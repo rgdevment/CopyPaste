@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "CopyPaste.UI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "CopyPaste.UI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
