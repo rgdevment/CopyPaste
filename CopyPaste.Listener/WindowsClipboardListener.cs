@@ -7,7 +7,7 @@ using System.Threading.Channels;
 
 namespace CopyPaste.Listener;
 
-public sealed partial class WindowsClipboardListener(ClipboardService service)
+public sealed partial class WindowsClipboardListener(ClipboardService service) : IDisposable
 {
     private const uint _cF_UNICODETEXT = 13;
     private const uint _cF_HDROP = 15;
@@ -15,11 +15,11 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     private static readonly uint _cF_HTML = RegisterClipboardFormatW("HTML Format");
 
     private IntPtr _hwnd;
+    private bool _disposed;
 
-    // Thread-safe queue to decouple capture from processing
     private readonly Channel<ClipboardTask> _taskQueue = Channel.CreateUnbounded<ClipboardTask>();
-
     private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? Bytes, List<string>? Files);
+    private readonly CancellationTokenSource _cts = new();
 
     #region Win32 API
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
@@ -86,6 +86,12 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     private static partial uint DragQueryFileW(IntPtr hDrop, uint iFile, [Out] char[]? lpszFile, uint cch);
     #endregion
 
+    public void Stop()
+    {
+        _cts.Cancel();
+        _taskQueue.Writer.Complete();
+    }
+
     public void Run()
     {
         _hwnd = CreateWindowExW(0, "Static", "CopyPasteHost", 0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
@@ -93,7 +99,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
 
         if (AddClipboardFormatListener(_hwnd))
         {
-            // Background consumer starts here
             _ = Task.Run(ProcessQueueAsync);
 
             while (GetMessage(out var msg, IntPtr.Zero, 0, 0))
@@ -107,33 +112,38 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
 
     private async Task ProcessQueueAsync()
     {
-        await foreach (var task in _taskQueue.Reader.ReadAllAsync().ConfigureAwait(false))
+        try
         {
-            bool success = false;
-            while (!success)
+            await foreach (var task in _taskQueue.Reader.ReadAllAsync(_cts.Token).ConfigureAwait(false))
             {
-                try
+                bool success = false;
+                while (!success && !_cts.IsCancellationRequested)
                 {
-                    NotifyService(task.Type, task.Text, task.Bytes, task.Files);
-                    success = true;
-                }
-                catch (IOException)
-                {
-                    await Task.Delay(500).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    Debug.WriteLine($"Critical processing error: {ex.Message}");
-                    // Prevent queue stall on unexpected errors
-                    success = true;
+                    try
+                    {
+                        NotifyService(task.Type, task.Text, task.Bytes, task.Files);
+                        success = true;
+                    }
+                    catch (IOException)
+                    {
+                        await Task.Delay(500, _cts.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        Debug.WriteLine($"Critical error: {ex.Message}");
+                        success = true;
+                    }
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine("Queue processing stopped gracefully.");
         }
     }
 
     private void OnClipboardChanged()
     {
-        // Give the owner app time to finish writing before we lock
         Thread.Sleep(50);
 
         if (!OpenClipboard(_hwnd)) return;
@@ -165,10 +175,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
                 _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Text, text, null, null));
             }
         }
-        finally
-        {
-            CloseClipboard();
-        }
+        finally { CloseClipboard(); }
     }
 
     private static byte[]? ExtractRawBytes(uint format)
@@ -218,45 +225,49 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     private static byte[]? FixDibHeader(byte[] dibData)
     {
         if (dibData.Length < 40) return null;
-
-        // Get basic DIB info to calculate the exact pixel offset
         int headerSize = BitConverter.ToInt32(dibData, 0);
         int bitCount = BitConverter.ToInt16(dibData, 14);
         int compression = BitConverter.ToInt32(dibData, 16);
         int colorsUsed = BitConverter.ToInt32(dibData, 32);
 
-        // Calculate palette or bitmask size
         int paletteSize = 0;
-        if (headerSize == 40 && compression == 3) // BI_BITFIELDS
-        {
-            paletteSize = 12; // 3 DWORD masks
-        }
-        else if (colorsUsed > 0)
-        {
-            paletteSize = colorsUsed * 4;
-        }
-        else if (bitCount <= 8)
-        {
-            paletteSize = (1 << bitCount) * 4;
-        }
+        if (headerSize == 40 && compression == 3) paletteSize = 12;
+        else if (colorsUsed > 0) paletteSize = colorsUsed * 4;
+        else if (bitCount <= 8) paletteSize = (1 << bitCount) * 4;
 
-        // Full BMP structure: [FileHeader (14)] + [DIB Header] + [Palette/Masks] + [Pixels]
         int pixelOffset = 14 + headerSize + paletteSize;
         int fileSize = 14 + dibData.Length;
 
         byte[] fileHeader = new byte[14];
-        fileHeader[0] = 0x42; // 'B'
-        fileHeader[1] = 0x4D; // 'M'
-
-        // Write size and offset in Little-Endian (Windows standard)
+        fileHeader[0] = 0x42; fileHeader[1] = 0x4D;
         BitConverter.TryWriteBytes(fileHeader.AsSpan(2), fileSize);
         BitConverter.TryWriteBytes(fileHeader.AsSpan(10), pixelOffset);
 
         byte[] bmp = new byte[fileSize];
         Buffer.BlockCopy(fileHeader, 0, bmp, 0, 14);
         Buffer.BlockCopy(dibData, 0, bmp, 14, dibData.Length);
-
         return bmp;
+    }
+
+    private static string ExtractHtmlFragment(string rawHtml)
+    {
+        if (string.IsNullOrWhiteSpace(rawHtml)) return string.Empty;
+
+        // Standard markers for CF_HTML format
+        const string startFragment = "";
+        const string endFragment = "";
+
+        int startIndex = rawHtml.IndexOf(startFragment, StringComparison.OrdinalIgnoreCase);
+        int endIndex = rawHtml.LastIndexOf(endFragment, StringComparison.OrdinalIgnoreCase);
+
+        if (startIndex != -1 && endIndex != -1)
+        {
+            startIndex += startFragment.Length;
+            return rawHtml[startIndex..endIndex].Trim();
+        }
+
+        int htmlStart = rawHtml.IndexOf("<html", StringComparison.OrdinalIgnoreCase);
+        return htmlStart != -1 ? rawHtml[htmlStart..].Trim() : rawHtml;
     }
 
     private void NotifyService(ClipboardContentType type, string? text, byte[]? bytes, List<string>? files)
@@ -267,7 +278,9 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
         }
         else if (type == ClipboardContentType.Html && bytes != null)
         {
-            service.AddItem(new ClipboardItem { Content = Encoding.UTF8.GetString(bytes).TrimEnd('\0'), Type = type });
+            string rawHtml = Encoding.UTF8.GetString(bytes).TrimEnd('\0');
+            string html = ExtractHtmlFragment(rawHtml);
+            service.AddItem(new ClipboardItem { Content = html, Type = type });
         }
         else if (type == ClipboardContentType.Image && bytes != null)
         {
@@ -280,6 +293,15 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
             string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
             service.AddItem(new ClipboardItem { Content = paths, Type = type, Metadata = json });
         }
+    }
+
+    // Explicit disposal of native and managed resources
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _cts.Cancel();
+        _cts.Dispose();
+        _disposed = true;
     }
 
     [StructLayout(LayoutKind.Sequential)]

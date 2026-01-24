@@ -7,6 +7,9 @@ namespace CopyPaste.Core;
 
 public class ClipboardService(IClipboardRepository repository)
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
+    public event Action<ClipboardItem>? OnThumbnailReady;
+
     public void AddItem(ClipboardItem item, byte[]? rawData = null)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -98,6 +101,8 @@ public class ClipboardService(IClipboardRepository repository)
             // Serialize and finalize DB record
             item.Metadata = JsonSerializer.Serialize(dataMap, MetadataJsonContext.Default.DictionaryStringObject);
             repository.Update(item);
+
+            OnThumbnailReady?.Invoke(item);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -141,5 +146,46 @@ public class ClipboardService(IClipboardRepository repository)
     public IEnumerable<ClipboardItem> GetHistory(string? query = null) =>
         string.IsNullOrWhiteSpace(query) ? repository.GetAll() : repository.Search(query);
 
-    public void RemoveItem(Guid id) => repository.Delete(id);
+    public void RemoveItem(Guid id)
+    {
+        var item = repository.GetAll().FirstOrDefault(x => x.Id == id);
+        if (item == null) return;
+
+        repository.Delete(id);
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(item.Content) && File.Exists(item.Content))
+                {
+                    File.Delete(item.Content);
+                }
+                if (!string.IsNullOrEmpty(item.Metadata))
+                {
+                    using var doc = JsonDocument.Parse(item.Metadata);
+                    if (doc.RootElement.TryGetProperty("thumb_path", out var pathProp))
+                    {
+                        string? thumbPath = pathProp.GetString();
+                        if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
+                        {
+                            File.Delete(thumbPath);
+                        }
+                    }
+                }
+            }
+            catch (IOException ex)
+            {
+                Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
+            }
+            catch (ArgumentException ex)
+            {
+                Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
+            }
+        });
+    }
 }
