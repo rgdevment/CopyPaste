@@ -13,7 +13,6 @@ public class LiteDbRepository(string dbPath) : IClipboardRepository
         var col = db.GetCollection<ClipboardItem>(_collectionName);
 
         // Ensure indices for performance
-        col.EnsureIndex(x => x.Content);
         col.EnsureIndex(x => x.CreatedAt);
 
         col.Insert(item);

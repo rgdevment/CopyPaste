@@ -100,6 +100,31 @@ public class ClipboardService(IClipboardRepository repository)
         return false;
     }
 
+    private static SKBitmap? DecodeDib(byte[] rawData)
+    {
+        if (rawData.Length < 40) return null; // Too small for DIB header
+
+        // BITMAPFILEHEADER (14 bytes) + DIB data
+        byte[] bmpFileHeader = new byte[14];
+        bmpFileHeader[0] = 0x42; // B
+        bmpFileHeader[1] = 0x4D; // M
+
+        // Total file size
+        int fileSize = rawData.Length + 14;
+        BitConverter.TryWriteBytes(bmpFileHeader.AsSpan(2), fileSize);
+
+        // Offset to pixel data (usually 14 + header size)
+        int headerSize = BitConverter.ToInt32(rawData, 0);
+        int offset = 14 + headerSize;
+        BitConverter.TryWriteBytes(bmpFileHeader.AsSpan(10), offset);
+
+        var fullBmp = new byte[fileSize];
+        Buffer.BlockCopy(bmpFileHeader, 0, fullBmp, 0, 14);
+        Buffer.BlockCopy(rawData, 0, fullBmp, 14, rawData.Length);
+
+        return SKBitmap.Decode(new MemoryStream(fullBmp));
+    }
+
     public IEnumerable<ClipboardItem> GetHistory(string? query = null) =>
         string.IsNullOrWhiteSpace(query) ? repository.GetAll() : repository.Search(query);
 

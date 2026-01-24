@@ -117,141 +117,132 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     {
         if (!OpenClipboard(_hwnd)) return;
 
+        ClipboardContentType type = ClipboardContentType.Text;
+        byte[]? rawBytes = null;
+        string? plainText = null;
+        List<string>? filePaths = null;
+
         try
         {
             if (IsClipboardFormatAvailable(_cF_HDROP))
             {
-                ExtractFilePaths();
+                filePaths = ExtractRawFilePaths();
+                type = ClipboardContentType.File;
             }
-            if (IsClipboardFormatAvailable(_cF_DIB))
+            else if (IsClipboardFormatAvailable(_cF_DIB))
             {
-                ExtractImage();
+                rawBytes = ExtractRawBytes(_cF_DIB);
+                type = ClipboardContentType.Image;
             }
-            if (IsClipboardFormatAvailable(_cF_HTML))
+            else if (IsClipboardFormatAvailable(_cF_HTML))
             {
-                ExtractHtml();
+                rawBytes = ExtractRawBytes(_cF_HTML);
+                type = ClipboardContentType.Html;
             }
             else if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
-                ExtractText();
+                plainText = ExtractRawText();
+                type = ClipboardContentType.Text;
             }
         }
         finally
         {
             CloseClipboard();
         }
+
+        if (type == ClipboardContentType.Image && rawBytes == null) return;
+
+        NotifyService(type, plainText, rawBytes, filePaths);
     }
 
-    private void ExtractText()
+    private static string? ExtractRawText()
     {
         IntPtr hData = GetClipboardData(_cF_UNICODETEXT);
-        if (hData == IntPtr.Zero) return;
+        if (hData == IntPtr.Zero) return null;
 
-        string? text = Marshal.PtrToStringUni(hData);
-        if (!string.IsNullOrWhiteSpace(text))
+        IntPtr pData = GlobalLock(hData);
+        try
         {
-            service.AddItem(new ClipboardItem
-            {
-                Content = text,
-                Type = ClipboardContentType.Text
-            });
+            return Marshal.PtrToStringUni(pData);
         }
+        finally { GlobalUnlock(hData); }
     }
 
-    private void ExtractImage()
+    private static byte[]? ExtractRawBytes(uint format)
     {
-        IntPtr hData = GetClipboardData(_cF_DIB);
-        if (hData == IntPtr.Zero) return;
+        IntPtr hData = GetClipboardData(format);
+        if (hData == IntPtr.Zero) return null;
 
         IntPtr pData = GlobalLock(hData);
         try
         {
             int size = (int)GlobalSize(hData);
+            if (size <= 0) return null;
+
             byte[] buffer = new byte[size];
             Marshal.Copy(pData, buffer, 0, size);
-
-            service.AddItem(new ClipboardItem
-            {
-                Type = ClipboardContentType.Image
-            }, buffer);
+            return buffer;
         }
-        finally
-        {
-            GlobalUnlock(hData);
-        }
+        finally { GlobalUnlock(hData); }
     }
 
-    private void ExtractHtml()
-    {
-        IntPtr hData = GetClipboardData(_cF_HTML);
-        if (hData == IntPtr.Zero) return;
-
-        IntPtr pData = GlobalLock(hData);
-        try
-        {
-            nuint size = GlobalSize(hData);
-            byte[] buffer = new byte[(int)size];
-            Marshal.Copy(pData, buffer, 0, buffer.Length);
-
-            // HTML Format is strictly UTF-8 encoded
-            string rawHtml = Encoding.UTF8.GetString(buffer).TrimEnd('\0');
-
-            if (!string.IsNullOrWhiteSpace(rawHtml))
-            {
-                service.AddItem(new ClipboardItem
-                {
-                    Content = rawHtml,
-                    Type = ClipboardContentType.Html
-                });
-            }
-        }
-        finally
-        {
-            GlobalUnlock(hData);
-        }
-    }
-
-    private void ExtractFilePaths()
+    private static List<string> ExtractRawFilePaths()
     {
         IntPtr hData = GetClipboardData(_cF_HDROP);
-        if (hData == IntPtr.Zero) return;
+        List<string> files = [];
+        if (hData == IntPtr.Zero) return files;
 
-        uint fileCount = DragQueryFileW(hData, 0xFFFFFFFF, null, 0);
-        List<string> fileList = [];
-
-        for (uint i = 0; i < fileCount; i++)
+        uint count = DragQueryFileW(hData, 0xFFFFFFFF, null, 0);
+        for (uint i = 0; i < count; i++)
         {
-            uint pathLength = DragQueryFileW(hData, i, null, 0);
-            char[] pathBuffer = new char[pathLength + 1];
-
-            if (DragQueryFileW(hData, i, pathBuffer, (uint)pathBuffer.Length) > 0)
+            uint length = DragQueryFileW(hData, i, null, 0);
+            char[] buffer = new char[length + 1];
+            if (DragQueryFileW(hData, i, buffer, (uint)buffer.Length) > 0)
             {
-                fileList.Add(new string(pathBuffer).TrimEnd('\0'));
+                files.Add(new string(buffer).TrimEnd('\0'));
             }
         }
+        return files;
+    }
 
-        if (fileList.Count > 0)
+    private void NotifyService(ClipboardContentType type, string? text, byte[]? bytes, List<string>? files)
+    {
+        if (type == ClipboardContentType.Text && !string.IsNullOrWhiteSpace(text))
         {
-            string allPaths = string.Join(Environment.NewLine, fileList);
-
-            var item = new ClipboardItem
-            {
-                Content = allPaths,
-                Type = ClipboardContentType.File
-            };
-
-            var metadata = new Dictionary<string, object>
-            {
-                { "file_count", fileList.Count },
-                { "is_multiple", fileList.Count > 1 },
-                { "first_extension", Path.GetExtension(fileList[0]) }
-            };
-
-            item.Metadata = JsonSerializer.Serialize(metadata, MetadataJsonContext.Default.DictionaryStringObject);
-            service.AddItem(item);
+            service.AddItem(new ClipboardItem { Content = text, Type = type });
         }
+        else if (type == ClipboardContentType.Html && bytes != null)
+        {
+            service.AddItem(new ClipboardItem { Content = Encoding.UTF8.GetString(bytes).TrimEnd('\0'), Type = type });
+        }
+        else if (type == ClipboardContentType.Image && bytes != null)
+        {
+            service.AddItem(new ClipboardItem { Type = type }, bytes);
+        }
+        else if (type == ClipboardContentType.File && files?.Count > 0)
+        {
+            string paths = string.Join(Environment.NewLine, files);
+            var meta = new Dictionary<string, object> { { "file_count", files.Count }, { "first_ext", Path.GetExtension(files[0]) } };
+            string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
+            service.AddItem(new ClipboardItem { Content = paths, Type = type, Metadata = json });
+        }
+    }
 
-        DragFinish(hData);
+    private async Task ProcessDbQueueAsync()
+    {
+        await foreach (var item in _dbQueue.Reader.ReadAllAsync())
+        {
+            try
+            {
+                service.AddItem(item);
+            }
+            catch (IOException) // DB busy
+            {
+                // Re-queue or retry after delay
+                await Task.Delay(100);
+                // logic to handle retry...
+            }
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
