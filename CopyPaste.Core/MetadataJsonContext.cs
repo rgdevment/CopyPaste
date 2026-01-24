@@ -2,8 +2,11 @@ using System.Text.Json.Serialization;
 
 namespace CopyPaste.Core;
 
-// This enables NativeAOT-compatible JSON serialization for Metadata
+[JsonSerializable(typeof(ClipboardItem))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
-internal sealed partial class MetadataJsonContext : JsonSerializerContext
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(long))]
+public partial class MetadataJsonContext : JsonSerializerContext
 {
 }
