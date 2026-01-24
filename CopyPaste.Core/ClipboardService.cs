@@ -1,6 +1,8 @@
 using SkiaSharp;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace CopyPaste.Core;
@@ -10,15 +12,57 @@ public class ClipboardService(IClipboardRepository repository)
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
 
-    public void AddItem(ClipboardItem item, byte[]? rawData = null)
+    public void AddText(string? text)
     {
-        ArgumentNullException.ThrowIfNull(item);
+        if (string.IsNullOrWhiteSpace(text)) return;
+        AddItem(new ClipboardItem { Content = text, Type = ClipboardContentType.Text });
+    }
 
-        // Pre-calculate hash for images to ensure reliable deduplication
-        string? currentHash = null;
-        if (item.Type == ClipboardContentType.Image && rawData != null)
+    public void AddHtml(byte[]? rawBytes)
+    {
+        if (rawBytes == null) return;
+
+        string rawHtml = Encoding.UTF8.GetString(rawBytes).TrimEnd('\0');
+        string html = ExtractHtmlFragment(rawHtml);
+
+        if (!string.IsNullOrWhiteSpace(html))
         {
-            currentHash = BitConverter.ToString(SHA256.HashData(rawData));
+            AddItem(new ClipboardItem { Content = html, Type = ClipboardContentType.Html });
+        }
+    }
+
+    public void AddImage(byte[]? dibData)
+    {
+        if (dibData == null) return;
+
+        byte[]? bmp = ConvertDibToBmp(dibData);
+        if (bmp != null)
+        {
+            AddItem(new ClipboardItem { Type = ClipboardContentType.Image }, bmp);
+        }
+    }
+
+    public void AddFiles(Collection<string>? files)
+    {
+        if (files == null || files.Count == 0) return;
+
+        string paths = string.Join(Environment.NewLine, files);
+        var meta = new Dictionary<string, object>
+        {
+            { "file_count", files.Count },
+            { "first_ext", Path.GetExtension(files[0]) }
+        };
+        string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
+
+        AddItem(new ClipboardItem { Content = paths, Type = ClipboardContentType.File, Metadata = json });
+    }
+
+    private void AddItem(ClipboardItem item, byte[]? imageData = null)
+    {
+        string? currentHash = null;
+        if (item.Type == ClipboardContentType.Image && imageData != null)
+        {
+            currentHash = BitConverter.ToString(SHA256.HashData(imageData));
         }
 
         var latest = repository.GetLatest();
@@ -32,7 +76,6 @@ public class ClipboardService(IClipboardRepository repository)
 
         if (item.Id == Guid.Empty) item.Id = Guid.NewGuid();
 
-        // Store hash immediately in metadata to block future duplicates during async processing
         if (item.Type == ClipboardContentType.Image && currentHash != null)
         {
             var initialMeta = new Dictionary<string, object> { { "hash", currentHash } };
@@ -41,9 +84,9 @@ public class ClipboardService(IClipboardRepository repository)
 
         repository.Save(item);
 
-        if (item.Type == ClipboardContentType.Image && rawData != null)
+        if (item.Type == ClipboardContentType.Image && imageData != null)
         {
-            _ = Task.Run(() => ProcessImageAssetsBackground(item, rawData, currentHash));
+            _ = Task.Run(() => ProcessImageAssetsBackground(item, imageData, currentHash));
         }
     }
 
@@ -187,5 +230,55 @@ public class ClipboardService(IClipboardRepository repository)
                 Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
             }
         });
+    }
+
+    private static string ExtractHtmlFragment(string rawHtml)
+    {
+        if (string.IsNullOrWhiteSpace(rawHtml)) return string.Empty;
+
+        const string startFragment = "<!--StartFragment-->";
+        const string endFragment = "<!--EndFragment-->";
+
+        int startIndex = rawHtml.IndexOf(startFragment, StringComparison.OrdinalIgnoreCase);
+        int endIndex = rawHtml.LastIndexOf(endFragment, StringComparison.OrdinalIgnoreCase);
+
+        if (startIndex != -1 && endIndex != -1)
+        {
+            startIndex += startFragment.Length;
+            return rawHtml[startIndex..endIndex].Trim();
+        }
+
+        int htmlStart = rawHtml.IndexOf("<html", StringComparison.OrdinalIgnoreCase);
+        return htmlStart != -1 ? rawHtml[htmlStart..].Trim() : rawHtml;
+    }
+
+    private static byte[]? ConvertDibToBmp(byte[] dibData)
+    {
+        if (dibData.Length < 40) return null;
+
+        int headerSize = BitConverter.ToInt32(dibData, 0);
+        int bitCount = BitConverter.ToInt16(dibData, 14);
+        int compression = BitConverter.ToInt32(dibData, 16);
+        int colorsUsed = BitConverter.ToInt32(dibData, 32);
+
+        int paletteSize = 0;
+        if (headerSize == 40 && compression == 3) paletteSize = 12;
+        else if (colorsUsed > 0) paletteSize = colorsUsed * 4;
+        else if (bitCount <= 8) paletteSize = (1 << bitCount) * 4;
+
+        int pixelOffset = 14 + headerSize + paletteSize;
+        int fileSize = 14 + dibData.Length;
+
+        byte[] fileHeader = new byte[14];
+        fileHeader[0] = 0x42; // 'B'
+        fileHeader[1] = 0x4D; // 'M'
+        BitConverter.TryWriteBytes(fileHeader.AsSpan(2), fileSize);
+        BitConverter.TryWriteBytes(fileHeader.AsSpan(10), pixelOffset);
+
+        byte[] bmp = new byte[fileSize];
+        Buffer.BlockCopy(fileHeader, 0, bmp, 0, 14);
+        Buffer.BlockCopy(dibData, 0, bmp, 14, dibData.Length);
+
+        return bmp;
     }
 }
