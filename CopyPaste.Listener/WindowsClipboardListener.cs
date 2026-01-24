@@ -218,16 +218,44 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     private static byte[]? FixDibHeader(byte[] dibData)
     {
         if (dibData.Length < 40) return null;
-        byte[] fileHeader = new byte[14];
-        fileHeader[0] = 0x42; fileHeader[1] = 0x4D;
-        int fileSize = dibData.Length + 14;
-        BitConverter.TryWriteBytes(fileHeader.AsSpan(2), fileSize);
+
+        // Get basic DIB info to calculate the exact pixel offset
         int headerSize = BitConverter.ToInt32(dibData, 0);
-        int offset = 14 + headerSize;
-        BitConverter.TryWriteBytes(fileHeader.AsSpan(10), offset);
+        int bitCount = BitConverter.ToInt16(dibData, 14);
+        int compression = BitConverter.ToInt32(dibData, 16);
+        int colorsUsed = BitConverter.ToInt32(dibData, 32);
+
+        // Calculate palette or bitmask size
+        int paletteSize = 0;
+        if (headerSize == 40 && compression == 3) // BI_BITFIELDS
+        {
+            paletteSize = 12; // 3 DWORD masks
+        }
+        else if (colorsUsed > 0)
+        {
+            paletteSize = colorsUsed * 4;
+        }
+        else if (bitCount <= 8)
+        {
+            paletteSize = (1 << bitCount) * 4;
+        }
+
+        // Full BMP structure: [FileHeader (14)] + [DIB Header] + [Palette/Masks] + [Pixels]
+        int pixelOffset = 14 + headerSize + paletteSize;
+        int fileSize = 14 + dibData.Length;
+
+        byte[] fileHeader = new byte[14];
+        fileHeader[0] = 0x42; // 'B'
+        fileHeader[1] = 0x4D; // 'M'
+
+        // Write size and offset in Little-Endian (Windows standard)
+        BitConverter.TryWriteBytes(fileHeader.AsSpan(2), fileSize);
+        BitConverter.TryWriteBytes(fileHeader.AsSpan(10), pixelOffset);
+
         byte[] bmp = new byte[fileSize];
         Buffer.BlockCopy(fileHeader, 0, bmp, 0, 14);
         Buffer.BlockCopy(dibData, 0, bmp, 14, dibData.Length);
+
         return bmp;
     }
 
