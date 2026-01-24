@@ -1,17 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <Platforms>x64</Platforms>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PublishAot>true</PublishAot>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <Platforms>x64</Platforms>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
-  </ItemGroup>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <OptimizationPreference>Speed</OptimizationPreference>
+        <StackTraceSupport>false</StackTraceSupport>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+    </ItemGroup>
 
 </Project>

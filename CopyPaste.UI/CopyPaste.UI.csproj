@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
@@ -19,6 +19,8 @@
     <PublishSelfContained>True</PublishSelfContained>
     <PublishReadyToRun>False</PublishReadyToRun>
     <PublishTrimmed>False</PublishTrimmed>
+
+    <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Content Remove="Assets\CopyPasteLogo.ico" />

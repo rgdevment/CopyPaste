@@ -2,7 +2,7 @@ using Microsoft.UI.Xaml;
 
 namespace CopyPaste.UI;
 
-internal partial class App : Application
+public partial class App : Application
 {
     private Window? _window;
 
