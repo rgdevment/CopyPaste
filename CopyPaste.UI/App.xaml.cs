@@ -1,8 +1,8 @@
-﻿using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml;
 
 namespace CopyPaste.UI;
 
-public partial class App : Application
+internal partial class App : Application
 {
     private Window? _window;
 

@@ -20,6 +20,10 @@
     <PublishReadyToRun>False</PublishReadyToRun>
     <PublishTrimmed>False</PublishTrimmed>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Remove="Assets\CopyPasteLogo.ico" />
+    <Content Remove="Assets\CopyPasteNotification.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />

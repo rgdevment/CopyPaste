@@ -3,6 +3,12 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
   </Configurations>
+  <Folder Name="/Elementos de la solución/">
+    <File Path="Directory.Build.props" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Project Path="CopyPaste.Core/CopyPaste.Core.csproj">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
