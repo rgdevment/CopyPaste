@@ -57,16 +57,27 @@ public class ClipboardService(IClipboardRepository repository)
             string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
 
             using var managedSrc = new MemoryStream(rawData);
-            using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException(
-                    $"Failed to decode bitmap. Size: {rawData.Length} bytes");
+            using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException("Decode failed");
 
-            int width = 200;
-            int height = (int)(bitmap.Height * (200.0 / bitmap.Width));
+            // High-quality "Retina" resize settings
+            int targetWidth = 300;
+            int targetHeight = (int)(bitmap.Height * (targetWidth / (double)bitmap.Width));
+            var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
 
-            var sampling = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
-            using var resized = bitmap.Resize(new SKImageInfo(width, height), sampling);
-            using var image = SKImage.FromBitmap(resized);
-            using var data = image.Encode(SKEncodedImageFormat.Png, 80);
+            using var resized = new SKBitmap(targetWidth, targetHeight);
+            using (var canvas = new SKCanvas(resized))
+            {
+                canvas.Clear(SKColors.Transparent);
+
+                // DrawImage is required to use SKSamplingOptions
+                using var imageToDraw = SKImage.FromBitmap(bitmap);
+                using var paint = new SKPaint { IsAntialias = true };
+
+                canvas.DrawImage(imageToDraw, SKRect.Create(targetWidth, targetHeight), sampling, paint);
+            }
+
+            using var thumbImage = SKImage.FromBitmap(resized);
+            using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 90);
 
             using (var stream = File.Create(thumbPath))
             {
@@ -76,14 +87,15 @@ public class ClipboardService(IClipboardRepository repository)
             var dataMap = new Dictionary<string, object>
         {
             { "thumb_path", thumbPath },
-            { "thumb_width", width },
-            { "thumb_height", height },
+            { "thumb_width", targetWidth },
+            { "thumb_height", targetHeight },
             { "width", bitmap.Width },
             { "height", bitmap.Height },
-            { "size", rawData.Length },
-            { "hash", preCalculatedHash ?? string.Empty },
+            { "size", (long)rawData.Length },
+            { "hash", preCalculatedHash ?? string.Empty }
         };
 
+            // Serialize and finalize DB record
             item.Metadata = JsonSerializer.Serialize(dataMap, MetadataJsonContext.Default.DictionaryStringObject);
             repository.Update(item);
         }
