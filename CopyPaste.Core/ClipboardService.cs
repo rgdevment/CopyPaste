@@ -1,4 +1,5 @@
 using SkiaSharp;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -19,14 +20,70 @@ public class ClipboardService(IClipboardRepository repository)
             return;
         }
 
+        // Ensure ID is ready for file naming
+        if (item.Id == Guid.Empty) item.Id = Guid.NewGuid();
+
+        // 1. Save record immediately to DB
+        repository.Save(item);
+
+        // 2. Fire and forget heavy assets processing
         if (item.Type == ClipboardContentType.Image && rawData != null)
         {
-            // Ensure unique ID before file operations
-            if (item.Id == Guid.Empty) item.Id = Guid.NewGuid();
-            ProcessImageStorage(item, rawData);
+            _ = Task.Run(() => ProcessImageAssetsBackground(item, rawData));
         }
+    }
 
-        repository.Save(item);
+    private void ProcessImageAssetsBackground(ClipboardItem item, byte[] rawData)
+    {
+        try
+        {
+            string originalPath = Path.Combine(StorageConfig.ImagesPath, $"{item.Id}.png");
+            File.WriteAllBytes(originalPath, rawData);
+            item.Content = originalPath;
+
+            string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+
+            using var managedSrc = new MemoryStream(rawData);
+            using var bitmap = SKBitmap.Decode(managedSrc);
+
+            // Exit if image data is invalid
+            if (bitmap == null) return;
+
+            int width = 200;
+            int height = (int)(bitmap.Height * (200.0 / bitmap.Width));
+
+            string hash = BitConverter.ToString(SHA256.HashData(rawData));
+
+            var sampling = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
+            using var resized = bitmap.Resize(new SKImageInfo(width, height), sampling);
+            using var image = SKImage.FromBitmap(resized);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 80);
+
+            using (var stream = File.Create(thumbPath))
+            {
+                data.SaveTo(stream);
+            }
+
+            var dataMap = new Dictionary<string, object>
+            {
+                { "thumb_path", thumbPath },
+                { "thumb_width", width },
+                { "thumb_height", height },
+                { "width", bitmap.Width },
+                { "height", bitmap.Height },
+                { "size", rawData.Length },
+                { "hash", hash },
+            };
+
+            item.Metadata = JsonSerializer.Serialize(dataMap, MetadataJsonContext.Default.DictionaryStringObject);
+
+            // 3. Update DB record with paths and metadata once ready
+            repository.Update(item);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Debug.WriteLine($"Asset processing failed: {ex.Message}");
+        }
     }
 
     private static bool IsDuplicate(ClipboardItem? last, ClipboardItem current, byte[]? currentImageBuffer)
@@ -45,46 +102,6 @@ public class ClipboardService(IClipboardRepository repository)
         };
     }
 
-    private static void ProcessImageStorage(ClipboardItem item, byte[] rawData)
-    {
-        string originalPath = Path.Combine(StorageConfig.ImagesPath, $"{item.Id}.png");
-        File.WriteAllBytes(originalPath, rawData);
-        item.Content = originalPath;
-
-        string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
-
-        using var managedSrc = new MemoryStream(rawData);
-        using var bitmap = SKBitmap.Decode(managedSrc);
-
-        if (bitmap == null) return;
-
-        int width = 200;
-        int height = (int)(bitmap.Height * (200.0 / bitmap.Width));
-
-        // Fast static hash calculation
-        string hash = BitConverter.ToString(SHA256.HashData(rawData));
-
-        var sampling = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
-        using var resized = bitmap.Resize(new SKImageInfo(width, height), sampling);
-        using var image = SKImage.FromBitmap(resized);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 80);
-        using var stream = File.Create(thumbPath);
-        data.SaveTo(stream);
-
-        var dataMap = new Dictionary<string, object>
-        {
-            { "thumb_path", thumbPath },
-            { "thumb_width", width },
-            { "thumb_height", height },
-            { "width", bitmap.Width },
-            { "height", bitmap.Height },
-            { "size", rawData.Length },
-            { "hash", hash },
-        };
-
-        item.Metadata = System.Text.Json.JsonSerializer.Serialize(dataMap, MetadataJsonContext.Default.DictionaryStringObject);
-    }
-
     private static bool CompareImages(ClipboardItem last, byte[]? currentBuffer)
     {
         if (currentBuffer == null || string.IsNullOrEmpty(last.Metadata)) return false;
@@ -98,31 +115,6 @@ public class ClipboardService(IClipboardRepository repository)
         }
 
         return false;
-    }
-
-    private static SKBitmap? DecodeDib(byte[] rawData)
-    {
-        if (rawData.Length < 40) return null; // Too small for DIB header
-
-        // BITMAPFILEHEADER (14 bytes) + DIB data
-        byte[] bmpFileHeader = new byte[14];
-        bmpFileHeader[0] = 0x42; // B
-        bmpFileHeader[1] = 0x4D; // M
-
-        // Total file size
-        int fileSize = rawData.Length + 14;
-        BitConverter.TryWriteBytes(bmpFileHeader.AsSpan(2), fileSize);
-
-        // Offset to pixel data (usually 14 + header size)
-        int headerSize = BitConverter.ToInt32(rawData, 0);
-        int offset = 14 + headerSize;
-        BitConverter.TryWriteBytes(bmpFileHeader.AsSpan(10), offset);
-
-        var fullBmp = new byte[fileSize];
-        Buffer.BlockCopy(bmpFileHeader, 0, fullBmp, 0, 14);
-        Buffer.BlockCopy(rawData, 0, fullBmp, 14, rawData.Length);
-
-        return SKBitmap.Decode(new MemoryStream(fullBmp));
     }
 
     public IEnumerable<ClipboardItem> GetHistory(string? query = null) =>

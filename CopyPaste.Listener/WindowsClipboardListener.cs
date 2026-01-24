@@ -1,7 +1,9 @@
 using CopyPaste.Core;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 
 namespace CopyPaste.Listener;
 
@@ -12,39 +14,40 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     private const uint _cF_DIB = 8;
     private static readonly uint _cF_HTML = RegisterClipboardFormatW("HTML Format");
 
-    // Window handle to associate with clipboard operations
     private IntPtr _hwnd;
 
-    [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool AddClipboardFormatListener(IntPtr hwnd);
+    // Thread-safe queue to decouple capture from processing
+    private readonly Channel<ClipboardTask> _taskQueue = Channel.CreateUnbounded<ClipboardTask>();
 
+    private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? Bytes, List<string>? Files);
+
+    #region Win32 API
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    private static partial IntPtr CreateWindowExW(
-        uint dwExStyle,
-        string lpClassName,
-        string lpWindowName,
-        uint dwStyle,
-        int x, int y,
-        int nWidth, int nHeight,
-        IntPtr hWndParent,
-        IntPtr hMenu,
-        IntPtr hInstance,
-        IntPtr lpParam);
+    private static partial IntPtr CreateWindowExW(uint dwExStyle, string lpClassName, string lpWindowName, uint dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
 
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static partial uint RegisterClipboardFormatW(string lpszFormat);
 
-    [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    [LibraryImport("user32.dll", EntryPoint = "GetMessageW")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    private static partial uint DragQueryFileW(IntPtr hDrop, uint iFile, [Out] char[]? lpszFile, uint cch);
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 
-    [LibraryImport("shell32.dll")]
+    [LibraryImport("user32.dll", EntryPoint = "DispatchMessageW")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    private static partial void DragFinish(IntPtr hDrop);
+    private static partial IntPtr DispatchMessage(ref MSG lpMsg);
+
+    [LibraryImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool TranslateMessage(ref MSG lpMsg);
+
+    [LibraryImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool AddClipboardFormatListener(IntPtr hwnd);
 
     [LibraryImport("user32.dll")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
@@ -78,111 +81,118 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static partial nuint GlobalSize(IntPtr hMem);
 
-    [LibraryImport("user32.dll")]
+    [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool TranslateMessage(ref MSG lpMsg);
-
-    [LibraryImport("user32.dll", EntryPoint = "GetMessageW")]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
-
-    [LibraryImport("user32.dll", EntryPoint = "DispatchMessageW")]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    private static partial IntPtr DispatchMessage(ref MSG lpMsg);
+    private static partial uint DragQueryFileW(IntPtr hDrop, uint iFile, [Out] char[]? lpszFile, uint cch);
+    #endregion
 
     public void Run()
     {
-        // Store window handle for future clipboard operations
-        _hwnd = CreateWindowExW(0, "Static", "CopyPasteListenerHost", 0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-
+        _hwnd = CreateWindowExW(0, "Static", "CopyPasteHost", 0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         if (_hwnd == IntPtr.Zero) return;
 
         if (AddClipboardFormatListener(_hwnd))
         {
+            // Background consumer starts here
+            _ = Task.Run(ProcessQueueAsync);
+
             while (GetMessage(out var msg, IntPtr.Zero, 0, 0))
             {
-                if (msg.message == 0x031D) // WM_CLIPBOARDUPDATE
-                {
-                    OnClipboardChanged();
-                }
+                if (msg.message == 0x031D) OnClipboardChanged();
                 TranslateMessage(ref msg);
                 DispatchMessage(ref msg);
             }
         }
     }
 
+    private async Task ProcessQueueAsync()
+    {
+        await foreach (var task in _taskQueue.Reader.ReadAllAsync().ConfigureAwait(false))
+        {
+            bool success = false;
+            while (!success)
+            {
+                try
+                {
+                    NotifyService(task.Type, task.Text, task.Bytes, task.Files);
+                    success = true;
+                }
+                catch (IOException)
+                {
+                    await Task.Delay(500).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Debug.WriteLine($"Critical processing error: {ex.Message}");
+                    // Prevent queue stall on unexpected errors
+                    success = true;
+                }
+            }
+        }
+    }
+
     private void OnClipboardChanged()
     {
-        if (!OpenClipboard(_hwnd)) return;
+        // Give the owner app time to finish writing before we lock
+        Thread.Sleep(50);
 
-        ClipboardContentType type = ClipboardContentType.Text;
-        byte[]? rawBytes = null;
-        string? plainText = null;
-        List<string>? filePaths = null;
+        if (!OpenClipboard(_hwnd)) return;
 
         try
         {
             if (IsClipboardFormatAvailable(_cF_HDROP))
             {
-                filePaths = ExtractRawFilePaths();
-                type = ClipboardContentType.File;
+                var files = ExtractRawFilePaths();
+                _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.File, null, null, files));
             }
             else if (IsClipboardFormatAvailable(_cF_DIB))
             {
-                rawBytes = ExtractRawBytes(_cF_DIB);
-                type = ClipboardContentType.Image;
+                var bytes = ExtractRawBytes(_cF_DIB);
+                if (bytes != null)
+                {
+                    var bmp = FixDibHeader(bytes);
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, bmp, null));
+                }
             }
             else if (IsClipboardFormatAvailable(_cF_HTML))
             {
-                rawBytes = ExtractRawBytes(_cF_HTML);
-                type = ClipboardContentType.Html;
+                var bytes = ExtractRawBytes(_cF_HTML);
+                _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Html, null, bytes, null));
             }
             else if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
-                plainText = ExtractRawText();
-                type = ClipboardContentType.Text;
+                var text = ExtractRawText();
+                _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Text, text, null, null));
             }
         }
         finally
         {
             CloseClipboard();
         }
-
-        if (type == ClipboardContentType.Image && rawBytes == null) return;
-
-        NotifyService(type, plainText, rawBytes, filePaths);
-    }
-
-    private static string? ExtractRawText()
-    {
-        IntPtr hData = GetClipboardData(_cF_UNICODETEXT);
-        if (hData == IntPtr.Zero) return null;
-
-        IntPtr pData = GlobalLock(hData);
-        try
-        {
-            return Marshal.PtrToStringUni(pData);
-        }
-        finally { GlobalUnlock(hData); }
     }
 
     private static byte[]? ExtractRawBytes(uint format)
     {
         IntPtr hData = GetClipboardData(format);
         if (hData == IntPtr.Zero) return null;
-
         IntPtr pData = GlobalLock(hData);
         try
         {
             int size = (int)GlobalSize(hData);
             if (size <= 0) return null;
-
             byte[] buffer = new byte[size];
             Marshal.Copy(pData, buffer, 0, size);
             return buffer;
         }
+        finally { GlobalUnlock(hData); }
+    }
+
+    private static string? ExtractRawText()
+    {
+        IntPtr hData = GetClipboardData(_cF_UNICODETEXT);
+        if (hData == IntPtr.Zero) return null;
+        IntPtr pData = GlobalLock(hData);
+        try { return Marshal.PtrToStringUni(pData); }
         finally { GlobalUnlock(hData); }
     }
 
@@ -203,6 +213,22 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
             }
         }
         return files;
+    }
+
+    private static byte[]? FixDibHeader(byte[] dibData)
+    {
+        if (dibData.Length < 40) return null;
+        byte[] fileHeader = new byte[14];
+        fileHeader[0] = 0x42; fileHeader[1] = 0x4D;
+        int fileSize = dibData.Length + 14;
+        BitConverter.TryWriteBytes(fileHeader.AsSpan(2), fileSize);
+        int headerSize = BitConverter.ToInt32(dibData, 0);
+        int offset = 14 + headerSize;
+        BitConverter.TryWriteBytes(fileHeader.AsSpan(10), offset);
+        byte[] bmp = new byte[fileSize];
+        Buffer.BlockCopy(fileHeader, 0, bmp, 0, 14);
+        Buffer.BlockCopy(dibData, 0, bmp, 14, dibData.Length);
+        return bmp;
     }
 
     private void NotifyService(ClipboardContentType type, string? text, byte[]? bytes, List<string>? files)
@@ -228,31 +254,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service)
         }
     }
 
-    private async Task ProcessDbQueueAsync()
-    {
-        await foreach (var item in _dbQueue.Reader.ReadAllAsync())
-        {
-            try
-            {
-                service.AddItem(item);
-            }
-            catch (IOException) // DB busy
-            {
-                // Re-queue or retry after delay
-                await Task.Delay(100);
-                // logic to handle retry...
-            }
-        }
-    }
-
     [StructLayout(LayoutKind.Sequential)]
-    internal struct MSG
-    {
-        public IntPtr hwnd;
-        public uint message;
-        public IntPtr wParam;
-        public IntPtr lParam;
-        public uint time;
-        public System.Drawing.Point pt;
-    }
+    internal struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam; public uint time; public System.Drawing.Point pt; }
 }
