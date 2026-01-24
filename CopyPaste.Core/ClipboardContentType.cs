@@ -5,5 +5,6 @@ public enum ClipboardContentType
     Text,
     Image,
     File,
-    Link
+    Link,
+    Html,
 }

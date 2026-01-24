@@ -3,6 +3,8 @@ namespace CopyPaste.Core;
 public interface IClipboardRepository
 {
     void Save(ClipboardItem item);
+    void Update(ClipboardItem item);
+    ClipboardItem? GetLatest();
     IEnumerable<ClipboardItem> GetAll();
     void Delete(Guid id);
 

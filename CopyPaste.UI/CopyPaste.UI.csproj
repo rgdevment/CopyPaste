@@ -38,5 +38,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+    <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
   </ItemGroup>
 </Project>

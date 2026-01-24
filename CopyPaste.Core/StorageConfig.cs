@@ -8,29 +8,37 @@ public static class StorageConfig
     );
 
     public static string DatabasePath => Path.Combine(_appDataPath, "history.db");
-
     public static string ImagesPath => Path.Combine(_appDataPath, "images");
-
     public static string ThumbnailsPath => Path.Combine(_appDataPath, "thumbs");
 
     public static void Initialize()
     {
-        // Ensure folders exist on startup
-        if (!Directory.Exists(_appDataPath)) Directory.CreateDirectory(_appDataPath);
-        if (!Directory.Exists(ImagesPath)) Directory.CreateDirectory(ImagesPath);
-        if (!Directory.Exists(ThumbnailsPath)) Directory.CreateDirectory(ThumbnailsPath);
+        // CreateDirectory handles existence checks internally
+        Directory.CreateDirectory(_appDataPath);
+        Directory.CreateDirectory(ImagesPath);
+        Directory.CreateDirectory(ThumbnailsPath);
     }
 
     public static void CleanOrphanImages(IEnumerable<string> validPaths)
     {
-        if (!Directory.Exists(ImagesPath)) return;
-
-        var existingFiles = Directory.GetFiles(ImagesPath);
         var validSet = new HashSet<string>(validPaths);
 
-        foreach (var file in existingFiles)
+        CleanDirectory(ImagesPath, validSet);
+
+        var validThumbs = validSet.Select(p =>
+            Path.Combine(ThumbnailsPath, $"{Path.GetFileNameWithoutExtension(p)}_t.png")
+        ).ToHashSet();
+
+        CleanDirectory(ThumbnailsPath, validThumbs);
+    }
+
+    private static void CleanDirectory(string path, HashSet<string> validFiles)
+    {
+        if (!Directory.Exists(path)) return;
+
+        foreach (var file in Directory.GetFiles(path))
         {
-            if (!validSet.Contains(file))
+            if (!validFiles.Contains(file))
             {
                 File.Delete(file);
             }
