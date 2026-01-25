@@ -16,5 +16,8 @@ While there are functional and wonderful "tanks" out there, we are looking for s
 ## Motivation & Contributions
 This project is driven by the desire to create something we actually want to use. We are not trying to impress anyone; we are just building a tool that fits our workflow and hopefully inspires others to contribute or learn along the way.
 
-## License
-MIT
+## 📜 License
+
+Distributed under the **GNU General Public License v3.0**. See the [`LICENSE`](./LICENSE) file for more information.
+
+*Copyright (C) 2026 Mario Hidalgo G. (rgdevment)*
