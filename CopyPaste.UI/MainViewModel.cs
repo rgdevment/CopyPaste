@@ -15,8 +15,6 @@ public partial class MainViewModel : ObservableObject
     private readonly ClipboardService _service;
     private Window? _window;
     private DispatcherQueue? _dispatcherQueue;
-    private const int _pageSize = 20;
-    private const int _maxItemsBeforeCleanup = 100;
     private bool _isLoading;
     private bool _hasMoreItems = true;
 
@@ -44,7 +42,7 @@ public partial class MainViewModel : ObservableObject
     {
         Items.Clear();
         _hasMoreItems = true;
-        foreach (var item in _service.GetHistory(_pageSize))
+        foreach (var item in _service.GetHistory(UIConfig.PageSize))
         {
             Items.Add(new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
         }
@@ -59,7 +57,7 @@ public partial class MainViewModel : ObservableObject
 
         _dispatcherQueue?.TryEnqueue(() =>
         {
-            var newItems = _service.GetHistory(_pageSize, Items.Count).ToList();
+            var newItems = _service.GetHistory(UIConfig.PageSize, Items.Count).ToList();
 
             if (newItems.Count == 0)
             {
@@ -101,9 +99,9 @@ public partial class MainViewModel : ObservableObject
 
     public void OnWindowDeactivated()
     {
-        if (Items.Count <= _maxItemsBeforeCleanup) return;
+        if (Items.Count <= UIConfig.MaxItemsBeforeCleanup) return;
 
-        while (Items.Count > _pageSize)
+        while (Items.Count > UIConfig.PageSize)
         {
             Items.RemoveAt(Items.Count - 1);
         }

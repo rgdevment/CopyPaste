@@ -16,6 +16,8 @@ public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
     private readonly AppWindow _appWindow;
+    private readonly IntPtr _hWnd;
+    private const int _hOTKEY_ID = 1;
 
     public MainWindow(ClipboardService service)
     {
@@ -23,19 +25,72 @@ public sealed partial class MainWindow : Window
         ViewModel.Initialize(this);
         this.InitializeComponent();
 
-        IntPtr hWnd = WindowNative.GetWindowHandle(this);
-        WindowId wndId = Win32Interop.GetWindowIdFromWindow(hWnd);
+        _hWnd = WindowNative.GetWindowHandle(this);
+        WindowId wndId = Win32Interop.GetWindowIdFromWindow(_hWnd);
         _appWindow = AppWindow.GetFromWindowId(wndId);
 
         SetWindowIcon();
         ConfigureSidebarStyle();
-
-        RemoveWindowBorder(hWnd);
+        RemoveWindowBorder(_hWnd);
+        RegisterGlobalHotkey();
+        HotkeyHelper.RegisterMessageHandler(_hWnd, OnHotkeyPressed);
 
         this.Activated += MainWindow_Activated;
-        this.Closed += (s, e) => { e.Handled = true; _appWindow.Hide(); };
+        this.Closed += MainWindow_Closed;
 
         ClipboardListView.Loaded += ClipboardListView_Loaded;
+    }
+
+    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        UnregisterHotKey(_hWnd, _hOTKEY_ID);
+        HotkeyHelper.UnregisterMessageHandler(_hWnd);
+        args.Handled = true;
+        _appWindow.Hide();
+    }
+
+    private void OnHotkeyPressed()
+    {
+        if (_appWindow.IsVisible)
+        {
+            _appWindow.Hide();
+        }
+        else
+        {
+            ViewModel.ShowWindow();
+        }
+    }
+
+    private void RegisterGlobalHotkey()
+    {
+        uint modifiers = 0;
+
+        if (UIConfig.Hotkey.UseWinKey)
+        {
+            modifiers |= _mOD_WIN;
+        }
+        else
+        {
+            modifiers |= _mOD_CONTROL;
+        }
+
+        if (UIConfig.Hotkey.UseAltKey)
+        {
+            modifiers |= _mOD_ALT;
+        }
+
+        bool registered = RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIConfig.Hotkey.VirtualKey);
+
+        if (!registered && UIConfig.Hotkey.UseWinKey)
+        {
+            // Fallback to Ctrl if Win key registration failed
+            modifiers = _mOD_CONTROL;
+            if (UIConfig.Hotkey.UseAltKey)
+            {
+                modifiers |= _mOD_ALT;
+            }
+            RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIConfig.Hotkey.VirtualKey);
+        }
     }
 
     private void ClipboardListView_Loaded(object sender, RoutedEventArgs e)
@@ -69,7 +124,7 @@ public sealed partial class MainWindow : Window
         var verticalOffset = scrollViewer.VerticalOffset;
         var maxVerticalOffset = scrollViewer.ScrollableHeight;
 
-        if (maxVerticalOffset > 0 && verticalOffset >= maxVerticalOffset - 100)
+        if (maxVerticalOffset > 0 && verticalOffset >= maxVerticalOffset - UIConfig.ScrollLoadThreshold)
         {
             ViewModel.LoadMoreItems();
         }
@@ -112,6 +167,12 @@ public sealed partial class MainWindow : Window
     [System.Runtime.InteropServices.LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref uint attrValue, int attrSize);
 
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
     // Window style constants
     private const int _gWL_STYLE = -16;
     private const int _gWL_EXSTYLE = -20;
@@ -131,7 +192,13 @@ public sealed partial class MainWindow : Window
     private const uint _sWP_NOZORDER = 0x0004;
     private const uint _sWP_NOACTIVATE = 0x0010;
 
+    // DWM constants
     private const int _dWMWA_WINDOW_CORNER_PREFERENCE = 33;
+
+    // Hotkey modifiers
+    private const uint _mOD_ALT = 0x0001;
+    private const uint _mOD_CONTROL = 0x0002;
+    private const uint _mOD_WIN = 0x0008;
 
     private static void RemoveWindowBorder(IntPtr hWnd)
     {
@@ -158,10 +225,10 @@ public sealed partial class MainWindow : Window
     {
         var displayArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary);
         var workArea = displayArea.WorkArea;
-        int width = 400;
-        int height = workArea.Height - 16;
+        int width = UIConfig.WindowWidth;
+        int height = workArea.Height - UIConfig.WindowMarginBottom;
         int x = (workArea.X + workArea.Width) - width;
-        int y = workArea.Y + 8;
+        int y = workArea.Y + UIConfig.WindowMarginTop;
         _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
     }
 
@@ -174,8 +241,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            IntPtr hWnd = WindowNative.GetWindowHandle(this);
-            RemoveWindowBorder(hWnd);
+            RemoveWindowBorder(_hWnd);
         }
     }
 

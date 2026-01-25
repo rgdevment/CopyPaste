@@ -71,6 +71,14 @@ public sealed partial class App : Application, IDisposable
         // ThumbnailConfig.GarbageCollectionThreshold = 2_000_000;
         // ThumbnailConfig.UIDecodeHeight = 260;
 
+        // Configure UI behavior (optional - defaults are already set)
+        // UIConfig.PageSize = 20;                      // Items loaded per page
+        // UIConfig.MaxItemsBeforeCleanup = 100;        // Max items in memory
+        // UIConfig.ScrollLoadThreshold = 100;          // Pixels from bottom to load more
+        // UIConfig.WindowWidth = 400;                  // Sidebar width
+        // UIConfig.Hotkey.UseWinKey = true;            // Use Win key (false = Ctrl key)
+        // UIConfig.Hotkey.VirtualKey = 0x56;           // V key (Win/Ctrl + Alt + V)
+
         _window = new MainWindow(_service!);
 
         _window.Activate();
