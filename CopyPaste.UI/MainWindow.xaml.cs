@@ -208,9 +208,21 @@ public sealed partial class MainWindow : Window
         {
             image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(imagePath));
         }
-        catch (Exception ex)
+        catch (UriFormatException ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load image: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Formato de URI inválido: {ex.Message}");
+            throw;
+        }
+        catch (System.IO.IOException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error de E/S al cargar la imagen: {ex.Message}");
+            throw;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Acceso no autorizado al cargar la imagen: {ex.Message}");
+            throw;
         }
     }
 }
+
