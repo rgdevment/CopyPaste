@@ -26,8 +26,7 @@ public sealed partial class MainWindow : Window
 
         ConfigureSidebarStyle();
 
-        // Initial border fix
-        PaintBorderGray(hWnd);
+        RemoveWindowBorder(hWnd);
 
         this.Activated += MainWindow_Activated;
         this.Closed += (s, e) => { e.Handled = true; _appWindow.Hide(); };
@@ -47,19 +46,60 @@ public sealed partial class MainWindow : Window
         MoveToRightEdge();
     }
 
-    // DWM API Definition
-#pragma warning disable IDE0060
+    // Win32 API Definitions
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint GetWindowLongPtrW(IntPtr hWnd, int nIndex);
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint SetWindowLongPtrW(IntPtr hWnd, int nIndex, nint dwNewLong);
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
     [System.Runtime.InteropServices.LibraryImport("dwmapi.dll")]
-    public static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref uint attrValue, int attrSize);
 
-    private const int _dWMWA_BORDER_COLOR = 34;
+    // Window style constants
+    private const int _gWL_STYLE = -16;
+    private const int _gWL_EXSTYLE = -20;
+    
+    private const nint _wS_BORDER = 0x00800000;
+    private const nint _wS_DLGFRAME = 0x00400000;
+    private const nint _wS_THICKFRAME = 0x00040000;
+    
+    private const nint _wS_EX_WINDOWEDGE = 0x00000100;
+    private const nint _wS_EX_CLIENTEDGE = 0x00000200;
+    private const nint _wS_EX_STATICEDGE = 0x00020000;
 
-    private const int _colorDarkGray = 0x00353535;
+    // SetWindowPos flags
+    private const uint _sWP_FRAMECHANGED = 0x0020;
+    private const uint _sWP_NOMOVE = 0x0002;
+    private const uint _sWP_NOSIZE = 0x0001;
+    private const uint _sWP_NOZORDER = 0x0004;
+    private const uint _sWP_NOACTIVATE = 0x0010;
 
-    private static void PaintBorderGray(IntPtr hWnd)
+    private const int _dWMWA_WINDOW_CORNER_PREFERENCE = 33;
+
+    private static void RemoveWindowBorder(IntPtr hWnd)
     {
-        int attributeValue = _colorDarkGray;
-        _ = DwmSetWindowAttribute(hWnd, _dWMWA_BORDER_COLOR, ref attributeValue, sizeof(int));
+        nint style = GetWindowLongPtrW(hWnd, _gWL_STYLE);
+        style &= ~_wS_BORDER;
+        style &= ~_wS_DLGFRAME;
+        style &= ~_wS_THICKFRAME;
+        SetWindowLongPtrW(hWnd, _gWL_STYLE, style);
+
+        nint exStyle = GetWindowLongPtrW(hWnd, _gWL_EXSTYLE);
+        exStyle &= ~_wS_EX_WINDOWEDGE;
+        exStyle &= ~_wS_EX_CLIENTEDGE;
+        exStyle &= ~_wS_EX_STATICEDGE;
+        SetWindowLongPtrW(hWnd, _gWL_EXSTYLE, exStyle);
+
+        SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0,
+            _sWP_FRAMECHANGED | _sWP_NOMOVE | _sWP_NOSIZE | _sWP_NOZORDER | _sWP_NOACTIVATE);
+
+        uint cornerPreference = 2;
+        _ = DwmSetWindowAttribute(hWnd, _dWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(uint));
     }
 
     private void MoveToRightEdge()
@@ -82,7 +122,7 @@ public sealed partial class MainWindow : Window
         else
         {
             IntPtr hWnd = WindowNative.GetWindowHandle(this);
-            PaintBorderGray(hWnd);
+            RemoveWindowBorder(hWnd);
         }
     }
 
