@@ -27,6 +27,7 @@ public sealed partial class MainWindow : Window
         WindowId wndId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow = AppWindow.GetFromWindowId(wndId);
 
+        SetWindowIcon();
         ConfigureSidebarStyle();
 
         RemoveWindowBorder(hWnd);
@@ -86,6 +87,15 @@ public sealed partial class MainWindow : Window
         }
         ExtendsContentIntoTitleBar = true;
         MoveToRightEdge();
+    }
+
+    private void SetWindowIcon()
+    {
+        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "CopyPasteLogoSimple.ico");
+        if (System.IO.File.Exists(iconPath))
+        {
+            _appWindow.SetIcon(iconPath);
+        }
     }
 
     // Win32 API Definitions

@@ -16,8 +16,8 @@
         </Grid.RowDefinitions>
 
         <tb:TaskbarIcon x:Name="TrayIcon"
-                        IconSource="/Assets/CopyPasteLogo.ico"
-                        ToolTipText="CopyPaste"
+        IconSource="/Assets/CopyPasteLogoSimple.ico"
+        ToolTipText="CopyPaste"
                         DoubleClickCommand="{x:Bind ViewModel.ShowWindowCommand}"
                         MenuActivation="RightClick">
             <tb:TaskbarIcon.ContextFlyout>

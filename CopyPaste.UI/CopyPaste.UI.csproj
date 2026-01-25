@@ -1,15 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <RootNamespace>CopyPaste.UI</RootNamespace>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Platforms>x64</Platforms>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <UseWinUI>true</UseWinUI>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+  <OutputType>WinExe</OutputType>
+  <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+  <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+  <RootNamespace>CopyPaste.UI</RootNamespace>
+  <ApplicationManifest>app.manifest</ApplicationManifest>
+  <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
+  <Platforms>x64</Platforms>
+  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  <UseWinUI>true</UseWinUI>
+  <Nullable>enable</Nullable>
+  <LangVersion>preview</LangVersion>
 
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
@@ -25,10 +26,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="Assets\CopyPasteLogo.ico" />
+    <Content Remove="Assets\CopyPasteLogoSimple.ico" />
     <Content Remove="Assets\CopyPasteNotification.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="Assets\CopyPasteLogo.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,17 +43,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
-    <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
-  </ItemGroup>
+      <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+      <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Content Update="Assets\CopyPasteLogo.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+    <ItemGroup>
+      <Content Include="Assets\CopyPasteLogoSimple.ico">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Converters\" />
-  </ItemGroup>
-</Project>
+    <ItemGroup>
+      <Folder Include="Converters\" />
+    </ItemGroup>
+  </Project>
