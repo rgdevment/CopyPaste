@@ -2,7 +2,7 @@
 
 First off, thank you for considering contributing to CopyPaste! It's people like you that make the open-source community such an amazing place to learn, inspire, and create.
 
-CopyPaste is an open-source project maintained by **Mario Hidalgo G. (rgdevment)**. We believe in high-performance tools and privacy respecting software.
+CopyPaste is an open-source project maintained by **rgdevment**. We believe in high-performance tools and privacy respecting software.
 
 ## 🛠 How Can I Contribute?
 
