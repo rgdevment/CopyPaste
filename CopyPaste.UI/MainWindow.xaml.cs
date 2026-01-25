@@ -5,6 +5,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using System;
+using System.Runtime.Versioning;
 using WinRT.Interop;
 
 namespace CopyPaste.UI;
@@ -63,11 +64,11 @@ public sealed partial class MainWindow : Window
     // Window style constants
     private const int _gWL_STYLE = -16;
     private const int _gWL_EXSTYLE = -20;
-    
+
     private const nint _wS_BORDER = 0x00800000;
     private const nint _wS_DLGFRAME = 0x00400000;
     private const nint _wS_THICKFRAME = 0x00040000;
-    
+
     private const nint _wS_EX_WINDOWEDGE = 0x00000100;
     private const nint _wS_EX_CLIENTEDGE = 0x00000200;
     private const nint _wS_EX_STATICEDGE = 0x00020000;
@@ -126,6 +127,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    [SupportedOSPlatform("windows10.0.17763.0")]
     private void Card_PointerEntered(object sender, PointerRoutedEventArgs _)
     {
         if (sender is FrameworkElement root && root.FindName("ActionPanel") is UIElement panel)
@@ -134,6 +136,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    [SupportedOSPlatform("windows10.0.17763.0")]
     private void Card_PointerExited(object sender, PointerRoutedEventArgs _)
     {
         if (sender is FrameworkElement root && root.FindName("ActionPanel") is UIElement panel)

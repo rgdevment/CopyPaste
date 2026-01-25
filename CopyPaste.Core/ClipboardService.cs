@@ -6,8 +6,11 @@ using System.Text.Json;
 
 namespace CopyPaste.Core;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.")]
 public class ClipboardService(IClipboardRepository repository)
 {
+    private const int _thumbnailWidth = 300;
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
 
@@ -42,7 +45,7 @@ public class ClipboardService(IClipboardRepository repository)
 
         string firstFile = files[0];
         string paths = string.Join(Environment.NewLine, files);
-        
+
         var meta = new Dictionary<string, object>
         {
             { "file_count", files.Count },
@@ -57,7 +60,13 @@ public class ClipboardService(IClipboardRepository repository)
         }
 
         string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
-        AddItem(new ClipboardItem { Content = paths, Type = type, Metadata = json, AppSource = source });
+        var item = new ClipboardItem { Content = paths, Type = type, Metadata = json, AppSource = source };
+        AddItem(item);
+
+        if (type is ClipboardContentType.Video or ClipboardContentType.Audio && File.Exists(firstFile))
+        {
+            _ = Task.Run(() => ProcessMediaThumbnailBackground(item, firstFile, type));
+        }
     }
 
     private void AddItem(ClipboardItem item, byte[]? imageData = null)
@@ -108,21 +117,16 @@ public class ClipboardService(IClipboardRepository repository)
             using var managedSrc = new MemoryStream(rawData);
             using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException("Decode failed");
 
-            // High-quality "Retina" resize settings
-            int targetWidth = 300;
-            int targetHeight = (int)(bitmap.Height * (targetWidth / (double)bitmap.Width));
+            int targetHeight = (int)(bitmap.Height * (_thumbnailWidth / (double)bitmap.Width));
             var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
 
-            using var resized = new SKBitmap(targetWidth, targetHeight);
+            using var resized = new SKBitmap(_thumbnailWidth, targetHeight);
             using (var canvas = new SKCanvas(resized))
             {
                 canvas.Clear(SKColors.Transparent);
-
-                // DrawImage is required to use SKSamplingOptions
                 using var imageToDraw = SKImage.FromBitmap(bitmap);
                 using var paint = new SKPaint { IsAntialias = true };
-
-                canvas.DrawImage(imageToDraw, SKRect.Create(targetWidth, targetHeight), sampling, paint);
+                canvas.DrawImage(imageToDraw, SKRect.Create(_thumbnailWidth, targetHeight), sampling, paint);
             }
 
             using var thumbImage = SKImage.FromBitmap(resized);
@@ -134,17 +138,16 @@ public class ClipboardService(IClipboardRepository repository)
             }
 
             var dataMap = new Dictionary<string, object>
-        {
-            { "thumb_path", thumbPath },
-            { "thumb_width", targetWidth },
-            { "thumb_height", targetHeight },
-            { "width", bitmap.Width },
-            { "height", bitmap.Height },
-            { "size", (long)rawData.Length },
-            { "hash", preCalculatedHash ?? string.Empty }
-        };
+            {
+                { "thumb_path", thumbPath },
+                { "thumb_width", _thumbnailWidth },
+                { "thumb_height", targetHeight },
+                { "width", bitmap.Width },
+                { "height", bitmap.Height },
+                { "size", (long)rawData.Length },
+                { "hash", preCalculatedHash ?? string.Empty }
+            };
 
-            // Serialize and finalize DB record
             item.Metadata = JsonSerializer.Serialize(dataMap, MetadataJsonContext.Default.DictionaryStringObject);
             repository.Update(item);
 
@@ -153,6 +156,169 @@ public class ClipboardService(IClipboardRepository repository)
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
             Debug.WriteLine($"Asset processing failed: {ex.Message}");
+        }
+    }
+
+    private void ProcessMediaThumbnailBackground(ClipboardItem item, string filePath, ClipboardContentType type)
+    {
+        var meta = ParseExistingMetadata(item.Metadata);
+
+        try
+        {
+            byte[]? thumbData = null;
+
+            // Extract thumbnail based on type
+            try
+            {
+                if (type == ClipboardContentType.Video)
+                {
+                    thumbData = WindowsThumbnailExtractor.GetThumbnail(filePath, _thumbnailWidth);
+                }
+                else if (type == ClipboardContentType.Audio)
+                {
+                    thumbData = ExtractAudioArtwork(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Thumbnail extraction failed: {ex.Message}");
+            }
+
+            // Save thumbnail if we got one
+            if (thumbData != null && thumbData.Length > 0)
+            {
+                try
+                {
+                    string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+
+                    using var managedSrc = new MemoryStream(thumbData);
+                    using var bitmap = SKBitmap.Decode(managedSrc);
+
+                    if (bitmap != null)
+                    {
+                        int targetHeight = (int)(bitmap.Height * (_thumbnailWidth / (double)bitmap.Width));
+                        var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
+
+                        using var resized = new SKBitmap(_thumbnailWidth, targetHeight);
+                        using (var canvas = new SKCanvas(resized))
+                        {
+                            canvas.Clear(SKColors.Transparent);
+                            using var imageToDraw = SKImage.FromBitmap(bitmap);
+                            using var paint = new SKPaint { IsAntialias = true };
+                            canvas.DrawImage(imageToDraw, SKRect.Create(_thumbnailWidth, targetHeight), sampling, paint);
+                        }
+
+                        using var thumbImage = SKImage.FromBitmap(resized);
+                        using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 90);
+
+                        using (var stream = File.Create(thumbPath))
+                        {
+                            data.SaveTo(stream);
+                        }
+
+                        meta["thumb_path"] = thumbPath;
+                        meta["thumb_width"] = _thumbnailWidth;
+                        meta["thumb_height"] = targetHeight;
+                        meta["original_width"] = bitmap.Width;
+                        meta["original_height"] = bitmap.Height;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Thumbnail save failed: {ex.Message}");
+                }
+            }
+
+            // Extract metadata (duration, etc.) - always try even if thumbnail failed
+            ExtractMediaMetadata(filePath, type, meta);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Media processing failed: {ex.Message}");
+        }
+        finally
+        {
+            // ALWAYS update and notify - even if thumbnail failed, metadata may have been extracted
+            try
+            {
+                item.Metadata = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
+                repository.Update(item);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to save metadata: {ex.Message}");
+            }
+
+            // ALWAYS notify UI so it can refresh (show placeholder or real thumb)
+            OnThumbnailReady?.Invoke(item);
+        }
+    }
+
+    private static Dictionary<string, object> ParseExistingMetadata(string? metadata)
+    {
+        var meta = new Dictionary<string, object>();
+        if (string.IsNullOrEmpty(metadata)) return meta;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(metadata);
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                meta[prop.Name] = prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString()!,
+                    JsonValueKind.Number => prop.Value.GetInt64(),
+                    _ => prop.Value.ToString()
+                };
+            }
+        }
+        catch (JsonException) { }
+
+        return meta;
+    }
+
+    private static void ExtractMediaMetadata(string filePath, ClipboardContentType type, Dictionary<string, object> meta)
+    {
+        try
+        {
+            // Use TagLib for both audio and video metadata - it's fast and doesn't need FFmpeg
+            using var tagFile = TagLib.File.Create(filePath);
+
+            if (tagFile.Properties.Duration != TimeSpan.Zero)
+                meta["duration"] = (long)tagFile.Properties.Duration.TotalSeconds;
+
+            if (type == ClipboardContentType.Video)
+            {
+                if (tagFile.Properties.VideoWidth > 0)
+                    meta["video_width"] = tagFile.Properties.VideoWidth;
+                if (tagFile.Properties.VideoHeight > 0)
+                    meta["video_height"] = tagFile.Properties.VideoHeight;
+            }
+            else if (type == ClipboardContentType.Audio)
+            {
+                if (!string.IsNullOrEmpty(tagFile.Tag.FirstAlbumArtist))
+                    meta["artist"] = tagFile.Tag.FirstAlbumArtist;
+                if (!string.IsNullOrEmpty(tagFile.Tag.Title))
+                    meta["title"] = tagFile.Tag.Title;
+                if (!string.IsNullOrEmpty(tagFile.Tag.Album))
+                    meta["album"] = tagFile.Tag.Album;
+            }
+        }
+        catch { /* Ignore metadata extraction failures */ }
+    }
+
+    private static byte[]? ExtractAudioArtwork(string audioPath)
+    {
+        try
+        {
+            using var tagFile = TagLib.File.Create(audioPath);
+            var pictures = tagFile.Tag.Pictures;
+            return pictures.Length > 0 ? pictures[0].Data.Data : null;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Audio artwork extraction failed: {ex.Message}");
+            return null;
         }
     }
 
@@ -197,7 +363,6 @@ public class ClipboardService(IClipboardRepository repository)
             ? repository.GetAll()
             : repository.Search(query);
 
-        // Sort by most recent and apply limit for UI performance
         return items
             .OrderByDescending(x => x.CreatedAt)
             .Take(limit);
@@ -214,10 +379,15 @@ public class ClipboardService(IClipboardRepository repository)
         {
             try
             {
-                if (!string.IsNullOrEmpty(item.Content) && File.Exists(item.Content))
+                // Only delete original file for images (we store a copy)
+                if (item.Type == ClipboardContentType.Image
+                    && !string.IsNullOrEmpty(item.Content)
+                    && File.Exists(item.Content))
                 {
                     File.Delete(item.Content);
                 }
+
+                // Always delete generated thumbnails
                 if (!string.IsNullOrEmpty(item.Metadata))
                 {
                     using var doc = JsonDocument.Parse(item.Metadata);
@@ -231,15 +401,7 @@ public class ClipboardService(IClipboardRepository repository)
                     }
                 }
             }
-            catch (IOException ex)
-            {
-                Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
-            }
-            catch (ArgumentException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or JsonException)
             {
                 Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
             }

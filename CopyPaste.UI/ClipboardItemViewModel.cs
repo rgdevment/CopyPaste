@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
@@ -66,13 +67,27 @@ public partial class ClipboardItemViewModel : ObservableObject
         _isPinned = model.IsPinned;
     }
 
-    public string Content => Model.Content;
+    public string Content => Model.Content ?? string.Empty;
 
-    public Visibility ImageVisibility => Model.Type == ClipboardContentType.Image 
-        ? Visibility.Visible : Visibility.Collapsed;
-    
-    public Visibility IsTextVisible => Model.Type != ClipboardContentType.Image 
-        ? Visibility.Visible : Visibility.Collapsed;
+    public string ThumbnailPath => GetThumbnailPathOrPlaceholder();
+
+    public Visibility ImageVisibility =>
+        Model.Type == ClipboardContentType.Image && !string.IsNullOrEmpty(Model.Content)
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility MediaThumbnailVisibility =>
+        Model.Type is ClipboardContentType.Video or ClipboardContentType.Audio
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility IsTextVisible =>
+        Model.Type is not ClipboardContentType.Image
+        && Model.Type is not ClipboardContentType.Video
+        && Model.Type is not ClipboardContentType.Audio
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    public string? MediaDuration => GetMediaDuration();
+
+    public Visibility DurationVisibility => MediaDuration != null ? Visibility.Visible : Visibility.Collapsed;
 
     public string HeaderTitle => Model.Type switch
     {
@@ -101,17 +116,74 @@ public partial class ClipboardItemViewModel : ObservableObject
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
 
     public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Audio or ClipboardContentType.Video;
-    
+
     public bool IsFileAvailable => !IsFileType || CheckFirstFileExists();
-    
+
     public Visibility FileWarningVisibility => IsFileType && !IsFileAvailable ? Visibility.Visible : Visibility.Collapsed;
 
     private bool CheckFirstFileExists()
     {
         if (string.IsNullOrEmpty(Model.Content)) return false;
-        
-        string firstPath = Model.Content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)[0];
-        return File.Exists(firstPath);
+
+        var paths = Model.Content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        if (paths.Length == 0) return false;
+
+        return File.Exists(paths[0]);
+    }
+
+    private string GetThumbnailPathOrPlaceholder()
+    {
+        var thumbPath = GetThumbnailPath();
+        if (!string.IsNullOrEmpty(thumbPath))
+            return thumbPath;
+
+        // Return static placeholder from Assets based on type
+        return Model.Type switch
+        {
+            ClipboardContentType.Video => "ms-appx:///Assets/thumb/video.png",
+            ClipboardContentType.Audio => "ms-appx:///Assets/thumb/audio.png",
+            _ => "ms-appx:///Assets/thumb/video.png"
+        };
+    }
+
+    private string? GetThumbnailPath()
+    {
+        if (string.IsNullOrEmpty(Model.Metadata)) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(Model.Metadata);
+            if (doc.RootElement.TryGetProperty("thumb_path", out var pathProp))
+            {
+                var path = pathProp.GetString();
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                    return path;
+            }
+        }
+        catch (JsonException) { }
+
+        return null;
+    }
+
+    private string? GetMediaDuration()
+    {
+        if (string.IsNullOrEmpty(Model.Metadata)) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(Model.Metadata);
+            if (doc.RootElement.TryGetProperty("duration", out var durationProp))
+            {
+                var seconds = durationProp.GetInt64();
+                var ts = TimeSpan.FromSeconds(seconds);
+                return ts.TotalHours >= 1
+                    ? ts.ToString(@"h\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture)
+                    : ts.ToString(@"m\:ss", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+        catch (JsonException) { }
+
+        return null;
     }
 
 

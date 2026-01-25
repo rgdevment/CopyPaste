@@ -13,7 +13,6 @@ public static class StorageConfig
 
     public static void Initialize()
     {
-        // CreateDirectory handles existence checks internally
         Directory.CreateDirectory(_appDataPath);
         Directory.CreateDirectory(ImagesPath);
         Directory.CreateDirectory(ThumbnailsPath);
