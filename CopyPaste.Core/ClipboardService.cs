@@ -67,6 +67,10 @@ public class ClipboardService(IClipboardRepository repository)
         {
             _ = Task.Run(() => ProcessMediaThumbnailBackground(item, firstFile, type));
         }
+        else if (type is ClipboardContentType.Image && File.Exists(firstFile))
+        {
+            _ = Task.Run(() => ProcessImageFileBackground(item, firstFile));
+        }
     }
 
     private void AddItem(ClipboardItem item, byte[]? imageData = null)
@@ -156,6 +160,68 @@ public class ClipboardService(IClipboardRepository repository)
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
             Debug.WriteLine($"Asset processing failed: {ex.Message}");
+        }
+    }
+
+    private void ProcessImageFileBackground(ClipboardItem item, string filePath)
+    {
+        var meta = ParseExistingMetadata(item.Metadata);
+
+        try
+        {
+            byte[] rawData = File.ReadAllBytes(filePath);
+            string hash = BitConverter.ToString(SHA256.HashData(rawData));
+            meta["hash"] = hash;
+
+            string originalPath = Path.Combine(StorageConfig.ImagesPath, $"{item.Id}.png");
+            File.WriteAllBytes(originalPath, rawData);
+
+            item.Content = originalPath;
+
+            string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+
+            using var managedSrc = new MemoryStream(rawData);
+            using var bitmap = SKBitmap.Decode(managedSrc);
+
+            if (bitmap != null)
+            {
+                int targetHeight = (int)(bitmap.Height * (_thumbnailWidth / (double)bitmap.Width));
+                var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
+
+                using var resized = new SKBitmap(_thumbnailWidth, targetHeight);
+                using (var canvas = new SKCanvas(resized))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var imageToDraw = SKImage.FromBitmap(bitmap);
+                    using var paint = new SKPaint { IsAntialias = true };
+                    canvas.DrawImage(imageToDraw, SKRect.Create(_thumbnailWidth, targetHeight), sampling, paint);
+                }
+
+                using var thumbImage = SKImage.FromBitmap(resized);
+                using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 90);
+
+                using (var stream = File.Create(thumbPath))
+                {
+                    data.SaveTo(stream);
+                }
+
+                meta["thumb_path"] = thumbPath;
+                meta["thumb_width"] = _thumbnailWidth;
+                meta["thumb_height"] = targetHeight;
+                meta["width"] = bitmap.Width;
+                meta["height"] = bitmap.Height;
+                meta["size"] = (long)rawData.Length;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Debug.WriteLine($"Image file processing failed: {ex.Message}");
+        }
+        finally
+        {
+            item.Metadata = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
+            repository.Update(item);
+            OnThumbnailReady?.Invoke(item);
         }
     }
 

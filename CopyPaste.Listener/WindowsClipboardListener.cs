@@ -166,9 +166,10 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             case ClipboardContentType.Link:
                 service.AddText(task.Text, task.Type, task.Source, task.RtfBytes);
                 break;
-            case ClipboardContentType.Image:
+            case ClipboardContentType.Image when task.ImageBytes != null:
                 service.AddImage(task.ImageBytes, task.Source);
                 break;
+            case ClipboardContentType.Image:
             case ClipboardContentType.File:
             case ClipboardContentType.Audio:
             case ClipboardContentType.Video:
