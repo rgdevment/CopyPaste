@@ -48,7 +48,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private static async Task OpenRepo()
     {
-        var uri = new Uri("https://github.com/rgdevment/CopyPaste");
+        var uri = new Uri("https://github.com/rgdevment/CopyPaste/issues");
         await Windows.System.Launcher.LaunchUriAsync(uri);
     }
 

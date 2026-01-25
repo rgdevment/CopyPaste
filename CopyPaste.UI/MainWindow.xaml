@@ -45,19 +45,12 @@
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
 
                 <Button Command="{x:Bind ViewModel.OpenRepoCommand}"
-                        ToolTipService.ToolTip="Ir al Repositorio"
+                        ToolTipService.ToolTip="Reportar error"
                         Padding="0"
                         Width="30" Height="30"
                         CornerRadius="4">
                     <FontIcon Glyph="&#xE8A7;" FontSize="12" Opacity="0.8"/>
                 </Button>
-
-                <Button Command="{x:Bind ViewModel.ClearAllCommand}"
-                        Content="Borrar todo"
-                        FontSize="12"
-                        Height="30"
-                        CornerRadius="4"
-                        Padding="12,0,12,0"/>
             </StackPanel>
         </Grid>
 
