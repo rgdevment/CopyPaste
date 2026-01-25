@@ -54,7 +54,8 @@
             </StackPanel>
         </Grid>
 
-        <ListView Grid.Row="1"
+        <ListView x:Name="ClipboardListView"
+                  Grid.Row="1"
                   ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
                   SelectionMode="None"
                   Padding="4,0,4,12">

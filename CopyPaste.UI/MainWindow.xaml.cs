@@ -3,7 +3,9 @@ using CopyPaste.UI.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using System;
 using System.Runtime.Versioning;
 using WinRT.Interop;
@@ -31,6 +33,45 @@ public sealed partial class MainWindow : Window
 
         this.Activated += MainWindow_Activated;
         this.Closed += (s, e) => { e.Handled = true; _appWindow.Hide(); };
+
+        ClipboardListView.Loaded += ClipboardListView_Loaded;
+    }
+
+    private void ClipboardListView_Loaded(object sender, RoutedEventArgs e)
+    {
+        var scrollViewer = FindScrollViewer(ClipboardListView);
+        if (scrollViewer != null)
+        {
+            scrollViewer.ViewChanged += ScrollViewer_ViewChanged;
+        }
+    }
+
+    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is ScrollViewer sv)
+                return sv;
+
+            var result = FindScrollViewer(child);
+            if (result != null)
+                return result;
+        }
+        return null;
+    }
+
+    private void ScrollViewer_ViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer scrollViewer) return;
+
+        var verticalOffset = scrollViewer.VerticalOffset;
+        var maxVerticalOffset = scrollViewer.ScrollableHeight;
+
+        if (maxVerticalOffset > 0 && verticalOffset >= maxVerticalOffset - 100)
+        {
+            ViewModel.LoadMoreItems();
+        }
     }
 
     private void ConfigureSidebarStyle()
@@ -118,6 +159,7 @@ public sealed partial class MainWindow : Window
     {
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
+            ViewModel.OnWindowDeactivated();
             _appWindow.Hide();
         }
         else

@@ -427,7 +427,7 @@ public class ClipboardService(IClipboardRepository repository)
         return false;
     }
 
-    public IEnumerable<ClipboardItem> GetHistory(int limit = 50, string? query = null)
+    public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null)
     {
         var items = string.IsNullOrWhiteSpace(query)
             ? repository.GetAll()
@@ -435,6 +435,7 @@ public class ClipboardService(IClipboardRepository repository)
 
         return items
             .OrderByDescending(x => x.CreatedAt)
+            .Skip(skip)
             .Take(limit);
     }
 

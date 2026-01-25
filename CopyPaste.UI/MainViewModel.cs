@@ -15,8 +15,15 @@ public partial class MainViewModel : ObservableObject
     private readonly ClipboardService _service;
     private Window? _window;
     private DispatcherQueue? _dispatcherQueue;
+    private const int _pageSize = 20;
+    private const int _maxItemsBeforeCleanup = 100;
+    private bool _isLoading;
+    private bool _hasMoreItems = true;
 
     public ObservableCollection<ClipboardItemViewModel> Items { get; } = [];
+
+    [ObservableProperty]
+    public partial bool IsLoadingMore { get; set; }
 
     public MainViewModel(ClipboardService service)
     {
@@ -36,22 +43,45 @@ public partial class MainViewModel : ObservableObject
     private void LoadHistory()
     {
         Items.Clear();
-        foreach (var item in _service.GetHistory(20))
+        _hasMoreItems = true;
+        foreach (var item in _service.GetHistory(_pageSize))
         {
             Items.Add(new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
         }
+    }
+
+    public void LoadMoreItems()
+    {
+        if (_isLoading || !_hasMoreItems) return;
+
+        _isLoading = true;
+        IsLoadingMore = true;
+
+        _dispatcherQueue?.TryEnqueue(() =>
+        {
+            var newItems = _service.GetHistory(_pageSize, Items.Count).ToList();
+
+            if (newItems.Count == 0)
+            {
+                _hasMoreItems = false;
+            }
+            else
+            {
+                foreach (var item in newItems)
+                {
+                    Items.Add(new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
+                }
+            }
+
+            _isLoading = false;
+            IsLoadingMore = false;
+        });
     }
 
     private void OnItemAdded(ClipboardItem item) =>
         _dispatcherQueue?.TryEnqueue(() =>
         {
             Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
-
-            // Limit visible items
-            while (Items.Count > 20)
-            {
-                Items.RemoveAt(Items.Count - 1);
-            }
         });
 
     private void OnThumbnailReady(ClipboardItem item) =>
@@ -68,6 +98,19 @@ public partial class MainViewModel : ObservableObject
     private void OnDeleteItem(ClipboardItemViewModel itemVM) => Items.Remove(itemVM);
     private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { }
     private void OnPinItem(ClipboardItemViewModel itemVM) { }
+
+    public void OnWindowDeactivated()
+    {
+        if (Items.Count <= _maxItemsBeforeCleanup) return;
+
+        while (Items.Count > _pageSize)
+        {
+            Items.RemoveAt(Items.Count - 1);
+        }
+
+        _hasMoreItems = true;
+        GC.Collect(2, GCCollectionMode.Optimized, false);
+    }
 
     [RelayCommand]
     private void ClearAll()
