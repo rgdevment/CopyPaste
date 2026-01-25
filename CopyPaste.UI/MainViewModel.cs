@@ -98,7 +98,13 @@ public partial class MainViewModel : ObservableObject
         }
     });
 
-    private void OnDeleteItem(ClipboardItemViewModel itemVM) => Items.Remove(itemVM);
+    private void OnDeleteItem(ClipboardItemViewModel itemVM)
+    {
+        // Delete from database and clean up app-generated files
+        _service.RemoveItem(itemVM.Model.Id);
+        // Remove from UI
+        Items.Remove(itemVM);
+    }
     private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { }
     private void OnPinItem(ClipboardItemViewModel itemVM) { }
 

@@ -63,13 +63,25 @@ public class LiteDbRepository : IClipboardRepository
         var col = db.GetCollection<ClipboardItem>(_collectionName);
 
         var item = col.FindById(id);
+        if (item == null) return;
 
-        // Clean up physical image file before removing record
-        if (item?.Type == ClipboardContentType.Image && File.Exists(item.Content))
+        // Clean up physical files stored by the app
+        // Image files stored in ImagesPath (backup copies)
+        if (item.Type == ClipboardContentType.Image && File.Exists(item.Content))
         {
-            File.Delete(item.Content);
+            try { File.Delete(item.Content); }
+            catch { /* Ignore cleanup errors */ }
         }
 
+        // Thumbnail files
+        string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+        if (File.Exists(thumbPath))
+        {
+            try { File.Delete(thumbPath); }
+            catch { /* Ignore cleanup errors */ }
+        }
+
+        // Remove from database
         col.Delete(id);
     }
 

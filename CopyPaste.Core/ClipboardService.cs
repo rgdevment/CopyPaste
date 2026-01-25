@@ -443,39 +443,10 @@ public class ClipboardService(IClipboardRepository repository)
         var item = repository.GetAll().FirstOrDefault(x => x.Id == id);
         if (item == null) return;
 
+        // The repository.Delete() method handles cleanup of app-generated files
+        // (backup images and thumbnails stored in LocalAppData)
+        // It NEVER deletes the original files
         repository.Delete(id);
-
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                // Only delete original file for images (we store a copy)
-                if (item.Type == ClipboardContentType.Image
-                    && !string.IsNullOrEmpty(item.Content)
-                    && File.Exists(item.Content))
-                {
-                    File.Delete(item.Content);
-                }
-
-                // Always delete generated thumbnails
-                if (!string.IsNullOrEmpty(item.Metadata))
-                {
-                    using var doc = JsonDocument.Parse(item.Metadata);
-                    if (doc.RootElement.TryGetProperty("thumb_path", out var pathProp))
-                    {
-                        string? thumbPath = pathProp.GetString();
-                        if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
-                        {
-                            File.Delete(thumbPath);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or JsonException)
-            {
-                Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
-            }
-        });
     }
 
     private static byte[]? ConvertDibToBmp(byte[] dibData)
