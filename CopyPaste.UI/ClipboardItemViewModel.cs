@@ -73,7 +73,6 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string HeaderTitle => Model.Type switch
     {
         ClipboardContentType.Text => "TEXT",
-        ClipboardContentType.RichText => "RICH TEXT",
         ClipboardContentType.Image => "IMAGE",
         ClipboardContentType.File => "FILE",
         ClipboardContentType.Link => "LINK",
@@ -85,7 +84,6 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string TypeIcon => Model.Type switch
     {
         ClipboardContentType.Text => "\uE8C4",
-        ClipboardContentType.RichText => "\uE8C4",
         ClipboardContentType.Image => "\uE91B",
         ClipboardContentType.Link => "\uE71B",
         ClipboardContentType.File => "\uE8B7",

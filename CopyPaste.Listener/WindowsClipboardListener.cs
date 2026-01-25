@@ -2,7 +2,6 @@ using CopyPaste.Core;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
@@ -165,10 +164,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         {
             case ClipboardContentType.Text:
             case ClipboardContentType.Link:
-                service.AddText(task.Text, task.Type, task.Source);
-                break;
-            case ClipboardContentType.RichText:
-                service.AddRichText(task.Text, task.RtfBytes, task.Source);
+                service.AddText(task.Text, task.Type, task.Source, task.RtfBytes);
                 break;
             case ClipboardContentType.Image:
                 service.AddImage(task.ImageBytes, task.Source);
@@ -207,26 +203,12 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
                     _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, null, bytes, null, source));
                 }
             }
-            else if (IsClipboardFormatAvailable(_cF_RTF) && IsClipboardFormatAvailable(_cF_UNICODETEXT))
-            {
-                var rtfBytes = ExtractBytes(_cF_RTF);
-                var text = ExtractText();
-                
-                if (rtfBytes != null && HasRichFormatting(rtfBytes))
-                {
-                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.RichText, text, rtfBytes, null, null, source));
-                }
-                else
-                {
-                    var type = DetectTextType(text);
-                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, null, null, null, source));
-                }
-            }
             else if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
                 var text = ExtractText();
                 var type = DetectTextType(text);
-                _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, null, null, null, source));
+                byte[]? rtfBytes = IsClipboardFormatAvailable(_cF_RTF) ? ExtractBytes(_cF_RTF) : null;
+                _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, rtfBytes, null, null, source));
             }
         }
         finally { CloseClipboard(); }
@@ -245,12 +227,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         return false;
     }
 
-    private static bool HasRichFormatting(byte[] rtfBytes)
-    {
-        string rtf = Encoding.ASCII.GetString(rtfBytes);
-        return FormattingRegex().IsMatch(rtf);
-    }
-
     private static ClipboardContentType DetectTextType(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return ClipboardContentType.Text;
@@ -260,16 +236,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     private static ClipboardContentType DetectFileCollectionType(Collection<string> files)
     {
         if (files.Count == 0) return ClipboardContentType.File;
-
-        var ext = Path.GetExtension(files[0]).ToUpperInvariant();
-
-        return ext switch
-        {
-            ".MP3" or ".WAV" or ".FLAC" or ".AAC" or ".OGG" or ".WMA" or ".M4A" => ClipboardContentType.Audio,
-            ".MP4" or ".AVI" or ".MKV" or ".MOV" or ".WMV" or ".FLV" or ".WEBM" => ClipboardContentType.Video,
-            ".PNG" or ".JPG" or ".JPEG" or ".GIF" or ".BMP" or ".WEBP" or ".SVG" or ".ICO" => ClipboardContentType.Image,
-            _ => ClipboardContentType.File
-        };
+        return FileExtensions.GetContentType(Path.GetExtension(files[0]));
     }
 
     private static string? GetClipboardSource()
@@ -304,9 +271,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
 
     [GeneratedRegex(@"^https?://[^\s]+$", RegexOptions.IgnoreCase)]
     private static partial Regex UrlRegex();
-
-    [GeneratedRegex(@"\\(b|i|ul|strike|super|sub|highlight|cf[0-9]|fs[0-9]|f[0-9]+\\)[^a-z]", RegexOptions.IgnoreCase)]
-    private static partial Regex FormattingRegex();
 
     private static byte[]? ExtractBytes(uint format)
     {

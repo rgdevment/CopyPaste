@@ -11,27 +11,18 @@ public class ClipboardService(IClipboardRepository repository)
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
 
-    public void AddText(string? text, ClipboardContentType type, string? source)
+    public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        AddItem(new ClipboardItem { Content = text, Type = type, AppSource = source });
-    }
 
-    public void AddRichText(string? plainText, byte[]? rtfBytes, string? source)
-    {
-        if (string.IsNullOrWhiteSpace(plainText) || rtfBytes == null) return;
-
-        string rtfBase64 = Convert.ToBase64String(rtfBytes);
-        var meta = new Dictionary<string, object> { { "rtf", rtfBase64 } };
-        string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
-
-        AddItem(new ClipboardItem
+        string? json = null;
+        if (rtfBytes != null)
         {
-            Content = plainText,
-            Type = ClipboardContentType.RichText,
-            Metadata = json,
-            AppSource = source
-        });
+            var meta = new Dictionary<string, object> { { "rtf", Convert.ToBase64String(rtfBytes) } };
+            json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
+        }
+
+        AddItem(new ClipboardItem { Content = text, Type = type, AppSource = source, Metadata = json });
     }
 
     public void AddImage(byte[]? dibData, string? source)
@@ -163,7 +154,6 @@ public class ClipboardService(IClipboardRepository repository)
         return current.Type switch
         {
             ClipboardContentType.Text or
-            ClipboardContentType.RichText or
             ClipboardContentType.Link or
             ClipboardContentType.File or
             ClipboardContentType.Audio or
