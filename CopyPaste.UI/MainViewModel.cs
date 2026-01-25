@@ -21,6 +21,7 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(ClipboardService service)
     {
         _service = service;
+        _service.OnItemAdded += OnItemAdded;
         _service.OnThumbnailReady += OnThumbnailReady;
         LoadHistory();
     }
@@ -40,6 +41,18 @@ public partial class MainViewModel : ObservableObject
             Items.Add(new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
         }
     }
+
+    private void OnItemAdded(ClipboardItem item) =>
+        _dispatcherQueue?.TryEnqueue(() =>
+        {
+            Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
+
+            // Limit visible items
+            while (Items.Count > 20)
+            {
+                Items.RemoveAt(Items.Count - 1);
+            }
+        });
 
     private void OnThumbnailReady(ClipboardItem item) =>
     _dispatcherQueue?.TryEnqueue(() =>

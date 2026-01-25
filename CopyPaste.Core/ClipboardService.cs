@@ -14,6 +14,9 @@ public class ClipboardService(IClipboardRepository repository)
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
+    public event Action<ClipboardItem>? OnItemAdded;
+
     public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
@@ -99,6 +102,7 @@ public class ClipboardService(IClipboardRepository repository)
         }
 
         repository.Save(item);
+        OnItemAdded?.Invoke(item);
 
         if (item.Type == ClipboardContentType.Image && imageData != null)
         {

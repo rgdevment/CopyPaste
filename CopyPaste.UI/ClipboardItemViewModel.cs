@@ -121,6 +121,81 @@ public partial class ClipboardItemViewModel : ObservableObject
 
     public Visibility FileWarningVisibility => IsFileType && !IsFileAvailable ? Visibility.Visible : Visibility.Collapsed;
 
+    // App Source (bottom left)
+    public string? AppSource => Model.AppSource;
+    public Visibility AppSourceVisibility => !string.IsNullOrEmpty(AppSource) ? Visibility.Visible : Visibility.Collapsed;
+
+    // Image dimensions from metadata
+    public string? ImageDimensions => GetImageDimensions();
+    public Visibility ImageDimensionsVisibility => ImageDimensions != null ? Visibility.Visible : Visibility.Collapsed;
+
+    // File size from metadata
+    public string? FileSize => GetFileSize();
+    public Visibility FileSizeVisibility => FileSize != null ? Visibility.Visible : Visibility.Collapsed;
+
+    // Media info visibility (duration + size for video/audio/image)
+    public Visibility MediaInfoVisibility =>
+        Model.Type is ClipboardContentType.Video or ClipboardContentType.Audio or ClipboardContentType.Image
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    private string? GetFileSize()
+    {
+        if (string.IsNullOrEmpty(Model.Metadata)) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(Model.Metadata);
+            
+            // Try "file_size" first (used for files), then "size" (used for images)
+            if (doc.RootElement.TryGetProperty("file_size", out var fileSizeProp))
+            {
+                return FormatFileSize(fileSizeProp.GetInt64());
+            }
+            
+            if (doc.RootElement.TryGetProperty("size", out var sizeProp))
+            {
+                return FormatFileSize(sizeProp.GetInt64());
+            }
+        }
+        catch (JsonException) { }
+
+        return null;
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = ["B", "KB", "MB", "GB"];
+        int order = 0;
+        double size = bytes;
+
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+
+        return $"{size:0.#} {sizes[order]}";
+    }
+
+    private string? GetImageDimensions()
+    {
+        if (Model.Type != ClipboardContentType.Image) return null;
+        if (string.IsNullOrEmpty(Model.Metadata)) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(Model.Metadata);
+            if (doc.RootElement.TryGetProperty("width", out var widthProp) &&
+                doc.RootElement.TryGetProperty("height", out var heightProp))
+            {
+                return $"{widthProp.GetInt64()}×{heightProp.GetInt64()}";
+            }
+        }
+        catch (JsonException) { }
+
+        return null;
+    }
+
     private bool CheckFirstFileExists()
     {
         if (string.IsNullOrEmpty(Model.Content)) return false;

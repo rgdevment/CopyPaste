@@ -149,6 +149,43 @@
                                 <TextBlock Text="Archivo no disponible" FontSize="11" Foreground="#FFAA00" Opacity="0.9"/>
                             </StackPanel>
 
+                            <!-- Footer: App Source (left) + Media Info (right) -->
+                            <Grid Grid.Row="2" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- App Source - Left -->
+                                <StackPanel Grid.Column="0" 
+                                            Orientation="Horizontal" 
+                                            Visibility="{x:Bind AppSourceVisibility}"
+                                            Opacity="0.5">
+                                    <FontIcon Glyph="&#xE737;" FontSize="10" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{x:Bind AppSource}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="150"/>
+                                </StackPanel>
+
+                                <!-- Media Info (Duration + Dimensions + Size) - Right -->
+                                <StackPanel Grid.Column="1" 
+                                            Orientation="Horizontal" 
+                                            Visibility="{x:Bind MediaInfoVisibility}"
+                                            Opacity="0.5"
+                                            Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind DurationVisibility}">
+                                        <FontIcon Glyph="&#xE916;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind MediaDuration}" FontSize="10"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind ImageDimensionsVisibility}">
+                                        <FontIcon Glyph="&#xE799;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind ImageDimensions}" FontSize="10"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind FileSizeVisibility}">
+                                        <FontIcon Glyph="&#xE7C3;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind FileSize}" FontSize="10"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
                             <StackPanel x:Name="ActionPanel" 
                                         Grid.Row="0" Grid.RowSpan="2"
                                         Orientation="Horizontal" 
