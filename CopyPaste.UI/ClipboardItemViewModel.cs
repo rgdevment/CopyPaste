@@ -297,10 +297,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     [RelayCommand]
     private void TogglePin()
     {
-        // This triggers the 'set' method in the IsPinned property defined above
         IsPinned = !IsPinned;
-
-        // Execute the callback to save in DB
         _pinAction(this);
     }
 }

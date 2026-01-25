@@ -449,6 +449,15 @@ public class ClipboardService(IClipboardRepository repository)
         repository.Delete(id);
     }
 
+    public void UpdatePin(Guid id, bool isPinned)
+    {
+        var item = repository.GetAll().FirstOrDefault(x => x.Id == id);
+        if (item == null) return;
+
+        item.IsPinned = isPinned;
+        item.ModifiedAt = DateTime.UtcNow;
+        repository.Update(item);
+    }
     private static byte[]? ConvertDibToBmp(byte[] dibData)
     {
         if (dibData.Length < 40) return null;

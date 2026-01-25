@@ -216,14 +216,6 @@
                                     <FontIcon Glyph="&#xE711;" FontSize="10"/>
                                 </Button>
                             </StackPanel>
-
-                            <FontIcon Glyph="&#xE840;" FontSize="12" 
-                                      Grid.Row="1"
-                                      HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                      Margin="0,0,-4,-4"
-                                      Opacity="0.9"
-                                      Foreground="{ThemeResource SystemControlHighlightAccentBrush}"
-                                      Visibility="{x:Bind PinIndicatorVisibility, Mode=OneWay}"/>
                         </Grid>
                     </Border>
                 </DataTemplate>

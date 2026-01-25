@@ -106,7 +106,9 @@ public partial class MainViewModel : ObservableObject
         Items.Remove(itemVM);
     }
     private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { }
-    private void OnPinItem(ClipboardItemViewModel itemVM) { }
+
+    private void OnPinItem(ClipboardItemViewModel itemVM) =>
+        _service.UpdatePin(itemVM.Model.Id, itemVM.IsPinned);
 
     public void OnWindowDeactivated()
     {
