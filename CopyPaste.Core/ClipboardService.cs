@@ -40,14 +40,23 @@ public class ClipboardService(IClipboardRepository repository)
     {
         if (files == null || files.Count == 0) return;
 
+        string firstFile = files[0];
         string paths = string.Join(Environment.NewLine, files);
+        
         var meta = new Dictionary<string, object>
         {
             { "file_count", files.Count },
-            { "first_ext", Path.GetExtension(files[0]) }
+            { "file_name", Path.GetFileName(firstFile) },
+            { "first_ext", Path.GetExtension(firstFile) }
         };
-        string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
 
+        if (File.Exists(firstFile))
+        {
+            var fileInfo = new FileInfo(firstFile);
+            meta["file_size"] = fileInfo.Length;
+        }
+
+        string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
         AddItem(new ClipboardItem { Content = paths, Type = type, Metadata = json, AppSource = source });
     }
 

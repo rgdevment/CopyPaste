@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
@@ -67,8 +68,11 @@ public partial class ClipboardItemViewModel : ObservableObject
 
     public string Content => Model.Content;
 
-    public Visibility IsImageVisible => Model.Type == ClipboardContentType.Image ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility IsTextVisible => Model.Type != ClipboardContentType.Image ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ImageVisibility => Model.Type == ClipboardContentType.Image 
+        ? Visibility.Visible : Visibility.Collapsed;
+    
+    public Visibility IsTextVisible => Model.Type != ClipboardContentType.Image 
+        ? Visibility.Visible : Visibility.Collapsed;
 
     public string HeaderTitle => Model.Type switch
     {
@@ -95,6 +99,20 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string PinIconGlyph => _isPinned ? "\uE840" : "\uE718";
     public string PinMenuText => _isPinned ? "Desanclar" : "Anclar";
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Audio or ClipboardContentType.Video;
+    
+    public bool IsFileAvailable => !IsFileType || CheckFirstFileExists();
+    
+    public Visibility FileWarningVisibility => IsFileType && !IsFileAvailable ? Visibility.Visible : Visibility.Collapsed;
+
+    private bool CheckFirstFileExists()
+    {
+        if (string.IsNullOrEmpty(Model.Content)) return false;
+        
+        string firstPath = Model.Content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)[0];
+        return File.Exists(firstPath);
+    }
 
 
     [RelayCommand]

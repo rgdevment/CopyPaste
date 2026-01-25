@@ -81,6 +81,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
@@ -97,6 +98,13 @@
                                 </StackPanel>
                             </Grid>
 
+
+
+
+
+
+
+
                             <TextBlock Text="{x:Bind Content}" 
                                        Grid.Row="1"
                                        MaxLines="3" 
@@ -112,7 +120,16 @@
                                    Stretch="UniformToFill"
                                    MaxHeight="140"
                                    HorizontalAlignment="Left"
-                                   Visibility="{x:Bind IsImageVisible}"/>
+                                   Visibility="{x:Bind ImageVisibility}"/>
+
+                            <StackPanel Orientation="Horizontal" 
+                                        Grid.Row="2" 
+                                        Margin="0,8,0,0"
+                                        Visibility="{x:Bind FileWarningVisibility}">
+                                <FontIcon Glyph="&#xE7BA;" FontSize="12" Foreground="#FFAA00" Margin="0,0,6,0"/>
+                                <TextBlock Text="Archivo no disponible" FontSize="11" Foreground="#FFAA00" Opacity="0.9"/>
+                            </StackPanel>
+
                             <StackPanel x:Name="ActionPanel" 
                                         Grid.Row="0" Grid.RowSpan="2"
                                         Orientation="Horizontal" 
