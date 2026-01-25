@@ -35,7 +35,9 @@ public static partial class WindowsThumbnailExtractor
 
     public static byte[]? GetThumbnail(string filePath, int width = 300)
     {
+        if (string.IsNullOrWhiteSpace(filePath)) return null;
         if (!File.Exists(filePath)) return null;
+        if (width <= 0 || width > 4096) return null;
 
         IntPtr shellItem = IntPtr.Zero;
         IntPtr hBitmap = IntPtr.Zero;
@@ -43,7 +45,11 @@ public static partial class WindowsThumbnailExtractor
         try
         {
             int hr = SHCreateItemFromParsingName(filePath, IntPtr.Zero, _iShellItemImageFactoryGuid, out shellItem);
-            if (hr != 0 || shellItem == IntPtr.Zero) return null;
+            if (hr != 0 || shellItem == IntPtr.Zero)
+            {
+                System.Diagnostics.Debug.WriteLine($"SHCreateItemFromParsingName failed: HRESULT 0x{hr:X8}");
+                return null;
+            }
 
             // Get the IShellItemImageFactory interface
             var factory = (IShellItemImageFactory)Marshal.GetObjectForIUnknown(shellItem);
@@ -52,13 +58,28 @@ public static partial class WindowsThumbnailExtractor
             var size = new SIZE { cx = width, cy = width };
             factory.GetImage(size, SIIGBF.ThumbnailOnly | SIIGBF.BiggerSizeOk, out hBitmap);
 
-            if (hBitmap == IntPtr.Zero) return null;
+            if (hBitmap == IntPtr.Zero)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetImage returned null bitmap for: {Path.GetFileName(filePath)}");
+                return null;
+            }
 
             // Convert HBITMAP to byte array
             return HBitmapToPngBytes(hBitmap);
         }
-        catch
+        catch (COMException ex)
         {
+            System.Diagnostics.Debug.WriteLine($"COM error extracting thumbnail: 0x{ex.HResult:X8} - {ex.Message}");
+            return null;
+        }
+        catch (InvalidCastException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Interface cast failed: {ex.Message}");
+            return null;
+        }
+        catch (Exception ex) when (ex is OutOfMemoryException or ExternalException)
+        {
+            System.Diagnostics.Debug.WriteLine($"Resource error: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
         finally
@@ -77,8 +98,14 @@ public static partial class WindowsThumbnailExtractor
             bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
             return ms.ToArray();
         }
-        catch
+        catch (ExternalException ex)
         {
+            System.Diagnostics.Debug.WriteLine($"GDI+ error converting bitmap: {ex.Message}");
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Invalid bitmap handle: {ex.Message}");
             return null;
         }
     }

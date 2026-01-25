@@ -138,22 +138,34 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
 
     private async Task ProcessTaskWithRetryAsync(ClipboardTask task)
     {
-        bool success = false;
-        while (!success && !_cts.IsCancellationRequested)
+        const int maxRetries = 3;
+        int attempt = 0;
+
+        while (attempt < maxRetries && !_cts.IsCancellationRequested)
         {
             try
             {
                 DispatchToService(task);
-                success = true;
+                return;
             }
-            catch (IOException)
+            catch (IOException ex)
             {
-                await Task.Delay(500, _cts.Token).ConfigureAwait(false);
+                attempt++;
+                Debug.WriteLine($"IO error (attempt {attempt}/{maxRetries}): {ex.Message}");
+                if (attempt < maxRetries)
+                {
+                    await Task.Delay(500 * attempt, _cts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Debug.WriteLine($"Access denied: {ex.Message}");
+                return; // No retry for permission issues
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Debug.WriteLine($"Critical error: {ex.Message}");
-                success = true;
+                Debug.WriteLine($"Unexpected error processing clipboard task: {ex.GetType().Name} - {ex.Message}");
+                return;
             }
         }
     }
@@ -182,7 +194,11 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     {
         Thread.Sleep(50);
 
-        if (!OpenClipboard(_hwnd)) return;
+        if (!OpenClipboard(_hwnd))
+        {
+            Debug.WriteLine("Failed to open clipboard - may be locked by another process");
+            return;
+        }
 
         try
         {
@@ -193,13 +209,16 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             if (IsClipboardFormatAvailable(_cF_HDROP))
             {
                 var files = ExtractFilePaths();
-                var type = DetectFileCollectionType(files);
-                _taskQueue.Writer.TryWrite(new ClipboardTask(type, null, null, null, files, source));
+                if (files.Count > 0)
+                {
+                    var type = DetectFileCollectionType(files);
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, null, null, null, files, source));
+                }
             }
             else if (IsClipboardFormatAvailable(_cF_DIB))
             {
                 var bytes = ExtractBytes(_cF_DIB);
-                if (bytes != null)
+                if (bytes != null && bytes.Length > 0)
                 {
                     _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, null, bytes, null, source));
                 }
@@ -207,10 +226,17 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             else if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
                 var text = ExtractText();
-                var type = DetectTextType(text);
-                byte[]? rtfBytes = IsClipboardFormatAvailable(_cF_RTF) ? ExtractBytes(_cF_RTF) : null;
-                _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, rtfBytes, null, null, source));
+                if (!string.IsNullOrEmpty(text))
+                {
+                    var type = DetectTextType(text);
+                    byte[]? rtfBytes = IsClipboardFormatAvailable(_cF_RTF) ? ExtractBytes(_cF_RTF) : null;
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, rtfBytes, null, null, source));
+                }
             }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Debug.WriteLine($"Clipboard processing error: {ex.GetType().Name} - {ex.Message}");
         }
         finally { CloseClipboard(); }
     }
@@ -236,7 +262,9 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
 
     private static ClipboardContentType DetectFileCollectionType(Collection<string> files)
     {
-        if (files.Count == 0) return ClipboardContentType.File;
+        // Only detect specific media types for single files.
+        // Multiple files (mixed or same type) are treated as File to avoid expensive thumbnail generation.
+        if (files.Count != 1) return ClipboardContentType.File;
         return FileExtensions.GetContentType(Path.GetExtension(files[0]));
     }
 
@@ -253,19 +281,9 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             using var process = Process.GetProcessById((int)processId);
             return process.ProcessName;
         }
-        catch (ArgumentException)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            // El proceso no existe.
-            return null;
-        }
-        catch (InvalidOperationException)
-        {
-            // El proceso ya ha terminado.
-            return null;
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            // Error de Win32 al obtener el proceso.
+            // Process no longer exists or access denied - expected scenarios
             return null;
         }
     }
@@ -277,14 +295,32 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     {
         IntPtr hData = GetClipboardData(format);
         if (hData == IntPtr.Zero) return null;
+
         IntPtr pData = GlobalLock(hData);
+        if (pData == IntPtr.Zero)
+        {
+            Debug.WriteLine($"GlobalLock failed for format {format}");
+            return null;
+        }
+
         try
         {
-            int size = (int)GlobalSize(hData);
-            if (size <= 0) return null;
+            nuint rawSize = GlobalSize(hData);
+            if (rawSize == 0 || rawSize > int.MaxValue)
+            {
+                Debug.WriteLine($"Invalid data size: {rawSize}");
+                return null;
+            }
+
+            int size = (int)rawSize;
             byte[] buffer = new byte[size];
             Marshal.Copy(pData, buffer, 0, size);
             return buffer;
+        }
+        catch (OutOfMemoryException ex)
+        {
+            Debug.WriteLine($"Out of memory extracting clipboard data: {ex.Message}");
+            return null;
         }
         finally { GlobalUnlock(hData); }
     }
@@ -293,27 +329,63 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     {
         IntPtr hData = GetClipboardData(_cF_UNICODETEXT);
         if (hData == IntPtr.Zero) return null;
+
         IntPtr pData = GlobalLock(hData);
-        try { return Marshal.PtrToStringUni(pData); }
+        if (pData == IntPtr.Zero)
+        {
+            Debug.WriteLine("GlobalLock failed for text extraction");
+            return null;
+        }
+
+        try
+        {
+            return Marshal.PtrToStringUni(pData);
+        }
+        catch (Exception ex) when (ex is AccessViolationException or ArgumentException)
+        {
+            Debug.WriteLine($"Text extraction failed: {ex.Message}");
+            return null;
+        }
         finally { GlobalUnlock(hData); }
     }
 
     private static Collection<string> ExtractFilePaths()
     {
-        IntPtr hData = GetClipboardData(_cF_HDROP);
         List<string> files = [];
-        if (hData == IntPtr.Zero) return new Collection<string>(files);
 
-        uint count = DragQueryFileW(hData, 0xFFFFFFFF, null, 0);
-        for (uint i = 0; i < count; i++)
+        try
         {
-            uint length = DragQueryFileW(hData, i, null, 0);
-            char[] buffer = new char[length + 1];
-            if (DragQueryFileW(hData, i, buffer, (uint)buffer.Length) > 0)
+            IntPtr hData = GetClipboardData(_cF_HDROP);
+            if (hData == IntPtr.Zero) return new Collection<string>(files);
+
+            uint count = DragQueryFileW(hData, 0xFFFFFFFF, null, 0);
+            if (count == 0 || count > 10000) // Sanity check
             {
-                files.Add(new string(buffer).TrimEnd('\0'));
+                Debug.WriteLine($"Invalid file count: {count}");
+                return new Collection<string>(files);
+            }
+
+            for (uint i = 0; i < count; i++)
+            {
+                uint length = DragQueryFileW(hData, i, null, 0);
+                if (length == 0 || length > 32767) continue; // MAX_PATH extended
+
+                char[] buffer = new char[length + 1];
+                if (DragQueryFileW(hData, i, buffer, (uint)buffer.Length) > 0)
+                {
+                    string path = new string(buffer).TrimEnd('\0');
+                    if (!string.IsNullOrWhiteSpace(path))
+                    {
+                        files.Add(path);
+                    }
+                }
             }
         }
+        catch (Exception ex) when (ex is OutOfMemoryException or AccessViolationException)
+        {
+            Debug.WriteLine($"File path extraction failed: {ex.Message}");
+        }
+
         return new Collection<string>(files);
     }
 
