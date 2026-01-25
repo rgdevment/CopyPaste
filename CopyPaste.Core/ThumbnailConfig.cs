@@ -13,21 +13,21 @@ public static class ThumbnailConfig
     /// Lower values = less memory, faster processing, lower quality.
     /// Recommended: 200-300px
     /// </summary>
-    public static int Width { get; set; } = 200;
+    public static int Width { get; set; } = 220;
 
     /// <summary>
     /// PNG encoding quality for image thumbnails (0-100).
     /// Higher values = better quality but larger files.
     /// Recommended: 75-90
     /// </summary>
-    public static int QualityPng { get; set; } = 75;
+    public static int QualityPng { get; set; } = 80;
 
     /// <summary>
     /// JPEG encoding quality for video/media thumbnails (0-100).
     /// Higher values = better quality but larger files.
     /// Recommended: 75-90
     /// </summary>
-    public static int QualityJpeg { get; set; } = 75;
+    public static int QualityJpeg { get; set; } = 80;
 
     /// <summary>
     /// Image size threshold (in bytes) to trigger garbage collection after processing.
@@ -41,5 +41,5 @@ public static class ThumbnailConfig
     /// Should be slightly smaller than thumbnail width for optimal rendering.
     /// Recommended: Width - 30px
     /// </summary>
-    public static int UIDecodeHeight { get; set; } = 180;
+    public static int UIDecodeHeight { get; set; } = 200;
 }
