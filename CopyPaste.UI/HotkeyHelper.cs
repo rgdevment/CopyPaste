@@ -6,7 +6,7 @@ namespace CopyPaste.UI;
 /// <summary>
 /// Helper class to handle Windows messages for hotkey support in WinUI 3.
 /// </summary>
-internal static class HotkeyHelper
+internal static partial class HotkeyHelper
 {
     private const int _wM_HOTKEY = 0x0312;
     private static SubclassProc? _subclassProcDelegate;
@@ -40,12 +40,14 @@ internal static class HotkeyHelper
 
     private delegate nint SubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, nuint uIdSubclass, IntPtr dwRefData);
 
-    [DllImport("comctl32.dll")]
-    private static extern bool SetWindowSubclass(IntPtr hWnd, SubclassProc pfnSubclass, nuint uIdSubclass, IntPtr dwRefData);
+    [LibraryImport("comctl32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool SetWindowSubclass(IntPtr hWnd, SubclassProc pfnSubclass, nuint uIdSubclass, IntPtr dwRefData);
 
-    [DllImport("comctl32.dll")]
-    private static extern bool RemoveWindowSubclass(IntPtr hWnd, SubclassProc? pfnSubclass, nuint uIdSubclass);
+    [LibraryImport("comctl32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool RemoveWindowSubclass(IntPtr hWnd, SubclassProc? pfnSubclass, nuint uIdSubclass);
 
-    [DllImport("comctl32.dll")]
-    private static extern nint DefSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+    [LibraryImport("comctl32.dll")]
+    private static partial nint DefSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
 }

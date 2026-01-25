@@ -38,6 +38,9 @@ public sealed partial class MainWindow : Window
         this.Activated += MainWindow_Activated;
         this.Closed += MainWindow_Closed;
 
+        // Also listen to AppWindow events to detect deactivation reliably
+        _appWindow.Changed += AppWindow_Changed;
+
         ClipboardListView.Loaded += ClipboardListView_Loaded;
     }
 
@@ -45,6 +48,14 @@ public sealed partial class MainWindow : Window
     {
         UnregisterHotKey(_hWnd, _hOTKEY_ID);
         HotkeyHelper.UnregisterMessageHandler(_hWnd);
+        // If the app is exiting, allow close to proceed
+        if (Application.Current is App app && app.IsExiting)
+        {
+            args.Handled = false;
+            return;
+        }
+
+        // Otherwise prevent app shutdown and just hide the window
         args.Handled = true;
         _appWindow.Hide();
     }
@@ -65,7 +76,7 @@ public sealed partial class MainWindow : Window
     {
         uint modifiers = 0;
 
-        if (UIConfig.Hotkey.UseWinKey)
+        if (UIHotkey.UseWinKey)
         {
             modifiers |= _mOD_WIN;
         }
@@ -74,31 +85,43 @@ public sealed partial class MainWindow : Window
             modifiers |= _mOD_CONTROL;
         }
 
-        if (UIConfig.Hotkey.UseAltKey)
+        if (UIHotkey.UseAltKey)
         {
             modifiers |= _mOD_ALT;
         }
 
-        bool registered = RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIConfig.Hotkey.VirtualKey);
+        bool registered = RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIHotkey.VirtualKey);
 
-        if (!registered && UIConfig.Hotkey.UseWinKey)
+        if (!registered && UIHotkey.UseWinKey)
         {
             // Fallback to Ctrl if Win key registration failed
             modifiers = _mOD_CONTROL;
-            if (UIConfig.Hotkey.UseAltKey)
+            if (UIHotkey.UseAltKey)
             {
                 modifiers |= _mOD_ALT;
             }
-            RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIConfig.Hotkey.VirtualKey);
+            RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIHotkey.VirtualKey);
         }
     }
 
-    private void ClipboardListView_Loaded(object sender, RoutedEventArgs e)
+    private void ClipboardListView_Loaded(object sender, RoutedEventArgs _)
     {
         var scrollViewer = FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
         {
             scrollViewer.ViewChanged += ScrollViewer_ViewChanged;
+        }
+    }
+
+    private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+    {
+        if (args.DidPresenterChange || args.DidVisibilityChange)
+        {
+            // If we lost visibility due to activation change, ensure cleanup
+            if (!sender.IsVisible)
+            {
+                ViewModel.OnWindowDeactivated();
+            }
         }
     }
 
@@ -167,11 +190,13 @@ public sealed partial class MainWindow : Window
     [System.Runtime.InteropServices.LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref uint attrValue, int attrSize);
 
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [System.Runtime.InteropServices.LibraryImport("user32.dll", SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    [System.Runtime.InteropServices.LibraryImport("user32.dll", SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool UnregisterHotKey(IntPtr hWnd, int id);
 
     // Window style constants
     private const int _gWL_STYLE = -16;
@@ -263,7 +288,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ClipboardImage_Loaded(object sender, RoutedEventArgs e)
+    private void ClipboardImage_Loaded(object sender, RoutedEventArgs _)
     {
         if (sender is not Image image) return;
 

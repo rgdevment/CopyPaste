@@ -42,27 +42,27 @@ public static class UIConfig
     /// Vertical margin from bottom of work area in pixels.
     /// </summary>
     public static int WindowMarginBottom { get; set; } = 16;
+}
+
+/// <summary>
+/// Global hotkey to show/hide the window.
+/// Modifiers: Win (default) or Ctrl (if Win fails to register)
+/// Key: Alt + V
+/// </summary>
+public static class UIHotkey
+{
+    /// <summary>
+    /// Virtual key code for the hotkey (V = 0x56)
+    /// </summary>
+    public static uint VirtualKey { get; set; } = 0x56; // V key
 
     /// <summary>
-    /// Global hotkey to show/hide the window.
-    /// Modifiers: Win (default) or Ctrl (if Win fails to register)
-    /// Key: Alt + V
+    /// Use Windows key as modifier (true) or Ctrl key (false)
     /// </summary>
-    public static class Hotkey
-    {
-        /// <summary>
-        /// Virtual key code for the hotkey (V = 0x56)
-        /// </summary>
-        public static uint VirtualKey { get; set; } = 0x56; // V key
+    public static bool UseWinKey { get; set; } = true;
 
-        /// <summary>
-        /// Use Windows key as modifier (true) or Ctrl key (false)
-        /// </summary>
-        public static bool UseWinKey { get; set; } = true;
-
-        /// <summary>
-        /// Include Alt modifier (always true for this app)
-        /// </summary>
-        public static bool UseAltKey { get; set; } = true;
-    }
+    /// <summary>
+    /// Include Alt modifier (always true for this app)
+    /// </summary>
+    public static bool UseAltKey { get; set; } = true;
 }

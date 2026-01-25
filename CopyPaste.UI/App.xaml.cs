@@ -30,6 +30,7 @@ public sealed partial class App : Application, IDisposable
     private readonly WindowsClipboardListener? _listener;
     private readonly ClipboardService? _service;
     private bool _isDisposed;
+    public bool IsExiting { get; private set; }
 
     public App()
     {
@@ -82,6 +83,30 @@ public sealed partial class App : Application, IDisposable
         _window = new MainWindow(_service!);
 
         _window.Activate();
+    }
+
+    public void BeginExit()
+    {
+        IsExiting = true;
+        try
+        {
+            _listener?.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Ya está eliminado, ignorar
+        }
+        catch (Exception)
+        {
+            // Registrar o manejar según sea necesario, pero no suprimir silenciosamente
+            throw;
+        }
+
+        // Close the window to trigger normal shutdown
+        _window?.Close();
+
+        // Ensure application exit
+        Application.Current.Exit();
     }
 
     public void Dispose()

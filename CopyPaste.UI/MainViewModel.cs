@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using WinRT.Interop;
 
 namespace CopyPaste.UI.ViewModels;
 
@@ -22,6 +23,10 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsLoadingMore { get; set; }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(IntPtr hWnd);
 
     public MainViewModel(ClipboardService service)
     {
@@ -126,6 +131,25 @@ public partial class MainViewModel : ObservableObject
         await Windows.System.Launcher.LaunchUriAsync(uri);
     }
 
-    [RelayCommand] public void ShowWindow() => _window?.Activate();
-    [RelayCommand] public static void Exit() => Application.Current.Exit();
+    [RelayCommand]
+    public void ShowWindow()
+    {
+        _window?.Activate();
+        if (_window != null)
+        {
+            var hWnd = WindowNative.GetWindowHandle(_window);
+            SetForegroundWindow(hWnd);
+        }
+    }
+    [RelayCommand] public static void Exit()
+    {
+        if (Application.Current is App app)
+        {
+            app.BeginExit();
+        }
+        else
+        {
+            Application.Current.Exit();
+        }
+    }
 }
