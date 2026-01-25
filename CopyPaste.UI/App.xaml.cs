@@ -50,7 +50,7 @@ public sealed partial class App : Application, IDisposable
     {
         // Configure thumbnail settings before initializing services
         // Uncomment one of the profiles below or customize your own
-        
+
         // Low Memory Profile (4-8GB RAM):
         // ThumbnailConfig.Width = 200;
         // ThumbnailConfig.QualityPng = 75;

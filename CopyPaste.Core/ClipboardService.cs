@@ -43,16 +43,18 @@ public class ClipboardService(IClipboardRepository repository)
         if (files == null || files.Count == 0) return;
 
         string firstFile = files[0];
+        bool isDirectory = Directory.Exists(firstFile);
         string paths = string.Join(Environment.NewLine, files);
 
         var meta = new Dictionary<string, object>
         {
             { "file_count", files.Count },
             { "file_name", Path.GetFileName(firstFile) },
-            { "first_ext", Path.GetExtension(firstFile) }
+            { "first_ext", Path.GetExtension(firstFile) },
+            { "is_directory", isDirectory }
         };
 
-        if (File.Exists(firstFile))
+        if (!isDirectory && File.Exists(firstFile))
         {
             var fileInfo = new FileInfo(firstFile);
             meta["file_size"] = fileInfo.Length;
@@ -397,6 +399,7 @@ public class ClipboardService(IClipboardRepository repository)
             ClipboardContentType.Text or
             ClipboardContentType.Link or
             ClipboardContentType.File or
+            ClipboardContentType.Folder or
             ClipboardContentType.Audio or
             ClipboardContentType.Video => last.Content == current.Content,
 

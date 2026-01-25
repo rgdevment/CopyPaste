@@ -94,11 +94,11 @@ public static partial class WindowsThumbnailExtractor
         {
             using var bitmap = System.Drawing.Image.FromHbitmap(hBitmap);
             using var ms = new MemoryStream();
-            
+
             // Use JPEG with configured quality for good balance between size and quality
             var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
                 .FirstOrDefault(e => e.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
-            
+
             if (encoder != null)
             {
                 using var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
@@ -110,7 +110,7 @@ public static partial class WindowsThumbnailExtractor
             {
                 bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
             }
-            
+
             return ms.ToArray();
         }
         catch (ExternalException ex)

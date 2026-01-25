@@ -141,7 +141,8 @@ public partial class MainViewModel : ObservableObject
             SetForegroundWindow(hWnd);
         }
     }
-    [RelayCommand] public static void Exit()
+    [RelayCommand]
+    public static void Exit()
     {
         if (Application.Current is App app)
         {

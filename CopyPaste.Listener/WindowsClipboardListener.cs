@@ -183,6 +183,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
                 break;
             case ClipboardContentType.Image:
             case ClipboardContentType.File:
+            case ClipboardContentType.Folder:
             case ClipboardContentType.Audio:
             case ClipboardContentType.Video:
                 service.AddFiles(task.Files, task.Type, task.Source);
@@ -265,7 +266,11 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         // Only detect specific media types for single files.
         // Multiple files (mixed or same type) are treated as File to avoid expensive thumbnail generation.
         if (files.Count != 1) return ClipboardContentType.File;
-        return FileExtensions.GetContentType(Path.GetExtension(files[0]));
+
+        string path = files[0];
+        if (Directory.Exists(path)) return ClipboardContentType.Folder;
+
+        return FileExtensions.GetContentType(Path.GetExtension(path));
     }
 
     private static string? GetClipboardSource()

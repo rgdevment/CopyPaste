@@ -6,6 +6,7 @@ public enum ClipboardContentType
     Text,
     Image,
     File,
+    Folder,
     Link,
     Audio,
     Video,

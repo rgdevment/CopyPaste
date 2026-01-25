@@ -96,6 +96,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         ClipboardContentType.Text => "TEXT",
         ClipboardContentType.Image => "IMAGE",
         ClipboardContentType.File => "FILE",
+        ClipboardContentType.Folder => "FOLDER",
         ClipboardContentType.Link => "LINK",
         ClipboardContentType.Audio => "AUDIO",
         ClipboardContentType.Video => "VIDEO",
@@ -108,6 +109,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         ClipboardContentType.Image => "\uE91B",
         ClipboardContentType.Link => "\uE71B",
         ClipboardContentType.File => "\uE8B7",
+        ClipboardContentType.Folder => "\uE8D5",
         ClipboardContentType.Audio => "\uE8D6",
         ClipboardContentType.Video => "\uE714",
         _ => "\uE7ba"
@@ -117,7 +119,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string PinMenuText => _isPinned ? "Desanclar" : "Anclar";
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
 
-    public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Audio or ClipboardContentType.Video;
+    public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Folder or ClipboardContentType.Audio or ClipboardContentType.Video;
 
     public bool IsFileAvailable => !IsFileType || CheckFirstFileExists();
 
@@ -148,13 +150,13 @@ public partial class ClipboardItemViewModel : ObservableObject
         try
         {
             using var doc = JsonDocument.Parse(Model.Metadata);
-            
+
             // Try "file_size" first (used for files), then "size" (used for images)
             if (doc.RootElement.TryGetProperty("file_size", out var fileSizeProp))
             {
                 return FormatFileSize(fileSizeProp.GetInt64());
             }
-            
+
             if (doc.RootElement.TryGetProperty("size", out var sizeProp))
             {
                 return FormatFileSize(sizeProp.GetInt64());
@@ -206,7 +208,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         var paths = Model.Content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         if (paths.Length == 0) return false;
 
-        return File.Exists(paths[0]);
+        return File.Exists(paths[0]) || Directory.Exists(paths[0]);
     }
 
     private string GetImagePathOrThumbnail()
