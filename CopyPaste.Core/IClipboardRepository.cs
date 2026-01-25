@@ -7,8 +7,6 @@ public interface IClipboardRepository
     ClipboardItem? GetLatest();
     IEnumerable<ClipboardItem> GetAll();
     void Delete(Guid id);
-
     int ClearOldItems(int days);
-
     IEnumerable<ClipboardItem> Search(string query);
 }

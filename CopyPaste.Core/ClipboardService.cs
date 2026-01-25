@@ -186,8 +186,17 @@ public class ClipboardService(IClipboardRepository repository)
         return false;
     }
 
-    public IEnumerable<ClipboardItem> GetHistory(string? query = null) =>
-        string.IsNullOrWhiteSpace(query) ? repository.GetAll() : repository.Search(query);
+    public IEnumerable<ClipboardItem> GetHistory(int limit = 50, string? query = null)
+    {
+        var items = string.IsNullOrWhiteSpace(query)
+            ? repository.GetAll()
+            : repository.Search(query);
+
+        // Sort by most recent and apply limit for UI performance
+        return items
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(limit);
+    }
 
     public void RemoveItem(Guid id)
     {
