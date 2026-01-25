@@ -9,7 +9,7 @@ namespace CopyPaste.Core;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.")]
 public class ClipboardService(IClipboardRepository repository)
 {
-    private const int _thumbnailWidth = 300;
+    private const int _thumbnailWidth = 200;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
@@ -138,7 +138,7 @@ public class ClipboardService(IClipboardRepository repository)
             }
 
             using var thumbImage = SKImage.FromBitmap(resized);
-            using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 90);
+            using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 80);
 
             using (var stream = File.Create(thumbPath))
             {

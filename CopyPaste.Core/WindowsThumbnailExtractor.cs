@@ -94,7 +94,23 @@ public static partial class WindowsThumbnailExtractor
         {
             using var bitmap = System.Drawing.Image.FromHbitmap(hBitmap);
             using var ms = new MemoryStream();
-            bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            
+            // Use JPEG with 80% quality instead of PNG to reduce size
+            var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+                .FirstOrDefault(e => e.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+            
+            if (encoder != null)
+            {
+                using var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
+                encoderParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(
+                    System.Drawing.Imaging.Encoder.Quality, 80L);
+                bitmap.Save(ms, encoder, encoderParams);
+            }
+            else
+            {
+                bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+            }
+            
             return ms.ToArray();
         }
         catch (ExternalException ex)

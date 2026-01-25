@@ -206,22 +206,30 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(imagePath));
+            var bitmap = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
+            {
+                UriSource = new Uri(imagePath),
+
+                // Prevent file locking and reduce memory usage
+                CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.IgnoreImageCache,
+
+                // Decode to max display size (MaxHeight=140 in XAML)
+                DecodePixelHeight = 200
+            };
+
+            image.Source = bitmap;
         }
         catch (UriFormatException ex)
         {
             System.Diagnostics.Debug.WriteLine($"Formato de URI inválido: {ex.Message}");
-            throw;
         }
         catch (System.IO.IOException ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error de E/S al cargar la imagen: {ex.Message}");
-            throw;
         }
         catch (UnauthorizedAccessException ex)
         {
             System.Diagnostics.Debug.WriteLine($"Acceso no autorizado al cargar la imagen: {ex.Message}");
-            throw;
         }
     }
 }
