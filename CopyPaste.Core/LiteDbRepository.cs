@@ -2,17 +2,28 @@ using LiteDB;
 
 namespace CopyPaste.Core;
 
-public class LiteDbRepository(string dbPath) : IClipboardRepository
+public class LiteDbRepository : IClipboardRepository
 {
-    private readonly string _connectionString = $"Filename={dbPath};Connection=shared";
+    private readonly string _connectionString;
     private const string _collectionName = "items";
+
+    public LiteDbRepository(string dbPath)
+    {
+        _connectionString = $"Filename={dbPath};Connection=shared";
+        ConfigureMapper();
+    }
+
+    private static void ConfigureMapper() =>
+        BsonMapper.Global.RegisterType<ClipboardContentType>(
+            serialize: type => type.ToString(),
+            deserialize: bson => Enum.TryParse<ClipboardContentType>(bson.AsString, out var result) ? result : ClipboardContentType.Unknown
+        );
 
     public void Save(ClipboardItem item)
     {
         using var db = new LiteDatabase(_connectionString);
         var col = db.GetCollection<ClipboardItem>(_collectionName);
 
-        // Ensure indices for performance
         col.EnsureIndex(x => x.CreatedAt);
 
         col.Insert(item);
@@ -31,19 +42,19 @@ public class LiteDbRepository(string dbPath) : IClipboardRepository
         using var db = new LiteDatabase(_connectionString);
         var col = db.GetCollection<ClipboardItem>(_collectionName);
 
-        // Retrieve most recent entry for deduplication check
         return col.Query()
                   .OrderByDescending(x => x.CreatedAt)
-                  .FirstOrDefault();
+                  .ToEnumerable()
+                  .FirstOrDefault(x => x.Type != ClipboardContentType.Unknown);
     }
 
     public IEnumerable<ClipboardItem> GetAll()
     {
         using var db = new LiteDatabase(_connectionString);
-        return db.GetCollection<ClipboardItem>(_collectionName)
+        return [.. db.GetCollection<ClipboardItem>(_collectionName)
                  .FindAll()
-                 .OrderByDescending(x => x.CreatedAt)
-                 .ToList();
+                 .Where(x => x.Type != ClipboardContentType.Unknown)
+                 .OrderByDescending(x => x.CreatedAt)];
     }
 
     public void Delete(Guid id)
@@ -75,9 +86,9 @@ public class LiteDbRepository(string dbPath) : IClipboardRepository
         if (string.IsNullOrWhiteSpace(query)) return GetAll();
 
         using var db = new LiteDatabase(_connectionString);
-        return db.GetCollection<ClipboardItem>(_collectionName)
+        return [.. db.GetCollection<ClipboardItem>(_collectionName)
                  .Find(x => x.Content.Contains(query, StringComparison.OrdinalIgnoreCase))
-                 .OrderByDescending(x => x.CreatedAt)
-                 .ToList();
+                 .Where(x => x.Type != ClipboardContentType.Unknown)
+                 .OrderByDescending(x => x.CreatedAt)];
     }
 }

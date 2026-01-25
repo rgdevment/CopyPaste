@@ -73,19 +73,25 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string HeaderTitle => Model.Type switch
     {
         ClipboardContentType.Text => "TEXT",
+        ClipboardContentType.RichText => "RICH TEXT",
         ClipboardContentType.Image => "IMAGE",
-        ClipboardContentType.Html => "TEXT",
         ClipboardContentType.File => "FILE",
+        ClipboardContentType.Link => "LINK",
+        ClipboardContentType.Audio => "AUDIO",
+        ClipboardContentType.Video => "VIDEO",
         _ => "CONTENT"
     };
 
     public string TypeIcon => Model.Type switch
     {
-        ClipboardContentType.Text => "\uE8C4", // Document
-        ClipboardContentType.Image => "\uE91B", // Photo
-        ClipboardContentType.Html => "\uE774",  // Globe
-        ClipboardContentType.File => "\uE8B7",  // File
-        _ => "\uE7ba" // Clipboard
+        ClipboardContentType.Text => "\uE8C4",
+        ClipboardContentType.RichText => "\uE8C4",
+        ClipboardContentType.Image => "\uE91B",
+        ClipboardContentType.Link => "\uE71B",
+        ClipboardContentType.File => "\uE8B7",
+        ClipboardContentType.Audio => "\uE8D6",
+        ClipboardContentType.Video => "\uE714",
+        _ => "\uE7ba"
     };
 
     public string PinIconGlyph => _isPinned ? "\uE840" : "\uE718";

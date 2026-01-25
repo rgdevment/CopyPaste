@@ -2,7 +2,6 @@ using SkiaSharp;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace CopyPaste.Core;
@@ -12,37 +11,41 @@ public class ClipboardService(IClipboardRepository repository)
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
 
-    public void AddText(string? text)
+    public void AddText(string? text, ClipboardContentType type, string? source)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        AddItem(new ClipboardItem { Content = text, Type = ClipboardContentType.Text });
+        AddItem(new ClipboardItem { Content = text, Type = type, AppSource = source });
     }
 
-    public void AddHtml(byte[]? rawBytes)
+    public void AddRichText(string? plainText, byte[]? rtfBytes, string? source)
     {
-        if (rawBytes == null) return;
+        if (string.IsNullOrWhiteSpace(plainText) || rtfBytes == null) return;
 
-        string rawHtml = Encoding.UTF8.GetString(rawBytes).TrimEnd('\0');
-        string html = ExtractHtmlFragment(rawHtml);
+        string rtfBase64 = Convert.ToBase64String(rtfBytes);
+        var meta = new Dictionary<string, object> { { "rtf", rtfBase64 } };
+        string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
 
-        if (!string.IsNullOrWhiteSpace(html))
+        AddItem(new ClipboardItem
         {
-            AddItem(new ClipboardItem { Content = html, Type = ClipboardContentType.Html });
-        }
+            Content = plainText,
+            Type = ClipboardContentType.RichText,
+            Metadata = json,
+            AppSource = source
+        });
     }
 
-    public void AddImage(byte[]? dibData)
+    public void AddImage(byte[]? dibData, string? source)
     {
         if (dibData == null) return;
 
         byte[]? bmp = ConvertDibToBmp(dibData);
         if (bmp != null)
         {
-            AddItem(new ClipboardItem { Type = ClipboardContentType.Image }, bmp);
+            AddItem(new ClipboardItem { Type = ClipboardContentType.Image, AppSource = source }, bmp);
         }
     }
 
-    public void AddFiles(Collection<string>? files)
+    public void AddFiles(Collection<string>? files, ClipboardContentType type, string? source)
     {
         if (files == null || files.Count == 0) return;
 
@@ -54,7 +57,7 @@ public class ClipboardService(IClipboardRepository repository)
         };
         string json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
 
-        AddItem(new ClipboardItem { Content = paths, Type = ClipboardContentType.File, Metadata = json });
+        AddItem(new ClipboardItem { Content = paths, Type = type, Metadata = json, AppSource = source });
     }
 
     private void AddItem(ClipboardItem item, byte[]? imageData = null)
@@ -160,8 +163,11 @@ public class ClipboardService(IClipboardRepository repository)
         return current.Type switch
         {
             ClipboardContentType.Text or
-            ClipboardContentType.Html or
-            ClipboardContentType.File => last.Content == current.Content,
+            ClipboardContentType.RichText or
+            ClipboardContentType.Link or
+            ClipboardContentType.File or
+            ClipboardContentType.Audio or
+            ClipboardContentType.Video => last.Content == current.Content,
 
             ClipboardContentType.Image => CompareImageHashes(last, currentHash),
 
@@ -239,26 +245,6 @@ public class ClipboardService(IClipboardRepository repository)
                 Debug.WriteLine($"Failed to delete physical files: {ex.Message}");
             }
         });
-    }
-
-    private static string ExtractHtmlFragment(string rawHtml)
-    {
-        if (string.IsNullOrWhiteSpace(rawHtml)) return string.Empty;
-
-        const string startFragment = "<!--StartFragment-->";
-        const string endFragment = "<!--EndFragment-->";
-
-        int startIndex = rawHtml.IndexOf(startFragment, StringComparison.OrdinalIgnoreCase);
-        int endIndex = rawHtml.LastIndexOf(endFragment, StringComparison.OrdinalIgnoreCase);
-
-        if (startIndex != -1 && endIndex != -1)
-        {
-            startIndex += startFragment.Length;
-            return rawHtml[startIndex..endIndex].Trim();
-        }
-
-        int htmlStart = rawHtml.IndexOf("<html", StringComparison.OrdinalIgnoreCase);
-        return htmlStart != -1 ? rawHtml[htmlStart..].Trim() : rawHtml;
     }
 
     private static byte[]? ConvertDibToBmp(byte[] dibData)

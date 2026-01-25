@@ -2,6 +2,8 @@ using CopyPaste.Core;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
 namespace CopyPaste.Listener;
@@ -11,7 +13,9 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     private const uint _cF_UNICODETEXT = 13;
     private const uint _cF_HDROP = 15;
     private const uint _cF_DIB = 8;
-    private static readonly uint _cF_HTML = RegisterClipboardFormatW("HTML Format");
+    private static readonly uint _cF_RTF = RegisterClipboardFormatW("Rich Text Format");
+    private static readonly uint _cF_ExcludeHistory = RegisterClipboardFormatW("ExcludeClipboardContentFromMonitorProcessing");
+    private static readonly uint _cF_CanInclude = RegisterClipboardFormatW("CanIncludeInClipboardHistory");
 
     private IntPtr _hwnd;
     private bool _disposed;
@@ -19,7 +23,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     private readonly Channel<ClipboardTask> _taskQueue = Channel.CreateUnbounded<ClipboardTask>();
     private readonly CancellationTokenSource _cts = new();
 
-    private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? Bytes, Collection<string>? Files);
+    private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? RtfBytes, byte[]? ImageBytes, Collection<string>? Files, string? Source);
 
     #region Win32 API
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
@@ -84,6 +88,14 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static partial uint DragQueryFileW(IntPtr hDrop, uint iFile, [Out] char[]? lpszFile, uint cch);
+
+    [LibraryImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial IntPtr GetClipboardOwner();
+
+    [LibraryImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
     #endregion
 
     public void Stop()
@@ -152,16 +164,19 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         switch (task.Type)
         {
             case ClipboardContentType.Text:
-                service.AddText(task.Text);
+            case ClipboardContentType.Link:
+                service.AddText(task.Text, task.Type, task.Source);
                 break;
-            case ClipboardContentType.Html:
-                service.AddHtml(task.Bytes);
+            case ClipboardContentType.RichText:
+                service.AddRichText(task.Text, task.RtfBytes, task.Source);
                 break;
             case ClipboardContentType.Image:
-                service.AddImage(task.Bytes);
+                service.AddImage(task.ImageBytes, task.Source);
                 break;
             case ClipboardContentType.File:
-                service.AddFiles(task.Files);
+            case ClipboardContentType.Audio:
+            case ClipboardContentType.Video:
+                service.AddFiles(task.Files, task.Type, task.Source);
                 break;
         }
     }
@@ -174,32 +189,124 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
 
         try
         {
+            if (ShouldExcludeFromHistory()) return;
+
+            string? source = GetClipboardSource();
+
             if (IsClipboardFormatAvailable(_cF_HDROP))
             {
                 var files = ExtractFilePaths();
-                _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.File, null, null, files));
+                var type = DetectFileCollectionType(files);
+                _taskQueue.Writer.TryWrite(new ClipboardTask(type, null, null, null, files, source));
             }
             else if (IsClipboardFormatAvailable(_cF_DIB))
             {
                 var bytes = ExtractBytes(_cF_DIB);
                 if (bytes != null)
                 {
-                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, bytes, null));
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, null, bytes, null, source));
                 }
             }
-            else if (IsClipboardFormatAvailable(_cF_HTML))
+            else if (IsClipboardFormatAvailable(_cF_RTF) && IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
-                var bytes = ExtractBytes(_cF_HTML);
-                _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Html, null, bytes, null));
+                var rtfBytes = ExtractBytes(_cF_RTF);
+                var text = ExtractText();
+                
+                if (rtfBytes != null && HasRichFormatting(rtfBytes))
+                {
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.RichText, text, rtfBytes, null, null, source));
+                }
+                else
+                {
+                    var type = DetectTextType(text);
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, null, null, null, source));
+                }
             }
             else if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
                 var text = ExtractText();
-                _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Text, text, null, null));
+                var type = DetectTextType(text);
+                _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, null, null, null, source));
             }
         }
         finally { CloseClipboard(); }
     }
+
+    private static bool ShouldExcludeFromHistory()
+    {
+        if (IsClipboardFormatAvailable(_cF_ExcludeHistory)) return true;
+
+        if (IsClipboardFormatAvailable(_cF_CanInclude))
+        {
+            var data = ExtractBytes(_cF_CanInclude);
+            if (data != null && data.Length >= 4 && BitConverter.ToInt32(data, 0) == 0) return true;
+        }
+
+        return false;
+    }
+
+    private static bool HasRichFormatting(byte[] rtfBytes)
+    {
+        string rtf = Encoding.ASCII.GetString(rtfBytes);
+        return FormattingRegex().IsMatch(rtf);
+    }
+
+    private static ClipboardContentType DetectTextType(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return ClipboardContentType.Text;
+        return UrlRegex().IsMatch(text.Trim()) ? ClipboardContentType.Link : ClipboardContentType.Text;
+    }
+
+    private static ClipboardContentType DetectFileCollectionType(Collection<string> files)
+    {
+        if (files.Count == 0) return ClipboardContentType.File;
+
+        var ext = Path.GetExtension(files[0]).ToUpperInvariant();
+
+        return ext switch
+        {
+            ".MP3" or ".WAV" or ".FLAC" or ".AAC" or ".OGG" or ".WMA" or ".M4A" => ClipboardContentType.Audio,
+            ".MP4" or ".AVI" or ".MKV" or ".MOV" or ".WMV" or ".FLV" or ".WEBM" => ClipboardContentType.Video,
+            ".PNG" or ".JPG" or ".JPEG" or ".GIF" or ".BMP" or ".WEBP" or ".SVG" or ".ICO" => ClipboardContentType.Image,
+            _ => ClipboardContentType.File
+        };
+    }
+
+    private static string? GetClipboardSource()
+    {
+        try
+        {
+            IntPtr owner = GetClipboardOwner();
+            if (owner == IntPtr.Zero) return null;
+
+            _ = GetWindowThreadProcessId(owner, out uint processId);
+            if (processId == 0) return null;
+
+            using var process = Process.GetProcessById((int)processId);
+            return process.ProcessName;
+        }
+        catch (ArgumentException)
+        {
+            // El proceso no existe.
+            return null;
+        }
+        catch (InvalidOperationException)
+        {
+            // El proceso ya ha terminado.
+            return null;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Error de Win32 al obtener el proceso.
+            return null;
+        }
+    }
+
+    [GeneratedRegex(@"^https?://[^\s]+$", RegexOptions.IgnoreCase)]
+    private static partial Regex UrlRegex();
+
+    [GeneratedRegex(@"\\(b|i|ul|strike|super|sub|highlight|cf[0-9]|fs[0-9]|f[0-9]+\\)[^a-z]", RegexOptions.IgnoreCase)]
+    private static partial Regex FormattingRegex();
 
     private static byte[]? ExtractBytes(uint format)
     {
@@ -256,3 +363,4 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     [StructLayout(LayoutKind.Sequential)]
     internal struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam; public uint time; public System.Drawing.Point pt; }
 }
+
