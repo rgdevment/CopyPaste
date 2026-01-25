@@ -45,8 +45,32 @@ public sealed partial class App : Application, IDisposable
         Task.Run(() => _listener.Run());
     }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
+        // Configure thumbnail settings before initializing services
+        // Uncomment one of the profiles below or customize your own
+        
+        // Low Memory Profile (4-8GB RAM):
+        // ThumbnailConfig.Width = 200;
+        // ThumbnailConfig.QualityPng = 75;
+        // ThumbnailConfig.QualityJpeg = 75;
+        // ThumbnailConfig.GarbageCollectionThreshold = 500_000;
+        // ThumbnailConfig.UIDecodeHeight = 180;
+
+        // Balanced Profile (default - recommended):
+        // ThumbnailConfig.Width = 250;
+        // ThumbnailConfig.QualityPng = 85;
+        // ThumbnailConfig.QualityJpeg = 85;
+        // ThumbnailConfig.GarbageCollectionThreshold = 1_000_000;
+        // ThumbnailConfig.UIDecodeHeight = 220;
+
+        // High Quality Profile (16GB+ RAM):
+        // ThumbnailConfig.Width = 300;
+        // ThumbnailConfig.QualityPng = 90;
+        // ThumbnailConfig.QualityJpeg = 90;
+        // ThumbnailConfig.GarbageCollectionThreshold = 2_000_000;
+        // ThumbnailConfig.UIDecodeHeight = 260;
+
         _window = new MainWindow(_service!);
 
         _window.Activate();

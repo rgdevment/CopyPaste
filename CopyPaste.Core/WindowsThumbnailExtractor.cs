@@ -95,7 +95,7 @@ public static partial class WindowsThumbnailExtractor
             using var bitmap = System.Drawing.Image.FromHbitmap(hBitmap);
             using var ms = new MemoryStream();
             
-            // Use JPEG with 80% quality instead of PNG to reduce size
+            // Use JPEG with configured quality for good balance between size and quality
             var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
                 .FirstOrDefault(e => e.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
             
@@ -103,7 +103,7 @@ public static partial class WindowsThumbnailExtractor
             {
                 using var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
                 encoderParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(
-                    System.Drawing.Imaging.Encoder.Quality, 80L);
+                    System.Drawing.Imaging.Encoder.Quality, (long)ThumbnailConfig.QualityJpeg);
                 bitmap.Save(ms, encoder, encoderParams);
             }
             else

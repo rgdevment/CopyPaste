@@ -213,8 +213,8 @@ public sealed partial class MainWindow : Window
                 // Prevent file locking and reduce memory usage
                 CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.IgnoreImageCache,
 
-                // Decode to max display size (MaxHeight=140 in XAML)
-                DecodePixelHeight = 200
+                // Decode to optimal display size using configured value
+                DecodePixelHeight = ThumbnailConfig.UIDecodeHeight
             };
 
             image.Source = bitmap;

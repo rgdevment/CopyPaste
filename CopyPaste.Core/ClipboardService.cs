@@ -9,8 +9,6 @@ namespace CopyPaste.Core;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.")]
 public class ClipboardService(IClipboardRepository repository)
 {
-    private const int _thumbnailWidth = 200;
-
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
 
@@ -19,8 +17,6 @@ public class ClipboardService(IClipboardRepository repository)
 
     public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null)
     {
-        if (string.IsNullOrWhiteSpace(text)) return;
-
         string? json = null;
         if (rtfBytes != null)
         {
@@ -28,7 +24,7 @@ public class ClipboardService(IClipboardRepository repository)
             json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
         }
 
-        AddItem(new ClipboardItem { Content = text, Type = type, AppSource = source, Metadata = json });
+        AddItem(new ClipboardItem { Content = text ?? string.Empty, Type = type, AppSource = source, Metadata = json });
     }
 
     public void AddImage(byte[]? dibData, string? source)
@@ -125,16 +121,16 @@ public class ClipboardService(IClipboardRepository repository)
             using var managedSrc = new MemoryStream(rawData);
             using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException("Decode failed");
 
-            int targetHeight = (int)(bitmap.Height * (_thumbnailWidth / (double)bitmap.Width));
+            int targetHeight = (int)(bitmap.Height * (ThumbnailConfig.Width / (double)bitmap.Width));
             var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
 
-            using var resized = new SKBitmap(_thumbnailWidth, targetHeight);
+            using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
             using (var canvas = new SKCanvas(resized))
             {
                 canvas.Clear(SKColors.Transparent);
                 using var imageToDraw = SKImage.FromBitmap(bitmap);
                 using var paint = new SKPaint { IsAntialias = true };
-                canvas.DrawImage(imageToDraw, SKRect.Create(_thumbnailWidth, targetHeight), sampling, paint);
+                canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
             }
 
             using var thumbImage = SKImage.FromBitmap(resized);
@@ -148,7 +144,7 @@ public class ClipboardService(IClipboardRepository repository)
             var dataMap = new Dictionary<string, object>
             {
                 { "thumb_path", thumbPath },
-                { "thumb_width", _thumbnailWidth },
+                { "thumb_width", ThumbnailConfig.Width },
                 { "thumb_height", targetHeight },
                 { "width", bitmap.Width },
                 { "height", bitmap.Height },
@@ -189,16 +185,16 @@ public class ClipboardService(IClipboardRepository repository)
 
             if (bitmap != null)
             {
-                int targetHeight = (int)(bitmap.Height * (_thumbnailWidth / (double)bitmap.Width));
+                int targetHeight = (int)(bitmap.Height * (ThumbnailConfig.Width / (double)bitmap.Width));
                 var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
 
-                using var resized = new SKBitmap(_thumbnailWidth, targetHeight);
+                using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
                 using (var canvas = new SKCanvas(resized))
                 {
                     canvas.Clear(SKColors.Transparent);
                     using var imageToDraw = SKImage.FromBitmap(bitmap);
                     using var paint = new SKPaint { IsAntialias = true };
-                    canvas.DrawImage(imageToDraw, SKRect.Create(_thumbnailWidth, targetHeight), sampling, paint);
+                    canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
                 }
 
                 using var thumbImage = SKImage.FromBitmap(resized);
@@ -210,7 +206,7 @@ public class ClipboardService(IClipboardRepository repository)
                 }
 
                 meta["thumb_path"] = thumbPath;
-                meta["thumb_width"] = _thumbnailWidth;
+                meta["thumb_width"] = ThumbnailConfig.Width;
                 meta["thumb_height"] = targetHeight;
                 meta["width"] = bitmap.Width;
                 meta["height"] = bitmap.Height;
@@ -242,7 +238,7 @@ public class ClipboardService(IClipboardRepository repository)
             {
                 if (type == ClipboardContentType.Video)
                 {
-                    thumbData = WindowsThumbnailExtractor.GetThumbnail(filePath, _thumbnailWidth);
+                    thumbData = WindowsThumbnailExtractor.GetThumbnail(filePath, ThumbnailConfig.Width);
                 }
                 else if (type == ClipboardContentType.Audio)
                 {
@@ -266,16 +262,16 @@ public class ClipboardService(IClipboardRepository repository)
 
                     if (bitmap != null)
                     {
-                        int targetHeight = (int)(bitmap.Height * (_thumbnailWidth / (double)bitmap.Width));
+                        int targetHeight = (int)(bitmap.Height * (ThumbnailConfig.Width / (double)bitmap.Width));
                         var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
 
-                        using var resized = new SKBitmap(_thumbnailWidth, targetHeight);
+                        using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
                         using (var canvas = new SKCanvas(resized))
                         {
                             canvas.Clear(SKColors.Transparent);
                             using var imageToDraw = SKImage.FromBitmap(bitmap);
                             using var paint = new SKPaint { IsAntialias = true };
-                            canvas.DrawImage(imageToDraw, SKRect.Create(_thumbnailWidth, targetHeight), sampling, paint);
+                            canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
                         }
 
                         using var thumbImage = SKImage.FromBitmap(resized);
@@ -287,7 +283,7 @@ public class ClipboardService(IClipboardRepository repository)
                         }
 
                         meta["thumb_path"] = thumbPath;
-                        meta["thumb_width"] = _thumbnailWidth;
+                        meta["thumb_width"] = ThumbnailConfig.Width;
                         meta["thumb_height"] = targetHeight;
                         meta["original_width"] = bitmap.Width;
                         meta["original_height"] = bitmap.Height;
