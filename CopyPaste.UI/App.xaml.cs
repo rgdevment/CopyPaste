@@ -1,6 +1,5 @@
 using CopyPaste.Core;
 using CopyPaste.Listener;
-using H.NotifyIcon;
 using Microsoft.UI.Xaml;
 using System;
 using System.Threading.Tasks;

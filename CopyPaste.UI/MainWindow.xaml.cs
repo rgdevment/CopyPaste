@@ -81,7 +81,6 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            // Re-apply black border on activation to prevent Windows from resetting it to white
             IntPtr hWnd = WindowNative.GetWindowHandle(this);
             PaintBorderGray(hWnd);
         }

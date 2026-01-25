@@ -1,6 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Threading.Tasks; // Required for Task
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
@@ -33,8 +33,8 @@ public partial class MainViewModel : ObservableObject
     }
 
     private void OnDeleteItem(ClipboardItemViewModel itemVM) => Items.Remove(itemVM);
-    private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { /* Paste logic */ }
-    private void OnPinItem(ClipboardItemViewModel itemVM) { /* Pin logic */ }
+    private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { }
+    private void OnPinItem(ClipboardItemViewModel itemVM) { }
 
     [RelayCommand]
     private void ClearAll()
@@ -45,7 +45,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    // FIXED: Changed 'void' to 'Task' to fix MVVMTK0039
     [RelayCommand]
     private static async Task OpenRepo()
     {

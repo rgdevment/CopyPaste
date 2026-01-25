@@ -8,15 +8,12 @@ namespace CopyPaste.UI.ViewModels;
 
 public partial class ClipboardItemViewModel : ObservableObject
 {
-    // --- Private Fields (Internal State) ---
     private readonly Action<ClipboardItemViewModel> _deleteAction;
     private readonly Action<ClipboardItemViewModel, bool> _pasteAction;
     private readonly Action<ClipboardItemViewModel> _pinAction;
 
-    // Internal backing field for the UI state
     private bool _isPinned;
 
-    // --- Public Properties ---
     public ClipboardItem Model { get; }
 
     public string Timestamp
@@ -36,22 +33,17 @@ public partial class ClipboardItemViewModel : ObservableObject
         }
     }
 
-    // Explicit Property Implementation
-    // This connects the private field (_isPinned) to the public UI (IsPinned)
     public bool IsPinned
     {
         get => _isPinned;
         set
         {
-            // SetProperty checks if value changed and notifies UI
             if (SetProperty(ref _isPinned, value))
             {
-                // When 'IsPinned' changes, these visual properties must update too
                 OnPropertyChanged(nameof(PinIconGlyph));
                 OnPropertyChanged(nameof(PinMenuText));
                 OnPropertyChanged(nameof(PinIndicatorVisibility));
 
-                // Update the underlying data model
                 Model.IsPinned = _isPinned;
             }
         }
@@ -70,15 +62,10 @@ public partial class ClipboardItemViewModel : ObservableObject
         _pasteAction = pasteAction;
         _pinAction = pinAction;
 
-        // INIT STATE:
-        // We take the value from the Database Model (model.IsPinned)
-        // and push it into our UI variable (_isPinned) to start correctly.
         _isPinned = model.IsPinned;
     }
 
     public string Content => Model.Content;
-
-    // --- Visual Helpers (Read-only) ---
 
     public Visibility IsImageVisible => Model.Type == ClipboardContentType.Image ? Visibility.Visible : Visibility.Collapsed;
     public Visibility IsTextVisible => Model.Type != ClipboardContentType.Image ? Visibility.Visible : Visibility.Collapsed;
@@ -101,14 +88,10 @@ public partial class ClipboardItemViewModel : ObservableObject
         _ => "\uE7ba" // Clipboard
     };
 
-    // --- Dynamic UI Properties ---
-    // These depend on 'IsPinned'. When IsPinned changes, these update.
-
-    public string PinIconGlyph => _isPinned ? "\uE840" : "\uE718"; // Filled vs Outline
+    public string PinIconGlyph => _isPinned ? "\uE840" : "\uE718";
     public string PinMenuText => _isPinned ? "Desanclar" : "Anclar";
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
 
-    // --- Commands ---
 
     [RelayCommand]
     private void Delete() => _deleteAction(this);
