@@ -71,9 +71,11 @@ public partial class ClipboardItemViewModel : ObservableObject
 
     public string ThumbnailPath => GetThumbnailPathOrPlaceholder();
 
-    public Visibility ImageVisibility =>
-        Model.Type == ClipboardContentType.Image && !string.IsNullOrEmpty(Model.Content)
-            ? Visibility.Visible : Visibility.Collapsed;
+    public string ImagePath => GetImagePathOrThumbnail();
+
+    public bool HasValidImagePath => Model.Type == ClipboardContentType.Image && !string.IsNullOrEmpty(GetImagePathOrThumbnail());
+
+    public Visibility ImageVisibility => HasValidImagePath ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility MediaThumbnailVisibility =>
         Model.Type is ClipboardContentType.Video or ClipboardContentType.Audio
@@ -133,9 +135,10 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string? FileSize => GetFileSize();
     public Visibility FileSizeVisibility => FileSize != null ? Visibility.Visible : Visibility.Collapsed;
 
-    // Media info visibility (duration + size for video/audio/image)
+    // Media info visibility (duration + size for video/audio/image) - only when we have data
     public Visibility MediaInfoVisibility =>
-        Model.Type is ClipboardContentType.Video or ClipboardContentType.Audio or ClipboardContentType.Image
+        (Model.Type is ClipboardContentType.Video or ClipboardContentType.Audio or ClipboardContentType.Image)
+        && (FileSize != null || ImageDimensions != null || MediaDuration != null)
             ? Visibility.Visible : Visibility.Collapsed;
 
     private string? GetFileSize()
@@ -204,6 +207,24 @@ public partial class ClipboardItemViewModel : ObservableObject
         if (paths.Length == 0) return false;
 
         return File.Exists(paths[0]);
+    }
+
+    private string GetImagePathOrThumbnail()
+    {
+        // First try the thumbnail path (always preferred for display)
+        var thumbPath = GetThumbnailPath();
+        if (!string.IsNullOrEmpty(thumbPath))
+            return thumbPath;
+
+        // Fallback to Content path if it exists
+        if (!string.IsNullOrEmpty(Model.Content) && File.Exists(Model.Content))
+            return Model.Content;
+
+        // Generic placeholder for images when processing failed
+        if (Model.Type == ClipboardContentType.Image)
+            return "ms-appx:///Assets/thumb/image.png";
+
+        return string.Empty;
     }
 
     private string GetThumbnailPathOrPlaceholder()

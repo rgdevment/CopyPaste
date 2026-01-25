@@ -186,4 +186,21 @@ public sealed partial class MainWindow : Window
             panel.Opacity = 0;
         }
     }
+
+    private void ClipboardImage_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Image image) return;
+
+        var imagePath = image.Tag as string;
+        if (string.IsNullOrEmpty(imagePath)) return;
+
+        try
+        {
+            image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(imagePath));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load image: {ex.Message}");
+        }
+    }
 }

@@ -116,16 +116,18 @@
                                        TextWrapping="Wrap"
                                        Visibility="{x:Bind IsTextVisible}"/>
 
-                            <Image Source="{x:Bind Content}"
+                            <Image x:Name="ClipboardImage"
                                    Grid.Row="1"
                                    Stretch="UniformToFill"
                                    MaxHeight="140"
                                    HorizontalAlignment="Left"
-                                   Visibility="{x:Bind ImageVisibility}"/>
+                                   Visibility="{x:Bind ImageVisibility}"
+                                   Loaded="ClipboardImage_Loaded"
+                                   Tag="{x:Bind ImagePath}"/>
 
                             <!-- Media (Video/Audio) Thumbnail with duration overlay -->
                             <Grid Grid.Row="1" Visibility="{x:Bind MediaThumbnailVisibility}">
-                                <Image Source="{x:Bind ThumbnailPath, TargetNullValue=''}"
+                                <Image Source="{x:Bind ThumbnailPath}"
                                        Stretch="UniformToFill"
                                        MaxHeight="140"
                                        HorizontalAlignment="Left"/>
