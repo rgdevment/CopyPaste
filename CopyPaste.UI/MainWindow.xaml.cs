@@ -323,5 +323,13 @@ public sealed partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine($"Acceso no autorizado al cargar la imagen: {ex.Message}");
         }
     }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            ViewModel.SearchQuery = textBox.Text ?? string.Empty;
+        }
+    }
 }
 

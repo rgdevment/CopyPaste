@@ -12,6 +12,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -54,9 +55,40 @@
             </StackPanel>
         </Grid>
 
+        <!-- Search Bar -->
+        <Grid Grid.Row="1" Padding="16,0,16,12" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0"
+                     x:Name="SearchBox"
+                     PlaceholderText="Buscar..."
+                     Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay}"
+                     TextChanged="SearchBox_TextChanged"
+                     Padding="12,8"
+                     FontSize="13"
+                     BorderThickness="1"
+                     BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                     Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                     CornerRadius="6"/>
+
+            <Button Grid.Column="1"
+                    Visibility="{x:Bind ViewModel.HasSearchQuery, Mode=OneWay}"
+                    Command="{x:Bind ViewModel.ClearSearchCommand}"
+                    Width="36" Height="36"
+                    Margin="8,0,0,0"
+                    Padding="0"
+                    ToolTipService.ToolTip="Limpiar búsqueda"
+                    CornerRadius="4">
+                <FontIcon Glyph="&#xE711;" FontSize="12"/>
+            </Button>
+        </Grid>
+
         <ListView x:Name="ClipboardListView"
-                  Grid.Row="1"
-                  ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
+                  Grid.Row="2"
+                  ItemsSource="{x:Bind ViewModel.FilteredItems, Mode=OneWay}"
                   SelectionMode="None"
                   Padding="4,0,4,12">
 
