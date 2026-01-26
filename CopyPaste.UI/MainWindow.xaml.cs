@@ -54,7 +54,7 @@ public sealed partial class MainWindow : Window
     {
         Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
         HotkeyHelper.UnregisterMessageHandler(_hWnd);
-        
+
         if (Application.Current is App { IsExiting: true })
         {
             args.Handled = false;
@@ -76,7 +76,7 @@ public sealed partial class MainWindow : Window
     private void RegisterGlobalHotkey()
     {
         uint modifiers = UIHotkey.UseWinKey ? Win32WindowHelper.MOD_WIN : Win32WindowHelper.MOD_CONTROL;
-        
+
         if (UIHotkey.UseAltKey)
             modifiers |= Win32WindowHelper.MOD_ALT;
 
@@ -101,7 +101,7 @@ public sealed partial class MainWindow : Window
     private void ScrollViewer_ViewChanged(object? _, ScrollViewerViewChangedEventArgs e)
     {
         if (_ is not ScrollViewer sv) return;
-        
+
         if (sv.ScrollableHeight > 0 && sv.VerticalOffset >= sv.ScrollableHeight - UIConfig.ScrollLoadThreshold)
             ViewModel.LoadMoreItems();
     }
@@ -173,7 +173,7 @@ public sealed partial class MainWindow : Window
 
     private static void Container_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && 
+        if (sender is FrameworkElement fe &&
             VisualTreeHelper.GetChild(fe, 0) is FrameworkElement root &&
             root.FindName("ActionPanel") is UIElement panel)
             panel.Opacity = 1;
@@ -181,7 +181,7 @@ public sealed partial class MainWindow : Window
 
     private static void Container_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && 
+        if (sender is FrameworkElement fe &&
             VisualTreeHelper.GetChild(fe, 0) is FrameworkElement root &&
             root.FindName("ActionPanel") is UIElement panel)
             panel.Opacity = 0;
