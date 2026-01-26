@@ -93,14 +93,26 @@ public class LiteDbRepository : IClipboardRepository
                  .DeleteMany(x => x.CreatedAt < limitDate);
     }
 
-    public IEnumerable<ClipboardItem> Search(string query)
+    public IEnumerable<ClipboardItem> Search(string query, int limit = 50, int skip = 0)
     {
-        if (string.IsNullOrWhiteSpace(query)) return GetAll();
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return GetAll()
+                .OrderByDescending(x => x.IsPinned)
+                .ThenByDescending(x => x.CreatedAt)
+                .Skip(skip)
+                .Take(limit);
+        }
 
         using var db = new LiteDatabase(_connectionString);
-        return [.. db.GetCollection<ClipboardItem>(_collectionName)
-                 .Find(x => x.Content.Contains(query, StringComparison.OrdinalIgnoreCase))
-                 .Where(x => x.Type != ClipboardContentType.Unknown)
-                 .OrderByDescending(x => x.CreatedAt)];
+        var allItems = db.GetCollection<ClipboardItem>(_collectionName)
+                         .FindAll()
+                         .Where(x => x.Type != ClipboardContentType.Unknown);
+
+        return [.. allItems.Where(item => SearchHelper.MatchesQuery(item, query))
+                       .OrderByDescending(x => x.IsPinned)
+                       .ThenByDescending(x => x.CreatedAt)
+                       .Skip(skip)
+                       .Take(limit)];
     }
 }

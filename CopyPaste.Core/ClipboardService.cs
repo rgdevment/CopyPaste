@@ -428,14 +428,16 @@ public class ClipboardService(IClipboardRepository repository)
 
     public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null)
     {
-        var items = string.IsNullOrWhiteSpace(query)
-            ? repository.GetAll()
-            : repository.Search(query);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return repository.GetAll()
+                .OrderByDescending(x => x.IsPinned)
+                .ThenByDescending(x => x.CreatedAt)
+                .Skip(skip)
+                .Take(limit);
+        }
 
-        return items
-            .OrderByDescending(x => x.CreatedAt)
-            .Skip(skip)
-            .Take(limit);
+        return repository.Search(query, limit, skip);
     }
 
     public void RemoveItem(Guid id)

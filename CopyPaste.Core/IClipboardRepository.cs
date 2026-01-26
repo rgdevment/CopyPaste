@@ -8,5 +8,5 @@ public interface IClipboardRepository
     IEnumerable<ClipboardItem> GetAll();
     void Delete(Guid id);
     int ClearOldItems(int days);
-    IEnumerable<ClipboardItem> Search(string query);
+    IEnumerable<ClipboardItem> Search(string query, int limit = 50, int skip = 0);
 }

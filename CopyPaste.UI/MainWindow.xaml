@@ -73,22 +73,11 @@
                      BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                      Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                      CornerRadius="6"/>
-
-            <Button Grid.Column="1"
-                    Visibility="{x:Bind ViewModel.HasSearchQuery, Mode=OneWay}"
-                    Command="{x:Bind ViewModel.ClearSearchCommand}"
-                    Width="36" Height="36"
-                    Margin="8,0,0,0"
-                    Padding="0"
-                    ToolTipService.ToolTip="Limpiar búsqueda"
-                    CornerRadius="4">
-                <FontIcon Glyph="&#xE711;" FontSize="12"/>
-            </Button>
         </Grid>
 
         <ListView x:Name="ClipboardListView"
                   Grid.Row="2"
-                  ItemsSource="{x:Bind ViewModel.FilteredItems, Mode=OneWay}"
+                  ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
                   SelectionMode="None"
                   Padding="4,0,4,12">
 
