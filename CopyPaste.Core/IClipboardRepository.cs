@@ -4,6 +4,7 @@ public interface IClipboardRepository
 {
     void Save(ClipboardItem item);
     void Update(ClipboardItem item);
+    ClipboardItem? GetById(Guid id);
     ClipboardItem? GetLatest();
     IEnumerable<ClipboardItem> GetAll();
     void Delete(Guid id);

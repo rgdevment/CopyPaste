@@ -15,8 +15,40 @@ public class ClipboardService(IClipboardRepository repository)
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnItemAdded;
 
+    // Track when app initiates a paste to avoid re-adding the same content
+    private DateTime _lastPasteTime = DateTime.MinValue;
+    private Guid _lastPastedItemId = Guid.Empty;
+
+    /// <summary>
+    /// Configurable time window (in milliseconds) to ignore clipboard changes after paste.
+    /// Default: 300ms. Can be adjusted based on system performance.
+    /// </summary>
+    public int PasteIgnoreWindowMs { get; set; } = 300;
+
+    /// <summary>
+    /// Notifies the service that a paste operation was initiated by the app.
+    /// This prevents the clipboard listener from re-adding the same item.
+    /// </summary>
+    public void NotifyPasteInitiated(Guid itemId)
+    {
+        _lastPasteTime = DateTime.UtcNow;
+        _lastPastedItemId = itemId;
+    }
+
+    /// <summary>
+    /// Checks if a clipboard change should be ignored because we just pasted it.
+    /// </summary>
+    private bool ShouldIgnoreClipboardChange()
+    {
+        if (_lastPastedItemId == Guid.Empty) return false;
+        return DateTime.UtcNow - _lastPasteTime < TimeSpan.FromMilliseconds(PasteIgnoreWindowMs);
+    }
+
     public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null)
     {
+        if (ShouldIgnoreClipboardChange()) return;
+
+
         string? json = null;
         if (rtfBytes != null)
         {
@@ -24,11 +56,13 @@ public class ClipboardService(IClipboardRepository repository)
             json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
         }
 
+
         AddItem(new ClipboardItem { Content = text ?? string.Empty, Type = type, AppSource = source, Metadata = json });
     }
 
     public void AddImage(byte[]? dibData, string? source)
     {
+        if (ShouldIgnoreClipboardChange()) return;
         if (dibData == null) return;
 
         byte[]? bmp = ConvertDibToBmp(dibData);
@@ -40,6 +74,7 @@ public class ClipboardService(IClipboardRepository repository)
 
     public void AddFiles(Collection<string>? files, ClipboardContentType type, string? source)
     {
+        if (ShouldIgnoreClipboardChange()) return;
         if (files == null || files.Count == 0) return;
 
         string firstFile = files[0];
@@ -86,7 +121,7 @@ public class ClipboardService(IClipboardRepository repository)
 
         if (IsDuplicate(latest, item, currentHash))
         {
-            latest!.CreatedAt = DateTime.Now;
+            latest!.ModifiedAt = DateTime.UtcNow;
             repository.Update(latest);
             return;
         }
@@ -438,14 +473,14 @@ public class ClipboardService(IClipboardRepository repository)
         }
 
         return items
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(x => x.ModifiedAt)
             .Skip(skip)
             .Take(limit);
     }
 
     public void RemoveItem(Guid id)
     {
-        var item = repository.GetAll().FirstOrDefault(x => x.Id == id);
+        var item = repository.GetById(id);
         if (item == null) return;
 
         // The repository.Delete() method handles cleanup of app-generated files
@@ -456,12 +491,28 @@ public class ClipboardService(IClipboardRepository repository)
 
     public void UpdatePin(Guid id, bool isPinned)
     {
-        var item = repository.GetAll().FirstOrDefault(x => x.Id == id);
+        var item = repository.GetById(id);
         if (item == null) return;
 
         item.IsPinned = isPinned;
         item.ModifiedAt = DateTime.UtcNow;
         repository.Update(item);
+    }
+
+    /// <summary>
+    /// Marks an item as used by updating its ModifiedAt timestamp.
+    /// This moves the item to the top of the list when sorted by modification date.
+    /// </summary>
+    /// <param name="id">The ID of the item to mark as used.</param>
+    /// <returns>The updated item, or null if not found.</returns>
+    public ClipboardItem? MarkItemUsed(Guid id)
+    {
+        var item = repository.GetById(id);
+        if (item == null) return null;
+
+        item.ModifiedAt = DateTime.UtcNow;
+        repository.Update(item);
+        return item;
     }
 
     private static byte[]? ConvertDibToBmp(byte[] dibData)

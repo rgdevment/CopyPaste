@@ -82,9 +82,15 @@ public sealed partial class MainWindow : Window
     private void OnHotkeyPressed()
     {
         if (_appWindow.IsVisible)
+        {
             _appWindow.Hide();
+        }
         else
+        {
+            // FocusHelper.CapturePreviousWindow() is called in HotkeyHelper
+            // BEFORE this method, ensuring we capture the correct window
             ViewModel.ShowWindow();
+        }
     }
 
     private void RegisterGlobalHotkey()
@@ -233,10 +239,20 @@ public sealed partial class MainWindow : Window
         var container = args.ItemContainer;
         container.PointerEntered -= Container_PointerEntered;
         container.PointerExited -= Container_PointerExited;
+        container.DoubleTapped -= Container_DoubleTapped;
         container.PointerEntered += Container_PointerEntered;
         container.PointerExited += Container_PointerExited;
+        container.DoubleTapped += Container_DoubleTapped;
 
         args.RegisterUpdateCallback(LoadClipboardImage);
+    }
+
+    private void Container_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+    {
+        if (sender is ListViewItem item && item.Content is ViewModels.ClipboardItemViewModel vm)
+        {
+            vm.PasteCommand.Execute(null);
+        }
     }
 
     private void LoadClipboardImage(ListViewBase sender, ContainerContentChangingEventArgs args)

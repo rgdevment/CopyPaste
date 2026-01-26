@@ -53,6 +53,43 @@ public static class UIConfig
 }
 
 /// <summary>
+/// Configuration for paste behavior timing.
+/// Adjust these values based on system performance.
+/// </summary>
+public static class PasteConfig
+{
+    /// <summary>
+    /// Time window (ms) to ignore clipboard changes after app-initiated paste.
+    /// Prevents duplicate items when pasting from our app.
+    /// Lower = faster but may cause duplicates on slow systems.
+    /// Recommended: 200-500
+    /// </summary>
+    public static int DuplicateIgnoreWindowMs { get; set; } = 300;
+
+    /// <summary>
+    /// Delay (ms) before attempting to restore focus to previous window.
+    /// Allows our window to fully hide first.
+    /// Lower = faster paste, but may fail if window hasn't hidden yet.
+    /// Recommended: 30-100
+    /// </summary>
+    public static int DelayBeforeFocusMs { get; set; } = 50;
+
+    /// <summary>
+    /// Delay (ms) after restoring focus before simulating Ctrl+V.
+    /// Allows target window to be ready to receive input.
+    /// Lower = faster paste, but may fail on slower apps.
+    /// Recommended: 50-200
+    /// </summary>
+    public static int DelayBeforePasteMs { get; set; } = 100;
+
+    /// <summary>
+    /// Maximum attempts to verify focus was restored before pasting.
+    /// Each attempt waits ~10ms.
+    /// </summary>
+    public static int MaxFocusVerifyAttempts { get; set; } = 10;
+}
+
+/// <summary>
 /// Global hotkey to show/hide the window.
 /// Modifiers: Win (default) or Ctrl (if Win fails to register)
 /// Key: Alt + V

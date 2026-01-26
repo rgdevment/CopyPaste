@@ -44,6 +44,9 @@ public sealed partial class App : Application, IDisposable
         _listener = new WindowsClipboardListener(_service);
         _cleanupService = new CleanupService(repository, () => UIConfig.RetentionDays);
 
+        // Configure paste timing from UIConfig
+        _service.PasteIgnoreWindowMs = PasteConfig.DuplicateIgnoreWindowMs;
+
         // Run listener in background
         Task.Run(() => _listener.Run());
     }
@@ -81,6 +84,12 @@ public sealed partial class App : Application, IDisposable
         // UIConfig.WindowWidth = 400;                  // Sidebar width
         // UIConfig.Hotkey.UseWinKey = true;            // Use Win key (false = Ctrl key)
         // UIConfig.Hotkey.VirtualKey = 0x56;           // V key (Win/Ctrl + Alt + V)
+
+        // Paste timing configuration (optional - for slow/fast systems)
+        // PasteConfig.DuplicateIgnoreWindowMs = 300;   // Time to ignore clipboard after paste
+        // PasteConfig.DelayBeforeFocusMs = 50;         // Delay before restoring focus
+        // PasteConfig.DelayBeforePasteMs = 100;        // Delay before sending Ctrl+V
+        // PasteConfig.MaxFocusVerifyAttempts = 10;     // Max attempts to verify focus
 
         _window = new MainWindow(_service!);
 

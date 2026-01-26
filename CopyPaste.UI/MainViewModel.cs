@@ -1,11 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
+using CopyPaste.UI.Helpers;
+using Microsoft.UI;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using WinRT.Interop;
 
@@ -140,7 +144,69 @@ public partial class MainViewModel : ObservableObject
         _service.RemoveItem(itemVM.Model.Id);
         Items.Remove(itemVM);
     }
-    private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types")]
+    private async void OnPasteItem(ClipboardItemViewModel itemVM, bool plain)
+    {
+        try
+        {
+            // Verify file availability for file-based types
+            if (itemVM.IsFileType && !itemVM.IsFileAvailable)
+            {
+                Debug.WriteLine($"Cannot paste: file not available for item {itemVM.Model.Id}");
+                return;
+            }
+
+            // Notify service that we're pasting to prevent duplicate detection
+            _service.NotifyPasteInitiated(itemVM.Model.Id);
+
+            // Set content to Windows clipboard
+            var success = ClipboardHelper.SetClipboardContent(itemVM.Model, plain);
+            if (!success)
+            {
+                Debug.WriteLine($"Failed to set clipboard content for item {itemVM.Model.Id}");
+                return;
+            }
+
+            // Mark item as used (updates ModifiedAt timestamp)
+            var updatedItem = _service.MarkItemUsed(itemVM.Model.Id);
+            if (updatedItem != null)
+            {
+                // Update the model with new timestamp
+                itemVM.Model.ModifiedAt = updatedItem.ModifiedAt;
+
+                // Move item to the top of the list in UI
+                MoveItemToTop(itemVM);
+            }
+
+            // Hide window and restore focus to previous window, then simulate Ctrl+V
+            HideWindow();
+            await FocusHelper.RestoreAndPasteAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Paste operation failed: {ex.Message}");
+        }
+    }
+
+    private void MoveItemToTop(ClipboardItemViewModel itemVM) =>
+        _dispatcherQueue?.TryEnqueue(() =>
+        {
+            var currentIndex = Items.IndexOf(itemVM);
+            if (currentIndex > 0)
+            {
+                Items.Move(currentIndex, 0);
+            }
+        });
+
+    private void HideWindow()
+    {
+        if (_window == null) return;
+
+        var hWnd = WindowNative.GetWindowHandle(_window);
+        var appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(hWnd));
+        appWindow.Hide();
+    }
 
     private void OnPinItem(ClipboardItemViewModel itemVM)
     {

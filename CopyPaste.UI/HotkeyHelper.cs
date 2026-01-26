@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using CopyPaste.UI.Helpers;
 
 namespace CopyPaste.UI;
 
@@ -31,6 +32,10 @@ internal static partial class HotkeyHelper
     {
         if (uMsg == _wM_HOTKEY)
         {
+            // IMPORTANT: Capture the foreground window BEFORE invoking the action
+            // At this point, the previous window still has focus
+            FocusHelper.CapturePreviousWindow();
+
             _hotkeyAction?.Invoke();
             return IntPtr.Zero;
         }

@@ -37,6 +37,14 @@ public class LiteDbRepository : IClipboardRepository
         col.Update(item);
     }
 
+    public ClipboardItem? GetById(Guid id)
+    {
+        using var db = new LiteDatabase(_connectionString);
+        var col = db.GetCollection<ClipboardItem>(_collectionName);
+
+        return col.FindById(id);
+    }
+
     public ClipboardItem? GetLatest()
     {
         using var db = new LiteDatabase(_connectionString);
@@ -54,7 +62,7 @@ public class LiteDbRepository : IClipboardRepository
         return [.. db.GetCollection<ClipboardItem>(_collectionName)
                  .FindAll()
                  .Where(x => x.Type != ClipboardContentType.Unknown)
-                 .OrderByDescending(x => x.CreatedAt)];
+                 .OrderByDescending(x => x.ModifiedAt)];
     }
 
     public void Delete(Guid id)
