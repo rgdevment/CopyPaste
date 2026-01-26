@@ -114,14 +114,14 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Opacity="0.6">
-                                    <FontIcon Glyph="{x:Bind TypeIcon}" FontSize="12" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{x:Bind HeaderTitle}" FontSize="11" FontWeight="SemiBold"/>
+                                    <FontIcon Glyph="{x:Bind TypeIcon, Mode=OneWay}" FontSize="12" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{x:Bind HeaderTitle, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"/>
                                     <TextBlock Text="•" Margin="6,0,6,0" FontSize="10"/>
-                                    <TextBlock Text="{x:Bind Timestamp}" FontSize="11"/>
+                                    <TextBlock Text="{x:Bind Timestamp, Mode=OneWay}" FontSize="11"/>
                                 </StackPanel>
                             </Grid>
 
-                            <TextBlock Text="{x:Bind Content}" 
+                            <TextBlock Text="{x:Bind Content, Mode=OneWay}" 
                                        Grid.Row="1"
                                        MaxLines="3" 
                                        LineHeight="20"
@@ -129,20 +129,20 @@
                                        FontSize="13"
                                        Opacity="0.9"
                                        TextWrapping="Wrap"
-                                       Visibility="{x:Bind IsTextVisible}"/>
+                                       Visibility="{x:Bind IsTextVisible, Mode=OneWay}"/>
 
                             <Image x:Name="ClipboardImage"
                                    Grid.Row="1"
                                    Stretch="UniformToFill"
                                    MaxHeight="140"
                                    HorizontalAlignment="Left"
-                                   Visibility="{x:Bind ImageVisibility}"
+                                   Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
                                    Loaded="ClipboardImage_Loaded"
-                                   Tag="{x:Bind ImagePath}"/>
+                                   Tag="{x:Bind ImagePath, Mode=OneWay}"/>
 
                             <!-- Media (Video/Audio) Thumbnail with duration overlay -->
-                            <Grid Grid.Row="1" Visibility="{x:Bind MediaThumbnailVisibility}">
-                                <Image Source="{x:Bind ThumbnailPath}"
+                            <Grid Grid.Row="1" Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}">
+                                <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}"
                                        Stretch="UniformToFill"
                                        MaxHeight="140"
                                        HorizontalAlignment="Left"/>
@@ -152,8 +152,8 @@
                                         HorizontalAlignment="Right" 
                                         VerticalAlignment="Bottom"
                                         Margin="0,0,4,4"
-                                        Visibility="{x:Bind DurationVisibility}">
-                                    <TextBlock Text="{x:Bind MediaDuration}" 
+                                        Visibility="{x:Bind DurationVisibility, Mode=OneWay}">
+                                    <TextBlock Text="{x:Bind MediaDuration, Mode=OneWay}" 
                                                FontSize="10" 
                                                Foreground="White"/>
                                 </Border>

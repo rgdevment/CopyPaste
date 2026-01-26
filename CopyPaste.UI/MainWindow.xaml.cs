@@ -295,32 +295,43 @@ public sealed partial class MainWindow : Window
         var imagePath = image.Tag as string;
         if (string.IsNullOrEmpty(imagePath)) return;
 
+        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!System.IO.File.Exists(imagePath))
+            {
+                if (imagePath.Contains("_t.png", StringComparison.Ordinal))
+                {
+                    try
+                    {
+                        image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
+                        {
+                            UriSource = new Uri("ms-appx:///Assets/thumb/image.png")
+                        };
+                    }
+                    catch { }
+                }
+                return;
+            }
+        }
+
+        if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap &&
+            currentBitmap.UriSource?.LocalPath == new Uri(imagePath).LocalPath)
+        {
+            return;
+        }
+
         try
         {
-            var bitmap = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
+            image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
             {
                 UriSource = new Uri(imagePath),
-
-                // Prevent file locking and reduce memory usage
-                CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.IgnoreImageCache,
-
-                // Decode to optimal display size using configured value
+                CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
                 DecodePixelHeight = ThumbnailConfig.UIDecodeHeight
             };
-
-            image.Source = bitmap;
         }
-        catch (UriFormatException ex)
+        catch
         {
-            System.Diagnostics.Debug.WriteLine($"Formato de URI inválido: {ex.Message}");
-        }
-        catch (System.IO.IOException ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error de E/S al cargar la imagen: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Acceso no autorizado al cargar la imagen: {ex.Message}");
+            // Silently fail - image will remain empty
         }
     }
 

@@ -139,7 +139,7 @@ public partial class MainViewModel : ObservableObject
 
         // Reset to initial page size and clear search when window is deactivated
         SearchQuery = string.Empty;
-        
+
         while (Items.Count > UIConfig.PageSize)
         {
             Items.RemoveAt(Items.Count - 1);

@@ -460,6 +460,7 @@ public class ClipboardService(IClipboardRepository repository)
         item.ModifiedAt = DateTime.UtcNow;
         repository.Update(item);
     }
+
     private static byte[]? ConvertDibToBmp(byte[] dibData)
     {
         if (dibData.Length < 40) return null;
