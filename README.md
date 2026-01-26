@@ -13,7 +13,7 @@
       <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
     </a>
     <a href="https://github.com/rgdevment/CopyPaste/releases">
-      <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
+      <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
     <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=flat-square&logo=windows" alt="Platform Windows"/>
     <a href="#license">
