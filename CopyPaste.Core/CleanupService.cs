@@ -21,7 +21,7 @@ public sealed class CleanupService : IDisposable
         _lastCleanupFileName
     );
 
-    public CleanupService(IClipboardRepository repository, Func<int> getRetentionDays)
+    public CleanupService(IClipboardRepository repository, Func<int> getRetentionDays, bool startTimer = true)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(getRetentionDays);
@@ -29,16 +29,15 @@ public sealed class CleanupService : IDisposable
         _repository = repository;
         _getRetentionDays = getRetentionDays;
 
-        // Run immediately, then every 18 hours
         _timer = new Timer(
             _ => RunCleanupIfNeeded(),
             null,
-            TimeSpan.Zero,
-            _checkInterval
+            startTimer ? TimeSpan.Zero : Timeout.InfiniteTimeSpan,
+            startTimer ? _checkInterval : Timeout.InfiniteTimeSpan
         );
     }
 
-    private void RunCleanupIfNeeded()
+    internal void RunCleanupIfNeeded()
     {
         if (_isDisposed) return;
 

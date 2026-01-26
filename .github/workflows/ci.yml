@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          include-prerelease: true
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj
+
+      - name: Lint (dotnet format)
+        run: |
+          dotnet format --verify-no-changes --no-restore CopyPaste.Core/CopyPaste.Core.csproj
+          dotnet format --verify-no-changes --no-restore CopyPaste.Listener/CopyPaste.Listener.csproj
+          dotnet format --verify-no-changes --no-restore CopyPaste.UI/CopyPaste.UI.csproj
+
+      - name: Build
+        run: dotnet build CopyPaste.UI/CopyPaste.UI.csproj -c Release --no-restore
+
+      - name: Test
+        shell: pwsh
+        run: |
+          $testProjects = Get-ChildItem -Path . -Recurse -Filter "*Test*.csproj" | Select-Object -ExpandProperty FullName
+          if (-not $testProjects) {
+            Write-Host "No test projects found. Skipping tests."
+            exit 0
+          }
+          foreach ($proj in $testProjects) {
+            dotnet test $proj -c Release --no-restore
+          }

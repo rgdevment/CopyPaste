@@ -1,0 +1,106 @@
+name: Release Master
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [win-x64, win-arm64]
+
+    env:
+      DOTNET_NOLOGO: true
+      PUBLISH_PATH: CopyPaste.UI/bin/Release/net10.0-windows*/${{ matrix.arch }}/publish
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: get_version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match 'refs/tags/v(.+)') {
+            $version = $matches[1]
+          } else {
+            $version = "1.0.0"
+          }
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "Version extracted: $version"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          include-prerelease: true
+
+      - name: Restore
+        run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -r ${{ matrix.arch }}
+
+      - name: Publish (${{ matrix.arch }})
+        run: dotnet publish CopyPaste.UI/CopyPaste.UI.csproj -c Release -r ${{ matrix.arch }} --self-contained true --no-restore
+
+      - name: Decode signing certificate
+        if: ${{ secrets.PFX_BASE64 != '' }}
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+        run: |
+          $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
+          Set-Content -Path signingCert.pfx -Value $bytes -AsByteStream
+
+      - name: Sign App Binaries
+        if: ${{ secrets.PFX_BASE64 != '' }}
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+        run: |
+          $pfxPath = Join-Path $PWD 'signingCert.pfx'
+          $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+          Get-ChildItem -Path $targetDir -Include *.exe,*.dll -Recurse | ForEach-Object {
+            & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+          }
+
+      - name: Create Portable Zip
+        shell: pwsh
+        run: |
+          $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+          Compress-Archive -Path "$targetDir/*" -DestinationPath "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-portable.zip" -Force
+
+      - name: Build Installer
+        uses: minhng97/inno-setup-action@v1.2.0
+        with:
+          path: setup.iss
+          defines: PublishDir=${{ github.workspace }}\${{ env.PUBLISH_PATH }} MyArch=${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }} MyAppVersion=${{ steps.get_version.outputs.VERSION }} RepoRoot=${{ github.workspace }}
+
+      - name: Rename Installer
+        shell: pwsh
+        run: |
+          $arch = "${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }}"
+          Move-Item -Path "Output/CopyPaste_Setup_$arch.exe" -Destination "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
+
+      - name: Sign Installer
+        if: ${{ secrets.PFX_BASE64 != '' }}
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+        run: |
+          $pfxPath = Join-Path $PWD 'signingCert.pfx'
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
+
+      - name: Release Files
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-portable.zip
+            CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

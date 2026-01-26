@@ -8,6 +8,7 @@
     <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Build.props" />
     <File Path="LICENSE" />
+    <File Path="setup.iss" />
   </Folder>
   <Project Path="CopyPaste.Core/CopyPaste.Core.csproj">
     <Platform Solution="*|x64" Project="x64" />

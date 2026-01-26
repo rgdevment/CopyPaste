@@ -255,13 +255,13 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         return false;
     }
 
-    private static ClipboardContentType DetectTextType(string? text)
+    internal static ClipboardContentType DetectTextType(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return ClipboardContentType.Text;
         return UrlRegex().IsMatch(text.Trim()) ? ClipboardContentType.Link : ClipboardContentType.Text;
     }
 
-    private static ClipboardContentType DetectFileCollectionType(Collection<string> files)
+    internal static ClipboardContentType DetectFileCollectionType(Collection<string> files)
     {
         // Only detect specific media types for single files.
         // Multiple files (mixed or same type) are treated as File to avoid expensive thumbnail generation.

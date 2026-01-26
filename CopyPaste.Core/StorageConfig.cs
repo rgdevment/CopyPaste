@@ -2,7 +2,7 @@ namespace CopyPaste.Core;
 
 public static class StorageConfig
 {
-    private static readonly string _appDataPath = Path.Combine(
+    private static string _appDataPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "CopyPaste"
     );
@@ -10,6 +10,8 @@ public static class StorageConfig
     public static string DatabasePath => Path.Combine(_appDataPath, "history.db");
     public static string ImagesPath => Path.Combine(_appDataPath, "images");
     public static string ThumbnailsPath => Path.Combine(_appDataPath, "thumbs");
+
+    internal static void SetBasePath(string basePath) => _appDataPath = basePath;
 
     public static void Initialize()
     {
