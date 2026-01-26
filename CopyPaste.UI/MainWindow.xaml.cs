@@ -295,31 +295,33 @@ public sealed partial class MainWindow : Window
         var imagePath = image.Tag as string;
         if (string.IsNullOrEmpty(imagePath)) return;
 
-        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase))
+        // Check file existence for non-app resources
+        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) && 
+            !System.IO.File.Exists(imagePath))
         {
-            if (!System.IO.File.Exists(imagePath))
+            // Try to show placeholder for missing thumbnails
+            if (imagePath.Contains("_t.png", StringComparison.Ordinal))
             {
-                if (imagePath.Contains("_t.png", StringComparison.Ordinal))
+                try
                 {
-                    try
+                    image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
                     {
-                        image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-                        {
-                            UriSource = new Uri("ms-appx:///Assets/thumb/image.png")
-                        };
-                    }
-                    catch { }
+                        UriSource = new Uri("ms-appx:///Assets/thumb/image.png")
+                    };
                 }
-                return;
+                catch { /* Silently fail */ }
             }
+            return;
         }
 
+        // Avoid reloading the same image
         if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap &&
             currentBitmap.UriSource?.LocalPath == new Uri(imagePath).LocalPath)
         {
             return;
         }
 
+        // Load the image
         try
         {
             image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
@@ -329,10 +331,7 @@ public sealed partial class MainWindow : Window
                 DecodePixelHeight = ThumbnailConfig.UIDecodeHeight
             };
         }
-        catch
-        {
-            // Silently fail - image will remain empty
-        }
+        catch { /* Silently fail */ }
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
