@@ -12,6 +12,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    timeout-minutes: 60
     strategy:
       matrix:
         arch: [win-x64, win-arm64]
