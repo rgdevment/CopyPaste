@@ -1,92 +1,121 @@
 <div align="center">
-  <img src="CopyPaste.UI/Assets/CopyPasteLogo.ico" width="128" height="128" alt="CopyPaste Logo"/>
+  <img src="CopyPaste.UI/Assets/CopyPasteLogo.ico" width="140" height="140" alt="CopyPaste App Logo"/>
+
   <h1>CopyPaste</h1>
+  <h3>The Modern Clipboard Manager for Windows</h3>
+
   <p>
-    <strong>The clipboard manager Windows actually deserves.</strong>
+    <strong>High Performance • Open Source • Native Design</strong>
   </p>
 
   <p>
-    <a href="https://github.com/rgdevment/CopyPaste/actions"><img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&label=Build" alt="Build Status"/></a>
-    <a href="#license"><img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square" alt="License"/></a>
-    <img src="https://img.shields.io/badge/Platform-Windows%2011-0078D4?style=flat-square&logo=windows" alt="Platform"/>
-    <img src="https://img.shields.io/badge/.NET-10%20Preview-512BD4?style=flat-square" alt=".NET Version"/>
+    <a href="https://github.com/rgdevment/CopyPaste/actions">
+      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
+    </a>
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
+    </a>
+    <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=flat-square&logo=windows" alt="Platform Windows"/>
+    <a href="#license">
+      <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License"/>
+    </a>
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/github/downloads/rgdevment/CopyPaste/total?style=flat-square&color=success&label=Downloads" alt="Total Downloads"/>
+    </a>
   </p>
 
-  <p>
-    <a href="https://github.com/rgdevment/CopyPaste/releases/latest"><strong>📥 Download Latest Version</strong></a>
-    ·
-    <a href="https://github.com/rgdevment/CopyPaste/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/rgdevment/CopyPaste/discussions">Request Feature</a>
+  <p align="center">
+    <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
+      <img src="https://img.shields.io/badge/📥_Download_CopyPaste_App-Click_Here-blueviolet?style=for-the-badge&logo=windows" alt="Download Now" height="40"/>
+    </a>
   </p>
 </div>
+
+---
+
+## 🚀 Introduction
+
+**CopyPaste** is a next-generation **Clipboard Manager** designed specifically for Windows 10 and 11. Unlike traditional tools that feel outdated or bloated, CopyPaste App focuses on three core pillars: **Native Aesthetics, Obsessive Performance, and Rock-Solid Stability.**
+
+Built on the bleeding edge with **.NET 10 Preview** and **WinUI 3**, it seamlessly integrates with your workflow, feeling less like a third-party tool and more like a feature Windows forgot to include.
 
 ---
 
 ## 💡 The Motivation
 **Why build another clipboard manager?**
 
-Windows has plenty of clipboard managers. Some are functional but ugly. Others are "tanks"—heavy, feature-bloated software that consumes 500MB of RAM just to remember text.
+The Windows ecosystem is flooded with clipboard tools. Some are purely functional but visually outdated. Others are "tanks"—heavy, feature-bloated software that consumes 500MB of RAM just to store a few text strings.
 
-We wanted something else.
-* We wanted the **minimalist aesthetic** of macOS utilities.
-* We wanted the **native feel** of Windows 11 notifications.
-* We wanted **obsessive performance**.
+**We wanted something different.**
+* We wanted the **minimalist aesthetic** found in top-tier macOS utilities.
+* We wanted the **native feel** of the Windows 11 Notification Center.
+* We wanted **efficiency** (NativeAOT) over features we never use.
 
-**This is a passion project.** We are not selling anything. We are building the tool *we* needed for our daily work, and we are committed to maintaining and refining it for years to come. Open Source, free, and transparent.
-
----
-
-## ✨ Features (Alpha)
-
-This project is currently in **Alpha / Proof of Concept**. We are building on the bleeding edge.
-
-* **Native & Modern:** Built with **WinUI 3 (Windows App SDK)**. It doesn't look like an alien app; it looks like part of Windows.
-* **Performance First:** Compiled with **NativeAOT** for instant startup and low memory footprint (~30-60MB).
-* **Zero Distractions:** It stays out of your way until you need it.
-* **Rich History:** Supports Text, Images, and Files (drag & drop ready).
-
-### 📸 Screenshots
-*(Work in progress)*
-
-> *Soon*
+**This is a passion project.** We are not selling data. We are not upselling "Pro" features. We are building the tool *we* needed for our daily development work, and we are sharing it with the community. Open Source, free, and transparent.
 
 ---
 
-## 🛠 Tech Stack
+## ✨ Key Features (Alpha)
+
+This project is currently in **Alpha / Proof of Concept**. We are pioneering desktop development with C# 14.
+
+* 🎨 **Native & Modern UI:** Built with **WinUI 3**. It respects your system theme (Light/Dark) and uses standard Windows controls.
+* ⚡ **Blazing Fast:** Compiled with **NativeAOT** for instant startup times and practically zero lag.
+* 🧠 **Smart Memory:** Targeted to run between **30-60MB RAM**. (Configurable limits coming soon).
+* 📂 **Rich History:** Seamlessly handles Text, Images, and File paths.
+* 🔒 **Privacy First:** 100% Local. Your clipboard history never leaves your machine.
+
+---
+
+## 📸 Screenshots
+
+> *Current status: The UI is fully functional and mimics the Windows 11 notification aesthetic. High-res screenshots and GIFs demonstrating the "CopyPaste App" workflow will be added here shortly.*
+
+*(Placeholder for future GIF: Showing specific copy-paste action)*
+
+---
+
+## 🛠 Tech Stack (For Developers)
 We are using this project to push the boundaries of modern .NET development on the Desktop:
 
-* **Language:** C# 14
-* **Framework:** .NET 10 Preview
-* **UI Framework:** WinUI 3
-* **Architecture:** Dependency Injection, MVVM-like structure, Low-level Hooks.
+| Technology | Purpose |
+| :--- | :--- |
+| **C# 14** | Latest language features for cleaner code. |
+| **.NET 10 Preview** | "Bleeding edge" runtime performance. |
+| **WinUI 3** | The native UI framework for Windows App SDK. |
+| **NativeAOT** | Ahead-of-Time compilation (No JIT lag). |
+| **Win32 Hooks** | Low-level clipboard monitoring. |
 
 ---
 
 ## 🚀 Getting Started
 
 ### Installation
-1.  Go to the [Releases Page](https://github.com/tu-usuario/CopyPaste/releases).
-2.  Download the **Installer (`.exe`)** or the **Portable (`.zip`)** version.
-3.  **Note:** Since this is an open-source project, the binary is self-signed. Windows SmartScreen might warn you. Click `More Info` -> `Run Anyway`.
+1.  Navigate to the [**Releases Page**](https://github.com/rgdevment/CopyPaste/releases).
+2.  Choose your flavor:
+    * **Installer (`.exe`):** (Recommended) Installs to AppData and creates shortcuts.
+    * **Portable (`.zip`):** Just unzip and run `CopyPaste.exe`.
+3.  **SmartScreen Note:** Since this is a community open-source project, the certificate is self-signed. If Windows warns you, click `More Info` -> `Run Anyway`.
 
 ### Compatibility
-* **Supported:** Windows 10 (1809+), Windows 11.
-* **Architectures:** x64 (Tested), ARM64 (Experimental - Feedack needed!).
+* **OS:** Windows 10 (1809+) or Windows 11.
+* **Architecture:**
+    * ✅ **x64:** Fully tested and supported.
+    * 🧪 **ARM64:** Builds available (Experimental - Feedback needed from Surface/Snapdragon users!).
 
 ---
 
-## 🚧 Roadmap & Known Issues
-We believe in radical transparency. Here is where we stand:
+## 🚧 Roadmap & Transparency
+We believe in radical honesty about the state of the app:
 
-- [ ] **Internationalization:** The UI is currently hardcoded in **Spanish**. English support is coming in v0.2.0.
-- [ ] **Settings UI:** Configuration is currently static. A settings menu is in development.
-- [ ] **ARM64 Testing:** We build for ARM, but we haven't tested it on physical hardware yet.
+- [ ] **Internationalization:** UI is currently hardcoded in **Spanish**. English support arrives in v0.2.0.
+- [ ] **Configuration UI:** Settings are currently static. A full preferences menu is in development.
+- [ ] **Search:** Implementing fuzzy search for history items.
 
 ---
 
 ## 🤝 Contributing
-This is a community effort. We welcome anyone who shares our vision of high-quality, native Windows apps.
+**CopyPaste** is a community effort. We welcome anyone who shares our vision of high-quality, native Windows apps.
 
 1.  **Fork** the repository.
 2.  Create your **Feature Branch** (`git checkout -b feature/AmazingFeature`).
@@ -95,11 +124,14 @@ This is a community effort. We welcome anyone who shares our vision of high-qual
 5.  Open a **Pull Request**.
 
 **Specific Help Wanted:**
-* If you have a Surface Pro X or any **Snapdragon** device, please test the ARM64 build and let us know if it works!
+* **ARM64 Testing:** If you have a Surface Pro X or Snapdragon Dev Kit, please test our ARM64 build and report issues!
 
 ---
 
 ## 📜 License
-Distributed under the **GNU General Public License v3.0**. See `LICENSE` for more information.
+**CopyPaste** - The ultimate clipboard tool for Windows.
+Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
-> **Built with ❤️ and C#**
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under certain conditions.
+Distributed under the **GNU General Public License v3.0**. See `LICENSE` for more information.
