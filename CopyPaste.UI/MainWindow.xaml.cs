@@ -1,12 +1,13 @@
 using CopyPaste.Core;
+using CopyPaste.UI.Helpers;
 using CopyPaste.UI.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using WinRT.Interop;
 
@@ -17,45 +18,49 @@ public sealed partial class MainWindow : Window
     public MainViewModel ViewModel { get; }
     private readonly AppWindow _appWindow;
     private readonly IntPtr _hWnd;
-    private const int _hOTKEY_ID = 1;
+    private const int _hotkeyId = 1;
 
     public MainWindow(ClipboardService service)
     {
         ViewModel = new MainViewModel(service);
         ViewModel.Initialize(this);
-        this.InitializeComponent();
+        InitializeComponent();
 
         _hWnd = WindowNative.GetWindowHandle(this);
-        WindowId wndId = Win32Interop.GetWindowIdFromWindow(_hWnd);
-        _appWindow = AppWindow.GetFromWindowId(wndId);
+        _appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_hWnd));
 
+        InitializeWindow();
+        RegisterEventHandlers();
+    }
+
+    private void InitializeWindow()
+    {
         SetWindowIcon();
         ConfigureSidebarStyle();
-        RemoveWindowBorder(_hWnd);
+        Win32WindowHelper.RemoveWindowBorder(_hWnd);
         RegisterGlobalHotkey();
         HotkeyHelper.RegisterMessageHandler(_hWnd, OnHotkeyPressed);
+    }
 
-        this.Activated += MainWindow_Activated;
-        this.Closed += MainWindow_Closed;
-
-        // Also listen to AppWindow events to detect deactivation reliably
+    private void RegisterEventHandlers()
+    {
+        Activated += MainWindow_Activated;
+        Closed += MainWindow_Closed;
         _appWindow.Changed += AppWindow_Changed;
-
         ClipboardListView.Loaded += ClipboardListView_Loaded;
     }
 
-    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    private void MainWindow_Closed(object? _, WindowEventArgs args)
     {
-        UnregisterHotKey(_hWnd, _hOTKEY_ID);
+        Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
         HotkeyHelper.UnregisterMessageHandler(_hWnd);
-        // If the app is exiting, allow close to proceed
-        if (Application.Current is App app && app.IsExiting)
+        
+        if (Application.Current is App { IsExiting: true })
         {
             args.Handled = false;
             return;
         }
 
-        // Otherwise prevent app shutdown and just hide the window
         args.Handled = true;
         _appWindow.Hide();
     }
@@ -63,93 +68,54 @@ public sealed partial class MainWindow : Window
     private void OnHotkeyPressed()
     {
         if (_appWindow.IsVisible)
-        {
             _appWindow.Hide();
-        }
         else
-        {
             ViewModel.ShowWindow();
-        }
     }
 
     private void RegisterGlobalHotkey()
     {
-        uint modifiers = 0;
-
-        if (UIHotkey.UseWinKey)
-        {
-            modifiers |= _mOD_WIN;
-        }
-        else
-        {
-            modifiers |= _mOD_CONTROL;
-        }
-
+        uint modifiers = UIHotkey.UseWinKey ? Win32WindowHelper.MOD_WIN : Win32WindowHelper.MOD_CONTROL;
+        
         if (UIHotkey.UseAltKey)
-        {
-            modifiers |= _mOD_ALT;
-        }
+            modifiers |= Win32WindowHelper.MOD_ALT;
 
-        bool registered = RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIHotkey.VirtualKey);
+        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, UIHotkey.VirtualKey);
 
         if (!registered && UIHotkey.UseWinKey)
         {
-            // Fallback to Ctrl if Win key registration failed
-            modifiers = _mOD_CONTROL;
+            modifiers = Win32WindowHelper.MOD_CONTROL;
             if (UIHotkey.UseAltKey)
-            {
-                modifiers |= _mOD_ALT;
-            }
-            RegisterHotKey(_hWnd, _hOTKEY_ID, modifiers, UIHotkey.VirtualKey);
+                modifiers |= Win32WindowHelper.MOD_ALT;
+            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, UIHotkey.VirtualKey);
         }
     }
 
-    private void ClipboardListView_Loaded(object sender, RoutedEventArgs _)
+    private void ClipboardListView_Loaded(object? _, RoutedEventArgs __)
     {
         var scrollViewer = FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
-        {
             scrollViewer.ViewChanged += ScrollViewer_ViewChanged;
-        }
     }
 
-    private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+    private void ScrollViewer_ViewChanged(object? _, ScrollViewerViewChangedEventArgs e)
     {
-        if (args.DidPresenterChange || args.DidVisibilityChange)
-        {
-            // If we lost visibility due to activation change, ensure cleanup
-            if (!sender.IsVisible)
-            {
-                ViewModel.OnWindowDeactivated();
-            }
-        }
-    }
-
-    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is ScrollViewer sv)
-                return sv;
-
-            var result = FindScrollViewer(child);
-            if (result != null)
-                return result;
-        }
-        return null;
-    }
-
-    private void ScrollViewer_ViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
-    {
-        if (sender is not ScrollViewer scrollViewer) return;
-
-        var verticalOffset = scrollViewer.VerticalOffset;
-        var maxVerticalOffset = scrollViewer.ScrollableHeight;
-
-        if (maxVerticalOffset > 0 && verticalOffset >= maxVerticalOffset - UIConfig.ScrollLoadThreshold)
-        {
+        if (_ is not ScrollViewer sv) return;
+        
+        if (sv.ScrollableHeight > 0 && sv.VerticalOffset >= sv.ScrollableHeight - UIConfig.ScrollLoadThreshold)
             ViewModel.LoadMoreItems();
+    }
+
+    private void MainWindow_Activated(object? _, WindowActivatedEventArgs args)
+    {
+        if (args.WindowActivationState == WindowActivationState.Deactivated)
+        {
+            ViewModel.OnWindowDeactivated();
+            _appWindow.Hide();
+        }
+        else
+        {
+            Win32WindowHelper.RemoveWindowBorder(_hWnd);
         }
     }
 
@@ -171,135 +137,87 @@ public sealed partial class MainWindow : Window
     {
         var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "CopyPasteLogoSimple.ico");
         if (System.IO.File.Exists(iconPath))
-        {
             _appWindow.SetIcon(iconPath);
-        }
-    }
-
-    // Win32 API Definitions
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    private static partial nint GetWindowLongPtrW(IntPtr hWnd, int nIndex);
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    private static partial nint SetWindowLongPtrW(IntPtr hWnd, int nIndex, nint dwNewLong);
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
-    [System.Runtime.InteropServices.LibraryImport("dwmapi.dll")]
-    private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref uint attrValue, int attrSize);
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll", SetLastError = true)]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll", SetLastError = true)]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool UnregisterHotKey(IntPtr hWnd, int id);
-
-    // Window style constants
-    private const int _gWL_STYLE = -16;
-    private const int _gWL_EXSTYLE = -20;
-
-    private const nint _wS_BORDER = 0x00800000;
-    private const nint _wS_DLGFRAME = 0x00400000;
-    private const nint _wS_THICKFRAME = 0x00040000;
-
-    private const nint _wS_EX_WINDOWEDGE = 0x00000100;
-    private const nint _wS_EX_CLIENTEDGE = 0x00000200;
-    private const nint _wS_EX_STATICEDGE = 0x00020000;
-
-    // SetWindowPos flags
-    private const uint _sWP_FRAMECHANGED = 0x0020;
-    private const uint _sWP_NOMOVE = 0x0002;
-    private const uint _sWP_NOSIZE = 0x0001;
-    private const uint _sWP_NOZORDER = 0x0004;
-    private const uint _sWP_NOACTIVATE = 0x0010;
-
-    // DWM constants
-    private const int _dWMWA_WINDOW_CORNER_PREFERENCE = 33;
-
-    // Hotkey modifiers
-    private const uint _mOD_ALT = 0x0001;
-    private const uint _mOD_CONTROL = 0x0002;
-    private const uint _mOD_WIN = 0x0008;
-
-    private static void RemoveWindowBorder(IntPtr hWnd)
-    {
-        nint style = GetWindowLongPtrW(hWnd, _gWL_STYLE);
-        style &= ~_wS_BORDER;
-        style &= ~_wS_DLGFRAME;
-        style &= ~_wS_THICKFRAME;
-        SetWindowLongPtrW(hWnd, _gWL_STYLE, style);
-
-        nint exStyle = GetWindowLongPtrW(hWnd, _gWL_EXSTYLE);
-        exStyle &= ~_wS_EX_WINDOWEDGE;
-        exStyle &= ~_wS_EX_CLIENTEDGE;
-        exStyle &= ~_wS_EX_STATICEDGE;
-        SetWindowLongPtrW(hWnd, _gWL_EXSTYLE, exStyle);
-
-        SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0,
-            _sWP_FRAMECHANGED | _sWP_NOMOVE | _sWP_NOSIZE | _sWP_NOZORDER | _sWP_NOACTIVATE);
-
-        uint cornerPreference = 2;
-        _ = DwmSetWindowAttribute(hWnd, _dWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(uint));
     }
 
     private void MoveToRightEdge()
     {
-        var displayArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary);
-        var workArea = displayArea.WorkArea;
+        var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary).WorkArea;
         int width = UIConfig.WindowWidth;
         int height = workArea.Height - UIConfig.WindowMarginBottom;
-        int x = (workArea.X + workArea.Width) - width;
+        int x = workArea.X + workArea.Width - width;
         int y = workArea.Y + UIConfig.WindowMarginTop;
         _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
     }
 
-    private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+    private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
     {
-        if (args.WindowActivationState == WindowActivationState.Deactivated)
-        {
+        if ((args.DidPresenterChange || args.DidVisibilityChange) && !sender.IsVisible)
             ViewModel.OnWindowDeactivated();
-            _appWindow.Hide();
-        }
-        else
-        {
-            RemoveWindowBorder(_hWnd);
-        }
     }
 
-    [SupportedOSPlatform("windows10.0.17763.0")]
-    private void Card_PointerEntered(object sender, PointerRoutedEventArgs _)
+    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
     {
-        if (sender is FrameworkElement root && root.FindName("ActionPanel") is UIElement panel)
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is ScrollViewer sv)
+                return sv;
+
+            var result = FindScrollViewer(child);
+            if (result != null)
+                return result;
+        }
+        return null;
+    }
+
+    private static void Container_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && 
+            VisualTreeHelper.GetChild(fe, 0) is FrameworkElement root &&
+            root.FindName("ActionPanel") is UIElement panel)
             panel.Opacity = 1;
-        }
     }
 
-    [SupportedOSPlatform("windows10.0.17763.0")]
-    private void Card_PointerExited(object sender, PointerRoutedEventArgs _)
+    private static void Container_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is FrameworkElement root && root.FindName("ActionPanel") is UIElement panel)
-        {
+        if (sender is FrameworkElement fe && 
+            VisualTreeHelper.GetChild(fe, 0) is FrameworkElement root &&
+            root.FindName("ActionPanel") is UIElement panel)
             panel.Opacity = 0;
+    }
+
+    private void ClipboardListView_ContainerContentChanging(ListViewBase _, ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue) return;
+
+        var container = args.ItemContainer;
+        container.PointerEntered -= Container_PointerEntered;
+        container.PointerExited -= Container_PointerExited;
+        container.PointerEntered += Container_PointerEntered;
+        container.PointerExited += Container_PointerExited;
+
+        args.RegisterUpdateCallback(LoadClipboardImage);
+    }
+
+    private void LoadClipboardImage(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is not ClipboardItemViewModel vm) return;
+
+        if (args.ItemContainer.ContentTemplateRoot is FrameworkElement root &&
+            root.FindName("ClipboardImage") is Image image)
+        {
+            LoadImageSource(image, vm.ImagePath);
         }
     }
 
-    private void ClipboardImage_Loaded(object sender, RoutedEventArgs _)
+    private static void LoadImageSource(Image image, string? imagePath)
     {
-        if (sender is not Image image) return;
-
-        var imagePath = image.Tag as string;
         if (string.IsNullOrEmpty(imagePath)) return;
 
-        // Check file existence for non-app resources
-        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) && 
+        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) &&
             !System.IO.File.Exists(imagePath))
         {
-            // Try to show placeholder for missing thumbnails
             if (imagePath.Contains("_t.png", StringComparison.Ordinal))
             {
                 try
@@ -314,14 +232,10 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // Avoid reloading the same image
         if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap &&
             currentBitmap.UriSource?.LocalPath == new Uri(imagePath).LocalPath)
-        {
             return;
-        }
 
-        // Load the image
         try
         {
             image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
@@ -334,12 +248,10 @@ public sealed partial class MainWindow : Window
         catch { /* Silently fail */ }
     }
 
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void SearchBox_TextChanged(object? sender, TextChangedEventArgs _)
     {
-        if (sender is TextBox textBox)
-        {
+        Debug.WriteLine("Search box text changed. Sender: {0}", sender);
+        if (SearchBox is TextBox textBox)
             ViewModel.SearchQuery = textBox.Text ?? string.Empty;
-        }
     }
 }
-

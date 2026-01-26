@@ -57,10 +57,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Converters\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <None Update="Controls\ClipboardItemCard.xaml">
         <Generator>MSBuild:Compile</Generator>
       </None>
