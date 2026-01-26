@@ -156,28 +156,22 @@ xmlns:tb="using:H.NotifyIcon">
                             <!-- Image Content -->
                             <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="4" 
                                     Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
-                                    HorizontalAlignment="Left" Opacity="0.6">
+                                    HorizontalAlignment="Stretch" Height="85" Opacity="0.6"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                 <Image x:Name="ClipboardImage"
-                                       Stretch="UniformToFill" MaxHeight="80" 
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Tag="{x:Bind ImagePath, Mode=OneWay}"/>
                             </Border>
 
                             <!-- Media Thumbnail -->
                             <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="4" 
                                     Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}"
-                                    HorizontalAlignment="Left" Opacity="0.6">
-                                <Grid>
-                                    <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}" 
-                                           Stretch="UniformToFill" MaxHeight="80"/>
-                                    <Border Background="#99000000" CornerRadius="3" Padding="5,2"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Visibility="{x:Bind DurationVisibility, Mode=OneWay}">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <FontIcon Glyph="&#xE768;" FontSize="10" Foreground="White"/>
-                                            <TextBlock Text="{x:Bind MediaDuration, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
+                                    HorizontalAlignment="Stretch" Height="85" Opacity="0.6"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}" 
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
 
                             <!-- File Warning -->
