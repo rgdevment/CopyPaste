@@ -6,18 +6,18 @@
   </p>
 
   <p>
-    <a href="https://github.com/tu-usuario/CopyPaste/actions"><img src="https://img.shields.io/github/actions/workflow/status/tu-usuario/CopyPaste/ci.yml?style=flat-square&label=Build" alt="Build Status"/></a>
-    <a href="#license"><img src="https://img.shields.io/github/license/tu-usuario/CopyPaste?style=flat-square" alt="License"/></a>
+    <a href="https://github.com/rgdevment/CopyPaste/actions"><img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&label=Build" alt="Build Status"/></a>
+    <a href="#license"><img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square" alt="License"/></a>
     <img src="https://img.shields.io/badge/Platform-Windows%2011-0078D4?style=flat-square&logo=windows" alt="Platform"/>
     <img src="https://img.shields.io/badge/.NET-10%20Preview-512BD4?style=flat-square" alt=".NET Version"/>
   </p>
 
   <p>
-    <a href="https://github.com/tu-usuario/CopyPaste/releases/latest"><strong>📥 Download Latest Version</strong></a>
+    <a href="https://github.com/rgdevment/CopyPaste/releases/latest"><strong>📥 Download Latest Version</strong></a>
     ·
-    <a href="https://github.com/tu-usuario/CopyPaste/issues">Report Bug</a>
+    <a href="https://github.com/rgdevment/CopyPaste/issues">Report Bug</a>
     ·
-    <a href="https://github.com/tu-usuario/CopyPaste/discussions">Request Feature</a>
+    <a href="https://github.com/rgdevment/CopyPaste/discussions">Request Feature</a>
   </p>
 </div>
 
