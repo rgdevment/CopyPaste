@@ -1,71 +1,80 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-  <OutputType>WinExe</OutputType>
-  <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-  <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-  <RootNamespace>CopyPaste.UI</RootNamespace>
-  <ApplicationManifest>app.manifest</ApplicationManifest>
-  <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
-  <Platforms>x64;arm64</Platforms>
-  <UseWinUI>true</UseWinUI>
-  <Nullable>enable</Nullable>
-  <LangVersion>preview</LangVersion>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+        <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+        <RootNamespace>CopyPaste.UI</RootNamespace>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
+        <Platforms>x64;arm64</Platforms>
+        <UseWinUI>true</UseWinUI>
+        <Nullable>enable</Nullable>
+        <LangVersion>preview</LangVersion>
 
-    <WindowsPackageType>None</WindowsPackageType>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <WinUISDKReferences>true</WinUISDKReferences>
+        <AssemblyName>CopyPaste</AssemblyName>
 
-    <SelfContained>True</SelfContained>
-    <PublishSelfContained>True</PublishSelfContained>
-    <PublishReadyToRun>False</PublishReadyToRun>
-    <PublishTrimmed>False</PublishTrimmed>
+        <WindowsPackageType>None</WindowsPackageType>
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+        <WinUISDKReferences>true</WinUISDKReferences>
 
-    <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
+        <SelfContained>True</SelfContained>
+        <PublishSelfContained>True</PublishSelfContained>
 
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <ItemGroup>
-    <Content Remove="Assets\CopyPasteLogoSimple.ico" />
-    <Content Remove="Assets\CopyPasteNotification.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="Assets\CopyPasteLogo.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Remove="Controls\ClipboardItemCard.xaml" />
-  </ItemGroup>
+        <PublishAot>true</PublishAot>
+        <SatelliteResourceLanguages>en;es</SatelliteResourceLanguages>
 
-  <ItemGroup>
-    <Manifest Include="$(ApplicationManifest)" />
-  </ItemGroup>
+        <PublishReadyToRun>False</PublishReadyToRun>
 
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7463" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
-  </ItemGroup>
+        <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
 
-  <ItemGroup>
-      <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
-      <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
+    <ItemGroup>
+        <Content Remove="Assets\CopyPasteLogoSimple.ico" />
+        <Content Remove="Assets\CopyPasteNotification.ico" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Remove="Assets\CopyPasteLogo.ico" />
+    </ItemGroup>
+    <ItemGroup>
+        <Page Remove="Controls\ClipboardItemCard.xaml" />
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="Assets\CopyPasteLogoSimple.ico">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+        <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>
 
     <ItemGroup>
-      <Content Update="Assets\CopyPasteLogo.ico">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
+        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7463" />
+        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Controls\ClipboardItemCard.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </None>
+        <TrimmerRootAssembly Include="LiteDB" />
     </ItemGroup>
-  </Project>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+        <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="Assets\CopyPasteLogoSimple.ico">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Update="Assets\CopyPasteLogo.ico">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="Controls\ClipboardItemCard.xaml">
+            <Generator>MSBuild:Compile</Generator>
+        </None>
+    </ItemGroup>
+</Project>
