@@ -173,18 +173,33 @@ public sealed partial class MainWindow : Window
 
     private static void Container_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe &&
-            VisualTreeHelper.GetChild(fe, 0) is FrameworkElement root &&
-            root.FindName("ActionPanel") is UIElement panel)
+        if (sender is ListViewItem item &&
+            item.ContentTemplateRoot is FrameworkElement root &&
+            FindDescendant(root, "ActionPanel") is UIElement panel)
             panel.Opacity = 1;
     }
 
     private static void Container_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe &&
-            VisualTreeHelper.GetChild(fe, 0) is FrameworkElement root &&
-            root.FindName("ActionPanel") is UIElement panel)
+        if (sender is ListViewItem item &&
+            item.ContentTemplateRoot is FrameworkElement root &&
+            FindDescendant(root, "ActionPanel") is UIElement panel)
             panel.Opacity = 0;
+    }
+
+    private static DependencyObject? FindDescendant(DependencyObject parent, string name)
+    {
+        if (parent is FrameworkElement fe && fe.Name == name)
+            return parent;
+
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            var result = FindDescendant(child, name);
+            if (result != null)
+                return result;
+        }
+        return null;
     }
 
     private void ClipboardListView_ContainerContentChanging(ListViewBase _, ContainerContentChangingEventArgs args)
