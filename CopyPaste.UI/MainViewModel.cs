@@ -7,7 +7,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
 using CopyPaste.UI.Helpers;
-using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -132,11 +131,8 @@ public partial class MainViewModel : ObservableObject
         _dispatcherQueue?.TryEnqueue(() =>
         {
             var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
-            if (existingVm != null)
-            {
-                var index = Items.IndexOf(existingVm);
-                Items[index] = new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem);
-            }
+            // Update existing ViewModel instead of replacing - reduces GC pressure
+            existingVm?.RefreshFromModel(item);
         });
 
     private void OnDeleteItem(ClipboardItemViewModel itemVM)
@@ -204,7 +200,7 @@ public partial class MainViewModel : ObservableObject
         if (_window == null) return;
 
         var hWnd = WindowNative.GetWindowHandle(_window);
-        var appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(hWnd));
+        var appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd));
         appWindow.Hide();
     }
 
@@ -222,13 +218,17 @@ public partial class MainViewModel : ObservableObject
         // Reset to initial page size and clear search when window is deactivated
         SearchQuery = string.Empty;
 
+        // Remove excess items from the end (oldest items)
         while (Items.Count > UIConfig.PageSize)
         {
             Items.RemoveAt(Items.Count - 1);
         }
 
         _hasMoreItems = true;
-        GC.Collect(2, GCCollectionMode.Optimized, false);
+
+        // Suggest GC to clean up removed ViewModels and BitmapImages
+        // Using Gen0 is lighter and lets GC decide if full collection is needed
+        GC.Collect(0, GCCollectionMode.Optimized, false);
     }
 
     [RelayCommand]

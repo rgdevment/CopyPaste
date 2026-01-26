@@ -7,8 +7,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System;
-using System.Diagnostics;
-using System.Runtime.Versioning;
 using WinRT.Interop;
 
 namespace CopyPaste.UI;
@@ -287,9 +285,13 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap &&
-            currentBitmap.UriSource?.LocalPath == new Uri(imagePath).LocalPath)
-            return;
+        // Skip if already showing the same image (avoid creating duplicate BitmapImages)
+        if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap)
+        {
+            var currentPath = currentBitmap.UriSource?.LocalPath;
+            if (currentPath != null && imagePath.EndsWith(System.IO.Path.GetFileName(currentPath), StringComparison.OrdinalIgnoreCase))
+                return;
+        }
 
         try
         {
@@ -305,7 +307,6 @@ public sealed partial class MainWindow : Window
 
     private void SearchBox_TextChanged(object? sender, TextChangedEventArgs _)
     {
-        Debug.WriteLine("Search box text changed. Sender: {0}", sender);
         if (SearchBox is TextBox textBox)
             ViewModel.SearchQuery = textBox.Text ?? string.Empty;
     }

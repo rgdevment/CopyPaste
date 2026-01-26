@@ -53,44 +53,6 @@ public sealed partial class App : Application, IDisposable
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        // Configure thumbnail settings before initializing services
-        // Uncomment one of the profiles below or customize your own
-
-        // Low Memory Profile (4-8GB RAM):
-        // ThumbnailConfig.Width = 200;
-        // ThumbnailConfig.QualityPng = 75;
-        // ThumbnailConfig.QualityJpeg = 75;
-        // ThumbnailConfig.GarbageCollectionThreshold = 500_000;
-        // ThumbnailConfig.UIDecodeHeight = 180;
-
-        // Balanced Profile (default - recommended):
-        // ThumbnailConfig.Width = 250;
-        // ThumbnailConfig.QualityPng = 85;
-        // ThumbnailConfig.QualityJpeg = 85;
-        // ThumbnailConfig.GarbageCollectionThreshold = 1_000_000;
-        // ThumbnailConfig.UIDecodeHeight = 220;
-
-        // High Quality Profile (16GB+ RAM):
-        // ThumbnailConfig.Width = 300;
-        // ThumbnailConfig.QualityPng = 90;
-        // ThumbnailConfig.QualityJpeg = 90;
-        // ThumbnailConfig.GarbageCollectionThreshold = 2_000_000;
-        // ThumbnailConfig.UIDecodeHeight = 260;
-
-        // Configure UI behavior (optional - defaults are already set)
-        // UIConfig.PageSize = 20;                      // Items loaded per page
-        // UIConfig.MaxItemsBeforeCleanup = 100;        // Max items in memory
-        // UIConfig.ScrollLoadThreshold = 100;          // Pixels from bottom to load more
-        // UIConfig.WindowWidth = 400;                  // Sidebar width
-        // UIConfig.Hotkey.UseWinKey = true;            // Use Win key (false = Ctrl key)
-        // UIConfig.Hotkey.VirtualKey = 0x56;           // V key (Win/Ctrl + Alt + V)
-
-        // Paste timing configuration (optional - for slow/fast systems)
-        // PasteConfig.DuplicateIgnoreWindowMs = 300;   // Time to ignore clipboard after paste
-        // PasteConfig.DelayBeforeFocusMs = 50;         // Delay before restoring focus
-        // PasteConfig.DelayBeforePasteMs = 100;        // Delay before sending Ctrl+V
-        // PasteConfig.MaxFocusVerifyAttempts = 10;     // Max attempts to verify focus
-
         _window = new MainWindow(_service!);
 
         _window.Activate();
@@ -105,11 +67,9 @@ public sealed partial class App : Application, IDisposable
         }
         catch (ObjectDisposedException)
         {
-            // Ya está eliminado, ignorar
         }
         catch (Exception)
         {
-            // Registrar o manejar según sea necesario, pero no suprimir silenciosamente
             throw;
         }
 

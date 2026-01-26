@@ -67,6 +67,35 @@ public partial class ClipboardItemViewModel : ObservableObject
         _isPinned = model.IsPinned;
     }
 
+    /// <summary>
+    /// Updates the underlying model and notifies UI of property changes.
+    /// Used when thumbnail/metadata becomes available without creating a new ViewModel.
+    /// </summary>
+    public void RefreshFromModel(ClipboardItem updatedModel)
+    {
+        ArgumentNullException.ThrowIfNull(updatedModel);
+
+        // Update the model reference
+        Model.Content = updatedModel.Content;
+        Model.Metadata = updatedModel.Metadata;
+        Model.ModifiedAt = updatedModel.ModifiedAt;
+
+        // Notify UI of properties that depend on metadata
+        OnPropertyChanged(nameof(Content));
+        OnPropertyChanged(nameof(ThumbnailPath));
+        OnPropertyChanged(nameof(ImagePath));
+        OnPropertyChanged(nameof(HasValidImagePath));
+        OnPropertyChanged(nameof(ImageVisibility));
+        OnPropertyChanged(nameof(MediaThumbnailVisibility));
+        OnPropertyChanged(nameof(MediaDuration));
+        OnPropertyChanged(nameof(DurationVisibility));
+        OnPropertyChanged(nameof(ImageDimensions));
+        OnPropertyChanged(nameof(ImageDimensionsVisibility));
+        OnPropertyChanged(nameof(FileSize));
+        OnPropertyChanged(nameof(FileSizeVisibility));
+        OnPropertyChanged(nameof(MediaInfoVisibility));
+    }
+
     public string Content => Model.Content ?? string.Empty;
 
     public string ThumbnailPath => GetThumbnailPathOrPlaceholder();
