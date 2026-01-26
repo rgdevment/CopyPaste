@@ -72,11 +72,19 @@ jobs:
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           Compress-Archive -Path "$targetDir/*" -DestinationPath "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-portable.zip" -Force
 
+    - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
       - name: Build Installer
-        uses: minhng97/inno-setup-action@v1.2.0
-        with:
-          path: setup.iss
-          defines: PublishDir=${{ github.workspace }}\${{ env.PUBLISH_PATH }} MyArch=${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }} MyAppVersion=${{ steps.get_version.outputs.VERSION }} RepoRoot=${{ github.workspace }}
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          $publishDir = "${{ github.workspace }}\${{ env.PUBLISH_PATH }}"
+          $repoRoot = "${{ github.workspace }}"
+          $myArch = "${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }}"
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+
+          & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DRepoRoot=$repoRoot"
 
       - name: Rename Installer
         shell: pwsh
