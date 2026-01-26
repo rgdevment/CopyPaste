@@ -85,12 +85,51 @@ public class LiteDbRepository : IClipboardRepository
         col.Delete(id);
     }
 
-    public int ClearOldItems(int days)
+    public int ClearOldItems(int days, bool excludePinned = true)
     {
-        using var db = new LiteDatabase(_connectionString);
-        var limitDate = DateTime.UtcNow.AddDays(-days);
-        return db.GetCollection<ClipboardItem>(_collectionName)
-                 .DeleteMany(x => x.CreatedAt < limitDate);
+        int deletedCount;
+
+        using (var db = new LiteDatabase(_connectionString))
+        {
+            var col = db.GetCollection<ClipboardItem>(_collectionName);
+            var limitDate = DateTime.UtcNow.AddDays(-days);
+
+            var itemsToDelete = col.Query()
+                .Where(x => x.CreatedAt < limitDate)
+                .ToEnumerable()
+                .Where(x => !excludePinned || !x.IsPinned)
+                .ToList();
+
+            foreach (var item in itemsToDelete)
+            {
+                // Clean up image files stored by the app
+                if (item.Type == ClipboardContentType.Image && File.Exists(item.Content))
+                {
+                    try { File.Delete(item.Content); }
+                    catch { /* Ignore cleanup errors */ }
+                }
+
+                // Clean up thumbnail files
+                string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+                if (File.Exists(thumbPath))
+                {
+                    try { File.Delete(thumbPath); }
+                    catch { /* Ignore cleanup errors */ }
+                }
+
+                col.Delete(item.Id);
+            }
+
+            deletedCount = itemsToDelete.Count;
+        }
+
+        // Force memory cleanup after large deletions
+        if (deletedCount > 50)
+        {
+            GC.Collect(0, GCCollectionMode.Optimized, false);
+        }
+
+        return deletedCount;
     }
 
     public IEnumerable<ClipboardItem> Search(string query, int limit = 50, int skip = 0)

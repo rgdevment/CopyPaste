@@ -29,6 +29,7 @@ public sealed partial class App : Application, IDisposable
     private Window? _window;
     private readonly WindowsClipboardListener? _listener;
     private readonly ClipboardService? _service;
+    private readonly CleanupService? _cleanupService;
     private bool _isDisposed;
     public bool IsExiting { get; private set; }
 
@@ -41,6 +42,7 @@ public sealed partial class App : Application, IDisposable
         var repository = new LiteDbRepository(StorageConfig.DatabasePath);
         _service = new ClipboardService(repository);
         _listener = new WindowsClipboardListener(_service);
+        _cleanupService = new CleanupService(repository, () => UIConfig.RetentionDays);
 
         // Run listener in background
         Task.Run(() => _listener.Run());
@@ -118,7 +120,11 @@ public sealed partial class App : Application, IDisposable
     private void Dispose(bool disposing)
     {
         if (_isDisposed) return;
-        if (disposing) _listener?.Dispose();
+        if (disposing)
+        {
+            _listener?.Dispose();
+            _cleanupService?.Dispose();
+        }
         _isDisposed = true;
     }
 }

@@ -1,59 +1,101 @@
 <Window
-    x:Class="CopyPaste.UI.MainWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:viewmodels="using:CopyPaste.UI.ViewModels"
-    xmlns:tb="using:H.NotifyIcon">
+x:Class="CopyPaste.UI.MainWindow"
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:viewmodels="using:CopyPaste.UI.ViewModels"
+xmlns:tb="using:H.NotifyIcon">
 
-    <Window.SystemBackdrop>
-        <DesktopAcrylicBackdrop />
-    </Window.SystemBackdrop>
+<Window.SystemBackdrop>
+    <DesktopAcrylicBackdrop />
+</Window.SystemBackdrop>
 
-    <Grid>
+<Grid>
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="48"/>
+        <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- System Tray Icon -->
+    <tb:TaskbarIcon x:Name="TrayIcon"
+                    IconSource="/Assets/CopyPasteLogoSimple.ico"
+                    ToolTipText="CopyPaste APP"
+                    DoubleClickCommand="{x:Bind ViewModel.ShowWindowCommand}"
+                    MenuActivation="RightClick">
+        <tb:TaskbarIcon.ContextFlyout>
+            <MenuFlyout>
+                <MenuFlyoutItem Text="Salir" Command="{x:Bind ViewModel.ExitCommand}"/>
+            </MenuFlyout>
+        </tb:TaskbarIcon.ContextFlyout>
+    </tb:TaskbarIcon>
+
+    <!-- Sidebar Navigation -->
+    <Border Grid.Column="0" 
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            BorderThickness="0,0,1,0"
+            BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}">
+        <Grid Margin="0,16,0,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Tab Buttons -->
+            <StackPanel Grid.Row="0" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Center">
+                <RadioButton x:Name="RecentTab"
+                             GroupName="NavTabs"
+                             IsChecked="True"
+                             Style="{StaticResource SidebarTabStyle}"
+                             ToolTipService.ToolTip="Recientes"
+                             Checked="TabChanged">
+                    <FontIcon Glyph="&#xE823;" FontSize="15"/>
+                </RadioButton>
+                <RadioButton x:Name="PinnedTab"
+                             GroupName="NavTabs"
+                             Style="{StaticResource SidebarTabStyle}"
+                             ToolTipService.ToolTip="Anclados"
+                             Checked="TabChanged">
+                    <FontIcon Glyph="&#xE718;" FontSize="15"/>
+                </RadioButton>
+            </StackPanel>
+
+            <!-- Settings/Info Button -->
+            <Button Grid.Row="1"
+                    Command="{x:Bind ViewModel.OpenRepoCommand}"
+                    ToolTipService.ToolTip="Reportar error"
+                    Padding="0"
+                    Width="34" Height="34"
+                    HorizontalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="6">
+                <FontIcon Glyph="&#xE897;" FontSize="13" Opacity="0.5"/>
+            </Button>
+        </Grid>
+    </Border>
+
+    <!-- Main Content -->
+    <Grid Grid.Column="1">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- System Tray Icon -->
-        <tb:TaskbarIcon x:Name="TrayIcon"
-                        IconSource="/Assets/CopyPasteLogoSimple.ico"
-                        ToolTipText="CopyPaste"
-                        DoubleClickCommand="{x:Bind ViewModel.ShowWindowCommand}"
-                        MenuActivation="RightClick">
-            <tb:TaskbarIcon.ContextFlyout>
-                <MenuFlyout>
-                    <MenuFlyoutItem Text="Salir" Command="{x:Bind ViewModel.ExitCommand}"/>
-                </MenuFlyout>
-            </tb:TaskbarIcon.ContextFlyout>
-        </tb:TaskbarIcon>
-
-        <!-- Header -->
-        <Grid Grid.Row="0" Margin="16,16,16,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <TextBlock Text="CopyPaste" 
-                       Grid.Column="0"
-                       FontFamily="Segoe UI"
-                       FontSize="14" 
-                       FontWeight="Normal" 
+        <!-- Header with Title -->
+        <StackPanel Grid.Row="0" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center" 
+                    Margin="0,14,0,6"
+                    Spacing="8">
+            <Image Source="/Assets/CopyPasteLogo.ico" 
+                   Width="18" Height="18" 
+                   VerticalAlignment="Center"/>
+            <TextBlock Text="CopyPaste APP" 
+                       FontSize="13" 
+                       FontWeight="SemiBold" 
                        Opacity="0.8"
                        VerticalAlignment="Center"/>
-
-            <Button Grid.Column="2"
-                    Command="{x:Bind ViewModel.OpenRepoCommand}"
-                    ToolTipService.ToolTip="Reportar error"
-                    Padding="0"
-                    Width="30" Height="30"
-                    CornerRadius="4">
-                <FontIcon Glyph="&#xE8A7;" FontSize="12" Opacity="0.8"/>
-            </Button>
-        </Grid>
+        </StackPanel>
 
         <!-- Search Bar -->
         <TextBox Grid.Row="1"
@@ -61,21 +103,21 @@
                  PlaceholderText="Buscar..."
                  Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay}"
                  TextChanged="SearchBox_TextChanged"
-                 Margin="16,0,16,12"
-                 Padding="12,8"
-                 FontSize="13"
+                 Margin="12,4,12,8"
+                 Padding="10,8"
+                 FontSize="12"
                  BorderThickness="1"
                  BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                  Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                  CornerRadius="6"/>
 
-        <!-- Clipboard Items List -->
-        <ListView x:Name="ClipboardListView"
-                  Grid.Row="2"
-                  ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
-                  SelectionMode="None"
-                  Padding="4,0,4,12"
-                  ContainerContentChanging="ClipboardListView_ContainerContentChanging">
+            <!-- Clipboard Items List -->
+            <ListView x:Name="ClipboardListView"
+                      Grid.Row="2"
+                      ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
+                      SelectionMode="None"
+                      Padding="4,0,4,12"
+                      ContainerContentChanging="ClipboardListView_ContainerContentChanging">
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
                     <ItemsStackPanel Orientation="Vertical"/>
@@ -83,13 +125,13 @@
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:ClipboardItemViewModel">
-                    <Border MinHeight="80" 
-                            CornerRadius="6"
-                            Background="{ThemeResource LayerFillColorDefaultBrush}"
-                            BorderThickness="1" 
-                            BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
-                            Margin="0,0,0,12">
-                        <Grid Padding="16,12,16,16">
+                <Border MinHeight="60" 
+                        CornerRadius="6"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderThickness="1" 
+                        BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        Margin="0,0,0,8">
+                    <Grid Padding="12,10,12,12">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
@@ -112,20 +154,31 @@
                                        Visibility="{x:Bind IsTextVisible, Mode=OneWay}"/>
 
                             <!-- Image Content -->
-                            <Image x:Name="ClipboardImage" Grid.Row="1"
-                                   Stretch="UniformToFill" MaxHeight="140" HorizontalAlignment="Left"
-                                   Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
-                                   Tag="{x:Bind ImagePath, Mode=OneWay}"/>
+                            <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="4" 
+                                    Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
+                                    HorizontalAlignment="Left" Opacity="0.6">
+                                <Image x:Name="ClipboardImage"
+                                       Stretch="UniformToFill" MaxHeight="80" 
+                                       Tag="{x:Bind ImagePath, Mode=OneWay}"/>
+                            </Border>
 
                             <!-- Media Thumbnail -->
-                            <Grid Grid.Row="1" Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}">
-                                <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}" Stretch="UniformToFill" MaxHeight="140" HorizontalAlignment="Left"/>
-                                <Border Background="#AA000000" CornerRadius="3" Padding="4,2"
-                                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4"
-                                        Visibility="{x:Bind DurationVisibility, Mode=OneWay}">
-                                    <TextBlock Text="{x:Bind MediaDuration, Mode=OneWay}" FontSize="10" Foreground="White"/>
-                                </Border>
-                            </Grid>
+                            <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="4" 
+                                    Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}"
+                                    HorizontalAlignment="Left" Opacity="0.6">
+                                <Grid>
+                                    <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}" 
+                                           Stretch="UniformToFill" MaxHeight="80"/>
+                                    <Border Background="#99000000" CornerRadius="3" Padding="5,2"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Visibility="{x:Bind DurationVisibility, Mode=OneWay}">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE768;" FontSize="10" Foreground="White"/>
+                                            <TextBlock Text="{x:Bind MediaDuration, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
 
                             <!-- File Warning -->
                             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" Visibility="{x:Bind FileWarningVisibility}">
@@ -187,6 +240,7 @@
                     </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
-        </ListView>
+            </ListView>
+        </Grid>
     </Grid>
 </Window>

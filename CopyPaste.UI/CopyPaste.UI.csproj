@@ -26,9 +26,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="Assets\CopyPasteLogo.ico" />
     <Content Remove="Assets\CopyPasteLogoSimple.ico" />
     <Content Remove="Assets\CopyPasteNotification.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Assets\CopyPasteLogo.ico" />
   </ItemGroup>
   <ItemGroup>
     <Page Remove="Controls\ClipboardItemCard.xaml" />
@@ -52,6 +54,12 @@
 
     <ItemGroup>
       <Content Include="Assets\CopyPasteLogoSimple.ico">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="Assets\CopyPasteLogo.ico">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>

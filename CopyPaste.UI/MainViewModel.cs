@@ -30,6 +30,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasSearchQuery { get; set; } = false;
 
+    [ObservableProperty]
+    public partial int SelectedTabIndex { get; set; }
+
+    private bool? CurrentPinnedFilter => SelectedTabIndex switch
+    {
+        0 => false,  // Recientes: IsPinned = false
+        1 => true,   // Anclados: IsPinned = true
+        _ => null
+    };
+
+    partial void OnSelectedTabIndexChanged(int value) => ReloadItems();
+
     partial void OnSearchQueryChanged(string value)
     {
         HasSearchQuery = !string.IsNullOrWhiteSpace(value);
@@ -65,7 +77,7 @@ public partial class MainViewModel : ObservableObject
     private void LoadItems()
     {
         var query = string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery;
-        var items = _service.GetHistory(UIConfig.PageSize, 0, query);
+        var items = _service.GetHistory(UIConfig.PageSize, 0, query, CurrentPinnedFilter);
 
         foreach (var item in items)
         {
@@ -83,7 +95,7 @@ public partial class MainViewModel : ObservableObject
         _dispatcherQueue?.TryEnqueue(() =>
         {
             var query = string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery;
-            var newItems = _service.GetHistory(UIConfig.PageSize, Items.Count, query).ToList();
+            var newItems = _service.GetHistory(UIConfig.PageSize, Items.Count, query, CurrentPinnedFilter).ToList();
 
             if (newItems.Count == 0)
             {
@@ -105,8 +117,8 @@ public partial class MainViewModel : ObservableObject
     private void OnItemAdded(ClipboardItem item) =>
         _dispatcherQueue?.TryEnqueue(() =>
         {
-            // Only add new items if we're not searching
-            if (string.IsNullOrWhiteSpace(SearchQuery))
+            // Only add new items if we're on "Recientes" tab and not searching
+            if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
             {
                 Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
             }
@@ -130,8 +142,12 @@ public partial class MainViewModel : ObservableObject
     }
     private void OnPasteItem(ClipboardItemViewModel itemVM, bool plain) { }
 
-    private void OnPinItem(ClipboardItemViewModel itemVM) =>
+    private void OnPinItem(ClipboardItemViewModel itemVM)
+    {
         _service.UpdatePin(itemVM.Model.Id, itemVM.IsPinned);
+        // Reload items when pin status changes since item moves between tabs
+        ReloadItems();
+    }
 
     public void OnWindowDeactivated()
     {

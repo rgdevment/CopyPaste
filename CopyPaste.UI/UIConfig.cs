@@ -31,7 +31,7 @@ public static class UIConfig
     /// Width of the sidebar window in pixels.
     /// Recommended: 350-500
     /// </summary>
-    public static int WindowWidth { get; set; } = 350;
+    public static int WindowWidth { get; set; } = 400;
 
     /// <summary>
     /// Vertical margin from top of work area in pixels.
@@ -42,6 +42,14 @@ public static class UIConfig
     /// Vertical margin from bottom of work area in pixels.
     /// </summary>
     public static int WindowMarginBottom { get; set; } = 16;
+
+    /// <summary>
+    /// Number of days to keep clipboard items before automatic cleanup.
+    /// Items older than this will be deleted (except pinned items).
+    /// Set to 0 to disable automatic cleanup.
+    /// Recommended: 7-90
+    /// </summary>
+    public static int RetentionDays { get; set; } = 30;
 }
 
 /// <summary>

@@ -50,6 +50,20 @@ public sealed partial class MainWindow : Window
         ClipboardListView.Loaded += ClipboardListView_Loaded;
     }
 
+    private void TabChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton rb)
+        {
+            var tooltip = ToolTipService.GetToolTip(rb) as string;
+            ViewModel.SelectedTabIndex = tooltip switch
+            {
+                "Recientes" => 0,
+                "Anclados" => 1,
+                _ => 0
+            };
+        }
+    }
+
     private void MainWindow_Closed(object? _, WindowEventArgs args)
     {
         Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
@@ -173,18 +187,28 @@ public sealed partial class MainWindow : Window
 
     private static void Container_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is ListViewItem item &&
-            item.ContentTemplateRoot is FrameworkElement root &&
-            FindDescendant(root, "ActionPanel") is UIElement panel)
-            panel.Opacity = 1;
+        if (sender is ListViewItem item && item.ContentTemplateRoot is FrameworkElement root)
+        {
+            if (FindDescendant(root, "ActionPanel") is UIElement panel)
+                panel.Opacity = 1;
+            if (FindDescendant(root, "ImageBorder") is UIElement imageBorder)
+                imageBorder.Opacity = 1;
+            if (FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
+                mediaBorder.Opacity = 1;
+        }
     }
 
     private static void Container_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (sender is ListViewItem item &&
-            item.ContentTemplateRoot is FrameworkElement root &&
-            FindDescendant(root, "ActionPanel") is UIElement panel)
-            panel.Opacity = 0;
+        if (sender is ListViewItem item && item.ContentTemplateRoot is FrameworkElement root)
+        {
+            if (FindDescendant(root, "ActionPanel") is UIElement panel)
+                panel.Opacity = 0;
+            if (FindDescendant(root, "ImageBorder") is UIElement imageBorder)
+                imageBorder.Opacity = 0.6;
+            if (FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
+                mediaBorder.Opacity = 0.6;
+        }
     }
 
     private static DependencyObject? FindDescendant(DependencyObject parent, string name)

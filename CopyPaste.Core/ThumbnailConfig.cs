@@ -11,23 +11,23 @@ public static class ThumbnailConfig
     /// <summary>
     /// Maximum width for generated thumbnails (height is calculated proportionally).
     /// Lower values = less memory, faster processing, lower quality.
-    /// Recommended: 200-300px
+    /// Recommended: 120-180px for compact cards
     /// </summary>
-    public static int Width { get; set; } = 250;
+    public static int Width { get; set; } = 160;
 
     /// <summary>
     /// PNG encoding quality for image thumbnails (0-100).
     /// Higher values = better quality but larger files.
-    /// Recommended: 75-90
+    /// Recommended: 70-85 for compact thumbnails
     /// </summary>
-    public static int QualityPng { get; set; } = 85;
+    public static int QualityPng { get; set; } = 75;
 
     /// <summary>
     /// JPEG encoding quality for video/media thumbnails (0-100).
     /// Higher values = better quality but larger files.
-    /// Recommended: 75-90
+    /// Recommended: 70-85 for compact thumbnails
     /// </summary>
-    public static int QualityJpeg { get; set; } = 85;
+    public static int QualityJpeg { get; set; } = 75;
 
     /// <summary>
     /// Image size threshold (in bytes) to trigger garbage collection after processing.
@@ -38,8 +38,8 @@ public static class ThumbnailConfig
 
     /// <summary>
     /// Decode pixel height for displaying thumbnails in UI.
-    /// Should be slightly smaller than thumbnail width for optimal rendering.
-    /// Recommended: Width - 30px
+    /// Optimized for compact card display (MaxHeight ~80px).
+    /// Recommended: 100-120px
     /// </summary>
-    public static int UIDecodeHeight { get; set; } = 220;
+    public static int UIDecodeHeight { get; set; } = 100;
 }

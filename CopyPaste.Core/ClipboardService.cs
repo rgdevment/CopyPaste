@@ -426,18 +426,21 @@ public class ClipboardService(IClipboardRepository repository)
         return false;
     }
 
-    public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null)
+    public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null, bool? isPinned = null)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        var items = string.IsNullOrWhiteSpace(query)
+            ? repository.GetAll()
+            : repository.Search(query, limit * 10, 0);
+
+        if (isPinned.HasValue)
         {
-            return repository.GetAll()
-                .OrderByDescending(x => x.IsPinned)
-                .ThenByDescending(x => x.CreatedAt)
-                .Skip(skip)
-                .Take(limit);
+            items = items.Where(x => x.IsPinned == isPinned.Value);
         }
 
-        return repository.Search(query, limit, skip);
+        return items
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip(skip)
+            .Take(limit);
     }
 
     public void RemoveItem(Guid id)
