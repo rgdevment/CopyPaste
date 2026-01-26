@@ -35,21 +35,23 @@
 
 ## 🚀 Introduction
 
-**CopyPaste** is a next-generation **Clipboard Manager** designed specifically for Windows 10 and 11. Unlike traditional tools that feel outdated or bloated, CopyPaste App focuses on three core pillars: **Native Aesthetics, Obsessive Performance, and Rock-Solid Stability.**
+**CopyPaste** is a next-generation **Clipboard Manager** designed specifically for Windows 10 and 11.
 
-Built on the bleeding edge with **.NET 10 Preview** and **WinUI 3**, it seamlessly integrates with your workflow, feeling less like a third-party tool and more like a feature Windows forgot to include.
+We prioritize **Native Aesthetics, Obsessive Performance, and Rock-Solid Stability.** It’s not just about low RAM usage; it’s about a design that feels right and a robustness you can rely on daily. Built on the bleeding edge with **.NET 10 Preview** and **WinUI 3**, it seamlessly integrates with your workflow, feeling less like a third-party tool and more like a feature Windows forgot to include.
+
+> **⚠️ Disclaimer:** Currently tested and validated primarily on **Windows 11 (x64)**.
 
 ---
 
 ## 💡 The Motivation
 **Why build another clipboard manager?**
 
-The Windows ecosystem is flooded with clipboard tools. Some are purely functional but visually outdated. Others are "tanks"—heavy, feature-bloated software that consumes 500MB of RAM just to store a few text strings.
+There are certainly capable tools out there, but many fail to deliver a modern, cohesive **experience**. It's not just about being functional; software today should be attractive, comfortable, and intuitive.
 
-**We wanted something different.**
-* We wanted the **minimalist aesthetic** found in top-tier macOS utilities.
-* We wanted the **native feel** of the Windows 11 Notification Center.
-* We wanted **efficiency** (NativeAOT) over features we never use.
+We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further.
+* **The Goal:** Bring the polish and fluidity often associated with macOS utilities to Windows.
+* **The Philosophy:** Adopt a pure Windows 11 design language so the app feels 100% native.
+* **The Standard:** Efficiency (NativeAOT) is non-negotiable, but so is visual elegance.
 
 **This is a passion project.** We are not selling data. We are not upselling "Pro" features. We are building the tool *we* needed for our daily development work, and we are sharing it with the community. Open Source, free, and transparent.
 
@@ -135,3 +137,7 @@ Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
 Distributed under the **GNU General Public License v3.0**. See `LICENSE` for more information.
+
+<div align="center">
+  <p>Built with ❤️, C#, and too much coffee.</p>
+</div>
