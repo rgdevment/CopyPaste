@@ -86,10 +86,17 @@ jobs:
         shell: pwsh
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          $publishDir = "${{ github.workspace }}\${{ env.PUBLISH_PATH }}"
+
+          $fullPath = Join-Path "${{ github.workspace }}" "${{ env.PUBLISH_PATH }}"
+          $publishDir = (Resolve-Path $fullPath).Path
+
           $repoRoot = "${{ github.workspace }}"
           $myArch = "${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }}"
           $version = "${{ steps.get_version.outputs.VERSION }}"
+
+          Write-Host "Compilando instalador con:"
+          Write-Host "Source: $publishDir"
+          Write-Host "Arch: $myArch"
 
           & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DRepoRoot=$repoRoot"
 
