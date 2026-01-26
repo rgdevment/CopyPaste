@@ -48,7 +48,7 @@ jobs:
         run: dotnet publish CopyPaste.UI/CopyPaste.UI.csproj -c Release -r ${{ matrix.arch }} --self-contained true --no-restore
 
       - name: Decode signing certificate
-        if: ${{ secrets.PFX_BASE64 != '' }}
+        if: secrets.PFX_BASE64 != ''
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.PFX_BASE64 }}
@@ -57,7 +57,7 @@ jobs:
           Set-Content -Path signingCert.pfx -Value $bytes -AsByteStream
 
       - name: Sign App Binaries
-        if: ${{ secrets.PFX_BASE64 != '' }}
+        if: secrets.PFX_BASE64 != ''
         shell: pwsh
         env:
           PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
@@ -87,7 +87,7 @@ jobs:
           Move-Item -Path "Output/CopyPaste_Setup_$arch.exe" -Destination "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
 
       - name: Sign Installer
-        if: ${{ secrets.PFX_BASE64 != '' }}
+        if: secrets.PFX_BASE64 != ''
         shell: pwsh
         env:
           PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
