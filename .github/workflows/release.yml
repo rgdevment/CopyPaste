@@ -61,9 +61,16 @@ jobs:
         shell: pwsh
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
+
+          # BÚSQUEDA DINÁMICA DE SIGNTOOL (Versión x64 más reciente)
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
+
+          if (-not $signtool) { Write-Error "Signtool no encontrado"; exit 1 }
+          Write-Host "Usando Signtool: $($signtool.FullName)"
+
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           Get-ChildItem -Path $targetDir -Include *.exe,*.dll -Recurse | ForEach-Object {
-            & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+            & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
           }
 
       - name: Create Portable Zip
@@ -97,7 +104,11 @@ jobs:
         shell: pwsh
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
+
+          # BÚSQUEDA DINÁMICA DE SIGNTOOL
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
+
+          & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
 
       - name: Release Files
         uses: softprops/action-gh-release@v2
