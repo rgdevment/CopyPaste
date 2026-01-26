@@ -77,19 +77,6 @@ This project is currently in **Alpha / Proof of Concept**. We are pioneering des
 
 ---
 
-## 🛠 Tech Stack (For Developers)
-We are using this project to push the boundaries of modern .NET development on the Desktop:
-
-| Technology | Purpose |
-| :--- | :--- |
-| **C# 14** | Latest language features for cleaner code. |
-| **.NET 10 Preview** | "Bleeding edge" runtime performance. |
-| **WinUI 3** | The native UI framework for Windows App SDK. |
-| **NativeAOT** | Ahead-of-Time compilation (No JIT lag). |
-| **Win32 Hooks** | Low-level clipboard monitoring. |
-
----
-
 ## 🚀 Getting Started
 
 ### Installation
@@ -119,14 +106,23 @@ We believe in radical honesty about the state of the app:
 ## 🤝 Contributing
 **CopyPaste** is a community effort. We welcome anyone who shares our vision of high-quality, native Windows apps.
 
-1.  **Fork** the repository.
-2.  Create your **Feature Branch** (`git checkout -b feature/AmazingFeature`).
-3.  **Commit** your changes.
-4.  **Push** to the branch.
-5.  Open a **Pull Request**.
+Please read our [**CONTRIBUTING.md**](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 **Specific Help Wanted:**
-* **ARM64 Testing:** If you have a Surface Pro X or Snapdragon Dev Kit, please test our ARM64 build and report issues!
+* 🧪 **ARM64 Testing:** If you have a Surface Pro X or Snapdragon Dev Kit, please test our ARM64 build and report issues!
+
+---
+
+## 🛠 Tech Stack (For Developers)
+We are using this project to push the boundaries of modern .NET development on the Desktop:
+
+| Technology | Purpose |
+| :--- | :--- |
+| **C# 14** | Latest language features for cleaner code. |
+| **.NET 10 Preview** | "Bleeding edge" runtime performance. |
+| **WinUI 3** | The native UI framework for Windows App SDK. |
+| **NativeAOT** | Ahead-of-Time compilation (No JIT lag). |
+| **Win32 Hooks** | Low-level clipboard monitoring. |
 
 ---
 
