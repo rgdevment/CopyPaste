@@ -1,4 +1,4 @@
-name: Release Master
+name: Release Build
 
 on:
   push:
@@ -19,6 +19,8 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       PUBLISH_PATH: CopyPaste.UI/bin/Release/net10.0-windows*/${{ matrix.arch }}/publish
+      PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+      PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -48,19 +50,15 @@ jobs:
         run: dotnet publish CopyPaste.UI/CopyPaste.UI.csproj -c Release -r ${{ matrix.arch }} --self-contained true --no-restore
 
       - name: Decode signing certificate
-        if: secrets.PFX_BASE64 != ''
+        if: env.PFX_BASE64 != ''
         shell: pwsh
-        env:
-          PFX_BASE64: ${{ secrets.PFX_BASE64 }}
         run: |
           $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
           Set-Content -Path signingCert.pfx -Value $bytes -AsByteStream
 
       - name: Sign App Binaries
-        if: secrets.PFX_BASE64 != ''
+        if: env.PFX_BASE64 != ''
         shell: pwsh
-        env:
-          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
@@ -87,10 +85,8 @@ jobs:
           Move-Item -Path "Output/CopyPaste_Setup_$arch.exe" -Destination "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
 
       - name: Sign Installer
-        if: secrets.PFX_BASE64 != ''
+        if: env.PFX_BASE64 != ''
         shell: pwsh
-        env:
-          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
           & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
