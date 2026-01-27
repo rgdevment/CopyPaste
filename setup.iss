@@ -39,10 +39,6 @@ VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 WizardStyle=modern
 DisableWelcomePage=no
-; Update behavior - close running app and uninstall previous version
-CloseApplications=yes
-CloseApplicationsFilter=*.exe
-RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -62,49 +58,90 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [InstallDelete]
-; Clean old app files but preserve user data
+; Clean old app files before installing new version (preserves user data in Data folder)
 Type: filesandordirs; Name: "{app}\*.dll"
 Type: filesandordirs; Name: "{app}\*.exe"
 Type: filesandordirs; Name: "{app}\*.pri"
 Type: filesandordirs; Name: "{app}\*.json"
+Type: filesandordirs; Name: "{app}\Assets"
 Type: filesandordirs; Name: "{app}\Microsoft.UI.Xaml"
 Type: filesandordirs; Name: "{app}\NpuDetect"
 Type: filesandordirs; Name: "{app}\en-us"
 
 [UninstallDelete]
-; Clean app files on uninstall but preserve user data folder
-Type: filesandordirs; Name: "{app}\*.dll"
-Type: filesandordirs; Name: "{app}\*.exe"
-Type: filesandordirs; Name: "{app}\Microsoft.UI.Xaml"
-Type: filesandordirs; Name: "{app}\NpuDetect"
+; Clean all app files on uninstall (user data in AppData\Local\CopyPaste is preserved)
+Type: filesandordirs; Name: "{app}\*"
 
 [Code]
-const
-  WM_CLOSE = $0010;
+function GetUninstallString(): String;
+var
+  UninstallPath: String;
+  UninstallString: String;
+begin
+  Result := '';
+  UninstallPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
+  if RegQueryStringValue(HKCU, UninstallPath, 'UninstallString', UninstallString) then
+    Result := UninstallString;
+end;
 
-function InitializeSetup(): Boolean;
+function IsUpgrade(): Boolean;
+begin
+  Result := GetUninstallString() <> '';
+end;
+
+procedure CloseRunningApp();
 var
   ResultCode: Integer;
 begin
-  Result := True;
-  
-  // Try to close the running application gracefully
-  if CheckForMutexes('{#MyAppName}') then
-  begin
-    Log('Application is running, attempting to close...');
-  end;
-  
-  // Force close the process if still running
+  // Force close the running application
   Exec('taskkill', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(500); // Wait for process to fully terminate
 end;
 
-function InitializeUninstall(): Boolean;
+function UninstallPreviousVersion(): Boolean;
 var
+  UninstallString: String;
   ResultCode: Integer;
 begin
   Result := True;
+  UninstallString := GetUninstallString();
+  
+  if UninstallString <> '' then
+  begin
+    // Close running app before uninstall
+    CloseRunningApp();
+    
+    // Run the uninstaller silently
+    UninstallString := RemoveQuotes(UninstallString);
+    if Exec(UninstallString, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    begin
+      Result := True;
+      Sleep(1000); // Wait for uninstall to complete
+    end
+    else
+      Result := False;
+  end;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  NeedsRestart := False;
+  
+  if IsUpgrade() then
+  begin
+    // Close app and uninstall previous version before installing
+    if not UninstallPreviousVersion() then
+    begin
+      // If uninstall fails, just close the app and continue
+      CloseRunningApp();
+    end;
+  end;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
   // Close the app before uninstalling
-  Exec('taskkill', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(500);
+  CloseRunningApp();
 end;

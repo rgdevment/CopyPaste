@@ -4,7 +4,7 @@ namespace CopyPaste.UI;
 /// Centralized configuration for UI behavior and appearance.
 /// Modify these values to customize the application experience.
 /// </summary>
-public static class UIConfig
+internal static class UIConfig
 {
     /// <summary>
     /// Number of clipboard items to load per page.
@@ -56,7 +56,7 @@ public static class UIConfig
 /// Configuration for paste behavior timing.
 /// Adjust these values based on system performance.
 /// </summary>
-public static class PasteConfig
+internal static class PasteConfig
 {
     /// <summary>
     /// Time window (ms) to ignore clipboard changes after app-initiated paste.
@@ -94,7 +94,7 @@ public static class PasteConfig
 /// Modifiers: Win (default) or Ctrl (if Win fails to register)
 /// Key: Alt + V
 /// </summary>
-public static class UIHotkey
+internal static class UIHotkey
 {
     /// <summary>
     /// Virtual key code for the hotkey (V = 0x56)
@@ -115,7 +115,7 @@ public static class UIHotkey
 /// <summary>
 /// Startup configuration.
 /// </summary>
-public static class StartupConfig
+internal static class StartupConfig
 {
     /// <summary>
     /// Whether to start CopyPaste automatically when Windows starts.

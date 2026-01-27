@@ -12,7 +12,7 @@ using WinRT.Interop;
 
 namespace CopyPaste.UI;
 
-public sealed partial class MainWindow : Window
+internal sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
     private readonly AppWindow _appWindow;

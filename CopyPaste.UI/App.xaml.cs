@@ -27,7 +27,7 @@ namespace CopyPaste.UI;
 public sealed partial class App : Application, IDisposable
 {
     private Window? _window;
-    private WelcomeWindow? _welcomeWindow;
+    private NativeSplash? _splash;
     private WindowsClipboardListener? _listener;
     private ClipboardService? _service;
     private CleanupService? _cleanupService;
@@ -37,39 +37,35 @@ public sealed partial class App : Application, IDisposable
 
     public App()
     {
+        // Show native splash immediately on first run (before WinUI initializes)
+        StorageConfig.Initialize();
+        if (StorageConfig.IsFirstRun)
+        {
+            _splash = new NativeSplash();
+        }
+
         this.UnhandledException += OnUnhandledException;
         InitializeComponent();
     }
 
-    protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        StorageConfig.Initialize();
-        var isFirstRun = StorageConfig.IsFirstRun;
+        // Initialize core services
+        InitializeCoreServices();
 
-        if (isFirstRun)
-        {
-            // Show welcome window while initializing
-            _welcomeWindow = new WelcomeWindow();
-            _welcomeWindow.Activate();
-
-            // Initialize in background - intentionally no ConfigureAwait to return to UI thread
-#pragma warning disable CA2007
-            await Task.Run(InitializeCoreServices);
-#pragma warning restore CA2007
-
-            // Mark as initialized and close welcome window
-            StorageConfig.MarkAsInitialized();
-            _welcomeWindow.Close();
-            _welcomeWindow = null;
-        }
-        else
-        {
-            // Normal startup - initialize directly
-            InitializeCoreServices();
-        }
-
+        // Create and show main window
         _window = new MainWindow(_service!);
         _window.Activate();
+
+        // Close splash after main window is ready
+        if (_splash != null)
+        {
+            StorageConfig.MarkAsInitialized();
+            _splash.Close();
+            _splash.Dispose();
+            _splash = null;
+        }
+
         AppLogger.Info("Main window launched");
     }
 
@@ -125,6 +121,7 @@ public sealed partial class App : Application, IDisposable
         if (_isDisposed) return;
         if (disposing)
         {
+            _splash?.Dispose();
             _listener?.Dispose();
             _cleanupService?.Dispose();
             _repository?.Dispose();
