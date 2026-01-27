@@ -9,42 +9,37 @@
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
-    <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
-
     <AssemblyName>CopyPaste</AssemblyName>
 
-    <!-- WinUI unpackaged app configuration -->
+    <!-- WinUI 3 unpackaged app configuration -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
-    
-    <!-- Force PRI generation for unpackaged apps (CRITICAL for XAML loading) -->
     <AppxPackage>false</AppxPackage>
     <EnableMsixTooling>false</EnableMsixTooling>
 
-    <!-- Trimming & Optimization -->
+    <!-- 
+      Publishing optimizations for WinUI 3:
+      - ReadyToRun: Precompiles IL to native code (faster cold start)
+      - Trimming partial: Removes unused code but preserves reflection (required for XAML)
+      Note: Native AOT is NOT compatible with WinUI 3 due to XAML reflection requirements
+    -->
+    <PublishReadyToRun>true</PublishReadyToRun>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
-    
-    <!-- Exclude satellite assemblies (language folders) -->
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    
-    <!-- ReadyToRun for faster startup -->
-    <PublishReadyToRun>true</PublishReadyToRun>
     
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 
-<ItemGroup>
-    <Page Remove="Controls\ClipboardItemCard.xaml" />
-</ItemGroup>
+    <ItemGroup>
+        <Page Remove="Controls\ClipboardItemCard.xaml" />
+    </ItemGroup>
 
-<ItemGroup>
-    <Manifest Include="$(ApplicationManifest)" />
-</ItemGroup>
+    <ItemGroup>
+        <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
@@ -66,7 +61,9 @@
     
     <!-- Copy PRI file to publish output (CRITICAL for XAML loading in Release) -->
     <Target Name="CopyPriToPublish" AfterTargets="Publish">
-        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" 
+              DestinationFolder="$(PublishDir)" 
+              SkipUnchangedFiles="true" />
     </Target>
     
     <!-- Copy Assets folder to publish output -->
@@ -74,6 +71,8 @@
         <ItemGroup>
             <AssetFiles Include="$(OutputPath)Assets\**\*" />
         </ItemGroup>
-        <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(AssetFiles)" 
+              DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" 
+              SkipUnchangedFiles="true" />
     </Target>
 </Project>
