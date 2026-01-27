@@ -59,57 +59,31 @@ jobs:
             --self-contained true `
             --no-restore
 
-      - name: Clean unnecessary files
+      - name: Clean unused SDK components
         shell: pwsh
         run: |
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           
-          # Remove ALL language/locale folders except en-us
-          # Keep only essential folders
-          $keepFolders = @('Assets', 'images', 'logs', 'thumbs', 'Microsoft.UI.Xaml', 'NpuDetect', 'en-us')
-          
-          Get-ChildItem -Path $targetDir -Directory | Where-Object {
-            $_.Name -notin $keepFolders
-          } | ForEach-Object {
-            # Only remove if it looks like a locale folder (contains resource DLLs or starts with locale pattern)
-            $hasResourceDll = (Get-ChildItem -Path $_.FullName -Filter "*.resources.dll" -ErrorAction SilentlyContinue).Count -gt 0
-            $isLocalePattern = $_.Name -match '^[a-z]{2}(-|$)'
-            
-            if ($hasResourceDll -or $isLocalePattern) {
-              Write-Host "Removing locale folder: $($_.Name)"
-              Remove-Item $_.FullName -Recurse -Force
-            }
-          }
-          
-          # Remove PDB files (debug symbols)
-          Get-ChildItem -Path $targetDir -Filter "*.pdb" -Recurse | Remove-Item -Force
-          
-          # Remove unnecessary DLLs (ML/AI components not used)
-          $unnecessaryDlls = @(
-            "onnxruntime.dll",
-            "DirectML.dll",
-            "Microsoft.Windows.Widgets.dll",
-            "Microsoft.DiaSymReader.Native.amd64.dll"
+          # Remove ML/AI DLLs that come with Windows App SDK but we don't use
+          $unusedDlls = @(
+            "onnxruntime.dll",      # ~20MB - Machine Learning runtime
+            "DirectML.dll",          # ~17MB - GPU Machine Learning
+            "Microsoft.Windows.Widgets.dll"  # Widgets API not used
           )
-          foreach ($dll in $unnecessaryDlls) {
+          
+          foreach ($dll in $unusedDlls) {
             $path = Join-Path $targetDir $dll
             if (Test-Path $path) {
+              $size = [math]::Round((Get-Item $path).Length / 1MB, 2)
               Remove-Item $path -Force
-              Write-Host "Removed: $dll"
+              Write-Host "Removed: $dll ($size MB)"
             }
           }
           
-          # Remove WinMD files (only needed for development)
-          Get-ChildItem -Path $targetDir -Filter "*.winmd" -Recurse | Remove-Item -Force
-          
-          # Remove unnecessary json files
-          Get-ChildItem -Path $targetDir -Filter "*.deps.json" -Recurse | Remove-Item -Force
-          Get-ChildItem -Path $targetDir -Filter "*.runtimeconfig.json" -Recurse | Remove-Item -Force
-          
-          # Calculate final size
-          $totalSize = (Get-ChildItem -Path $targetDir -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
-          Write-Host "Final publish size: $([math]::Round($totalSize, 2)) MB"
-          Write-Host "File count: $((Get-ChildItem -Path $targetDir -Recurse -File).Count)"
+          # Show final stats
+          $totalSize = (Get-ChildItem -Path $targetDir -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
+          $fileCount = (Get-ChildItem -Path $targetDir -Recurse -File).Count
+          Write-Host "`nFinal size: $([math]::Round($totalSize, 2)) MB ($fileCount files)"
 
       - name: Decode signing certificate
         if: env.PFX_BASE64 != ''

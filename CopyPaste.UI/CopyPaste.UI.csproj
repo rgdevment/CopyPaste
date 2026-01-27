@@ -19,12 +19,23 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
 
-    <!-- Self-contained (NO AOT for WinUI - not fully supported) -->
+    <!-- Self-contained deployment -->
     <SelfContained>true</SelfContained>
     <PublishSelfContained>true</PublishSelfContained>
-
-    <!-- Exclude unnecessary satellite assemblies -->
+    
+    <!-- Trimming to reduce size (without AOT) -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    
+    <!-- Only English - no other languages needed (UI is hardcoded) -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    
+    <!-- Exclude Windows App SDK language folders -->
+    <WindowsAppSDKSelfContainedExcludeLanguages>true</WindowsAppSDKSelfContainedExcludeLanguages>
+    
+    <!-- Exclude debug symbols from publish -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
