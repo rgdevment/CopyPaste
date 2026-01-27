@@ -124,7 +124,6 @@ public sealed partial class App : Application, IDisposable
             using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath, true);
             if (key == null) return;
 
-            // Only register if not already registered
             if (key.GetValue(appName) == null)
             {
                 var exePath = System.Environment.ProcessPath;
@@ -135,27 +134,12 @@ public sealed partial class App : Application, IDisposable
                 }
             }
         }
-        catch (System.Security.SecurityException ex)
+        catch (Exception ex)
         {
-            AppLogger.Exception(ex, "Failed to register for startup (SecurityException)");
-            throw;
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            AppLogger.Exception(ex, "Failed to register for startup (UnauthorizedAccessException)");
-            throw;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            AppLogger.Exception(ex, "Failed to register for startup (ObjectDisposedException)");
-            throw;
-        }
-        catch (System.IO.IOException ex)
-        {
-            AppLogger.Exception(ex, "Failed to register for startup (IOException)");
-            throw;
+            AppLogger.Exception(ex, "Failed to register for startup");
         }
     }
 }
+
 
 
