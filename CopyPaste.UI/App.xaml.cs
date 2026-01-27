@@ -112,6 +112,8 @@ public sealed partial class App : Application, IDisposable
         e.Handled = true;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", 
+        Justification = "Startup registration is non-critical - any failure should not prevent app from running")]
     private static void RegisterForStartup()
     {
         if (!StartupConfig.RunOnStartup) return;
@@ -140,6 +142,7 @@ public sealed partial class App : Application, IDisposable
         }
     }
 }
+
 
 
 
