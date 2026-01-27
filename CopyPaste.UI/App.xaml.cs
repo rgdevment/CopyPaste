@@ -27,6 +27,7 @@ namespace CopyPaste.UI;
 public sealed partial class App : Application, IDisposable
 {
     private Window? _window;
+    private WelcomeWindow? _welcomeWindow;
     private WindowsClipboardListener? _listener;
     private ClipboardService? _service;
     private CleanupService? _cleanupService;
@@ -40,10 +41,30 @@ public sealed partial class App : Application, IDisposable
         InitializeComponent();
     }
 
-    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        // Initialize core services (deferred from constructor for faster startup)
-        InitializeCoreServices();
+        StorageConfig.Initialize();
+        var isFirstRun = StorageConfig.IsFirstRun;
+
+        if (isFirstRun)
+        {
+            // Show welcome window while initializing
+            _welcomeWindow = new WelcomeWindow();
+            _welcomeWindow.Activate();
+
+            // Initialize in background
+            await Task.Run(InitializeCoreServices);
+
+            // Mark as initialized and close welcome window
+            StorageConfig.MarkAsInitialized();
+            _welcomeWindow.Close();
+            _welcomeWindow = null;
+        }
+        else
+        {
+            // Normal startup - initialize directly
+            InitializeCoreServices();
+        }
 
         _window = new MainWindow(_service!);
         _window.Activate();
@@ -55,8 +76,6 @@ public sealed partial class App : Application, IDisposable
         // Initialize logger for error tracking
         AppLogger.Initialize();
         AppLogger.Info("Application starting...");
-
-        StorageConfig.Initialize();
 
         // Register for Windows startup if configured
         RegisterForStartup();

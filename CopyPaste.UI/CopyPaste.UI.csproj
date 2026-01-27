@@ -33,23 +33,18 @@
     
     <!-- ReadyToRun for faster startup -->
     <PublishReadyToRun>true</PublishReadyToRun>
-    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
-    
-    <!-- Optimize JIT behavior -->
-    <TieredCompilation>true</TieredCompilation>
-    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
     
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 
-    <ItemGroup>
-        <Page Remove="Controls\ClipboardItemCard.xaml" />
-    </ItemGroup>
+<ItemGroup>
+    <Page Remove="Controls\ClipboardItemCard.xaml" />
+</ItemGroup>
 
-    <ItemGroup>
-        <Manifest Include="$(ApplicationManifest)" />
-    </ItemGroup>
+<ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+</ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
@@ -71,9 +66,7 @@
     
     <!-- Copy PRI file to publish output (CRITICAL for XAML loading in Release) -->
     <Target Name="CopyPriToPublish" AfterTargets="Publish">
-        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" 
-              DestinationFolder="$(PublishDir)" 
-              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
     </Target>
     
     <!-- Copy Assets folder to publish output -->
@@ -81,8 +74,6 @@
         <ItemGroup>
             <AssetFiles Include="$(OutputPath)Assets\**\*" />
         </ItemGroup>
-        <Copy SourceFiles="@(AssetFiles)" 
-              DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" 
-              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 </Project>

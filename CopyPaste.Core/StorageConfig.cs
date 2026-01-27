@@ -10,14 +10,29 @@ public static class StorageConfig
     public static string DatabasePath => Path.Combine(_appDataPath, "clipboard.db");
     public static string ImagesPath => Path.Combine(_appDataPath, "images");
     public static string ThumbnailsPath => Path.Combine(_appDataPath, "thumbs");
+    private static string FirstRunFlagPath => Path.Combine(_appDataPath, ".initialized");
 
     internal static void SetBasePath(string basePath) => _appDataPath = basePath;
+
+    public static bool IsFirstRun => !File.Exists(FirstRunFlagPath);
 
     public static void Initialize()
     {
         Directory.CreateDirectory(_appDataPath);
         Directory.CreateDirectory(ImagesPath);
         Directory.CreateDirectory(ThumbnailsPath);
+    }
+
+    public static void MarkAsInitialized()
+    {
+        try
+        {
+            File.WriteAllText(FirstRunFlagPath, DateTime.UtcNow.ToString("O"));
+        }
+        catch
+        {
+            // Non-critical, ignore errors
+        }
     }
 
     public static void CleanOrphanImages(IEnumerable<string> validPaths)
