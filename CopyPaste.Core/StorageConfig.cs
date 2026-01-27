@@ -23,6 +23,10 @@ public static class StorageConfig
         Directory.CreateDirectory(ThumbnailsPath);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "First-run flag is non-critical - any failure should not prevent app from running")]
     public static void MarkAsInitialized()
     {
         try

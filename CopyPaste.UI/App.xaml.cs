@@ -52,8 +52,10 @@ public sealed partial class App : Application, IDisposable
             _welcomeWindow = new WelcomeWindow();
             _welcomeWindow.Activate();
 
-            // Initialize in background
+            // Initialize in background - intentionally no ConfigureAwait to return to UI thread
+#pragma warning disable CA2007
             await Task.Run(InitializeCoreServices);
+#pragma warning restore CA2007
 
             // Mark as initialized and close welcome window
             StorageConfig.MarkAsInitialized();
