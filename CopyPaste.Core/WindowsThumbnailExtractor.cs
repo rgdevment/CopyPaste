@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using SkiaSharp;
 
 namespace CopyPaste.Core;
 
@@ -63,8 +64,8 @@ public static partial class WindowsThumbnailExtractor
                 return null;
             }
 
-            // Convert HBITMAP to byte array
-            return HBitmapToPngBytes(hBitmap);
+            // Convert HBITMAP to byte array using SkiaSharp (Native AOT compatible)
+            return HBitmapToBytes(hBitmap);
         }
         catch (COMException ex)
         {
@@ -88,40 +89,87 @@ public static partial class WindowsThumbnailExtractor
         }
     }
 
-    private static byte[]? HBitmapToPngBytes(IntPtr hBitmap)
+    [DllImport("gdi32.dll")]
+    private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines,
+        [Out] byte[] lpvBits, ref BITMAPINFO lpbi, uint uUsage);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll", EntryPoint = "GetObjectW")]
+    private static extern int GetObject(IntPtr hObject, int nCount, ref BITMAP lpObject);
+
+    private static byte[]? HBitmapToBytes(IntPtr hBitmap)
     {
+        IntPtr hdc = IntPtr.Zero;
+
         try
         {
-            using var bitmap = System.Drawing.Image.FromHbitmap(hBitmap);
-            using var ms = new MemoryStream();
+            // Get bitmap info
+            var bmp = new BITMAP();
+            if (GetObject(hBitmap, Marshal.SizeOf<BITMAP>(), ref bmp) == 0)
+                return null;
 
-            // Use JPEG with configured quality for good balance between size and quality
-            var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
-                .FirstOrDefault(e => e.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+            int width = bmp.bmWidth;
+            int height = bmp.bmHeight;
 
-            if (encoder != null)
+            if (width <= 0 || height <= 0)
+                return null;
+
+            // Setup BITMAPINFO for 32-bit BGRA
+            var bi = new BITMAPINFO
             {
-                using var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
-                encoderParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(
-                    System.Drawing.Imaging.Encoder.Quality, (long)ThumbnailConfig.QualityJpeg);
-                bitmap.Save(ms, encoder, encoderParams);
-            }
-            else
-            {
-                bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
-            }
+                bmiHeader = new BITMAPINFOHEADER
+                {
+                    biSize = (uint)Marshal.SizeOf<BITMAPINFOHEADER>(),
+                    biWidth = width,
+                    biHeight = -height, // Negative for top-down
+                    biPlanes = 1,
+                    biBitCount = 32,
+                    biCompression = 0 // BI_RGB
+                }
+            };
 
-            return ms.ToArray();
+            // Allocate pixel buffer
+            int stride = width * 4;
+            int bufferSize = stride * height;
+            byte[] pixelData = new byte[bufferSize];
+
+            hdc = CreateCompatibleDC(IntPtr.Zero);
+            if (hdc == IntPtr.Zero)
+                return null;
+
+            // Get the bits
+            int scanLines = GetDIBits(hdc, hBitmap, 0, (uint)height, pixelData, ref bi, 0);
+            if (scanLines == 0)
+                return null;
+
+            // Create SkiaSharp bitmap from raw pixel data
+            var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+            using var skBitmap = new SKBitmap(info);
+
+            // Copy pixel data to SKBitmap
+            var pixels = skBitmap.GetPixels();
+            Marshal.Copy(pixelData, 0, pixels, bufferSize);
+
+            // Encode to JPEG
+            using var image = SKImage.FromBitmap(skBitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Jpeg, ThumbnailConfig.QualityJpeg);
+
+            return data.ToArray();
         }
-        catch (ExternalException ex)
+        catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"GDI+ error converting bitmap: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"HBitmapToBytes error: {ex.Message}");
             return null;
         }
-        catch (ArgumentException ex)
+        finally
         {
-            System.Diagnostics.Debug.WriteLine($"Invalid bitmap handle: {ex.Message}");
-            return null;
+            if (hdc != IntPtr.Zero) DeleteDC(hdc);
         }
     }
 
@@ -130,6 +178,42 @@ public static partial class WindowsThumbnailExtractor
     {
         public int cx;
         public int cy;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BITMAP
+    {
+        public int bmType;
+        public int bmWidth;
+        public int bmHeight;
+        public int bmWidthBytes;
+        public ushort bmPlanes;
+        public ushort bmBitsPixel;
+        public IntPtr bmBits;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BITMAPINFOHEADER
+    {
+        public uint biSize;
+        public int biWidth;
+        public int biHeight;
+        public ushort biPlanes;
+        public ushort biBitCount;
+        public uint biCompression;
+        public uint biSizeImage;
+        public int biXPelsPerMeter;
+        public int biYPelsPerMeter;
+        public uint biClrUsed;
+        public uint biClrImportant;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BITMAPINFO
+    {
+        public BITMAPINFOHEADER bmiHeader;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
+        public uint[] bmiColors;
     }
 
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

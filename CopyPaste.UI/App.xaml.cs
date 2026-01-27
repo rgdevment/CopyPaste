@@ -30,6 +30,7 @@ public sealed partial class App : Application, IDisposable
     private readonly WindowsClipboardListener? _listener;
     private readonly ClipboardService? _service;
     private readonly CleanupService? _cleanupService;
+    private readonly SqliteRepository? _repository;
     private bool _isDisposed;
     public bool IsExiting { get; private set; }
 
@@ -38,11 +39,11 @@ public sealed partial class App : Application, IDisposable
         InitializeComponent();
         StorageConfig.Initialize();
 
-        // Initialize core components once
-        var repository = new LiteDbRepository(StorageConfig.DatabasePath);
-        _service = new ClipboardService(repository);
+        // Initialize core components (Native AOT-compatible SQLite)
+        _repository = new SqliteRepository(StorageConfig.DatabasePath);
+        _service = new ClipboardService(_repository);
         _listener = new WindowsClipboardListener(_service);
-        _cleanupService = new CleanupService(repository, () => UIConfig.RetentionDays);
+        _cleanupService = new CleanupService(_repository, () => UIConfig.RetentionDays);
 
         // Configure paste timing from UIConfig
         _service.PasteIgnoreWindowMs = PasteConfig.DuplicateIgnoreWindowMs;
@@ -64,6 +65,7 @@ public sealed partial class App : Application, IDisposable
         try
         {
             _listener?.Dispose();
+            _repository?.Dispose();
         }
         catch (ObjectDisposedException)
         {
@@ -93,6 +95,7 @@ public sealed partial class App : Application, IDisposable
         {
             _listener?.Dispose();
             _cleanupService?.Dispose();
+            _repository?.Dispose();
         }
         _isDisposed = true;
     }

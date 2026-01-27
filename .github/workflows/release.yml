@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        arch: [win-x64, win-arm64]
+        arch: [win-x64]
 
     env:
       DOTNET_NOLOGO: true
@@ -92,7 +92,7 @@ jobs:
           $publishDir = (Resolve-Path $fullPath).Path
 
           $repoRoot = "${{ github.workspace }}"
-          $myArch = "${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }}"
+          $myArch = "${{ matrix.arch == 'win-x64' && 'x64' }}"
           $version = "${{ steps.get_version.outputs.VERSION }}"
 
           Write-Host "Compilando instalador con:"
@@ -104,7 +104,7 @@ jobs:
       - name: Rename Installer
         shell: pwsh
         run: |
-          $arch = "${{ matrix.arch == 'win-x64' && 'x64' || 'arm64' }}"
+          $arch = "${{ matrix.arch == 'win-x64' && 'x64' }}"
           Move-Item -Path "Output/CopyPaste_Setup_$arch.exe" -Destination "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
 
       - name: Sign Installer

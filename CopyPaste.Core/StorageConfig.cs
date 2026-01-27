@@ -7,7 +7,7 @@ public static class StorageConfig
         "CopyPaste"
     );
 
-    public static string DatabasePath => Path.Combine(_appDataPath, "history.db");
+    public static string DatabasePath => Path.Combine(_appDataPath, "clipboard.db");
     public static string ImagesPath => Path.Combine(_appDataPath, "images");
     public static string ThumbnailsPath => Path.Combine(_appDataPath, "thumbs");
 

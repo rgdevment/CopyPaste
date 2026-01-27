@@ -15,6 +15,13 @@ public class ClipboardService(IClipboardRepository repository)
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnItemAdded;
 
+    /// <summary>
+    /// Fired when a duplicate item is detected and its ModifiedAt is updated.
+    /// The UI should move this item to the top of the list.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
+    public event Action<ClipboardItem>? OnItemReactivated;
+
     // Track when app initiates a paste to avoid re-adding the same content
     private DateTime _lastPasteTime = DateTime.MinValue;
     private Guid _lastPastedItemId = Guid.Empty;
@@ -121,8 +128,10 @@ public class ClipboardService(IClipboardRepository repository)
 
         if (IsDuplicate(latest, item, currentHash))
         {
+            // Item already exists - update timestamp and notify UI to move it to top
             latest!.ModifiedAt = DateTime.UtcNow;
             repository.Update(latest);
+            OnItemReactivated?.Invoke(latest);
             return;
         }
 

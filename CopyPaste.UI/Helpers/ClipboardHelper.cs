@@ -112,7 +112,10 @@ internal static class ClipboardHelper
 
             // Set as file reference
             var storageFile = StorageFile.GetFileFromPathAsync(item.Content).AsTask().Result;
-            dataPackage.SetStorageItems([storageFile]);
+
+            // Use explicit List<IStorageItem> for WinRT interop compatibility
+            var storageItems = new List<IStorageItem> { storageFile };
+            dataPackage.SetStorageItems(storageItems);
 
             // Also set as bitmap for applications that prefer bitmap format
             var streamRef = Windows.Storage.Streams.RandomAccessStreamReference.CreateFromFile(storageFile);

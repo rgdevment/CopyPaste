@@ -55,19 +55,28 @@ public partial class MainViewModel : ObservableObject
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static partial bool SetForegroundWindow(IntPtr hWnd);
 
-    public MainViewModel(ClipboardService service)
-    {
-        _service = service;
-        _service.OnItemAdded += OnItemAdded;
-        _service.OnThumbnailReady += OnThumbnailReady;
-        LoadItems();
-    }
+    public MainViewModel(ClipboardService service) => _service = service;
 
     public void Initialize(Window window)
     {
         ArgumentNullException.ThrowIfNull(window);
         _window = window;
         _dispatcherQueue = window.DispatcherQueue;
+
+        // Subscribe to events only after dispatcher is available
+        _service.OnItemAdded += OnItemAdded;
+        _service.OnThumbnailReady += OnThumbnailReady;
+        _service.OnItemReactivated += OnItemReactivated;
+
+        // Load initial items
+        LoadItems();
+    }
+
+    public void Cleanup()
+    {
+        _service.OnItemAdded -= OnItemAdded;
+        _service.OnThumbnailReady -= OnThumbnailReady;
+        _service.OnItemReactivated -= OnItemReactivated;
     }
 
     private void ReloadItems()
@@ -90,12 +99,12 @@ public partial class MainViewModel : ObservableObject
 
     public void LoadMoreItems()
     {
-        if (_isLoading || !_hasMoreItems) return;
+        if (_isLoading || !_hasMoreItems || _dispatcherQueue == null) return;
 
         _isLoading = true;
         IsLoadingMore = true;
 
-        _dispatcherQueue?.TryEnqueue(() =>
+        _dispatcherQueue.TryEnqueue(() =>
         {
             var query = string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery;
             var newItems = _service.GetHistory(UIConfig.PageSize, Items.Count, query, CurrentPinnedFilter).ToList();
@@ -117,8 +126,11 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
-    private void OnItemAdded(ClipboardItem item) =>
-        _dispatcherQueue?.TryEnqueue(() =>
+    private void OnItemAdded(ClipboardItem item)
+    {
+        if (_dispatcherQueue is null) return;
+
+        _dispatcherQueue.TryEnqueue(() =>
         {
             // Only add new items if we're on "Recientes" tab and not searching
             if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
@@ -126,14 +138,50 @@ public partial class MainViewModel : ObservableObject
                 Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
             }
         });
+    }
 
-    private void OnThumbnailReady(ClipboardItem item) =>
-        _dispatcherQueue?.TryEnqueue(() =>
+    private void OnItemReactivated(ClipboardItem item)
+    {
+        if (_dispatcherQueue is null) return;
+
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            // Find existing item in the list
+            var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
+
+            if (existingVm != null)
+            {
+                // Update the model's ModifiedAt and move to top
+                existingVm.Model.ModifiedAt = item.ModifiedAt;
+                MoveItemToTop(existingVm);
+            }
+            else if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                // Item exists in DB but not in current view - add it to top
+                Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
+            }
+        });
+    }
+
+    private void OnThumbnailReady(ClipboardItem item)
+    {
+        if (_dispatcherQueue is null) return;
+
+        _dispatcherQueue.TryEnqueue(() =>
         {
             var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
-            // Update existing ViewModel instead of replacing - reduces GC pressure
-            existingVm?.RefreshFromModel(item);
+            if (existingVm != null)
+            {
+                // Update existing ViewModel - this will fire ImagePathChanged event
+                existingVm.RefreshFromModel(item);
+            }
         });
+    }
+
+    /// <summary>
+    /// Reloads the image for a specific item. Called from MainWindow when ImagePathChanged fires.
+    /// </summary>
+    public event EventHandler<ClipboardItemViewModel>? ItemImageUpdated;
 
     private void OnDeleteItem(ClipboardItemViewModel itemVM)
     {
@@ -197,7 +245,7 @@ public partial class MainViewModel : ObservableObject
 
     private void HideWindow()
     {
-        if (_window == null) return;
+        if (_window is null) return;
 
         var hWnd = WindowNative.GetWindowHandle(_window);
         var appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd));

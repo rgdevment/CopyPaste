@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
@@ -7,12 +7,15 @@
         <Nullable>enable</Nullable>
         <PublishAot>true</PublishAot>
         <InvariantGlobalization>true</InvariantGlobalization>
-        <Platforms>x64;arm64</Platforms>
+        <Platforms>x64</Platforms>
 
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
         <OptimizationPreference>Speed</OptimizationPreference>
         <StackTraceSupport>true</StackTraceSupport>
+        
+        <!-- Enable COM interop for Native AOT -->
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     </PropertyGroup>
 
     <ItemGroup>

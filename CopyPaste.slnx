@@ -5,6 +5,8 @@
   </Configurations>
   <Folder Name="/Elementos de la solución/">
     <File Path=".editorconfig" />
+    <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/release.yml" />
     <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Build.props" />
     <File Path="LICENSE" />

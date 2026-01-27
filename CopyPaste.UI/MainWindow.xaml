@@ -176,7 +176,7 @@ xmlns:tb="using:H.NotifyIcon">
                             </Border>
 
                             <!-- File Warning -->
-                            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" Visibility="{x:Bind FileWarningVisibility}">
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" Visibility="{x:Bind FileWarningVisibility, Mode=OneWay}">
                                 <FontIcon Glyph="&#xE7BA;" FontSize="12" Foreground="#FFAA00" Margin="0,0,6,0"/>
                                 <TextBlock Text="Archivo no disponible" FontSize="11" Foreground="#FFAA00" Opacity="0.9"/>
                             </StackPanel>
@@ -187,22 +187,22 @@ xmlns:tb="using:H.NotifyIcon">
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Visibility="{x:Bind AppSourceVisibility}" Opacity="0.5">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Visibility="{x:Bind AppSourceVisibility, Mode=OneWay}" Opacity="0.5">
                                     <FontIcon Glyph="&#xE737;" FontSize="10" Margin="0,0,4,0"/>
-                                    <TextBlock Text="{x:Bind AppSource}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="150"/>
+                                    <TextBlock Text="{x:Bind AppSource, Mode=OneWay}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="150"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{x:Bind MediaInfoVisibility}" Opacity="0.5" Spacing="8">
-                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind DurationVisibility}">
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{x:Bind MediaInfoVisibility, Mode=OneWay}" Opacity="0.5" Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind DurationVisibility, Mode=OneWay}">
                                         <FontIcon Glyph="&#xE916;" FontSize="10" Margin="0,0,4,0"/>
-                                        <TextBlock Text="{x:Bind MediaDuration}" FontSize="10"/>
+                                        <TextBlock Text="{x:Bind MediaDuration, Mode=OneWay}" FontSize="10"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind ImageDimensionsVisibility}">
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind ImageDimensionsVisibility, Mode=OneWay}">
                                         <FontIcon Glyph="&#xE799;" FontSize="10" Margin="0,0,4,0"/>
-                                        <TextBlock Text="{x:Bind ImageDimensions}" FontSize="10"/>
+                                        <TextBlock Text="{x:Bind ImageDimensions, Mode=OneWay}" FontSize="10"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind FileSizeVisibility}">
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind FileSizeVisibility, Mode=OneWay}">
                                         <FontIcon Glyph="&#xE7C3;" FontSize="10" Margin="0,0,4,0"/>
-                                        <TextBlock Text="{x:Bind FileSize}" FontSize="10"/>
+                                        <TextBlock Text="{x:Bind FileSize, Mode=OneWay}" FontSize="10"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>

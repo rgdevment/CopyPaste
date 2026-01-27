@@ -1,33 +1,36 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-        <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-        <RootNamespace>CopyPaste.UI</RootNamespace>
-        <ApplicationManifest>app.manifest</ApplicationManifest>
-        <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
-        <Platforms>x64;arm64</Platforms>
-        <UseWinUI>true</UseWinUI>
-        <Nullable>enable</Nullable>
-        <LangVersion>preview</LangVersion>
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>CopyPaste.UI</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
 
-        <AssemblyName>CopyPaste</AssemblyName>
+    <AssemblyName>CopyPaste</AssemblyName>
 
-        <WindowsPackageType>None</WindowsPackageType>
-        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-        <WinUISDKReferences>true</WinUISDKReferences>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WinUISDKReferences>true</WinUISDKReferences>
 
-        <SelfContained>True</SelfContained>
-        <PublishSelfContained>True</PublishSelfContained>
+    <SelfContained>True</SelfContained>
+    <PublishSelfContained>True</PublishSelfContained>
 
-        <PublishAot>true</PublishAot>
-        <SatelliteResourceLanguages>en;es</SatelliteResourceLanguages>
+    <PublishAot>true</PublishAot>
+    <SatelliteResourceLanguages>en;es</SatelliteResourceLanguages>
 
-        <PublishReadyToRun>False</PublishReadyToRun>
+    <PublishReadyToRun>False</PublishReadyToRun>
 
-        <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    </PropertyGroup>
+    <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        
+    <!-- Enable COM interop for Native AOT -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+</PropertyGroup>
 
     <ItemGroup>
         <Content Remove="Assets\CopyPasteLogoSimple.ico" />
@@ -49,10 +52,6 @@
         <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7463" />
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <TrimmerRootAssembly Include="LiteDB" />
     </ItemGroup>
 
     <ItemGroup>

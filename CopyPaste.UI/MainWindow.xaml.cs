@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System;
+using System.Linq;
 using WinRT.Interop;
 
 namespace CopyPaste.UI;
@@ -66,6 +67,15 @@ public sealed partial class MainWindow : Window
     {
         Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
         HotkeyHelper.UnregisterMessageHandler(_hWnd);
+
+        // Cleanup ViewModel event subscriptions
+        ViewModel.Cleanup();
+
+        // Unsubscribe from all items' ImagePathChanged events
+        foreach (var item in ViewModel.Items)
+        {
+            item.ImagePathChanged -= OnImagePathChanged;
+        }
 
         if (Application.Current is App { IsExiting: true })
         {
@@ -134,6 +144,17 @@ public sealed partial class MainWindow : Window
         else
         {
             Win32WindowHelper.RemoveWindowBorder(_hWnd);
+            // Refresh file availability status for visible items
+            RefreshFileAvailability();
+        }
+    }
+
+    private void RefreshFileAvailability()
+    {
+        // Refresh file status for visible file-type items when window is activated
+        foreach (var item in ViewModel.Items.Where(i => i.IsFileType))
+        {
+            item.RefreshFileStatus();
         }
     }
 
@@ -232,7 +253,15 @@ public sealed partial class MainWindow : Window
 
     private void ClipboardListView_ContainerContentChanging(ListViewBase _, ContainerContentChangingEventArgs args)
     {
-        if (args.InRecycleQueue) return;
+        if (args.InRecycleQueue)
+        {
+            // Unsubscribe when recycling
+            if (args.Item is ClipboardItemViewModel recycledVm)
+            {
+                recycledVm.ImagePathChanged -= OnImagePathChanged;
+            }
+            return;
+        }
 
         var container = args.ItemContainer;
         container.PointerEntered -= Container_PointerEntered;
@@ -242,7 +271,27 @@ public sealed partial class MainWindow : Window
         container.PointerExited += Container_PointerExited;
         container.DoubleTapped += Container_DoubleTapped;
 
+        // Subscribe to image path changes for live thumbnail updates
+        if (args.Item is ClipboardItemViewModel vm)
+        {
+            vm.ImagePathChanged -= OnImagePathChanged;
+            vm.ImagePathChanged += OnImagePathChanged;
+        }
+
         args.RegisterUpdateCallback(LoadClipboardImage);
+    }
+
+    private void OnImagePathChanged(object? sender, string newPath)
+    {
+        if (sender is not ClipboardItemViewModel vm) return;
+
+        // Find the container for this item and reload its image
+        var container = ClipboardListView.ContainerFromItem(vm) as ListViewItem;
+        if (container?.ContentTemplateRoot is FrameworkElement root &&
+            root.FindName("ClipboardImage") is Image image)
+        {
+            LoadImageSource(image, newPath);
+        }
     }
 
     private void Container_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)

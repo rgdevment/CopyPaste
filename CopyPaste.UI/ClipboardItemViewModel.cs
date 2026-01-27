@@ -75,12 +75,16 @@ public partial class ClipboardItemViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(updatedModel);
 
-        // Update the model reference
+        // Update the model properties
         Model.Content = updatedModel.Content;
         Model.Metadata = updatedModel.Metadata;
         Model.ModifiedAt = updatedModel.ModifiedAt;
 
-        // Notify UI of properties that depend on metadata
+        // Clear cached paths to force re-evaluation
+        _cachedThumbnailPath = null;
+        _cachedImagePath = null;
+
+        // Notify UI of ALL properties that might have changed
         OnPropertyChanged(nameof(Content));
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(ImagePath));
@@ -94,13 +98,51 @@ public partial class ClipboardItemViewModel : ObservableObject
         OnPropertyChanged(nameof(FileSize));
         OnPropertyChanged(nameof(FileSizeVisibility));
         OnPropertyChanged(nameof(MediaInfoVisibility));
+        OnPropertyChanged(nameof(IsTextVisible));
+        OnPropertyChanged(nameof(IsFileAvailable));
+        OnPropertyChanged(nameof(FileWarningVisibility));
+
+        // Fire event for image reload (used by MainWindow)
+        ImagePathChanged?.Invoke(this, ImagePath);
     }
+
+    /// <summary>
+    /// Call to refresh file availability status (e.g., when file might have been deleted).
+    /// </summary>
+    public void RefreshFileStatus()
+    {
+        OnPropertyChanged(nameof(IsFileAvailable));
+        OnPropertyChanged(nameof(FileWarningVisibility));
+    }
+
+    /// <summary>
+    /// Fired when ImagePath changes (thumbnail becomes available).
+    /// </summary>
+    public event EventHandler<string>? ImagePathChanged;
+
+    // Cached paths to avoid repeated JSON parsing - cleared on refresh
+    private string? _cachedThumbnailPath;
+    private string? _cachedImagePath;
 
     public string Content => Model.Content ?? string.Empty;
 
-    public string ThumbnailPath => GetThumbnailPathOrPlaceholder();
+    public string ThumbnailPath
+    {
+        get
+        {
+            _cachedThumbnailPath ??= GetThumbnailPathOrPlaceholder();
+            return _cachedThumbnailPath;
+        }
+    }
 
-    public string ImagePath => GetImagePathOrThumbnail();
+    public string ImagePath
+    {
+        get
+        {
+            _cachedImagePath ??= GetImagePathOrThumbnail();
+            return _cachedImagePath;
+        }
+    }
 
     public bool HasValidImagePath => Model.Type == ClipboardContentType.Image && !string.IsNullOrEmpty(GetImagePathOrThumbnail());
 
