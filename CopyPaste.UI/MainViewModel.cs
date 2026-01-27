@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -173,7 +172,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         {
             if (itemVM.IsFileType && !itemVM.IsFileAvailable)
             {
-                Debug.WriteLine($"Cannot paste: file not available for item {itemVM.Model.Id}");
+                AppLogger.Warn($"Cannot paste: file not available for item {itemVM.Model.Id}");
                 return;
             }
 
@@ -181,7 +180,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
 
             if (!ClipboardHelper.SetClipboardContent(itemVM.Model, plain))
             {
-                Debug.WriteLine($"Failed to set clipboard content for item {itemVM.Model.Id}");
+                AppLogger.Warn($"Failed to set clipboard content for item {itemVM.Model.Id}");
                 return;
             }
 
@@ -196,7 +195,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Paste operation failed: {ex.Message}");
+            AppLogger.Exception(ex, "Paste operation failed");
         }
     }
 

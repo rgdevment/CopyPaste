@@ -62,7 +62,7 @@ jobs:
             -p:IlcOptimizationPreference=Speed `
             -p:TrimMode=partial
 
-      - name: Clean unnecessary language folders
+      - name: Clean unnecessary files
         shell: pwsh
         run: |
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
@@ -76,8 +76,32 @@ jobs:
           # Remove PDB files (debug symbols)
           Get-ChildItem -Path $targetDir -Filter "*.pdb" -Recurse | Remove-Item -Force
           
-          Write-Host "Cleaned publish folder"
-          Get-ChildItem -Path $targetDir | Format-Table Name, Length -AutoSize
+          # Remove unnecessary DLLs (ML/AI components not used)
+          $unnecessaryDlls = @(
+            "onnxruntime.dll",
+            "DirectML.dll",
+            "Microsoft.Windows.Widgets.dll",
+            "Microsoft.DiaSymReader.Native.amd64.dll"
+          )
+          foreach ($dll in $unnecessaryDlls) {
+            $path = Join-Path $targetDir $dll
+            if (Test-Path $path) {
+              Remove-Item $path -Force
+              Write-Host "Removed: $dll"
+            }
+          }
+          
+          # Remove WinMD files (only needed for development)
+          Get-ChildItem -Path $targetDir -Filter "*.winmd" -Recurse | Remove-Item -Force
+          
+          # Remove unnecessary json files
+          Get-ChildItem -Path $targetDir -Filter "*.deps.json" -Recurse | Remove-Item -Force
+          Get-ChildItem -Path $targetDir -Filter "*.runtimeconfig.json" -Recurse | Remove-Item -Force
+          
+          # Calculate final size
+          $totalSize = (Get-ChildItem -Path $targetDir -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
+          Write-Host "Final publish size: $([math]::Round($totalSize, 2)) MB"
+          Write-Host "File count: $((Get-ChildItem -Path $targetDir -Recurse -File).Count)"
 
       - name: Decode signing certificate
         if: env.PFX_BASE64 != ''

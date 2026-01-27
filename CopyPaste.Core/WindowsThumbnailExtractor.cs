@@ -47,7 +47,6 @@ public static partial class WindowsThumbnailExtractor
             int hr = SHCreateItemFromParsingName(filePath, IntPtr.Zero, _iShellItemImageFactoryGuid, out shellItem);
             if (hr != 0 || shellItem == IntPtr.Zero)
             {
-                System.Diagnostics.Debug.WriteLine($"SHCreateItemFromParsingName failed: HRESULT 0x{hr:X8}");
                 return null;
             }
 
@@ -61,26 +60,22 @@ public static partial class WindowsThumbnailExtractor
 
             if (hBitmap == IntPtr.Zero)
             {
-                System.Diagnostics.Debug.WriteLine($"GetImage returned null bitmap for: {Path.GetFileName(filePath)}");
                 return null;
             }
 
             // Convert HBITMAP to byte array using SkiaSharp (Native AOT compatible)
             return HBitmapToBytes(hBitmap);
         }
-        catch (COMException ex)
+        catch (COMException)
         {
-            System.Diagnostics.Debug.WriteLine($"COM error extracting thumbnail: 0x{ex.HResult:X8} - {ex.Message}");
             return null;
         }
-        catch (InvalidCastException ex)
+        catch (InvalidCastException)
         {
-            System.Diagnostics.Debug.WriteLine($"Interface cast failed: {ex.Message}");
             return null;
         }
-        catch (Exception ex) when (ex is OutOfMemoryException or ExternalException)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine($"Resource error: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
         finally
@@ -92,7 +87,9 @@ public static partial class WindowsThumbnailExtractor
 
     [DllImport("gdi32.dll")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+#pragma warning disable SYSLIB1054
     private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines,
+#pragma warning restore SYSLIB1054
         [Out] byte[] lpvBits, ref BITMAPINFO lpbi, uint uUsage);
 
     [LibraryImport("gdi32.dll")]
@@ -167,9 +164,8 @@ public static partial class WindowsThumbnailExtractor
 
             return data.ToArray();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine($"HBitmapToBytes error: {ex.Message}");
             return null;
         }
         finally

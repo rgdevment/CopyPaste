@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace CopyPaste.Core;
 
 /// <summary>
@@ -52,11 +50,14 @@ public sealed class CleanupService : IDisposable
             int deletedCount = _repository.ClearOldItems(retentionDays, excludePinned: true);
             SaveLastCleanupDate(DateTime.UtcNow);
 
-            Debug.WriteLine($"Cleanup: {deletedCount} items older than {retentionDays} days removed.");
+            if (deletedCount > 0)
+            {
+                AppLogger.Info($"Cleanup: {deletedCount} items older than {retentionDays} days removed");
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Debug.WriteLine($"Cleanup failed: {ex.Message}");
+            AppLogger.Exception(ex, "Cleanup failed");
         }
     }
 
@@ -75,7 +76,7 @@ public sealed class CleanupService : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Debug.WriteLine($"Failed to load last cleanup date: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to load last cleanup date");
         }
 
         return DateTime.MinValue;
@@ -89,7 +90,7 @@ public sealed class CleanupService : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Debug.WriteLine($"Failed to save last cleanup date: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to save last cleanup date");
         }
     }
 

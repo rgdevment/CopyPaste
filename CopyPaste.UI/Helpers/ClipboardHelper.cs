@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using CopyPaste.Core;
@@ -42,7 +41,7 @@ internal static class ClipboardHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to set clipboard content: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to set clipboard content");
             return false;
         }
     }
@@ -89,7 +88,7 @@ internal static class ClipboardHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to set text to clipboard: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to set text to clipboard");
             return false;
         }
     }
@@ -102,7 +101,7 @@ internal static class ClipboardHelper
         // For images, Content contains the path to the saved image file
         if (string.IsNullOrEmpty(item.Content) || !File.Exists(item.Content))
         {
-            Debug.WriteLine($"Image file not found: {item.Content}");
+            AppLogger.Warn($"Image file not found: {item.Content}");
             return false;
         }
 
@@ -127,7 +126,7 @@ internal static class ClipboardHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to set image to clipboard: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to set image to clipboard");
             return false;
         }
     }
@@ -165,18 +164,18 @@ internal static class ClipboardHelper
                     }
                     else
                     {
-                        Debug.WriteLine($"Path not found: {trimmedPath}");
+                        AppLogger.Warn($"Path not found: {trimmedPath}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Failed to access path '{trimmedPath}': {ex.Message}");
+                    AppLogger.Exception(ex, $"Failed to access path '{trimmedPath}'");
                 }
             }
 
             if (validPaths.Count == 0)
             {
-                Debug.WriteLine("No valid files or folders found to copy");
+                AppLogger.Warn("No valid files or folders found to copy");
                 return false;
             }
 
@@ -192,7 +191,7 @@ internal static class ClipboardHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to set files to clipboard: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to set files to clipboard");
             return false;
         }
     }

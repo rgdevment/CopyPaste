@@ -37,6 +37,11 @@ public sealed partial class App : Application, IDisposable
     public App()
     {
         InitializeComponent();
+
+        // Initialize logger first for error tracking
+        AppLogger.Initialize();
+        AppLogger.Info("Application starting...");
+
         StorageConfig.Initialize();
 
         // Initialize core components (Native AOT-compatible SQLite)
@@ -50,6 +55,8 @@ public sealed partial class App : Application, IDisposable
 
         // Run listener in background
         Task.Run(() => _listener.Run());
+
+        AppLogger.Info("Application initialized successfully");
     }
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
@@ -57,11 +64,13 @@ public sealed partial class App : Application, IDisposable
         _window = new MainWindow(_service!);
 
         _window.Activate();
+        AppLogger.Info("Main window launched");
     }
 
     public void BeginExit()
     {
         IsExiting = true;
+        AppLogger.Info("Application exiting...");
         try
         {
             _listener?.Dispose();
@@ -70,8 +79,9 @@ public sealed partial class App : Application, IDisposable
         catch (ObjectDisposedException)
         {
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            AppLogger.Exception(ex, "Error during exit");
             throw;
         }
 

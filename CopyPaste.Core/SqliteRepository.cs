@@ -1,5 +1,4 @@
 using Microsoft.Data.Sqlite;
-using System.Diagnostics;
 
 namespace CopyPaste.Core;
 
@@ -28,13 +27,13 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode == 26) // SQLITE_NOTADB
         {
-            Debug.WriteLine($"Database file is not valid SQLite: {ex.Message}");
+            AppLogger.Warn($"Database file is not valid SQLite, recreating: {ex.Message}");
             HandleCorruptDatabase();
             InitializeDatabase();
         }
         catch (SqliteException ex)
         {
-            Debug.WriteLine($"SQLite error during initialization: {ex.Message}");
+            AppLogger.Exception(ex, "SQLite error during initialization, recreating database");
             HandleCorruptDatabase();
             InitializeDatabase();
         }
@@ -49,7 +48,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
             // Backup the corrupt/incompatible file
             var backupPath = $"{_dbPath}.backup.{DateTime.Now:yyyyMMddHHmmss}";
             File.Move(_dbPath, backupPath);
-            Debug.WriteLine($"Moved incompatible database to: {backupPath}");
+            AppLogger.Info($"Moved incompatible database to: {backupPath}");
 
             // Also remove WAL/SHM files if they exist
             var walPath = _dbPath + "-wal";
@@ -59,7 +58,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
         catch (IOException ex)
         {
-            Debug.WriteLine($"Failed to backup corrupt database: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to backup corrupt database");
             // Try to delete instead
             try
             {
@@ -392,7 +391,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"WAL checkpoint failed: {ex.Message}");
+            AppLogger.Exception(ex, "WAL checkpoint failed during dispose");
         }
     }
 }

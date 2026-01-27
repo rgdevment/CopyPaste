@@ -1,7 +1,7 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using CopyPaste.Core;
 
 namespace CopyPaste.UI.Helpers;
 
@@ -79,11 +79,10 @@ internal static partial class FocusHelper
         {
             _previousForegroundWindow = hwnd;
             _previousWindowThreadId = GetWindowThreadProcessId(hwnd, out _);
-            Debug.WriteLine($"[FocusHelper] Captured: 0x{hwnd:X}, Thread: {_previousWindowThreadId}");
         }
         else
         {
-            Debug.WriteLine("[FocusHelper] Failed to capture valid window");
+            AppLogger.Warn("Failed to capture valid window");
             _previousForegroundWindow = IntPtr.Zero;
         }
     }
@@ -95,13 +94,13 @@ internal static partial class FocusHelper
     {
         if (_previousForegroundWindow == IntPtr.Zero)
         {
-            Debug.WriteLine("[FocusHelper] No previous window");
+            AppLogger.Warn("No previous window to restore");
             return false;
         }
 
         if (!IsWindow(_previousForegroundWindow))
         {
-            Debug.WriteLine("[FocusHelper] Window no longer exists");
+            AppLogger.Warn("Window no longer exists");
             _previousForegroundWindow = IntPtr.Zero;
             return false;
         }
@@ -138,12 +137,12 @@ internal static partial class FocusHelper
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            Debug.WriteLine($"[FocusHelper] Restore failed (Win32Exception): {ex.Message}");
+            AppLogger.Exception(ex, "Restore window failed");
             throw;
         }
         catch (InvalidOperationException ex)
         {
-            Debug.WriteLine($"[FocusHelper] Restore failed (InvalidOperationException): {ex.Message}");
+            AppLogger.Exception(ex, "Restore window failed");
             throw;
         }
     }
@@ -157,7 +156,6 @@ internal static partial class FocusHelper
         {
             if (GetForegroundWindow() == _previousForegroundWindow)
             {
-                Debug.WriteLine($"[FocusHelper] Focus confirmed after {i + 1} attempts");
                 return true;
             }
             await Task.Delay(10).ConfigureAwait(false);
@@ -174,7 +172,6 @@ internal static partial class FocusHelper
         keybd_event(_vK_V, 0, 0, UIntPtr.Zero);
         keybd_event(_vK_V, 0, _kEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(_vK_CONTROL, 0, _kEYEVENTF_KEYUP, UIntPtr.Zero);
-        Debug.WriteLine("[FocusHelper] Ctrl+V sent");
     }
 
     /// <summary>
@@ -184,7 +181,7 @@ internal static partial class FocusHelper
     {
         if (_previousForegroundWindow == IntPtr.Zero)
         {
-            Debug.WriteLine("[FocusHelper] No window to restore");
+            AppLogger.Warn("No window to restore for paste");
             return;
         }
 
@@ -193,7 +190,7 @@ internal static partial class FocusHelper
 
         if (!RestorePreviousWindow())
         {
-            Debug.WriteLine("[FocusHelper] Could not restore window");
+            AppLogger.Warn("Could not restore window for paste");
             return;
         }
 
@@ -203,7 +200,6 @@ internal static partial class FocusHelper
         if (!focusConfirmed)
         {
             // Fallback: wait the configured delay
-            Debug.WriteLine("[FocusHelper] Focus not confirmed, using delay fallback");
             await Task.Delay(PasteConfig.DelayBeforePasteMs).ConfigureAwait(false);
         }
 

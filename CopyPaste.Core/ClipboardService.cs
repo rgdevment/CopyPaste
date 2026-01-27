@@ -1,6 +1,5 @@
 using SkiaSharp;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -193,7 +192,7 @@ public class ClipboardService(IClipboardRepository repository)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Debug.WriteLine($"Asset processing failed: {ex.Message}");
+            AppLogger.Exception(ex, "Asset processing failed");
         }
     }
 
@@ -237,7 +236,7 @@ public class ClipboardService(IClipboardRepository repository)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Debug.WriteLine($"Image file processing failed: {ex.Message}");
+            AppLogger.Exception(ex, "Image file processing failed");
         }
         finally
         {
@@ -269,7 +268,7 @@ public class ClipboardService(IClipboardRepository repository)
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Thumbnail extraction failed: {ex.Message}");
+                AppLogger.Exception(ex, "Thumbnail extraction failed");
             }
 
             // Save thumbnail if we got one
@@ -295,7 +294,7 @@ public class ClipboardService(IClipboardRepository repository)
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Thumbnail save failed: {ex.Message}");
+                    AppLogger.Exception(ex, "Thumbnail save failed");
                 }
             }
 
@@ -304,7 +303,7 @@ public class ClipboardService(IClipboardRepository repository)
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Media processing failed: {ex.Message}");
+            AppLogger.Exception(ex, "Media processing failed");
         }
         finally
         {
@@ -316,7 +315,7 @@ public class ClipboardService(IClipboardRepository repository)
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to save metadata: {ex.Message}");
+                AppLogger.Exception(ex, "Failed to save metadata");
             }
 
             // ALWAYS notify UI so it can refresh (show placeholder or real thumb)
@@ -387,7 +386,7 @@ public class ClipboardService(IClipboardRepository repository)
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Audio artwork extraction failed: {ex.Message}");
+            AppLogger.Exception(ex, "Audio artwork extraction failed");
             return null;
         }
     }

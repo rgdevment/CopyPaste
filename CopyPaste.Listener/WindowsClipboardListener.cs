@@ -106,10 +106,15 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     public void Run()
     {
         _hwnd = CreateWindowExW(0, "Static", "CopyPasteHost", 0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        if (_hwnd == IntPtr.Zero) return;
+        if (_hwnd == IntPtr.Zero)
+        {
+            AppLogger.Error("Failed to create clipboard listener window");
+            return;
+        }
 
         if (AddClipboardFormatListener(_hwnd))
         {
+            AppLogger.Info("Clipboard listener started");
             _ = Task.Run(ProcessQueueAsync);
 
             while (GetMessage(out var msg, IntPtr.Zero, 0, 0))
@@ -118,6 +123,10 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
                 TranslateMessage(ref msg);
                 DispatchMessage(ref msg);
             }
+        }
+        else
+        {
+            AppLogger.Error("Failed to add clipboard format listener");
         }
     }
 
@@ -132,7 +141,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         }
         catch (OperationCanceledException)
         {
-            Debug.WriteLine("Queue processing stopped gracefully.");
+            AppLogger.Info("Clipboard queue processing stopped");
         }
     }
 
@@ -151,7 +160,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             catch (IOException ex)
             {
                 attempt++;
-                Debug.WriteLine($"IO error (attempt {attempt}/{maxRetries}): {ex.Message}");
+                AppLogger.Warn($"IO error processing clipboard (attempt {attempt}/{maxRetries}): {ex.Message}");
                 if (attempt < maxRetries)
                 {
                     await Task.Delay(500 * attempt, _cts.Token).ConfigureAwait(false);
@@ -159,12 +168,12 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             }
             catch (UnauthorizedAccessException ex)
             {
-                Debug.WriteLine($"Access denied: {ex.Message}");
-                return; // No retry for permission issues
+                AppLogger.Warn($"Access denied processing clipboard: {ex.Message}");
+                return;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Debug.WriteLine($"Unexpected error processing clipboard task: {ex.GetType().Name} - {ex.Message}");
+                AppLogger.Exception(ex, "Unexpected error processing clipboard task");
                 return;
             }
         }
@@ -197,7 +206,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
 
         if (!OpenClipboard(_hwnd))
         {
-            Debug.WriteLine("Failed to open clipboard - may be locked by another process");
+            AppLogger.Warn("Failed to open clipboard - may be locked by another process");
             return;
         }
 
@@ -237,7 +246,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Debug.WriteLine($"Clipboard processing error: {ex.GetType().Name} - {ex.Message}");
+            AppLogger.Exception(ex, "Clipboard processing error");
         }
         finally { CloseClipboard(); }
     }
@@ -304,7 +313,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         IntPtr pData = GlobalLock(hData);
         if (pData == IntPtr.Zero)
         {
-            Debug.WriteLine($"GlobalLock failed for format {format}");
             return null;
         }
 
@@ -313,7 +321,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             nuint rawSize = GlobalSize(hData);
             if (rawSize == 0 || rawSize > int.MaxValue)
             {
-                Debug.WriteLine($"Invalid data size: {rawSize}");
                 return null;
             }
 
@@ -324,7 +331,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         }
         catch (OutOfMemoryException ex)
         {
-            Debug.WriteLine($"Out of memory extracting clipboard data: {ex.Message}");
+            AppLogger.Exception(ex, "Out of memory extracting clipboard data");
             return null;
         }
         finally { GlobalUnlock(hData); }
@@ -338,7 +345,6 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         IntPtr pData = GlobalLock(hData);
         if (pData == IntPtr.Zero)
         {
-            Debug.WriteLine("GlobalLock failed for text extraction");
             return null;
         }
 
@@ -348,7 +354,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         }
         catch (Exception ex) when (ex is AccessViolationException or ArgumentException)
         {
-            Debug.WriteLine($"Text extraction failed: {ex.Message}");
+            AppLogger.Exception(ex, "Text extraction failed");
             return null;
         }
         finally { GlobalUnlock(hData); }
@@ -364,9 +370,8 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             if (hData == IntPtr.Zero) return new Collection<string>(files);
 
             uint count = DragQueryFileW(hData, 0xFFFFFFFF, null, 0);
-            if (count == 0 || count > 10000) // Sanity check
+            if (count == 0 || count > 10000)
             {
-                Debug.WriteLine($"Invalid file count: {count}");
                 return new Collection<string>(files);
             }
 
@@ -388,7 +393,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         }
         catch (Exception ex) when (ex is OutOfMemoryException or AccessViolationException)
         {
-            Debug.WriteLine($"File path extraction failed: {ex.Message}");
+            AppLogger.Exception(ex, "File path extraction failed");
         }
 
         return new Collection<string>(files);
