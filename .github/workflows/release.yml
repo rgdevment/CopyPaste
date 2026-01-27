@@ -56,7 +56,7 @@ jobs:
           dotnet publish CopyPaste.UI/CopyPaste.UI.csproj `
             -c Release `
             -r ${{ matrix.arch }} `
-            --self-contained false `
+            --self-contained true `
             --no-restore
 
       - name: Decode signing certificate

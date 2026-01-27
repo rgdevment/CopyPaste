@@ -7,7 +7,6 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
@@ -18,11 +17,6 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
-
-    <!-- Framework-dependent (requires .NET 10 installed) -->
-    <!-- For alpha/beta testing - reduces installer from ~200MB to ~15MB -->
-    <SelfContained>false</SelfContained>
-    <PublishSelfContained>false</PublishSelfContained>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
