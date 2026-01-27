@@ -39,6 +39,10 @@ VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 WizardStyle=modern
 DisableWelcomePage=no
+; Native app closure using Windows Restart Manager
+CloseApplications=yes
+CloseApplicationsFilter={#MyAppExeName}
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -56,42 +60,3 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-
-; Inno Setup only removes files it installed - user data is preserved automatically
-
-[Code]
-const
-  UninstallRegKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{{AE2A10DA-F6FA-417B-8C06-99EBA788AFFE}}_is1';
-
-function GetUninstallExePath(): String;
-var
-  InstallPath: String;
-begin
-  Result := '';
-  if RegQueryStringValue(HKCU, UninstallRegKey, 'InstallLocation', InstallPath) then
-    Result := InstallPath + 'unins000.exe'
-  else if RegQueryStringValue(HKLM, UninstallRegKey, 'InstallLocation', InstallPath) then
-    Result := InstallPath + 'unins000.exe';
-    
-  if (Result = '') or (not FileExists(Result)) then
-    Result := ExpandConstant('{localappdata}\{#MyAppName}\unins000.exe');
-end;
-
-function PrepareToInstall(var NeedsRestart: Boolean): String;
-var
-  UninstallExe: String;
-  ResultCode: Integer;
-begin
-  Result := '';
-  NeedsRestart := False;
-  
-  UninstallExe := GetUninstallExePath();
-  
-  if FileExists(UninstallExe) then
-  begin
-    WizardForm.PreparingLabel.Caption := 'Removing previous version...';
-    // Run uninstaller - it will handle closing the app and asking user if needed
-    Exec(UninstallExe, '/SILENT /NORESTART', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode);
-    Sleep(1000);
-  end;
-end;
