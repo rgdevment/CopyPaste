@@ -39,6 +39,10 @@ VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 WizardStyle=modern
 DisableWelcomePage=no
+; Update behavior - close running app and uninstall previous version
+CloseApplications=yes
+CloseApplicationsFilter=*.exe
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -56,3 +60,51 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[InstallDelete]
+; Clean old app files but preserve user data
+Type: filesandordirs; Name: "{app}\*.dll"
+Type: filesandordirs; Name: "{app}\*.exe"
+Type: filesandordirs; Name: "{app}\*.pri"
+Type: filesandordirs; Name: "{app}\*.json"
+Type: filesandordirs; Name: "{app}\Microsoft.UI.Xaml"
+Type: filesandordirs; Name: "{app}\NpuDetect"
+Type: filesandordirs; Name: "{app}\en-us"
+
+[UninstallDelete]
+; Clean app files on uninstall but preserve user data folder
+Type: filesandordirs; Name: "{app}\*.dll"
+Type: filesandordirs; Name: "{app}\*.exe"
+Type: filesandordirs; Name: "{app}\Microsoft.UI.Xaml"
+Type: filesandordirs; Name: "{app}\NpuDetect"
+
+[Code]
+const
+  WM_CLOSE = $0010;
+
+function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  
+  // Try to close the running application gracefully
+  if CheckForMutexes('{#MyAppName}') then
+  begin
+    Log('Application is running, attempting to close...');
+  end;
+  
+  // Force close the process if still running
+  Exec('taskkill', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500); // Wait for process to fully terminate
+end;
+
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  // Close the app before uninstalling
+  Exec('taskkill', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500);
+end;

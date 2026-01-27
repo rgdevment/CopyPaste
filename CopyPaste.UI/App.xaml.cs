@@ -27,19 +27,31 @@ namespace CopyPaste.UI;
 public sealed partial class App : Application, IDisposable
 {
     private Window? _window;
-    private readonly WindowsClipboardListener? _listener;
-    private readonly ClipboardService? _service;
-    private readonly CleanupService? _cleanupService;
-    private readonly SqliteRepository? _repository;
+    private WindowsClipboardListener? _listener;
+    private ClipboardService? _service;
+    private CleanupService? _cleanupService;
+    private SqliteRepository? _repository;
     private bool _isDisposed;
     public bool IsExiting { get; private set; }
 
     public App()
     {
         this.UnhandledException += OnUnhandledException;
-
         InitializeComponent();
+    }
 
+    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    {
+        // Initialize core services (deferred from constructor for faster startup)
+        InitializeCoreServices();
+
+        _window = new MainWindow(_service!);
+        _window.Activate();
+        AppLogger.Info("Main window launched");
+    }
+
+    private void InitializeCoreServices()
+    {
         // Initialize logger for error tracking
         AppLogger.Initialize();
         AppLogger.Info("Application starting...");
@@ -62,13 +74,6 @@ public sealed partial class App : Application, IDisposable
         Task.Run(() => _listener.Run());
 
         AppLogger.Info("Application initialized");
-    }
-
-    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-    {
-        _window = new MainWindow(_service!);
-        _window.Activate();
-        AppLogger.Info("Main window launched");
     }
 
     public void BeginExit()
