@@ -63,6 +63,12 @@
         <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7463" />
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
+        <PackageReference Include="System.Formats.Nrbf" Version="10.0.0" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <!-- Prevent trimming of System.Formats.Nrbf for AOT compilation -->
+        <TrimmerRootAssembly Include="System.Formats.Nrbf" />
     </ItemGroup>
 
     <ItemGroup>
