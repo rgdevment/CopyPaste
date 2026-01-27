@@ -47,14 +47,14 @@ xmlns:tb="using:H.NotifyIcon">
                              Style="{StaticResource SidebarTabStyle}"
                              ToolTipService.ToolTip="Recientes"
                              Checked="TabChanged">
-                    <FontIcon Glyph="&#xE823;" FontSize="15"/>
+                    <FontIcon x:Name="RecentTabIcon" Glyph="&#xE823;" FontSize="15" Foreground="#5B9BD5"/>
                 </RadioButton>
                 <RadioButton x:Name="PinnedTab"
                              GroupName="NavTabs"
                              Style="{StaticResource SidebarTabStyle}"
                              ToolTipService.ToolTip="Anclados"
                              Checked="TabChanged">
-                    <FontIcon Glyph="&#xE718;" FontSize="15"/>
+                    <FontIcon x:Name="PinnedTabIcon" Glyph="&#xE718;" FontSize="15"/>
                 </RadioButton>
             </StackPanel>
 
@@ -73,6 +73,7 @@ xmlns:tb="using:H.NotifyIcon">
         </Grid>
     </Border>
 
+
     <!-- Main Content -->
     <Grid Grid.Column="1">
         <Grid.RowDefinitions>
@@ -81,21 +82,44 @@ xmlns:tb="using:H.NotifyIcon">
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header with Title -->
-        <StackPanel Grid.Row="0" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Center" 
-                    Margin="0,14,0,6"
-                    Spacing="8">
-            <Image Source="/Assets/CopyPasteLogo.ico" 
-                   Width="18" Height="18" 
-                   VerticalAlignment="Center"/>
-            <TextBlock Text="CopyPaste APP" 
-                       FontSize="13" 
-                       FontWeight="SemiBold" 
-                       Opacity="0.8"
+        <!-- Section Title Indicator -->
+        <Grid Grid.Row="0" Margin="12,14,12,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Section Title (Left) -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Left" 
+                        Spacing="6">
+                <FontIcon x:Name="SectionIcon" 
+                          Glyph="&#xE823;" 
+                          FontSize="14"
+                          Foreground="#5B9BD5"/>
+                <TextBlock x:Name="SectionTitle" 
+                           Text="Recientes" 
+                           FontSize="14" 
+                           FontWeight="SemiBold"
+                           Foreground="#5B9BD5"/>
+            </StackPanel>
+
+            <!-- App Branding (Right) -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="6"
+                        Opacity="0.5">
+                <TextBlock Text="CopyPaste" 
+                           FontSize="11" 
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <Image Source="/Assets/CopyPasteNotification.ico" 
+                       Width="14" Height="14" 
                        VerticalAlignment="Center"/>
-        </StackPanel>
+            </StackPanel>
+        </Grid>
 
         <!-- Search Bar -->
         <TextBox Grid.Row="1"
@@ -110,6 +134,19 @@ xmlns:tb="using:H.NotifyIcon">
                  BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                  Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                  CornerRadius="6"/>
+
+            <!-- Empty State Message -->
+            <StackPanel Grid.Row="2" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
+                <FontIcon Glyph="&#xE74C;" FontSize="32" Opacity="0.3" HorizontalAlignment="Center"/>
+                <TextBlock Text="No hay elementos en esta sección" 
+                           FontSize="13" 
+                           Opacity="0.5"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
 
             <!-- Clipboard Items List -->
             <ListView x:Name="ClipboardListView"

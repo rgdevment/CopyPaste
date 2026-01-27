@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Linq;
+using Windows.UI;
 using WinRT.Interop;
 
 namespace CopyPaste.UI;
@@ -60,6 +61,45 @@ internal sealed partial class MainWindow : Window
                 "Anclados" => 1,
                 _ => 0
             };
+
+            UpdateSectionIndicator(tooltip);
+        }
+    }
+
+    private void UpdateSectionIndicator(string? section)
+    {
+        // Verificar que los elementos XAML estén inicializados
+        if (SectionTitle == null || SectionIcon == null)
+            return;
+
+        var orangeColor = Color.FromArgb(255, 210, 120, 50);
+        var orangeBrush = new SolidColorBrush(orangeColor);
+        var blueColor = Color.FromArgb(255, 91, 155, 213);
+        var blueBrush = new SolidColorBrush(blueColor);
+        var inactiveColor = Color.FromArgb(255, 120, 120, 120);
+        var inactiveBrush = new SolidColorBrush(inactiveColor);
+
+        if (section == "Anclados")
+        {
+            SectionTitle.Text = "Anclados";
+            SectionIcon.Glyph = "\uE718";
+            SectionTitle.Foreground = orangeBrush;
+            SectionIcon.Foreground = orangeBrush;
+
+            // Actualizar iconos del sidebar
+            if (PinnedTabIcon != null) PinnedTabIcon.Foreground = orangeBrush;
+            if (RecentTabIcon != null) RecentTabIcon.Foreground = inactiveBrush;
+        }
+        else
+        {
+            SectionTitle.Text = "Recientes";
+            SectionIcon.Glyph = "\uE823";
+            SectionTitle.Foreground = blueBrush;
+            SectionIcon.Foreground = blueBrush;
+
+            // Actualizar iconos del sidebar
+            if (RecentTabIcon != null) RecentTabIcon.Foreground = blueBrush;
+            if (PinnedTabIcon != null) PinnedTabIcon.Foreground = inactiveBrush;
         }
     }
 

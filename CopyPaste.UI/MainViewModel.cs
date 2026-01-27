@@ -24,6 +24,9 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
     public ObservableCollection<ClipboardItemViewModel> Items { get; } = [];
 
     [ObservableProperty]
+    public partial bool IsEmpty { get; set; } = true;
+
+    [ObservableProperty]
     public partial bool IsLoadingMore { get; set; }
 
     [ObservableProperty]
@@ -79,6 +82,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         Items.Clear();
         _hasMoreItems = true;
         LoadItems();
+        UpdateIsEmpty();
     }
 
     private void LoadItems()
@@ -88,7 +92,11 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
 
         foreach (var item in items)
             Items.Add(CreateViewModel(item));
+
+        UpdateIsEmpty();
     }
+
+    private void UpdateIsEmpty() => IsEmpty = Items.Count == 0;
 
     public void LoadMoreItems()
     {
@@ -124,7 +132,10 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (ShouldShowInCurrentView())
+            {
                 Items.Insert(0, CreateViewModel(item));
+                UpdateIsEmpty();
+            }
         });
     }
 
@@ -163,6 +174,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
     {
         _service.RemoveItem(itemVM.Model.Id);
         Items.Remove(itemVM);
+        UpdateIsEmpty();
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types")]
