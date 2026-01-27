@@ -7,6 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
@@ -17,6 +18,11 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
+    
+    <!-- Force PRI generation for unpackaged apps (CRITICAL for XAML loading) -->
+    <AppxPackage>false</AppxPackage>
+    <GenerateLibraryLayout>true</GenerateLibraryLayout>
+    <EnableMsixTooling>true</EnableMsixTooling>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -28,13 +34,6 @@
 
     <ItemGroup>
         <Manifest Include="$(ApplicationManifest)" />
-    </ItemGroup>
-    
-    <!-- Include ALL assets and copy to output -->
-    <ItemGroup>
-        <Content Include="Assets\**\*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
     </ItemGroup>
 
     <ItemGroup>
@@ -50,38 +49,25 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Update="Assets\CopyPasteLogo.ico">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\CopyPasteLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\CopyPasteLogoSimple.ico">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\CopyPasteLogoSimple.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\CopyPasteNotification.ico">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\CopyPasteNotification.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\thumb\audio.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\thumb\image.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Update="Assets\thumb\video.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
         <None Update="Controls\ClipboardItemCard.xaml">
             <Generator>MSBuild:Compile</Generator>
         </None>
     </ItemGroup>
+    
+    <!-- Copy PRI file to publish output (CRITICAL for XAML loading in Release) -->
+    <Target Name="CopyPriToPublish" AfterTargets="Publish">
+        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" 
+              DestinationFolder="$(PublishDir)" 
+              SkipUnchangedFiles="true" />
+    </Target>
+    
+    <!-- Copy Assets folder to publish output -->
+    <Target Name="CopyAssetsToPublish" AfterTargets="Publish">
+        <ItemGroup>
+            <AssetFiles Include="$(OutputPath)Assets\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(AssetFiles)" 
+              DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" 
+              SkipUnchangedFiles="true" />
+    </Target>
 </Project>
