@@ -13,9 +13,9 @@
     <!-- AOT Configuration -->
     <PublishAot>true</PublishAot>
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-    <TrimMode>full</TrimMode>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <StackTraceSupport>false</StackTraceSupport>
+    <TrimMode>partial</TrimMode>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StackTraceSupport>true</StackTraceSupport>
         
     <!-- Enable COM interop for Native AOT -->
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

@@ -24,15 +24,17 @@
     <PublishAot>true</PublishAot>
     <PublishReadyToRun>false</PublishReadyToRun>
 
-    <!-- AOT Optimizations -->
+    <!-- AOT Optimizations - WinUI compatible -->
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-    <TrimMode>full</TrimMode>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <StackTraceSupport>false</StackTraceSupport>
-    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <TrimMode>partial</TrimMode>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StackTraceSupport>true</StackTraceSupport>
 
-    <!-- Exclude unnecessary satellite assemblies -->
+    <!-- Exclude unnecessary satellite assemblies from our code -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    
+    <!-- Exclude Windows App SDK language folders -->
+    <WindowsAppSDKSelfContainedExcludeLanguages>true</WindowsAppSDKSelfContainedExcludeLanguages>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

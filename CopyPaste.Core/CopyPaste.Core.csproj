@@ -12,8 +12,8 @@
   <!-- AOT Configuration -->
   <PublishAot>true</PublishAot>
   <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-  <TrimMode>full</TrimMode>
-  <InvariantGlobalization>true</InvariantGlobalization>
+  <TrimMode>partial</TrimMode>
+  <InvariantGlobalization>false</InvariantGlobalization>
     
   <!-- Enable COM interop for Native AOT (required for Shell thumbnail extraction) -->
   <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

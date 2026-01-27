@@ -60,9 +60,24 @@ jobs:
             --no-restore `
             -p:PublishAot=true `
             -p:IlcOptimizationPreference=Speed `
-            -p:TrimMode=full `
-            -p:InvariantGlobalization=true `
-            -p:StackTraceSupport=false
+            -p:TrimMode=partial
+
+      - name: Clean unnecessary language folders
+        shell: pwsh
+        run: |
+          $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+          
+          # Remove all language folders except 'en' and 'en-US'
+          Get-ChildItem -Path $targetDir -Directory | Where-Object {
+            $_.Name -match '^[a-z]{2}(-[A-Za-z]{2,4})?$' -and 
+            $_.Name -notin @('en', 'en-US')
+          } | Remove-Item -Recurse -Force
+          
+          # Remove PDB files (debug symbols)
+          Get-ChildItem -Path $targetDir -Filter "*.pdb" -Recurse | Remove-Item -Force
+          
+          Write-Host "Cleaned publish folder"
+          Get-ChildItem -Path $targetDir | Format-Table Name, Length -AutoSize
 
       - name: Decode signing certificate
         if: env.PFX_BASE64 != ''
