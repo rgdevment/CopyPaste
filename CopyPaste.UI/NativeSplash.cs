@@ -31,14 +31,7 @@ public sealed partial class NativeSplash : IDisposable
     {
         _hInstance = GetModuleHandle(null);
 
-        // Initialize GDI+
-        var input = new GdiplusStartupInput { GdiplusVersion = 1 };
-        _ = GdiplusStartup(out _gdiplusToken, ref input, out _);
-
-        // Load logo image
-        LoadLogoImage();
-
-        // Run message loop on separate thread
+        // Run message loop on separate thread (GDI+ init happens there to not block)
         _messageThread = new Thread(CreateAndShowWindow)
         {
             IsBackground = true,
@@ -75,7 +68,7 @@ public sealed partial class NativeSplash : IDisposable
     {
         const string className = "CopyPasteSplash";
 
-        // Register window class
+        // Register window class first, show window immediately
         var wc = new WNDCLASSEX
         {
             cbSize = (uint)Marshal.SizeOf<WNDCLASSEX>(),
@@ -110,9 +103,18 @@ public sealed partial class NativeSplash : IDisposable
             return;
         }
 
+        // Show window immediately, then load logo
         ShowWindow(_hwnd, 5); // SW_SHOW
         UpdateWindow(_hwnd);
         _windowCreated.Set();
+
+        // Initialize GDI+ and load logo AFTER window is visible
+        var input = new GdiplusStartupInput { GdiplusVersion = 1 };
+        _ = GdiplusStartup(out _gdiplusToken, ref input, out _);
+        LoadLogoImage();
+
+        // Force repaint with logo
+        InvalidateRect(_hwnd, nint.Zero, true);
 
         // Message loop
         while (GetMessage(out var msg, nint.Zero, 0, 0) > 0)
@@ -167,8 +169,8 @@ public sealed partial class NativeSplash : IDisposable
             oldFont = SelectObject(hdc, hFont);
             _ = SetTextColor(hdc, 0x00888888); // Gray
 
-            var subtitleRect = new RECT { top = 170, right = _width, bottom = 195 };
-            _ = DrawText(hdc, "Loading...", -1, ref subtitleRect, 0x00000001);
+            var subtitleRect = new RECT { top = 170, right = _width, bottom = 210 };
+            _ = DrawText(hdc, "Compiling the APP for your computer...", -1, ref subtitleRect, 0x00000001);
 
             SelectObject(hdc, oldFont);
             DeleteObject(hFont);
@@ -251,6 +253,10 @@ public sealed partial class NativeSplash : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool PostMessage(nint hWnd, uint msg, nint wParam, nint lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool InvalidateRect(nint hWnd, nint lpRect, [MarshalAs(UnmanagedType.Bool)] bool bErase);
 
     [DllImport("user32.dll")]
     private static extern nint LoadCursor(nint hInstance, int lpCursorName);

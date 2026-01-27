@@ -96,7 +96,11 @@ procedure CloseRunningApp();
 var
   ResultCode: Integer;
 begin
-  Exec('taskkill', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // First try graceful close, then force kill with process tree
+  Exec('taskkill', '/IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(300);
+  // Force kill including child processes
+  Exec('taskkill', '/F /T /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(500);
 end;
 
