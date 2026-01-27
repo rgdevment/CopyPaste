@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -6,17 +7,20 @@ namespace CopyPaste.UI;
 
 /// <summary>
 /// Native Win32 splash screen that displays instantly before WinUI initializes.
-/// Uses pure Win32 APIs to avoid framework cold-start delays.
+/// Uses pure Win32 APIs with GDI+ for image loading to avoid framework cold-start delays.
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA2216:Disposable types should declare finalizer", Justification = "No unmanaged resources owned directly")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "SYSLIB1054:Use “LibraryImportAttribute” en lugar de “DllImportAttribute” para generar código de serialización P/Invoke en el tiempo de compilación", Justification = "Is a native scrren")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "SYSLIB1054:Use LibraryImportAttribute", Justification = "Native splash screen requires DllImport for GDI+")]
 public sealed partial class NativeSplash : IDisposable
 {
-    private const int _width = 300;
-    private const int _height = 200;
+    private const int _width = 320;
+    private const int _height = 240;
+    private const int _logoSize = 80;
 
     private nint _hwnd;
     private readonly nint _hInstance;
+    private nint _gdiplusToken;
+    private static nint _logoImage;
     private bool _disposed;
     private readonly Thread? _messageThread;
     private readonly ManualResetEventSlim _windowCreated = new(false);
@@ -26,6 +30,13 @@ public sealed partial class NativeSplash : IDisposable
     public NativeSplash()
     {
         _hInstance = GetModuleHandle(null);
+
+        // Initialize GDI+
+        var input = new GdiplusStartupInput { GdiplusVersion = 1 };
+        _ = GdiplusStartup(out _gdiplusToken, ref input, out _);
+
+        // Load logo image
+        LoadLogoImage();
 
         // Run message loop on separate thread
         _messageThread = new Thread(CreateAndShowWindow)
@@ -38,6 +49,26 @@ public sealed partial class NativeSplash : IDisposable
 
         // Wait for window to be created (max 2 seconds)
         _windowCreated.Wait(2000);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Logo loading is non-critical")]
+    private static void LoadLogoImage()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exePath)) return;
+
+            var logoPath = Path.Combine(Path.GetDirectoryName(exePath)!, "Assets", "CopyPasteLogo.png");
+            if (File.Exists(logoPath))
+            {
+                _ = GdipLoadImageFromFile(logoPath, out _logoImage);
+            }
+        }
+        catch
+        {
+            _logoImage = nint.Zero;
+        }
     }
 
     private void CreateAndShowWindow()
@@ -104,30 +135,49 @@ public sealed partial class NativeSplash : IDisposable
             _ = FillRect(hdc, ref rect, brush);
             DeleteObject(brush);
 
+            // Draw logo if available
+            if (_logoImage != nint.Zero)
+            {
+                _ = GdipCreateFromHDC(hdc, out var graphics);
+                if (graphics != nint.Zero)
+                {
+                    int logoX = (_width - _logoSize) / 2;
+                    int logoY = 35;
+                    _ = GdipDrawImageRectI(graphics, _logoImage, logoX, logoY, _logoSize, _logoSize);
+                    _ = GdipDeleteGraphics(graphics);
+                }
+            }
+
             // Configure text
             _ = SetBkMode(hdc, 1); // TRANSPARENT
             _ = SetTextColor(hdc, 0x00FFFFFF); // White
 
             // Title font
-            var hFont = CreateFont(28, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI");
+            var hFont = CreateFont(24, 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI");
             var oldFont = SelectObject(hdc, hFont);
 
-            var titleRect = new RECT { top = 60, right = _width, bottom = 100 };
+            var titleRect = new RECT { top = 130, right = _width, bottom = 165 };
             _ = DrawText(hdc, "CopyPaste", -1, ref titleRect, 0x00000001); // DT_CENTER
 
             SelectObject(hdc, oldFont);
             DeleteObject(hFont);
 
             // Subtitle font
-            hFont = CreateFont(14, 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI");
+            hFont = CreateFont(13, 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI");
             oldFont = SelectObject(hdc, hFont);
-            _ = SetTextColor(hdc, 0x00AAAAAA); // Gray
+            _ = SetTextColor(hdc, 0x00888888); // Gray
 
-            var subtitleRect = new RECT { top = 110, right = _width, bottom = 140 };
-            _ = DrawText(hdc, "Starting...", -1, ref subtitleRect, 0x00000001);
+            var subtitleRect = new RECT { top = 170, right = _width, bottom = 195 };
+            _ = DrawText(hdc, "Loading...", -1, ref subtitleRect, 0x00000001);
 
             SelectObject(hdc, oldFont);
             DeleteObject(hFont);
+
+            // Draw subtle border
+            var borderBrush = CreateSolidBrush(0x00404040);
+            var borderRect = new RECT { right = _width, bottom = _height };
+            _ = FrameRect(hdc, ref borderRect, borderBrush);
+            DeleteObject(borderBrush);
 
             EndPaint(hwnd, ref ps);
             return nint.Zero;
@@ -150,6 +200,19 @@ public sealed partial class NativeSplash : IDisposable
         if (_disposed) return;
         _disposed = true;
         Close();
+
+        if (_logoImage != nint.Zero)
+        {
+            _ = GdipDisposeImage(_logoImage);
+            _logoImage = nint.Zero;
+        }
+
+        if (_gdiplusToken != nint.Zero)
+        {
+            GdiplusShutdown(_gdiplusToken);
+            _gdiplusToken = nint.Zero;
+        }
+
         _windowCreated.Dispose();
     }
 
@@ -205,6 +268,9 @@ public sealed partial class NativeSplash : IDisposable
     [DllImport("user32.dll")]
     private static extern int FillRect(nint hDC, ref RECT lprc, nint hbr);
 
+    [DllImport("user32.dll")]
+    private static extern int FrameRect(nint hDC, ref RECT lprc, nint hbr);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int DrawText(nint hdc, string lpchText, int cchText, ref RECT lprc, uint format);
 
@@ -231,6 +297,37 @@ public sealed partial class NativeSplash : IDisposable
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern nint GetModuleHandle(string? lpModuleName);
+
+    // GDI+ imports for PNG loading
+    [DllImport("gdiplus.dll")]
+    private static extern int GdiplusStartup(out nint token, ref GdiplusStartupInput input, out nint output);
+
+    [DllImport("gdiplus.dll")]
+    private static extern void GdiplusShutdown(nint token);
+
+    [DllImport("gdiplus.dll", CharSet = CharSet.Unicode)]
+    private static extern int GdipLoadImageFromFile(string filename, out nint image);
+
+    [DllImport("gdiplus.dll")]
+    private static extern int GdipCreateFromHDC(nint hdc, out nint graphics);
+
+    [DllImport("gdiplus.dll")]
+    private static extern int GdipDrawImageRectI(nint graphics, nint image, int x, int y, int width, int height);
+
+    [DllImport("gdiplus.dll")]
+    private static extern int GdipDeleteGraphics(nint graphics);
+
+    [DllImport("gdiplus.dll")]
+    private static extern int GdipDisposeImage(nint image);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GdiplusStartupInput
+    {
+        public uint GdiplusVersion;
+        public nint DebugEventCallback;
+        public int SuppressBackgroundThread;
+        public int SuppressExternalCodecs;
+    }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct WNDCLASSEX

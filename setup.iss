@@ -58,7 +58,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [InstallDelete]
-; Clean old app files before installing new version (preserves user data in Data folder)
+; Clean old app files before installing new version (preserves user data in AppData)
 Type: filesandordirs; Name: "{app}\*.dll"
 Type: filesandordirs; Name: "{app}\*.exe"
 Type: filesandordirs; Name: "{app}\*.pri"
@@ -73,14 +73,17 @@ Type: filesandordirs; Name: "{app}\en-us"
 Type: filesandordirs; Name: "{app}\*"
 
 [Code]
+const
+  UninstallRegKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{{AE2A10DA-F6FA-417B-8C06-99EBA788AFFE}}_is1';
+
 function GetUninstallString(): String;
 var
-  UninstallPath: String;
   UninstallString: String;
 begin
   Result := '';
-  UninstallPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
-  if RegQueryStringValue(HKCU, UninstallPath, 'UninstallString', UninstallString) then
+  if RegQueryStringValue(HKCU, UninstallRegKey, 'UninstallString', UninstallString) then
+    Result := UninstallString
+  else if RegQueryStringValue(HKLM, UninstallRegKey, 'UninstallString', UninstallString) then
     Result := UninstallString;
 end;
 
@@ -93,9 +96,8 @@ procedure CloseRunningApp();
 var
   ResultCode: Integer;
 begin
-  // Force close the running application
   Exec('taskkill', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(500); // Wait for process to fully terminate
+  Sleep(500);
 end;
 
 function UninstallPreviousVersion(): Boolean;
@@ -108,18 +110,11 @@ begin
   
   if UninstallString <> '' then
   begin
-    // Close running app before uninstall
     CloseRunningApp();
     
-    // Run the uninstaller silently
     UninstallString := RemoveQuotes(UninstallString);
-    if Exec(UninstallString, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    begin
-      Result := True;
-      Sleep(1000); // Wait for uninstall to complete
-    end
-    else
-      Result := False;
+    Exec(UninstallString, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Sleep(1000);
   end;
 end;
 
@@ -130,18 +125,13 @@ begin
   
   if IsUpgrade() then
   begin
-    // Close app and uninstall previous version before installing
-    if not UninstallPreviousVersion() then
-    begin
-      // If uninstall fails, just close the app and continue
-      CloseRunningApp();
-    end;
+    WizardForm.PreparingLabel.Caption := 'Removing previous version...';
+    UninstallPreviousVersion();
   end;
 end;
 
 function InitializeUninstall(): Boolean;
 begin
   Result := True;
-  // Close the app before uninstalling
   CloseRunningApp();
 end;
