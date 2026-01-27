@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
-  <Application>
-    <!-- Preserve only our application assembly for WinUI XAML runtime -->
-    <Assembly Name="CopyPaste" Dynamic="Required All" />
-  </Application>
-</Directives>
-

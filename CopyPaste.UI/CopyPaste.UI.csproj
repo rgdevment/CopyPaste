@@ -14,36 +14,20 @@
 
     <AssemblyName>CopyPaste</AssemblyName>
 
+    <!-- WinUI unpackaged app configuration -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
-    
-    <!-- Force include bootstrapper for unpackaged apps -->
-    <WindowsAppSDKBootstrapInitialize>true</WindowsAppSDKBootstrapInitialize>
 
-    <!-- Self-contained and AOT -->
+    <!-- Self-contained (NO AOT for WinUI - not fully supported) -->
     <SelfContained>true</SelfContained>
     <PublishSelfContained>true</PublishSelfContained>
-    <PublishAot>true</PublishAot>
-    <PublishReadyToRun>false</PublishReadyToRun>
 
-    <!-- AOT Optimizations - WinUI compatible -->
-    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-    <TrimMode>link</TrimMode>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <StackTraceSupport>true</StackTraceSupport>
-
-    <!-- Exclude unnecessary satellite assemblies from our code -->
+    <!-- Exclude unnecessary satellite assemblies -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    
-    <!-- Exclude Windows App SDK language folders -->
-    <WindowsAppSDKSelfContainedExcludeLanguages>true</WindowsAppSDKSelfContainedExcludeLanguages>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        
-    <!-- Enable COM interop for Native AOT -->
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
 </PropertyGroup>
 
     <ItemGroup>
@@ -66,18 +50,6 @@
         <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7463" />
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
-        <PackageReference Include="System.Formats.Nrbf" Version="10.0.0" />
-    </ItemGroup>
-    
-    <ItemGroup>
-        <!-- Prevent trimming of critical assemblies for AOT compilation -->
-        <TrimmerRootAssembly Include="System.Formats.Nrbf" />
-        <TrimmerRootAssembly Include="Microsoft.WindowsAppSDK" />
-        <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
-        <TrimmerRootAssembly Include="WinRT.Runtime" />
-        
-        <!-- Include runtime directives for AOT -->
-        <RdXmlFile Include="rd.xml" />
     </ItemGroup>
 
     <ItemGroup>

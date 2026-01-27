@@ -57,10 +57,7 @@ jobs:
             -c Release `
             -r ${{ matrix.arch }} `
             --self-contained true `
-            --no-restore `
-            -p:PublishAot=true `
-            -p:IlcOptimizationPreference=Speed `
-            -p:TrimMode=link
+            --no-restore
 
       - name: Clean unnecessary files
         shell: pwsh
