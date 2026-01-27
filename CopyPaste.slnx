@@ -3,7 +3,7 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
   </Configurations>
-  <Folder Name="/Elementos de la solución/">
+  <Folder Name="/CopyPaste.Resources/">
     <File Path=".editorconfig" />
     <File Path=".github/workflows/ci.yml" />
     <File Path=".github/workflows/release.yml" />

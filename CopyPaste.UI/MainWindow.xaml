@@ -132,6 +132,23 @@ xmlns:tb="using:H.NotifyIcon">
                         BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                         Margin="0,0,0,8"
                         Tag="{x:Bind}">
+                    <Border.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Pegar" Icon="Paste" Command="{x:Bind PasteCommand}"/>
+                            <MenuFlyoutItem Text="Pegar sin formato" Command="{x:Bind PastePlainCommand}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="Eliminar" Command="{x:Bind DeleteCommand}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Border.ContextFlyout>
                     <Grid Padding="12,10,12,12">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -211,10 +228,13 @@ xmlns:tb="using:H.NotifyIcon">
                             <StackPanel x:Name="ActionPanel" Grid.Row="0" Grid.RowSpan="2"
                                         Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" 
                                         Margin="0,-4,-4,0" Spacing="2" Opacity="0">
-                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Opciones">
+                                <!-- Botón "..." - Solo opciones comunes (sin Eliminar) -->
+                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0" 
+                                        ToolTipService.ToolTip="Opciones">
                                     <FontIcon Glyph="&#xE712;" FontSize="14"/>
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <!-- ⚠️ MANTENER SINCRONIZADO CON Border.ContextFlyout (excepto Eliminar) -->
                                             <MenuFlyoutItem Text="Pegar" Icon="Paste" Command="{x:Bind PasteCommand}"/>
                                             <MenuFlyoutItem Text="Pegar sin formato" Command="{x:Bind PastePlainCommand}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
@@ -223,6 +243,7 @@ xmlns:tb="using:H.NotifyIcon">
                                             <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
+                                            <!-- ℹ️ No incluye "Eliminar" - solo está en clic derecho -->
                                         </MenuFlyout>
                                     </Button.Flyout>
                                 </Button>
