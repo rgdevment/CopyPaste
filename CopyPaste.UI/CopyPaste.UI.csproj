@@ -70,8 +70,11 @@
     </ItemGroup>
     
     <ItemGroup>
-        <!-- Prevent trimming of System.Formats.Nrbf for AOT compilation -->
+        <!-- Prevent trimming of critical assemblies for AOT compilation -->
         <TrimmerRootAssembly Include="System.Formats.Nrbf" />
+        <TrimmerRootAssembly Include="Microsoft.WindowsAppSDK" />
+        <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
+        <TrimmerRootAssembly Include="WinRT.Runtime" />
         
         <!-- Include runtime directives for AOT -->
         <RdXmlFile Include="rd.xml" />
