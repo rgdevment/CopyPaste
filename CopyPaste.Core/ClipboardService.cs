@@ -167,31 +167,13 @@ public class ClipboardService(IClipboardRepository repository)
             using var managedSrc = new MemoryStream(rawData);
             using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException("Decode failed");
 
-            int targetHeight = (int)(bitmap.Height * (ThumbnailConfig.Width / (double)bitmap.Width));
-            var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
-
-            using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
-            using (var canvas = new SKCanvas(resized))
-            {
-                canvas.Clear(SKColors.Transparent);
-                using var imageToDraw = SKImage.FromBitmap(bitmap);
-                using var paint = new SKPaint { IsAntialias = true };
-                canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
-            }
-
-            using var thumbImage = SKImage.FromBitmap(resized);
-            using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 80);
-
-            using (var stream = File.Create(thumbPath))
-            {
-                data.SaveTo(stream);
-            }
+            var (width, height) = GenerateThumbnail(bitmap, thumbPath, SKEncodedImageFormat.Png);
 
             var dataMap = new Dictionary<string, object>
             {
                 { "thumb_path", thumbPath },
-                { "thumb_width", ThumbnailConfig.Width },
-                { "thumb_height", targetHeight },
+                { "thumb_width", width },
+                { "thumb_height", height },
                 { "width", bitmap.Width },
                 { "height", bitmap.Height },
                 { "size", (long)rawData.Length },
@@ -202,6 +184,12 @@ public class ClipboardService(IClipboardRepository repository)
             repository.Update(item);
 
             OnThumbnailReady?.Invoke(item);
+
+            // Force GC for large images to prevent memory buildup
+            if (rawData.Length >= ThumbnailConfig.GarbageCollectionThreshold)
+            {
+                GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -231,32 +219,20 @@ public class ClipboardService(IClipboardRepository repository)
 
             if (bitmap != null)
             {
-                int targetHeight = (int)(bitmap.Height * (ThumbnailConfig.Width / (double)bitmap.Width));
-                var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
-
-                using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
-                using (var canvas = new SKCanvas(resized))
-                {
-                    canvas.Clear(SKColors.Transparent);
-                    using var imageToDraw = SKImage.FromBitmap(bitmap);
-                    using var paint = new SKPaint { IsAntialias = true };
-                    canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
-                }
-
-                using var thumbImage = SKImage.FromBitmap(resized);
-                using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 90);
-
-                using (var stream = File.Create(thumbPath))
-                {
-                    data.SaveTo(stream);
-                }
+                var (width, height) = GenerateThumbnail(bitmap, thumbPath, SKEncodedImageFormat.Png);
 
                 meta["thumb_path"] = thumbPath;
-                meta["thumb_width"] = ThumbnailConfig.Width;
-                meta["thumb_height"] = targetHeight;
+                meta["thumb_width"] = width;
+                meta["thumb_height"] = height;
                 meta["width"] = bitmap.Width;
                 meta["height"] = bitmap.Height;
                 meta["size"] = (long)rawData.Length;
+
+                // Force GC for large images to prevent memory buildup
+                if (rawData.Length >= ThumbnailConfig.GarbageCollectionThreshold)
+                {
+                    GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
@@ -308,29 +284,11 @@ public class ClipboardService(IClipboardRepository repository)
 
                     if (bitmap != null)
                     {
-                        int targetHeight = (int)(bitmap.Height * (ThumbnailConfig.Width / (double)bitmap.Width));
-                        var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
-
-                        using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
-                        using (var canvas = new SKCanvas(resized))
-                        {
-                            canvas.Clear(SKColors.Transparent);
-                            using var imageToDraw = SKImage.FromBitmap(bitmap);
-                            using var paint = new SKPaint { IsAntialias = true };
-                            canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
-                        }
-
-                        using var thumbImage = SKImage.FromBitmap(resized);
-                        using var data = thumbImage.Encode(SKEncodedImageFormat.Png, 90);
-
-                        using (var stream = File.Create(thumbPath))
-                        {
-                            data.SaveTo(stream);
-                        }
+                        var (width, height) = GenerateThumbnail(bitmap, thumbPath, SKEncodedImageFormat.Png);
 
                         meta["thumb_path"] = thumbPath;
-                        meta["thumb_width"] = ThumbnailConfig.Width;
-                        meta["thumb_height"] = targetHeight;
+                        meta["thumb_width"] = width;
+                        meta["thumb_height"] = height;
                         meta["original_width"] = bitmap.Width;
                         meta["original_height"] = bitmap.Height;
                     }
@@ -522,6 +480,36 @@ public class ClipboardService(IClipboardRepository repository)
         item.ModifiedAt = DateTime.UtcNow;
         repository.Update(item);
         return item;
+    }
+
+    /// <summary>
+    /// Generates a thumbnail from a bitmap and saves it to disk.
+    /// Returns the width and height of the generated thumbnail.
+    /// </summary>
+    private static (int Width, int Height) GenerateThumbnail(SKBitmap sourceBitmap, string outputPath, SKEncodedImageFormat format)
+    {
+        int targetHeight = (int)(sourceBitmap.Height * (ThumbnailConfig.Width / (double)sourceBitmap.Width));
+        var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
+
+        using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
+        using (var canvas = new SKCanvas(resized))
+        {
+            canvas.Clear(SKColors.Transparent);
+            using var imageToDraw = SKImage.FromBitmap(sourceBitmap);
+            using var paint = new SKPaint { IsAntialias = true };
+            canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
+        }
+
+        using var thumbImage = SKImage.FromBitmap(resized);
+        int quality = format == SKEncodedImageFormat.Png ? ThumbnailConfig.QualityPng : ThumbnailConfig.QualityJpeg;
+        using var data = thumbImage.Encode(format, quality);
+
+        using (var stream = File.Create(outputPath))
+        {
+            data.SaveTo(stream);
+        }
+
+        return (ThumbnailConfig.Width, targetHeight);
     }
 
     private static byte[]? ConvertDibToBmp(byte[] dibData)

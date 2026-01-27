@@ -52,6 +52,7 @@ public static partial class WindowsThumbnailExtractor
             }
 
             // Get the IShellItemImageFactory interface
+            // Marshal.GetObjectForIUnknown adds a COM reference which is released by shellItem cleanup
             var factory = (IShellItemImageFactory)Marshal.GetObjectForIUnknown(shellItem);
 
             // Request thumbnail
