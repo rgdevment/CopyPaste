@@ -19,15 +19,11 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
 
-    <!-- Self-contained deployment -->
+    <!-- Self-contained deployment (NO trimming - WinUI not compatible) -->
     <SelfContained>true</SelfContained>
     <PublishSelfContained>true</PublishSelfContained>
     
-    <!-- Trimming to reduce size (without AOT) -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
-    
-    <!-- Only English - no other languages needed (UI is hardcoded) -->
+    <!-- Only English - no other languages needed -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     
     <!-- Exclude Windows App SDK language folders -->
