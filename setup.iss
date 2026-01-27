@@ -57,68 +57,58 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
-[InstallDelete]
-; Clean old app files before installing new version (preserves user data in AppData)
-Type: filesandordirs; Name: "{app}\*.dll"
-Type: filesandordirs; Name: "{app}\*.exe"
-Type: filesandordirs; Name: "{app}\*.pri"
-Type: filesandordirs; Name: "{app}\*.json"
-Type: filesandordirs; Name: "{app}\Assets"
-Type: filesandordirs; Name: "{app}\Microsoft.UI.Xaml"
-Type: filesandordirs; Name: "{app}\NpuDetect"
-Type: filesandordirs; Name: "{app}\en-us"
-
-[UninstallDelete]
-; Clean all app files on uninstall (user data in AppData\Local\CopyPaste is preserved)
-Type: filesandordirs; Name: "{app}\*"
+; Inno Setup only removes files it installed - user data is preserved automatically
 
 [Code]
 const
   UninstallRegKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{{AE2A10DA-F6FA-417B-8C06-99EBA788AFFE}}_is1';
 
-function GetUninstallString(): String;
+function GetUninstallExePath(): String;
 var
-  UninstallString: String;
+  InstallPath: String;
 begin
   Result := '';
-  if RegQueryStringValue(HKCU, UninstallRegKey, 'UninstallString', UninstallString) then
-    Result := UninstallString
-  else if RegQueryStringValue(HKLM, UninstallRegKey, 'UninstallString', UninstallString) then
-    Result := UninstallString;
+  // Try to get install location from registry
+  if RegQueryStringValue(HKCU, UninstallRegKey, 'InstallLocation', InstallPath) then
+    Result := InstallPath + 'unins000.exe'
+  else if RegQueryStringValue(HKLM, UninstallRegKey, 'InstallLocation', InstallPath) then
+    Result := InstallPath + 'unins000.exe';
+    
+  // Fallback: check default location
+  if (Result = '') or (not FileExists(Result)) then
+    Result := ExpandConstant('{localappdata}\{#MyAppName}\unins000.exe');
 end;
 
-function IsUpgrade(): Boolean;
-begin
-  Result := GetUninstallString() <> '';
-end;
-
-procedure CloseRunningApp();
+function IsAppInstalled(): Boolean;
 var
-  ResultCode: Integer;
+  UninstallExe: String;
 begin
-  // First try graceful close, then force kill with process tree
-  Exec('taskkill', '/IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(300);
-  // Force kill including child processes
-  Exec('taskkill', '/F /T /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(500);
+  UninstallExe := GetUninstallExePath();
+  Result := FileExists(UninstallExe);
 end;
 
 function UninstallPreviousVersion(): Boolean;
 var
-  UninstallString: String;
+  UninstallExe: String;
   ResultCode: Integer;
 begin
   Result := True;
-  UninstallString := GetUninstallString();
+  UninstallExe := GetUninstallExePath();
   
-  if UninstallString <> '' then
+  if FileExists(UninstallExe) then
   begin
-    CloseRunningApp();
+    // Run the native Inno Setup uninstaller
+    // The uninstaller handles closing the app and removing files automatically
+    Exec(UninstallExe, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     
-    UninstallString := RemoveQuotes(UninstallString);
-    Exec(UninstallString, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Sleep(1000);
+    // Wait for uninstaller to fully complete
+    Sleep(2000);
+    
+    // Verify uninstallation completed
+    if FileExists(UninstallExe) then
+    begin
+      Log('Warning: Uninstaller still exists after execution');
+    end;
   end;
 end;
 
@@ -127,15 +117,9 @@ begin
   Result := '';
   NeedsRestart := False;
   
-  if IsUpgrade() then
+  if IsAppInstalled() then
   begin
     WizardForm.PreparingLabel.Caption := 'Removing previous version...';
     UninstallPreviousVersion();
   end;
-end;
-
-function InitializeUninstall(): Boolean;
-begin
-  Result := True;
-  CloseRunningApp();
 end;
