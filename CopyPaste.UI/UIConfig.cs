@@ -111,3 +111,16 @@ public static class UIHotkey
     /// </summary>
     public static bool UseAltKey { get; set; } = true;
 }
+
+/// <summary>
+/// Startup configuration.
+/// </summary>
+public static class StartupConfig
+{
+    /// <summary>
+    /// Whether to start CopyPaste automatically when Windows starts.
+    /// Default: true
+    /// </summary>
+    public static bool RunOnStartup { get; set; } = true;
+}
+

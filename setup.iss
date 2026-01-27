@@ -40,6 +40,9 @@ VersionInfoProductVersion={#MyAppVersion}
 WizardStyle=modern
 DisableWelcomePage=no
 
+[Messages]
+WelcomeLabel2=This will install [name/ver] on your computer.%n%nREQUIRED: .NET 10 Runtime (Preview)%nDownload: https://dotnet.microsoft.com/download/dotnet/10.0
+
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"

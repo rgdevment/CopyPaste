@@ -19,19 +19,10 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
 
-    <!-- Self-contained deployment (NO trimming - WinUI not compatible) -->
-    <SelfContained>true</SelfContained>
-    <PublishSelfContained>true</PublishSelfContained>
-    
-    <!-- Only English - no other languages needed -->
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    
-    <!-- Exclude Windows App SDK language folders -->
-    <WindowsAppSDKSelfContainedExcludeLanguages>true</WindowsAppSDKSelfContainedExcludeLanguages>
-    
-    <!-- Exclude debug symbols from publish -->
-    <DebugType>none</DebugType>
-    <DebugSymbols>false</DebugSymbols>
+    <!-- Framework-dependent (requires .NET 10 installed) -->
+    <!-- For alpha/beta testing - reduces installer from ~200MB to ~15MB -->
+    <SelfContained>false</SelfContained>
+    <PublishSelfContained>false</PublishSelfContained>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

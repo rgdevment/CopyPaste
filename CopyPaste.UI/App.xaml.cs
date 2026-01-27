@@ -46,6 +46,9 @@ public sealed partial class App : Application, IDisposable
 
         StorageConfig.Initialize();
 
+        // Register for Windows startup if configured
+        RegisterForStartup();
+
         // Initialize core components
         _repository = new SqliteRepository(StorageConfig.DatabasePath);
         _service = new ClipboardService(_repository);
@@ -108,5 +111,51 @@ public sealed partial class App : Application, IDisposable
         AppLogger.Exception(e.Exception, "Unhandled exception");
         e.Handled = true;
     }
+
+    private static void RegisterForStartup()
+    {
+        if (!StartupConfig.RunOnStartup) return;
+
+        try
+        {
+            const string keyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+            const string appName = "CopyPaste";
+
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath, true);
+            if (key == null) return;
+
+            // Only register if not already registered
+            if (key.GetValue(appName) == null)
+            {
+                var exePath = System.Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    key.SetValue(appName, $"\"{exePath}\"");
+                    AppLogger.Info("Registered for Windows startup");
+                }
+            }
+        }
+        catch (System.Security.SecurityException ex)
+        {
+            AppLogger.Exception(ex, "Failed to register for startup (SecurityException)");
+            throw;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            AppLogger.Exception(ex, "Failed to register for startup (UnauthorizedAccessException)");
+            throw;
+        }
+        catch (ObjectDisposedException ex)
+        {
+            AppLogger.Exception(ex, "Failed to register for startup (ObjectDisposedException)");
+            throw;
+        }
+        catch (System.IO.IOException ex)
+        {
+            AppLogger.Exception(ex, "Failed to register for startup (IOException)");
+            throw;
+        }
+    }
 }
+
 
