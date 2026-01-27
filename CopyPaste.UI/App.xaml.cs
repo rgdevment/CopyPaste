@@ -36,35 +36,67 @@ public sealed partial class App : Application, IDisposable
 
     public App()
     {
-        InitializeComponent();
+        // Hook unhandled exception handler FIRST
+        this.UnhandledException += OnUnhandledException;
 
-        // Initialize logger first for error tracking
-        AppLogger.Initialize();
-        AppLogger.Info("Application starting...");
+        try
+        {
+            InitializeComponent();
 
-        StorageConfig.Initialize();
+            // Initialize logger first for error tracking
+            AppLogger.Initialize();
+            AppLogger.Info("Application starting...");
 
-        // Initialize core components (Native AOT-compatible SQLite)
-        _repository = new SqliteRepository(StorageConfig.DatabasePath);
-        _service = new ClipboardService(_repository);
-        _listener = new WindowsClipboardListener(_service);
-        _cleanupService = new CleanupService(_repository, () => UIConfig.RetentionDays);
+            AppLogger.Info("Initializing StorageConfig...");
+            StorageConfig.Initialize();
 
-        // Configure paste timing from UIConfig
-        _service.PasteIgnoreWindowMs = PasteConfig.DuplicateIgnoreWindowMs;
+            AppLogger.Info("Creating SqliteRepository...");
+            _repository = new SqliteRepository(StorageConfig.DatabasePath);
 
-        // Run listener in background
-        Task.Run(() => _listener.Run());
+            AppLogger.Info("Creating ClipboardService...");
+            _service = new ClipboardService(_repository);
 
-        AppLogger.Info("Application initialized successfully");
+            AppLogger.Info("Creating WindowsClipboardListener...");
+            _listener = new WindowsClipboardListener(_service);
+
+            AppLogger.Info("Creating CleanupService...");
+            _cleanupService = new CleanupService(_repository, () => UIConfig.RetentionDays);
+
+            // Configure paste timing from UIConfig
+            _service.PasteIgnoreWindowMs = PasteConfig.DuplicateIgnoreWindowMs;
+
+            // Run listener in background
+            AppLogger.Info("Starting clipboard listener...");
+            Task.Run(() => _listener.Run());
+
+            AppLogger.Info("Application initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Fatal error during App initialization");
+            throw;
+        }
+
+        // Log to confirm constructor completed
+        AppLogger.Info("App constructor completed, waiting for OnLaunched...");
     }
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow(_service!);
+        try
+        {
+            AppLogger.Info("OnLaunched called");
+            _window = new MainWindow(_service!);
 
-        _window.Activate();
-        AppLogger.Info("Main window launched");
+            AppLogger.Info("Activating window...");
+            _window.Activate();
+            AppLogger.Info("Main window launched");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Fatal error during window launch");
+            throw;
+        }
     }
 
     public void BeginExit()
@@ -109,4 +141,11 @@ public sealed partial class App : Application, IDisposable
         }
         _isDisposed = true;
     }
+
+    private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        AppLogger.Exception(e.Exception, "Unhandled exception");
+        e.Handled = true; // Prevent crash, but app may be in bad state
+    }
 }
+

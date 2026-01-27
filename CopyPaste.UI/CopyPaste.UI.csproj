@@ -17,6 +17,9 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
+    
+    <!-- Force include bootstrapper for unpackaged apps -->
+    <WindowsAppSDKBootstrapInitialize>true</WindowsAppSDKBootstrapInitialize>
 
     <!-- Self-contained and AOT -->
     <SelfContained>true</SelfContained>
@@ -26,7 +29,7 @@
 
     <!-- AOT Optimizations - WinUI compatible -->
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-    <TrimMode>partial</TrimMode>
+    <TrimMode>link</TrimMode>
     <InvariantGlobalization>false</InvariantGlobalization>
     <StackTraceSupport>true</StackTraceSupport>
 
@@ -69,6 +72,9 @@
     <ItemGroup>
         <!-- Prevent trimming of System.Formats.Nrbf for AOT compilation -->
         <TrimmerRootAssembly Include="System.Formats.Nrbf" />
+        
+        <!-- Include runtime directives for AOT -->
+        <RdXmlFile Include="rd.xml" />
     </ItemGroup>
 
     <ItemGroup>
