@@ -44,8 +44,11 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: "preview"
 
-      - name: Restore
+      - name: Restore dependencies
         run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -r ${{ matrix.arch }}
+
+      - name: Lint (Check format)
+        run: dotnet format --verify-no-changes --no-restore
 
       - name: Publish (${{ matrix.arch }})
         run: dotnet publish CopyPaste.UI/CopyPaste.UI.csproj -c Release -r ${{ matrix.arch }} --self-contained true --no-restore
@@ -63,11 +66,11 @@ jobs:
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
 
-          # BÚSQUEDA DINÁMICA DE SIGNTOOL (Versión x64 más reciente)
+          # Find latest x64 version of signtool
           $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
 
-          if (-not $signtool) { Write-Error "Signtool no encontrado"; exit 1 }
-          Write-Host "Usando Signtool: $($signtool.FullName)"
+          if (-not $signtool) { Write-Error "Signtool not found"; exit 1 }
+          Write-Host "Using Signtool: $($signtool.FullName)"
 
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           Get-ChildItem -Path $targetDir -Include *.exe,*.dll -Recurse | ForEach-Object {
@@ -92,10 +95,10 @@ jobs:
           $publishDir = (Resolve-Path $fullPath).Path
 
           $repoRoot = "${{ github.workspace }}"
-          $myArch = "${{ matrix.arch == 'win-x64' && 'x64' }}"
+          $myArch = if ("${{ matrix.arch }}" -eq "win-x64") { "x64" } else { "x86" }
           $version = "${{ steps.get_version.outputs.VERSION }}"
 
-          Write-Host "Compilando instalador con:"
+          Write-Host "Building installer with:"
           Write-Host "Source: $publishDir"
           Write-Host "Arch: $myArch"
 
@@ -104,7 +107,7 @@ jobs:
       - name: Rename Installer
         shell: pwsh
         run: |
-          $arch = "${{ matrix.arch == 'win-x64' && 'x64' }}"
+          $arch = if ("${{ matrix.arch }}" -eq "win-x64") { "x64" } else { "x86" }
           Move-Item -Path "Output/CopyPaste_Setup_$arch.exe" -Destination "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
 
       - name: Sign Installer
@@ -113,7 +116,7 @@ jobs:
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
 
-          # BÚSQUEDA DINÁMICA DE SIGNTOOL
+          # Find latest x64 version of signtool
           $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
 
           & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"

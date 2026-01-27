@@ -90,18 +90,22 @@ public static partial class WindowsThumbnailExtractor
     }
 
     [DllImport("gdi32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines,
         [Out] byte[] lpvBits, ref BITMAPINFO lpbi, uint uUsage);
 
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+    [LibraryImport("gdi32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial IntPtr CreateCompatibleDC(IntPtr hdc);
 
-    [DllImport("gdi32.dll")]
+    [LibraryImport("gdi32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DeleteDC(IntPtr hdc);
+    private static partial bool DeleteDC(IntPtr hdc);
 
-    [DllImport("gdi32.dll", EntryPoint = "GetObjectW")]
-    private static extern int GetObject(IntPtr hObject, int nCount, ref BITMAP lpObject);
+    [LibraryImport("gdi32.dll", EntryPoint = "GetObjectW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial int GetObject(IntPtr hObject, int nCount, ref BITMAP lpObject);
 
     private static byte[]? HBitmapToBytes(IntPtr hBitmap)
     {

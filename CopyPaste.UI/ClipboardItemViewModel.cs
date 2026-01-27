@@ -103,7 +103,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         OnPropertyChanged(nameof(FileWarningVisibility));
 
         // Fire event for image reload (used by MainWindow)
-        ImagePathChanged?.Invoke(this, ImagePath);
+        ImagePathChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     /// <summary>
     /// Fired when ImagePath changes (thumbnail becomes available).
     /// </summary>
-    public event EventHandler<string>? ImagePathChanged;
+    public event EventHandler? ImagePathChanged;
 
     // Cached paths to avoid repeated JSON parsing - cleared on refresh
     private string? _cachedThumbnailPath;

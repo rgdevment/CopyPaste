@@ -281,7 +281,7 @@ public sealed partial class MainWindow : Window
         args.RegisterUpdateCallback(LoadClipboardImage);
     }
 
-    private void OnImagePathChanged(object? sender, string newPath)
+    private void OnImagePathChanged(object? sender, EventArgs e)
     {
         if (sender is not ClipboardItemViewModel vm) return;
 
@@ -290,7 +290,7 @@ public sealed partial class MainWindow : Window
         if (container?.ContentTemplateRoot is FrameworkElement root &&
             root.FindName("ClipboardImage") is Image image)
         {
-            LoadImageSource(image, newPath);
+            LoadImageSource(image, vm.ImagePath);
         }
     }
 

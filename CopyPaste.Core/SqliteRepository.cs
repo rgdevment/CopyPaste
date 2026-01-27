@@ -262,9 +262,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         var itemsToDelete = new List<ClipboardItem>();
         using (var selectCmd = connection.CreateCommand())
         {
-            selectCmd.CommandText = excludePinned
-                ? "SELECT * FROM ClipboardItems WHERE CreatedAt < @LimitDate AND IsPinned = 0"
-                : "SELECT * FROM ClipboardItems WHERE CreatedAt < @LimitDate";
+            selectCmd.CommandText = "SELECT * FROM ClipboardItems WHERE CreatedAt < @LimitDate" + (excludePinned ? " AND IsPinned = 0" : "");
             selectCmd.Parameters.AddWithValue("@LimitDate", limitDate.ToString("O"));
 
             using var reader = selectCmd.ExecuteReader();
@@ -282,9 +280,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
 
         // Delete from database
         using var deleteCmd = connection.CreateCommand();
-        deleteCmd.CommandText = excludePinned
-            ? "DELETE FROM ClipboardItems WHERE CreatedAt < @LimitDate AND IsPinned = 0"
-            : "DELETE FROM ClipboardItems WHERE CreatedAt < @LimitDate";
+        deleteCmd.CommandText = "DELETE FROM ClipboardItems WHERE CreatedAt < @LimitDate" + (excludePinned ? " AND IsPinned = 0" : "");
         deleteCmd.Parameters.AddWithValue("@LimitDate", limitDate.ToString("O"));
 
         var deletedCount = deleteCmd.ExecuteNonQuery();
@@ -316,7 +312,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         else
         {
             // Use FTS5 for full-text search with prefix matching
-            var searchTerm = query.Trim().Replace("\"", "\"\"") + "*";
+            var searchTerm = query.Trim().Replace("\"", "\"\"", StringComparison.Ordinal) + "*";
             cmd.CommandText = """
                 SELECT c.* FROM ClipboardItems c
                 INNER JOIN ClipboardItems_fts fts ON c.rowid = fts.rowid
@@ -357,8 +353,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         Id = Guid.Parse(reader.GetString(reader.GetOrdinal("Id"))),
         Content = reader.GetString(reader.GetOrdinal("Content")),
         Type = (ClipboardContentType)reader.GetInt32(reader.GetOrdinal("Type")),
-        CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedAt"))),
-        ModifiedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("ModifiedAt"))),
+        CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedAt")), System.Globalization.CultureInfo.InvariantCulture),
+        ModifiedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("ModifiedAt")), System.Globalization.CultureInfo.InvariantCulture),
         AppSource = reader.IsDBNull(reader.GetOrdinal("AppSource")) ? null : reader.GetString(reader.GetOrdinal("AppSource")),
         IsPinned = reader.GetInt32(reader.GetOrdinal("IsPinned")) == 1,
         Metadata = reader.IsDBNull(reader.GetOrdinal("Metadata")) ? null : reader.GetString(reader.GetOrdinal("Metadata"))

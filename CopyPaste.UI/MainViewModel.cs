@@ -128,60 +128,58 @@ public partial class MainViewModel : ObservableObject
 
     private void OnItemAdded(ClipboardItem item)
     {
-        if (_dispatcherQueue is null) return;
-
-        _dispatcherQueue.TryEnqueue(() =>
+        if (_dispatcherQueue is not null)
         {
-            // Only add new items if we're on "Recientes" tab and not searching
-            if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
+            _dispatcherQueue.TryEnqueue(() =>
             {
-                Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
-            }
-        });
+                // Only add new items if we're on "Recientes" tab and not searching
+                if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
+                {
+                    Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
+                }
+            });
+        }
     }
 
     private void OnItemReactivated(ClipboardItem item)
     {
-        if (_dispatcherQueue is null) return;
-
-        _dispatcherQueue.TryEnqueue(() =>
+        if (_dispatcherQueue is not null)
         {
-            // Find existing item in the list
-            var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
+            _dispatcherQueue.TryEnqueue(() =>
+            {
+                // Find existing item in the list
+                var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
 
-            if (existingVm != null)
-            {
-                // Update the model's ModifiedAt and move to top
-                existingVm.Model.ModifiedAt = item.ModifiedAt;
-                MoveItemToTop(existingVm);
-            }
-            else if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
-            {
-                // Item exists in DB but not in current view - add it to top
-                Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
-            }
-        });
+                if (existingVm != null)
+                {
+                    // Update the model's ModifiedAt and move to top
+                    existingVm.Model.ModifiedAt = item.ModifiedAt;
+                    MoveItemToTop(existingVm);
+                }
+                else if (SelectedTabIndex == 0 && string.IsNullOrWhiteSpace(SearchQuery))
+                {
+                    // Item exists in DB but not in current view - add it to top
+                    Items.Insert(0, new ClipboardItemViewModel(item, OnDeleteItem, OnPasteItem, OnPinItem));
+                }
+            });
+        }
     }
 
     private void OnThumbnailReady(ClipboardItem item)
     {
-        if (_dispatcherQueue is null) return;
-
-        _dispatcherQueue.TryEnqueue(() =>
+        if (_dispatcherQueue is not null)
         {
-            var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
-            if (existingVm != null)
+            _dispatcherQueue.TryEnqueue(() =>
             {
-                // Update existing ViewModel - this will fire ImagePathChanged event
-                existingVm.RefreshFromModel(item);
-            }
-        });
+                var existingVm = Items.FirstOrDefault(vm => vm.Model.Id == item.Id);
+                if (existingVm != null)
+                {
+                    // Update existing ViewModel - this will fire ImagePathChanged event
+                    existingVm.RefreshFromModel(item);
+                }
+            });
+        }
     }
-
-    /// <summary>
-    /// Reloads the image for a specific item. Called from MainWindow when ImagePathChanged fires.
-    /// </summary>
-    public event EventHandler<ClipboardItemViewModel>? ItemImageUpdated;
 
     private void OnDeleteItem(ClipboardItemViewModel itemVM)
     {
@@ -245,11 +243,12 @@ public partial class MainViewModel : ObservableObject
 
     private void HideWindow()
     {
-        if (_window is null) return;
-
-        var hWnd = WindowNative.GetWindowHandle(_window);
-        var appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd));
-        appWindow.Hide();
+        if (_window is not null)
+        {
+            var hWnd = WindowNative.GetWindowHandle(_window);
+            var appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd));
+            appWindow.Hide();
+        }
     }
 
     private void OnPinItem(ClipboardItemViewModel itemVM)
