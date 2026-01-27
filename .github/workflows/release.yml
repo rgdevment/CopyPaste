@@ -57,7 +57,49 @@ jobs:
             -c Release `
             -r ${{ matrix.arch }} `
             --self-contained true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
             --no-restore
+
+      - name: Clean Publish Output
+        shell: pwsh
+        run: |
+          $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+          Write-Host "Cleaning publish directory: $publishDir"
+          
+          # Define folders to keep (exact names)
+          $keepFolders = @('Assets', 'Microsoft.UI.Xaml', 'NpuDetect', 'en-us', 'en-US', 'en')
+          
+          # Remove all culture/language folders except essential ones
+          # Pattern matches: xx, xx-XX, xx-Xxxx-XX, xxx-XX (culture codes including variants)
+          Get-ChildItem -Path $publishDir -Directory | Where-Object {
+            $folderName = $_.Name
+            ($keepFolders -notcontains $folderName) -and 
+            ($folderName -match '^[a-z]{2,3}(-[A-Za-z]{2,8})?(-[A-Za-z]{2,8})?$')
+          } | ForEach-Object {
+            Write-Host "Removing culture folder: $($_.Name)"
+            Remove-Item -Path $_.FullName -Recurse -Force
+          }
+          
+          # Remove PDB files
+          Get-ChildItem -Path $publishDir -Filter "*.pdb" -Recurse | Remove-Item -Force
+          
+          # Remove XML documentation files (except resources)
+          Get-ChildItem -Path $publishDir -Filter "*.xml" -Recurse | Where-Object {
+            $_.Name -notlike "*.resources.xml"
+          } | Remove-Item -Force
+          
+          # Remove createdump.exe (crash dump tool, not needed for production)
+          Get-ChildItem -Path $publishDir -Filter "createdump.exe" -Recurse | Remove-Item -Force
+          
+          # Count and display results
+          $fileCount = (Get-ChildItem -Path $publishDir -File -Recurse).Count
+          $folderCount = (Get-ChildItem -Path $publishDir -Directory -Recurse).Count
+          $sizeBytes = (Get-ChildItem -Path $publishDir -File -Recurse | Measure-Object -Property Length -Sum).Sum
+          $sizeMB = [math]::Round($sizeBytes / 1MB, 2)
+          
+          Write-Host "Final publish output: $fileCount files, $folderCount folders, $sizeMB MB"
+          Get-ChildItem -Path $publishDir -Directory | Select-Object Name | Format-Table
 
       - name: Decode signing certificate
         if: env.PFX_BASE64 != ''

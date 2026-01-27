@@ -10,15 +10,13 @@
 
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-    <!-- AOT Configuration -->
-    <PublishAot>true</PublishAot>
-    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-    <TrimMode>partial</TrimMode>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <StackTraceSupport>true</StackTraceSupport>
-        
-    <!-- Enable COM interop for Native AOT -->
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <!-- Trimming compatibility -->
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    
+    <!-- Exclude satellite assemblies -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 </PropertyGroup>
 
     <ItemGroup>

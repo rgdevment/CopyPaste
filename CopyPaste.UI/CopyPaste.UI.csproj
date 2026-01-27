@@ -21,9 +21,22 @@
     
     <!-- Force PRI generation for unpackaged apps (CRITICAL for XAML loading) -->
     <AppxPackage>false</AppxPackage>
-    <GenerateLibraryLayout>true</GenerateLibraryLayout>
-    <EnableMsixTooling>true</EnableMsixTooling>
+    <EnableMsixTooling>false</EnableMsixTooling>
 
+    <!-- Trimming & Optimization -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    
+    <!-- Exclude satellite assemblies (language folders) -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    
+    <!-- ReadyToRun for faster startup -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    
+    <!-- Single file output -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
