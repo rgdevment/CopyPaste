@@ -64,11 +64,22 @@ jobs:
         run: |
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           
+          # Remove ALL language/locale folders (they're from Windows App SDK, not needed)
+          # Keep only: Assets, Microsoft.UI.Xaml, NpuDetect
+          $keepFolders = @('Assets', 'Microsoft.UI.Xaml', 'NpuDetect')
+          
+          Get-ChildItem -Path $targetDir -Directory | Where-Object {
+            $_.Name -notin $keepFolders -and $_.Name -match '^[a-z]{2}(-|_|$)'
+          } | ForEach-Object {
+            Write-Host "Removing locale: $($_.Name)"
+            Remove-Item $_.FullName -Recurse -Force
+          }
+          
           # Remove ML/AI DLLs that come with Windows App SDK but we don't use
           $unusedDlls = @(
-            "onnxruntime.dll",      # ~20MB - Machine Learning runtime
-            "DirectML.dll",          # ~17MB - GPU Machine Learning
-            "Microsoft.Windows.Widgets.dll"  # Widgets API not used
+            "onnxruntime.dll",
+            "DirectML.dll",
+            "Microsoft.Windows.Widgets.dll"
           )
           
           foreach ($dll in $unusedDlls) {
