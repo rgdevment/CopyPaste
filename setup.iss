@@ -68,58 +68,30 @@ var
   InstallPath: String;
 begin
   Result := '';
-  // Try to get install location from registry
   if RegQueryStringValue(HKCU, UninstallRegKey, 'InstallLocation', InstallPath) then
     Result := InstallPath + 'unins000.exe'
   else if RegQueryStringValue(HKLM, UninstallRegKey, 'InstallLocation', InstallPath) then
     Result := InstallPath + 'unins000.exe';
     
-  // Fallback: check default location
   if (Result = '') or (not FileExists(Result)) then
     Result := ExpandConstant('{localappdata}\{#MyAppName}\unins000.exe');
 end;
 
-function IsAppInstalled(): Boolean;
-var
-  UninstallExe: String;
-begin
-  UninstallExe := GetUninstallExePath();
-  Result := FileExists(UninstallExe);
-end;
-
-function UninstallPreviousVersion(): Boolean;
+function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   UninstallExe: String;
   ResultCode: Integer;
 begin
-  Result := True;
+  Result := '';
+  NeedsRestart := False;
+  
   UninstallExe := GetUninstallExePath();
   
   if FileExists(UninstallExe) then
   begin
-    // Run the native Inno Setup uninstaller
-    // The uninstaller handles closing the app and removing files automatically
-    Exec(UninstallExe, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    
-    // Wait for uninstaller to fully complete
-    Sleep(2000);
-    
-    // Verify uninstallation completed
-    if FileExists(UninstallExe) then
-    begin
-      Log('Warning: Uninstaller still exists after execution');
-    end;
-  end;
-end;
-
-function PrepareToInstall(var NeedsRestart: Boolean): String;
-begin
-  Result := '';
-  NeedsRestart := False;
-  
-  if IsAppInstalled() then
-  begin
     WizardForm.PreparingLabel.Caption := 'Removing previous version...';
-    UninstallPreviousVersion();
+    // Run uninstaller - it will handle closing the app and asking user if needed
+    Exec(UninstallExe, '/SILENT /NORESTART', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode);
+    Sleep(1000);
   end;
 end;
