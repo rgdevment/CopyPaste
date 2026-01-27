@@ -6,7 +6,7 @@
 #define MyAppExeName "CopyPaste.exe"
 #define MyAppIcon "CopyPaste.UI\Assets\CopyPasteLogoSimple.ico"
 #ifndef PublishDir
-  #define PublishDir "CopyPaste.UI\bin\Release\net10.0-windows\win-x64\publish"
+  #define PublishDir "CopyPaste.UI\bin\Release\net10.0-windows10.0.22621.0\win-x64\publish"
 #endif
 #ifndef MyArch
   #define MyArch "x64"

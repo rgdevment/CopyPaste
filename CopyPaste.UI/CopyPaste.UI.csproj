@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <RootNamespace>CopyPaste.UI</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
@@ -17,13 +18,21 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
 
-    <SelfContained>True</SelfContained>
-    <PublishSelfContained>True</PublishSelfContained>
-
+    <!-- Self-contained and AOT -->
+    <SelfContained>true</SelfContained>
+    <PublishSelfContained>true</PublishSelfContained>
     <PublishAot>true</PublishAot>
-    <SatelliteResourceLanguages>en;es</SatelliteResourceLanguages>
+    <PublishReadyToRun>false</PublishReadyToRun>
 
-    <PublishReadyToRun>False</PublishReadyToRun>
+    <!-- AOT Optimizations -->
+    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
+    <TrimMode>full</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+
+    <!-- Exclude unnecessary satellite assemblies -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

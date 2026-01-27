@@ -19,7 +19,8 @@ jobs:
 
     env:
       DOTNET_NOLOGO: true
-      PUBLISH_PATH: CopyPaste.UI/bin/Release/net10.0-windows*/${{ matrix.arch }}/publish
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PUBLISH_PATH: CopyPaste.UI/bin/Release/net10.0-windows10.0.22621.0/${{ matrix.arch }}/publish
       PFX_BASE64: ${{ secrets.PFX_BASE64 }}
       PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
 
@@ -51,7 +52,17 @@ jobs:
         run: dotnet format --verify-no-changes --no-restore
 
       - name: Publish (${{ matrix.arch }})
-        run: dotnet publish CopyPaste.UI/CopyPaste.UI.csproj -c Release -r ${{ matrix.arch }} --self-contained true --no-restore
+        run: |
+          dotnet publish CopyPaste.UI/CopyPaste.UI.csproj `
+            -c Release `
+            -r ${{ matrix.arch }} `
+            --self-contained true `
+            --no-restore `
+            -p:PublishAot=true `
+            -p:IlcOptimizationPreference=Speed `
+            -p:TrimMode=full `
+            -p:InvariantGlobalization=true `
+            -p:StackTraceSupport=false
 
       - name: Decode signing certificate
         if: env.PFX_BASE64 != ''
