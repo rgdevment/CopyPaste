@@ -38,18 +38,18 @@
 </PropertyGroup>
 
     <ItemGroup>
-        <Content Remove="Assets\CopyPasteLogoSimple.ico" />
-        <Content Remove="Assets\CopyPasteNotification.ico" />
-    </ItemGroup>
-    <ItemGroup>
-        <None Remove="Assets\CopyPasteLogo.ico" />
-    </ItemGroup>
-    <ItemGroup>
         <Page Remove="Controls\ClipboardItemCard.xaml" />
     </ItemGroup>
 
     <ItemGroup>
         <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
+    
+    <!-- Include ALL assets and copy to output -->
+    <ItemGroup>
+        <Content Include="Assets\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
@@ -62,18 +62,6 @@
     <ItemGroup>
         <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
         <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Content Include="Assets\CopyPasteLogoSimple.ico">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Content Update="Assets\CopyPasteLogo.ico">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
     </ItemGroup>
 
     <ItemGroup>
