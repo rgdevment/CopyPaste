@@ -37,9 +37,12 @@ public sealed partial class App : Application, IDisposable
 
     public App()
     {
-        // Show native splash on every startup (important for JIT compilation on first run and after updates)
-        StorageConfig.Initialize();
+        // CRITICAL: Create splash FIRST, before any other initialization
+        // This minimizes assemblies loaded before the splash appears
         _splash = new NativeSplash();
+        
+        // Now initialize storage (this may load additional assemblies)
+        StorageConfig.Initialize();
 
         this.UnhandledException += OnUnhandledException;
         InitializeComponent();

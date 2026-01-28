@@ -164,6 +164,12 @@ jobs:
             --self-contained true `
             -p:DebugType=None `
             -p:DebugSymbols=false `
+            -p:PublishReadyToRun=true `
+            -p:PublishReadyToRunComposite=true `
+            -p:PublishTrimmed=true `
+            -p:TrimMode=partial `
+            -p:TieredCompilation=true `
+            -p:TieredCompilationQuickJitForLoops=true `
             --no-restore
 
       - name: Clean Publish Output

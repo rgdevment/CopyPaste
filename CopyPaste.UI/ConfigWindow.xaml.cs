@@ -13,8 +13,8 @@ namespace CopyPaste.UI;
 /// </summary>
 public sealed partial class ConfigWindow : Window
 {
-    private record ThumbnailPreset(int Width, int QualityPng, int QualityJpeg, int GCThreshold, int UIDecodeHeight);
-    private record PastePreset(int DuplicateIgnoreMs, int DelayBeforeFocusMs, int DelayBeforePasteMs, int MaxFocusAttempts);
+    private sealed record ThumbnailPreset(int Width, int QualityPng, int QualityJpeg, int GCThreshold, int UIDecodeHeight);
+    private sealed record PastePreset(int DuplicateIgnoreMs, int DelayBeforeFocusMs, int DelayBeforePasteMs, int MaxFocusAttempts);
 
     private static readonly ThumbnailPreset _presetExcellent = new(280, 95, 95, 2_000_000, 157);
     private static readonly ThumbnailPreset _presetHigh = new(220, 90, 90, 1_500_000, 124);

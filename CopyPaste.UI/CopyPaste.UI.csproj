@@ -29,9 +29,41 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     
+    <!-- 
+      Cold-start optimizations:
+      - TieredCompilation: Start with quick JIT, optimize hot paths later
+      - QuickJitForLoops: Don't wait to optimize loops on startup
+      - ReadyToRunComposite: Better R2R optimization for self-contained apps
+    -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
+    
+    <!-- Reduce assembly loading time -->
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    
+    <!-- 
+      Suppress IL2104 trimming warnings from third-party assemblies:
+      - Microsoft.Windows.SDK.NET: Windows SDK (not trim-compatible)
+      - WinRT.Runtime: WinRT interop layer
+      - System.Private.Windows.Core: System.Drawing internals
+      - TagLibSharp: Media metadata library (netstandard2.0, not trim-aware)
+      These assemblies use reflection patterns that trigger warnings but work correctly with partial trimming.
+    -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
+
+<!-- 
+  Trimming configuration for third-party assemblies that don't support trimming.
+  This prevents false-positive warnings while maintaining functionality.
+-->
+<ItemGroup>
+    <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
+    <TrimmerRootAssembly Include="WinRT.Runtime" />
+</ItemGroup>
 
 
 

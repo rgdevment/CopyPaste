@@ -167,7 +167,7 @@ public sealed partial class NativeSplash : IDisposable
             _ = SetTextColor(hdc, 0x00888888); // Gray
 
             var subtitleRect = new RECT { top = 170, right = _width, bottom = 210 };
-            _ = DrawText(hdc, "Compiling the APP...", -1, ref subtitleRect, 0x00000001);
+            _ = DrawText(hdc, "Initializing for first run...", -1, ref subtitleRect, 0x00000001);
 
             SelectObject(hdc, oldFont);
             DeleteObject(hFont);
