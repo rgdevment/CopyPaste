@@ -18,6 +18,7 @@
 
 using CopyPaste.Core;
 using CopyPaste.Listener;
+using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using System;
 using System.IO;
@@ -47,22 +48,20 @@ public sealed partial class App : Application, IDisposable
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        // Initialize core services
+        var config = ConfigLoader.Config;
+        L.Initialize(new LocalizationService(config.PreferredLanguage));
+
         InitializeCoreServices();
 
-        // Create and show main window
         _window = new MainWindow(_service!);
         _window.Activate();
 
-        // Signal the native launcher that we're ready (it will close the splash)
         SignalLauncherReady();
-
         AppLogger.Info("Main window launched");
     }
 
     private void InitializeCoreServices()
     {
-        // Initialize logger for error tracking
         AppLogger.Initialize();
         AppLogger.Info("Application starting...");
 
@@ -100,6 +99,7 @@ public sealed partial class App : Application, IDisposable
         {
         }
 
+        L.Dispose();
         _window?.Close();
         Application.Current.Exit();
     }

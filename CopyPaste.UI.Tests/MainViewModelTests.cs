@@ -4,12 +4,7 @@ using Xunit;
 namespace CopyPaste.UI.Tests;
 
 /// <summary>
-/// Tests para MainViewModel.
-/// NOTA: Estos tests están limitados debido a dependencias de WinUI3 y DispatcherQueue.
-/// Para testing completo de UI, se recomienda:
-/// - Usar una estrategia de inyección de dependencias para DispatcherQueue
-/// - Crear interfaces para servicios de Windows (Window, DispatcherQueue)
-/// - Implementar tests de integración con WinAppDriver para testing UI completo
+/// Basic tests for MainViewModel (limited due to WinUI3/DispatcherQueue dependencies).
 /// </summary>
 public class MainViewModelBasicTests
 {
@@ -127,34 +122,3 @@ public class MainViewModelBasicTests
         public int ClearOldItems(int days, bool excludePinned = true) => 0;
     }
 }
-
-/*
- * SUGERENCIAS PARA TESTING AVANZADO DE MainViewModel:
- * 
- * 1. Inyección de Dependencias:
- *    - Crear IWindowService para abstraer operaciones de Window
- *    - Crear IDispatcherService para abstraer DispatcherQueue
- *    - Permitir inyectar mocks en el constructor
- * 
- * 2. Tests Recomendados (requieren refactoring):
- *    - Initialize: Verificar que se suscriban a eventos del servicio
- *    - LoadItems: Verificar que se carguen items del repositorio
- *    - LoadMoreItems: Verificar paginación
- *    - OnItemAdded: Verificar que se agregue al inicio de la colección
- *    - OnItemReactivated: Verificar que se mueva al inicio
- *    - OnThumbnailReady: Verificar que se actualice thumbnail
- *    - TogglePin: Verificar cambio de estado
- *    - DeleteItem: Verificar eliminación de colección
- *    - CopyToClipboard: Verificar interacción con clipboard
- * 
- * 3. Testing de Integración:
- *    - Usar WinAppDriver para tests UI end-to-end
- *    - Verificar interacciones de usuario completas
- *    - Probar navegación entre tabs
- *    - Probar búsqueda y filtrado visual
- * 
- * 4. Arquitectura Recomendada:
- *    - Implementar patrón Repository para UI services
- *    - Usar MVVM Toolkit con comandos asíncronos testeables
- *    - Separar lógica de negocio de código específico de plataforma
- */

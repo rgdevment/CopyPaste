@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Core.Tests;
 
-public class StorageConfigTests : IDisposable
+public sealed class StorageConfigTests : IDisposable
 {
     private readonly string _basePath;
 

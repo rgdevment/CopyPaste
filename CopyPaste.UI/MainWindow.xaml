@@ -23,13 +23,13 @@ xmlns:tb="using:H.NotifyIcon">
                     MenuActivation="RightClick">
         <tb:TaskbarIcon.ContextFlyout>
             <MenuFlyout>
-                <MenuFlyoutItem Text="Salir" Command="{x:Bind ViewModel.ExitCommand}"/>
+                <MenuFlyoutItem x:Name="TrayMenuExit" Command="{x:Bind ViewModel.ExitCommand}"/>
             </MenuFlyout>
         </tb:TaskbarIcon.ContextFlyout>
     </tb:TaskbarIcon>
 
     <!-- Sidebar Navigation -->
-    <Border Grid.Column="0" 
+    <Border Grid.Column="0"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
             BorderThickness="0,0,1,0"
             BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}">
@@ -45,14 +45,12 @@ xmlns:tb="using:H.NotifyIcon">
                              GroupName="NavTabs"
                              IsChecked="True"
                              Style="{StaticResource SidebarTabStyle}"
-                             ToolTipService.ToolTip="Recientes"
                              Checked="TabChanged">
                     <FontIcon x:Name="RecentTabIcon" Glyph="&#xE823;" FontSize="15" Foreground="#5B9BD5"/>
                 </RadioButton>
                 <RadioButton x:Name="PinnedTab"
                              GroupName="NavTabs"
                              Style="{StaticResource SidebarTabStyle}"
-                             ToolTipService.ToolTip="Anclados"
                              Checked="TabChanged">
                     <FontIcon x:Name="PinnedTabIcon" Glyph="&#xE718;" FontSize="15"/>
                 </RadioButton>
@@ -60,8 +58,8 @@ xmlns:tb="using:H.NotifyIcon">
 
             <!-- Settings/Info Buttons -->
             <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Center">
-                <Button Click="OpenSettings_Click"
-                        ToolTipService.ToolTip="Configuración"
+                <Button x:Name="SettingsButton"
+                        Click="OpenSettings_Click"
                         Padding="0"
                         Width="34" Height="34"
                         HorizontalAlignment="Center"
@@ -70,8 +68,8 @@ xmlns:tb="using:H.NotifyIcon">
                         CornerRadius="6">
                     <FontIcon Glyph="&#xE713;" FontSize="13" Opacity="0.5"/>
                 </Button>
-                <Button Command="{x:Bind ViewModel.OpenRepoCommand}"
-                        ToolTipService.ToolTip="Reportar error"
+                <Button x:Name="ReportButton"
+                        Command="{x:Bind ViewModel.OpenRepoCommand}"
                         Padding="0"
                         Width="34" Height="34"
                         HorizontalAlignment="Center"
@@ -102,16 +100,16 @@ xmlns:tb="using:H.NotifyIcon">
 
             <!-- Section Title (Left) -->
             <StackPanel Grid.Column="0"
-                        Orientation="Horizontal" 
-                        HorizontalAlignment="Left" 
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Left"
                         Spacing="6">
-                <FontIcon x:Name="SectionIcon" 
-                          Glyph="&#xE823;" 
+                <FontIcon x:Name="SectionIcon"
+                          Glyph="&#xE823;"
                           FontSize="14"
                           Foreground="#5B9BD5"/>
-                <TextBlock x:Name="SectionTitle" 
-                           Text="Recientes" 
-                           FontSize="14" 
+                <TextBlock x:Name="SectionTitle"
+                           Text="Recientes"
+                           FontSize="14"
                            FontWeight="SemiBold"
                            Foreground="#5B9BD5"/>
             </StackPanel>
@@ -122,12 +120,12 @@ xmlns:tb="using:H.NotifyIcon">
                         HorizontalAlignment="Right"
                         Spacing="6"
                         Opacity="0.5">
-                <TextBlock Text="CopyPaste" 
-                           FontSize="11" 
+                <TextBlock Text="CopyPaste"
+                           FontSize="11"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
-                <Image Source="/Assets/CopyPasteNotification.ico" 
-                       Width="14" Height="14" 
+                <Image Source="/Assets/CopyPasteNotification.ico"
+                       Width="14" Height="14"
                        VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
@@ -135,7 +133,6 @@ xmlns:tb="using:H.NotifyIcon">
         <!-- Search Bar -->
         <TextBox Grid.Row="1"
                  x:Name="SearchBox"
-                 PlaceholderText="Buscar..."
                  Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay}"
                  TextChanged="SearchBox_TextChanged"
                  Margin="12,4,12,8"
@@ -147,14 +144,14 @@ xmlns:tb="using:H.NotifyIcon">
                  CornerRadius="6"/>
 
             <!-- Empty State Message -->
-            <StackPanel Grid.Row="2" 
-                        HorizontalAlignment="Center" 
+            <StackPanel Grid.Row="2"
+                        HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="8"
                         Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
                 <FontIcon Glyph="&#xE74C;" FontSize="32" Opacity="0.3" HorizontalAlignment="Center"/>
-                <TextBlock Text="No hay elementos en esta sección" 
-                           FontSize="13" 
+                <TextBlock x:Name="EmptyStateText"
+                           FontSize="13"
                            Opacity="0.5"
                            HorizontalAlignment="Center"/>
             </StackPanel>
@@ -173,26 +170,26 @@ xmlns:tb="using:H.NotifyIcon">
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:ClipboardItemViewModel">
-                <Border MinHeight="60" 
+                <Border MinHeight="60"
                         CornerRadius="6"
                         Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderThickness="1" 
+                        BorderThickness="1"
                         BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                         Margin="0,0,0,8"
                         Tag="{x:Bind}">
                     <Border.ContextFlyout>
                         <MenuFlyout>
-                            <MenuFlyoutItem Text="Pegar" Icon="Paste" Command="{x:Bind PasteCommand}"/>
-                            <MenuFlyoutItem Text="Pegar sin formato" Command="{x:Bind PastePlainCommand}">
+                            <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
+                            <MenuFlyoutItem Text="{x:Bind PastePlainText}" Command="{x:Bind PastePlainCommand}">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutSeparator/>
                             <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
-                            
+
                             <MenuFlyoutSeparator/>
-                            <MenuFlyoutItem Text="Eliminar" Command="{x:Bind DeleteCommand}">
+                            <MenuFlyoutItem Text="{x:Bind DeleteText}" Command="{x:Bind DeleteCommand}">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;"/></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                         </MenuFlyout>
@@ -214,13 +211,13 @@ xmlns:tb="using:H.NotifyIcon">
                             </StackPanel>
 
                             <!-- Text Content -->
-                            <TextBlock Grid.Row="1" Text="{x:Bind Content, Mode=OneWay}" 
-                                       MaxLines="3" LineHeight="20" TextTrimming="CharacterEllipsis" 
+                            <TextBlock Grid.Row="1" Text="{x:Bind Content, Mode=OneWay}"
+                                       MaxLines="3" LineHeight="20" TextTrimming="CharacterEllipsis"
                                        FontSize="13" Opacity="0.9" TextWrapping="Wrap"
                                        Visibility="{x:Bind IsTextVisible, Mode=OneWay}"/>
 
                             <!-- Image Content -->
-                            <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="4" 
+                            <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="4"
                                     Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
                                     HorizontalAlignment="Stretch" Height="85" Opacity="0.6"
                                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
@@ -231,11 +228,11 @@ xmlns:tb="using:H.NotifyIcon">
                             </Border>
 
                             <!-- Media Thumbnail -->
-                            <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="4" 
+                            <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="4"
                                     Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}"
                                     HorizontalAlignment="Stretch" Height="85" Opacity="0.6"
                                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}" 
+                                <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}"
                                        Stretch="Uniform"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -274,10 +271,10 @@ xmlns:tb="using:H.NotifyIcon">
 
                             <!-- Action Panel (hover) -->
                             <StackPanel x:Name="ActionPanel" Grid.Row="0" Grid.RowSpan="2"
-                                        Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" 
+                                        Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Margin="0,-4,-4,0" Spacing="2" Opacity="0">
                                 <!-- Botón "..." - Solo opciones comunes (sin Eliminar) -->
-                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0" 
+                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0"
                                         ToolTipService.ToolTip="Opciones">
                                     <FontIcon Glyph="&#xE712;" FontSize="14"/>
                                     <Button.Flyout>
@@ -295,7 +292,7 @@ xmlns:tb="using:H.NotifyIcon">
                                         </MenuFlyout>
                                     </Button.Flyout>
                                 </Button>
-                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0" 
+                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0"
                                         Command="{x:Bind DeleteCommand}" ToolTipService.ToolTip="Eliminar">
                                     <FontIcon Glyph="&#xE711;" FontSize="10"/>
                                 </Button>

@@ -1,4 +1,5 @@
 using CopyPaste.Core;
+using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
@@ -6,11 +7,6 @@ using System.Diagnostics;
 
 namespace CopyPaste.UI;
 
-/// <summary>
-/// Configuration window for managing application settings.
-/// Loads values from MyM.json, allows editing, and saves to MyM.json.
-/// Implements proper resource cleanup on close.
-/// </summary>
 public sealed partial class ConfigWindow : Window
 {
     private sealed record ThumbnailPreset(int Width, int QualityPng, int QualityJpeg, int GCThreshold, int UIDecodeHeight);
@@ -35,22 +31,16 @@ public sealed partial class ConfigWindow : Window
     {
         InitializeComponent();
 
-        // Set window size
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
         appWindow.Resize(new Windows.Graphics.SizeInt32(620, 780));
-
-        // Center window
         CenterWindow(appWindow);
 
-        // Ensure config directory exists
         StorageConfig.Initialize();
-
-        // Load current configuration values (single read, then cached)
+        ApplyLocalizedStrings();
         LoadCurrentValues();
 
-        // Wire up hotkey preview updates
         UseCtrlCheck.Checked += OnHotkeyChanged;
         UseCtrlCheck.Unchecked += OnHotkeyChanged;
         UseWinCheck.Checked += OnHotkeyChanged;
@@ -60,9 +50,16 @@ public sealed partial class ConfigWindow : Window
         UseShiftCheck.Checked += OnHotkeyChanged;
         UseShiftCheck.Unchecked += OnHotkeyChanged;
         HotkeyCombo.SelectionChanged += OnHotkeyComboChanged;
-
-        // Register for window close to cleanup resources
         this.Closed += OnWindowClosed;
+    }
+
+    private void ApplyLocalizedStrings()
+    {
+        LanguageHeading.Text = L.Get("config.language.heading");
+        LanguageLabel.Text = L.Get("config.language.label");
+        LanguageDesc.Text = L.Get("config.language.desc");
+        if (LanguageCombo.Items[0] is ComboBoxItem autoItem)
+            autoItem.Content = L.Get("config.language.auto");
     }
 
     private void OnHotkeyChanged(object sender, RoutedEventArgs e) => UpdateHotkeyPreview();
@@ -70,7 +67,6 @@ public sealed partial class ConfigWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs e)
     {
-        // Unsubscribe all event handlers to prevent memory leaks
         UseCtrlCheck.Checked -= OnHotkeyChanged;
         UseCtrlCheck.Unchecked -= OnHotkeyChanged;
         UseWinCheck.Checked -= OnHotkeyChanged;
@@ -81,8 +77,6 @@ public sealed partial class ConfigWindow : Window
         UseShiftCheck.Unchecked -= OnHotkeyChanged;
         HotkeyCombo.SelectionChanged -= OnHotkeyComboChanged;
         this.Closed -= OnWindowClosed;
-
-        // Clear references to allow GC
         _originalThumbnailValues = null;
         _originalPasteValues = null;
     }
@@ -99,17 +93,15 @@ public sealed partial class ConfigWindow : Window
         appWindow.Move(new Windows.Graphics.PointInt32(centerX, centerY));
     }
 
-    /// <summary>
-    /// Loads current configuration values from MyM.json into the UI controls.
-    /// Forces a fresh read from disk to show actual saved values.
-    /// </summary>
     private void LoadCurrentValues()
     {
         _isLoadingValues = true;
 
-        // Force fresh read from JSON file (not cached values)
         ConfigLoader.ClearCache();
         var config = ConfigLoader.Load();
+
+        // Language
+        SelectLanguage(config.PreferredLanguage);
 
         // Startup
         RunOnStartupSwitch.IsOn = config.RunOnStartup;
@@ -144,6 +136,19 @@ public sealed partial class ConfigWindow : Window
 
         UpdateHotkeyPreview();
         _isLoadingValues = false;
+    }
+
+    private void SelectLanguage(string langTag)
+    {
+        for (int i = 0; i < LanguageCombo.Items.Count; i++)
+        {
+            if (LanguageCombo.Items[i] is ComboBoxItem item && item.Tag?.ToString() == langTag)
+            {
+                LanguageCombo.SelectedIndex = i;
+                return;
+            }
+        }
+        LanguageCombo.SelectedIndex = 0;
     }
 
     private void SelectPastePreset(MyMConfig config)
@@ -324,7 +329,6 @@ public sealed partial class ConfigWindow : Window
         Justification = "Save operation should not crash - errors are logged")]
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        // Validate: at least 2 modifiers required
         int modifierCount = 0;
         if (UseCtrlCheck.IsChecked == true) modifierCount++;
         if (UseWinCheck.IsChecked == true) modifierCount++;
@@ -342,9 +346,13 @@ public sealed partial class ConfigWindow : Window
             var (virtualKey, keyName) = GetSelectedHotkey();
             var thumbnailPreset = GetSelectedThumbnailPreset();
             var pastePreset = GetSelectedPastePreset();
+            var selectedLang = (LanguageCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "auto";
 
             var config = new MyMConfig
             {
+                // Language
+                PreferredLanguage = selectedLang,
+
                 // Startup
                 RunOnStartup = RunOnStartupSwitch.IsOn,
 

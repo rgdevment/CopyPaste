@@ -1,0 +1,139 @@
+{
+  "window": {
+    "title": "CopyPaste",
+    "appBranding": "CopyPaste"
+  },
+  "ui": {
+    "section": {
+      "recent": "Recent",
+      "pinned": "Pinned"
+    },
+    "sidebar": {
+      "settings": "Settings",
+      "report": "Report bug"
+    },
+    "search": {
+      "placeholder": "Search..."
+    },
+    "emptyState": "No items in this section"
+  },
+  "config": {
+    "window": {
+      "title": "Settings",
+      "description": "Changes are saved to MyM.json and require restart."
+    },
+    "language": {
+      "heading": "LANGUAGE",
+      "label": "Interface language",
+      "desc": "Requires restart to apply",
+      "auto": "Auto (System)"
+    },
+    "startup": {
+      "title": "Startup",
+      "heading": "STARTUP",
+      "runOnStartup": "Run on startup",
+      "runOnStartupDesc": "Launches in background when you sign in",
+      "runOnStartupYes": "Yes",
+      "runOnStartupNo": "No"
+    },
+    "hotkey": {
+      "heading": "KEYBOARD SHORTCUTS",
+      "shortcutLabel": "Shortcut to open/close CopyPaste",
+      "shortcutDesc": "Select at least 2 modifiers + one key",
+      "preview": "Current shortcut: {shortcut}",
+      "modifierCtrl": "Ctrl",
+      "modifierWin": "Win",
+      "modifierAlt": "Alt",
+      "modifierShift": "Shift",
+      "plus": "+"
+    },
+    "appearance": {
+      "heading": "APPEARANCE",
+      "panelWidth": "Panel width",
+      "panelWidthDesc": "Width in pixels (350-600px)",
+      "panelWidthTooltip": "Sidebar panel width in pixels. Recommended: 350-500px",
+      "marginTop": "Top margin",
+      "marginTopDesc": "Distance from top (px)",
+      "marginTopTooltip": "Space between the top of the screen and the panel. Allows adjusting vertical position.",
+      "marginBottom": "Bottom margin",
+      "marginBottomDesc": "Distance from bottom (px)",
+      "marginBottomTooltip": "Space between the bottom of the screen and the panel. Useful if you have a large taskbar."
+    },
+    "performance": {
+      "heading": "PERFORMANCE",
+      "itemsPerPage": "Items per page",
+      "itemsPerPageDesc": "Amount to load per batch",
+      "memoryLimit": "Memory limit",
+      "memoryLimitDesc": "Maximum items in RAM",
+      "scrollThreshold": "Scroll threshold",
+      "scrollThresholdDesc": "Distance to load more (px)"
+    },
+    "storage": {
+      "heading": "STORAGE",
+      "retentionDays": "Retention days",
+      "retentionDaysDesc": "Days to keep history (0=unlimited)",
+      "retentionDaysTooltip": "Days to keep clipboard history. 0 = unlimited. Pinned items are never deleted."
+    },
+    "paste": {
+      "heading": "PASTE",
+      "speedDesc": "Automatic paste speed. Normal/Safe recommended for most computers.",
+      "speed": "Paste speed",
+      "speedDesc2": "Adjust restoration and paste timings",
+      "speedFast": "Fast",
+      "speedNormal": "Normal",
+      "speedSafe": "Safe",
+      "speedSlow": "Slow",
+      "speedWarning": "⚠️ Fast: May cause strange behavior in heavy apps.\n⚠️ Slow: May feel like a failure on modern computers."
+    },
+    "thumbnails": {
+      "heading": "THUMBNAILS (ADVANCED)",
+      "warning": "Modifying can affect RAM usage and disk space.",
+      "quality": "Thumbnail quality",
+      "qualityDesc": "Only affects future thumbnails",
+      "qualityExcellent": "Excellent",
+      "qualityHigh": "High",
+      "qualityMedium": "Medium",
+      "qualityLow": "Low",
+      "qualityMinimal": "Minimal",
+      "qualityTooltip": "Select a quality preset. Excellent = better quality but more RAM. Minimal = minimal resource usage."
+    },
+    "buttons": {
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "saveAndRestart": "Save and restart"
+    }
+  },
+  "clipboard": {
+    "contextMenu": {
+      "paste": "Paste",
+      "pastePlain": "Paste plain",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "delete": "Delete"
+    },
+    "fileWarning": "File not available",
+    "itemTypes": {
+      "text": "TEXT",
+      "image": "IMAGE",
+      "file": "FILE",
+      "folder": "FOLDER",
+      "link": "LINK",
+      "audio": "AUDIO",
+      "video": "VIDEO",
+      "content": "CONTENT"
+    },
+    "timestamps": {
+      "today": "Today {time}",
+      "yesterday": "Yesterday {time}"
+    }
+  },
+  "buttons": {
+    "settings": "Settings",
+    "reportBug": "Report a bug",
+    "options": "Options"
+  },
+  "tray": {
+    "tooltip": "CopyPaste",
+    "exit": "Exit"
+  }
+}

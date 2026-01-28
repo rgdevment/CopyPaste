@@ -1,0 +1,139 @@
+{
+  "window": {
+    "title": "CopyPaste",
+    "appBranding": "CopyPaste"
+  },
+  "ui": {
+    "section": {
+      "recent": "Recientes",
+      "pinned": "Anclados"
+    },
+    "sidebar": {
+      "settings": "Configuración",
+      "report": "Reportar error"
+    },
+    "search": {
+      "placeholder": "Buscar..."
+    },
+    "emptyState": "No hay elementos en esta sección"
+  },
+  "config": {
+    "window": {
+      "title": "Configuración",
+      "description": "Los cambios se guardan en MyM.json y requieren reiniciar."
+    },
+    "language": {
+      "heading": "IDIOMA",
+      "label": "Idioma de la interfaz",
+      "desc": "Requiere reiniciar para aplicar",
+      "auto": "Automático (Sistema)"
+    },
+    "startup": {
+      "title": "Inicio",
+      "heading": "INICIO",
+      "runOnStartup": "Iniciar con Windows",
+      "runOnStartupDesc": "Ejecuta en segundo plano al iniciar sesión",
+      "runOnStartupYes": "Sí",
+      "runOnStartupNo": "No"
+    },
+    "hotkey": {
+      "heading": "ATAJOS DE TECLADO",
+      "shortcutLabel": "Atajo para abrir/cerrar CopyPaste",
+      "shortcutDesc": "Selecciona al menos 2 modificadores + una tecla",
+      "preview": "Atajo actual: {shortcut}",
+      "modifierCtrl": "Ctrl",
+      "modifierWin": "Win",
+      "modifierAlt": "Alt",
+      "modifierShift": "Shift",
+      "plus": "+"
+    },
+    "appearance": {
+      "heading": "APARIENCIA",
+      "panelWidth": "Ancho del panel",
+      "panelWidthDesc": "Ancho en píxeles (350-600px)",
+      "panelWidthTooltip": "Ancho del panel lateral en píxeles. Recomendado: 350-500px",
+      "marginTop": "Margen superior",
+      "marginTopDesc": "Distancia desde arriba (px)",
+      "marginTopTooltip": "Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posición vertical.",
+      "marginBottom": "Margen inferior",
+      "marginBottomDesc": "Distancia desde abajo (px)",
+      "marginBottomTooltip": "Espacio entre el borde inferior de la pantalla y el panel. Útil si tienes barra de tareas grande."
+    },
+    "performance": {
+      "heading": "RENDIMIENTO",
+      "itemsPerPage": "Elementos por página",
+      "itemsPerPageDesc": "Cantidad a cargar por lote",
+      "memoryLimit": "Límite en memoria",
+      "memoryLimitDesc": "Máximo elementos en RAM",
+      "scrollThreshold": "Umbral de scroll",
+      "scrollThresholdDesc": "Distancia para cargar más (px)"
+    },
+    "storage": {
+      "heading": "ALMACENAMIENTO",
+      "retentionDays": "Días de retención",
+      "retentionDaysDesc": "Días para mantener historial (0=sin límite)",
+      "retentionDaysTooltip": "Días para mantener historial del portapapeles. 0 = sin límite. Los elementos anclados nunca se borran."
+    },
+    "paste": {
+      "heading": "PEGADO",
+      "speedDesc": "Velocidad de pegado automático. Normal/Seguro recomendados para mayoría de equipos.",
+      "speed": "Velocidad de pegado",
+      "speedDesc2": "Ajusta timings de restauración y pegado",
+      "speedFast": "Rápido",
+      "speedNormal": "Normal",
+      "speedSafe": "Seguro",
+      "speedSlow": "Lento",
+      "speedWarning": "⚠️ Rápido: Puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: Puede dar sensación de fallo en equipos modernos."
+    },
+    "thumbnails": {
+      "heading": "MINIATURAS (AVANZADO)",
+      "warning": "Modificar puede afectar consumo de RAM y espacio en disco.",
+      "quality": "Calidad de miniaturas",
+      "qualityDesc": "Solo afecta miniaturas futuras",
+      "qualityExcellent": "Excelente",
+      "qualityHigh": "Alta",
+      "qualityMedium": "Media",
+      "qualityLow": "Baja",
+      "qualityMinimal": "Ahorro",
+      "qualityTooltip": "Selecciona un preset de calidad. Excelente = mejor calidad pero más RAM. Ahorro = mínimo consumo de recursos."
+    },
+    "buttons": {
+      "reset": "Restablecer",
+      "cancel": "Cancelar",
+      "saveAndRestart": "Guardar y reiniciar"
+    }
+  },
+  "clipboard": {
+    "contextMenu": {
+      "paste": "Pegar",
+      "pastePlain": "Pegar sin formato",
+      "pin": "Anclar",
+      "unpin": "Desanclar",
+      "delete": "Eliminar"
+    },
+    "fileWarning": "Archivo no disponible",
+    "itemTypes": {
+      "text": "TEXTO",
+      "image": "IMAGEN",
+      "file": "ARCHIVO",
+      "folder": "CARPETA",
+      "link": "ENLACE",
+      "audio": "AUDIO",
+      "video": "VIDEO",
+      "content": "CONTENIDO"
+    },
+    "timestamps": {
+      "today": "Hoy {time}",
+      "yesterday": "Ayer {time}"
+    }
+  },
+  "buttons": {
+    "settings": "Configuración",
+    "reportBug": "Reportar error",
+    "options": "Opciones"
+  },
+  "tray": {
+    "tooltip": "CopyPaste",
+    "exit": "Salir"
+  }
+}

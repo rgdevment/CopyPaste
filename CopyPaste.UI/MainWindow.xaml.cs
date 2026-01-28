@@ -1,5 +1,6 @@
 using CopyPaste.Core;
 using CopyPaste.UI.Helpers;
+using CopyPaste.UI.Localization;
 using CopyPaste.UI.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
@@ -32,6 +33,7 @@ internal sealed partial class MainWindow : Window
 
         InitializeWindow();
         RegisterEventHandlers();
+        ApplyLocalizedStrings();
     }
 
     private void InitializeWindow()
@@ -41,6 +43,18 @@ internal sealed partial class MainWindow : Window
         Win32WindowHelper.RemoveWindowBorder(_hWnd);
         RegisterGlobalHotkey();
         HotkeyHelper.RegisterMessageHandler(_hWnd, OnHotkeyPressed);
+    }
+
+    private void ApplyLocalizedStrings()
+    {
+        TrayMenuExit.Text = L.Get("tray.exit");
+        ToolTipService.SetToolTip(RecentTab, L.Get("ui.section.recent"));
+        ToolTipService.SetToolTip(PinnedTab, L.Get("ui.section.pinned"));
+        ToolTipService.SetToolTip(SettingsButton, L.Get("ui.sidebar.settings"));
+        ToolTipService.SetToolTip(ReportButton, L.Get("ui.sidebar.report"));
+        SearchBox.PlaceholderText = L.Get("ui.search.placeholder");
+        EmptyStateText.Text = L.Get("ui.emptyState");
+        SectionTitle.Text = L.Get("ui.section.recent");
     }
 
     private void RegisterEventHandlers()
@@ -55,19 +69,18 @@ internal sealed partial class MainWindow : Window
     {
         if (sender is RadioButton rb)
         {
-            var tooltip = ToolTipService.GetToolTip(rb) as string;
-            ViewModel.SelectedTabIndex = tooltip switch
+            ViewModel.SelectedTabIndex = rb.Name switch
             {
-                "Recientes" => 0,
-                "Anclados" => 1,
+                nameof(RecentTab) => 0,
+                nameof(PinnedTab) => 1,
                 _ => 0
             };
 
-            UpdateSectionIndicator(tooltip);
+            UpdateSectionIndicator(rb.Name);
         }
     }
 
-    private void UpdateSectionIndicator(string? section)
+    private void UpdateSectionIndicator(string? tabName)
     {
         // Verificar que los elementos XAML estén inicializados
         if (SectionTitle == null || SectionIcon == null)
@@ -80,9 +93,9 @@ internal sealed partial class MainWindow : Window
         var inactiveColor = Color.FromArgb(255, 120, 120, 120);
         var inactiveBrush = new SolidColorBrush(inactiveColor);
 
-        if (section == "Anclados")
+        if (tabName == nameof(PinnedTab))
         {
-            SectionTitle.Text = "Anclados";
+            SectionTitle.Text = L.Get("ui.section.pinned");
             SectionIcon.Glyph = "\uE718";
             SectionTitle.Foreground = orangeBrush;
             SectionIcon.Foreground = orangeBrush;
@@ -93,7 +106,7 @@ internal sealed partial class MainWindow : Window
         }
         else
         {
-            SectionTitle.Text = "Recientes";
+            SectionTitle.Text = L.Get("ui.section.recent");
             SectionIcon.Glyph = "\uE823";
             SectionTitle.Foreground = blueBrush;
             SectionIcon.Foreground = blueBrush;

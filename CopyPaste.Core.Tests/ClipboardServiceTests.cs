@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Core.Tests;
 
-public class ClipboardServiceTests : IDisposable
+public sealed class ClipboardServiceTests : IDisposable
 {
     private readonly string _basePath;
     private readonly StubClipboardRepository _repository;

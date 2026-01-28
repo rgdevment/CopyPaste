@@ -70,9 +70,13 @@
 
 
 
-
     <ItemGroup>
         <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Localization/language-config.json" />
+        <EmbeddedResource Include="Localization/Languages/*.json" />
     </ItemGroup>
 
     <ItemGroup>

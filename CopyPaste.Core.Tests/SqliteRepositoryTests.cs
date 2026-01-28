@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -8,7 +7,7 @@ using Xunit;
 
 namespace CopyPaste.Core.Tests;
 
-public class SqliteRepositoryTests : IDisposable
+public sealed class SqliteRepositoryTests : IDisposable
 {
     private readonly string _basePath;
     private readonly string _dbPath;

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace CopyPaste.Core.Tests;
 
-public class CleanupServiceTests : IDisposable
+public sealed class CleanupServiceTests : IDisposable
 {
     private readonly string _basePath;
 
@@ -200,7 +200,7 @@ public class CleanupServiceTests : IDisposable
 
     #endregion
 
-    private string GetLastCleanupFile()
+    private static string GetLastCleanupFile()
     {
         var directory = Path.GetDirectoryName(StorageConfig.DatabasePath)!;
         return Path.Combine(directory, "last_cleanup.txt");

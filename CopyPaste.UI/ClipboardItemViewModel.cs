@@ -4,6 +4,7 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
+using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 
 namespace CopyPaste.UI.ViewModels;
@@ -13,6 +14,9 @@ public partial class ClipboardItemViewModel : ObservableObject
     private readonly Action<ClipboardItemViewModel> _deleteAction;
     private readonly Action<ClipboardItemViewModel, bool> _pasteAction;
     private readonly Action<ClipboardItemViewModel> _pinAction;
+    private readonly string _pasteText;
+    private readonly string _pastePlainText;
+    private readonly string _deleteText;
 
     private bool _isPinned;
 
@@ -26,10 +30,10 @@ public partial class ClipboardItemViewModel : ObservableObject
             var now = DateTime.Now;
 
             if (date.Date == now.Date)
-                return $"Hoy {date:HH:mm}";
+                return L.Get("clipboard.timestamps.today").Replace("{time}", date.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
 
             if (date.Date == now.Date.AddDays(-1))
-                return $"Ayer {date:HH:mm}";
+                return L.Get("clipboard.timestamps.yesterday").Replace("{time}", date.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
 
             return date.ToString("dd MMM HH:mm", System.Globalization.CultureInfo.InvariantCulture);
         }
@@ -63,6 +67,9 @@ public partial class ClipboardItemViewModel : ObservableObject
         _deleteAction = deleteAction;
         _pasteAction = pasteAction;
         _pinAction = pinAction;
+        _pasteText = L.Get("clipboard.contextMenu.paste");
+        _pastePlainText = L.Get("clipboard.contextMenu.pastePlain");
+        _deleteText = L.Get("clipboard.contextMenu.delete");
 
         _isPinned = model.IsPinned;
     }
@@ -164,14 +171,14 @@ public partial class ClipboardItemViewModel : ObservableObject
 
     public string HeaderTitle => Model.Type switch
     {
-        ClipboardContentType.Text => "TEXT",
-        ClipboardContentType.Image => "IMAGE",
-        ClipboardContentType.File => "FILE",
-        ClipboardContentType.Folder => "FOLDER",
-        ClipboardContentType.Link => "LINK",
-        ClipboardContentType.Audio => "AUDIO",
-        ClipboardContentType.Video => "VIDEO",
-        _ => "CONTENT"
+        ClipboardContentType.Text => L.Get("clipboard.itemTypes.text"),
+        ClipboardContentType.Image => L.Get("clipboard.itemTypes.image"),
+        ClipboardContentType.File => L.Get("clipboard.itemTypes.file"),
+        ClipboardContentType.Folder => L.Get("clipboard.itemTypes.folder"),
+        ClipboardContentType.Link => L.Get("clipboard.itemTypes.link"),
+        ClipboardContentType.Audio => L.Get("clipboard.itemTypes.audio"),
+        ClipboardContentType.Video => L.Get("clipboard.itemTypes.video"),
+        _ => L.Get("clipboard.itemTypes.content")
     };
 
     public string TypeIcon => Model.Type switch
@@ -187,7 +194,11 @@ public partial class ClipboardItemViewModel : ObservableObject
     };
 
     public string PinIconGlyph => _isPinned ? "\uE840" : "\uE718";
-    public string PinMenuText => _isPinned ? "Desanclar" : "Anclar";
+    public string PinMenuText => _isPinned ? L.Get("clipboard.contextMenu.unpin") : L.Get("clipboard.contextMenu.pin");
+    public string PasteText => _pasteText;
+    public string PastePlainText => _pastePlainText;
+    public string DeleteText => _deleteText;
+
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
 
     public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Folder or ClipboardContentType.Audio or ClipboardContentType.Video;

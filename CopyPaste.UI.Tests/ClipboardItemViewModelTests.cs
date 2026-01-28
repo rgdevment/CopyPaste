@@ -282,39 +282,3 @@ public class ClipboardItemViewModelTests
 
     #endregion
 }
-
-/*
- * SUGERENCIAS PARA TESTING ADICIONAL DE ClipboardItemViewModel:
- * 
- * 1. Command Tests (requieren setup específico de WinUI):
- *    - CopyCommand: Verificar que invoque _pasteAction correctamente
- *    - CopyAndCloseCommand: Verificar que invoque con closeAfter=true
- *    - DeleteCommand: Verificar que invoque _deleteAction
- *    - TogglePinCommand: Verificar que invoque _pinAction
- * 
- * 2. Property Tests Avanzados:
- *    - Content: Probar diferentes tipos de contenido (texto, rutas de archivo)
- *    - ThumbnailPath: Verificar parsing de metadata para thumbnails
- *    - ImagePath: Verificar parsing de rutas de imagen
- *    - MediaDuration: Verificar formateo de duración desde metadata
- *    - ImageDimensions: Verificar formateo de dimensiones desde metadata
- *    - FileSize: Verificar formateo de tamaño de archivo
- * 
- * 3. Visibility Properties:
- *    - ImageVisibility: Probar con diferentes tipos de contenido
- *    - MediaThumbnailVisibility: Verificar para audio/video
- *    - DurationVisibility: Verificar para media con duración
- *    - ImageDimensionsVisibility: Verificar para imágenes con dimensiones
- *    - FileSizeVisibility: Verificar para archivos con tamaño
- * 
- * 4. Icon/Display Properties:
- *    - TypeIcon: Verificar íconos correctos para cada ClipboardContentType
- *    - PinIconGlyph: Verificar cambio basado en IsPinned
- *    - PinMenuText: Verificar texto correcto según estado
- * 
- * 5. Integration Tests:
- *    - Probar interacción con ClipboardService real
- *    - Verificar actualización de UI cuando cambia thumbnail
- *    - Probar flujo completo de pin/unpin
- *    - Verificar eliminación y actualización de colección padre
- */

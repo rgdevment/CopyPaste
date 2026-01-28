@@ -10,6 +10,17 @@ namespace CopyPaste.Core;
 public sealed class MyMConfig
 {
     // ═══════════════════════════════════════════════════════════════
+    // Localization Configuration
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Preferred language tag (BCP 47 format).
+    /// "auto" = detect from Windows OS.
+    /// "en-US", "es-CL", etc. = specific language.
+    /// </summary>
+    public string PreferredLanguage { get; set; } = "auto";
+
+    // ═══════════════════════════════════════════════════════════════
     // Startup Configuration
     // ═══════════════════════════════════════════════════════════════
 
