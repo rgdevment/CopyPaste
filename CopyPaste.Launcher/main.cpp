@@ -147,9 +147,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
     ShowWindow(g_hwnd, SW_SHOW);
     UpdateWindow(g_hwnd);
 
-    // Launch .NET app (CopyPaste.exe)
+    // Launch .NET app (CopyPaste.App.exe)
     if (!LaunchMainApp()) {
-        MessageBoxW(NULL, L"Could not start CopyPaste.exe", L"Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(NULL, L"Could not start CopyPaste.App.exe", L"Error", MB_OK | MB_ICONERROR);
         Cleanup();
         if (mutex) CloseHandle(mutex);
         return 1;
@@ -200,7 +200,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
 }
 
 bool LaunchMainApp(void) {
-    std::wstring appPath = g_exeDir + L"\\CopyPaste.exe";
+std::wstring appPath = g_exeDir + L"\\CopyPaste.App.exe";
 
     STARTUPINFOW si;
     ZeroMemory(&si, sizeof(si));

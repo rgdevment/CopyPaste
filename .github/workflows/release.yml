@@ -20,7 +20,7 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
-      PUBLISH_PATH: CopyPaste.UI/bin/Release/net10.0-windows10.0.22621.0/${{ matrix.arch }}/publish
+      PUBLISH_PATH: CopyPaste.UI/bin/x64/Release/net10.0-windows10.0.22621.0/${{ matrix.arch }}/publish
       PFX_BASE64: ${{ secrets.PFX_BASE64 }}
       PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
 
@@ -171,7 +171,7 @@ jobs:
           # Compile with optimizations and embed manifest
           cl.exe /O2 /MT /EHsc main.cpp `
             /link user32.lib gdi32.lib gdiplus.lib shell32.lib `
-            /OUT:CopyPasteLauncher.exe `
+            /OUT:CopyPaste.exe `
             /SUBSYSTEM:WINDOWS `
             /MANIFEST:EMBED `
             /MANIFESTINPUT:app.manifest
@@ -223,12 +223,12 @@ jobs:
         run: |
           $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           
-          # Copy native launcher to publish directory
-          Copy-Item "CopyPaste.Launcher/CopyPasteLauncher.exe" -Destination $publishDir
+          # Copy native launcher to publish directory (overwrites the .NET exe name)
+          Copy-Item "CopyPaste.Launcher/CopyPaste.exe" -Destination $publishDir
           
           Write-Host "✅ Native launcher integrated"
-          Write-Host "Launcher: CopyPasteLauncher.exe"
-          Write-Host ".NET app: CopyPaste.exe"
+          Write-Host "Entry point: CopyPaste.exe (native launcher)"
+          Write-Host ".NET app: CopyPaste.App.exe"
 
       - name: Clean Publish Output
         shell: pwsh

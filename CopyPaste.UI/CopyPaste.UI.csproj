@@ -10,7 +10,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <LangVersion>preview</LangVersion>
-    <AssemblyName>CopyPaste</AssemblyName>
+    <AssemblyName>CopyPaste.App</AssemblyName>
 
     <!-- WinUI 3 unpackaged app configuration -->
     <WindowsPackageType>None</WindowsPackageType>

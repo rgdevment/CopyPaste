@@ -171,12 +171,13 @@ public sealed partial class App : Application, IDisposable
 
             if (key.GetValue(appName) == null)
             {
-                // Register the launcher (CopyPasteLauncher.exe) for Windows startup
+                // Register the launcher (CopyPaste.exe) for Windows startup
+                // The launcher shows splash and starts CopyPaste.App.exe
                 var appExePath = Environment.ProcessPath;
                 if (!string.IsNullOrEmpty(appExePath))
                 {
                     var appDir = Path.GetDirectoryName(appExePath)!;
-                    var launcherPath = Path.Combine(appDir, "CopyPasteLauncher.exe");
+                    var launcherPath = Path.Combine(appDir, "CopyPaste.exe");
 
                     // Use launcher if it exists, otherwise use current exe (for debugging)
                     var startupPath = File.Exists(launcherPath) ? launcherPath : appExePath;
