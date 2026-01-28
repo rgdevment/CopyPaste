@@ -40,7 +40,7 @@ public sealed partial class App : Application, IDisposable
         // CRITICAL: Create splash FIRST, before any other initialization
         // This minimizes assemblies loaded before the splash appears
         _splash = new NativeSplash();
-        
+
         // Now initialize storage (this may load additional assemblies)
         StorageConfig.Initialize();
 
