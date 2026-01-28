@@ -20,14 +20,17 @@ using CopyPaste.Core;
 using CopyPaste.Listener;
 using Microsoft.UI.Xaml;
 using System;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CopyPaste.UI;
 
 public sealed partial class App : Application, IDisposable
 {
+    private const string _launcherReadyEventName = "CopyPaste_AppReady";
+
     private Window? _window;
-    private NativeSplash? _splash;
     private WindowsClipboardListener? _listener;
     private ClipboardService? _service;
     private CleanupService? _cleanupService;
@@ -37,13 +40,7 @@ public sealed partial class App : Application, IDisposable
 
     public App()
     {
-        // CRITICAL: Create splash FIRST, before any other initialization
-        // This minimizes assemblies loaded before the splash appears
-        _splash = new NativeSplash();
-
-        // Now initialize storage (this may load additional assemblies)
         StorageConfig.Initialize();
-
         this.UnhandledException += OnUnhandledException;
         InitializeComponent();
     }
@@ -57,10 +54,8 @@ public sealed partial class App : Application, IDisposable
         _window = new MainWindow(_service!);
         _window.Activate();
 
-        // Close splash after main window is ready and dispose resources immediately
-        _splash?.Close();
-        _splash?.Dispose();
-        _splash = null;
+        // Signal the native launcher that we're ready (it will close the splash)
+        SignalLauncherReady();
 
         AppLogger.Info("Main window launched");
     }
@@ -120,12 +115,36 @@ public sealed partial class App : Application, IDisposable
         if (_isDisposed) return;
         if (disposing)
         {
-            _splash?.Dispose();
             _listener?.Dispose();
             _cleanupService?.Dispose();
             _repository?.Dispose();
         }
         _isDisposed = true;
+    }
+
+    /// <summary>
+    /// Signals the native launcher that the app is ready.
+    /// The launcher creates a Named Event and waits for this signal to close the splash screen.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Launcher signaling is non-critical")]
+    private static void SignalLauncherReady()
+    {
+        try
+        {
+            // Try to open the existing event created by the launcher
+            using var readyEvent = EventWaitHandle.OpenExisting(_launcherReadyEventName);
+            readyEvent.Set();
+            AppLogger.Info("Signaled launcher that app is ready");
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+            // Event doesn't exist - app was started directly without launcher (e.g., debugging)
+            // This is fine, just continue
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Failed to signal launcher");
+        }
     }
 
     private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
@@ -152,11 +171,17 @@ public sealed partial class App : Application, IDisposable
 
             if (key.GetValue(appName) == null)
             {
-                var exePath = System.Environment.ProcessPath;
-                if (!string.IsNullOrEmpty(exePath))
+                // Register the launcher (CopyPaste.exe), not the .NET app (CopyPaste.App.exe)
+                var appExePath = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(appExePath))
                 {
-                    key.SetValue(appName, $"\"{exePath}\"");
-                    AppLogger.Info("Registered for Windows startup");
+                    var appDir = Path.GetDirectoryName(appExePath)!;
+                    var launcherPath = Path.Combine(appDir, "CopyPaste.exe");
+
+                    // Use launcher if it exists, otherwise use current exe (for debugging)
+                    var startupPath = File.Exists(launcherPath) ? launcherPath : appExePath;
+                    key.SetValue(appName, $"\"{startupPath}\"");
+                    AppLogger.Info($"Registered for Windows startup: {startupPath}");
                 }
             }
         }
