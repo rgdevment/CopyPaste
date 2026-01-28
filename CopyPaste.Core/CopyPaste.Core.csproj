@@ -10,9 +10,6 @@
   <!-- Trimming: mark as safe for trimmer when consumed by UI project -->
   <IsTrimmable>true</IsTrimmable>
   <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-
-  <!-- Enable COM support for Native AOT (needed for WindowsThumbnailExtractor) -->
-  <EnableComHosting>true</EnableComHosting>
 </PropertyGroup>
 
   <ItemGroup>
