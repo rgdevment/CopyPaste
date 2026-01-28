@@ -105,23 +105,23 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         // Triggers to keep FTS in sync
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_ai AFTER INSERT ON ClipboardItems BEGIN
-                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource) 
+                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource)
                 VALUES (NEW.rowid, NEW.Content, NEW.AppSource);
             END
             """);
 
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_ad AFTER DELETE ON ClipboardItems BEGIN
-                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource) 
+                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource)
                 VALUES ('delete', OLD.rowid, OLD.Content, OLD.AppSource);
             END
             """);
 
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_au AFTER UPDATE ON ClipboardItems BEGIN
-                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource) 
+                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource)
                 VALUES ('delete', OLD.rowid, OLD.Content, OLD.AppSource);
-                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource) 
+                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource)
                 VALUES (NEW.rowid, NEW.Content, NEW.AppSource);
             END
             """);
@@ -176,8 +176,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         using var cmd = connection.CreateCommand();
 
         cmd.CommandText = """
-            UPDATE ClipboardItems 
-            SET Content = @Content, Type = @Type, CreatedAt = @CreatedAt, ModifiedAt = @ModifiedAt, 
+            UPDATE ClipboardItems
+            SET Content = @Content, Type = @Type, CreatedAt = @CreatedAt, ModifiedAt = @ModifiedAt,
                 AppSource = @AppSource, IsPinned = @IsPinned, Metadata = @Metadata
             WHERE Id = @Id
             """;
@@ -204,9 +204,9 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         using var cmd = connection.CreateCommand();
 
         cmd.CommandText = """
-            SELECT * FROM ClipboardItems 
-            WHERE Type != @UnknownType 
-            ORDER BY CreatedAt DESC 
+            SELECT * FROM ClipboardItems
+            WHERE Type != @UnknownType
+            ORDER BY CreatedAt DESC
             LIMIT 1
             """;
         cmd.Parameters.AddWithValue("@UnknownType", (int)ClipboardContentType.Unknown);
@@ -221,8 +221,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         using var cmd = connection.CreateCommand();
 
         cmd.CommandText = """
-            SELECT * FROM ClipboardItems 
-            WHERE Type != @UnknownType 
+            SELECT * FROM ClipboardItems
+            WHERE Type != @UnknownType
             ORDER BY ModifiedAt DESC
             """;
         cmd.Parameters.AddWithValue("@UnknownType", (int)ClipboardContentType.Unknown);
@@ -302,7 +302,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         if (string.IsNullOrWhiteSpace(query))
         {
             cmd.CommandText = """
-                SELECT * FROM ClipboardItems 
+                SELECT * FROM ClipboardItems
                 WHERE Type != @UnknownType
                 ORDER BY IsPinned DESC, CreatedAt DESC
                 LIMIT @Limit OFFSET @Skip
@@ -368,12 +368,19 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
             catch { /* Ignore */ }
         }
 
-        // Clean up thumbnail
-        var thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
-        if (File.Exists(thumbPath))
+        // Clean up thumbnail (could be .png, .jpg, or .webp)
+        var thumbBaseName = $"{item.Id}_t";
+        var thumbDir = StorageConfig.ThumbnailsPath;
+        var possibleExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp" };
+
+        foreach (var ext in possibleExtensions)
         {
-            try { File.Delete(thumbPath); }
-            catch { /* Ignore */ }
+            var thumbPath = Path.Combine(thumbDir, thumbBaseName + ext);
+            if (File.Exists(thumbPath))
+            {
+                try { File.Delete(thumbPath); }
+                catch { /* Ignore */ }
+            }
         }
     }
 

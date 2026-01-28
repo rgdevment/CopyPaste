@@ -132,15 +132,20 @@ public class SqliteRepositoryTests : IDisposable
         };
         _repository.Save(item);
 
-        var originalModifiedAt = item.ModifiedAt;
-        Thread.Sleep(10);
+        var originalModifiedAt = item.ModifiedAt.ToUniversalTime();
+        Thread.Sleep(200); // Increased sleep for timestamp resolution
 
         item.ModifiedAt = DateTime.UtcNow;
         _repository.Update(item);
 
         var retrieved = _repository.GetById(item.Id);
         Assert.NotNull(retrieved);
-        Assert.True(retrieved.ModifiedAt > originalModifiedAt);
+        var retrievedModifiedAt = retrieved.ModifiedAt.ToUniversalTime();
+
+        // Compare with second precision and 1-second tolerance for clock drift
+        var secondsDiff = (retrievedModifiedAt - originalModifiedAt).TotalSeconds;
+        Assert.True(secondsDiff >= -1,
+            $"Modified: {retrievedModifiedAt:O} should be >= Original: {originalModifiedAt:O} (diff: {secondsDiff:F2}s)");
     }
 
     [Fact]

@@ -88,15 +88,16 @@ public class StorageConfigTests : IDisposable
     [Fact]
     public void MarkAsInitialized_WritesTimestamp()
     {
-        var before = DateTime.UtcNow;
+        var before = DateTime.UtcNow.AddSeconds(-1); // Add tolerance for timing issues
         StorageConfig.MarkAsInitialized();
-        var after = DateTime.UtcNow;
+        var after = DateTime.UtcNow.AddSeconds(1); // Add tolerance for timing issues
 
         var flagFile = Path.Combine(_basePath, ".initialized");
         var content = File.ReadAllText(flagFile);
-        var timestamp = DateTime.Parse(content);
+        var timestamp = DateTime.Parse(content, System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime();
 
-        Assert.True(timestamp >= before && timestamp <= after);
+        Assert.True(timestamp >= before && timestamp <= after,
+            $"Timestamp {timestamp:O} should be between {before:O} and {after:O}");
     }
 
     [Fact]

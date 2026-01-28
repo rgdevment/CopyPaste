@@ -86,6 +86,11 @@ public sealed class CleanupService : IDisposable
     {
         try
         {
+            var directory = Path.GetDirectoryName(CleanupFilePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
             File.WriteAllText(CleanupFilePath, date.ToString("O"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

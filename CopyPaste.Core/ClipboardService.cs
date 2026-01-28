@@ -259,16 +259,34 @@ public class ClipboardService(IClipboardRepository repository)
             {
                 if (type == ClipboardContentType.Video)
                 {
+                    AppLogger.Info($"Extracting video thumbnail: {Path.GetFileName(filePath)}");
                     thumbData = WindowsThumbnailExtractor.GetThumbnail(filePath, ConfigLoader.Config.ThumbnailWidth);
+                    if (thumbData != null)
+                    {
+                        AppLogger.Info($"Video thumbnail extracted successfully: {thumbData.Length} bytes");
+                    }
+                    else
+                    {
+                        AppLogger.Warn($"Video thumbnail extraction returned null for: {Path.GetFileName(filePath)}");
+                    }
                 }
                 else if (type == ClipboardContentType.Audio)
                 {
+                    AppLogger.Info($"Extracting audio artwork: {Path.GetFileName(filePath)}");
                     thumbData = ExtractAudioArtwork(filePath);
+                    if (thumbData != null)
+                    {
+                        AppLogger.Info($"Audio artwork extracted successfully: {thumbData.Length} bytes");
+                    }
+                    else
+                    {
+                        AppLogger.Warn($"Audio artwork extraction returned null for: {Path.GetFileName(filePath)}");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.Exception(ex, "Thumbnail extraction failed");
+                AppLogger.Exception(ex, $"Thumbnail extraction failed for: {Path.GetFileName(filePath)}");
             }
 
             // Save thumbnail if we got one
@@ -276,26 +294,44 @@ public class ClipboardService(IClipboardRepository repository)
             {
                 try
                 {
-                    string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+                    // Windows already returns the thumbnail in the requested size as JPEG
+                    // For videos: save directly without re-encoding (more efficient, preserves quality)
+                    // For audio: artwork might be PNG/JPEG, detect and save accordingly
+                    string extension = type == ClipboardContentType.Video ? "jpg" : DetectImageFormat(thumbData);
+                    string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.{extension}");
 
+                    AppLogger.Info($"Saving {type} thumbnail directly: {thumbData.Length} bytes as {extension}");
+                    File.WriteAllBytes(thumbPath, thumbData);
+
+                    // Get dimensions for metadata
                     using var managedSrc = new MemoryStream(thumbData);
                     using var bitmap = SKBitmap.Decode(managedSrc);
 
                     if (bitmap != null)
                     {
-                        var (width, height) = GenerateThumbnail(bitmap, thumbPath, SKEncodedImageFormat.Png);
-
                         meta["thumb_path"] = thumbPath;
-                        meta["thumb_width"] = width;
-                        meta["thumb_height"] = height;
+                        meta["thumb_width"] = bitmap.Width;
+                        meta["thumb_height"] = bitmap.Height;
                         meta["original_width"] = bitmap.Width;
                         meta["original_height"] = bitmap.Height;
+
+                        AppLogger.Info($"Thumbnail saved successfully: {thumbPath} ({bitmap.Width}x{bitmap.Height})");
+                    }
+                    else
+                    {
+                        AppLogger.Warn($"Could not decode thumbnail for dimensions, but file was saved");
+                        // Still save the path even if we couldn't decode dimensions
+                        meta["thumb_path"] = thumbPath;
                     }
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Exception(ex, "Thumbnail save failed");
+                    AppLogger.Exception(ex, $"Thumbnail save failed for item {item.Id}");
                 }
+            }
+            else
+            {
+                AppLogger.Warn($"No thumbnail data available for {type}: {Path.GetFileName(filePath)}");
             }
 
             // Extract metadata (duration, etc.) - always try even if thumbnail failed
@@ -374,6 +410,27 @@ public class ClipboardService(IClipboardRepository repository)
             }
         }
         catch { /* Ignore metadata extraction failures */ }
+    }
+
+    private static string DetectImageFormat(byte[] imageData)
+    {
+        if (imageData.Length < 4) return "jpg"; // Default fallback
+
+        // Check PNG signature (89 50 4E 47)
+        if (imageData[0] == 0x89 && imageData[1] == 0x50 && imageData[2] == 0x4E && imageData[3] == 0x47)
+            return "png";
+
+        // Check JPEG signature (FF D8 FF)
+        if (imageData[0] == 0xFF && imageData[1] == 0xD8 && imageData[2] == 0xFF)
+            return "jpg";
+
+        // Check WebP signature (RIFF ... WEBP)
+        if (imageData.Length >= 12 &&
+            imageData[0] == 0x52 && imageData[1] == 0x49 && imageData[2] == 0x46 && imageData[3] == 0x46 &&
+            imageData[8] == 0x57 && imageData[9] == 0x45 && imageData[10] == 0x42 && imageData[11] == 0x50)
+            return "webp";
+
+        return "jpg"; // Default fallback
     }
 
     private static byte[]? ExtractAudioArtwork(string audioPath)

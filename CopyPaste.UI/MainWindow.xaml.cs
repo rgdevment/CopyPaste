@@ -363,7 +363,8 @@ internal sealed partial class MainWindow : Window
         if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) &&
             !System.IO.File.Exists(imagePath))
         {
-            if (imagePath.Contains("_t.png", StringComparison.Ordinal))
+            // Check if it's a thumbnail file (could be _t.png, _t.jpg, _t.webp, etc.)
+            if (imagePath.Contains("_t.", StringComparison.Ordinal))
             {
                 try
                 {

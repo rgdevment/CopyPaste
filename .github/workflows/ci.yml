@@ -41,4 +41,4 @@ jobs:
         run: dotnet build -c Release --no-restore
 
       - name: Run Tests
-        run: dotnet test -c Release --no-build --verbosity normal
+        run: dotnet test -c Debug --verbosity normal --logger "console;verbosity=detailed"
