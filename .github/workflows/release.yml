@@ -185,6 +185,7 @@ jobs:
           Write-Host "✅ Native launcher built successfully"
 
       - name: Publish (${{ matrix.arch }})
+        shell: pwsh
         run: |
           dotnet publish CopyPaste.UI/CopyPaste.UI.csproj `
             -c Release `
@@ -199,6 +200,23 @@ jobs:
             -p:TieredCompilation=true `
             -p:TieredCompilationQuickJitForLoops=true `
             --no-restore
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "dotnet publish failed"
+            exit 1
+          }
+          
+          # Verify publish output exists
+          $expectedPath = "${{ env.PUBLISH_PATH }}"
+          if (Test-Path $expectedPath) {
+            Write-Host "✅ Publish output found at: $expectedPath"
+            Get-ChildItem $expectedPath -Name | Select-Object -First 10
+          } else {
+            Write-Error "❌ Publish output not found at: $expectedPath"
+            Write-Host "Searching for publish folders..."
+            Get-ChildItem -Path "CopyPaste.UI/bin" -Recurse -Directory -Filter "publish" | ForEach-Object { Write-Host $_.FullName }
+            exit 1
+          }
 
       - name: Integrate Native Launcher
         shell: pwsh

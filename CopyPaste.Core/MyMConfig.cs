@@ -25,7 +25,7 @@ public sealed class MyMConfig
     /// <summary>
     /// Use Ctrl key as modifier.
     /// </summary>
-    public bool UseCtrlKey { get; set; } = false;
+    public bool UseCtrlKey { get; set; }
 
     /// <summary>
     /// Use Windows key as modifier.
@@ -40,7 +40,7 @@ public sealed class MyMConfig
     /// <summary>
     /// Use Shift key as modifier.
     /// </summary>
-    public bool UseShiftKey { get; set; } = false;
+    public bool UseShiftKey { get; set; }
 
     /// <summary>
     /// Virtual key code for the hotkey (V = 0x56).
