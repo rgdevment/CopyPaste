@@ -3,11 +3,11 @@
  * Shows splash screen instantly while .NET app initializes
  */
 
-#define WIN32_LEAN_AND_MEAN
 #define UNICODE
 #define _UNICODE
 
 #include <windows.h>
+#include <objidl.h>
 #include <gdiplus.h>
 #include <string>
 
