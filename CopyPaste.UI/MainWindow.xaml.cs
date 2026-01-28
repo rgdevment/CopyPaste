@@ -18,6 +18,7 @@ internal sealed partial class MainWindow : Window
     public MainViewModel ViewModel { get; }
     private readonly AppWindow _appWindow;
     private readonly IntPtr _hWnd;
+    private readonly MyMConfig _config = ConfigLoader.Config; // Cache config once at startup
     private const int _hotkeyId = 1;
 
     public MainWindow(ClipboardService service)
@@ -143,22 +144,21 @@ internal sealed partial class MainWindow : Window
 
     private void RegisterGlobalHotkey()
     {
-        var config = ConfigLoader.Config;
         uint modifiers = 0;
 
-        if (config.UseCtrlKey) modifiers |= Win32WindowHelper.MOD_CONTROL;
-        if (config.UseWinKey) modifiers |= Win32WindowHelper.MOD_WIN;
-        if (config.UseAltKey) modifiers |= Win32WindowHelper.MOD_ALT;
-        if (config.UseShiftKey) modifiers |= Win32WindowHelper.MOD_SHIFT;
+        if (_config.UseCtrlKey) modifiers |= Win32WindowHelper.MOD_CONTROL;
+        if (_config.UseWinKey) modifiers |= Win32WindowHelper.MOD_WIN;
+        if (_config.UseAltKey) modifiers |= Win32WindowHelper.MOD_ALT;
+        if (_config.UseShiftKey) modifiers |= Win32WindowHelper.MOD_SHIFT;
 
-        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
+        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, _config.VirtualKey);
 
         // Fallback: if Win key fails, try with Ctrl instead
-        if (!registered && config.UseWinKey)
+        if (!registered && _config.UseWinKey)
         {
             modifiers &= ~Win32WindowHelper.MOD_WIN;
             modifiers |= Win32WindowHelper.MOD_CONTROL;
-            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
+            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, _config.VirtualKey);
         }
     }
 
@@ -173,7 +173,7 @@ internal sealed partial class MainWindow : Window
     {
         if (_ is not ScrollViewer sv) return;
 
-        if (sv.ScrollableHeight > 0 && sv.VerticalOffset >= sv.ScrollableHeight - ConfigLoader.Config.ScrollLoadThreshold)
+        if (sv.ScrollableHeight > 0 && sv.VerticalOffset >= sv.ScrollableHeight - _config.ScrollLoadThreshold)
             ViewModel.LoadMoreItems();
     }
 
@@ -224,12 +224,11 @@ internal sealed partial class MainWindow : Window
 
     private void MoveToRightEdge()
     {
-        var config = ConfigLoader.Config;
         var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        int width = config.WindowWidth;
-        int height = workArea.Height - config.WindowMarginBottom;
+        int width = _config.WindowWidth;
+        int height = workArea.Height - _config.WindowMarginBottom;
         int x = workArea.X + workArea.Width - width;
-        int y = workArea.Y + config.WindowMarginTop;
+        int y = workArea.Y + _config.WindowMarginTop;
         _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
     }
 
@@ -392,7 +391,7 @@ internal sealed partial class MainWindow : Window
             {
                 UriSource = new Uri(imagePath),
                 CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
-                DecodePixelHeight = ConfigLoader.Config.ThumbnailUIDecodeHeight
+                DecodePixelHeight = ConfigLoader.Config.ThumbnailUIDecodeHeight // Static access needed here
             };
         }
         catch { /* Silently fail */ }

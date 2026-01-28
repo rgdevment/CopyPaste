@@ -16,6 +16,7 @@ namespace CopyPaste.UI.ViewModels;
 public partial class MainViewModel(ClipboardService service) : ObservableObject
 {
     private readonly ClipboardService _service = service;
+    private readonly MyMConfig _config = ConfigLoader.Config; // Cache config once at startup
     private Window? _window;
     private DispatcherQueue? _dispatcherQueue;
     private bool _isLoading;
@@ -88,7 +89,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
     private void LoadItems()
     {
         var query = GetSearchQuery();
-        var items = _service.GetHistory(ConfigLoader.Config.PageSize, 0, query, CurrentPinnedFilter);
+        var items = _service.GetHistory(_config.PageSize, 0, query, CurrentPinnedFilter);
 
         foreach (var item in items)
             Items.Add(CreateViewModel(item));
@@ -102,13 +103,14 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
     {
         if (_isLoading || !_hasMoreItems || _dispatcherQueue is null) return;
 
+
         _isLoading = true;
         IsLoadingMore = true;
 
         _dispatcherQueue.TryEnqueue(() =>
         {
             var query = GetSearchQuery();
-            var newItems = _service.GetHistory(ConfigLoader.Config.PageSize, Items.Count, query, CurrentPinnedFilter).ToList();
+            var newItems = _service.GetHistory(_config.PageSize, Items.Count, query, CurrentPinnedFilter).ToList();
 
             if (newItems.Count is 0)
             {
@@ -240,12 +242,11 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
 
     public void OnWindowDeactivated()
     {
-        var config = ConfigLoader.Config;
-        if (Items.Count <= config.MaxItemsBeforeCleanup) return;
+        if (Items.Count <= _config.MaxItemsBeforeCleanup) return;
 
         SearchQuery = string.Empty;
 
-        while (Items.Count > config.PageSize)
+        while (Items.Count > _config.PageSize)
             Items.RemoveAt(Items.Count - 1);
 
         _hasMoreItems = true;

@@ -88,9 +88,9 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock Text="Ancho del panel" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Ancho en pixeles (300-800px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Ancho en pixeles (350-600px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <NumberBox x:Name="WindowWidthBox" Grid.Column="1" Minimum="300" Maximum="800" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                                <NumberBox x:Name="WindowWidthBox" Grid.Column="1" Minimum="350" Maximum="600" SpinButtonPlacementMode="Compact" SmallChange="10"/>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
                             <Grid ToolTipService.ToolTip="Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posicion vertical.">
@@ -190,53 +190,32 @@
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                         <StackPanel Spacing="16">
-                            <Grid ToolTipService.ToolTip="Ventana de tiempo para ignorar cambios duplicados en el portapapeles. Aumenta si ves duplicados.">
+                            <TextBlock Text="Velocidad de pegado automatico. Normal/Seguro recomendados para mayoria de equipos." FontSize="11" Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Grid ToolTipService.ToolTip="Rapido = equipos potentes (puede fallar). Normal = equilibrio. Seguro = conservador. Lento = equipos antiguos.">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="180"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Anti-duplicados (ms)" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Tiempo para evitar duplicados" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Velocidad de pegado" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Ajusta timings de restauracion y pegado" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <NumberBox x:Name="DuplicateIgnoreWindowMsBox" Grid.Column="1" Minimum="100" Maximum="1000" SpinButtonPlacementMode="Compact" SmallChange="50"/>
+                                <ComboBox x:Name="PastePresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="PastePresetCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Rapido" Tag="fast"/>
+                                    <ComboBoxItem Content="Normal" Tag="normal"/>
+                                    <ComboBoxItem Content="Seguro" Tag="safe"/>
+                                    <ComboBoxItem Content="Lento" Tag="slow"/>
+                                </ComboBox>
                             </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Tiempo de espera antes de intentar restaurar el foco a la ventana anterior. Aumenta si el pegado falla.">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Delay foco (ms)" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Espera antes de restaurar ventana" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="DelayBeforeFocusMsBox" Grid.Column="1" Minimum="10" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
-                            </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Tiempo de espera despues de restaurar foco antes de simular Ctrl+V. Apps pesadas necesitan mas tiempo.">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Delay Ctrl+V (ms)" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Espera antes de simular pegado" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="DelayBeforePasteMsBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
-                            </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Numero de intentos para verificar que el foco se restauro correctamente. Aumenta si el pegado es inconsistente.">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Intentos de foco" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Verificaciones antes de pegar" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="MaxFocusVerifyAttemptsBox" Grid.Column="1" Minimum="1" Maximum="50" SpinButtonPlacementMode="Compact" SmallChange="5"/>
-                            </Grid>
+                            <Border Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}" CornerRadius="4" Padding="10" Opacity="0.7">
+                                <TextBlock FontSize="10" Opacity="0.85" TextWrapping="Wrap">
+                                    <Run Text="⚠️ Rapido:"/>
+                                    <Run Text=" Puede causar comportamientos extraños en apps pesadas."/>
+                                    <LineBreak/>
+                                    <Run Text="⚠️ Lento:"/>
+                                    <Run Text=" Puede dar sensacion de fallo en equipos modernos."/>
+                                </TextBlock>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -250,67 +229,25 @@
                             <Border Background="#33E8912D" CornerRadius="4" Padding="12">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="#E8912D"/>
-                                    <TextBlock Text="Modificar puede afectar rendimiento. Solo si sabes lo que haces." FontSize="11" Foreground="#E8912D" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Modificar puede afectar consumo de RAM y espacio en disco." FontSize="11" Foreground="#E8912D" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
-                            <Grid ToolTipService.ToolTip="Ancho maximo de las miniaturas generadas. Mayor = mejor calidad pero mas memoria y espacio en disco.">
+                            <Grid ToolTipService.ToolTip="Selecciona un preset de calidad. Excelente = mejor calidad pero mas RAM. Ahorro = minimo consumo de recursos.">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="180"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Ancho miniatura (px)" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Ancho maximo de miniaturas" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Calidad de miniaturas" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Solo afecta miniaturas futuras" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <NumberBox x:Name="ThumbnailWidthBox" Grid.Column="1" Minimum="100" Maximum="400" SpinButtonPlacementMode="Compact" SmallChange="10"/>
-                            </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Calidad de compresion PNG (0-100). Mayor = mejor calidad pero archivos mas grandes.">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Calidad PNG" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Compresion PNG (0-100)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="ThumbnailQualityPngBox" Grid.Column="1" Minimum="10" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
-                            </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Calidad de compresion JPEG (0-100). Usado para videos y audio. Mayor = mejor calidad.">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Calidad JPEG" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Compresion JPEG (0-100)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="ThumbnailQualityJpegBox" Grid.Column="1" Minimum="10" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
-                            </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Tamano de imagen (bytes) que activa limpieza de memoria. Menor = menos RAM pero mas lento. 1MB = 1000000">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Umbral GC (bytes)" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Activa limpieza de memoria" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="ThumbnailGCThresholdBox" Grid.Column="1" Minimum="100000" Maximum="5000000" SpinButtonPlacementMode="Compact" SmallChange="100000"/>
-                            </Grid>
-                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Altura de decodificacion para mostrar miniaturas en la UI. Menor = menos memoria pero menor calidad visual.">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Altura UI (px)" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Altura de decodificacion UI" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <NumberBox x:Name="ThumbnailUIDecodeHeightBox" Grid.Column="1" Minimum="50" Maximum="300" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                                <ComboBox x:Name="ThumbnailPresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="ThumbnailPresetCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Excelente" Tag="excellent"/>
+                                    <ComboBoxItem Content="Alta" Tag="high"/>
+                                    <ComboBoxItem Content="Media" Tag="medium"/>
+                                    <ComboBoxItem Content="Baja" Tag="low"/>
+                                    <ComboBoxItem Content="Ahorro" Tag="minimal"/>
+                                </ComboBox>
                             </Grid>
                         </StackPanel>
                     </Border>

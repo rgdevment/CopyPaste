@@ -68,8 +68,8 @@ public sealed partial class App : Application, IDisposable
         AppLogger.Initialize();
         AppLogger.Info("Application starting...");
 
-        // Load configuration (ConfigLoader.Config is the single source of truth)
-        _ = ConfigLoader.Config;
+        // Load configuration once and cache it (never reloaded until app restart)
+        var config = ConfigLoader.Config;
 
         // Register for Windows startup if configured
         RegisterForStartup();
@@ -78,10 +78,10 @@ public sealed partial class App : Application, IDisposable
         _repository = new SqliteRepository(StorageConfig.DatabasePath);
         _service = new ClipboardService(_repository);
         _listener = new WindowsClipboardListener(_service);
-        _cleanupService = new CleanupService(_repository, () => ConfigLoader.Config.RetentionDays);
+        _cleanupService = new CleanupService(_repository, () => config.RetentionDays);
 
-        // Configure paste timing
-        _service.PasteIgnoreWindowMs = ConfigLoader.Config.DuplicateIgnoreWindowMs;
+        // Configure paste timing (from cached config)
+        _service.PasteIgnoreWindowMs = config.DuplicateIgnoreWindowMs;
 
         // Run listener in background
         Task.Run(() => _listener.Run());

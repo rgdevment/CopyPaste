@@ -101,23 +101,28 @@ public sealed class MyMConfig
 
     /// <summary>
     /// Time window (ms) to ignore clipboard changes after app-initiated paste.
+    /// Default: Seguro preset (450ms).
     /// </summary>
-    public int DuplicateIgnoreWindowMs { get; set; } = 300;
+    public int DuplicateIgnoreWindowMs { get; set; } = 450;
 
     /// <summary>
     /// Delay (ms) before attempting to restore focus to previous window.
+    /// Default: Seguro preset (100ms).
     /// </summary>
-    public int DelayBeforeFocusMs { get; set; } = 50;
+    public int DelayBeforeFocusMs { get; set; } = 100;
 
     /// <summary>
     /// Delay (ms) after restoring focus before simulating Ctrl+V.
+    /// Default: Seguro preset (180ms).
     /// </summary>
-    public int DelayBeforePasteMs { get; set; } = 100;
+    public int DelayBeforePasteMs { get; set; } = 180;
 
     /// <summary>
     /// Maximum attempts to verify focus was restored before pasting.
+    /// Default: Seguro preset (15 attempts).
     /// </summary>
-    public int MaxFocusVerifyAttempts { get; set; } = 10;
+    public int MaxFocusVerifyAttempts { get; set; } = 15;
+
 
     // ═══════════════════════════════════════════════════════════════
     // Thumbnail Configuration (Advanced)
