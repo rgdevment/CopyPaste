@@ -58,18 +58,29 @@ xmlns:tb="using:H.NotifyIcon">
                 </RadioButton>
             </StackPanel>
 
-            <!-- Settings/Info Button -->
-            <Button Grid.Row="1"
-                    Command="{x:Bind ViewModel.OpenRepoCommand}"
-                    ToolTipService.ToolTip="Reportar error"
-                    Padding="0"
-                    Width="34" Height="34"
-                    HorizontalAlignment="Center"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    CornerRadius="6">
-                <FontIcon Glyph="&#xE897;" FontSize="13" Opacity="0.5"/>
-            </Button>
+            <!-- Settings/Info Buttons -->
+            <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <Button Click="OpenSettings_Click"
+                        ToolTipService.ToolTip="Configuración"
+                        Padding="0"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6">
+                    <FontIcon Glyph="&#xE713;" FontSize="13" Opacity="0.5"/>
+                </Button>
+                <Button Command="{x:Bind ViewModel.OpenRepoCommand}"
+                        ToolTipService.ToolTip="Reportar error"
+                        Padding="0"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6">
+                    <FontIcon Glyph="&#xE897;" FontSize="13" Opacity="0.5"/>
+                </Button>
+            </StackPanel>
         </Grid>
     </Border>
 

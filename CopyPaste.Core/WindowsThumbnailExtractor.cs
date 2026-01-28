@@ -160,7 +160,7 @@ public static partial class WindowsThumbnailExtractor
 
             // Encode to JPEG
             using var image = SKImage.FromBitmap(skBitmap);
-            using var data = image.Encode(SKEncodedImageFormat.Jpeg, ThumbnailConfig.QualityJpeg);
+            using var data = image.Encode(SKEncodedImageFormat.Jpeg, ConfigLoader.Config.ThumbnailQualityJpeg);
 
             return data.ToArray();
         }

@@ -68,6 +68,9 @@ public sealed partial class App : Application, IDisposable
         AppLogger.Initialize();
         AppLogger.Info("Application starting...");
 
+        // Load configuration (ConfigLoader.Config is the single source of truth)
+        _ = ConfigLoader.Config;
+
         // Register for Windows startup if configured
         RegisterForStartup();
 
@@ -75,10 +78,10 @@ public sealed partial class App : Application, IDisposable
         _repository = new SqliteRepository(StorageConfig.DatabasePath);
         _service = new ClipboardService(_repository);
         _listener = new WindowsClipboardListener(_service);
-        _cleanupService = new CleanupService(_repository, () => UIConfig.RetentionDays);
+        _cleanupService = new CleanupService(_repository, () => ConfigLoader.Config.RetentionDays);
 
         // Configure paste timing
-        _service.PasteIgnoreWindowMs = PasteConfig.DuplicateIgnoreWindowMs;
+        _service.PasteIgnoreWindowMs = ConfigLoader.Config.DuplicateIgnoreWindowMs;
 
         // Run listener in background
         Task.Run(() => _listener.Run());
@@ -134,7 +137,7 @@ public sealed partial class App : Application, IDisposable
         Justification = "Startup registration is non-critical - any failure should not prevent app from running")]
     private static void RegisterForStartup()
     {
-        if (!StartupConfig.RunOnStartup) return;
+        if (!ConfigLoader.Config.RunOnStartup) return;
 
         try
         {

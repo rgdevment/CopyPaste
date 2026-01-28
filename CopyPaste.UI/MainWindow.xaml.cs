@@ -143,19 +143,22 @@ internal sealed partial class MainWindow : Window
 
     private void RegisterGlobalHotkey()
     {
-        uint modifiers = UIHotkey.UseWinKey ? Win32WindowHelper.MOD_WIN : Win32WindowHelper.MOD_CONTROL;
+        var config = ConfigLoader.Config;
+        uint modifiers = 0;
 
-        if (UIHotkey.UseAltKey)
-            modifiers |= Win32WindowHelper.MOD_ALT;
+        if (config.UseCtrlKey) modifiers |= Win32WindowHelper.MOD_CONTROL;
+        if (config.UseWinKey) modifiers |= Win32WindowHelper.MOD_WIN;
+        if (config.UseAltKey) modifiers |= Win32WindowHelper.MOD_ALT;
+        if (config.UseShiftKey) modifiers |= Win32WindowHelper.MOD_SHIFT;
 
-        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, UIHotkey.VirtualKey);
+        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
 
-        if (!registered && UIHotkey.UseWinKey)
+        // Fallback: if Win key fails, try with Ctrl instead
+        if (!registered && config.UseWinKey)
         {
-            modifiers = Win32WindowHelper.MOD_CONTROL;
-            if (UIHotkey.UseAltKey)
-                modifiers |= Win32WindowHelper.MOD_ALT;
-            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, UIHotkey.VirtualKey);
+            modifiers &= ~Win32WindowHelper.MOD_WIN;
+            modifiers |= Win32WindowHelper.MOD_CONTROL;
+            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
         }
     }
 
@@ -170,7 +173,7 @@ internal sealed partial class MainWindow : Window
     {
         if (_ is not ScrollViewer sv) return;
 
-        if (sv.ScrollableHeight > 0 && sv.VerticalOffset >= sv.ScrollableHeight - UIConfig.ScrollLoadThreshold)
+        if (sv.ScrollableHeight > 0 && sv.VerticalOffset >= sv.ScrollableHeight - ConfigLoader.Config.ScrollLoadThreshold)
             ViewModel.LoadMoreItems();
     }
 
@@ -221,11 +224,12 @@ internal sealed partial class MainWindow : Window
 
     private void MoveToRightEdge()
     {
+        var config = ConfigLoader.Config;
         var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        int width = UIConfig.WindowWidth;
-        int height = workArea.Height - UIConfig.WindowMarginBottom;
+        int width = config.WindowWidth;
+        int height = workArea.Height - config.WindowMarginBottom;
         int x = workArea.X + workArea.Width - width;
-        int y = workArea.Y + UIConfig.WindowMarginTop;
+        int y = workArea.Y + config.WindowMarginTop;
         _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
     }
 
@@ -388,7 +392,7 @@ internal sealed partial class MainWindow : Window
             {
                 UriSource = new Uri(imagePath),
                 CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
-                DecodePixelHeight = ThumbnailConfig.UIDecodeHeight
+                DecodePixelHeight = ConfigLoader.Config.ThumbnailUIDecodeHeight
             };
         }
         catch { /* Silently fail */ }
@@ -398,5 +402,11 @@ internal sealed partial class MainWindow : Window
     {
         if (SearchBox is TextBox textBox)
             ViewModel.SearchQuery = textBox.Text ?? string.Empty;
+    }
+
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var configWindow = new ConfigWindow();
+        configWindow.Activate();
     }
 }

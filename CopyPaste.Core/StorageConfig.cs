@@ -10,6 +10,7 @@ public static class StorageConfig
     public static string DatabasePath => Path.Combine(_appDataPath, "clipboard.db");
     public static string ImagesPath => Path.Combine(_appDataPath, "images");
     public static string ThumbnailsPath => Path.Combine(_appDataPath, "thumbs");
+    public static string ConfigPath => Path.Combine(_appDataPath, "config");
     private static string FirstRunFlagPath => Path.Combine(_appDataPath, ".initialized");
 
     internal static void SetBasePath(string basePath) => _appDataPath = basePath;
@@ -21,6 +22,7 @@ public static class StorageConfig
         Directory.CreateDirectory(_appDataPath);
         Directory.CreateDirectory(ImagesPath);
         Directory.CreateDirectory(ThumbnailsPath);
+        Directory.CreateDirectory(ConfigPath);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage(

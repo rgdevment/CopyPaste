@@ -185,8 +185,10 @@ internal static partial class FocusHelper
             return;
         }
 
+        var config = ConfigLoader.Config;
+
         // Wait for our window to hide
-        await Task.Delay(PasteConfig.DelayBeforeFocusMs).ConfigureAwait(false);
+        await Task.Delay(config.DelayBeforeFocusMs).ConfigureAwait(false);
 
         if (!RestorePreviousWindow())
         {
@@ -195,12 +197,12 @@ internal static partial class FocusHelper
         }
 
         // Use active polling to verify focus, with fallback to delay
-        bool focusConfirmed = await WaitForFocusAsync(PasteConfig.MaxFocusVerifyAttempts).ConfigureAwait(false);
+        bool focusConfirmed = await WaitForFocusAsync(config.MaxFocusVerifyAttempts).ConfigureAwait(false);
 
         if (!focusConfirmed)
         {
             // Fallback: wait the configured delay
-            await Task.Delay(PasteConfig.DelayBeforePasteMs).ConfigureAwait(false);
+            await Task.Delay(config.DelayBeforePasteMs).ConfigureAwait(false);
         }
 
         SimulatePaste();

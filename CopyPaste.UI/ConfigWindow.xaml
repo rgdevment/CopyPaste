@@ -1,0 +1,332 @@
+<Window
+    x:Class="CopyPaste.UI.ConfigWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Configuracion - CopyPaste">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+    <Grid Padding="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE713;" FontSize="28"/>
+                <TextBlock Text="Configuracion" FontSize="28" FontWeight="SemiBold"/>
+            </StackPanel>
+            <TextBlock Text="Los cambios se guardan en MyM.json y requieren reiniciar." FontSize="12" Opacity="0.6" Margin="0,8,0,0"/>
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+            <StackPanel Spacing="24">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE7E8;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="INICIO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Iniciar con Windows" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="Ejecuta en segundo plano al iniciar sesion" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ToggleSwitch x:Name="RunOnStartupSwitch" Grid.Column="1" OnContent="Si" OffContent="No"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE765;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="ATAJOS DE TECLADO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="16">
+                            <StackPanel>
+                                <TextBlock Text="Atajo para abrir/cerrar CopyPaste" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="Selecciona al menos 2 modificadores + una tecla" FontSize="11" Opacity="0.6" Margin="0,4,0,12"/>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <CheckBox x:Name="UseCtrlCheck" Content="Ctrl"/>
+                                    <CheckBox x:Name="UseWinCheck" Content="Win"/>
+                                    <CheckBox x:Name="UseAltCheck" Content="Alt"/>
+                                    <CheckBox x:Name="UseShiftCheck" Content="Shift"/>
+                                    <TextBlock Text="+" VerticalAlignment="Center" Margin="4,0"/>
+                                    <ComboBox x:Name="HotkeyCombo" Width="80" SelectedIndex="0">
+                                        <ComboBoxItem Content="V" Tag="86"/>
+                                        <ComboBoxItem Content="C" Tag="67"/>
+                                        <ComboBoxItem Content="X" Tag="88"/>
+                                        <ComboBoxItem Content="Z" Tag="90"/>
+                                        <ComboBoxItem Content="A" Tag="65"/>
+                                        <ComboBoxItem Content="S" Tag="83"/>
+                                        <ComboBoxItem Content="D" Tag="68"/>
+                                        <ComboBoxItem Content="Q" Tag="81"/>
+                                        <ComboBoxItem Content="W" Tag="87"/>
+                                        <ComboBoxItem Content="E" Tag="69"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <TextBlock x:Name="HotkeyPreview" Text="Atajo actual: Win + Alt + V" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE771;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="APARIENCIA" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="16">
+                            <Grid ToolTipService.ToolTip="Ancho del panel lateral en pixeles. Recomendado: 350-500px">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Ancho del panel" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Ancho en pixeles (300-800px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="WindowWidthBox" Grid.Column="1" Minimum="300" Maximum="800" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posicion vertical.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Margen superior" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Distancia desde arriba (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="WindowMarginTopBox" Grid.Column="1" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="4"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Espacio entre el borde inferior de la pantalla y el panel. Util si tienes barra de tareas grande.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Margen inferior" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Distancia desde abajo (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="WindowMarginBottomBox" Grid.Column="1" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="4"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="RENDIMIENTO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Elementos por pagina" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Cantidad a cargar por lote" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="PageSizeBox" Grid.Column="1" Minimum="5" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Limite en memoria" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Maximo elementos en RAM" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="MaxItemsBeforeCleanupBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Umbral de scroll" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Distancia para cargar mas (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="ScrollLoadThresholdBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE74E;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="ALMACENAMIENTO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                        <Grid ToolTipService.ToolTip="Dias para mantener historial del portapapeles. 0 = sin limite. Los elementos anclados nunca se borran.">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Dias de retencion" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="Dias para mantener historial (0=sin limite)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <NumberBox x:Name="RetentionDaysBox" Grid.Column="1" Minimum="0" Maximum="365" SpinButtonPlacementMode="Compact" SmallChange="7"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE77F;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="PEGADO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="16">
+                            <Grid ToolTipService.ToolTip="Ventana de tiempo para ignorar cambios duplicados en el portapapeles. Aumenta si ves duplicados.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Anti-duplicados (ms)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Tiempo para evitar duplicados" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="DuplicateIgnoreWindowMsBox" Grid.Column="1" Minimum="100" Maximum="1000" SpinButtonPlacementMode="Compact" SmallChange="50"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Tiempo de espera antes de intentar restaurar el foco a la ventana anterior. Aumenta si el pegado falla.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Delay foco (ms)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Espera antes de restaurar ventana" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="DelayBeforeFocusMsBox" Grid.Column="1" Minimum="10" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Tiempo de espera despues de restaurar foco antes de simular Ctrl+V. Apps pesadas necesitan mas tiempo.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Delay Ctrl+V (ms)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Espera antes de simular pegado" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="DelayBeforePasteMsBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Numero de intentos para verificar que el foco se restauro correctamente. Aumenta si el pegado es inconsistente.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Intentos de foco" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Verificaciones antes de pegar" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="MaxFocusVerifyAttemptsBox" Grid.Column="1" Minimum="1" Maximum="50" SpinButtonPlacementMode="Compact" SmallChange="5"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <FontIcon Glyph="&#xE91B;" FontSize="16" Foreground="#E8912D"/>
+                        <TextBlock Text="MINIATURAS (AVANZADO)" FontSize="12" FontWeight="SemiBold" Foreground="#E8912D" CharacterSpacing="50"/>
+                    </StackPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16" BorderBrush="#E8912D" BorderThickness="1">
+                        <StackPanel Spacing="16">
+                            <Border Background="#33E8912D" CornerRadius="4" Padding="12">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="#E8912D"/>
+                                    <TextBlock Text="Modificar puede afectar rendimiento. Solo si sabes lo que haces." FontSize="11" Foreground="#E8912D" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                            <Grid ToolTipService.ToolTip="Ancho maximo de las miniaturas generadas. Mayor = mejor calidad pero mas memoria y espacio en disco.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Ancho miniatura (px)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Ancho maximo de miniaturas" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="ThumbnailWidthBox" Grid.Column="1" Minimum="100" Maximum="400" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Calidad de compresion PNG (0-100). Mayor = mejor calidad pero archivos mas grandes.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Calidad PNG" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Compresion PNG (0-100)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="ThumbnailQualityPngBox" Grid.Column="1" Minimum="10" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Calidad de compresion JPEG (0-100). Usado para videos y audio. Mayor = mejor calidad.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Calidad JPEG" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Compresion JPEG (0-100)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="ThumbnailQualityJpegBox" Grid.Column="1" Minimum="10" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Tamano de imagen (bytes) que activa limpieza de memoria. Menor = menos RAM pero mas lento. 1MB = 1000000">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Umbral GC (bytes)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Activa limpieza de memoria" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="ThumbnailGCThresholdBox" Grid.Column="1" Minimum="100000" Maximum="5000000" SpinButtonPlacementMode="Compact" SmallChange="100000"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid ToolTipService.ToolTip="Altura de decodificacion para mostrar miniaturas en la UI. Menor = menos memoria pero menor calidad visual.">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Altura UI (px)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Altura de decodificacion UI" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="ThumbnailUIDecodeHeightBox" Grid.Column="1" Minimum="50" Maximum="300" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+        <Grid Grid.Row="2" Margin="0,24,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="ResetButton" Grid.Column="0" Content="Restablecer" Click="ResetButton_Click"/>
+            <Button x:Name="CancelButton" Grid.Column="2" Content="Cancelar" Click="CancelButton_Click" Margin="0,0,8,0"/>
+            <Button x:Name="SaveButton" Grid.Column="3" Content="Guardar y reiniciar" Click="SaveButton_Click" Style="{ThemeResource AccentButtonStyle}"/>
+        </Grid>
+    </Grid>
+</Window>

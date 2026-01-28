@@ -33,9 +33,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 
-    <ItemGroup>
-        <Page Remove="Controls\ClipboardItemCard.xaml" />
-    </ItemGroup>
+
+
 
     <ItemGroup>
         <Manifest Include="$(ApplicationManifest)" />
@@ -54,16 +53,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="Controls\ClipboardItemCard.xaml">
+        <Page Update="ConfigWindow.xaml">
+          <Generator>MSBuild:Compile</Generator>
+        </Page>
+        <Page Update="Controls\ClipboardItemCard.xaml">
             <Generator>MSBuild:Compile</Generator>
-        </None>
+        </Page>
     </ItemGroup>
+    
     
     <!-- Copy PRI file to publish output (CRITICAL for XAML loading in Release) -->
     <Target Name="CopyPriToPublish" AfterTargets="Publish">
-        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" 
-              DestinationFolder="$(PublishDir)" 
-              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
     </Target>
     
     <!-- Copy Assets folder to publish output -->
@@ -71,8 +72,6 @@
         <ItemGroup>
             <AssetFiles Include="$(OutputPath)Assets\**\*" />
         </ItemGroup>
-        <Copy SourceFiles="@(AssetFiles)" 
-              DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" 
-              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 </Project>

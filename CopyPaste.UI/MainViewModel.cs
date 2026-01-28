@@ -88,7 +88,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
     private void LoadItems()
     {
         var query = GetSearchQuery();
-        var items = _service.GetHistory(UIConfig.PageSize, 0, query, CurrentPinnedFilter);
+        var items = _service.GetHistory(ConfigLoader.Config.PageSize, 0, query, CurrentPinnedFilter);
 
         foreach (var item in items)
             Items.Add(CreateViewModel(item));
@@ -108,7 +108,7 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         _dispatcherQueue.TryEnqueue(() =>
         {
             var query = GetSearchQuery();
-            var newItems = _service.GetHistory(UIConfig.PageSize, Items.Count, query, CurrentPinnedFilter).ToList();
+            var newItems = _service.GetHistory(ConfigLoader.Config.PageSize, Items.Count, query, CurrentPinnedFilter).ToList();
 
             if (newItems.Count is 0)
             {
@@ -240,11 +240,12 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
 
     public void OnWindowDeactivated()
     {
-        if (Items.Count <= UIConfig.MaxItemsBeforeCleanup) return;
+        var config = ConfigLoader.Config;
+        if (Items.Count <= config.MaxItemsBeforeCleanup) return;
 
         SearchQuery = string.Empty;
 
-        while (Items.Count > UIConfig.PageSize)
+        while (Items.Count > config.PageSize)
             Items.RemoveAt(Items.Count - 1);
 
         _hasMoreItems = true;

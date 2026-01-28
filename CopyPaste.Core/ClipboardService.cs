@@ -185,7 +185,7 @@ public class ClipboardService(IClipboardRepository repository)
             OnThumbnailReady?.Invoke(item);
 
             // Force GC for large images to prevent memory buildup
-            if (rawData.Length >= ThumbnailConfig.GarbageCollectionThreshold)
+            if (rawData.Length >= ConfigLoader.Config.ThumbnailGCThreshold)
             {
                 GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
             }
@@ -228,7 +228,7 @@ public class ClipboardService(IClipboardRepository repository)
                 meta["size"] = (long)rawData.Length;
 
                 // Force GC for large images to prevent memory buildup
-                if (rawData.Length >= ThumbnailConfig.GarbageCollectionThreshold)
+                if (rawData.Length >= ConfigLoader.Config.ThumbnailGCThreshold)
                 {
                     GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
                 }
@@ -259,7 +259,7 @@ public class ClipboardService(IClipboardRepository repository)
             {
                 if (type == ClipboardContentType.Video)
                 {
-                    thumbData = WindowsThumbnailExtractor.GetThumbnail(filePath, ThumbnailConfig.Width);
+                    thumbData = WindowsThumbnailExtractor.GetThumbnail(filePath, ConfigLoader.Config.ThumbnailWidth);
                 }
                 else if (type == ClipboardContentType.Audio)
                 {
@@ -487,20 +487,21 @@ public class ClipboardService(IClipboardRepository repository)
     /// </summary>
     private static (int Width, int Height) GenerateThumbnail(SKBitmap sourceBitmap, string outputPath, SKEncodedImageFormat format)
     {
-        int targetHeight = (int)(sourceBitmap.Height * (ThumbnailConfig.Width / (double)sourceBitmap.Width));
+        var config = ConfigLoader.Config;
+        int targetHeight = (int)(sourceBitmap.Height * (config.ThumbnailWidth / (double)sourceBitmap.Width));
         var sampling = new SKSamplingOptions(SKCubicResampler.CatmullRom);
 
-        using var resized = new SKBitmap(ThumbnailConfig.Width, targetHeight);
+        using var resized = new SKBitmap(config.ThumbnailWidth, targetHeight);
         using (var canvas = new SKCanvas(resized))
         {
             canvas.Clear(SKColors.Transparent);
             using var imageToDraw = SKImage.FromBitmap(sourceBitmap);
             using var paint = new SKPaint { IsAntialias = true };
-            canvas.DrawImage(imageToDraw, SKRect.Create(ThumbnailConfig.Width, targetHeight), sampling, paint);
+            canvas.DrawImage(imageToDraw, SKRect.Create(config.ThumbnailWidth, targetHeight), sampling, paint);
         }
 
         using var thumbImage = SKImage.FromBitmap(resized);
-        int quality = format == SKEncodedImageFormat.Png ? ThumbnailConfig.QualityPng : ThumbnailConfig.QualityJpeg;
+        int quality = format == SKEncodedImageFormat.Png ? config.ThumbnailQualityPng : config.ThumbnailQualityJpeg;
         using var data = thumbImage.Encode(format, quality);
 
         using (var stream = File.Create(outputPath))
@@ -508,7 +509,7 @@ public class ClipboardService(IClipboardRepository repository)
             data.SaveTo(stream);
         }
 
-        return (ThumbnailConfig.Width, targetHeight);
+        return (config.ThumbnailWidth, targetHeight);
     }
 
     private static byte[]? ConvertDibToBmp(byte[] dibData)
