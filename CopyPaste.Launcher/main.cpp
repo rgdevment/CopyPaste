@@ -1,3 +1,268 @@
+/**
+ * CopyPaste Native Launcher
+ * Shows splash screen instantly while .NET app initializes
+ */
+
+#define WIN32_LEAN_AND_MEAN
+#define UNICODE
+#define _UNICODE
+
+#include <windows.h>
+#include <gdiplus.h>
+#include <string>
+
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "shell32.lib")
+
+// Window constants
+#define WINDOW_WIDTH       360
+#define WINDOW_HEIGHT      280
+#define LOGO_SIZE          80
+#define PROGRESS_HEIGHT    4
+#define MAX_WAIT_MS        (5 * 60 * 1000)
+#define PROGRESS_INTERVAL  50
+
+// Colors (BGR format: 0x00BBGGRR)
+#define CLR_BACKGROUND     0x00282828
+#define CLR_TEXT_TITLE     0x00FFFFFF
+#define CLR_TEXT_SUBTITLE  0x00888888
+#define CLR_TEXT_STATUS    0x00FFB464
+#define CLR_PROGRESS_BG    0x003C3C3C
+#define CLR_PROGRESS_FG    0x00FFB464
+#define CLR_BORDER         0x00404040
+
+// Global state
+static HWND g_hwnd = NULL;
+static HANDLE g_readyEvent = NULL;
+static HANDLE g_appProcess = NULL;
+static Gdiplus::Image* g_logoImage = NULL;
+static ULONG_PTR g_gdiplusToken = 0;
+static int g_progressPos = 0;
+static bool g_isClosing = false;
+static std::wstring g_statusText = L"Starting...";
+static std::wstring g_exeDir;
+static int g_statusIndex = 0;
+
+// English status messages
+static const wchar_t* STATUS_MESSAGES[] = {
+    L"Starting...",
+    L"Configuring for first use...",
+    L"Optimizing performance...",
+    L"This only happens once...",
+    L"Almost ready...",
+    L"Thanks for your patience..."
+};
+#define STATUS_COUNT 6
+
+// Forward declarations
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+void DrawSplash(HDC hdc);
+bool LaunchMainApp(void);
+void UpdateProgress(void);
+void Cleanup(void);
+
+static std::wstring GetExeDirectory(void) {
+    wchar_t path[MAX_PATH];
+    GetModuleFileNameW(NULL, path, MAX_PATH);
+    std::wstring fullPath(path);
+    size_t pos = fullPath.find_last_of(L"\\/");
+    return (pos != std::wstring::npos) ? fullPath.substr(0, pos) : fullPath;
+}
+
+static bool LoadLogo(void) {
+    std::wstring logoPath = g_exeDir + L"\\Assets\\CopyPasteLogo.png";
+    g_logoImage = Gdiplus::Image::FromFile(logoPath.c_str());
+    return (g_logoImage && g_logoImage->GetLastStatus() == Gdiplus::Ok);
+}
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nCmdShow) {
+    (void)hPrev; (void)pCmdLine; (void)nCmdShow;
+
+    g_exeDir = GetExeDirectory();
+
+    // Single instance check
+    HANDLE mutex = CreateMutexW(NULL, TRUE, L"CopyPaste_SingleInstance");
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        if (mutex) CloseHandle(mutex);
+        return 0;
+    }
+
+    // Create ready event
+    g_readyEvent = CreateEventW(NULL, TRUE, FALSE, L"CopyPaste_AppReady");
+    if (!g_readyEvent) {
+        if (mutex) CloseHandle(mutex);
+        return 1;
+    }
+
+    // Initialize GDI+
+    Gdiplus::GdiplusStartupInput gdiplusInput;
+    Gdiplus::GdiplusStartup(&g_gdiplusToken, &gdiplusInput, NULL);
+
+    // Load logo
+    LoadLogo();
+
+    // Register window class
+    WNDCLASSEXW wc;
+    ZeroMemory(&wc, sizeof(wc));
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(CLR_BACKGROUND);
+    wc.lpszClassName = L"CopyPasteSplash";
+
+    // Load icon
+    std::wstring iconPath = g_exeDir + L"\\Assets\\CopyPasteLogo.ico";
+    HICON hIcon = (HICON)LoadImageW(NULL, iconPath.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+    wc.hIcon = hIcon;
+    wc.hIconSm = hIcon;
+
+    RegisterClassExW(&wc);
+
+    // Center on screen
+    int screenW = GetSystemMetrics(SM_CXSCREEN);
+    int screenH = GetSystemMetrics(SM_CYSCREEN);
+    int posX = (screenW - WINDOW_WIDTH) / 2;
+    int posY = (screenH - WINDOW_HEIGHT) / 2;
+
+    // Create window
+    g_hwnd = CreateWindowExW(
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+        L"CopyPasteSplash",
+        L"CopyPaste",
+        WS_POPUP,
+        posX, posY, WINDOW_WIDTH, WINDOW_HEIGHT,
+        NULL, NULL, hInstance, NULL
+    );
+
+    if (!g_hwnd) {
+        Cleanup();
+        if (mutex) CloseHandle(mutex);
+        return 1;
+    }
+
+    ShowWindow(g_hwnd, SW_SHOW);
+    UpdateWindow(g_hwnd);
+
+    // Launch .NET app (CopyPaste.exe)
+    if (!LaunchMainApp()) {
+        MessageBoxW(NULL, L"Could not start CopyPaste.exe", L"Error", MB_OK | MB_ICONERROR);
+        Cleanup();
+        if (mutex) CloseHandle(mutex);
+        return 1;
+    }
+
+    // Set timers
+    SetTimer(g_hwnd, 1, PROGRESS_INTERVAL, NULL);
+    SetTimer(g_hwnd, 2, 3000, NULL);
+
+    // Main loop
+    MSG msg;
+    DWORD startTime = GetTickCount();
+
+    while (!g_isClosing) {
+        DWORD waitResult = MsgWaitForMultipleObjects(1, &g_readyEvent, FALSE, 100, QS_ALLINPUT);
+
+        if (waitResult == WAIT_OBJECT_0) {
+            g_isClosing = true;
+            break;
+        }
+
+        if (g_appProcess) {
+            DWORD exitCode = 0;
+            if (GetExitCodeProcess(g_appProcess, &exitCode) && exitCode != STILL_ACTIVE) {
+                g_isClosing = true;
+                break;
+            }
+        }
+
+        if ((GetTickCount() - startTime) > MAX_WAIT_MS) {
+            g_isClosing = true;
+            break;
+        }
+
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                g_isClosing = true;
+                break;
+            }
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+
+    Cleanup();
+    if (mutex) CloseHandle(mutex);
+    return 0;
+}
+
+bool LaunchMainApp(void) {
+    std::wstring appPath = g_exeDir + L"\\CopyPaste.exe";
+
+    STARTUPINFOW si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+
+    BOOL result = CreateProcessW(
+        appPath.c_str(),
+        NULL, NULL, NULL, FALSE, 0, NULL,
+        g_exeDir.c_str(),
+        &si, &pi
+    );
+
+    if (!result) {
+        return false;
+    }
+
+    g_appProcess = pi.hProcess;
+    CloseHandle(pi.hThread);
+    return true;
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP memBmp = CreateCompatibleBitmap(hdc, WINDOW_WIDTH, WINDOW_HEIGHT);
+        HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, memBmp);
+
+        DrawSplash(memDC);
+
+        BitBlt(hdc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, memDC, 0, 0, SRCCOPY);
+
+        SelectObject(memDC, oldBmp);
+        DeleteObject(memBmp);
+        DeleteDC(memDC);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_TIMER:
+        if (wParam == 1) {
+            UpdateProgress();
+        }
+        else if (wParam == 2) {
+            g_statusIndex = (g_statusIndex + 1) % STATUS_COUNT;
+            g_statusText = STATUS_MESSAGES[g_statusIndex];
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
+        return 0;
+
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    }
+
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
