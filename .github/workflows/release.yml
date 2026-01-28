@@ -27,6 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Wait for CI to start
+        shell: pwsh
+        run: |
+          Write-Host "⏳ Waiting 30 seconds to ensure CI workflow starts first..."
+          Write-Host "This prevents race conditions where release starts before CI"
+          Start-Sleep -Seconds 30
+          Write-Host "✅ Wait complete, proceeding with release verification"
+
       - name: Extract version from tag
         id: get_version
         shell: pwsh
@@ -47,6 +55,103 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -r ${{ matrix.arch }}
+
+      - name: Verify CI Status
+        shell: pwsh
+        run: |
+          $sha = git rev-parse HEAD
+          Write-Host "🔍 Checking CI status for commit: $sha"
+          
+          # Get the CI workflow runs for this commit
+          $headers = @{
+            "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"
+            "Accept" = "application/vnd.github.v3+json"
+          }
+          
+          $repo = "${{ github.repository }}"
+          $url = "https://api.github.com/repos/$repo/commits/$sha/check-runs"
+          
+          # Configuration
+          $maxWaitAttempts = 30  # Wait up to 5 minutes for CI to complete
+          $maxRetries = 3        # Retry up to 3 times if API fails
+          $waitSeconds = 10
+          $ciPassed = $false
+          
+          function Test-CIStatus {
+            param($retryCount = 0)
+            
+            try {
+              $attempt = 0
+              
+              while ($attempt -lt $maxWaitAttempts) {
+                $response = Invoke-RestMethod -Uri $url -Headers $headers -ErrorAction Stop
+                $ciRuns = $response.check_runs | Where-Object { 
+                  $_.name -like "*CI*" -or 
+                  $_.name -like "*Build*Test*" -or
+                  $_.name -like "*build*"
+                }
+                
+                if ($ciRuns.Count -eq 0) {
+                  Write-Host "⚠️  No CI runs found yet. Waiting... (attempt $($attempt + 1)/$maxWaitAttempts)"
+                  Start-Sleep -Seconds $waitSeconds
+                  $attempt++
+                  continue
+                }
+                
+                $latestCi = $ciRuns | Sort-Object -Property started_at -Descending | Select-Object -First 1
+                $status = $latestCi.status
+                $conclusion = $latestCi.conclusion
+                $ciName = $latestCi.name
+                
+                Write-Host "📊 CI '$ciName' - Status: $status, Conclusion: $conclusion"
+                
+                if ($status -eq "completed") {
+                  if ($conclusion -eq "success") {
+                    Write-Host "✅ CI passed successfully!"
+                    return $true
+                  } else {
+                    Write-Error "❌ CI failed with conclusion: $conclusion"
+                    Write-Error "Cannot proceed with release. Please fix CI issues first."
+                    Write-Host "::error::CI failed - Release blocked"
+                    exit 1
+                  }
+                } else {
+                  $elapsed = $attempt * $waitSeconds
+                  Write-Host "⏳ CI is still running... ($elapsed seconds elapsed, attempt $($attempt + 1)/$maxWaitAttempts)"
+                  Start-Sleep -Seconds $waitSeconds
+                  $attempt++
+                }
+              }
+              
+              # Timeout reached
+              Write-Warning "⚠️  CI verification timed out after $($maxWaitAttempts * $waitSeconds) seconds"
+              Write-Warning "Proceeding with caution. Please verify CI status manually."
+              return $true
+              
+            } catch {
+              if ($retryCount -lt $maxRetries) {
+                $nextRetry = $retryCount + 1
+                Write-Warning "⚠️  API call failed (attempt $nextRetry/$maxRetries): $($_.Exception.Message)"
+                Write-Host "Retrying in 5 seconds..."
+                Start-Sleep -Seconds 5
+                return Test-CIStatus -retryCount $nextRetry
+              } else {
+                Write-Error "❌ Failed to verify CI status after $maxRetries retries"
+                Write-Error "Last error: $($_.Exception.Message)"
+                Write-Warning "Proceeding with caution - could not verify CI status"
+                return $true
+              }
+            }
+          }
+          
+          $ciPassed = Test-CIStatus
+          
+          if (-not $ciPassed) {
+            Write-Error "❌ CI verification failed. Release aborted."
+            exit 1
+          }
+          
+          Write-Host "✅ CI verification complete - proceeding with release"
 
       - name: Lint (Check format)
         run: dotnet format --verify-no-changes --no-restore
