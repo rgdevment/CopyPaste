@@ -3,12 +3,13 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
   </Configurations>
-  <Folder Name="/CopyPaste.Resources/">
-    <File Path=".editorconfig" />
+  <Folder Name="/Launcher/">
+    <File Path="CopyPaste.Launcher/app.manifest" />
+    <File Path="CopyPaste.Launcher/main.cpp" />
+  </Folder>
+  <Folder Name="/Resources/">
     <File Path=".github/workflows/ci.yml" />
     <File Path=".github/workflows/release.yml" />
-    <File Path="CONTRIBUTING.md" />
-    <File Path="Directory.Build.props" />
     <File Path="LICENSE" />
     <File Path="setup.iss" />
   </Folder>

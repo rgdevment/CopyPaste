@@ -42,7 +42,7 @@ DisableWelcomePage=no
 ; Native app closure using Windows Restart Manager
 ; Close both the native launcher and the .NET app
 CloseApplications=yes
-CloseApplicationsFilter=CopyPaste.exe,CopyPaste.App.exe
+CloseApplicationsFilter=CopyPaste.exe,CopyPasteLauncher.exe
 RestartApplications=no
 
 [Languages]
