@@ -439,11 +439,28 @@ public class ClipboardService(IClipboardRepository repository)
         {
             using var tagFile = TagLib.File.Create(audioPath);
             var pictures = tagFile.Tag.Pictures;
-            return pictures.Length > 0 ? pictures[0].Data.Data : null;
+
+            if (pictures.Length == 0)
+            {
+                AppLogger.Info($"[ExtractAudioArtwork] No pictures found in {Path.GetFileName(audioPath)} (pictures.Length={pictures.Length})");
+                return null;
+            }
+
+            var firstPicture = pictures[0];
+            var data = firstPicture.Data?.Data;
+
+            if (data == null || data.Length == 0)
+            {
+                AppLogger.Warn($"[ExtractAudioArtwork] Picture data is null or empty for {Path.GetFileName(audioPath)}");
+                return null;
+            }
+
+            AppLogger.Info($"[ExtractAudioArtwork] Found picture with {data.Length} bytes, type={firstPicture.Type}");
+            return data;
         }
         catch (Exception ex)
         {
-            AppLogger.Exception(ex, "Audio artwork extraction failed");
+            AppLogger.Exception(ex, $"[ExtractAudioArtwork] Failed to extract from {Path.GetFileName(audioPath)}");
             return null;
         }
     }

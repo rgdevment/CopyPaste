@@ -47,6 +47,7 @@ public static partial class WindowsThumbnailExtractor
             int hr = SHCreateItemFromParsingName(filePath, IntPtr.Zero, _iShellItemImageFactoryGuid, out shellItem);
             if (hr != 0 || shellItem == IntPtr.Zero)
             {
+                AppLogger.Warn($"[WindowsThumbnailExtractor] SHCreateItemFromParsingName failed with HRESULT: 0x{hr:X8} for {Path.GetFileName(filePath)}");
                 return null;
             }
 
@@ -54,28 +55,53 @@ public static partial class WindowsThumbnailExtractor
             // Marshal.GetObjectForIUnknown adds a COM reference which is released by shellItem cleanup
             var factory = (IShellItemImageFactory)Marshal.GetObjectForIUnknown(shellItem);
 
-            // Request thumbnail
+            // Request thumbnail with multiple flag combinations if first attempt fails
             var size = new SIZE { cx = width, cy = width };
+
+            // Try with ThumbnailOnly first (strict)
             factory.GetImage(size, SIIGBF.ThumbnailOnly | SIIGBF.BiggerSizeOk, out hBitmap);
+
+            // If that fails, try without ThumbnailOnly (allows icon fallback)
+            if (hBitmap == IntPtr.Zero)
+            {
+                AppLogger.Info($"[WindowsThumbnailExtractor] ThumbnailOnly flag failed, trying with relaxed flags for {Path.GetFileName(filePath)}");
+                factory.GetImage(size, SIIGBF.BiggerSizeOk | SIIGBF.MemoryOnly, out hBitmap);
+            }
+
+            // Last resort: try without any special flags
+            if (hBitmap == IntPtr.Zero)
+            {
+                AppLogger.Info($"[WindowsThumbnailExtractor] All special flags failed, trying default for {Path.GetFileName(filePath)}");
+                factory.GetImage(size, SIIGBF.ResizeToFit, out hBitmap);
+            }
 
             if (hBitmap == IntPtr.Zero)
             {
+                AppLogger.Warn($"[WindowsThumbnailExtractor] GetImage returned null HBITMAP for {Path.GetFileName(filePath)}");
                 return null;
             }
 
             // Convert HBITMAP to byte array using SkiaSharp (Native AOT compatible)
-            return HBitmapToBytes(hBitmap);
+            var result = HBitmapToBytes(hBitmap);
+            if (result == null)
+            {
+                AppLogger.Warn($"[WindowsThumbnailExtractor] HBitmapToBytes failed for {Path.GetFileName(filePath)}");
+            }
+            return result;
         }
-        catch (COMException)
+        catch (COMException ex)
         {
+            AppLogger.Exception(ex, $"[WindowsThumbnailExtractor] COM error for {Path.GetFileName(filePath)}");
             return null;
         }
-        catch (InvalidCastException)
+        catch (InvalidCastException ex)
         {
+            AppLogger.Exception(ex, $"[WindowsThumbnailExtractor] InvalidCast error for {Path.GetFileName(filePath)}");
             return null;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            AppLogger.Exception(ex, $"[WindowsThumbnailExtractor] Unexpected error for {Path.GetFileName(filePath)}");
             return null;
         }
         finally
