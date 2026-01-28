@@ -36,14 +36,14 @@ constexpr int PROGRESS_HEIGHT = 4;
 constexpr DWORD MAX_WAIT_MS = 5 * 60 * 1000; // 5 minutes max
 constexpr DWORD PROGRESS_INTERVAL_MS = 50;
 
-// Colors (BGR format for Win32)
-constexpr COLORREF COLOR_BACKGROUND = RGB(40, 40, 40);
-constexpr COLORREF COLOR_TEXT_TITLE = RGB(255, 255, 255);
-constexpr COLORREF COLOR_TEXT_SUBTITLE = RGB(136, 136, 136);
-constexpr COLORREF COLOR_TEXT_STATUS = RGB(100, 180, 255);
-constexpr COLORREF COLOR_PROGRESS_BG = RGB(60, 60, 60);
-constexpr COLORREF COLOR_PROGRESS_FG = RGB(100, 180, 255);
-constexpr COLORREF COLOR_BORDER = RGB(64, 64, 64);
+// Colors (BGR format for Win32: 0x00BBGGRR)
+const COLORREF COLOR_BACKGROUND = 0x00282828;      // Dark gray
+const COLORREF COLOR_TEXT_TITLE = 0x00FFFFFF;      // White
+const COLORREF COLOR_TEXT_SUBTITLE = 0x00888888;   // Gray
+const COLORREF COLOR_TEXT_STATUS = 0x00FFB464;     // Light blue (BGR)
+const COLORREF COLOR_PROGRESS_BG = 0x003C3C3C;     // Darker gray
+const COLORREF COLOR_PROGRESS_FG = 0x00FFB464;     // Light blue (BGR)
+const COLORREF COLOR_BORDER = 0x00404040;          // Border gray
 
 // Global state
 HWND g_hwnd = nullptr;
