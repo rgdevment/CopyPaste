@@ -51,7 +51,7 @@ There are certainly capable tools out there, but many fail to deliver a modern, 
 We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further.
 * **The Goal:** Bring the polish and fluidity often associated with macOS utilities to Windows.
 * **The Philosophy:** Adopt a pure Windows 11 design language so the app feels 100% native.
-* **The Standard:** Efficiency (NativeAOT) is non-negotiable, but so is visual elegance.
+* **The Standard:** Efficiency and instant responsiveness are non-negotiable, but so is visual elegance.
 
 **This is a passion project.** We are not selling data. We are not upselling "Pro" features. We are building the tool *we* needed for our daily development work, and we are sharing it with the community. Open Source, free, and transparent.
 
@@ -62,8 +62,8 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 This project is currently in **Alpha / Proof of Concept**. We are pioneering desktop development with C# 14.
 
 * 🎨 **Native & Modern UI:** Built with **WinUI 3**. It respects your system theme (Light/Dark) and uses standard Windows controls.
-* ⚡ **Blazing Fast:** Compiled with **NativeAOT** for instant startup times and practically zero lag.
-* 🧠 **Smart Memory:** Targeted to run between **30-60MB RAM**. (Configurable limits coming soon).
+* ⚡ **Instant Startup:** A native C++ launcher displays a splash screen immediately while the .NET app initializes in the background. No waiting, no blank screens.
+* 🧠 **Smart Memory:** Targeted to run between **30-60MB RAM**. Optimized with ReadyToRun precompilation.
 * 📂 **Rich History:** Seamlessly handles Text, Images, and File paths.
 * 🔒 **Privacy First:** 100% Local. Your clipboard history never leaves your machine.
 
@@ -81,25 +81,84 @@ This project is currently in **Alpha / Proof of Concept**. We are pioneering des
 
 ### Installation
 1.  Navigate to the [**Releases Page**](https://github.com/rgdevment/CopyPaste/releases).
-2.  Choose your flavor:
-    * **Installer (`.exe`):** (Recommended) Installs to AppData and creates shortcuts.
-    * **Portable (`.zip`):** Just unzip and run `CopyPaste.exe`.
-3.  **SmartScreen Note:** Since this is a community open-source project, the certificate is self-signed. If Windows warns you, click `More Info` -> `Run Anyway`.
+2.  Download the **Installer (`.exe`)** — it installs to your AppData folder and creates Start Menu shortcuts automatically.
+3.  Run the installer and follow the prompts.
+
+### ⚠️ Security Warnings (Self-Signed Certificate)
+
+Since CopyPaste is an **independent open-source project**, we use a self-signed certificate. This means Windows and your browser may show security warnings. **This is normal and expected.**
+
+<details>
+<summary><strong>🌐 Browser Warning (When Downloading)</strong></summary>
+
+Your browser may block or warn about the download:
+- **Chrome:** Click the `⋮` menu on the download → `Keep dangerous file`
+- **Edge:** Click `...` → `Keep` → `Keep anyway`
+- **Firefox:** Usually allows the download, but may warn
+
+</details>
+
+<details>
+<summary><strong>🛡️ Windows SmartScreen (When Running)</strong></summary>
+
+When you run the installer or app for the first time:
+
+1. Windows shows **"Windows protected your PC"**
+2. Click **`More info`** (small link below the message)
+3. Click **`Run anyway`**
+
+This only happens once. After installation, CopyPaste runs normally.
+
+</details>
+
+<details>
+<summary><strong>🔒 Why the warnings?</strong></summary>
+
+- Code signing certificates from trusted authorities cost **$200-400/year**
+- As a free, open-source project, we can't justify this expense
+- The app is **100% open source** — you can inspect every line of code
+- We provide SHA256 checksums for each release for verification
+
+</details>
+
+### How It Works
+CopyPaste uses a **dual-process architecture** for the best user experience:
+- **`CopyPaste.exe`** — A lightweight native launcher that shows a splash screen instantly.
+- **`CopyPaste.App.exe`** — The main .NET application that runs in the background.
+
+When you launch CopyPaste, the native launcher appears immediately while the .NET app initializes. Once ready, the splash closes automatically and CopyPaste is ready to use. This only takes a few seconds on first run; subsequent launches are nearly instant.
 
 ### Compatibility
 * **OS:** Windows 10 (1809+) or Windows 11.
-* **Architecture:**
-    * ✅ **x64:** Fully tested and supported.
-    * 🧪 **ARM64:** Builds available (Experimental - Feedback needed from Surface/Snapdragon users!).
+* **Architecture:** x64 (64-bit) fully tested and supported.
+
+---
+
+## 🐛 Found a Bug? Have Feedback?
+
+We'd love to hear from you! You don't need to be a developer to help.
+
+| Type | How to Report |
+| :--- | :--- |
+| 🐛 **Bug Report** | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — describe what happened and steps to reproduce |
+| 💡 **Feature Request** | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell us what you'd like to see |
+| ⭐ **Enjoying it?** | Give us a star on GitHub — it helps others discover the project! |
+
+**When reporting bugs, please include:**
+- Windows version (e.g., Windows 11 23H2)
+- What you were doing when the issue occurred
+- Any error messages you saw
 
 ---
 
 ## 🚧 Roadmap & Transparency
 We believe in radical honesty about the state of the app:
 
-- [ ] **Internationalization:** UI is currently hardcoded in **Spanish**. English support arrives in v0.2.0.
-- [ ] **Configuration UI:** Settings are currently static. A full preferences menu is in development.
+- [x] **Instant Startup:** Native C++ launcher with splash screen.
+- [x] **English UI:** Full English interface implemented.
+- [ ] **Configuration UI:** Settings are currently file-based (`MyM.json`). A visual preferences menu is in development.
 - [ ] **Search:** Implementing fuzzy search for history items.
+- [ ] **Internationalization:** Multi-language support planned for future versions.
 
 ---
 
@@ -107,9 +166,6 @@ We believe in radical honesty about the state of the app:
 **CopyPaste** is a community effort. We welcome anyone who shares our vision of high-quality, native Windows apps.
 
 Please read our [**CONTRIBUTING.md**](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-**Specific Help Wanted:**
-* 🧪 **ARM64 Testing:** If you have a Surface Pro X or Snapdragon Dev Kit, please test our ARM64 build and report issues!
 
 ---
 
@@ -121,8 +177,10 @@ We are using this project to push the boundaries of modern .NET development on t
 | **C# 14** | Latest language features for cleaner code. |
 | **.NET 10 Preview** | "Bleeding edge" runtime performance. |
 | **WinUI 3** | The native UI framework for Windows App SDK. |
-| **NativeAOT** | Ahead-of-Time compilation (No JIT lag). |
-| **Win32 Hooks** | Low-level clipboard monitoring. |
+| **ReadyToRun (R2R)** | Pre-compiled IL for faster cold starts. |
+| **Native C++ Launcher** | Instant splash screen while .NET initializes. |
+| **Win32 Interop** | Low-level clipboard monitoring via hooks. |
+| **SQLite** | Local, lightweight database for clipboard history. |
 
 ---
 
