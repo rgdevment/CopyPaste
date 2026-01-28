@@ -22,7 +22,7 @@
 #define LOGO_SIZE          80
 #define PROGRESS_HEIGHT    4
 #define MAX_WAIT_MS        (5 * 60 * 1000)
-#define PROGRESS_INTERVAL  100
+#define PROGRESS_INTERVAL  150
 
 // Colors (BGR format: 0x00BBGGRR)
 #define CLR_BACKGROUND     0x00282828
@@ -32,6 +32,15 @@
 #define CLR_PROGRESS_BG    0x003C3C3C
 #define CLR_PROGRESS_FG    0x00FFB464
 #define CLR_BORDER         0x00404040
+
+// Cached GDI objects (created once, reused)
+static HFONT g_titleFont = NULL;
+static HFONT g_subFont = NULL;
+static HFONT g_statusFont = NULL;
+static HBRUSH g_bgBrush = NULL;
+static HBRUSH g_progressBgBrush = NULL;
+static HBRUSH g_progressFgBrush = NULL;
+static HBRUSH g_borderBrush = NULL;
 
 // Global state
 static HWND g_hwnd = NULL;
@@ -62,6 +71,32 @@ void DrawSplash(HDC hdc);
 bool LaunchMainApp(void);
 void UpdateProgress(void);
 void Cleanup(void);
+
+static void InitGdiObjects(void) {
+    g_titleFont = CreateFontW(28, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+    g_subFont = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+    g_statusFont = CreateFontW(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+    g_bgBrush = CreateSolidBrush(CLR_BACKGROUND);
+    g_progressBgBrush = CreateSolidBrush(CLR_PROGRESS_BG);
+    g_progressFgBrush = CreateSolidBrush(CLR_PROGRESS_FG);
+    g_borderBrush = CreateSolidBrush(CLR_BORDER);
+}
+
+static void CleanupGdiObjects(void) {
+    if (g_titleFont) { DeleteObject(g_titleFont); g_titleFont = NULL; }
+    if (g_subFont) { DeleteObject(g_subFont); g_subFont = NULL; }
+    if (g_statusFont) { DeleteObject(g_statusFont); g_statusFont = NULL; }
+    if (g_bgBrush) { DeleteObject(g_bgBrush); g_bgBrush = NULL; }
+    if (g_progressBgBrush) { DeleteObject(g_progressBgBrush); g_progressBgBrush = NULL; }
+    if (g_progressFgBrush) { DeleteObject(g_progressFgBrush); g_progressFgBrush = NULL; }
+    if (g_borderBrush) { DeleteObject(g_borderBrush); g_borderBrush = NULL; }
+}
 
 static std::wstring GetExeDirectory(void) {
     wchar_t path[MAX_PATH];
@@ -100,8 +135,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
     Gdiplus::GdiplusStartupInput gdiplusInput;
     Gdiplus::GdiplusStartup(&g_gdiplusToken, &gdiplusInput, NULL);
 
-    // Load logo
+    // Load logo and initialize cached GDI objects
     LoadLogo();
+    InitGdiObjects();
 
     // Register window class
     WNDCLASSEXW wc;
@@ -111,7 +147,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = CreateSolidBrush(CLR_BACKGROUND);
+    wc.hbrBackground = g_bgBrush;
     wc.lpszClassName = L"CopyPasteSplash";
 
     // Load icon
@@ -275,14 +311,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 void DrawSplash(HDC hdc) {
     RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
-    HBRUSH bgBrush = CreateSolidBrush(CLR_BACKGROUND);
-    FillRect(hdc, &rect, bgBrush);
-    DeleteObject(bgBrush);
+    FillRect(hdc, &rect, g_bgBrush);
 
-    // Draw logo
+    // Draw logo (use lower quality for speed)
     if (g_logoImage) {
         Gdiplus::Graphics gfx(hdc);
-        gfx.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+        gfx.SetInterpolationMode(Gdiplus::InterpolationModeLowQuality);
         int logoX = (WINDOW_WIDTH - LOGO_SIZE) / 2;
         int logoY = 40;
         gfx.DrawImage(g_logoImage, logoX, logoY, LOGO_SIZE, LOGO_SIZE);
@@ -290,54 +324,33 @@ void DrawSplash(HDC hdc) {
 
     SetBkMode(hdc, TRANSPARENT);
 
-    // Title
-    HFONT titleFont = CreateFontW(28, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
-    HFONT oldFont = (HFONT)SelectObject(hdc, titleFont);
+    // Title (use cached font)
+    HFONT oldFont = (HFONT)SelectObject(hdc, g_titleFont);
     SetTextColor(hdc, CLR_TEXT_TITLE);
-
     RECT titleRect = { 0, 135, WINDOW_WIDTH, 170 };
     DrawTextW(hdc, L"CopyPaste", -1, &titleRect, DT_CENTER | DT_SINGLELINE);
 
-    SelectObject(hdc, oldFont);
-    DeleteObject(titleFont);
-
-    // Subtitle
-    HFONT subFont = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
-    oldFont = (HFONT)SelectObject(hdc, subFont);
+    // Subtitle (use cached font)
+    SelectObject(hdc, g_subFont);
     SetTextColor(hdc, CLR_TEXT_SUBTITLE);
-
     RECT subRect = { 0, 170, WINDOW_WIDTH, 195 };
     DrawTextW(hdc, L"Clipboard Manager", -1, &subRect, DT_CENTER | DT_SINGLELINE);
 
-    SelectObject(hdc, oldFont);
-    DeleteObject(subFont);
-
-    // Status
-    HFONT statusFont = CreateFontW(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
-    oldFont = (HFONT)SelectObject(hdc, statusFont);
+    // Status (use cached font)
+    SelectObject(hdc, g_statusFont);
     SetTextColor(hdc, CLR_TEXT_STATUS);
-
     RECT statusRect = { 20, 210, WINDOW_WIDTH - 20, 235 };
     DrawTextW(hdc, g_statusText.c_str(), -1, &statusRect, DT_CENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
-    DeleteObject(statusFont);
 
-    // Progress bar background
+    // Progress bar background (use cached brush)
     int progY = 245;
     int progMargin = 40;
     RECT progBgRect = { progMargin, progY, WINDOW_WIDTH - progMargin, progY + PROGRESS_HEIGHT };
-    HBRUSH progBgBrush = CreateSolidBrush(CLR_PROGRESS_BG);
-    FillRect(hdc, &progBgRect, progBgBrush);
-    DeleteObject(progBgBrush);
+    FillRect(hdc, &progBgRect, g_progressBgBrush);
 
-    // Progress bar foreground (animated)
+    // Progress bar foreground (animated, use cached brush)
     int progWidth = WINDOW_WIDTH - (progMargin * 2);
     int barWidth = progWidth / 3;
     int barX = progMargin + (g_progressPos % (progWidth + barWidth)) - barWidth;
@@ -346,17 +359,13 @@ void DrawSplash(HDC hdc) {
     SelectClipRgn(hdc, clipRgn);
 
     RECT progFgRect = { barX, progY, barX + barWidth, progY + PROGRESS_HEIGHT };
-    HBRUSH progFgBrush = CreateSolidBrush(CLR_PROGRESS_FG);
-    FillRect(hdc, &progFgRect, progFgBrush);
-    DeleteObject(progFgBrush);
+    FillRect(hdc, &progFgRect, g_progressFgBrush);
 
     SelectClipRgn(hdc, NULL);
     DeleteObject(clipRgn);
 
-    // Border
-    HBRUSH borderBrush = CreateSolidBrush(CLR_BORDER);
-    FrameRect(hdc, &rect, borderBrush);
-    DeleteObject(borderBrush);
+    // Border (use cached brush)
+    FrameRect(hdc, &rect, g_borderBrush);
 }
 
 void UpdateProgress(void) {
@@ -369,6 +378,7 @@ void UpdateProgress(void) {
     InvalidateRect(g_hwnd, &progRect, FALSE);
 }
 
+
 void Cleanup(void) {
     if (g_hwnd) {
         KillTimer(g_hwnd, 1);
@@ -376,6 +386,9 @@ void Cleanup(void) {
         DestroyWindow(g_hwnd);
         g_hwnd = NULL;
     }
+
+    // Cleanup cached GDI objects
+    CleanupGdiObjects();
 
     if (g_logoImage) {
         delete g_logoImage;
