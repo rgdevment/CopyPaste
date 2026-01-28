@@ -168,8 +168,11 @@ jobs:
           Write-Host "🔨 Building native C++ launcher..."
           Push-Location CopyPaste.Launcher
           
-          # Compile with optimizations and embed manifest
-          cl.exe /O2 /MT /EHsc main.cpp `
+          # Compile resource file (icon)
+          rc.exe /fo resources.res resources.rc
+          
+          # Compile with optimizations, embed manifest and icon
+          cl.exe /O2 /MT /EHsc main.cpp resources.res `
             /link user32.lib gdi32.lib gdiplus.lib shell32.lib `
             /OUT:CopyPaste.exe `
             /SUBSYSTEM:WINDOWS `
@@ -294,12 +297,6 @@ jobs:
             & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
           }
 
-      - name: Create Portable Zip
-        shell: pwsh
-        run: |
-          $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
-          Compress-Archive -Path "$targetDir/*" -DestinationPath "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-portable.zip" -Force
-
       - name: Install Inno Setup
         run: choco install innosetup --no-progress
 
@@ -343,7 +340,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-portable.zip
             CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -22,7 +22,7 @@
 #define LOGO_SIZE          80
 #define PROGRESS_HEIGHT    4
 #define MAX_WAIT_MS        (5 * 60 * 1000)
-#define PROGRESS_INTERVAL  50
+#define PROGRESS_INTERVAL  100
 
 // Colors (BGR format: 0x00BBGGRR)
 #define CLR_BACKGROUND     0x00282828
@@ -155,22 +155,25 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
         return 1;
     }
 
-    // Set timers
+    // Set timers (reduced frequency for lower CPU usage)
     SetTimer(g_hwnd, 1, PROGRESS_INTERVAL, NULL);
-    SetTimer(g_hwnd, 2, 3000, NULL);
+    SetTimer(g_hwnd, 2, 4000, NULL);
 
     // Main loop
     MSG msg;
     DWORD startTime = GetTickCount();
 
     while (!g_isClosing) {
-        DWORD waitResult = MsgWaitForMultipleObjects(1, &g_readyEvent, FALSE, 100, QS_ALLINPUT);
+        // Wait for event OR messages (timeout 200ms)
+        DWORD waitResult = MsgWaitForMultipleObjects(1, &g_readyEvent, FALSE, 200, QS_ALLINPUT);
 
-        if (waitResult == WAIT_OBJECT_0) {
+        // CRITICAL: Always check if event is signaled (fixes detection issue)
+        if (WaitForSingleObject(g_readyEvent, 0) == WAIT_OBJECT_0) {
             g_isClosing = true;
             break;
         }
 
+        // Check if process exited
         if (g_appProcess) {
             DWORD exitCode = 0;
             if (GetExitCodeProcess(g_appProcess, &exitCode) && exitCode != STILL_ACTIVE) {
@@ -179,18 +182,22 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
             }
         }
 
+        // Check timeout
         if ((GetTickCount() - startTime) > MAX_WAIT_MS) {
             g_isClosing = true;
             break;
         }
 
-        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT) {
-                g_isClosing = true;
-                break;
+        // Process messages only if available
+        if (waitResult == WAIT_OBJECT_0 + 1) {
+            while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+                if (msg.message == WM_QUIT) {
+                    g_isClosing = true;
+                    break;
+                }
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
             }
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
         }
     }
 
