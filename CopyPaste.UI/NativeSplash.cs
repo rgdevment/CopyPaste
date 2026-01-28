@@ -31,7 +31,12 @@ public sealed partial class NativeSplash : IDisposable
     {
         _hInstance = GetModuleHandle(null);
 
-        // Run message loop on separate thread (GDI+ init happens there to not block)
+        // Initialize GDI+ and load logo BEFORE creating window for faster display
+        var input = new GdiplusStartupInput { GdiplusVersion = 1 };
+        _ = GdiplusStartup(out _gdiplusToken, ref input, out _);
+        LoadLogoImage();
+
+        // Run message loop on separate thread
         _messageThread = new Thread(CreateAndShowWindow)
         {
             IsBackground = true,
@@ -40,8 +45,8 @@ public sealed partial class NativeSplash : IDisposable
         _messageThread.SetApartmentState(ApartmentState.STA);
         _messageThread.Start();
 
-        // Wait for window to be created (max 2 seconds)
-        _windowCreated.Wait(2000);
+        // Wait for window to be created (should be very fast now, max 500ms)
+        _windowCreated.Wait(500);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Logo loading is non-critical")]
@@ -68,7 +73,7 @@ public sealed partial class NativeSplash : IDisposable
     {
         const string className = "CopyPasteSplash";
 
-        // Register window class first, show window immediately
+        // Register window class
         var wc = new WNDCLASSEX
         {
             cbSize = (uint)Marshal.SizeOf<WNDCLASSEX>(),
@@ -103,18 +108,10 @@ public sealed partial class NativeSplash : IDisposable
             return;
         }
 
-        // Show window immediately, then load logo
+        // Show window immediately (logo already loaded)
         ShowWindow(_hwnd, 5); // SW_SHOW
         UpdateWindow(_hwnd);
         _windowCreated.Set();
-
-        // Initialize GDI+ and load logo AFTER window is visible
-        var input = new GdiplusStartupInput { GdiplusVersion = 1 };
-        _ = GdiplusStartup(out _gdiplusToken, ref input, out _);
-        LoadLogoImage();
-
-        // Force repaint with logo
-        InvalidateRect(_hwnd, nint.Zero, true);
 
         // Message loop
         while (GetMessage(out var msg, nint.Zero, 0, 0) > 0)
@@ -170,7 +167,7 @@ public sealed partial class NativeSplash : IDisposable
             _ = SetTextColor(hdc, 0x00888888); // Gray
 
             var subtitleRect = new RECT { top = 170, right = _width, bottom = 210 };
-            _ = DrawText(hdc, "Compiling the APP for your computer...", -1, ref subtitleRect, 0x00000001);
+            _ = DrawText(hdc, "Compiling the APP...", -1, ref subtitleRect, 0x00000001);
 
             SelectObject(hdc, oldFont);
             DeleteObject(hFont);
@@ -202,6 +199,9 @@ public sealed partial class NativeSplash : IDisposable
         if (_disposed) return;
         _disposed = true;
         Close();
+
+        // Wait for message thread to finish (with timeout)
+        _messageThread?.Join(100);
 
         if (_logoImage != nint.Zero)
         {

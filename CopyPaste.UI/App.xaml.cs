@@ -37,12 +37,9 @@ public sealed partial class App : Application, IDisposable
 
     public App()
     {
-        // Show native splash immediately on first run (before WinUI initializes)
+        // Show native splash on every startup (important for JIT compilation on first run and after updates)
         StorageConfig.Initialize();
-        if (StorageConfig.IsFirstRun)
-        {
-            _splash = new NativeSplash();
-        }
+        _splash = new NativeSplash();
 
         this.UnhandledException += OnUnhandledException;
         InitializeComponent();
@@ -57,14 +54,10 @@ public sealed partial class App : Application, IDisposable
         _window = new MainWindow(_service!);
         _window.Activate();
 
-        // Close splash after main window is ready
-        if (_splash != null)
-        {
-            StorageConfig.MarkAsInitialized();
-            _splash.Close();
-            _splash.Dispose();
-            _splash = null;
-        }
+        // Close splash after main window is ready and dispose resources immediately
+        _splash?.Close();
+        _splash?.Dispose();
+        _splash = null;
 
         AppLogger.Info("Main window launched");
     }
