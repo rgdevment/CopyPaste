@@ -30,17 +30,27 @@ namespace CopyPaste.UI;
 public sealed partial class App : Application, IDisposable
 {
     private const string _launcherReadyEventName = "CopyPaste_AppReady";
+    private const string _mutexName = "Global\\CopyPaste_SingleInstance_Mutex";
 
     private Window? _window;
     private WindowsClipboardListener? _listener;
     private ClipboardService? _service;
     private CleanupService? _cleanupService;
     private SqliteRepository? _repository;
+    private Mutex? _singleInstanceMutex;
     private bool _isDisposed;
     public bool IsExiting { get; private set; }
 
     public App()
     {
+        // Check for existing instance first
+        if (!TryAcquireSingleInstance())
+        {
+            // Another instance is running - exit silently
+            Environment.Exit(0);
+            return;
+        }
+
         StorageConfig.Initialize();
         this.UnhandledException += OnUnhandledException;
         InitializeComponent();
@@ -118,9 +128,75 @@ public sealed partial class App : Application, IDisposable
             _listener?.Dispose();
             _cleanupService?.Dispose();
             _repository?.Dispose();
+            _singleInstanceMutex?.ReleaseMutex();
+            _singleInstanceMutex?.Dispose();
         }
         _isDisposed = true;
     }
+
+    /// <summary>
+    /// Attempts to acquire the single instance mutex.
+    /// Returns true if this is the first instance, false if another instance is already running.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Single instance check is non-critical - any failure should not prevent app from running")]
+    private bool TryAcquireSingleInstance()
+    {
+        try
+        {
+            _singleInstanceMutex = new Mutex(true, _mutexName, out bool createdNew);
+
+            if (!createdNew)
+            {
+                // Mutex already exists - another instance is running
+                _singleInstanceMutex.Dispose();
+                _singleInstanceMutex = null;
+
+                // Show message to user
+                ShowInstanceAlreadyRunningMessage();
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Failed to check for single instance");
+            // On error, allow the app to continue
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Shows a message box informing the user that the application is already running.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Message display is non-critical")]
+    private static void ShowInstanceAlreadyRunningMessage()
+    {
+        try
+        {
+            // Use native Windows MessageBox since WinUI window isn't created yet
+            var hwnd = IntPtr.Zero;
+            var message = "CopyPaste is already running.\n\nCheck the system tray for the application icon.";
+            var caption = "CopyPaste";
+            const uint MB_OK = 0x00000000;
+            const uint MB_ICONINFORMATION = 0x00000040;
+
+            _ = MessageBox(hwnd, message, caption, MB_OK | MB_ICONINFORMATION);
+        }
+        catch
+        {
+            // If MessageBox fails, just exit silently
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 
     /// <summary>
     /// Signals the native launcher that the app is ready.
