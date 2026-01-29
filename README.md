@@ -59,7 +59,7 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 
 ## ✨ Key Features
 
-> 🚀 **v1.0.0-beta.1** — This is our first public beta! We're excited to share CopyPaste with you and would love your feedback.
+> 🚀 **v1.0.0-beta.2** — This is our latest beta! See [Release Notes](https://github.com/rgdevment/CopyPaste/releases) for detailed changes and improvements.
 
 * 🎨 **Native & Modern UI:** Built with **WinUI 3**. It respects your system theme (Light/Dark) and uses standard Windows controls.
 * ⚡ **Instant Startup:** A native C++ launcher displays a splash screen immediately while the .NET app initializes in the background. No waiting, no blank screens.
@@ -200,21 +200,11 @@ We'd love to hear from you! **Your feedback is crucial for this beta release.**
 
 ---
 
-## 🚧 Roadmap & Transparency
-We believe in radical honesty about the state of the app:
+## 🚧 Roadmap & Release Notes
 
-**✅ Completed in v1.0.0-beta.1:**
-- [x] Native C++ launcher with instant splash screen
-- [x] Full English and Spanish interfaces
-- [x] Multi-language support with automatic detection
-- [x] Visual configuration panel (Settings)
-- [x] Fuzzy search for clipboard history
-- [x] System tray integration
-- [x] Global hotkey support (customizable)
-- [x] Pin/unpin clipboard items
-- [x] Text, images, files, and folders support
-- [x] Full keyboard navigation (Tab, Enter, Delete, P)
-- [x] Single instance validation (prevents multiple instances)
+We believe in transparency about the state of the app. For detailed information about completed features, improvements, and upcoming changes:
+
+📋 **[View Release Notes & Changelog](https://github.com/rgdevment/CopyPaste/releases)** — Complete history of all versions, features, and bug fixes.
 
 ---
 
