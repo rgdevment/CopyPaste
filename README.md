@@ -39,7 +39,7 @@
 
 We prioritize **Native Aesthetics, Obsessive Performance, and Rock-Solid Stability.** It’s not just about low RAM usage; it’s about a design that feels right and a robustness you can rely on daily. Built on the bleeding edge with **.NET 10 Preview** and **WinUI 3**, it seamlessly integrates with your workflow, feeling less like a third-party tool and more like a feature Windows forgot to include.
 
-> **⚠️ Disclaimer:** Currently tested and validated primarily on **Windows 11 (x64)**.
+> 🧪 **Beta Release:** This is a beta version. We've tested extensively on Windows 11 (x64), but we need your help finding edge cases!
 
 ---
 
@@ -57,15 +57,17 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 
 ---
 
-## ✨ Key Features (Alpha)
+## ✨ Key Features
 
-This project is currently in **Alpha / Proof of Concept**. We are pioneering desktop development with C# 14.
+> 🚀 **v1.0.0-beta.1** — This is our first public beta! We're excited to share CopyPaste with you and would love your feedback.
 
 * 🎨 **Native & Modern UI:** Built with **WinUI 3**. It respects your system theme (Light/Dark) and uses standard Windows controls.
 * ⚡ **Instant Startup:** A native C++ launcher displays a splash screen immediately while the .NET app initializes in the background. No waiting, no blank screens.
 * 🧠 **Smart Memory:** Targeted to run between **30-60MB RAM**. Optimized with ReadyToRun precompilation.
 * 📂 **Rich History:** Seamlessly handles Text, Images, and File paths.
 * 🔒 **Privacy First:** 100% Local. Your clipboard history never leaves your machine.
+* 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
+* ⚙️ **Configurable:** Hotkeys, appearance, performance settings, and more.
 
 ---
 
@@ -136,29 +138,42 @@ When you launch CopyPaste, the native launcher appears immediately while the .NE
 
 ## 🐛 Found a Bug? Have Feedback?
 
-We'd love to hear from you! You don't need to be a developer to help.
+We'd love to hear from you! **Your feedback is crucial for this beta release.**
 
 | Type | How to Report |
 | :--- | :--- |
 | 🐛 **Bug Report** | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — describe what happened and steps to reproduce |
 | 💡 **Feature Request** | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell us what you'd like to see |
+| 💬 **General Feedback** | [Start a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — share your thoughts, suggestions, or questions |
 | ⭐ **Enjoying it?** | Give us a star on GitHub — it helps others discover the project! |
 
 **When reporting bugs, please include:**
 - Windows version (e.g., Windows 11 23H2)
 - What you were doing when the issue occurred
 - Any error messages you saw
+- CopyPaste version (check in Settings or the installer name)
 
 ---
 
 ## 🚧 Roadmap & Transparency
 We believe in radical honesty about the state of the app:
 
-- [x] **Instant Startup:** Native C++ launcher with splash screen.
-- [x] **English UI:** Full English interface implemented.
-- [x] **Internationalization:** Multi-language support with automatic detection.
-- [x] **Configuration UI:** Settings are currently file-based (`MyM.json`). A visual preferences menu is in development.
-- [x] **Search:** Implementing fuzzy search for history items.
+**✅ Completed in v1.0.0-beta.1:**
+- [x] Native C++ launcher with instant splash screen
+- [x] Full English and Spanish interfaces
+- [x] Multi-language support with automatic detection
+- [x] Visual configuration panel (Settings)
+- [x] Fuzzy search for clipboard history
+- [x] System tray integration
+- [x] Global hotkey support (customizable)
+- [x] Pin/unpin clipboard items
+- [x] Text, images, files, and folders support
+
+**🔜 Coming Soon:**
+- [ ] More languages (community contributions welcome!)
+- [ ] Clipboard sync (optional, encrypted)
+- [ ] Keyboard navigation improvements
+- [ ] Performance monitoring dashboard
 
 ---
 
