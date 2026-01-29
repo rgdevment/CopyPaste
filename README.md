@@ -100,9 +100,9 @@ This workflow matches the efficiency of double-clicking with your mouse but keep
 
 ## 📸 Screenshots
 
-> *Current status: The UI is fully functional and mimics the Windows 11 notification aesthetic. High-res screenshots and GIFs demonstrating the "CopyPaste App" workflow will be added here shortly.*
-
-*(Placeholder for future GIF: Showing specific copy-paste action)*
+<div align="center">
+    <img src="CopyPaste.UI/Assets/Sample.gif" alt="CopyPaste Demo"/>
+</div>
 
 ---
 
