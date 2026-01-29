@@ -1,0 +1,44 @@
+name: "💡 Feature Request"
+description: "Suggest an idea or a design improvement for CopyPaste"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Share your vision! 🚀
+        We are building CopyPaste to be the most beautiful and pleasant clipboard manager for Windows.
+        Before suggesting a feature, consider: Does this align with a high-end, native Windows 11 experience?
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: "What is your idea?"
+      description: "A clear and concise description of what you want to see."
+      placeholder: "e.g., I would love a smoother transition when pinning items..."
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "The Experience"
+      description: "How does this make using CopyPaste more pleasant or efficient for you?"
+    validations:
+      required: true
+  - type: textarea
+    id: design-impact
+    attributes:
+      label: "Visual & Design Proposal"
+      description: "How should this look? We prioritize clean, modern, and fluid aesthetics."
+      placeholder: "Describe the icons, animations, or where this fits in the UI..."
+  - type: checkboxes
+    id: philosophy-check
+    attributes:
+      label: "Philosophy Check"
+      options:
+        - label: "This feature enhances the modern UI and avoids 'clunky' designs."
+          required: true
+        - label: "This contributes to a pleasant and intuitive user experience."
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Inspiration"
+      description: "Have you seen a similar beautiful implementation in other modern apps?"
