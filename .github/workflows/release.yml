@@ -44,8 +44,19 @@ jobs:
           } else {
             $version = "1.0.0"
           }
+          
+          # Extract numeric version for Windows (e.g., 1.0.0-beta.1 -> 1.0.0.1)
+          if ($version -match '^(\d+\.\d+\.\d+)(?:-(?:alpha|beta|rc)\.(\d+))?$') {
+            $baseVersion = $matches[1]
+            $preRelease = if ($matches[2]) { $matches[2] } else { "0" }
+            $numericVersion = "$baseVersion.$preRelease"
+          } else {
+            $numericVersion = "$version.0"
+          }
+          
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-          echo "Version extracted: $version"
+          echo "VERSION_NUMERIC=$numericVersion" >> $env:GITHUB_OUTPUT
+          echo "Version: $version (numeric: $numericVersion)"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -311,12 +322,14 @@ jobs:
           $repoRoot = "${{ github.workspace }}"
           $myArch = if ("${{ matrix.arch }}" -eq "win-x64") { "x64" } else { "x86" }
           $version = "${{ steps.get_version.outputs.VERSION }}"
+          $versionNumeric = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
 
           Write-Host "Building installer with:"
           Write-Host "Source: $publishDir"
           Write-Host "Arch: $myArch"
+          Write-Host "Version: $version (numeric: $versionNumeric)"
 
-          & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DRepoRoot=$repoRoot"
+          & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DMyAppVersionNumeric=$versionNumeric" "/DRepoRoot=$repoRoot"
 
       - name: Rename Installer
         shell: pwsh

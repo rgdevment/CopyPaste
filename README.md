@@ -169,12 +169,6 @@ We believe in radical honesty about the state of the app:
 - [x] Pin/unpin clipboard items
 - [x] Text, images, files, and folders support
 
-**🔜 Coming Soon:**
-- [ ] More languages (community contributions welcome!)
-- [ ] Clipboard sync (optional, encrypted)
-- [ ] Keyboard navigation improvements
-- [ ] Performance monitoring dashboard
-
 ---
 
 ## 🌐 Localization

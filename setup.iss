@@ -2,6 +2,9 @@
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.0"
 #endif
+#ifndef MyAppVersionNumeric
+  #define MyAppVersionNumeric "1.0.0.0"
+#endif
 #define MyAppPublisher "RGDevment"
 #define MyAppExeName "CopyPaste.exe"
 #define MyAppIcon "CopyPaste.UI\Assets\CopyPasteLogoSimple.ico"
@@ -31,12 +34,12 @@ SolidCompression=yes
 SetupIconFile={#MyAppIcon}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
-VersionInfoVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersionNumeric}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} Installer
 VersionInfoTextVersion={#MyAppVersion}
 VersionInfoProductName={#MyAppName}
-VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductVersion={#MyAppVersionNumeric}
 WizardStyle=modern
 DisableWelcomePage=no
 ; Native app closure using Windows Restart Manager
