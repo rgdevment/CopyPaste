@@ -81,18 +81,36 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 | `Win+Alt+V` | Open/close CopyPaste (default hotkey, customizable) |
 | `↓` or `Tab` | Navigate from search to clipboard items |
 | `↑` / `↓` | Navigate between clipboard items |
+| `→` | Expand/collapse selected card to see more text |
 | `Shift+Tab` | Return to search box |
 | `Enter` | Paste selected item and return to previous app |
 | `Delete` | Delete selected item |
 | `P` | Pin/Unpin selected item |
-| `Esc` | Close CopyPaste window |
+| `Esc` | Clear search box (if focused) or close window |
+
+### Card Expansion
+Clipboard items (cards) can be expanded to show more text content:
+
+**With Mouse:**
+- **Single click** on a card → Expand/collapse to see more text (3 lines → 7 lines)
+- **Double click** on a card → Paste the item immediately
+- Only one card can be expanded at a time
+- All cards collapse when the window is hidden
+- No visual hover effect on cards (clean minimal design)
+
+**With Keyboard:**
+- **Right arrow `→`** → Expand/collapse the selected card
+- Cards automatically collapse when you navigate to a different item with `↑`/`↓`
+- Only one card can be expanded at a time
 
 ### Keyboard-Only Workflow
 1. **Press `Win+Alt+V`** → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time
-3. **Press `↓`** → Navigate to first clipboard item
-4. **Use `↑`/`↓`** → Select the desired item
-5. **Press `Enter`** → Item is pasted to your previous application
+3. **Press `Esc`** (optional) → Clear search to see all items again
+4. **Press `↓`** → Navigate to first clipboard item
+5. **Use `↑`/`↓`** → Select the desired item
+6. **Press `→`** (optional) → Expand card to see full text
+7. **Press `Enter`** → Item is pasted to your previous application
 
 This workflow matches the efficiency of double-clicking with your mouse but keeps your hands on the keyboard.
 

@@ -21,6 +21,8 @@ internal sealed partial class MainWindow : Window
     private readonly IntPtr _hWnd;
     private readonly MyMConfig _config = ConfigLoader.Config; // Cache config once at startup
     private const int _hotkeyId = 1;
+    private ClipboardItemViewModel? _currentExpandedItem;
+    private ClipboardItemViewModel? _previousSelectedItem;
 
     public MainWindow(ClipboardService service)
     {
@@ -64,6 +66,7 @@ internal sealed partial class MainWindow : Window
         Closed += MainWindow_Closed;
         _appWindow.Changed += AppWindow_Changed;
         ClipboardListView.Loaded += ClipboardListView_Loaded;
+        ClipboardListView.SelectionChanged += ClipboardListView_SelectionChanged;
         SearchBox.KeyDown += SearchBox_KeyDown;
     }
 
@@ -119,8 +122,19 @@ internal sealed partial class MainWindow : Window
         }
     }
 
+    private void CollapseAllCards()
+    {
+        foreach (var item in ViewModel.Items)
+        {
+            item.Collapse();
+        }
+        _currentExpandedItem = null;
+        _previousSelectedItem = null;
+    }
+
     private void MainWindow_Closed(object? _, WindowEventArgs args)
     {
+        CollapseAllCards();
         Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
         HotkeyHelper.UnregisterMessageHandler(_hWnd);
 
@@ -147,6 +161,7 @@ internal sealed partial class MainWindow : Window
     {
         if (_appWindow.IsVisible)
         {
+            CollapseAllCards();
             _appWindow.Hide();
         }
         else
@@ -196,6 +211,7 @@ internal sealed partial class MainWindow : Window
     {
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
+            CollapseAllCards();
             ViewModel.OnWindowDeactivated();
             _appWindow.Hide();
         }
@@ -327,9 +343,11 @@ internal sealed partial class MainWindow : Window
         container.PointerEntered -= Container_PointerEntered;
         container.PointerExited -= Container_PointerExited;
         container.DoubleTapped -= Container_DoubleTapped;
+        container.Tapped -= Container_Tapped;
         container.PointerEntered += Container_PointerEntered;
         container.PointerExited += Container_PointerExited;
         container.DoubleTapped += Container_DoubleTapped;
+        container.Tapped += Container_Tapped;
 
         // Subscribe to image path changes for live thumbnail updates
         if (args.Item is ClipboardItemViewModel vm)
@@ -351,6 +369,22 @@ internal sealed partial class MainWindow : Window
             root.FindName("ClipboardImage") is Image image)
         {
             LoadImageSource(image, vm.ImagePath);
+        }
+    }
+
+    private void Container_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if (sender is ListViewItem item && item.Content is ViewModels.ClipboardItemViewModel vm)
+        {
+            if (_currentExpandedItem != null && _currentExpandedItem != vm)
+            {
+                _currentExpandedItem.Collapse();
+            }
+
+            vm.ToggleExpanded();
+            _currentExpandedItem = vm.IsExpanded ? vm : null;
+
+            e.Handled = true;
         }
     }
 
@@ -423,6 +457,14 @@ internal sealed partial class MainWindow : Window
 
     private void SearchBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
+        // Clear search when pressing Escape
+        if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            SearchBox.Text = string.Empty;
+            e.Handled = true;
+            return;
+        }
+
         // Navigate to ListView when pressing Enter or Down arrow in SearchBox
         if (e.Key is Windows.System.VirtualKey.Enter or Windows.System.VirtualKey.Down)
         {
@@ -471,6 +513,65 @@ internal sealed partial class MainWindow : Window
                 vm.TogglePinCommand.Execute(null);
                 e.Handled = true;
                 break;
+
+            case Windows.System.VirtualKey.Right:
+                if (_currentExpandedItem != null && _currentExpandedItem != vm)
+                {
+                    _currentExpandedItem.Collapse();
+                }
+                vm.ToggleExpanded();
+                _currentExpandedItem = vm.IsExpanded ? vm : null;
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void ClipboardListView_SelectionChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs e)
+    {
+        // Dim previous images/media
+        if (e.RemovedItems.Count > 0)
+        {
+            foreach (var removed in e.RemovedItems)
+            {
+                var removedContainer = ClipboardListView.ContainerFromItem(removed) as ListViewItem;
+                if (removedContainer?.ContentTemplateRoot is FrameworkElement removedRoot)
+                {
+                    if (FindDescendant(removedRoot, "ImageBorder") is UIElement imageBorder)
+                        imageBorder.Opacity = 0.6;
+                    if (FindDescendant(removedRoot, "MediaBorder") is UIElement mediaBorder)
+                        mediaBorder.Opacity = 0.6;
+                }
+            }
+        }
+
+        // Highlight current images/media
+        if (e.AddedItems.Count > 0)
+        {
+            foreach (var added in e.AddedItems)
+            {
+                var addedContainer = ClipboardListView.ContainerFromItem(added) as ListViewItem;
+                if (addedContainer?.ContentTemplateRoot is FrameworkElement addedRoot)
+                {
+                    if (FindDescendant(addedRoot, "ImageBorder") is UIElement imageBorder)
+                        imageBorder.Opacity = 1;
+                    if (FindDescendant(addedRoot, "MediaBorder") is UIElement mediaBorder)
+                        mediaBorder.Opacity = 1;
+                }
+            }
+        }
+
+        // Auto-collapse previous card on navigation
+        if (ClipboardListView.SelectedItem is ClipboardItemViewModel currentVm)
+        {
+            if (_previousSelectedItem != null && _previousSelectedItem != currentVm && _previousSelectedItem.IsExpanded)
+            {
+                _previousSelectedItem.Collapse();
+                if (_currentExpandedItem == _previousSelectedItem)
+                {
+                    _currentExpandedItem = null;
+                }
+            }
+            _previousSelectedItem = currentVm;
         }
     }
 

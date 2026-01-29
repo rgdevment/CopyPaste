@@ -23,6 +23,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     private readonly string _headerTitle;
 
     private bool _isPinned;
+    private bool _isExpanded;
 
     public ClipboardItem Model { get; }
 
@@ -58,6 +59,22 @@ public partial class ClipboardItemViewModel : ObservableObject
             }
         }
     }
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (SetProperty(ref _isExpanded, value))
+            {
+                OnPropertyChanged(nameof(ContentMaxLines));
+                OnPropertyChanged(nameof(ContentLineHeight));
+            }
+        }
+    }
+
+    public int ContentMaxLines => _isExpanded ? 9 : 3;
+    public double ContentLineHeight { get; } = 20.0;
 
     public ClipboardItemViewModel(
         ClipboardItem model,
@@ -391,4 +408,8 @@ public partial class ClipboardItemViewModel : ObservableObject
         IsPinned = !IsPinned;
         _pinAction(this);
     }
+
+    public void ToggleExpanded() => IsExpanded = !IsExpanded;
+
+    public void Collapse() => IsExpanded = false;
 }

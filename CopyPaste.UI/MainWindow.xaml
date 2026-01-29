@@ -173,6 +173,14 @@ xmlns:tb="using:H.NotifyIcon">
                     <Setter Property="Margin" Value="0"/>
                     <Setter Property="MinHeight" Value="0"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListViewItem">
+                                <ContentPresenter/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
                 </Style>
             </ListView.ItemContainerStyle>
             <ListView.ItemsPanel>
@@ -224,7 +232,9 @@ xmlns:tb="using:H.NotifyIcon">
 
                             <!-- Text Content -->
                             <TextBlock Grid.Row="1" Text="{x:Bind Content, Mode=OneWay}"
-                                       MaxLines="3" LineHeight="20" TextTrimming="CharacterEllipsis"
+                                       MaxLines="{x:Bind ContentMaxLines, Mode=OneWay}"
+                                       LineHeight="{x:Bind ContentLineHeight, Mode=OneWay}"
+                                       TextTrimming="CharacterEllipsis"
                                        FontSize="13" Opacity="0.9" TextWrapping="Wrap"
                                        Visibility="{x:Bind IsTextVisible, Mode=OneWay}"/>
 
