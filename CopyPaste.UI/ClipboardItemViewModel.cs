@@ -17,6 +17,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     private readonly string _pasteText;
     private readonly string _pastePlainText;
     private readonly string _deleteText;
+    private readonly string _fileWarningText;
 
     private bool _isPinned;
 
@@ -70,6 +71,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         _pasteText = L.Get("clipboard.contextMenu.paste");
         _pastePlainText = L.Get("clipboard.contextMenu.pastePlain");
         _deleteText = L.Get("clipboard.contextMenu.delete");
+        _fileWarningText = L.Get("clipboard.fileWarning");
 
         _isPinned = model.IsPinned;
     }
@@ -198,8 +200,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string PasteText => _pasteText;
     public string PastePlainText => _pastePlainText;
     public string DeleteText => _deleteText;
-
-    public string FileWarningText => L.Get("clipboard.fileWarning");
+    public string FileWarningText => _fileWarningText;
 
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
 
