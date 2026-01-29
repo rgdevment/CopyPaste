@@ -226,10 +226,10 @@
                                     <TextBlock x:Name="PasteSpeedDesc" Text="Ajusta timings de restauracion y pegado" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ComboBox x:Name="PastePresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="PastePresetCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Rapido" Tag="fast"/>
-                                    <ComboBoxItem Content="Normal" Tag="normal"/>
-                                    <ComboBoxItem Content="Seguro" Tag="safe"/>
-                                    <ComboBoxItem Content="Lento" Tag="slow"/>
+                                    <ComboBoxItem x:Name="PastePresetFast" Tag="fast"/>
+                                    <ComboBoxItem x:Name="PastePresetNormal" Tag="normal"/>
+                                    <ComboBoxItem x:Name="PastePresetSafe" Tag="safe"/>
+                                    <ComboBoxItem x:Name="PastePresetSlow" Tag="slow"/>
                                 </ComboBox>
                             </Grid>
                             <Border Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}" CornerRadius="4" Padding="10" Opacity="0.7">
@@ -267,11 +267,11 @@
                                     <TextBlock x:Name="ThumbnailQualityDesc" Text="Solo afecta miniaturas futuras" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ThumbnailPresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="ThumbnailPresetCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Excelente" Tag="excellent"/>
-                                    <ComboBoxItem Content="Alta" Tag="high"/>
-                                    <ComboBoxItem Content="Media" Tag="medium"/>
-                                    <ComboBoxItem Content="Baja" Tag="low"/>
-                                    <ComboBoxItem Content="Ahorro" Tag="minimal"/>
+                                    <ComboBoxItem x:Name="ThumbnailPresetExcellent" Tag="excellent"/>
+                                    <ComboBoxItem x:Name="ThumbnailPresetHigh" Tag="high"/>
+                                    <ComboBoxItem x:Name="ThumbnailPresetMedium" Tag="medium"/>
+                                    <ComboBoxItem x:Name="ThumbnailPresetLow" Tag="low"/>
+                                    <ComboBoxItem x:Name="ThumbnailPresetMinimal" Tag="minimal"/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>

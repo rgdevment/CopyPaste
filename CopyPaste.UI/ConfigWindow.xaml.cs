@@ -114,6 +114,10 @@ public sealed partial class ConfigWindow : Window
         PasteSpeedDesc.Text = L.Get("config.paste.speedDesc");
         ToolTipService.SetToolTip(PasteSpeedGrid, L.Get("config.paste.speedTooltip"));
         PasteWarning.Text = L.Get("config.paste.warning");
+        PastePresetFast.Content = L.Get("config.paste.presets.fast");
+        PastePresetNormal.Content = L.Get("config.paste.presets.normal");
+        PastePresetSafe.Content = L.Get("config.paste.presets.safe");
+        PastePresetSlow.Content = L.Get("config.paste.presets.slow");
 
         // Thumbnail
         ThumbnailHeading.Text = L.Get("config.thumbnail.heading");
@@ -121,6 +125,11 @@ public sealed partial class ConfigWindow : Window
         ThumbnailQualityLabel.Text = L.Get("config.thumbnail.qualityLabel");
         ThumbnailQualityDesc.Text = L.Get("config.thumbnail.qualityDesc");
         ToolTipService.SetToolTip(ThumbnailQualityGrid, L.Get("config.thumbnail.qualityTooltip"));
+        ThumbnailPresetExcellent.Content = L.Get("config.thumbnail.presets.excellent");
+        ThumbnailPresetHigh.Content = L.Get("config.thumbnail.presets.high");
+        ThumbnailPresetMedium.Content = L.Get("config.thumbnail.presets.medium");
+        ThumbnailPresetLow.Content = L.Get("config.thumbnail.presets.low");
+        ThumbnailPresetMinimal.Content = L.Get("config.thumbnail.presets.minimal");
 
         // Buttons
         ResetButton.Content = L.Get("config.buttons.reset");

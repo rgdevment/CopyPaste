@@ -85,14 +85,27 @@
       "speedLabel": "Velocidad de pegado",
       "speedDesc": "Ajusta timings de restauración y pegado",
       "speedTooltip": "Rápido = equipos potentes (puede fallar). Normal = equilibrio. Seguro = conservador. Lento = equipos antiguos.",
-      "warning": "⚠️ Rápido: Puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: Puede dar sensación de fallo en equipos modernos."
+      "warning": "⚠️ Rápido: Puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: Puede dar sensación de fallo en equipos modernos.",
+      "presets": {
+        "fast": "Rápido",
+        "normal": "Normal",
+        "safe": "Seguro",
+        "slow": "Lento"
+      }
     },
     "thumbnail": {
       "heading": "MINIATURAS (AVANZADO)",
       "warning": "Modificar puede afectar consumo de RAM y espacio en disco.",
       "qualityLabel": "Calidad de miniaturas",
       "qualityDesc": "Solo afecta miniaturas futuras",
-      "qualityTooltip": "Selecciona un preset de calidad. Excelente = mejor calidad pero más RAM. Ahorro = mínimo consumo de recursos."
+      "qualityTooltip": "Selecciona un preset de calidad. Excelente = mejor calidad pero más RAM. Ahorro = mínimo consumo de recursos.",
+      "presets": {
+        "excellent": "Excelente",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja",
+        "minimal": "Ahorro"
+      }
     },
     "buttons": {
       "reset": "Restablecer",

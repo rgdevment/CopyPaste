@@ -85,14 +85,27 @@
       "speedLabel": "Paste speed",
       "speedDesc": "Adjust restoration and paste timings",
       "speedTooltip": "Fast = powerful computers (may fail). Normal = balanced. Safe = conservative. Slow = old computers.",
-      "warning": "⚠️ Fast: May cause strange behavior in heavy apps.\n⚠️ Slow: May feel like a failure on modern computers."
+      "warning": "⚠️ Fast: May cause strange behavior in heavy apps.\n⚠️ Slow: May feel like a failure on modern computers.",
+      "presets": {
+        "fast": "Fast",
+        "normal": "Normal",
+        "safe": "Safe",
+        "slow": "Slow"
+      }
     },
     "thumbnail": {
       "heading": "THUMBNAILS (ADVANCED)",
       "warning": "Modifying can affect RAM usage and disk space.",
       "qualityLabel": "Thumbnail quality",
       "qualityDesc": "Only affects future thumbnails",
-      "qualityTooltip": "Select a quality preset. Excellent = better quality but more RAM. Minimal = minimal resource usage."
+      "qualityTooltip": "Select a quality preset. Excellent = better quality but more RAM. Minimal = minimal resource usage.",
+      "presets": {
+        "excellent": "Excellent",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "minimal": "Minimal"
+      }
     },
     "buttons": {
       "reset": "Reset",

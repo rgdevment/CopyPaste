@@ -44,7 +44,7 @@ jobs:
           } else {
             $version = "1.0.0"
           }
-          
+
           # Extract numeric version for Windows (e.g., 1.0.0-beta.1 -> 1.0.0.1)
           if ($version -match '^(\d+\.\d+\.\d+)(?:-(?:alpha|beta|rc)\.(\d+))?$') {
             $baseVersion = $matches[1]
@@ -53,7 +53,7 @@ jobs:
           } else {
             $numericVersion = "$version.0"
           }
-          
+
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
           echo "VERSION_NUMERIC=$numericVersion" >> $env:GITHUB_OUTPUT
           echo "Version: $version (numeric: $numericVersion)"
@@ -72,50 +72,50 @@ jobs:
         run: |
           $sha = git rev-parse HEAD
           Write-Host "🔍 Checking CI status for commit: $sha"
-          
+
           # Get the CI workflow runs for this commit
           $headers = @{
             "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"
             "Accept" = "application/vnd.github.v3+json"
           }
-          
+
           $repo = "${{ github.repository }}"
           $url = "https://api.github.com/repos/$repo/commits/$sha/check-runs"
-          
+
           # Configuration
           $maxWaitAttempts = 30  # Wait up to 5 minutes for CI to complete
           $maxRetries = 3        # Retry up to 3 times if API fails
           $waitSeconds = 10
           $ciPassed = $false
-          
+
           function Test-CIStatus {
             param($retryCount = 0)
-            
+
             try {
               $attempt = 0
-              
+
               while ($attempt -lt $maxWaitAttempts) {
                 $response = Invoke-RestMethod -Uri $url -Headers $headers -ErrorAction Stop
-                $ciRuns = $response.check_runs | Where-Object { 
-                  $_.name -like "*CI*" -or 
+                $ciRuns = $response.check_runs | Where-Object {
+                  $_.name -like "*CI*" -or
                   $_.name -like "*Build*Test*" -or
                   $_.name -like "*build*"
                 }
-                
+
                 if ($ciRuns.Count -eq 0) {
                   Write-Host "⚠️  No CI runs found yet. Waiting... (attempt $($attempt + 1)/$maxWaitAttempts)"
                   Start-Sleep -Seconds $waitSeconds
                   $attempt++
                   continue
                 }
-                
+
                 $latestCi = $ciRuns | Sort-Object -Property started_at -Descending | Select-Object -First 1
                 $status = $latestCi.status
                 $conclusion = $latestCi.conclusion
                 $ciName = $latestCi.name
-                
+
                 Write-Host "📊 CI '$ciName' - Status: $status, Conclusion: $conclusion"
-                
+
                 if ($status -eq "completed") {
                   if ($conclusion -eq "success") {
                     Write-Host "✅ CI passed successfully!"
@@ -133,12 +133,12 @@ jobs:
                   $attempt++
                 }
               }
-              
+
               # Timeout reached
               Write-Warning "⚠️  CI verification timed out after $($maxWaitAttempts * $waitSeconds) seconds"
               Write-Warning "Proceeding with caution. Please verify CI status manually."
               return $true
-              
+
             } catch {
               if ($retryCount -lt $maxRetries) {
                 $nextRetry = $retryCount + 1
@@ -154,14 +154,14 @@ jobs:
               }
             }
           }
-          
+
           $ciPassed = Test-CIStatus
-          
+
           if (-not $ciPassed) {
             Write-Error "❌ CI verification failed. Release aborted."
             exit 1
           }
-          
+
           Write-Host "✅ CI verification complete - proceeding with release"
 
 
@@ -178,10 +178,10 @@ jobs:
         run: |
           Write-Host "🔨 Building native C++ launcher..."
           Push-Location CopyPaste.Launcher
-          
+
           # Compile resource file (icon)
           rc.exe /fo resources.res resources.rc
-          
+
           # Compile with optimizations, embed manifest and icon
           cl.exe /O2 /MT /EHsc main.cpp resources.res `
             /link user32.lib gdi32.lib gdiplus.lib shell32.lib `
@@ -189,12 +189,12 @@ jobs:
             /SUBSYSTEM:WINDOWS `
             /MANIFEST:EMBED `
             /MANIFESTINPUT:app.manifest
-          
+
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to build native launcher"
             exit 1
           }
-          
+
           Pop-Location
           Write-Host "✅ Native launcher built successfully"
 
@@ -214,12 +214,12 @@ jobs:
             -p:TieredCompilation=true `
             -p:TieredCompilationQuickJitForLoops=true `
             --no-restore
-          
+
           if ($LASTEXITCODE -ne 0) {
             Write-Error "dotnet publish failed"
             exit 1
           }
-          
+
           # Verify publish output exists
           $expectedPath = "${{ env.PUBLISH_PATH }}"
           if (Test-Path $expectedPath) {
@@ -236,10 +236,10 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
-          
+
           # Copy native launcher to publish directory (overwrites the .NET exe name)
           Copy-Item "CopyPaste.Launcher/CopyPaste.exe" -Destination $publishDir
-          
+
           Write-Host "✅ Native launcher integrated"
           Write-Host "Entry point: CopyPaste.exe (native launcher)"
           Write-Host ".NET app: CopyPaste.App.exe"
@@ -249,38 +249,38 @@ jobs:
         run: |
           $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           Write-Host "Cleaning publish directory: $publishDir"
-          
+
           # Define folders to keep (exact names)
           $keepFolders = @('Assets', 'Microsoft.UI.Xaml', 'NpuDetect', 'en-us', 'en-US', 'en')
-          
+
           # Remove all culture/language folders except essential ones
           # Pattern matches: xx, xx-XX, xx-Xxxx-XX, xxx-XX (culture codes including variants)
           Get-ChildItem -Path $publishDir -Directory | Where-Object {
             $folderName = $_.Name
-            ($keepFolders -notcontains $folderName) -and 
+            ($keepFolders -notcontains $folderName) -and
             ($folderName -match '^[a-z]{2,3}(-[A-Za-z]{2,8})?(-[A-Za-z]{2,8})?$')
           } | ForEach-Object {
             Write-Host "Removing culture folder: $($_.Name)"
             Remove-Item -Path $_.FullName -Recurse -Force
           }
-          
+
           # Remove PDB files
           Get-ChildItem -Path $publishDir -Filter "*.pdb" -Recurse | Remove-Item -Force
-          
+
           # Remove XML documentation files (except resources)
           Get-ChildItem -Path $publishDir -Filter "*.xml" -Recurse | Where-Object {
             $_.Name -notlike "*.resources.xml"
           } | Remove-Item -Force
-          
+
           # Remove createdump.exe (crash dump tool, not needed for production)
           Get-ChildItem -Path $publishDir -Filter "createdump.exe" -Recurse | Remove-Item -Force
-          
+
           # Count and display results
           $fileCount = (Get-ChildItem -Path $publishDir -File -Recurse).Count
           $folderCount = (Get-ChildItem -Path $publishDir -Directory -Recurse).Count
           $sizeBytes = (Get-ChildItem -Path $publishDir -File -Recurse | Measure-Object -Property Length -Sum).Sum
           $sizeMB = [math]::Round($sizeBytes / 1MB, 2)
-          
+
           Write-Host "Final publish output: $fileCount files, $folderCount folders, $sizeMB MB"
           Get-ChildItem -Path $publishDir -Directory | Select-Object Name | Format-Table
 
