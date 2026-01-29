@@ -156,9 +156,92 @@ We believe in radical honesty about the state of the app:
 
 - [x] **Instant Startup:** Native C++ launcher with splash screen.
 - [x] **English UI:** Full English interface implemented.
-- [ ] **Configuration UI:** Settings are currently file-based (`MyM.json`). A visual preferences menu is in development.
-- [ ] **Search:** Implementing fuzzy search for history items.
-- [ ] **Internationalization:** Multi-language support planned for future versions.
+- [x] **Internationalization:** Multi-language support with automatic detection.
+- [x] **Configuration UI:** Settings are currently file-based (`MyM.json`). A visual preferences menu is in development.
+- [x] **Search:** Implementing fuzzy search for history items.
+
+---
+
+## 🌐 Localization
+
+CopyPaste supports multiple languages with automatic detection based on your Windows settings.
+
+### Currently Supported Languages
+| Language | Tag | Status |
+| :--- | :---: | :---: |
+| 🇺🇸 English (US) | `en-US` | ✅ Complete |
+| 🇨🇱 Spanish (Chile) | `es-CL` | ✅ Complete |
+
+### How It Works
+- **Automatic Detection:** The app detects your Windows display language and applies the appropriate translation.
+- **Regional Fallback:** If your exact region isn't available (e.g., `es-MX`), it falls back to the base language (e.g., `es-CL`).
+- **Manual Override:** You can force a specific language in the Settings panel.
+
+### 🤝 Help Us Translate!
+We welcome translation contributions for any language! Here's how to add a new language:
+
+#### Steps to Add a New Translation
+
+1. **Fork the repository** and clone it locally.
+
+2. **Copy the base language file:**
+   ```
+   CopyPaste.UI/Localization/Languages/en-US.json
+   ```
+   This is the reference file with all translation keys.
+
+3. **Name your file using BCP 47 language tags:**
+   - `de-DE.json` (German - Germany)
+   - `fr-FR.json` (French - France)
+   - `pt-BR.json` (Portuguese - Brazil)
+   - `ja-JP.json` (Japanese - Japan)
+   - `zh-CN.json` (Chinese - Simplified)
+
+   > 📖 [Full list of BCP 47 language tags](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-lcid/a9eac961-e77d-41a6-90a5-ce1a8b0cdb9c)
+
+4. **Translate all values** (keep the JSON keys in English):
+   ```json
+   {
+     "window": {
+       "title": "CopyPaste",
+       "appBranding": "CopyPaste"
+     },
+     "ui": {
+       "section": {
+         "recent": "Récents",  // ← Translate this value
+         "pinned": "Épinglés" // ← Translate this value
+       }
+       // ... continue for all keys
+     }
+   }
+   ```
+
+5. **Register your language** in `LocalizationService.cs`:
+   ```csharp
+   private static readonly string[] _availableLanguages = ["en-US", "es-CL", "de-DE"]; // Add yours
+   ```
+
+6. **(Optional) Add regional fallback** in `language-config.json`:
+   ```json
+   {
+     "fallbacks": {
+       "de": "de-DE",  // German variants → de-DE
+       "fr": "fr-FR"   // French variants → fr-FR
+     }
+   }
+   ```
+
+7. **Test your translation** by changing your Windows language or using the manual override.
+
+8. **Submit a Pull Request** with your translation!
+
+#### Translation Guidelines
+- ✅ Keep translations concise (UI space is limited)
+- ✅ Use formal/neutral tone
+- ✅ Preserve placeholders like `{shortcut}` or `{time}`
+- ✅ Test that all strings fit in the UI
+- ❌ Don't translate brand names (`CopyPaste`, `Windows`, etc.)
+- ❌ Don't change JSON keys (only values)
 
 ---
 

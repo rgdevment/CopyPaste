@@ -15,12 +15,17 @@
     "search": {
       "placeholder": "Search..."
     },
-    "emptyState": "No items in this section"
+    "emptyState": "No items in this section",
+    "buttons": {
+      "options": "Options",
+      "delete": "Delete"
+    }
   },
   "config": {
     "window": {
-      "title": "Settings",
-      "description": "Changes are saved to MyM.json and require restart."
+      "title": "Settings - CopyPaste",
+      "heading": "Settings",
+      "subtitle": "Changes are saved to MyM.json and require restart."
     },
     "language": {
       "heading": "LANGUAGE",
@@ -61,10 +66,10 @@
     },
     "performance": {
       "heading": "PERFORMANCE",
-      "itemsPerPage": "Items per page",
-      "itemsPerPageDesc": "Amount to load per batch",
-      "memoryLimit": "Memory limit",
-      "memoryLimitDesc": "Maximum items in RAM",
+      "pageSize": "Items per page",
+      "pageSizeDesc": "Amount to load per batch",
+      "maxItems": "Memory limit",
+      "maxItemsDesc": "Maximum items in RAM",
       "scrollThreshold": "Scroll threshold",
       "scrollThresholdDesc": "Distance to load more (px)"
     },
@@ -72,35 +77,35 @@
       "heading": "STORAGE",
       "retentionDays": "Retention days",
       "retentionDaysDesc": "Days to keep history (0=unlimited)",
-      "retentionDaysTooltip": "Days to keep clipboard history. 0 = unlimited. Pinned items are never deleted."
+      "retentionTooltip": "Days to keep clipboard history. 0 = unlimited. Pinned items are never deleted."
     },
     "paste": {
       "heading": "PASTE",
-      "speedDesc": "Automatic paste speed. Normal/Safe recommended for most computers.",
-      "speed": "Paste speed",
-      "speedDesc2": "Adjust restoration and paste timings",
-      "speedFast": "Fast",
-      "speedNormal": "Normal",
-      "speedSafe": "Safe",
-      "speedSlow": "Slow",
-      "speedWarning": "⚠️ Fast: May cause strange behavior in heavy apps.\n⚠️ Slow: May feel like a failure on modern computers."
+      "intro": "Automatic paste speed. Normal/Safe recommended for most computers.",
+      "speedLabel": "Paste speed",
+      "speedDesc": "Adjust restoration and paste timings",
+      "speedTooltip": "Fast = powerful computers (may fail). Normal = balanced. Safe = conservative. Slow = old computers.",
+      "warning": "⚠️ Fast: May cause strange behavior in heavy apps.\n⚠️ Slow: May feel like a failure on modern computers."
     },
-    "thumbnails": {
+    "thumbnail": {
       "heading": "THUMBNAILS (ADVANCED)",
       "warning": "Modifying can affect RAM usage and disk space.",
-      "quality": "Thumbnail quality",
+      "qualityLabel": "Thumbnail quality",
       "qualityDesc": "Only affects future thumbnails",
-      "qualityExcellent": "Excellent",
-      "qualityHigh": "High",
-      "qualityMedium": "Medium",
-      "qualityLow": "Low",
-      "qualityMinimal": "Minimal",
       "qualityTooltip": "Select a quality preset. Excellent = better quality but more RAM. Minimal = minimal resource usage."
     },
     "buttons": {
       "reset": "Reset",
       "cancel": "Cancel",
-      "saveAndRestart": "Save and restart"
+      "save": "Save and restart"
+    },
+    "dialog": {
+      "errorTitle": "Error",
+      "accept": "OK"
+    },
+    "errors": {
+      "minModifiers": "You must select at least 2 modifier keys (Ctrl, Win, Alt or Shift).",
+      "saveFailed": "Failed to save. Check permissions for the configuration folder."
     }
   },
   "clipboard": {

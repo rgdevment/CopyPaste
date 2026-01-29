@@ -47,6 +47,7 @@ internal sealed partial class MainWindow : Window
 
     private void ApplyLocalizedStrings()
     {
+        TrayIcon.ToolTipText = L.Get("tray.tooltip");
         TrayMenuExit.Text = L.Get("tray.exit");
         ToolTipService.SetToolTip(RecentTab, L.Get("ui.section.recent"));
         ToolTipService.SetToolTip(PinnedTab, L.Get("ui.section.pinned"));

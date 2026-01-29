@@ -55,11 +55,77 @@ public sealed partial class ConfigWindow : Window
 
     private void ApplyLocalizedStrings()
     {
+        // Window
+        Title = L.Get("config.window.title");
+        ConfigTitle.Text = L.Get("config.window.heading");
+        ConfigSubtitle.Text = L.Get("config.window.subtitle");
+
+        // Language
         LanguageHeading.Text = L.Get("config.language.heading");
         LanguageLabel.Text = L.Get("config.language.label");
         LanguageDesc.Text = L.Get("config.language.desc");
         if (LanguageCombo.Items[0] is ComboBoxItem autoItem)
             autoItem.Content = L.Get("config.language.auto");
+
+        // Startup
+        StartupHeading.Text = L.Get("config.startup.heading");
+        StartupLabel.Text = L.Get("config.startup.runOnStartup");
+        StartupDesc.Text = L.Get("config.startup.runOnStartupDesc");
+        RunOnStartupSwitch.OnContent = L.Get("config.startup.runOnStartupYes");
+        RunOnStartupSwitch.OffContent = L.Get("config.startup.runOnStartupNo");
+
+        // Hotkey
+        HotkeyHeading.Text = L.Get("config.hotkey.heading");
+        HotkeyLabel.Text = L.Get("config.hotkey.shortcutLabel");
+        HotkeyDesc.Text = L.Get("config.hotkey.shortcutDesc");
+        UpdateHotkeyPreview();
+
+        // Appearance
+        AppearanceHeading.Text = L.Get("config.appearance.heading");
+        PanelWidthLabel.Text = L.Get("config.appearance.panelWidth");
+        PanelWidthDesc.Text = L.Get("config.appearance.panelWidthDesc");
+        ToolTipService.SetToolTip(PanelWidthGrid, L.Get("config.appearance.panelWidthTooltip"));
+        MarginTopLabel.Text = L.Get("config.appearance.marginTop");
+        MarginTopDesc.Text = L.Get("config.appearance.marginTopDesc");
+        ToolTipService.SetToolTip(MarginTopGrid, L.Get("config.appearance.marginTopTooltip"));
+        MarginBottomLabel.Text = L.Get("config.appearance.marginBottom");
+        MarginBottomDesc.Text = L.Get("config.appearance.marginBottomDesc");
+        ToolTipService.SetToolTip(MarginBottomGrid, L.Get("config.appearance.marginBottomTooltip"));
+
+        // Performance
+        PerformanceHeading.Text = L.Get("config.performance.heading");
+        PageSizeLabel.Text = L.Get("config.performance.pageSize");
+        PageSizeDesc.Text = L.Get("config.performance.pageSizeDesc");
+        MaxItemsLabel.Text = L.Get("config.performance.maxItems");
+        MaxItemsDesc.Text = L.Get("config.performance.maxItemsDesc");
+        ScrollThresholdLabel.Text = L.Get("config.performance.scrollThreshold");
+        ScrollThresholdDesc.Text = L.Get("config.performance.scrollThresholdDesc");
+
+        // Storage
+        StorageHeading.Text = L.Get("config.storage.heading");
+        RetentionLabel.Text = L.Get("config.storage.retentionDays");
+        RetentionDesc.Text = L.Get("config.storage.retentionDaysDesc");
+        ToolTipService.SetToolTip(RetentionGrid, L.Get("config.storage.retentionTooltip"));
+
+        // Paste
+        PasteHeading.Text = L.Get("config.paste.heading");
+        PasteIntro.Text = L.Get("config.paste.intro");
+        PasteSpeedLabel.Text = L.Get("config.paste.speedLabel");
+        PasteSpeedDesc.Text = L.Get("config.paste.speedDesc");
+        ToolTipService.SetToolTip(PasteSpeedGrid, L.Get("config.paste.speedTooltip"));
+        PasteWarning.Text = L.Get("config.paste.warning");
+
+        // Thumbnail
+        ThumbnailHeading.Text = L.Get("config.thumbnail.heading");
+        ThumbnailWarning.Text = L.Get("config.thumbnail.warning");
+        ThumbnailQualityLabel.Text = L.Get("config.thumbnail.qualityLabel");
+        ThumbnailQualityDesc.Text = L.Get("config.thumbnail.qualityDesc");
+        ToolTipService.SetToolTip(ThumbnailQualityGrid, L.Get("config.thumbnail.qualityTooltip"));
+
+        // Buttons
+        ResetButton.Content = L.Get("config.buttons.reset");
+        CancelButton.Content = L.Get("config.buttons.cancel");
+        SaveButton.Content = L.Get("config.buttons.save");
     }
 
     private void OnHotkeyChanged(object sender, RoutedEventArgs e) => UpdateHotkeyPreview();
@@ -239,15 +305,16 @@ public sealed partial class ConfigWindow : Window
     {
         var parts = new System.Collections.Generic.List<string>();
 
-        if (UseCtrlCheck.IsChecked == true) parts.Add("Ctrl");
-        if (UseWinCheck.IsChecked == true) parts.Add("Win");
-        if (UseAltCheck.IsChecked == true) parts.Add("Alt");
-        if (UseShiftCheck.IsChecked == true) parts.Add("Shift");
+        if (UseCtrlCheck.IsChecked == true) parts.Add(L.Get("config.hotkey.modifierCtrl"));
+        if (UseWinCheck.IsChecked == true) parts.Add(L.Get("config.hotkey.modifierWin"));
+        if (UseAltCheck.IsChecked == true) parts.Add(L.Get("config.hotkey.modifierAlt"));
+        if (UseShiftCheck.IsChecked == true) parts.Add(L.Get("config.hotkey.modifierShift"));
 
         var selectedKey = (HotkeyCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "V";
         parts.Add(selectedKey);
 
-        HotkeyPreview.Text = $"Atajo actual: {string.Join(" + ", parts)}";
+        var shortcut = string.Join($" {L.Get("config.hotkey.plus")} ", parts);
+        HotkeyPreview.Text = L.Get("config.hotkey.preview").Replace("{shortcut}", shortcut, StringComparison.Ordinal);
     }
 
     private void ThumbnailPresetCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -337,7 +404,7 @@ public sealed partial class ConfigWindow : Window
 
         if (modifierCount < 2)
         {
-            ShowErrorDialog("Debes seleccionar al menos 2 teclas modificadoras (Ctrl, Win, Alt o Shift).");
+            ShowErrorDialog(L.Get("config.errors.minModifiers"));
             return;
         }
 
@@ -399,7 +466,7 @@ public sealed partial class ConfigWindow : Window
             }
             else
             {
-                ShowErrorDialog("Error al guardar. Revisa los permisos de la carpeta de configuración.");
+                ShowErrorDialog(L.Get("config.errors.saveFailed"));
             }
         }
         catch (Exception ex)
@@ -432,9 +499,9 @@ public sealed partial class ConfigWindow : Window
     {
         var dialog = new ContentDialog
         {
-            Title = "Error",
+            Title = L.Get("config.dialog.errorTitle"),
             Content = message,
-            CloseButtonText = "Aceptar",
+            CloseButtonText = L.Get("config.dialog.accept"),
             XamlRoot = Content.XamlRoot
         };
         await dialog.ShowAsync();

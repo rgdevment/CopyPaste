@@ -15,9 +15,9 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,24">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <FontIcon Glyph="&#xE713;" FontSize="28"/>
-                <TextBlock Text="Configuracion" FontSize="28" FontWeight="SemiBold"/>
+                <TextBlock x:Name="ConfigTitle" Text="Configuracion" FontSize="28" FontWeight="SemiBold"/>
             </StackPanel>
-            <TextBlock Text="Los cambios se guardan en MyM.json y requieren reiniciar." FontSize="12" Opacity="0.6" Margin="0,8,0,0"/>
+            <TextBlock x:Name="ConfigSubtitle" Text="Los cambios se guardan en MyM.json y requieren reiniciar." FontSize="12" Opacity="0.6" Margin="0,8,0,0"/>
         </StackPanel>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
             <StackPanel Spacing="24">
@@ -49,7 +49,7 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE7E8;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="INICIO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                        <TextBlock x:Name="StartupHeading" Text="INICIO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                         <Grid>
@@ -58,23 +58,23 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Iniciar con Windows" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="Ejecuta en segundo plano al iniciar sesion" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="StartupLabel" Text="Iniciar con Windows" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="StartupDesc" Text="Ejecuta en segundo plano al iniciar sesion" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <ToggleSwitch x:Name="RunOnStartupSwitch" Grid.Column="1" OnContent="Si" OffContent="No"/>
+                            <ToggleSwitch x:Name="RunOnStartupSwitch" Grid.Column="1"/>
                         </Grid>
                     </Border>
                 </StackPanel>
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE765;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="ATAJOS DE TECLADO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                        <TextBlock x:Name="HotkeyHeading" Text="ATAJOS DE TECLADO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                         <StackPanel Spacing="16">
                             <StackPanel>
-                                <TextBlock Text="Atajo para abrir/cerrar CopyPaste" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="Selecciona al menos 2 modificadores + una tecla" FontSize="11" Opacity="0.6" Margin="0,4,0,12"/>
+                                <TextBlock x:Name="HotkeyLabel" Text="Atajo para abrir/cerrar CopyPaste" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="HotkeyDesc" Text="Selecciona al menos 2 modificadores + una tecla" FontSize="11" Opacity="0.6" Margin="0,4,0,12"/>
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <CheckBox x:Name="UseCtrlCheck" Content="Ctrl"/>
                                     <CheckBox x:Name="UseWinCheck" Content="Win"/>
@@ -102,42 +102,42 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE771;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="APARIENCIA" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                        <TextBlock x:Name="AppearanceHeading" Text="APARIENCIA" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                         <StackPanel Spacing="16">
-                            <Grid ToolTipService.ToolTip="Ancho del panel lateral en pixeles. Recomendado: 350-500px">
+                            <Grid x:Name="PanelWidthGrid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="120"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Ancho del panel" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Ancho en pixeles (350-600px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="PanelWidthLabel" Text="Ancho del panel" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="PanelWidthDesc" Text="Ancho en pixeles (350-600px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <NumberBox x:Name="WindowWidthBox" Grid.Column="1" Minimum="350" Maximum="600" SpinButtonPlacementMode="Compact" SmallChange="10"/>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posicion vertical.">
+                            <Grid x:Name="MarginTopGrid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="120"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Margen superior" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Distancia desde arriba (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="MarginTopLabel" Text="Margen superior" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="MarginTopDesc" Text="Distancia desde arriba (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <NumberBox x:Name="WindowMarginTopBox" Grid.Column="1" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="4"/>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
-                            <Grid ToolTipService.ToolTip="Espacio entre el borde inferior de la pantalla y el panel. Util si tienes barra de tareas grande.">
+                            <Grid x:Name="MarginBottomGrid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="120"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Margen inferior" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Distancia desde abajo (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="MarginBottomLabel" Text="Margen inferior" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="MarginBottomDesc" Text="Distancia desde abajo (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <NumberBox x:Name="WindowMarginBottomBox" Grid.Column="1" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="4"/>
                             </Grid>
@@ -147,7 +147,7 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="RENDIMIENTO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                        <TextBlock x:Name="PerformanceHeading" Text="RENDIMIENTO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                         <StackPanel Spacing="16">
@@ -157,8 +157,8 @@
                                     <ColumnDefinition Width="120"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Elementos por pagina" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Cantidad a cargar por lote" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="PageSizeLabel" Text="Elementos por pagina" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="PageSizeDesc" Text="Cantidad a cargar por lote" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <NumberBox x:Name="PageSizeBox" Grid.Column="1" Minimum="5" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
                             </Grid>
@@ -169,8 +169,8 @@
                                     <ColumnDefinition Width="120"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Limite en memoria" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Maximo elementos en RAM" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="MaxItemsLabel" Text="Limite en memoria" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="MaxItemsDesc" Text="Maximo elementos en RAM" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <NumberBox x:Name="MaxItemsBeforeCleanupBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
                             </Grid>
@@ -181,8 +181,8 @@
                                     <ColumnDefinition Width="120"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Umbral de scroll" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Distancia para cargar mas (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="ScrollThresholdLabel" Text="Umbral de scroll" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="ScrollThresholdDesc" Text="Distancia para cargar mas (px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <NumberBox x:Name="ScrollLoadThresholdBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
                             </Grid>
@@ -192,17 +192,17 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE74E;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="ALMACENAMIENTO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                        <TextBlock x:Name="StorageHeading" Text="ALMACENAMIENTO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
-                        <Grid ToolTipService.ToolTip="Dias para mantener historial del portapapeles. 0 = sin limite. Los elementos anclados nunca se borran.">
+                        <Grid x:Name="RetentionGrid">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="120"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Dias de retencion" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="Dias para mantener historial (0=sin limite)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="RetentionLabel" Text="Dias de retencion" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="RetentionDesc" Text="Dias para mantener historial (0=sin limite)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                             </StackPanel>
                             <NumberBox x:Name="RetentionDaysBox" Grid.Column="1" Minimum="0" Maximum="365" SpinButtonPlacementMode="Compact" SmallChange="7"/>
                         </Grid>
@@ -211,19 +211,19 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE77F;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="PEGADO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                        <TextBlock x:Name="PasteHeading" Text="PEGADO" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                         <StackPanel Spacing="16">
-                            <TextBlock Text="Velocidad de pegado automatico. Normal/Seguro recomendados para mayoria de equipos." FontSize="11" Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <Grid ToolTipService.ToolTip="Rapido = equipos potentes (puede fallar). Normal = equilibrio. Seguro = conservador. Lento = equipos antiguos.">
+                            <TextBlock x:Name="PasteIntro" Text="Velocidad de pegado automatico. Normal/Seguro recomendados para mayoria de equipos." FontSize="11" Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Grid x:Name="PasteSpeedGrid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="180"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Velocidad de pegado" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Ajusta timings de restauracion y pegado" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="PasteSpeedLabel" Text="Velocidad de pegado" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="PasteSpeedDesc" Text="Ajusta timings de restauracion y pegado" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ComboBox x:Name="PastePresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="PastePresetCombo_SelectionChanged">
                                     <ComboBoxItem Content="Rapido" Tag="fast"/>
@@ -233,7 +233,7 @@
                                 </ComboBox>
                             </Grid>
                             <Border Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}" CornerRadius="4" Padding="10" Opacity="0.7">
-                                <TextBlock FontSize="10" Opacity="0.85" TextWrapping="Wrap">
+                                <TextBlock x:Name="PasteWarning" FontSize="10" Opacity="0.85" TextWrapping="Wrap">
                                     <Run Text="⚠️ Rapido:"/>
                                     <Run Text=" Puede causar comportamientos extraños en apps pesadas."/>
                                     <LineBreak/>
@@ -247,24 +247,24 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
                         <FontIcon Glyph="&#xE91B;" FontSize="16" Foreground="#E8912D"/>
-                        <TextBlock Text="MINIATURAS (AVANZADO)" FontSize="12" FontWeight="SemiBold" Foreground="#E8912D" CharacterSpacing="50"/>
+                        <TextBlock x:Name="ThumbnailHeading" Text="MINIATURAS (AVANZADO)" FontSize="12" FontWeight="SemiBold" Foreground="#E8912D" CharacterSpacing="50"/>
                     </StackPanel>
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16" BorderBrush="#E8912D" BorderThickness="1">
                         <StackPanel Spacing="16">
                             <Border Background="#33E8912D" CornerRadius="4" Padding="12">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="#E8912D"/>
-                                    <TextBlock Text="Modificar puede afectar consumo de RAM y espacio en disco." FontSize="11" Foreground="#E8912D" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="ThumbnailWarning" Text="Modificar puede afectar consumo de RAM y espacio en disco." FontSize="11" Foreground="#E8912D" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
-                            <Grid ToolTipService.ToolTip="Selecciona un preset de calidad. Excelente = mejor calidad pero mas RAM. Ahorro = minimo consumo de recursos.">
+                            <Grid x:Name="ThumbnailQualityGrid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="180"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Calidad de miniaturas" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Solo afecta miniaturas futuras" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="ThumbnailQualityLabel" Text="Calidad de miniaturas" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="ThumbnailQualityDesc" Text="Solo afecta miniaturas futuras" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ThumbnailPresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="ThumbnailPresetCombo_SelectionChanged">
                                     <ComboBoxItem Content="Excelente" Tag="excellent"/>
@@ -286,9 +286,9 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Button x:Name="ResetButton" Grid.Column="0" Content="Restablecer" Click="ResetButton_Click"/>
-            <Button x:Name="CancelButton" Grid.Column="2" Content="Cancelar" Click="CancelButton_Click" Margin="0,0,8,0"/>
-            <Button x:Name="SaveButton" Grid.Column="3" Content="Guardar y reiniciar" Click="SaveButton_Click" Style="{ThemeResource AccentButtonStyle}"/>
+            <Button x:Name="ResetButton" Grid.Column="0" Click="ResetButton_Click"/>
+            <Button x:Name="CancelButton" Grid.Column="2" Click="CancelButton_Click" Margin="0,0,8,0"/>
+            <Button x:Name="SaveButton" Grid.Column="3" Click="SaveButton_Click" Style="{ThemeResource AccentButtonStyle}"/>
         </Grid>
     </Grid>
 </Window>

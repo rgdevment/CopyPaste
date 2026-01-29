@@ -240,7 +240,7 @@ xmlns:tb="using:H.NotifyIcon">
                             <!-- File Warning -->
                             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" Visibility="{x:Bind FileWarningVisibility, Mode=OneWay}">
                                 <FontIcon Glyph="&#xE7BA;" FontSize="12" Foreground="#FFAA00" Margin="0,0,6,0"/>
-                                <TextBlock Text="Archivo no disponible" FontSize="11" Foreground="#FFAA00" Opacity="0.9"/>
+                                <TextBlock Text="{x:Bind FileWarningText}" FontSize="11" Foreground="#FFAA00" Opacity="0.9"/>
                             </StackPanel>
 
                             <!-- Footer -->
@@ -274,14 +274,13 @@ xmlns:tb="using:H.NotifyIcon">
                                         Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Margin="0,-4,-4,0" Spacing="2" Opacity="0">
                                 <!-- Botón "..." - Solo opciones comunes (sin Eliminar) -->
-                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0"
-                                        ToolTipService.ToolTip="Opciones">
+                                <Button x:Name="OptionsButton" Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0">
                                     <FontIcon Glyph="&#xE712;" FontSize="14"/>
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
                                             <!-- ⚠️ MANTENER SINCRONIZADO CON Border.ContextFlyout (excepto Eliminar) -->
-                                            <MenuFlyoutItem Text="Pegar" Icon="Paste" Command="{x:Bind PasteCommand}"/>
-                                            <MenuFlyoutItem Text="Pegar sin formato" Command="{x:Bind PastePlainCommand}">
+                                            <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
+                                            <MenuFlyoutItem Text="{x:Bind PastePlainText}" Command="{x:Bind PastePlainCommand}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator/>
@@ -292,8 +291,8 @@ xmlns:tb="using:H.NotifyIcon">
                                         </MenuFlyout>
                                     </Button.Flyout>
                                 </Button>
-                                <Button Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0"
-                                        Command="{x:Bind DeleteCommand}" ToolTipService.ToolTip="Eliminar">
+                                <Button x:Name="DeleteButton" Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0"
+                                        Command="{x:Bind DeleteCommand}">
                                     <FontIcon Glyph="&#xE711;" FontSize="10"/>
                                 </Button>
                             </StackPanel>

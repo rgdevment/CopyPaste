@@ -199,6 +199,8 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string PastePlainText => _pastePlainText;
     public string DeleteText => _deleteText;
 
+    public string FileWarningText => L.Get("clipboard.fileWarning");
+
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
 
     public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Folder or ClipboardContentType.Audio or ClipboardContentType.Video;
