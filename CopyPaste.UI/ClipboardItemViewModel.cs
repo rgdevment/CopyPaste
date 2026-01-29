@@ -73,7 +73,9 @@ public partial class ClipboardItemViewModel : ObservableObject
         }
     }
 
-    public int ContentMaxLines => _isExpanded ? 9 : 3;
+    public int ContentMaxLines => _isExpanded
+        ? ConfigLoader.Config.CardMaxLines
+        : ConfigLoader.Config.CardMinLines;
     public double ContentLineHeight { get; } = 20.0;
 
     public ClipboardItemViewModel(

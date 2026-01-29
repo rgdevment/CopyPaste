@@ -141,6 +141,30 @@
                                 </StackPanel>
                                 <NumberBox x:Name="WindowMarginBottomBox" Grid.Column="1" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="4"/>
                             </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid x:Name="CardMinLinesGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock x:Name="CardMinLinesLabel" Text="Lineas (colapsada)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="CardMinLinesDesc" Text="Lineas de texto en tarjeta colapsada" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="CardMinLinesBox" Grid.Column="1" Minimum="1" Maximum="10" SpinButtonPlacementMode="Compact" SmallChange="1"/>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                            <Grid x:Name="CardMaxLinesGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock x:Name="CardMaxLinesLabel" Text="Lineas (expandida)" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="CardMaxLinesDesc" Text="Lineas de texto en tarjeta expandida" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <NumberBox x:Name="CardMaxLinesBox" Grid.Column="1" Minimum="3" Maximum="20" SpinButtonPlacementMode="Compact" SmallChange="1"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -91,6 +91,12 @@ public sealed partial class ConfigWindow : Window
         MarginBottomLabel.Text = L.Get("config.appearance.marginBottom");
         MarginBottomDesc.Text = L.Get("config.appearance.marginBottomDesc");
         ToolTipService.SetToolTip(MarginBottomGrid, L.Get("config.appearance.marginBottomTooltip"));
+        CardMinLinesLabel.Text = L.Get("config.appearance.cardMinLines");
+        CardMinLinesDesc.Text = L.Get("config.appearance.cardMinLinesDesc");
+        ToolTipService.SetToolTip(CardMinLinesGrid, L.Get("config.appearance.cardMinLinesTooltip"));
+        CardMaxLinesLabel.Text = L.Get("config.appearance.cardMaxLines");
+        CardMaxLinesDesc.Text = L.Get("config.appearance.cardMaxLinesDesc");
+        ToolTipService.SetToolTip(CardMaxLinesGrid, L.Get("config.appearance.cardMaxLinesTooltip"));
 
         // Performance
         PerformanceHeading.Text = L.Get("config.performance.heading");
@@ -194,6 +200,8 @@ public sealed partial class ConfigWindow : Window
         WindowWidthBox.Value = config.WindowWidth;
         WindowMarginTopBox.Value = config.WindowMarginTop;
         WindowMarginBottomBox.Value = config.WindowMarginBottom;
+        CardMinLinesBox.Value = config.CardMinLines;
+        CardMaxLinesBox.Value = config.CardMaxLines;
 
         // Performance
         PageSizeBox.Value = config.PageSize;
@@ -387,6 +395,8 @@ public sealed partial class ConfigWindow : Window
         WindowWidthBox.Value = d.WindowWidth;
         WindowMarginTopBox.Value = d.WindowMarginTop;
         WindowMarginBottomBox.Value = d.WindowMarginBottom;
+        CardMinLinesBox.Value = d.CardMinLines;
+        CardMaxLinesBox.Value = d.CardMaxLines;
 
         PageSizeBox.Value = d.PageSize;
         MaxItemsBeforeCleanupBox.Value = d.MaxItemsBeforeCleanup;
@@ -444,9 +454,8 @@ public sealed partial class ConfigWindow : Window
                 WindowWidth = (int)WindowWidthBox.Value,
                 WindowMarginTop = (int)WindowMarginTopBox.Value,
                 WindowMarginBottom = (int)WindowMarginBottomBox.Value,
-
-                // Performance
-                PageSize = (int)PageSizeBox.Value,
+                CardMinLines = (int)CardMinLinesBox.Value,
+                CardMaxLines = (int)CardMaxLinesBox.Value,
                 MaxItemsBeforeCleanup = (int)MaxItemsBeforeCleanupBox.Value,
                 ScrollLoadThreshold = (int)ScrollLoadThresholdBox.Value,
 

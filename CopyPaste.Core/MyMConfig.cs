@@ -97,6 +97,16 @@ public sealed class MyMConfig
     /// </summary>
     public int WindowMarginBottom { get; set; } = 16;
 
+    /// <summary>
+    /// Number of text lines shown when card is collapsed.
+    /// </summary>
+    public int CardMinLines { get; set; } = 3;
+
+    /// <summary>
+    /// Number of text lines shown when card is expanded.
+    /// </summary>
+    public int CardMaxLines { get; set; } = 9;
+
     // ═══════════════════════════════════════════════════════════════
     // Storage Configuration
     // ═══════════════════════════════════════════════════════════════

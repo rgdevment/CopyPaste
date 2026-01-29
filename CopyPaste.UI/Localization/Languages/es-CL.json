@@ -62,7 +62,13 @@
       "marginTopTooltip": "Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posición vertical.",
       "marginBottom": "Margen inferior",
       "marginBottomDesc": "Distancia desde abajo (px)",
-      "marginBottomTooltip": "Espacio entre el borde inferior de la pantalla y el panel. Útil si tienes barra de tareas grande."
+      "marginBottomTooltip": "Espacio entre el borde inferior de la pantalla y el panel. Útil si tienes barra de tareas grande.",
+      "cardMinLines": "Líneas (colapsada)",
+      "cardMinLinesDesc": "Líneas de texto en tarjeta colapsada",
+      "cardMinLinesTooltip": "Número de líneas visibles cuando la tarjeta está colapsada. Recomendado: 2-4 líneas.",
+      "cardMaxLines": "Líneas (expandida)",
+      "cardMaxLinesDesc": "Líneas de texto en tarjeta expandida",
+      "cardMaxLinesTooltip": "Número de líneas visibles cuando expandes la tarjeta. Recomendado: 6-12 líneas."
     },
     "performance": {
       "heading": "RENDIMIENTO",

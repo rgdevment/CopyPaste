@@ -62,7 +62,13 @@
       "marginTopTooltip": "Space between the top of the screen and the panel. Allows adjusting vertical position.",
       "marginBottom": "Bottom margin",
       "marginBottomDesc": "Distance from bottom (px)",
-      "marginBottomTooltip": "Space between the bottom of the screen and the panel. Useful if you have a large taskbar."
+      "marginBottomTooltip": "Space between the bottom of the screen and the panel. Useful if you have a large taskbar.",
+      "cardMinLines": "Lines (collapsed)",
+      "cardMinLinesDesc": "Text lines when card is collapsed",
+      "cardMinLinesTooltip": "Number of visible lines when the card is collapsed. Recommended: 2-4 lines.",
+      "cardMaxLines": "Lines (expanded)",
+      "cardMaxLinesDesc": "Text lines when card is expanded",
+      "cardMaxLinesTooltip": "Number of visible lines when you expand the card. Recommended: 6-12 lines."
     },
     "performance": {
       "heading": "PERFORMANCE",
