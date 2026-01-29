@@ -160,9 +160,21 @@ xmlns:tb="using:H.NotifyIcon">
             <ListView x:Name="ClipboardListView"
                       Grid.Row="2"
                       ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
-                      SelectionMode="None"
+                      SelectionMode="Single"
+                      IsTabStop="True"
+                      TabNavigation="Once"
+                      SingleSelectionFollowsFocus="True"
+                      PreviewKeyDown="ClipboardListView_PreviewKeyDown"
                       Padding="4,0,4,12"
                       ContainerContentChanging="ClipboardListView_ContainerContentChanging">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="MinHeight" Value="0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+            </ListView.ItemContainerStyle>
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
                     <ItemsStackPanel Orientation="Vertical"/>

@@ -64,6 +64,7 @@ internal sealed partial class MainWindow : Window
         Closed += MainWindow_Closed;
         _appWindow.Changed += AppWindow_Changed;
         ClipboardListView.Loaded += ClipboardListView_Loaded;
+        SearchBox.KeyDown += SearchBox_KeyDown;
     }
 
     private void TabChanged(object sender, RoutedEventArgs e)
@@ -203,6 +204,8 @@ internal sealed partial class MainWindow : Window
             Win32WindowHelper.RemoveWindowBorder(_hWnd);
             // Refresh file availability status for visible items
             RefreshFileAvailability();
+            // Focus search box for immediate keyboard input
+            FocusSearchBox();
         }
     }
 
@@ -417,6 +420,64 @@ internal sealed partial class MainWindow : Window
         if (SearchBox is TextBox textBox)
             ViewModel.SearchQuery = textBox.Text ?? string.Empty;
     }
+
+    private void SearchBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        // Navigate to ListView when pressing Enter or Down arrow in SearchBox
+        if (e.Key is Windows.System.VirtualKey.Enter or Windows.System.VirtualKey.Down)
+        {
+            if (ClipboardListView.Items.Count > 0)
+            {
+                ClipboardListView.SelectedIndex = 0;
+
+                // If Enter was pressed and there's an item, paste it directly (same as double-click)
+                if (e.Key == Windows.System.VirtualKey.Enter &&
+                    ClipboardListView.SelectedItem is ClipboardItemViewModel vm)
+                {
+                    vm.PasteCommand.Execute(null);
+                }
+                else
+                {
+                    // Just navigate to list with Down arrow
+                    ClipboardListView.Focus(FocusState.Keyboard);
+                }
+
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void ClipboardListView_PreviewKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (ClipboardListView.SelectedItem is not ClipboardItemViewModel vm)
+            return;
+
+        switch (e.Key)
+        {
+            // Paste selected item when pressing Enter (same as double-click)
+            case Windows.System.VirtualKey.Enter:
+                vm.PasteCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            // Delete selected item when pressing Delete
+            case Windows.System.VirtualKey.Delete:
+                vm.DeleteCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            // Pin/Unpin with P key
+            case Windows.System.VirtualKey.P:
+                vm.TogglePinCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void FocusSearchBox() =>
+        // Use dispatcher to ensure focus happens after window is fully rendered
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            SearchBox.Focus(FocusState.Programmatic));
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
     {

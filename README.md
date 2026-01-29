@@ -67,7 +67,34 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 * 📂 **Rich History:** Seamlessly handles Text, Images, and File paths.
 * 🔒 **Privacy First:** 100% Local. Your clipboard history never leaves your machine.
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
+* ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
 * ⚙️ **Configurable:** Hotkeys, appearance, performance settings, and more.
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+CopyPaste is designed for power users who prefer keyboard navigation:
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Win+Alt+V` | Open/close CopyPaste (default hotkey, customizable) |
+| `↓` or `Tab` | Navigate from search to clipboard items |
+| `↑` / `↓` | Navigate between clipboard items |
+| `Shift+Tab` | Return to search box |
+| `Enter` | Paste selected item and return to previous app |
+| `Delete` | Delete selected item |
+| `P` | Pin/Unpin selected item |
+| `Esc` | Close CopyPaste window |
+
+### Keyboard-Only Workflow
+1. **Press `Win+Alt+V`** → Window opens with focus on search box
+2. **Type to filter** (optional) → Results update in real-time
+3. **Press `↓`** → Navigate to first clipboard item
+4. **Use `↑`/`↓`** → Select the desired item
+5. **Press `Enter`** → Item is pasted to your previous application
+
+This workflow matches the efficiency of double-clicking with your mouse but keeps your hands on the keyboard.
 
 ---
 
@@ -168,6 +195,8 @@ We believe in radical honesty about the state of the app:
 - [x] Global hotkey support (customizable)
 - [x] Pin/unpin clipboard items
 - [x] Text, images, files, and folders support
+- [x] Full keyboard navigation (Tab, Enter, Delete, P)
+- [x] Single instance validation (prevents multiple instances)
 
 ---
 
