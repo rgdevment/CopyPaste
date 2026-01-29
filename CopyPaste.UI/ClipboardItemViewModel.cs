@@ -18,6 +18,9 @@ public partial class ClipboardItemViewModel : ObservableObject
     private readonly string _pastePlainText;
     private readonly string _deleteText;
     private readonly string _fileWarningText;
+    private readonly string _pinText;
+    private readonly string _unpinText;
+    private readonly string _headerTitle;
 
     private bool _isPinned;
 
@@ -72,6 +75,19 @@ public partial class ClipboardItemViewModel : ObservableObject
         _pastePlainText = L.Get("clipboard.contextMenu.pastePlain");
         _deleteText = L.Get("clipboard.contextMenu.delete");
         _fileWarningText = L.Get("clipboard.fileWarning");
+        _pinText = L.Get("clipboard.contextMenu.pin");
+        _unpinText = L.Get("clipboard.contextMenu.unpin");
+        _headerTitle = model.Type switch
+        {
+            ClipboardContentType.Text => L.Get("clipboard.itemTypes.text"),
+            ClipboardContentType.Image => L.Get("clipboard.itemTypes.image"),
+            ClipboardContentType.File => L.Get("clipboard.itemTypes.file"),
+            ClipboardContentType.Folder => L.Get("clipboard.itemTypes.folder"),
+            ClipboardContentType.Link => L.Get("clipboard.itemTypes.link"),
+            ClipboardContentType.Audio => L.Get("clipboard.itemTypes.audio"),
+            ClipboardContentType.Video => L.Get("clipboard.itemTypes.video"),
+            _ => L.Get("clipboard.itemTypes.content")
+        };
 
         _isPinned = model.IsPinned;
     }
@@ -171,17 +187,7 @@ public partial class ClipboardItemViewModel : ObservableObject
 
     public Visibility DurationVisibility => MediaDuration != null ? Visibility.Visible : Visibility.Collapsed;
 
-    public string HeaderTitle => Model.Type switch
-    {
-        ClipboardContentType.Text => L.Get("clipboard.itemTypes.text"),
-        ClipboardContentType.Image => L.Get("clipboard.itemTypes.image"),
-        ClipboardContentType.File => L.Get("clipboard.itemTypes.file"),
-        ClipboardContentType.Folder => L.Get("clipboard.itemTypes.folder"),
-        ClipboardContentType.Link => L.Get("clipboard.itemTypes.link"),
-        ClipboardContentType.Audio => L.Get("clipboard.itemTypes.audio"),
-        ClipboardContentType.Video => L.Get("clipboard.itemTypes.video"),
-        _ => L.Get("clipboard.itemTypes.content")
-    };
+    public string HeaderTitle => _headerTitle;
 
     public string TypeIcon => Model.Type switch
     {
@@ -196,7 +202,7 @@ public partial class ClipboardItemViewModel : ObservableObject
     };
 
     public string PinIconGlyph => _isPinned ? "\uE840" : "\uE718";
-    public string PinMenuText => _isPinned ? L.Get("clipboard.contextMenu.unpin") : L.Get("clipboard.contextMenu.pin");
+    public string PinMenuText => _isPinned ? _unpinText : _pinText;
     public string PasteText => _pasteText;
     public string PastePlainText => _pastePlainText;
     public string DeleteText => _deleteText;
