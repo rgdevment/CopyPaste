@@ -182,7 +182,7 @@ We welcome translation contributions for any language! Here's how to add a new l
 
 #### Steps to Add a New Translation
 
-1. **Fork the repository** and clone it locally.
+1. **Create a branch** from `main` in the repository.
 
 2. **Copy the base language file:**
    ```
