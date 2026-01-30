@@ -59,7 +59,7 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 
 ## ✨ Key Features
 
-> 🚀 **v1.0.0-beta.2** — This is our latest beta! See [Release Notes](https://github.com/rgdevment/CopyPaste/releases) for detailed changes and improvements.
+> 🚀 **Latest Release** — See all features and improvements in our [Release Notes](https://github.com/rgdevment/CopyPaste/releases/latest).
 
 * 🎨 **Native & Modern UI:** Built with **WinUI 3**. It respects your system theme (Light/Dark) and uses standard Windows controls.
 * ⚡ **Instant Startup:** A native C++ launcher displays a splash screen immediately while the .NET app initializes in the background. No waiting, no blank screens.
