@@ -6,7 +6,7 @@ namespace CopyPaste.UI.Tests;
 /// <summary>
 /// Basic tests for MainViewModel (limited due to WinUI3/DispatcherQueue dependencies).
 /// </summary>
-public class MainViewModelBasicTests
+public sealed class MainViewModelBasicTests
 {
     [Fact]
     public void Constructor_WithValidService_CreatesInstance()

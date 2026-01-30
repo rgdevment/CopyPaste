@@ -206,6 +206,7 @@ public sealed class CleanupServiceTests : IDisposable
         return Path.Combine(directory, "last_cleanup.txt");
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
         try

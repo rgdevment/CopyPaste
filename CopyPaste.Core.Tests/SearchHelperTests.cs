@@ -3,7 +3,7 @@ using Xunit;
 
 namespace CopyPaste.Core.Tests;
 
-public class SearchHelperTests
+public sealed class SearchHelperTests
 {
     #region NormalizeText Tests
 
@@ -221,9 +221,9 @@ public class SearchHelperTests
     }
 
     [Fact]
-    public void MatchesQuery_NullContent_DoesNotMatch()
+    public void MatchesQuery_DefaultContent_DoesNotMatchNonEmptyQuery()
     {
-        var item = new ClipboardItem { Content = null, Type = ClipboardContentType.Text };
+        var item = new ClipboardItem { Type = ClipboardContentType.Text };
 
         Assert.False(SearchHelper.MatchesQuery(item, "test"));
     }

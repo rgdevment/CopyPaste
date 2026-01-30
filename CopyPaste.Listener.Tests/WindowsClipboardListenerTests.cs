@@ -7,7 +7,7 @@ using Xunit;
 
 namespace CopyPaste.Listener.Tests;
 
-public class WindowsClipboardListenerTests : IDisposable
+public sealed class WindowsClipboardListenerTests : IDisposable
 {
     private readonly string _tempDir;
 
@@ -299,6 +299,7 @@ public class WindowsClipboardListenerTests : IDisposable
 
     #endregion
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
         try

@@ -249,13 +249,14 @@ public sealed class StorageConfigTests : IDisposable
         var newBasePath = Path.Combine(Path.GetTempPath(), "NewPath", Guid.NewGuid().ToString());
         StorageConfig.SetBasePath(newBasePath);
 
-        Assert.Contains(newBasePath, StorageConfig.DatabasePath);
-        Assert.Contains(newBasePath, StorageConfig.ImagesPath);
-        Assert.Contains(newBasePath, StorageConfig.ThumbnailsPath);
+        Assert.Contains(newBasePath, StorageConfig.DatabasePath, StringComparison.Ordinal);
+        Assert.Contains(newBasePath, StorageConfig.ImagesPath, StringComparison.Ordinal);
+        Assert.Contains(newBasePath, StorageConfig.ThumbnailsPath, StringComparison.Ordinal);
     }
 
     #endregion
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
         try

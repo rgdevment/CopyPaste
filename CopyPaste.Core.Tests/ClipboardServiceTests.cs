@@ -32,7 +32,7 @@ public sealed class ClipboardServiceTests : IDisposable
     {
         _service.AddText("Hello World", ClipboardContentType.Text, "TestApp");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Equal("Hello World", _repository.SavedItems[0].Content);
         Assert.Equal(ClipboardContentType.Text, _repository.SavedItems[0].Type);
         Assert.Equal("TestApp", _repository.SavedItems[0].AppSource);
@@ -43,7 +43,7 @@ public sealed class ClipboardServiceTests : IDisposable
     {
         _service.AddText(null, ClipboardContentType.Text, "TestApp");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Equal(string.Empty, _repository.SavedItems[0].Content);
     }
 
@@ -52,7 +52,7 @@ public sealed class ClipboardServiceTests : IDisposable
     {
         _service.AddText(string.Empty, ClipboardContentType.Text, "TestApp");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Equal(string.Empty, _repository.SavedItems[0].Content);
     }
 
@@ -61,7 +61,7 @@ public sealed class ClipboardServiceTests : IDisposable
     {
         _service.AddText("https://example.com", ClipboardContentType.Link, "Browser");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Equal(ClipboardContentType.Link, _repository.SavedItems[0].Type);
     }
 
@@ -71,9 +71,9 @@ public sealed class ClipboardServiceTests : IDisposable
         var rtfBytes = new byte[] { 1, 2, 3, 4 };
         _service.AddText("Test", ClipboardContentType.Text, "TestApp", rtfBytes);
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.NotNull(_repository.SavedItems[0].Metadata);
-        Assert.Contains("rtf", _repository.SavedItems[0].Metadata);
+        Assert.Contains("rtf", _repository.SavedItems[0].Metadata, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class ClipboardServiceTests : IDisposable
     {
         _service.AddText("Test", ClipboardContentType.Text, "TestApp");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Null(_repository.SavedItems[0].Metadata);
     }
 
@@ -125,11 +125,11 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.AddFiles(new Collection<string> { testFile }, ClipboardContentType.File, "Explorer");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Equal(testFile, _repository.SavedItems[0].Content);
         Assert.NotNull(_repository.SavedItems[0].Metadata);
-        Assert.Contains("file_count", _repository.SavedItems[0].Metadata);
-        Assert.Contains("file_name", _repository.SavedItems[0].Metadata);
+        Assert.Contains("file_count", _repository.SavedItems[0].Metadata, StringComparison.Ordinal);
+        Assert.Contains("file_name", _repository.SavedItems[0].Metadata, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -142,10 +142,10 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.AddFiles(new Collection<string> { file1, file2 }, ClipboardContentType.File, "Explorer");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
-        Assert.Contains(file1, _repository.SavedItems[0].Content);
-        Assert.Contains(file2, _repository.SavedItems[0].Content);
-        Assert.Contains(Environment.NewLine, _repository.SavedItems[0].Content);
+        Assert.Single(_repository.SavedItems);
+        Assert.Contains(file1, _repository.SavedItems[0].Content, StringComparison.Ordinal);
+        Assert.Contains(file2, _repository.SavedItems[0].Content, StringComparison.Ordinal);
+        Assert.Contains(Environment.NewLine, _repository.SavedItems[0].Content, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -156,8 +156,8 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.AddFiles(new Collection<string> { testDir }, ClipboardContentType.Folder, "Explorer");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
-        Assert.Contains("is_directory", _repository.SavedItems[0].Metadata!);
+        Assert.Single(_repository.SavedItems);
+        Assert.Contains("is_directory", _repository.SavedItems[0].Metadata!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.AddFiles(new Collection<string> { nonExistent }, ClipboardContentType.File, "Explorer");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Equal(nonExistent, _repository.SavedItems[0].Content);
     }
 
@@ -255,7 +255,7 @@ public sealed class ClipboardServiceTests : IDisposable
 
         Assert.NotNull(reactivatedItem);
         Assert.Equal(existingItem.Id, reactivatedItem.Id);
-        Assert.Equal(1, _repository.UpdatedItems.Count);
+        Assert.Single(_repository.UpdatedItems);
         Assert.Empty(_repository.SavedItems);
     }
 
@@ -272,12 +272,13 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.AddText("Different", ClipboardContentType.Text, "TestApp");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Single(_repository.SavedItems);
         Assert.Empty(_repository.UpdatedItems);
     }
 
     #endregion
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
         try

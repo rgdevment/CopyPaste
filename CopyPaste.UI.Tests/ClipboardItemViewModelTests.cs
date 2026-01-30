@@ -3,7 +3,7 @@ using Xunit;
 
 namespace CopyPaste.UI.Tests;
 
-public class ClipboardItemViewModelTests
+public sealed class ClipboardItemViewModelTests
 {
     #region Constructor Tests
 

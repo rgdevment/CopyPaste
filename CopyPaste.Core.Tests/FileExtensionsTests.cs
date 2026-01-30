@@ -3,7 +3,7 @@ using Xunit;
 
 namespace CopyPaste.Core.Tests;
 
-public class FileExtensionsTests
+public sealed class FileExtensionsTests
 {
     #region Audio Extensions
 
