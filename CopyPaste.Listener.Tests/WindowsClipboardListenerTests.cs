@@ -1,4 +1,6 @@
+using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using CopyPaste.Listener;
 using CopyPaste.Core;
 using Xunit;

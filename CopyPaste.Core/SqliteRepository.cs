@@ -206,7 +206,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         cmd.CommandText = """
             SELECT * FROM ClipboardItems
             WHERE Type != @UnknownType
-            ORDER BY CreatedAt DESC
+            ORDER BY ModifiedAt DESC
             LIMIT 1
             """;
         cmd.Parameters.AddWithValue("@UnknownType", (int)ClipboardContentType.Unknown);

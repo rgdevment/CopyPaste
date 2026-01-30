@@ -2,6 +2,7 @@ using CopyPaste.Core;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
@@ -21,6 +22,11 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
 
     private readonly Channel<ClipboardTask> _taskQueue = Channel.CreateUnbounded<ClipboardTask>();
     private readonly CancellationTokenSource _cts = new();
+
+    // Debounce mechanism to prevent duplicate clipboard events
+    private string? _lastContentHash;
+    private DateTime _lastChangeTime = DateTime.MinValue;
+    private readonly TimeSpan _debounceWindow = TimeSpan.FromMilliseconds(500);
 
     private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? RtfBytes, byte[]? ImageBytes, Collection<string>? Files, string? Source);
 
@@ -214,6 +220,13 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
         {
             if (ShouldExcludeFromHistory()) return;
 
+            // Calculate content hash for deduplication
+            string? contentHash = CalculateClipboardHash();
+            if (contentHash != null && IsDuplicateChange(contentHash))
+            {
+                return; // Skip duplicate clipboard event
+            }
+
             string? source = GetClipboardSource();
 
             if (IsClipboardFormatAvailable(_cF_HDROP))
@@ -249,6 +262,68 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
             AppLogger.Exception(ex, "Clipboard processing error");
         }
         finally { CloseClipboard(); }
+    }
+
+    private bool IsDuplicateChange(string contentHash)
+    {
+        var now = DateTime.UtcNow;
+        if (contentHash == _lastContentHash && (now - _lastChangeTime) < _debounceWindow)
+        {
+            AppLogger.Info($"Skipping duplicate clipboard event (same content within {_debounceWindow.TotalMilliseconds}ms)");
+            return true;
+        }
+
+        _lastContentHash = contentHash;
+        _lastChangeTime = now;
+        return false;
+    }
+
+    private static string? CalculateClipboardHash()
+    {
+        try
+        {
+            // Create a signature of what's currently on clipboard
+            var signature = new List<string>();
+
+            if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
+            {
+                var text = ExtractText();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    // For text, use first 100 chars to avoid hashing huge content
+                    var sample = text.Length > 100 ? text.Substring(0, 100) : text;
+                    signature.Add($"TEXT:{sample}");
+                }
+            }
+
+            if (IsClipboardFormatAvailable(_cF_HDROP))
+            {
+                var files = ExtractFilePaths();
+                if (files.Count > 0)
+                {
+                    signature.Add($"FILES:{string.Join("|", files)}");
+                }
+            }
+
+            if (IsClipboardFormatAvailable(_cF_DIB))
+            {
+                // For images, just mark that an image is present
+                // Computing full hash would be expensive
+                signature.Add("IMAGE:present");
+            }
+
+            if (signature.Count == 0) return null;
+
+            // Simple hash of the signature
+            var combined = string.Join("||", signature);
+            var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(combined));
+            return Convert.ToHexString(hash);
+        }
+        catch (Exception ex) when (ex is OutOfMemoryException or AccessViolationException)
+        {
+            AppLogger.Exception(ex, "Failed to calculate clipboard hash");
+            return null;
+        }
     }
 
     private static bool ShouldExcludeFromHistory()
