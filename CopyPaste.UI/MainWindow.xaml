@@ -207,14 +207,29 @@ xmlns:tb="using:H.NotifyIcon">
                             <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
-
+                            <MenuFlyoutItem Text="{x:Bind EditText}" Command="{x:Bind EditCommand}" Visibility="{x:Bind CanEdit}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                             <MenuFlyoutSeparator/>
                             <MenuFlyoutItem Text="{x:Bind DeleteText}" Command="{x:Bind DeleteCommand}">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;"/></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                         </MenuFlyout>
                     </Border.ContextFlyout>
-                    <Grid Padding="12,10,12,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Color indicator (left border) -->
+                        <Border x:Name="ColorIndicator" Grid.Column="0" Width="3"
+                                CornerRadius="6,0,0,6" Margin="-1,-1,0,-1"
+                                Visibility="{x:Bind CardColorVisibility, Mode=OneWay}">
+                            <Border.Background>
+                                <SolidColorBrush Color="{x:Bind CardBorderColor, Mode=OneWay}"/>
+                            </Border.Background>
+                        </Border>
+                        <Grid Grid.Column="1" Padding="12,10,12,12">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
@@ -222,8 +237,22 @@ xmlns:tb="using:H.NotifyIcon">
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Header -->
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Opacity="0.6" Margin="0,0,0,8">
+                            <!-- Header with Label -->
+                            <Grid Grid.Row="0" VerticalAlignment="Center" Margin="0,0,0,8"
+                                        Visibility="{x:Bind LabelVisibility, Mode=OneWay}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <FontIcon Glyph="{x:Bind TypeIcon, Mode=OneWay}" FontSize="12" Margin="0,0,8,0" Opacity="0.6"/>
+                                    <TextBlock Text="{x:Bind Label, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Opacity="0.8"/>
+                                </StackPanel>
+                                <TextBlock x:Name="LabelTimestamp" Grid.Column="1" Text="{x:Bind Timestamp, Mode=OneWay}" FontSize="11" Opacity="0.5"/>
+                            </Grid>
+                            <!-- Default Header (Type + Timestamp) -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Opacity="0.6" Margin="0,0,0,8"
+                                        Visibility="{x:Bind DefaultHeaderVisibility, Mode=OneWay}">
                                 <FontIcon Glyph="{x:Bind TypeIcon, Mode=OneWay}" FontSize="12" Margin="0,0,8,0"/>
                                 <TextBlock Text="{x:Bind HeaderTitle, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"/>
                                 <TextBlock Text="&#x2022;" Margin="6,0,6,0" FontSize="10"/>
@@ -295,12 +324,10 @@ xmlns:tb="using:H.NotifyIcon">
                             <StackPanel x:Name="ActionPanel" Grid.Row="0" Grid.RowSpan="2"
                                         Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Margin="0,-4,-4,0" Spacing="2" Opacity="0">
-                                <!-- Botón "..." - Solo opciones comunes (sin Eliminar) -->
                                 <Button x:Name="OptionsButton" Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0">
                                     <FontIcon Glyph="&#xE712;" FontSize="14"/>
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                            <!-- ⚠️ MANTENER SINCRONIZADO CON Border.ContextFlyout (excepto Eliminar) -->
                                             <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
                                             <MenuFlyoutItem Text="{x:Bind PastePlainText}" Command="{x:Bind PastePlainCommand}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
@@ -309,7 +336,9 @@ xmlns:tb="using:H.NotifyIcon">
                                             <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <!-- ℹ️ No incluye "Eliminar" - solo está en clic derecho -->
+                                            <MenuFlyoutItem Text="{x:Bind EditText}" Command="{x:Bind EditCommand}" Visibility="{x:Bind CanEdit}">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;"/></MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
                                         </MenuFlyout>
                                     </Button.Flyout>
                                 </Button>
@@ -319,6 +348,7 @@ xmlns:tb="using:H.NotifyIcon">
                                 </Button>
                             </StackPanel>
                         </Grid>
+                    </Grid>
                     </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>

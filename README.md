@@ -64,11 +64,14 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 * 🎨 **Native & Modern UI:** Built with **WinUI 3**. It respects your system theme (Light/Dark) and uses standard Windows controls.
 * ⚡ **Instant Startup:** A native C++ launcher displays a splash screen immediately while the .NET app initializes in the background. No waiting, no blank screens.
 * 🧠 **Smart Memory:** Targeted to run between **30-60MB RAM**. Optimized with ReadyToRun precompilation.
-* 📂 **Rich History:** Seamlessly handles Text, Images, and File paths.
+* 📂 **Rich History:** Seamlessly handles Text, Images, Files, Audio, and Video with smart thumbnails.
+* 🏷️ **Card Labels & Colors:** Personalize your clipboard items with custom labels (up to 40 characters) and 6 color options (Red, Green, Purple, Yellow, Blue, or None).
+* 📌 **Pin Important Items:** Keep your most-used items always accessible at the top.
 * 🔒 **Privacy First:** 100% Local. Your clipboard history never leaves your machine.
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
-* ⚙️ **Configurable:** Hotkeys, appearance, performance settings, and more.
+* 🔍 **Full-Text Search:** Instantly find any item with powerful FTS5 search across content and labels.
+* ⚙️ **Configurable:** Hotkeys, appearance, panel width (400-600px), retention days, and more.
 
 ---
 
@@ -86,7 +89,18 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 | `Enter` | Paste selected item and return to previous app |
 | `Delete` | Delete selected item |
 | `P` | Pin/Unpin selected item |
+| `E` | Edit card (add label and color) |
 | `Esc` | Clear search box (if focused) or close window |
+
+### Card Customization
+Each clipboard card can be personalized with:
+- **Custom Label:** Add a descriptive name (up to 40 characters) to identify your items quickly
+- **Color Indicator:** Choose from 6 colors (Red, Green, Purple, Yellow, Blue) or None to visually categorize your items
+
+To edit a card:
+- **Right-click** on any card → Select "Edit"
+- **Press `E`** with a card selected
+- **Click the `...` menu** on hover → Select "Edit"
 
 ### Card Expansion
 Clipboard items (cards) can be expanded to show more text content:
@@ -105,12 +119,13 @@ Clipboard items (cards) can be expanded to show more text content:
 
 ### Keyboard-Only Workflow
 1. **Press `Win+Alt+V`** → Window opens with focus on search box
-2. **Type to filter** (optional) → Results update in real-time
+2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
 3. **Press `Esc`** (optional) → Clear search to see all items again
 4. **Press `↓`** → Navigate to first clipboard item
 5. **Use `↑`/`↓`** → Select the desired item
 6. **Press `→`** (optional) → Expand card to see full text
-7. **Press `Enter`** → Item is pasted to your previous application
+7. **Press `E`** (optional) → Edit card to add label/color
+8. **Press `Enter`** → Item is pasted to your previous application
 
 This workflow matches the efficiency of double-clicking with your mouse but keeps your hands on the keyboard.
 
@@ -309,7 +324,8 @@ We are using this project to push the boundaries of modern .NET development on t
 | **ReadyToRun (R2R)** | Pre-compiled IL for faster cold starts. |
 | **Native C++ Launcher** | Instant splash screen while .NET initializes. |
 | **Win32 Interop** | Low-level clipboard monitoring via hooks. |
-| **SQLite** | Local, lightweight database for clipboard history. |
+| **SQLite + FTS5** | Local database with full-text search for instant queries. |
+| **SkiaSharp** | Cross-platform graphics for thumbnail generation. |
 
 ---
 

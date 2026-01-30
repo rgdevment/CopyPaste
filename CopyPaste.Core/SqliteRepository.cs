@@ -82,9 +82,15 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
                 ModifiedAt TEXT NOT NULL,
                 AppSource TEXT,
                 IsPinned INTEGER NOT NULL DEFAULT 0,
-                Metadata TEXT
+                Metadata TEXT,
+                Label TEXT,
+                CardColor INTEGER NOT NULL DEFAULT 0
             )
             """);
+
+        // Migrate existing databases: add Label column if missing
+        MigrateAddColumnIfMissing(connection, "Label", "TEXT");
+        MigrateAddColumnIfMissing(connection, "CardColor", "INTEGER NOT NULL DEFAULT 0");
 
         // Indexes for common queries
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_CreatedAt ON ClipboardItems(CreatedAt DESC)");
@@ -92,37 +98,41 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_Type ON ClipboardItems(Type)");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_IsPinned ON ClipboardItems(IsPinned)");
 
-        // FTS5 virtual table for full-text search
+        // FTS5 virtual table for full-text search (includes Label for searching by user-defined names)
         ExecuteNonQuery(connection, """
             CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardItems_fts USING fts5(
                 Content,
                 AppSource,
+                Label,
                 content='ClipboardItems',
                 content_rowid='rowid'
             )
             """);
 
+        // Rebuild FTS if schema changed (Label column added)
+        RebuildFtsIfNeeded(connection);
+
         // Triggers to keep FTS in sync
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_ai AFTER INSERT ON ClipboardItems BEGIN
-                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource)
-                VALUES (NEW.rowid, NEW.Content, NEW.AppSource);
+                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource, Label)
+                VALUES (NEW.rowid, NEW.Content, NEW.AppSource, NEW.Label);
             END
             """);
 
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_ad AFTER DELETE ON ClipboardItems BEGIN
-                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource)
-                VALUES ('delete', OLD.rowid, OLD.Content, OLD.AppSource);
+                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource, Label)
+                VALUES ('delete', OLD.rowid, OLD.Content, OLD.AppSource, OLD.Label);
             END
             """);
 
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_au AFTER UPDATE ON ClipboardItems BEGIN
-                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource)
-                VALUES ('delete', OLD.rowid, OLD.Content, OLD.AppSource);
-                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource)
-                VALUES (NEW.rowid, NEW.Content, NEW.AppSource);
+                INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, Content, AppSource, Label)
+                VALUES ('delete', OLD.rowid, OLD.Content, OLD.AppSource, OLD.Label);
+                INSERT INTO ClipboardItems_fts(rowid, Content, AppSource, Label)
+                VALUES (NEW.rowid, NEW.Content, NEW.AppSource, NEW.Label);
             END
             """);
     }
@@ -160,8 +170,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         using var cmd = connection.CreateCommand();
 
         cmd.CommandText = """
-            INSERT INTO ClipboardItems (Id, Content, Type, CreatedAt, ModifiedAt, AppSource, IsPinned, Metadata)
-            VALUES (@Id, @Content, @Type, @CreatedAt, @ModifiedAt, @AppSource, @IsPinned, @Metadata)
+            INSERT INTO ClipboardItems (Id, Content, Type, CreatedAt, ModifiedAt, AppSource, IsPinned, Metadata, Label, CardColor)
+            VALUES (@Id, @Content, @Type, @CreatedAt, @ModifiedAt, @AppSource, @IsPinned, @Metadata, @Label, @CardColor)
             """;
 
         AddParameters(cmd, item);
@@ -178,7 +188,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         cmd.CommandText = """
             UPDATE ClipboardItems
             SET Content = @Content, Type = @Type, CreatedAt = @CreatedAt, ModifiedAt = @ModifiedAt,
-                AppSource = @AppSource, IsPinned = @IsPinned, Metadata = @Metadata
+                AppSource = @AppSource, IsPinned = @IsPinned, Metadata = @Metadata,
+                Label = @Label, CardColor = @CardColor
             WHERE Id = @Id
             """;
 
@@ -210,6 +221,23 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
             LIMIT 1
             """;
         cmd.Parameters.AddWithValue("@UnknownType", (int)ClipboardContentType.Unknown);
+
+        using var reader = cmd.ExecuteReader();
+        return reader.Read() ? MapToItem(reader) : null;
+    }
+
+    public ClipboardItem? FindByContentAndType(string content, ClipboardContentType type)
+    {
+        using var connection = CreateConnection();
+        using var cmd = connection.CreateCommand();
+
+        cmd.CommandText = """
+            SELECT * FROM ClipboardItems
+            WHERE Content = @Content AND Type = @Type
+            LIMIT 1
+            """;
+        cmd.Parameters.AddWithValue("@Content", content);
+        cmd.Parameters.AddWithValue("@Type", (int)type);
 
         using var reader = cmd.ExecuteReader();
         return reader.Read() ? MapToItem(reader) : null;
@@ -271,13 +299,11 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
             }
         }
 
-        // Cleanup files
         foreach (var item in itemsToDelete)
         {
             CleanupItemFiles(item);
         }
 
-        // Delete from database
         using var deleteCmd = connection.CreateCommand();
         deleteCmd.CommandText = "DELETE FROM ClipboardItems WHERE CreatedAt < @LimitDate" + (excludePinned ? " AND IsPinned = 0" : "");
         deleteCmd.Parameters.AddWithValue("@LimitDate", limitDate.ToString("O"));
@@ -345,6 +371,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         cmd.Parameters.AddWithValue("@AppSource", item.AppSource ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@IsPinned", item.IsPinned ? 1 : 0);
         cmd.Parameters.AddWithValue("@Metadata", item.Metadata ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@Label", item.Label ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@CardColor", (int)item.CardColor);
     }
 
     private static ClipboardItem MapToItem(SqliteDataReader reader) => new()
@@ -356,7 +384,9 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         ModifiedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("ModifiedAt")), System.Globalization.CultureInfo.InvariantCulture),
         AppSource = reader.IsDBNull(reader.GetOrdinal("AppSource")) ? null : reader.GetString(reader.GetOrdinal("AppSource")),
         IsPinned = reader.GetInt32(reader.GetOrdinal("IsPinned")) == 1,
-        Metadata = reader.IsDBNull(reader.GetOrdinal("Metadata")) ? null : reader.GetString(reader.GetOrdinal("Metadata"))
+        Metadata = reader.IsDBNull(reader.GetOrdinal("Metadata")) ? null : reader.GetString(reader.GetOrdinal("Metadata")),
+        Label = GetNullableString(reader, "Label"),
+        CardColor = GetCardColor(reader, "CardColor")
     };
 
     private static void CleanupItemFiles(ClipboardItem item)
@@ -381,6 +411,99 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
                 try { File.Delete(thumbPath); }
                 catch { /* Ignore */ }
             }
+        }
+    }
+
+    /// <summary>
+    /// Safely reads a nullable string column, handling missing columns during migration.
+    /// </summary>
+    private static string? GetNullableString(SqliteDataReader reader, string columnName)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // Column doesn't exist yet (pre-migration)
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Safely reads CardColor column, handling missing columns during migration.
+    /// </summary>
+    private static CardColor GetCardColor(SqliteDataReader reader, string columnName)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            if (reader.IsDBNull(ordinal))
+                return CardColor.None;
+
+            var value = reader.GetInt32(ordinal);
+            return Enum.IsDefined(typeof(CardColor), value) ? (CardColor)value : CardColor.None;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // Column doesn't exist yet (pre-migration)
+            return CardColor.None;
+        }
+    }
+
+    /// <summary>
+    /// Adds a column to the table if it doesn't exist.
+    /// </summary>
+    private static void MigrateAddColumnIfMissing(SqliteConnection connection, string columnName, string columnType)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = $"PRAGMA table_info(ClipboardItems)";
+
+        var columnExists = false;
+        using (var reader = cmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                var name = reader.GetString(reader.GetOrdinal("name"));
+                if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    columnExists = true;
+                    break;
+                }
+            }
+        }
+
+        if (!columnExists)
+        {
+            AppLogger.Info($"Migrating database: adding column {columnName}");
+            ExecuteNonQuery(connection, $"ALTER TABLE ClipboardItems ADD COLUMN {columnName} {columnType}");
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds FTS index if Label column was added (schema change).
+    /// Checks if Label is indexed in FTS and rebuilds if not.
+    /// </summary>
+    private static void RebuildFtsIfNeeded(SqliteConnection connection)
+    {
+        try
+        {
+            // Check if FTS has Label column by trying to query it
+            using var testCmd = connection.CreateCommand();
+            testCmd.CommandText = "SELECT Label FROM ClipboardItems_fts LIMIT 0";
+            testCmd.ExecuteNonQuery();
+        }
+        catch (SqliteException)
+        {
+            // FTS doesn't have Label column - need to rebuild
+            AppLogger.Info("Rebuilding FTS index to include Label column");
+
+            // Drop old FTS table and triggers
+            ExecuteNonQuery(connection, "DROP TRIGGER IF EXISTS ClipboardItems_ai");
+            ExecuteNonQuery(connection, "DROP TRIGGER IF EXISTS ClipboardItems_ad");
+            ExecuteNonQuery(connection, "DROP TRIGGER IF EXISTS ClipboardItems_au");
+            ExecuteNonQuery(connection, "DROP TABLE IF EXISTS ClipboardItems_fts");
         }
     }
 

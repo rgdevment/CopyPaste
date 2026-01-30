@@ -14,12 +14,14 @@ public partial class ClipboardItemViewModel : ObservableObject
     private readonly Action<ClipboardItemViewModel> _deleteAction;
     private readonly Action<ClipboardItemViewModel, bool> _pasteAction;
     private readonly Action<ClipboardItemViewModel> _pinAction;
+    private readonly Action<ClipboardItemViewModel>? _editAction;
     private readonly string _pasteText;
     private readonly string _pastePlainText;
     private readonly string _deleteText;
     private readonly string _fileWarningText;
     private readonly string _pinText;
     private readonly string _unpinText;
+    private readonly string _editText;
     private readonly string _headerTitle;
 
     private bool _isPinned;
@@ -82,7 +84,8 @@ public partial class ClipboardItemViewModel : ObservableObject
         ClipboardItem model,
         Action<ClipboardItemViewModel> deleteAction,
         Action<ClipboardItemViewModel, bool> pasteAction,
-        Action<ClipboardItemViewModel> pinAction)
+        Action<ClipboardItemViewModel> pinAction,
+        Action<ClipboardItemViewModel>? editAction = null)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -90,12 +93,14 @@ public partial class ClipboardItemViewModel : ObservableObject
         _deleteAction = deleteAction;
         _pasteAction = pasteAction;
         _pinAction = pinAction;
+        _editAction = editAction;
         _pasteText = L.Get("clipboard.contextMenu.paste");
         _pastePlainText = L.Get("clipboard.contextMenu.pastePlain");
         _deleteText = L.Get("clipboard.contextMenu.delete");
         _fileWarningText = L.Get("clipboard.fileWarning");
         _pinText = L.Get("clipboard.contextMenu.pin");
         _unpinText = L.Get("clipboard.contextMenu.unpin");
+        _editText = L.Get("clipboard.contextMenu.edit");
         _headerTitle = model.Type switch
         {
             ClipboardContentType.Text => L.Get("clipboard.itemTypes.text"),
@@ -228,6 +233,34 @@ public partial class ClipboardItemViewModel : ObservableObject
     public string FileWarningText => _fileWarningText;
 
     public Visibility PinIndicatorVisibility => _isPinned ? Visibility.Visible : Visibility.Collapsed;
+
+    public string? Label => Model.Label;
+
+    public bool HasLabel => !string.IsNullOrEmpty(Model.Label);
+
+    public Visibility LabelVisibility => HasLabel ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility DefaultHeaderVisibility => HasLabel ? Visibility.Collapsed : Visibility.Visible;
+
+    public CardColor CardColor => Model.CardColor;
+
+    public bool HasCardColor => Model.CardColor != CardColor.None;
+
+    public Visibility CardColorVisibility => HasCardColor ? Visibility.Visible : Visibility.Collapsed;
+
+    public string CardBorderColor => Model.CardColor switch
+    {
+        CardColor.Red => "#E74C3C",
+        CardColor.Green => "#2ECC71",
+        CardColor.Purple => "#9B59B6",
+        CardColor.Yellow => "#F1C40F",
+        CardColor.Blue => "#3498DB",
+        _ => "Transparent"
+    };
+
+    public string EditText => _editText;
+
+    public bool CanEdit => _editAction != null;
 
     public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Folder or ClipboardContentType.Audio or ClipboardContentType.Video;
 
@@ -409,6 +442,21 @@ public partial class ClipboardItemViewModel : ObservableObject
     {
         IsPinned = !IsPinned;
         _pinAction(this);
+    }
+
+    [RelayCommand]
+    private void Edit() => _editAction?.Invoke(this);
+
+    public void RefreshLabelAndColor()
+    {
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(HasLabel));
+        OnPropertyChanged(nameof(LabelVisibility));
+        OnPropertyChanged(nameof(DefaultHeaderVisibility));
+        OnPropertyChanged(nameof(CardColor));
+        OnPropertyChanged(nameof(HasCardColor));
+        OnPropertyChanged(nameof(CardColorVisibility));
+        OnPropertyChanged(nameof(CardBorderColor));
     }
 
     public void ToggleExpanded() => IsExpanded = !IsExpanded;

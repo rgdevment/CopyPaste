@@ -24,12 +24,13 @@ public class ClipboardService(IClipboardRepository repository)
     // Track when app initiates a paste to avoid re-adding the same content
     private DateTime _lastPasteTime = DateTime.MinValue;
     private Guid _lastPastedItemId = Guid.Empty;
+    private string? _lastPastedContent;
 
     /// <summary>
     /// Configurable time window (in milliseconds) to ignore clipboard changes after paste.
-    /// Default: 300ms. Can be adjusted based on system performance.
+    /// Default: 450ms (Seguro preset). Configured via MyMConfig.DuplicateIgnoreWindowMs.
     /// </summary>
-    public int PasteIgnoreWindowMs { get; set; } = 300;
+    public int PasteIgnoreWindowMs { get; set; } = 450;
 
     /// <summary>
     /// Notifies the service that a paste operation was initiated by the app.
@@ -39,20 +40,35 @@ public class ClipboardService(IClipboardRepository repository)
     {
         _lastPasteTime = DateTime.UtcNow;
         _lastPastedItemId = itemId;
+
+        // Store the content of the pasted item to prevent duplicates
+        var item = repository.GetById(itemId);
+        _lastPastedContent = item?.Content;
     }
 
     /// <summary>
     /// Checks if a clipboard change should be ignored because we just pasted it.
+    /// Uses both time-based and content-based checks.
     /// </summary>
-    private bool ShouldIgnoreClipboardChange()
+    private bool ShouldIgnoreClipboardChange(string? content = null)
     {
         if (_lastPastedItemId == Guid.Empty) return false;
-        return DateTime.UtcNow - _lastPasteTime < TimeSpan.FromMilliseconds(PasteIgnoreWindowMs);
+
+        // Time-based check
+        if (DateTime.UtcNow - _lastPasteTime < TimeSpan.FromMilliseconds(PasteIgnoreWindowMs))
+            return true;
+
+        // Content-based check - ignore if same content within extended window (2 seconds)
+        if (content != null && _lastPastedContent == content &&
+            DateTime.UtcNow - _lastPasteTime < TimeSpan.FromSeconds(2))
+            return true;
+
+        return false;
     }
 
     public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null)
     {
-        if (ShouldIgnoreClipboardChange()) return;
+        if (ShouldIgnoreClipboardChange(text)) return;
 
 
         string? json = null;
@@ -68,7 +84,7 @@ public class ClipboardService(IClipboardRepository repository)
 
     public void AddImage(byte[]? dibData, string? source)
     {
-        if (ShouldIgnoreClipboardChange()) return;
+        if (ShouldIgnoreClipboardChange(null)) return;
         if (dibData == null) return;
 
         byte[]? bmp = ConvertDibToBmp(dibData);
@@ -80,7 +96,7 @@ public class ClipboardService(IClipboardRepository repository)
 
     public void AddFiles(Collection<string>? files, ClipboardContentType type, string? source)
     {
-        if (ShouldIgnoreClipboardChange()) return;
+        if (ShouldIgnoreClipboardChange(null)) return;
         if (files == null || files.Count == 0) return;
 
         string firstFile = files[0];
@@ -123,14 +139,15 @@ public class ClipboardService(IClipboardRepository repository)
             currentHash = BitConverter.ToString(SHA256.HashData(imageData));
         }
 
-        var latest = repository.GetLatest();
+        // Check for duplicates - search entire database, not just latest item
+        ClipboardItem? existingItem = FindExistingItem(item, currentHash);
 
-        if (IsDuplicate(latest, item, currentHash))
+        if (existingItem != null)
         {
             // Item already exists - update timestamp and notify UI to move it to top
-            latest!.ModifiedAt = DateTime.UtcNow;
-            repository.Update(latest);
-            OnItemReactivated?.Invoke(latest);
+            existingItem.ModifiedAt = DateTime.UtcNow;
+            repository.Update(existingItem);
+            OnItemReactivated?.Invoke(existingItem);
             return;
         }
 
@@ -465,40 +482,40 @@ public class ClipboardService(IClipboardRepository repository)
         }
     }
 
-    private static bool IsDuplicate(ClipboardItem? last, ClipboardItem current, string? currentHash)
+    private ClipboardItem? FindExistingItem(ClipboardItem current, string? currentHash)
     {
-        if (last == null || last.Type != current.Type) return false;
-
-        return current.Type switch
+        // For images, we need to search by hash in metadata
+        if (current.Type == ClipboardContentType.Image && currentHash != null)
         {
-            ClipboardContentType.Text or
-            ClipboardContentType.Link or
-            ClipboardContentType.File or
-            ClipboardContentType.Folder or
-            ClipboardContentType.Audio or
-            ClipboardContentType.Video => last.Content == current.Content,
+            return FindExistingImageByHash(currentHash);
+        }
 
-            ClipboardContentType.Image => CompareImageHashes(last, currentHash),
-
-            _ => false
-        };
+        // For non-image types, search by content and type
+        return repository.FindByContentAndType(current.Content, current.Type);
     }
 
-    private static bool CompareImageHashes(ClipboardItem last, string? currentHash)
+    private ClipboardItem? FindExistingImageByHash(string currentHash)
     {
-        if (currentHash == null || string.IsNullOrEmpty(last.Metadata)) return false;
+        // Search through all items to find one with matching hash
+        // We need to check metadata for each image item
+        var allItems = repository.GetAll()
+            .Where(i => i.Type == ClipboardContentType.Image && !string.IsNullOrEmpty(i.Metadata));
 
-        try
+        foreach (var item in allItems)
         {
-            using var doc = JsonDocument.Parse(last.Metadata);
-            if (doc.RootElement.TryGetProperty("hash", out var hashProp))
+            try
             {
-                return hashProp.GetString() == currentHash;
+                using var doc = JsonDocument.Parse(item.Metadata!);
+                if (doc.RootElement.TryGetProperty("hash", out var hashProp) &&
+                    hashProp.GetString() == currentHash)
+                {
+                    return item;
+                }
             }
+            catch (JsonException) { }
         }
-        catch (JsonException) { }
 
-        return false;
+        return null;
     }
 
     public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null, bool? isPinned = null)
@@ -506,6 +523,7 @@ public class ClipboardService(IClipboardRepository repository)
         var items = string.IsNullOrWhiteSpace(query)
             ? repository.GetAll()
             : repository.Search(query, limit * 10, 0);
+
 
         if (isPinned.HasValue)
         {
@@ -535,6 +553,17 @@ public class ClipboardService(IClipboardRepository repository)
         if (item == null) return;
 
         item.IsPinned = isPinned;
+        item.ModifiedAt = DateTime.UtcNow;
+        repository.Update(item);
+    }
+
+    public void UpdateLabelAndColor(Guid id, string? label, CardColor color)
+    {
+        var item = repository.GetById(id);
+        if (item == null) return;
+
+        item.Label = label;
+        item.CardColor = color;
         item.ModifiedAt = DateTime.UtcNow;
         repository.Update(item);
     }

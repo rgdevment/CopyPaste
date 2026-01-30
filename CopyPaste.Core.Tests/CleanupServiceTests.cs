@@ -241,6 +241,8 @@ public sealed class CleanupServiceTests : IDisposable
 
         public ClipboardItem? GetLatest() => throw new NotImplementedException();
 
+        public ClipboardItem? FindByContentAndType(string content, ClipboardContentType type) => throw new NotImplementedException();
+
         public void Save(ClipboardItem item) => throw new NotImplementedException();
 
         public IEnumerable<ClipboardItem> Search(string query, int limit = 50, int skip = 0) => throw new NotImplementedException();

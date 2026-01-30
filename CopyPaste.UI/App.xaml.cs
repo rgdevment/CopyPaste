@@ -21,6 +21,7 @@ using CopyPaste.Listener;
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,6 +44,8 @@ public sealed partial class App : Application, IDisposable
 
     public App()
     {
+        WaitForPreviousInstanceIfNeeded();
+
         // Check for existing instance first
         if (!TryAcquireSingleInstance())
         {
@@ -54,6 +57,25 @@ public sealed partial class App : Application, IDisposable
         StorageConfig.Initialize();
         this.UnhandledException += OnUnhandledException;
         InitializeComponent();
+    }
+
+    private static void WaitForPreviousInstanceIfNeeded()
+    {
+        var args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "--wait-for-pid" && int.TryParse(args[i + 1], out int pid))
+            {
+                try
+                {
+                    using var process = Process.GetProcessById(pid);
+                    process.WaitForExit(5000);
+                }
+                catch (ArgumentException) { /* Process already exited */ }
+                catch (InvalidOperationException) { /* Process already exited */ }
+                break;
+            }
+        }
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)

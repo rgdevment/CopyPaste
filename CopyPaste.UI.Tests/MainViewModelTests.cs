@@ -117,6 +117,7 @@ public class MainViewModelBasicTests
         public void Delete(Guid id) { }
         public ClipboardItem? GetById(Guid id) => null;
         public ClipboardItem? GetLatest() => null;
+        public ClipboardItem? FindByContentAndType(string content, ClipboardContentType type) => null;
         public IEnumerable<ClipboardItem> GetAll() => [];
         public IEnumerable<ClipboardItem> Search(string query, int limit = 50, int skip = 0) => [];
         public int ClearOldItems(int days, bool excludePinned = true) => 0;

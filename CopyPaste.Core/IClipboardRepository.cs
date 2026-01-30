@@ -6,6 +6,7 @@ public interface IClipboardRepository
     void Update(ClipboardItem item);
     ClipboardItem? GetById(Guid id);
     ClipboardItem? GetLatest();
+    ClipboardItem? FindByContentAndType(string content, ClipboardContentType type);
     IEnumerable<ClipboardItem> GetAll();
     void Delete(Guid id);
     int ClearOldItems(int days, bool excludePinned = true);

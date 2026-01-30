@@ -23,6 +23,7 @@ internal sealed partial class MainWindow : Window
     private const int _hotkeyId = 1;
     private ClipboardItemViewModel? _currentExpandedItem;
     private ClipboardItemViewModel? _previousSelectedItem;
+    private bool _isDialogOpen;
 
     public MainWindow(ClipboardService service)
     {
@@ -68,6 +69,7 @@ internal sealed partial class MainWindow : Window
         ClipboardListView.Loaded += ClipboardListView_Loaded;
         ClipboardListView.SelectionChanged += ClipboardListView_SelectionChanged;
         SearchBox.KeyDown += SearchBox_KeyDown;
+        ViewModel.OnEditRequested += ShowEditDialog;
     }
 
     private void TabChanged(object sender, RoutedEventArgs e)
@@ -140,6 +142,7 @@ internal sealed partial class MainWindow : Window
 
         // Cleanup ViewModel event subscriptions
         ViewModel.Cleanup();
+        ViewModel.OnEditRequested -= ShowEditDialog;
 
         // Unsubscribe from all items' ImagePathChanged events
         foreach (var item in ViewModel.Items)
@@ -211,6 +214,8 @@ internal sealed partial class MainWindow : Window
     {
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
+            if (_isDialogOpen) return;
+
             CollapseAllCards();
             ViewModel.OnWindowDeactivated();
             _appWindow.Hide();
@@ -292,6 +297,8 @@ internal sealed partial class MainWindow : Window
         {
             if (FindDescendant(root, "ActionPanel") is UIElement panel)
                 panel.Opacity = 1;
+            if (FindDescendant(root, "LabelTimestamp") is UIElement timestamp)
+                timestamp.Opacity = 0;
             if (FindDescendant(root, "ImageBorder") is UIElement imageBorder)
                 imageBorder.Opacity = 1;
             if (FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
@@ -305,6 +312,8 @@ internal sealed partial class MainWindow : Window
         {
             if (FindDescendant(root, "ActionPanel") is UIElement panel)
                 panel.Opacity = 0;
+            if (FindDescendant(root, "LabelTimestamp") is UIElement timestamp)
+                timestamp.Opacity = 0.5;
             if (FindDescendant(root, "ImageBorder") is UIElement imageBorder)
                 imageBorder.Opacity = 0.6;
             if (FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
@@ -496,19 +505,16 @@ internal sealed partial class MainWindow : Window
 
         switch (e.Key)
         {
-            // Paste selected item when pressing Enter (same as double-click)
             case Windows.System.VirtualKey.Enter:
                 vm.PasteCommand.Execute(null);
                 e.Handled = true;
                 break;
 
-            // Delete selected item when pressing Delete
             case Windows.System.VirtualKey.Delete:
                 vm.DeleteCommand.Execute(null);
                 e.Handled = true;
                 break;
 
-            // Pin/Unpin with P key
             case Windows.System.VirtualKey.P:
                 vm.TogglePinCommand.Execute(null);
                 e.Handled = true;
@@ -584,5 +590,78 @@ internal sealed partial class MainWindow : Window
     {
         var configWindow = new ConfigWindow();
         configWindow.Activate();
+    }
+
+    private async void ShowEditDialog(object? sender, ClipboardItemViewModel itemVM)
+    {
+        _isDialogOpen = true;
+
+        try
+        {
+            var labelBox = new TextBox
+            {
+                Text = itemVM.Label ?? string.Empty,
+                PlaceholderText = L.Get("clipboard.editDialog.labelPlaceholder"),
+                MaxLength = ClipboardItem.MaxLabelLength,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+
+            var colorPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 12, 0, 0) };
+            var colorLabel = new TextBlock
+            {
+                Text = L.Get("clipboard.editDialog.colorLabel"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0),
+                Opacity = 0.7
+            };
+            colorPanel.Children.Add(colorLabel);
+
+            var colorCombo = new ComboBox { Width = 120 };
+            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorNone"), Tag = CardColor.None });
+            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorRed"), Tag = CardColor.Red });
+            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorGreen"), Tag = CardColor.Green });
+            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorPurple"), Tag = CardColor.Purple });
+            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorYellow"), Tag = CardColor.Yellow });
+            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorBlue"), Tag = CardColor.Blue });
+
+            colorCombo.SelectedIndex = (int)itemVM.CardColor;
+            colorPanel.Children.Add(colorCombo);
+
+            var hintText = new TextBlock
+            {
+                Text = L.Get("clipboard.editDialog.labelHint"),
+                FontSize = 11,
+                Opacity = 0.5,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
+            var contentPanel = new StackPanel { Spacing = 4 };
+            contentPanel.Children.Add(labelBox);
+            contentPanel.Children.Add(hintText);
+            contentPanel.Children.Add(colorPanel);
+
+            var dialog = new ContentDialog
+            {
+                Title = L.Get("clipboard.editDialog.title"),
+                Content = contentPanel,
+                PrimaryButtonText = L.Get("clipboard.editDialog.save"),
+                CloseButtonText = L.Get("clipboard.editDialog.cancel"),
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary && colorCombo.SelectedItem is ComboBoxItem selectedColor)
+            {
+                var label = string.IsNullOrWhiteSpace(labelBox.Text) ? null : labelBox.Text.Trim();
+                var color = (CardColor)(selectedColor.Tag ?? CardColor.None);
+                ViewModel.SaveItemLabelAndColor(itemVM, label, color);
+            }
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
     }
 }

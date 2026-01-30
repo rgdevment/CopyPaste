@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using CopyPaste.Core;
 using Xunit;
@@ -178,6 +179,9 @@ public sealed class ClipboardServiceTests : IDisposable
     public void NotifyPasteInitiated_PreventsAddText()
     {
         var itemId = Guid.NewGuid();
+        var item = new ClipboardItem { Id = itemId, Content = "Test", Type = ClipboardContentType.Text };
+        _repository.ItemsById[itemId] = item;
+
         _service.NotifyPasteInitiated(itemId);
 
         _service.AddText("Test", ClipboardContentType.Text, "TestApp");
@@ -190,13 +194,35 @@ public sealed class ClipboardServiceTests : IDisposable
     {
         _service.PasteIgnoreWindowMs = 50;
         var itemId = Guid.NewGuid();
+        var item = new ClipboardItem { Id = itemId, Content = "Original", Type = ClipboardContentType.Text };
+        _repository.ItemsById[itemId] = item;
+
         _service.NotifyPasteInitiated(itemId);
 
         Thread.Sleep(100);
 
+        // Different content should be added after timeout
+        _service.AddText("Different", ClipboardContentType.Text, "TestApp");
+
+        Assert.Single(_repository.SavedItems);
+    }
+
+    [Fact]
+    public void NotifyPasteInitiated_SameContentIgnoredForExtendedWindow()
+    {
+        _service.PasteIgnoreWindowMs = 50;
+        var itemId = Guid.NewGuid();
+        var item = new ClipboardItem { Id = itemId, Content = "Test", Type = ClipboardContentType.Text };
+        _repository.ItemsById[itemId] = item;
+
+        _service.NotifyPasteInitiated(itemId);
+
+        Thread.Sleep(100);
+
+        // Same content should still be ignored within extended 2-second window
         _service.AddText("Test", ClipboardContentType.Text, "TestApp");
 
-        Assert.Equal(1, _repository.SavedItems.Count);
+        Assert.Empty(_repository.SavedItems);
     }
 
     [Fact]
@@ -272,6 +298,7 @@ public sealed class ClipboardServiceTests : IDisposable
         public List<ClipboardItem> SavedItems { get; } = new();
         public List<ClipboardItem> UpdatedItems { get; } = new();
         public ClipboardItem? LatestItem { get; set; }
+        public Dictionary<Guid, ClipboardItem> ItemsById { get; } = new();
 
         public void Save(ClipboardItem item) => SavedItems.Add(item);
 
@@ -279,13 +306,23 @@ public sealed class ClipboardServiceTests : IDisposable
 
         public ClipboardItem? GetLatest() => LatestItem;
 
+        public ClipboardItem? FindByContentAndType(string content, ClipboardContentType type)
+        {
+            // Check LatestItem first (for backward compatibility with tests)
+            if (LatestItem != null && LatestItem.Content == content && LatestItem.Type == type)
+                return LatestItem;
+
+            // Check ItemsById collection
+            return ItemsById.Values.FirstOrDefault(i => i.Content == content && i.Type == type);
+        }
+
         public int ClearOldItems(int days, bool excludePinned = true) => 0;
 
         public void Delete(Guid id) => throw new NotImplementedException();
 
-        public IEnumerable<ClipboardItem> GetAll() => throw new NotImplementedException();
+        public IEnumerable<ClipboardItem> GetAll() => [];
 
-        public ClipboardItem? GetById(Guid id) => throw new NotImplementedException();
+        public ClipboardItem? GetById(Guid id) => ItemsById.TryGetValue(id, out var item) ? item : null;
 
         public IEnumerable<ClipboardItem> Search(string query, int limit = 50, int skip = 0) => throw new NotImplementedException();
     }

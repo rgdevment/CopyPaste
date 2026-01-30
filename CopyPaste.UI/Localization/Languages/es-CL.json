@@ -55,8 +55,8 @@
     "appearance": {
       "heading": "APARIENCIA",
       "panelWidth": "Ancho del panel",
-      "panelWidthDesc": "Ancho en píxeles (350-600px)",
-      "panelWidthTooltip": "Ancho del panel lateral en píxeles. Recomendado: 350-500px",
+      "panelWidthDesc": "Ancho en píxeles (400-600px)",
+      "panelWidthTooltip": "Ancho del panel lateral en píxeles. Recomendado: 400-500px",
       "marginTop": "Margen superior",
       "marginTopDesc": "Distancia desde arriba (px)",
       "marginTopTooltip": "Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posición vertical.",
@@ -133,7 +133,22 @@
       "pastePlain": "Pegar sin formato",
       "pin": "Anclar",
       "unpin": "Desanclar",
-      "delete": "Eliminar"
+      "delete": "Eliminar",
+      "edit": "Editar tarjeta"
+    },
+    "editDialog": {
+      "title": "Editar tarjeta",
+      "labelPlaceholder": "Etiqueta (opcional)",
+      "labelHint": "Máximo 40 caracteres",
+      "colorLabel": "Color",
+      "colorNone": "Sin color",
+      "colorRed": "Rojo",
+      "colorGreen": "Verde",
+      "colorPurple": "Morado",
+      "colorYellow": "Amarillo",
+      "colorBlue": "Azul",
+      "save": "Guardar",
+      "cancel": "Cancelar"
     },
     "fileWarning": "Archivo no disponible",
     "itemTypes": {

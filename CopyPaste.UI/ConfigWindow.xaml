@@ -115,7 +115,7 @@
                                     <TextBlock x:Name="PanelWidthLabel" Text="Ancho del panel" FontSize="14" FontWeight="SemiBold"/>
                                     <TextBlock x:Name="PanelWidthDesc" Text="Ancho en pixeles (350-600px)" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <NumberBox x:Name="WindowWidthBox" Grid.Column="1" Minimum="350" Maximum="600" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                                <NumberBox x:Name="WindowWidthBox" Grid.Column="1" Minimum="400" Maximum="600" SpinButtonPlacementMode="Compact" SmallChange="10"/>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
                             <Grid x:Name="MarginTopGrid">

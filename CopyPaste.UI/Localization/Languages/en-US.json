@@ -55,8 +55,8 @@
     "appearance": {
       "heading": "APPEARANCE",
       "panelWidth": "Panel width",
-      "panelWidthDesc": "Width in pixels (350-600px)",
-      "panelWidthTooltip": "Sidebar panel width in pixels. Recommended: 350-500px",
+      "panelWidthDesc": "Width in pixels (400-600px)",
+      "panelWidthTooltip": "Sidebar panel width in pixels. Recommended: 400-500px",
       "marginTop": "Top margin",
       "marginTopDesc": "Distance from top (px)",
       "marginTopTooltip": "Space between the top of the screen and the panel. Allows adjusting vertical position.",
@@ -133,7 +133,22 @@
       "pastePlain": "Paste plain",
       "pin": "Pin",
       "unpin": "Unpin",
-      "delete": "Delete"
+      "delete": "Delete",
+      "edit": "Edit card"
+    },
+    "editDialog": {
+      "title": "Edit card",
+      "labelPlaceholder": "Label (optional)",
+      "labelHint": "40 characters max",
+      "colorLabel": "Color",
+      "colorNone": "None",
+      "colorRed": "Red",
+      "colorGreen": "Green",
+      "colorPurple": "Purple",
+      "colorYellow": "Yellow",
+      "colorBlue": "Blue",
+      "save": "Save",
+      "cancel": "Cancel"
     },
     "fileWarning": "File not available",
     "itemTypes": {

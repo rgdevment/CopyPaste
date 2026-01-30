@@ -283,4 +283,185 @@ public class ClipboardItemViewModelTests
     }
 
     #endregion
+
+    #region Label Tests
+
+    [Fact]
+    public void Label_WithValue_ReturnsLabel()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "abc-123",
+            Type = ClipboardContentType.Text,
+            Label = "API Key"
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.Equal("API Key", viewModel.Label);
+        Assert.True(viewModel.HasLabel);
+    }
+
+    [Fact]
+    public void Label_WithNull_HasLabelIsFalse()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            Label = null
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.Null(viewModel.Label);
+        Assert.False(viewModel.HasLabel);
+    }
+
+    [Fact]
+    public void CardColor_ReturnsCorrectBorderColor()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.Red
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.Equal(CardColor.Red, viewModel.CardColor);
+        Assert.Equal("#E74C3C", viewModel.CardBorderColor);
+    }
+
+    [Fact]
+    public void CardColor_None_ReturnsTransparent()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.None
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.Equal("Transparent", viewModel.CardBorderColor);
+    }
+
+    [Fact]
+    public void HasCardColor_WithColor_ReturnsTrue()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.Green
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.True(viewModel.HasCardColor);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, viewModel.CardColorVisibility);
+    }
+
+    [Fact]
+    public void HasCardColor_WithNone_ReturnsFalse()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.None
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.False(viewModel.HasCardColor);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, viewModel.CardColorVisibility);
+    }
+
+    [Fact]
+    public void RefreshLabelAndColor_NotifiesPropertyChanges()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text
+        };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        var propertiesChanged = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertiesChanged.Add(e.PropertyName!);
+
+        model.Label = "New Label";
+        model.CardColor = CardColor.Blue;
+        viewModel.RefreshLabelAndColor();
+
+        Assert.Contains("Label", propertiesChanged);
+        Assert.Contains("CardColor", propertiesChanged);
+        Assert.Contains("HasCardColor", propertiesChanged);
+        Assert.Contains("CardColorVisibility", propertiesChanged);
+        Assert.Contains("CardBorderColor", propertiesChanged);
+    }
+
+    [Fact]
+    public void EditCommand_WithEditAction_InvokesAction()
+    {
+        var model = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text
+        };
+
+        var editCalled = false;
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }, _ => editCalled = true
+        );
+
+        viewModel.EditCommand.Execute(null);
+
+        Assert.True(editCalled);
+    }
+
+    [Fact]
+    public void CanEdit_WithEditAction_ReturnsTrue()
+    {
+        var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }, _ => { }
+        );
+
+        Assert.True(viewModel.CanEdit);
+    }
+
+    [Fact]
+    public void CanEdit_WithoutEditAction_ReturnsFalse()
+    {
+        var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
+
+        var viewModel = new ViewModels.ClipboardItemViewModel(
+            model, _ => { }, (_, _) => { }, _ => { }
+        );
+
+        Assert.False(viewModel.CanEdit);
+    }
+
+    #endregion
 }

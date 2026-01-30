@@ -16,11 +16,14 @@
   <Project Path="CopyPaste.Core/CopyPaste.Core.csproj">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
+  <Project Path="CopyPaste.Core.Tests/CopyPaste.Core.Tests.csproj" />
   <Project Path="CopyPaste.Listener/CopyPaste.Listener.csproj">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
+  <Project Path="CopyPaste.Listener.Tests/CopyPaste.Listener.Tests.csproj" />
   <Project Path="CopyPaste.UI/CopyPaste.UI.csproj">
     <Platform Project="x64" />
     <Deploy />
   </Project>
+  <Project Path="CopyPaste.UI.Tests/CopyPaste.UI.Tests.csproj" />
 </Solution>

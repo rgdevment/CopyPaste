@@ -295,6 +295,20 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
             Application.Current.Exit();
     }
 
+    internal event EventHandler<ClipboardItemViewModel>? OnEditRequested;
+
+    private void OnEditItem(ClipboardItemViewModel itemVM) => OnEditRequested?.Invoke(this, itemVM);
+
+    public void SaveItemLabelAndColor(ClipboardItemViewModel itemVM, string? label, CardColor color)
+    {
+        ArgumentNullException.ThrowIfNull(itemVM);
+
+        _service.UpdateLabelAndColor(itemVM.Model.Id, label, color);
+        itemVM.Model.Label = label;
+        itemVM.Model.CardColor = color;
+        itemVM.RefreshLabelAndColor();
+    }
+
     private string? GetSearchQuery() =>
         string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery;
 
@@ -302,5 +316,5 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         SelectedTabIndex is 0 && string.IsNullOrWhiteSpace(SearchQuery);
 
     private ClipboardItemViewModel CreateViewModel(ClipboardItem item) =>
-        new(item, OnDeleteItem, OnPasteItem, OnPinItem);
+        new(item, OnDeleteItem, OnPasteItem, OnPinItem, OnEditItem);
 }

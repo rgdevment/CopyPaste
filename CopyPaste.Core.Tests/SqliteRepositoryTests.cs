@@ -99,6 +99,72 @@ public sealed class SqliteRepositoryTests : IDisposable
         Assert.True(retrieved.IsPinned);
     }
 
+    [Fact]
+    public void Save_WithLabel_StoresLabel()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Some UUID: abc-123",
+            Type = ClipboardContentType.Text,
+            Label = "API Key Production"
+        };
+
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal("API Key Production", retrieved.Label);
+    }
+
+    [Fact]
+    public void Save_WithCardColor_StoresColor()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Important note",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.Red
+        };
+
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal(CardColor.Red, retrieved.CardColor);
+    }
+
+    [Fact]
+    public void Save_WithoutLabel_HasNullLabel()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text
+        };
+
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Null(retrieved.Label);
+    }
+
+    [Fact]
+    public void Save_WithoutCardColor_HasNoneColor()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text
+        };
+
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal(CardColor.None, retrieved.CardColor);
+    }
+
     #endregion
 
     #region Update Tests
@@ -170,6 +236,63 @@ public sealed class SqliteRepositoryTests : IDisposable
         var retrieved = _repository.GetById(item.Id);
         Assert.NotNull(retrieved);
         Assert.True(retrieved.IsPinned);
+    }
+
+    [Fact]
+    public void Update_Label_UpdatesLabel()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            Label = null
+        };
+        _repository.Save(item);
+
+        item.Label = "My Custom Label";
+        _repository.Update(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal("My Custom Label", retrieved.Label);
+    }
+
+    [Fact]
+    public void Update_CardColor_UpdatesColor()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.None
+        };
+        _repository.Save(item);
+
+        item.CardColor = CardColor.Blue;
+        _repository.Update(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal(CardColor.Blue, retrieved.CardColor);
+    }
+
+    [Fact]
+    public void Update_LabelToNull_ClearsLabel()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "Test",
+            Type = ClipboardContentType.Text,
+            Label = "Existing Label"
+        };
+        _repository.Save(item);
+
+        item.Label = null;
+        _repository.Update(item);
+
+        var retrieved = _repository.GetById(item.Id);
+        Assert.NotNull(retrieved);
+        Assert.Null(retrieved.Label);
     }
 
     #endregion
@@ -390,6 +513,31 @@ public sealed class SqliteRepositoryTests : IDisposable
         var results = _repository.Search("NonExistent").ToList();
 
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Search_FindsByLabel()
+    {
+        var item1 = new ClipboardItem
+        {
+            Content = "abc-123-xyz",
+            Type = ClipboardContentType.Text,
+            Label = "API Key Production"
+        };
+        var item2 = new ClipboardItem
+        {
+            Content = "def-456-uvw",
+            Type = ClipboardContentType.Text,
+            Label = "Database Password"
+        };
+
+        _repository.Save(item1);
+        _repository.Save(item2);
+
+        var results = _repository.Search("Production").ToList();
+
+        Assert.Single(results);
+        Assert.Equal("API Key Production", results[0].Label);
     }
 
     #endregion

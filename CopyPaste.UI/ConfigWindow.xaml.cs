@@ -503,7 +503,13 @@ public sealed partial class ConfigWindow : Window
             var exePath = Environment.ProcessPath;
             if (!string.IsNullOrEmpty(exePath))
             {
-                Process.Start(new ProcessStartInfo { FileName = exePath, UseShellExecute = true });
+                var currentPid = Environment.ProcessId;
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = $"--wait-for-pid {currentPid}",
+                    UseShellExecute = true
+                });
                 if (App.Current is App app) app.BeginExit();
             }
         }
