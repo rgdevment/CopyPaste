@@ -166,7 +166,7 @@ jobs:
 
 
       - name: Lint (Check format)
-        run: dotnet format --verify-no-changes --no-restore
+        run: dotnet format CopyPaste.UI/CopyPaste.UI.csproj --verify-no-changes --no-restore
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
