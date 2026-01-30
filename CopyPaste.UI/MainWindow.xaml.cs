@@ -466,12 +466,32 @@ internal sealed partial class MainWindow : Window
 
     private void SearchBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
+        var ctrlPressed = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control)
+            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+
         // Clear search when pressing Escape
         if (e.Key == Windows.System.VirtualKey.Escape)
         {
             SearchBox.Text = string.Empty;
             e.Handled = true;
             return;
+        }
+
+        // Quick tab switching: Ctrl+1 (Recent), Ctrl+2 (Pinned)
+        if (ctrlPressed)
+        {
+            if (e.Key == Windows.System.VirtualKey.Number1)
+            {
+                RecentTab.IsChecked = true;
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Windows.System.VirtualKey.Number2)
+            {
+                PinnedTab.IsChecked = true;
+                e.Handled = true;
+                return;
+            }
         }
 
         // Navigate to ListView when pressing Enter or Down arrow in SearchBox
@@ -500,6 +520,26 @@ internal sealed partial class MainWindow : Window
 
     private void ClipboardListView_PreviewKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
+        var ctrlPressed = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control)
+            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+
+        // Quick tab switching: Ctrl+1 (Recent), Ctrl+2 (Pinned)
+        if (ctrlPressed)
+        {
+            if (e.Key == Windows.System.VirtualKey.Number1)
+            {
+                RecentTab.IsChecked = true;
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Windows.System.VirtualKey.Number2)
+            {
+                PinnedTab.IsChecked = true;
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (ClipboardListView.SelectedItem is not ClipboardItemViewModel vm)
             return;
 
@@ -517,6 +557,11 @@ internal sealed partial class MainWindow : Window
 
             case Windows.System.VirtualKey.P:
                 vm.TogglePinCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.E:
+                vm.EditCommand.Execute(null);
                 e.Handled = true;
                 break;
 

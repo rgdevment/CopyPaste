@@ -57,9 +57,9 @@ static int g_statusIndex = 0;
 // English status messages
 static const wchar_t* STATUS_MESSAGES[] = {
     L"Starting...",
-    L"Configuring for first use...",
+    L"Loading components...",
+    L"Compiling resources...",
     L"Optimizing performance...",
-    L"This only happens once...",
     L"Almost ready...",
     L"Thanks for your patience..."
 };
@@ -121,6 +121,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrev, PWSTR pCmdLine, int nC
     HANDLE mutex = CreateMutexW(NULL, TRUE, L"CopyPaste_SingleInstance");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         if (mutex) CloseHandle(mutex);
+        // Try to activate existing window by signaling the ready event
+        HANDLE existingEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, L"CopyPaste_AppReady");
+        if (existingEvent) {
+            SetEvent(existingEvent);
+            CloseHandle(existingEvent);
+        }
         return 0;
     }
 

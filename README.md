@@ -90,6 +90,8 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 | `Delete` | Delete selected item |
 | `P` | Pin/Unpin selected item |
 | `E` | Edit card (add label and color) |
+| `Ctrl+1` | Switch to Recent tab |
+| `Ctrl+2` | Switch to Pinned tab |
 | `Esc` | Clear search box (if focused) or close window |
 
 ### Card Customization
