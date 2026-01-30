@@ -349,7 +349,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     {
         // Only detect specific media types for single files.
         // Multiple files (mixed or same type) are treated as File to avoid expensive thumbnail generation.
-        if (files.Count != 1) return ClipboardContentType.File;
+        if (files == null || files.Count != 1) return ClipboardContentType.File;
 
         string path = files[0];
         if (Directory.Exists(path)) return ClipboardContentType.Folder;

@@ -37,8 +37,8 @@ jobs:
       - name: Lint (Check format)
         run: dotnet format --verify-no-changes --no-restore
 
-      - name: Build Solution
-        run: dotnet build -c Release --no-restore
+      - name: Build Solution (Release)
+        run: dotnet build CopyPaste.slnx -c Release --no-restore
 
       - name: Run Tests
-        run: dotnet test -c Debug --verbosity normal --logger "console;verbosity=detailed"
+        run: dotnet test CopyPaste.slnx -c Release --no-build --verbosity normal --logger "console;verbosity=detailed"

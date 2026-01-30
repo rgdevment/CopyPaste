@@ -58,9 +58,9 @@ public class WindowsClipboardListenerTests : IDisposable
     }
 
     [Theory]
-    [InlineData("ftp://example.com", ClipboardContentType.Text)]
-    [InlineData("file:///C:/path", ClipboardContentType.Text)]
-    [InlineData("ht tp://broken.com", ClipboardContentType.Text)]
+    [InlineData("ftp://example.com")]
+    [InlineData("file:///C:/path")]
+    [InlineData("ht tp://broken.com")]
     public void DetectTextType_NonHttpProtocols_ReturnsText(string input)
     {
         var result = WindowsClipboardListener.DetectTextType(input);
