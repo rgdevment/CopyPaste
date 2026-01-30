@@ -10,7 +10,8 @@
     },
     "sidebar": {
       "settings": "Configuración",
-      "report": "Reportar error"
+      "report": "Reportar error",
+      "help": "Atajos de teclado"
     },
     "search": {
       "placeholder": "Buscar..."
@@ -174,5 +175,69 @@
   "tray": {
     "tooltip": "CopyPaste",
     "exit": "Salir"
+  },
+  "help": {
+    "window": {
+      "title": "Atajos de teclado - CopyPaste"
+    },
+    "title": "Atajos de teclado",
+    "subtitle": "Potencia tu flujo de trabajo con estos atajos",
+    "section": {
+      "general": "GENERAL",
+      "search": "BÚSQUEDA",
+      "navigation": "NAVEGACIÓN DE TARJETAS",
+      "actions": "ACCIONES DE TARJETAS"
+    },
+    "shortcuts": {
+      "openClose": {
+        "key": "Win+Alt+V",
+        "desc": "Abrir/cerrar CopyPaste (personalizable en ajustes)"
+      },
+      "escape": {
+        "key": "Esc",
+        "desc": "Limpiar búsqueda o cerrar ventana"
+      },
+      "tab1": {
+        "key": "Ctrl+1",
+        "desc": "Cambiar a pestaña Recientes"
+      },
+      "tab2": {
+        "key": "Ctrl+2",
+        "desc": "Cambiar a pestaña Anclados"
+      },
+      "down": {
+        "key": "↓ o Tab",
+        "desc": "Navegar desde búsqueda a elementos del portapapeles"
+      },
+      "shiftTab": {
+        "key": "Shift+Tab",
+        "desc": "Volver al cuadro de búsqueda"
+      },
+      "arrows": {
+        "key": "↑ / ↓",
+        "desc": "Navegar entre elementos del portapapeles"
+      },
+      "right": {
+        "key": "→",
+        "desc": "Expandir/contraer tarjeta seleccionada para ver más texto"
+      },
+      "enter": {
+        "key": "Enter",
+        "desc": "Pegar elemento seleccionado y volver a la app anterior"
+      },
+      "delete": {
+        "key": "Delete",
+        "desc": "Eliminar elemento seleccionado"
+      },
+      "pin": {
+        "key": "P",
+        "desc": "Anclar/Desanclar elemento seleccionado"
+      },
+      "edit": {
+        "key": "E",
+        "desc": "Editar tarjeta (agregar etiqueta y color)"
+      }
+    },
+    "closeButton": "Cerrar"
   }
 }

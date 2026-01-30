@@ -10,7 +10,8 @@
     },
     "sidebar": {
       "settings": "Settings",
-      "report": "Report bug"
+      "report": "Report bug",
+      "help": "Keyboard shortcuts"
     },
     "search": {
       "placeholder": "Search..."
@@ -174,5 +175,69 @@
   "tray": {
     "tooltip": "CopyPaste",
     "exit": "Exit"
+  },
+  "help": {
+    "window": {
+      "title": "Keyboard Shortcuts - CopyPaste"
+    },
+    "title": "Keyboard Shortcuts",
+    "subtitle": "Power your workflow with these shortcuts",
+    "section": {
+      "general": "GENERAL",
+      "search": "SEARCH",
+      "navigation": "CARD NAVIGATION",
+      "actions": "CARD ACTIONS"
+    },
+    "shortcuts": {
+      "openClose": {
+        "key": "Win+Alt+V",
+        "desc": "Open/close CopyPaste (customizable in settings)"
+      },
+      "escape": {
+        "key": "Esc",
+        "desc": "Clear search or close window"
+      },
+      "tab1": {
+        "key": "Ctrl+1",
+        "desc": "Switch to Recent tab"
+      },
+      "tab2": {
+        "key": "Ctrl+2",
+        "desc": "Switch to Pinned tab"
+      },
+      "down": {
+        "key": "↓ or Tab",
+        "desc": "Navigate from search to clipboard items"
+      },
+      "shiftTab": {
+        "key": "Shift+Tab",
+        "desc": "Return to search box"
+      },
+      "arrows": {
+        "key": "↑ / ↓",
+        "desc": "Navigate between clipboard items"
+      },
+      "right": {
+        "key": "→",
+        "desc": "Expand/collapse selected card to see more text"
+      },
+      "enter": {
+        "key": "Enter",
+        "desc": "Paste selected item and return to previous app"
+      },
+      "delete": {
+        "key": "Delete",
+        "desc": "Delete selected item"
+      },
+      "pin": {
+        "key": "P",
+        "desc": "Pin/Unpin selected item"
+      },
+      "edit": {
+        "key": "E",
+        "desc": "Edit card (add label and color)"
+      }
+    },
+    "closeButton": "Close"
   }
 }

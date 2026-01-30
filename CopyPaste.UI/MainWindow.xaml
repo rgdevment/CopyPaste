@@ -58,6 +58,20 @@ xmlns:tb="using:H.NotifyIcon">
 
             <!-- Settings/Info Buttons -->
             <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <Button x:Name="HelpButton"
+                        Click="OpenHelp_Click"
+                        Padding="0"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6">
+                    <FontIcon Glyph="&#xE946;" FontSize="13" Opacity="0.5"/>
+                </Button>
+                <Border Height="1"
+                        Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        Margin="8,2,8,2"
+                        Opacity="0.3"/>
                 <Button x:Name="SettingsButton"
                         Click="OpenSettings_Click"
                         Padding="0"
@@ -76,7 +90,7 @@ xmlns:tb="using:H.NotifyIcon">
                         Background="Transparent"
                         BorderThickness="0"
                         CornerRadius="6">
-                    <FontIcon Glyph="&#xE897;" FontSize="13" Opacity="0.5"/>
+                    <FontIcon Glyph="&#xE8B1;" FontSize="13" Opacity="0.5"/>
                 </Button>
             </StackPanel>
         </Grid>

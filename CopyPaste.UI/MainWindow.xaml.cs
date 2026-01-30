@@ -54,6 +54,7 @@ internal sealed partial class MainWindow : Window
         TrayMenuExit.Text = L.Get("tray.exit");
         ToolTipService.SetToolTip(RecentTab, L.Get("ui.section.recent"));
         ToolTipService.SetToolTip(PinnedTab, L.Get("ui.section.pinned"));
+        ToolTipService.SetToolTip(HelpButton, L.Get("ui.sidebar.help"));
         ToolTipService.SetToolTip(SettingsButton, L.Get("ui.sidebar.settings"));
         ToolTipService.SetToolTip(ReportButton, L.Get("ui.sidebar.report"));
         SearchBox.PlaceholderText = L.Get("ui.search.placeholder");
@@ -630,6 +631,12 @@ internal sealed partial class MainWindow : Window
         // Use dispatcher to ensure focus happens after window is fully rendered
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
             SearchBox.Focus(FocusState.Programmatic));
+
+    private void OpenHelp_Click(object sender, RoutedEventArgs e)
+    {
+        var helpWindow = new HelpWindow();
+        helpWindow.Activate();
+    }
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
     {

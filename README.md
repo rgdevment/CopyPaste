@@ -70,7 +70,8 @@ We don't want a Windows XP or Windows 7 experience in 2026. We aim to go further
 * 🔒 **Privacy First:** 100% Local. Your clipboard history never leaves your machine.
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
-* 🔍 **Full-Text Search:** Instantly find any item with powerful FTS5 search across content and labels.
+* � **Built-in Help:** Quick access to keyboard shortcuts reference window from the sidebar.
+* �🔍 **Full-Text Search:** Instantly find any item with powerful FTS5 search across content and labels.
 * ⚙️ **Configurable:** Hotkeys, appearance, panel width (400-600px), retention days, and more.
 
 ---
