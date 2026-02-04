@@ -32,6 +32,32 @@
 </div>
 
 ---
+CopyPaste is a high-performance clipboard history manager for Windows 10 and 11, developed in C# and WinUI 3. Unlike other managers, it focuses on being a native, lightweight, and open-source tool.
+
+**In short:** CopyPaste is a fast, private, and free clipboard manager for Windows 10/11. It keeps your clipboard history locally, respects sensitive data, and is built to feel native and distraction-free.
+
+**Keywords:** clipboard manager, clipboard history, Windows 11 clipboard tool, Windows 10 clipboard history, productivity app, privacy-first, free, offline.
+
+---
+
+## 📌 Table of Contents
+
+- [Why I Built This](#-why-i-built-this)
+- [What Is This?](#-what-is-this)
+- [What It Is / What It Isn’t](#-what-it-is--what-it-isnt)
+- [Who Is This For?](#-who-is-this-for)
+- [Privacy & Security](#-privacy--security)
+- [Key Features](#-key-features)
+- [Keyboard Shortcuts](#-keyboard-shortcuts)
+- [Screenshots](#-screenshots)
+- [Getting Started](#-getting-started)
+- [FAQ](#-faq)
+- [Found a Bug? Have Feedback?](#-found-a-bug-have-feedback)
+- [Localization](#-localization-help-us-go-global)
+- [Want to Help?](#-want-to-help)
+- [Tech Stack (For Developers)](#-tech-stack-for-developers)
+- [License & Spirit](#-license--spirit)
+
 ## 💡 Why I Built This
 
 I didn't build CopyPaste to sell you something. I built it because **I needed it**—and I believe you might need it too.
@@ -70,6 +96,58 @@ It's designed to feel like it belongs in Windows—not like some third-party too
 
 
 ---
+
+## ✅ What It Is / ❌ What It Isn’t
+
+**CopyPaste is:**
+- A **local-first clipboard history** app for Windows 10/11.
+- A **fast** tool designed for keyboard workflows.
+- **Open source**, so you can inspect how it works.
+
+**CopyPaste isn’t:**
+- A cloud clipboard or sync service.
+- A telemetry/analytics app.
+- A “platform” with accounts, subscriptions, or ads.
+
+---
+
+## 👤 Who Is This For?
+
+If you copy and paste all day, this is for you:
+
+- **Students** collecting notes, quotes, and sources.
+- **Developers** juggling snippets, commands, and logs.
+- **Creators & writers** reusing text fragments and assets.
+- **Support & operations** teams handling repetitive responses.
+- **Anyone** who wants a clean, private clipboard history on Windows 10/11.
+
+---
+
+## 🔒 Privacy & Security
+
+CopyPaste is built with a **privacy-first** mindset:
+
+- **Local-only storage** — no cloud, no servers, no data syncing.
+- **No tracking** — no telemetry, no analytics, no hidden collection.
+- **Sensitive content is ignored** — passwords and password-manager copies aren’t saved.
+
+**Non-goals (by design):** No accounts, no subscriptions, no ads, no cloud sync, no “AI analysis” of your clipboard.
+
+For responsible disclosure and security contact info, see [SECURITY.md](SECURITY.md).
+
+<details>
+<summary><strong>Where is my data stored?</strong></summary>
+
+CopyPaste stores its data locally under your Windows user profile:
+
+- **Database:** `%LOCALAPPDATA%\CopyPaste\clipboard.db`
+- **Images:** `%LOCALAPPDATA%\CopyPaste\images`
+- **Thumbnails:** `%LOCALAPPDATA%\CopyPaste\thumbs`
+- **Config:** `%LOCALAPPDATA%\CopyPaste\config`
+
+</details>
+
+If you care about privacy and control, this is made for you.
 
 ## ✨ Key Features
 
@@ -207,15 +285,22 @@ In the **Settings** window, you can customize filter behavior:
 <div align="center">
     <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo"/>
 </div>
+<div align="center"><em>Fast search, clean cards, and native Windows 11 look.</em></div>
 <hr>
 
 <div align="center">
     <img src="CopyPaste.UI/Assets/Config.png" alt="CopyPaste Demo"/>
 </div>
+<div align="center"><em>Privacy-friendly settings, hotkeys, and filter options.</em></div>
 
 ---
 
 ## 🚀 Getting Started
+
+### Quick Install (3 Steps)
+1. Go to the [**Latest Release**](https://github.com/rgdevment/CopyPaste/releases/latest).
+2. Download the **Installer (.exe)**.
+3. Run it and open CopyPaste with `Win+Alt+V`.
 
 ### Installation
 1.  Navigate to the [**Releases Page**](https://github.com/rgdevment/CopyPaste/releases).
@@ -259,6 +344,19 @@ This only happens once. After installation, CopyPaste runs normally.
 
 </details>
 
+### ✅ Verifying a Release (Recommended)
+
+If you want extra confidence before running the installer:
+
+1. Download the installer **and** the published SHA256 checksum from the same GitHub Release.
+2. Compare the installer hash with the published value.
+
+On Windows (PowerShell):
+
+```powershell
+Get-FileHash .\CopyPaste-Installer.exe -Algorithm SHA256
+```
+
 ### How It Works
 CopyPaste uses a **dual-process architecture** for the best user experience:
 - **`CopyPaste.exe`** — A lightweight native launcher that shows a splash screen instantly.
@@ -271,6 +369,29 @@ When you launch CopyPaste, the native launcher appears immediately while the .NE
 * **Architecture:** x64 (64-bit) fully tested and supported.
 
 ---
+
+## ❓ FAQ
+
+**Is CopyPaste free?**
+Yes. It’s completely free and open source.
+
+**Does it upload my data?**
+No. Everything stays on your PC.
+
+**Does it store passwords?**
+No. Passwords and clipboard content from password managers are ignored.
+
+**Do I need internet to use it?**
+No. It works fully offline.
+
+**Does it sync between devices?**
+No. There’s intentionally no cloud sync.
+
+**Where are my files stored?**
+Under `%LOCALAPPDATA%\CopyPaste\` (database, images, thumbnails, config).
+
+**Is it compatible with Windows 10 and 11?**
+Yes, Windows 10 (1809+) and Windows 11 are supported.
 
 ## 🤝 Found a Bug? Have Feedback?
 
