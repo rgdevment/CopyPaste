@@ -1,0 +1,116 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>CopyPaste.UI</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <LangVersion>preview</LangVersion>
+    <AssemblyName>CopyPaste.App</AssemblyName>
+
+    <!-- WinUI 3 unpackaged app configuration -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WinUISDKReferences>true</WinUISDKReferences>
+    <AppxPackage>false</AppxPackage>
+    <EnableMsixTooling>false</EnableMsixTooling>
+
+    <!--
+      Publishing optimizations for WinUI 3:
+      - ReadyToRun: Precompiles IL to native code (faster cold start)
+      - Trimming partial: Removes unused code but preserves reflection (required for XAML)
+      Note: Native AOT is NOT compatible with WinUI 3 due to XAML reflection requirements
+    -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+
+    <!-- Enable built-in COM interop for trimmed builds (needed for WindowsThumbnailExtractor) -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+
+    <!--
+      Cold-start optimizations:
+      - TieredCompilation: Start with quick JIT, optimize hot paths later
+      - QuickJitForLoops: Don't wait to optimize loops on startup
+      - ReadyToRunComposite: Better R2R optimization for self-contained apps
+    -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
+
+    <!-- Reduce assembly loading time -->
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+
+    <!--
+      Suppress IL2104 trimming warnings from third-party assemblies:
+      - Microsoft.Windows.SDK.NET: Windows SDK (not trim-compatible)
+      - WinRT.Runtime: WinRT interop layer
+      - System.Private.Windows.Core: System.Drawing internals
+      - TagLibSharp: Media metadata library (netstandard2.0, not trim-aware)
+      These assemblies use reflection patterns that trigger warnings but work correctly with partial trimming.
+    -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+
+    <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+</PropertyGroup>
+
+<!--
+  Trimming configuration for third-party assemblies that don't support trimming.
+  This prevents false-positive warnings while maintaining functionality.
+-->
+<ItemGroup>
+    <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
+    <TrimmerRootAssembly Include="WinRT.Runtime" />
+</ItemGroup>
+
+
+
+    <ItemGroup>
+        <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Localization/language-config.json" />
+        <EmbeddedResource Include="Localization/Languages/*.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
+        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7463" />
+        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+        <ProjectReference Include="..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Page Update="ConfigWindow.xaml">
+          <Generator>MSBuild:Compile</Generator>
+        </Page>
+        <Page Update="Controls\ClipboardItemCard.xaml">
+            <Generator>MSBuild:Compile</Generator>
+        </Page>
+    </ItemGroup>
+
+
+    <!-- Copy PRI file to publish output (CRITICAL for XAML loading in Release) -->
+    <Target Name="CopyPriToPublish" AfterTargets="Publish">
+        <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    </Target>
+
+    <!-- Copy Assets folder to publish output -->
+    <Target Name="CopyAssetsToPublish" AfterTargets="Publish">
+        <ItemGroup>
+            <AssetFiles Include="$(OutputPath)Assets\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(PublishDir)Assets\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    </Target>
+</Project>

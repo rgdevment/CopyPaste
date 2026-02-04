@@ -1,0 +1,358 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        arch: [win-x64]
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PUBLISH_PATH: CopyPaste.UI/bin/x64/Release/net10.0-windows10.0.22621.0/${{ matrix.arch }}/publish
+      PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+      PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for CI to start
+        shell: pwsh
+        run: |
+          Write-Host "⏳ Waiting 30 seconds to ensure CI workflow starts first..."
+          Write-Host "This prevents race conditions where release starts before CI"
+          Start-Sleep -Seconds 30
+          Write-Host "✅ Wait complete, proceeding with release verification"
+
+      - name: Extract version from tag
+        id: get_version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match 'refs/tags/v(.+)') {
+            $version = $matches[1]
+          } else {
+            $version = "1.0.0"
+          }
+
+          # Extract numeric version for Windows (e.g., 1.0.0-beta.1 -> 1.0.0.1)
+          if ($version -match '^(\d+\.\d+\.\d+)(?:-(?:alpha|beta|rc)\.(\d+))?$') {
+            $baseVersion = $matches[1]
+            $preRelease = if ($matches[2]) { $matches[2] } else { "0" }
+            $numericVersion = "$baseVersion.$preRelease"
+          } else {
+            $numericVersion = "$version.0"
+          }
+
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "VERSION_NUMERIC=$numericVersion" >> $env:GITHUB_OUTPUT
+          echo "Version: $version (numeric: $numericVersion)"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "preview"
+
+      - name: Restore dependencies
+        run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -r ${{ matrix.arch }}
+
+      - name: Verify CI Status
+        shell: pwsh
+        run: |
+          $sha = git rev-parse HEAD
+          Write-Host "🔍 Checking CI status for commit: $sha"
+
+          # Get the CI workflow runs for this commit
+          $headers = @{
+            "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"
+            "Accept" = "application/vnd.github.v3+json"
+          }
+
+          $repo = "${{ github.repository }}"
+          $url = "https://api.github.com/repos/$repo/commits/$sha/check-runs"
+
+          # Configuration
+          $maxWaitAttempts = 30  # Wait up to 5 minutes for CI to complete
+          $maxRetries = 3        # Retry up to 3 times if API fails
+          $waitSeconds = 10
+          $ciPassed = $false
+
+          function Test-CIStatus {
+            param($retryCount = 0)
+
+            try {
+              $attempt = 0
+
+              while ($attempt -lt $maxWaitAttempts) {
+                $response = Invoke-RestMethod -Uri $url -Headers $headers -ErrorAction Stop
+                $ciRuns = $response.check_runs | Where-Object {
+                  $_.name -like "*CI*" -or
+                  $_.name -like "*Build*Test*" -or
+                  $_.name -like "*build*"
+                }
+
+                if ($ciRuns.Count -eq 0) {
+                  Write-Host "⚠️  No CI runs found yet. Waiting... (attempt $($attempt + 1)/$maxWaitAttempts)"
+                  Start-Sleep -Seconds $waitSeconds
+                  $attempt++
+                  continue
+                }
+
+                $latestCi = $ciRuns | Sort-Object -Property started_at -Descending | Select-Object -First 1
+                $status = $latestCi.status
+                $conclusion = $latestCi.conclusion
+                $ciName = $latestCi.name
+
+                Write-Host "📊 CI '$ciName' - Status: $status, Conclusion: $conclusion"
+
+                if ($status -eq "completed") {
+                  if ($conclusion -eq "success") {
+                    Write-Host "✅ CI passed successfully!"
+                    return $true
+                  } else {
+                    Write-Error "❌ CI failed with conclusion: $conclusion"
+                    Write-Error "Cannot proceed with release. Please fix CI issues first."
+                    Write-Host "::error::CI failed - Release blocked"
+                    exit 1
+                  }
+                } else {
+                  $elapsed = $attempt * $waitSeconds
+                  Write-Host "⏳ CI is still running... ($elapsed seconds elapsed, attempt $($attempt + 1)/$maxWaitAttempts)"
+                  Start-Sleep -Seconds $waitSeconds
+                  $attempt++
+                }
+              }
+
+              # Timeout reached
+              Write-Warning "⚠️  CI verification timed out after $($maxWaitAttempts * $waitSeconds) seconds"
+              Write-Warning "Proceeding with caution. Please verify CI status manually."
+              return $true
+
+            } catch {
+              if ($retryCount -lt $maxRetries) {
+                $nextRetry = $retryCount + 1
+                Write-Warning "⚠️  API call failed (attempt $nextRetry/$maxRetries): $($_.Exception.Message)"
+                Write-Host "Retrying in 5 seconds..."
+                Start-Sleep -Seconds 5
+                return Test-CIStatus -retryCount $nextRetry
+              } else {
+                Write-Error "❌ Failed to verify CI status after $maxRetries retries"
+                Write-Error "Last error: $($_.Exception.Message)"
+                Write-Warning "Proceeding with caution - could not verify CI status"
+                return $true
+              }
+            }
+          }
+
+          $ciPassed = Test-CIStatus
+
+          if (-not $ciPassed) {
+            Write-Error "❌ CI verification failed. Release aborted."
+            exit 1
+          }
+
+          Write-Host "✅ CI verification complete - proceeding with release"
+
+
+      - name: Lint (Check format)
+        run: dotnet format CopyPaste.UI/CopyPaste.UI.csproj --verify-no-changes --no-restore
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build Native Launcher
+        shell: pwsh
+        run: |
+          Write-Host "🔨 Building native C++ launcher..."
+          Push-Location CopyPaste.Launcher
+
+          # Compile resource file (icon)
+          rc.exe /fo resources.res resources.rc
+
+          # Compile with optimizations, embed manifest and icon
+          cl.exe /O2 /MT /EHsc main.cpp resources.res `
+            /link user32.lib gdi32.lib gdiplus.lib shell32.lib `
+            /OUT:CopyPaste.exe `
+            /SUBSYSTEM:WINDOWS `
+            /MANIFEST:EMBED `
+            /MANIFESTINPUT:app.manifest
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to build native launcher"
+            exit 1
+          }
+
+          Pop-Location
+          Write-Host "✅ Native launcher built successfully"
+
+      - name: Publish (${{ matrix.arch }})
+        shell: pwsh
+        run: |
+          dotnet publish CopyPaste.UI/CopyPaste.UI.csproj `
+            -c Release `
+            -r ${{ matrix.arch }} `
+            --self-contained true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -p:PublishReadyToRun=true `
+            -p:PublishReadyToRunComposite=true `
+            -p:PublishTrimmed=true `
+            -p:TrimMode=partial `
+            -p:TieredCompilation=true `
+            -p:TieredCompilationQuickJitForLoops=true `
+            --no-restore
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "dotnet publish failed"
+            exit 1
+          }
+
+          # Verify publish output exists
+          $expectedPath = "${{ env.PUBLISH_PATH }}"
+          if (Test-Path $expectedPath) {
+            Write-Host "✅ Publish output found at: $expectedPath"
+            Get-ChildItem $expectedPath -Name | Select-Object -First 10
+          } else {
+            Write-Error "❌ Publish output not found at: $expectedPath"
+            Write-Host "Searching for publish folders..."
+            Get-ChildItem -Path "CopyPaste.UI/bin" -Recurse -Directory -Filter "publish" | ForEach-Object { Write-Host $_.FullName }
+            exit 1
+          }
+
+      - name: Integrate Native Launcher
+        shell: pwsh
+        run: |
+          $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+
+          # Copy native launcher to publish directory (overwrites the .NET exe name)
+          Copy-Item "CopyPaste.Launcher/CopyPaste.exe" -Destination $publishDir
+
+          Write-Host "✅ Native launcher integrated"
+          Write-Host "Entry point: CopyPaste.exe (native launcher)"
+          Write-Host ".NET app: CopyPaste.App.exe"
+
+      - name: Clean Publish Output
+        shell: pwsh
+        run: |
+          $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+          Write-Host "Cleaning publish directory: $publishDir"
+
+          # Define folders to keep (exact names)
+          $keepFolders = @('Assets', 'Microsoft.UI.Xaml', 'NpuDetect', 'en-us', 'en-US', 'en')
+
+          # Remove all culture/language folders except essential ones
+          # Pattern matches: xx, xx-XX, xx-Xxxx-XX, xxx-XX (culture codes including variants)
+          Get-ChildItem -Path $publishDir -Directory | Where-Object {
+            $folderName = $_.Name
+            ($keepFolders -notcontains $folderName) -and
+            ($folderName -match '^[a-z]{2,3}(-[A-Za-z]{2,8})?(-[A-Za-z]{2,8})?$')
+          } | ForEach-Object {
+            Write-Host "Removing culture folder: $($_.Name)"
+            Remove-Item -Path $_.FullName -Recurse -Force
+          }
+
+          # Remove PDB files
+          Get-ChildItem -Path $publishDir -Filter "*.pdb" -Recurse | Remove-Item -Force
+
+          # Remove XML documentation files (except resources)
+          Get-ChildItem -Path $publishDir -Filter "*.xml" -Recurse | Where-Object {
+            $_.Name -notlike "*.resources.xml"
+          } | Remove-Item -Force
+
+          # Remove createdump.exe (crash dump tool, not needed for production)
+          Get-ChildItem -Path $publishDir -Filter "createdump.exe" -Recurse | Remove-Item -Force
+
+          # Count and display results
+          $fileCount = (Get-ChildItem -Path $publishDir -File -Recurse).Count
+          $folderCount = (Get-ChildItem -Path $publishDir -Directory -Recurse).Count
+          $sizeBytes = (Get-ChildItem -Path $publishDir -File -Recurse | Measure-Object -Property Length -Sum).Sum
+          $sizeMB = [math]::Round($sizeBytes / 1MB, 2)
+
+          Write-Host "Final publish output: $fileCount files, $folderCount folders, $sizeMB MB"
+          Get-ChildItem -Path $publishDir -Directory | Select-Object Name | Format-Table
+
+      - name: Decode signing certificate
+        if: env.PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
+          Set-Content -Path signingCert.pfx -Value $bytes -AsByteStream
+
+      - name: Sign App Binaries
+        if: env.PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $pfxPath = Join-Path $PWD 'signingCert.pfx'
+
+          # Find latest x64 version of signtool
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
+
+          if (-not $signtool) { Write-Error "Signtool not found"; exit 1 }
+          Write-Host "Using Signtool: $($signtool.FullName)"
+
+          $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
+          Get-ChildItem -Path $targetDir -Include *.exe,*.dll -Recurse | ForEach-Object {
+            & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+          }
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
+      - name: Build Installer
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+
+          $fullPath = Join-Path "${{ github.workspace }}" "${{ env.PUBLISH_PATH }}"
+          $publishDir = (Resolve-Path $fullPath).Path
+
+          $repoRoot = "${{ github.workspace }}"
+          $myArch = if ("${{ matrix.arch }}" -eq "win-x64") { "x64" } else { "x86" }
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          $versionNumeric = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
+
+          Write-Host "Building installer with:"
+          Write-Host "Source: $publishDir"
+          Write-Host "Arch: $myArch"
+          Write-Host "Version: $version (numeric: $versionNumeric)"
+
+          & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DMyAppVersionNumeric=$versionNumeric" "/DRepoRoot=$repoRoot"
+
+      - name: Rename Installer
+        shell: pwsh
+        run: |
+          $arch = if ("${{ matrix.arch }}" -eq "win-x64") { "x64" } else { "x86" }
+          Move-Item -Path "Output/CopyPaste_Setup_$arch.exe" -Destination "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
+
+      - name: Sign Installer
+        if: env.PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $pfxPath = Join-Path $PWD 'signingCert.pfx'
+
+          # Find latest x64 version of signtool
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
+
+          & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
+
+      - name: Release Files
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

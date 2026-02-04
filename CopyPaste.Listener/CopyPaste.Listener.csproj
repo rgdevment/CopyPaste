@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Trimming: mark as safe for trimmer when consumed by UI project -->
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+</PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+    </ItemGroup>
+
+</Project>

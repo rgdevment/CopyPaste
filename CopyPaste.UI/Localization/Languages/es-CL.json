@@ -1,0 +1,275 @@
+{
+  "window": {
+    "title": "CopyPaste",
+    "appBranding": "CopyPaste"
+  },
+  "ui": {
+    "section": {
+      "recent": "Recientes",
+      "pinned": "Anclados"
+    },
+    "sidebar": {
+      "settings": "Configuración",
+      "report": "Reportar error",
+      "help": "Atajos de teclado"
+    },
+    "search": {
+      "placeholder": "Buscar..."
+    },
+    "filters": {
+      "modeContent": "Contenido",
+      "modeCategory": "Categoría",
+      "modeType": "Tipo",
+      "selectColors": "Seleccionar colores...",
+      "selectTypes": "Seleccionar tipos..."
+    },
+    "emptyState": "No hay elementos en esta sección"
+  },
+  "config": {
+    "window": {
+      "title": "Configuración - CopyPaste",
+      "heading": "Configuración",
+      "subtitle": "Los cambios se guardan en MyM.json y requieren reiniciar."
+    },
+    "language": {
+      "heading": "IDIOMA",
+      "label": "Idioma de la interfaz",
+      "desc": "Requiere reiniciar para aplicar",
+      "auto": "Automático (Sistema)"
+    },
+    "startup": {
+      "heading": "INICIO",
+      "runOnStartup": "Iniciar con Windows",
+      "runOnStartupDesc": "Ejecuta en segundo plano al iniciar sesión",
+      "runOnStartupYes": "Sí",
+      "runOnStartupNo": "No"
+    },
+    "hotkey": {
+      "heading": "ATAJOS DE TECLADO",
+      "shortcutLabel": "Atajo para abrir/cerrar CopyPaste",
+      "shortcutDesc": "Selecciona modificadores + una tecla",
+      "preview": "Atajo actual: {shortcut}",
+      "modifierCtrl": "Ctrl",
+      "modifierWin": "Win",
+      "modifierAlt": "Alt",
+      "modifierShift": "Shift",
+      "plus": "+"
+    },
+    "appearance": {
+      "heading": "APARIENCIA",
+      "panelWidth": "Ancho del panel",
+      "panelWidthDesc": "Ancho en píxeles (400-600px)",
+      "panelWidthTooltip": "Ancho del panel lateral en píxeles. Recomendado: 400-500px",
+      "marginTop": "Margen superior",
+      "marginTopDesc": "Distancia desde arriba (px)",
+      "marginTopTooltip": "Espacio entre el borde superior de la pantalla y el panel. Permite ajustar la posición vertical.",
+      "marginBottom": "Margen inferior",
+      "marginBottomDesc": "Distancia desde abajo (px)",
+      "marginBottomTooltip": "Espacio entre el borde inferior de la pantalla y el panel. Útil si tienes barra de tareas grande.",
+      "cardMinLines": "Líneas (colapsada)",
+      "cardMinLinesDesc": "Líneas de texto en tarjeta colapsada",
+      "cardMinLinesTooltip": "Número de líneas visibles cuando la tarjeta está colapsada. Recomendado: 2-4 líneas.",
+      "cardMaxLines": "Líneas (expandida)",
+      "cardMaxLinesDesc": "Líneas de texto en tarjeta expandida",
+      "cardMaxLinesTooltip": "Número de líneas visibles cuando expandes la tarjeta. Recomendado: 6-12 líneas.",
+      "resetScrollOnShow": "Volver arriba al abrir",
+      "resetScrollOnShowDesc": "Resetea scroll y selecciona el último item",
+      "resetScrollOnShowTooltip": "Cuando está activo, la lista vuelve al inicio y selecciona el elemento más reciente cada vez que se abre la ventana.",
+      "resetScrollOnShowYes": "Sí",
+      "resetScrollOnShowNo": "No"
+    },
+    "behavior": {
+      "heading": "COMPORTAMIENTO",
+      "yes": "Sí",
+      "no": "No",
+      "resetFilterMode": "Volver a modo Contenido al abrir",
+      "resetFilterModeDesc": "Si no, se mantiene el último modo usado",
+      "resetContentFilter": "Limpiar búsqueda al abrir",
+      "resetContentFilterDesc": "Borra el texto de búsqueda",
+      "resetCategoryFilter": "Limpiar filtro categoría al abrir",
+      "resetCategoryFilterDesc": "Deselecciona filtros de color",
+      "resetTypeFilter": "Limpiar filtro tipo al abrir",
+      "resetTypeFilterDesc": "Deselecciona filtros de tipo"
+    },
+    "performance": {
+      "heading": "RENDIMIENTO",
+      "pageSize": "Elementos por página",
+      "pageSizeDesc": "Cantidad a cargar por lote",
+      "maxItems": "Límite en memoria",
+      "maxItemsDesc": "Máximo elementos en RAM",
+      "scrollThreshold": "Umbral de scroll",
+      "scrollThresholdDesc": "Distancia para cargar más (px)"
+    },
+    "categories": {
+      "heading": "CATEGORÍAS",
+      "desc": "Personaliza los nombres de las categorías de color."
+    },
+    "storage": {
+      "heading": "ALMACENAMIENTO",
+      "retentionDays": "Días de retención",
+      "retentionDaysDesc": "Días para mantener historial (0=sin límite)",
+      "retentionTooltip": "Días para mantener historial del portapapeles. 0 = sin límite. Los elementos anclados nunca se borran."
+    },
+    "paste": {
+      "heading": "PEGADO",
+      "intro": "Velocidad de pegado automático. Normal/Seguro recomendados para mayoría de equipos.",
+      "speedLabel": "Velocidad de pegado",
+      "speedDesc": "Ajusta timings de restauración y pegado",
+      "speedTooltip": "Rápido = equipos potentes (puede fallar). Normal = equilibrio. Seguro = conservador. Lento = equipos antiguos.",
+      "warning": "⚠️ Rápido: Puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: Puede dar sensación de fallo en equipos modernos.",
+      "presets": {
+        "fast": "Rápido",
+        "normal": "Normal",
+        "safe": "Seguro",
+        "slow": "Lento"
+      }
+    },
+    "thumbnail": {
+      "heading": "MINIATURAS (AVANZADO)",
+      "warning": "Modificar puede afectar consumo de RAM y espacio en disco.",
+      "qualityLabel": "Calidad de miniaturas",
+      "qualityDesc": "Solo afecta miniaturas futuras",
+      "qualityTooltip": "Selecciona un preset de calidad. Excelente = mejor calidad pero más RAM. Ahorro = mínimo consumo de recursos.",
+      "presets": {
+        "excellent": "Excelente",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja",
+        "minimal": "Ahorro"
+      }
+    },
+    "buttons": {
+      "reset": "Restablecer",
+      "cancel": "Cancelar",
+      "save": "Guardar y reiniciar"
+    },
+    "dialog": {
+      "errorTitle": "Error",
+      "accept": "Aceptar"
+    },
+    "errors": {
+      "saveFailed": "Error al guardar. Revisa los permisos de la carpeta de configuración."
+    }
+  },
+  "clipboard": {
+    "contextMenu": {
+      "paste": "Pegar",
+      "pastePlain": "Pegar sin formato",
+      "pin": "Anclar",
+      "unpin": "Desanclar",
+      "delete": "Eliminar",
+      "edit": "Editar tarjeta"
+    },
+    "editDialog": {
+      "title": "Editar tarjeta",
+      "labelPlaceholder": "Etiqueta (opcional)",
+      "labelHint": "Máximo 40 caracteres",
+      "colorLabel": "Color",
+      "colorNone": "Sin color",
+      "colorRed": "Rojo",
+      "colorGreen": "Verde",
+      "colorPurple": "Morado",
+      "colorYellow": "Amarillo",
+      "colorBlue": "Azul",
+      "colorOrange": "Naranja",
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    },
+    "fileWarning": "Archivo no disponible",
+    "itemTypes": {
+      "text": "TEXTO",
+      "image": "IMAGEN",
+      "file": "ARCHIVO",
+      "folder": "CARPETA",
+      "link": "ENLACE",
+      "audio": "AUDIO",
+      "video": "VIDEO",
+      "content": "CONTENIDO"
+    },
+    "timestamps": {
+      "today": "Hoy {time}",
+      "yesterday": "Ayer {time}"
+    }
+  },
+  "tray": {
+    "tooltip": "CopyPaste",
+    "exit": "Salir"
+  },
+  "help": {
+    "window": {
+      "title": "Atajos de teclado - CopyPaste"
+    },
+    "title": "Atajos de teclado",
+    "subtitle": "Potencia tu flujo de trabajo con estos atajos",
+    "section": {
+      "general": "GENERAL",
+      "search": "BÚSQUEDA",
+      "filters": "FILTROS",
+      "navigation": "NAVEGACIÓN DE TARJETAS",
+      "actions": "ACCIONES DE TARJETAS"
+    },
+    "shortcuts": {
+      "openClose": {
+        "key": "Win+Alt+V",
+        "desc": "Abrir/cerrar CopyPaste (personalizable en ajustes)"
+      },
+      "escape": {
+        "key": "Esc",
+        "desc": "Limpiar búsqueda o cerrar ventana"
+      },
+      "tab1": {
+        "key": "Ctrl+1",
+        "desc": "Cambiar a pestaña Recientes"
+      },
+      "tab2": {
+        "key": "Ctrl+2",
+        "desc": "Cambiar a pestaña Anclados"
+      },
+      "down": {
+        "key": "↓ o Tab",
+        "desc": "Navegar desde búsqueda a elementos del portapapeles"
+      },
+      "shiftTab": {
+        "key": "Shift+Tab",
+        "desc": "Volver al cuadro de búsqueda"
+      },
+      "filterContent": {
+        "key": "Alt+C",
+        "desc": "Cambiar a modo Contenido (búsqueda de texto)"
+      },
+      "filterCategory": {
+        "key": "Alt+G",
+        "desc": "Cambiar a modo Categoría (por color)"
+      },
+      "filterType": {
+        "key": "Alt+T",
+        "desc": "Cambiar a modo Tipo (por tipo de elemento)"
+      },
+      "arrows": {
+        "key": "↑ / ↓",
+        "desc": "Navegar entre elementos del portapapeles"
+      },
+      "right": {
+        "key": "→",
+        "desc": "Expandir/contraer tarjeta seleccionada para ver más texto"
+      },
+      "enter": {
+        "key": "Enter",
+        "desc": "Pegar elemento seleccionado y volver a la app anterior"
+      },
+      "delete": {
+        "key": "Delete",
+        "desc": "Eliminar elemento seleccionado"
+      },
+      "pin": {
+        "key": "P",
+        "desc": "Anclar/Desanclar elemento seleccionado"
+      },
+      "edit": {
+        "key": "E",
+        "desc": "Editar tarjeta (agregar etiqueta y color)"
+      }
+    },
+    "closeButton": "Cerrar"
+  }
+}

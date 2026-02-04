@@ -1,0 +1,275 @@
+{
+  "window": {
+    "title": "CopyPaste",
+    "appBranding": "CopyPaste"
+  },
+  "ui": {
+    "section": {
+      "recent": "Recent",
+      "pinned": "Pinned"
+    },
+    "sidebar": {
+      "settings": "Settings",
+      "report": "Report bug",
+      "help": "Keyboard shortcuts"
+    },
+    "search": {
+      "placeholder": "Search..."
+    },
+    "filters": {
+      "modeContent": "Content",
+      "modeCategory": "Category",
+      "modeType": "Type",
+      "selectColors": "Select colors...",
+      "selectTypes": "Select types..."
+    },
+    "emptyState": "No items in this section"
+  },
+  "config": {
+    "window": {
+      "title": "Settings - CopyPaste",
+      "heading": "Settings",
+      "subtitle": "Changes are saved to MyM.json and require restart."
+    },
+    "language": {
+      "heading": "LANGUAGE",
+      "label": "Interface language",
+      "desc": "Requires restart to apply",
+      "auto": "Auto (System)"
+    },
+    "startup": {
+      "heading": "STARTUP",
+      "runOnStartup": "Run on startup",
+      "runOnStartupDesc": "Launches in background when you sign in",
+      "runOnStartupYes": "Yes",
+      "runOnStartupNo": "No"
+    },
+    "hotkey": {
+      "heading": "KEYBOARD SHORTCUTS",
+      "shortcutLabel": "Shortcut to open/close CopyPaste",
+      "shortcutDesc": "Select modifiers + one key",
+      "preview": "Current shortcut: {shortcut}",
+      "modifierCtrl": "Ctrl",
+      "modifierWin": "Win",
+      "modifierAlt": "Alt",
+      "modifierShift": "Shift",
+      "plus": "+"
+    },
+    "appearance": {
+      "heading": "APPEARANCE",
+      "panelWidth": "Panel width",
+      "panelWidthDesc": "Width in pixels (400-600px)",
+      "panelWidthTooltip": "Sidebar panel width in pixels. Recommended: 400-500px",
+      "marginTop": "Top margin",
+      "marginTopDesc": "Distance from top (px)",
+      "marginTopTooltip": "Space between the top of the screen and the panel. Allows adjusting vertical position.",
+      "marginBottom": "Bottom margin",
+      "marginBottomDesc": "Distance from bottom (px)",
+      "marginBottomTooltip": "Space between the bottom of the screen and the panel. Useful if you have a large taskbar.",
+      "cardMinLines": "Lines (collapsed)",
+      "cardMinLinesDesc": "Text lines when card is collapsed",
+      "cardMinLinesTooltip": "Number of visible lines when the card is collapsed. Recommended: 2-4 lines.",
+      "cardMaxLines": "Lines (expanded)",
+      "cardMaxLinesDesc": "Text lines when card is expanded",
+      "cardMaxLinesTooltip": "Number of visible lines when you expand the card. Recommended: 6-12 lines.",
+      "resetScrollOnShow": "Scroll to top on open",
+      "resetScrollOnShowDesc": "Resets scroll and selects the latest item",
+      "resetScrollOnShowTooltip": "When enabled, the list scrolls to the top and selects the most recent item each time the window opens.",
+      "resetScrollOnShowYes": "Yes",
+      "resetScrollOnShowNo": "No"
+    },
+    "behavior": {
+      "heading": "BEHAVIOR",
+      "yes": "Yes",
+      "no": "No",
+      "resetFilterMode": "Return to Content mode on open",
+      "resetFilterModeDesc": "If off, stays in the last used mode",
+      "resetContentFilter": "Clear search on open",
+      "resetContentFilterDesc": "Clears the search text",
+      "resetCategoryFilter": "Clear category filter on open",
+      "resetCategoryFilterDesc": "Deselects color filters",
+      "resetTypeFilter": "Clear type filter on open",
+      "resetTypeFilterDesc": "Deselects type filters"
+    },
+    "performance": {
+      "heading": "PERFORMANCE",
+      "pageSize": "Items per page",
+      "pageSizeDesc": "Amount to load per batch",
+      "maxItems": "Memory limit",
+      "maxItemsDesc": "Maximum items in RAM",
+      "scrollThreshold": "Scroll threshold",
+      "scrollThresholdDesc": "Distance to load more (px)"
+    },
+    "categories": {
+      "heading": "CATEGORIES",
+      "desc": "Customize the names of color categories."
+    },
+    "storage": {
+      "heading": "STORAGE",
+      "retentionDays": "Retention days",
+      "retentionDaysDesc": "Days to keep history (0=unlimited)",
+      "retentionTooltip": "Days to keep clipboard history. 0 = unlimited. Pinned items are never deleted."
+    },
+    "paste": {
+      "heading": "PASTE",
+      "intro": "Automatic paste speed. Normal/Safe recommended for most computers.",
+      "speedLabel": "Paste speed",
+      "speedDesc": "Adjust restoration and paste timings",
+      "speedTooltip": "Fast = powerful computers (may fail). Normal = balanced. Safe = conservative. Slow = old computers.",
+      "warning": "⚠️ Fast: May cause strange behavior in heavy apps.\n⚠️ Slow: May feel like a failure on modern computers.",
+      "presets": {
+        "fast": "Fast",
+        "normal": "Normal",
+        "safe": "Safe",
+        "slow": "Slow"
+      }
+    },
+    "thumbnail": {
+      "heading": "THUMBNAILS (ADVANCED)",
+      "warning": "Modifying can affect RAM usage and disk space.",
+      "qualityLabel": "Thumbnail quality",
+      "qualityDesc": "Only affects future thumbnails",
+      "qualityTooltip": "Select a quality preset. Excellent = better quality but more RAM. Minimal = minimal resource usage.",
+      "presets": {
+        "excellent": "Excellent",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "minimal": "Minimal"
+      }
+    },
+    "buttons": {
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "save": "Save and restart"
+    },
+    "dialog": {
+      "errorTitle": "Error",
+      "accept": "OK"
+    },
+    "errors": {
+      "saveFailed": "Failed to save. Check permissions for the configuration folder."
+    }
+  },
+  "clipboard": {
+    "contextMenu": {
+      "paste": "Paste",
+      "pastePlain": "Paste plain",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "delete": "Delete",
+      "edit": "Edit card"
+    },
+    "editDialog": {
+      "title": "Edit card",
+      "labelPlaceholder": "Label (optional)",
+      "labelHint": "40 characters max",
+      "colorLabel": "Color",
+      "colorNone": "None",
+      "colorRed": "Red",
+      "colorGreen": "Green",
+      "colorPurple": "Purple",
+      "colorYellow": "Yellow",
+      "colorBlue": "Blue",
+      "colorOrange": "Orange",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "fileWarning": "File not available",
+    "itemTypes": {
+      "text": "TEXT",
+      "image": "IMAGE",
+      "file": "FILE",
+      "folder": "FOLDER",
+      "link": "LINK",
+      "audio": "AUDIO",
+      "video": "VIDEO",
+      "content": "CONTENT"
+    },
+    "timestamps": {
+      "today": "Today {time}",
+      "yesterday": "Yesterday {time}"
+    }
+  },
+  "tray": {
+    "tooltip": "CopyPaste",
+    "exit": "Exit"
+  },
+  "help": {
+    "window": {
+      "title": "Keyboard Shortcuts - CopyPaste"
+    },
+    "title": "Keyboard Shortcuts",
+    "subtitle": "Power your workflow with these shortcuts",
+    "section": {
+      "general": "GENERAL",
+      "search": "SEARCH",
+      "filters": "FILTERS",
+      "navigation": "CARD NAVIGATION",
+      "actions": "CARD ACTIONS"
+    },
+    "shortcuts": {
+      "openClose": {
+        "key": "Win+Alt+V",
+        "desc": "Open/close CopyPaste (customizable in settings)"
+      },
+      "escape": {
+        "key": "Esc",
+        "desc": "Clear search or close window"
+      },
+      "tab1": {
+        "key": "Ctrl+1",
+        "desc": "Switch to Recent tab"
+      },
+      "tab2": {
+        "key": "Ctrl+2",
+        "desc": "Switch to Pinned tab"
+      },
+      "down": {
+        "key": "↓ or Tab",
+        "desc": "Navigate from search to clipboard items"
+      },
+      "shiftTab": {
+        "key": "Shift+Tab",
+        "desc": "Return to search box"
+      },
+      "filterContent": {
+        "key": "Alt+C",
+        "desc": "Switch to Content filter mode (text search)"
+      },
+      "filterCategory": {
+        "key": "Alt+G",
+        "desc": "Switch to Category filter mode (by color)"
+      },
+      "filterType": {
+        "key": "Alt+T",
+        "desc": "Switch to Type filter mode (by item type)"
+      },
+      "arrows": {
+        "key": "↑ / ↓",
+        "desc": "Navigate between clipboard items"
+      },
+      "right": {
+        "key": "→",
+        "desc": "Expand/collapse selected card to see more text"
+      },
+      "enter": {
+        "key": "Enter",
+        "desc": "Paste selected item and return to previous app"
+      },
+      "delete": {
+        "key": "Delete",
+        "desc": "Delete selected item"
+      },
+      "pin": {
+        "key": "P",
+        "desc": "Pin/Unpin selected item"
+      },
+      "edit": {
+        "key": "E",
+        "desc": "Edit card (add label and color)"
+      }
+    },
+    "closeButton": "Close"
+  }
+}

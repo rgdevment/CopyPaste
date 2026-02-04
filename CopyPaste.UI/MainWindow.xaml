@@ -1,0 +1,553 @@
+<Window
+x:Class="CopyPaste.UI.MainWindow"
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:viewmodels="using:CopyPaste.UI.ViewModels"
+xmlns:tb="using:H.NotifyIcon">
+
+<Window.SystemBackdrop>
+    <DesktopAcrylicBackdrop />
+</Window.SystemBackdrop>
+
+<Grid>
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="48"/>
+        <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- System Tray Icon -->
+    <tb:TaskbarIcon x:Name="TrayIcon"
+                    IconSource="/Assets/CopyPasteLogoSimple.ico"
+                    ToolTipText="CopyPaste APP"
+                    DoubleClickCommand="{x:Bind ViewModel.ShowWindowCommand}"
+                    MenuActivation="RightClick">
+        <tb:TaskbarIcon.ContextFlyout>
+            <MenuFlyout>
+                <MenuFlyoutItem x:Name="TrayMenuExit" Command="{x:Bind ViewModel.ExitCommand}"/>
+            </MenuFlyout>
+        </tb:TaskbarIcon.ContextFlyout>
+    </tb:TaskbarIcon>
+
+    <!-- Sidebar Navigation -->
+    <Border Grid.Column="0"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            BorderThickness="0,0,1,0"
+            BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}">
+        <Grid Margin="0,16,0,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Tab Buttons -->
+            <StackPanel Grid.Row="0" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Center">
+                <RadioButton x:Name="RecentTab"
+                             GroupName="NavTabs"
+                             IsChecked="True"
+                             Style="{StaticResource SidebarTabStyle}"
+                             Checked="TabChanged">
+                    <FontIcon x:Name="RecentTabIcon" Glyph="&#xE823;" FontSize="15" Foreground="#5B9BD5"/>
+                </RadioButton>
+                <RadioButton x:Name="PinnedTab"
+                             GroupName="NavTabs"
+                             Style="{StaticResource SidebarTabStyle}"
+                             Checked="TabChanged">
+                    <FontIcon x:Name="PinnedTabIcon" Glyph="&#xE718;" FontSize="15"/>
+                </RadioButton>
+            </StackPanel>
+
+            <!-- Settings/Info Buttons -->
+            <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <Button x:Name="HelpButton"
+                        Click="OpenHelp_Click"
+                        Padding="0"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6">
+                    <FontIcon Glyph="&#xE946;" FontSize="13" Opacity="0.5"/>
+                </Button>
+                <Border Height="1"
+                        Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        Margin="8,2,8,2"
+                        Opacity="0.3"/>
+                <Button x:Name="SettingsButton"
+                        Click="OpenSettings_Click"
+                        Padding="0"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6">
+                    <FontIcon Glyph="&#xE713;" FontSize="13" Opacity="0.5"/>
+                </Button>
+                <Button x:Name="ReportButton"
+                        Command="{x:Bind ViewModel.OpenRepoCommand}"
+                        Padding="0"
+                        Width="34" Height="34"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6">
+                    <FontIcon Glyph="&#xE8B1;" FontSize="13" Opacity="0.5"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+
+
+    <!-- Main Content -->
+    <Grid Grid.Column="1" x:Name="MainContentGrid" PreviewKeyDown="MainContent_PreviewKeyDown">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Section Title Indicator -->
+        <Grid Grid.Row="0" Margin="12,14,12,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Section Title (Left) -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Left"
+                        Spacing="6">
+                <FontIcon x:Name="SectionIcon"
+                          Glyph="&#xE823;"
+                          FontSize="14"
+                          Foreground="#5B9BD5"/>
+                <TextBlock x:Name="SectionTitle"
+                           Text="Recientes"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="#5B9BD5"/>
+            </StackPanel>
+
+            <!-- App Branding (Right) -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="6"
+                        Opacity="0.5">
+                <TextBlock Text="CopyPaste"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <Image Source="/Assets/CopyPasteNotification.ico"
+                       Width="14" Height="14"
+                       VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Search/Filter Bar -->
+        <Grid Grid.Row="1" Margin="12,4,12,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Content search (text) -->
+            <TextBox x:Name="SearchBox"
+                     Grid.Column="0"
+                     Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay}"
+                     TextChanged="SearchBox_TextChanged"
+                     Padding="10,8"
+                     FontSize="12"
+                     BorderThickness="1"
+                     BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                     Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                     CornerRadius="6"
+                     Visibility="{x:Bind ViewModel.IsContentFilterMode, Mode=OneWay}"/>
+
+            <!-- Category filter (colors) - Dropdown pattern -->
+            <Grid x:Name="ColorFilterPanel"
+                  Grid.Column="0"
+                  KeyDown="FilterChips_KeyDown"
+                  Visibility="{x:Bind ViewModel.IsCategoryFilterMode, Mode=OneWay}">
+                <Button x:Name="ColorDropdownButton"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Padding="10,8"
+                        Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Selected chips or placeholder -->
+                        <StackPanel x:Name="SelectedColorsPanel" Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                            <TextBlock x:Name="ColorPlaceholder" Text="Select colors..." Opacity="0.5" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="10" Opacity="0.6" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Button.Flyout>
+                        <Flyout x:Name="ColorFlyout" Placement="BottomEdgeAlignedLeft">
+                            <StackPanel Spacing="2" MinWidth="120">
+                                <CheckBox x:Name="ColorCheckRed" Tag="Red" Checked="ColorCheckBox_Changed" Unchecked="ColorCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="#E74C3C" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ColorLabelRed" Text="Red" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="ColorCheckGreen" Tag="Green" Checked="ColorCheckBox_Changed" Unchecked="ColorCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="#2ECC71" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ColorLabelGreen" Text="Green" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="ColorCheckPurple" Tag="Purple" Checked="ColorCheckBox_Changed" Unchecked="ColorCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="#9B59B6" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ColorLabelPurple" Text="Purple" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="ColorCheckYellow" Tag="Yellow" Checked="ColorCheckBox_Changed" Unchecked="ColorCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="#F1C40F" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ColorLabelYellow" Text="Yellow" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="ColorCheckBlue" Tag="Blue" Checked="ColorCheckBox_Changed" Unchecked="ColorCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="#3498DB" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ColorLabelBlue" Text="Blue" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="ColorCheckOrange" Tag="Orange" Checked="ColorCheckBox_Changed" Unchecked="ColorCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="#E67E22" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ColorLabelOrange" Text="Orange" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+
+            <!-- Type filter - Dropdown pattern -->
+            <Grid x:Name="TypeFilterPanel"
+                  Grid.Column="0"
+                  KeyDown="FilterChips_KeyDown"
+                  Visibility="{x:Bind ViewModel.IsTypeFilterMode, Mode=OneWay}">
+                <Button x:Name="TypeDropdownButton"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Padding="10,8"
+                        Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Selected chips or placeholder -->
+                        <StackPanel x:Name="SelectedTypesPanel" Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                            <TextBlock x:Name="TypePlaceholder" Text="Select types..." Opacity="0.5" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="10" Opacity="0.6" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Button.Flyout>
+                        <Flyout x:Name="TypeFlyout" Placement="BottomEdgeAlignedLeft">
+                            <StackPanel Spacing="2" MinWidth="120">
+                                <CheckBox x:Name="TypeCheckText" Tag="Text" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8C1;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelText" Text="Text" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="TypeCheckImage" Tag="Image" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE91B;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelImage" Text="Image" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="TypeCheckFile" Tag="File" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE7C3;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelFile" Text="File" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="TypeCheckFolder" Tag="Folder" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8B7;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelFolder" Text="Folder" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="TypeCheckLink" Tag="Link" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE71B;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelLink" Text="Link" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="TypeCheckAudio" Tag="Audio" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8D6;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelAudio" Text="Audio" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox x:Name="TypeCheckVideo" Tag="Video" Checked="TypeCheckBox_Changed" Unchecked="TypeCheckBox_Changed" MinHeight="28">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE714;" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TypeLabelVideo" Text="Video" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+
+            <!-- Filter mode button -->
+            <Button x:Name="FilterModeButton"
+                    Grid.Column="1"
+                    Width="32" Height="32"
+                    Margin="6,0,0,0"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="6">
+                <FontIcon x:Name="FilterModeIcon" Glyph="&#xE71C;" FontSize="14" Opacity="0.6"/>
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <RadioMenuFlyoutItem x:Name="FilterModeContent" Text="Contenido" IsChecked="True" Click="FilterModeItem_Click" Tag="0"/>
+                        <RadioMenuFlyoutItem x:Name="FilterModeCategory" Text="Categoría" Click="FilterModeItem_Click" Tag="1"/>
+                        <RadioMenuFlyoutItem x:Name="FilterModeType" Text="Tipo" Click="FilterModeItem_Click" Tag="2"/>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+            <!-- Empty State Message -->
+            <StackPanel Grid.Row="2"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
+                <FontIcon Glyph="&#xE74C;" FontSize="32" Opacity="0.3" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="EmptyStateText"
+                           FontSize="13"
+                           Opacity="0.5"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Clipboard Items List -->
+            <ListView x:Name="ClipboardListView"
+                      Grid.Row="2"
+                      ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
+                      SelectionMode="Single"
+                      IsTabStop="True"
+                      TabNavigation="Once"
+                      SingleSelectionFollowsFocus="True"
+                      PreviewKeyDown="ClipboardListView_PreviewKeyDown"
+                      Padding="4,0,4,12"
+                      ContainerContentChanging="ClipboardListView_ContainerContentChanging">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="MinHeight" Value="0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListViewItem">
+                                <ContentPresenter/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <ItemsStackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:ClipboardItemViewModel">
+                <Border MinHeight="60"
+                        CornerRadius="6"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                        Margin="0,0,0,8"
+                        Tag="{x:Bind}">
+                    <Border.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
+                            <MenuFlyoutItem Text="{x:Bind PastePlainText}" Command="{x:Bind PastePlainCommand}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="{x:Bind EditText}" Command="{x:Bind EditCommand}" Visibility="{x:Bind CanEdit}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="{x:Bind DeleteText}" Command="{x:Bind DeleteCommand}">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Border.ContextFlyout>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Color indicator (left border) -->
+                        <Border x:Name="ColorIndicator" Grid.Column="0" Width="3"
+                                CornerRadius="6,0,0,6" Margin="-1,-1,0,-1"
+                                Visibility="{x:Bind CardColorVisibility, Mode=OneWay}">
+                            <Border.Background>
+                                <SolidColorBrush Color="{x:Bind CardBorderColor, Mode=OneWay}"/>
+                            </Border.Background>
+                        </Border>
+
+                        <Grid Grid.Column="1" Padding="12,10,12,12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Header with Label -->
+                            <Grid Grid.Row="0" VerticalAlignment="Center" Margin="0,0,0,8"
+                                        Visibility="{x:Bind LabelVisibility, Mode=OneWay}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <FontIcon Glyph="{x:Bind TypeIcon, Mode=OneWay}" FontSize="12" Margin="0,0,8,0" Opacity="0.6"/>
+                                    <TextBlock Text="{x:Bind Label, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Opacity="0.8"/>
+                                </StackPanel>
+                                <TextBlock x:Name="LabelTimestamp" Grid.Column="1" Text="{x:Bind Timestamp, Mode=OneWay}" FontSize="11" Opacity="0.5"/>
+                            </Grid>
+                            <!-- Default Header (Type + Timestamp) -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Opacity="0.6" Margin="0,0,0,8"
+                                        Visibility="{x:Bind DefaultHeaderVisibility, Mode=OneWay}">
+                                <FontIcon Glyph="{x:Bind TypeIcon, Mode=OneWay}" FontSize="12" Margin="0,0,8,0"/>
+                                <TextBlock Text="{x:Bind HeaderTitle, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"/>
+                                <TextBlock Text="&#x2022;" Margin="6,0,6,0" FontSize="10"/>
+                                <TextBlock Text="{x:Bind Timestamp, Mode=OneWay}" FontSize="11"/>
+                            </StackPanel>
+
+                            <!-- Text Content -->
+                            <TextBlock Grid.Row="1" Text="{x:Bind Content, Mode=OneWay}"
+                                       MaxLines="{x:Bind ContentMaxLines, Mode=OneWay}"
+                                       LineHeight="{x:Bind ContentLineHeight, Mode=OneWay}"
+                                       TextTrimming="CharacterEllipsis"
+                                       FontSize="13" Opacity="0.9" TextWrapping="Wrap"
+                                       Visibility="{x:Bind IsTextVisible, Mode=OneWay}"/>
+
+                            <!-- Image Content -->
+                            <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="4"
+                                    Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
+                                    HorizontalAlignment="Stretch" Height="85" Opacity="0.6"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                <Image x:Name="ClipboardImage"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Tag="{x:Bind ImagePath, Mode=OneWay}"/>
+                            </Border>
+
+                            <!-- Media Thumbnail -->
+                            <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="4"
+                                    Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}"
+                                    HorizontalAlignment="Stretch" Height="85" Opacity="0.6"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- File Warning -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" Visibility="{x:Bind FileWarningVisibility, Mode=OneWay}">
+                                <FontIcon Glyph="&#xE7BA;" FontSize="12" Foreground="#FFAA00" Margin="0,0,6,0"/>
+                                <TextBlock Text="{x:Bind FileWarningText}" FontSize="11" Foreground="#FFAA00" Opacity="0.9"/>
+                            </StackPanel>
+
+                            <!-- Footer -->
+                            <Grid Grid.Row="3" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                                    <!-- Pin indicator (only shown when filtering) -->
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind PinIndicatorVisibility, Mode=OneWay}" Opacity="0.7">
+                                        <FontIcon Glyph="&#xE718;" FontSize="10" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                    </StackPanel>
+                                    <!-- App Source -->
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind AppSourceVisibility, Mode=OneWay}" Opacity="0.5">
+                                        <FontIcon Glyph="&#xE737;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind AppSource, Mode=OneWay}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="150"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Opacity="0.5" Spacing="8">
+                                    <TextBlock Text="{x:Bind PasteCountDisplay, Mode=OneWay}" FontSize="10" Visibility="{x:Bind PasteCountVisibility, Mode=OneWay}"/>
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind DurationVisibility, Mode=OneWay}">
+                                        <FontIcon Glyph="&#xE916;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind MediaDuration, Mode=OneWay}" FontSize="10"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind ImageDimensionsVisibility, Mode=OneWay}">
+                                        <FontIcon Glyph="&#xE799;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind ImageDimensions, Mode=OneWay}" FontSize="10"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Visibility="{x:Bind FileSizeVisibility, Mode=OneWay}">
+                                        <FontIcon Glyph="&#xE7C3;" FontSize="10" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{x:Bind FileSize, Mode=OneWay}" FontSize="10"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Action Panel (hover) -->
+                            <StackPanel x:Name="ActionPanel" Grid.Row="0" Grid.RowSpan="2"
+                                        Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Margin="0,-4,-4,0" Spacing="2" Opacity="0">
+                                <Button x:Name="OptionsButton" Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE712;" FontSize="14"/>
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
+                                            <MenuFlyoutItem Text="{x:Bind PastePlainText}" Command="{x:Bind PastePlainCommand}">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE75F;"/></MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutSeparator/>
+                                            <MenuFlyoutItem Text="{x:Bind PinMenuText, Mode=OneWay}" Command="{x:Bind TogglePinCommand}">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}"/></MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="{x:Bind EditText}" Command="{x:Bind EditCommand}" Visibility="{x:Bind CanEdit}">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;"/></MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                                <Button x:Name="DeleteButton" Width="26" Height="26" Padding="0" Background="Transparent" BorderThickness="0"
+                                        Command="{x:Bind DeleteCommand}">
+                                    <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
+</Window>

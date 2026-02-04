@@ -1,0 +1,45 @@
+name: "💡 Feature Request"
+description: "Suggest an idea or improvement for CopyPaste"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Share your idea! 🚀
+        CopyPaste is a community project—your feedback helps us grow.
+        We value simplicity and minimalism. Before suggesting, consider:
+        Does this idea maintain the clean, native Windows 11 experience?
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: "What's your idea?"
+      description: "A clear and concise description of what you'd like to see."
+      placeholder: "e.g., I'd love a smoother transition when pinning items..."
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "How does this improve your experience?"
+      description: "How would this make using CopyPaste more pleasant or efficient for you?"
+    validations:
+      required: true
+  - type: textarea
+    id: design-impact
+    attributes:
+      label: "Visual Proposal (optional)"
+      description: "How should this look? We prioritize clean, modern, and fluid aesthetics."
+      placeholder: "Describe icons, animations, or where this fits in the UI..."
+  - type: checkboxes
+    id: philosophy-check
+    attributes:
+      label: "Philosophy Checklist"
+      options:
+        - label: "This idea maintains the modern UI and avoids 'heavy' designs."
+          required: true
+        - label: "It contributes to a simple and intuitive experience."
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Inspiration (optional)"
+      description: "Have you seen something similar in other modern apps that you liked?"

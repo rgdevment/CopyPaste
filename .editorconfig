@@ -1,0 +1,48 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.cs]
+# --- C# 14 / .NET 10 Modern Standards ---
+csharp_style_namespace_declarations = file_scoped:error
+csharp_style_expression_bodied_methods = true:error
+csharp_style_expression_bodied_constructors = true:suggestion
+csharp_style_expression_bodied_properties = true:error
+csharp_style_expression_bodied_accessors = true:error
+
+# --- Nullable Reference Types ---
+dotnet_diagnostic.CS8600.severity = error
+dotnet_diagnostic.CS8601.severity = error
+dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8603.severity = error
+dotnet_diagnostic.CS8604.severity = error
+
+# --- Code Noise Reduction ---
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+csharp_prefer_simple_using_statement = true:error
+csharp_style_prefer_method_group_conversion = true:suggestion
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_style_prefer_top_level_statements = true:suggestion
+csharp_style_prefer_utf8_string_literals = true:suggestion
+
+# --- Pattern Matching (C# 14) ---
+csharp_style_pattern_matching_over_as_with_null_check = true:error
+csharp_style_pattern_matching_over_is_with_cast_check = true:error
+csharp_style_prefer_not_pattern = true:suggestion
+csharp_style_prefer_extended_property_pattern = true:suggestion
+
+# --- Naming Conventions (Clean Code) ---
+dotnet_naming_rule.private_members_with_underscore.symbols = private_fields
+dotnet_naming_rule.private_members_with_underscore.style = prefix_underscore
+dotnet_naming_rule.private_members_with_underscore.severity = error
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.prefix_underscore.required_prefix = _
+dotnet_naming_style.prefix_underscore.capitalization = camel_case
