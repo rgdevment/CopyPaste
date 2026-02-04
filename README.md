@@ -44,11 +44,11 @@ CopyPaste is a high-performance clipboard history manager for Windows 10 and 11,
 
 - [Why I Built This](#-why-i-built-this)
 - [What Is This?](#-what-is-this)
-- [What It Is / What It Isn’t](#-what-it-is--what-it-isnt)
+- [What It Is / What It Isn't](#-what-it-is---what-it-isnt)
 - [Who Is This For?](#-who-is-this-for)
 - [Privacy & Security](#-privacy--security)
 - [Key Features](#-key-features)
-- [Keyboard Shortcuts](#-keyboard-shortcuts)
+- [Keyboard Shortcuts](#️-keyboard-shortcuts)
 - [Screenshots](#-screenshots)
 - [Getting Started](#-getting-started)
 - [FAQ](#-faq)
