@@ -10,7 +10,6 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Windows.UI;
 using WinRT.Interop;
 
@@ -59,6 +58,7 @@ internal sealed partial class DefaultThemeWindow : Window
     private void ApplyLocalizedStrings()
     {
         TrayIcon.ToolTipText = L.Get("tray.tooltip");
+        TrayMenuSettings.Text = L.Get("tray.settings", "Settings");
         TrayMenuExit.Text = L.Get("tray.exit");
         ToolTipService.SetToolTip(RecentTab, L.Get("ui.section.recent"));
         ToolTipService.SetToolTip(PinnedTab, L.Get("ui.section.pinned"));
@@ -226,16 +226,8 @@ internal sealed partial class DefaultThemeWindow : Window
             if (_themeSettings.ResetScrollOnShow)
                 ResetScrollToTop();
             ResetFiltersOnShow();
-            RefreshFileAvailability();
+            ViewModel.RefreshFileAvailability();
             FocusSearchBox();
-        }
-    }
-
-    private void RefreshFileAvailability()
-    {
-        foreach (var item in ViewModel.Items.Where(i => i.IsFileType))
-        {
-            item.RefreshFileStatus();
         }
     }
 
@@ -899,6 +891,9 @@ internal sealed partial class DefaultThemeWindow : Window
         _context.OpenHelp();
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e) =>
+        _context.OpenSettings();
+
+    private void TrayMenuSettings_Click(object sender, RoutedEventArgs e) =>
         _context.OpenSettings();
 
     private async void ShowEditDialog(object? sender, ClipboardItemViewModel itemVM)

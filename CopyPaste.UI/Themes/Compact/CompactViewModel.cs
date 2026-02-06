@@ -5,21 +5,9 @@ using System.Threading.Tasks;
 
 namespace CopyPaste.UI.Themes;
 
-public partial class DefaultThemeViewModel(IClipboardService service, MyMConfig config, DefaultThemeSettings themeSettings)
+public partial class CompactViewModel(IClipboardService service, MyMConfig config, CompactSettings themeSettings)
     : ClipboardThemeViewModelBase(service, config, themeSettings.CardMaxLines, themeSettings.CardMinLines)
 {
-    [RelayCommand]
-    private void ClearAll()
-    {
-        for (int i = Items.Count - 1; i >= 0; i--)
-        {
-            if (Items[i].IsPinned) continue;
-
-            Service.RemoveItem(Items[i].Model.Id);
-            Items.RemoveAt(i);
-        }
-    }
-
     [RelayCommand]
     private static async Task OpenRepo()
     {

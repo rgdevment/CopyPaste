@@ -125,10 +125,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         _isPinned = model.IsPinned;
     }
 
-    /// <summary>
-    /// Updates the underlying model and notifies UI of property changes.
-    /// Used when thumbnail/metadata becomes available without creating a new ViewModel.
-    /// </summary>
+
     public void RefreshFromModel(ClipboardItem updatedModel)
     {
         ArgumentNullException.ThrowIfNull(updatedModel);
@@ -164,18 +161,12 @@ public partial class ClipboardItemViewModel : ObservableObject
         ImagePathChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// Call to refresh file availability status (e.g., when file might have been deleted).
-    /// </summary>
     public void RefreshFileStatus()
     {
         OnPropertyChanged(nameof(IsFileAvailable));
         OnPropertyChanged(nameof(FileWarningVisibility));
     }
 
-    /// <summary>
-    /// Fired when ImagePath changes (thumbnail becomes available).
-    /// </summary>
     public event EventHandler? ImagePathChanged;
 
     // Cached paths to avoid repeated JSON parsing - cleared on refresh
@@ -272,9 +263,9 @@ public partial class ClipboardItemViewModel : ObservableObject
 
     public bool CanEdit => _editAction != null;
 
-    public bool IsFileType => Model.Type is ClipboardContentType.File or ClipboardContentType.Folder or ClipboardContentType.Audio or ClipboardContentType.Video;
+    public bool IsFileType => Model.IsFileBasedType;
 
-    public bool IsFileAvailable => !IsFileType || CheckFirstFileExists();
+    public bool IsFileAvailable => Model.IsFileAvailable();
 
     public Visibility FileWarningVisibility => IsFileType && !IsFileAvailable ? Visibility.Visible : Visibility.Collapsed;
 
@@ -356,16 +347,6 @@ public partial class ClipboardItemViewModel : ObservableObject
         catch (JsonException) { }
 
         return null;
-    }
-
-    private bool CheckFirstFileExists()
-    {
-        if (string.IsNullOrEmpty(Model.Content)) return false;
-
-        var paths = Model.Content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        if (paths.Length == 0) return false;
-
-        return File.Exists(paths[0]) || Directory.Exists(paths[0]);
     }
 
     private string GetImagePathOrThumbnail()

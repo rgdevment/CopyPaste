@@ -88,6 +88,7 @@ public sealed partial class App : Application, IDisposable
 
         _themeRegistry = new ThemeRegistry();
         _themeRegistry.RegisterInternal<DefaultTheme>();
+        _themeRegistry.RegisterInternal<CompactTheme>();
         _themeRegistry.DiscoverCommunityThemes();
 
         var context = new ThemeContext(
