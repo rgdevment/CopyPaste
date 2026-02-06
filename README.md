@@ -284,15 +284,20 @@ In the **Settings** window, you can customize filter behavior:
 
 ## 📸 Screenshots
 <div align="center">
-    <img src="CopyPaste.UI/Assets/CopyPasteCompactMode.png" alt="CopyPaste Compact Mode" width="30%" height="30%"/>
+    <img src="CopyPaste.UI/Assets/CopyPasteCompactMode.png" alt="CopyPaste Compact Mode"/>
 </div>
-<div align="center"><em>CopyPaste compact mode Windows 11 look.</em></div>
+<div align="center"><em>CopyPaste Compact Mode Windows 11 look.</em></div>
+
+<div align="center">
+    <img src="CopyPaste.UI/Assets/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode"/>
+</div>
+<div align="center"><em>CopyPaste Compact Cards Mode Windows 11 look.</em></div>
 <hr>
 
 <div align="center">
     <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo"/>
 </div>
-<div align="center"><em>CopyPaste full mode, fast search, clean cards.</em></div>
+<div align="center"><em>CopyPaste Full Mode, Fast Search, Clean Cards.</em></div>
 <hr>
 
 <div align="center">
@@ -437,8 +442,8 @@ CopyPaste should speak your language. Currently we support English and Spanish, 
 ### Currently Supported Languages
 | Language | Tag | Status |
 | :--- | :---: | :---: |
-| 🇺🇸 English (US) | `en-US` | ✅ Complete |
 | 🇨🇱 Spanish (Chile) | `es-CL` | ✅ Complete |
+| 🇺🇸 English (US) | `en-US` | ✅ Complete |
 
 ### How It Works
 - **Automatic Detection:** The app detects your Windows display language and applies the appropriate translation.
