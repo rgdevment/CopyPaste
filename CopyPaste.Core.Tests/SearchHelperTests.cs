@@ -1,5 +1,4 @@
 using System;
-using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Core.Tests;

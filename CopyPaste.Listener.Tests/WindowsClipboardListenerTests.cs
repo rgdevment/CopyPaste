@@ -1,9 +1,8 @@
+using CopyPaste.Core;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using CopyPaste.Listener;
-using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Listener.Tests;

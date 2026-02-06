@@ -1,7 +1,7 @@
-using System;
 using CopyPaste.Core.Themes;
 using CopyPaste.UI.Helpers;
 using Microsoft.UI.Windowing;
+using System;
 using WinRT.Interop;
 
 namespace CopyPaste.UI.Themes;

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using CopyPaste.Core;
 using CopyPaste.UI.Themes;
 using Xunit;

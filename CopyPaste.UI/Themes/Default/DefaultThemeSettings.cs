@@ -1,8 +1,8 @@
+using CopyPaste.Core;
 using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CopyPaste.Core;
 
 namespace CopyPaste.UI.Themes;
 
@@ -13,7 +13,7 @@ namespace CopyPaste.UI.Themes;
 /// </summary>
 public sealed class DefaultThemeSettings
 {
-    private const string FileName = "DefaultTheme.json";
+    private const string _fileName = "DefaultTheme.json";
 
     // ═══════════════════════════════════════════════════════════════
     // Geometry (sidebar layout)
@@ -61,7 +61,7 @@ public sealed class DefaultThemeSettings
     // Persistence
     // ═══════════════════════════════════════════════════════════════
 
-    private static string FilePath => Path.Combine(StorageConfig.ConfigPath, FileName);
+    private static string FilePath => Path.Combine(StorageConfig.ConfigPath, _fileName);
 
     /// <summary>
     /// Loads settings from DefaultTheme.json. Returns defaults if file doesn't exist.
@@ -83,13 +83,13 @@ public sealed class DefaultThemeSettings
             var settings = JsonSerializer.Deserialize(json, DefaultThemeSettingsJsonContext.Default.DefaultThemeSettings);
             if (settings != null)
             {
-                AppLogger.Info($"Loaded theme settings from {FileName}");
+                AppLogger.Info($"Loaded theme settings from {_fileName}");
                 return settings;
             }
         }
         catch (Exception ex)
         {
-            AppLogger.Error($"Failed to load {FileName}: {ex.Message}");
+            AppLogger.Error($"Failed to load {_fileName}: {ex.Message}");
         }
 
         return new DefaultThemeSettings();

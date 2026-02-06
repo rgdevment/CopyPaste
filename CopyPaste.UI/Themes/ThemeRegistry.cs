@@ -1,10 +1,10 @@
+using CopyPaste.Core;
+using CopyPaste.Core.Themes;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using CopyPaste.Core;
-using CopyPaste.Core.Themes;
 
 namespace CopyPaste.UI.Themes;
 

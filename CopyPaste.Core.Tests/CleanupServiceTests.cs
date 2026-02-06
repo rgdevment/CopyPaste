@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Core.Tests;

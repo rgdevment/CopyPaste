@@ -1,11 +1,11 @@
-using System;
-using System.IO;
-using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
+using System;
+using System.IO;
+using System.Text.Json;
 
 namespace CopyPaste.UI.Themes;
 

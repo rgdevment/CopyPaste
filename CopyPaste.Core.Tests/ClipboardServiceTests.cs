@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Core.Tests;

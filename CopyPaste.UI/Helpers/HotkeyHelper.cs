@@ -1,6 +1,6 @@
+using CopyPaste.Core;
 using System;
 using System.Runtime.InteropServices;
-using CopyPaste.Core;
 
 namespace CopyPaste.UI.Helpers;
 
