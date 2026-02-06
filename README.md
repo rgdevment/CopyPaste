@@ -283,10 +283,8 @@ In the **Settings** window, you can customize filter behavior:
 ---
 
 ## 📸 Screenshots
-
-
 <div align="center">
-    <img src="CopyPaste.UI/Assets/CopyPasteCompactMode.png" alt="CopyPaste Compact Mode"/>
+    <img src="CopyPaste.UI/Assets/CopyPasteCompactMode.png" alt="CopyPaste Compact Mode" width="30%" height="30%"/>
 </div>
 <div align="center"><em>CopyPaste compact mode Windows 11 look.</em></div>
 <hr>
@@ -294,7 +292,7 @@ In the **Settings** window, you can customize filter behavior:
 <div align="center">
     <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo"/>
 </div>
-<div align="center"><em>CopyPaste Full mode, fast search, clean cards.</em></div>
+<div align="center"><em>CopyPaste full mode, fast search, clean cards.</em></div>
 <hr>
 
 <div align="center">
