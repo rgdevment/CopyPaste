@@ -6,13 +6,11 @@ using CopyPaste.Core;
 namespace CopyPaste.UI.Helpers;
 
 /// <summary>
-/// Helper class for managing window focus and simulating keyboard input.
-/// Used to restore focus to the previous window and simulate paste (Ctrl+V).
+/// Helper for managing window focus and simulating keyboard input.
 /// </summary>
 internal static partial class FocusHelper
 {
     #region P/Invoke Declarations
-
     [LibraryImport("user32.dll")]
     private static partial IntPtr GetForegroundWindow();
 
@@ -69,7 +67,7 @@ internal static partial class FocusHelper
     private static uint _previousWindowThreadId;
 
     /// <summary>
-    /// Captures the currently focused window. Call this before showing our window.
+    /// Captures the currently focused window.
     /// </summary>
     public static void CapturePreviousWindow()
     {
@@ -117,7 +115,6 @@ internal static partial class FocusHelper
 
             try
             {
-                // Restore if minimized
                 var style = GetWindowLongPtrW(_previousForegroundWindow, _gWL_STYLE);
                 if ((style.ToInt64() & _wS_MINIMIZE) != 0)
                 {
@@ -148,7 +145,7 @@ internal static partial class FocusHelper
     }
 
     /// <summary>
-    /// Waits for focus to be on the target window using active polling instead of fixed delay.
+    /// Waits for focus on the target window using active polling.
     /// </summary>
     private static async Task<bool> WaitForFocusAsync(int maxAttempts)
     {
@@ -164,7 +161,7 @@ internal static partial class FocusHelper
     }
 
     /// <summary>
-    /// Simulates Ctrl+V keystroke.
+    /// Simulates Ctrl+V.
     /// </summary>
     public static void SimulatePaste()
     {
@@ -175,9 +172,9 @@ internal static partial class FocusHelper
     }
 
     /// <summary>
-    /// Restores focus and simulates paste using configured timing.
+    /// Restores focus and simulates paste.
     /// </summary>
-    public static async Task RestoreAndPasteAsync()
+    public static async Task RestoreAndPasteAsync(int delayBeforeFocusMs, int maxFocusVerifyAttempts, int delayBeforePasteMs)
     {
         if (_previousForegroundWindow == IntPtr.Zero)
         {
@@ -185,10 +182,7 @@ internal static partial class FocusHelper
             return;
         }
 
-        var config = ConfigLoader.Config;
-
-        // Wait for our window to hide
-        await Task.Delay(config.DelayBeforeFocusMs).ConfigureAwait(false);
+        await Task.Delay(delayBeforeFocusMs).ConfigureAwait(false);
 
         if (!RestorePreviousWindow())
         {
@@ -196,13 +190,11 @@ internal static partial class FocusHelper
             return;
         }
 
-        // Use active polling to verify focus, with fallback to delay
-        bool focusConfirmed = await WaitForFocusAsync(config.MaxFocusVerifyAttempts).ConfigureAwait(false);
+        bool focusConfirmed = await WaitForFocusAsync(maxFocusVerifyAttempts).ConfigureAwait(false);
 
         if (!focusConfirmed)
         {
-            // Fallback: wait the configured delay
-            await Task.Delay(config.DelayBeforePasteMs).ConfigureAwait(false);
+            await Task.Delay(delayBeforePasteMs).ConfigureAwait(false);
         }
 
         SimulatePaste();

@@ -21,7 +21,7 @@ internal sealed partial class MainWindow : Window
     public MainViewModel ViewModel { get; }
     private readonly AppWindow _appWindow;
     private readonly IntPtr _hWnd;
-    private readonly MyMConfig _config = ConfigLoader.Config; // Cache config once at startup
+    private readonly MyMConfig _config;
     private const int _hotkeyId = 1;
     private ClipboardItemViewModel? _currentExpandedItem;
     private ClipboardItemViewModel? _previousSelectedItem;
@@ -32,9 +32,10 @@ internal sealed partial class MainWindow : Window
     private static readonly SolidColorBrush _blueBrush = new(Color.FromArgb(255, 91, 155, 213));
     private static readonly SolidColorBrush _inactiveBrush = new(Color.FromArgb(255, 120, 120, 120));
 
-    public MainWindow(ClipboardService service)
+    public MainWindow(IClipboardService service, MyMConfig config)
     {
-        ViewModel = new MainViewModel(service);
+        _config = config;
+        ViewModel = new MainViewModel(service, config);
         ViewModel.Initialize(this);
         InitializeComponent();
 
@@ -450,7 +451,7 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private static void LoadImageSource(Image image, string? imagePath)
+    private void LoadImageSource(Image image, string? imagePath)
     {
         if (string.IsNullOrEmpty(imagePath)) return;
 
@@ -486,7 +487,7 @@ internal sealed partial class MainWindow : Window
             {
                 UriSource = new Uri(imagePath),
                 CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
-                DecodePixelHeight = ConfigLoader.Config.ThumbnailUIDecodeHeight // Static access needed here
+                DecodePixelHeight = _config.ThumbnailUIDecodeHeight
             };
         }
         catch { /* Silently fail */ }

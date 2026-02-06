@@ -14,10 +14,10 @@ using WinRT.Interop;
 
 namespace CopyPaste.UI.ViewModels;
 
-public partial class MainViewModel(ClipboardService service) : ObservableObject
+public partial class MainViewModel(IClipboardService service, MyMConfig config) : ObservableObject
 {
-    private readonly ClipboardService _service = service;
-    private readonly MyMConfig _config = ConfigLoader.Config; // Cache config once at startup
+    private readonly IClipboardService _service = service;
+    private readonly MyMConfig _config = config;
     private Window? _window;
     private DispatcherQueue? _dispatcherQueue;
     private bool _isLoading;
@@ -243,7 +243,10 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
             }
 
             HideWindow();
-            await FocusHelper.RestoreAndPasteAsync().ConfigureAwait(false);
+            await FocusHelper.RestoreAndPasteAsync(
+                _config.DelayBeforeFocusMs,
+                _config.MaxFocusVerifyAttempts,
+                _config.DelayBeforePasteMs).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -448,5 +451,6 @@ public partial class MainViewModel(ClipboardService service) : ObservableObject
         _selectedTypes.Count > 0;
 
     private ClipboardItemViewModel CreateViewModel(ClipboardItem item) =>
-        new(item, OnDeleteItem, OnPasteItem, OnPinItem, OnEditItem, HasActiveFilter);
+        new(item, OnDeleteItem, OnPasteItem, OnPinItem, OnEditItem, HasActiveFilter,
+            _config.CardMaxLines, _config.CardMinLines);
 }

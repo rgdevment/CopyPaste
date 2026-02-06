@@ -15,6 +15,8 @@ public partial class ClipboardItemViewModel : ObservableObject
     private readonly Action<ClipboardItemViewModel, bool> _pasteAction;
     private readonly Action<ClipboardItemViewModel> _pinAction;
     private readonly Action<ClipboardItemViewModel>? _editAction;
+    private readonly int _cardMaxLines;
+    private readonly int _cardMinLines;
     private readonly string _pasteText;
     private readonly string _pastePlainText;
     private readonly string _deleteText;
@@ -77,8 +79,8 @@ public partial class ClipboardItemViewModel : ObservableObject
     }
 
     public int ContentMaxLines => _isExpanded
-        ? ConfigLoader.Config.CardMaxLines
-        : ConfigLoader.Config.CardMinLines;
+        ? _cardMaxLines
+        : _cardMinLines;
     public double ContentLineHeight { get; } = 20.0;
 
     public ClipboardItemViewModel(
@@ -87,7 +89,9 @@ public partial class ClipboardItemViewModel : ObservableObject
         Action<ClipboardItemViewModel, bool> pasteAction,
         Action<ClipboardItemViewModel> pinAction,
         Action<ClipboardItemViewModel>? editAction = null,
-        bool showPinIndicator = false)
+        bool showPinIndicator = false,
+        int cardMaxLines = 12,
+        int cardMinLines = 3)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -97,6 +101,8 @@ public partial class ClipboardItemViewModel : ObservableObject
         _pinAction = pinAction;
         _editAction = editAction;
         _showPinIndicator = showPinIndicator;
+        _cardMaxLines = cardMaxLines;
+        _cardMinLines = cardMinLines;
         _pasteText = L.Get("clipboard.contextMenu.paste");
         _pastePlainText = L.Get("clipboard.contextMenu.pastePlain");
         _deleteText = L.Get("clipboard.contextMenu.delete");

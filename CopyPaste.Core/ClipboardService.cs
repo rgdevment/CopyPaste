@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace CopyPaste.Core;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.")]
-public class ClipboardService(IClipboardRepository repository)
+public class ClipboardService(IClipboardRepository repository) : IClipboardService
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;

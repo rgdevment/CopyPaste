@@ -8,7 +8,7 @@ using System.Threading.Channels;
 
 namespace CopyPaste.Listener;
 
-public sealed partial class WindowsClipboardListener(ClipboardService service) : IDisposable
+public sealed partial class WindowsClipboardListener(IClipboardService service) : IClipboardListener
 {
     private const uint _cF_UNICODETEXT = 13;
     private const uint _cF_HDROP = 15;
@@ -103,7 +103,7 @@ public sealed partial class WindowsClipboardListener(ClipboardService service) :
     private static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
     #endregion
 
-    public void Stop()
+    public void Shutdown()
     {
         _cts.Cancel();
         _taskQueue.Writer.Complete();
