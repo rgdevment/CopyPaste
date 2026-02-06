@@ -2,7 +2,6 @@ namespace CopyPaste.Core;
 
 public class ClipboardItem
 {
-    /// <summary>Maximum length for user-defined labels.</summary>
     public const int MaxLabelLength = 40;
 
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -13,30 +12,30 @@ public class ClipboardItem
     public string? AppSource { get; set; }
     public bool IsPinned { get; set; }
 
-    /// <summary>
-    /// Optional user-defined label for easy identification.
-    /// Limited to <see cref="MaxLabelLength"/> characters.
-    /// </summary>
     public string? Label { get; set; }
 
-    /// <summary>
-    /// Optional color for visual organization.
-    /// </summary>
     public CardColor CardColor { get; set; } = CardColor.None;
 
-    /// <summary>
-    /// Multi-purpose field for thumbnails, file info, or text tags.
-    /// </summary>
     public string? Metadata { get; set; }
 
-    /// <summary>
-    /// Number of times this item has been pasted.
-    /// </summary>
     public int PasteCount { get; set; }
 
-    /// <summary>
-    /// SHA256 hash of content for deduplication (primarily for images).
-    /// Indexed in database for fast duplicate detection.
-    /// </summary>
     public string? ContentHash { get; set; }
+
+    public bool IsFileBasedType =>
+        Type is ClipboardContentType.File
+            or ClipboardContentType.Folder
+            or ClipboardContentType.Audio
+            or ClipboardContentType.Video;
+
+    public bool IsFileAvailable()
+    {
+        if (!IsFileBasedType) return true;
+        if (string.IsNullOrEmpty(Content)) return false;
+
+        var paths = Content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        if (paths.Length == 0) return false;
+
+        return File.Exists(paths[0]) || Directory.Exists(paths[0]);
+    }
 }

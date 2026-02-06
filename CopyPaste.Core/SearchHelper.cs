@@ -3,9 +3,6 @@ using System.Text;
 
 namespace CopyPaste.Core;
 
-/// <summary>
-/// Helper class for clipboard search functionality.
-/// </summary>
 internal static class SearchHelper
 {
     public static string NormalizeText(string text)

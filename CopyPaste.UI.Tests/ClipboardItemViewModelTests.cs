@@ -16,7 +16,7 @@ public sealed class ClipboardItemViewModelTests
             Type = ClipboardContentType.Text
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -31,7 +31,7 @@ public sealed class ClipboardItemViewModelTests
     public void Constructor_WithNullModel_ThrowsException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ViewModels.ClipboardItemViewModel(
+            new Themes.ClipboardItemViewModel(
                 null!,
                 _ => { },
                 (_, _) => { },
@@ -50,7 +50,7 @@ public sealed class ClipboardItemViewModelTests
             IsPinned = true
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -74,7 +74,7 @@ public sealed class ClipboardItemViewModelTests
             IsPinned = false
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -96,7 +96,7 @@ public sealed class ClipboardItemViewModelTests
             IsPinned = false
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -125,7 +125,7 @@ public sealed class ClipboardItemViewModelTests
             CreatedAt = DateTime.UtcNow
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -146,7 +146,7 @@ public sealed class ClipboardItemViewModelTests
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -167,7 +167,7 @@ public sealed class ClipboardItemViewModelTests
             CreatedAt = DateTime.UtcNow.AddDays(-7)
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -191,7 +191,7 @@ public sealed class ClipboardItemViewModelTests
             Type = ClipboardContentType.Text
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -218,7 +218,7 @@ public sealed class ClipboardItemViewModelTests
             Type = ClipboardContentType.Text
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -238,7 +238,7 @@ public sealed class ClipboardItemViewModelTests
             Metadata = null
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -271,7 +271,7 @@ public sealed class ClipboardItemViewModelTests
             Type = ClipboardContentType.Text
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model,
             _ => { },
             (_, _) => { },
@@ -296,7 +296,7 @@ public sealed class ClipboardItemViewModelTests
             Label = "API Key"
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -314,7 +314,7 @@ public sealed class ClipboardItemViewModelTests
             Label = null
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -332,7 +332,7 @@ public sealed class ClipboardItemViewModelTests
             CardColor = CardColor.Red
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -350,7 +350,7 @@ public sealed class ClipboardItemViewModelTests
             CardColor = CardColor.None
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -367,7 +367,7 @@ public sealed class ClipboardItemViewModelTests
             CardColor = CardColor.Green
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -385,7 +385,7 @@ public sealed class ClipboardItemViewModelTests
             CardColor = CardColor.None
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -402,7 +402,7 @@ public sealed class ClipboardItemViewModelTests
             Type = ClipboardContentType.Text
         };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -430,7 +430,7 @@ public sealed class ClipboardItemViewModelTests
         };
 
         var editCalled = false;
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }, _ => editCalled = true
         );
 
@@ -444,7 +444,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }, _ => { }
         );
 
@@ -456,7 +456,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -472,7 +472,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text, IsPinned = true };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }, editAction: null, showPinIndicator: true
         );
 
@@ -484,7 +484,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text, IsPinned = true };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }, editAction: null, showPinIndicator: false
         );
 
@@ -496,7 +496,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text, IsPinned = false };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }, editAction: null, showPinIndicator: true
         );
 
@@ -508,7 +508,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text, IsPinned = false };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 
@@ -520,7 +520,7 @@ public sealed class ClipboardItemViewModelTests
     {
         var model = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text, IsPinned = true };
 
-        var viewModel = new ViewModels.ClipboardItemViewModel(
+        var viewModel = new Themes.ClipboardItemViewModel(
             model, _ => { }, (_, _) => { }, _ => { }
         );
 

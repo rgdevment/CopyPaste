@@ -5,4 +5,4 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.", Justification = "Image loading failures should be handled gracefully without crashing the UI", Scope = "member", Target = "~M:CopyPaste.UI.MainWindow.LoadImageSource(Microsoft.UI.Xaml.Controls.Image,System.String)")]
+[assembly: SuppressMessage("Design", "CA1031:Don't catch general exception types", Justification = "Image loading failures should be handled gracefully without crashing the UI", Scope = "member", Target = "~M:CopyPaste.UI.Themes.DefaultThemeWindow.LoadImageSource(Microsoft.UI.Xaml.Controls.Image,System.String)")]
