@@ -31,6 +31,16 @@
       "heading": "Configuración",
       "subtitle": "Los cambios se guardan en MyM.json y requieren reiniciar."
     },
+    "tabs": {
+      "general": "General",
+      "theme": "Tema"
+    },
+    "themeSelector": {
+      "heading": "TEMA",
+      "label": "Tema activo",
+      "desc": "Requiere reiniciar para aplicar",
+      "communityWarning": "Los temas de la comunidad no están verificados. Úsalos bajo tu propio riesgo."
+    },
     "language": {
       "heading": "IDIOMA",
       "label": "Idioma de la interfaz",

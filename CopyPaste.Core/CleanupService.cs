@@ -1,9 +1,5 @@
 namespace CopyPaste.Core;
 
-/// <summary>
-/// Service responsible for automatic cleanup of old clipboard items.
-/// Runs once per day, checking every 18 hours.
-/// </summary>
 public sealed class CleanupService : IDisposable
 {
     private static readonly TimeSpan _checkInterval = TimeSpan.FromHours(18);

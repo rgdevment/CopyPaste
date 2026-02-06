@@ -1,5 +1,5 @@
-using System.Runtime.InteropServices;
 using SkiaSharp;
+using System.Runtime.InteropServices;
 
 namespace CopyPaste.Core;
 
@@ -41,6 +41,7 @@ public static partial class WindowsThumbnailExtractor
 
         IntPtr shellItem = IntPtr.Zero;
         IntPtr hBitmap = IntPtr.Zero;
+        object? factoryObj = null;
 
         try
         {
@@ -51,9 +52,9 @@ public static partial class WindowsThumbnailExtractor
                 return null;
             }
 
-            // Get the IShellItemImageFactory interface
-            // Marshal.GetObjectForIUnknown adds a COM reference which is released by shellItem cleanup
-            var factory = (IShellItemImageFactory)Marshal.GetObjectForIUnknown(shellItem);
+            // Get the IShellItemImageFactory interface (RCW adds a COM reference)
+            factoryObj = Marshal.GetObjectForIUnknown(shellItem);
+            var factory = (IShellItemImageFactory)factoryObj;
 
             // Request thumbnail with multiple flag combinations if first attempt fails
             var size = new SIZE { cx = width, cy = width };
@@ -107,6 +108,7 @@ public static partial class WindowsThumbnailExtractor
         finally
         {
             if (hBitmap != IntPtr.Zero) DeleteObject(hBitmap);
+            if (factoryObj != null) Marshal.ReleaseComObject(factoryObj);
             if (shellItem != IntPtr.Zero) Marshal.Release(shellItem);
         }
     }

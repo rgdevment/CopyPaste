@@ -5,6 +5,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.", Justification = "Cleanup operations should not throw - log and continue", Scope = "member", Target = "~M:CopyPaste.Core.SqliteRepository.CleanupItemFiles(CopyPaste.Core.ClipboardItem)")]
-[assembly: SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.", Justification = "Database corruption recovery must catch all exceptions to attempt backup", Scope = "member", Target = "~M:CopyPaste.Core.SqliteRepository.HandleCorruptDatabase")]
-[assembly: SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.", Justification = "Dispose should never throw exceptions", Scope = "member", Target = "~M:CopyPaste.Core.SqliteRepository.Dispose")]
+[assembly: SuppressMessage("Design", "CA1031:Don't catch general exception types.", Justification = "Cleanup operations should not throw - log and continue", Scope = "member", Target = "~M:CopyPaste.Core.SqliteRepository.CleanupItemFiles(CopyPaste.Core.ClipboardItem)")]
+[assembly: SuppressMessage("Design", "CA1031:Don't catch general exception types.", Justification = "Database corruption recovery must catch all exceptions to attempt backup", Scope = "member", Target = "~M:CopyPaste.Core.SqliteRepository.HandleCorruptDatabase")]
+[assembly: SuppressMessage("Design", "CA1031:Don't catch general exception types.", Justification = "Dispose should never throw exceptions", Scope = "member", Target = "~M:CopyPaste.Core.SqliteRepository.Dispose")]

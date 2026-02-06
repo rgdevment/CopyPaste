@@ -1,19 +1,21 @@
 using CopyPaste.Core;
+using CopyPaste.UI.Themes;
 using Xunit;
 
 namespace CopyPaste.UI.Tests;
 
-/// <summary>
-/// Basic tests for MainViewModel (limited due to WinUI3/DispatcherQueue dependencies).
-/// </summary>
 public sealed class MainViewModelBasicTests
 {
+    private static Themes.DefaultThemeViewModel CreateViewModel(IClipboardService? service = null)
+    {
+        service ??= new ClipboardService(new StubRepository());
+        return new Themes.DefaultThemeViewModel(service, new MyMConfig(), new DefaultThemeSettings());
+    }
+
     [Fact]
     public void Constructor_WithValidService_CreatesInstance()
     {
-        var service = new ClipboardService(new StubRepository());
-
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.NotNull(viewModel);
         Assert.NotNull(viewModel.Items);
@@ -22,8 +24,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void Items_InitialState_IsEmpty()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.Empty(viewModel.Items);
     }
@@ -31,8 +32,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void IsEmpty_InitialState_IsTrue()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.True(viewModel.IsEmpty);
     }
@@ -40,8 +40,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void SearchQuery_InitialState_IsEmpty()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.Equal(string.Empty, viewModel.SearchQuery);
     }
@@ -49,8 +48,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void HasSearchQuery_InitialState_IsFalse()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.False(viewModel.HasSearchQuery);
     }
@@ -58,8 +56,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void SelectedTabIndex_InitialState_IsZero()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.Equal(0, viewModel.SelectedTabIndex);
     }
@@ -67,8 +64,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void SearchQuery_WhenSet_UpdatesHasSearchQuery()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.SearchQuery = "test";
 
@@ -78,8 +74,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void SearchQuery_WhenSetToEmpty_UpdatesHasSearchQueryToFalse()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.SearchQuery = "test";
         viewModel.SearchQuery = "";
@@ -90,8 +85,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void SelectedTabIndex_CanBeChanged()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.SelectedTabIndex = 1;
 
@@ -101,8 +95,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void Cleanup_CanBeCalled()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.Cleanup();
 
@@ -112,8 +105,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void ActiveFilterMode_InitialState_IsZero()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         Assert.Equal(0, viewModel.ActiveFilterMode);
     }
@@ -121,8 +113,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void IsContentFilterMode_WhenActiveFilterModeIsZero_ReturnsTrue()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ActiveFilterMode = 0;
 
@@ -134,8 +125,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void IsCategoryFilterMode_WhenActiveFilterModeIsOne_ReturnsTrue()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ActiveFilterMode = 1;
 
@@ -147,8 +137,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void IsTypeFilterMode_WhenActiveFilterModeIsTwo_ReturnsTrue()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ActiveFilterMode = 2;
 
@@ -160,8 +149,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void ToggleColorFilter_AddsAndRemovesColor()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleColorFilter(CardColor.Red);
         Assert.True(viewModel.IsColorSelected(CardColor.Red));
@@ -173,8 +161,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void ToggleTypeFilter_AddsAndRemovesType()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleTypeFilter(ClipboardContentType.Text);
         Assert.True(viewModel.IsTypeSelected(ClipboardContentType.Text));
@@ -186,8 +173,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void ClearColorFilters_RemovesAllColors()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleColorFilter(CardColor.Red);
         viewModel.ToggleColorFilter(CardColor.Blue);
@@ -203,8 +189,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void ClearTypeFilters_RemovesAllTypes()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleTypeFilter(ClipboardContentType.Text);
         viewModel.ToggleTypeFilter(ClipboardContentType.Image);
@@ -220,8 +205,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void MultipleColorFilters_CanBeAddedAndChecked()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleColorFilter(CardColor.Red);
         viewModel.ToggleColorFilter(CardColor.Blue);
@@ -237,8 +221,7 @@ public sealed class MainViewModelBasicTests
     [Fact]
     public void MultipleTypeFilters_CanBeAddedAndChecked()
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleTypeFilter(ClipboardContentType.Text);
         viewModel.ToggleTypeFilter(ClipboardContentType.Image);
@@ -257,8 +240,7 @@ public sealed class MainViewModelBasicTests
     [InlineData(2, false, false, true)]
     public void FilterMode_PropertiesReflectActiveMode(int mode, bool isContent, bool isCategory, bool isType)
     {
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ActiveFilterMode = mode;
 
@@ -271,8 +253,7 @@ public sealed class MainViewModelBasicTests
     public void ToggleColorFilter_WithNoneColor_StillToggles()
     {
         // Note: CardColor.None is not filtered out, so it will be added
-        var service = new ClipboardService(new StubRepository());
-        var viewModel = new ViewModels.MainViewModel(service);
+        var viewModel = CreateViewModel();
 
         viewModel.ToggleColorFilter(CardColor.None);
         Assert.True(viewModel.IsColorSelected(CardColor.None));
@@ -280,6 +261,141 @@ public sealed class MainViewModelBasicTests
         viewModel.ToggleColorFilter(CardColor.None);
         Assert.False(viewModel.IsColorSelected(CardColor.None));
     }
+
+    #region Search and Filter Interaction Tests
+
+    [Fact]
+    public void SearchQuery_WhenSetToWhitespace_HasSearchQueryIsFalse()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.SearchQuery = "   ";
+
+        // Whitespace-only is treated as empty (IsNullOrWhiteSpace)
+        Assert.False(viewModel.HasSearchQuery);
+    }
+
+    [Fact]
+    public void SearchQuery_PropertyChangedIsRaised()
+    {
+        var viewModel = CreateViewModel();
+        var propertyNames = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertyNames.Add(e.PropertyName!);
+
+        viewModel.SearchQuery = "test";
+
+        Assert.Contains("SearchQuery", propertyNames);
+        Assert.Contains("HasSearchQuery", propertyNames);
+    }
+
+    [Fact]
+    public void ActiveFilterMode_PropertyChangedIsRaised()
+    {
+        var viewModel = CreateViewModel();
+        var propertyNames = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertyNames.Add(e.PropertyName!);
+
+        viewModel.ActiveFilterMode = 2;
+
+        Assert.Contains("ActiveFilterMode", propertyNames);
+    }
+
+    [Fact]
+    public void SelectedTabIndex_PropertyChangedIsRaised()
+    {
+        var viewModel = CreateViewModel();
+        var propertyNames = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertyNames.Add(e.PropertyName!);
+
+        viewModel.SelectedTabIndex = 1;
+
+        Assert.Contains("SelectedTabIndex", propertyNames);
+    }
+
+    [Fact]
+    public void ClearColorFilters_WhenNoFilters_DoesNotThrow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ClearColorFilters();
+
+        Assert.False(viewModel.IsColorSelected(CardColor.Red));
+    }
+
+    [Fact]
+    public void ClearTypeFilters_WhenNoFilters_DoesNotThrow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ClearTypeFilters();
+
+        Assert.False(viewModel.IsTypeSelected(ClipboardContentType.Text));
+    }
+
+    [Theory]
+    [InlineData(CardColor.Red)]
+    [InlineData(CardColor.Green)]
+    [InlineData(CardColor.Purple)]
+    [InlineData(CardColor.Yellow)]
+    [InlineData(CardColor.Blue)]
+    [InlineData(CardColor.Orange)]
+    public void ToggleColorFilter_AllColors_CanBeToggled(CardColor color)
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ToggleColorFilter(color);
+        Assert.True(viewModel.IsColorSelected(color));
+
+        viewModel.ToggleColorFilter(color);
+        Assert.False(viewModel.IsColorSelected(color));
+    }
+
+    [Theory]
+    [InlineData(ClipboardContentType.Text)]
+    [InlineData(ClipboardContentType.Image)]
+    [InlineData(ClipboardContentType.File)]
+    [InlineData(ClipboardContentType.Folder)]
+    [InlineData(ClipboardContentType.Link)]
+    [InlineData(ClipboardContentType.Audio)]
+    [InlineData(ClipboardContentType.Video)]
+    public void ToggleTypeFilter_AllTypes_CanBeToggled(ClipboardContentType type)
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ToggleTypeFilter(type);
+        Assert.True(viewModel.IsTypeSelected(type));
+
+        viewModel.ToggleTypeFilter(type);
+        Assert.False(viewModel.IsTypeSelected(type));
+    }
+
+    [Fact]
+    public void FilterMode_OutOfRange_StillSetsValue()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ActiveFilterMode = 99;
+
+        Assert.Equal(99, viewModel.ActiveFilterMode);
+        Assert.False(viewModel.IsContentFilterMode);
+        Assert.False(viewModel.IsCategoryFilterMode);
+        Assert.False(viewModel.IsTypeFilterMode);
+    }
+
+    #endregion
+
+    #region Cleanup Tests
+
+    [Fact]
+    public void Cleanup_MultipleCalls_DoesNotThrow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.Cleanup();
+        viewModel.Cleanup();
+    }
+
+    #endregion
 
     private sealed class StubRepository : IClipboardRepository
     {

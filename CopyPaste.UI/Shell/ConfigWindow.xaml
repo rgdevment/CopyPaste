@@ -1,0 +1,331 @@
+<Window
+    x:Class="CopyPaste.UI.Shell.ConfigWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Configuracion - CopyPaste">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <NavigationView x:Name="SettingsNav"
+                        Grid.Row="0"
+                        PaneDisplayMode="Left"
+                        IsPaneToggleButtonVisible="False"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="False"
+                        IsPaneOpen="True"
+                        OpenPaneLength="220"
+                        SelectionChanged="OnNavSelectionChanged">
+            <NavigationView.PaneHeader>
+                <StackPanel Margin="16,28,16,16">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE713;" FontSize="22"/>
+                        <TextBlock x:Name="ConfigTitle" Text="Settings" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ConfigSubtitle" FontSize="10" Opacity="0.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </StackPanel>
+            </NavigationView.PaneHeader>
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="GeneralNavItem" Tag="general" IsSelected="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="ThemeNavItem" Tag="theme">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE771;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            <Grid>
+                <!-- General settings -->
+                <ScrollViewer x:Name="GeneralContent" VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+                    <StackPanel Spacing="20" Margin="24,12,24,24">
+                        <!-- LANGUAGE -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE774;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="LanguageHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock x:Name="LanguageLabel" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="LanguageDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="LanguageCombo" Grid.Column="1" MinWidth="150">
+                                        <ComboBoxItem Tag="auto"/>
+                                        <ComboBoxItem Content="English" Tag="en-US"/>
+                                        <ComboBoxItem Content="Español (Chile)" Tag="es-CL"/>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                        <!-- STARTUP -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE7E8;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="StartupHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock x:Name="StartupLabel" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="StartupDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="RunOnStartupSwitch" Grid.Column="1"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                        <!-- HOTKEY -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE765;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="HotkeyHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="HotkeyLabel" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="HotkeyDesc" FontSize="11" Opacity="0.6" Margin="0,4,0,12"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <CheckBox x:Name="UseCtrlCheck" Content="Ctrl"/>
+                                            <CheckBox x:Name="UseWinCheck" Content="Win"/>
+                                            <CheckBox x:Name="UseAltCheck" Content="Alt"/>
+                                            <CheckBox x:Name="UseShiftCheck" Content="Shift"/>
+                                            <TextBlock Text="+" VerticalAlignment="Center" Margin="4,0"/>
+                                            <ComboBox x:Name="HotkeyCombo" Width="80" SelectedIndex="0">
+                                                <ComboBoxItem Content="V" Tag="86"/>
+                                                <ComboBoxItem Content="C" Tag="67"/>
+                                                <ComboBoxItem Content="X" Tag="88"/>
+                                                <ComboBoxItem Content="Z" Tag="90"/>
+                                                <ComboBoxItem Content="A" Tag="65"/>
+                                                <ComboBoxItem Content="S" Tag="83"/>
+                                                <ComboBoxItem Content="D" Tag="68"/>
+                                                <ComboBoxItem Content="Q" Tag="81"/>
+                                                <ComboBoxItem Content="W" Tag="87"/>
+                                                <ComboBoxItem Content="E" Tag="69"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <TextBlock x:Name="HotkeyPreview" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,12,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <!-- THEME SELECTOR -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE771;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="ThemeSelectorHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="180"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="ThemeSelectorLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="ThemeSelectorDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="ThemeCombo" Grid.Column="1" HorizontalAlignment="Stretch"
+                                                  SelectionChanged="ThemeCombo_SelectionChanged"/>
+                                    </Grid>
+                                    <TextBlock x:Name="ThemeInfoText" FontSize="11" Opacity="0.5"/>
+                                    <Border x:Name="ThemeCommunityWarning" Visibility="Collapsed"
+                                            Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                            CornerRadius="4" Padding="10">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE7BA;" FontSize="14"/>
+                                            <TextBlock x:Name="ThemeWarningText" FontSize="11" TextWrapping="Wrap" Opacity="0.9"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <!-- CATEGORIES -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE790;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="CategoriesHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="12">
+                                    <TextBlock x:Name="CategoriesDesc" FontSize="11" Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Ellipse Width="14" Height="14" Fill="#E74C3C" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="ColorLabelRedBox" Grid.Column="1" PlaceholderText="Red" MaxLength="20"/>
+                                    </Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Ellipse Width="14" Height="14" Fill="#2ECC71" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="ColorLabelGreenBox" Grid.Column="1" PlaceholderText="Green" MaxLength="20"/>
+                                    </Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Ellipse Width="14" Height="14" Fill="#9B59B6" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="ColorLabelPurpleBox" Grid.Column="1" PlaceholderText="Purple" MaxLength="20"/>
+                                    </Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Ellipse Width="14" Height="14" Fill="#F1C40F" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="ColorLabelYellowBox" Grid.Column="1" PlaceholderText="Yellow" MaxLength="20"/>
+                                    </Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Ellipse Width="14" Height="14" Fill="#3498DB" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="ColorLabelBlueBox" Grid.Column="1" PlaceholderText="Blue" MaxLength="20"/>
+                                    </Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Ellipse Width="14" Height="14" Fill="#E67E22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="ColorLabelOrangeBox" Grid.Column="1" PlaceholderText="Orange" MaxLength="20"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <!-- PERFORMANCE -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="PerformanceHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="16">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="PageSizeLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="PageSizeDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <NumberBox x:Name="PageSizeBox" Grid.Column="1" Minimum="5" Maximum="100" SpinButtonPlacementMode="Compact" SmallChange="5"/>
+                                    </Grid>
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="MaxItemsLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="MaxItemsDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <NumberBox x:Name="MaxItemsBeforeCleanupBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                                    </Grid>
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="ScrollThresholdLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="ScrollThresholdDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <NumberBox x:Name="ScrollLoadThresholdBox" Grid.Column="1" Minimum="20" Maximum="500" SpinButtonPlacementMode="Compact" SmallChange="10"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <!-- STORAGE -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE74E;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="StorageHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <Grid x:Name="RetentionGrid">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock x:Name="RetentionLabel" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="RetentionDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <NumberBox x:Name="RetentionDaysBox" Grid.Column="1" Minimum="0" Maximum="365" SpinButtonPlacementMode="Compact" SmallChange="7"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                        <!-- PASTE -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE77F;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="PasteHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="16">
+                                    <TextBlock x:Name="PasteIntro" FontSize="11" Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <Grid x:Name="PasteSpeedGrid">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="PasteSpeedLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="PasteSpeedDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="PastePresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="PastePresetCombo_SelectionChanged">
+                                            <ComboBoxItem x:Name="PastePresetFast" Tag="fast"/>
+                                            <ComboBoxItem x:Name="PastePresetNormal" Tag="normal"/>
+                                            <ComboBoxItem x:Name="PastePresetSafe" Tag="safe"/>
+                                            <ComboBoxItem x:Name="PastePresetSlow" Tag="slow"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Border Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}" CornerRadius="4" Padding="10" Opacity="0.7">
+                                        <TextBlock x:Name="PasteWarning" FontSize="10" Opacity="0.85" TextWrapping="Wrap"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <!-- THUMBNAILS -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE91B;" FontSize="16" Foreground="#E8912D"/>
+                                <TextBlock x:Name="ThumbnailHeading" FontSize="12" FontWeight="SemiBold" Foreground="#E8912D" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16" BorderBrush="#E8912D" BorderThickness="1">
+                                <StackPanel Spacing="16">
+                                    <Border Background="#33E8912D" CornerRadius="4" Padding="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="#E8912D"/>
+                                            <TextBlock x:Name="ThumbnailWarning" FontSize="11" Foreground="#E8912D" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Grid x:Name="ThumbnailQualityGrid">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="ThumbnailQualityLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="ThumbnailQualityDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="ThumbnailPresetCombo" Grid.Column="1" SelectedIndex="2" SelectionChanged="ThumbnailPresetCombo_SelectionChanged">
+                                            <ComboBoxItem x:Name="ThumbnailPresetExcellent" Tag="excellent"/>
+                                            <ComboBoxItem x:Name="ThumbnailPresetHigh" Tag="high"/>
+                                            <ComboBoxItem x:Name="ThumbnailPresetMedium" Tag="medium"/>
+                                            <ComboBoxItem x:Name="ThumbnailPresetLow" Tag="low"/>
+                                            <ComboBoxItem x:Name="ThumbnailPresetMinimal" Tag="minimal"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- Theme settings content -->
+                <ScrollViewer x:Name="ThemeContent" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+                    <ContentPresenter x:Name="ThemeSettingsPresenter" Margin="24,12,24,24"/>
+                </ScrollViewer>
+            </Grid>
+        </NavigationView>
+        <!-- Footer buttons -->
+        <Border Grid.Row="1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+            <Grid Padding="28,16,28,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="ResetButton" Grid.Column="0" Click="ResetButton_Click"/>
+                <Button x:Name="CancelButton" Grid.Column="2" Click="CancelButton_Click" Margin="0,0,8,0"/>
+                <Button x:Name="SaveButton" Grid.Column="3" Click="SaveButton_Click" Style="{ThemeResource AccentButtonStyle}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

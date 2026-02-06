@@ -92,12 +92,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Page Update="ConfigWindow.xaml">
+        <Page Update="Shell\ConfigWindow.xaml">
           <Generator>MSBuild:Compile</Generator>
         </Page>
-        <Page Update="Controls\ClipboardItemCard.xaml">
-            <Generator>MSBuild:Compile</Generator>
-        </Page>
+
     </ItemGroup>
 
 

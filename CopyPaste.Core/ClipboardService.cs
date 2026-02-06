@@ -5,20 +5,11 @@ using System.Text.Json;
 
 namespace CopyPaste.Core;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:No capture tipos de excepción generales.")]
-public class ClipboardService(IClipboardRepository repository)
+public class ClipboardService(IClipboardRepository repository) : IClipboardService
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnThumbnailReady;
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnItemAdded;
 
-    /// <summary>
-    /// Fired when a duplicate item is detected and its ModifiedAt is updated.
-    /// The UI should move this item to the top of the list.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1003: primitive object")]
     public event Action<ClipboardItem>? OnItemReactivated;
 
     // Track when app initiates a paste to avoid re-adding the same content
@@ -26,39 +17,23 @@ public class ClipboardService(IClipboardRepository repository)
     private Guid _lastPastedItemId = Guid.Empty;
     private string? _lastPastedContent;
 
-    /// <summary>
-    /// Configurable time window (in milliseconds) to ignore clipboard changes after paste.
-    /// Default: 450ms (Seguro preset). Configured via MyMConfig.DuplicateIgnoreWindowMs.
-    /// </summary>
     public int PasteIgnoreWindowMs { get; set; } = 450;
 
-    /// <summary>
-    /// Notifies the service that a paste operation was initiated by the app.
-    /// This prevents the clipboard listener from re-adding the same item.
-    /// </summary>
     public void NotifyPasteInitiated(Guid itemId)
     {
         _lastPasteTime = DateTime.UtcNow;
         _lastPastedItemId = itemId;
-
-        // Store the content of the pasted item to prevent duplicates
         var item = repository.GetById(itemId);
         _lastPastedContent = item?.Content;
     }
 
-    /// <summary>
-    /// Checks if a clipboard change should be ignored because we just pasted it.
-    /// Uses both time-based and content-based checks.
-    /// </summary>
     private bool ShouldIgnoreClipboardChange(string? content = null)
     {
         if (_lastPastedItemId == Guid.Empty) return false;
 
-        // Time-based check
         if (DateTime.UtcNow - _lastPasteTime < TimeSpan.FromMilliseconds(PasteIgnoreWindowMs))
             return true;
 
-        // Content-based check - ignore if same content within extended window (2 seconds)
         if (content != null && _lastPastedContent == content &&
             DateTime.UtcNow - _lastPasteTime < TimeSpan.FromSeconds(2))
             return true;
@@ -202,7 +177,6 @@ public class ClipboardService(IClipboardRepository repository)
 
             OnThumbnailReady?.Invoke(item);
 
-            // Force GC for large images to prevent memory buildup
             if (rawData.Length >= ConfigLoader.Config.ThumbnailGCThreshold)
             {
                 GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
@@ -245,7 +219,6 @@ public class ClipboardService(IClipboardRepository repository)
                 meta["height"] = bitmap.Height;
                 meta["size"] = (long)rawData.Length;
 
-                // Force GC for large images to prevent memory buildup
                 if (rawData.Length >= ConfigLoader.Config.ThumbnailGCThreshold)
                 {
                     GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
@@ -264,6 +237,8 @@ public class ClipboardService(IClipboardRepository repository)
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Media thumbnail processing is best-effort - failures should not crash app")]
     private void ProcessMediaThumbnailBackground(ClipboardItem item, string filePath, ClipboardContentType type)
     {
         var meta = ParseExistingMetadata(item.Metadata);
@@ -272,7 +247,6 @@ public class ClipboardService(IClipboardRepository repository)
         {
             byte[]? thumbData = null;
 
-            // Extract thumbnail based on type
             try
             {
                 if (type == ClipboardContentType.Video)
@@ -307,21 +281,16 @@ public class ClipboardService(IClipboardRepository repository)
                 AppLogger.Exception(ex, $"Thumbnail extraction failed for: {Path.GetFileName(filePath)}");
             }
 
-            // Save thumbnail if we got one
             if (thumbData != null && thumbData.Length > 0)
             {
                 try
                 {
-                    // Windows already returns the thumbnail in the requested size as JPEG
-                    // For videos: save directly without re-encoding (more efficient, preserves quality)
-                    // For audio: artwork might be PNG/JPEG, detect and save accordingly
                     string extension = type == ClipboardContentType.Video ? "jpg" : DetectImageFormat(thumbData);
                     string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.{extension}");
 
                     AppLogger.Info($"Saving {type} thumbnail directly: {thumbData.Length} bytes as {extension}");
                     File.WriteAllBytes(thumbPath, thumbData);
 
-                    // Get dimensions for metadata
                     using var managedSrc = new MemoryStream(thumbData);
                     using var bitmap = SKBitmap.Decode(managedSrc);
 
@@ -338,7 +307,6 @@ public class ClipboardService(IClipboardRepository repository)
                     else
                     {
                         AppLogger.Warn($"Could not decode thumbnail for dimensions, but file was saved");
-                        // Still save the path even if we couldn't decode dimensions
                         meta["thumb_path"] = thumbPath;
                     }
                 }
@@ -352,7 +320,6 @@ public class ClipboardService(IClipboardRepository repository)
                 AppLogger.Warn($"No thumbnail data available for {type}: {Path.GetFileName(filePath)}");
             }
 
-            // Extract metadata (duration, etc.) - always try even if thumbnail failed
             ExtractMediaMetadata(filePath, type, meta);
         }
         catch (Exception ex)
@@ -361,7 +328,6 @@ public class ClipboardService(IClipboardRepository repository)
         }
         finally
         {
-            // ALWAYS update and notify - even if thumbnail failed, metadata may have been extracted
             try
             {
                 item.Metadata = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
@@ -372,7 +338,6 @@ public class ClipboardService(IClipboardRepository repository)
                 AppLogger.Exception(ex, "Failed to save metadata");
             }
 
-            // ALWAYS notify UI so it can refresh (show placeholder or real thumb)
             OnThumbnailReady?.Invoke(item);
         }
     }
@@ -400,6 +365,8 @@ public class ClipboardService(IClipboardRepository repository)
         return meta;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Media metadata extraction is best-effort - failures should not crash app")]
     private static void ExtractMediaMetadata(string filePath, ClipboardContentType type, Dictionary<string, object> meta)
     {
         try
@@ -476,7 +443,9 @@ public class ClipboardService(IClipboardRepository repository)
             AppLogger.Info($"[ExtractAudioArtwork] Found picture with {data.Length} bytes, type={firstPicture.Type}");
             return data;
         }
+#pragma warning disable CA1031
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             AppLogger.Exception(ex, $"[ExtractAudioArtwork] Failed to extract from {Path.GetFileName(audioPath)}");
             return null;
@@ -502,10 +471,6 @@ public class ClipboardService(IClipboardRepository repository)
     public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null, bool? isPinned = null) =>
         GetHistoryAdvanced(limit, skip, query, null, null, isPinned);
 
-    /// <summary>
-    /// Advanced history retrieval with all filters at DB level.
-    /// When any filter is active (query, types, or colors), searches ALL items (PRO mode).
-    /// </summary>
     public IEnumerable<ClipboardItem> GetHistoryAdvanced(
         int limit,
         int skip,
@@ -520,9 +485,6 @@ public class ClipboardService(IClipboardRepository repository)
         var item = repository.GetById(id);
         if (item == null) return;
 
-        // The repository.Delete() method handles cleanup of app-generated files
-        // (backup images and thumbnails stored in LocalAppData)
-        // It NEVER deletes the original files
         repository.Delete(id);
     }
 
@@ -547,12 +509,6 @@ public class ClipboardService(IClipboardRepository repository)
         repository.Update(item);
     }
 
-    /// <summary>
-    /// Marks an item as used by updating its ModifiedAt timestamp and incrementing PasteCount.
-    /// This moves the item to the top of the list when sorted by modification date.
-    /// </summary>
-    /// <param name="id">The ID of the item to mark as used.</param>
-    /// <returns>The updated item, or null if not found.</returns>
     public ClipboardItem? MarkItemUsed(Guid id)
     {
         var item = repository.GetById(id);
@@ -565,10 +521,6 @@ public class ClipboardService(IClipboardRepository repository)
         return item;
     }
 
-    /// <summary>
-    /// Generates a thumbnail from a bitmap and saves it to disk.
-    /// Returns the width and height of the generated thumbnail.
-    /// </summary>
     private static (int Width, int Height) GenerateThumbnail(SKBitmap sourceBitmap, string outputPath, SKEncodedImageFormat format)
     {
         var config = ConfigLoader.Config;

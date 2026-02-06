@@ -11,6 +11,7 @@ public static class StorageConfig
     public static string ImagesPath => Path.Combine(_appDataPath, "images");
     public static string ThumbnailsPath => Path.Combine(_appDataPath, "thumbs");
     public static string ConfigPath => Path.Combine(_appDataPath, "config");
+    public static string ThemesPath => Path.Combine(_appDataPath, "themes");
     private static string FirstRunFlagPath => Path.Combine(_appDataPath, ".initialized");
 
     internal static void SetBasePath(string basePath) => _appDataPath = basePath;

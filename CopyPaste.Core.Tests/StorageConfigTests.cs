@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using CopyPaste.Core;
 using Xunit;
 
 namespace CopyPaste.Core.Tests;

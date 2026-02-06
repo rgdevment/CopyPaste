@@ -31,6 +31,16 @@
       "heading": "Settings",
       "subtitle": "Changes are saved to MyM.json and require restart."
     },
+    "tabs": {
+      "general": "General",
+      "theme": "Theme"
+    },
+    "themeSelector": {
+      "heading": "THEME",
+      "label": "Active theme",
+      "desc": "Requires restart to apply",
+      "communityWarning": "Community themes are not verified. Use at your own risk."
+    },
     "language": {
       "heading": "LANGUAGE",
       "label": "Interface language",

@@ -17,14 +17,16 @@
 // along with CopyPaste. If not, see <https://github.com/rgdevment/CopyPaste/blob/main/LICENSE>.
 
 using CopyPaste.Core;
+using CopyPaste.Core.Themes;
 using CopyPaste.Listener;
+using CopyPaste.UI.Helpers;
 using CopyPaste.UI.Localization;
+using CopyPaste.UI.Themes;
 using Microsoft.UI.Xaml;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace CopyPaste.UI;
 
@@ -32,12 +34,13 @@ public sealed partial class App : Application, IDisposable
 {
     private const string _launcherReadyEventName = "CopyPaste_AppReady";
     private const string _mutexName = "Global\\CopyPaste_SingleInstance_Mutex";
+    private const int _hotkeyId = 1;
 
-    private Window? _window;
-    private WindowsClipboardListener? _listener;
-    private ClipboardService? _service;
-    private CleanupService? _cleanupService;
-    private SqliteRepository? _repository;
+    private IntPtr _hWnd;
+    private CopyPasteEngine? _engine;
+
+    private ITheme? _theme;
+    private ThemeRegistry? _themeRegistry;
     private Mutex? _singleInstanceMutex;
     private bool _isDisposed;
     public bool IsExiting { get; private set; }
@@ -46,10 +49,8 @@ public sealed partial class App : Application, IDisposable
     {
         WaitForPreviousInstanceIfNeeded();
 
-        // Check for existing instance first
         if (!TryAcquireSingleInstance())
         {
-            // Another instance is running - exit silently
             Environment.Exit(0);
             return;
         }
@@ -80,13 +81,30 @@ public sealed partial class App : Application, IDisposable
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        var config = ConfigLoader.Config;
-        L.Initialize(new LocalizationService(config.PreferredLanguage));
-
         InitializeCoreServices();
 
-        _window = new MainWindow(_service!);
-        _window.Activate();
+        var config = _engine!.Config;
+        L.Initialize(new LocalizationService(config.PreferredLanguage));
+
+        _themeRegistry = new ThemeRegistry();
+        _themeRegistry.RegisterInternal<DefaultTheme>();
+        _themeRegistry.RegisterInternal<CompactTheme>();
+        _themeRegistry.DiscoverCommunityThemes();
+
+        var context = new ThemeContext(
+            _engine.Service,
+            config,
+            openSettings: () => new Shell.ConfigWindow(_theme!, _themeRegistry.AvailableThemes).Activate(),
+            openHelp: () => new Shell.HelpWindow().Activate(),
+            requestExit: BeginExit);
+
+        _theme = _themeRegistry.Create(config.ThemeId);
+        _hWnd = _theme.CreateWindow(context);
+
+        RegisterGlobalHotkey(config);
+        HotkeyHelper.RegisterMessageHandler(_hWnd, OnHotkeyPressed);
+
+        _theme.Show();
 
         SignalLauncherReady();
         AppLogger.Info("Main window launched");
@@ -94,45 +112,42 @@ public sealed partial class App : Application, IDisposable
 
     private void InitializeCoreServices()
     {
-        AppLogger.Initialize();
-        AppLogger.Info("Application starting...");
-
-        // Load configuration once and cache it (never reloaded until app restart)
-        var config = ConfigLoader.Config;
-
-        // Register for Windows startup if configured
+        _engine = new CopyPasteEngine(svc => new WindowsClipboardListener(svc));
+        _engine.Start();
         RegisterForStartup();
+    }
 
-        // Initialize core components
-        _repository = new SqliteRepository(StorageConfig.DatabasePath);
-        _service = new ClipboardService(_repository);
-        _listener = new WindowsClipboardListener(_service);
-        _cleanupService = new CleanupService(_repository, () => config.RetentionDays);
+    private void OnHotkeyPressed() => _theme?.Toggle();
 
-        // Configure paste timing (from cached config)
-        _service.PasteIgnoreWindowMs = config.DuplicateIgnoreWindowMs;
+    private void RegisterGlobalHotkey(MyMConfig config)
+    {
+        uint modifiers = 0;
+        if (config.UseCtrlKey) modifiers |= Win32WindowHelper.MOD_CONTROL;
+        if (config.UseWinKey) modifiers |= Win32WindowHelper.MOD_WIN;
+        if (config.UseAltKey) modifiers |= Win32WindowHelper.MOD_ALT;
+        if (config.UseShiftKey) modifiers |= Win32WindowHelper.MOD_SHIFT;
 
-        // Run listener in background
-        Task.Run(() => _listener.Run());
+        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
 
-        AppLogger.Info("Application initialized");
+        if (!registered && config.UseWinKey)
+        {
+            modifiers &= ~Win32WindowHelper.MOD_WIN;
+            modifiers |= Win32WindowHelper.MOD_CONTROL;
+            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
+        }
     }
 
     public void BeginExit()
     {
         IsExiting = true;
         AppLogger.Info("Application exiting...");
-        try
-        {
-            _listener?.Dispose();
-            _repository?.Dispose();
-        }
-        catch (ObjectDisposedException)
-        {
-        }
+
+        Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
+        HotkeyHelper.UnregisterMessageHandler(_hWnd);
+        _theme?.Dispose();
+        _engine?.Dispose();
 
         L.Dispose();
-        _window?.Close();
         Application.Current.Exit();
     }
 
@@ -147,22 +162,15 @@ public sealed partial class App : Application, IDisposable
         if (_isDisposed) return;
         if (disposing)
         {
-            _listener?.Dispose();
-            _cleanupService?.Dispose();
-            _repository?.Dispose();
+            _theme?.Dispose();
+            _engine?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
             _singleInstanceMutex?.Dispose();
         }
         _isDisposed = true;
     }
 
-    /// <summary>
-    /// Attempts to acquire the single instance mutex.
-    /// Returns true if this is the first instance, false if another instance is already running.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1031:Do not catch general exception types",
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
         Justification = "Single instance check is non-critical - any failure should not prevent app from running")]
     private bool TryAcquireSingleInstance()
     {
@@ -172,11 +180,8 @@ public sealed partial class App : Application, IDisposable
 
             if (!createdNew)
             {
-                // Mutex already exists - another instance is running
                 _singleInstanceMutex.Dispose();
                 _singleInstanceMutex = null;
-
-                // Show message to user
                 ShowInstanceAlreadyRunningMessage();
                 return false;
             }
@@ -186,23 +191,16 @@ public sealed partial class App : Application, IDisposable
         catch (Exception ex)
         {
             AppLogger.Exception(ex, "Failed to check for single instance");
-            // On error, allow the app to continue
             return true;
         }
     }
 
-    /// <summary>
-    /// Shows a message box informing the user that the application is already running.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1031:Do not catch general exception types",
-        Justification = "Message display is non-critical")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Message display is non-critical - failures should not prevent app from running")]
     private static void ShowInstanceAlreadyRunningMessage()
     {
         try
         {
-            // Use native Windows MessageBox since WinUI window isn't created yet
             var hwnd = IntPtr.Zero;
             var message = "CopyPaste is already running.\n\nCheck the system tray for the application icon.";
             var caption = "CopyPaste";
@@ -211,33 +209,27 @@ public sealed partial class App : Application, IDisposable
 
             _ = MessageBox(hwnd, message, caption, MB_OK | MB_ICONINFORMATION);
         }
-        catch
+        catch (Exception ex)
         {
-            // If MessageBox fails, just exit silently
+            AppLogger.Exception(ex, "Failed to show already running message");
         }
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 
-    /// <summary>
-    /// Signals the native launcher that the app is ready.
-    /// The launcher creates a Named Event and waits for this signal to close the splash screen.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Launcher signaling is non-critical")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Launcher signaling is non-critical - failures should not prevent app from running")]
     private static void SignalLauncherReady()
     {
         try
         {
-            // Try to open the existing event created by the launcher
             using var readyEvent = EventWaitHandle.OpenExisting(_launcherReadyEventName);
             readyEvent.Set();
             AppLogger.Info("Signaled launcher that app is ready");
         }
         catch (WaitHandleCannotBeOpenedException)
         {
-            // Event doesn't exist - app was started directly without launcher (e.g., debugging)
-            // This is fine, just continue
         }
         catch (Exception ex)
         {
@@ -251,13 +243,11 @@ public sealed partial class App : Application, IDisposable
         e.Handled = true;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1031:Do not catch general exception types",
-        Justification = "Startup registration is non-critical - any failure should not prevent app from running")]
-    private static void RegisterForStartup()
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Startup registration is non-critical - failures should not prevent app from running")]
+    private void RegisterForStartup()
     {
-        if (!ConfigLoader.Config.RunOnStartup) return;
+        if (!_engine!.Config.RunOnStartup) return;
 
         try
         {
@@ -269,15 +259,11 @@ public sealed partial class App : Application, IDisposable
 
             if (key.GetValue(appName) == null)
             {
-                // Register the launcher (CopyPaste.exe) for Windows startup
-                // The launcher shows splash and starts CopyPaste.App.exe
                 var appExePath = Environment.ProcessPath;
                 if (!string.IsNullOrEmpty(appExePath))
                 {
                     var appDir = Path.GetDirectoryName(appExePath)!;
                     var launcherPath = Path.Combine(appDir, "CopyPaste.exe");
-
-                    // Use launcher if it exists, otherwise use current exe (for debugging)
                     var startupPath = File.Exists(launcherPath) ? launcherPath : appExePath;
                     key.SetValue(appName, $"\"{startupPath}\"");
                     AppLogger.Info($"Registered for Windows startup: {startupPath}");
@@ -290,7 +276,3 @@ public sealed partial class App : Application, IDisposable
         }
     }
 }
-
-
-
-

@@ -11,7 +11,7 @@ internal static partial class Win32WindowHelper
     #region P/Invoke Declarations
 
     [LibraryImport("user32.dll")]
-    private static partial nint GetWindowLongPtrW(IntPtr hWnd, int nIndex);
+    public static partial nint GetWindowLongPtrW(IntPtr hWnd, int nIndex);
 
     [LibraryImport("user32.dll")]
     private static partial nint SetWindowLongPtrW(IntPtr hWnd, int nIndex, nint dwNewLong);
@@ -30,6 +30,10 @@ internal static partial class Win32WindowHelper
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetForegroundWindow(IntPtr hWnd);
 
     #endregion
 

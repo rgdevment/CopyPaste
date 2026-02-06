@@ -168,6 +168,7 @@ If you care about privacy and control, this is made for you.
 * 🔄 **Smart Filter Behavior:** Filters only apply to their active mode—switching modes automatically uses the relevant filter without mixing criteria.
 * 📌 **Pin Indicators:** When searching or filtering, pinned items display a subtle pin icon in the footer, making them easy to identify among results.
 * ⚙️ **Configurable:** Hotkeys, appearance, panel width (400-600px), retention days, filter reset behavior, and more.
+* 🎨 **Multiple Themes:** Switch between built-in themes (Default and Compact) from settings to match your workflow.
 
 ---
 ## 💪 What Makes This Different
@@ -211,7 +212,7 @@ Each clipboard card can be personalized with:
 To edit a card:
 - **Right-click** on any card → Select "Edit"
 - **Press `E`** with a card selected
-- **Click the `...` menu** on hover → Select "Edit"
+- **Click the `...` menu** on hover → Select "Edit" *(Default theme only)*
 
 ### Advanced Filters
 CopyPaste includes three filter modes to help you find items quickly:
@@ -245,11 +246,12 @@ CopyPaste includes three filter modes to help you find items quickly:
 Clipboard items (cards) can be expanded to show more text content:
 
 **With Mouse:**
-- **Single click** on a card → Expand/collapse to see more text (3 lines → 7 lines)
+- **Single click** on a card → Expand/collapse to see more text
 - **Double click** on a card → Paste the item immediately
 - Only one card can be expanded at a time
 - All cards collapse when the window is hidden
-- No visual hover effect on cards (clean minimal design)
+- In **Default** theme, hovering a card reveals quick action buttons
+- In **Compact** theme, cards have no hover effect (use right-click instead)
 
 **With Keyboard:**
 - **Right arrow `→`** → Expand/collapse the selected card
@@ -282,14 +284,21 @@ In the **Settings** window, you can customize filter behavior:
 
 ## 📸 Screenshots
 
+
 <div align="center">
-    <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo"/>
+    <img src="CopyPaste.UI/Assets/CopyPasteCompactMode.png" alt="CopyPaste Compact Mode"/>
 </div>
-<div align="center"><em>Fast search, clean cards, and native Windows 11 look.</em></div>
+<div align="center"><em>CopyPaste compact mode Windows 11 look.</em></div>
 <hr>
 
 <div align="center">
-    <img src="CopyPaste.UI/Assets/Config.png" alt="CopyPaste Demo"/>
+    <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo"/>
+</div>
+<div align="center"><em>CopyPaste Full mode, fast search, clean cards.</em></div>
+<hr>
+
+<div align="center">
+    <img src="CopyPaste.UI/Assets/ConfigCopyPaste.png" alt="CopyPaste Demo"/>
 </div>
 <div align="center"><em>Privacy-friendly settings, hotkeys, and filter options.</em></div>
 
@@ -538,8 +547,18 @@ If you're curious about what's under the hood:
 | **Win32 Interop** | Low-level clipboard hooks to catch everything. |
 | **SQLite + FTS5** | Local storage with full-text search. |
 | **SkiaSharp** | Generates image thumbnails. |
+| **Theme System** | Multiple built-in themes via internal `ITheme` interface. |
 
 ---
+
+## 🎨 Themes
+
+CopyPaste includes multiple built-in themes that let you change how the application looks and behaves.
+
+- **Default** — Full-featured sidebar layout with all options visible.
+- **Compact** — Minimal popup that appears near your cursor, optimized for quick access.
+- You can switch between themes from **Settings → General → Theme**.
+- Changes require a restart to take effect.
 
 ---
 
