@@ -633,7 +633,7 @@ public sealed partial class ConfigWindow : Window
         }
         catch (Exception ex)
         {
-            AppLogger.Error($"Failed to restart: {ex.Message}");
+            AppLogger.Exception(ex, "Failed to restart application");
         }
     }
 

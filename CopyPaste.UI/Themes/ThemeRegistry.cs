@@ -8,21 +8,13 @@ using System.Reflection;
 
 namespace CopyPaste.UI.Themes;
 
-/// <summary>
-/// Discovers, registers, and instantiates available themes.
-/// Internal themes are registered explicitly; community themes are loaded from DLLs.
-/// </summary>
 internal sealed class ThemeRegistry
 {
     private readonly Dictionary<string, Func<ITheme>> _factories = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ThemeInfo> _themes = [];
 
-    /// <summary>All discovered themes (internal + community).</summary>
     public IReadOnlyList<ThemeInfo> AvailableThemes => _themes;
 
-    /// <summary>
-    /// Registers a built-in (internal) theme.
-    /// </summary>
     public void RegisterInternal<T>() where T : ITheme, new()
     {
         using var probe = new T();
@@ -31,12 +23,8 @@ internal sealed class ThemeRegistry
         _factories[probe.Id] = static () => new T();
     }
 
-    /// <summary>
-    /// Scans the themes folder for community DLLs implementing <see cref="ITheme"/>.
-    /// Each DLL is loaded, types are inspected, and valid themes are registered.
-    /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Community DLL loading must not crash the app")]
+        Justification = "Community theme loading must not crash app - failures are logged")]
     public void DiscoverCommunityThemes()
     {
         var themesDir = StorageConfig.ThemesPath;
@@ -75,14 +63,11 @@ internal sealed class ThemeRegistry
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to load theme from {Path.GetFileName(dll)}: {ex.Message}");
+                AppLogger.Exception(ex, $"Failed to load theme from {Path.GetFileName(dll)}");
             }
         }
     }
 
-    /// <summary>
-    /// Creates a theme instance by ID. Falls back to the first registered theme if not found.
-    /// </summary>
     public ITheme Create(string themeId)
     {
         if (_factories.TryGetValue(themeId, out var factory))

@@ -39,7 +39,6 @@ public sealed partial class App : Application, IDisposable
     private IntPtr _hWnd;
     private CopyPasteEngine? _engine;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859", Justification = "ITheme interface is intentional for theme extensibility")]
     private ITheme? _theme;
     private ThemeRegistry? _themeRegistry;
     private Mutex? _singleInstanceMutex;
@@ -170,12 +169,7 @@ public sealed partial class App : Application, IDisposable
         _isDisposed = true;
     }
 
-    /// <summary>
-    /// Attempts to acquire the single instance mutex.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1031:Do not catch general exception types",
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
         Justification = "Single instance check is non-critical - any failure should not prevent app from running")]
     private bool TryAcquireSingleInstance()
     {
@@ -200,10 +194,8 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1031:Do not catch general exception types",
-        Justification = "Message display is non-critical")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Message display is non-critical - failures should not prevent app from running")]
     private static void ShowInstanceAlreadyRunningMessage()
     {
         try
@@ -216,18 +208,17 @@ public sealed partial class App : Application, IDisposable
 
             _ = MessageBox(hwnd, message, caption, MB_OK | MB_ICONINFORMATION);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Exception(ex, "Failed to show already running message");
         }
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 
-    /// <summary>
-    /// Signals the native launcher that the app is ready.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Launcher signaling is non-critical")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Launcher signaling is non-critical - failures should not prevent app from running")]
     private static void SignalLauncherReady()
     {
         try
@@ -251,10 +242,8 @@ public sealed partial class App : Application, IDisposable
         e.Handled = true;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1031:Do not catch general exception types",
-        Justification = "Startup registration is non-critical - any failure should not prevent app from running")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Startup registration is non-critical - failures should not prevent app from running")]
     private void RegisterForStartup()
     {
         if (!_engine!.Config.RunOnStartup) return;

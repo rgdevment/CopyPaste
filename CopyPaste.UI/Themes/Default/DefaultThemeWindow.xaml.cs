@@ -28,7 +28,6 @@ internal sealed partial class DefaultThemeWindow : Window
     private ClipboardItemViewModel? _previousSelectedItem;
     private bool _isDialogOpen;
 
-    // Cached brushes to avoid creating new instances on each tab change
     private static readonly SolidColorBrush _orangeBrush = new(Color.FromArgb(255, 210, 120, 50));
     private static readonly SolidColorBrush _blueBrush = new(Color.FromArgb(255, 91, 155, 213));
     private static readonly SolidColorBrush _inactiveBrush = new(Color.FromArgb(255, 120, 120, 120));
@@ -93,9 +92,6 @@ internal sealed partial class DefaultThemeWindow : Window
         TypeLabelVideo.Text = L.Get("clipboard.itemTypes.video");
     }
 
-    /// <summary>
-    /// Gets a color label, preferring custom config label over localized default.
-    /// </summary>
     private string GetColorLabelWithFallback(string colorName, string localizationKey) =>
         _config.ColorLabels?.TryGetValue(colorName, out var label) == true && !string.IsNullOrWhiteSpace(label)
             ? label
@@ -227,21 +223,16 @@ internal sealed partial class DefaultThemeWindow : Window
         else
         {
             Win32WindowHelper.RemoveWindowBorder(_hWnd);
-            // Reset scroll position if configured
             if (_themeSettings.ResetScrollOnShow)
                 ResetScrollToTop();
-            // Reset filters based on config
             ResetFiltersOnShow();
-            // Refresh file availability status for visible items
             RefreshFileAvailability();
-            // Focus search box for immediate keyboard input
             FocusSearchBox();
         }
     }
 
     private void RefreshFileAvailability()
     {
-        // Refresh file status for visible file-type items when window is activated
         foreach (var item in ViewModel.Items.Where(i => i.IsFileType))
         {
             item.RefreshFileStatus();

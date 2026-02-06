@@ -4,19 +4,10 @@ using Windows.Storage;
 
 namespace CopyPaste.Core;
 
-/// <summary>
-/// Helper for Windows clipboard content operations.
-/// Used by ALL themes — every UI sets clipboard content before pasting.
-/// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+    Justification = "Clipboard operations must not crash app - failures are logged")]
 public static class ClipboardHelper
 {
-    /// <summary>
-    /// Sets the clipboard content based on the item type.
-    /// </summary>
-    /// <param name="item">The clipboard item to paste.</param>
-    /// <param name="plainText">If true, paste as plain text (removes formatting).</param>
-    /// <returns>True if the operation was successful, false otherwise.</returns>
     public static bool SetClipboardContent(ClipboardItem item, bool plainText = false)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -42,9 +33,6 @@ public static class ClipboardHelper
         }
     }
 
-    /// <summary>
-    /// Sets text content to the clipboard.
-    /// </summary>
     private static bool SetText(string content, string? metadata, bool plainText)
     {
         if (string.IsNullOrEmpty(content))
@@ -55,7 +43,6 @@ public static class ClipboardHelper
             var dataPackage = new DataPackage();
             dataPackage.SetText(content);
 
-            // If not plain text and we have RTF metadata, include it
             if (!plainText && !string.IsNullOrEmpty(metadata))
             {
                 try
@@ -74,7 +61,6 @@ public static class ClipboardHelper
                 }
                 catch (JsonException)
                 {
-                    // Metadata parsing failed, proceed with plain text only
                 }
             }
 

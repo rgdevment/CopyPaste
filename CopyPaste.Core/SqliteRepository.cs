@@ -2,10 +2,6 @@ using Microsoft.Data.Sqlite;
 
 namespace CopyPaste.Core;
 
-/// <summary>
-/// Native AOT-compatible SQLite repository with FTS5 full-text search.
-/// Minimal RAM usage - data stays on disk, only accessed when needed.
-/// </summary>
 public sealed class SqliteRepository : IClipboardRepository, IDisposable
 {
     private readonly string _dbPath;
@@ -72,7 +68,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
     {
         using var connection = CreateConnection();
 
-        // Main table
         ExecuteNonQuery(connection, """
             CREATE TABLE IF NOT EXISTS ClipboardItems (
                 Id TEXT PRIMARY KEY,
@@ -90,20 +85,17 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
             )
             """);
 
-        // Migrate existing databases: add Label column if missing
         MigrateAddColumnIfMissing(connection, "Label", "TEXT");
         MigrateAddColumnIfMissing(connection, "CardColor", "INTEGER NOT NULL DEFAULT 0");
         MigrateAddColumnIfMissing(connection, "PasteCount", "INTEGER NOT NULL DEFAULT 0");
         MigrateAddColumnIfMissing(connection, "ContentHash", "TEXT");
 
-        // Indexes for common queries
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_CreatedAt ON ClipboardItems(CreatedAt DESC)");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_ModifiedAt ON ClipboardItems(ModifiedAt DESC)");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_Type ON ClipboardItems(Type)");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_IsPinned ON ClipboardItems(IsPinned)");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_ContentHash ON ClipboardItems(ContentHash)");
 
-        // FTS5 virtual table for full-text search (includes Label for searching by user-defined names)
         ExecuteNonQuery(connection, """
             CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardItems_fts USING fts5(
                 Content,
@@ -114,10 +106,8 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
             )
             """);
 
-        // Rebuild FTS if schema changed (Label column added)
         RebuildFtsIfNeeded(connection);
 
-        // Triggers to keep FTS in sync
         ExecuteNonQuery(connection, """
             CREATE TRIGGER IF NOT EXISTS ClipboardItems_ai AFTER INSERT ON ClipboardItems BEGIN
                 INSERT INTO ClipboardItems_fts(rowid, Content, AppSource, Label)
@@ -308,7 +298,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
 
         using var connection = CreateConnection();
 
-        // First get items to delete (for file cleanup)
         var itemsToDelete = new List<ClipboardItem>();
         using (var selectCmd = connection.CreateCommand())
         {
@@ -335,7 +324,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
 
         if (deletedCount > 50)
         {
-            // Optimize database after large deletions
             ExecuteNonQuery(connection, "VACUUM");
             GC.Collect(0, GCCollectionMode.Optimized, false);
         }
@@ -359,7 +347,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
         else
         {
-            // Hybrid search: FTS5 with BM25 ranking + LIKE fallback for substrings
+
             var trimmedQuery = query.Trim();
             var ftsQuery = trimmedQuery.Replace("\"", "\"\"", StringComparison.Ordinal) + "*";
             var likePattern = "%" + trimmedQuery.Replace("%", "[%]", StringComparison.Ordinal)
@@ -462,7 +450,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
 
         if (hasTextQuery)
         {
-            // Hybrid search: FTS5 with BM25 ranking + LIKE fallback for substrings
             var trimmedQuery = query!.Trim();
             var ftsQuery = trimmedQuery.Replace("\"", "\"\"", StringComparison.Ordinal) + "*";
             var likePattern = "%" + trimmedQuery.Replace("%", "[%]", StringComparison.Ordinal)
@@ -553,14 +540,12 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
 
     private static void CleanupItemFiles(ClipboardItem item)
     {
-        // Clean up image backup
         if (item.Type == ClipboardContentType.Image && !string.IsNullOrEmpty(item.Content) && File.Exists(item.Content))
         {
             try { File.Delete(item.Content); }
             catch { /* Ignore */ }
         }
 
-        // Clean up thumbnail (could be .png, .jpg, or .webp)
         var thumbBaseName = $"{item.Id}_t";
         var thumbDir = StorageConfig.ThumbnailsPath;
         var possibleExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp" };
@@ -576,9 +561,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
     }
 
-    /// <summary>
-    /// Safely reads an integer column, handling missing columns during migration.
-    /// </summary>
     private static int GetIntOrDefault(SqliteDataReader reader, string columnName)
     {
         try
@@ -592,9 +574,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
     }
 
-    /// <summary>
-    /// Safely reads a nullable string column, handling missing columns during migration.
-    /// </summary>
     private static string? GetNullableString(SqliteDataReader reader, string columnName)
     {
         try
@@ -604,14 +583,10 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
         catch (ArgumentOutOfRangeException)
         {
-            // Column doesn't exist yet (pre-migration)
             return null;
         }
     }
 
-    /// <summary>
-    /// Safely reads CardColor column, handling missing columns during migration.
-    /// </summary>
     private static CardColor GetCardColor(SqliteDataReader reader, string columnName)
     {
         try
@@ -625,14 +600,10 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
         catch (ArgumentOutOfRangeException)
         {
-            // Column doesn't exist yet (pre-migration)
             return CardColor.None;
         }
     }
 
-    /// <summary>
-    /// Adds a column to the table if it doesn't exist.
-    /// </summary>
     private static void MigrateAddColumnIfMissing(SqliteConnection connection, string columnName, string columnType)
     {
         using var cmd = connection.CreateCommand();
@@ -659,25 +630,18 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         }
     }
 
-    /// <summary>
-    /// Rebuilds FTS index if Label column was added (schema change).
-    /// Checks if Label is indexed in FTS and rebuilds if not.
-    /// </summary>
     private static void RebuildFtsIfNeeded(SqliteConnection connection)
     {
         try
         {
-            // Check if FTS has Label column by trying to query it
             using var testCmd = connection.CreateCommand();
             testCmd.CommandText = "SELECT Label FROM ClipboardItems_fts LIMIT 0";
             testCmd.ExecuteNonQuery();
         }
         catch (SqliteException)
         {
-            // FTS doesn't have Label column - need to rebuild
             AppLogger.Info("Rebuilding FTS index to include Label column");
 
-            // Drop old FTS table and triggers
             ExecuteNonQuery(connection, "DROP TRIGGER IF EXISTS ClipboardItems_ai");
             ExecuteNonQuery(connection, "DROP TRIGGER IF EXISTS ClipboardItems_ad");
             ExecuteNonQuery(connection, "DROP TRIGGER IF EXISTS ClipboardItems_au");
@@ -690,8 +654,6 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        // SQLite connections are closed automatically when disposed
-        // WAL checkpoint for clean shutdown
         try
         {
             using var connection = CreateConnection();

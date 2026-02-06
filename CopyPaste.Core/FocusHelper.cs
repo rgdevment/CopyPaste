@@ -2,11 +2,6 @@ using System.Runtime.InteropServices;
 
 namespace CopyPaste.Core;
 
-/// <summary>
-/// Helper for managing window focus and simulating keyboard input (paste workflow).
-/// Used by ALL themes — every UI must capture the previous window, restore focus,
-/// and simulate Ctrl+V to paste clipboard content.
-/// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes",
     Justification = "P/Invokes target well-known system DLLs (user32.dll, kernel32.dll)")]
 public static partial class FocusHelper
@@ -68,10 +63,6 @@ public static partial class FocusHelper
     private static IntPtr _previousForegroundWindow = IntPtr.Zero;
     private static uint _previousWindowThreadId;
 
-    /// <summary>
-    /// Captures the currently focused window.
-    /// Must be called BEFORE showing the clipboard window (typically on hotkey press).
-    /// </summary>
     public static void CapturePreviousWindow()
     {
         var hwnd = GetForegroundWindow();
@@ -88,9 +79,6 @@ public static partial class FocusHelper
         }
     }
 
-    /// <summary>
-    /// Restores focus to the previously captured window.
-    /// </summary>
     public static bool RestorePreviousWindow()
     {
         if (_previousForegroundWindow == IntPtr.Zero)

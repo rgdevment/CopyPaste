@@ -212,7 +212,8 @@ public partial class DefaultThemeViewModel(IClipboardService service, MyMConfig 
         UpdateIsEmpty();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Paste operation errors must be handled gracefully without crashing UI")]
     private async void OnPasteItem(ClipboardItemViewModel itemVM, bool plain)
     {
         try

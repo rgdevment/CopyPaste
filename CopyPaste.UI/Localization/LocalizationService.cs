@@ -37,7 +37,6 @@ public sealed class LocalizationService : IDisposable
 
     private static string ResolveLanguage(string? preferred, string osCulture)
     {
-        // Manual preference path
         if (!string.IsNullOrEmpty(preferred) && !string.Equals(preferred, "auto", StringComparison.OrdinalIgnoreCase))
         {
             if (LanguageExists(preferred))
@@ -56,7 +55,6 @@ public sealed class LocalizationService : IDisposable
             AppLogger.Warn($"Resolution: Manual preference '{preferred}' not found, falling back to OS detection", "LocalizationService");
         }
 
-        // OS culture detection path
         if (LanguageExists(osCulture))
         {
             AppLogger.Info($"Resolution: OS culture '{osCulture}' found directly", "LocalizationService");
@@ -70,7 +68,6 @@ public sealed class LocalizationService : IDisposable
             return regionalFallback;
         }
 
-        // Global fallback path
         var globalFallback = GetGlobalFallback();
         AppLogger.Info($"Resolution: No match for OS '{osCulture}' → global fallback '{globalFallback}'", "LocalizationService");
         return globalFallback;
@@ -89,7 +86,8 @@ public sealed class LocalizationService : IDisposable
         return config.TryGetValue("globalFallback", out var fallback) ? fallback : "en-US";
     }
 
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Config loading is best-effort - failures are logged and defaults returned")]
     private static Dictionary<string, string> LoadConfig()
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -112,7 +110,7 @@ public sealed class LocalizationService : IDisposable
         }
         catch (Exception ex)
         {
-            AppLogger.Error($"Failed to load language-config.json: {ex.Message} - Using default fallback 'en-US'", "LocalizationService");
+            AppLogger.Exception(ex, "Failed to load language-config.json - Using default fallback 'en-US'");
             result["globalFallback"] = "en-US";
         }
         return result;
@@ -127,7 +125,8 @@ public sealed class LocalizationService : IDisposable
         return merged.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Language loading is best-effort - failures are logged and English fallback used")]
     private static void LoadLanguageInto(string lang, Dictionary<string, string> target)
     {
         try
@@ -140,7 +139,7 @@ public sealed class LocalizationService : IDisposable
         }
         catch (Exception ex)
         {
-            AppLogger.Error($"Failed to load language file '{lang}.json': {ex.Message}", "LocalizationService");
+            AppLogger.Exception(ex, $"Failed to load language file '{lang}.json'");
         }
     }
 
