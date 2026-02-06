@@ -12,12 +12,13 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using WinRT.Interop;
 
-namespace CopyPaste.UI.ViewModels;
+namespace CopyPaste.UI.Themes;
 
-public partial class MainViewModel(IClipboardService service, MyMConfig config) : ObservableObject
+public partial class DefaultThemeViewModel(IClipboardService service, MyMConfig config, DefaultThemeSettings themeSettings) : ObservableObject
 {
     private readonly IClipboardService _service = service;
     private readonly MyMConfig _config = config;
+    private readonly DefaultThemeSettings _themeSettings = themeSettings;
     private Window? _window;
     private DispatcherQueue? _dispatcherQueue;
     private bool _isLoading;
@@ -72,10 +73,6 @@ public partial class MainViewModel(IClipboardService service, MyMConfig config) 
         HasSearchQuery = !string.IsNullOrWhiteSpace(value);
         ReloadItems();
     }
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool SetForegroundWindow(IntPtr hWnd);
 
     public void Initialize(Window window)
     {
@@ -324,7 +321,7 @@ public partial class MainViewModel(IClipboardService service, MyMConfig config) 
 
         _window.Activate();
         var hWnd = WindowNative.GetWindowHandle(_window);
-        SetForegroundWindow(hWnd);
+        Win32WindowHelper.SetForegroundWindow(hWnd);
     }
 
     [RelayCommand]
@@ -452,5 +449,5 @@ public partial class MainViewModel(IClipboardService service, MyMConfig config) 
 
     private ClipboardItemViewModel CreateViewModel(ClipboardItem item) =>
         new(item, OnDeleteItem, OnPasteItem, OnPinItem, OnEditItem, HasActiveFilter,
-            _config.CardMaxLines, _config.CardMinLines);
+            _themeSettings.CardMaxLines, _themeSettings.CardMinLines);
 }

@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
-using CopyPaste.UI.Helpers;
+using CopyPaste.Core;
 
-namespace CopyPaste.UI;
+namespace CopyPaste.UI.Helpers;
 
 /// <summary>
 /// Helper class to handle Windows messages for hotkey support in WinUI 3.

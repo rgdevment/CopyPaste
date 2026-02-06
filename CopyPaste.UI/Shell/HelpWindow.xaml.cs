@@ -1,7 +1,7 @@
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 
-namespace CopyPaste.UI;
+namespace CopyPaste.UI.Shell;
 
 internal sealed partial class HelpWindow : Window
 {

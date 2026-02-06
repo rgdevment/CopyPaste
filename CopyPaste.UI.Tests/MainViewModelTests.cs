@@ -1,14 +1,15 @@
 using CopyPaste.Core;
+using CopyPaste.UI.Themes;
 using Xunit;
 
 namespace CopyPaste.UI.Tests;
 
 public sealed class MainViewModelBasicTests
 {
-    private static ViewModels.MainViewModel CreateViewModel(IClipboardService? service = null)
+    private static Themes.DefaultThemeViewModel CreateViewModel(IClipboardService? service = null)
     {
         service ??= new ClipboardService(new StubRepository());
-        return new ViewModels.MainViewModel(service, new MyMConfig());
+        return new Themes.DefaultThemeViewModel(service, new MyMConfig(), new DefaultThemeSettings());
     }
 
     [Fact]

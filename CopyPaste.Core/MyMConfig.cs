@@ -31,6 +31,16 @@ public sealed class MyMConfig
     public bool RunOnStartup { get; set; } = true;
 
     // ═══════════════════════════════════════════════════════════════
+    // Theme Selection
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// ID of the active theme (e.g., "copypaste.default").
+    /// Must match <see cref="CopyPaste.Core.Themes.ITheme.Id"/>.
+    /// </summary>
+    public string ThemeId { get; set; } = "copypaste.default";
+
+    // ═══════════════════════════════════════════════════════════════
     // Hotkey Configuration
     // ═══════════════════════════════════════════════════════════════
 
@@ -65,13 +75,8 @@ public sealed class MyMConfig
     public string KeyName { get; set; } = "V";
 
     // ═══════════════════════════════════════════════════════════════
-    // UI Configuration
+    // Pagination & Performance (applies to ALL themes)
     // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Width of the sidebar window in pixels.
-    /// </summary>
-    public int WindowWidth { get; set; } = 400;
 
     /// <summary>
     /// Number of clipboard items to load per page.
@@ -88,55 +93,10 @@ public sealed class MyMConfig
     /// </summary>
     public int ScrollLoadThreshold { get; set; } = 100;
 
-    /// <summary>
-    /// Vertical margin from top of work area in pixels.
-    /// </summary>
-    public int WindowMarginTop { get; set; } = 8;
 
-    /// <summary>
-    /// Vertical margin from bottom of work area in pixels.
-    /// </summary>
-    public int WindowMarginBottom { get; set; } = 16;
-
-    /// <summary>
-    /// Number of text lines shown when card is collapsed.
-    /// </summary>
-    public int CardMinLines { get; set; } = 3;
-
-    /// <summary>
-    /// Number of text lines shown when card is expanded.
-    /// </summary>
-    public int CardMaxLines { get; set; } = 9;
-
-    /// <summary>
-    /// Whether to reset scroll position to top and select the first item when window is shown.
-    /// </summary>
-    public bool ResetScrollOnShow { get; set; } = true;
-
-    /// <summary>
-    /// Return to Content filter mode when window is shown.
-    /// If false, stays in the last used filter mode.
-    /// </summary>
-    public bool ResetFilterModeOnShow { get; set; } = true;
-
-    /// <summary>
-    /// Clear text search filter when window is shown.
-    /// Only applies if ResetFilterModeOnShow is false.
-    /// </summary>
-    public bool ResetContentFilterOnShow { get; set; } = true;
-
-    /// <summary>
-    /// Clear category (color) filter when window is shown.
-    /// </summary>
-    public bool ResetCategoryFilterOnShow { get; set; } = true;
-
-    /// <summary>
-    /// Clear type filter when window is shown.
-    /// </summary>
-    public bool ResetTypeFilterOnShow { get; set; } = true;
 
     // ═══════════════════════════════════════════════════════════════
-    // Category Labels Configuration (Visual customization)
+    // Category Labels Configuration (applies to ALL themes)
     // ═══════════════════════════════════════════════════════════════
 
     /// <summary>

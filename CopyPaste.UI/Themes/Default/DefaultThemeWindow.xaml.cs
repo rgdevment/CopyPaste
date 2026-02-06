@@ -1,7 +1,7 @@
 using CopyPaste.Core;
+using CopyPaste.Core.Themes;
 using CopyPaste.UI.Helpers;
 using CopyPaste.UI.Localization;
-using CopyPaste.UI.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -14,15 +14,16 @@ using System.Linq;
 using Windows.UI;
 using WinRT.Interop;
 
-namespace CopyPaste.UI;
+namespace CopyPaste.UI.Themes;
 
-internal sealed partial class MainWindow : Window
+internal sealed partial class DefaultThemeWindow : Window
 {
-    public MainViewModel ViewModel { get; }
+    public DefaultThemeViewModel ViewModel { get; }
     private readonly AppWindow _appWindow;
     private readonly IntPtr _hWnd;
     private readonly MyMConfig _config;
-    private const int _hotkeyId = 1;
+    private readonly DefaultThemeSettings _themeSettings;
+    private readonly ThemeContext _context;
     private ClipboardItemViewModel? _currentExpandedItem;
     private ClipboardItemViewModel? _previousSelectedItem;
     private bool _isDialogOpen;
@@ -32,10 +33,12 @@ internal sealed partial class MainWindow : Window
     private static readonly SolidColorBrush _blueBrush = new(Color.FromArgb(255, 91, 155, 213));
     private static readonly SolidColorBrush _inactiveBrush = new(Color.FromArgb(255, 120, 120, 120));
 
-    public MainWindow(IClipboardService service, MyMConfig config)
+    public DefaultThemeWindow(ThemeContext context, DefaultThemeSettings themeSettings)
     {
-        _config = config;
-        ViewModel = new MainViewModel(service, config);
+        _context = context;
+        _config = context.Config;
+        _themeSettings = themeSettings;
+        ViewModel = new DefaultThemeViewModel(context.Service, _config, _themeSettings);
         ViewModel.Initialize(this);
         InitializeComponent();
 
@@ -52,8 +55,6 @@ internal sealed partial class MainWindow : Window
         SetWindowIcon();
         ConfigureSidebarStyle();
         Win32WindowHelper.RemoveWindowBorder(_hWnd);
-        RegisterGlobalHotkey();
-        HotkeyHelper.RegisterMessageHandler(_hWnd, OnHotkeyPressed);
     }
 
     private void ApplyLocalizedStrings()
@@ -95,13 +96,15 @@ internal sealed partial class MainWindow : Window
     /// <summary>
     /// Gets a color label, preferring custom config label over localized default.
     /// </summary>
-    private static string GetColorLabelWithFallback(string colorName, string localizationKey) =>
-        ConfigLoader.GetColorLabel(colorName) ?? L.Get(localizationKey);
+    private string GetColorLabelWithFallback(string colorName, string localizationKey) =>
+        _config.ColorLabels?.TryGetValue(colorName, out var label) == true && !string.IsNullOrWhiteSpace(label)
+            ? label
+            : L.Get(localizationKey);
 
     private void RegisterEventHandlers()
     {
-        Activated += MainWindow_Activated;
-        Closed += MainWindow_Closed;
+        Activated += Window_Activated;
+        Closed += Window_Closed;
         _appWindow.Changed += AppWindow_Changed;
         ClipboardListView.Loaded += ClipboardListView_Loaded;
         ClipboardListView.SelectionChanged += ClipboardListView_SelectionChanged;
@@ -126,7 +129,6 @@ internal sealed partial class MainWindow : Window
 
     private void UpdateSectionIndicator(string? tabName)
     {
-        // Verificar que los elementos XAML estén inicializados
         if (SectionTitle == null || SectionIcon == null)
             return;
 
@@ -137,7 +139,6 @@ internal sealed partial class MainWindow : Window
             SectionTitle.Foreground = _orangeBrush;
             SectionIcon.Foreground = _orangeBrush;
 
-            // Actualizar iconos del sidebar
             if (PinnedTabIcon != null) PinnedTabIcon.Foreground = _orangeBrush;
             if (RecentTabIcon != null) RecentTabIcon.Foreground = _inactiveBrush;
         }
@@ -148,13 +149,12 @@ internal sealed partial class MainWindow : Window
             SectionTitle.Foreground = _blueBrush;
             SectionIcon.Foreground = _blueBrush;
 
-            // Actualizar iconos del sidebar
             if (RecentTabIcon != null) RecentTabIcon.Foreground = _blueBrush;
             if (PinnedTabIcon != null) PinnedTabIcon.Foreground = _inactiveBrush;
         }
     }
 
-    private void CollapseAllCards()
+    internal void CollapseAllCards()
     {
         foreach (var item in ViewModel.Items)
         {
@@ -164,13 +164,10 @@ internal sealed partial class MainWindow : Window
         _previousSelectedItem = null;
     }
 
-    private void MainWindow_Closed(object? _, WindowEventArgs args)
+    private void Window_Closed(object? _, WindowEventArgs args)
     {
         CollapseAllCards();
-        Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
-        HotkeyHelper.UnregisterMessageHandler(_hWnd);
 
-        // Cleanup ViewModel event subscriptions
         ViewModel.Cleanup();
         ViewModel.OnEditRequested -= ShowEditDialog;
 
@@ -190,41 +187,6 @@ internal sealed partial class MainWindow : Window
         _appWindow.Hide();
     }
 
-    private void OnHotkeyPressed()
-    {
-        if (_appWindow.IsVisible)
-        {
-            CollapseAllCards();
-            _appWindow.Hide();
-        }
-        else
-        {
-            // FocusHelper.CapturePreviousWindow() is called in HotkeyHelper
-            // BEFORE this method, ensuring we capture the correct window
-            ViewModel.ShowWindow();
-        }
-    }
-
-    private void RegisterGlobalHotkey()
-    {
-        uint modifiers = 0;
-
-        if (_config.UseCtrlKey) modifiers |= Win32WindowHelper.MOD_CONTROL;
-        if (_config.UseWinKey) modifiers |= Win32WindowHelper.MOD_WIN;
-        if (_config.UseAltKey) modifiers |= Win32WindowHelper.MOD_ALT;
-        if (_config.UseShiftKey) modifiers |= Win32WindowHelper.MOD_SHIFT;
-
-        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, _config.VirtualKey);
-
-        // Fallback: if Win key fails, try with Ctrl instead
-        if (!registered && _config.UseWinKey)
-        {
-            modifiers &= ~Win32WindowHelper.MOD_WIN;
-            modifiers |= Win32WindowHelper.MOD_CONTROL;
-            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, _config.VirtualKey);
-        }
-    }
-
     private void ClipboardListView_Loaded(object? _, RoutedEventArgs __)
     {
         var scrollViewer = FindScrollViewer(ClipboardListView);
@@ -240,7 +202,7 @@ internal sealed partial class MainWindow : Window
             ViewModel.LoadMoreItems();
     }
 
-    private void MainWindow_Activated(object? _, WindowActivatedEventArgs args)
+    private void Window_Activated(object? _, WindowActivatedEventArgs args)
     {
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
@@ -254,7 +216,7 @@ internal sealed partial class MainWindow : Window
         {
             Win32WindowHelper.RemoveWindowBorder(_hWnd);
             // Reset scroll position if configured
-            if (_config.ResetScrollOnShow)
+            if (_themeSettings.ResetScrollOnShow)
                 ResetScrollToTop();
             // Reset filters based on config
             ResetFiltersOnShow();
@@ -298,10 +260,10 @@ internal sealed partial class MainWindow : Window
     private void MoveToRightEdge()
     {
         var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        int width = _config.WindowWidth;
-        int height = workArea.Height - _config.WindowMarginBottom;
+        int width = _themeSettings.WindowWidth;
+        int height = workArea.Height - _themeSettings.WindowMarginBottom;
         int x = workArea.X + workArea.Width - width;
-        int y = workArea.Y + _config.WindowMarginTop;
+        int y = workArea.Y + _themeSettings.WindowMarginTop;
         _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
     }
 
@@ -418,7 +380,7 @@ internal sealed partial class MainWindow : Window
 
     private void Container_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
-        if (sender is ListViewItem item && item.Content is ViewModels.ClipboardItemViewModel vm)
+        if (sender is ListViewItem item && item.Content is ClipboardItemViewModel vm)
         {
             if (_currentExpandedItem != null && _currentExpandedItem != vm)
             {
@@ -434,7 +396,7 @@ internal sealed partial class MainWindow : Window
 
     private void Container_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
     {
-        if (sender is ListViewItem item && item.Content is ViewModels.ClipboardItemViewModel vm)
+        if (sender is ListViewItem item && item.Content is ClipboardItemViewModel vm)
         {
             vm.PasteCommand.Execute(null);
         }
@@ -502,10 +464,10 @@ internal sealed partial class MainWindow : Window
     private void ResetFiltersOnShow()
     {
         ViewModel.ResetFilters(
-            _config.ResetFilterModeOnShow,
-            _config.ResetContentFilterOnShow,
-            _config.ResetCategoryFilterOnShow,
-            _config.ResetTypeFilterOnShow);
+            _themeSettings.ResetFilterModeOnShow,
+            _themeSettings.ResetContentFilterOnShow,
+            _themeSettings.ResetCategoryFilterOnShow,
+            _themeSettings.ResetTypeFilterOnShow);
 
         // Sync UI state with ViewModel
         SyncFilterChipsState();
@@ -683,9 +645,6 @@ internal sealed partial class MainWindow : Window
 
     private void MainContent_PreviewKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
-        var ctrlPressed = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control)
-            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
-
         // ESC clears current filter
         if (e.Key == Windows.System.VirtualKey.Escape)
         {
@@ -933,17 +892,11 @@ internal sealed partial class MainWindow : Window
             ClipboardListView.SelectedIndex = 0;
     }
 
-    private void OpenHelp_Click(object sender, RoutedEventArgs e)
-    {
-        var helpWindow = new HelpWindow();
-        helpWindow.Activate();
-    }
+    private void OpenHelp_Click(object sender, RoutedEventArgs e) =>
+        _context.OpenHelp();
 
-    private void OpenSettings_Click(object sender, RoutedEventArgs e)
-    {
-        var configWindow = new ConfigWindow();
-        configWindow.Activate();
-    }
+    private void OpenSettings_Click(object sender, RoutedEventArgs e) =>
+        _context.OpenSettings();
 
     private async void ShowEditDialog(object? sender, ClipboardItemViewModel itemVM)
     {

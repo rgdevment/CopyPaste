@@ -7,7 +7,7 @@ using CopyPaste.Core;
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 
-namespace CopyPaste.UI.ViewModels;
+namespace CopyPaste.UI.Themes;
 
 public partial class ClipboardItemViewModel : ObservableObject
 {
@@ -160,7 +160,7 @@ public partial class ClipboardItemViewModel : ObservableObject
         OnPropertyChanged(nameof(IsFileAvailable));
         OnPropertyChanged(nameof(FileWarningVisibility));
 
-        // Fire event for image reload (used by MainWindow)
+        // Fire event for image reload (used by DefaultThemeWindow)
         ImagePathChanged?.Invoke(this, EventArgs.Empty);
     }
 

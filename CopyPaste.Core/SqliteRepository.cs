@@ -85,6 +85,7 @@ public sealed class SqliteRepository : IClipboardRepository, IDisposable
                 Metadata TEXT,
                 Label TEXT,
                 CardColor INTEGER NOT NULL DEFAULT 0,
+                PasteCount INTEGER NOT NULL DEFAULT 0,
                 ContentHash TEXT
             )
             """);

@@ -2,18 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using CopyPaste.Core;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 
-namespace CopyPaste.UI.Helpers;
+namespace CopyPaste.Core;
 
 /// <summary>
-/// Helper class for Windows clipboard operations.
-/// Handles setting text, files, images, and other content types to the system clipboard.
+/// Helper for Windows clipboard content operations.
+/// Used by ALL themes — every UI sets clipboard content before pasting.
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types")]
-internal static class ClipboardHelper
+public static class ClipboardHelper
 {
     /// <summary>
     /// Sets the clipboard content based on the item type.

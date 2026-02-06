@@ -1,4 +1,5 @@
 using CopyPaste.Core;
+using CopyPaste.Core.Themes;
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -6,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace CopyPaste.UI;
+namespace CopyPaste.UI.Shell;
 
 public sealed partial class ConfigWindow : Window
 {
@@ -24,23 +25,35 @@ public sealed partial class ConfigWindow : Window
     private static readonly PastePreset _pasteSeguro = new(450, 100, 180, 15);
     private static readonly PastePreset _pasteLento = new(600, 150, 300, 15);
 
+    private readonly ITheme _theme;
+    private readonly IReadOnlyList<ThemeInfo> _availableThemes;
     private bool _isLoadingValues;
     private ThumbnailPreset? _originalThumbnailValues;
     private PastePreset? _originalPasteValues;
+    private string _selectedThemeId;
 
-    public ConfigWindow()
+    public ConfigWindow(ITheme theme, IReadOnlyList<ThemeInfo> availableThemes)
     {
+        _theme = theme;
+        _availableThemes = availableThemes;
+        _selectedThemeId = theme.Id;
         InitializeComponent();
 
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new Windows.Graphics.SizeInt32(620, 780));
+        appWindow.Resize(new Windows.Graphics.SizeInt32(820, 780));
         CenterWindow(appWindow);
 
         StorageConfig.Initialize();
         ApplyLocalizedStrings();
         LoadCurrentValues();
+        EmbedThemeSettings();
+        PopulateThemeSelector();
+
+        // Navigation items
+        GeneralNavItem.Content = L.Get("config.tabs.general", "General");
+        ThemeNavItem.Content = $"{L.Get("config.tabs.theme", "Theme")}: {_theme.Name}";
 
         UseCtrlCheck.Checked += OnHotkeyChanged;
         UseCtrlCheck.Unchecked += OnHotkeyChanged;
@@ -51,25 +64,80 @@ public sealed partial class ConfigWindow : Window
         UseShiftCheck.Checked += OnHotkeyChanged;
         UseShiftCheck.Unchecked += OnHotkeyChanged;
         HotkeyCombo.SelectionChanged += OnHotkeyComboChanged;
-        ResetFilterModeOnShowSwitch.Toggled += OnResetFilterModeToggled;
         this.Closed += OnWindowClosed;
     }
 
-    private void OnResetFilterModeToggled(object sender, RoutedEventArgs e)
+    private void EmbedThemeSettings()
     {
-        if (!_isLoadingValues)
-            UpdateResetFilterSwitchesEnabled();
+        var section = _theme.CreateSettingsSection();
+        if (section is UIElement element)
+        {
+            ThemeSettingsPresenter.Content = element;
+        }
+        else
+        {
+            // Theme has no settings — hide the nav item
+            ThemeNavItem.Visibility = Visibility.Collapsed;
+        }
     }
 
-    private void UpdateResetFilterSwitchesEnabled()
+    private void OnNavSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        var enabled = !ResetFilterModeOnShowSwitch.IsOn;
-        ResetContentFilterOnShowSwitch.IsEnabled = enabled;
-        ResetCategoryFilterOnShowSwitch.IsEnabled = enabled;
-        ResetTypeFilterOnShowSwitch.IsEnabled = enabled;
-        ResetContentFilterGrid.Opacity = enabled ? 1.0 : 0.5;
-        ResetCategoryFilterGrid.Opacity = enabled ? 1.0 : 0.5;
-        ResetTypeFilterGrid.Opacity = enabled ? 1.0 : 0.5;
+        if (args.SelectedItem is NavigationViewItem item)
+        {
+            var isGeneral = item.Tag?.ToString() == "general";
+            GeneralContent.Visibility = isGeneral ? Visibility.Visible : Visibility.Collapsed;
+            ThemeContent.Visibility = isGeneral ? Visibility.Collapsed : Visibility.Visible;
+        }
+    }
+
+    private void PopulateThemeSelector()
+    {
+        _isLoadingValues = true;
+        ThemeCombo.Items.Clear();
+
+        int selectedIndex = 0;
+        for (int i = 0; i < _availableThemes.Count; i++)
+        {
+            var t = _availableThemes[i];
+            var label = t.IsCommunity ? $"{t.Name} (community)" : t.Name;
+            ThemeCombo.Items.Add(new ComboBoxItem { Content = label, Tag = t.Id });
+            if (string.Equals(t.Id, _selectedThemeId, StringComparison.OrdinalIgnoreCase))
+                selectedIndex = i;
+        }
+
+        ThemeCombo.SelectedIndex = selectedIndex;
+        UpdateThemeInfo(selectedIndex);
+        _isLoadingValues = false;
+    }
+
+    private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoadingValues) return;
+        if (ThemeCombo.SelectedItem is ComboBoxItem item && item.Tag is string id)
+        {
+            _selectedThemeId = id;
+            UpdateThemeInfo(ThemeCombo.SelectedIndex);
+        }
+    }
+
+    private void UpdateThemeInfo(int index)
+    {
+        if (index < 0 || index >= _availableThemes.Count) return;
+
+        var info = _availableThemes[index];
+        ThemeInfoText.Text = $"v{info.Version} — {info.Author}";
+
+        if (info.IsCommunity)
+        {
+            ThemeCommunityWarning.Visibility = Visibility.Visible;
+            ThemeWarningText.Text = L.Get("config.themeSelector.communityWarning",
+                "Community themes are not verified. Use at your own risk.");
+        }
+        else
+        {
+            ThemeCommunityWarning.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void ApplyLocalizedStrings()
@@ -99,47 +167,12 @@ public sealed partial class ConfigWindow : Window
         HotkeyDesc.Text = L.Get("config.hotkey.shortcutDesc");
         UpdateHotkeyPreview();
 
-        // Appearance
-        AppearanceHeading.Text = L.Get("config.appearance.heading");
-        PanelWidthLabel.Text = L.Get("config.appearance.panelWidth");
-        PanelWidthDesc.Text = L.Get("config.appearance.panelWidthDesc");
-        ToolTipService.SetToolTip(PanelWidthGrid, L.Get("config.appearance.panelWidthTooltip"));
-        MarginTopLabel.Text = L.Get("config.appearance.marginTop");
-        MarginTopDesc.Text = L.Get("config.appearance.marginTopDesc");
-        ToolTipService.SetToolTip(MarginTopGrid, L.Get("config.appearance.marginTopTooltip"));
-        MarginBottomLabel.Text = L.Get("config.appearance.marginBottom");
-        MarginBottomDesc.Text = L.Get("config.appearance.marginBottomDesc");
-        ToolTipService.SetToolTip(MarginBottomGrid, L.Get("config.appearance.marginBottomTooltip"));
-        CardMinLinesLabel.Text = L.Get("config.appearance.cardMinLines");
-        CardMinLinesDesc.Text = L.Get("config.appearance.cardMinLinesDesc");
-        ToolTipService.SetToolTip(CardMinLinesGrid, L.Get("config.appearance.cardMinLinesTooltip"));
-        CardMaxLinesLabel.Text = L.Get("config.appearance.cardMaxLines");
-        CardMaxLinesDesc.Text = L.Get("config.appearance.cardMaxLinesDesc");
-        ToolTipService.SetToolTip(CardMaxLinesGrid, L.Get("config.appearance.cardMaxLinesTooltip"));
-        ResetScrollLabel.Text = L.Get("config.appearance.resetScrollOnShow");
-        ResetScrollDesc.Text = L.Get("config.appearance.resetScrollOnShowDesc");
-        ToolTipService.SetToolTip(ResetScrollGrid, L.Get("config.appearance.resetScrollOnShowTooltip"));
-        ResetScrollOnShowSwitch.OnContent = L.Get("config.appearance.resetScrollOnShowYes");
-        ResetScrollOnShowSwitch.OffContent = L.Get("config.appearance.resetScrollOnShowNo");
+        // Appearance & Behavior are managed by theme's settings section
 
-        // Behavior
-        BehaviorHeading.Text = L.Get("config.behavior.heading");
-        ResetFilterModeLabel.Text = L.Get("config.behavior.resetFilterMode");
-        ResetFilterModeDesc.Text = L.Get("config.behavior.resetFilterModeDesc");
-        ResetFilterModeOnShowSwitch.OnContent = L.Get("config.behavior.yes");
-        ResetFilterModeOnShowSwitch.OffContent = L.Get("config.behavior.no");
-        ResetContentFilterLabel.Text = L.Get("config.behavior.resetContentFilter");
-        ResetContentFilterDesc.Text = L.Get("config.behavior.resetContentFilterDesc");
-        ResetContentFilterOnShowSwitch.OnContent = L.Get("config.behavior.yes");
-        ResetContentFilterOnShowSwitch.OffContent = L.Get("config.behavior.no");
-        ResetCategoryFilterLabel.Text = L.Get("config.behavior.resetCategoryFilter");
-        ResetCategoryFilterDesc.Text = L.Get("config.behavior.resetCategoryFilterDesc");
-        ResetCategoryFilterOnShowSwitch.OnContent = L.Get("config.behavior.yes");
-        ResetCategoryFilterOnShowSwitch.OffContent = L.Get("config.behavior.no");
-        ResetTypeFilterLabel.Text = L.Get("config.behavior.resetTypeFilter");
-        ResetTypeFilterDesc.Text = L.Get("config.behavior.resetTypeFilterDesc");
-        ResetTypeFilterOnShowSwitch.OnContent = L.Get("config.behavior.yes");
-        ResetTypeFilterOnShowSwitch.OffContent = L.Get("config.behavior.no");
+        // Theme selector
+        ThemeSelectorHeading.Text = L.Get("config.themeSelector.heading", "THEME");
+        ThemeSelectorLabel.Text = L.Get("config.themeSelector.label", "Active theme");
+        ThemeSelectorDesc.Text = L.Get("config.themeSelector.desc", "Requires restart to apply");
 
         // Categories
         CategoriesHeading.Text = L.Get("config.categories.heading");
@@ -249,18 +282,7 @@ public sealed partial class ConfigWindow : Window
         // Hotkey key - find by Tag value
         SelectHotkeyByVirtualKey(config.VirtualKey);
 
-        // UI / Appearance
-        WindowWidthBox.Value = config.WindowWidth;
-        WindowMarginTopBox.Value = config.WindowMarginTop;
-        WindowMarginBottomBox.Value = config.WindowMarginBottom;
-        CardMinLinesBox.Value = config.CardMinLines;
-        CardMaxLinesBox.Value = config.CardMaxLines;
-        ResetScrollOnShowSwitch.IsOn = config.ResetScrollOnShow;
-        ResetFilterModeOnShowSwitch.IsOn = config.ResetFilterModeOnShow;
-        ResetContentFilterOnShowSwitch.IsOn = config.ResetContentFilterOnShow;
-        ResetCategoryFilterOnShowSwitch.IsOn = config.ResetCategoryFilterOnShow;
-        ResetTypeFilterOnShowSwitch.IsOn = config.ResetTypeFilterOnShow;
-        UpdateResetFilterSwitchesEnabled();
+        // UI / Appearance & Behavior managed by theme
 
         // Categories - load custom labels
         LoadColorLabels(config);
@@ -467,16 +489,8 @@ public sealed partial class ConfigWindow : Window
         UseShiftCheck.IsChecked = d.UseShiftKey;
         SelectHotkeyByVirtualKey(d.VirtualKey);
 
-        WindowWidthBox.Value = d.WindowWidth;
-        WindowMarginTopBox.Value = d.WindowMarginTop;
-        WindowMarginBottomBox.Value = d.WindowMarginBottom;
-        CardMinLinesBox.Value = d.CardMinLines;
-        CardMaxLinesBox.Value = d.CardMaxLines;
-        ResetScrollOnShowSwitch.IsOn = d.ResetScrollOnShow;
-        ResetFilterModeOnShowSwitch.IsOn = d.ResetFilterModeOnShow;
-        ResetContentFilterOnShowSwitch.IsOn = d.ResetContentFilterOnShow;
-        ResetCategoryFilterOnShowSwitch.IsOn = d.ResetCategoryFilterOnShow;
-        ResetTypeFilterOnShowSwitch.IsOn = d.ResetTypeFilterOnShow;
+        // Theme-specific settings
+        _theme.ResetThemeSettings();
 
         PageSizeBox.Value = d.PageSize;
         MaxItemsBeforeCleanupBox.Value = d.MaxItemsBeforeCleanup;
@@ -532,6 +546,9 @@ public sealed partial class ConfigWindow : Window
                 // Startup
                 RunOnStartup = RunOnStartupSwitch.IsOn,
 
+                // Theme
+                ThemeId = _selectedThemeId,
+
                 // Hotkey
                 UseCtrlKey = UseCtrlCheck.IsChecked == true,
                 UseWinKey = UseWinCheck.IsChecked == true,
@@ -540,17 +557,8 @@ public sealed partial class ConfigWindow : Window
                 VirtualKey = virtualKey,
                 KeyName = keyName,
 
-                // UI / Appearance
-                WindowWidth = (int)WindowWidthBox.Value,
-                WindowMarginTop = (int)WindowMarginTopBox.Value,
-                WindowMarginBottom = (int)WindowMarginBottomBox.Value,
-                CardMinLines = (int)CardMinLinesBox.Value,
-                CardMaxLines = (int)CardMaxLinesBox.Value,
-                ResetScrollOnShow = ResetScrollOnShowSwitch.IsOn,
-                ResetFilterModeOnShow = ResetFilterModeOnShowSwitch.IsOn,
-                ResetContentFilterOnShow = ResetContentFilterOnShowSwitch.IsOn,
-                ResetCategoryFilterOnShow = ResetCategoryFilterOnShowSwitch.IsOn,
-                ResetTypeFilterOnShow = ResetTypeFilterOnShowSwitch.IsOn,
+                // UI / Pagination (core settings)
+                PageSize = (int)PageSizeBox.Value,
                 MaxItemsBeforeCleanup = (int)MaxItemsBeforeCleanupBox.Value,
                 ScrollLoadThreshold = (int)ScrollLoadThresholdBox.Value,
 
@@ -578,6 +586,7 @@ public sealed partial class ConfigWindow : Window
 
             if (ConfigLoader.Save(config))
             {
+                _theme.SaveThemeSettings();
                 RestartApplication();
             }
             else

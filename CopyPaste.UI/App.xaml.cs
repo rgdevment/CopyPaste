@@ -17,8 +17,11 @@
 // along with CopyPaste. If not, see <https://github.com/rgdevment/CopyPaste/blob/main/LICENSE>.
 
 using CopyPaste.Core;
+using CopyPaste.Core.Themes;
 using CopyPaste.Listener;
+using CopyPaste.UI.Helpers;
 using CopyPaste.UI.Localization;
+using CopyPaste.UI.Themes;
 using Microsoft.UI.Xaml;
 using System;
 using System.Diagnostics;
@@ -31,9 +34,14 @@ public sealed partial class App : Application, IDisposable
 {
     private const string _launcherReadyEventName = "CopyPaste_AppReady";
     private const string _mutexName = "Global\\CopyPaste_SingleInstance_Mutex";
+    private const int _hotkeyId = 1;
 
-    private Window? _window;
+    private IntPtr _hWnd;
     private CopyPasteEngine? _engine;
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859", Justification = "ITheme interface is intentional for theme extensibility")]
+    private ITheme? _theme;
+    private ThemeRegistry? _themeRegistry;
     private Mutex? _singleInstanceMutex;
     private bool _isDisposed;
     public bool IsExiting { get; private set; }
@@ -79,8 +87,24 @@ public sealed partial class App : Application, IDisposable
         var config = _engine!.Config;
         L.Initialize(new LocalizationService(config.PreferredLanguage));
 
-        _window = new MainWindow(_engine.Service, config);
-        _window.Activate();
+        _themeRegistry = new ThemeRegistry();
+        _themeRegistry.RegisterInternal<DefaultTheme>();
+        _themeRegistry.DiscoverCommunityThemes();
+
+        var context = new ThemeContext(
+            _engine.Service,
+            config,
+            openSettings: () => new Shell.ConfigWindow(_theme!, _themeRegistry.AvailableThemes).Activate(),
+            openHelp: () => new Shell.HelpWindow().Activate(),
+            requestExit: BeginExit);
+
+        _theme = _themeRegistry.Create(config.ThemeId);
+        _hWnd = _theme.CreateWindow(context);
+
+        RegisterGlobalHotkey(config);
+        HotkeyHelper.RegisterMessageHandler(_hWnd, OnHotkeyPressed);
+
+        _theme.Show();
 
         SignalLauncherReady();
         AppLogger.Info("Main window launched");
@@ -88,9 +112,29 @@ public sealed partial class App : Application, IDisposable
 
     private void InitializeCoreServices()
     {
-        RegisterForStartup();
         _engine = new CopyPasteEngine(svc => new WindowsClipboardListener(svc));
         _engine.Start();
+        RegisterForStartup();
+    }
+
+    private void OnHotkeyPressed() => _theme?.Toggle();
+
+    private void RegisterGlobalHotkey(MyMConfig config)
+    {
+        uint modifiers = 0;
+        if (config.UseCtrlKey) modifiers |= Win32WindowHelper.MOD_CONTROL;
+        if (config.UseWinKey) modifiers |= Win32WindowHelper.MOD_WIN;
+        if (config.UseAltKey) modifiers |= Win32WindowHelper.MOD_ALT;
+        if (config.UseShiftKey) modifiers |= Win32WindowHelper.MOD_SHIFT;
+
+        bool registered = Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
+
+        if (!registered && config.UseWinKey)
+        {
+            modifiers &= ~Win32WindowHelper.MOD_WIN;
+            modifiers |= Win32WindowHelper.MOD_CONTROL;
+            Win32WindowHelper.RegisterHotKey(_hWnd, _hotkeyId, modifiers, config.VirtualKey);
+        }
     }
 
     public void BeginExit()
@@ -98,10 +142,12 @@ public sealed partial class App : Application, IDisposable
         IsExiting = true;
         AppLogger.Info("Application exiting...");
 
+        Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
+        HotkeyHelper.UnregisterMessageHandler(_hWnd);
+        _theme?.Dispose();
         _engine?.Dispose();
 
         L.Dispose();
-        _window?.Close();
         Application.Current.Exit();
     }
 
@@ -116,6 +162,7 @@ public sealed partial class App : Application, IDisposable
         if (_isDisposed) return;
         if (disposing)
         {
+            _theme?.Dispose();
             _engine?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
             _singleInstanceMutex?.Dispose();

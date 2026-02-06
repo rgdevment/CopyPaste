@@ -168,6 +168,7 @@ If you care about privacy and control, this is made for you.
 * 🔄 **Smart Filter Behavior:** Filters only apply to their active mode—switching modes automatically uses the relevant filter without mixing criteria.
 * 📌 **Pin Indicators:** When searching or filtering, pinned items display a subtle pin icon in the footer, making them easy to identify among results.
 * ⚙️ **Configurable:** Hotkeys, appearance, panel width (400-600px), retention days, filter reset behavior, and more.
+* 🎨 **Theme System:** Switch between built-in themes from settings. Community themes are coming soon.
 
 ---
 ## 💪 What Makes This Different
@@ -538,6 +539,19 @@ If you're curious about what's under the hood:
 | **Win32 Interop** | Low-level clipboard hooks to catch everything. |
 | **SQLite + FTS5** | Local storage with full-text search. |
 | **SkiaSharp** | Generates image thumbnails. |
+| **Plugin Architecture** | Extensible theme system via `ITheme` interface. |
+
+---
+
+## 🎨 Themes
+
+CopyPaste includes a theme system that lets you change how the application looks and behaves.
+
+- **Built-in themes** are included with the application and maintained by the team.
+- You can switch between available themes from **Settings → General → Theme**.
+- Changes require a restart to take effect.
+
+> 🚧 **Community themes (coming soon).** The internal architecture already supports loading third-party themes via compiled DLLs, but this feature is not yet open to the public. We're working on documentation, safety guidelines, and a stable API surface before enabling it. Stay tuned!
 
 ---
 

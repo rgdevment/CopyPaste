@@ -1,8 +1,8 @@
 <Window
-x:Class="CopyPaste.UI.MainWindow"
+x:Class="CopyPaste.UI.Themes.DefaultThemeWindow"
 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-xmlns:viewmodels="using:CopyPaste.UI.ViewModels"
+xmlns:viewmodels="using:CopyPaste.UI.Themes"
 xmlns:tb="using:H.NotifyIcon">
 
 <Window.SystemBackdrop>

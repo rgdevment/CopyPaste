@@ -1,22 +1,22 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using CopyPaste.Core;
 
-namespace CopyPaste.UI.Helpers;
+namespace CopyPaste.Core;
 
 /// <summary>
-/// Helper for managing window focus and simulating keyboard input.
+/// Helper for managing window focus and simulating keyboard input (paste workflow).
+/// Used by ALL themes — every UI must capture the previous window, restore focus,
+/// and simulate Ctrl+V to paste clipboard content.
 /// </summary>
-internal static partial class FocusHelper
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes",
+    Justification = "P/Invokes target well-known system DLLs (user32.dll, kernel32.dll)")]
+public static partial class FocusHelper
 {
     #region P/Invoke Declarations
-    [LibraryImport("user32.dll")]
-    private static partial IntPtr GetForegroundWindow();
 
     [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SetForegroundWindow(IntPtr hWnd);
+    private static partial IntPtr GetForegroundWindow();
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -35,6 +35,13 @@ internal static partial class FocusHelper
     private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(IntPtr hWnd);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static partial IntPtr GetWindowLongPtrW(IntPtr hWnd, int nIndex);
+
+    [LibraryImport("user32.dll")]
     private static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     [LibraryImport("user32.dll")]
@@ -46,9 +53,6 @@ internal static partial class FocusHelper
 
     [LibraryImport("user32.dll")]
     private static partial void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
-    [LibraryImport("user32.dll")]
-    private static partial IntPtr GetWindowLongPtrW(IntPtr hWnd, int nIndex);
 
     #endregion
 
@@ -68,6 +72,7 @@ internal static partial class FocusHelper
 
     /// <summary>
     /// Captures the currently focused window.
+    /// Must be called BEFORE showing the clipboard window (typically on hotkey press).
     /// </summary>
     public static void CapturePreviousWindow()
     {
@@ -173,6 +178,7 @@ internal static partial class FocusHelper
 
     /// <summary>
     /// Restores focus and simulates paste.
+    /// Uses config-driven delays for timing.
     /// </summary>
     public static async Task RestoreAndPasteAsync(int delayBeforeFocusMs, int maxFocusVerifyAttempts, int delayBeforePasteMs)
     {

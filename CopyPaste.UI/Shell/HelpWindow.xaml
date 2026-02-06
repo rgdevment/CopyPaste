@@ -1,5 +1,5 @@
 <Window
-    x:Class="CopyPaste.UI.HelpWindow"
+    x:Class="CopyPaste.UI.Shell.HelpWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
