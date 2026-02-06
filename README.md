@@ -32,11 +32,28 @@
 </div>
 
 ---
-CopyPaste is a high-performance clipboard history manager for Windows 10 and 11, developed in C# and WinUI 3. Unlike other managers, it focuses on being a native, lightweight, and open-source tool.
 
-**In short:** CopyPaste is a fast, private, and free clipboard manager for Windows 10/11. It keeps your clipboard history locally, respects sensitive data, and is built to feel native and distraction-free.
+### A tool born from a personal need for harmony.
 
-**Keywords:** clipboard manager, clipboard history, Windows 11 clipboard tool, Windows 10 clipboard history, productivity app, privacy-first, free, offline.
+**CopyPaste** is not just a clipboard manager focused on obsessive performance. I don't believe power should be synonymous with something clunky or purely functional; on the contrary, this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
+
+My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of Windows, but that we can now enjoy together.
+
+---
+
+### ✨ Why I Built This
+Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't, without friction or unnecessary visual noise.
+
+* **Aesthetics and Fluidity:** I was inspired by the harmony of the cleanest workspaces to bring that same sense of calm to Windows 10 and 11. I use **WinUI 3** to ensure that every transition and every pixel feels like an integral part of the system, blending beauty and speed.
+* **A Commitment to Respect:** I firmly believe that your data is yours. That’s why CopyPaste is **local-first**: nothing leaves your computer—no accounts, no telemetry, and no tracking of any kind. It is a tool designed with privacy and absolute respect for your digital space in mind.
+* **Open Source and Shared:** This project is **GPL v3** because I want this utility to belong to the community. It’s my way of sharing a tool that I use every day to maintain an organized and pleasant workflow.
+
+---
+
+### 🤝 Built for (and by) us
+I don't see those who use CopyPaste as "end users," but as **collaborators** in this search for a better experience. If you value simplicity, speed, and above all, an aesthetic that respects your focus, this tool is for you. Your reports and suggestions are what help CopyPaste continue to evolve toward that perfect tool we always wanted to have.
+
+> **In short:** A clipboard manager that prioritizes visual harmony and native design without sacrificing performance. Hassle-free, private, and created with the care your daily life deserves.
 
 ---
 
