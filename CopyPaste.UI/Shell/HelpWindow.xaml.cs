@@ -1,5 +1,6 @@
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
+using System;
 
 namespace CopyPaste.UI.Shell;
 
@@ -25,6 +26,11 @@ internal sealed partial class HelpWindow : Window
         {
             // Set window size
             appWindow.Resize(new Windows.Graphics.SizeInt32(700, 600));
+
+            // Set window icon
+            var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "CopyPasteLogoSimple.ico");
+            if (System.IO.File.Exists(iconPath))
+                appWindow.SetIcon(iconPath);
 
             // Center on screen
             var displayArea = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Primary);

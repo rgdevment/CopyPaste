@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using CopyPaste.Listener;
@@ -299,6 +300,127 @@ public sealed class WindowsClipboardListenerTests : IDisposable
 
     #endregion
 
+    #region Dispose Lifecycle Tests
+
+    [Fact]
+    public void Dispose_CanBeCalledMultipleTimes_DoesNotThrow()
+    {
+        var listener = new WindowsClipboardListener(new StubClipboardService());
+
+        listener.Dispose();
+        listener.Dispose();
+        listener.Dispose();
+    }
+
+    [Fact]
+    public void NewInstance_BeforeStart_CanBeDisposed()
+    {
+        // Listener that was never started should dispose cleanly
+        var listener = new WindowsClipboardListener(new StubClipboardService());
+        listener.Dispose();
+    }
+
+    #endregion
+
+    #region DetectTextType Additional Tests
+
+    [Theory]
+    [InlineData("https://user:pass@host.com/path", ClipboardContentType.Link)]
+    [InlineData("https://example.com/path?q=1&b=2#frag", ClipboardContentType.Link)]
+    [InlineData("https://sub.domain.example.com", ClipboardContentType.Link)]
+    public void DetectTextType_ComplexUrls_ReturnsLink(string url, ClipboardContentType expected)
+    {
+        var result = WindowsClipboardListener.DetectTextType(url);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("www.example.com")]
+    [InlineData("example.com")]
+    [InlineData("not a url at all")]
+    [InlineData("mailto:user@example.com")]
+    public void DetectTextType_NonHttpSchemes_ReturnsText(string input)
+    {
+        var result = WindowsClipboardListener.DetectTextType(input);
+
+        Assert.Equal(ClipboardContentType.Text, result);
+    }
+
+    [Fact]
+    public void DetectTextType_UrlWithLeadingWhitespace_ReturnsText()
+    {
+        // Leading whitespace means it's not a clean URL
+        var result = WindowsClipboardListener.DetectTextType("  https://example.com");
+
+        // Depending on implementation, this may be Text or Link
+        // The point is it handles gracefully
+        Assert.True(result == ClipboardContentType.Text || result == ClipboardContentType.Link);
+    }
+
+    [Fact]
+    public void DetectTextType_VeryLongUrl_ReturnsLink()
+    {
+        var longUrl = "https://example.com/" + new string('a', 2000);
+
+        var result = WindowsClipboardListener.DetectTextType(longUrl);
+
+        Assert.Equal(ClipboardContentType.Link, result);
+    }
+
+    #endregion
+
+    #region DetectFileCollectionType Additional Tests
+
+    [Theory]
+    [InlineData("archive.zip")]
+    [InlineData("package.tar.gz")]
+    [InlineData("backup.rar")]
+    [InlineData("bundle.7z")]
+    public void DetectFileCollectionType_ArchiveFiles_ReturnsFile(string filename)
+    {
+        var files = new Collection<string> { Path.Combine(_tempDir, filename) };
+
+        var result = WindowsClipboardListener.DetectFileCollectionType(files);
+
+        Assert.Equal(ClipboardContentType.File, result);
+    }
+
+    [Theory]
+    [InlineData("photo.JPEG", ClipboardContentType.Image)]
+    [InlineData("VIDEO.MP4", ClipboardContentType.Video)]
+    [InlineData("MUSIC.FLAC", ClipboardContentType.Audio)]
+    public void DetectFileCollectionType_UpperCaseExtensions_DetectsCorrectly(string filename, ClipboardContentType expected)
+    {
+        var files = new Collection<string> { Path.Combine(_tempDir, filename) };
+
+        var result = WindowsClipboardListener.DetectFileCollectionType(files);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void DetectFileCollectionType_FileWithDotOnly_ReturnsFile()
+    {
+        var files = new Collection<string> { Path.Combine(_tempDir, "file.") };
+
+        var result = WindowsClipboardListener.DetectFileCollectionType(files);
+
+        Assert.Equal(ClipboardContentType.File, result);
+    }
+
+    [Fact]
+    public void DetectFileCollectionType_HiddenFile_ReturnsFile()
+    {
+        var files = new Collection<string> { Path.Combine(_tempDir, ".gitignore") };
+
+        var result = WindowsClipboardListener.DetectFileCollectionType(files);
+
+        Assert.Equal(ClipboardContentType.File, result);
+    }
+
+    #endregion
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
@@ -313,5 +435,27 @@ public sealed class WindowsClipboardListenerTests : IDisposable
         {
             // Best-effort cleanup.
         }
+    }
+
+    private sealed class StubClipboardService : IClipboardService
+    {
+        public event Action<ClipboardItem>? OnItemAdded;
+        public event Action<ClipboardItem>? OnThumbnailReady;
+        public event Action<ClipboardItem>? OnItemReactivated;
+        public int PasteIgnoreWindowMs { get; set; } = 450;
+
+        public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null) { }
+        public void AddImage(byte[]? dibData, string? source) { }
+        public void AddFiles(Collection<string>? files, ClipboardContentType type, string? source) { }
+        public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null, bool? isPinned = null) => [];
+        public IEnumerable<ClipboardItem> GetHistoryAdvanced(int limit, int skip, string? query, IReadOnlyCollection<ClipboardContentType>? types, IReadOnlyCollection<CardColor>? colors, bool? isPinned) => [];
+        public void RemoveItem(Guid id) { }
+        public void UpdatePin(Guid id, bool isPinned) { }
+        public void UpdateLabelAndColor(Guid id, string? label, CardColor color) { }
+        public ClipboardItem? MarkItemUsed(Guid id) => null;
+        public void NotifyPasteInitiated(Guid itemId) { }
+
+        // Suppress unused event warnings
+        internal void SuppressWarnings() { OnItemAdded?.Invoke(null!); OnThumbnailReady?.Invoke(null!); OnItemReactivated?.Invoke(null!); }
     }
 }

@@ -278,6 +278,403 @@ public sealed class ClipboardServiceTests : IDisposable
 
     #endregion
 
+    #region RemoveItem Tests
+
+    [Fact]
+    public void RemoveItem_WithExistingItem_DeletesFromRepository()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text };
+        _repository.ItemsById[id] = item;
+
+        _service.RemoveItem(id);
+
+        Assert.Single(_repository.DeletedIds);
+        Assert.Equal(id, _repository.DeletedIds[0]);
+    }
+
+    [Fact]
+    public void RemoveItem_WithNonExistentItem_DoesNotCallDelete()
+    {
+        _service.RemoveItem(Guid.NewGuid());
+
+        Assert.Empty(_repository.DeletedIds);
+    }
+
+    #endregion
+
+    #region UpdatePin Tests
+
+    [Fact]
+    public void UpdatePin_WithExistingItem_UpdatesPinStatus()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, IsPinned = false };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdatePin(id, true);
+
+        Assert.True(item.IsPinned);
+        Assert.Single(_repository.UpdatedItems);
+    }
+
+    [Fact]
+    public void UpdatePin_WithExistingItem_UnpinsItem()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, IsPinned = true };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdatePin(id, false);
+
+        Assert.False(item.IsPinned);
+        Assert.Single(_repository.UpdatedItems);
+    }
+
+    [Fact]
+    public void UpdatePin_WithNonExistentItem_DoesNotUpdate()
+    {
+        _service.UpdatePin(Guid.NewGuid(), true);
+
+        Assert.Empty(_repository.UpdatedItems);
+    }
+
+    [Fact]
+    public void UpdatePin_UpdatesModifiedAt()
+    {
+        var id = Guid.NewGuid();
+        var originalTime = DateTime.UtcNow.AddHours(-1);
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, ModifiedAt = originalTime };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdatePin(id, true);
+
+        Assert.True(item.ModifiedAt > originalTime);
+    }
+
+    #endregion
+
+    #region UpdateLabelAndColor Tests
+
+    [Fact]
+    public void UpdateLabelAndColor_WithExistingItem_UpdatesBoth()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdateLabelAndColor(id, "My Label", CardColor.Red);
+
+        Assert.Equal("My Label", item.Label);
+        Assert.Equal(CardColor.Red, item.CardColor);
+        Assert.Single(_repository.UpdatedItems);
+    }
+
+    [Fact]
+    public void UpdateLabelAndColor_WithNullLabel_SetsNullLabel()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, Label = "Old Label" };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdateLabelAndColor(id, null, CardColor.None);
+
+        Assert.Null(item.Label);
+        Assert.Equal(CardColor.None, item.CardColor);
+    }
+
+    [Fact]
+    public void UpdateLabelAndColor_WithNonExistentItem_DoesNotUpdate()
+    {
+        _service.UpdateLabelAndColor(Guid.NewGuid(), "Label", CardColor.Blue);
+
+        Assert.Empty(_repository.UpdatedItems);
+    }
+
+    [Fact]
+    public void UpdateLabelAndColor_UpdatesModifiedAt()
+    {
+        var id = Guid.NewGuid();
+        var originalTime = DateTime.UtcNow.AddHours(-1);
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, ModifiedAt = originalTime };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdateLabelAndColor(id, "Label", CardColor.Green);
+
+        Assert.True(item.ModifiedAt > originalTime);
+    }
+
+    [Theory]
+    [InlineData(CardColor.None)]
+    [InlineData(CardColor.Red)]
+    [InlineData(CardColor.Green)]
+    [InlineData(CardColor.Purple)]
+    [InlineData(CardColor.Yellow)]
+    [InlineData(CardColor.Blue)]
+    [InlineData(CardColor.Orange)]
+    public void UpdateLabelAndColor_AllColors_AreAccepted(CardColor color)
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text };
+        _repository.ItemsById[id] = item;
+
+        _service.UpdateLabelAndColor(id, "Label", color);
+
+        Assert.Equal(color, item.CardColor);
+    }
+
+    #endregion
+
+    #region MarkItemUsed Tests
+
+    [Fact]
+    public void MarkItemUsed_WithExistingItem_IncrementsPasteCount()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, PasteCount = 0 };
+        _repository.ItemsById[id] = item;
+
+        var result = _service.MarkItemUsed(id);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.PasteCount);
+    }
+
+    [Fact]
+    public void MarkItemUsed_CalledMultipleTimes_IncrementsPasteCountEachTime()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, PasteCount = 0 };
+        _repository.ItemsById[id] = item;
+
+        _service.MarkItemUsed(id);
+        _service.MarkItemUsed(id);
+        _service.MarkItemUsed(id);
+
+        Assert.Equal(3, item.PasteCount);
+    }
+
+    [Fact]
+    public void MarkItemUsed_WithNonExistentItem_ReturnsNull()
+    {
+        var result = _service.MarkItemUsed(Guid.NewGuid());
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void MarkItemUsed_UpdatesModifiedAt()
+    {
+        var id = Guid.NewGuid();
+        var originalTime = DateTime.UtcNow.AddHours(-1);
+        var item = new ClipboardItem { Id = id, Content = "Test", Type = ClipboardContentType.Text, ModifiedAt = originalTime };
+        _repository.ItemsById[id] = item;
+
+        _service.MarkItemUsed(id);
+
+        Assert.True(item.ModifiedAt > originalTime);
+    }
+
+    [Fact]
+    public void MarkItemUsed_ReturnsUpdatedItem()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "Hello", Type = ClipboardContentType.Text, PasteCount = 5 };
+        _repository.ItemsById[id] = item;
+
+        var result = _service.MarkItemUsed(id);
+
+        Assert.NotNull(result);
+        Assert.Equal("Hello", result.Content);
+        Assert.Equal(6, result.PasteCount);
+    }
+
+    #endregion
+
+    #region AddImage Tests
+
+    [Fact]
+    public void AddImage_WithNullData_DoesNotSave()
+    {
+        _service.AddImage(null, "TestApp");
+
+        Assert.Empty(_repository.SavedItems);
+    }
+
+    [Fact]
+    public void AddImage_WithShortDibData_DoesNotSave()
+    {
+        // DIB data less than 40 bytes is invalid — ConvertDibToBmp returns null
+        _service.AddImage(new byte[10], "TestApp");
+
+        Assert.Empty(_repository.SavedItems);
+    }
+
+    [Fact]
+    public void AddImage_DuringPasteWindow_IsIgnored()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "img.png", Type = ClipboardContentType.Image };
+        _repository.ItemsById[id] = item;
+        _service.PasteIgnoreWindowMs = 2000;
+
+        _service.NotifyPasteInitiated(id);
+
+        // Should be ignored during paste window
+        _service.AddImage(new byte[100], "TestApp");
+
+        Assert.Empty(_repository.SavedItems);
+    }
+
+    #endregion
+
+    #region GetHistory Tests
+
+    [Fact]
+    public void GetHistory_DelegatesToGetHistoryAdvanced()
+    {
+        var result = _service.GetHistory(10, 0, "query", true);
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public void GetHistory_DefaultParameters_ReturnsEmptyFromStub()
+    {
+        var result = _service.GetHistory();
+
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region NotifyPasteInitiated Advanced Tests
+
+    [Fact]
+    public void NotifyPasteInitiated_DifferentContent_NotIgnoredAfterTimeWindow()
+    {
+        _service.PasteIgnoreWindowMs = 50;
+        var itemId = Guid.NewGuid();
+        var item = new ClipboardItem { Id = itemId, Content = "Original", Type = ClipboardContentType.Text };
+        _repository.ItemsById[itemId] = item;
+
+        _service.NotifyPasteInitiated(itemId);
+        Thread.Sleep(100);
+
+        // Different content should be added after initial window expires
+        _service.AddText("Totally different content", ClipboardContentType.Text, "TestApp");
+
+        Assert.Single(_repository.SavedItems);
+        Assert.Equal("Totally different content", _repository.SavedItems[0].Content);
+    }
+
+    [Fact]
+    public void NotifyPasteInitiated_WithNonExistentItem_StillIgnoresWithinWindow()
+    {
+        _service.PasteIgnoreWindowMs = 500;
+        var itemId = Guid.NewGuid();
+        // item not added to repository — GetById returns null
+
+        _service.NotifyPasteInitiated(itemId);
+
+        _service.AddText("New text", ClipboardContentType.Text, "TestApp");
+
+        Assert.Empty(_repository.SavedItems);
+    }
+
+    #endregion
+
+    #region AddText Edge Cases
+
+    [Fact]
+    public void AddText_FiresOnItemAddedWithCorrectAppSource()
+    {
+        ClipboardItem? addedItem = null;
+        _service.OnItemAdded += item => addedItem = item;
+
+        _service.AddText("Test", ClipboardContentType.Text, "Chrome.exe");
+
+        Assert.NotNull(addedItem);
+        Assert.Equal("Chrome.exe", addedItem.AppSource);
+    }
+
+    [Fact]
+    public void AddText_WithNullAppSource_SavesNullAppSource()
+    {
+        _service.AddText("Test", ClipboardContentType.Text, null);
+
+        Assert.Single(_repository.SavedItems);
+        Assert.Null(_repository.SavedItems[0].AppSource);
+    }
+
+    [Fact]
+    public void AddText_WithAllContentTypes_SavesCorrectType()
+    {
+        _service.AddText("test", ClipboardContentType.Text, "App");
+        _service.AddText("https://x.com", ClipboardContentType.Link, "App");
+
+        Assert.Equal(2, _repository.SavedItems.Count);
+        Assert.Equal(ClipboardContentType.Text, _repository.SavedItems[0].Type);
+        Assert.Equal(ClipboardContentType.Link, _repository.SavedItems[1].Type);
+    }
+
+    [Fact]
+    public void AddText_GeneratesUniqueIds()
+    {
+        _service.AddText("First", ClipboardContentType.Text, "App");
+        _service.AddText("Second", ClipboardContentType.Text, "App");
+
+        Assert.Equal(2, _repository.SavedItems.Count);
+        Assert.NotEqual(_repository.SavedItems[0].Id, _repository.SavedItems[1].Id);
+        Assert.NotEqual(Guid.Empty, _repository.SavedItems[0].Id);
+    }
+
+    #endregion
+
+    #region AddFiles Edge Cases
+
+    [Fact]
+    public void AddFiles_FiresOnItemAddedEvent()
+    {
+        ClipboardItem? addedItem = null;
+        _service.OnItemAdded += item => addedItem = item;
+
+        var testFile = Path.Combine(_basePath, "event_test.txt");
+        File.WriteAllText(testFile, "content");
+        _service.AddFiles(new Collection<string> { testFile }, ClipboardContentType.File, "Explorer");
+
+        Assert.NotNull(addedItem);
+    }
+
+    [Fact]
+    public void AddFiles_DuringPasteWindow_IsIgnored()
+    {
+        var id = Guid.NewGuid();
+        var item = new ClipboardItem { Id = id, Content = "file.txt", Type = ClipboardContentType.File };
+        _repository.ItemsById[id] = item;
+        _service.PasteIgnoreWindowMs = 2000;
+
+        _service.NotifyPasteInitiated(id);
+
+        _service.AddFiles(new Collection<string> { "file.txt" }, ClipboardContentType.File, "Explorer");
+
+        Assert.Empty(_repository.SavedItems);
+    }
+
+    [Fact]
+    public void AddFiles_WithFileSize_IncludesFileSizeInMetadata()
+    {
+        var testFile = Path.Combine(_basePath, "sized_file.txt");
+        File.WriteAllText(testFile, "Hello, World!");
+
+        _service.AddFiles(new Collection<string> { testFile }, ClipboardContentType.File, "Explorer");
+
+        Assert.Single(_repository.SavedItems);
+        Assert.Contains("file_size", _repository.SavedItems[0].Metadata!, StringComparison.Ordinal);
+    }
+
+    #endregion
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
@@ -319,7 +716,8 @@ public sealed class ClipboardServiceTests : IDisposable
 
         public int ClearOldItems(int days, bool excludePinned = true) => 0;
 
-        public void Delete(Guid id) => throw new NotImplementedException();
+        public List<Guid> DeletedIds { get; } = new();
+        public void Delete(Guid id) => DeletedIds.Add(id);
 
         public IEnumerable<ClipboardItem> GetAll() => [];
 

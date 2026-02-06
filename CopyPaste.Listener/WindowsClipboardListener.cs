@@ -101,12 +101,31 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
     [LibraryImport("user32.dll")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [LibraryImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool RemoveClipboardFormatListener(IntPtr hwnd);
+
+    [LibraryImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool DestroyWindow(IntPtr hwnd);
+
+    [LibraryImport("user32.dll", EntryPoint = "PostMessageW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
     #endregion
 
     public void Shutdown()
     {
         _cts.Cancel();
         _taskQueue.Writer.Complete();
+
+        // Post WM_QUIT to break the GetMessage loop in Run()
+        if (_hwnd != IntPtr.Zero)
+            PostMessage(_hwnd, 0x0012 /* WM_QUIT */, IntPtr.Zero, IntPtr.Zero);
     }
 
     public void Run()
@@ -477,9 +496,18 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
     public void Dispose()
     {
         if (_disposed) return;
-        _cts.Cancel();
-        _cts.Dispose();
         _disposed = true;
+
+        _cts.Cancel();
+
+        if (_hwnd != IntPtr.Zero)
+        {
+            RemoveClipboardFormatListener(_hwnd);
+            DestroyWindow(_hwnd);
+            _hwnd = IntPtr.Zero;
+        }
+
+        _cts.Dispose();
     }
 
     [StructLayout(LayoutKind.Sequential)]

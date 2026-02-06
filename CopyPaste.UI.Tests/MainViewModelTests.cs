@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CopyPaste.Core;
 using CopyPaste.UI.Themes;
 using Xunit;
@@ -261,6 +262,141 @@ public sealed class MainViewModelBasicTests
         viewModel.ToggleColorFilter(CardColor.None);
         Assert.False(viewModel.IsColorSelected(CardColor.None));
     }
+
+    #region Search and Filter Interaction Tests
+
+    [Fact]
+    public void SearchQuery_WhenSetToWhitespace_HasSearchQueryIsFalse()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.SearchQuery = "   ";
+
+        // Whitespace-only is treated as empty (IsNullOrWhiteSpace)
+        Assert.False(viewModel.HasSearchQuery);
+    }
+
+    [Fact]
+    public void SearchQuery_PropertyChangedIsRaised()
+    {
+        var viewModel = CreateViewModel();
+        var propertyNames = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertyNames.Add(e.PropertyName!);
+
+        viewModel.SearchQuery = "test";
+
+        Assert.Contains("SearchQuery", propertyNames);
+        Assert.Contains("HasSearchQuery", propertyNames);
+    }
+
+    [Fact]
+    public void ActiveFilterMode_PropertyChangedIsRaised()
+    {
+        var viewModel = CreateViewModel();
+        var propertyNames = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertyNames.Add(e.PropertyName!);
+
+        viewModel.ActiveFilterMode = 2;
+
+        Assert.Contains("ActiveFilterMode", propertyNames);
+    }
+
+    [Fact]
+    public void SelectedTabIndex_PropertyChangedIsRaised()
+    {
+        var viewModel = CreateViewModel();
+        var propertyNames = new List<string>();
+        viewModel.PropertyChanged += (_, e) => propertyNames.Add(e.PropertyName!);
+
+        viewModel.SelectedTabIndex = 1;
+
+        Assert.Contains("SelectedTabIndex", propertyNames);
+    }
+
+    [Fact]
+    public void ClearColorFilters_WhenNoFilters_DoesNotThrow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ClearColorFilters();
+
+        Assert.False(viewModel.IsColorSelected(CardColor.Red));
+    }
+
+    [Fact]
+    public void ClearTypeFilters_WhenNoFilters_DoesNotThrow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ClearTypeFilters();
+
+        Assert.False(viewModel.IsTypeSelected(ClipboardContentType.Text));
+    }
+
+    [Theory]
+    [InlineData(CardColor.Red)]
+    [InlineData(CardColor.Green)]
+    [InlineData(CardColor.Purple)]
+    [InlineData(CardColor.Yellow)]
+    [InlineData(CardColor.Blue)]
+    [InlineData(CardColor.Orange)]
+    public void ToggleColorFilter_AllColors_CanBeToggled(CardColor color)
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ToggleColorFilter(color);
+        Assert.True(viewModel.IsColorSelected(color));
+
+        viewModel.ToggleColorFilter(color);
+        Assert.False(viewModel.IsColorSelected(color));
+    }
+
+    [Theory]
+    [InlineData(ClipboardContentType.Text)]
+    [InlineData(ClipboardContentType.Image)]
+    [InlineData(ClipboardContentType.File)]
+    [InlineData(ClipboardContentType.Folder)]
+    [InlineData(ClipboardContentType.Link)]
+    [InlineData(ClipboardContentType.Audio)]
+    [InlineData(ClipboardContentType.Video)]
+    public void ToggleTypeFilter_AllTypes_CanBeToggled(ClipboardContentType type)
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ToggleTypeFilter(type);
+        Assert.True(viewModel.IsTypeSelected(type));
+
+        viewModel.ToggleTypeFilter(type);
+        Assert.False(viewModel.IsTypeSelected(type));
+    }
+
+    [Fact]
+    public void FilterMode_OutOfRange_StillSetsValue()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ActiveFilterMode = 99;
+
+        Assert.Equal(99, viewModel.ActiveFilterMode);
+        Assert.False(viewModel.IsContentFilterMode);
+        Assert.False(viewModel.IsCategoryFilterMode);
+        Assert.False(viewModel.IsTypeFilterMode);
+    }
+
+    #endregion
+
+    #region Cleanup Tests
+
+    [Fact]
+    public void Cleanup_MultipleCalls_DoesNotThrow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.Cleanup();
+        viewModel.Cleanup();
+    }
+
+    #endregion
 
     private sealed class StubRepository : IClipboardRepository
     {

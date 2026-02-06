@@ -34,6 +34,9 @@ public sealed partial class ConfigWindow : Window
 
     public ConfigWindow(ITheme theme, IReadOnlyList<ThemeInfo> availableThemes)
     {
+        ArgumentNullException.ThrowIfNull(theme);
+        ArgumentNullException.ThrowIfNull(availableThemes);
+
         _theme = theme;
         _availableThemes = availableThemes;
         _selectedThemeId = theme.Id;
@@ -43,6 +46,7 @@ public sealed partial class ConfigWindow : Window
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
         appWindow.Resize(new Windows.Graphics.SizeInt32(820, 780));
+        SetWindowIcon(appWindow);
         CenterWindow(appWindow);
 
         StorageConfig.Initialize();
@@ -258,6 +262,13 @@ public sealed partial class ConfigWindow : Window
         var centerY = (displayArea.WorkArea.Height - appWindow.Size.Height) / 2;
 
         appWindow.Move(new Windows.Graphics.PointInt32(centerX, centerY));
+    }
+
+    private static void SetWindowIcon(Microsoft.UI.Windowing.AppWindow appWindow)
+    {
+        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "CopyPasteLogoSimple.ico");
+        if (System.IO.File.Exists(iconPath))
+            appWindow.SetIcon(iconPath);
     }
 
     private void LoadCurrentValues()

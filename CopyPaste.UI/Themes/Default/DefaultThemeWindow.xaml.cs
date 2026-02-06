@@ -171,6 +171,18 @@ internal sealed partial class DefaultThemeWindow : Window
         ViewModel.Cleanup();
         ViewModel.OnEditRequested -= ShowEditDialog;
 
+        // Unsubscribe from framework events
+        Activated -= Window_Activated;
+        _appWindow.Changed -= AppWindow_Changed;
+        ClipboardListView.Loaded -= ClipboardListView_Loaded;
+        ClipboardListView.SelectionChanged -= ClipboardListView_SelectionChanged;
+        SearchBox.KeyDown -= SearchBox_KeyDown;
+
+        // Unsubscribe from ScrollViewer
+        var scrollViewer = FindScrollViewer(ClipboardListView);
+        if (scrollViewer != null)
+            scrollViewer.ViewChanged -= ScrollViewer_ViewChanged;
+
         // Unsubscribe from all items' ImagePathChanged events
         foreach (var item in ViewModel.Items)
         {
