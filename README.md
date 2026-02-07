@@ -371,6 +371,7 @@ When you launch CopyPaste, the native launcher appears immediately while the .NE
 ### Compatibility
 * **OS:** Windows 10 (1809+) or Windows 11.
 * **Architecture:** x64 (64-bit) fully tested and supported.
+* **Architecture:** ARM64 — experimental support available since v1.0.0-beta.3. This build has not been tested on real ARM64 hardware yet. If you're running Windows on ARM, we'd love your feedback — please [open an issue](https://github.com/rgdevment/CopyPaste/issues) with your experience.
 
 ---
 
