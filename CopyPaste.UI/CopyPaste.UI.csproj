@@ -6,8 +6,7 @@
     <RootNamespace>CopyPaste.UI</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
-    <Platforms>x64</Platforms>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Platforms>x64;ARM64</Platforms>
     <UseWinUI>true</UseWinUI>
     <LangVersion>preview</LangVersion>
     <AssemblyName>CopyPaste.App</AssemblyName>

@@ -2,6 +2,7 @@
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
+    <Platform Name="ARM64" />
   </Configurations>
   <Folder Name="/Launcher/">
     <File Path="CopyPaste.Launcher/app.manifest" />
@@ -15,14 +16,17 @@
   </Folder>
   <Project Path="CopyPaste.Core/CopyPaste.Core.csproj">
     <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|ARM64" Project="ARM64" />
   </Project>
   <Project Path="CopyPaste.Core.Tests/CopyPaste.Core.Tests.csproj" />
   <Project Path="CopyPaste.Listener/CopyPaste.Listener.csproj">
     <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|ARM64" Project="ARM64" />
   </Project>
   <Project Path="CopyPaste.Listener.Tests/CopyPaste.Listener.Tests.csproj" />
   <Project Path="CopyPaste.UI/CopyPaste.UI.csproj">
-    <Platform Project="x64" />
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|ARM64" Project="ARM64" />
     <Deploy />
   </Project>
   <Project Path="CopyPaste.UI.Tests/CopyPaste.UI.Tests.csproj" />
