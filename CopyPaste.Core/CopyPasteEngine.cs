@@ -5,10 +5,12 @@ public sealed class CopyPasteEngine : IDisposable
     private readonly SqliteRepository _repository;
     private readonly IClipboardListener _listener;
     private readonly CleanupService _cleanupService;
+    private UpdateChecker? _updateChecker;
     private bool _isDisposed;
 
     public IClipboardService Service { get; }
     public MyMConfig Config { get; }
+    public UpdateChecker? UpdateChecker => _updateChecker;
 
     public CopyPasteEngine(Func<IClipboardService, IClipboardListener> listenerFactory)
     {
@@ -35,6 +37,9 @@ public sealed class CopyPasteEngine : IDisposable
     {
         Task.Run(() => _listener.Run());
         AppLogger.Info("Clipboard listener started");
+
+        _updateChecker = new UpdateChecker();
+        AppLogger.Info("Update checker started");
     }
 
     public void Dispose()
@@ -43,6 +48,7 @@ public sealed class CopyPasteEngine : IDisposable
 
         try
         {
+            _updateChecker?.Dispose();
             _listener.Dispose();
             _cleanupService.Dispose();
             _repository.Dispose();
