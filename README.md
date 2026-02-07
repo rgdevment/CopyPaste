@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
   <img src="CopyPaste.UI/Assets/CopyPasteLogo.ico" width="140" height="140" alt="CopyPaste App Logo"/>
 
   <h1>CopyPaste</h1>
@@ -35,38 +35,39 @@
 
 ### A tool born from a personal need for harmony.
 
-**CopyPaste** is not just a clipboard manager focused on obsessive performance. I don't believe power should be synonymous with something clunky or purely functional; on the contrary, this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
+**CopyPaste** is not just a clipboard manager focused on performance. I don't believe power should be synonymous with something clunky or purely functional — this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
 
 My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of Windows, but that we can now enjoy together.
 
 ---
 
 ### ✨ Why I Built This
-Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't, without friction or unnecessary visual noise.
 
-* **Aesthetics and Fluidity:** I was inspired by the harmony of the cleanest workspaces to bring that same sense of calm to Windows 10 and 11. I use **WinUI 3** to ensure that every transition and every pixel feels like an integral part of the system, blending beauty and speed.
-* **A Commitment to Respect:** I firmly believe that your data is yours. That’s why CopyPaste is **local-first**: nothing leaves your computer—no accounts, no telemetry, and no tracking of any kind. It is a tool designed with privacy and absolute respect for your digital space in mind.
-* **Open Source and Shared:** This project is **GPL v3** because I want this utility to belong to the community. It’s my way of sharing a tool that I use every day to maintain an organized and pleasant workflow.
+Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't — without friction or unnecessary visual noise.
+
+* **Aesthetics and Fluidity:** I was inspired by the cleanest workspaces to bring that same sense of calm to Windows. I use **WinUI 3** to ensure that every transition and every pixel feels like an integral part of the system, blending beauty and speed.
+* **A Commitment to Respect:** Your data is yours. CopyPaste is **local-first**: nothing leaves your computer — no accounts, no telemetry, no tracking of any kind. A tool designed with privacy and absolute respect for your digital space.
+* **Open Source and Shared:** This project is **GPL v3** because I want it to belong to the community. It's my way of sharing a tool I use every day to keep my workflow organized and pleasant.
 
 ---
 
 ### 🤝 Built for (and by) us
+
 I don't see those who use CopyPaste as "end users," but as **collaborators** in this search for a better experience. If you value simplicity, speed, and above all, an aesthetic that respects your focus, this tool is for you. Your reports and suggestions are what help CopyPaste continue to evolve toward that perfect tool we always wanted to have.
 
-> **In short:** A clipboard manager that prioritizes visual harmony and native design without sacrificing performance. Hassle-free, private, and created with the care your daily life deserves.
+> 🧪 **Currently in Beta** — I use CopyPaste every day on Windows 11, but every setup is different. If something feels off, [let me know](#-found-a-bug-have-feedback). Your feedback is what shapes this project.
 
 ---
 
-## 📌 Table of Contents
+## � Table of Contents
 
+- [See It in Action](#-see-it-in-action)
 - [Why I Built This](#-why-i-built-this)
-- [What Is This?](#-what-is-this)
 - [What It Is / What It Isn't](#-what-it-is---what-it-isnt)
 - [Who Is This For?](#-who-is-this-for)
 - [Privacy & Security](#-privacy--security)
 - [Key Features](#-key-features)
 - [Keyboard Shortcuts](#️-keyboard-shortcuts)
-- [Screenshots](#-screenshots)
 - [Getting Started](#-getting-started)
 - [FAQ](#-faq)
 - [Found a Bug? Have Feedback?](#-found-a-bug-have-feedback)
@@ -75,12 +76,31 @@ I don't see those who use CopyPaste as "end users," but as **collaborators** in 
 - [Tech Stack (For Developers)](#-tech-stack-for-developers)
 - [License & Spirit](#-license--spirit)
 
+## 📸 See It in Action
+
+<div align="center">
+    <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo — Fast search, clean cards, native Windows design"/>
+</div>
+<div align="center"><em>Fast search, clean cards, and a native feel. This is CopyPaste in action.</em></div>
+
+<br/>
+
+<div align="center">
+    <img src="CopyPaste.UI/Assets/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode on Windows 11"/>
+    &nbsp;&nbsp;
+    <img src="CopyPaste.UI/Assets/ConfigCopyPaste.png" alt="CopyPaste Settings — privacy-friendly configuration"/>
+</div>
+<div align="center"><em>Compact mode for quick access (left) and privacy-friendly settings (right).</em></div>
+
+---
+
 ## 💡 Why I Built This
 
 I didn't build CopyPaste to sell you something. I built it because **I needed it**—and I believe you might need it too.
 
 ### The Problem
-There are clipboard managers out there, sure. But many feel clunky, outdated, or over-complicated. In 2026, software on Windows shouldn't feel like it was designed for Windows XP, 2000, or Windows 7. It should feel **native, responsive, and beautiful**.
+
+There are clipboard managers out there, sure. But many feel clunky, outdated, or over-complicated. In 2026, software on Windows shouldn't feel like it was designed for Windows XP or Windows 7. It should feel **native, responsive, and beautiful**.
 
 I was tired of:
 - Tools that hog system resources
@@ -89,6 +109,7 @@ I was tired of:
 - Closed ecosystems where you're locked into someone else's vision
 
 ### What I'm Building (With Your Help)
+
 **This started as a passion project**, not a startup chasing metrics. It's a personal project that I'm sharing with you:
 - 🔒 **Your data stays yours** — Everything is local. I don't collect, track, or send anything anywhere. There's no analytics, no telemetry, nothing. Because I don't need to know what you're copying.
 - 💻 **100% Open Source** — Every line of code is here for you to read, modify, or learn from
@@ -96,21 +117,11 @@ I was tired of:
 - 🤝 **Built together** — Your feedback shapes what this becomes. You're not a user, you're part of this
 
 ### What I'm Trying to Do
+
 I wanted to bring the **polish and fluidity** you find in great tools to Windows. Things like:
 - **Windows 11 design language** — so it feels native, not foreign
 - **Performance** — every millisecond counts when you use something hundreds of times a day
 - **Reliability** — something you can count on without thinking about it
-
----
-
-## 🚀 What Is This?
-
-**CopyPaste** is a **Clipboard Manager** I built for Windows 10 and 11.
-
-It's designed to feel like it belongs in Windows—not like some third-party tool that sticks out. I wanted something fast, clean, and native. Something that just *works* without getting in your way.
-
-> 🧪 **Beta Release:** I've been using this daily on Windows 11, but every setup is different. If something feels off or breaks, [please tell me](#-found-a-bug-have-feedback). Your feedback literally shapes what gets built next.
-
 
 ---
 
@@ -186,17 +197,6 @@ If you care about privacy and control, this is made for you.
 * 📌 **Pin Indicators:** When searching or filtering, pinned items display a subtle pin icon in the footer, making them easy to identify among results.
 * ⚙️ **Configurable:** Hotkeys, appearance, panel width (400-600px), retention days, filter reset behavior, and more.
 * 🎨 **Multiple Themes:** Switch between built-in themes (Default and Compact) from settings to match your workflow.
-
----
-## 💪 What Makes This Different
-
-This isn't a product pitch. It's a tool I built for myself that I'm sharing with you:
-
-- **No Bloat.** Just what you need, nothing extra.
-- **No Tracking.** I don't want your data. I don't collect it, period.
-- **No Paywalls.** Everything is free. No "premium" tier hiding basic features.
-- **No Corporate BS.** This is a personal project, open source from day one.
-- **Your Feedback Matters.** You tell me what's broken or missing, and I'll work on it.
 
 ---
 ## ⌨️ Keyboard Shortcuts
@@ -296,31 +296,6 @@ In the **Settings** window, you can customize filter behavior:
 - **Clear type filter on open:** Resets type selections when opening (only applies if not returning to Content mode)
 
 **Note:** If "Return to Content mode on open" is enabled, the other clear options are automatically disabled since returning to Content mode achieves the same result.
-
----
-
-## 📸 Screenshots
-<div align="center">
-    <img src="CopyPaste.UI/Assets/CopyPasteCompactMode.png" alt="CopyPaste Compact Mode"/>
-</div>
-<div align="center"><em>CopyPaste Compact Mode Windows 11 look.</em></div>
-
-<div align="center">
-    <img src="CopyPaste.UI/Assets/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode"/>
-</div>
-<div align="center"><em>CopyPaste Compact Cards Mode Windows 11 look.</em></div>
-<hr>
-
-<div align="center">
-    <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo"/>
-</div>
-<div align="center"><em>CopyPaste Full Mode, Fast Search, Clean Cards.</em></div>
-<hr>
-
-<div align="center">
-    <img src="CopyPaste.UI/Assets/ConfigCopyPaste.png" alt="CopyPaste Demo"/>
-</div>
-<div align="center"><em>Privacy-friendly settings, hotkeys, and filter options.</em></div>
 
 ---
 
