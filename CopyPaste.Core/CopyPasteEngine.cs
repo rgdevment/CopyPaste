@@ -38,8 +38,15 @@ public sealed class CopyPasteEngine : IDisposable
         Task.Run(() => _listener.Run());
         AppLogger.Info("Clipboard listener started");
 
-        _updateChecker = new UpdateChecker();
-        AppLogger.Info("Update checker started");
+        if (!PackageHelper.IsPackaged)
+        {
+            _updateChecker = new UpdateChecker();
+            AppLogger.Info("Update checker started");
+        }
+        else
+        {
+            AppLogger.Info("Update checker skipped (packaged mode - updates managed by Store)");
+        }
     }
 
     public void Dispose()
