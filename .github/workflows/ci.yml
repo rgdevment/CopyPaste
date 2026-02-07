@@ -32,13 +32,13 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore -p:Platform=x64
 
       - name: Lint (Check format)
         run: dotnet format --verify-no-changes --no-restore
 
       - name: Build Solution (Release)
-        run: dotnet build CopyPaste.slnx -c Release --no-restore
+        run: dotnet build CopyPaste.slnx -c Release -p:Platform=x64 --no-restore
 
       - name: Run Tests
-        run: dotnet test CopyPaste.slnx -c Release --no-build --verbosity normal --logger "console;verbosity=detailed"
+        run: dotnet test CopyPaste.slnx -c Release -p:Platform=x64 --no-build --verbosity normal --logger "console;verbosity=detailed"
