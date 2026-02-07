@@ -115,7 +115,7 @@ public sealed partial class App : Application, IDisposable
     {
         _engine = new CopyPasteEngine(svc => new WindowsClipboardListener(svc));
         _engine.Start();
-        RegisterForStartup();
+        _ = StartupHelper.ApplyStartupSettingAsync(_engine.Config.RunOnStartup);
         InitializeUpdateChecker();
     }
 
@@ -303,36 +303,4 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Startup registration is non-critical - failures should not prevent app from running")]
-    private void RegisterForStartup()
-    {
-        if (!_engine!.Config.RunOnStartup) return;
-
-        try
-        {
-            const string keyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-            const string appName = "CopyPaste";
-
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath, true);
-            if (key == null) return;
-
-            if (key.GetValue(appName) == null)
-            {
-                var appExePath = Environment.ProcessPath;
-                if (!string.IsNullOrEmpty(appExePath))
-                {
-                    var appDir = Path.GetDirectoryName(appExePath)!;
-                    var launcherPath = Path.Combine(appDir, "CopyPaste.exe");
-                    var startupPath = File.Exists(launcherPath) ? launcherPath : appExePath;
-                    key.SetValue(appName, $"\"{startupPath}\"");
-                    AppLogger.Info($"Registered for Windows startup: {startupPath}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Exception(ex, "Failed to register for startup");
-        }
-    }
 }

@@ -4,19 +4,11 @@
     <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <RootNamespace>CopyPaste.UI</RootNamespace>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
     <UseWinUI>true</UseWinUI>
     <LangVersion>preview</LangVersion>
     <AssemblyName>CopyPaste.App</AssemblyName>
-
-    <!-- WinUI 3 unpackaged app configuration -->
-    <WindowsPackageType>None</WindowsPackageType>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <WinUISDKReferences>true</WinUISDKReferences>
-    <AppxPackage>false</AppxPackage>
-    <EnableMsixTooling>false</EnableMsixTooling>
 
     <!--
       Publishing optimizations for WinUI 3:
@@ -59,6 +51,33 @@
 </PropertyGroup>
 
 <!--
+  Standalone (unpackaged) build configuration - DEFAULT.
+  Used for GitHub Releases distribution with Inno Setup installer.
+  Build with: dotnet build (no extra parameters needed)
+-->
+<PropertyGroup Condition="'$(PackageMode)' != 'Store'">
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WinUISDKReferences>true</WinUISDKReferences>
+    <AppxPackage>false</AppxPackage>
+    <EnableMsixTooling>false</EnableMsixTooling>
+</PropertyGroup>
+
+<!--
+  Microsoft Store (MSIX) build configuration.
+  Used for Store distribution. Activated with: dotnet build -p:PackageMode=Store
+  Identity values (Name, Publisher) are set via CI/CD secrets in release pipeline.
+-->
+<PropertyGroup Condition="'$(PackageMode)' == 'Store'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <AppxPackage>true</AppxPackage>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+</PropertyGroup>
+
+<!--
   Trimming configuration for third-party assemblies that don't support trimming.
   This prevents false-positive warnings while maintaining functionality.
 -->
@@ -70,7 +89,12 @@
 
 
     <ItemGroup>
-        <Manifest Include="$(ApplicationManifest)" />
+        <Manifest Include="$(ApplicationManifest)" Condition="'$(PackageMode)' != 'Store'" />
+    </ItemGroup>
+
+    <!-- MSIX manifest included only for Store builds -->
+    <ItemGroup Condition="'$(PackageMode)' == 'Store'">
+        <AppxManifest Include="Package.appxmanifest" />
     </ItemGroup>
 
     <ItemGroup>
