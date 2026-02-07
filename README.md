@@ -41,7 +41,7 @@ My goal was to create something that felt truly **native**: a piece of software 
 
 ---
 
-### ✨ Why I Built This
+### ✨ What Drives This Project
 
 Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't — without friction or unnecessary visual noise.
 
