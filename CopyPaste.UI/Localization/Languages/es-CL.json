@@ -205,6 +205,10 @@
     "tooltip": "CopyPaste",
     "exit": "Salir"
   },
+  "update": {
+    "title": "Actualización Disponible",
+    "message": "Una nueva versión de CopyPaste está disponible: v{0}\n\nVersión actual: v{1}\n\n¿Quieres abrir la página de descarga?\n\nHaz clic en 'No' para ignorar esta versión."
+  },
   "help": {
     "window": {
       "title": "Atajos de teclado - CopyPaste"
