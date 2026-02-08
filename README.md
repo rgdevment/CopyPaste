@@ -25,8 +25,12 @@
   </p>
 
   <p align="center">
+    <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
+      <img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="50"/>
+    </a>
+    &nbsp;&nbsp;
     <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
-      <img src="https://img.shields.io/badge/📥_Download_CopyPaste_App-Click_Here-blueviolet?style=for-the-badge&logo=windows" alt="Download Now" height="40"/>
+      <img src="https://img.shields.io/badge/📥_Standalone_Installer-GitHub_Releases-blueviolet?style=for-the-badge&logo=github" alt="Download from GitHub" height="40"/>
     </a>
   </p>
 </div>
@@ -191,6 +195,7 @@ If you care about privacy and control, this is made for you.
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
 * 📖 **Built-in Help:** Quick access to keyboard shortcuts reference window from the sidebar.
+* 🔄 **Automatic Updates:** Get notified when a new version is available — update with one click (standalone installer).
 * 🔍 **Full-Text Search:** Instantly find any item with powerful FTS5 search across content and labels.
 * 🎛️ **Advanced Filters:** Three filter modes—Content (text search), Category (color selection), and Type (item type selection)—with intuitive dropdown multi-selection.
 * 🔄 **Smart Filter Behavior:** Filters only apply to their active mode—switching modes automatically uses the relevant filter without mixing criteria.
@@ -301,17 +306,23 @@ In the **Settings** window, you can customize filter behavior:
 
 ## 🚀 Getting Started
 
-### Quick Install (3 Steps)
+CopyPaste is available through two distribution channels:
+
+### Option A: Microsoft Store (Recommended)
+1. Get **CopyPaste** from the [**Microsoft Store**](https://apps.microsoft.com/detail/9NBJRZF3K856).
+2. Click **Install** — no security warnings, automatic updates via the Store.
+3. Open CopyPaste with `Win+Alt+V`.
+
+> The Store version is framework-dependent (smaller download) and updates are handled automatically by Windows.
+
+### Option B: Standalone Installer (GitHub Releases)
 1. Go to the [**Latest Release**](https://github.com/rgdevment/CopyPaste/releases/latest).
-2. Download the **Installer (.exe)**.
+2. Download the **Installer (.exe)** for your architecture (x64 or ARM64).
 3. Run it and open CopyPaste with `Win+Alt+V`.
 
-### Installation
-1.  Navigate to the [**Releases Page**](https://github.com/rgdevment/CopyPaste/releases).
-2.  Download the **Installer (`.exe`)** — it installs to your AppData folder and creates Start Menu shortcuts automatically.
-3.  Run the installer and follow the prompts.
+> The standalone version is fully self-contained — no runtime dependencies needed. Includes a native splash screen launcher and in-app update notifications.
 
-### ⚠️ Security Warnings (Self-Signed Certificate)
+### ⚠️ Security Warnings (Standalone Only — Self-Signed Certificate)
 
 Since CopyPaste is an **independent open-source project**, we use a self-signed certificate. This means Windows and your browser may show security warnings. **This is normal and expected.**
 
@@ -362,16 +373,19 @@ Get-FileHash .\CopyPaste-Installer.exe -Algorithm SHA256
 ```
 
 ### How It Works
-CopyPaste uses a **dual-process architecture** for the best user experience:
-- **`CopyPaste.exe`** — A lightweight native launcher that shows a splash screen instantly.
+
+**Standalone (GitHub Releases):** CopyPaste uses a dual-process architecture:
+- **`CopyPaste.exe`** — A lightweight native C++ launcher that shows a splash screen instantly.
 - **`CopyPaste.App.exe`** — The main .NET application that runs in the background.
 
-When you launch CopyPaste, the native launcher appears immediately while the .NET app initializes. Once ready, the splash closes automatically and CopyPaste is ready to use. This only takes a few seconds on first run; subsequent launches are nearly instant.
+When you launch CopyPaste, the native launcher appears immediately while the .NET app initializes. Once ready, the splash closes automatically. This only takes a few seconds on first run; subsequent launches are nearly instant.
+
+**Microsoft Store (MSIX):** The Store version launches `CopyPaste.App.exe` directly — no splash screen is needed because the .NET runtime and Windows App SDK are pre-installed as framework dependencies, resulting in fast startup times.
 
 ### Compatibility
 * **OS:** Windows 10 (1809+) or Windows 11.
-* **Architecture:** x64 (64-bit) fully tested and supported.
-* **Architecture:** ARM64 — experimental support available since v1.0.0-beta.3. This build has not been tested on real ARM64 hardware yet. If you're running Windows on ARM, we'd love your feedback — please [open an issue](https://github.com/rgdevment/CopyPaste/issues) with your experience.
+* **Architecture:** x64 and ARM64 supported on both distribution channels.
+* **ARM64 Note:** Experimental support available since v1.0.0-beta.3. If you're running Windows on ARM, we'd love your feedback — please [open an issue](https://github.com/rgdevment/CopyPaste/issues) with your experience.
 
 ---
 
@@ -393,7 +407,10 @@ No. It works fully offline.
 No. There’s intentionally no cloud sync.
 
 **Where are my files stored?**
-Under `%LOCALAPPDATA%\CopyPaste\` (database, images, thumbnails, config).
+Under `%LOCALAPPDATA%\CopyPaste\` (database, images, thumbnails, config, logs). Same location for both Store and standalone versions.
+
+**What's the difference between the Store and standalone versions?**
+Same features and same codebase. The Store version is smaller (framework-dependent), gets automatic updates via Windows, and has no security warnings. The standalone version is fully self-contained, includes a native splash screen, and notifies you of updates in-app.
 
 **Is it compatible with Windows 10 and 11?**
 Yes, Windows 10 (1809+) and Windows 11 are supported.
@@ -538,7 +555,7 @@ If you're curious about what's under the hood:
 | :--- | :--- |
 | **C# / .NET 10** | Modern C# features, good performance. |
 | **WinUI 3** | Native Windows UI—looks and feels like it belongs. |
-| **ReadyToRun** | Pre-compiled to start faster. |
+| **ReadyToRun** | Pre-compiled to start faster (standalone builds). |
 | **Native C++ Launcher** | Shows something immediately while .NET loads. |
 | **Win32 Interop** | Low-level clipboard hooks to catch everything. |
 | **SQLite + FTS5** | Local storage with full-text search. |
