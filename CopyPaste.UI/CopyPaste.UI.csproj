@@ -11,40 +11,12 @@
     <AssemblyName>CopyPaste.App</AssemblyName>
 
     <!--
-      Publishing optimizations for WinUI 3:
-      - ReadyToRun: Precompiles IL to native code (faster cold start)
-      - Trimming partial: Removes unused code but preserves reflection (required for XAML)
-      Note: Native AOT is NOT compatible with WinUI 3 due to XAML reflection requirements
-    -->
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
-
-    <!-- Enable built-in COM interop for trimmed builds (needed for WindowsThumbnailExtractor) -->
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-
-    <!--
-      Cold-start optimizations:
+      Cold-start optimizations (apply to all build modes):
       - TieredCompilation: Start with quick JIT, optimize hot paths later
       - QuickJitForLoops: Don't wait to optimize loops on startup
-      - ReadyToRunComposite: Better R2R optimization for self-contained apps
     -->
     <TieredCompilation>true</TieredCompilation>
     <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
-    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
-
-    <!-- Reduce assembly loading time -->
-    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
-
-    <!--
-      Suppress IL2104 trimming warnings from third-party assemblies:
-      - Microsoft.Windows.SDK.NET: Windows SDK (not trim-compatible)
-      - WinRT.Runtime: WinRT interop layer
-      - System.Private.Windows.Core: System.Drawing internals
-      - TagLibSharp: Media metadata library (netstandard2.0, not trim-aware)
-      These assemblies use reflection patterns that trigger warnings but work correctly with partial trimming.
-    -->
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
 
     <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -62,6 +34,21 @@
     <WinUISDKReferences>true</WinUISDKReferences>
     <AppxPackage>false</AppxPackage>
     <EnableMsixTooling>false</EnableMsixTooling>
+
+    <!--
+      Publishing optimizations for standalone (self-contained) builds:
+      - ReadyToRun: Precompiles IL to native code (faster cold start)
+      - ReadyToRunComposite: Better R2R optimization for self-contained apps
+      - Trimming partial: Removes unused code but preserves reflection (required for XAML)
+      Note: These require self-contained and are NOT compatible with MSIX/Store builds.
+    -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
 </PropertyGroup>
 
 <!--
@@ -79,9 +66,9 @@
 
 <!--
   Trimming configuration for third-party assemblies that don't support trimming.
-  This prevents false-positive warnings while maintaining functionality.
+  Only applies to standalone builds where PublishTrimmed=true.
 -->
-<ItemGroup>
+<ItemGroup Condition="'$(PackageMode)' != 'Store'">
     <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
     <TrimmerRootAssembly Include="WinRT.Runtime" />
 </ItemGroup>
