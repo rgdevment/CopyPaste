@@ -9,7 +9,7 @@
   <Identity
     Name="rgdevment.CopyPaste-ClipboardManager"
     Publisher="CN=AC154EDC-DBFC-482B-AF3B-A1A6FF12DA84"
-    Version="1.0.0.4"
+    Version="1.0.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
