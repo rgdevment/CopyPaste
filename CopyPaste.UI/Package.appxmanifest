@@ -29,6 +29,11 @@
   <Resources>
     <Resource Language="en-US" />
     <Resource Language="es-CL" />
+    <Resource uap:Scale="100" />
+    <Resource uap:Scale="125" />
+    <Resource uap:Scale="150" />
+    <Resource uap:Scale="200" />
+    <Resource uap:Scale="400" />
   </Resources>
 
   <Applications>
