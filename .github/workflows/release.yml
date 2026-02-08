@@ -366,3 +366,221 @@ jobs:
             CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Microsoft Store MSIX Build ──────────────────────────────────────────
+  # Builds MSIX packages for Store distribution (x64 + ARM64).
+  # Runs after standalone release succeeds (ensures CI is green).
+  # MSIX packages are attached to the GitHub Release for manual upload
+  # and passed to store-publish for automated submission.
+  store:
+    runs-on: windows-latest
+    needs: release
+    timeout-minutes: 30
+    if: startsWith(github.ref, 'refs/tags/')
+    strategy:
+      matrix:
+        include:
+          - platform: x64
+            msix_arch: x64
+          - platform: ARM64
+            msix_arch: arm64
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: get_version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match 'refs/tags/v(.+)') {
+            $version = $matches[1]
+          } else {
+            $version = "1.0.0"
+          }
+
+          if ($version -match '^(\d+\.\d+\.\d+)(?:-(?:alpha|beta|rc)\.(\d+))?$') {
+            $baseVersion = $matches[1]
+            $preRelease = if ($matches[2]) { $matches[2] } else { "0" }
+            $numericVersion = "$baseVersion.$preRelease"
+          } else {
+            $numericVersion = "$version.0"
+          }
+
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "VERSION_NUMERIC=$numericVersion" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version (numeric: $numericVersion)"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "preview"
+
+      - name: Update Package.appxmanifest
+        shell: pwsh
+        run: |
+          $path = "CopyPaste.UI/Package.appxmanifest"
+          [xml]$xml = Get-Content $path
+          $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+          $ns.AddNamespace("pkg", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+
+          $identity = $xml.SelectSingleNode("//pkg:Identity", $ns)
+          $identity.SetAttribute("Version", "${{ steps.get_version.outputs.VERSION_NUMERIC }}")
+          $identity.SetAttribute("ProcessorArchitecture", "${{ matrix.msix_arch }}")
+          $xml.Save((Resolve-Path $path).Path)
+
+          Write-Host "Updated manifest: Version=${{ steps.get_version.outputs.VERSION_NUMERIC }}, Arch=${{ matrix.msix_arch }}"
+
+      - name: Restore dependencies
+        run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -p:PackageMode=Store -p:Platform=${{ matrix.platform }}
+
+      - name: Build MSIX package
+        shell: pwsh
+        run: |
+          dotnet build CopyPaste.UI/CopyPaste.UI.csproj `
+            -c Release `
+            -p:PackageMode=Store `
+            -p:Platform=${{ matrix.platform }} `
+            -p:AppxBundle=Never `
+            -p:UapAppxPackageBuildMode=StoreUpload `
+            -p:AppxPackageSigningEnabled=false `
+            --no-restore
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "MSIX build failed"
+            exit 1
+          }
+          Write-Host "MSIX build completed successfully"
+
+      - name: Locate MSIX output
+        id: msix
+        shell: pwsh
+        run: |
+          # Look for .msixupload first (preferred for Store), then .msix
+          $file = Get-ChildItem -Path "CopyPaste.UI" -Recurse -Include "*.msixupload" |
+                  Select-Object -First 1
+
+          if (-not $file) {
+            $file = Get-ChildItem -Path "CopyPaste.UI" -Recurse -Include "*.msix" |
+                    Select-Object -First 1
+          }
+
+          if (-not $file) {
+            Write-Error "No MSIX output found"
+            Write-Host "Searching build output for package files..."
+            Get-ChildItem -Path "CopyPaste.UI/bin" -Recurse -File |
+              Where-Object { $_.Extension -in ".msix", ".msixupload", ".appx" } |
+              ForEach-Object { Write-Host $_.FullName }
+            exit 1
+          }
+
+          $sizeMB = [math]::Round($file.Length / 1MB, 2)
+          Write-Host "Found: $($file.FullName) ($sizeMB MB)"
+
+          # Create a clean name for the release asset
+          $ext = $file.Extension
+          $cleanName = "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.msix_arch }}$ext"
+          $cleanPath = Join-Path $file.Directory.FullName $cleanName
+          Copy-Item $file.FullName $cleanPath
+
+          echo "PATH=$cleanPath" >> $env:GITHUB_OUTPUT
+          echo "NAME=$cleanName" >> $env:GITHUB_OUTPUT
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix-${{ matrix.msix_arch }}
+          path: ${{ steps.msix.outputs.PATH }}
+          retention-days: 30
+
+      - name: Attach MSIX to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.msix.outputs.PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Microsoft Store Submission ──────────────────────────────────────────
+  # DISABLED: First Store submission must be done manually via Partner Center.
+  # To re-enable: change the 'if' condition below to:
+  #   if: startsWith(github.ref, 'refs/tags/')
+  store-publish:
+    runs-on: windows-latest
+    needs: store
+    timeout-minutes: 15
+    if: false # Disabled until first manual Store submission is approved
+
+    env:
+      STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
+      STORE_CLIENT_ID: ${{ secrets.STORE_CLIENT_ID }}
+      STORE_CLIENT_SECRET: ${{ secrets.STORE_CLIENT_SECRET }}
+
+    steps:
+      - name: Check Store credentials
+        id: check_creds
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:STORE_TENANT_ID) -or
+              [string]::IsNullOrEmpty($env:STORE_CLIENT_ID) -or
+              [string]::IsNullOrEmpty($env:STORE_CLIENT_SECRET)) {
+
+            Write-Host "Store credentials not configured - skipping automatic submission."
+            Write-Host "MSIX packages are available in the GitHub Release for manual upload."
+            Write-Host ""
+            Write-Host "To enable automatic Store submission, add these GitHub secrets:"
+            Write-Host "  STORE_TENANT_ID     - Azure AD tenant ID"
+            Write-Host "  STORE_CLIENT_ID     - Azure AD application (client) ID"
+            Write-Host "  STORE_CLIENT_SECRET - Azure AD application client secret"
+            Write-Host ""
+            Write-Host "And this GitHub repository variable:"
+            Write-Host "  STORE_APP_ID        - Partner Center application ID"
+            echo "HAS_CREDS=false" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "Store credentials found - proceeding with submission"
+            echo "HAS_CREDS=true" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Download MSIX packages
+        if: steps.check_creds.outputs.HAS_CREDS == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: msix-*
+          path: packages
+          merge-multiple: true
+
+      - name: Setup .NET
+        if: steps.check_creds.outputs.HAS_CREDS == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "preview"
+
+      - name: Install Microsoft Store CLI
+        if: steps.check_creds.outputs.HAS_CREDS == 'true'
+        run: dotnet tool install -g MSStore.CLI
+
+      - name: Configure Store CLI
+        if: steps.check_creds.outputs.HAS_CREDS == 'true'
+        shell: pwsh
+        run: |
+          msstore reconfigure `
+            --tenantId $env:STORE_TENANT_ID `
+            --clientId $env:STORE_CLIENT_ID `
+            --clientSecret $env:STORE_CLIENT_SECRET
+
+      - name: Submit to Microsoft Store
+        if: steps.check_creds.outputs.HAS_CREDS == 'true'
+        shell: pwsh
+        run: |
+          $packages = Get-ChildItem -Path packages -Include "*.msixupload","*.msix" -Recurse
+          Write-Host "Submitting $($packages.Count) package(s) to Microsoft Store..."
+          $packages | ForEach-Object {
+            Write-Host "  - $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)"
+          }
+
+          $packagePaths = $packages | Select-Object -ExpandProperty FullName
+          msstore publish --inputDirectory packages --id ${{ vars.STORE_APP_ID }}

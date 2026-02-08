@@ -64,9 +64,10 @@ public sealed class CleanupService : IDisposable
             if (File.Exists(CleanupFilePath))
             {
                 string content = File.ReadAllText(CleanupFilePath);
-                if (DateTime.TryParse(content, out var date))
+                if (DateTime.TryParse(content, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var date))
                 {
-                    return date;
+                    return date.ToUniversalTime();
                 }
             }
         }

@@ -38,6 +38,7 @@ public sealed partial class App : Application, IDisposable
 
     private IntPtr _hWnd;
     private CopyPasteEngine? _engine;
+    private UpdateChecker? _updateChecker;
 
     private ITheme? _theme;
     private ThemeRegistry? _themeRegistry;
@@ -114,7 +115,8 @@ public sealed partial class App : Application, IDisposable
     {
         _engine = new CopyPasteEngine(svc => new WindowsClipboardListener(svc));
         _engine.Start();
-        RegisterForStartup();
+        _ = StartupHelper.ApplyStartupSettingAsync(_engine.Config.RunOnStartup);
+        InitializeUpdateChecker();
     }
 
     private void OnHotkeyPressed() => _theme?.Toggle();
@@ -145,6 +147,7 @@ public sealed partial class App : Application, IDisposable
         Win32WindowHelper.UnregisterHotKey(_hWnd, _hotkeyId);
         HotkeyHelper.UnregisterMessageHandler(_hWnd);
         _theme?.Dispose();
+        _updateChecker?.Dispose();
         _engine?.Dispose();
 
         L.Dispose();
@@ -163,6 +166,7 @@ public sealed partial class App : Application, IDisposable
         if (disposing)
         {
             _theme?.Dispose();
+            _updateChecker?.Dispose();
             _engine?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
             _singleInstanceMutex?.Dispose();
@@ -244,35 +248,59 @@ public sealed partial class App : Application, IDisposable
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Startup registration is non-critical - failures should not prevent app from running")]
-    private void RegisterForStartup()
+        Justification = "Update check is non-critical - failures should not prevent app from running")]
+    private void InitializeUpdateChecker()
     {
-        if (!_engine!.Config.RunOnStartup) return;
-
         try
         {
-            const string keyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-            const string appName = "CopyPaste";
-
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath, true);
-            if (key == null) return;
-
-            if (key.GetValue(appName) == null)
+            _updateChecker = _engine!.UpdateChecker;
+            if (_updateChecker != null)
             {
-                var appExePath = Environment.ProcessPath;
-                if (!string.IsNullOrEmpty(appExePath))
-                {
-                    var appDir = Path.GetDirectoryName(appExePath)!;
-                    var launcherPath = Path.Combine(appDir, "CopyPaste.exe");
-                    var startupPath = File.Exists(launcherPath) ? launcherPath : appExePath;
-                    key.SetValue(appName, $"\"{startupPath}\"");
-                    AppLogger.Info($"Registered for Windows startup: {startupPath}");
-                }
+                _updateChecker.OnUpdateAvailable += OnUpdateAvailable;
+                AppLogger.Info("Update checker initialized");
             }
         }
         catch (Exception ex)
         {
-            AppLogger.Exception(ex, "Failed to register for startup");
+            AppLogger.Exception(ex, "Failed to initialize update checker");
         }
     }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Update notification is non-critical - failures should not prevent app from running")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1863:Use CompositeFormat",
+        Justification = "Format string is dynamic (localized) and used at most once per session")]
+    private void OnUpdateAvailable(object? sender, UpdateAvailableEventArgs e)
+    {
+        try
+        {
+            var title = L.Get("update.title", "Update Available");
+            var message = string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                L.Get("update.message", "A new version of CopyPaste is available: v{0}\n\nCurrent version: v{1}\n\nWould you like to open the download page?\n\nClick 'No' to dismiss this version."),
+                e.NewVersion,
+                UpdateChecker.GetCurrentVersion());
+
+            const uint MB_YESNO = 0x00000004;
+            const uint MB_ICONINFORMATION = 0x00000040;
+            const uint MB_TOPMOST = 0x00040000;
+            const int IDYES = 6;
+
+            var result = MessageBox(IntPtr.Zero, message, title, MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST);
+
+            if (result == IDYES)
+            {
+                Process.Start(new ProcessStartInfo(e.DownloadUrl) { UseShellExecute = true });
+            }
+            else
+            {
+                UpdateChecker.DismissVersion(e.NewVersion);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Failed to show update notification");
+        }
+    }
+
 }
