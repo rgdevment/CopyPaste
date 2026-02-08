@@ -52,8 +52,8 @@ public sealed class StartupHelperTests : IDisposable
 
         Assert.NotNull(value);
         // Value should be a quoted path
-        Assert.StartsWith("\"" , value, StringComparison.Ordinal);
-        Assert.EndsWith("\"" , value, StringComparison.Ordinal);
+        Assert.StartsWith("\"", value, StringComparison.Ordinal);
+        Assert.EndsWith("\"", value, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class StartupHelperTests : IDisposable
     {
         // In unpackaged mode (tests), this should use the registry path
         var exception = await Record.ExceptionAsync(
-            () => StartupHelper.ApplyStartupSettingAsync(true));
+            () => StartupHelper.ApplyStartupSettingAsync(true)).ConfigureAwait(true);
 
         Assert.Null(exception);
     }
@@ -185,7 +185,7 @@ public sealed class StartupHelperTests : IDisposable
     public async Task ApplyStartupSettingAsync_Disable_DoesNotThrow()
     {
         var exception = await Record.ExceptionAsync(
-            () => StartupHelper.ApplyStartupSettingAsync(false));
+            () => StartupHelper.ApplyStartupSettingAsync(false)).ConfigureAwait(true);
 
         Assert.Null(exception);
     }
@@ -193,7 +193,7 @@ public sealed class StartupHelperTests : IDisposable
     [Fact]
     public async Task ApplyStartupSettingAsync_Enable_CreatesRegistryEntry_WhenUnpackaged()
     {
-        await StartupHelper.ApplyStartupSettingAsync(true);
+        await StartupHelper.ApplyStartupSettingAsync(true).ConfigureAwait(true);
 
         using var key = Registry.CurrentUser.OpenSubKey(_registryKeyPath);
         Assert.NotNull(key?.GetValue(_appRegistryName));
@@ -202,8 +202,8 @@ public sealed class StartupHelperTests : IDisposable
     [Fact]
     public async Task ApplyStartupSettingAsync_Disable_RemovesRegistryEntry_WhenUnpackaged()
     {
-        await StartupHelper.ApplyStartupSettingAsync(true);
-        await StartupHelper.ApplyStartupSettingAsync(false);
+        await StartupHelper.ApplyStartupSettingAsync(true).ConfigureAwait(true);
+        await StartupHelper.ApplyStartupSettingAsync(false).ConfigureAwait(true);
 
         using var key = Registry.CurrentUser.OpenSubKey(_registryKeyPath);
         Assert.Null(key?.GetValue(_appRegistryName));

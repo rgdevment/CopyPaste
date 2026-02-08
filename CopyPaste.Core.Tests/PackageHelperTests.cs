@@ -50,7 +50,7 @@ public sealed class PackageHelperTests
             tasks[i] = Task.Run(() => results[index] = PackageHelper.IsPackaged);
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // All results should be identical
         Assert.All(results, r => Assert.Equal(results[0], r));
