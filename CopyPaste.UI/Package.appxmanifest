@@ -13,11 +13,13 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>CopyPaste</DisplayName>
+    <DisplayName>CopyPaste - Clipboard Manager</DisplayName>
 
     <PublisherDisplayName>rgdevment</PublisherDisplayName>
 
     <Logo>Assets\StoreLogo.png</Logo>
+
+    <Description>A clipboard manager designed to feel native — fast, beautiful, and private. Built with WinUI 3 for visual harmony. Your data stays local: no cloud, no telemetry, no tracking. Open source and free.</Description>
   </Properties>
 
   <Dependencies>
@@ -36,12 +38,16 @@
 
       <uap:VisualElements
         DisplayName="CopyPaste"
-        Description="High performance, local-first clipboard manager."
+        Description="A clipboard manager designed to feel native — fast, beautiful, and private. Built with WinUI 3 for visual harmony. Your data stays local: no cloud, no telemetry, no tracking. Open source and free."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
 
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:DefaultTile
+          Wide310x150Logo="Assets\Wide310x150Logo.png"
+          Square310x310Logo="Assets\Square310x310Logo.png"
+          Square71x71Logo="Assets\Square71x71Logo.png"
+          ShortName="CopyPaste" />
 
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>

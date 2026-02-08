@@ -83,16 +83,16 @@ I don't see those who use CopyPaste as "end users," but as **collaborators** in 
 ## 📸 See It in Action
 
 <div align="center">
-    <img src="CopyPaste.UI/Assets/Samples.gif" alt="CopyPaste Demo — Fast search, clean cards, native Windows design"/>
+    <img src="Resources/Samples.gif" alt="CopyPaste Demo — Fast search, clean cards, native Windows design"/>
 </div>
 <div align="center"><em>Fast search, clean cards, and a native feel. This is CopyPaste in action.</em></div>
 
 <br/>
 
 <div align="center">
-    <img src="CopyPaste.UI/Assets/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode on Windows 11"/>
+    <img src="Resources/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode on Windows 11"/>
     &nbsp;&nbsp;
-    <img src="CopyPaste.UI/Assets/ConfigCopyPaste.png" alt="CopyPaste Settings — privacy-friendly configuration"/>
+    <img src="Resources/ConfigCopyPaste.png" alt="CopyPaste Settings — privacy-friendly configuration"/>
 </div>
 <div align="center"><em>Compact mode for quick access (left) and privacy-friendly settings (right).</em></div>
 
