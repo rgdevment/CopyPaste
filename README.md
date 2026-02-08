@@ -26,7 +26,7 @@
 
   <p align="center">
     <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
-      <img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="50"/>
+      <img src="https://img.shields.io/badge/📦_Microsoft_Store-Get_CopyPaste-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store" height="40"/>
     </a>
     &nbsp;&nbsp;
     <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
