@@ -4,14 +4,31 @@
     <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <RootNamespace>CopyPaste.UI</RootNamespace>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CopyPasteLogoSimple.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
     <UseWinUI>true</UseWinUI>
     <LangVersion>preview</LangVersion>
     <AssemblyName>CopyPaste.App</AssemblyName>
 
-    <!-- WinUI 3 unpackaged app configuration -->
+    <!--
+      Cold-start optimizations (apply to all build modes):
+      - TieredCompilation: Start with quick JIT, optimize hot paths later
+      - QuickJitForLoops: Don't wait to optimize loops on startup
+    -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+
+    <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+</PropertyGroup>
+
+<!--
+  Standalone (unpackaged) build configuration - DEFAULT.
+  Used for GitHub Releases distribution with Inno Setup installer.
+  Build with: dotnet build (no extra parameters needed)
+-->
+<PropertyGroup Condition="'$(PackageMode)' != 'Store'">
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
@@ -19,50 +36,39 @@
     <EnableMsixTooling>false</EnableMsixTooling>
 
     <!--
-      Publishing optimizations for WinUI 3:
+      Publishing optimizations for standalone (self-contained) builds:
       - ReadyToRun: Precompiles IL to native code (faster cold start)
+      - ReadyToRunComposite: Better R2R optimization for self-contained apps
       - Trimming partial: Removes unused code but preserves reflection (required for XAML)
-      Note: Native AOT is NOT compatible with WinUI 3 due to XAML reflection requirements
+      Note: These require self-contained and are NOT compatible with MSIX/Store builds.
     -->
     <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
-
-    <!-- Enable built-in COM interop for trimmed builds (needed for WindowsThumbnailExtractor) -->
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-
-    <!--
-      Cold-start optimizations:
-      - TieredCompilation: Start with quick JIT, optimize hot paths later
-      - QuickJitForLoops: Don't wait to optimize loops on startup
-      - ReadyToRunComposite: Better R2R optimization for self-contained apps
-    -->
-    <TieredCompilation>true</TieredCompilation>
-    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
-    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
-
-    <!-- Reduce assembly loading time -->
     <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
-
-    <!--
-      Suppress IL2104 trimming warnings from third-party assemblies:
-      - Microsoft.Windows.SDK.NET: Windows SDK (not trim-compatible)
-      - WinRT.Runtime: WinRT interop layer
-      - System.Private.Windows.Core: System.Drawing internals
-      - TagLibSharp: Media metadata library (netstandard2.0, not trim-aware)
-      These assemblies use reflection patterns that trigger warnings but work correctly with partial trimming.
-    -->
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+</PropertyGroup>
 
-    <NoWarn>$(NoWarn);CA1515;CA5392</NoWarn>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+<!--
+  Microsoft Store (MSIX) build configuration.
+  Used for Store distribution. Activated with: dotnet build -p:PackageMode=Store
+  Identity values (Name, Publisher) are set via CI/CD secrets in release pipeline.
+-->
+<PropertyGroup Condition="'$(PackageMode)' == 'Store'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <AppxPackage>true</AppxPackage>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
 </PropertyGroup>
 
 <!--
   Trimming configuration for third-party assemblies that don't support trimming.
-  This prevents false-positive warnings while maintaining functionality.
+  Only applies to standalone builds where PublishTrimmed=true.
 -->
-<ItemGroup>
+<ItemGroup Condition="'$(PackageMode)' != 'Store'">
     <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
     <TrimmerRootAssembly Include="WinRT.Runtime" />
 </ItemGroup>
@@ -70,7 +76,12 @@
 
 
     <ItemGroup>
-        <Manifest Include="$(ApplicationManifest)" />
+        <Manifest Include="$(ApplicationManifest)" Condition="'$(PackageMode)' != 'Store'" />
+    </ItemGroup>
+
+    <!-- MSIX manifest included only for Store builds -->
+    <ItemGroup Condition="'$(PackageMode)' == 'Store'">
+        <AppxManifest Include="Package.appxmanifest" />
     </ItemGroup>
 
     <ItemGroup>
