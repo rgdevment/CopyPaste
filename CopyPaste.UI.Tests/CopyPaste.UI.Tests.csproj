@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <!-- CA1707: Underscores in test method names are standard convention (Method_Scenario_Result) -->
+    <!-- CA1707: Underscores in identifiers are the project-wide naming convention -->
     <!-- CA1515: xUnit requires public test classes for discovery/reflection -->
     <NoWarn>IDE0022;CA1707;CA1515</NoWarn>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
