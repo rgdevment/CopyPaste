@@ -59,7 +59,7 @@ Sometimes, in our daily workflow, we just need something that's "just there" whe
 
 I don't see those who use CopyPaste as "end users," but as **collaborators** in this search for a better experience. If you value simplicity, speed, and above all, an aesthetic that respects your focus, this tool is for you. Your reports and suggestions are what help CopyPaste continue to evolve toward that perfect tool we always wanted to have.
 
-> 🧪 **Currently in Beta** — I use CopyPaste every day on Windows 11, but every setup is different. If something feels off, [let me know](#-found-a-bug-have-feedback). Your feedback is what shapes this project.
+> 🚀 **v1.0.0 Released** — I use CopyPaste every day on Windows 11, but every setup is different. If something feels off, [let me know](#-found-a-bug-have-feedback). Your feedback is what shapes this project.
 
 ---
 
@@ -385,7 +385,7 @@ When you launch CopyPaste, the native launcher appears immediately while the .NE
 ### Compatibility
 * **OS:** Windows 10 (1809+) or Windows 11.
 * **Architecture:** x64 and ARM64 supported on both distribution channels.
-* **ARM64 Note:** Experimental support available since v1.0.0-beta.3. If you're running Windows on ARM, we'd love your feedback — please [open an issue](https://github.com/rgdevment/CopyPaste/issues) with your experience.
+* **ARM64 Note:** Fully supported since v1.0.0. If you're running Windows on ARM and encounter any issues, please [open an issue](https://github.com/rgdevment/CopyPaste/issues).
 
 ---
 
