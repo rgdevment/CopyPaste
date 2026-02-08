@@ -179,7 +179,7 @@ CopyPaste stores its data locally under your Windows user profile:
 
 </details>
 
-If you care about privacy and control, this is made for you.
+If you care about privacy and control, this is made for you. Read our full [Privacy Policy](PRIVACY.md) for complete details.
 
 ## ✨ Key Features
 
