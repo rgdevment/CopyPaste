@@ -26,12 +26,12 @@
 
   <p align="center">
     <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
-      <img src="https://img.shields.io/badge/📦_Microsoft_Store-Get_CopyPaste-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store" height="40"/>
+      <img src="https://img.shields.io/badge/📦_Microsoft_Store-Get_CopyPaste-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store" height="50"/>
     </a>
-    &nbsp;&nbsp;
-    <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
-      <img src="https://img.shields.io/badge/📥_Standalone_Installer-GitHub_Releases-blueviolet?style=for-the-badge&logo=github" alt="Download from GitHub" height="40"/>
-    </a>
+  </p>
+
+  <p align="center">
+    <sub>Also available as a <a href="https://github.com/rgdevment/CopyPaste/releases/latest">standalone installer</a> from GitHub Releases.</sub>
   </p>
 </div>
 
@@ -195,7 +195,7 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
 * 📖 **Built-in Help:** Quick access to keyboard shortcuts reference window from the sidebar.
-* 🔄 **Automatic Updates:** Get notified when a new version is available — update with one click (standalone installer).
+* 🔄 **Automatic Updates:** The Microsoft Store version updates seamlessly via Windows. The standalone installer notifies you when a new version is available.
 * 🔍 **Full-Text Search:** Instantly find any item with powerful FTS5 search across content and labels.
 * 🎛️ **Advanced Filters:** Three filter modes—Content (text search), Category (color selection), and Type (item type selection)—with intuitive dropdown multi-selection.
 * 🔄 **Smart Filter Behavior:** Filters only apply to their active mode—switching modes automatically uses the relevant filter without mixing criteria.
@@ -306,71 +306,47 @@ In the **Settings** window, you can customize filter behavior:
 
 ## 🚀 Getting Started
 
-CopyPaste is available through two distribution channels:
+### Install from the Microsoft Store (Recommended)
 
-### Option A: Microsoft Store (Recommended)
+The fastest and easiest way to get CopyPaste:
+
 1. Get **CopyPaste** from the [**Microsoft Store**](https://apps.microsoft.com/detail/9NBJRZF3K856).
 2. Click **Install** — no security warnings, automatic updates via the Store.
 3. Open CopyPaste with `Win+Alt+V`.
 
-> The Store version is framework-dependent (smaller download) and updates are handled automatically by Windows.
+> The Store version is framework-dependent (smaller download), updates automatically through Windows, and requires no additional setup.
 
-### Option B: Standalone Installer (GitHub Releases)
+<details>
+<summary><strong>📥 Alternative: Standalone Installer (GitHub Releases)</strong></summary>
+
+If you prefer a traditional installer or can't access the Microsoft Store:
+
 1. Go to the [**Latest Release**](https://github.com/rgdevment/CopyPaste/releases/latest).
 2. Download the **Installer (.exe)** for your architecture (x64 or ARM64).
 3. Run it and open CopyPaste with `Win+Alt+V`.
 
-> The standalone version is fully self-contained — no runtime dependencies needed. Includes a native splash screen launcher and in-app update notifications.
+The standalone version is fully self-contained — no runtime dependencies needed. Includes a native splash screen launcher and in-app update notifications.
 
-### ⚠️ Security Warnings (Standalone Only — Self-Signed Certificate)
+#### ⚠️ Security Warnings (Self-Signed Certificate)
 
-Since CopyPaste is an **independent open-source project**, we use a self-signed certificate. This means Windows and your browser may show security warnings. **This is normal and expected.**
+Since CopyPaste is an independent open-source project, we use a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
 
-<details>
-<summary><strong>🌐 Browser Warning (When Downloading)</strong></summary>
+- **Browser:** Chrome/Edge may block the download — click `Keep` or `Keep anyway`.
+- **SmartScreen:** Click `More info` → `Run anyway` (only happens once).
+- **Why?** Code signing certificates cost $200-800/year. The code is 100% open source — you can inspect every line. SHA256 checksums are provided for each release.
 
-Your browser may block or warn about the download:
-- **Chrome:** Click the `⋮` menu on the download → `Keep dangerous file`
-- **Edge:** Click `...` → `Keep` → `Keep anyway`
-- **Firefox:** Usually allows the download, but may warn
-
-</details>
-
-<details>
-<summary><strong>🛡️ Windows SmartScreen (When Running)</strong></summary>
-
-When you run the installer or app for the first time:
-
-1. Windows shows **"Windows protected your PC"**
-2. Click **`More info`** (small link below the message)
-3. Click **`Run anyway`**
-
-This only happens once. After installation, CopyPaste runs normally.
-
-</details>
-
-<details>
-<summary><strong>🔒 Why the warnings?</strong></summary>
-
-- Code signing certificates cost **$200-800/year** from trusted authorities
-- This is a free, open-source project—I can't justify that expense
-- The code is **100% open source** — you can inspect every line
-- SHA256 checksums are provided for each release
-
-</details>
-
-### ✅ Verifying a Release (Recommended)
+#### ✅ Verifying a Release
 
 If you want extra confidence before running the installer:
 
 1. Download the installer **and** the published SHA256 checksum from the same GitHub Release.
 2. Compare the installer hash with the published value.
 
-On Windows (PowerShell):
-
 ```powershell
 Get-FileHash .\CopyPaste-Installer.exe -Algorithm SHA256
 ```
+
+</details>
 
 ### How It Works
 
@@ -410,7 +386,7 @@ No. There’s intentionally no cloud sync.
 Under `%LOCALAPPDATA%\CopyPaste\` (database, images, thumbnails, config, logs). Same location for both Store and standalone versions.
 
 **What's the difference between the Store and standalone versions?**
-Same features and same codebase. The Store version is smaller (framework-dependent), gets automatic updates via Windows, and has no security warnings. The standalone version is fully self-contained, includes a native splash screen, and notifies you of updates in-app.
+Same features and same codebase. The **Microsoft Store version is recommended** — it's smaller (framework-dependent), updates automatically via Windows, and installs without any security warnings. The standalone version is available as an alternative for users who can't access the Store.
 
 **Is it compatible with Windows 10 and 11?**
 Yes, Windows 10 (1809+) and Windows 11 are supported.
