@@ -27,11 +27,11 @@ public sealed class UpdateChecker : IDisposable
     private static readonly Uri _gitHubReleasesUri = new(_gitHubReleasesUrl);
     private const string _dismissedVersionFileName = "dismissed_update.txt";
 
-    private static readonly TimeSpan _checkInterval = TimeSpan.FromHours(12);
+    private static readonly TimeSpan _startupDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan _httpTimeout = TimeSpan.FromSeconds(15);
 
     private readonly HttpClient _httpClient;
-    private readonly Timer _timer;
+    private readonly CancellationTokenSource _cts = new();
     private bool _isDisposed;
 
     /// <summary>
@@ -39,18 +39,31 @@ public sealed class UpdateChecker : IDisposable
     /// </summary>
     public event EventHandler<UpdateAvailableEventArgs>? OnUpdateAvailable;
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Fire-and-forget task must never throw — unobserved exception would crash the process")]
     public UpdateChecker()
     {
         _httpClient = new HttpClient { Timeout = _httpTimeout };
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "CopyPaste-UpdateChecker");
         _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
 
-        _timer = new Timer(
-            _ => CheckForUpdateAsync().ConfigureAwait(false),
-            null,
-            TimeSpan.FromSeconds(30), // First check 30s after startup
-            _checkInterval
-        );
+        // Single check after startup delay — no recurring timer needed
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(_startupDelay, _cts.Token).ConfigureAwait(false);
+                await CheckForUpdateAsync().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // App closed before the check ran — expected
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn($"Update check unexpected error: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>
@@ -75,9 +88,13 @@ public sealed class UpdateChecker : IDisposable
         return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.0.0";
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Update check is non-critical — unexpected failures must be logged, not crash the app")]
     internal async Task CheckForUpdateAsync()
     {
         if (_isDisposed) return;
+
+        AppLogger.Info("Update check started...");
 
         try
         {
@@ -95,6 +112,12 @@ public sealed class UpdateChecker : IDisposable
             if (release == null || string.IsNullOrEmpty(release.TagName))
             {
                 AppLogger.Warn("Update check: invalid response");
+                return;
+            }
+
+            if (release.Prerelease)
+            {
+                AppLogger.Info("Update check: latest release is a pre-release, skipping");
                 return;
             }
 
@@ -129,6 +152,14 @@ public sealed class UpdateChecker : IDisposable
         catch (JsonException ex)
         {
             AppLogger.Warn($"Update check failed (parse): {ex.Message}");
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected during shutdown — timer may fire while HttpClient is disposing
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn($"Update check failed: {ex.Message}");
         }
     }
 
@@ -230,7 +261,8 @@ public sealed class UpdateChecker : IDisposable
     {
         if (_isDisposed) return;
         _isDisposed = true;
-        _timer.Dispose();
+        _cts.Cancel();
+        _cts.Dispose();
         _httpClient.Dispose();
     }
 }
