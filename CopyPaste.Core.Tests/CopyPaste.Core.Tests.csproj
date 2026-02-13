@@ -6,7 +6,9 @@
     <!-- CA1707: Underscores in identifiers are the project-wide naming convention -->
     <!-- CA1054: Tests use string URLs to verify parsing behavior -->
     <!-- CA1515: xUnit requires public test classes for discovery/reflection -->
-    <NoWarn>IDE0022;CA1707;CA1054;CA1515</NoWarn>
+    <!-- S4144: Test methods intentionally share similar structure with different data -->
+    <!-- S2925: Thread.Sleep is needed for timing-sensitive integration tests -->
+    <NoWarn>IDE0022;CA1707;CA1054;CA1515;S4144;S2925</NoWarn>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
   <ItemGroup>

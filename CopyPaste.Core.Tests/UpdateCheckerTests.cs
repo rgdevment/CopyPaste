@@ -97,8 +97,11 @@ public class UpdateCheckerTests
     {
         var checker = new UpdateChecker();
         checker.Dispose();
+
         // Double dispose should not throw
-        checker.Dispose();
+        var exception = Record.Exception(() => checker.Dispose());
+
+        Assert.Null(exception);
     }
 
     #endregion
