@@ -1,0 +1,60 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '39 11 * * 5'
+
+jobs:
+  analyze:
+    name: Analyze C#
+    runs-on: windows-latest
+    timeout-minutes: 120
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "preview"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: manual
+
+      - name: Build projects (CodeQL traced)
+        shell: pwsh
+        run: |
+          # Build Core and Listener libraries only.
+          # CopyPaste.UI is excluded because WinRT source generators and the
+          # XAML compiler are incompatible with the CodeQL build tracer.
+          # Security-relevant code (SQLite, file I/O, networking, clipboard)
+          # lives in Core and Listener.
+          dotnet build CopyPaste.Core/CopyPaste.Core.csproj -c Release -p:Platform=x64
+          dotnet build CopyPaste.Listener/CopyPaste.Listener.csproj -c Release -p:Platform=x64
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:csharp'

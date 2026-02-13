@@ -391,8 +391,13 @@ public sealed class MainViewModelBasicTests
     {
         var viewModel = CreateViewModel();
 
-        viewModel.Cleanup();
-        viewModel.Cleanup();
+        var exception = Record.Exception(() =>
+        {
+            viewModel.Cleanup();
+            viewModel.Cleanup();
+        });
+
+        Assert.Null(exception);
     }
 
     #endregion
