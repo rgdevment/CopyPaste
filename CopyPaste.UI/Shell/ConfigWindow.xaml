@@ -35,6 +35,11 @@
                         <FontIcon Glyph="&#xE713;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Name="BackupNavItem" Tag="backup">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F1;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="ThemeNavItem" Tag="theme">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE771;"/>
@@ -302,6 +307,51 @@
                                             <ComboBoxItem x:Name="ThumbnailPresetMinimal" Tag="minimal"/>
                                         </ComboBox>
                                     </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- Backup settings -->
+                <ScrollViewer x:Name="BackupContent" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+                    <StackPanel Spacing="20" Margin="24,12,24,24">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                <FontIcon Glyph="&#xE8F1;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="BackupHeading" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CharacterSpacing="50"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="16">
+                                    <TextBlock x:Name="BackupDesc" FontSize="11" Opacity="0.65" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="BackupLastDate" FontSize="11" Opacity="0.5"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="BackupCreateLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="BackupCreateDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Button x:Name="BackupCreateButton" Grid.Column="1" Click="BackupCreateButton_Click" MinWidth="120">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE896;" FontSize="14"/>
+                                                <TextBlock x:Name="BackupCreateButtonText"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Opacity="0.3"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock x:Name="BackupRestoreLabel" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="BackupRestoreDesc" FontSize="11" Opacity="0.6" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Button x:Name="BackupRestoreButton" Grid.Column="1" Click="BackupRestoreButton_Click" MinWidth="120">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE8E5;" FontSize="14"/>
+                                                <TextBlock x:Name="BackupRestoreButtonText"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock x:Name="BackupStatusText" FontSize="11" Visibility="Collapsed" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

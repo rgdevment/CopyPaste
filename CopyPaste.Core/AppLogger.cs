@@ -9,7 +9,6 @@ namespace CopyPaste.Core;
 /// Simple file logger optimized for AOT and minimal allocations.
 /// Logs are written to the application data folder.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Logger must never crash the app")]
 public static class AppLogger
 {
     private static readonly string _logDirectory = Path.Combine(

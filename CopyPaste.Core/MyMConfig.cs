@@ -116,6 +116,12 @@ public sealed class MyMConfig
     /// </summary>
     public int RetentionDays { get; set; } = 30;
 
+    /// <summary>
+    /// UTC timestamp of the last successful backup.
+    /// Null if the user has never created a backup.
+    /// </summary>
+    public DateTime? LastBackupDateUtc { get; set; }
+
     // ═══════════════════════════════════════════════════════════════
     // Paste Behavior Configuration
     // ═══════════════════════════════════════════════════════════════

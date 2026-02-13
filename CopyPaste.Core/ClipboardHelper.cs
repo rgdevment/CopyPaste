@@ -4,8 +4,6 @@ using Windows.Storage;
 
 namespace CopyPaste.Core;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-    Justification = "Clipboard operations must not crash app - failures are logged")]
 public static class ClipboardHelper
 {
     public static bool SetClipboardContent(ClipboardItem item, bool plainText = false)

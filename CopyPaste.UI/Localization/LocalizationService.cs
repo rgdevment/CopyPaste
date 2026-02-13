@@ -85,8 +85,6 @@ public sealed class LocalizationService : IDisposable
         return config.TryGetValue("globalFallback", out var fallback) ? fallback : "en-US";
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Config loading is best-effort - failures are logged and defaults returned")]
     private static Dictionary<string, string> LoadConfig()
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -124,8 +122,6 @@ public sealed class LocalizationService : IDisposable
         return merged.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Language loading is best-effort - failures are logged and English fallback used")]
     private static void LoadLanguageInto(string lang, Dictionary<string, string> target)
     {
         try
