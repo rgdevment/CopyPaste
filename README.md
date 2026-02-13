@@ -37,7 +37,16 @@
   </p>
 
   <p align="center">
-    <sub>Also available as a <a href="https://github.com/rgdevment/CopyPaste/releases/latest">standalone installer</a> from GitHub Releases.</sub>
+    <sub><strong>Also available as a <a href="https://github.com/rgdevment/CopyPaste/releases/latest">standalone installer</a> from GitHub Releases.</strong></sub>
+  </p>
+
+  <p>
+    <a href="https://github.com/sponsors/rgdevment">
+      <img src="https://img.shields.io/badge/Sponsor-♥-ea4aaa?style=flat-square&logo=github" alt="GitHub Sponsors"/>
+    </a>
+    <a href="https://buymeacoffee.com/rgdevment">
+      <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"/>
+    </a>
   </p>
 </div>
 
