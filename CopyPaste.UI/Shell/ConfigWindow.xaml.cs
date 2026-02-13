@@ -61,6 +61,7 @@ public sealed partial class ConfigWindow : Window
         GeneralNavItem.Content = L.Get("config.tabs.general", "General");
         BackupNavItem.Content = L.Get("config.tabs.backup", "Backup");
         ThemeNavItem.Content = $"{L.Get("config.tabs.theme", "Theme")}: {_theme.Name}";
+        AboutNavItem.Content = L.Get("config.tabs.about", "About");
 
         UseCtrlCheck.Checked += OnHotkeyChanged;
         UseCtrlCheck.Unchecked += OnHotkeyChanged;
@@ -96,6 +97,7 @@ public sealed partial class ConfigWindow : Window
             GeneralContent.Visibility = tag == "general" ? Visibility.Visible : Visibility.Collapsed;
             BackupContent.Visibility = tag == "backup" ? Visibility.Visible : Visibility.Collapsed;
             ThemeContent.Visibility = tag == "theme" ? Visibility.Visible : Visibility.Collapsed;
+            AboutContent.Visibility = tag == "about" ? Visibility.Visible : Visibility.Collapsed;
 
             if (tag == "backup")
             {
@@ -246,6 +248,17 @@ public sealed partial class ConfigWindow : Window
         ThumbnailPresetMedium.Content = L.Get("config.thumbnail.presets.medium");
         ThumbnailPresetLow.Content = L.Get("config.thumbnail.presets.low");
         ThumbnailPresetMinimal.Content = L.Get("config.thumbnail.presets.minimal");
+
+        // About
+        AboutVersionText.Text = $"v{UpdateChecker.GetCurrentVersion()}";
+        AboutDescription.Text = L.Get("config.about.description", "A lightweight, fast, and open-source clipboard manager for Windows.");
+        AboutLinksHeading.Text = L.Get("config.about.linksHeading", "LINKS");
+        AboutSupportLabel.Text = L.Get("config.about.supportLabel", "Support & Source code");
+        AboutSupportDesc.Text = L.Get("config.about.supportDesc", "Report issues or contribute on GitHub");
+        AboutDonateLabel.Text = L.Get("config.about.donateLabel", "Support the project");
+        AboutDonateDesc.Text = L.Get("config.about.donateDesc", "If you find CopyPaste useful, consider buying us a coffee");
+        AboutDonateButtonText.Text = L.Get("config.about.donateButton", "Buy me a coffee");
+        AboutLicense.Text = L.Get("config.about.license", "MIT License — Free and open source.");
 
         // Buttons
         ResetButton.Content = L.Get("config.buttons.reset");
