@@ -34,7 +34,8 @@
     "tabs": {
       "general": "General",
       "backup": "Respaldo",
-      "theme": "Tema"
+      "theme": "Tema",
+      "about": "Acerca de"
     },
     "themeSelector": {
       "heading": "TEMA",
@@ -182,6 +183,16 @@
     },
     "errors": {
       "saveFailed": "Error al guardar. Revisa los permisos de la carpeta de configuración."
+    },
+    "about": {
+      "description": "Un gestor de portapapeles ligero, rápido y de código abierto para Windows.\nCopia una vez, pega donde quieras — tu historial del portapapeles, siempre a mano.",
+      "linksHeading": "ENLACES",
+      "supportLabel": "Soporte y código fuente",
+      "supportDesc": "Reporta problemas o contribuye en GitHub",
+      "donateLabel": "Apoya el proyecto",
+      "donateDesc": "Si CopyPaste te resulta útil, considera invitarnos un café",
+      "donateButton": "Invítame un café",
+      "license": "Licencia MIT — Libre y de código abierto."
     }
   },
   "clipboard": {
