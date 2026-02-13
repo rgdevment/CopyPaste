@@ -37,17 +37,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Pre-build (generate source files)
-        run: dotnet build CopyPaste.slnx -c Release -p:Platform=x64
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: csharp
           build-mode: manual
 
-      - name: Build Solution (CodeQL traced)
-        run: dotnet build CopyPaste.slnx -c Release -p:Platform=x64 --no-incremental
+      - name: Build projects (CodeQL traced)
+        shell: pwsh
+        run: |
+          # Build Core and Listener libraries only.
+          # CopyPaste.UI is excluded because WinRT source generators and the
+          # XAML compiler are incompatible with the CodeQL build tracer.
+          # Security-relevant code (SQLite, file I/O, networking, clipboard)
+          # lives in Core and Listener.
+          dotnet build CopyPaste.Core/CopyPaste.Core.csproj -c Release -p:Platform=x64
+          dotnet build CopyPaste.Listener/CopyPaste.Listener.csproj -c Release -p:Platform=x64
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
