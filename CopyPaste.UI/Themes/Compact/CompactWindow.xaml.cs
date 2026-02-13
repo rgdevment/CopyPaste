@@ -277,8 +277,6 @@ internal sealed partial class CompactWindow : Window
     private void HelpButton_Click(object sender, RoutedEventArgs e) =>
         _context.OpenHelp();
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2007:ConfigureAwait",
-        Justification = "UI event handler must remain on UI thread")]
     private async void ReportBugButton_Click(object sender, RoutedEventArgs e) =>
         await ViewModel.OpenRepoCommand.ExecuteAsync(null);
 
@@ -544,8 +542,6 @@ internal sealed partial class CompactWindow : Window
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Image loading must not crash UI - failures are silently handled")]
     private void LoadImageSource(Image image, string? imagePath)
     {
         if (string.IsNullOrEmpty(imagePath)) return;

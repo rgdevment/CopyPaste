@@ -46,3 +46,7 @@ dotnet_naming_symbols.private_fields.applicable_kinds = field
 dotnet_naming_symbols.private_fields.applicable_accessibilities = private
 dotnet_naming_style.prefix_underscore.required_prefix = _
 dotnet_naming_style.prefix_underscore.capitalization = camel_case
+
+# --- Suppressed Rules ---
+dotnet_diagnostic.CA1031.severity = suggestion
+dotnet_diagnostic.CA2007.severity = none

@@ -674,7 +674,6 @@ public sealed class ClipboardServiceTests : IDisposable
 
     #endregion
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort cleanup of temp test data should not fail tests")]
     public void Dispose()
     {
         try

@@ -6,6 +6,8 @@ using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using Windows.Storage.Pickers;
 
 namespace CopyPaste.UI.Shell;
 
@@ -57,6 +59,7 @@ public sealed partial class ConfigWindow : Window
 
         // Navigation items
         GeneralNavItem.Content = L.Get("config.tabs.general", "General");
+        BackupNavItem.Content = L.Get("config.tabs.backup", "Backup");
         ThemeNavItem.Content = $"{L.Get("config.tabs.theme", "Theme")}: {_theme.Name}";
 
         UseCtrlCheck.Checked += OnHotkeyChanged;
@@ -89,9 +92,15 @@ public sealed partial class ConfigWindow : Window
     {
         if (args.SelectedItem is NavigationViewItem item)
         {
-            var isGeneral = item.Tag?.ToString() == "general";
-            GeneralContent.Visibility = isGeneral ? Visibility.Visible : Visibility.Collapsed;
-            ThemeContent.Visibility = isGeneral ? Visibility.Collapsed : Visibility.Visible;
+            var tag = item.Tag?.ToString();
+            GeneralContent.Visibility = tag == "general" ? Visibility.Visible : Visibility.Collapsed;
+            BackupContent.Visibility = tag == "backup" ? Visibility.Visible : Visibility.Collapsed;
+            ThemeContent.Visibility = tag == "theme" ? Visibility.Visible : Visibility.Collapsed;
+
+            if (tag == "backup")
+            {
+                UpdateLastBackupDisplay();
+            }
         }
     }
 
@@ -202,6 +211,17 @@ public sealed partial class ConfigWindow : Window
         RetentionLabel.Text = L.Get("config.storage.retentionDays");
         RetentionDesc.Text = L.Get("config.storage.retentionDaysDesc");
         ToolTipService.SetToolTip(RetentionGrid, L.Get("config.storage.retentionTooltip"));
+
+        // Backup
+        BackupHeading.Text = L.Get("config.backup.heading");
+        BackupDesc.Text = L.Get("config.backup.desc");
+        BackupCreateLabel.Text = L.Get("config.backup.createLabel");
+        BackupCreateDesc.Text = L.Get("config.backup.createDesc");
+        BackupCreateButtonText.Text = L.Get("config.backup.createButton");
+        BackupRestoreLabel.Text = L.Get("config.backup.restoreLabel");
+        BackupRestoreDesc.Text = L.Get("config.backup.restoreDesc");
+        BackupRestoreButtonText.Text = L.Get("config.backup.restoreButton");
+        UpdateLastBackupDisplay();
 
         // Paste
         PasteHeading.Text = L.Get("config.paste.heading");
@@ -538,8 +558,6 @@ public sealed partial class ConfigWindow : Window
 
     private void CancelButton_Click(object sender, RoutedEventArgs e) => Close();
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Save operation should not crash - errors are logged")]
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -612,8 +630,6 @@ public sealed partial class ConfigWindow : Window
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Restart is best-effort")]
     private static void RestartApplication()
     {
         try
@@ -647,5 +663,140 @@ public sealed partial class ConfigWindow : Window
             XamlRoot = Content.XamlRoot
         };
         await dialog.ShowAsync();
+    }
+
+    private void UpdateLastBackupDisplay()
+    {
+        var config = ConfigLoader.Config;
+        if (config.LastBackupDateUtc.HasValue)
+        {
+            var local = config.LastBackupDateUtc.Value.ToLocalTime();
+            BackupLastDate.Text = L.Get("config.backup.lastBackup")
+                .Replace("{date}", local.ToString("g", System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal);
+            BackupLastDate.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            BackupLastDate.Text = L.Get("config.backup.noBackupYet");
+            BackupLastDate.Visibility = Visibility.Visible;
+        }
+    }
+
+    private async void BackupCreateButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new FileSavePicker();
+            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            picker.FileTypeChoices.Add("CopyPaste Backup", new List<string> { ".zip" });
+            picker.SuggestedFileName = $"CopyPaste_Backup_{DateTime.Now:yyyy-MM-dd}";
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSaveFileAsync();
+            if (file == null) return;
+
+            BackupCreateButton.IsEnabled = false;
+            BackupStatusText.Text = L.Get("config.backup.creating");
+            BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+            BackupStatusText.Visibility = Visibility.Visible;
+
+            using var stream = await file.OpenStreamForWriteAsync();
+            stream.SetLength(0);
+            var manifest = BackupService.CreateBackup(stream, UpdateChecker.GetCurrentVersion());
+
+            var config = ConfigLoader.Load();
+            config.LastBackupDateUtc = manifest.CreatedAtUtc;
+            ConfigLoader.Save(config);
+
+            BackupStatusText.Text = L.Get("config.backup.createSuccess")
+                .Replace("{count}", manifest.ItemCount.ToString(System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal)
+                .Replace("{images}", manifest.ImageCount.ToString(System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal);
+            BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Green);
+            UpdateLastBackupDisplay();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Backup creation failed");
+            BackupStatusText.Text = L.Get("config.backup.createError");
+            BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Red);
+            BackupStatusText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            BackupCreateButton.IsEnabled = true;
+        }
+    }
+
+    private async void BackupRestoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new FileOpenPicker();
+            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            picker.FileTypeFilter.Add(".zip");
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSingleFileAsync();
+            if (file == null) return;
+
+            using var validationStream = await file.OpenStreamForReadAsync();
+            var info = BackupService.ValidateBackup(validationStream);
+            if (info == null)
+            {
+                ShowErrorDialog(L.Get("config.backup.invalidFile"));
+                return;
+            }
+
+            var confirmDialog = new ContentDialog
+            {
+                Title = L.Get("config.backup.restoreConfirmTitle"),
+                Content = L.Get("config.backup.restoreConfirmMessage")
+                    .Replace("{count}", info.ItemCount.ToString(System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal)
+                    .Replace("{date}", info.CreatedAtUtc.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal),
+                PrimaryButtonText = L.Get("config.backup.restoreConfirmYes"),
+                CloseButtonText = L.Get("config.buttons.cancel"),
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = Content.XamlRoot
+            };
+
+            var result = await confirmDialog.ShowAsync();
+            if (result != ContentDialogResult.Primary) return;
+
+            BackupRestoreButton.IsEnabled = false;
+            BackupStatusText.Text = L.Get("config.backup.restoring");
+            BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+            BackupStatusText.Visibility = Visibility.Visible;
+
+            using var restoreStream = await file.OpenStreamForReadAsync();
+            var manifest = BackupService.RestoreBackup(restoreStream);
+
+            if (manifest != null)
+            {
+                BackupStatusText.Text = L.Get("config.backup.restoreSuccess");
+                BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Green);
+                ConfigLoader.ClearCache();
+                RestartApplication();
+            }
+            else
+            {
+                BackupStatusText.Text = L.Get("config.backup.restoreError");
+                BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Red);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Exception(ex, "Backup restore failed");
+            BackupStatusText.Text = L.Get("config.backup.restoreError");
+            BackupStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Red);
+            BackupStatusText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            BackupRestoreButton.IsEnabled = true;
+        }
     }
 }

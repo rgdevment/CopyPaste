@@ -33,6 +33,7 @@
     },
     "tabs": {
       "general": "General",
+      "backup": "Backup",
       "theme": "Theme"
     },
     "themeSelector": {
@@ -119,6 +120,28 @@
       "retentionDays": "Retention days",
       "retentionDaysDesc": "Days to keep history (0=unlimited)",
       "retentionTooltip": "Days to keep clipboard history. 0 = unlimited. Pinned items are never deleted."
+    },
+    "backup": {
+      "heading": "BACKUP & RESTORE",
+      "desc": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
+      "lastBackup": "Last backup: {date}",
+      "noBackupYet": "No backup created yet.",
+      "createLabel": "Create backup",
+      "createDesc": "Export all data to a ZIP file",
+      "createButton": "Backup",
+      "restoreLabel": "Restore backup",
+      "restoreDesc": "Import data from a backup file",
+      "restoreButton": "Restore",
+      "creating": "Creating backup...",
+      "createSuccess": "Backup created: {count} items, {images} images.",
+      "createError": "Failed to create backup. Check permissions.",
+      "restoring": "Restoring backup...",
+      "restoreSuccess": "Restore complete. Restarting...",
+      "restoreError": "Restore failed. Your previous data has been preserved.",
+      "invalidFile": "Invalid backup file. Select a valid CopyPaste backup (.zip).",
+      "restoreConfirmTitle": "Restore backup?",
+      "restoreConfirmMessage": "This will replace all current data with the backup ({count} items, {date}). This action cannot be undone.",
+      "restoreConfirmYes": "Restore"
     },
     "paste": {
       "heading": "PASTE",

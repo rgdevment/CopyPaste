@@ -24,8 +24,6 @@ public sealed class DefaultThemeSettings
 
     private static string FilePath => Path.Combine(StorageConfig.ConfigPath, _fileName);
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Settings loading should not crash app - failures are logged and defaults returned")]
     public static DefaultThemeSettings Load()
     {
         try
@@ -53,8 +51,6 @@ public sealed class DefaultThemeSettings
         return new DefaultThemeSettings();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Settings saving should not crash app - failures are logged")]
     public static bool Save(DefaultThemeSettings settings)
     {
         try

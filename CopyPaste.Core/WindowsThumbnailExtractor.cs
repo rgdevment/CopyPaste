@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace CopyPaste.Core;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types")]
 public static partial class WindowsThumbnailExtractor
 {
     private static readonly Guid _iShellItemImageFactoryGuid = new("bcc18b79-ba16-442f-80c4-8a59c30c463b");

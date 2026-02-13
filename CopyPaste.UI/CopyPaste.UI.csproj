@@ -30,7 +30,7 @@
 <PropertyGroup Condition="'$(PackageMode)' != 'Store'">
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <WindowsPackageType>None</WindowsPackageType>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsAppSDKSelfContained Condition="'$(Platform)' == 'x64' or '$(Platform)' == 'ARM64'">true</WindowsAppSDKSelfContained>
     <WinUISDKReferences>true</WinUISDKReferences>
     <AppxPackage>false</AppxPackage>
     <EnableMsixTooling>false</EnableMsixTooling>

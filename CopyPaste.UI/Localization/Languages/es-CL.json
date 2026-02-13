@@ -33,6 +33,7 @@
     },
     "tabs": {
       "general": "General",
+      "backup": "Respaldo",
       "theme": "Tema"
     },
     "themeSelector": {
@@ -119,6 +120,28 @@
       "retentionDays": "Días de retención",
       "retentionDaysDesc": "Días para mantener historial (0=sin límite)",
       "retentionTooltip": "Días para mantener historial del portapapeles. 0 = sin límite. Los elementos anclados nunca se borran."
+    },
+    "backup": {
+      "heading": "RESPALDO Y RESTAURACIÓN",
+      "desc": "Crea un respaldo de tu historial del portapapeles, imágenes y configuración. Restaura en cualquier momento en este u otro dispositivo.",
+      "lastBackup": "Último respaldo: {date}",
+      "noBackupYet": "Aún no se ha creado un respaldo.",
+      "createLabel": "Crear respaldo",
+      "createDesc": "Exportar todos los datos a un archivo ZIP",
+      "createButton": "Respaldar",
+      "restoreLabel": "Restaurar respaldo",
+      "restoreDesc": "Importar datos desde un archivo de respaldo",
+      "restoreButton": "Restaurar",
+      "creating": "Creando respaldo...",
+      "createSuccess": "Respaldo creado: {count} elementos, {images} imágenes.",
+      "createError": "Error al crear respaldo. Verifica los permisos.",
+      "restoring": "Restaurando respaldo...",
+      "restoreSuccess": "Restauración completa. Reiniciando...",
+      "restoreError": "Error al restaurar. Tus datos anteriores se han preservado.",
+      "invalidFile": "Archivo de respaldo inválido. Selecciona un respaldo CopyPaste válido (.zip).",
+      "restoreConfirmTitle": "¿Restaurar respaldo?",
+      "restoreConfirmMessage": "Esto reemplazará todos los datos actuales con el respaldo ({count} elementos, {date}). Esta acción no se puede deshacer.",
+      "restoreConfirmYes": "Restaurar"
     },
     "paste": {
       "heading": "PEGADO",

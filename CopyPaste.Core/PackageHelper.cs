@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace CopyPaste.Core;
 
 /// <summary>
@@ -19,8 +17,6 @@ public static class PackageHelper
     /// </summary>
     public static bool IsPackaged => _isPackaged.Value;
 
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Package.Current throws when unpackaged - catching is the expected detection pattern")]
     private static bool DetectIsPackaged()
     {
         try

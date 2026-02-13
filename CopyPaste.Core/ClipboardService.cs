@@ -237,8 +237,6 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Media thumbnail processing is best-effort - failures should not crash app")]
     private void ProcessMediaThumbnailBackground(ClipboardItem item, string filePath, ClipboardContentType type)
     {
         var meta = ParseExistingMetadata(item.Metadata);
@@ -365,8 +363,6 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
         return meta;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Media metadata extraction is best-effort - failures should not crash app")]
     private static void ExtractMediaMetadata(string filePath, ClipboardContentType type, Dictionary<string, object> meta)
     {
         try
