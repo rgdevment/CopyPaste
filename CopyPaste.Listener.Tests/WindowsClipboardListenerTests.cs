@@ -304,19 +304,27 @@ public sealed class WindowsClipboardListenerTests : IDisposable
     [Fact]
     public void Dispose_CanBeCalledMultipleTimes_DoesNotThrow()
     {
-        var listener = new WindowsClipboardListener(new StubClipboardService());
+        using var listener = new WindowsClipboardListener(new StubClipboardService());
 
-        listener.Dispose();
-        listener.Dispose();
-        listener.Dispose();
+        var exception = Record.Exception(() =>
+        {
+            listener.Dispose();
+            listener.Dispose();
+            listener.Dispose();
+        });
+
+        Assert.Null(exception);
     }
 
     [Fact]
     public void NewInstance_BeforeStart_CanBeDisposed()
     {
         // Listener that was never started should dispose cleanly
-        var listener = new WindowsClipboardListener(new StubClipboardService());
-        listener.Dispose();
+        using var listener = new WindowsClipboardListener(new StubClipboardService());
+
+        var exception = Record.Exception(() => listener.Dispose());
+
+        Assert.Null(exception);
     }
 
     #endregion
@@ -437,9 +445,11 @@ public sealed class WindowsClipboardListenerTests : IDisposable
 
     private sealed class StubClipboardService : IClipboardService
     {
+#pragma warning disable CS0067 // Events required by interface but unused in stub
         public event Action<ClipboardItem>? OnItemAdded;
         public event Action<ClipboardItem>? OnThumbnailReady;
         public event Action<ClipboardItem>? OnItemReactivated;
+#pragma warning restore CS0067
         public int PasteIgnoreWindowMs { get; set; } = 450;
 
         public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null) { }
@@ -452,8 +462,5 @@ public sealed class WindowsClipboardListenerTests : IDisposable
         public void UpdateLabelAndColor(Guid id, string? label, CardColor color) { }
         public ClipboardItem? MarkItemUsed(Guid id) => null;
         public void NotifyPasteInitiated(Guid itemId) { }
-
-        // Suppress unused event warnings
-        internal void SuppressWarnings() { OnItemAdded?.Invoke(null!); OnThumbnailReady?.Invoke(null!); OnItemReactivated?.Invoke(null!); }
     }
 }
