@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace CopyPaste.Core;
 
 /// <summary>
@@ -26,8 +24,6 @@ public static class StartupHelper
     /// All exceptions are handled internally - this method never throws.
     /// </summary>
     /// <param name="runOnStartup">True to enable auto-start, false to disable.</param>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Startup registration is non-critical - failures should not prevent app from running")]
     public static async Task ApplyStartupSettingAsync(bool runOnStartup)
     {
         try
@@ -47,8 +43,6 @@ public static class StartupHelper
         }
     }
 
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "StartupTask API can fail for various reasons - all non-critical")]
     private static async Task ApplyPackagedStartupAsync(bool enable)
     {
         try

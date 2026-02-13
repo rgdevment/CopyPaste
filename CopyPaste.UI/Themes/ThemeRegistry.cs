@@ -23,8 +23,6 @@ internal sealed class ThemeRegistry
         _factories[probe.Id] = static () => new T();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Community theme loading must not crash app - failures are logged")]
     public void DiscoverCommunityThemes()
     {
         var themesDir = StorageConfig.ThemesPath;

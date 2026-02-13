@@ -174,8 +174,6 @@ public sealed partial class App : Application, IDisposable
         _isDisposed = true;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Single instance check is non-critical - any failure should not prevent app from running")]
     private bool TryAcquireSingleInstance()
     {
         try
@@ -199,8 +197,6 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Message display is non-critical - failures should not prevent app from running")]
     private static void ShowInstanceAlreadyRunningMessage()
     {
         try
@@ -222,8 +218,6 @@ public sealed partial class App : Application, IDisposable
     [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Launcher signaling is non-critical - failures should not prevent app from running")]
     private static void SignalLauncherReady()
     {
         try
@@ -247,8 +241,6 @@ public sealed partial class App : Application, IDisposable
         e.Handled = true;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Update check is non-critical - failures should not prevent app from running")]
     private void InitializeUpdateChecker()
     {
         try
@@ -266,8 +258,6 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Update notification is non-critical - failures should not prevent app from running")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1863:Use CompositeFormat",
         Justification = "Format string is dynamic (localized) and used at most once per session")]
     private void OnUpdateAvailable(object? sender, UpdateAvailableEventArgs e)

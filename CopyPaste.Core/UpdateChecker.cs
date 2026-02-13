@@ -39,8 +39,6 @@ public sealed class UpdateChecker : IDisposable
     /// </summary>
     public event EventHandler<UpdateAvailableEventArgs>? OnUpdateAvailable;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Fire-and-forget task must never throw — unobserved exception would crash the process")]
     public UpdateChecker()
     {
         _httpClient = new HttpClient { Timeout = _httpTimeout };
@@ -88,8 +86,6 @@ public sealed class UpdateChecker : IDisposable
         return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.0.0";
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Update check is non-critical — unexpected failures must be logged, not crash the app")]
     internal async Task CheckForUpdateAsync()
     {
         if (_isDisposed) return;
@@ -236,8 +232,6 @@ public sealed class UpdateChecker : IDisposable
     /// <summary>
     /// Checks if the user has dismissed a specific version notification.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Dismissed version check is non-critical - any failure should return false")]
     private static bool IsVersionDismissed(string version)
     {
         try

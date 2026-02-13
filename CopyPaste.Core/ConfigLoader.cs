@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace CopyPaste.Core;
@@ -31,8 +30,6 @@ public static class ConfigLoader
     /// <summary>
     /// Loads configuration from MyM.json. Missing properties use MyMConfig defaults.
     /// </summary>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Config loading should not crash app - any error falls back to defaults")]
     public static MyMConfig Load()
     {
         if (_cachedConfig != null)
@@ -68,8 +65,6 @@ public static class ConfigLoader
     /// <summary>
     /// Saves configuration to MyM.json.
     /// </summary>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Config saving should not crash app - errors are logged")]
     public static bool Save(MyMConfig config)
     {
         try

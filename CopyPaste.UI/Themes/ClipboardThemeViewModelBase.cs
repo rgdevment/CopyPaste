@@ -222,8 +222,6 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
         UpdateIsEmpty();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Paste errors must not crash UI")]
     private async void OnPasteItem(ClipboardItemViewModel itemVM, bool plain)
     {
         try
