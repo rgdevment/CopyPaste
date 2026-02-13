@@ -41,9 +41,6 @@
   </p>
 
   <p>
-    <a href="https://github.com/sponsors/rgdevment">
-      <img src="https://img.shields.io/badge/Sponsor-♥-ea4aaa?style=flat-square&logo=github" alt="GitHub Sponsors"/>
-    </a>
     <a href="https://buymeacoffee.com/rgdevment">
       <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"/>
     </a>
