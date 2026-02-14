@@ -29,7 +29,7 @@
     "window": {
       "title": "Configuración - CopyPaste",
       "heading": "Configuración",
-      "subtitle": "Los cambios se guardan en MyM.json y requieren reiniciar."
+      "subtitle": "Los cambios requieren reiniciar la aplicación para aplicarse."
     },
     "tabs": {
       "general": "General",
@@ -192,7 +192,7 @@
       "donateLabel": "Apoya el proyecto",
       "donateDesc": "Si CopyPaste te resulta útil, considera invitarnos un café",
       "donateButton": "Invítame un café",
-      "license": "Licencia MIT — Libre y de código abierto."
+      "license": "Licencia GPL v3 — Libre y de código abierto."
     }
   },
   "clipboard": {

@@ -1,20 +1,20 @@
 <Project>
   <PropertyGroup>
-    <!-- Code quality -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-all</AnalysisLevel>
     <LangVersion>14.0</LangVersion>
     <Nullable>enable</Nullable>
-    
-    <!-- Release optimizations -->
+
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
     <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
-    
-    <!-- Single language (removes 90+ language folders) -->
+
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    
-    <!-- Deterministic builds for reproducibility -->
+
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>

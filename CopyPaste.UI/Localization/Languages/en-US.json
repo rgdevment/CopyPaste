@@ -29,7 +29,7 @@
     "window": {
       "title": "Settings - CopyPaste",
       "heading": "Settings",
-      "subtitle": "Changes are saved to MyM.json and require restart."
+      "subtitle": "Changes require restarting the app to take effect."
     },
     "tabs": {
       "general": "General",
@@ -192,7 +192,7 @@
       "donateLabel": "Support the project",
       "donateDesc": "If you find CopyPaste useful, consider buying us a coffee",
       "donateButton": "Buy me a coffee",
-      "license": "MIT License — Free and open source."
+      "license": "GPL v3 License — Free and open source."
     }
   },
   "clipboard": {

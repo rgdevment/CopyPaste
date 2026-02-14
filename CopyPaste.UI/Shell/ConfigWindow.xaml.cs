@@ -258,7 +258,7 @@ public sealed partial class ConfigWindow : Window
         AboutDonateLabel.Text = L.Get("config.about.donateLabel", "Support the project");
         AboutDonateDesc.Text = L.Get("config.about.donateDesc", "If you find CopyPaste useful, consider buying us a coffee");
         AboutDonateButtonText.Text = L.Get("config.about.donateButton", "Buy me a coffee");
-        AboutLicense.Text = L.Get("config.about.license", "MIT License — Free and open source.");
+        AboutLicense.Text = L.Get("config.about.license", "GPL v3 License — Free and open source.");
 
         // Buttons
         ResetButton.Content = L.Get("config.buttons.reset");
