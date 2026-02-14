@@ -23,9 +23,8 @@
 </PropertyGroup>
 
 <!--
-  Standalone (unpackaged) build configuration - DEFAULT.
-  Used for GitHub Releases distribution with Inno Setup installer.
-  Build with: dotnet build (no extra parameters needed)
+  Standalone (unpackaged) build: dotnet build (default)
+  Store (MSIX) build: dotnet build -p:PackageMode=Store
 -->
 <PropertyGroup Condition="'$(PackageMode)' != 'Store'">
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -35,13 +34,6 @@
     <AppxPackage>false</AppxPackage>
     <EnableMsixTooling>false</EnableMsixTooling>
 
-    <!--
-      Publishing optimizations for standalone (self-contained) builds:
-      - ReadyToRun: Precompiles IL to native code (faster cold start)
-      - ReadyToRunComposite: Better R2R optimization for self-contained apps
-      - Trimming partial: Removes unused code but preserves reflection (required for XAML)
-      Note: These require self-contained and are NOT compatible with MSIX/Store builds.
-    -->
     <PublishReadyToRun>true</PublishReadyToRun>
     <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
     <PublishTrimmed>true</PublishTrimmed>
@@ -51,11 +43,6 @@
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
 </PropertyGroup>
 
-<!--
-  Microsoft Store (MSIX) build configuration.
-  Used for Store distribution. Activated with: dotnet build -p:PackageMode=Store
-  Identity values (Name, Publisher) are set via CI/CD secrets in release pipeline.
--->
 <PropertyGroup Condition="'$(PackageMode)' == 'Store'">
     <WindowsPackageType>MSIX</WindowsPackageType>
     <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
@@ -64,10 +51,6 @@
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
 </PropertyGroup>
 
-<!--
-  Trimming configuration for third-party assemblies that don't support trimming.
-  Only applies to standalone builds where PublishTrimmed=true.
--->
 <ItemGroup Condition="'$(PackageMode)' != 'Store'">
     <TrimmerRootAssembly Include="Microsoft.Windows.SDK.NET" />
     <TrimmerRootAssembly Include="WinRT.Runtime" />
@@ -79,7 +62,7 @@
         <Manifest Include="$(ApplicationManifest)" Condition="'$(PackageMode)' != 'Store'" />
     </ItemGroup>
 
-    <!-- MSIX manifest included only for Store builds -->
+    <!-- MSIX manifest only for Store builds -->
     <ItemGroup Condition="'$(PackageMode)' == 'Store'">
         <AppxManifest Include="Package.appxmanifest" />
     </ItemGroup>
@@ -109,12 +92,10 @@
     </ItemGroup>
 
 
-    <!-- Copy PRI file to publish output (CRITICAL for XAML loading in Release) -->
     <Target Name="CopyPriToPublish" AfterTargets="Publish">
         <Copy SourceFiles="$(OutputPath)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
     </Target>
 
-    <!-- Copy Assets folder to publish output -->
     <Target Name="CopyAssetsToPublish" AfterTargets="Publish">
         <ItemGroup>
             <AssetFiles Include="$(OutputPath)Assets\**\*" />

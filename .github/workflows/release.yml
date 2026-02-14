@@ -39,10 +39,7 @@ jobs:
       - name: Wait for CI to start
         shell: pwsh
         run: |
-          Write-Host "⏳ Waiting 30 seconds to ensure CI workflow starts first..."
-          Write-Host "This prevents race conditions where release starts before CI"
           Start-Sleep -Seconds 30
-          Write-Host "✅ Wait complete, proceeding with release verification"
 
       - name: Extract version from tag
         id: get_version
@@ -54,7 +51,6 @@ jobs:
             $version = "1.0.0"
           }
 
-          # Extract numeric version for Windows (e.g., 1.0.0-beta.1 -> 1.0.0.1)
           if ($version -match '^(\d+\.\d+\.\d+)(?:-(?:alpha|beta|rc)\.(\d+))?$') {
             $baseVersion = $matches[1]
             $preRelease = if ($matches[2]) { $matches[2] } else { "0" }
@@ -88,10 +84,9 @@ jobs:
           }
 
           $repo = "${{ github.repository }}"
-          # Query the CI workflow directly by filename — no ambiguity with release jobs
           $url = "https://api.github.com/repos/$repo/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=1"
 
-          $maxAttempts = 20   # Wait up to ~100 seconds
+          $maxAttempts = 20
           $waitSeconds = 5
 
           for ($i = 0; $i -lt $maxAttempts; $i++) {
@@ -104,14 +99,11 @@ jobs:
             }
 
             if ($response.total_count -eq 0) {
-              # CI workflow doesn't run on tags — check if commit already passed CI on main
               if ($i -eq 0) {
-                Write-Host "ℹ️  No CI workflow run found for this SHA."
-                Write-Host "   CI only runs on push to main — checking if this commit already passed CI..."
+                Write-Host "No CI run found for this SHA, checking if already validated..."
               }
-              # If no CI run exists after a few attempts, the commit likely passed CI before tagging
               if ($i -ge 3) {
-                Write-Host "✅ No CI run found after $($i * $waitSeconds)s — commit was likely already validated on main."
+                Write-Host "No CI run found — commit was likely already validated on main."
                 exit 0
               }
               Start-Sleep -Seconds $waitSeconds
@@ -153,35 +145,30 @@ jobs:
       - name: Build Native Launcher
         shell: pwsh
         run: |
-          Write-Host "🔨 Building native C++ launcher..."
           Push-Location CopyPaste.Launcher
-
-          # Compile resource file (icon)
           rc.exe /fo resources.res resources.rc
-
-          # Compile with optimizations, embed manifest and icon
           cl.exe /O2 /MT /EHsc main.cpp resources.res `
             /link user32.lib gdi32.lib gdiplus.lib shell32.lib `
             /OUT:CopyPaste.exe `
             /SUBSYSTEM:WINDOWS `
             /MANIFEST:EMBED `
             /MANIFESTINPUT:app.manifest
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to build native launcher"
-            exit 1
-          }
-
+          if ($LASTEXITCODE -ne 0) { exit 1 }
           Pop-Location
-          Write-Host "✅ Native launcher built successfully"
 
       - name: Publish (${{ matrix.arch }})
         shell: pwsh
         run: |
+          $v = "${{ steps.get_version.outputs.VERSION }}"
+          $vn = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
+
           dotnet publish CopyPaste.UI/CopyPaste.UI.csproj `
             -c Release `
             -r ${{ matrix.arch }} `
             -p:Platform=${{ matrix.platform }} `
+            -p:Version=$v `
+            -p:AssemblyVersion=$vn `
+            -p:FileVersion=$vn `
             --self-contained true `
             -p:DebugType=None `
             -p:DebugSymbols=false `
@@ -193,20 +180,11 @@ jobs:
             -p:TieredCompilationQuickJitForLoops=true `
             --no-restore
 
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "dotnet publish failed"
-            exit 1
-          }
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
-          # Verify publish output exists
           $expectedPath = "${{ env.PUBLISH_PATH }}"
-          if (Test-Path $expectedPath) {
-            Write-Host "✅ Publish output found at: $expectedPath"
-            Get-ChildItem $expectedPath -Name | Select-Object -First 10
-          } else {
-            Write-Error "❌ Publish output not found at: $expectedPath"
-            Write-Host "Searching for publish folders..."
-            Get-ChildItem -Path "CopyPaste.UI/bin" -Recurse -Directory -Filter "publish" | ForEach-Object { Write-Host $_.FullName }
+          if (-not (Test-Path $expectedPath)) {
+            Write-Error "Publish output not found at: $expectedPath"
             exit 1
           }
 
@@ -214,53 +192,27 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
-
-          # Copy native launcher to publish directory (overwrites the .NET exe name)
           Copy-Item "CopyPaste.Launcher/CopyPaste.exe" -Destination $publishDir
-
-          Write-Host "✅ Native launcher integrated"
-          Write-Host "Entry point: CopyPaste.exe (native launcher)"
-          Write-Host ".NET app: CopyPaste.App.exe"
 
       - name: Clean Publish Output
         shell: pwsh
         run: |
           $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
-          Write-Host "Cleaning publish directory: $publishDir"
-
-          # Define folders to keep (exact names)
           $keepFolders = @('Assets', 'Microsoft.UI.Xaml', 'NpuDetect', 'en-us', 'en-US', 'en')
 
-          # Remove all culture/language folders except essential ones
-          # Pattern matches: xx, xx-XX, xx-Xxxx-XX, xxx-XX (culture codes including variants)
           Get-ChildItem -Path $publishDir -Directory | Where-Object {
-            $folderName = $_.Name
-            ($keepFolders -notcontains $folderName) -and
-            ($folderName -match '^[a-z]{2,3}(-[A-Za-z]{2,8})?(-[A-Za-z]{2,8})?$')
-          } | ForEach-Object {
-            Write-Host "Removing culture folder: $($_.Name)"
-            Remove-Item -Path $_.FullName -Recurse -Force
-          }
+            ($keepFolders -notcontains $_.Name) -and
+            ($_.Name -match '^[a-z]{2,3}(-[A-Za-z]{2,8})?(-[A-Za-z]{2,8})?$')
+          } | Remove-Item -Recurse -Force
 
-          # Remove PDB files
           Get-ChildItem -Path $publishDir -Filter "*.pdb" -Recurse | Remove-Item -Force
-
-          # Remove XML documentation files (except resources)
           Get-ChildItem -Path $publishDir -Filter "*.xml" -Recurse | Where-Object {
             $_.Name -notlike "*.resources.xml"
           } | Remove-Item -Force
-
-          # Remove createdump.exe (crash dump tool, not needed for production)
           Get-ChildItem -Path $publishDir -Filter "createdump.exe" -Recurse | Remove-Item -Force
 
-          # Count and display results
-          $fileCount = (Get-ChildItem -Path $publishDir -File -Recurse).Count
-          $folderCount = (Get-ChildItem -Path $publishDir -Directory -Recurse).Count
           $sizeBytes = (Get-ChildItem -Path $publishDir -File -Recurse | Measure-Object -Property Length -Sum).Sum
-          $sizeMB = [math]::Round($sizeBytes / 1MB, 2)
-
-          Write-Host "Final publish output: $fileCount files, $folderCount folders, $sizeMB MB"
-          Get-ChildItem -Path $publishDir -Directory | Select-Object Name | Format-Table
+          Write-Host "Publish output: $([math]::Round($sizeBytes / 1MB, 2)) MB"
 
       - name: Decode signing certificate
         if: env.PFX_BASE64 != ''
@@ -274,12 +226,8 @@ jobs:
         shell: pwsh
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
-
-          # Find latest x64 version of signtool
           $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
-
           if (-not $signtool) { Write-Error "Signtool not found"; exit 1 }
-          Write-Host "Using Signtool: $($signtool.FullName)"
 
           $targetDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
           Get-ChildItem -Path $targetDir -Include *.exe,*.dll -Recurse | ForEach-Object {
@@ -302,11 +250,6 @@ jobs:
           $version = "${{ steps.get_version.outputs.VERSION }}"
           $versionNumeric = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
 
-          Write-Host "Building installer with:"
-          Write-Host "Source: $publishDir"
-          Write-Host "Arch: $myArch"
-          Write-Host "Version: $version (numeric: $versionNumeric)"
-
           & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DMyAppVersionNumeric=$versionNumeric" "/DRepoRoot=$repoRoot"
 
       - name: Rename Installer
@@ -320,10 +263,7 @@ jobs:
         shell: pwsh
         run: |
           $pfxPath = Join-Path $PWD 'signingCert.pfx'
-
-          # Find latest x64 version of signtool
           $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
-
           & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe"
 
       - name: Upload installer artifact
@@ -333,10 +273,7 @@ jobs:
           path: CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.arch }}-setup.exe
           retention-days: 5
 
-  # ─── GitHub Release ──────────────────────────────────────────────────────
-  # Single job that creates the release and uploads all installers at once.
-  # This avoids race conditions when multiple matrix jobs try to finalize
-  # the same release simultaneously.
+  # ─── GitHub Release ─────────────────────────
   release:
     runs-on: ubuntu-latest
     needs: build
@@ -362,11 +299,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ─── Microsoft Store MSIX Build ──────────────────────────────────────────
-  # Builds MSIX packages for Store distribution (x64 + ARM64).
-  # Runs after standalone release succeeds (ensures CI is green).
-  # MSIX packages are attached to the GitHub Release for manual upload
-  # and passed to store-publish for automated submission.
+  # ─── Microsoft Store MSIX Build ─────────────
   store:
     runs-on: windows-latest
     needs: release
@@ -397,9 +330,6 @@ jobs:
             $version = "1.0.0"
           }
 
-          # Store only runs on stable tags (no pre-release).
-          # Microsoft Store requires revision (4th component) to be 0.
-          # Stable version: Major.Minor.Patch.0
           if ($version -match '^(\d+\.\d+\.\d+)') {
             $numericVersion = "$($matches[1]).0"
           } else {
@@ -437,20 +367,22 @@ jobs:
       - name: Build MSIX package
         shell: pwsh
         run: |
+          $v = "${{ steps.get_version.outputs.VERSION }}"
+          $vn = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
+
           dotnet build CopyPaste.UI/CopyPaste.UI.csproj `
             -c Release `
             -p:PackageMode=Store `
             -p:Platform=${{ matrix.platform }} `
+            -p:Version=$v `
+            -p:AssemblyVersion=$vn `
+            -p:FileVersion=$vn `
             -p:AppxBundle=Never `
             -p:UapAppxPackageBuildMode=StoreUpload `
             -p:AppxPackageSigningEnabled=false `
             --no-restore
 
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "MSIX build failed"
-            exit 1
-          }
-          Write-Host "MSIX build completed successfully"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Locate MSIX output
         id: msix
@@ -467,17 +399,9 @@ jobs:
 
           if (-not $file) {
             Write-Error "No MSIX output found"
-            Write-Host "Searching build output for package files..."
-            Get-ChildItem -Path "CopyPaste.UI/bin" -Recurse -File |
-              Where-Object { $_.Extension -in ".msix", ".msixupload", ".appx" } |
-              ForEach-Object { Write-Host $_.FullName }
             exit 1
           }
 
-          $sizeMB = [math]::Round($file.Length / 1MB, 2)
-          Write-Host "Found: $($file.FullName) ($sizeMB MB)"
-
-          # Create a clean name for the release asset
           $ext = $file.Extension
           $cleanName = "CopyPaste-${{ steps.get_version.outputs.VERSION }}-${{ matrix.msix_arch }}$ext"
           $cleanPath = Join-Path $file.Directory.FullName $cleanName
@@ -500,11 +424,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ─── Microsoft Store Submission ──────────────────────────────────────────
-  # Automatically submits MSIX packages to the Microsoft Store.
-  # Only runs on stable version tags (no pre-release).
-  # Requires these GitHub secrets: STORE_TENANT_ID, STORE_CLIENT_ID, STORE_CLIENT_SECRET
-  # And this GitHub variable: STORE_APP_ID
+  # ─── Microsoft Store Submission ─────────────
   store-publish:
     runs-on: windows-latest
     needs: store
@@ -524,20 +444,9 @@ jobs:
           if ([string]::IsNullOrEmpty($env:STORE_TENANT_ID) -or
               [string]::IsNullOrEmpty($env:STORE_CLIENT_ID) -or
               [string]::IsNullOrEmpty($env:STORE_CLIENT_SECRET)) {
-
-            Write-Host "Store credentials not configured - skipping automatic submission."
-            Write-Host "MSIX packages are available in the GitHub Release for manual upload."
-            Write-Host ""
-            Write-Host "To enable automatic Store submission, add these GitHub secrets:"
-            Write-Host "  STORE_TENANT_ID     - Azure AD tenant ID"
-            Write-Host "  STORE_CLIENT_ID     - Azure AD application (client) ID"
-            Write-Host "  STORE_CLIENT_SECRET - Azure AD application client secret"
-            Write-Host ""
-            Write-Host "And this GitHub repository variable:"
-            Write-Host "  STORE_APP_ID        - Partner Center application ID"
+            Write-Host "Store credentials not configured - skipping"
             echo "HAS_CREDS=false" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Host "Store credentials found - proceeding with submission"
             echo "HAS_CREDS=true" >> $env:GITHUB_OUTPUT
           }
 
@@ -576,12 +485,10 @@ jobs:
               $body = "Bug fixes and improvements."
             }
 
-            # Store listing 'What's new' supports max 1500 characters
             if ($body.Length -gt 1500) {
               $body = $body.Substring(0, 1497) + "..."
             }
 
-            # Write multiline output using heredoc delimiter (GitHub Actions recommended)
             $delimiter = "RELEASE_NOTES_EOF"
             echo "NOTES<<$delimiter" >> $env:GITHUB_OUTPUT
             echo $body >> $env:GITHUB_OUTPUT
@@ -625,17 +532,11 @@ jobs:
         shell: pwsh
         run: |
           $packages = Get-ChildItem -Path packages -Include "*.msixupload","*.msix" -Recurse
-          Write-Host "Uploading $($packages.Count) package(s) to Microsoft Store..."
-          $packages | ForEach-Object {
-            Write-Host "  - $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)"
-          }
-
           if ($packages.Count -eq 0) {
-            Write-Error "No MSIX packages found in packages directory"
+            Write-Error "No MSIX packages found"
             exit 1
           }
 
-          # msstore publish requires a path/URL as first argument
           $firstPackage = $packages[0].FullName
           msstore publish $firstPackage --inputDirectory packages --appId ${{ vars.STORE_APP_ID }} --noCommit --verbose
 
@@ -652,20 +553,13 @@ jobs:
             $notes = "Bug fixes and improvements."
           }
 
-          # Escape special characters for JSON
           $escapedNotes = $notes -replace '\\', '\\\\' -replace '"', '\"' -replace "`r", '' -replace "`n", '\n'
-
-          # Construct metadata JSON directly (PascalCase required for packaged apps)
           $metadataJson = '{"Listings":{"en-us":{"BaseListing":{"ReleaseNotes":"' + $escapedNotes + '"}}}}'
 
-          Write-Host "Updating Store listing with release notes ($($notes.Length) chars)..."
           msstore submission updateMetadata $appId $metadataJson --skipInitialPolling
-          Write-Host "Store listing metadata updated"
 
       - name: Commit and publish submission
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
         shell: pwsh
         run: |
-          Write-Host "Committing Store submission..."
           msstore submission publish ${{ vars.STORE_APP_ID }}
-          Write-Host "Store submission committed - awaiting certification"

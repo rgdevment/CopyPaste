@@ -371,7 +371,7 @@
                     <StackPanel Spacing="20" Margin="24,12,24,24">
                         <!-- APP INFO -->
                         <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,16,0,8">
-                            <Image Source="/Assets/StoreLogo.png" Width="72" Height="72" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/Square150x150Logo.png" Width="72" Height="72" HorizontalAlignment="Center"/>
                             <TextBlock Text="CopyPaste" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock x:Name="AboutVersionText" FontSize="12" Opacity="0.6" HorizontalAlignment="Center"/>
                         </StackPanel>
