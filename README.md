@@ -2,7 +2,7 @@
   <img src="CopyPaste.UI/Assets/CopyPasteLogo.ico" width="140" height="140" alt="CopyPaste App Logo"/>
 
   <h1>CopyPaste</h1>
-  <h3>The Modern Clipboard Manager for Windows</h3>
+  <h3>The Modern Clipboard Manager for Copy paste on Windows</h3>
 
   <p>
     <strong>High Performance • Open Source • Native Design</strong>
