@@ -330,12 +330,44 @@
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:ClipboardItemViewModel">
+                    <SwipeControl Margin="8,0,8,6">
+                        <SwipeControl.LeftItems>
+                            <SwipeItems Mode="Execute">
+                                <SwipeItem x:Name="SwipeDeleteItem"
+                                           Text="Delete"
+                                           Background="#E74C3C"
+                                           Invoked="SwipeDelete_Invoked">
+                                    <SwipeItem.IconSource>
+                                        <SymbolIconSource Symbol="Delete"/>
+                                    </SwipeItem.IconSource>
+                                </SwipeItem>
+                            </SwipeItems>
+                        </SwipeControl.LeftItems>
+                        <SwipeControl.RightItems>
+                            <SwipeItems Mode="Reveal">
+                                <SwipeItem x:Name="SwipePinItem"
+                                           Text="Pin"
+                                           Background="#3498DB"
+                                           Invoked="SwipePin_Invoked">
+                                    <SwipeItem.IconSource>
+                                        <SymbolIconSource Symbol="Pin"/>
+                                    </SwipeItem.IconSource>
+                                </SwipeItem>
+                                <SwipeItem x:Name="SwipeEditItem"
+                                           Text="Edit"
+                                           Background="#6C757D"
+                                           Invoked="SwipeEdit_Invoked">
+                                    <SwipeItem.IconSource>
+                                        <SymbolIconSource Symbol="Edit"/>
+                                    </SwipeItem.IconSource>
+                                </SwipeItem>
+                            </SwipeItems>
+                        </SwipeControl.RightItems>
                     <Border MinHeight="44"
                             CornerRadius="8"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderThickness="1"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            Margin="8,0,8,6"
                             Tag="{x:Bind}">
                         <Border.ContextFlyout>
                             <MenuFlyout>
@@ -450,6 +482,7 @@
 
                         </Grid>
                     </Border>
+                    </SwipeControl>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>

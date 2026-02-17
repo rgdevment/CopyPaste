@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Windows.Foundation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -282,6 +283,24 @@ internal sealed partial class CompactWindow : Window
 
     private void TrayMenuSettings_Click(object sender, RoutedEventArgs e) =>
         _context.OpenSettings();
+
+    private void SwipeDelete_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    {
+        if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
+            vm.DeleteCommand.Execute(null);
+    }
+
+    private void SwipePin_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    {
+        if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
+            vm.TogglePinCommand.Execute(null);
+    }
+
+    private void SwipeEdit_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    {
+        if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
+            vm.EditCommand.Execute(null);
+    }
 
     private void ResetFiltersOnShow()
     {
