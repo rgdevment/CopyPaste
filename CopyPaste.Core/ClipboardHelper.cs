@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
+using Windows.Storage.Streams;
 
 namespace CopyPaste.Core;
 
@@ -73,12 +74,8 @@ public static class ClipboardHelper
         }
     }
 
-    /// <summary>
-    /// Sets image content to the clipboard.
-    /// </summary>
     private static bool SetImage(ClipboardItem item)
     {
-        // For images, Content contains the path to the saved image file
         if (string.IsNullOrEmpty(item.Content) || !File.Exists(item.Content))
         {
             AppLogger.Warn($"Image file not found: {item.Content}");
@@ -87,17 +84,20 @@ public static class ClipboardHelper
 
         try
         {
+            byte[] imageBytes = File.ReadAllBytes(item.Content);
+
+            using var memStream = new InMemoryRandomAccessStream();
+            using (var writer = new DataWriter(memStream.GetOutputStreamAt(0)))
+            {
+                writer.WriteBytes(imageBytes);
+                writer.StoreAsync().AsTask().GetAwaiter().GetResult();
+                writer.DetachStream();
+            }
+
+            memStream.Seek(0);
+
             var dataPackage = new DataPackage();
-
-            // Set as file reference
-            var storageFile = StorageFile.GetFileFromPathAsync(item.Content).AsTask().Result;
-
-            // Use explicit List<IStorageItem> for WinRT interop compatibility
-            var storageItems = new List<IStorageItem> { storageFile };
-            dataPackage.SetStorageItems(storageItems);
-
-            // Also set as bitmap for applications that prefer bitmap format
-            var streamRef = Windows.Storage.Streams.RandomAccessStreamReference.CreateFromFile(storageFile);
+            var streamRef = RandomAccessStreamReference.CreateFromStream(memStream);
             dataPackage.SetBitmap(streamRef);
 
             Clipboard.SetContent(dataPackage);

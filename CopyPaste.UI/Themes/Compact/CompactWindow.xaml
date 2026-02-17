@@ -90,17 +90,6 @@
             </StackPanel>
         </Grid>
 
-        <!-- Header: Section Title -->
-        <Grid Grid.Row="1" Margin="16,2,16,4">
-            <TextBlock x:Name="SectionTitle"
-                       Text="Clipboard"
-                       FontSize="14"
-                       FontWeight="SemiBold"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Left"
-                       Opacity="0.9"/>
-        </Grid>
-
         <!-- Search/Filter Bar -->
         <Grid Grid.Row="2" Margin="12,4,12,6">
             <Grid.ColumnDefinitions>
@@ -330,13 +319,15 @@
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:ClipboardItemViewModel">
-                    <Border MinHeight="44"
+                    <Border MinHeight="52"
                             CornerRadius="8"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderThickness="1"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            Margin="8,0,8,6"
-                            Tag="{x:Bind}">
+                            Margin="8,0,8,7"
+                            Tag="{x:Bind}"
+                            PointerEntered="Card_PointerEntered"
+                            PointerExited="Card_PointerExited">
                         <Border.ContextFlyout>
                             <MenuFlyout>
                                 <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
@@ -367,16 +358,16 @@
                             </Border>
 
                             <!-- Content area with header + body + footer -->
-                            <Grid Padding="12,6,12,6">
+                            <Grid Padding="12,8,12,8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- Card header: type icon + label/name (left) + timestamp (right) -->
-                                <Grid Grid.Row="0" Margin="0,0,0,4">
+                                <!-- Card header: type icon + label/name (left) + timestamp + hover actions (right) -->
+                                <Grid Grid.Row="0" Margin="0,0,0,5">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -389,21 +380,48 @@
                                         <TextBlock Text="{x:Bind HeaderTitle}" FontSize="11" Opacity="0.4"
                                                    MaxLines="1" Visibility="{x:Bind DefaultHeaderVisibility}"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind Timestamp}" FontSize="10" Opacity="0.35"
-                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                                        <!-- Timestamp (visible by default, hidden on hover) -->
+                                        <TextBlock x:Name="TimestampText" Text="{x:Bind Timestamp}" FontSize="10" Opacity="0.35"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        <!-- Hover action buttons (hidden by default, shown on hover) -->
+                                        <StackPanel x:Name="HoverActions" Orientation="Horizontal" Spacing="2"
+                                                    Opacity="0" VerticalAlignment="Center" Margin="4,0,0,0">
+                                            <Button Command="{x:Bind TogglePinCommand}"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                                    ToolTipService.ToolTip="{x:Bind PinMenuText, Mode=OneWay}">
+                                                <FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}" FontSize="11" Opacity="0.6"/>
+                                            </Button>
+                                            <Button Command="{x:Bind EditCommand}"
+                                                    Visibility="{x:Bind CanEdit}"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                                    ToolTipService.ToolTip="{x:Bind EditText}">
+                                                <FontIcon Glyph="&#xE70F;" FontSize="11" Opacity="0.6"/>
+                                            </Button>
+                                            <Button Command="{x:Bind DeleteCommand}"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                                    ToolTipService.ToolTip="{x:Bind DeleteText}">
+                                                <FontIcon Glyph="&#xE711;" FontSize="11" Opacity="0.6"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
                                 </Grid>
 
                                 <!-- Text content -->
                                 <TextBlock Grid.Row="1" Text="{x:Bind Content, Mode=OneWay}"
                                            MaxLines="{x:Bind ContentMaxLines, Mode=OneWay}"
                                            TextTrimming="CharacterEllipsis"
-                                           FontSize="13" Opacity="0.85" TextWrapping="Wrap"
+                                           FontSize="13" Opacity="0.9" LineHeight="20" TextWrapping="Wrap"
                                            Visibility="{x:Bind IsTextVisible, Mode=OneWay}"/>
 
                                 <!-- Image content -->
-                                <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="4"
+                                <Border x:Name="ImageBorder" Grid.Row="1" CornerRadius="6"
                                         Visibility="{x:Bind ImageVisibility, Mode=OneWay}"
-                                        HorizontalAlignment="Stretch" Height="70" Opacity="0.7"
+                                        HorizontalAlignment="Stretch" Height="90" Opacity="0.9"
+                                        Margin="0,2,0,0"
                                         Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <Image x:Name="ClipboardImage"
                                            Stretch="Uniform"
@@ -412,9 +430,10 @@
                                 </Border>
 
                                 <!-- Media thumbnail -->
-                                <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="4"
+                                <Border x:Name="MediaBorder" Grid.Row="1" CornerRadius="6"
                                         Visibility="{x:Bind MediaThumbnailVisibility, Mode=OneWay}"
-                                        HorizontalAlignment="Stretch" Height="70" Opacity="0.7"
+                                        HorizontalAlignment="Stretch" Height="90" Opacity="0.9"
+                                        Margin="0,2,0,0"
                                         Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <Image Source="{x:Bind ThumbnailPath, Mode=OneWay}"
                                            Stretch="Uniform"
@@ -429,7 +448,7 @@
                                 </StackPanel>
 
                                 <!-- Card footer: source + size + paste count -->
-                                <Grid Grid.Row="3" Margin="0,4,0,0">
+                                <Grid Grid.Row="3" Margin="0,6,0,0">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="4"
                                                 Visibility="{x:Bind AppSourceVisibility}">
                                         <FontIcon Glyph="&#xE7C3;" FontSize="9" Opacity="0.3"/>
