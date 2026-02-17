@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using WinRT.Interop;
@@ -284,18 +285,21 @@ internal sealed partial class CompactWindow : Window
     private void TrayMenuSettings_Click(object sender, RoutedEventArgs e) =>
         _context.OpenSettings();
 
+    [SuppressMessage("Design", "CA1822:Mark members as static", Justification = "XAML event handler")]
     private void SwipeDelete_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
     {
         if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
             vm.DeleteCommand.Execute(null);
     }
 
+    [SuppressMessage("Design", "CA1822:Mark members as static", Justification = "XAML event handler")]
     private void SwipePin_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
     {
         if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
             vm.TogglePinCommand.Execute(null);
     }
 
+    [SuppressMessage("Design", "CA1822:Mark members as static", Justification = "XAML event handler")]
     private void SwipeEdit_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
     {
         if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
