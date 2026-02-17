@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Windows.Foundation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -127,7 +128,6 @@ internal sealed partial class CompactWindow : Window
 
     private void ApplyLocalizedStrings()
     {
-        SectionTitle.Text = L.Get("ui.section.recent", "Clipboard");
         SearchBox.PlaceholderText = L.Get("ui.search.placeholder", "Search...");
         EmptyStateText.Text = L.Get("ui.search.empty", "No items");
 
@@ -172,7 +172,6 @@ internal sealed partial class CompactWindow : Window
     {
         ViewModel.SelectedTabIndex = index;
         UpdateTabVisuals(index);
-        UpdateSectionTitle(index);
     }
 
     private void UpdateTabVisuals(int activeIndex)
@@ -181,14 +180,6 @@ internal sealed partial class CompactWindow : Window
         PinnedTabIcon.Opacity = activeIndex == 1 ? 1.0 : 0.45;
     }
 
-    private void UpdateSectionTitle(int tabIndex)
-    {
-        if (SectionTitle == null) return;
-
-        SectionTitle.Text = tabIndex == 1
-            ? L.Get("ui.section.pinned", "Pinned")
-            : L.Get("ui.section.recent", "Clipboard");
-    }
 
     internal void CollapseAllCards()
     {
@@ -282,6 +273,36 @@ internal sealed partial class CompactWindow : Window
 
     private void TrayMenuSettings_Click(object sender, RoutedEventArgs e) =>
         _context.OpenSettings();
+
+    private void Card_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        var timestamp = FindChild<TextBlock>(border, "TimestampText");
+        var actions = FindChild<StackPanel>(border, "HoverActions");
+        if (timestamp != null) timestamp.Opacity = 0;
+        if (actions != null) actions.Opacity = 1;
+    }
+
+    private void Card_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        var timestamp = FindChild<TextBlock>(border, "TimestampText");
+        var actions = FindChild<StackPanel>(border, "HoverActions");
+        if (timestamp != null) timestamp.Opacity = 0.35;
+        if (actions != null) actions.Opacity = 0;
+    }
+
+    private static T? FindChild<T>(DependencyObject parent, string name) where T : FrameworkElement
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T fe && fe.Name == name) return fe;
+            var result = FindChild<T>(child, name);
+            if (result != null) return result;
+        }
+        return null;
+    }
 
     private void ResetFiltersOnShow()
     {
