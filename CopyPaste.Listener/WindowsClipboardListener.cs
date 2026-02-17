@@ -326,9 +326,27 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
 
             if (IsClipboardFormatAvailable(_cF_DIB))
             {
-                // For images, just mark that an image is present
-                // Computing full hash would be expensive
-                signature.Add("IMAGE:present");
+                IntPtr hData = GetClipboardData(_cF_DIB);
+                if (hData != IntPtr.Zero)
+                {
+                    nuint size = GlobalSize(hData);
+                    IntPtr pData = GlobalLock(hData);
+                    if (pData != IntPtr.Zero)
+                    {
+                        try
+                        {
+                            int sampleSize = (int)Math.Min((uint)size, 256u);
+                            byte[] sample = new byte[sampleSize];
+                            Marshal.Copy(pData, sample, 0, sampleSize);
+                            signature.Add($"IMAGE:{size}:{Convert.ToHexString(sample)}");
+                        }
+                        finally { GlobalUnlock(hData); }
+                    }
+                    else
+                    {
+                        signature.Add($"IMAGE:{size}");
+                    }
+                }
             }
 
             if (signature.Count == 0) return null;

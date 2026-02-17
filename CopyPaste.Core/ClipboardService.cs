@@ -149,18 +149,25 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
         try
         {
             string originalPath = Path.Combine(StorageConfig.ImagesPath, $"{item.Id}.png");
-            File.WriteAllBytes(originalPath, rawData);
+
+            using var managedSrc = new MemoryStream(rawData);
+            using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException("Decode failed");
+
+            using var fullImage = SKImage.FromBitmap(bitmap);
+            using var pngData = fullImage.Encode(SKEncodedImageFormat.Png, 100);
+            using (var fileStream = File.Create(originalPath))
+            {
+                pngData.SaveTo(fileStream);
+            }
 
             item.Content = originalPath;
             repository.Update(item);
 
             string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
 
-            using var managedSrc = new MemoryStream(rawData);
-            using var bitmap = SKBitmap.Decode(managedSrc) ?? throw new ArgumentException("Decode failed");
-
             var (width, height) = GenerateThumbnail(bitmap, thumbPath, SKEncodedImageFormat.Png);
 
+            long pngFileSize = new FileInfo(originalPath).Length;
             var dataMap = new Dictionary<string, object>
             {
                 { "thumb_path", thumbPath },
@@ -168,7 +175,7 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
                 { "thumb_height", height },
                 { "width", bitmap.Width },
                 { "height", bitmap.Height },
-                { "size", (long)rawData.Length },
+                { "size", pngFileSize },
                 { "hash", preCalculatedHash ?? string.Empty }
             };
 
@@ -199,9 +206,6 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
             meta["hash"] = hash;
 
             string originalPath = Path.Combine(StorageConfig.ImagesPath, $"{item.Id}.png");
-            File.WriteAllBytes(originalPath, rawData);
-
-            item.Content = originalPath;
 
             string thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
 
@@ -210,14 +214,24 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
 
             if (bitmap != null)
             {
+                using var fullImage = SKImage.FromBitmap(bitmap);
+                using var pngData = fullImage.Encode(SKEncodedImageFormat.Png, 100);
+                using (var fileStream = File.Create(originalPath))
+                {
+                    pngData.SaveTo(fileStream);
+                }
+
+                item.Content = originalPath;
+
                 var (width, height) = GenerateThumbnail(bitmap, thumbPath, SKEncodedImageFormat.Png);
 
+                long pngFileSize = new FileInfo(originalPath).Length;
                 meta["thumb_path"] = thumbPath;
                 meta["thumb_width"] = width;
                 meta["thumb_height"] = height;
                 meta["width"] = bitmap.Width;
                 meta["height"] = bitmap.Height;
-                meta["size"] = (long)rawData.Length;
+                meta["size"] = pngFileSize;
 
                 if (rawData.Length >= ConfigLoader.Config.ThumbnailGCThreshold)
                 {
