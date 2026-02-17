@@ -4,10 +4,6 @@
     "appBranding": "CopyPaste"
   },
   "ui": {
-    "section": {
-      "recent": "Recent",
-      "pinned": "Pinned"
-    },
     "sidebar": {
       "settings": "Settings",
       "report": "Report bug",

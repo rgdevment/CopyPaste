@@ -128,7 +128,6 @@ internal sealed partial class CompactWindow : Window
 
     private void ApplyLocalizedStrings()
     {
-        SectionTitle.Text = L.Get("ui.section.recent", "Clipboard");
         SearchBox.PlaceholderText = L.Get("ui.search.placeholder", "Search...");
         EmptyStateText.Text = L.Get("ui.search.empty", "No items");
 
@@ -173,7 +172,6 @@ internal sealed partial class CompactWindow : Window
     {
         ViewModel.SelectedTabIndex = index;
         UpdateTabVisuals(index);
-        UpdateSectionTitle(index);
     }
 
     private void UpdateTabVisuals(int activeIndex)
@@ -182,14 +180,6 @@ internal sealed partial class CompactWindow : Window
         PinnedTabIcon.Opacity = activeIndex == 1 ? 1.0 : 0.45;
     }
 
-    private void UpdateSectionTitle(int tabIndex)
-    {
-        if (SectionTitle == null) return;
-
-        SectionTitle.Text = tabIndex == 1
-            ? L.Get("ui.section.pinned", "Pinned")
-            : L.Get("ui.section.recent", "Clipboard");
-    }
 
     internal void CollapseAllCards()
     {
