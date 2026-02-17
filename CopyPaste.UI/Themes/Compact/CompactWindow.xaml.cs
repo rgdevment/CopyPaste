@@ -10,7 +10,6 @@ using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using WinRT.Interop;
@@ -285,25 +284,34 @@ internal sealed partial class CompactWindow : Window
     private void TrayMenuSettings_Click(object sender, RoutedEventArgs e) =>
         _context.OpenSettings();
 
-    [SuppressMessage("Design", "CA1822:Mark members as static", Justification = "XAML event handler")]
-    private void SwipeDelete_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    private void Card_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
-            vm.DeleteCommand.Execute(null);
+        if (sender is not Border border) return;
+        var timestamp = FindChild<TextBlock>(border, "TimestampText");
+        var actions = FindChild<StackPanel>(border, "HoverActions");
+        if (timestamp != null) timestamp.Opacity = 0;
+        if (actions != null) actions.Opacity = 1;
     }
 
-    [SuppressMessage("Design", "CA1822:Mark members as static", Justification = "XAML event handler")]
-    private void SwipePin_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    private void Card_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
-        if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
-            vm.TogglePinCommand.Execute(null);
+        if (sender is not Border border) return;
+        var timestamp = FindChild<TextBlock>(border, "TimestampText");
+        var actions = FindChild<StackPanel>(border, "HoverActions");
+        if (timestamp != null) timestamp.Opacity = 0.35;
+        if (actions != null) actions.Opacity = 0;
     }
 
-    [SuppressMessage("Design", "CA1822:Mark members as static", Justification = "XAML event handler")]
-    private void SwipeEdit_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    private static T? FindChild<T>(DependencyObject parent, string name) where T : FrameworkElement
     {
-        if (args.SwipeControl.DataContext is ClipboardItemViewModel vm)
-            vm.EditCommand.Execute(null);
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T fe && fe.Name == name) return fe;
+            var result = FindChild<T>(child, name);
+            if (result != null) return result;
+        }
+        return null;
     }
 
     private void ResetFiltersOnShow()
