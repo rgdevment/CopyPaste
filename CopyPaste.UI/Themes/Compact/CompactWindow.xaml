@@ -314,6 +314,13 @@
                     <Setter Property="MinHeight" Value="0"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                     <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListViewItem">
+                                <ContentPresenter/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
                 </Style>
             </ListView.ItemContainerStyle>
             <ListView.ItemsPanel>
@@ -323,45 +330,15 @@
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:ClipboardItemViewModel">
-                    <SwipeControl Margin="8,0,8,6">
-                        <SwipeControl.LeftItems>
-                            <SwipeItems Mode="Execute">
-                                <SwipeItem x:Name="SwipeDeleteItem"
-                                           Text="Delete"
-                                           Background="#E74C3C"
-                                           Invoked="SwipeDelete_Invoked">
-                                    <SwipeItem.IconSource>
-                                        <SymbolIconSource Symbol="Delete"/>
-                                    </SwipeItem.IconSource>
-                                </SwipeItem>
-                            </SwipeItems>
-                        </SwipeControl.LeftItems>
-                        <SwipeControl.RightItems>
-                            <SwipeItems Mode="Reveal">
-                                <SwipeItem x:Name="SwipePinItem"
-                                           Text="Pin"
-                                           Background="#3498DB"
-                                           Invoked="SwipePin_Invoked">
-                                    <SwipeItem.IconSource>
-                                        <SymbolIconSource Symbol="Pin"/>
-                                    </SwipeItem.IconSource>
-                                </SwipeItem>
-                                <SwipeItem x:Name="SwipeEditItem"
-                                           Text="Edit"
-                                           Background="#6C757D"
-                                           Invoked="SwipeEdit_Invoked">
-                                    <SwipeItem.IconSource>
-                                        <SymbolIconSource Symbol="Edit"/>
-                                    </SwipeItem.IconSource>
-                                </SwipeItem>
-                            </SwipeItems>
-                        </SwipeControl.RightItems>
                     <Border MinHeight="44"
                             CornerRadius="8"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderThickness="1"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            Tag="{x:Bind}">
+                            Margin="8,0,8,6"
+                            Tag="{x:Bind}"
+                            PointerEntered="Card_PointerEntered"
+                            PointerExited="Card_PointerExited">
                         <Border.ContextFlyout>
                             <MenuFlyout>
                                 <MenuFlyoutItem Text="{x:Bind PasteText}" Icon="Paste" Command="{x:Bind PasteCommand}"/>
@@ -400,7 +377,7 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- Card header: type icon + label/name (left) + timestamp (right) -->
+                                <!-- Card header: type icon + label/name (left) + timestamp + hover actions (right) -->
                                 <Grid Grid.Row="0" Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -414,8 +391,34 @@
                                         <TextBlock Text="{x:Bind HeaderTitle}" FontSize="11" Opacity="0.4"
                                                    MaxLines="1" Visibility="{x:Bind DefaultHeaderVisibility}"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind Timestamp}" FontSize="10" Opacity="0.35"
-                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                                        <!-- Timestamp (visible by default, hidden on hover) -->
+                                        <TextBlock x:Name="TimestampText" Text="{x:Bind Timestamp}" FontSize="10" Opacity="0.35"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        <!-- Hover action buttons (hidden by default, shown on hover) -->
+                                        <StackPanel x:Name="HoverActions" Orientation="Horizontal" Spacing="2"
+                                                    Opacity="0" VerticalAlignment="Center" Margin="4,0,0,0">
+                                            <Button Command="{x:Bind TogglePinCommand}"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                                    ToolTipService.ToolTip="{x:Bind PinMenuText, Mode=OneWay}">
+                                                <FontIcon Glyph="{x:Bind PinIconGlyph, Mode=OneWay}" FontSize="11" Opacity="0.6"/>
+                                            </Button>
+                                            <Button Command="{x:Bind EditCommand}"
+                                                    Visibility="{x:Bind CanEdit}"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                                    ToolTipService.ToolTip="{x:Bind EditText}">
+                                                <FontIcon Glyph="&#xE70F;" FontSize="11" Opacity="0.6"/>
+                                            </Button>
+                                            <Button Command="{x:Bind DeleteCommand}"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                                    ToolTipService.ToolTip="{x:Bind DeleteText}">
+                                                <FontIcon Glyph="&#xE711;" FontSize="11" Opacity="0.6"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
                                 </Grid>
 
                                 <!-- Text content -->
@@ -475,7 +478,6 @@
 
                         </Grid>
                     </Border>
-                    </SwipeControl>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
