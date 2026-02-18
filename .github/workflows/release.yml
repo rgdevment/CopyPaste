@@ -429,7 +429,7 @@ jobs:
     runs-on: windows-latest
     needs: store
     timeout-minutes: 15
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-')
+    if: false #startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-')
 
     env:
       STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
