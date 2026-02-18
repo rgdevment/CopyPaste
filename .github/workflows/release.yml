@@ -433,6 +433,7 @@ jobs:
 
     env:
       STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
+      STORE_SELLER_ID: ${{ secrets.STORE_SELLER_ID }}
       STORE_CLIENT_ID: ${{ secrets.STORE_CLIENT_ID }}
       STORE_CLIENT_SECRET: ${{ secrets.STORE_CLIENT_SECRET }}
 
@@ -442,6 +443,7 @@ jobs:
         shell: pwsh
         run: |
           if ([string]::IsNullOrEmpty($env:STORE_TENANT_ID) -or
+              [string]::IsNullOrEmpty($env:STORE_SELLER_ID) -or
               [string]::IsNullOrEmpty($env:STORE_CLIENT_ID) -or
               [string]::IsNullOrEmpty($env:STORE_CLIENT_SECRET)) {
             Write-Host "Store credentials not configured - skipping"
@@ -542,10 +544,13 @@ jobs:
 
       - name: Configure Store CLI
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
+        env:
+          STORE_SELLER_ID: ${{ secrets.STORE_SELLER_ID }}
         shell: pwsh
         run: |
           msstore reconfigure `
             --tenantId $env:STORE_TENANT_ID `
+            --sellerId $env:STORE_SELLER_ID `
             --clientId $env:STORE_CLIENT_ID `
             --clientSecret $env:STORE_CLIENT_SECRET
 
