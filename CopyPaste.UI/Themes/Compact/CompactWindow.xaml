@@ -383,7 +383,7 @@
                                     <Grid Grid.Column="1" VerticalAlignment="Center">
                                         <!-- Timestamp (visible by default, hidden on hover) -->
                                         <TextBlock x:Name="TimestampText" Text="{x:Bind Timestamp}" FontSize="10" Opacity="0.35"
-                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                   VerticalAlignment="Center" HorizontalAlignment="Right" Margin="8,0,0,0"/>
                                         <!-- Hover action buttons (hidden by default, shown on hover) -->
                                         <StackPanel x:Name="HoverActions" Orientation="Horizontal" Spacing="2"
                                                     Opacity="0" VerticalAlignment="Center" Margin="4,0,0,0">
