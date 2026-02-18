@@ -518,10 +518,27 @@ jobs:
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
         shell: pwsh
         run: |
-          winget install --id Microsoft.MicrosoftStoreCLI --source winget --silent --accept-package-agreements --accept-source-agreements
-          # Refresh PATH so msstore is available in subsequent steps
-          $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")
-          echo "PATH=$env:PATH" >> $env:GITHUB_ENV
+          $release = Invoke-RestMethod "https://api.github.com/repos/microsoft/msstore-cli/releases/latest"
+          $asset = $release.assets | Where-Object { $_.name -like "*win-x64*" -and $_.name -like "*.zip" } | Select-Object -First 1
+
+          if (-not $asset) {
+            Write-Error "MSStore CLI release asset not found"
+            exit 1
+          }
+
+          Write-Host "Downloading $($asset.name)..."
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "msstore-cli.zip"
+          Expand-Archive "msstore-cli.zip" -DestinationPath "$env:LOCALAPPDATA\msstore-cli" -Force
+
+          $msstoreExe = Get-ChildItem "$env:LOCALAPPDATA\msstore-cli" -Recurse -Filter "msstore.exe" | Select-Object -First 1
+          if (-not $msstoreExe) {
+            Write-Error "msstore.exe not found after extraction"
+            exit 1
+          }
+
+          $toolDir = $msstoreExe.DirectoryName
+          echo "$toolDir" >> $env:GITHUB_PATH
+          Write-Host "MSStore CLI installed at $toolDir"
 
       - name: Configure Store CLI
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
