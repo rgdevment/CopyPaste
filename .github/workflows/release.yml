@@ -511,14 +511,17 @@ jobs:
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: "10.0.x"
           dotnet-quality: "preview"
 
       - name: Install Microsoft Store CLI
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
-        run: dotnet tool install -g MSStore.CLI --framework net8.0
+        shell: pwsh
+        run: |
+          winget install --id Microsoft.MicrosoftStoreCLI --source winget --silent --accept-package-agreements --accept-source-agreements
+          # Refresh PATH so msstore is available in subsequent steps
+          $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")
+          echo "PATH=$env:PATH" >> $env:GITHUB_ENV
 
       - name: Configure Store CLI
         if: steps.check_creds.outputs.HAS_CREDS == 'true'
