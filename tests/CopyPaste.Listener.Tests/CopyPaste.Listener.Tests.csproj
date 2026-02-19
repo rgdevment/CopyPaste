@@ -7,8 +7,7 @@
     <!-- CA1054: Tests use string URLs to verify parsing behavior -->
     <!-- CA1515: xUnit requires public test classes for discovery/reflection -->
     <!-- S4144: Test methods intentionally share similar structure with different data -->
-    <!-- S2925: Thread.Sleep is needed for timing-sensitive integration tests -->
-    <NoWarn>IDE0022;CA1707;CA1054;CA1515;S4144;S2925</NoWarn>
+    <NoWarn>IDE0022;CA1707;CA1054;CA1515;S4144</NoWarn>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
   <ItemGroup>
@@ -21,7 +20,8 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+    <ProjectReference Include="..\..\CopyPaste.Listener\CopyPaste.Listener.csproj" />
+    <ProjectReference Include="..\..\CopyPaste.Core\CopyPaste.Core.csproj" />
   </ItemGroup>
 </Project>
 

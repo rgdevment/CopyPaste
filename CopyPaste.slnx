@@ -17,16 +17,18 @@
     <Platform Solution="*|x64" Project="x64" />
     <Platform Solution="*|ARM64" Project="ARM64" />
   </Project>
-  <Project Path="CopyPaste.Core.Tests/CopyPaste.Core.Tests.csproj" />
   <Project Path="CopyPaste.Listener/CopyPaste.Listener.csproj">
     <Platform Solution="*|x64" Project="x64" />
     <Platform Solution="*|ARM64" Project="ARM64" />
   </Project>
-  <Project Path="CopyPaste.Listener.Tests/CopyPaste.Listener.Tests.csproj" />
   <Project Path="CopyPaste.UI/CopyPaste.UI.csproj">
     <Platform Solution="*|x64" Project="x64" />
     <Platform Solution="*|ARM64" Project="ARM64" />
     <Deploy />
   </Project>
-  <Project Path="CopyPaste.UI.Tests/CopyPaste.UI.Tests.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="Tests/CopyPaste.Core.Tests/CopyPaste.Core.Tests.csproj" />
+    <Project Path="Tests/CopyPaste.Listener.Tests/CopyPaste.Listener.Tests.csproj" />
+    <Project Path="Tests/CopyPaste.UI.Tests/CopyPaste.UI.Tests.csproj" />
+  </Folder>
 </Solution>
