@@ -47,6 +47,7 @@ public static class ClipboardHelper
                 try
                 {
                     using var doc = JsonDocument.Parse(metadata);
+
                     if (doc.RootElement.TryGetProperty("rtf", out var rtfProp))
                     {
                         var rtfBase64 = rtfProp.GetString();
@@ -55,6 +56,18 @@ public static class ClipboardHelper
                             var rtfBytes = Convert.FromBase64String(rtfBase64);
                             var rtfText = System.Text.Encoding.UTF8.GetString(rtfBytes);
                             dataPackage.SetRtf(rtfText);
+                        }
+                    }
+
+                    if (doc.RootElement.TryGetProperty("html", out var htmlProp))
+                    {
+                        var htmlBase64 = htmlProp.GetString();
+                        if (!string.IsNullOrEmpty(htmlBase64))
+                        {
+                            var htmlBytes = Convert.FromBase64String(htmlBase64);
+                            // CF_HTML is UTF-8 encoded and includes the Windows clipboard HTML header
+                            var htmlText = System.Text.Encoding.UTF8.GetString(htmlBytes);
+                            dataPackage.SetHtmlFormat(htmlText);
                         }
                     }
                 }
