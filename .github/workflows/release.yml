@@ -86,8 +86,10 @@ jobs:
           $repo = "${{ github.repository }}"
           $url = "https://api.github.com/repos/$repo/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=1"
 
-          $maxAttempts = 20
-          $waitSeconds = 5
+          $maxAttempts = 40
+          $waitSeconds = 20
+          $notFoundStreak = 0
+          $maxNotFoundStreak = 6   # 2 minutes with no CI run found → hard fail
 
           for ($i = 0; $i -lt $maxAttempts; $i++) {
             try {
@@ -99,17 +101,18 @@ jobs:
             }
 
             if ($response.total_count -eq 0) {
-              if ($i -eq 0) {
-                Write-Host "No CI run found for this SHA, checking if already validated..."
-              }
-              if ($i -ge 3) {
-                Write-Host "No CI run found — commit was likely already validated on main."
-                exit 0
+              $notFoundStreak++
+              Write-Host "⚠️  No CI run found for this SHA (attempt $notFoundStreak/$maxNotFoundStreak)..."
+              if ($notFoundStreak -ge $maxNotFoundStreak) {
+                Write-Error "❌ No CI run found after $($notFoundStreak * $waitSeconds)s — commit may not have gone through CI. Release blocked."
+                Write-Host "::error::No CI run found — Release blocked"
+                exit 1
               }
               Start-Sleep -Seconds $waitSeconds
               continue
             }
 
+            $notFoundStreak = 0
             $run = $response.workflow_runs[0]
             $status = $run.status
             $conclusion = $run.conclusion
@@ -131,7 +134,9 @@ jobs:
             Start-Sleep -Seconds $waitSeconds
           }
 
-          Write-Warning "⚠️  CI verification timed out. Proceeding — please verify manually."
+          Write-Error "❌ CI verification timed out after $($maxAttempts * $waitSeconds)s — Release blocked."
+          Write-Host "::error::CI verification timed out — Release blocked"
+          exit 1
 
 
       - name: Lint (Check format)

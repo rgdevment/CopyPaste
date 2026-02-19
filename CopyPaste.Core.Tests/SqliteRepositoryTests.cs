@@ -341,7 +341,7 @@ public sealed class SqliteRepositoryTests : IDisposable
         var item2 = new ClipboardItem { Content = "Second", Type = ClipboardContentType.Text };
 
         _repository.Save(item1);
-        Thread.Sleep(10);
+        Thread.Sleep(50);
         _repository.Save(item2);
 
         var latest = _repository.GetLatest();
@@ -400,7 +400,7 @@ public sealed class SqliteRepositoryTests : IDisposable
         var item2 = new ClipboardItem { Content = "Second", Type = ClipboardContentType.Text };
 
         _repository.Save(item1);
-        Thread.Sleep(10);
+        Thread.Sleep(50);
         _repository.Save(item2);
 
         var all = _repository.GetAll().ToList();

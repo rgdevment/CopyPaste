@@ -198,7 +198,7 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.NotifyPasteInitiated(itemId);
 
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Different content should be added after timeout
         _service.AddText("Different", ClipboardContentType.Text, "TestApp");
@@ -216,7 +216,7 @@ public sealed class ClipboardServiceTests : IDisposable
 
         _service.NotifyPasteInitiated(itemId);
 
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Same content should still be ignored within extended 2-second window
         _service.AddText("Test", ClipboardContentType.Text, "TestApp");
@@ -558,7 +558,7 @@ public sealed class ClipboardServiceTests : IDisposable
         _repository.ItemsById[itemId] = item;
 
         _service.NotifyPasteInitiated(itemId);
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Different content should be added after initial window expires
         _service.AddText("Totally different content", ClipboardContentType.Text, "TestApp");
