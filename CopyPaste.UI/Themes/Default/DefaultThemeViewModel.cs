@@ -8,6 +8,8 @@ namespace CopyPaste.UI.Themes;
 public partial class DefaultThemeViewModel(IClipboardService service, MyMConfig config, DefaultThemeSettings themeSettings)
     : ClipboardThemeViewModelBase(service, config, themeSettings.CardMaxLines, themeSettings.CardMinLines)
 {
+    public override bool IsWindowPinned => themeSettings.PinWindow;
+
     [RelayCommand]
     private void ClearAll()
     {

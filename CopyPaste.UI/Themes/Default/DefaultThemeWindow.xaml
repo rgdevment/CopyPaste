@@ -39,14 +39,30 @@ xmlns:tb="using:H.NotifyIcon">
             Background="{ThemeResource LayerFillColorDefaultBrush}"
             BorderThickness="0,0,1,0"
             BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}">
-        <Grid Margin="0,16,0,16">
+        <Grid Margin="0,8,0,16">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- Hide Button (visible only when PinWindow is active) -->
+            <Button x:Name="HideWindowButton"
+                    Grid.Row="0"
+                    Click="HideWindowButton_Click"
+                    Padding="0"
+                    Width="34" Height="34"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,4"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="6"
+                    Visibility="Collapsed">
+                <FontIcon Glyph="&#xE711;" FontSize="13" Opacity="0.5"/>
+            </Button>
+
             <!-- Tab Buttons -->
-            <StackPanel Grid.Row="0" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Center">
+            <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Center">
                 <RadioButton x:Name="RecentTab"
                              GroupName="NavTabs"
                              IsChecked="True"
@@ -63,7 +79,7 @@ xmlns:tb="using:H.NotifyIcon">
             </StackPanel>
 
             <!-- Settings/Info Buttons -->
-            <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+            <StackPanel Grid.Row="2" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Center">
                 <Button x:Name="HelpButton"
                         Click="OpenHelp_Click"
                         Padding="0"

@@ -20,6 +20,7 @@ internal sealed class DefaultThemeSettingsPanel
 
     // Behavior controls
     private ToggleSwitch? _pinWindowSwitch;
+    private ToggleSwitch? _scrollToTopOnPasteSwitch;
     private ToggleSwitch? _resetScrollSwitch;
     private ToggleSwitch? _resetFilterModeSwitch;
     private ToggleSwitch? _resetContentFilterSwitch;
@@ -53,6 +54,7 @@ internal sealed class DefaultThemeSettingsPanel
         CardMinLines = (int)(_cardMinLinesBox?.Value ?? 3),
         CardMaxLines = (int)(_cardMaxLinesBox?.Value ?? 9),
         PinWindow = _pinWindowSwitch?.IsOn ?? false,
+        ScrollToTopOnPaste = _scrollToTopOnPasteSwitch?.IsOn ?? true,
         ResetScrollOnShow = _resetScrollSwitch?.IsOn ?? true,
         ResetFilterModeOnShow = _resetFilterModeSwitch?.IsOn ?? true,
         ResetContentFilterOnShow = _resetContentFilterSwitch?.IsOn ?? true,
@@ -77,6 +79,7 @@ internal sealed class DefaultThemeSettingsPanel
         if (_cardMinLinesBox != null) _cardMinLinesBox.Value = s.CardMinLines;
         if (_cardMaxLinesBox != null) _cardMaxLinesBox.Value = s.CardMaxLines;
         if (_pinWindowSwitch != null) _pinWindowSwitch.IsOn = s.PinWindow;
+        if (_scrollToTopOnPasteSwitch != null) _scrollToTopOnPasteSwitch.IsOn = s.ScrollToTopOnPaste;
         if (_resetScrollSwitch != null) _resetScrollSwitch.IsOn = s.ResetScrollOnShow;
         if (_resetFilterModeSwitch != null) _resetFilterModeSwitch.IsOn = s.ResetFilterModeOnShow;
         if (_resetContentFilterSwitch != null) _resetContentFilterSwitch.IsOn = s.ResetContentFilterOnShow;
@@ -179,10 +182,25 @@ internal sealed class DefaultThemeSettingsPanel
             OnContent = L.Get("config.behavior.yes"),
             OffContent = L.Get("config.behavior.no"),
         };
+        _pinWindowSwitch.Toggled += (_, _) => UpdatePinWindowDependentSwitches();
         cardStack.Children.Add(BuildToggleRow(
             L.Get("config.behavior.pinWindow"),
             L.Get("config.behavior.pinWindowDesc"),
             _pinWindowSwitch));
+
+        cardStack.Children.Add(BuildDivider());
+
+        _scrollToTopOnPasteSwitch = new ToggleSwitch
+        {
+            IsOn = s.ScrollToTopOnPaste,
+            IsEnabled = s.PinWindow,
+            OnContent = L.Get("config.behavior.yes"),
+            OffContent = L.Get("config.behavior.no"),
+        };
+        cardStack.Children.Add(BuildToggleRow(
+            L.Get("config.behavior.scrollToTopOnPaste"),
+            L.Get("config.behavior.scrollToTopOnPasteDesc"),
+            _scrollToTopOnPasteSwitch));
 
         cardStack.Children.Add(BuildDivider());
 
@@ -321,5 +339,11 @@ internal sealed class DefaultThemeSettingsPanel
         if (_resetContentFilterGrid != null) _resetContentFilterGrid.Opacity = enabled ? 1.0 : 0.5;
         if (_resetCategoryFilterGrid != null) _resetCategoryFilterGrid.Opacity = enabled ? 1.0 : 0.5;
         if (_resetTypeFilterGrid != null) _resetTypeFilterGrid.Opacity = enabled ? 1.0 : 0.5;
+    }
+
+    private void UpdatePinWindowDependentSwitches()
+    {
+        if (_scrollToTopOnPasteSwitch != null)
+            _scrollToTopOnPasteSwitch.IsEnabled = _pinWindowSwitch?.IsOn ?? false;
     }
 }
