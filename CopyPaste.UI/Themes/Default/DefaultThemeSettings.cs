@@ -16,6 +16,7 @@ public sealed class DefaultThemeSettings
     public int WindowMarginBottom { get; set; } = 16;
     public int CardMinLines { get; set; } = 3;
     public int CardMaxLines { get; set; } = 9;
+    public bool PinWindow { get; set; } = false;
     public bool ResetScrollOnShow { get; set; } = true;
     public bool ResetFilterModeOnShow { get; set; } = true;
     public bool ResetContentFilterOnShow { get; set; } = true;

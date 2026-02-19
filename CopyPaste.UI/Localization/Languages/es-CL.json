@@ -94,6 +94,8 @@
       "heading": "COMPORTAMIENTO",
       "yes": "Sí",
       "no": "No",
+      "pinWindow": "Mantener ventana visible",
+      "pinWindowDesc": "La ventana permanece abierta al hacer clic en otras apps",
       "resetFilterMode": "Volver a modo Contenido al abrir",
       "resetFilterModeDesc": "Si no, se mantiene el último modo usado",
       "resetContentFilter": "Limpiar búsqueda al abrir",
