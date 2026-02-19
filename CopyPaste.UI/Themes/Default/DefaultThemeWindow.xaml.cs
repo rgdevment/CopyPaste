@@ -215,6 +215,7 @@ internal sealed partial class DefaultThemeWindow : Window
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
             if (_isDialogOpen) return;
+            if (_themeSettings.PinWindow) return;
 
             CollapseAllCards();
             ViewModel.OnWindowDeactivated();

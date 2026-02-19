@@ -19,6 +19,7 @@ internal sealed class DefaultThemeSettingsPanel
     private NumberBox? _cardMaxLinesBox;
 
     // Behavior controls
+    private ToggleSwitch? _pinWindowSwitch;
     private ToggleSwitch? _resetScrollSwitch;
     private ToggleSwitch? _resetFilterModeSwitch;
     private ToggleSwitch? _resetContentFilterSwitch;
@@ -51,6 +52,7 @@ internal sealed class DefaultThemeSettingsPanel
         WindowMarginBottom = (int)(_marginBottomBox?.Value ?? 16),
         CardMinLines = (int)(_cardMinLinesBox?.Value ?? 3),
         CardMaxLines = (int)(_cardMaxLinesBox?.Value ?? 9),
+        PinWindow = _pinWindowSwitch?.IsOn ?? false,
         ResetScrollOnShow = _resetScrollSwitch?.IsOn ?? true,
         ResetFilterModeOnShow = _resetFilterModeSwitch?.IsOn ?? true,
         ResetContentFilterOnShow = _resetContentFilterSwitch?.IsOn ?? true,
@@ -74,6 +76,7 @@ internal sealed class DefaultThemeSettingsPanel
         if (_marginBottomBox != null) _marginBottomBox.Value = s.WindowMarginBottom;
         if (_cardMinLinesBox != null) _cardMinLinesBox.Value = s.CardMinLines;
         if (_cardMaxLinesBox != null) _cardMaxLinesBox.Value = s.CardMaxLines;
+        if (_pinWindowSwitch != null) _pinWindowSwitch.IsOn = s.PinWindow;
         if (_resetScrollSwitch != null) _resetScrollSwitch.IsOn = s.ResetScrollOnShow;
         if (_resetFilterModeSwitch != null) _resetFilterModeSwitch.IsOn = s.ResetFilterModeOnShow;
         if (_resetContentFilterSwitch != null) _resetContentFilterSwitch.IsOn = s.ResetContentFilterOnShow;
@@ -169,6 +172,19 @@ internal sealed class DefaultThemeSettingsPanel
             Padding = new Thickness(16),
         };
         var cardStack = new StackPanel { Spacing = 16 };
+
+        _pinWindowSwitch = new ToggleSwitch
+        {
+            IsOn = s.PinWindow,
+            OnContent = L.Get("config.behavior.yes"),
+            OffContent = L.Get("config.behavior.no"),
+        };
+        cardStack.Children.Add(BuildToggleRow(
+            L.Get("config.behavior.pinWindow"),
+            L.Get("config.behavior.pinWindowDesc"),
+            _pinWindowSwitch));
+
+        cardStack.Children.Add(BuildDivider());
 
         _resetScrollSwitch = new ToggleSwitch
         {

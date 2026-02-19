@@ -94,6 +94,8 @@
       "heading": "BEHAVIOR",
       "yes": "Yes",
       "no": "No",
+      "pinWindow": "Keep window visible",
+      "pinWindowDesc": "Window stays open when you click on other apps",
       "resetFilterMode": "Return to Content mode on open",
       "resetFilterModeDesc": "If off, stays in the last used mode",
       "resetContentFilter": "Clear search on open",
