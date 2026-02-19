@@ -26,6 +26,8 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
 
     protected IClipboardService Service => _service;
 
+    public virtual bool IsWindowPinned => false;
+
     protected ClipboardThemeViewModelBase(IClipboardService service, MyMConfig config, int cardMaxLines, int cardMinLines)
     {
         _service = service;
@@ -245,7 +247,9 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
                 MoveItemToTop(itemVM);
             }
 
-            HideWindow();
+            if (!IsWindowPinned)
+                HideWindow();
+
             await FocusHelper.RestoreAndPasteAsync(
                 _config.DelayBeforeFocusMs,
                 _config.MaxFocusVerifyAttempts,
@@ -265,7 +269,10 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
         {
             var currentIndex = Items.IndexOf(itemVM);
             if (currentIndex > 0)
+            {
                 Items.Move(currentIndex, 0);
+                OnScrollToTopRequested?.Invoke(this, EventArgs.Empty);
+            }
         });
     }
 
@@ -321,6 +328,8 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
     }
 
     internal event EventHandler<ClipboardItemViewModel>? OnEditRequested;
+
+    internal event EventHandler? OnScrollToTopRequested;
 
     private void OnEditItem(ClipboardItemViewModel itemVM) => OnEditRequested?.Invoke(this, itemVM);
 

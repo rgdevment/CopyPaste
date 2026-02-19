@@ -11,6 +11,8 @@ internal sealed class CompactSettingsPanel
     private NumberBox? _popupHeightBox;
     private NumberBox? _cardMinLinesBox;
     private NumberBox? _cardMaxLinesBox;
+    private ToggleSwitch? _pinWindowSwitch;
+    private ToggleSwitch? _scrollToTopOnPasteSwitch;
     private ToggleSwitch? _hideOnDeactivateSwitch;
     private ToggleSwitch? _resetScrollSwitch;
     private ToggleSwitch? _resetSearchSwitch;
@@ -29,6 +31,8 @@ internal sealed class CompactSettingsPanel
         PopupHeight = (int)(_popupHeightBox?.Value ?? 480),
         CardMinLines = (int)(_cardMinLinesBox?.Value ?? 2),
         CardMaxLines = (int)(_cardMaxLinesBox?.Value ?? 5),
+        PinWindow = _pinWindowSwitch?.IsOn ?? false,
+        ScrollToTopOnPaste = _scrollToTopOnPasteSwitch?.IsOn ?? true,
         HideOnDeactivate = _hideOnDeactivateSwitch?.IsOn ?? true,
         ResetScrollOnShow = _resetScrollSwitch?.IsOn ?? true,
         ResetSearchOnShow = _resetSearchSwitch?.IsOn ?? true,
@@ -46,6 +50,8 @@ internal sealed class CompactSettingsPanel
         if (_popupHeightBox != null) _popupHeightBox.Value = s.PopupHeight;
         if (_cardMinLinesBox != null) _cardMinLinesBox.Value = s.CardMinLines;
         if (_cardMaxLinesBox != null) _cardMaxLinesBox.Value = s.CardMaxLines;
+        if (_pinWindowSwitch != null) _pinWindowSwitch.IsOn = s.PinWindow;
+        if (_scrollToTopOnPasteSwitch != null) _scrollToTopOnPasteSwitch.IsOn = s.ScrollToTopOnPaste;
         if (_hideOnDeactivateSwitch != null) _hideOnDeactivateSwitch.IsOn = s.HideOnDeactivate;
         if (_resetScrollSwitch != null) _resetScrollSwitch.IsOn = s.ResetScrollOnShow;
         if (_resetSearchSwitch != null) _resetSearchSwitch.IsOn = s.ResetSearchOnShow;
@@ -113,15 +119,24 @@ internal sealed class CompactSettingsPanel
         grid.RowDefinitions.Add(new RowDefinition());
         grid.RowDefinitions.Add(new RowDefinition());
         grid.RowDefinitions.Add(new RowDefinition());
+        grid.RowDefinitions.Add(new RowDefinition());
+        grid.RowDefinitions.Add(new RowDefinition());
+
+        _pinWindowSwitch = new ToggleSwitch { IsOn = s.PinWindow, Margin = new Thickness(0, 4, 0, 4) };
+        _pinWindowSwitch.Toggled += (_, _) => UpdatePinWindowDependentSwitches();
+        AddSettingRow(grid, 0, L.Get("config.behavior.pinWindow", "Keep window visible"), _pinWindowSwitch);
+
+        _scrollToTopOnPasteSwitch = new ToggleSwitch { IsOn = s.ScrollToTopOnPaste, IsEnabled = s.PinWindow, Margin = new Thickness(0, 4, 0, 4) };
+        AddSettingRow(grid, 1, L.Get("config.behavior.scrollToTopOnPaste", "Scroll to top after paste"), _scrollToTopOnPasteSwitch);
 
         _hideOnDeactivateSwitch = new ToggleSwitch { IsOn = s.HideOnDeactivate, Margin = new Thickness(0, 4, 0, 4) };
-        AddSettingRow(grid, 0, L.Get("config.compact.hideOnDeactivate", "Hide on deactivate"), _hideOnDeactivateSwitch);
+        AddSettingRow(grid, 2, L.Get("config.compact.hideOnDeactivate", "Hide on deactivate"), _hideOnDeactivateSwitch);
 
         _resetScrollSwitch = new ToggleSwitch { IsOn = s.ResetScrollOnShow, Margin = new Thickness(0, 4, 0, 4) };
-        AddSettingRow(grid, 1, L.Get("config.compact.resetScroll", "Reset scroll on show"), _resetScrollSwitch);
+        AddSettingRow(grid, 3, L.Get("config.compact.resetScroll", "Reset scroll on show"), _resetScrollSwitch);
 
         _resetSearchSwitch = new ToggleSwitch { IsOn = s.ResetSearchOnShow, Margin = new Thickness(0, 4, 0, 4) };
-        AddSettingRow(grid, 2, L.Get("config.compact.resetSearch", "Reset search on show"), _resetSearchSwitch);
+        AddSettingRow(grid, 4, L.Get("config.compact.resetSearch", "Reset search on show"), _resetSearchSwitch);
 
         section.Children.Add(grid);
         return section;
@@ -159,4 +174,10 @@ internal sealed class CompactSettingsPanel
 
     private static SolidColorBrush GetAccentBrush() =>
         new(Windows.UI.Color.FromArgb(255, 0, 120, 215));
+
+    private void UpdatePinWindowDependentSwitches()
+    {
+        if (_scrollToTopOnPasteSwitch != null)
+            _scrollToTopOnPasteSwitch.IsEnabled = _pinWindowSwitch?.IsOn ?? false;
+    }
 }

@@ -124,6 +124,7 @@ internal sealed partial class CompactWindow : Window
         ClipboardListView.Loaded += ClipboardListView_Loaded;
         SearchBox.KeyDown += SearchBox_KeyDown;
         ViewModel.OnEditRequested += ShowEditDialog;
+        ViewModel.OnScrollToTopRequested += ViewModel_OnScrollToTopRequested;
     }
 
     private void ApplyLocalizedStrings()
@@ -193,6 +194,7 @@ internal sealed partial class CompactWindow : Window
         CollapseAllCards();
         ViewModel.Cleanup();
         ViewModel.OnEditRequested -= ShowEditDialog;
+        ViewModel.OnScrollToTopRequested -= ViewModel_OnScrollToTopRequested;
 
         Activated -= Window_Activated;
         _appWindow.Changed -= AppWindow_Changed;
@@ -236,6 +238,10 @@ internal sealed partial class CompactWindow : Window
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
             if (_isDialogOpen) return;
+
+            FocusHelper.UpdatePasteTarget(_hWnd);
+
+            if (_themeSettings.PinWindow) return;
             if (!_themeSettings.HideOnDeactivate) return;
 
             CollapseAllCards();
@@ -245,8 +251,9 @@ internal sealed partial class CompactWindow : Window
         else
         {
             Win32WindowHelper.RemoveWindowBorder(_hWnd);
-            PositionAtCursor();
-            if (_themeSettings.ResetScrollOnShow)
+            if (!_themeSettings.PinWindow)
+                PositionAtCursor();
+            if (!_themeSettings.PinWindow && _themeSettings.ResetScrollOnShow)
                 ResetScrollToTop();
             ResetFiltersOnShow();
             ViewModel.RefreshFileAvailability();
@@ -507,10 +514,10 @@ internal sealed partial class CompactWindow : Window
         }
 
         var container = args.ItemContainer;
-        container.DoubleTapped -= Container_DoubleTapped;
         container.Tapped -= Container_Tapped;
-        container.DoubleTapped += Container_DoubleTapped;
+        container.DoubleTapped -= Container_DoubleTapped;
         container.Tapped += Container_Tapped;
+        container.DoubleTapped += Container_DoubleTapped;
 
         if (args.Item is ClipboardItemViewModel vm)
         {
@@ -539,17 +546,19 @@ internal sealed partial class CompactWindow : Window
         {
             if (_currentExpandedItem != null && _currentExpandedItem != vm)
                 _currentExpandedItem.Collapse();
-
             vm.ToggleExpanded();
             _currentExpandedItem = vm.IsExpanded ? vm : null;
-            e.Handled = true;
         }
     }
 
     private void Container_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
     {
         if (sender is ListViewItem item && item.Content is ClipboardItemViewModel vm)
+        {
+            vm.Collapse();
+            _currentExpandedItem = null;
             vm.PasteCommand.Execute(null);
+        }
     }
 
     private void LoadClipboardImage(ListViewBase sender, ContainerContentChangingEventArgs args)
@@ -783,6 +792,20 @@ internal sealed partial class CompactWindow : Window
 
         if (ClipboardListView.Items.Count > 0)
             ClipboardListView.SelectedIndex = 0;
+    }
+
+    private void ViewModel_OnScrollToTopRequested(object? sender, EventArgs e)
+    {
+        if (!_themeSettings.ScrollToTopOnPaste) return;
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            var scrollViewer = FindScrollViewer(ClipboardListView);
+            scrollViewer?.ChangeView(null, 0, null, disableAnimation: false);
+
+            if (ClipboardListView.Items.Count > 0)
+                ClipboardListView.SelectedIndex = 0;
+        });
     }
 
     private async void ShowEditDialog(object? sender, ClipboardItemViewModel itemVM)

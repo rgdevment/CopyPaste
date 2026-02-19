@@ -46,6 +46,7 @@ internal sealed partial class DefaultThemeWindow : Window
         InitializeWindow();
         RegisterEventHandlers();
         ApplyLocalizedStrings();
+        ApplyPinWindowVisuals();
     }
 
     private void InitializeWindow()
@@ -55,11 +56,24 @@ internal sealed partial class DefaultThemeWindow : Window
         Win32WindowHelper.RemoveWindowBorder(_hWnd);
     }
 
+    private void ApplyPinWindowVisuals() =>
+        HideWindowButton.Visibility = _themeSettings.PinWindow
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    private void HideWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        CollapseAllCards();
+        ViewModel.OnWindowDeactivated();
+        _appWindow.Hide();
+    }
+
     private void ApplyLocalizedStrings()
     {
         TrayIcon.ToolTipText = L.Get("tray.tooltip");
         TrayMenuSettings.Text = L.Get("tray.settings", "Settings");
         TrayMenuExit.Text = L.Get("tray.exit");
+        ToolTipService.SetToolTip(HideWindowButton, L.Get("ui.sidebar.hide", "Hide"));
         ToolTipService.SetToolTip(RecentTab, L.Get("ui.section.recent"));
         ToolTipService.SetToolTip(PinnedTab, L.Get("ui.section.pinned"));
         ToolTipService.SetToolTip(HelpButton, L.Get("ui.sidebar.help"));
@@ -106,6 +120,7 @@ internal sealed partial class DefaultThemeWindow : Window
         ClipboardListView.SelectionChanged += ClipboardListView_SelectionChanged;
         SearchBox.KeyDown += SearchBox_KeyDown;
         ViewModel.OnEditRequested += ShowEditDialog;
+        ViewModel.OnScrollToTopRequested += ViewModel_OnScrollToTopRequested;
     }
 
     private void TabChanged(object sender, RoutedEventArgs e)
@@ -166,6 +181,7 @@ internal sealed partial class DefaultThemeWindow : Window
 
         ViewModel.Cleanup();
         ViewModel.OnEditRequested -= ShowEditDialog;
+        ViewModel.OnScrollToTopRequested -= ViewModel_OnScrollToTopRequested;
 
         // Unsubscribe from framework events
         Activated -= Window_Activated;
@@ -215,6 +231,9 @@ internal sealed partial class DefaultThemeWindow : Window
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
             if (_isDialogOpen) return;
+
+            FocusHelper.UpdatePasteTarget(_hWnd);
+
             if (_themeSettings.PinWindow) return;
 
             CollapseAllCards();
@@ -224,7 +243,8 @@ internal sealed partial class DefaultThemeWindow : Window
         else
         {
             Win32WindowHelper.RemoveWindowBorder(_hWnd);
-            if (_themeSettings.ResetScrollOnShow)
+            ApplyPinWindowVisuals();
+            if (!_themeSettings.PinWindow && _themeSettings.ResetScrollOnShow)
                 ResetScrollToTop();
             ResetFiltersOnShow();
             ViewModel.RefreshFileAvailability();
@@ -344,12 +364,12 @@ internal sealed partial class DefaultThemeWindow : Window
         var container = args.ItemContainer;
         container.PointerEntered -= Container_PointerEntered;
         container.PointerExited -= Container_PointerExited;
-        container.DoubleTapped -= Container_DoubleTapped;
         container.Tapped -= Container_Tapped;
+        container.DoubleTapped -= Container_DoubleTapped;
         container.PointerEntered += Container_PointerEntered;
         container.PointerExited += Container_PointerExited;
-        container.DoubleTapped += Container_DoubleTapped;
         container.Tapped += Container_Tapped;
+        container.DoubleTapped += Container_DoubleTapped;
 
         // Subscribe to image path changes for live thumbnail updates
         if (args.Item is ClipboardItemViewModel vm)
@@ -379,14 +399,9 @@ internal sealed partial class DefaultThemeWindow : Window
         if (sender is ListViewItem item && item.Content is ClipboardItemViewModel vm)
         {
             if (_currentExpandedItem != null && _currentExpandedItem != vm)
-            {
                 _currentExpandedItem.Collapse();
-            }
-
             vm.ToggleExpanded();
             _currentExpandedItem = vm.IsExpanded ? vm : null;
-
-            e.Handled = true;
         }
     }
 
@@ -394,6 +409,8 @@ internal sealed partial class DefaultThemeWindow : Window
     {
         if (sender is ListViewItem item && item.Content is ClipboardItemViewModel vm)
         {
+            vm.Collapse();
+            _currentExpandedItem = null;
             vm.PasteCommand.Execute(null);
         }
     }
@@ -886,6 +903,20 @@ internal sealed partial class DefaultThemeWindow : Window
 
         if (ClipboardListView.Items.Count > 0)
             ClipboardListView.SelectedIndex = 0;
+    }
+
+    private void ViewModel_OnScrollToTopRequested(object? sender, EventArgs e)
+    {
+        if (!_themeSettings.ScrollToTopOnPaste) return;
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            var scrollViewer = FindScrollViewer(ClipboardListView);
+            scrollViewer?.ChangeView(null, 0, null, disableAnimation: false);
+
+            if (ClipboardListView.Items.Count > 0)
+                ClipboardListView.SelectedIndex = 0;
+        });
     }
 
     private void OpenHelp_Click(object sender, RoutedEventArgs e) =>

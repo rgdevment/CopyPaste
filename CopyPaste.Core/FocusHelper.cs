@@ -79,6 +79,16 @@ public static partial class FocusHelper
         }
     }
 
+    public static void UpdatePasteTarget(IntPtr ownWindowHandle)
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd != IntPtr.Zero && hwnd != ownWindowHandle && IsWindow(hwnd) && IsWindowVisible(hwnd))
+        {
+            _previousForegroundWindow = hwnd;
+            _previousWindowThreadId = GetWindowThreadProcessId(hwnd, out _);
+        }
+    }
+
     public static bool RestorePreviousWindow()
     {
         if (_previousForegroundWindow == IntPtr.Zero)

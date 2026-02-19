@@ -280,7 +280,6 @@ CopyPaste includes three filter modes to help you find items quickly:
 Clipboard items (cards) can be expanded to show more text content:
 
 **With Mouse:**
-- **Single click** on a card → Expand/collapse to see more text
 - **Double click** on a card → Paste the item immediately
 - Only one card can be expanded at a time
 - All cards collapse when the window is hidden

@@ -14,6 +14,8 @@ public sealed class CompactSettings
     public int PopupHeight { get; set; } = 480;
     public int CardMinLines { get; set; } = 2;
     public int CardMaxLines { get; set; } = 5;
+    public bool PinWindow { get; set; }
+    public bool ScrollToTopOnPaste { get; set; } = true;
     public bool HideOnDeactivate { get; set; } = true;
     public bool ResetScrollOnShow { get; set; } = true;
     public bool ResetSearchOnShow { get; set; } = true;

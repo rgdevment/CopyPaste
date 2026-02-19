@@ -9,6 +9,7 @@
       "pinned": "Anclados"
     },
     "sidebar": {
+      "hide": "Ocultar",
       "settings": "Configuración",
       "report": "Reportar error",
       "help": "Atajos de teclado"
@@ -96,6 +97,8 @@
       "no": "No",
       "pinWindow": "Mantener ventana visible",
       "pinWindowDesc": "La ventana permanece abierta al hacer clic en otras apps",
+      "scrollToTopOnPaste": "Ir al inicio al pegar",
+      "scrollToTopOnPasteDesc": "Hace scroll al inicio para mostrar el item pegado cuando la ventana está fija",
       "resetFilterMode": "Volver a modo Contenido al abrir",
       "resetFilterModeDesc": "Si no, se mantiene el último modo usado",
       "resetContentFilter": "Limpiar búsqueda al abrir",

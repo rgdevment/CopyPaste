@@ -9,6 +9,7 @@
       "pinned": "Pinned"
     },
     "sidebar": {
+      "hide": "Hide",
       "settings": "Settings",
       "report": "Report bug",
       "help": "Keyboard shortcuts"
@@ -96,6 +97,8 @@
       "no": "No",
       "pinWindow": "Keep window visible",
       "pinWindowDesc": "Window stays open when you click on other apps",
+      "scrollToTopOnPaste": "Scroll to top after paste",
+      "scrollToTopOnPasteDesc": "Scrolls to top to show the pasted item when window is pinned",
       "resetFilterMode": "Return to Content mode on open",
       "resetFilterModeDesc": "If off, stays in the last used mode",
       "resetContentFilter": "Clear search on open",
