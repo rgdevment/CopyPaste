@@ -84,7 +84,7 @@ jobs:
           /o:"${{ vars.SONAR_ORGANIZATION }}"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml"
 
       - name: Restore dependencies
         run: dotnet restore -p:Platform=x64
@@ -96,6 +96,7 @@ jobs:
         run: >
           dotnet test CopyPaste.slnx -c Release -p:Platform=x64 --no-build
           --collect:"XPlat Code Coverage"
+          --results-directory coverage
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: SonarScanner End
