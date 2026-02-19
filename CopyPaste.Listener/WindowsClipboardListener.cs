@@ -14,6 +14,7 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
     private const uint _cF_HDROP = 15;
     private const uint _cF_DIB = 8;
     private static readonly uint _cF_RTF = RegisterClipboardFormatW("Rich Text Format");
+    private static readonly uint _cF_HTML = RegisterClipboardFormatW("HTML Format");
     private static readonly uint _cF_ExcludeHistory = RegisterClipboardFormatW("ExcludeClipboardContentFromMonitorProcessing");
     private static readonly uint _cF_CanInclude = RegisterClipboardFormatW("CanIncludeInClipboardHistory");
 
@@ -28,7 +29,7 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
     private DateTime _lastChangeTime = DateTime.MinValue;
     private readonly TimeSpan _debounceWindow = TimeSpan.FromMilliseconds(500);
 
-    private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? RtfBytes, byte[]? ImageBytes, Collection<string>? Files, string? Source);
+    private sealed record ClipboardTask(ClipboardContentType Type, string? Text, byte[]? RtfBytes, byte[]? HtmlBytes, byte[]? ImageBytes, Collection<string>? Files, string? Source);
 
     #region Win32 API
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
@@ -210,7 +211,7 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
         {
             case ClipboardContentType.Text:
             case ClipboardContentType.Link:
-                service.AddText(task.Text, task.Type, task.Source, task.RtfBytes);
+                service.AddText(task.Text, task.Type, task.Source, task.RtfBytes, task.HtmlBytes);
                 break;
             case ClipboardContentType.Image when task.ImageBytes != null:
                 service.AddImage(task.ImageBytes, task.Source);
@@ -254,25 +255,31 @@ public sealed partial class WindowsClipboardListener(IClipboardService service) 
                 if (files.Count > 0)
                 {
                     var type = DetectFileCollectionType(files);
-                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, null, null, null, files, source));
-                }
-            }
-            else if (IsClipboardFormatAvailable(_cF_DIB))
-            {
-                var bytes = ExtractBytes(_cF_DIB);
-                if (bytes != null && bytes.Length > 0)
-                {
-                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, null, bytes, null, source));
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, null, null, null, null, files, source));
                 }
             }
             else if (IsClipboardFormatAvailable(_cF_UNICODETEXT))
             {
+                // Text path is preferred over CF_DIB when both are present.
+                // Rich content (Word, Outlook, browsers) exposes CF_DIB as a side-effect
+                // of embedded images, but the full content (including images) is already
+                // embedded in CF_RTF (\pict blocks) or CF_HTML (data-URI <img> tags).
                 var text = ExtractText();
                 if (!string.IsNullOrEmpty(text))
                 {
                     var type = DetectTextType(text);
                     byte[]? rtfBytes = IsClipboardFormatAvailable(_cF_RTF) ? ExtractBytes(_cF_RTF) : null;
-                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, rtfBytes, null, null, source));
+                    byte[]? htmlBytes = IsClipboardFormatAvailable(_cF_HTML) ? ExtractBytes(_cF_HTML) : null;
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(type, text, rtfBytes, htmlBytes, null, null, source));
+                }
+            }
+            else if (IsClipboardFormatAvailable(_cF_DIB))
+            {
+                // Pure image: no text present (screenshot, Paint, image editors, etc.)
+                var bytes = ExtractBytes(_cF_DIB);
+                if (bytes != null && bytes.Length > 0)
+                {
+                    _taskQueue.Writer.TryWrite(new ClipboardTask(ClipboardContentType.Image, null, null, null, bytes, null, source));
                 }
             }
         }

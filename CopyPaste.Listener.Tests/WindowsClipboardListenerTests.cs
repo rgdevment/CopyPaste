@@ -452,7 +452,7 @@ public sealed class WindowsClipboardListenerTests : IDisposable
 #pragma warning restore CS0067
         public int PasteIgnoreWindowMs { get; set; } = 450;
 
-        public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null) { }
+        public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null, byte[]? htmlBytes = null) { }
         public void AddImage(byte[]? dibData, string? source) { }
         public void AddFiles(Collection<string>? files, ClipboardContentType type, string? source) { }
         public IEnumerable<ClipboardItem> GetHistory(int limit = 50, int skip = 0, string? query = null, bool? isPinned = null) => [];

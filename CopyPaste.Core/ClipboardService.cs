@@ -41,18 +41,21 @@ public class ClipboardService(IClipboardRepository repository) : IClipboardServi
         return false;
     }
 
-    public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null)
+    public void AddText(string? text, ClipboardContentType type, string? source, byte[]? rtfBytes = null, byte[]? htmlBytes = null)
     {
         if (ShouldIgnoreClipboardChange(text)) return;
 
+        var meta = new Dictionary<string, object>();
 
-        string? json = null;
         if (rtfBytes != null)
-        {
-            var meta = new Dictionary<string, object> { { "rtf", Convert.ToBase64String(rtfBytes) } };
-            json = JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject);
-        }
+            meta["rtf"] = Convert.ToBase64String(rtfBytes);
 
+        if (htmlBytes != null)
+            meta["html"] = Convert.ToBase64String(htmlBytes);
+
+        string? json = meta.Count > 0
+            ? JsonSerializer.Serialize(meta, MetadataJsonContext.Default.DictionaryStringObject)
+            : null;
 
         AddItem(new ClipboardItem { Content = text ?? string.Empty, Type = type, AppSource = source, Metadata = json });
     }
