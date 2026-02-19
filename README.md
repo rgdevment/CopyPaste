@@ -202,7 +202,8 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 * 📂 **Handles Everything:** Text, images, files, audio, and video—with thumbnails so you know what's what.
 * 🏷️ **Card Labels & Colors:** Personalize your clipboard items with custom labels (up to 40 characters) and 6 color options (Red, Green, Purple, Yellow, Blue, or None).
 * 📌 **Pin Important Items:** Keep your most-used items always accessible at the top.
-* 🔒 **Private by Default:** Everything stays on your computer. No cloud, no sync, no servers.
+* � **Always-On-Top Mode (PinWindow):** Keep the CopyPaste window visible while you work in other apps. Available in both Default and Compact themes — perfect for paste-heavy workflows.
+* �🔒 **Private by Default:** Everything stays on your computer. No cloud, no sync, no servers.
 * 🔐 **Respects Sensitive Data:** Passwords and API keys aren't stored. Password managers (1Password, Bitwarden, etc.) are ignored—their clipboard content never gets saved.
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
@@ -280,11 +281,14 @@ CopyPaste includes three filter modes to help you find items quickly:
 Clipboard items (cards) can be expanded to show more text content:
 
 **With Mouse:**
-- **Double click** on a card → Paste the item immediately
+- **Single click** on a card → Expand to see full text (click again to collapse)
+- **Double click** on a card → Paste the item immediately to your previous app
 - Only one card can be expanded at a time
 - All cards collapse when the window is hidden
 - In **Default** theme, hovering a card reveals quick action buttons
 - In **Compact** theme, cards have no hover effect (use right-click instead)
+
+> **Note:** Double-click always collapses the card before pasting, so your last click state is always clean.
 
 **With Keyboard:**
 - **Right arrow `→`** → Expand/collapse the selected card
@@ -559,6 +563,21 @@ CopyPaste includes multiple built-in themes that let you change how the applicat
 - **Compact** — Minimal popup that appears near your cursor, optimized for quick access.
 - You can switch between themes from **Settings → General → Theme**.
 - Changes require a restart to take effect.
+
+### 📌 PinWindow (Always-On-Top Mode)
+
+Both themes support **PinWindow**, which keeps the CopyPaste window visible even when you click on other apps. Enable it in each theme's settings.
+
+| Behavior | Normal Mode | PinWindow ON |
+| :--- | :--- | :--- |
+| Window visibility | Hides when you click away | Stays on screen always |
+| Scroll on re-focus | Resets to top (configurable) | Scroll position preserved |
+| Scroll after paste | — | Animated scroll to top (configurable) |
+| Paste target | Captured at hotkey press | Tracked as you switch apps |
+
+**Default theme** shows a **Hide button** (↑) at the top of the sidebar when PinWindow is active, so you can dismiss the window manually.
+
+**Compact theme** already has a ✕ close button visible at all times.
 
 ---
 
