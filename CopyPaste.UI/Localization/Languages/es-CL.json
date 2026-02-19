@@ -4,6 +4,10 @@
     "appBranding": "CopyPaste"
   },
   "ui": {
+    "section": {
+      "recent": "Recientes",
+      "pinned": "Anclados"
+    },
     "sidebar": {
       "settings": "Configuración",
       "report": "Reportar error",
