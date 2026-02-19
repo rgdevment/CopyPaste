@@ -136,38 +136,35 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
 
     public void LoadMoreItems()
     {
-        if (_isLoading || !_hasMoreItems || _dispatcherQueue is null) return;
+        if (_isLoading || !_hasMoreItems) return;
 
         _isLoading = true;
         IsLoadingMore = true;
 
-        _dispatcherQueue.TryEnqueue(() =>
+        var query = IsContentFilterMode ? GetSearchQuery() : null;
+        var types = IsTypeFilterMode && _selectedTypes.Count > 0 ? _selectedTypes : null;
+        var colors = IsCategoryFilterMode && _selectedColors.Count > 0 ? _selectedColors : null;
+
+        var newItems = _service.GetHistoryAdvanced(
+            _config.PageSize,
+            Items.Count,
+            query,
+            types,
+            colors,
+            CurrentPinnedFilter).ToList();
+
+        if (newItems.Count is 0)
         {
-            var query = IsContentFilterMode ? GetSearchQuery() : null;
-            var types = IsTypeFilterMode && _selectedTypes.Count > 0 ? _selectedTypes : null;
-            var colors = IsCategoryFilterMode && _selectedColors.Count > 0 ? _selectedColors : null;
+            _hasMoreItems = false;
+        }
+        else
+        {
+            foreach (var item in newItems)
+                Items.Add(CreateViewModel(item));
+        }
 
-            var newItems = _service.GetHistoryAdvanced(
-                _config.PageSize,
-                Items.Count,
-                query,
-                types,
-                colors,
-                CurrentPinnedFilter).ToList();
-
-            if (newItems.Count is 0)
-            {
-                _hasMoreItems = false;
-            }
-            else
-            {
-                foreach (var item in newItems)
-                    Items.Add(CreateViewModel(item));
-            }
-
-            _isLoading = false;
-            IsLoadingMore = false;
-        });
+        _isLoading = false;
+        IsLoadingMore = false;
     }
 
     private void OnItemAdded(ClipboardItem item)
