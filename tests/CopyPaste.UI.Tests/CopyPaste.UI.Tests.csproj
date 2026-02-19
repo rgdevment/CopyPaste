@@ -27,8 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CopyPaste.UI\CopyPaste.UI.csproj" />
-    <ProjectReference Include="..\CopyPaste.Core\CopyPaste.Core.csproj" />
+    <ProjectReference Include="..\..\CopyPaste.UI\CopyPaste.UI.csproj" />
+    <ProjectReference Include="..\..\CopyPaste.Core\CopyPaste.Core.csproj" />
   </ItemGroup>
 
 </Project>
