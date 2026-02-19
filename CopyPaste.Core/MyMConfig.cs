@@ -80,7 +80,7 @@ public sealed class MyMConfig
     /// <summary>
     /// Number of clipboard items to load per page.
     /// </summary>
-    public int PageSize { get; set; } = 20;
+    public int PageSize { get; set; } = 30;
 
     /// <summary>
     /// Maximum number of items to keep in memory before cleanup.
@@ -90,7 +90,7 @@ public sealed class MyMConfig
     /// <summary>
     /// Scroll offset threshold (in pixels) from bottom to trigger loading more items.
     /// </summary>
-    public int ScrollLoadThreshold { get; set; } = 100;
+    public int ScrollLoadThreshold { get; set; } = 400;
 
 
 
