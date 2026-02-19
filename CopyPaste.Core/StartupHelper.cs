@@ -91,7 +91,7 @@ public static class StartupHelper
     /// </summary>
     internal static void ApplyUnpackagedStartup(bool enable)
     {
-        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(_registryKeyPath, true);
+        using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(_registryKeyPath, true);
         if (key == null) return;
 
         if (enable)
