@@ -72,10 +72,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Install tools
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
-          dotnet tool install --global dotnet-reportgenerator-globaltool
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
 
       - name: SonarScanner Begin
         env:
@@ -86,7 +84,7 @@ jobs:
           /o:"${{ vars.SONAR_ORGANIZATION }}"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage/merged/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           /d:sonar.coverage.exclusions="Tests/**"
 
       - name: Restore dependencies
@@ -101,13 +99,6 @@ jobs:
           --collect:"XPlat Code Coverage"
           --results-directory coverage
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-      - name: Merge coverage reports
-        run: >
-          reportgenerator
-          -reports:"${{ github.workspace }}/coverage/**/coverage.opencover.xml"
-          -targetdir:"${{ github.workspace }}/coverage/merged"
-          -reporttypes:OpenCover
 
       - name: SonarScanner End
         env:
