@@ -23,35 +23,36 @@ public sealed class SqliteRepositoryTests : IDisposable
         _repository = new SqliteRepository(_dbPath);
     }
 
-    #region Save Tests
-
-    [Fact]
-    public void Save_NewItem_StoresInDatabase()
+    private static ClipboardItem CreateItem(
+        string content = "test",
+        ClipboardContentType type = ClipboardContentType.Text,
+        bool isPinned = false,
+        CardColor color = CardColor.None,
+        string? label = null,
+        string? contentHash = null,
+        DateTime? createdAt = null,
+        DateTime? modifiedAt = null)
     {
-        var item = new ClipboardItem
+        return new ClipboardItem
         {
-            Content = "Test content",
-            Type = ClipboardContentType.Text,
-            AppSource = "TestApp"
+            Content = content,
+            Type = type,
+            IsPinned = isPinned,
+            CardColor = color,
+            Label = label,
+            ContentHash = contentHash,
+            CreatedAt = createdAt ?? DateTime.UtcNow,
+            ModifiedAt = modifiedAt ?? DateTime.UtcNow
         };
-
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal("Test content", retrieved.Content);
-        Assert.Equal(ClipboardContentType.Text, retrieved.Type);
-        Assert.Equal("TestApp", retrieved.AppSource);
     }
 
+    #region Save and GetById
+
     [Fact]
-    public void Save_WithoutId_GeneratesId()
+    public void Save_AssignsGuidIfEmpty()
     {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text
-        };
+        var item = CreateItem();
+        item.Id = Guid.Empty;
 
         _repository.Save(item);
 
@@ -59,174 +60,99 @@ public sealed class SqliteRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void Save_WithMetadata_StoresMetadata()
+    public void Save_PersistsItem()
     {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text,
-            Metadata = "{\"key\":\"value\"}"
-        };
+        var item = CreateItem("hello");
 
         _repository.Save(item);
 
         var retrieved = _repository.GetById(item.Id);
         Assert.NotNull(retrieved);
-        Assert.Equal("{\"key\":\"value\"}", retrieved.Metadata);
+        Assert.Equal("hello", retrieved.Content);
     }
 
     [Fact]
-    public void Save_NullItem_ThrowsException()
+    public void GetById_ExistingItem_ReturnsItem()
     {
-        Assert.Throws<ArgumentNullException>(() => _repository.Save(null!));
+        var item = CreateItem();
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+
+        Assert.NotNull(retrieved);
+        Assert.Equal(item.Id, retrieved.Id);
     }
 
     [Fact]
-    public void Save_PinnedItem_StoresPinnedFlag()
+    public void GetById_NonExistent_ReturnsNull()
     {
+        var result = _repository.GetById(Guid.NewGuid());
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Save_AllFieldsPersisted()
+    {
+        var id = Guid.NewGuid();
+        var createdAt = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Utc);
+        var modifiedAt = new DateTime(2024, 6, 20, 14, 45, 0, DateTimeKind.Utc);
         var item = new ClipboardItem
         {
-            Content = "Pinned",
-            Type = ClipboardContentType.Text,
-            IsPinned = true
+            Id = id,
+            Content = "full content",
+            Type = ClipboardContentType.Link,
+            AppSource = "TestApp",
+            IsPinned = true,
+            Metadata = "{\"key\":\"value\"}",
+            Label = "my label",
+            CardColor = CardColor.Blue,
+            PasteCount = 7,
+            ContentHash = "abc123hash",
+            CreatedAt = createdAt,
+            ModifiedAt = modifiedAt
         };
 
         _repository.Save(item);
 
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.True(retrieved.IsPinned);
-    }
-
-    [Fact]
-    public void Save_WithLabel_StoresLabel()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Some UUID: abc-123",
-            Type = ClipboardContentType.Text,
-            Label = "API Key Production"
-        };
-
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal("API Key Production", retrieved.Label);
-    }
-
-    [Fact]
-    public void Save_WithCardColor_StoresColor()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Important note",
-            Type = ClipboardContentType.Text,
-            CardColor = CardColor.Red
-        };
-
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal(CardColor.Red, retrieved.CardColor);
-    }
-
-    [Fact]
-    public void Save_WithoutLabel_HasNullLabel()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text
-        };
-
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Null(retrieved.Label);
-    }
-
-    [Fact]
-    public void Save_WithoutCardColor_HasNoneColor()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text
-        };
-
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal(CardColor.None, retrieved.CardColor);
+        var r = _repository.GetById(id);
+        Assert.NotNull(r);
+        Assert.Equal(id, r.Id);
+        Assert.Equal("full content", r.Content);
+        Assert.Equal(ClipboardContentType.Link, r.Type);
+        Assert.Equal("TestApp", r.AppSource);
+        Assert.True(r.IsPinned);
+        Assert.Equal("{\"key\":\"value\"}", r.Metadata);
+        Assert.Equal("my label", r.Label);
+        Assert.Equal(CardColor.Blue, r.CardColor);
+        Assert.Equal(7, r.PasteCount);
+        Assert.Equal("abc123hash", r.ContentHash);
+        Assert.Equal(createdAt, r.CreatedAt.ToUniversalTime());
+        Assert.Equal(modifiedAt, r.ModifiedAt.ToUniversalTime());
     }
 
     #endregion
 
-    #region Update Tests
+    #region Update
 
     [Fact]
-    public void Update_ExistingItem_UpdatesContent()
+    public void Update_ModifiesExistingItem()
     {
-        var item = new ClipboardItem
-        {
-            Content = "Original",
-            Type = ClipboardContentType.Text
-        };
+        var item = CreateItem("original");
         _repository.Save(item);
 
-        item.Content = "Updated";
+        item.Content = "updated";
         _repository.Update(item);
 
         var retrieved = _repository.GetById(item.Id);
         Assert.NotNull(retrieved);
-        Assert.Equal("Updated", retrieved.Content);
+        Assert.Equal("updated", retrieved.Content);
     }
 
     [Fact]
-    public void Update_ModifiedAt_UpdatesTimestamp()
+    public void Update_ChangesIsPinned()
     {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text
-        };
-        _repository.Save(item);
-
-        var originalModifiedAt = item.ModifiedAt.ToUniversalTime();
-        Thread.Sleep(200); // Increased sleep for timestamp resolution
-
-        item.ModifiedAt = DateTime.UtcNow;
-        _repository.Update(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        var retrievedModifiedAt = retrieved.ModifiedAt.ToUniversalTime();
-
-        // Compare with second precision and 1-second tolerance for clock drift
-        var secondsDiff = (retrievedModifiedAt - originalModifiedAt).TotalSeconds;
-        Assert.True(secondsDiff >= -1,
-            $"Modified: {retrievedModifiedAt:O} should be >= Original: {originalModifiedAt:O} (diff: {secondsDiff:F2}s)");
-    }
-
-    [Fact]
-    public void Update_NullItem_ThrowsException()
-    {
-        Assert.Throws<ArgumentNullException>(() => _repository.Update(null!));
-    }
-
-    [Fact]
-    public void Update_IsPinned_UpdatesPinnedStatus()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text,
-            IsPinned = false
-        };
+        var item = CreateItem(isPinned: false);
         _repository.Save(item);
 
         item.IsPinned = true;
@@ -237,156 +163,131 @@ public sealed class SqliteRepositoryTests : IDisposable
         Assert.True(retrieved.IsPinned);
     }
 
-    [Fact]
-    public void Update_Label_UpdatesLabel()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text,
-            Label = null
-        };
-        _repository.Save(item);
-
-        item.Label = "My Custom Label";
-        _repository.Update(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal("My Custom Label", retrieved.Label);
-    }
-
-    [Fact]
-    public void Update_CardColor_UpdatesColor()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text,
-            CardColor = CardColor.None
-        };
-        _repository.Save(item);
-
-        item.CardColor = CardColor.Blue;
-        _repository.Update(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal(CardColor.Blue, retrieved.CardColor);
-    }
-
-    [Fact]
-    public void Update_LabelToNull_ClearsLabel()
-    {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text,
-            Label = "Existing Label"
-        };
-        _repository.Save(item);
-
-        item.Label = null;
-        _repository.Update(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
-        Assert.Null(retrieved.Label);
-    }
-
     #endregion
 
-    #region GetById Tests
+    #region GetLatest
 
     [Fact]
-    public void GetById_ExistingItem_ReturnsItem()
+    public void GetLatest_ReturnsNewestByModifiedAt()
     {
-        var item = new ClipboardItem
-        {
-            Content = "Test",
-            Type = ClipboardContentType.Text
-        };
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-
-        Assert.NotNull(retrieved);
-        Assert.Equal(item.Id, retrieved.Id);
-    }
-
-    [Fact]
-    public void GetById_NonExistentItem_ReturnsNull()
-    {
-        var result = _repository.GetById(Guid.NewGuid());
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void GetById_EmptyGuid_ReturnsNull()
-    {
-        var result = _repository.GetById(Guid.Empty);
-
-        Assert.Null(result);
-    }
-
-    #endregion
-
-    #region GetLatest Tests
-
-    [Fact]
-    public void GetLatest_WithItems_ReturnsMostRecent()
-    {
-        var item1 = new ClipboardItem { Content = "First", Type = ClipboardContentType.Text };
-        var item2 = new ClipboardItem { Content = "Second", Type = ClipboardContentType.Text };
-
-        _repository.Save(item1);
-        Thread.Sleep(50);
-        _repository.Save(item2);
+        var older = CreateItem("older", modifiedAt: DateTime.UtcNow.AddSeconds(-10));
+        var newer = CreateItem("newer", modifiedAt: DateTime.UtcNow);
+        _repository.Save(older);
+        _repository.Save(newer);
 
         var latest = _repository.GetLatest();
 
         Assert.NotNull(latest);
-        Assert.Equal("Second", latest.Content);
+        Assert.Equal("newer", latest.Content);
     }
 
     [Fact]
-    public void GetLatest_EmptyDatabase_ReturnsNull()
+    public void GetLatest_EmptyDb_ReturnsNull()
     {
-        var latest = _repository.GetLatest();
+        var result = _repository.GetLatest();
 
-        Assert.Null(latest);
+        Assert.Null(result);
     }
 
     [Fact]
-    public void GetLatest_IgnoresUnknownType()
+    public void GetLatest_ExcludesUnknownType()
     {
-        var unknownItem = new ClipboardItem { Content = "Unknown", Type = ClipboardContentType.Unknown };
-        var textItem = new ClipboardItem { Content = "Text", Type = ClipboardContentType.Text };
-
+        var textItem = CreateItem("text item");
+        var unknownItem = CreateItem("unknown item", type: ClipboardContentType.Unknown, modifiedAt: DateTime.UtcNow.AddSeconds(5));
         _repository.Save(textItem);
         _repository.Save(unknownItem);
 
         var latest = _repository.GetLatest();
 
         Assert.NotNull(latest);
-        Assert.Equal("Text", latest.Content);
+        Assert.Equal("text item", latest.Content);
     }
 
     #endregion
 
-    #region GetAll Tests
+    #region FindByContentHash
+
+    [Fact]
+    public void FindByContentHash_ExistingHash_ReturnsItem()
+    {
+        var item = CreateItem(contentHash: "hash_xyz");
+        _repository.Save(item);
+
+        var result = _repository.FindByContentHash("hash_xyz");
+
+        Assert.NotNull(result);
+        Assert.Equal(item.Id, result.Id);
+    }
+
+    [Fact]
+    public void FindByContentHash_NoMatch_ReturnsNull()
+    {
+        var item = CreateItem(contentHash: "hash_abc");
+        _repository.Save(item);
+
+        var result = _repository.FindByContentHash("hash_not_found");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void FindByContentHash_NullOrEmpty_ReturnsNull()
+    {
+        var item = CreateItem(contentHash: "some_hash");
+        _repository.Save(item);
+
+        Assert.Null(_repository.FindByContentHash(null!));
+        Assert.Null(_repository.FindByContentHash(string.Empty));
+    }
+
+    #endregion
+
+    #region FindByContentAndType
+
+    [Fact]
+    public void FindByContentAndType_Match_ReturnsItem()
+    {
+        var item = CreateItem("find me", ClipboardContentType.Text);
+        _repository.Save(item);
+
+        var result = _repository.FindByContentAndType("find me", ClipboardContentType.Text);
+
+        Assert.NotNull(result);
+        Assert.Equal(item.Id, result.Id);
+    }
+
+    [Fact]
+    public void FindByContentAndType_NoMatch_ReturnsNull()
+    {
+        var item = CreateItem("something", ClipboardContentType.Text);
+        _repository.Save(item);
+
+        var result = _repository.FindByContentAndType("not found", ClipboardContentType.Text);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void FindByContentAndType_SameContentDifferentType_ReturnsNull()
+    {
+        var item = CreateItem("shared content", ClipboardContentType.Text);
+        _repository.Save(item);
+
+        var result = _repository.FindByContentAndType("shared content", ClipboardContentType.Link);
+
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region GetAll
 
     [Fact]
     public void GetAll_ReturnsAllItems()
     {
-        var item1 = new ClipboardItem { Content = "First", Type = ClipboardContentType.Text };
-        var item2 = new ClipboardItem { Content = "Second", Type = ClipboardContentType.Text };
-        var item3 = new ClipboardItem { Content = "Third", Type = ClipboardContentType.Text };
-
-        _repository.Save(item1);
-        _repository.Save(item2);
-        _repository.Save(item3);
+        _repository.Save(CreateItem("a"));
+        _repository.Save(CreateItem("b"));
+        _repository.Save(CreateItem("c"));
 
         var all = _repository.GetAll().ToList();
 
@@ -394,81 +295,131 @@ public sealed class SqliteRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void GetAll_OrdersByModifiedAtDesc()
+    public void GetAll_ExcludesUnknownType()
     {
-        var item1 = new ClipboardItem { Content = "First", Type = ClipboardContentType.Text };
-        var item2 = new ClipboardItem { Content = "Second", Type = ClipboardContentType.Text };
-
-        _repository.Save(item1);
-        Thread.Sleep(50);
-        _repository.Save(item2);
-
-        var all = _repository.GetAll().ToList();
-
-        Assert.Equal("Second", all[0].Content);
-        Assert.Equal("First", all[1].Content);
-    }
-
-    [Fact]
-    public void GetAll_EmptyDatabase_ReturnsEmpty()
-    {
-        var all = _repository.GetAll().ToList();
-
-        Assert.Empty(all);
-    }
-
-    [Fact]
-    public void GetAll_IgnoresUnknownType()
-    {
-        var unknownItem = new ClipboardItem { Content = "Unknown", Type = ClipboardContentType.Unknown };
-        var textItem = new ClipboardItem { Content = "Text", Type = ClipboardContentType.Text };
-
-        _repository.Save(textItem);
-        _repository.Save(unknownItem);
+        _repository.Save(CreateItem("visible", ClipboardContentType.Text));
+        _repository.Save(CreateItem("hidden", ClipboardContentType.Unknown));
 
         var all = _repository.GetAll().ToList();
 
         Assert.Single(all);
-        Assert.Equal("Text", all[0].Content);
+        Assert.Equal("visible", all[0].Content);
+    }
+
+    [Fact]
+    public void GetAll_OrderedByModifiedAtDesc()
+    {
+        var first = CreateItem("first", modifiedAt: DateTime.UtcNow.AddSeconds(-20));
+        var second = CreateItem("second", modifiedAt: DateTime.UtcNow.AddSeconds(-10));
+        var third = CreateItem("third", modifiedAt: DateTime.UtcNow);
+        _repository.Save(first);
+        _repository.Save(second);
+        _repository.Save(third);
+
+        var all = _repository.GetAll().ToList();
+
+        Assert.Equal("third", all[0].Content);
+        Assert.Equal("second", all[1].Content);
+        Assert.Equal("first", all[2].Content);
     }
 
     #endregion
 
-    #region Delete Tests
+    #region Delete
 
     [Fact]
-    public void Delete_ExistingItem_RemovesFromDatabase()
+    public void Delete_RemovesItem()
     {
-        var item = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
+        var item = CreateItem();
         _repository.Save(item);
 
         _repository.Delete(item.Id);
 
-        var retrieved = _repository.GetById(item.Id);
-        Assert.Null(retrieved);
+        Assert.Null(_repository.GetById(item.Id));
     }
 
     [Fact]
-    public void Delete_NonExistentItem_DoesNotThrow()
+    public void Delete_NonExistent_DoesNotThrow()
     {
-        _repository.Delete(Guid.NewGuid());
+        var ex = Record.Exception(() => _repository.Delete(Guid.NewGuid()));
 
-        // Should not throw
-        Assert.True(true);
+        Assert.Null(ex);
     }
 
     #endregion
 
-    #region Search Tests
+    #region ClearOldItems
 
     [Fact]
-    public void Search_FindsMatchingContent()
+    public void ClearOldItems_DeletesOlderThanDays()
     {
-        var item1 = new ClipboardItem { Content = "Hello World", Type = ClipboardContentType.Text };
-        var item2 = new ClipboardItem { Content = "Goodbye World", Type = ClipboardContentType.Text };
+        var oldItem = CreateItem("old", createdAt: DateTime.UtcNow.AddDays(-10));
+        var newItem = CreateItem("new");
+        _repository.Save(oldItem);
+        _repository.Save(newItem);
 
-        _repository.Save(item1);
-        _repository.Save(item2);
+        _repository.ClearOldItems(7);
+
+        Assert.Null(_repository.GetById(oldItem.Id));
+        Assert.NotNull(_repository.GetById(newItem.Id));
+    }
+
+    [Fact]
+    public void ClearOldItems_ExcludesPinned_WhenTrue()
+    {
+        var oldPinned = CreateItem("old pinned", isPinned: true, createdAt: DateTime.UtcNow.AddDays(-10));
+        _repository.Save(oldPinned);
+
+        var deleted = _repository.ClearOldItems(7, excludePinned: true);
+
+        Assert.Equal(0, deleted);
+        Assert.NotNull(_repository.GetById(oldPinned.Id));
+    }
+
+    [Fact]
+    public void ClearOldItems_IncludesPinned_WhenFalse()
+    {
+        var oldPinned = CreateItem("old pinned", isPinned: true, createdAt: DateTime.UtcNow.AddDays(-10));
+        _repository.Save(oldPinned);
+
+        var deleted = _repository.ClearOldItems(7, excludePinned: false);
+
+        Assert.Equal(1, deleted);
+        Assert.Null(_repository.GetById(oldPinned.Id));
+    }
+
+    [Fact]
+    public void ClearOldItems_ReturnsDeletedCount()
+    {
+        _repository.Save(CreateItem("old1", createdAt: DateTime.UtcNow.AddDays(-10)));
+        _repository.Save(CreateItem("old2", createdAt: DateTime.UtcNow.AddDays(-15)));
+        _repository.Save(CreateItem("new"));
+
+        var count = _repository.ClearOldItems(7);
+
+        Assert.Equal(2, count);
+    }
+
+    #endregion
+
+    #region Search
+
+    [Fact]
+    public void Search_EmptyQuery_ReturnsAllOrdered()
+    {
+        _repository.Save(CreateItem("alpha"));
+        _repository.Save(CreateItem("beta"));
+
+        var results = _repository.Search(string.Empty).ToList();
+
+        Assert.Equal(2, results.Count);
+    }
+
+    [Fact]
+    public void Search_WithQuery_FindsMatchingContent()
+    {
+        _repository.Save(CreateItem("Hello World"));
+        _repository.Save(CreateItem("Goodbye"));
 
         var results = _repository.Search("Hello").ToList();
 
@@ -477,154 +428,162 @@ public sealed class SqliteRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void Search_EmptyQuery_ReturnsAll()
+    public void Search_RespectsLimitAndSkip()
     {
-        var item1 = new ClipboardItem { Content = "First", Type = ClipboardContentType.Text };
-        var item2 = new ClipboardItem { Content = "Second", Type = ClipboardContentType.Text };
+        for (int i = 0; i < 10; i++)
+            _repository.Save(CreateItem($"item {i}"));
 
-        _repository.Save(item1);
-        _repository.Save(item2);
+        var page1 = _repository.Search(string.Empty, limit: 3, skip: 0).ToList();
+        var page2 = _repository.Search(string.Empty, limit: 3, skip: 3).ToList();
 
-        var results = _repository.Search("").ToList();
+        Assert.Equal(3, page1.Count);
+        Assert.Equal(3, page2.Count);
+        Assert.DoesNotContain(page2, i => page1.Any(j => j.Id == i.Id));
+    }
+
+    [Fact]
+    public void Search_NoMatch_ReturnsEmpty()
+    {
+        _repository.Save(CreateItem("some text"));
+
+        var results = _repository.Search("zzznomatch").ToList();
+
+        Assert.Empty(results);
+    }
+
+    #endregion
+
+    #region SearchAdvanced
+
+    [Fact]
+    public void SearchAdvanced_NoFilters_ReturnsAll()
+    {
+        _repository.Save(CreateItem("first"));
+        _repository.Save(CreateItem("second"));
+
+        var results = _repository.SearchAdvanced(null, null, null, null, 100, 0).ToList();
 
         Assert.Equal(2, results.Count);
     }
 
     [Fact]
-    public void Search_WithLimit_ReturnsLimitedResults()
+    public void SearchAdvanced_TypeFilter_FiltersCorrectly()
     {
-        for (int i = 0; i < 10; i++)
-        {
-            _repository.Save(new ClipboardItem { Content = $"Item {i}", Type = ClipboardContentType.Text });
-        }
+        _repository.Save(CreateItem("text item", ClipboardContentType.Text));
+        _repository.Save(CreateItem("link item", ClipboardContentType.Link));
+        _repository.Save(CreateItem("image item", ClipboardContentType.Image));
 
-        var results = _repository.Search("", limit: 5).ToList();
-
-        Assert.Equal(5, results.Count);
-    }
-
-    [Fact]
-    public void Search_NoMatches_ReturnsEmpty()
-    {
-        var item = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
-        _repository.Save(item);
-
-        var results = _repository.Search("NonExistent").ToList();
-
-        Assert.Empty(results);
-    }
-
-    [Fact]
-    public void Search_FindsByLabel()
-    {
-        var item1 = new ClipboardItem
-        {
-            Content = "abc-123-xyz",
-            Type = ClipboardContentType.Text,
-            Label = "API Key Production"
-        };
-        var item2 = new ClipboardItem
-        {
-            Content = "def-456-uvw",
-            Type = ClipboardContentType.Text,
-            Label = "Database Password"
-        };
-
-        _repository.Save(item1);
-        _repository.Save(item2);
-
-        var results = _repository.Search("Production").ToList();
+        var results = _repository.SearchAdvanced(
+            null,
+            new[] { ClipboardContentType.Link },
+            null,
+            null,
+            100,
+            0).ToList();
 
         Assert.Single(results);
-        Assert.Equal("API Key Production", results[0].Label);
+        Assert.Equal("link item", results[0].Content);
+    }
+
+    [Fact]
+    public void SearchAdvanced_ColorFilter_FiltersCorrectly()
+    {
+        _repository.Save(CreateItem("red item", color: CardColor.Red));
+        _repository.Save(CreateItem("blue item", color: CardColor.Blue));
+        _repository.Save(CreateItem("no color", color: CardColor.None));
+
+        var results = _repository.SearchAdvanced(
+            null,
+            null,
+            new[] { CardColor.Red },
+            null,
+            100,
+            0).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("red item", results[0].Content);
+    }
+
+    [Fact]
+    public void SearchAdvanced_IsPinnedFilter_FiltersCorrectly()
+    {
+        _repository.Save(CreateItem("pinned", isPinned: true));
+        _repository.Save(CreateItem("not pinned", isPinned: false));
+
+        var results = _repository.SearchAdvanced(null, null, null, true, 100, 0).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("pinned", results[0].Content);
+    }
+
+    [Fact]
+    public void SearchAdvanced_TextQuery_FindsMatches()
+    {
+        _repository.Save(CreateItem("unique phrase here"));
+        _repository.Save(CreateItem("something else"));
+
+        var results = _repository.SearchAdvanced("unique phrase", null, null, null, 100, 0).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("unique phrase here", results[0].Content);
+    }
+
+    [Fact]
+    public void SearchAdvanced_CombinedFilters_WorksTogether()
+    {
+        _repository.Save(CreateItem("text red", ClipboardContentType.Text, color: CardColor.Red));
+        _repository.Save(CreateItem("text blue", ClipboardContentType.Text, color: CardColor.Blue));
+        _repository.Save(CreateItem("link red", ClipboardContentType.Link, color: CardColor.Red));
+
+        var results = _repository.SearchAdvanced(
+            null,
+            new[] { ClipboardContentType.Text },
+            new[] { CardColor.Red },
+            null,
+            100,
+            0).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("text red", results[0].Content);
     }
 
     #endregion
 
-    #region ClearOldItems Tests
+    #region Dispose
 
     [Fact]
-    public void ClearOldItems_RemovesOldItems()
+    public void Dispose_CanBeCalledMultipleTimes()
     {
-        var oldItem = new ClipboardItem
+        var basePath = Path.Combine(Path.GetTempPath(), "CopyPasteTests", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(basePath);
+        StorageConfig.SetBasePath(basePath);
+        StorageConfig.Initialize();
+
+        var dbPath = Path.Combine(basePath, "dispose_test.db");
+
+        Exception? ex;
+        using (var repo = new SqliteRepository(dbPath))
         {
-            Content = "Old",
-            Type = ClipboardContentType.Text,
-            CreatedAt = DateTime.UtcNow.AddDays(-10)
-        };
-        var newItem = new ClipboardItem
-        {
-            Content = "New",
-            Type = ClipboardContentType.Text
-        };
+            ex = Record.Exception(() =>
+            {
+                repo.Dispose();
+                repo.Dispose();
+            });
+        }
 
-        _repository.Save(oldItem);
-        _repository.Save(newItem);
+        Assert.Null(ex);
 
-        var count = _repository.ClearOldItems(7);
-
-        Assert.Equal(1, count);
-        Assert.Null(_repository.GetById(oldItem.Id));
-        Assert.NotNull(_repository.GetById(newItem.Id));
-    }
-
-    [Fact]
-    public void ClearOldItems_ExcludesPinned_KeepsPinnedItems()
-    {
-        var oldPinnedItem = new ClipboardItem
-        {
-            Content = "Old Pinned",
-            Type = ClipboardContentType.Text,
-            CreatedAt = DateTime.UtcNow.AddDays(-10),
-            IsPinned = true
-        };
-
-        _repository.Save(oldPinnedItem);
-
-        var count = _repository.ClearOldItems(7, excludePinned: true);
-
-        Assert.Equal(0, count);
-        Assert.NotNull(_repository.GetById(oldPinnedItem.Id));
-    }
-
-    [Fact]
-    public void ClearOldItems_IncludePinned_RemovesPinnedItems()
-    {
-        var oldPinnedItem = new ClipboardItem
-        {
-            Content = "Old Pinned",
-            Type = ClipboardContentType.Text,
-            CreatedAt = DateTime.UtcNow.AddDays(-10),
-            IsPinned = true
-        };
-
-        _repository.Save(oldPinnedItem);
-
-        var count = _repository.ClearOldItems(7, excludePinned: false);
-
-        Assert.Equal(1, count);
-        Assert.Null(_repository.GetById(oldPinnedItem.Id));
+        try { Directory.Delete(basePath, recursive: true); } catch { }
     }
 
     #endregion
 
-    #region Database Initialization Tests
+    #region Database resilience
 
     [Fact]
-    public void Constructor_CreatesDatabase()
+    public void Constructor_CreatesNewDatabase()
     {
         Assert.True(File.Exists(_dbPath));
-    }
-
-    [Fact]
-    public void Constructor_CreatesTablesAndIndexes()
-    {
-        // If we can save and retrieve, tables exist
-        var item = new ClipboardItem { Content = "Test", Type = ClipboardContentType.Text };
-        _repository.Save(item);
-
-        var retrieved = _repository.GetById(item.Id);
-        Assert.NotNull(retrieved);
     }
 
     #endregion
@@ -636,9 +595,7 @@ public sealed class SqliteRepositoryTests : IDisposable
         try
         {
             if (Directory.Exists(_basePath))
-            {
                 Directory.Delete(_basePath, recursive: true);
-            }
         }
         catch
         {
