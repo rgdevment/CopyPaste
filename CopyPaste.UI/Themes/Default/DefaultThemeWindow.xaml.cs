@@ -191,7 +191,7 @@ internal sealed partial class DefaultThemeWindow : Window
         SearchBox.KeyDown -= SearchBox_KeyDown;
 
         // Unsubscribe from ScrollViewer
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
             scrollViewer.ViewChanged -= ScrollViewer_ViewChanged;
 
@@ -213,7 +213,7 @@ internal sealed partial class DefaultThemeWindow : Window
 
     private void ClipboardListView_Loaded(object? _, RoutedEventArgs __)
     {
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
             scrollViewer.ViewChanged += ScrollViewer_ViewChanged;
     }
@@ -289,32 +289,17 @@ internal sealed partial class DefaultThemeWindow : Window
             ViewModel.OnWindowDeactivated();
     }
 
-    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is ScrollViewer sv)
-                return sv;
-
-            var result = FindScrollViewer(child);
-            if (result != null)
-                return result;
-        }
-        return null;
-    }
-
     private static void Container_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         if (sender is ListViewItem item && item.ContentTemplateRoot is FrameworkElement root)
         {
-            if (FindDescendant(root, "ActionPanel") is UIElement panel)
+            if (ClipboardWindowHelpers.FindDescendant(root, "ActionPanel") is UIElement panel)
                 panel.Opacity = 1;
-            if (FindDescendant(root, "LabelTimestamp") is UIElement timestamp)
+            if (ClipboardWindowHelpers.FindDescendant(root, "LabelTimestamp") is UIElement timestamp)
                 timestamp.Opacity = 0;
-            if (FindDescendant(root, "ImageBorder") is UIElement imageBorder)
+            if (ClipboardWindowHelpers.FindDescendant(root, "ImageBorder") is UIElement imageBorder)
                 imageBorder.Opacity = 1;
-            if (FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
+            if (ClipboardWindowHelpers.FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
                 mediaBorder.Opacity = 1;
         }
     }
@@ -323,30 +308,15 @@ internal sealed partial class DefaultThemeWindow : Window
     {
         if (sender is ListViewItem item && item.ContentTemplateRoot is FrameworkElement root)
         {
-            if (FindDescendant(root, "ActionPanel") is UIElement panel)
+            if (ClipboardWindowHelpers.FindDescendant(root, "ActionPanel") is UIElement panel)
                 panel.Opacity = 0;
-            if (FindDescendant(root, "LabelTimestamp") is UIElement timestamp)
+            if (ClipboardWindowHelpers.FindDescendant(root, "LabelTimestamp") is UIElement timestamp)
                 timestamp.Opacity = 0.5;
-            if (FindDescendant(root, "ImageBorder") is UIElement imageBorder)
+            if (ClipboardWindowHelpers.FindDescendant(root, "ImageBorder") is UIElement imageBorder)
                 imageBorder.Opacity = 0.6;
-            if (FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
+            if (ClipboardWindowHelpers.FindDescendant(root, "MediaBorder") is UIElement mediaBorder)
                 mediaBorder.Opacity = 0.6;
         }
-    }
-
-    private static DependencyObject? FindDescendant(DependencyObject parent, string name)
-    {
-        if (parent is FrameworkElement fe && fe.Name == name)
-            return parent;
-
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            var result = FindDescendant(child, name);
-            if (result != null)
-                return result;
-        }
-        return null;
     }
 
     private void ClipboardListView_ContainerContentChanging(ListViewBase _, ContainerContentChangingEventArgs args)
@@ -426,47 +396,8 @@ internal sealed partial class DefaultThemeWindow : Window
         }
     }
 
-    private void LoadImageSource(Image image, string? imagePath)
-    {
-        if (string.IsNullOrEmpty(imagePath)) return;
-
-        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) &&
-            !System.IO.File.Exists(imagePath))
-        {
-            // Check if it's a thumbnail file (could be _t.png, _t.jpg, _t.webp, etc.)
-            if (imagePath.Contains("_t.", StringComparison.Ordinal))
-            {
-                try
-                {
-                    image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-                    {
-                        UriSource = new Uri("ms-appx:///Assets/thumb/image.png")
-                    };
-                }
-                catch { /* Silently fail */ }
-            }
-            return;
-        }
-
-        // Skip if already showing the same image (avoid creating duplicate BitmapImages)
-        if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap)
-        {
-            var currentPath = currentBitmap.UriSource?.LocalPath;
-            if (currentPath != null && imagePath.EndsWith(System.IO.Path.GetFileName(currentPath), StringComparison.OrdinalIgnoreCase))
-                return;
-        }
-
-        try
-        {
-            image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-            {
-                UriSource = new Uri(imagePath),
-                CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
-                DecodePixelHeight = _config.ThumbnailUIDecodeHeight
-            };
-        }
-        catch { /* Silently fail */ }
-    }
+    private void LoadImageSource(Image image, string? imagePath) =>
+        ClipboardWindowHelpers.LoadImageSource(image, imagePath, _config.ThumbnailUIDecodeHeight);
 
     private void SearchBox_TextChanged(object? sender, TextChangedEventArgs _)
     {
@@ -578,7 +509,7 @@ internal sealed partial class DefaultThemeWindow : Window
                 {
                     Width = 16,
                     Height = 16,
-                    Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(ParseColor(hex)),
+                    Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(ClipboardWindowHelpers.ParseColor(hex)),
                     Stroke = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(40, 0, 0, 0)),
                     StrokeThickness = 1,
                     Margin = new Thickness(0, 0, 2, 0)
@@ -643,17 +574,6 @@ internal sealed partial class DefaultThemeWindow : Window
                 shown++;
             }
         }
-    }
-
-    private static Windows.UI.Color ParseColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Windows.UI.Color.FromArgb(
-            255,
-            byte.Parse(hex.AsSpan(0, 2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(2, 2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(4, 2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture)
-        );
     }
 
     private void MainContent_PreviewKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
@@ -852,9 +772,9 @@ internal sealed partial class DefaultThemeWindow : Window
                 var removedContainer = ClipboardListView.ContainerFromItem(removed) as ListViewItem;
                 if (removedContainer?.ContentTemplateRoot is FrameworkElement removedRoot)
                 {
-                    if (FindDescendant(removedRoot, "ImageBorder") is UIElement imageBorder)
+                    if (ClipboardWindowHelpers.FindDescendant(removedRoot, "ImageBorder") is UIElement imageBorder)
                         imageBorder.Opacity = 0.6;
-                    if (FindDescendant(removedRoot, "MediaBorder") is UIElement mediaBorder)
+                    if (ClipboardWindowHelpers.FindDescendant(removedRoot, "MediaBorder") is UIElement mediaBorder)
                         mediaBorder.Opacity = 0.6;
                 }
             }
@@ -868,9 +788,9 @@ internal sealed partial class DefaultThemeWindow : Window
                 var addedContainer = ClipboardListView.ContainerFromItem(added) as ListViewItem;
                 if (addedContainer?.ContentTemplateRoot is FrameworkElement addedRoot)
                 {
-                    if (FindDescendant(addedRoot, "ImageBorder") is UIElement imageBorder)
+                    if (ClipboardWindowHelpers.FindDescendant(addedRoot, "ImageBorder") is UIElement imageBorder)
                         imageBorder.Opacity = 1;
-                    if (FindDescendant(addedRoot, "MediaBorder") is UIElement mediaBorder)
+                    if (ClipboardWindowHelpers.FindDescendant(addedRoot, "MediaBorder") is UIElement mediaBorder)
                         mediaBorder.Opacity = 1;
                 }
             }
@@ -898,7 +818,7 @@ internal sealed partial class DefaultThemeWindow : Window
 
     private void ResetScrollToTop()
     {
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         scrollViewer?.ChangeView(null, 0, null, disableAnimation: true);
 
         if (ClipboardListView.Items.Count > 0)
@@ -911,7 +831,7 @@ internal sealed partial class DefaultThemeWindow : Window
 
         DispatcherQueue.TryEnqueue(() =>
         {
-            var scrollViewer = FindScrollViewer(ClipboardListView);
+            var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
             scrollViewer?.ChangeView(null, 0, null, disableAnimation: false);
 
             if (ClipboardListView.Items.Count > 0)

@@ -201,7 +201,7 @@ internal sealed partial class CompactWindow : Window
         ClipboardListView.Loaded -= ClipboardListView_Loaded;
         SearchBox.KeyDown -= SearchBox_KeyDown;
 
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
             scrollViewer.ViewChanged -= ScrollViewer_ViewChanged;
 
@@ -220,7 +220,7 @@ internal sealed partial class CompactWindow : Window
 
     private void ClipboardListView_Loaded(object? _, RoutedEventArgs __)
     {
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
             scrollViewer.ViewChanged += ScrollViewer_ViewChanged;
     }
@@ -284,8 +284,8 @@ internal sealed partial class CompactWindow : Window
     private void Card_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         if (sender is not Border border) return;
-        var timestamp = FindChild<TextBlock>(border, "TimestampText");
-        var actions = FindChild<StackPanel>(border, "HoverActions");
+        var timestamp = ClipboardWindowHelpers.FindChild<TextBlock>(border, "TimestampText");
+        var actions = ClipboardWindowHelpers.FindChild<StackPanel>(border, "HoverActions");
         if (timestamp != null) timestamp.Opacity = 0;
         if (actions != null) actions.Opacity = 1;
     }
@@ -293,22 +293,10 @@ internal sealed partial class CompactWindow : Window
     private void Card_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         if (sender is not Border border) return;
-        var timestamp = FindChild<TextBlock>(border, "TimestampText");
-        var actions = FindChild<StackPanel>(border, "HoverActions");
+        var timestamp = ClipboardWindowHelpers.FindChild<TextBlock>(border, "TimestampText");
+        var actions = ClipboardWindowHelpers.FindChild<StackPanel>(border, "HoverActions");
         if (timestamp != null) timestamp.Opacity = 0.35;
         if (actions != null) actions.Opacity = 0;
-    }
-
-    private static T? FindChild<T>(DependencyObject parent, string name) where T : FrameworkElement
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T fe && fe.Name == name) return fe;
-            var result = FindChild<T>(child, name);
-            if (result != null) return result;
-        }
-        return null;
     }
 
     private void ResetFiltersOnShow()
@@ -428,7 +416,7 @@ internal sealed partial class CompactWindow : Window
                 {
                     Width = 16,
                     Height = 16,
-                    Fill = new SolidColorBrush(ParseColor(hex)),
+                    Fill = new SolidColorBrush(ClipboardWindowHelpers.ParseColor(hex)),
                     Stroke = new SolidColorBrush(Windows.UI.Color.FromArgb(40, 0, 0, 0)),
                     StrokeThickness = 1,
                     Margin = new Thickness(0, 0, 2, 0)
@@ -491,17 +479,6 @@ internal sealed partial class CompactWindow : Window
                 shown++;
             }
         }
-    }
-
-    private static Windows.UI.Color ParseColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Windows.UI.Color.FromArgb(
-            255,
-            byte.Parse(hex.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture)
-        );
     }
 
     private void ClipboardListView_ContainerContentChanging(ListViewBase _, ContainerContentChangingEventArgs args)
@@ -572,45 +549,8 @@ internal sealed partial class CompactWindow : Window
         }
     }
 
-    private void LoadImageSource(Image image, string? imagePath)
-    {
-        if (string.IsNullOrEmpty(imagePath)) return;
-
-        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) &&
-            !System.IO.File.Exists(imagePath))
-        {
-            if (imagePath.Contains("_t.", StringComparison.Ordinal))
-            {
-                try
-                {
-                    image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-                    {
-                        UriSource = new Uri("ms-appx:///Assets/thumb/image.png")
-                    };
-                }
-                catch { /* Silently fail */ }
-            }
-            return;
-        }
-
-        if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap)
-        {
-            var currentPath = currentBitmap.UriSource?.LocalPath;
-            if (currentPath != null && imagePath.EndsWith(System.IO.Path.GetFileName(currentPath), StringComparison.OrdinalIgnoreCase))
-                return;
-        }
-
-        try
-        {
-            image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-            {
-                UriSource = new Uri(imagePath),
-                CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
-                DecodePixelHeight = _config.ThumbnailUIDecodeHeight
-            };
-        }
-        catch { /* Silently fail */ }
-    }
+    private void LoadImageSource(Image image, string? imagePath) =>
+        ClipboardWindowHelpers.LoadImageSource(image, imagePath, _config.ThumbnailUIDecodeHeight);
 
     private void SearchBox_TextChanged(object? sender, TextChangedEventArgs _)
     {
@@ -768,26 +708,13 @@ internal sealed partial class CompactWindow : Window
         }
     }
 
-    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is ScrollViewer sv) return sv;
-
-            var result = FindScrollViewer(child);
-            if (result != null) return result;
-        }
-        return null;
-    }
-
     private void FocusSearchBox() =>
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
             SearchBox.Focus(FocusState.Programmatic));
 
     private void ResetScrollToTop()
     {
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         scrollViewer?.ChangeView(null, 0, null, disableAnimation: true);
 
         if (ClipboardListView.Items.Count > 0)
@@ -800,7 +727,7 @@ internal sealed partial class CompactWindow : Window
 
         DispatcherQueue.TryEnqueue(() =>
         {
-            var scrollViewer = FindScrollViewer(ClipboardListView);
+            var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
             scrollViewer?.ChangeView(null, 0, null, disableAnimation: false);
 
             if (ClipboardListView.Items.Count > 0)

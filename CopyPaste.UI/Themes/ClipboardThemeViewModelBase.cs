@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
+using System.Threading.Tasks;
 using CopyPaste.UI.Helpers;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
@@ -307,6 +308,13 @@ public abstract partial class ClipboardThemeViewModelBase : ObservableObject
 
     [RelayCommand]
     private void ClearSearch() => SearchQuery = string.Empty;
+
+    [RelayCommand]
+    private static async Task OpenRepo()
+    {
+        var uri = new Uri("https://github.com/rgdevment/CopyPaste/issues");
+        await Windows.System.Launcher.LaunchUriAsync(uri);
+    }
 
     [RelayCommand]
     public void ShowWindow()
