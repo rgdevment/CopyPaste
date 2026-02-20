@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <Platforms>x64;ARM64</Platforms>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <!-- CA1707: Underscores in identifiers are the project-wide naming convention -->
