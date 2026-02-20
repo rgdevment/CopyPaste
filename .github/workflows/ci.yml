@@ -85,7 +85,11 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage/**/coverage.opencover.xml"
-          /d:sonar.coverage.exclusions="Tests/**"
+          /d:sonar.sources="CopyPaste.Core,CopyPaste.Listener,CopyPaste.UI"
+          /d:sonar.tests="Tests"
+          /d:sonar.test.inclusions="Tests/**"
+          /d:sonar.exclusions="Tests/**,**/obj/**,**/bin/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.xaml,**/Assets/**,**/Localization/Languages/**,CopyPaste.Launcher/**"
+          /d:sonar.coverage.exclusions="Tests/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs"
 
       - name: Restore dependencies
         run: dotnet restore -p:Platform=x64
@@ -94,11 +98,39 @@ jobs:
         run: dotnet build CopyPaste.slnx -c Debug -p:Platform=x64 --no-restore
 
       - name: Run Tests with Coverage
-        run: >
-          dotnet test CopyPaste.slnx -c Debug -p:Platform=x64 --no-build
-          --collect:"XPlat Code Coverage"
-          --results-directory coverage
-          --settings coverage.runsettings
+        shell: pwsh
+        run: |
+          $exclude='"[CopyPaste.Core.Tests]*%2c[CopyPaste.Listener.Tests]*%2c[CopyPaste.UI.Tests]*%2c[xunit.*]*%2c[Microsoft.*]*"'
+          $include='"[CopyPaste.Core]*%2c[CopyPaste.Listener]*%2c[CopyPaste.App]*"'
+          $excludeByFile='"**/AssemblyInfo.cs%2c**/GlobalSuppressions.cs%2c**/*.g.cs%2c**/*.designer.cs"'
+          $excludeByAttr='"System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute%2cSystem.CodeDom.Compiler.GeneratedCodeAttribute%2cSystem.Runtime.CompilerServices.CompilerGeneratedAttribute"'
+
+          dotnet test Tests/CopyPaste.Core.Tests/ -c Debug -p:Platform=x64 `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput="${{ github.workspace }}/coverage/core/" `
+            /p:Include=$include `
+            /p:Exclude=$exclude `
+            /p:ExcludeByFile=$excludeByFile `
+            /p:ExcludeByAttribute=$excludeByAttr
+
+          dotnet test Tests/CopyPaste.Listener.Tests/ -c Debug -p:Platform=x64 `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput="${{ github.workspace }}/coverage/listener/" `
+            /p:Include=$include `
+            /p:Exclude=$exclude `
+            /p:ExcludeByFile=$excludeByFile `
+            /p:ExcludeByAttribute=$excludeByAttr
+
+          dotnet test Tests/CopyPaste.UI.Tests/ -c Debug -p:Platform=x64 `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput="${{ github.workspace }}/coverage/ui/" `
+            /p:Include=$include `
+            /p:Exclude=$exclude `
+            /p:ExcludeByFile=$excludeByFile `
+            /p:ExcludeByAttribute=$excludeByAttr
 
       - name: SonarScanner End
         env:
