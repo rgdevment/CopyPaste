@@ -84,12 +84,10 @@ jobs:
           /o:"${{ vars.SONAR_ORGANIZATION }}"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage/**/coverage.opencover.xml"
-          /d:sonar.sources="CopyPaste.Core,CopyPaste.Listener,CopyPaste.UI"
-          /d:sonar.tests="Tests"
-          /d:sonar.test.inclusions="Tests/**"
-          /d:sonar.exclusions="Tests/**,**/obj/**,**/bin/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.xaml,**/Assets/**,**/Localization/Languages/**,CopyPaste.Launcher/**"
-          /d:sonar.coverage.exclusions="Tests/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs"
+          /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml"
+          /d:sonar.dotnet.excludeTestProjects=true
+          /d:sonar.exclusions="**/obj/**,**/bin/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.xaml,**/Assets/**,**/Localization/Languages/**,CopyPaste.Launcher/**"
+          /d:sonar.coverage.exclusions="**/AssemblyInfo.cs,**/GlobalSuppressions.cs"
 
       - name: Restore dependencies
         run: dotnet restore -p:Platform=x64
@@ -98,39 +96,25 @@ jobs:
         run: dotnet build CopyPaste.slnx -c Debug -p:Platform=x64 --no-restore
 
       - name: Run Tests with Coverage
-        shell: pwsh
+        shell: bash
         run: |
-          $exclude='"[CopyPaste.Core.Tests]*%2c[CopyPaste.Listener.Tests]*%2c[CopyPaste.UI.Tests]*%2c[xunit.*]*%2c[Microsoft.*]*"'
-          $include='"[CopyPaste.Core]*%2c[CopyPaste.Listener]*%2c[CopyPaste.App]*"'
-          $excludeByFile='"**/AssemblyInfo.cs%2c**/GlobalSuppressions.cs%2c**/*.g.cs%2c**/*.designer.cs"'
-          $excludeByAttr='"System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute%2cSystem.CodeDom.Compiler.GeneratedCodeAttribute%2cSystem.Runtime.CompilerServices.CompilerGeneratedAttribute"'
+          CFG="DataCollectionRunSettings.DataCollectors.DataCollector.Configuration"
 
-          dotnet test Tests/CopyPaste.Core.Tests/ -c Debug -p:Platform=x64 `
-            /p:CollectCoverage=true `
-            /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput="${{ github.workspace }}/coverage/core/" `
-            /p:Include=$include `
-            /p:Exclude=$exclude `
-            /p:ExcludeByFile=$excludeByFile `
-            /p:ExcludeByAttribute=$excludeByAttr
+          run_coverage() {
+            dotnet test "$1" -c Debug -p:Platform=x64 \
+              --collect:"XPlat Code Coverage" \
+              --results-directory "coverage/$2" \
+              -- "${CFG}.Format=opencover" \
+              "${CFG}.IncludeTestAssembly=false" \
+              "${CFG}.Include=[CopyPaste.Core]*%2c[CopyPaste.Listener]*%2c[CopyPaste.App]*" \
+              "${CFG}.Exclude=[CopyPaste.Core.Tests]*%2c[CopyPaste.Listener.Tests]*%2c[CopyPaste.UI.Tests]*%2c[xunit.*]*%2c[Microsoft.*]*" \
+              "${CFG}.ExcludeByFile=**/AssemblyInfo.cs%2c**/GlobalSuppressions.cs%2c**/*.g.cs%2c**/*.designer.cs" \
+              "${CFG}.ExcludeByAttribute=System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute%2cSystem.CodeDom.Compiler.GeneratedCodeAttribute%2cSystem.Runtime.CompilerServices.CompilerGeneratedAttribute"
+          }
 
-          dotnet test Tests/CopyPaste.Listener.Tests/ -c Debug -p:Platform=x64 `
-            /p:CollectCoverage=true `
-            /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput="${{ github.workspace }}/coverage/listener/" `
-            /p:Include=$include `
-            /p:Exclude=$exclude `
-            /p:ExcludeByFile=$excludeByFile `
-            /p:ExcludeByAttribute=$excludeByAttr
-
-          dotnet test Tests/CopyPaste.UI.Tests/ -c Debug -p:Platform=x64 `
-            /p:CollectCoverage=true `
-            /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput="${{ github.workspace }}/coverage/ui/" `
-            /p:Include=$include `
-            /p:Exclude=$exclude `
-            /p:ExcludeByFile=$excludeByFile `
-            /p:ExcludeByAttribute=$excludeByAttr
+          run_coverage Tests/CopyPaste.Core.Tests/ core
+          run_coverage Tests/CopyPaste.Listener.Tests/ listener
+          run_coverage Tests/CopyPaste.UI.Tests/ ui
 
       - name: SonarScanner End
         env:
