@@ -27,8 +27,17 @@
     <Deploy />
   </Project>
   <Folder Name="/Tests/">
-    <Project Path="Tests/CopyPaste.Core.Tests/CopyPaste.Core.Tests.csproj" />
-    <Project Path="Tests/CopyPaste.Listener.Tests/CopyPaste.Listener.Tests.csproj" />
-    <Project Path="Tests/CopyPaste.UI.Tests/CopyPaste.UI.Tests.csproj" />
+    <Project Path="Tests/CopyPaste.Core.Tests/CopyPaste.Core.Tests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="Tests/CopyPaste.Listener.Tests/CopyPaste.Listener.Tests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="Tests/CopyPaste.UI.Tests/CopyPaste.UI.Tests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
   </Folder>
 </Solution>

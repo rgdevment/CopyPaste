@@ -1,7 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
 using CopyPaste.Core;
-using System;
-using System.Threading.Tasks;
 
 namespace CopyPaste.UI.Themes;
 
@@ -20,12 +18,5 @@ public partial class DefaultThemeViewModel(IClipboardService service, MyMConfig 
             Service.RemoveItem(Items[i].Model.Id);
             Items.RemoveAt(i);
         }
-    }
-
-    [RelayCommand]
-    private static async Task OpenRepo()
-    {
-        var uri = new Uri("https://github.com/rgdevment/CopyPaste/issues");
-        await Windows.System.Launcher.LaunchUriAsync(uri);
     }
 }

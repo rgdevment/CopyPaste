@@ -59,12 +59,7 @@ internal sealed partial class CompactWindow : Window
         ApplyLocalizedStrings();
     }
 
-    private void SetWindowIcon()
-    {
-        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "CopyPasteLogoSimple.ico");
-        if (System.IO.File.Exists(iconPath))
-            _appWindow.SetIcon(iconPath);
-    }
+    private void SetWindowIcon() => ClipboardWindowHelpers.SetWindowIcon(_appWindow);
 
     private void ConfigurePopupStyle()
     {
@@ -201,7 +196,7 @@ internal sealed partial class CompactWindow : Window
         ClipboardListView.Loaded -= ClipboardListView_Loaded;
         SearchBox.KeyDown -= SearchBox_KeyDown;
 
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
             scrollViewer.ViewChanged -= ScrollViewer_ViewChanged;
 
@@ -220,7 +215,7 @@ internal sealed partial class CompactWindow : Window
 
     private void ClipboardListView_Loaded(object? _, RoutedEventArgs __)
     {
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         if (scrollViewer != null)
             scrollViewer.ViewChanged += ScrollViewer_ViewChanged;
     }
@@ -284,8 +279,8 @@ internal sealed partial class CompactWindow : Window
     private void Card_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         if (sender is not Border border) return;
-        var timestamp = FindChild<TextBlock>(border, "TimestampText");
-        var actions = FindChild<StackPanel>(border, "HoverActions");
+        var timestamp = ClipboardWindowHelpers.FindChild<TextBlock>(border, "TimestampText");
+        var actions = ClipboardWindowHelpers.FindChild<StackPanel>(border, "HoverActions");
         if (timestamp != null) timestamp.Opacity = 0;
         if (actions != null) actions.Opacity = 1;
     }
@@ -293,22 +288,10 @@ internal sealed partial class CompactWindow : Window
     private void Card_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         if (sender is not Border border) return;
-        var timestamp = FindChild<TextBlock>(border, "TimestampText");
-        var actions = FindChild<StackPanel>(border, "HoverActions");
+        var timestamp = ClipboardWindowHelpers.FindChild<TextBlock>(border, "TimestampText");
+        var actions = ClipboardWindowHelpers.FindChild<StackPanel>(border, "HoverActions");
         if (timestamp != null) timestamp.Opacity = 0.35;
         if (actions != null) actions.Opacity = 0;
-    }
-
-    private static T? FindChild<T>(DependencyObject parent, string name) where T : FrameworkElement
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T fe && fe.Name == name) return fe;
-            var result = FindChild<T>(child, name);
-            if (result != null) return result;
-        }
-        return null;
     }
 
     private void ResetFiltersOnShow()
@@ -377,132 +360,14 @@ internal sealed partial class CompactWindow : Window
         }
     }
 
-    private void SyncFilterChipsState()
-    {
-        ColorCheckRed.IsChecked = ViewModel.IsColorSelected(CardColor.Red);
-        ColorCheckGreen.IsChecked = ViewModel.IsColorSelected(CardColor.Green);
-        ColorCheckPurple.IsChecked = ViewModel.IsColorSelected(CardColor.Purple);
-        ColorCheckYellow.IsChecked = ViewModel.IsColorSelected(CardColor.Yellow);
-        ColorCheckBlue.IsChecked = ViewModel.IsColorSelected(CardColor.Blue);
-        ColorCheckOrange.IsChecked = ViewModel.IsColorSelected(CardColor.Orange);
+    private void SyncFilterChipsState() =>
+        ClipboardFilterChipsHelper.SyncFilterChipsState(ViewModel, (FrameworkElement)Content);
 
-        TypeCheckText.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.Text);
-        TypeCheckImage.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.Image);
-        TypeCheckFile.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.File);
-        TypeCheckFolder.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.Folder);
-        TypeCheckLink.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.Link);
-        TypeCheckAudio.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.Audio);
-        TypeCheckVideo.IsChecked = ViewModel.IsTypeSelected(ClipboardContentType.Video);
+    private void UpdateSelectedColorsDisplay() =>
+        ClipboardFilterChipsHelper.UpdateSelectedColorsDisplay(ViewModel, (FrameworkElement)Content);
 
-        FilterModeContent.IsChecked = ViewModel.ActiveFilterMode == 0;
-        FilterModeCategory.IsChecked = ViewModel.ActiveFilterMode == 1;
-        FilterModeType.IsChecked = ViewModel.ActiveFilterMode == 2;
-
-        UpdateSelectedColorsDisplay();
-        UpdateSelectedTypesDisplay();
-    }
-
-    private void UpdateSelectedColorsDisplay()
-    {
-        while (SelectedColorsPanel.Children.Count > 1)
-            SelectedColorsPanel.Children.RemoveAt(1);
-
-        var selectedColors = new List<(CardColor color, string hex)>();
-        if (ViewModel.IsColorSelected(CardColor.Red)) selectedColors.Add((CardColor.Red, "#E74C3C"));
-        if (ViewModel.IsColorSelected(CardColor.Green)) selectedColors.Add((CardColor.Green, "#2ECC71"));
-        if (ViewModel.IsColorSelected(CardColor.Purple)) selectedColors.Add((CardColor.Purple, "#9B59B6"));
-        if (ViewModel.IsColorSelected(CardColor.Yellow)) selectedColors.Add((CardColor.Yellow, "#F1C40F"));
-        if (ViewModel.IsColorSelected(CardColor.Blue)) selectedColors.Add((CardColor.Blue, "#3498DB"));
-        if (ViewModel.IsColorSelected(CardColor.Orange)) selectedColors.Add((CardColor.Orange, "#E67E22"));
-
-        if (selectedColors.Count == 0)
-        {
-            ColorPlaceholder.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            ColorPlaceholder.Visibility = Visibility.Collapsed;
-            foreach (var (_, hex) in selectedColors)
-            {
-                var chip = new Ellipse
-                {
-                    Width = 16,
-                    Height = 16,
-                    Fill = new SolidColorBrush(ParseColor(hex)),
-                    Stroke = new SolidColorBrush(Windows.UI.Color.FromArgb(40, 0, 0, 0)),
-                    StrokeThickness = 1,
-                    Margin = new Thickness(0, 0, 2, 0)
-                };
-                SelectedColorsPanel.Children.Add(chip);
-            }
-        }
-    }
-
-    private void UpdateSelectedTypesDisplay()
-    {
-        while (SelectedTypesPanel.Children.Count > 1)
-            SelectedTypesPanel.Children.RemoveAt(1);
-
-        var selectedTypes = new List<(ClipboardContentType type, string glyph)>();
-        if (ViewModel.IsTypeSelected(ClipboardContentType.Text)) selectedTypes.Add((ClipboardContentType.Text, "\uE8C1"));
-        if (ViewModel.IsTypeSelected(ClipboardContentType.Image)) selectedTypes.Add((ClipboardContentType.Image, "\uE91B"));
-        if (ViewModel.IsTypeSelected(ClipboardContentType.File)) selectedTypes.Add((ClipboardContentType.File, "\uE7C3"));
-        if (ViewModel.IsTypeSelected(ClipboardContentType.Folder)) selectedTypes.Add((ClipboardContentType.Folder, "\uE8B7"));
-        if (ViewModel.IsTypeSelected(ClipboardContentType.Link)) selectedTypes.Add((ClipboardContentType.Link, "\uE71B"));
-        if (ViewModel.IsTypeSelected(ClipboardContentType.Audio)) selectedTypes.Add((ClipboardContentType.Audio, "\uE8D6"));
-        if (ViewModel.IsTypeSelected(ClipboardContentType.Video)) selectedTypes.Add((ClipboardContentType.Video, "\uE714"));
-
-        if (selectedTypes.Count == 0)
-        {
-            TypePlaceholder.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            TypePlaceholder.Visibility = Visibility.Collapsed;
-            var maxToShow = 5;
-            var shown = 0;
-            foreach (var (_, glyph) in selectedTypes)
-            {
-                if (shown >= maxToShow)
-                {
-                    var moreText = new TextBlock
-                    {
-                        Text = $"+{selectedTypes.Count - maxToShow}",
-                        FontSize = 10,
-                        Opacity = 0.6,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        Margin = new Thickness(4, 0, 0, 0)
-                    };
-                    SelectedTypesPanel.Children.Add(moreText);
-                    break;
-                }
-                var chipBorder = new Border
-                {
-                    Background = new SolidColorBrush(Windows.UI.Color.FromArgb(30, 128, 128, 128)),
-                    CornerRadius = new CornerRadius(4),
-                    Padding = new Thickness(6, 3, 6, 3),
-                    Child = new FontIcon
-                    {
-                        Glyph = glyph,
-                        FontSize = 12
-                    }
-                };
-                SelectedTypesPanel.Children.Add(chipBorder);
-                shown++;
-            }
-        }
-    }
-
-    private static Windows.UI.Color ParseColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Windows.UI.Color.FromArgb(
-            255,
-            byte.Parse(hex.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture)
-        );
-    }
+    private void UpdateSelectedTypesDisplay() =>
+        ClipboardFilterChipsHelper.UpdateSelectedTypesDisplay(ViewModel, (FrameworkElement)Content);
 
     private void ClipboardListView_ContainerContentChanging(ListViewBase _, ContainerContentChangingEventArgs args)
     {
@@ -572,45 +437,8 @@ internal sealed partial class CompactWindow : Window
         }
     }
 
-    private void LoadImageSource(Image image, string? imagePath)
-    {
-        if (string.IsNullOrEmpty(imagePath)) return;
-
-        if (!imagePath.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) &&
-            !System.IO.File.Exists(imagePath))
-        {
-            if (imagePath.Contains("_t.", StringComparison.Ordinal))
-            {
-                try
-                {
-                    image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-                    {
-                        UriSource = new Uri("ms-appx:///Assets/thumb/image.png")
-                    };
-                }
-                catch { /* Silently fail */ }
-            }
-            return;
-        }
-
-        if (image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage currentBitmap)
-        {
-            var currentPath = currentBitmap.UriSource?.LocalPath;
-            if (currentPath != null && imagePath.EndsWith(System.IO.Path.GetFileName(currentPath), StringComparison.OrdinalIgnoreCase))
-                return;
-        }
-
-        try
-        {
-            image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage
-            {
-                UriSource = new Uri(imagePath),
-                CreateOptions = Microsoft.UI.Xaml.Media.Imaging.BitmapCreateOptions.None,
-                DecodePixelHeight = _config.ThumbnailUIDecodeHeight
-            };
-        }
-        catch { /* Silently fail */ }
-    }
+    private void LoadImageSource(Image image, string? imagePath) =>
+        ClipboardWindowHelpers.LoadImageSource(image, imagePath, _config.ThumbnailUIDecodeHeight);
 
     private void SearchBox_TextChanged(object? sender, TextChangedEventArgs _)
     {
@@ -768,26 +596,13 @@ internal sealed partial class CompactWindow : Window
         }
     }
 
-    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is ScrollViewer sv) return sv;
-
-            var result = FindScrollViewer(child);
-            if (result != null) return result;
-        }
-        return null;
-    }
-
     private void FocusSearchBox() =>
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
             SearchBox.Focus(FocusState.Programmatic));
 
     private void ResetScrollToTop()
     {
-        var scrollViewer = FindScrollViewer(ClipboardListView);
+        var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
         scrollViewer?.ChangeView(null, 0, null, disableAnimation: true);
 
         if (ClipboardListView.Items.Count > 0)
@@ -800,7 +615,7 @@ internal sealed partial class CompactWindow : Window
 
         DispatcherQueue.TryEnqueue(() =>
         {
-            var scrollViewer = FindScrollViewer(ClipboardListView);
+            var scrollViewer = ClipboardWindowHelpers.FindScrollViewer(ClipboardListView);
             scrollViewer?.ChangeView(null, 0, null, disableAnimation: false);
 
             if (ClipboardListView.Items.Count > 0)
@@ -811,70 +626,11 @@ internal sealed partial class CompactWindow : Window
     private async void ShowEditDialog(object? sender, ClipboardItemViewModel itemVM)
     {
         _isDialogOpen = true;
-
         try
         {
-            var labelBox = new TextBox
-            {
-                Text = itemVM.Label ?? string.Empty,
-                PlaceholderText = L.Get("clipboard.editDialog.labelPlaceholder"),
-                MaxLength = ClipboardItem.MaxLabelLength,
-                HorizontalAlignment = HorizontalAlignment.Stretch
-            };
-
-            var colorPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 12, 0, 0) };
-            var colorLabel = new TextBlock
-            {
-                Text = L.Get("clipboard.editDialog.colorLabel"),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0),
-                Opacity = 0.7
-            };
-            colorPanel.Children.Add(colorLabel);
-
-            var colorCombo = new ComboBox { Width = 140 };
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorNone"), Tag = CardColor.None });
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorRed"), Tag = CardColor.Red });
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorGreen"), Tag = CardColor.Green });
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorPurple"), Tag = CardColor.Purple });
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorYellow"), Tag = CardColor.Yellow });
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorBlue"), Tag = CardColor.Blue });
-            colorCombo.Items.Add(new ComboBoxItem { Content = L.Get("clipboard.editDialog.colorOrange"), Tag = CardColor.Orange });
-
-            colorCombo.SelectedIndex = (int)itemVM.CardColor;
-            colorPanel.Children.Add(colorCombo);
-
-            var hintText = new TextBlock
-            {
-                Text = L.Get("clipboard.editDialog.labelHint"),
-                FontSize = 11,
-                Opacity = 0.5,
-                Margin = new Thickness(0, 4, 0, 0)
-            };
-
-            var contentPanel = new StackPanel { Spacing = 4 };
-            contentPanel.Children.Add(labelBox);
-            contentPanel.Children.Add(hintText);
-            contentPanel.Children.Add(colorPanel);
-
-            var dialog = new ContentDialog
-            {
-                Title = L.Get("clipboard.editDialog.title"),
-                Content = contentPanel,
-                PrimaryButtonText = L.Get("clipboard.editDialog.save"),
-                CloseButtonText = L.Get("clipboard.editDialog.cancel"),
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = Content.XamlRoot
-            };
-
-            var result = await dialog.ShowAsync();
-
-            if (result == ContentDialogResult.Primary && colorCombo.SelectedItem is ComboBoxItem selectedColor)
-            {
-                var label = string.IsNullOrWhiteSpace(labelBox.Text) ? null : labelBox.Text.Trim();
-                var color = (CardColor)(selectedColor.Tag ?? CardColor.None);
-                ViewModel.SaveItemLabelAndColor(itemVM, label, color);
-            }
+            var result = await ClipboardWindowHelpers.ShowEditDialogAsync(Content.XamlRoot, itemVM);
+            if (result is { } r)
+                ViewModel.SaveItemLabelAndColor(itemVM, r.label, r.color);
         }
         finally
         {
