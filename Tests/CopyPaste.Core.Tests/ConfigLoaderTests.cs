@@ -250,7 +250,8 @@ public sealed class ConfigLoaderTests : IDisposable
     [InlineData(CardColor.Orange)]
     public void GetColorLabel_AllNonNoneColors_DoNotThrow(CardColor color)
     {
-        ConfigLoader.GetColorLabel(color);
+        var ex = Record.Exception(() => ConfigLoader.GetColorLabel(color));
+        Assert.Null(ex);
     }
 
     #endregion
