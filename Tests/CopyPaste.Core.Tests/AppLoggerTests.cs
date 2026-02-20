@@ -80,66 +80,47 @@ public class AppLoggerTests
     public void Info_WhenDisabled_DoesNotThrow()
     {
         var original = AppLogger.IsEnabled;
-        try
-        {
-            AppLogger.IsEnabled = false;
-            AppLogger.Info("test message");
-        }
-        finally
-        {
-            AppLogger.IsEnabled = original;
-        }
+        AppLogger.IsEnabled = false;
+        var ex = Record.Exception(() => AppLogger.Info("test message"));
+        AppLogger.IsEnabled = original;
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Warn_WhenDisabled_DoesNotThrow()
     {
         var original = AppLogger.IsEnabled;
-        try
-        {
-            AppLogger.IsEnabled = false;
-            AppLogger.Warn("test warning");
-        }
-        finally
-        {
-            AppLogger.IsEnabled = original;
-        }
+        AppLogger.IsEnabled = false;
+        var ex = Record.Exception(() => AppLogger.Warn("test warning"));
+        AppLogger.IsEnabled = original;
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Error_WhenDisabled_DoesNotThrow()
     {
         var original = AppLogger.IsEnabled;
-        try
-        {
-            AppLogger.IsEnabled = false;
-            AppLogger.Error("test error");
-        }
-        finally
-        {
-            AppLogger.IsEnabled = original;
-        }
+        AppLogger.IsEnabled = false;
+        var ex = Record.Exception(() => AppLogger.Error("test error"));
+        AppLogger.IsEnabled = original;
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Exception_WhenDisabled_DoesNotThrow()
     {
         var original = AppLogger.IsEnabled;
-        try
-        {
-            AppLogger.IsEnabled = false;
-            AppLogger.Exception(new System.InvalidOperationException("test"), "context");
-        }
-        finally
-        {
-            AppLogger.IsEnabled = original;
-        }
+        AppLogger.IsEnabled = false;
+        var ex = Record.Exception(() => AppLogger.Exception(new System.InvalidOperationException("test"), "context"));
+        AppLogger.IsEnabled = original;
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Exception_WithNullException_DoesNotThrow()
     {
-        AppLogger.Exception(null, "context");
+        var ex = Record.Exception(() => AppLogger.Exception(null, "context"));
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -147,19 +128,22 @@ public class AppLoggerTests
     {
         var inner = new System.ArgumentException("inner error");
         var outer = new System.InvalidOperationException("outer error", inner);
-        AppLogger.Exception(outer, "test context");
+        var ex = Record.Exception(() => AppLogger.Exception(outer, "test context"));
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Exception_WithEmptyContext_DoesNotThrow()
     {
-        AppLogger.Exception(new System.Exception("test"), "");
+        var ex = Record.Exception(() => AppLogger.Exception(new System.InvalidOperationException("test"), ""));
+        Assert.Null(ex);
     }
 
     [Fact]
     public void Exception_WithNullContext_DoesNotThrow()
     {
-        AppLogger.Exception(new System.Exception("test"));
+        var ex = Record.Exception(() => AppLogger.Exception(new System.InvalidOperationException("test")));
+        Assert.Null(ex);
     }
 
     #endregion
@@ -172,15 +156,20 @@ public class AppLoggerTests
         AppLogger.Initialize();
         AppLogger.Initialize();
         AppLogger.Initialize();
+        Assert.True(AppLogger.IsEnabled);
     }
 
     [Fact]
     public void Initialize_AfterInit_LoggingWorks()
     {
         AppLogger.Initialize();
-        AppLogger.Info("test after init");
-        AppLogger.Warn("warn after init");
-        AppLogger.Error("error after init");
+        var ex = Record.Exception(() =>
+        {
+            AppLogger.Info("test after init");
+            AppLogger.Warn("warn after init");
+            AppLogger.Error("error after init");
+        });
+        Assert.Null(ex);
     }
 
     #endregion

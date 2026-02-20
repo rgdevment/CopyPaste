@@ -80,7 +80,8 @@ public sealed class UpdateCheckerAdditionalTests : IDisposable
     [Fact]
     public void DismissVersion_DoesNotThrow()
     {
-        UpdateChecker.DismissVersion("1.0.0");
+        var ex = Record.Exception(() => UpdateChecker.DismissVersion("1.0.0"));
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -205,7 +206,8 @@ public sealed class UpdateCheckerAdditionalTests : IDisposable
     {
         using var checker = new UpdateChecker();
         checker.Dispose();
-        checker.Dispose();
+        var ex = Record.Exception(() => checker.Dispose());
+        Assert.Null(ex);
     }
 
     #endregion

@@ -157,7 +157,8 @@ public sealed class ClipboardServiceAdditionalTests : IDisposable
             Assert.Equal(5, skip);
         };
 
-        _service.GetHistory(10, 5, "search", true).ToList();
+        var result = _service.GetHistory(10, 5, "search", true).ToList();
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -178,7 +179,8 @@ public sealed class ClipboardServiceAdditionalTests : IDisposable
             Assert.Equal(0, skip);
         };
 
-        _service.GetHistoryAdvanced(20, 0, "test", typeFilter, colorFilter, false).ToList();
+        var result = _service.GetHistoryAdvanced(20, 0, "test", typeFilter, colorFilter, false).ToList();
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -192,7 +194,8 @@ public sealed class ClipboardServiceAdditionalTests : IDisposable
             Assert.Null(isPinned);
         };
 
-        _service.GetHistoryAdvanced(50, 0, null, null, null, null).ToList();
+        var result = _service.GetHistoryAdvanced(50, 0, null, null, null, null).ToList();
+        Assert.NotNull(result);
     }
 
     #endregion
