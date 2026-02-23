@@ -87,7 +87,7 @@ jobs:
           /d:sonar.cs.opencover.reportsPaths="coverage/core/**/coverage.opencover.xml,coverage/listener/**/coverage.opencover.xml,coverage/ui/**/coverage.opencover.xml"
           /d:sonar.dotnet.excludeTestProjects=true
           /d:sonar.exclusions="**/obj/**,**/bin/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.xaml,**/Assets/**,**/Localization/Languages/**,CopyPaste.Launcher/**"
-          /d:sonar.coverage.exclusions="**/AssemblyInfo.cs,**/GlobalSuppressions.cs"
+          /d:sonar.coverage.exclusions="**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/App.xaml.cs,**/*Window.xaml.cs,**/*Window.cs,**/*Panel.cs,**/Win32WindowHelper.cs,**/HotkeyHelper.cs,**/ClipboardFilterChipsHelper.cs,**/WindowsClipboardListener.cs,**/ClipboardHelper.cs,**/CopyPasteEngine.cs,**/FocusHelper.cs,**/WindowsThumbnailExtractor.cs"
 
       - name: Restore dependencies
         run: dotnet restore -p:Platform=x64
@@ -99,13 +99,13 @@ jobs:
         run: |
           dotnet test Tests/CopyPaste.Core.Tests/ -c Debug -p:Platform=x64 --no-build `
             --collect:"XPlat Code Coverage" --results-directory coverage/core `
-            --settings coverage.runsettings
+            --settings coverage.core.runsettings
           dotnet test Tests/CopyPaste.Listener.Tests/ -c Debug -p:Platform=x64 --no-build `
             --collect:"XPlat Code Coverage" --results-directory coverage/listener `
-            --settings coverage.runsettings
+            --settings coverage.listener.runsettings
           dotnet test Tests/CopyPaste.UI.Tests/ -c Debug -p:Platform=x64 --no-build `
             --collect:"XPlat Code Coverage" --results-directory coverage/ui `
-            --settings coverage.runsettings
+            --settings coverage.ui.runsettings
 
       - name: SonarScanner End
         env:

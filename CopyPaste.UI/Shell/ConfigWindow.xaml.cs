@@ -6,11 +6,13 @@ using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Windows.Storage.Pickers;
 
 namespace CopyPaste.UI.Shell;
 
+[ExcludeFromCodeCoverage(Justification = "WinUI3 Window with event-driven UI — not unit testable")]
 public sealed partial class ConfigWindow : Window
 {
     private sealed record ThumbnailPreset(int Width, int QualityPng, int QualityJpeg, int GCThreshold, int UIDecodeHeight);

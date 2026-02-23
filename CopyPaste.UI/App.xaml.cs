@@ -25,11 +25,13 @@ using CopyPaste.UI.Themes;
 using Microsoft.UI.Xaml;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 
 namespace CopyPaste.UI;
 
+[ExcludeFromCodeCoverage(Justification = "WinUI3 Application entry point with Win32 lifecycle — not unit testable")]
 public sealed partial class App : Application, IDisposable
 {
     private const string _launcherReadyEventName = "CopyPaste_AppReady";

@@ -10,11 +10,13 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Windows.UI;
 using WinRT.Interop;
 
 namespace CopyPaste.UI.Themes;
 
+[ExcludeFromCodeCoverage(Justification = "WinUI3 Window with event-driven UI — not unit testable")]
 internal sealed partial class DefaultThemeWindow : Window
 {
     public DefaultThemeViewModel ViewModel { get; }

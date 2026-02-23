@@ -2,9 +2,11 @@ using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CopyPaste.UI.Themes;
 
+[ExcludeFromCodeCoverage(Justification = "Creates WinUI3 UI controls — requires WinUI3 runtime")]
 internal sealed class CompactSettingsPanel
 {
     private NumberBox? _popupWidthBox;
