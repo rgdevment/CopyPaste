@@ -402,7 +402,7 @@ public sealed class DefaultThemeViewModelClearAllTests
     {
         var unpinned1 = new ClipboardItem { Content = "a", Type = ClipboardContentType.Text, IsPinned = false };
         var unpinned2 = new ClipboardItem { Content = "b", Type = ClipboardContentType.Text, IsPinned = false };
-        var pinned    = new ClipboardItem { Content = "c", Type = ClipboardContentType.Text, IsPinned = true  };
+        var pinned = new ClipboardItem { Content = "c", Type = ClipboardContentType.Text, IsPinned = true };
         var (vm, service) = CreateVmWithItems([unpinned1, unpinned2, pinned]);
         vm.ToggleColorFilter(CardColor.Red);
 
