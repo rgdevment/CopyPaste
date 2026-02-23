@@ -2,12 +2,14 @@ using CopyPaste.Core;
 using CopyPaste.Core.Themes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 
 namespace CopyPaste.UI.Themes;
 
+[ExcludeFromCodeCoverage(Justification = "Creates ITheme instances (WinUI3 Windows) via reflection — requires WinUI3 runtime")]
 internal sealed class ThemeRegistry
 {
     private readonly Dictionary<string, Func<ITheme>> _factories = new(StringComparer.OrdinalIgnoreCase);

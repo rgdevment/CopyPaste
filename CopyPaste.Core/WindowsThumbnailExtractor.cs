@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using SkiaSharp;
 using System.Runtime.InteropServices;
 
 namespace CopyPaste.Core;
 
+[ExcludeFromCodeCoverage(Justification = "Windows Shell IShellItemImageFactory P/Invoke — not unit testable")]
 public static partial class WindowsThumbnailExtractor
 {
     private static readonly Guid _iShellItemImageFactoryGuid = new("bcc18b79-ba16-442f-80c4-8a59c30c463b");

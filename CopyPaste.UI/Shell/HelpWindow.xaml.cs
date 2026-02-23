@@ -1,9 +1,11 @@
 using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CopyPaste.UI.Shell;
 
+[ExcludeFromCodeCoverage(Justification = "WinUI3 Window — not unit testable")]
 internal sealed partial class HelpWindow : Window
 {
     public HelpWindow()

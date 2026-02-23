@@ -1,6 +1,7 @@
 using CopyPaste.Core;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using System.Threading.Channels;
 
 namespace CopyPaste.Listener;
 
+[ExcludeFromCodeCoverage(Justification = "Win32 message loop and Windows clipboard API — requires running Windows message pump")]
 public sealed partial class WindowsClipboardListener(IClipboardService service) : IClipboardListener
 {
     private const uint _cF_UNICODETEXT = 13;

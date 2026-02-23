@@ -5,10 +5,12 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Windows.UI;
 
 namespace CopyPaste.UI.Helpers;
 
+[ExcludeFromCodeCoverage(Justification = "Manipulates WinUI3 UI controls directly — requires WinUI3 runtime")]
 internal static class ClipboardFilterChipsHelper
 {
     internal static void SyncFilterChipsState(ClipboardThemeViewModelBase vm, FrameworkElement root)

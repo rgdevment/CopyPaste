@@ -10,12 +10,14 @@ using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using WinRT.Interop;
 
 namespace CopyPaste.UI.Themes;
 
+[ExcludeFromCodeCoverage(Justification = "WinUI3 Window with event-driven UI — not unit testable")]
 internal sealed partial class CompactWindow : Window
 {
     private readonly AppWindow _appWindow;
