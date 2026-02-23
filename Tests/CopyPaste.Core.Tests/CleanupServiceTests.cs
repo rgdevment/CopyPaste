@@ -146,6 +146,43 @@ public sealed class CleanupServiceTests : IDisposable
         Assert.Equal(1, repo.ClearCalls);
     }
 
+    [Fact]
+    public void RunCleanupIfNeeded_DeletedItemsGreaterThanZero_CleansUpSuccessfully()
+    {
+        var repo = new StubClipboardRepository(deletedCount: 5);
+        using var service = new CleanupService(repo, () => 30, startTimer: false);
+
+        service.RunCleanupIfNeeded();
+
+        Assert.Equal(1, repo.ClearCalls);
+        Assert.Equal(5, repo.LastDeletedCount);
+    }
+
+    [Fact]
+    public void RunCleanupIfNeeded_DeletedItemsIsZero_DoesNotThrow()
+    {
+        var repo = new StubClipboardRepository(deletedCount: 0);
+        using var service = new CleanupService(repo, () => 14, startTimer: false);
+
+        var ex = Record.Exception(() => service.RunCleanupIfNeeded());
+
+        Assert.Null(ex);
+        Assert.Equal(1, repo.ClearCalls);
+    }
+
+    [Fact]
+    public void Constructor_WithStartTimer_TimerCallbackFiresEventually()
+    {
+        var repo = new StubClipboardRepository();
+        using var service = new CleanupService(repo, () => 7, startTimer: true);
+
+        // Timer fires immediately with dueTime = TimeSpan.Zero
+        System.Threading.Thread.Sleep(500);
+
+        // Timer callback (b__8_0) should have invoked RunCleanupIfNeeded at least once
+        Assert.True(repo.ClearCalls >= 1);
+    }
+
     #endregion
 
     private static string GetLastCleanupFilePath()
@@ -171,14 +208,20 @@ public sealed class CleanupServiceTests : IDisposable
 
     private sealed class StubClipboardRepository : IClipboardRepository
     {
+        private readonly int _deletedCount;
+
+        public StubClipboardRepository(int deletedCount = 0) => _deletedCount = deletedCount;
+
         public int ClearCalls { get; private set; }
         public int LastRetentionDays { get; private set; }
+        public int LastDeletedCount { get; private set; }
 
         public int ClearOldItems(int days, bool excludePinned = true)
         {
             ClearCalls++;
             LastRetentionDays = days;
-            return 0;
+            LastDeletedCount = _deletedCount;
+            return _deletedCount;
         }
 
         public void Delete(Guid id) => throw new NotImplementedException();

@@ -252,6 +252,26 @@ public sealed class StorageConfigTests : IDisposable
         Assert.Contains(newBasePath, StorageConfig.ThumbnailsPath, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ThemesPath_IsCorrect()
+    {
+        var expected = Path.Combine(_basePath, "themes");
+        Assert.Equal(expected, StorageConfig.ThemesPath);
+    }
+
+    [Fact]
+    public void ConfigPath_IsCorrect()
+    {
+        var expected = Path.Combine(_basePath, "config");
+        Assert.Equal(expected, StorageConfig.ConfigPath);
+    }
+
+    [Fact]
+    public void Initialize_CreatesConfigDirectory()
+    {
+        Assert.True(Directory.Exists(StorageConfig.ConfigPath));
+    }
+
     #endregion
 
     public void Dispose()
