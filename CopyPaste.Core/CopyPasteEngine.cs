@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace CopyPaste.Core;
 
+[ExcludeFromCodeCoverage(Justification = "Orchestrates Win32 clipboard listener — requires running system")]
 public sealed class CopyPasteEngine : IDisposable
 {
     private readonly SqliteRepository _repository;

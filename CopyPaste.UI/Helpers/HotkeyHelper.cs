@@ -1,5 +1,6 @@
 using CopyPaste.Core;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace CopyPaste.UI.Helpers;
@@ -7,6 +8,7 @@ namespace CopyPaste.UI.Helpers;
 /// <summary>
 /// Helper class to handle Windows messages for hotkey support in WinUI 3.
 /// </summary>
+[ExcludeFromCodeCoverage(Justification = "Win32 hotkey registration and WndProc — requires running Win32 window")]
 internal static partial class HotkeyHelper
 {
     private const int _wM_HOTKEY = 0x0312;

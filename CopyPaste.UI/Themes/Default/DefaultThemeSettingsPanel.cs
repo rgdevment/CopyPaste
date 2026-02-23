@@ -2,6 +2,7 @@ using CopyPaste.UI.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CopyPaste.UI.Themes;
 
@@ -9,6 +10,7 @@ namespace CopyPaste.UI.Themes;
 /// Builds and manages the settings UI for DefaultTheme.
 /// Embedded in ConfigWindow via ITheme.CreateSettingsSection().
 /// </summary>
+[ExcludeFromCodeCoverage(Justification = "Creates WinUI3 UI controls (NumberBox, etc.) — requires WinUI3 runtime")]
 internal sealed class DefaultThemeSettingsPanel
 {
     // Appearance controls

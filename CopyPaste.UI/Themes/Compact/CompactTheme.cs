@@ -2,10 +2,12 @@ using CopyPaste.Core.Themes;
 using CopyPaste.UI.Helpers;
 using Microsoft.UI.Windowing;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using WinRT.Interop;
 
 namespace CopyPaste.UI.Themes;
 
+[ExcludeFromCodeCoverage(Justification = "Creates WinUI3 Window (CompactWindow) — requires WinUI3 runtime")]
 internal sealed class CompactTheme : ITheme
 {
     public string Id => "copypaste.compact";

@@ -5,10 +5,10 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <Format>opencover</Format>
-          <Include>[CopyPaste.App]*,[CopyPaste.Core]*,[CopyPaste.Listener]*</Include>
-          <Exclude>[CopyPaste.Core.Tests]*,[CopyPaste.Listener.Tests]*,[CopyPaste.UI.Tests]*,[xunit.*]*,[Microsoft.*]*</Exclude>
+          <Include>[CopyPaste.App]*</Include>
+          <Exclude>[CopyPaste.UI.Tests]*,[xunit.*]*,[Microsoft.*]*</Exclude>
           <ExcludeByFile>**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.g.cs,**/*.designer.cs</ExcludeByFile>
-          <ExcludeByAttribute>System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute,System.CodeDom.Compiler.GeneratedCodeAttribute</ExcludeByAttribute>
+          <ExcludeByAttribute>System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute,System.CodeDom.Compiler.GeneratedCodeAttribute,System.Runtime.CompilerServices.CompilerGeneratedAttribute</ExcludeByAttribute>
           <SingleHit>false</SingleHit>
           <IncludeTestAssembly>false</IncludeTestAssembly>
         </Configuration>
