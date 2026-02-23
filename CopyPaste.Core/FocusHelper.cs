@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace CopyPaste.Core;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes",
+[SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes",
     Justification = "P/Invokes target well-known system DLLs (user32.dll, kernel32.dll)")]
+[ExcludeFromCodeCoverage(Justification = "Win32 P/Invoke (user32.dll SendInput/SetForegroundWindow) — not unit testable")]
 public static partial class FocusHelper
 {
     #region P/Invoke Declarations

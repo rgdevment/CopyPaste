@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace CopyPaste.UI.Helpers;
@@ -6,6 +7,7 @@ namespace CopyPaste.UI.Helpers;
 /// <summary>
 /// Helper class for Win32 window manipulation APIs.
 /// </summary>
+[ExcludeFromCodeCoverage(Justification = "Win32 P/Invoke (user32.dll, dwmapi.dll) — not unit testable")]
 internal static partial class Win32WindowHelper
 {
     #region P/Invoke Declarations

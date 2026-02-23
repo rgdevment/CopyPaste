@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
@@ -5,6 +6,7 @@ using Windows.Storage.Streams;
 
 namespace CopyPaste.Core;
 
+[ExcludeFromCodeCoverage(Justification = "Requires Windows Clipboard runtime (WinRT) — not unit testable")]
 public static class ClipboardHelper
 {
     public static bool SetClipboardContent(ClipboardItem item, bool plainText = false)
