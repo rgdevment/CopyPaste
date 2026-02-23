@@ -374,11 +374,11 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
                                         <FontIcon Glyph="{x:Bind TypeIcon}" FontSize="10" Opacity="0.4"/>
-                                        <TextBlock Text="{x:Bind Label}" FontSize="11" Opacity="0.5"
+                                        <TextBlock Text="{x:Bind Label, Mode=OneWay}" FontSize="11" Opacity="0.5"
                                                    FontWeight="SemiBold" MaxLines="1" TextTrimming="CharacterEllipsis"
-                                                   Visibility="{x:Bind LabelVisibility}"/>
+                                                   Visibility="{x:Bind LabelVisibility, Mode=OneWay}"/>
                                         <TextBlock Text="{x:Bind HeaderTitle}" FontSize="11" Opacity="0.4"
-                                                   MaxLines="1" Visibility="{x:Bind DefaultHeaderVisibility}"/>
+                                                   MaxLines="1" Visibility="{x:Bind DefaultHeaderVisibility, Mode=OneWay}"/>
                                     </StackPanel>
                                     <Grid Grid.Column="1" VerticalAlignment="Center">
                                         <!-- Timestamp (visible by default, hidden on hover) -->
