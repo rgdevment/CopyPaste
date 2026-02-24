@@ -170,6 +170,44 @@ public sealed class LocalizationServiceTests : IDisposable
         Assert.NotEqual("[clipboard.contextMenu.delete]", clipboardKey);
     }
 
+    [Fact]
+    public void Constructor_WithRegionalBaseLang_ResolvesToRegionalVariant()
+    {
+        // "es" has no exact match in available languages, but language-config.json
+        // maps regional "es" → "es-CL", so it should resolve to "es-CL".
+        _service = new LocalizationService("es");
+
+        Assert.Equal("es-CL", _service.CurrentLanguage);
+    }
+
+    [Fact]
+    public void Constructor_WithEsArg_FallsBackToEsCL()
+    {
+        // "es-AR" is not a supported language; base language "es" maps to "es-CL".
+        _service = new LocalizationService("es-AR");
+
+        Assert.Equal("es-CL", _service.CurrentLanguage);
+    }
+
+    [Fact]
+    public void Constructor_WithUnknownPreferredAndUnknownOsCulture_FallsBackToEnUs()
+    {
+        // Force OS culture to something not in available languages and without a regional mapping.
+        // This exercises GetGlobalFallback() → returns "en-US".
+        var original = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("zh-CN");
+            // "zh-XX" not in availableLanguages, no regional.zh mapping → warn → OS "zh-CN" also not found, no regional.zh → GetGlobalFallback()
+            _service = new LocalizationService("zh-XX");
+            Assert.Equal("en-US", _service.CurrentLanguage);
+        }
+        finally
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = original;
+        }
+    }
+
     #endregion
 
     public void Dispose()

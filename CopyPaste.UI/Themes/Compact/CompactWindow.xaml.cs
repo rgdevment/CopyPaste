@@ -143,6 +143,12 @@ internal sealed partial class CompactWindow : Window
         FilterModeCategory.Text = L.Get("ui.filterMode.category", "Category");
         FilterModeType.Text = L.Get("ui.filterMode.type", "Type");
 
+        FirstRunText.Text = L.Get("ui.firstRun.text", "Personaliza tu experiencia en");
+        FirstRunAction.Content = L.Get("ui.firstRun.action", "Ajustes");
+
+        if (!_config.HasSeenThemeHint)
+            FirstRunBanner.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
         ColorLabelRed.Text = L.Get("clipboard.editDialog.colorRed", "Red");
         ColorLabelGreen.Text = L.Get("clipboard.editDialog.colorGreen", "Green");
         ColorLabelPurple.Text = L.Get("clipboard.editDialog.colorPurple", "Purple");
@@ -256,6 +262,27 @@ internal sealed partial class CompactWindow : Window
             ViewModel.RefreshFileAvailability();
             FocusSearchBox();
         }
+    }
+
+    private void FirstRunBanner_Close(object sender, RoutedEventArgs e)
+    {
+        FirstRunBanner.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        DismissFirstRunHint();
+    }
+
+    private void FirstRunAction_Click(object sender, RoutedEventArgs e)
+    {
+        FirstRunBanner.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        DismissFirstRunHint();
+        _context.OpenSettings();
+    }
+
+    private static void DismissFirstRunHint()
+    {
+        var cfg = ConfigLoader.Load();
+        if (cfg.HasSeenThemeHint) return;
+        cfg.HasSeenThemeHint = true;
+        ConfigLoader.Save(cfg);
     }
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
