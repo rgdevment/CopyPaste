@@ -87,6 +87,7 @@ public sealed partial class App : Application, IDisposable
         InitializeCoreServices();
 
         var config = _engine!.Config;
+        MigrateFirstRunToCompact(config);
         L.Initialize(new LocalizationService(config.PreferredLanguage));
 
         _themeRegistry = new ThemeRegistry();
@@ -111,6 +112,17 @@ public sealed partial class App : Application, IDisposable
 
         SignalLauncherReady();
         AppLogger.Info("Main window launched");
+    }
+
+    // Ensures fresh installs and users who never changed their theme get Compact by default.
+    // Only runs once (guarded by HasSeenThemeHint = false on first run).
+    private static void MigrateFirstRunToCompact(MyMConfig config)
+    {
+        if (!config.HasSeenThemeHint && config.ThemeId == "copypaste.default")
+        {
+            config.ThemeId = "copypaste.compact";
+            ConfigLoader.Save(config);
+        }
     }
 
     private void InitializeCoreServices()

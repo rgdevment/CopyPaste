@@ -15,6 +15,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -91,7 +92,7 @@
         </Grid>
 
         <!-- Search/Filter Bar -->
-        <Grid Grid.Row="2" Margin="12,4,12,6">
+        <Grid Grid.Row="3" Margin="12,4,12,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -272,8 +273,32 @@
             </Button>
         </Grid>
 
+        <!-- First-run tip (shown once) -->
+        <Grid x:Name="FirstRunBanner"
+              Grid.Row="1"
+              Visibility="Collapsed"
+              Margin="14,2,10,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                <TextBlock x:Name="FirstRunText" FontSize="11" Opacity="0.45"
+                           VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <HyperlinkButton x:Name="FirstRunAction" Padding="2,0" FontSize="11"
+                                 Opacity="0.6" Click="FirstRunAction_Click"
+                                 VerticalAlignment="Center"/>
+            </StackPanel>
+            <Button Grid.Column="1" Width="18" Height="18" Padding="0"
+                    Background="Transparent" BorderThickness="0" CornerRadius="3"
+                    Click="FirstRunBanner_Close" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE711;" FontSize="7" Opacity="0.3"/>
+            </Button>
+        </Grid>
+
         <!-- Empty State -->
-        <StackPanel Grid.Row="3"
+        <StackPanel Grid.Row="4"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="8"
@@ -287,7 +312,7 @@
 
         <!-- Clipboard Items List -->
         <ListView x:Name="ClipboardListView"
-                  Grid.Row="3"
+                  Grid.Row="4"
                   ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
                   SelectionMode="Single"
                   IsTabStop="True"
@@ -372,13 +397,15 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
-                                        <FontIcon Glyph="{x:Bind TypeIcon}" FontSize="10" Opacity="0.4"/>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                        <FontIcon Glyph="{x:Bind TypeIcon}" FontSize="10" Opacity="0.4" VerticalAlignment="Center"/>
                                         <TextBlock Text="{x:Bind Label, Mode=OneWay}" FontSize="11" Opacity="0.5"
                                                    FontWeight="SemiBold" MaxLines="1" TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"
                                                    Visibility="{x:Bind LabelVisibility, Mode=OneWay}"/>
                                         <TextBlock Text="{x:Bind HeaderTitle}" FontSize="11" Opacity="0.4"
-                                                   MaxLines="1" Visibility="{x:Bind DefaultHeaderVisibility, Mode=OneWay}"/>
+                                                   MaxLines="1" VerticalAlignment="Center"
+                                                   Visibility="{x:Bind DefaultHeaderVisibility, Mode=OneWay}"/>
                                     </StackPanel>
                                     <Grid Grid.Column="1" VerticalAlignment="Center">
                                         <!-- Timestamp (visible by default, hidden on hover) -->
@@ -443,17 +470,18 @@
                                 <!-- File warning -->
                                 <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,0"
                                             Visibility="{x:Bind FileWarningVisibility, Mode=OneWay}">
-                                    <FontIcon Glyph="&#xE7BA;" FontSize="10" Foreground="#FFAA00" Margin="0,0,4,0"/>
-                                    <TextBlock Text="{x:Bind FileWarningText}" FontSize="10" Foreground="#FFAA00"/>
+                                    <FontIcon Glyph="&#xE7BA;" FontSize="10" Foreground="#FFAA00" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{x:Bind FileWarningText}" FontSize="10" Foreground="#FFAA00" VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <!-- Card footer: source + size + paste count -->
                                 <Grid Grid.Row="3" Margin="0,6,0,0">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="4"
                                                 Visibility="{x:Bind AppSourceVisibility}">
-                                        <FontIcon Glyph="&#xE7C3;" FontSize="9" Opacity="0.3"/>
+                                        <FontIcon Glyph="&#xE7C3;" FontSize="9" Opacity="0.3" VerticalAlignment="Center"/>
                                         <TextBlock Text="{x:Bind AppSource}" FontSize="10" Opacity="0.35"
-                                                   MaxLines="1" TextTrimming="CharacterEllipsis" MaxWidth="140"/>
+                                                   MaxLines="1" TextTrimming="CharacterEllipsis" MaxWidth="140"
+                                                   VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
                                         <TextBlock Text="{x:Bind PasteCountDisplay, Mode=OneWay}" FontSize="10" Opacity="0.35"
@@ -474,7 +502,7 @@
         </ListView>
 
         <!-- Bottom Branding Bar -->
-        <Grid Grid.Row="4" Margin="12,4,12,8">
+        <Grid Grid.Row="5" Margin="12,4,12,8">
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Center"
                         Spacing="6"
