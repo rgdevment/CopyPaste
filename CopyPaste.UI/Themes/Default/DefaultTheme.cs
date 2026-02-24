@@ -11,7 +11,7 @@ namespace CopyPaste.UI.Themes;
 internal sealed class DefaultTheme : ITheme
 {
     public string Id => "copypaste.default";
-    public string Name => "Default";
+    public string Name => "Full";
     public string Version => "1.0.0";
     public string Author => "CopyPaste";
 

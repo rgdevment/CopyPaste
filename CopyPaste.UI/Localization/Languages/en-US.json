@@ -24,7 +24,11 @@
       "selectColors": "Select colors...",
       "selectTypes": "Select types..."
     },
-    "emptyState": "No items in this section"
+    "emptyState": "No items in this section",
+    "firstRun": {
+      "text": "Customize your experience in",
+      "action": "Settings"
+    }
   },
   "config": {
     "window": {

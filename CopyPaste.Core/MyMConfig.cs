@@ -37,7 +37,13 @@ public sealed class MyMConfig
     /// ID of the active theme (e.g., "copypaste.default").
     /// Must match <see cref="CopyPaste.Core.Themes.ITheme.Id"/>.
     /// </summary>
-    public string ThemeId { get; set; } = "copypaste.default";
+    public string ThemeId { get; set; } = "copypaste.compact";
+
+    /// <summary>
+    /// Whether the user has already seen (and dismissed) the theme discovery hint in Settings.
+    /// Once true, the hint banner is never shown again.
+    /// </summary>
+    public bool HasSeenThemeHint { get; set; }
 
     // ═══════════════════════════════════════════════════════════════
     // Hotkey Configuration
