@@ -23,10 +23,10 @@ public class MyMConfigTests
     }
 
     [Fact]
-    public void DefaultConfig_ThemeId_IsDefault()
+    public void DefaultConfig_ThemeId_IsCompact()
     {
         var config = new MyMConfig();
-        Assert.Equal("copypaste.default", config.ThemeId);
+        Assert.Equal("copypaste.compact", config.ThemeId);
     }
 
     [Fact]
