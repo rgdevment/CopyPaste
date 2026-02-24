@@ -176,6 +176,20 @@ public class MyMConfigTests
         Assert.Equal(95, config.ThumbnailUIDecodeHeight);
     }
 
+    [Fact]
+    public void DefaultConfig_HasSeenThemeHint_IsFalse()
+    {
+        var config = new MyMConfig();
+        Assert.False(config.HasSeenThemeHint);
+    }
+
+    [Fact]
+    public void HasSeenThemeHint_CanBeSetToTrue()
+    {
+        var config = new MyMConfig { HasSeenThemeHint = true };
+        Assert.True(config.HasSeenThemeHint);
+    }
+
     #endregion
 
     #region Property Setters

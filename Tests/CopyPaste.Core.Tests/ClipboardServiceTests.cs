@@ -96,6 +96,43 @@ public sealed class ClipboardServiceTests : IDisposable
         Assert.Equal("Test", addedItem.Content);
     }
 
+    [Fact]
+    public void AddText_WithHtmlBytes_SavesHtmlInMetadata()
+    {
+        var htmlBytes = System.Text.Encoding.UTF8.GetBytes("<html><body>hello</body></html>");
+        _service.AddText("hello", ClipboardContentType.Text, "Browser", htmlBytes: htmlBytes);
+
+        Assert.Single(_repository.SavedItems);
+        Assert.NotNull(_repository.SavedItems[0].Metadata);
+        Assert.Contains("html", _repository.SavedItems[0].Metadata, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddText_WithBothRtfAndHtmlBytes_SavesBothInMetadata()
+    {
+        var rtfBytes = new byte[] { 1, 2, 3 };
+        var htmlBytes = System.Text.Encoding.UTF8.GetBytes("<html>text</html>");
+        _service.AddText("text", ClipboardContentType.Text, "Editor", rtfBytes, htmlBytes);
+
+        Assert.Single(_repository.SavedItems);
+        var metadata = _repository.SavedItems[0].Metadata;
+        Assert.NotNull(metadata);
+        Assert.Contains("rtf", metadata, StringComparison.Ordinal);
+        Assert.Contains("html", metadata, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddText_WithHtmlBytesOnly_MetadataDoesNotContainRtf()
+    {
+        var htmlBytes = System.Text.Encoding.UTF8.GetBytes("<html>text</html>");
+        _service.AddText("text", ClipboardContentType.Text, "Browser", htmlBytes: htmlBytes);
+
+        Assert.Single(_repository.SavedItems);
+        var metadata = _repository.SavedItems[0].Metadata;
+        Assert.NotNull(metadata);
+        Assert.DoesNotContain("rtf", metadata, StringComparison.Ordinal);
+    }
+
     #endregion
 
     #region AddFiles Tests

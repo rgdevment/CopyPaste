@@ -95,4 +95,36 @@ public sealed class ClipboardWindowHelpersTests
     }
 
     #endregion
+
+    #region LoadImageSource Guard Tests
+
+    [Fact]
+    public void LoadImageSource_WithNullPath_DoesNotThrow()
+    {
+        var exception = Record.Exception(() =>
+            ClipboardWindowHelpers.LoadImageSource(null!, null, 100));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void LoadImageSource_WithEmptyPath_DoesNotThrow()
+    {
+        var exception = Record.Exception(() =>
+            ClipboardWindowHelpers.LoadImageSource(null!, string.Empty, 100));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void LoadImageSource_WithNonExistentPathNoThumbnailSuffix_DoesNotThrow()
+    {
+        // Path doesn't exist and doesn't contain "_t." so returns without accessing image
+        var exception = Record.Exception(() =>
+            ClipboardWindowHelpers.LoadImageSource(null!, @"C:\nonexistent\image.png", 100));
+
+        Assert.Null(exception);
+    }
+
+    #endregion
 }
