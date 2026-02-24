@@ -71,7 +71,7 @@ Sometimes, in our daily workflow, we just need something that's "just there" whe
 
 I don't see those who use CopyPaste as "end users," but as **collaborators** in this search for a better experience. If you value simplicity, speed, and above all, an aesthetic that respects your focus, this tool is for you. Your reports and suggestions are what help CopyPaste continue to evolve toward that perfect tool we always wanted to have.
 
-> 🚀 **v1.0.0 Released** — I use CopyPaste every day on Windows 11, but every setup is different. If something feels off, [let me know](#-found-a-bug-have-feedback). Your feedback is what shapes this project.
+> 🚀 I use CopyPaste every day on Windows 11, but every setup is different. If something feels off, [let me know](#-found-a-bug-have-feedback). Your feedback is what shapes this project.
 
 ---
 
