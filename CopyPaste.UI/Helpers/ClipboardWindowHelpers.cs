@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading.Tasks;
 using Windows.UI;
@@ -15,6 +16,7 @@ namespace CopyPaste.UI.Helpers;
 
 internal static class ClipboardWindowHelpers
 {
+    [ExcludeFromCodeCoverage(Justification = "Traverses WinUI3 visual tree via VisualTreeHelper — requires WinUI3 runtime")]
     internal static ScrollViewer? FindScrollViewer(DependencyObject parent)
     {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
@@ -30,6 +32,7 @@ internal static class ClipboardWindowHelpers
         return null;
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Traverses WinUI3 visual tree via VisualTreeHelper — requires WinUI3 runtime")]
     internal static DependencyObject? FindDescendant(DependencyObject parent, string name)
     {
         if (parent is FrameworkElement fe && fe.Name == name)
@@ -45,6 +48,7 @@ internal static class ClipboardWindowHelpers
         return null;
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Traverses WinUI3 visual tree via VisualTreeHelper — requires WinUI3 runtime")]
     internal static T? FindChild<T>(DependencyObject parent, string name) where T : FrameworkElement
     {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
@@ -110,6 +114,7 @@ internal static class ClipboardWindowHelpers
         catch { /* Silently fail */ }
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Uses AppWindow API — requires WinUI3 runtime")]
     internal static void SetWindowIcon(AppWindow appWindow)
     {
         var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "CopyPasteLogoSimple.ico");
@@ -117,6 +122,7 @@ internal static class ClipboardWindowHelpers
             appWindow.SetIcon(iconPath);
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Creates and shows WinUI3 ContentDialog — requires WinUI3 runtime")]
     internal static async Task<(string? label, CardColor color)?> ShowEditDialogAsync(
         XamlRoot xamlRoot,
         ClipboardItemViewModel itemVM,
