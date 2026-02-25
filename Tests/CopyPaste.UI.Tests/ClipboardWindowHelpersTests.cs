@@ -126,5 +126,24 @@ public sealed class ClipboardWindowHelpersTests
         Assert.Null(exception);
     }
 
+    [Fact]
+    public void LoadImageSource_WithThumbnailSuffixNonExistentPath_DoesNotThrow()
+    {
+        // Path doesn't exist but contains "_t." — triggers thumbnail fallback branch (try/catch)
+        var exception = Record.Exception(() =>
+            ClipboardWindowHelpers.LoadImageSource(null!, @"C:\nonexistent\clip_t.png", 100));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void LoadImageSource_WithAnotherThumbnailSuffix_DoesNotThrow()
+    {
+        var exception = Record.Exception(() =>
+            ClipboardWindowHelpers.LoadImageSource(null!, @"C:\path\to\image_t.jpg", 100));
+
+        Assert.Null(exception);
+    }
+
     #endregion
 }
