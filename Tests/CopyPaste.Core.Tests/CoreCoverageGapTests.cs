@@ -128,6 +128,131 @@ public sealed class SqliteRepositoryEdgeCaseTests : IDisposable
 
         Assert.Single(results);
     }
+
+    [Fact]
+    public void GetCardColor_WithNonNoneValue_PreservesColor()
+    {
+        var item = new ClipboardItem
+        {
+            Content = "colored item",
+            Type = ClipboardContentType.Text,
+            CardColor = CardColor.Red,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
+        };
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+
+        Assert.NotNull(retrieved);
+        Assert.Equal(CardColor.Red, retrieved!.CardColor);
+    }
+
+    [Theory]
+    [InlineData(CardColor.Green)]
+    [InlineData(CardColor.Purple)]
+    [InlineData(CardColor.Yellow)]
+    [InlineData(CardColor.Blue)]
+    [InlineData(CardColor.Orange)]
+    public void GetCardColor_AllColors_RoundTrip(CardColor color)
+    {
+        var item = new ClipboardItem
+        {
+            Content = $"item_{color}",
+            Type = ClipboardContentType.Text,
+            CardColor = color,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
+        };
+        _repository.Save(item);
+
+        var retrieved = _repository.GetById(item.Id);
+
+        Assert.Equal(color, retrieved!.CardColor);
+    }
+
+    [Fact]
+    public void Delete_TextItem_RemovesFromRepository()
+    {
+        var item = MakeItem("delete me");
+        _repository.Save(item);
+
+        var ex = Record.Exception(() => _repository.Delete(item.Id));
+
+        Assert.Null(ex);
+        Assert.Null(_repository.GetById(item.Id));
+    }
+
+    [Fact]
+    public void Delete_ImageItemWithExistingFile_DeletesImageFile()
+    {
+        Directory.CreateDirectory(StorageConfig.ImagesPath);
+        var imagePath = Path.Combine(StorageConfig.ImagesPath, $"{Guid.NewGuid()}.png");
+        File.WriteAllBytes(imagePath, [0x89, 0x50, 0x4E, 0x47]);
+
+        var item = new ClipboardItem
+        {
+            Content = imagePath,
+            Type = ClipboardContentType.Image,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
+        };
+        _repository.Save(item);
+
+        _repository.Delete(item.Id);
+
+        Assert.False(File.Exists(imagePath));
+    }
+
+    [Fact]
+    public void Delete_ImageItemWithThumbnailFile_DeletesThumbnailToo()
+    {
+        Directory.CreateDirectory(StorageConfig.ThumbnailsPath);
+        var item = new ClipboardItem
+        {
+            Content = "some_image_path.png",
+            Type = ClipboardContentType.Image,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
+        };
+        _repository.Save(item);
+
+        var thumbPath = Path.Combine(StorageConfig.ThumbnailsPath, $"{item.Id}_t.png");
+        File.WriteAllBytes(thumbPath, [0x89, 0x50, 0x4E, 0x47]);
+
+        _repository.Delete(item.Id);
+
+        Assert.False(File.Exists(thumbPath));
+    }
+
+    [Fact]
+    public void Delete_NonExistentId_DoesNotThrow()
+    {
+        var ex = Record.Exception(() => _repository.Delete(Guid.NewGuid()));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void ClearOldItems_ImageItemWithFile_DeletesFileOnCleanup()
+    {
+        Directory.CreateDirectory(StorageConfig.ImagesPath);
+        var imagePath = Path.Combine(StorageConfig.ImagesPath, $"{Guid.NewGuid()}.png");
+        File.WriteAllBytes(imagePath, [0x89, 0x50, 0x4E, 0x47]);
+
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+        var item = new ClipboardItem
+        {
+            Content = imagePath,
+            Type = ClipboardContentType.Image,
+            CreatedAt = oldDate,
+            ModifiedAt = oldDate
+        };
+        _repository.Save(item);
+
+        _repository.ClearOldItems(days: 7);
+
+        Assert.False(File.Exists(imagePath));
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
