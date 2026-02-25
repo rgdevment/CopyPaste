@@ -74,6 +74,7 @@ internal static class ClipboardWindowHelpers
         );
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Creates BitmapImage objects — requires WinUI3 runtime")]
     internal static void LoadImageSource(Image image, string? imagePath, int thumbnailDecodeHeight)
     {
         if (string.IsNullOrEmpty(imagePath)) return;
@@ -95,6 +96,12 @@ internal static class ClipboardWindowHelpers
             return;
         }
 
+        LoadImageSourceFromValidPath(image, imagePath, thumbnailDecodeHeight);
+    }
+
+    [ExcludeFromCodeCoverage(Justification = "Creates BitmapImage from valid path or ms-appx URI — requires WinUI3 runtime")]
+    private static void LoadImageSourceFromValidPath(Image image, string imagePath, int thumbnailDecodeHeight)
+    {
         if (image.Source is BitmapImage currentBitmap)
         {
             var currentPath = currentBitmap.UriSource?.LocalPath;
