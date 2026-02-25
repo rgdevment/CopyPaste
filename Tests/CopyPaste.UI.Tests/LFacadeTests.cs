@@ -137,5 +137,53 @@ public sealed class LFacadeTests : IDisposable
         Assert.Null(ex);
     }
 
+    [Fact]
+    public void Dispose_BeforeInitialize_DoesNotThrow()
+    {
+        // _instance is null — covers the instance?.Dispose() null branch in the new Dispose() code
+        var ex = Record.Exception(() => L.Dispose());
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_DoesNotThrow()
+    {
+        var service = new LocalizationService("en-US");
+        L.Initialize(service);
+        L.Dispose(); // sets _instance = null
+
+        // Second call — covers Dispose() with null _instance after first dispose
+        var ex = Record.Exception(() => L.Dispose());
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Get_AfterLDispose_ReturnsBracketedKey()
+    {
+        var service = new LocalizationService("en-US");
+        L.Initialize(service);
+        L.Dispose(); // new code sets _instance = null before calling Dispose
+
+        var value = L.Get("window.title");
+
+        Assert.Equal("[window.title]", value);
+    }
+
+    [Fact]
+    public void Get_AfterLDispose_WithDefault_ReturnsBracketedKey()
+    {
+        // After L.Dispose(), _instance is null — default value is NOT used
+        // (the ?? $"[{key}]" path fires, not the ObjectDisposedException catch path)
+        var service = new LocalizationService("en-US");
+        L.Initialize(service);
+        L.Dispose();
+
+        var value = L.Get("window.title", "fallback");
+
+        Assert.Equal("[window.title]", value);
+    }
+
     #endregion
 }
