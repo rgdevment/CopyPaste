@@ -28,6 +28,9 @@
     <a href="#license">
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License"/>
     </a>
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads.json&style=flat-square&logo=github" alt="Downloads"/>
+    </a>
   </p>
 
   <p align="center">
