@@ -14,6 +14,8 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
 
       - name: Update downloads badge
         env:
