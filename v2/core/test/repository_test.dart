@@ -140,6 +140,21 @@ void main() {
       expect(deleted, equals(0));
     });
 
+    test('clearOldItems keeps recently modified items', () async {
+      final oldCreatedButRecentlyUsed = ClipboardItem(
+        content: 'recently used',
+        type: ClipboardContentType.text,
+        createdAt:
+            DateTime.now().toUtc().subtract(const Duration(days: 60)),
+        modifiedAt: DateTime.now().toUtc(),
+      );
+      await repo.save(oldCreatedButRecentlyUsed);
+      final deleted = await repo.clearOldItems(30);
+      expect(deleted, equals(0));
+      final remaining = await repo.getAll();
+      expect(remaining.length, equals(1));
+    });
+
     test('search finds items by content', () async {
       await repo.save(
         ClipboardItem(content: 'hello world', type: ClipboardContentType.text),

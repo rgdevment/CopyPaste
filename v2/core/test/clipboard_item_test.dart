@@ -98,5 +98,42 @@ void main() {
         expect(copy.cardColor, equals(color));
       }
     });
+
+    test('equality based on id', () {
+      final a = ClipboardItem(
+        id: 'same-id',
+        content: 'a',
+        type: ClipboardContentType.text,
+      );
+      final b = ClipboardItem(
+        id: 'same-id',
+        content: 'b',
+        type: ClipboardContentType.link,
+      );
+      final c = ClipboardItem(
+        id: 'different-id',
+        content: 'a',
+        type: ClipboardContentType.text,
+      );
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+      expect(a, isNot(equals(c)));
+    });
+
+    test('isFileAvailable returns true for non-file types', () {
+      final item = ClipboardItem(
+        content: 'text',
+        type: ClipboardContentType.text,
+      );
+      expect(item.isFileAvailable(), isTrue);
+    });
+
+    test('isFileAvailable returns false for empty content on file types', () {
+      final item = ClipboardItem(
+        content: '',
+        type: ClipboardContentType.file,
+      );
+      expect(item.isFileAvailable(), isFalse);
+    });
   });
 }

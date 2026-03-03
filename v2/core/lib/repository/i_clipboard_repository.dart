@@ -28,4 +28,5 @@ abstract interface class IClipboardRepository {
     required int limit,
     required int skip,
   });
+  Future<void> close();
 }

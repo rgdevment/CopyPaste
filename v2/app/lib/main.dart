@@ -1,122 +1,228 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
 
-void main() {
-  runApp(const MyApp());
+import 'package:core/core.dart';
+import 'package:flutter/material.dart';
+import 'package:listener/listener.dart';
+import 'package:window_manager/window_manager.dart';
+
+import 'shell/app_window.dart';
+import 'shell/focus_manager.dart';
+import 'shell/hotkey_handler.dart';
+import 'shell/startup_helper.dart';
+import 'shell/tray_icon.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+
+  final storage = await StorageConfig.create();
+  await storage.ensureDirectories();
+
+  AppLogger.initialize('${storage.baseDir}/logs');
+
+  final config = await AppConfig.load(
+    '${storage.configPath}/${AppConfig.fileName}',
+  );
+
+  final repo = SqliteRepository.fromPath(storage.databasePath);
+  final clipboardService = ClipboardService(repo, imagesPath: storage.imagesPath)
+    ..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs
+    ..setThumbnailsPath(storage.thumbnailsPath);
+
+  final cleanupService = CleanupService(
+    repo,
+    () => config.retentionDays,
+    storage: storage,
+  )..start(storage.baseDir);
+
+  final listener = WindowsClipboardListener();
+  final updateChecker = UpdateChecker(configPath: storage.configPath)
+    ..start('2.0.0');
+
+  await StartupHelper.apply(config.runOnStartup);
+
+  runApp(
+    CopyPasteApp(
+      storage: storage,
+      config: config,
+      repo: repo,
+      clipboardService: clipboardService,
+      cleanupService: cleanupService,
+      listener: listener,
+      updateChecker: updateChecker,
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class CopyPasteApp extends StatefulWidget {
+  const CopyPasteApp({
+    required this.storage,
+    required this.config,
+    required this.repo,
+    required this.clipboardService,
+    required this.cleanupService,
+    required this.listener,
+    required this.updateChecker,
+    super.key,
+  });
 
-  // This widget is the root of your application.
+  final StorageConfig storage;
+  final AppConfig config;
+  final SqliteRepository repo;
+  final ClipboardService clipboardService;
+  final CleanupService cleanupService;
+  final WindowsClipboardListener listener;
+  final UpdateChecker updateChecker;
+
+  @override
+  State<CopyPasteApp> createState() => _CopyPasteAppState();
+}
+
+class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
+  late final AppWindow _appWindow;
+  late final TrayIcon _trayIcon;
+  late final HotkeyHandler _hotkeyHandler;
+  final WindowFocusManager _focusManager = WindowFocusManager();
+  StreamSubscription<ClipboardEvent>? _listenerSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _appWindow = AppWindow();
+    _trayIcon = TrayIcon(
+      onToggle: _toggleWindow,
+      onExit: _exitApp,
+    );
+    _hotkeyHandler = HotkeyHandler(
+      config: widget.config,
+      onHotkey: _onHotkey,
+    );
+
+    _initShell();
+  }
+
+  Future<void> _initShell() async {
+    await _appWindow.init();
+    await _trayIcon.init();
+    await _hotkeyHandler.registerWithFallback();
+    windowManager.addListener(this);
+
+    _startListening();
+  }
+
+  void _startListening() {
+    if (!Platform.isWindows) return;
+    _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
+  }
+
+  Future<void> _onClipboardEvent(ClipboardEvent event) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        await _processClipboardEvent(event);
+        return;
+      } catch (_) {
+        if (attempt < 2) {
+          await Future<void>.delayed(
+            Duration(milliseconds: 100 * (attempt + 1)),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _processClipboardEvent(ClipboardEvent event) async {
+    switch (event.type) {
+      case ClipboardContentType.text:
+      case ClipboardContentType.link:
+        await widget.clipboardService.processText(
+          event.text ?? '',
+          event.type,
+          source: event.source,
+          rtfBytes: event.rtfBytes,
+          htmlBytes: event.htmlBytes,
+        );
+      case ClipboardContentType.image:
+        await widget.clipboardService.processImage(
+          event.contentHash,
+          source: event.source,
+          imageBytes: event.bytes,
+        );
+      case ClipboardContentType.file:
+      case ClipboardContentType.folder:
+      case ClipboardContentType.audio:
+      case ClipboardContentType.video:
+        if (event.files != null && event.files!.isNotEmpty) {
+          await widget.clipboardService.processFiles(
+            event.files!,
+            event.type,
+            source: event.source,
+          );
+        }
+      case ClipboardContentType.unknown:
+        break;
+    }
+  }
+
+  Future<void> _onHotkey() async {
+    _focusManager.capturePreviousWindow();
+    await _appWindow.toggle();
+  }
+
+  Future<void> _toggleWindow() async {
+    await _appWindow.toggle();
+  }
+
+  Future<void> _exitApp() async {
+    try { await _listenerSubscription?.cancel(); } catch (_) {}
+    try { await _hotkeyHandler.unregister(); } catch (_) {}
+    try { await _trayIcon.dispose(); } catch (_) {}
+    try { widget.clipboardService.dispose(); } catch (_) {}
+    try { widget.cleanupService.dispose(); } catch (_) {}
+    try { widget.updateChecker.dispose(); } catch (_) {}
+    try { await widget.repo.close(); } catch (_) {}
+    exit(0);
+  }
+
+  @override
+  void onWindowBlur() {
+    _appWindow.hideIfNotPinned();
+  }
+
+  @override
+  void onWindowClose() {
+    _exitApp();
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'CopyPaste',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      themeMode: ThemeMode.system,
+      home: const Scaffold(
+        body: Center(
+          child: Text('CopyPaste v2 — Shell Ready'),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
+
