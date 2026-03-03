@@ -29,7 +29,7 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
-      PUBLISH_PATH: CopyPaste.UI/bin/${{ matrix.platform }}/Release/net10.0-windows10.0.22621.0/${{ matrix.arch }}/publish
+      PUBLISH_PATH: v1/CopyPaste.UI/bin/${{ matrix.platform }}/Release/net10.0-windows10.0.22621.0/${{ matrix.arch }}/publish
       PFX_BASE64: ${{ secrets.PFX_BASE64 }}
       PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
 
@@ -70,7 +70,7 @@ jobs:
           dotnet-quality: "preview"
 
       - name: Restore dependencies
-        run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -r ${{ matrix.arch }} -p:Platform=${{ matrix.platform }}
+        run: dotnet restore v1/CopyPaste.UI/CopyPaste.UI.csproj -r ${{ matrix.arch }} -p:Platform=${{ matrix.platform }}
 
       - name: Verify CI Status
         shell: pwsh
@@ -140,7 +140,7 @@ jobs:
 
 
       - name: Lint (Check format)
-        run: dotnet format CopyPaste.UI/CopyPaste.UI.csproj --verify-no-changes --no-restore
+        run: dotnet format v1/CopyPaste.UI/CopyPaste.UI.csproj --verify-no-changes --no-restore
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -150,7 +150,7 @@ jobs:
       - name: Build Native Launcher
         shell: pwsh
         run: |
-          Push-Location CopyPaste.Launcher
+          Push-Location v1/CopyPaste.Launcher
           rc.exe /fo resources.res resources.rc
           cl.exe /O2 /MT /EHsc main.cpp resources.res `
             /link user32.lib gdi32.lib gdiplus.lib shell32.lib `
@@ -167,7 +167,7 @@ jobs:
           $v = "${{ steps.get_version.outputs.VERSION }}"
           $vn = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
 
-          dotnet publish CopyPaste.UI/CopyPaste.UI.csproj `
+          dotnet publish v1/CopyPaste.UI/CopyPaste.UI.csproj `
             -c Release `
             -r ${{ matrix.arch }} `
             -p:Platform=${{ matrix.platform }} `
@@ -197,7 +197,7 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = (Resolve-Path "${{ env.PUBLISH_PATH }}").Path
-          Copy-Item "CopyPaste.Launcher/CopyPaste.exe" -Destination $publishDir
+          Copy-Item "v1/CopyPaste.Launcher/CopyPaste.exe" -Destination $publishDir
 
       - name: Clean Publish Output
         shell: pwsh
@@ -255,7 +255,7 @@ jobs:
           $version = "${{ steps.get_version.outputs.VERSION }}"
           $versionNumeric = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
 
-          & $iscc setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DMyAppVersionNumeric=$versionNumeric" "/DRepoRoot=$repoRoot"
+          & $iscc v1/setup.iss "/DPublishDir=$publishDir" "/DMyArch=$myArch" "/DMyAppVersion=$version" "/DMyAppVersionNumeric=$versionNumeric" "/DRepoRoot=$repoRoot"
 
       - name: Rename Installer
         shell: pwsh
@@ -354,7 +354,7 @@ jobs:
       - name: Update Package.appxmanifest
         shell: pwsh
         run: |
-          $path = "CopyPaste.UI/Package.appxmanifest"
+          $path = "v1/CopyPaste.UI/Package.appxmanifest"
           [xml]$xml = Get-Content $path
           $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
           $ns.AddNamespace("pkg", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
@@ -367,7 +367,7 @@ jobs:
           Write-Host "Updated manifest: Version=${{ steps.get_version.outputs.VERSION_NUMERIC }}, Arch=${{ matrix.msix_arch }}"
 
       - name: Restore dependencies
-        run: dotnet restore CopyPaste.UI/CopyPaste.UI.csproj -p:PackageMode=Store -p:Platform=${{ matrix.platform }}
+        run: dotnet restore v1/CopyPaste.UI/CopyPaste.UI.csproj -p:PackageMode=Store -p:Platform=${{ matrix.platform }}
 
       - name: Build MSIX package
         shell: pwsh
@@ -375,7 +375,7 @@ jobs:
           $v = "${{ steps.get_version.outputs.VERSION }}"
           $vn = "${{ steps.get_version.outputs.VERSION_NUMERIC }}"
 
-          dotnet build CopyPaste.UI/CopyPaste.UI.csproj `
+          dotnet build v1/CopyPaste.UI/CopyPaste.UI.csproj `
             -c Release `
             -p:PackageMode=Store `
             -p:Platform=${{ matrix.platform }} `
@@ -394,11 +394,11 @@ jobs:
         shell: pwsh
         run: |
           # Look for .msixupload first (preferred for Store), then .msix
-          $file = Get-ChildItem -Path "CopyPaste.UI" -Recurse -Include "*.msixupload" |
+          $file = Get-ChildItem -Path "v1/CopyPaste.UI" -Recurse -Include "*.msixupload" |
                   Select-Object -First 1
 
           if (-not $file) {
-            $file = Get-ChildItem -Path "CopyPaste.UI" -Recurse -Include "*.msix" |
+            $file = Get-ChildItem -Path "v1/CopyPaste.UI" -Recurse -Include "*.msix" |
                     Select-Object -First 1
           }
 
