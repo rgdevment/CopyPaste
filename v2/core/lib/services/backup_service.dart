@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
 
@@ -56,8 +57,12 @@ class BackupService {
   static Future<BackupManifest> createBackup(
     String outputPath,
     StorageConfig storage,
-    String appVersion,
-  ) async {
+    String appVersion, {
+    int itemCount = 0,
+    bool hasPinnedItems = false,
+  }) async {
+    _walCheckpoint(storage.databasePath);
+
     final archive = Archive();
     var imageCount = 0;
 
@@ -82,13 +87,24 @@ class BackupService {
       }
     }
 
+    final configDir = Directory(storage.configPath);
+    if (configDir.existsSync()) {
+      for (final file in configDir.listSync().whereType<File>()) {
+        archive.addFile(ArchiveFile(
+          'config/${file.uri.pathSegments.last}',
+          file.lengthSync(),
+          file.readAsBytesSync(),
+        ));
+      }
+    }
+
     final manifest = BackupManifest(
       version: BackupManifest.currentVersion,
       appVersion: appVersion,
       createdAtUtc: DateTime.now().toUtc(),
-      itemCount: 0,
+      itemCount: itemCount,
       imageCount: imageCount,
-      hasPinnedItems: false,
+      hasPinnedItems: hasPinnedItems,
       machineName: _hostName(),
     );
 
@@ -114,6 +130,8 @@ class BackupService {
     final backupFile = File(backupPath);
     if (!backupFile.existsSync()) return null;
 
+    String? snapshotDir;
+
     try {
       final archive =
           ZipDecoder().decodeBytes(backupFile.readAsBytesSync());
@@ -128,6 +146,10 @@ class BackupService {
       final manifest = BackupManifest.fromJson(manifestJson);
       if (manifest.version > BackupManifest.currentVersion) return null;
 
+      snapshotDir = await _createPreRestoreSnapshot(storage);
+
+      _deleteWalFiles(storage.databasePath);
+
       await storage.ensureDirectories();
 
       for (final file in archive) {
@@ -139,10 +161,139 @@ class BackupService {
         }
       }
 
+      _cleanupSnapshot(snapshotDir);
+      return manifest;
+    } catch (_) {
+      if (snapshotDir != null) {
+        await _rollbackFromSnapshot(snapshotDir, storage);
+      }
+      return null;
+    }
+  }
+
+  static Future<BackupManifest?> validateBackup(String backupPath) async {
+    final backupFile = File(backupPath);
+    if (!backupFile.existsSync()) return null;
+
+    try {
+      final archive =
+          ZipDecoder().decodeBytes(backupFile.readAsBytesSync());
+
+      final manifestEntry = archive.findFile('manifest.json');
+      if (manifestEntry == null) return null;
+
+      final manifestJson = jsonDecode(
+        utf8.decode(manifestEntry.content as List<int>),
+      ) as Map<String, dynamic>;
+
+      final manifest = BackupManifest.fromJson(manifestJson);
+      if (manifest.version > BackupManifest.currentVersion) return null;
+
       return manifest;
     } catch (_) {
       return null;
     }
+  }
+
+  static void _walCheckpoint(String dbPath) {
+    try {
+      final walFile = File('$dbPath-wal');
+      final shmFile = File('$dbPath-shm');
+      if (walFile.existsSync() && walFile.lengthSync() == 0) {
+        walFile.deleteSync();
+      }
+      if (shmFile.existsSync() && !walFile.existsSync()) {
+        shmFile.deleteSync();
+      }
+    } catch (_) {}
+  }
+
+  static void _deleteWalFiles(String dbPath) {
+    try {
+      final walFile = File('$dbPath-wal');
+      final shmFile = File('$dbPath-shm');
+      if (walFile.existsSync()) walFile.deleteSync();
+      if (shmFile.existsSync()) shmFile.deleteSync();
+    } catch (_) {}
+  }
+
+  static Future<String> _createPreRestoreSnapshot(
+    StorageConfig storage,
+  ) async {
+    final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
+    final snapshotDir =
+        p.join(storage.baseDir, '.pre-restore-$timestamp');
+    final dir = Directory(snapshotDir);
+    await dir.create(recursive: true);
+
+    final dbFile = File(storage.databasePath);
+    if (dbFile.existsSync()) {
+      await dbFile.copy(p.join(snapshotDir, 'clipboard.db'));
+    }
+
+    final imagesDir = Directory(storage.imagesPath);
+    if (imagesDir.existsSync()) {
+      final snapImagesDir =
+          Directory(p.join(snapshotDir, 'images'));
+      await snapImagesDir.create();
+      for (final file in imagesDir.listSync().whereType<File>()) {
+        await file.copy(
+          p.join(snapImagesDir.path, p.basename(file.path)),
+        );
+      }
+    }
+
+    final configDir = Directory(storage.configPath);
+    if (configDir.existsSync()) {
+      final snapConfigDir =
+          Directory(p.join(snapshotDir, 'config'));
+      await snapConfigDir.create();
+      for (final file in configDir.listSync().whereType<File>()) {
+        await file.copy(
+          p.join(snapConfigDir.path, p.basename(file.path)),
+        );
+      }
+    }
+
+    return snapshotDir;
+  }
+
+  static Future<void> _rollbackFromSnapshot(
+    String snapshotDir,
+    StorageConfig storage,
+  ) async {
+    try {
+      final snapDb = File(p.join(snapshotDir, 'clipboard.db'));
+      if (snapDb.existsSync()) {
+        await snapDb.copy(storage.databasePath);
+      }
+
+      final snapImages = Directory(p.join(snapshotDir, 'images'));
+      if (snapImages.existsSync()) {
+        for (final file in snapImages.listSync().whereType<File>()) {
+          await file.copy(
+            p.join(storage.imagesPath, p.basename(file.path)),
+          );
+        }
+      }
+
+      final snapConfig = Directory(p.join(snapshotDir, 'config'));
+      if (snapConfig.existsSync()) {
+        for (final file in snapConfig.listSync().whereType<File>()) {
+          await file.copy(
+            p.join(storage.configPath, p.basename(file.path)),
+          );
+        }
+      }
+
+      _cleanupSnapshot(snapshotDir);
+    } catch (_) {}
+  }
+
+  static void _cleanupSnapshot(String snapshotDir) {
+    try {
+      Directory(snapshotDir).deleteSync(recursive: true);
+    } catch (_) {}
   }
 
   static String _hostName() {

@@ -24,3 +24,4 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.0.0
   build_runner: ^2.0.0
+  test: ^1.29.0

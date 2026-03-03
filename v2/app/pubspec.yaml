@@ -19,6 +19,7 @@ dependencies:
   window_manager: ^0.4.0
   flutter_acrylic: ^1.0.0
   flutter_animate: ^4.0.0
+  ffi: ^2.2.0
 
 dev_dependencies:
   flutter_test:

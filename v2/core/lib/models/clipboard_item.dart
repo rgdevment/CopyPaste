@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:uuid/uuid.dart';
 
 import 'card_color.dart';
@@ -71,4 +73,22 @@ class ClipboardItem {
         pasteCount: pasteCount ?? this.pasteCount,
         contentHash: contentHash ?? this.contentHash,
       );
+
+  bool isFileAvailable() {
+    if (!isFileBasedType) return true;
+    if (content.isEmpty) return false;
+    final paths =
+        content.split('\n').where((s) => s.isNotEmpty).toList();
+    if (paths.isEmpty) return false;
+    return File(paths.first).existsSync() ||
+        Directory(paths.first).existsSync();
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ClipboardItem && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

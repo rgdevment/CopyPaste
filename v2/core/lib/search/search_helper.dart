@@ -14,7 +14,8 @@ class SearchHelper {
   static String normalize(String text) {
     final lower = text.toLowerCase();
     final buffer = StringBuffer();
-    for (final char in lower.split('')) {
+    for (final rune in lower.runes) {
+      final char = String.fromCharCode(rune);
       buffer.write(_accentMap[char] ?? char);
     }
     return buffer.toString();

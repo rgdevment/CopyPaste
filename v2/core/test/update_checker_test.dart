@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:core/core.dart';
@@ -57,6 +59,57 @@ void main() {
     test('dispose closes stream without error', () {
       final checker = UpdateChecker();
       expect(checker.dispose, returnsNormally);
+    });
+  });
+
+  group('UpdateChecker dismiss', () {
+    late Directory tempDir;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('dismiss_test_');
+    });
+
+    tearDown(() => tempDir.deleteSync(recursive: true));
+
+    test('dismissVersion writes version to file', () {
+      final checker = UpdateChecker(configPath: tempDir.path);
+      checker.dismissVersion('2.1.0');
+      expect(checker.isVersionDismissed('2.1.0'), isTrue);
+      checker.dispose();
+    });
+
+    test('isVersionDismissed returns false for different version', () {
+      final checker = UpdateChecker(configPath: tempDir.path);
+      checker.dismissVersion('2.1.0');
+      expect(checker.isVersionDismissed('2.2.0'), isFalse);
+      checker.dispose();
+    });
+
+    test('isVersionDismissed returns false when no file exists', () {
+      final checker = UpdateChecker(configPath: tempDir.path);
+      expect(checker.isVersionDismissed('1.0.0'), isFalse);
+      checker.dispose();
+    });
+
+    test('isVersionDismissed returns false when configPath is null', () {
+      final checker = UpdateChecker();
+      expect(checker.isVersionDismissed('1.0.0'), isFalse);
+      checker.dispose();
+    });
+
+    test('dismissVersion is no-op when configPath is null', () {
+      final checker = UpdateChecker();
+      expect(() => checker.dismissVersion('1.0.0'), returnsNormally);
+      checker.dispose();
+    });
+
+    test('dismiss overwrites previous dismissal', () {
+      final checker = UpdateChecker(configPath: tempDir.path);
+      checker.dismissVersion('2.0.0');
+      checker.dismissVersion('2.1.0');
+      expect(checker.isVersionDismissed('2.0.0'), isFalse);
+      expect(checker.isVersionDismissed('2.1.0'), isTrue);
+      checker.dispose();
     });
   });
 }

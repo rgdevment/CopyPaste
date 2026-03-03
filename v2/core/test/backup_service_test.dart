@@ -122,5 +122,58 @@ void main() {
         restoreDir.deleteSync(recursive: true);
       }
     });
+
+    test('restore creates and cleans up pre-restore snapshot', () async {
+      File(storage.databasePath).writeAsBytesSync([83, 81, 76]);
+
+      final outputPath = p.join(tempDir.path, 'snapshot_test.zip');
+      await BackupService.createBackup(outputPath, storage, '2.0.0');
+
+      final restoreDir = Directory.systemTemp.createTempSync('snapshot_');
+      try {
+        final restoreStorage =
+            await StorageConfig.create(baseDir: restoreDir.path);
+        await restoreStorage.ensureDirectories();
+        File(restoreStorage.databasePath).writeAsBytesSync([1, 2, 3]);
+
+        await BackupService.restoreBackup(outputPath, restoreStorage);
+
+        final snapshotDirs = Directory(restoreDir.path)
+            .listSync()
+            .whereType<Directory>()
+            .where((d) => p.basename(d.path).startsWith('.pre-restore-'));
+        expect(snapshotDirs, isEmpty);
+      } finally {
+        restoreDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
+  group('BackupService.validateBackup', () {
+    test('returns manifest for valid backup', () async {
+      File(storage.databasePath).writeAsBytesSync([83, 81, 76, 105]);
+
+      final outputPath = p.join(tempDir.path, 'validate.zip');
+      await BackupService.createBackup(outputPath, storage, '2.0.0');
+
+      final manifest = await BackupService.validateBackup(outputPath);
+      expect(manifest, isNotNull);
+      expect(manifest!.appVersion, equals('2.0.0'));
+    });
+
+    test('returns null for nonexistent file', () async {
+      final manifest = await BackupService.validateBackup(
+        p.join(tempDir.path, 'missing.zip'),
+      );
+      expect(manifest, isNull);
+    });
+
+    test('returns null for invalid zip', () async {
+      final badFile = File(p.join(tempDir.path, 'bad.zip'));
+      badFile.writeAsBytesSync([0, 1, 2, 3]);
+
+      final manifest = await BackupService.validateBackup(badFile.path);
+      expect(manifest, isNull);
+    });
   });
 }
