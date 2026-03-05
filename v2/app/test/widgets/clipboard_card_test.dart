@@ -32,7 +32,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -51,7 +51,7 @@ void main() {
           onTap: () => tapCount++,
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
           onExpandToggle: () => expandCount++,
         ),
       ));
@@ -78,7 +78,7 @@ void main() {
           onTap: () => tapCount++,
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
           onExpandToggle: () => expandCount++,
         ),
       ));
@@ -99,7 +99,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
           isSelected: true,
         ),
       ));
@@ -118,7 +118,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
           isExpanded: true,
           cardMaxLines: 5,
         ),
@@ -140,7 +140,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -155,7 +155,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -170,7 +170,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -185,7 +185,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -200,7 +200,7 @@ void main() {
           onTap: () {},
           onPin: () {},
           onDelete: () {},
-          onLabelColor: (_, __) {},
+          onLabelColor: (_, _) {},
         ),
         brightness: Brightness.dark,
       ));

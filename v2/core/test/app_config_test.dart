@@ -194,13 +194,13 @@ void main() {
     });
 
     test('full serialization round-trip with all fields', () {
-      final config = AppConfig(
+      const config = AppConfig(
         preferredLanguage: 'es',
         runOnStartup: false,
         hotkeyUseCtrl: true,
         pageSize: 50,
         retentionDays: 60,
-        colorLabels: const {'1': 'Work'},
+        colorLabels: {'1': 'Work'},
         duplicateIgnoreWindowMs: 600,
         delayBeforeFocusMs: 120,
         delayBeforePasteMs: 200,
