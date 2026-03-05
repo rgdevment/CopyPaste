@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -44,6 +45,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _hovering = false;
   String? _resolvedImagePath;
   bool _imagePathResolved = false;
+  Timer? _tapTimer;
+  int _tapCount = 0;
 
   @override
   void initState() {
@@ -59,6 +62,26 @@ class _ClipboardCardState extends State<ClipboardCard> {
         oldWidget.item.metadata != widget.item.metadata) {
       _imagePathResolved = false;
       _resolveImagePath();
+    }
+  }
+
+  @override
+  void dispose() {
+    _tapTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    _tapCount++;
+    if (_tapCount == 1) {
+      _tapTimer = Timer(const Duration(milliseconds: 200), () {
+        _tapCount = 0;
+        widget.onExpandToggle?.call();
+      });
+    } else {
+      _tapTimer?.cancel();
+      _tapCount = 0;
+      widget.onTap();
     }
   }
 
@@ -206,8 +229,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
       child: GestureDetector(
-        onTap: widget.onExpandToggle,
-        onDoubleTap: widget.onTap,
+        onTap: _handleTap,
         onSecondaryTapUp: (d) => _showContextMenu(context, d.globalPosition),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
@@ -915,7 +937,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
   }
 }
 
-class _CardActionButton extends StatefulWidget {
+class _CardActionButton extends StatelessWidget {
   const _CardActionButton({
     required this.icon,
     required this.onTap,
@@ -929,74 +951,46 @@ class _CardActionButton extends StatefulWidget {
   final bool isDanger;
 
   @override
-  State<_CardActionButton> createState() => _CardActionButtonState();
-}
-
-class _CardActionButtonState extends State<_CardActionButton> {
-  bool _hovering = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = CopyPasteTheme.of(context);
     final colors = CopyPasteTheme.colorsOf(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final defaultBg = isDark
+    final bg = isDark
         ? colors.surfaceVariant
         : Colors.white.withValues(alpha: 0.95);
 
-    final button = MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 100),
-          width: 26,
-          height: 26,
-          transform: _hovering
-              ? Matrix4.translationValues(0, -1, 0)
-              : null,
-          decoration: BoxDecoration(
-            color: _hovering && widget.isDanger
-                ? colors.danger.withValues(alpha: 0.08)
-                : defaultBg,
-            borderRadius: BorderRadius.circular(theme.radii.button),
-            border: Border.all(
-              color: _hovering && widget.isDanger
-                  ? colors.danger.withValues(alpha: 0.2)
-                  : colors.onSurface.withValues(alpha: 0.08),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: _hovering ? 0.15 : 0.1,
-                ),
-                blurRadius: _hovering ? 4 : 3,
-                offset: Offset(0, _hovering ? 2 : 1),
-              ),
-            ],
-          ),
+    final button = SizedBox(
+      width: 30,
+      height: 30,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(theme.radii.button),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(theme.radii.button),
+          hoverColor: isDanger
+              ? colors.danger.withValues(alpha: 0.08)
+              : colors.onSurface.withValues(alpha: 0.06),
+          splashColor: isDanger
+              ? colors.danger.withValues(alpha: 0.15)
+              : colors.onSurface.withValues(alpha: 0.1),
           child: Center(
             child: Icon(
-              widget.icon,
-              size: 12,
-              color: widget.isDanger
-                  ? colors.danger.withValues(
-                      alpha: _hovering ? 0.9 : 0.6,
-                    )
-                  : colors.onSurface.withValues(
-                      alpha: _hovering ? 0.7 : 0.45,
-                    ),
+              icon,
+              size: 13,
+              color: isDanger
+                  ? colors.danger.withValues(alpha: 0.7)
+                  : colors.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),
       ),
     );
 
-    if (widget.tooltip != null) {
+    if (tooltip != null) {
       return Tooltip(
-        message: widget.tooltip!,
+        message: tooltip!,
         textStyle: const TextStyle(fontSize: 10, color: Colors.white),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.75),

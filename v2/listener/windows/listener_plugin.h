@@ -29,6 +29,8 @@ class ListenerPlugin : public flutter::Plugin {
   ListenerPlugin(const ListenerPlugin&) = delete;
   ListenerPlugin& operator=(const ListenerPlugin&) = delete;
 
+  static std::string WideToUtf8(const std::wstring& wide);
+
   void StartListening(
       std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> sink);
   void StopListening();
@@ -68,7 +70,6 @@ class ListenerPlugin : public flutter::Plugin {
   static std::vector<std::wstring> ExtractFilePaths();
   static bool IsUrl(const std::wstring& text);
   static int DetectFileType(const std::wstring& path);
-  static std::string WideToUtf8(const std::wstring& wide);
   static std::wstring Utf8ToWide(const std::string& utf8);
   static std::string ComputeSimpleHash(const std::string& data);
 

@@ -530,7 +530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: l.sectionCategories,
           subtitle: l.subtitleCategories,
           children: [
-            ..._colorEntries.map(
+            ..._colorEntries(l).map(
               (e) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
@@ -1196,14 +1196,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         textStyle: const TextStyle(fontSize: 12),
       );
 
-  static const _colorEntries = [
-    (key: 'Red', defaultName: 'Red', color: Color(0xFFE53935)),
-    (key: 'Green', defaultName: 'Green', color: Color(0xFF43A047)),
-    (key: 'Purple', defaultName: 'Purple', color: Color(0xFF8E24AA)),
-    (key: 'Yellow', defaultName: 'Yellow', color: Color(0xFFFDD835)),
-    (key: 'Blue', defaultName: 'Blue', color: Color(0xFF1E88E5)),
-    (key: 'Orange', defaultName: 'Orange', color: Color(0xFFFB8C00)),
-  ];
+  static List<({String key, String defaultName, Color color})>
+      _colorEntries(AppLocalizations l) => [
+            (key: 'Red', defaultName: l.colorRed, color: const Color(0xFFE53935)),
+            (key: 'Green', defaultName: l.colorGreen, color: const Color(0xFF43A047)),
+            (key: 'Purple', defaultName: l.colorPurple, color: const Color(0xFF8E24AA)),
+            (key: 'Yellow', defaultName: l.colorYellow, color: const Color(0xFFFDD835)),
+            (key: 'Blue', defaultName: l.colorBlue, color: const Color(0xFF1E88E5)),
+            (key: 'Orange', defaultName: l.colorOrange, color: const Color(0xFFFB8C00)),
+          ];
 
 
 
