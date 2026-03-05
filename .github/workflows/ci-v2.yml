@@ -65,22 +65,3 @@ jobs:
 
       - name: Build Windows (Release)
         run: cd v2/app && flutter build windows --release
-
-  build-windows-arm64:
-    runs-on: windows-11-arm64
-    if: false # activate when ARM64 runner is available
-    needs: analyze
-    name: Build Windows ARM64
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Get dependencies
-        run: cd v2/app && flutter pub get
-
-      - name: Build Windows (Release ARM64)
-        run: cd v2/app && flutter build windows --release
