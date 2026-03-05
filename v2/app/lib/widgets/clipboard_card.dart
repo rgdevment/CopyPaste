@@ -968,6 +968,7 @@ class _CardActionButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(theme.radii.button),
         child: InkWell(
           onTap: onTap,
+          canRequestFocus: false,
           borderRadius: BorderRadius.circular(theme.radii.button),
           hoverColor: isDanger
               ? colors.danger.withValues(alpha: 0.08)
