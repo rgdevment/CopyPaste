@@ -34,7 +34,7 @@ class AppConfig {
     this.resetSearchOnShow = true,
     this.hasSeenHint = false,
     this.dismissedUpdateVersion,
-    this.themeMode = 'light',
+    this.themeMode = 'auto',
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(
@@ -75,7 +75,7 @@ class AppConfig {
         hasSeenHint: json['hasSeenHint'] as bool? ?? false,
         dismissedUpdateVersion:
             json['dismissedUpdateVersion'] as String?,
-        themeMode: json['themeMode'] as String? ?? 'light',
+        themeMode: json['themeMode'] as String? ?? 'auto',
       );
 
   static const String fileName = 'config.json';
