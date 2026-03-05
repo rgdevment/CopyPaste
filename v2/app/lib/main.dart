@@ -318,12 +318,13 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
     if (item.isFileBasedType && !item.isFileAvailable()) return;
     await widget.clipboardService.notifyPasteInitiated(item.id);
     await widget.clipboardService.recordPaste(item.id);
-    await ClipboardWriter.setFromItem(
+    final ok = await ClipboardWriter.setFromItem(
       typeValue: item.type.value,
       content: item.content,
       metadata: item.metadata,
       plainText: plainText,
     );
+    if (!ok) return;
     await _appWindow.hide();
     await _focusManager.restoreAndPaste(
       delayBeforeFocusMs: _config.delayBeforeFocusMs,

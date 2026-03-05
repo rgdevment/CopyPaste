@@ -16,6 +16,10 @@
 #include <propsys.h>
 #include <propkey.h>
 #include <propvarutil.h>
+#include <objidl.h>
+#include <gdiplus.h>
+
+#pragma comment(lib, "gdiplus.lib")
 
 #include <algorithm>
 #include <cstring>
@@ -204,10 +208,14 @@ ListenerPlugin::ListenerPlugin(flutter::PluginRegistrarWindows* registrar)
       L"ExcludeClipboardContentFromMonitorProcessing");
   cf_can_include_ =
       RegisterClipboardFormat(L"CanIncludeInClipboardHistory");
+
+  Gdiplus::GdiplusStartupInput gdipInput;
+  Gdiplus::GdiplusStartup(&gdip_token_, &gdipInput, nullptr);
 }
 
 ListenerPlugin::~ListenerPlugin() {
   StopListening();
+  if (gdip_token_) Gdiplus::GdiplusShutdown(gdip_token_);
 }
 
 void ListenerPlugin::StartListening(
@@ -781,55 +789,67 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
   if (imagePath.empty()) return false;
 
   std::wstring wpath = Utf8ToWide(imagePath);
-  HANDLE hFile = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                              nullptr, OPEN_EXISTING,
-                              FILE_ATTRIBUTE_NORMAL, nullptr);
-  if (hFile == INVALID_HANDLE_VALUE) return false;
 
-  DWORD fileSize = GetFileSize(hFile, nullptr);
-  if (fileSize == INVALID_FILE_SIZE || fileSize < sizeof(BITMAPFILEHEADER)) {
-    CloseHandle(hFile);
+  // Use GDI+ to load any image format (PNG, BMP, JPEG, etc.)
+  Gdiplus::Bitmap bitmap(wpath.c_str());
+  if (bitmap.GetLastStatus() != Gdiplus::Ok) return false;
+
+  HBITMAP hBitmap = nullptr;
+  Gdiplus::Color bg(0, 255, 255, 255);
+  if (bitmap.GetHBITMAP(bg, &hBitmap) != Gdiplus::Ok || !hBitmap)
+    return false;
+
+  BITMAP bm = {};
+  GetObject(hBitmap, sizeof(bm), &bm);
+
+  BITMAPINFOHEADER bih = {};
+  bih.biSize = sizeof(BITMAPINFOHEADER);
+  bih.biWidth = bm.bmWidth;
+  bih.biHeight = bm.bmHeight;
+  bih.biPlanes = 1;
+  bih.biBitCount = 32;
+  bih.biCompression = BI_RGB;
+
+  size_t rowBytes = static_cast<size_t>(bm.bmWidth) * 4;
+  size_t imgSize = rowBytes * bm.bmHeight;
+  bih.biSizeImage = static_cast<DWORD>(imgSize);
+
+  size_t dibSize = sizeof(BITMAPINFOHEADER) + imgSize;
+  HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, dibSize);
+  if (!hMem) {
+    DeleteObject(hBitmap);
     return false;
   }
 
-  std::vector<uint8_t> fileData(fileSize);
-  DWORD bytesRead = 0;
-  if (!ReadFile(hFile, fileData.data(), fileSize, &bytesRead, nullptr) ||
-      bytesRead != fileSize) {
-    CloseHandle(hFile);
+  void* ptr = GlobalLock(hMem);
+  if (!ptr) {
+    GlobalFree(hMem);
+    DeleteObject(hBitmap);
     return false;
   }
-  CloseHandle(hFile);
 
-  const auto* bfh = reinterpret_cast<const BITMAPFILEHEADER*>(fileData.data());
-  if (bfh->bfType != 0x4D42) return false;
+  memcpy(ptr, &bih, sizeof(BITMAPINFOHEADER));
 
-  size_t dibSize = fileSize - sizeof(BITMAPFILEHEADER);
-  const uint8_t* dibData = fileData.data() + sizeof(BITMAPFILEHEADER);
+  HDC hDC = GetDC(nullptr);
+  auto* bi = reinterpret_cast<BITMAPINFO*>(ptr);
+  GetDIBits(hDC, hBitmap, 0, bm.bmHeight,
+            static_cast<uint8_t*>(ptr) + sizeof(BITMAPINFOHEADER),
+            bi, DIB_RGB_COLORS);
+  ReleaseDC(nullptr, hDC);
+  GlobalUnlock(hMem);
+  DeleteObject(hBitmap);
 
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
-  if (!OpenClipboard(hwnd)) return false;
+  if (!OpenClipboard(hwnd)) {
+    GlobalFree(hMem);
+    return false;
+  }
 
   EmptyClipboard();
-  bool ok = false;
-
-  HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, dibSize);
-  if (hMem) {
-    void* ptr = GlobalLock(hMem);
-    if (ptr) {
-      memcpy(ptr, dibData, dibSize);
-      GlobalUnlock(hMem);
-      if (SetClipboardData(CF_DIB, hMem)) {
-        ok = true;
-      } else {
-        GlobalFree(hMem);
-      }
-    } else {
-      GlobalFree(hMem);
-    }
-  }
+  bool ok = SetClipboardData(CF_DIB, hMem) != nullptr;
+  if (!ok) GlobalFree(hMem);
 
   CloseClipboard();
   return ok;
