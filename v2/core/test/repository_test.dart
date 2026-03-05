@@ -212,5 +212,149 @@ void main() {
       expect(results.length, equals(1));
       expect(results.first.cardColor, equals(CardColor.red));
     });
+
+    test('searchAdvanced filters by isPinned true', () async {
+      await repo.save(
+        ClipboardItem(
+          content: 'pinned item',
+          type: ClipboardContentType.text,
+          isPinned: true,
+        ),
+      );
+      await repo.save(
+        ClipboardItem(content: 'normal item', type: ClipboardContentType.text),
+      );
+      final results = await repo.searchAdvanced(
+        isPinned: true,
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.isPinned, isTrue);
+    });
+
+    test('searchAdvanced with query and type filter', () async {
+      await repo.save(
+        ClipboardItem(content: 'hello text', type: ClipboardContentType.text),
+      );
+      await repo.save(
+        ClipboardItem(content: 'hello link', type: ClipboardContentType.link),
+      );
+      await repo.save(
+        ClipboardItem(content: 'world text', type: ClipboardContentType.text),
+      );
+      final results = await repo.searchAdvanced(
+        query: 'hello',
+        types: [ClipboardContentType.text],
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.content, equals('hello text'));
+    });
+
+    test('getLatest returns most recently modified item', () async {
+      final older = ClipboardItem(
+        content: 'older',
+        type: ClipboardContentType.text,
+        modifiedAt: DateTime.utc(2024, 1, 1),
+      );
+      final newer = ClipboardItem(
+        content: 'newer',
+        type: ClipboardContentType.text,
+        modifiedAt: DateTime.utc(2024, 1, 2),
+      );
+      await repo.save(older);
+      await repo.save(newer);
+      final latest = await repo.getLatest();
+      expect(latest, isNotNull);
+      expect(latest!.content, equals('newer'));
+    });
+
+    test('getLatest returns null on empty repository', () async {
+      final latest = await repo.getLatest();
+      expect(latest, isNull);
+    });
+
+    test('deleteAllUnpinned removes only non-pinned items', () async {
+      final pinned = ClipboardItem(
+        content: 'keep me',
+        type: ClipboardContentType.text,
+        isPinned: true,
+      );
+      final unpinned = ClipboardItem(
+        content: 'delete me',
+        type: ClipboardContentType.text,
+      );
+      await repo.save(pinned);
+      await repo.save(unpinned);
+      final deleted = await repo.deleteAllUnpinned();
+      expect(deleted, equals(1));
+      final remaining = await repo.getAll();
+      expect(remaining.length, equals(1));
+      expect(remaining.first.isPinned, isTrue);
+    });
+
+    test('count returns correct number of items', () async {
+      expect(await repo.count(), equals(0));
+      await repo.save(
+        ClipboardItem(content: 'a', type: ClipboardContentType.text),
+      );
+      await repo.save(
+        ClipboardItem(content: 'b', type: ClipboardContentType.text),
+      );
+      expect(await repo.count(), equals(2));
+
+      final all = await repo.getAll();
+      await repo.delete(all.first.id);
+      expect(await repo.count(), equals(1));
+    });
+
+    test('getImagePaths returns content of image items', () async {
+      await repo.save(
+        ClipboardItem(
+          content: '/images/photo.png',
+          type: ClipboardContentType.image,
+        ),
+      );
+      await repo.save(
+        ClipboardItem(content: 'text item', type: ClipboardContentType.text),
+      );
+      final paths = await repo.getImagePaths();
+      expect(paths.length, equals(1));
+      expect(paths.first, equals('/images/photo.png'));
+    });
+
+    test('getImagePaths returns empty list when no images', () async {
+      await repo.save(
+        ClipboardItem(content: 'text', type: ClipboardContentType.text),
+      );
+      final paths = await repo.getImagePaths();
+      expect(paths, isEmpty);
+    });
+
+    test('walCheckpoint completes without error', () async {
+      await repo.save(
+        ClipboardItem(content: 'test', type: ClipboardContentType.text),
+      );
+      await expectLater(repo.walCheckpoint(), completes);
+    });
+
+    test('searchAdvanced with skip paginates results', () async {
+      for (var i = 0; i < 5; i++) {
+        await repo.save(
+          ClipboardItem(
+            content: 'item $i',
+            type: ClipboardContentType.text,
+            modifiedAt:
+                DateTime.utc(2024, 1, i + 1),
+          ),
+        );
+      }
+      final page1 = await repo.searchAdvanced(limit: 3, skip: 0);
+      final page2 = await repo.searchAdvanced(limit: 3, skip: 3);
+      expect(page1.length, equals(3));
+      expect(page2.length, equals(2));
+    });
   });
 }
