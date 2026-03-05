@@ -7,6 +7,9 @@
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 
 #include <memory>

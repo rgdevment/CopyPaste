@@ -36,6 +36,13 @@ void main() {
       expect(UpdateChecker.isNewer('invalid', '1.0.0'), isFalse);
       expect(UpdateChecker.isNewer('1.0.0', 'bad'), isFalse);
     });
+
+    test('handles pre-release suffixes by comparing base version', () {
+      expect(UpdateChecker.isNewer('2.0.0-beta.1', '1.9.0'), isTrue);
+      expect(UpdateChecker.isNewer('1.0.0-beta.1', '1.0.0'), isFalse);
+      expect(UpdateChecker.isNewer('1.1.0-rc.2', '1.0.0'), isTrue);
+      expect(UpdateChecker.isNewer('1.0.0', '1.0.0-beta.1'), isFalse);
+    });
   });
 
   group('UpdateInfo', () {

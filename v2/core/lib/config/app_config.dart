@@ -12,15 +12,29 @@ class AppConfig {
     this.hotkeyVirtualKey = 0x56,
     this.hotkeyKeyName = 'V',
     this.pageSize = 30,
+    this.maxItemsBeforeCleanup = 100,
+    this.scrollLoadThreshold = 400,
     this.retentionDays = 30,
     this.colorLabels = const {},
     this.duplicateIgnoreWindowMs = 450,
     this.delayBeforeFocusMs = 100,
     this.delayBeforePasteMs = 180,
     this.maxFocusVerifyAttempts = 15,
-    this.thumbnailWidth = 170,
-    this.thumbnailQuality = 80,
+    this.thumbnailWidth = 200,
+    this.thumbnailQuality = 90,
     this.lastBackupDateUtc,
+    this.popupWidth = 368,
+    this.popupHeight = 480,
+    this.cardMinLines = 2,
+    this.cardMaxLines = 5,
+    this.pinWindow = false,
+    this.scrollToTopOnPaste = true,
+    this.hideOnDeactivate = true,
+    this.resetScrollOnShow = true,
+    this.resetSearchOnShow = true,
+    this.hasSeenHint = false,
+    this.dismissedUpdateVersion,
+    this.themeMode = 'light',
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(
@@ -33,6 +47,10 @@ class AppConfig {
         hotkeyVirtualKey: json['hotkeyVirtualKey'] as int? ?? 0x56,
         hotkeyKeyName: json['hotkeyKeyName'] as String? ?? 'V',
         pageSize: json['pageSize'] as int? ?? 30,
+        maxItemsBeforeCleanup:
+            json['maxItemsBeforeCleanup'] as int? ?? 100,
+        scrollLoadThreshold:
+            json['scrollLoadThreshold'] as int? ?? 400,
         retentionDays: json['retentionDays'] as int? ?? 30,
         colorLabels:
             (json['colorLabels'] as Map<String, dynamic>?)
@@ -44,33 +62,78 @@ class AppConfig {
         delayBeforePasteMs: json['delayBeforePasteMs'] as int? ?? 180,
         maxFocusVerifyAttempts:
             json['maxFocusVerifyAttempts'] as int? ?? 15,
-        thumbnailWidth: json['thumbnailWidth'] as int? ?? 170,
-        thumbnailQuality: json['thumbnailQuality'] as int? ?? 80,
+        thumbnailWidth: json['thumbnailWidth'] as int? ?? 200,
+        thumbnailQuality: json['thumbnailQuality'] as int? ?? 90,
         lastBackupDateUtc: json['lastBackupDateUtc'] != null
             ? DateTime.tryParse(json['lastBackupDateUtc'] as String)
             : null,
+        popupWidth: json['popupWidth'] as int? ?? 368,
+        popupHeight: json['popupHeight'] as int? ?? 480,
+        cardMinLines: json['cardMinLines'] as int? ?? 2,
+        cardMaxLines: json['cardMaxLines'] as int? ?? 5,
+        pinWindow: json['pinWindow'] as bool? ?? false,
+        scrollToTopOnPaste: json['scrollToTopOnPaste'] as bool? ?? true,
+        hideOnDeactivate: json['hideOnDeactivate'] as bool? ?? true,
+        resetScrollOnShow: json['resetScrollOnShow'] as bool? ?? true,
+        resetSearchOnShow: json['resetSearchOnShow'] as bool? ?? true,
+        hasSeenHint: json['hasSeenHint'] as bool? ?? false,
+        dismissedUpdateVersion:
+            json['dismissedUpdateVersion'] as String?,
+        themeMode: json['themeMode'] as String? ?? 'light',
       );
 
   static const String fileName = 'config.json';
+  static const String appVersion = '2.0.0';
 
+  // Language & Startup
   final String preferredLanguage;
   final bool runOnStartup;
+
+  // Hotkey
   final bool hotkeyUseCtrl;
   final bool hotkeyUseWin;
   final bool hotkeyUseAlt;
   final bool hotkeyUseShift;
   final int hotkeyVirtualKey;
   final String hotkeyKeyName;
+
+  // Performance
   final int pageSize;
+  final int maxItemsBeforeCleanup;
+  final int scrollLoadThreshold;
+
+  // Storage
   final int retentionDays;
   final Map<String, String> colorLabels;
+
+  // Paste behavior
   final int duplicateIgnoreWindowMs;
   final int delayBeforeFocusMs;
   final int delayBeforePasteMs;
   final int maxFocusVerifyAttempts;
+
+  // Thumbnails
   final int thumbnailWidth;
   final int thumbnailQuality;
+
+  // Backup
   final DateTime? lastBackupDateUtc;
+
+  // Appearance
+  final int popupWidth;
+  final int popupHeight;
+  final int cardMinLines;
+  final int cardMaxLines;
+
+  // Behavior
+  final bool pinWindow;
+  final bool scrollToTopOnPaste;
+  final bool hideOnDeactivate;
+  final bool resetScrollOnShow;
+  final bool resetSearchOnShow;
+  final bool hasSeenHint;
+  final String? dismissedUpdateVersion;
+  final String themeMode;
 
   AppConfig copyWith({
     String? preferredLanguage,
@@ -82,6 +145,8 @@ class AppConfig {
     int? hotkeyVirtualKey,
     String? hotkeyKeyName,
     int? pageSize,
+    int? maxItemsBeforeCleanup,
+    int? scrollLoadThreshold,
     int? retentionDays,
     Map<String, String>? colorLabels,
     int? duplicateIgnoreWindowMs,
@@ -91,6 +156,18 @@ class AppConfig {
     int? thumbnailWidth,
     int? thumbnailQuality,
     DateTime? lastBackupDateUtc,
+    int? popupWidth,
+    int? popupHeight,
+    int? cardMinLines,
+    int? cardMaxLines,
+    bool? pinWindow,
+    bool? scrollToTopOnPaste,
+    bool? hideOnDeactivate,
+    bool? resetScrollOnShow,
+    bool? resetSearchOnShow,
+    bool? hasSeenHint,
+    String? dismissedUpdateVersion,
+    String? themeMode,
   }) =>
       AppConfig(
         preferredLanguage: preferredLanguage ?? this.preferredLanguage,
@@ -102,6 +179,10 @@ class AppConfig {
         hotkeyVirtualKey: hotkeyVirtualKey ?? this.hotkeyVirtualKey,
         hotkeyKeyName: hotkeyKeyName ?? this.hotkeyKeyName,
         pageSize: pageSize ?? this.pageSize,
+        maxItemsBeforeCleanup:
+            maxItemsBeforeCleanup ?? this.maxItemsBeforeCleanup,
+        scrollLoadThreshold:
+            scrollLoadThreshold ?? this.scrollLoadThreshold,
         retentionDays: retentionDays ?? this.retentionDays,
         colorLabels: colorLabels ?? this.colorLabels,
         duplicateIgnoreWindowMs:
@@ -113,6 +194,19 @@ class AppConfig {
         thumbnailWidth: thumbnailWidth ?? this.thumbnailWidth,
         thumbnailQuality: thumbnailQuality ?? this.thumbnailQuality,
         lastBackupDateUtc: lastBackupDateUtc ?? this.lastBackupDateUtc,
+        popupWidth: popupWidth ?? this.popupWidth,
+        popupHeight: popupHeight ?? this.popupHeight,
+        cardMinLines: cardMinLines ?? this.cardMinLines,
+        cardMaxLines: cardMaxLines ?? this.cardMaxLines,
+        pinWindow: pinWindow ?? this.pinWindow,
+        scrollToTopOnPaste: scrollToTopOnPaste ?? this.scrollToTopOnPaste,
+        hideOnDeactivate: hideOnDeactivate ?? this.hideOnDeactivate,
+        resetScrollOnShow: resetScrollOnShow ?? this.resetScrollOnShow,
+        resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
+        hasSeenHint: hasSeenHint ?? this.hasSeenHint,
+        dismissedUpdateVersion:
+            dismissedUpdateVersion ?? this.dismissedUpdateVersion,
+        themeMode: themeMode ?? this.themeMode,
       );
 
   Map<String, dynamic> toJson() => {
@@ -125,6 +219,8 @@ class AppConfig {
         'hotkeyVirtualKey': hotkeyVirtualKey,
         'hotkeyKeyName': hotkeyKeyName,
         'pageSize': pageSize,
+        'maxItemsBeforeCleanup': maxItemsBeforeCleanup,
+        'scrollLoadThreshold': scrollLoadThreshold,
         'retentionDays': retentionDays,
         'colorLabels': colorLabels,
         'duplicateIgnoreWindowMs': duplicateIgnoreWindowMs,
@@ -135,6 +231,19 @@ class AppConfig {
         'thumbnailQuality': thumbnailQuality,
         if (lastBackupDateUtc != null)
           'lastBackupDateUtc': lastBackupDateUtc!.toIso8601String(),
+        'popupWidth': popupWidth,
+        'popupHeight': popupHeight,
+        'cardMinLines': cardMinLines,
+        'cardMaxLines': cardMaxLines,
+        'pinWindow': pinWindow,
+        'scrollToTopOnPaste': scrollToTopOnPaste,
+        'hideOnDeactivate': hideOnDeactivate,
+        'resetScrollOnShow': resetScrollOnShow,
+        'resetSearchOnShow': resetSearchOnShow,
+        'hasSeenHint': hasSeenHint,
+        if (dismissedUpdateVersion != null)
+          'dismissedUpdateVersion': dismissedUpdateVersion,
+        'themeMode': themeMode,
       };
 
   static Future<AppConfig> load(String configPath) async {

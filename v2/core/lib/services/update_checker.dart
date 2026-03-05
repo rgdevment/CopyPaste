@@ -98,8 +98,8 @@ class UpdateChecker {
 
   static bool isNewer(String latest, String current) {
     try {
-      final l = latest.split('.').map(int.parse).toList();
-      final c = current.split('.').map(int.parse).toList();
+      final l = _parseVersion(latest);
+      final c = _parseVersion(current);
       for (var i = 0; i < 3; i++) {
         final lv = i < l.length ? l[i] : 0;
         final cv = i < c.length ? c[i] : 0;
@@ -110,6 +110,12 @@ class UpdateChecker {
     } catch (_) {
       return false;
     }
+  }
+
+  static List<int> _parseVersion(String version) {
+    // Strip pre-release suffix: "1.0.0-beta.1" → "1.0.0"
+    final base = version.split('-').first;
+    return base.split('.').map(int.parse).toList();
   }
 
   void dispose() {

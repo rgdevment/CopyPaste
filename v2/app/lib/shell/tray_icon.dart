@@ -11,8 +11,9 @@ class TrayIcon with TrayListener {
 
   Future<void> init() async {
     trayManager.addListener(this);
-    await trayManager.setIcon('assets/icons/icon_tray_32.png');
-    await trayManager.setToolTip('CopyPaste');
+    await trayManager.setIcon('assets/icons/icon_tray.ico');
+    // Set a basic menu immediately so right-click works even before the first
+    // build() triggers rebuild() with localized strings.
     await trayManager.setContextMenu(
       Menu(
         items: [
@@ -24,8 +25,30 @@ class TrayIcon with TrayListener {
     );
   }
 
+  Future<void> rebuild({
+    required String showHideLabel,
+    required String exitLabel,
+    required String tooltip,
+  }) async {
+    await trayManager.setToolTip(tooltip);
+    await trayManager.setContextMenu(
+      Menu(
+        items: [
+          MenuItem(key: 'toggle', label: showHideLabel),
+          MenuItem.separator(),
+          MenuItem(key: 'exit', label: exitLabel),
+        ],
+      ),
+    );
+  }
+
   @override
   void onTrayIconMouseDown() => onToggle();
+
+  @override
+  void onTrayIconRightMouseDown() {
+    trayManager.popUpContextMenu();
+  }
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {

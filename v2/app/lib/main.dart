@@ -1,34 +1,64 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
+import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
 import 'shell/hotkey_handler.dart';
+import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
+import 'screens/main_screen.dart';
+import 'screens/settings_screen.dart';
+import 'theme/compact_theme.dart';
+import 'theme/theme_provider.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
+  if (Platform.isWindows) {
+    await Window.initialize();
+  }
+
+  if (!SingleInstance.acquire()) {
+    exit(0);
+  }
+
   final storage = await StorageConfig.create();
   await storage.ensureDirectories();
-
   AppLogger.initialize('${storage.baseDir}/logs');
+
+  FlutterError.onError = (details) {
+    AppLogger.error(
+      'FlutterError: ${details.exceptionAsString()}\n${details.stack}',
+    );
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    AppLogger.error('Unhandled: $error\n$stack');
+    return false;
+  };
 
   final config = await AppConfig.load(
     '${storage.configPath}/${AppConfig.fileName}',
   );
 
   final repo = SqliteRepository.fromPath(storage.databasePath);
-  final clipboardService = ClipboardService(repo, imagesPath: storage.imagesPath)
-    ..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs
-    ..setThumbnailsPath(storage.thumbnailsPath);
+  final clipboardService =
+      ClipboardService(repo, imagesPath: storage.imagesPath)
+        ..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs
+        ..thumbnailWidth = config.thumbnailWidth
+        ..thumbnailQuality = config.thumbnailQuality
+        ..setThumbnailsPath(storage.thumbnailsPath);
 
   final cleanupService = CleanupService(
     repo,
@@ -38,9 +68,23 @@ void main() async {
 
   final listener = WindowsClipboardListener();
   final updateChecker = UpdateChecker(configPath: storage.configPath)
-    ..start('2.0.0');
+    ..start(AppConfig.appVersion);
 
   await StartupHelper.apply(config.runOnStartup);
+
+  if (Platform.isWindows) {
+    final micaDark = switch (config.themeMode) {
+      'dark' => true,
+      'auto' || 'system' =>
+        PlatformDispatcher.instance.platformBrightness == Brightness.dark,
+      _ => false,
+    };
+    await Window.setEffect(
+      effect: WindowEffect.mica,
+      color: const Color(0x00000000),
+      dark: micaDark,
+    );
+  }
 
   runApp(
     CopyPasteApp(
@@ -82,20 +126,29 @@ class CopyPasteApp extends StatefulWidget {
 class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
   late final AppWindow _appWindow;
   late final TrayIcon _trayIcon;
-  late final HotkeyHandler _hotkeyHandler;
+  late HotkeyHandler _hotkeyHandler;
+  late AppConfig _config;
   final WindowFocusManager _focusManager = WindowFocusManager();
+  final _mainScreenKey = GlobalKey<MainScreenState>();
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
+  String? _lastTrayLocale;
 
   @override
   void initState() {
     super.initState();
-    _appWindow = AppWindow();
+    _config = widget.config;
+    _appWindow = AppWindow(
+      onVisibilityChanged: _onWindowVisibilityChanged,
+      popupWidth: _config.popupWidth.toDouble(),
+      popupHeight: _config.popupHeight.toDouble(),
+    );
+    _appWindow.pinned = _config.pinWindow;
     _trayIcon = TrayIcon(
       onToggle: _toggleWindow,
       onExit: _exitApp,
     );
     _hotkeyHandler = HotkeyHandler(
-      config: widget.config,
+      config: _config,
       onHotkey: _onHotkey,
     );
 
@@ -103,17 +156,26 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
   }
 
   Future<void> _initShell() async {
+    windowManager.addListener(this);
+    final isFirstRun = widget.storage.isFirstRun;
     await _appWindow.init();
+    if (Platform.isWindows) {
+      await _appWindow.applyMica(dark: _isMicaDark(_config.themeMode));
+    }
     await _trayIcon.init();
     await _hotkeyHandler.registerWithFallback();
-    windowManager.addListener(this);
-
+    if (isFirstRun) {
+      widget.storage.markAsInitialized();
+      await _appWindow.show();
+    }
     _startListening();
   }
 
   void _startListening() {
     if (!Platform.isWindows) return;
-    _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
+    _listenerSubscription = widget.listener.onEvent.listen(
+      _onClipboardEvent,
+    );
   }
 
   Future<void> _onClipboardEvent(ClipboardEvent event) async {
@@ -121,11 +183,13 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
       try {
         await _processClipboardEvent(event);
         return;
-      } catch (_) {
+      } catch (e, s) {
         if (attempt < 2) {
           await Future<void>.delayed(
-            Duration(milliseconds: 100 * (attempt + 1)),
+            Duration(milliseconds: 500 * (attempt + 1)),
           );
+        } else {
+          AppLogger.error('Clipboard event failed after 3 retries: $e\n$s');
         }
       }
     }
@@ -143,15 +207,24 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
           htmlBytes: event.htmlBytes,
         );
       case ClipboardContentType.image:
-        await widget.clipboardService.processImage(
-          event.contentHash,
-          source: event.source,
-          imageBytes: event.bytes,
-        );
+        if (event.bytes != null && event.bytes!.isNotEmpty) {
+          await widget.clipboardService.processImage(
+            event.contentHash,
+            source: event.source,
+            imageBytes: event.bytes,
+          );
+        } else if (event.files != null && event.files!.isNotEmpty) {
+          final item = await widget.clipboardService.processImage(
+            event.contentHash,
+            source: event.source,
+            imagePath: event.files!.first,
+          );
+          if (item != null) {
+            unawaited(_processImageFileThumbnail(item, event.files!.first));
+          }
+        }
       case ClipboardContentType.file:
       case ClipboardContentType.folder:
-      case ClipboardContentType.audio:
-      case ClipboardContentType.video:
         if (event.files != null && event.files!.isNotEmpty) {
           await widget.clipboardService.processFiles(
             event.files!,
@@ -159,8 +232,94 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
             source: event.source,
           );
         }
+      case ClipboardContentType.audio:
+      case ClipboardContentType.video:
+        if (event.files != null && event.files!.isNotEmpty) {
+          final item = await widget.clipboardService.processFiles(
+            event.files!,
+            event.type,
+            source: event.source,
+          );
+          if (item != null) {
+            unawaited(_processMediaThumbnail(item, event.files!.first));
+          }
+        }
       case ClipboardContentType.unknown:
         break;
+    }
+  }
+
+  Future<void> _processMediaThumbnail(
+    ClipboardItem item,
+    String filePath,
+  ) async {
+    try {
+      final meta = <String, Object>{};
+      if (item.metadata != null && item.metadata!.isNotEmpty) {
+        final existing =
+            jsonDecode(item.metadata!) as Map<String, dynamic>;
+        existing.forEach((k, v) {
+          if (v != null) meta[k] = v as Object;
+        });
+      }
+
+      final thumbBytes =
+          await ClipboardWriter.getThumbnail(filePath, width: 300);
+      if (thumbBytes != null && thumbBytes.isNotEmpty) {
+        final thumbPath =
+            p.join(widget.storage.thumbnailsPath, '${item.id}_t.bmp');
+        await File(thumbPath).writeAsBytes(thumbBytes);
+        meta['thumb_path'] = thumbPath;
+      }
+
+      final mediaInfo = await ClipboardWriter.getMediaInfo(filePath);
+      if (mediaInfo != null) {
+        mediaInfo.forEach((k, v) {
+          if (v != null) meta[k] = v;
+        });
+      }
+
+      if (meta.isNotEmpty) {
+        await widget.clipboardService
+            .updateMetadata(item.id, jsonEncode(meta));
+      }
+    } catch (e, s) {
+      AppLogger.error('Media thumbnail/metadata failed: $e\n$s');
+    }
+  }
+
+  Future<void> _processImageFileThumbnail(
+    ClipboardItem item,
+    String filePath,
+  ) async {
+    try {
+      final file = File(filePath);
+      if (!file.existsSync()) return;
+
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) return;
+
+      final result = await ImageProcessor.processAndSave(
+        imageBytes: bytes,
+        id: item.id,
+        imagesDir: widget.storage.imagesPath,
+        thumbsDir: widget.storage.thumbnailsPath,
+        thumbnailWidth: _config.thumbnailWidth,
+        thumbnailQuality: _config.thumbnailQuality,
+      );
+      if (result == null) return;
+
+      final meta = <String, Object>{
+        'width': result.width,
+        'height': result.height,
+        'thumb_path': result.thumbPath,
+        'thumb_width': result.thumbWidth,
+        'thumb_height': result.thumbHeight,
+        'size': result.fileSize,
+      };
+      await widget.clipboardService.updateMetadata(item.id, jsonEncode(meta));
+    } catch (e, s) {
+      AppLogger.error('Image file thumbnail failed: $e\n$s');
     }
   }
 
@@ -169,11 +328,51 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
     await _appWindow.toggle();
   }
 
+  void _dismissHint() {
+    if (_config.hasSeenHint) return;
+    _config = _config.copyWith(hasSeenHint: true);
+    _config
+        .save('${widget.storage.configPath}/${AppConfig.fileName}');
+    if (mounted) setState(() {});
+  }
+
+  void _dismissUpdate(String version) {
+    _config = _config.copyWith(dismissedUpdateVersion: version);
+    _config
+        .save('${widget.storage.configPath}/${AppConfig.fileName}');
+  }
+
   Future<void> _toggleWindow() async {
     await _appWindow.toggle();
   }
 
-  Future<void> _exitApp() async {
+  void _onWindowVisibilityChanged(bool visible) {
+    if (visible) {
+      _mainScreenKey.currentState?.onWindowShow();
+    } else {
+      _mainScreenKey.currentState?.onWindowHide();
+    }
+  }
+
+  Future<void> _onPasteItem(ClipboardItem item, {bool plainText = false}) async {
+    if (item.isFileBasedType && !item.isFileAvailable()) return;
+    await widget.clipboardService.notifyPasteInitiated(item.id);
+    await widget.clipboardService.recordPaste(item.id);
+    await ClipboardWriter.setFromItem(
+      typeValue: item.type.value,
+      content: item.content,
+      metadata: item.metadata,
+      plainText: plainText,
+    );
+    await _appWindow.hide();
+    await _focusManager.restoreAndPaste(
+      delayBeforeFocusMs: _config.delayBeforeFocusMs,
+      maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
+      delayBeforePasteMs: _config.delayBeforePasteMs,
+    );
+  }
+
+  Future<void> _cleanup() async {
     try { await _listenerSubscription?.cancel(); } catch (_) {}
     try { await _hotkeyHandler.unregister(); } catch (_) {}
     try { await _trayIcon.dispose(); } catch (_) {}
@@ -181,45 +380,149 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
     try { widget.cleanupService.dispose(); } catch (_) {}
     try { widget.updateChecker.dispose(); } catch (_) {}
     try { await widget.repo.close(); } catch (_) {}
+  }
+
+  bool _isMicaDark(String themeMode) => switch (themeMode) {
+        'dark' => true,
+        'auto' || 'system' =>
+          PlatformDispatcher.instance.platformBrightness == Brightness.dark,
+        _ => false,
+      };
+
+  Future<void> _exitApp() async {
+    await _cleanup();
+    SingleInstance.release();
     exit(0);
+  }
+
+  Future<void> _openSettings(BuildContext ctx) async {
+    await _appWindow.enterSettingsMode();
+    if (!ctx.mounted) return;
+    await Navigator.of(ctx).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) => SettingsScreen(
+          config: _config,
+          configPath: '${widget.storage.configPath}/${AppConfig.fileName}',
+          clipboardService: widget.clipboardService,
+          storage: widget.storage,
+          onSave: (newConfig, hotkeyChanged) async {
+            setState(() => _config = newConfig);
+            _appWindow.pinned = newConfig.pinWindow;
+            _appWindow.updatePopupSize(
+              newConfig.popupWidth.toDouble(),
+              newConfig.popupHeight.toDouble(),
+            );
+            if (Platform.isWindows) {
+              await _appWindow.applyMica(
+                dark: _isMicaDark(newConfig.themeMode),
+              );
+            }
+            if (hotkeyChanged) {
+              await _hotkeyHandler.unregister();
+              _hotkeyHandler = HotkeyHandler(
+                config: newConfig,
+                onHotkey: _onHotkey,
+              );
+              await _hotkeyHandler.registerWithFallback();
+            }
+          },
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 150),
+      ),
+    );
+    await _appWindow.exitSettingsMode();
   }
 
   @override
   void onWindowBlur() {
+    if (!_appWindow.isReady || !_appWindow.isVisible) return;
+    if (!_config.hideOnDeactivate) return;
     _appWindow.hideIfNotPinned();
   }
 
   @override
   void onWindowClose() {
-    _exitApp();
+    _appWindow.hide();
   }
 
   @override
   void dispose() {
     windowManager.removeListener(this);
+    unawaited(_cleanup());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CopyPaste',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
+    return CopyPasteTheme(
+      themeData: CompactTheme(),
+      child: MaterialApp(
+        title: 'CopyPaste',
+        debugShowCheckedModeBanner: false,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _config.preferredLanguage == 'auto'
+            ? null
+            : Locale(_config.preferredLanguage),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
+          scaffoldBackgroundColor: Colors.transparent,
+          fontFamily: 'Inter',
+          useMaterial3: true,
         ),
-        useMaterial3: true,
-      ),
-      themeMode: ThemeMode.system,
-      home: const Scaffold(
-        body: Center(
-          child: Text('CopyPaste v2 — Shell Ready'),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF4F46E5),
+            brightness: Brightness.dark,
+          ),
+          scaffoldBackgroundColor: Colors.transparent,
+          fontFamily: 'Inter',
+          useMaterial3: true,
+        ),
+        themeMode: switch (_config.themeMode) {
+          'dark' => ThemeMode.dark,
+          'auto' || 'system' => ThemeMode.system,
+          _ => ThemeMode.light,
+        },
+        home: Builder(
+          builder: (ctx) {
+            final l = AppLocalizations.of(ctx);
+            final currentLocale = Localizations.localeOf(ctx).toString();
+            if (_lastTrayLocale != currentLocale) {
+              _lastTrayLocale = currentLocale;
+              unawaited(_trayIcon.rebuild(
+                showHideLabel: l.trayShowHide,
+                exitLabel: l.trayExit,
+                tooltip: l.trayTooltip,
+              ));
+            }
+            final bg = Platform.isWindows
+                ? Colors.transparent
+                : CopyPasteTheme.colorsOf(ctx).background;
+            return Scaffold(
+              backgroundColor: bg,
+              body: MainScreen(
+                key: _mainScreenKey,
+                clipboardService: widget.clipboardService,
+                updateChecker: widget.updateChecker,
+                resetScrollOnShow: _config.resetScrollOnShow,
+                resetSearchOnShow: _config.resetSearchOnShow,
+                scrollToTopOnPaste: _config.scrollToTopOnPaste,
+                cardMinLines: _config.cardMinLines,
+                cardMaxLines: _config.cardMaxLines,
+                showHint: !_config.hasSeenHint,
+                onDismissHint: _dismissHint,
+                dismissedUpdateVersion: _config.dismissedUpdateVersion,
+                onDismissUpdate: _dismissUpdate,
+                onPaste: _onPasteItem,
+                onPastePlain: (item) => _onPasteItem(item, plainText: true),
+                onExit: () => _appWindow.hide(),
+                onSettings: () => _openSettings(ctx),
+              ),
+            );
+          },
         ),
       ),
     );

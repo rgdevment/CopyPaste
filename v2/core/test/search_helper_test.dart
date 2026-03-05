@@ -23,5 +23,19 @@ void main() {
     test('handles already normalized text', () {
       expect(SearchHelper.normalize('hello'), equals('hello'));
     });
+
+    test('normalizes ligatures', () {
+      expect(SearchHelper.normalize('Straße'), equals('strasse'));
+      expect(SearchHelper.normalize('Ærodynamic'), equals('aerodynamic'));
+      expect(SearchHelper.normalize('œuvre'), equals('oeuvre'));
+    });
+
+    test('normalizes extended Latin characters', () {
+      expect(SearchHelper.normalize('Łódź'), equals('lodz'));
+      expect(SearchHelper.normalize('Česká'), equals('ceska'));
+      expect(SearchHelper.normalize('Kraków'), equals('krakow'));
+      expect(SearchHelper.normalize('Győr'), equals('gyor'));
+      expect(SearchHelper.normalize('Zürich'), equals('zurich'));
+    });
   });
 }

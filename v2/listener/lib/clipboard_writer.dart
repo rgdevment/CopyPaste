@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
@@ -12,7 +13,7 @@ class ClipboardWriter {
     bool plainText = false,
   }) async {
     final args = <String, Object?>{
-      'type': plainText ? 4 : 0,
+      'type': 0,
       'content': content,
       'plainText': plainText,
     };
@@ -65,9 +66,8 @@ class ClipboardWriter {
   }) async {
     switch (typeValue) {
       case 0:
-        return setText(content, metadata: metadata, plainText: plainText);
       case 4:
-        return setText(content, plainText: true);
+        return setText(content, metadata: metadata, plainText: plainText);
       case 1:
         return setImage(content);
       case 2:
@@ -77,6 +77,30 @@ class ClipboardWriter {
         return setFiles(content, typeValue);
       default:
         return setText(content, plainText: true);
+    }
+  }
+
+  static Future<Uint8List?> getThumbnail(String path, {int width = 300}) async {
+    try {
+      final result = await _channel.invokeMethod<Uint8List>(
+        'getThumbnail',
+        <String, Object?>{'path': path, 'width': width},
+      );
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<Map<String, Object?>?> getMediaInfo(String path) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'getMediaInfo',
+        <String, Object?>{'path': path},
+      );
+      return result;
+    } catch (_) {
+      return null;
     }
   }
 }

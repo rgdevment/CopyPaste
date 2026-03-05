@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
-import '../models/clipboard_content_type.dart';
 import '../repository/i_clipboard_repository.dart';
 
 class CleanupService {
@@ -80,12 +79,7 @@ class CleanupService {
     final storage = _storage;
     if (storage == null) return;
     try {
-      final allItems = await _repository.getAll();
-      final validPaths = allItems
-          .where((item) => item.type == ClipboardContentType.image)
-          .map((item) => item.content)
-          .where((c) => c.isNotEmpty)
-          .toList();
+      final validPaths = await _repository.getImagePaths();
       storage.cleanOrphanImages(validPaths);
     } catch (_) {}
   }
