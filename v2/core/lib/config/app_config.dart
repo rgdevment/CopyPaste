@@ -33,7 +33,6 @@ class AppConfig {
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
     this.hasSeenHint = false,
-    this.dismissedUpdateVersion,
     this.themeMode = 'auto',
   });
 
@@ -73,8 +72,6 @@ class AppConfig {
         resetScrollOnShow: json['resetScrollOnShow'] as bool? ?? true,
         resetSearchOnShow: json['resetSearchOnShow'] as bool? ?? true,
         hasSeenHint: json['hasSeenHint'] as bool? ?? false,
-        dismissedUpdateVersion:
-            json['dismissedUpdateVersion'] as String?,
         themeMode: json['themeMode'] as String? ?? 'auto',
       );
 
@@ -123,7 +120,6 @@ class AppConfig {
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
   final bool hasSeenHint;
-  final String? dismissedUpdateVersion;
   final String themeMode;
 
   AppConfig copyWith({
@@ -153,7 +149,6 @@ class AppConfig {
     bool? resetScrollOnShow,
     bool? resetSearchOnShow,
     bool? hasSeenHint,
-    Object? dismissedUpdateVersion = _sentinel,
     String? themeMode,
   }) =>
       AppConfig(
@@ -189,9 +184,6 @@ class AppConfig {
         resetScrollOnShow: resetScrollOnShow ?? this.resetScrollOnShow,
         resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
         hasSeenHint: hasSeenHint ?? this.hasSeenHint,
-        dismissedUpdateVersion: dismissedUpdateVersion == _sentinel
-            ? this.dismissedUpdateVersion
-            : dismissedUpdateVersion as String?,
         themeMode: themeMode ?? this.themeMode,
       );
 
@@ -223,8 +215,6 @@ class AppConfig {
         'resetScrollOnShow': resetScrollOnShow,
         'resetSearchOnShow': resetSearchOnShow,
         'hasSeenHint': hasSeenHint,
-        if (dismissedUpdateVersion != null)
-          'dismissedUpdateVersion': dismissedUpdateVersion,
         'themeMode': themeMode,
       };
 

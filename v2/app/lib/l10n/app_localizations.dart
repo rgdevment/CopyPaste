@@ -116,12 +116,6 @@ abstract class AppLocalizations {
   /// **'Copy something to get started'**
   String get emptyStateSubtitle;
 
-  /// Update available banner text
-  ///
-  /// In en, this message translates to:
-  /// **'v{version} available — click to download'**
-  String updateBannerLabel(String version);
-
   /// First-run hint banner text
   ///
   /// In en, this message translates to:

@@ -24,7 +24,6 @@ class MainScreen extends StatefulWidget {
     required this.onPastePlain,
     required this.onExit,
     required this.onSettings,
-    this.updateChecker,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
     this.cardMinLines = 2,
@@ -32,8 +31,6 @@ class MainScreen extends StatefulWidget {
     this.colorLabels = const {},
     this.showHint = false,
     this.onDismissHint,
-    this.dismissedUpdateVersion,
-    this.onDismissUpdate,
     super.key,
   });
 
@@ -42,7 +39,6 @@ class MainScreen extends StatefulWidget {
   final void Function(ClipboardItem item) onPastePlain;
   final VoidCallback onExit;
   final VoidCallback onSettings;
-  final UpdateChecker? updateChecker;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
   final int cardMinLines;
@@ -50,8 +46,6 @@ class MainScreen extends StatefulWidget {
   final Map<String, String> colorLabels;
   final bool showHint;
   final VoidCallback? onDismissHint;
-  final String? dismissedUpdateVersion;
-  final void Function(String version)? onDismissUpdate;
 
   @override
   State<MainScreen> createState() => MainScreenState();
@@ -78,8 +72,6 @@ class MainScreenState extends State<MainScreen> {
 
   StreamSubscription<ClipboardItem>? _addedSub;
   StreamSubscription<ClipboardItem>? _reactivatedSub;
-  StreamSubscription<UpdateInfo>? _updateSub;
-  UpdateInfo? _updateInfo;
 
   static const int _pageSize = 30;
   int _currentPage = 0;
@@ -93,11 +85,6 @@ class MainScreenState extends State<MainScreen> {
     _addedSub = widget.clipboardService.onItemAdded.listen((_) => _reload());
     _reactivatedSub =
         widget.clipboardService.onItemReactivated.listen((_) => _reload());
-    _updateSub = widget.updateChecker?.onUpdateAvailable.listen((info) {
-      if (mounted && info.version != widget.dismissedUpdateVersion) {
-        setState(() => _updateInfo = info);
-      }
-    });
 _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     _scrollController.addListener(_onScroll);
     _loadItems();
@@ -107,7 +94,6 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
   void dispose() {
     _addedSub?.cancel();
     _reactivatedSub?.cancel();
-    _updateSub?.cancel();
     _reloadDebounce?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
@@ -439,7 +425,6 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
                 ? const EmptyState()
                 : _buildRealList(theme, _items),
           ),
-          if (_updateInfo != null) _buildUpdateBanner(colors),
           Divider(height: 1, thickness: 0.5, color: colors.divider),
           _buildBottomBar(theme, colors),
         ],
@@ -595,50 +580,6 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     );
   }
 
-  Widget _buildUpdateBanner(AppThemeColorScheme colors) {
-    return GestureDetector(
-      onTap: () async {
-        final url = _updateInfo!.downloadUrl;
-        await UrlHelper.open(url);
-      },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          color: colors.primary.withValues(alpha: 0.08),
-          child: Row(
-            children: [
-              Icon(Icons.system_update_rounded,
-                  size: 14, color: colors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  AppLocalizations.of(context).updateBannerLabel(_updateInfo!.version),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: colors.primary,
-                    decoration: TextDecoration.underline,
-                    decorationColor: colors.primary.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  final version = _updateInfo?.version;
-                  if (mounted) setState(() => _updateInfo = null);
-                  if (version != null) {
-                    widget.onDismissUpdate?.call(version);
-                  }
-                },
-                child: Icon(Icons.close_rounded,
-                    size: 14, color: colors.onSurfaceMuted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _StaggeredFadeIn extends StatefulWidget {

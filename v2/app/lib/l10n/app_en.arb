@@ -10,14 +10,6 @@
   "emptyStateSubtitle": "Copy something to get started",
   "@emptyStateSubtitle": { "description": "Empty state subtitle" },
 
-  "updateBannerLabel": "v{version} available — click to download",
-  "@updateBannerLabel": {
-    "description": "Update available banner text",
-    "placeholders": {
-      "version": { "type": "String" }
-    }
-  },
-
   "hintBannerText": "Customize your experience in",
   "@hintBannerText": { "description": "First-run hint banner text" },
 
