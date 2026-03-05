@@ -9,10 +9,13 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get searchPlaceholder => 'Search...';
+  String get searchPlaceholder => 'Search clipboard…';
 
   @override
   String get emptyState => 'No items in this section';
+
+  @override
+  String get emptyStateSubtitle => 'Copy something to get started';
 
   @override
   String updateBannerLabel(String version) {
@@ -352,4 +355,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trayShowHide => 'Show/Hide';
+
+  @override
+  String get fileNotFound => 'Not found';
+
+  @override
+  String get audioFile => 'Audio file';
+
+  @override
+  String get videoFile => 'Video file';
+
+  @override
+  String get timeNow => 'now';
+
+  @override
+  String get clearAllFilters => 'Clear all filters';
+
+  @override
+  String get colorSectionLabel => 'COLOR';
+
+  @override
+  String get colorNone => 'None';
+
+  @override
+  String get subtitlePastePreset =>
+      'Automatic paste speed. Normal/Safe recommended for most computers.';
+
+  @override
+  String get subtitleBackup =>
+      'Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.';
+
+  @override
+  String get aboutDescription =>
+      'A lightweight, fast, and open-source clipboard manager for Windows.\nCopy once, paste anywhere — your clipboard history, always at hand.';
+
+  @override
+  String get aboutLicense => 'GPL v3 License — Free and open source.';
 }

@@ -6,6 +6,7 @@ import 'card_color.dart';
 import 'clipboard_content_type.dart';
 
 const _uuid = Uuid();
+const _sentinel = Object();
 
 class ClipboardItem {
   ClipboardItem({
@@ -51,13 +52,13 @@ class ClipboardItem {
     ClipboardContentType? type,
     DateTime? createdAt,
     DateTime? modifiedAt,
-    String? appSource,
+    Object? appSource = _sentinel,
     bool? isPinned,
-    String? label,
+    Object? label = _sentinel,
     CardColor? cardColor,
-    String? metadata,
+    Object? metadata = _sentinel,
     int? pasteCount,
-    String? contentHash,
+    Object? contentHash = _sentinel,
   }) =>
       ClipboardItem(
         id: id,
@@ -65,13 +66,16 @@ class ClipboardItem {
         type: type ?? this.type,
         createdAt: createdAt ?? this.createdAt,
         modifiedAt: modifiedAt ?? this.modifiedAt,
-        appSource: appSource ?? this.appSource,
+        appSource:
+            appSource == _sentinel ? this.appSource : appSource as String?,
         isPinned: isPinned ?? this.isPinned,
-        label: label ?? this.label,
+        label: label == _sentinel ? this.label : label as String?,
         cardColor: cardColor ?? this.cardColor,
-        metadata: metadata ?? this.metadata,
+        metadata:
+            metadata == _sentinel ? this.metadata : metadata as String?,
         pasteCount: pasteCount ?? this.pasteCount,
-        contentHash: contentHash ?? this.contentHash,
+        contentHash:
+            contentHash == _sentinel ? this.contentHash : contentHash as String?,
       );
 
   bool isFileAvailable() {
@@ -80,8 +84,8 @@ class ClipboardItem {
     final paths =
         content.split('\n').where((s) => s.isNotEmpty).toList();
     if (paths.isEmpty) return false;
-    return File(paths.first).existsSync() ||
-        Directory(paths.first).existsSync();
+    return paths
+        .every((p) => File(p).existsSync() || Directory(p).existsSync());
   }
 
   @override

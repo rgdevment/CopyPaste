@@ -44,7 +44,7 @@ class ClipboardService {
     }
     if (content != null &&
         content == _lastPastedContent &&
-        elapsed.inSeconds < 2) {
+        elapsed.inMilliseconds < pasteIgnoreWindowMs * 2) {
       return true;
     }
     return false;

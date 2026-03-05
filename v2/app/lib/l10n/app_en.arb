@@ -1,11 +1,14 @@
 {
   "@@locale": "en",
 
-  "searchPlaceholder": "Search...",
+  "searchPlaceholder": "Search clipboard\u2026",
   "@searchPlaceholder": { "description": "Search box placeholder" },
 
   "emptyState": "No items in this section",
   "@emptyState": { "description": "Empty list message" },
+
+  "emptyStateSubtitle": "Copy something to get started",
+  "@emptyStateSubtitle": { "description": "Empty state subtitle" },
 
   "updateBannerLabel": "v{version} available — click to download",
   "@updateBannerLabel": {
@@ -269,5 +272,38 @@
   "@shortcutFocusSearch": { "description": "Focus search shortcut" },
 
   "trayShowHide": "Show/Hide",
-  "@trayShowHide": { "description": "Tray menu show/hide item" }
+  "@trayShowHide": { "description": "Tray menu show/hide item" },
+
+  "fileNotFound": "Not found",
+  "@fileNotFound": { "description": "Badge when file is missing" },
+
+  "audioFile": "Audio file",
+  "@audioFile": { "description": "Fallback name for audio items" },
+
+  "videoFile": "Video file",
+  "@videoFile": { "description": "Fallback name for video items" },
+
+  "timeNow": "now",
+  "@timeNow": { "description": "Timestamp for less than 1 minute ago" },
+
+  "clearAllFilters": "Clear all filters",
+  "@clearAllFilters": { "description": "Filter menu clear action" },
+
+  "colorSectionLabel": "COLOR",
+  "@colorSectionLabel": { "description": "Filter menu color section header" },
+
+  "colorNone": "None",
+  "@colorNone": { "description": "No color option" },
+
+  "subtitlePastePreset": "Automatic paste speed. Normal/Safe recommended for most computers.",
+  "@subtitlePastePreset": { "description": "Paste preset subtitle" },
+
+  "subtitleBackup": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
+  "@subtitleBackup": { "description": "Backup section subtitle" },
+
+  "aboutDescription": "A lightweight, fast, and open-source clipboard manager for Windows.\nCopy once, paste anywhere \u2014 your clipboard history, always at hand.",
+  "@aboutDescription": { "description": "About section description" },
+
+  "aboutLicense": "GPL v3 License \u2014 Free and open source.",
+  "@aboutLicense": { "description": "License footer text" }
 }

@@ -183,14 +183,15 @@ class _LabelColorDialogState extends State<LabelColorDialog> {
   }
 
   Widget _buildColorGrid(AppThemeColorScheme colors, AppThemeData theme) {
-    const entries = [
-      (CardColor.none, 'None'),
-      (CardColor.red, 'Red'),
-      (CardColor.green, 'Green'),
-      (CardColor.purple, 'Purple'),
-      (CardColor.yellow, 'Yellow'),
-      (CardColor.blue, 'Blue'),
-      (CardColor.orange, 'Orange'),
+    final l = AppLocalizations.of(context);
+    final entries = [
+      (CardColor.none, l.colorNone),
+      (CardColor.red, l.colorRed),
+      (CardColor.green, l.colorGreen),
+      (CardColor.purple, l.colorPurple),
+      (CardColor.yellow, l.colorYellow),
+      (CardColor.blue, l.colorBlue),
+      (CardColor.orange, l.colorOrange),
     ];
 
     return Wrap(

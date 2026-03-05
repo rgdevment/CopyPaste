@@ -20,7 +20,8 @@ class HotkeyHandler {
       );
       _hotkey = hotkey;
       return true;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('Hotkey registration failed: $e');
       return false;
     }
   }

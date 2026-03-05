@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
+import 'app_logger.dart';
 
 class BackupManifest {
   const BackupManifest({
@@ -166,7 +167,8 @@ class BackupService {
 
       _cleanupSnapshot(snapshotDir);
       return manifest;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('restoreBackup failed: $e');
       if (snapshotDir != null) {
         await _rollbackFromSnapshot(snapshotDir, storage);
       }
@@ -193,7 +195,8 @@ class BackupService {
       if (manifest.version > BackupManifest.currentVersion) return null;
 
       return manifest;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('validateBackup failed: $e');
       return null;
     }
   }
@@ -204,7 +207,9 @@ class BackupService {
       final shmFile = File('$dbPath-shm');
       if (walFile.existsSync()) walFile.deleteSync();
       if (shmFile.existsSync()) shmFile.deleteSync();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('deleteWalFiles failed: $e');
+    }
   }
 
   static Future<String> _createPreRestoreSnapshot(
@@ -277,19 +282,24 @@ class BackupService {
       }
 
       _cleanupSnapshot(snapshotDir);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('rollbackFromSnapshot failed: $e');
+    }
   }
 
   static void _cleanupSnapshot(String snapshotDir) {
     try {
       Directory(snapshotDir).deleteSync(recursive: true);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('cleanupSnapshot failed: $e');
+    }
   }
 
   static String _hostName() {
     try {
       return Platform.localHostname;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('hostName failed: $e');
       return 'unknown';
     }
   }

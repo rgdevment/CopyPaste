@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/theme_provider.dart';
 
 class TitleBar extends StatelessWidget {
@@ -138,7 +139,7 @@ class _SearchBarState extends State<_SearchBar> {
           cursorColor: colors.primary,
           cursorWidth: 1.2,
           decoration: InputDecoration(
-            hintText: 'Buscar en portapapeles…',
+            hintText: AppLocalizations.of(context).searchPlaceholder,
             hintStyle: theme.typography.searchInput.copyWith(
               color: colors.onSurface.withValues(alpha: 0.35),
             ),

@@ -191,14 +191,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  String get _hotkeyPreview {
+  String _hotkeyString([String separator = '+']) {
     final parts = <String>[];
     if (_hotkeyCtrl) parts.add('Ctrl');
     if (_hotkeyWin) parts.add('Win');
     if (_hotkeyAlt) parts.add('Alt');
     if (_hotkeyShift) parts.add('Shift');
     parts.add(_hotkeyKeyName);
-    return parts.join(' + ');
+    return parts.join(separator);
   }
 
   String? get _pastePresetName {
@@ -462,7 +462,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _SettingsRow(
               label: l.settingHotkeyShortcutLabel,
-              subtitle: 'Current: $_hotkeyPreview',
+              subtitle: 'Current: ${_hotkeyString(' + ')}',
               colors: colors,
             ),
             const SizedBox(height: 8),
@@ -636,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Icons.content_paste_go_rounded,
           title: l.sectionPaste,
           subtitle:
-              'Automatic paste speed. Normal/Safe recommended for most computers.',
+              l.subtitlePastePreset,
           children: [
             _SettingsRow(
               label: l.settingPasteSpeed,
@@ -687,8 +687,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Icons.archive_rounded,
           title: l.sectionBackupRestore,
           subtitle:
-              'Create a backup of your clipboard history, images, and settings. '
-              'Restore at any time on this or another device.',
+              l.subtitleBackup,
           children: [
             if (_lastBackupDateUtc != null)
               Padding(
@@ -749,7 +748,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Icons.keyboard_rounded,
           title: l.sectionShortcuts,
           children: [
-            _ShortcutRow(keys: _hotkeyLabel, description: l.shortcutOpenClose, colors: colors),
+            _ShortcutRow(keys: _hotkeyString(), description: l.shortcutOpenClose, colors: colors),
             _ShortcutRow(keys: '\u2191 / \u2193', description: l.shortcutArrows, colors: colors),
             _ShortcutRow(keys: 'Enter', description: l.shortcutEnter, colors: colors),
             _ShortcutRow(keys: 'Delete', description: l.shortcutDelete, colors: colors),
@@ -896,9 +895,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: l.sectionAbout,
           children: [
             Text(
-              'A lightweight, fast, and open-source clipboard manager '
-              'for Windows.\nCopy once, paste anywhere \u2014 your clipboard '
-              'history, always at hand.',
+              l.aboutDescription,
               style: TextStyle(
                 fontSize: 12,
                 color: colors.onSurfaceVariant,
@@ -938,7 +935,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Padding(
           padding: const EdgeInsets.only(top: 12, left: 4),
           child: Text(
-            'GPL v3 License \u2014 Free and open source.',
+            l.aboutLicense,
             style: TextStyle(fontSize: 10.5, color: colors.onSurfaceMuted),
           ),
         ),
@@ -1208,15 +1205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     (key: 'Orange', defaultName: 'Orange', color: Color(0xFFFB8C00)),
   ];
 
-  String get _hotkeyLabel {
-    final parts = <String>[];
-    if (_hotkeyCtrl) parts.add('Ctrl');
-    if (_hotkeyWin) parts.add('Win');
-    if (_hotkeyAlt) parts.add('Alt');
-    if (_hotkeyShift) parts.add('Shift');
-    parts.add(_hotkeyKeyName);
-    return parts.join('+');
-  }
+
 
 }
 

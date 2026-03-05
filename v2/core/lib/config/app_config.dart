@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../services/app_logger.dart';
+
+const _sentinel = Object();
+
 class AppConfig {
   const AppConfig({
     this.preferredLanguage = 'auto',
@@ -140,7 +144,7 @@ class AppConfig {
     int? delayBeforeFocusMs,
     int? delayBeforePasteMs,
     int? maxFocusVerifyAttempts,
-    DateTime? lastBackupDateUtc,
+    Object? lastBackupDateUtc = _sentinel,
     int? popupWidth,
     int? popupHeight,
     int? cardMinLines,
@@ -149,7 +153,7 @@ class AppConfig {
     bool? resetScrollOnShow,
     bool? resetSearchOnShow,
     bool? hasSeenHint,
-    String? dismissedUpdateVersion,
+    Object? dismissedUpdateVersion = _sentinel,
     String? themeMode,
   }) =>
       AppConfig(
@@ -174,7 +178,9 @@ class AppConfig {
         delayBeforePasteMs: delayBeforePasteMs ?? this.delayBeforePasteMs,
         maxFocusVerifyAttempts:
             maxFocusVerifyAttempts ?? this.maxFocusVerifyAttempts,
-        lastBackupDateUtc: lastBackupDateUtc ?? this.lastBackupDateUtc,
+        lastBackupDateUtc: lastBackupDateUtc == _sentinel
+            ? this.lastBackupDateUtc
+            : lastBackupDateUtc as DateTime?,
         popupWidth: popupWidth ?? this.popupWidth,
         popupHeight: popupHeight ?? this.popupHeight,
         cardMinLines: cardMinLines ?? this.cardMinLines,
@@ -183,8 +189,9 @@ class AppConfig {
         resetScrollOnShow: resetScrollOnShow ?? this.resetScrollOnShow,
         resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
         hasSeenHint: hasSeenHint ?? this.hasSeenHint,
-        dismissedUpdateVersion:
-            dismissedUpdateVersion ?? this.dismissedUpdateVersion,
+        dismissedUpdateVersion: dismissedUpdateVersion == _sentinel
+            ? this.dismissedUpdateVersion
+            : dismissedUpdateVersion as String?,
         themeMode: themeMode ?? this.themeMode,
       );
 
@@ -228,7 +235,8 @@ class AppConfig {
       final json =
           jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       return AppConfig.fromJson(json);
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('Failed to load config: $e');
       return const AppConfig();
     }
   }
