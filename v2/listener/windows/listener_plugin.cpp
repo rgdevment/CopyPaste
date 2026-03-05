@@ -13,7 +13,6 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
-#include <shobjidl.h>
 #include <propsys.h>
 #include <propkey.h>
 #include <propvarutil.h>
@@ -21,8 +20,6 @@
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
-#include <functional>
-#include <iostream>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -59,94 +56,6 @@ std::vector<uint8_t> ConvertDibToBmp(const std::vector<uint8_t>& dib) {
   std::memcpy(bmp.data(), &bfh, sizeof(BITMAPFILEHEADER));
   std::memcpy(bmp.data() + sizeof(BITMAPFILEHEADER), dib.data(), dib.size());
   return bmp;
-}
-
-std::vector<uint8_t> HBitmapToBmpBytes(HBITMAP hBitmap) {
-  BITMAP bmp = {};
-  if (GetObject(hBitmap, sizeof(BITMAP), &bmp) == 0) return {};
-  if (bmp.bmWidth <= 0 || bmp.bmHeight <= 0) return {};
-
-  BITMAPINFOHEADER bi = {};
-  bi.biSize = sizeof(BITMAPINFOHEADER);
-  bi.biWidth = bmp.bmWidth;
-  bi.biHeight = -bmp.bmHeight;
-  bi.biPlanes = 1;
-  bi.biBitCount = 32;
-  bi.biCompression = BI_RGB;
-
-  int stride = bmp.bmWidth * 4;
-  int dataSize = stride * bmp.bmHeight;
-  std::vector<uint8_t> pixels(dataSize);
-
-  HDC hdc = CreateCompatibleDC(nullptr);
-  if (!hdc) return {};
-
-  BITMAPINFO bmi = {};
-  bmi.bmiHeader = bi;
-  int scanLines = GetDIBits(hdc, hBitmap, 0, bmp.bmHeight,
-                            pixels.data(), &bmi, DIB_RGB_COLORS);
-  DeleteDC(hdc);
-  if (scanLines == 0) return {};
-
-  BITMAPFILEHEADER bfh = {};
-  bfh.bfType = 0x4D42;
-  int headerSize =
-      static_cast<int>(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER));
-  bfh.bfSize = headerSize + dataSize;
-  bfh.bfOffBits = headerSize;
-
-  std::vector<uint8_t> result(bfh.bfSize);
-  std::memcpy(result.data(), &bfh, sizeof(BITMAPFILEHEADER));
-  std::memcpy(result.data() + sizeof(BITMAPFILEHEADER), &bi,
-              sizeof(BITMAPINFOHEADER));
-  std::memcpy(result.data() + headerSize, pixels.data(), dataSize);
-  return result;
-}
-
-std::vector<uint8_t> GetShellThumbnail(const std::wstring& filePath,
-                                       int width) {
-  IShellItemImageFactory* pFactory = nullptr;
-  HRESULT hr = SHCreateItemFromParsingName(
-      filePath.c_str(), nullptr, IID_PPV_ARGS(&pFactory));
-  if (FAILED(hr) || !pFactory) return {};
-
-  SIZE size = {width, width};
-  HBITMAP hBitmap = nullptr;
-
-  // Try ThumbnailOnly first (strict — real preview frames)
-  hr = pFactory->GetImage(size, SIIGBF_THUMBNAILONLY | SIIGBF_BIGGERSIZEOK,
-                          &hBitmap);
-  if (FAILED(hr) || !hBitmap) {
-    hBitmap = nullptr;
-    hr = pFactory->GetImage(size, SIIGBF_BIGGERSIZEOK | SIIGBF_MEMORYONLY,
-                            &hBitmap);
-  }
-  if (FAILED(hr) || !hBitmap) {
-    hBitmap = nullptr;
-    hr = pFactory->GetImage(size, SIIGBF_RESIZETOFIT, &hBitmap);
-  }
-
-  std::vector<uint8_t> result;
-  if (SUCCEEDED(hr) && hBitmap) {
-    result = HBitmapToBmpBytes(hBitmap);
-    DeleteObject(hBitmap);
-  }
-
-  pFactory->Release();
-  return result;
-}
-
-std::string WideToUtf8Helper(const std::wstring& wide) {
-  if (wide.empty()) return {};
-  int sz = WideCharToMultiByte(CP_UTF8, 0, wide.data(),
-                                static_cast<int>(wide.size()), nullptr, 0,
-                                nullptr, nullptr);
-  if (sz <= 0) return {};
-  std::string result(sz, '\0');
-  WideCharToMultiByte(CP_UTF8, 0, wide.data(),
-                      static_cast<int>(wide.size()), result.data(), sz,
-                      nullptr, nullptr);
-  return result;
 }
 
 flutter::EncodableMap GetMediaInfo(const std::wstring& filePath) {
@@ -190,10 +99,11 @@ flutter::EncodableMap GetMediaInfo(const std::wstring& filePath) {
   PropVariantInit(&pv);
   if (SUCCEEDED(pStore->GetValue(PKEY_Music_AlbumArtist, &pv))) {
     PWSTR str = nullptr;
-    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str &&
-        wcslen(str) > 0) {
-      info[flutter::EncodableValue("artist")] =
-          flutter::EncodableValue(WideToUtf8Helper(str));
+    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str) {
+      if (wcslen(str) > 0) {
+        info[flutter::EncodableValue("artist")] =
+            flutter::EncodableValue(ListenerPlugin::WideToUtf8(std::wstring(str)));
+      }
       CoTaskMemFree(str);
     }
   }
@@ -203,10 +113,11 @@ flutter::EncodableMap GetMediaInfo(const std::wstring& filePath) {
   PropVariantInit(&pv);
   if (SUCCEEDED(pStore->GetValue(PKEY_Title, &pv))) {
     PWSTR str = nullptr;
-    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str &&
-        wcslen(str) > 0) {
-      info[flutter::EncodableValue("title")] =
-          flutter::EncodableValue(WideToUtf8Helper(str));
+    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str) {
+      if (wcslen(str) > 0) {
+        info[flutter::EncodableValue("title")] =
+            flutter::EncodableValue(ListenerPlugin::WideToUtf8(std::wstring(str)));
+      }
       CoTaskMemFree(str);
     }
   }
@@ -216,10 +127,11 @@ flutter::EncodableMap GetMediaInfo(const std::wstring& filePath) {
   PropVariantInit(&pv);
   if (SUCCEEDED(pStore->GetValue(PKEY_Music_AlbumTitle, &pv))) {
     PWSTR str = nullptr;
-    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str &&
-        wcslen(str) > 0) {
-      info[flutter::EncodableValue("album")] =
-          flutter::EncodableValue(WideToUtf8Helper(str));
+    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str) {
+      if (wcslen(str) > 0) {
+        info[flutter::EncodableValue("album")] =
+            flutter::EncodableValue(ListenerPlugin::WideToUtf8(std::wstring(str)));
+      }
       CoTaskMemFree(str);
     }
   }
@@ -613,7 +525,9 @@ bool ListenerPlugin::IsUrl(const std::wstring& text) {
 }
 
 int ListenerPlugin::DetectFileType(const std::wstring& path) {
-  if (GetFileAttributesW(path.c_str()) & FILE_ATTRIBUTE_DIRECTORY) {
+  DWORD attrs = GetFileAttributesW(path.c_str());
+  if (attrs != INVALID_FILE_ATTRIBUTES &&
+      (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
     return 3;  // folder
   }
 
@@ -675,33 +589,6 @@ std::wstring ListenerPlugin::Utf8ToWide(const std::string& utf8) {
 void ListenerPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue>& call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-  if (call.method_name() == "getThumbnail") {
-    const auto* args =
-        std::get_if<flutter::EncodableMap>(call.arguments());
-    if (!args) {
-      result->Success(flutter::EncodableValue());
-      return;
-    }
-    auto path_it = args->find(flutter::EncodableValue("path"));
-    auto width_it = args->find(flutter::EncodableValue("width"));
-    if (path_it == args->end()) {
-      result->Success(flutter::EncodableValue());
-      return;
-    }
-    std::string pathUtf8 = std::get<std::string>(path_it->second);
-    int width = 300;
-    if (width_it != args->end()) {
-      width = std::get<int>(width_it->second);
-    }
-    auto bytes = GetShellThumbnail(Utf8ToWide(pathUtf8), width);
-    if (bytes.empty()) {
-      result->Success(flutter::EncodableValue());
-    } else {
-      result->Success(flutter::EncodableValue(bytes));
-    }
-    return;
-  }
-
   if (call.method_name() == "getMediaInfo") {
     const auto* args =
         std::get_if<flutter::EncodableMap>(call.arguments());

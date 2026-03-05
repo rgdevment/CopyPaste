@@ -1,9 +1,6 @@
 {
   "@@locale": "es",
 
-  "appTitle": "CopyPaste",
-  "tabRecent": "Recientes",
-  "tabPinned": "Anclados",
   "searchPlaceholder": "Buscar...",
   "emptyState": "No hay elementos en esta sección",
 
@@ -13,26 +10,13 @@
   "hintBannerAction": "Ajustes",
 
   "settingsTitle": "Configuración",
-  "sectionGeneral": "GENERAL",
-  "sectionHotkey": "ATAJO DE TECLADO",
-  "sectionStorage": "ALMACENAMIENTO",
-  "sectionBackup": "RESPALDO",
   "sectionShortcuts": "ATAJOS DE TECLADO",
+
+  "sectionStorage": "ALMACENAMIENTO",
 
   "settingRunOnStartup": "Iniciar con Windows",
   "settingLanguage": "Idioma de la interfaz",
-  "languageAuto": "Auto",
-  "languageEnglish": "English",
-  "languageSpanish": "Español",
-
-  "settingHotkeyLabel": "Atajo global para abrir CopyPaste",
   "hotkeyWillApply": "El atajo se aplicará de inmediato",
-
-  "settingRetentionDays": "Retención del historial",
-  "settingRetentionDaysDesc": "Días para mantener historial (0 = sin límite)",
-
-  "settingClearHistory": "Limpiar todo el historial",
-  "settingClearHistoryDesc": "Eliminar permanentemente todos los elementos",
 
   "clearHistoryConfirmTitle": "¿Limpiar historial?",
   "clearHistoryConfirmMessage": "Esto eliminará permanentemente todos los elementos no anclados. Esta acción no se puede deshacer.",
@@ -41,18 +25,12 @@
   "backupLastDate": "Último respaldo: {date}",
   "backupNone": "Aún no se ha creado un respaldo.",
   "backupCreateLabel": "Crear respaldo",
-  "backupCreateDesc": "Exportar todos los datos a un archivo ZIP",
   "backupRestoreLabel": "Restaurar respaldo",
-  "backupRestoreDesc": "Importar datos desde un archivo de respaldo",
-  "backupCreating": "Creando respaldo...",
-  "backupSuccess": "Respaldo creado: {count} elementos, {images} imágenes.",
   "backupError": "Error al crear el respaldo. Verifica los permisos.",
 
   "restoreDialogTitle": "Restaurar respaldo",
-  "restoreDialogHint": "Ruta al archivo .zip de respaldo",
   "restoreDialogWarning": "Esto reemplazará todos los datos actuales con el contenido del respaldo. ¿Continuar?",
   "restoreFileNotFound": "Archivo no encontrado.",
-  "restoreInvalidFile": "Archivo de respaldo inválido. Selecciona un respaldo CopyPaste válido (.zip).",
   "restoreSuccess": "Se restauraron {count} elementos.",
   "restoreError": "Error al restaurar. Tus datos anteriores se han preservado.",
 
@@ -67,12 +45,8 @@
   "menuEdit": "Editar tarjeta",
   "menuDelete": "Eliminar",
 
-  "editCardTitle": "Editar tarjeta",
-  "editLabelPlaceholder": "Etiqueta (opcional)",
-  "editLabelHint": "Máximo 40 caracteres",
   "editColorLabel": "Color",
 
-  "colorNone": "Sin color",
   "colorRed": "Rojo",
   "colorGreen": "Verde",
   "colorPurple": "Morado",
@@ -90,16 +64,8 @@
   "filterAll": "Todo",
   "filterPinned": "Anclados",
 
-  "fileNotAvailable": "Archivo no disponible",
-
   "trayTooltip": "CopyPaste",
   "trayExit": "Salir",
-
-  "shortcutsTitle": "Atajos de teclado",
-  "shortcutsSubtitle": "Potencia tu flujo de trabajo",
-  "shortcutsGroupGeneral": "GENERAL",
-  "shortcutsGroupNavigation": "NAVEGACIÓN",
-  "shortcutsGroupActions": "ACCIONES",
 
   "shortcutOpenClose": "Abrir / cerrar CopyPaste",
   "shortcutEscape": "Limpiar búsqueda o cerrar ventana",

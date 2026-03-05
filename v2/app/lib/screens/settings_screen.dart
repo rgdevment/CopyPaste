@@ -183,6 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _popupHeight = d.popupHeight;
       _cardMinLines = d.cardMinLines;
       _cardMaxLines = d.cardMaxLines;
+      _themeMode = d.themeMode;
       _hideOnDeactivate = d.hideOnDeactivate;
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;

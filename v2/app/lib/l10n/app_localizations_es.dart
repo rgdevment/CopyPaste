@@ -9,15 +9,6 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
-  String get appTitle => 'CopyPaste';
-
-  @override
-  String get tabRecent => 'Recientes';
-
-  @override
-  String get tabPinned => 'Anclados';
-
-  @override
   String get searchPlaceholder => 'Buscar...';
 
   @override
@@ -38,19 +29,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTitle => 'Configuración';
 
   @override
-  String get sectionGeneral => 'GENERAL';
-
-  @override
-  String get sectionHotkey => 'ATAJO DE TECLADO';
+  String get sectionShortcuts => 'ATAJOS DE TECLADO';
 
   @override
   String get sectionStorage => 'ALMACENAMIENTO';
-
-  @override
-  String get sectionBackup => 'RESPALDO';
-
-  @override
-  String get sectionShortcuts => 'ATAJOS DE TECLADO';
 
   @override
   String get settingRunOnStartup => 'Iniciar con Windows';
@@ -59,33 +41,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingLanguage => 'Idioma de la interfaz';
 
   @override
-  String get languageAuto => 'Auto';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get languageSpanish => 'Español';
-
-  @override
-  String get settingHotkeyLabel => 'Atajo global para abrir CopyPaste';
-
-  @override
   String get hotkeyWillApply => 'El atajo se aplicará de inmediato';
-
-  @override
-  String get settingRetentionDays => 'Retención del historial';
-
-  @override
-  String get settingRetentionDaysDesc =>
-      'Días para mantener historial (0 = sin límite)';
-
-  @override
-  String get settingClearHistory => 'Limpiar todo el historial';
-
-  @override
-  String get settingClearHistoryDesc =>
-      'Eliminar permanentemente todos los elementos';
 
   @override
   String get clearHistoryConfirmTitle => '¿Limpiar historial?';
@@ -109,21 +65,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get backupCreateLabel => 'Crear respaldo';
 
   @override
-  String get backupCreateDesc => 'Exportar todos los datos a un archivo ZIP';
-
-  @override
   String get backupRestoreLabel => 'Restaurar respaldo';
-
-  @override
-  String get backupRestoreDesc => 'Importar datos desde un archivo de respaldo';
-
-  @override
-  String get backupCreating => 'Creando respaldo...';
-
-  @override
-  String backupSuccess(int count, int images) {
-    return 'Respaldo creado: $count elementos, $images imágenes.';
-  }
 
   @override
   String get backupError =>
@@ -133,18 +75,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get restoreDialogTitle => 'Restaurar respaldo';
 
   @override
-  String get restoreDialogHint => 'Ruta al archivo .zip de respaldo';
-
-  @override
   String get restoreDialogWarning =>
       'Esto reemplazará todos los datos actuales con el contenido del respaldo. ¿Continuar?';
 
   @override
   String get restoreFileNotFound => 'Archivo no encontrado.';
-
-  @override
-  String get restoreInvalidFile =>
-      'Archivo de respaldo inválido. Selecciona un respaldo CopyPaste válido (.zip).';
 
   @override
   String restoreSuccess(int count) {
@@ -183,19 +118,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuDelete => 'Eliminar';
 
   @override
-  String get editCardTitle => 'Editar tarjeta';
-
-  @override
-  String get editLabelPlaceholder => 'Etiqueta (opcional)';
-
-  @override
-  String get editLabelHint => 'Máximo 40 caracteres';
-
-  @override
   String get editColorLabel => 'Color';
-
-  @override
-  String get colorNone => 'Sin color';
 
   @override
   String get colorRed => 'Rojo';
@@ -243,28 +166,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get filterPinned => 'Anclados';
 
   @override
-  String get fileNotAvailable => 'Archivo no disponible';
-
-  @override
   String get trayTooltip => 'CopyPaste';
 
   @override
   String get trayExit => 'Salir';
-
-  @override
-  String get shortcutsTitle => 'Atajos de teclado';
-
-  @override
-  String get shortcutsSubtitle => 'Potencia tu flujo de trabajo';
-
-  @override
-  String get shortcutsGroupGeneral => 'GENERAL';
-
-  @override
-  String get shortcutsGroupNavigation => 'NAVEGACIÓN';
-
-  @override
-  String get shortcutsGroupActions => 'ACCIONES';
 
   @override
   String get shortcutOpenClose => 'Abrir / cerrar CopyPaste';

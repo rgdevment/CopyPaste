@@ -9,15 +9,6 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'CopyPaste';
-
-  @override
-  String get tabRecent => 'Recent';
-
-  @override
-  String get tabPinned => 'Pinned';
-
-  @override
   String get searchPlaceholder => 'Search...';
 
   @override
@@ -38,19 +29,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
-  String get sectionGeneral => 'GENERAL';
-
-  @override
-  String get sectionHotkey => 'HOTKEY';
+  String get sectionShortcuts => 'KEYBOARD SHORTCUTS';
 
   @override
   String get sectionStorage => 'STORAGE';
-
-  @override
-  String get sectionBackup => 'BACKUP';
-
-  @override
-  String get sectionShortcuts => 'KEYBOARD SHORTCUTS';
 
   @override
   String get settingRunOnStartup => 'Run on startup';
@@ -59,32 +41,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingLanguage => 'Interface language';
 
   @override
-  String get languageAuto => 'Auto';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get languageSpanish => 'Español';
-
-  @override
-  String get settingHotkeyLabel => 'Global shortcut to open CopyPaste';
-
-  @override
   String get hotkeyWillApply => 'Hotkey will apply immediately';
-
-  @override
-  String get settingRetentionDays => 'History retention';
-
-  @override
-  String get settingRetentionDaysDesc => 'Days to keep history (0 = unlimited)';
-
-  @override
-  String get settingClearHistory => 'Clear all history';
-
-  @override
-  String get settingClearHistoryDesc =>
-      'Permanently delete all clipboard items';
 
   @override
   String get clearHistoryConfirmTitle => 'Clear history?';
@@ -108,21 +65,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupCreateLabel => 'Create backup';
 
   @override
-  String get backupCreateDesc => 'Export all data to a ZIP file';
-
-  @override
   String get backupRestoreLabel => 'Restore backup';
-
-  @override
-  String get backupRestoreDesc => 'Import data from a backup file';
-
-  @override
-  String get backupCreating => 'Creating backup...';
-
-  @override
-  String backupSuccess(int count, int images) {
-    return 'Backup created: $count items, $images images.';
-  }
 
   @override
   String get backupError => 'Failed to create backup. Check permissions.';
@@ -131,18 +74,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreDialogTitle => 'Restore backup';
 
   @override
-  String get restoreDialogHint => 'Path to .zip backup file';
-
-  @override
   String get restoreDialogWarning =>
       'This will replace all current data with the backup contents. Continue?';
 
   @override
   String get restoreFileNotFound => 'File not found.';
-
-  @override
-  String get restoreInvalidFile =>
-      'Invalid backup file. Select a valid CopyPaste backup (.zip).';
 
   @override
   String restoreSuccess(int count) {
@@ -181,19 +117,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuDelete => 'Delete';
 
   @override
-  String get editCardTitle => 'Edit card';
-
-  @override
-  String get editLabelPlaceholder => 'Label (optional)';
-
-  @override
-  String get editLabelHint => '40 characters max';
-
-  @override
   String get editColorLabel => 'Color';
-
-  @override
-  String get colorNone => 'None';
 
   @override
   String get colorRed => 'Red';
@@ -241,28 +165,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterPinned => 'Pinned';
 
   @override
-  String get fileNotAvailable => 'File not available';
-
-  @override
   String get trayTooltip => 'CopyPaste';
 
   @override
   String get trayExit => 'Exit';
-
-  @override
-  String get shortcutsTitle => 'Keyboard Shortcuts';
-
-  @override
-  String get shortcutsSubtitle => 'Power your workflow';
-
-  @override
-  String get shortcutsGroupGeneral => 'GENERAL';
-
-  @override
-  String get shortcutsGroupNavigation => 'NAVIGATION';
-
-  @override
-  String get shortcutsGroupActions => 'ACTIONS';
 
   @override
   String get shortcutOpenClose => 'Open / close CopyPaste';

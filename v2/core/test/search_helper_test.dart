@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:core/core.dart';
+import 'package:core/search/search_helper.dart';
 
 void main() {
   group('SearchHelper', () {
