@@ -63,6 +63,7 @@ class MainScreenState extends State<MainScreen> {
   final _focusNode = FocusNode();
   final _searchFocusNode = FocusNode();
   final _filterBarKey = GlobalKey<FilterBarState>();
+  final _cardKeys = <String, GlobalKey>{};
 
   ClipboardTab _currentTab = ClipboardTab.recent;
   List<ClipboardItem> _items = [];
@@ -155,6 +156,8 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
       setState(() {
         if (_currentPage == 0) {
           _items = items;
+          final activeIds = items.map((e) => e.id).toSet();
+          _cardKeys.removeWhere((id, _) => !activeIds.contains(id));
         } else {
           _items.addAll(items);
         }
@@ -252,6 +255,7 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
         _items.isNotEmpty) {
       setState(() => _selectedIndex = 0);
       _focusNode.requestFocus();
+      _ensureVisible(0);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -380,23 +384,17 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
   }
 
   void _ensureVisible(int index) {
-    final estimatedOffset = index * 70.0;
-    final viewportDimension = _scrollController.position.viewportDimension;
-    final currentOffset = _scrollController.offset;
-
-    if (estimatedOffset < currentOffset) {
-      _scrollController.animateTo(
-        estimatedOffset,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-      );
-    } else if (estimatedOffset + 70 > currentOffset + viewportDimension) {
-      _scrollController.animateTo(
-        estimatedOffset + 70 - viewportDimension,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-      );
-    }
+    if (index < 0 || index >= _items.length) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _cardKeys[_items[index].id]?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   bool get _isEmpty => _items.isEmpty && !_loading;
@@ -410,6 +408,7 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     return Focus(
       focusNode: _focusNode,
       onKeyEvent: _onKeyEvent,
+      descendantsAreTraversable: false,
       child: Column(
         children: [
           TitleBar(
@@ -514,8 +513,9 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
+        final cardKey = _cardKeys.putIfAbsent(item.id, GlobalKey.new);
         final card = Padding(
-          key: ValueKey(item.id),
+          key: cardKey,
           padding: EdgeInsets.only(bottom: theme.spacing.cardGap),
           child: ClipboardCard(
             item: item,
