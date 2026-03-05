@@ -45,17 +45,3 @@ jobs:
           files: v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
           flags: core,listener,app
           fail_ci_if_error: false
-
-  build-windows:
-    runs-on: windows-latest
-    needs: analyze
-    name: Build Windows x64
-    steps:
-        - uses: actions/checkout@v4
-        - uses: subosito/flutter-action@v2
-        with:
-            channel: stable
-        - name: Get dependencies
-        run: cd v2/app && flutter pub get
-        - name: Build
-        run: cd v2/app && flutter build windows --dart-define="STORE_BUILD=false" --dart-define="APP_VERSION=0.0.0-dev"
