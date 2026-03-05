@@ -27,9 +27,9 @@ class MainScreen extends StatefulWidget {
     this.updateChecker,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
-    this.scrollToTopOnPaste = true,
     this.cardMinLines = 2,
     this.cardMaxLines = 5,
+    this.colorLabels = const {},
     this.showHint = false,
     this.onDismissHint,
     this.dismissedUpdateVersion,
@@ -45,9 +45,9 @@ class MainScreen extends StatefulWidget {
   final UpdateChecker? updateChecker;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
-  final bool scrollToTopOnPaste;
   final int cardMinLines;
   final int cardMaxLines;
+  final Map<String, String> colorLabels;
   final bool showHint;
   final VoidCallback? onDismissHint;
   final String? dismissedUpdateVersion;
@@ -77,7 +77,6 @@ class MainScreenState extends State<MainScreen> {
 
   StreamSubscription<ClipboardItem>? _addedSub;
   StreamSubscription<ClipboardItem>? _reactivatedSub;
-  StreamSubscription<ClipboardItem>? _thumbnailSub;
   StreamSubscription<UpdateInfo>? _updateSub;
   UpdateInfo? _updateInfo;
 
@@ -93,8 +92,6 @@ class MainScreenState extends State<MainScreen> {
     _addedSub = widget.clipboardService.onItemAdded.listen((_) => _reload());
     _reactivatedSub =
         widget.clipboardService.onItemReactivated.listen((_) => _reload());
-    _thumbnailSub =
-        widget.clipboardService.onThumbnailReady.listen((_) => _reload());
     _updateSub = widget.updateChecker?.onUpdateAvailable.listen((info) {
       if (mounted && info.version != widget.dismissedUpdateVersion) {
         setState(() => _updateInfo = info);
@@ -108,7 +105,6 @@ class MainScreenState extends State<MainScreen> {
   void dispose() {
     _addedSub?.cancel();
     _reactivatedSub?.cancel();
-    _thumbnailSub?.cancel();
     _updateSub?.cancel();
     _reloadDebounce?.cancel();
     _scrollController.dispose();
@@ -150,9 +146,7 @@ class MainScreenState extends State<MainScreen> {
         query: _searchQuery.isEmpty ? null : _searchQuery,
         types: _typeFilters.isEmpty ? null : _typeFilters,
         colors: _colorFilters.isEmpty ? null : _colorFilters,
-        isPinned: _searchQuery.isNotEmpty
-            ? null
-            : (_currentTab == ClipboardTab.pinned ? true : false),
+        isPinned: _currentTab == ClipboardTab.pinned ? true : null,
         limit: _pageSize,
         skip: _currentPage * _pageSize,
       );
@@ -417,6 +411,7 @@ class MainScreenState extends State<MainScreen> {
               key: _filterBarKey,
               selectedTypes: _typeFilters,
               selectedColors: _colorFilters,
+              colorLabels: widget.colorLabels,
               onTypesChanged: _onTypeFilterChanged,
               onColorsChanged: _onColorFilterChanged,
               onClear: hasColorFilters ? _clearFilters : null,

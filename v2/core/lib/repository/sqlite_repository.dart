@@ -300,7 +300,6 @@ class SqliteRepository implements IClipboardRepository {
     if (normalized.isEmpty) {
       final rows = await (_db.select(_db.clipboardItems)
             ..orderBy([
-              (t) => OrderingTerm.desc(t.isPinned),
               (t) => OrderingTerm.desc(t.modifiedAt),
             ])
             ..limit(limit, offset: skip))
@@ -332,7 +331,7 @@ class SqliteRepository implements IClipboardRepository {
         UNION ALL
         SELECT * FROM like_results
       )
-      ORDER BY is_pinned DESC, source ASC, rank ASC, modified_at DESC
+      ORDER BY source ASC, rank ASC, modified_at DESC
       LIMIT ? OFFSET ?
       ''',
       variables: [
@@ -422,7 +421,7 @@ class SqliteRepository implements IClipboardRepository {
           UNION ALL
           SELECT * FROM like_results
         )
-        ORDER BY is_pinned DESC, source ASC, rank ASC, modified_at DESC
+        ORDER BY source ASC, rank ASC, modified_at DESC
         LIMIT ? OFFSET ?
         ''',
         variables: [
@@ -446,7 +445,7 @@ class SqliteRepository implements IClipboardRepository {
       '''
       SELECT c.* FROM clipboard_items c
       WHERE $filterClause
-      ORDER BY c.is_pinned DESC, c.modified_at DESC
+      ORDER BY c.modified_at DESC
       LIMIT ? OFFSET ?
       ''',
       variables: [

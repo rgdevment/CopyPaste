@@ -101,17 +101,6 @@ class BackupService {
       }
     }
 
-    final thumbsDir = Directory(storage.thumbnailsPath);
-    if (thumbsDir.existsSync()) {
-      for (final file in thumbsDir.listSync().whereType<File>()) {
-        archive.addFile(ArchiveFile(
-          'thumbs/${file.uri.pathSegments.last}',
-          file.lengthSync(),
-          file.readAsBytesSync(),
-        ));
-      }
-    }
-
     final manifest = BackupManifest(
       version: BackupManifest.currentVersion,
       appVersion: appVersion,
@@ -256,18 +245,6 @@ class BackupService {
       }
     }
 
-    final thumbsDir = Directory(storage.thumbnailsPath);
-    if (thumbsDir.existsSync()) {
-      final snapThumbsDir =
-          Directory(p.join(snapshotDir, 'thumbs'));
-      await snapThumbsDir.create();
-      for (final file in thumbsDir.listSync().whereType<File>()) {
-        await file.copy(
-          p.join(snapThumbsDir.path, p.basename(file.path)),
-        );
-      }
-    }
-
     return snapshotDir;
   }
 
@@ -295,15 +272,6 @@ class BackupService {
         for (final file in snapConfig.listSync().whereType<File>()) {
           await file.copy(
             p.join(storage.configPath, p.basename(file.path)),
-          );
-        }
-      }
-
-      final snapThumbs = Directory(p.join(snapshotDir, 'thumbs'));
-      if (snapThumbs.existsSync()) {
-        for (final file in snapThumbs.listSync().whereType<File>()) {
-          await file.copy(
-            p.join(storage.thumbnailsPath, p.basename(file.path)),
           );
         }
       }

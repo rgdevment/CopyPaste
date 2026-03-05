@@ -11,6 +11,7 @@ class FilterBar extends StatefulWidget {
     required this.selectedColors,
     required this.onTypesChanged,
     required this.onColorsChanged,
+    this.colorLabels = const {},
     this.onClear,
     super.key,
   });
@@ -19,6 +20,7 @@ class FilterBar extends StatefulWidget {
   final List<CardColor> selectedColors;
   final void Function(List<ClipboardContentType>) onTypesChanged;
   final void Function(List<CardColor>) onColorsChanged;
+  final Map<String, String> colorLabels;
   final VoidCallback? onClear;
 
   @override
@@ -105,13 +107,14 @@ class FilterBarState extends State<FilterBar> {
 
   List<(CardColor, String)> _getColorEntries(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final cl = widget.colorLabels;
     return [
-      (CardColor.red, l.colorRed),
-      (CardColor.green, l.colorGreen),
-      (CardColor.purple, l.colorPurple),
-      (CardColor.yellow, l.colorYellow),
-      (CardColor.blue, l.colorBlue),
-      (CardColor.orange, l.colorOrange),
+      (CardColor.red, cl['Red'] ?? l.colorRed),
+      (CardColor.green, cl['Green'] ?? l.colorGreen),
+      (CardColor.purple, cl['Purple'] ?? l.colorPurple),
+      (CardColor.yellow, cl['Yellow'] ?? l.colorYellow),
+      (CardColor.blue, cl['Blue'] ?? l.colorBlue),
+      (CardColor.orange, cl['Orange'] ?? l.colorOrange),
     ];
   }
 

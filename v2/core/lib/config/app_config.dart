@@ -20,15 +20,11 @@ class AppConfig {
     this.delayBeforeFocusMs = 100,
     this.delayBeforePasteMs = 180,
     this.maxFocusVerifyAttempts = 15,
-    this.thumbnailWidth = 200,
-    this.thumbnailQuality = 90,
     this.lastBackupDateUtc,
     this.popupWidth = 368,
     this.popupHeight = 480,
     this.cardMinLines = 2,
     this.cardMaxLines = 5,
-    this.pinWindow = false,
-    this.scrollToTopOnPaste = true,
     this.hideOnDeactivate = true,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
@@ -62,8 +58,6 @@ class AppConfig {
         delayBeforePasteMs: json['delayBeforePasteMs'] as int? ?? 180,
         maxFocusVerifyAttempts:
             json['maxFocusVerifyAttempts'] as int? ?? 15,
-        thumbnailWidth: json['thumbnailWidth'] as int? ?? 200,
-        thumbnailQuality: json['thumbnailQuality'] as int? ?? 90,
         lastBackupDateUtc: json['lastBackupDateUtc'] != null
             ? DateTime.tryParse(json['lastBackupDateUtc'] as String)
             : null,
@@ -71,8 +65,6 @@ class AppConfig {
         popupHeight: json['popupHeight'] as int? ?? 480,
         cardMinLines: json['cardMinLines'] as int? ?? 2,
         cardMaxLines: json['cardMaxLines'] as int? ?? 5,
-        pinWindow: json['pinWindow'] as bool? ?? false,
-        scrollToTopOnPaste: json['scrollToTopOnPaste'] as bool? ?? true,
         hideOnDeactivate: json['hideOnDeactivate'] as bool? ?? true,
         resetScrollOnShow: json['resetScrollOnShow'] as bool? ?? true,
         resetSearchOnShow: json['resetSearchOnShow'] as bool? ?? true,
@@ -83,7 +75,10 @@ class AppConfig {
       );
 
   static const String fileName = 'config.json';
-  static const String appVersion = '2.0.0';
+  static const String appVersion = String.fromEnvironment(
+    'APP_VERSION',
+    defaultValue: '2.0.0',
+  );
 
   // Language & Startup
   final String preferredLanguage;
@@ -112,10 +107,6 @@ class AppConfig {
   final int delayBeforePasteMs;
   final int maxFocusVerifyAttempts;
 
-  // Thumbnails
-  final int thumbnailWidth;
-  final int thumbnailQuality;
-
   // Backup
   final DateTime? lastBackupDateUtc;
 
@@ -124,10 +115,6 @@ class AppConfig {
   final int popupHeight;
   final int cardMinLines;
   final int cardMaxLines;
-
-  // Behavior
-  final bool pinWindow;
-  final bool scrollToTopOnPaste;
   final bool hideOnDeactivate;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
@@ -153,15 +140,11 @@ class AppConfig {
     int? delayBeforeFocusMs,
     int? delayBeforePasteMs,
     int? maxFocusVerifyAttempts,
-    int? thumbnailWidth,
-    int? thumbnailQuality,
     DateTime? lastBackupDateUtc,
     int? popupWidth,
     int? popupHeight,
     int? cardMinLines,
     int? cardMaxLines,
-    bool? pinWindow,
-    bool? scrollToTopOnPaste,
     bool? hideOnDeactivate,
     bool? resetScrollOnShow,
     bool? resetSearchOnShow,
@@ -191,15 +174,11 @@ class AppConfig {
         delayBeforePasteMs: delayBeforePasteMs ?? this.delayBeforePasteMs,
         maxFocusVerifyAttempts:
             maxFocusVerifyAttempts ?? this.maxFocusVerifyAttempts,
-        thumbnailWidth: thumbnailWidth ?? this.thumbnailWidth,
-        thumbnailQuality: thumbnailQuality ?? this.thumbnailQuality,
         lastBackupDateUtc: lastBackupDateUtc ?? this.lastBackupDateUtc,
         popupWidth: popupWidth ?? this.popupWidth,
         popupHeight: popupHeight ?? this.popupHeight,
         cardMinLines: cardMinLines ?? this.cardMinLines,
         cardMaxLines: cardMaxLines ?? this.cardMaxLines,
-        pinWindow: pinWindow ?? this.pinWindow,
-        scrollToTopOnPaste: scrollToTopOnPaste ?? this.scrollToTopOnPaste,
         hideOnDeactivate: hideOnDeactivate ?? this.hideOnDeactivate,
         resetScrollOnShow: resetScrollOnShow ?? this.resetScrollOnShow,
         resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
@@ -227,16 +206,12 @@ class AppConfig {
         'delayBeforeFocusMs': delayBeforeFocusMs,
         'delayBeforePasteMs': delayBeforePasteMs,
         'maxFocusVerifyAttempts': maxFocusVerifyAttempts,
-        'thumbnailWidth': thumbnailWidth,
-        'thumbnailQuality': thumbnailQuality,
         if (lastBackupDateUtc != null)
           'lastBackupDateUtc': lastBackupDateUtc!.toIso8601String(),
         'popupWidth': popupWidth,
         'popupHeight': popupHeight,
         'cardMinLines': cardMinLines,
         'cardMaxLines': cardMaxLines,
-        'pinWindow': pinWindow,
-        'scrollToTopOnPaste': scrollToTopOnPaste,
         'hideOnDeactivate': hideOnDeactivate,
         'resetScrollOnShow': resetScrollOnShow,
         'resetSearchOnShow': resetSearchOnShow,

@@ -7,13 +7,11 @@ class StorageConfig {
   StorageConfig._({required this.baseDir})
       : databasePath = p.join(baseDir, 'clipboard.db'),
         imagesPath = p.join(baseDir, 'images'),
-        thumbnailsPath = p.join(baseDir, 'thumbs'),
         configPath = p.join(baseDir, 'config');
 
   final String baseDir;
   final String databasePath;
   final String imagesPath;
-  final String thumbnailsPath;
   final String configPath;
 
   String get _initFlagPath => p.join(baseDir, '.initialized');
@@ -36,7 +34,7 @@ class StorageConfig {
   }
 
   Future<void> ensureDirectories() async {
-    for (final dir in [baseDir, imagesPath, thumbnailsPath, configPath]) {
+    for (final dir in [baseDir, imagesPath, configPath]) {
       await Directory(dir).create(recursive: true);
     }
   }
@@ -52,13 +50,7 @@ class StorageConfig {
   }
 
   void cleanOrphanImages(List<String> validImagePaths) {
-    final validSet = validImagePaths.toSet();
-    _cleanDirectory(imagesPath, validSet);
-    final validThumbs = validImagePaths.map((path) {
-      final name = p.basenameWithoutExtension(path);
-      return p.join(thumbnailsPath, '${name}_t.png');
-    }).toSet();
-    _cleanDirectory(thumbnailsPath, validThumbs);
+    _cleanDirectory(imagesPath, validImagePaths.toSet());
   }
 
   void _cleanDirectory(String dirPath, Set<String> validFiles) {

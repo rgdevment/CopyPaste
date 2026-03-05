@@ -704,12 +704,6 @@ abstract class AppLocalizations {
   /// **'PASTE'**
   String get sectionPaste;
 
-  /// Thumbnails section title
-  ///
-  /// In en, this message translates to:
-  /// **'THUMBNAILS (ADVANCED)'**
-  String get sectionThumbnails;
-
   /// Backup and restore section title
   ///
   /// In en, this message translates to:
@@ -812,18 +806,6 @@ abstract class AppLocalizations {
   /// **'Lines expanded'**
   String get settingLinesExpanded;
 
-  /// Keep window visible label
-  ///
-  /// In en, this message translates to:
-  /// **'Keep window visible'**
-  String get settingKeepWindowVisible;
-
-  /// Scroll to top after paste label
-  ///
-  /// In en, this message translates to:
-  /// **'Scroll to top after paste'**
-  String get settingScrollToTopOnPaste;
-
   /// Hide on deactivate label
   ///
   /// In en, this message translates to:
@@ -841,12 +823,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear search on open'**
   String get settingClearSearchOnOpen;
-
-  /// Thumbnail quality label
-  ///
-  /// In en, this message translates to:
-  /// **'Thumbnail quality'**
-  String get settingThumbnailQuality;
 
   /// Retention days label
   ///
@@ -872,18 +848,6 @@ abstract class AppLocalizations {
   /// **'Launches in background when you sign in'**
   String get subtitleStartupDesc;
 
-  /// Keep window visible subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Window stays open when you click on other apps'**
-  String get subtitleKeepWindowVisible;
-
-  /// Scroll to top on paste subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Only when window is pinned'**
-  String get subtitleScrollToTopOnPaste;
-
   /// Hide on deactivate subtitle
   ///
   /// In en, this message translates to:
@@ -907,18 +871,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adjust restoration and paste timings'**
   String get subtitlePasteSpeed;
-
-  /// Thumbnails section subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Modifying can affect RAM usage and disk space.'**
-  String get subtitleThumbnails;
-
-  /// Thumbnail quality subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Only affects future thumbnails'**
-  String get subtitleThumbnailQuality;
 
   /// Categories subtitle
   ///
