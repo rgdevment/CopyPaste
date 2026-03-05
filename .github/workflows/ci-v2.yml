@@ -50,48 +50,12 @@ jobs:
     runs-on: windows-latest
     needs: analyze
     name: Build Windows x64
-
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
+        - uses: actions/checkout@v4
+        - uses: subosito/flutter-action@v2
         with:
-          channel: stable
-
-      - name: Get dependencies
+            channel: stable
+        - name: Get dependencies
         run: cd v2/app && flutter pub get
-
-      - name: Install Fastforge
-        run: dart pub global activate fastforge
-
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress
-
-      - name: Build standalone (exe installer)
-        shell: pwsh
-        run: |
-          Push-Location v2/app
-          fastforge package `
-            --platform windows `
-            --targets exe `
-            --build-dart-define "STORE_BUILD=false" `
-            --build-dart-define "APP_VERSION=0.0.0-dev"
-          Pop-Location
-
-      - name: Build store MSIX
-        shell: pwsh
-        run: |
-          Push-Location v2/app
-          fastforge package `
-            --platform windows `
-            --targets msix `
-            --build-dart-define "STORE_BUILD=true" `
-            --build-dart-define "APP_VERSION=0.0.0-dev"
-          Pop-Location
-
-      - name: Upload installers
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installers
-          path: v2/app/dist/
-          retention-days: 3
+        - name: Build
+        run: cd v2/app && flutter build windows --dart-define="STORE_BUILD=false" --dart-define="APP_VERSION=0.0.0-dev"
