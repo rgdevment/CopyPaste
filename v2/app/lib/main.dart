@@ -9,6 +9,8 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'services/auto_update_service.dart';
+
 import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
 import 'shell/hotkey_handler.dart';
@@ -70,8 +72,6 @@ void main() async {
   )..start(storage.baseDir);
 
   final listener = WindowsClipboardListener();
-  final updateChecker = UpdateChecker(configPath: storage.configPath)
-    ..start(AppConfig.appVersion);
 
   await StartupHelper.apply(config.runOnStartup);
 
@@ -91,7 +91,6 @@ void main() async {
       clipboardService: clipboardService,
       cleanupService: cleanupService,
       listener: listener,
-      updateChecker: updateChecker,
     ),
   );
 }
@@ -104,7 +103,6 @@ class CopyPasteApp extends StatefulWidget {
     required this.clipboardService,
     required this.cleanupService,
     required this.listener,
-    required this.updateChecker,
     super.key,
   });
 
@@ -114,7 +112,6 @@ class CopyPasteApp extends StatefulWidget {
   final ClipboardService clipboardService;
   final CleanupService cleanupService;
   final WindowsClipboardListener listener;
-  final UpdateChecker updateChecker;
 
   @override
   State<CopyPasteApp> createState() => _CopyPasteAppState();
@@ -173,6 +170,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
       await _appWindow.show();
     }
     _startListening();
+    unawaited(AutoUpdateService.initialize());
   }
 
   void _startListening() {
@@ -296,12 +294,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
     if (mounted) setState(() {});
   }
 
-  void _dismissUpdate(String version) {
-    _config = _config.copyWith(dismissedUpdateVersion: version);
-    _config
-        .save('${widget.storage.configPath}/${AppConfig.fileName}');
-  }
-
   Future<void> _toggleWindow() async {
     await _appWindow.toggle();
   }
@@ -339,7 +331,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
     try { await _trayIcon.dispose(); } catch (e) { AppLogger.error('cleanup tray: $e'); }
     try { widget.clipboardService.dispose(); } catch (e) { AppLogger.error('cleanup clipboard: $e'); }
     try { widget.cleanupService.dispose(); } catch (e) { AppLogger.error('cleanup cleanup: $e'); }
-    try { widget.updateChecker.dispose(); } catch (e) { AppLogger.error('cleanup update: $e'); }
     try { await widget.repo.close(); } catch (e) { AppLogger.error('cleanup repo: $e'); }
   }
 
@@ -460,7 +451,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
               body: MainScreen(
                 key: _mainScreenKey,
                 clipboardService: widget.clipboardService,
-                updateChecker: widget.updateChecker,
                 colorLabels: _config.colorLabels,
                 resetScrollOnShow: _config.resetScrollOnShow,
                 resetSearchOnShow: _config.resetSearchOnShow,
@@ -468,8 +458,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
                 cardMaxLines: _config.cardMaxLines,
                 showHint: !_config.hasSeenHint,
                 onDismissHint: _dismissHint,
-                dismissedUpdateVersion: _config.dismissedUpdateVersion,
-                onDismissUpdate: _dismissUpdate,
                 onPaste: _onPasteItem,
                 onPastePlain: (item) => _onPasteItem(item, plainText: true),
                 onExit: () => _appWindow.hide(),

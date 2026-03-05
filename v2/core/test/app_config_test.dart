@@ -93,19 +93,6 @@ void main() {
       final updated = config.copyWith(pageSize: 20);
       expect(updated.lastBackupDateUtc, equals(date));
     });
-
-    test('copyWith can clear dismissedUpdateVersion to null', () {
-      const config = AppConfig(dismissedUpdateVersion: '2.1.0');
-      final updated = config.copyWith(dismissedUpdateVersion: null);
-      expect(updated.dismissedUpdateVersion, isNull);
-    });
-
-    test('copyWith without dismissedUpdateVersion preserves existing value',
-        () {
-      const config = AppConfig(dismissedUpdateVersion: '2.0.1');
-      final updated = config.copyWith(retentionDays: 60);
-      expect(updated.dismissedUpdateVersion, equals('2.0.1'));
-    });
   });
 
   group('AppConfig hotkey fields', () {
@@ -201,12 +188,6 @@ void main() {
       expect(config.toJson().containsKey('lastBackupDateUtc'), isFalse);
     });
 
-    test('toJson omits dismissedUpdateVersion when null', () {
-      const config = AppConfig();
-      expect(
-          config.toJson().containsKey('dismissedUpdateVersion'), isFalse);
-    });
-
     test('toJson includes lastBackupDateUtc when set', () {
       final config = AppConfig(lastBackupDateUtc: DateTime.utc(2026, 3, 5));
       expect(config.toJson()['lastBackupDateUtc'], isA<String>());
@@ -232,7 +213,6 @@ void main() {
         resetScrollOnShow: false,
         resetSearchOnShow: false,
         hasSeenHint: true,
-        dismissedUpdateVersion: '2.0.0',
         themeMode: 'light',
       );
       final restored = AppConfig.fromJson(config.toJson());
@@ -247,7 +227,6 @@ void main() {
       expect(restored.cardMinLines, equals(3));
       expect(restored.hideOnDeactivate, isFalse);
       expect(restored.hasSeenHint, isTrue);
-      expect(restored.dismissedUpdateVersion, equals('2.0.0'));
       expect(restored.themeMode, equals('light'));
     });
   });

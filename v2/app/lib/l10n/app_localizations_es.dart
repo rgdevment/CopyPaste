@@ -18,11 +18,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get emptyStateSubtitle => 'Copia algo para comenzar';
 
   @override
-  String updateBannerLabel(String version) {
-    return 'v$version disponible — click para descargar';
-  }
-
-  @override
   String get hintBannerText => 'Personaliza tu experiencia en';
 
   @override
