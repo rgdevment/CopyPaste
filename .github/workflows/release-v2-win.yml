@@ -156,6 +156,18 @@ jobs:
     name: Create GitHub Release
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Extract tag message
+        id: tag_message
+        run: |
+          MSG=$(git tag -l --format='%(contents)' "${{ github.ref_name }}")
+          echo "TAG_BODY<<EOF" >> $GITHUB_OUTPUT
+          echo "$MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -165,6 +177,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body: ${{ steps.tag_message.outputs.TAG_BODY }}
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
