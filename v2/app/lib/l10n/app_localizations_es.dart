@@ -391,7 +391,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'Un gestor de portapapeles ligero, rápido y de código abierto para Windows.\nCopia una vez, pega en cualquier lugar — tu historial del portapapeles, siempre a mano.';
+      'Un gestor de portapapeles ligero, rápido y de código abierto para Windows, macOS y Linux.\nCopia una vez, pega en cualquier lugar — tu historial del portapapeles, siempre a mano.';
 
   @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';

@@ -827,7 +827,7 @@ abstract class AppLocalizations {
   /// About section description
   ///
   /// In en, this message translates to:
-  /// **'A lightweight, fast, and open-source clipboard manager for Windows.\nCopy once, paste anywhere — your clipboard history, always at hand.'**
+  /// **'A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere — your clipboard history, always at hand.'**
   String get aboutDescription;
 
   /// License footer text

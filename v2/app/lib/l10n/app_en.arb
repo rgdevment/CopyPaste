@@ -301,7 +301,7 @@
   "subtitleBackup": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
   "@subtitleBackup": { "description": "Backup section subtitle" },
 
-  "aboutDescription": "A lightweight, fast, and open-source clipboard manager for Windows.\nCopy once, paste anywhere \u2014 your clipboard history, always at hand.",
+  "aboutDescription": "A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere \u2014 your clipboard history, always at hand.",
   "@aboutDescription": { "description": "About section description" },
 
   "aboutLicense": "GPL v3 License \u2014 Free and open source.",

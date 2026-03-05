@@ -387,7 +387,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'A lightweight, fast, and open-source clipboard manager for Windows.\nCopy once, paste anywhere — your clipboard history, always at hand.';
+      'A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere — your clipboard history, always at hand.';
 
   @override
   String get aboutLicense => 'GPL v3 License — Free and open source.';
