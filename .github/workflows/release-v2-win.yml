@@ -164,7 +164,7 @@ jobs:
       - name: Extract tag message
         id: tag_message
         run: |
-          MSG=$(git tag -l --format='%(contents)' "${{ github.ref_name }}")
+          MSG=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | sed '/-----BEGIN SSH SIGNATURE-----/,$d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
           echo "TAG_BODY<<EOF" >> $GITHUB_OUTPUT
           echo "$MSG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -193,17 +193,11 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     timeout-minutes: 5
     name: Update Appcast
-    permissions:
-      contents: write
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Generate appcast.xml from GitHub Releases
+      - name: Generate and update appcast Gist
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: |
           RELEASE=$(gh api repos/${{ github.repository }}/releases \
             --jq '[.[] | select(.tag_name | startswith("v2.")) | select(.draft | not)] | sort_by(.published_at) | reverse | .[0]')
@@ -211,7 +205,6 @@ jobs:
           TAG=$(echo "$RELEASE" | jq -r '.tag_name')
           VERSION=${TAG#v}
           DATE=$(echo "$RELEASE" | jq -r '.published_at')
-          PRERELEASE=$(echo "$RELEASE" | jq -r '.prerelease')
           ASSET_URL=$(echo "$RELEASE" | jq -r '.assets[] | select(.name | endswith("_Setup.exe")) | .browser_download_url')
 
           if [ -z "$ASSET_URL" ]; then
@@ -222,37 +215,25 @@ jobs:
           ASSET_SIZE=$(echo "$RELEASE" | jq -r '.assets[] | select(.name | endswith("_Setup.exe")) | .size')
           PUB_DATE=$(date -d "$DATE" -R)
 
-          cat > appcast.xml << APPCAST_EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-            <channel>
-              <title>CopyPaste</title>
-              <description>CopyPaste update feed</description>
-              <language>en</language>
-              <item>
-                <title>CopyPaste ${VERSION}</title>
-                <pubDate>${PUB_DATE}</pubDate>
-                <enclosure
-                  url="${ASSET_URL}"
-                  sparkle:version="${VERSION}"
-                  sparkle:os="windows"
-                  type="application/octet-stream"
-                  length="${ASSET_SIZE}" />
-              </item>
-            </channel>
-          </rss>
-          APPCAST_EOF
+          cat > /tmp/appcast.xml << APPCAST_EOF
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>CopyPaste</title>
+    <description>CopyPaste update feed</description>
+    <language>en</language>
+    <item>
+      <title>CopyPaste ${VERSION}</title>
+      <pubDate>${PUB_DATE}</pubDate>
+      <enclosure
+        url="${ASSET_URL}"
+        sparkle:version="${VERSION}"
+        sparkle:os="windows"
+        type="application/octet-stream"
+        length="${ASSET_SIZE}" />
+    </item>
+  </channel>
+</rss>
+APPCAST_EOF
 
-          sed -i 's/^          //' appcast.xml
-
-      - name: Commit and push appcast.xml
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add appcast.xml
-          if git diff --cached --quiet; then
-            echo "No changes to appcast.xml"
-          else
-            git commit -m "chore: update appcast.xml for ${{ github.ref_name }}"
-            git push
-          fi
+          gh gist edit ${{ vars.APPCAST_GIST_ID }} -f appcast.xml /tmp/appcast.xml

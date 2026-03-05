@@ -210,7 +210,7 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
 * 📖 **Built-in Help:** Quick access to keyboard shortcuts reference window from the sidebar.
-* 🔄 **Automatic Updates:** The Microsoft Store version updates seamlessly via Windows. The standalone installer notifies you when a new version is available.
+* 🔄 **Automatic Updates:** The Microsoft Store version updates seamlessly via Windows. The standalone installer checks for updates via a lightweight feed (no user data sent) and notifies you when a new version is available.
 * 🔍 **Full-Text Search:** Instantly find any item with powerful FTS5 search across content and labels.
 * 🎛️ **Advanced Filters:** Three filter modes—Content (text search), Category (color selection), and Type (item type selection)—with intuitive dropdown multi-selection.
 * 🔄 **Smart Filter Behavior:** Filters only apply to their active mode—switching modes automatically uses the relevant filter without mixing criteria.
@@ -383,7 +383,7 @@ No. Everything stays on your PC.
 No. Passwords and clipboard content from password managers are ignored.
 
 **Do I need internet to use it?**
-No. It works fully offline.
+No. It works fully offline. The standalone version makes a single read-only request to check for updates (no user data is sent), but the app works perfectly without an internet connection. The Microsoft Store version makes no network requests at all.
 
 **Does it sync between devices?**
 No. There’s intentionally no cloud sync.
