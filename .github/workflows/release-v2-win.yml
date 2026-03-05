@@ -1,0 +1,167 @@
+name: Release v2 (Windows)
+
+on:
+  push:
+    tags:
+      - "v2.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to use (e.g. 2.1.0). Defaults to 2.0.0-dev"
+        required: false
+        default: "2.0.0-dev"
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    name: Build & Release Windows
+
+    env:
+      PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+      PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: get_version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $version = "${{ github.event.inputs.version }}"
+          } elseif ($env:GITHUB_REF -match 'refs/tags/v2\.(.+)') {
+            $version = "2.$($matches[1])"
+          } else {
+            $version = "2.0.0"
+          }
+          $parts = $version.Split('.')
+          $version4 = switch ($parts.Count) {
+            1 { "$version.0.0.0" }
+            2 { "$version.0.0" }
+            3 { "$version.0" }
+            default { $version }
+          }
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "VERSION4=$version4" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version  (MSIX: $version4)"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Fastforge
+        run: dart pub global activate fastforge
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
+      - name: Get dependencies
+        run: cd v2/app && flutter pub get
+
+      - name: Build standalone (exe installer)
+        shell: pwsh
+        run: |
+          Push-Location v2/app
+          fastforge package `
+            --platform windows `
+            --targets exe `
+            --build-dart-define "STORE_BUILD=false" `
+            --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
+          Pop-Location
+
+      - name: Decode signing certificate
+        if: env.PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
+          Set-Content -Path signingCert.pfx -Value $bytes -AsByteStream
+
+      - name: Sign standalone installer
+        if: env.PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $pfxPath = Join-Path $PWD 'signingCert.pfx'
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" `
+            -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -like "*x64*" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { Write-Error "Signtool not found"; exit 1 }
+
+          $distDir = "v2/app/dist"
+          Get-ChildItem -Path $distDir -Include *.exe -Recurse | ForEach-Object {
+            & $signtool.FullName sign /f $pfxPath /p $env:PFX_PASSWORD `
+              /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+          }
+
+      - name: Rename standalone installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          $distDir = "v2/app/dist"
+          $setup = Get-ChildItem -Path $distDir -Recurse -Filter "*-setup.exe" | Select-Object -First 1
+          if ($setup) {
+            $newName = "CopyPaste_${version}_x64_Setup.exe"
+            $newPath = Join-Path $setup.DirectoryName $newName
+            Move-Item -Path $setup.FullName -Destination $newPath
+            Write-Host "Renamed to: $newName"
+          }
+
+      - name: Build store MSIX
+        shell: pwsh
+        run: |
+          Push-Location v2/app
+          fastforge package `
+            --platform windows `
+            --targets msix `
+            --build-dart-define "STORE_BUILD=true" `
+            --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
+          Pop-Location
+
+      - name: Rename store MSIX
+        shell: pwsh
+        run: |
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          $distDir = "v2/app/dist"
+          $msix = Get-ChildItem -Path $distDir -Recurse -Filter "*.msix" | Select-Object -First 1
+          if ($msix) {
+            $newName = "CopyPaste_${version}_x64_store.msix"
+            $newPath = Join-Path $msix.DirectoryName $newName
+            Move-Item -Path $msix.FullName -Destination $newPath
+            Write-Host "Renamed to: $newName"
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: v2/app/dist/
+          retention-days: 5
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: release-windows
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 10
+    name: Create GitHub Release
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/**/*_Setup.exe
+            artifacts/**/*_store.msix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

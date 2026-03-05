@@ -1,0 +1,97 @@
+name: CI v2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    name: Analyze & Test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get dependencies
+        run: |
+          cd v2/core && flutter pub get
+          cd ../listener && flutter pub get
+          cd ../app && flutter pub get
+
+      - name: Analyze
+        run: |
+          cd v2/core && flutter analyze
+          cd ../app && flutter analyze
+
+      - name: Run tests
+        run: |
+          cd v2/core && flutter test --coverage
+          cd ../listener && flutter test --coverage
+          cd ../app && flutter test --coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
+          flags: core,listener,app
+          fail_ci_if_error: false
+
+  build-windows:
+    runs-on: windows-latest
+    needs: analyze
+    name: Build Windows x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get dependencies
+        run: cd v2/app && flutter pub get
+
+      - name: Install Fastforge
+        run: dart pub global activate fastforge
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
+      - name: Build standalone (exe installer)
+        shell: pwsh
+        run: |
+          Push-Location v2/app
+          fastforge package `
+            --platform windows `
+            --targets exe `
+            --build-dart-define "STORE_BUILD=false" `
+            --build-dart-define "APP_VERSION=0.0.0-dev"
+          Pop-Location
+
+      - name: Build store MSIX
+        shell: pwsh
+        run: |
+          Push-Location v2/app
+          fastforge package `
+            --platform windows `
+            --targets msix `
+            --build-dart-define "STORE_BUILD=true" `
+            --build-dart-define "APP_VERSION=0.0.0-dev"
+          Pop-Location
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: v2/app/dist/
+          retention-days: 3
