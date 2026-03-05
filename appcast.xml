@@ -5,11 +5,11 @@
     <description>CopyPaste update feed</description>
     <language>en</language>
     <item>
-      <title>CopyPaste 2.0.0</title>
-      <pubDate>Thu, 01 Jan 2025 00:00:00 +0000</pubDate>
+      <title>CopyPaste 2.0.0-beta.1</title>
+      <pubDate>Wed, 05 Mar 2026 00:00:00 +0000</pubDate>
       <enclosure
-        url="https://github.com/rgdevment/CopyPaste/releases/download/v2.0.0/CopyPaste_2.0.0_x64_Setup.exe"
-        sparkle:version="2.0.0"
+        url="https://github.com/rgdevment/CopyPaste/releases/download/v2.0.0-beta.1/CopyPaste_2.0.0-beta.1_x64_Setup.exe"
+        sparkle:version="2.0.0-beta.1"
         sparkle:os="windows"
         type="application/octet-stream"
         length="0" />
