@@ -5,7 +5,7 @@ publisher_name: RGDevment
 publisher_url: https://github.com/rgdevment/CopyPaste
 install_dir_name: "{localappdata}\\CopyPaste"
 privileges_required: lowest
-setup_icon_file: assets/icons/icon_app_256.png
+setup_icon_file: windows/runner/resources/app_icon.ico
 create_desktop_icon: true
 launch_at_startup: true
 locales:
