@@ -174,7 +174,7 @@ class FilterBarState extends State<FilterBar> {
   }
 }
 
-class _FilterButton extends StatefulWidget {
+class _FilterButton extends StatelessWidget {
   const _FilterButton({
     required this.icon,
     required this.isActive,
@@ -188,69 +188,60 @@ class _FilterButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_FilterButton> createState() => _FilterButtonState();
-}
-
-class _FilterButtonState extends State<_FilterButton> {
-  bool _hovering = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = CopyPasteTheme.of(context);
     final colors = CopyPasteTheme.colorsOf(context);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          width: 30,
-          height: 30,
-          margin: const EdgeInsets.only(right: 3),
-          decoration: BoxDecoration(
-            color: _hovering
-                ? colors.onSurface.withValues(alpha: 0.08)
-                : widget.isActive
-                    ? colors.primary.withValues(alpha: 0.1)
-                    : Colors.transparent,
+    return Padding(
+      padding: const EdgeInsets.only(right: 3),
+      child: SizedBox(
+        width: 30,
+        height: 30,
+        child: Material(
+          color: isActive
+              ? colors.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          child: InkWell(
+            onTap: onTap,
             borderRadius: BorderRadius.circular(6),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                widget.icon,
-                size: theme.sizing.iconSizeMd,
-                color: widget.isActive
-                    ? colors.primary
-                    : colors.onSurface.withValues(alpha: 0.5),
-              ),
-              if (widget.badge > 0)
-                Positioned(
-                  top: 2,
-                  right: 2,
-                  child: Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: colors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${widget.badge}',
-                        style: TextStyle(
-                          color: colors.onPrimary,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w600,
+            hoverColor: colors.onSurface.withValues(alpha: 0.08),
+            splashColor: colors.primary.withValues(alpha: 0.15),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: theme.sizing.iconSizeMd,
+                  color: isActive
+                      ? colors.primary
+                      : colors.onSurface.withValues(alpha: 0.5),
+                ),
+                if (badge > 0)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: colors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$badge',
+                          style: TextStyle(
+                            color: colors.onPrimary,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
