@@ -38,16 +38,20 @@ jobs:
           } else {
             $version = "2.0.0"
           }
-          $parts = $version.Split('.')
+
+          $isPrerelease = if ($version -match '-') { 'true' } else { 'false' }
+          $baseVersion = $version -replace '-.*', ''
+          $parts = $baseVersion.Split('.')
           $version4 = switch ($parts.Count) {
-            1 { "$version.0.0.0" }
-            2 { "$version.0.0" }
-            3 { "$version.0" }
-            default { $version }
+            1 { "$baseVersion.0.0.0" }
+            2 { "$baseVersion.0.0" }
+            3 { "$baseVersion.0" }
+            default { $baseVersion }
           }
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
           echo "VERSION4=$version4" >> $env:GITHUB_OUTPUT
-          Write-Host "Version: $version  (MSIX: $version4)"
+          echo "IS_PRERELEASE=$isPrerelease" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version  (MSIX: $version4)  (PreRelease: $isPrerelease)"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -112,6 +116,7 @@ jobs:
           }
 
       - name: Build store MSIX
+        if: steps.get_version.outputs.IS_PRERELEASE != 'true'
         shell: pwsh
         run: |
           Push-Location v2/app
@@ -123,6 +128,7 @@ jobs:
           Pop-Location
 
       - name: Rename store MSIX
+        if: steps.get_version.outputs.IS_PRERELEASE != 'true'
         shell: pwsh
         run: |
           $version = "${{ steps.get_version.outputs.VERSION }}"
@@ -160,6 +166,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             artifacts/**/*_Setup.exe
             artifacts/**/*_store.msix
