@@ -7,7 +7,6 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
-import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import 'shell/app_window.dart';
@@ -55,10 +54,7 @@ void main() async {
   final repo = SqliteRepository.fromPath(storage.databasePath);
   final clipboardService =
       ClipboardService(repo, imagesPath: storage.imagesPath)
-        ..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs
-        ..thumbnailWidth = config.thumbnailWidth
-        ..thumbnailQuality = config.thumbnailQuality
-        ..setThumbnailsPath(storage.thumbnailsPath);
+        ..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
 
   final cleanupService = CleanupService(
     repo,
@@ -142,7 +138,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
       popupWidth: _config.popupWidth.toDouble(),
       popupHeight: _config.popupHeight.toDouble(),
     );
-    _appWindow.pinned = _config.pinWindow;
     _trayIcon = TrayIcon(
       onToggle: _toggleWindow,
       onExit: _exitApp,
@@ -220,7 +215,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
             imagePath: event.files!.first,
           );
           if (item != null) {
-            unawaited(_processImageFileThumbnail(item, event.files!.first));
+            unawaited(_processMediaMetadata(item, event.files!.first));
           }
         }
       case ClipboardContentType.file:
@@ -241,7 +236,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
             source: event.source,
           );
           if (item != null) {
-            unawaited(_processMediaThumbnail(item, event.files!.first));
+            unawaited(_processMediaMetadata(item, event.files!.first));
           }
         }
       case ClipboardContentType.unknown:
@@ -249,7 +244,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
     }
   }
 
-  Future<void> _processMediaThumbnail(
+  Future<void> _processMediaMetadata(
     ClipboardItem item,
     String filePath,
   ) async {
@@ -261,15 +256,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
         existing.forEach((k, v) {
           if (v != null) meta[k] = v as Object;
         });
-      }
-
-      final thumbBytes =
-          await ClipboardWriter.getThumbnail(filePath, width: 300);
-      if (thumbBytes != null && thumbBytes.isNotEmpty) {
-        final thumbPath =
-            p.join(widget.storage.thumbnailsPath, '${item.id}_t.bmp');
-        await File(thumbPath).writeAsBytes(thumbBytes);
-        meta['thumb_path'] = thumbPath;
       }
 
       final mediaInfo = await ClipboardWriter.getMediaInfo(filePath);
@@ -284,42 +270,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
             .updateMetadata(item.id, jsonEncode(meta));
       }
     } catch (e, s) {
-      AppLogger.error('Media thumbnail/metadata failed: $e\n$s');
-    }
-  }
-
-  Future<void> _processImageFileThumbnail(
-    ClipboardItem item,
-    String filePath,
-  ) async {
-    try {
-      final file = File(filePath);
-      if (!file.existsSync()) return;
-
-      final bytes = await file.readAsBytes();
-      if (bytes.isEmpty) return;
-
-      final result = await ImageProcessor.processAndSave(
-        imageBytes: bytes,
-        id: item.id,
-        imagesDir: widget.storage.imagesPath,
-        thumbsDir: widget.storage.thumbnailsPath,
-        thumbnailWidth: _config.thumbnailWidth,
-        thumbnailQuality: _config.thumbnailQuality,
-      );
-      if (result == null) return;
-
-      final meta = <String, Object>{
-        'width': result.width,
-        'height': result.height,
-        'thumb_path': result.thumbPath,
-        'thumb_width': result.thumbWidth,
-        'thumb_height': result.thumbHeight,
-        'size': result.fileSize,
-      };
-      await widget.clipboardService.updateMetadata(item.id, jsonEncode(meta));
-    } catch (e, s) {
-      AppLogger.error('Image file thumbnail failed: $e\n$s');
+      AppLogger.error('Media metadata failed: $e\n$s');
     }
   }
 
@@ -407,7 +358,6 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
           storage: widget.storage,
           onSave: (newConfig, hotkeyChanged) async {
             setState(() => _config = newConfig);
-            _appWindow.pinned = newConfig.pinWindow;
             _appWindow.updatePopupSize(
               newConfig.popupWidth.toDouble(),
               newConfig.popupHeight.toDouble(),
@@ -499,7 +449,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
               ));
             }
             final bg = Platform.isWindows
-                ? Colors.transparent
+                ? CopyPasteTheme.colorsOf(ctx).background.withValues(alpha: 0.85)
                 : CopyPasteTheme.colorsOf(ctx).background;
             return Scaffold(
               backgroundColor: bg,
@@ -507,9 +457,9 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
                 key: _mainScreenKey,
                 clipboardService: widget.clipboardService,
                 updateChecker: widget.updateChecker,
+                colorLabels: _config.colorLabels,
                 resetScrollOnShow: _config.resetScrollOnShow,
                 resetSearchOnShow: _config.resetSearchOnShow,
-                scrollToTopOnPaste: _config.scrollToTopOnPaste,
                 cardMinLines: _config.cardMinLines,
                 cardMaxLines: _config.cardMaxLines,
                 showHint: !_config.hasSeenHint,

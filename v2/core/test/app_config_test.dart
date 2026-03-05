@@ -23,7 +23,6 @@ void main() {
         retentionDays: 60,
         pageSize: 50,
         hotkeyUseCtrl: true,
-        thumbnailWidth: 200,
       );
       final json = config.toJson();
       final restored = AppConfig.fromJson(json);
@@ -31,7 +30,6 @@ void main() {
       expect(restored.retentionDays, equals(60));
       expect(restored.pageSize, equals(50));
       expect(restored.hotkeyUseCtrl, isTrue);
-      expect(restored.thumbnailWidth, equals(200));
     });
 
     test('copyWith produces new instance with changes', () {

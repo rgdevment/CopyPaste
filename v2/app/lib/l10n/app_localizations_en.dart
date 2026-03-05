@@ -325,9 +325,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionPaste => 'PASTE';
 
   @override
-  String get sectionThumbnails => 'THUMBNAILS (ADVANCED)';
-
-  @override
   String get sectionBackupRestore => 'BACKUP & RESTORE';
 
   @override
@@ -379,12 +376,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingLinesExpanded => 'Lines expanded';
 
   @override
-  String get settingKeepWindowVisible => 'Keep window visible';
-
-  @override
-  String get settingScrollToTopOnPaste => 'Scroll to top after paste';
-
-  @override
   String get settingHideOnDeactivate => 'Hide on deactivate';
 
   @override
@@ -392,9 +383,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingClearSearchOnOpen => 'Clear search on open';
-
-  @override
-  String get settingThumbnailQuality => 'Thumbnail quality';
 
   @override
   String get settingRetentionDaysLabel => 'Retention days (0 = unlimited)';
@@ -409,13 +397,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subtitleStartupDesc => 'Launches in background when you sign in';
 
   @override
-  String get subtitleKeepWindowVisible =>
-      'Window stays open when you click on other apps';
-
-  @override
-  String get subtitleScrollToTopOnPaste => 'Only when window is pinned';
-
-  @override
   String get subtitleHideOnDeactivate => 'Close window when clicking outside';
 
   @override
@@ -427,13 +408,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitlePasteSpeed => 'Adjust restoration and paste timings';
-
-  @override
-  String get subtitleThumbnails =>
-      'Modifying can affect RAM usage and disk space.';
-
-  @override
-  String get subtitleThumbnailQuality => 'Only affects future thumbnails';
 
   @override
   String get subtitleCategories => 'Customize the names of color categories.';

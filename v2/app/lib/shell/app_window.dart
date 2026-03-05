@@ -38,7 +38,6 @@ class AppWindow {
   double _popupHeight;
   bool _visible = false;
   bool _ready = false;
-  bool pinned = false;
   bool _settingsMode = false;
 
   bool get isVisible => _visible;
@@ -51,22 +50,23 @@ class AppWindow {
   }
 
   Future<void> init() async {
-    await windowManager.waitUntilReadyToShow();
-    await windowManager.setTitle('CopyPaste');
-    await windowManager.setSize(Size(_popupWidth, _popupHeight));
-    await windowManager.setMinimumSize(Size(_popupWidth, 400));
-    await windowManager.setMaximumSize(Size(_popupWidth, 900));
-    await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-    await windowManager.setAlwaysOnTop(true);
-    await windowManager.setResizable(false);
-    await windowManager.setMaximizable(false);
-    await windowManager.setPreventClose(true);
-    await windowManager.setSkipTaskbar(true);
-    if (Platform.isWindows) {
-      await windowManager.setBackgroundColor(const Color(0x00000000));
-      await applyMica();
-    }
-    await windowManager.hide();
+    await windowManager.waitUntilReadyToShow(null, () async {
+      await windowManager.setTitle('CopyPaste');
+      await windowManager.setSize(Size(_popupWidth, _popupHeight));
+      await windowManager.setMinimumSize(Size(_popupWidth, 400));
+      await windowManager.setMaximumSize(Size(_popupWidth, 900));
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      await windowManager.setAlwaysOnTop(true);
+      await windowManager.setResizable(false);
+      await windowManager.setMaximizable(false);
+      await windowManager.setPreventClose(true);
+      await windowManager.setSkipTaskbar(true);
+      if (Platform.isWindows) {
+        await windowManager.setBackgroundColor(const Color(0x00000000));
+        await applyMica();
+      }
+      await windowManager.hide();
+    });
     _visible = false;
     _ready = true;
   }
@@ -224,7 +224,7 @@ class AppWindow {
   }
 
   void hideIfNotPinned() {
-    if (!pinned && _visible && !_settingsMode) {
+    if (_visible && !_settingsMode) {
       hide();
     }
   }

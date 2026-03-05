@@ -80,18 +80,6 @@ class ClipboardWriter {
     }
   }
 
-  static Future<Uint8List?> getThumbnail(String path, {int width = 300}) async {
-    try {
-      final result = await _channel.invokeMethod<Uint8List>(
-        'getThumbnail',
-        <String, Object?>{'path': path, 'width': width},
-      );
-      return result;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<Map<String, Object?>?> getMediaInfo(String path) async {
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(

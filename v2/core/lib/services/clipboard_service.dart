@@ -20,19 +20,12 @@ class ClipboardService {
   final String? _imagesPath;
   final _itemAdded = StreamController<ClipboardItem>.broadcast();
   final _itemReactivated = StreamController<ClipboardItem>.broadcast();
-  final _thumbnailReady = StreamController<ClipboardItem>.broadcast();
   bool _disposed = false;
 
   Stream<ClipboardItem> get onItemAdded => _itemAdded.stream;
   Stream<ClipboardItem> get onItemReactivated => _itemReactivated.stream;
-  Stream<ClipboardItem> get onThumbnailReady => _thumbnailReady.stream;
 
-  String? _thumbnailsPath;
   int pasteIgnoreWindowMs = 450;
-  int thumbnailWidth = 200;
-  int thumbnailQuality = 80;
-
-  void setThumbnailsPath(String path) => _thumbnailsPath = path;
 
   DateTime _lastPasteTime =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -127,11 +120,10 @@ class ClipboardService {
     await _repository.save(savedItem);
     _itemAdded.add(savedItem);
 
-    // Process image in background isolate (BMP→PNG + thumbnail)
+    // Process image in background isolate (BMP→PNG)
     if (imageBytes != null &&
         imageBytes.isNotEmpty &&
-        _imagesPath != null &&
-        _thumbnailsPath != null) {
+        _imagesPath != null) {
       unawaited(_processImageBackground(savedItem, imageBytes));
     }
 
@@ -150,9 +142,6 @@ class ClipboardService {
         imageBytes: bytes,
         id: item.id,
         imagesDir: _imagesPath!,
-        thumbsDir: _thumbnailsPath!,
-        thumbnailWidth: thumbnailWidth,
-        thumbnailQuality: thumbnailQuality,
       );
       if (result == null || _disposed) return;
 
@@ -163,13 +152,10 @@ class ClipboardService {
         if (bmp.existsSync()) bmp.deleteSync();
       } catch (_) {}
 
-      // Update item with PNG path and metadata
+      // Update item with PNG path and dimensions
       final meta = <String, Object>{
         'width': result.width,
         'height': result.height,
-        'thumb_path': result.thumbPath,
-        'thumb_width': result.thumbWidth,
-        'thumb_height': result.thumbHeight,
         'size': result.fileSize,
       };
       final updated = item.copyWith(
@@ -177,7 +163,7 @@ class ClipboardService {
         metadata: jsonEncode(meta),
       );
       await _repository.update(updated);
-      if (!_disposed) _thumbnailReady.add(updated);
+      if (!_disposed) _itemReactivated.add(updated);
     } catch (e, s) {
       AppLogger.error('Image processing failed for ${item.id}: $e\n$s');
     }
@@ -257,16 +243,6 @@ class ClipboardService {
         if (file.existsSync()) file.deleteSync();
       } catch (_) {}
     }
-
-    if (_thumbnailsPath != null) {
-      for (final ext in const ['.png', '.jpg', '.jpeg', '.webp']) {
-        try {
-          final thumbPath = p.join(_thumbnailsPath!, '${item.id}_t$ext');
-          final thumbFile = File(thumbPath);
-          if (thumbFile.existsSync()) thumbFile.deleteSync();
-        } catch (_) {}
-      }
-    }
   }
 
   Future<List<ClipboardItem>> getHistoryAdvanced({
@@ -321,13 +297,12 @@ class ClipboardService {
     if (item == null) return;
     final updated = item.copyWith(metadata: metadata);
     await _repository.update(updated);
-    if (!_disposed) _thumbnailReady.add(updated);
+    if (!_disposed) _itemReactivated.add(updated);
   }
 
   void dispose() {
     _disposed = true;
     _itemAdded.close();
     _itemReactivated.close();
-    _thumbnailReady.close();
   }
 }

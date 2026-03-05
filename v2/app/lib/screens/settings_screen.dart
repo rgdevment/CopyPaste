@@ -65,10 +65,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _delayBeforePasteMs;
   late int _maxFocusVerifyAttempts;
 
-  // Thumbnails
-  late int _thumbnailWidth;
-  late int _thumbnailQuality;
-
   // Backup
   late DateTime? _lastBackupDateUtc;
 
@@ -80,8 +76,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _themeMode;
 
   // Behavior
-  late bool _pinWindow;
-  late bool _scrollToTopOnPaste;
   late bool _hideOnDeactivate;
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
@@ -113,16 +107,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _delayBeforeFocusMs = widget.config.delayBeforeFocusMs;
     _delayBeforePasteMs = widget.config.delayBeforePasteMs;
     _maxFocusVerifyAttempts = widget.config.maxFocusVerifyAttempts;
-    _thumbnailWidth = widget.config.thumbnailWidth;
-    _thumbnailQuality = widget.config.thumbnailQuality;
     _lastBackupDateUtc = widget.config.lastBackupDateUtc;
     _popupWidth = widget.config.popupWidth;
     _popupHeight = widget.config.popupHeight;
     _cardMinLines = widget.config.cardMinLines;
     _cardMaxLines = widget.config.cardMaxLines;
     _themeMode = widget.config.themeMode;
-    _pinWindow = widget.config.pinWindow;
-    _scrollToTopOnPaste = widget.config.scrollToTopOnPaste;
     _hideOnDeactivate = widget.config.hideOnDeactivate;
     _resetScrollOnShow = widget.config.resetScrollOnShow;
     _resetSearchOnShow = widget.config.resetSearchOnShow;
@@ -150,16 +140,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         delayBeforeFocusMs: _delayBeforeFocusMs,
         delayBeforePasteMs: _delayBeforePasteMs,
         maxFocusVerifyAttempts: _maxFocusVerifyAttempts,
-        thumbnailWidth: _thumbnailWidth,
-        thumbnailQuality: _thumbnailQuality,
         lastBackupDateUtc: _lastBackupDateUtc,
         popupWidth: _popupWidth,
         popupHeight: _popupHeight,
         cardMinLines: _cardMinLines,
         cardMaxLines: _cardMaxLines,
         themeMode: _themeMode,
-        pinWindow: _pinWindow,
-        scrollToTopOnPaste: _scrollToTopOnPaste,
         hideOnDeactivate: _hideOnDeactivate,
         resetScrollOnShow: _resetScrollOnShow,
         resetSearchOnShow: _resetSearchOnShow,
@@ -193,14 +179,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _delayBeforeFocusMs = d.delayBeforeFocusMs;
       _delayBeforePasteMs = d.delayBeforePasteMs;
       _maxFocusVerifyAttempts = d.maxFocusVerifyAttempts;
-      _thumbnailWidth = d.thumbnailWidth;
-      _thumbnailQuality = d.thumbnailQuality;
       _popupWidth = d.popupWidth;
       _popupHeight = d.popupHeight;
       _cardMinLines = d.cardMinLines;
       _cardMaxLines = d.cardMaxLines;
-      _pinWindow = d.pinWindow;
-      _scrollToTopOnPaste = d.scrollToTopOnPaste;
       _hideOnDeactivate = d.hideOnDeactivate;
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;
@@ -269,38 +251,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _delayBeforePasteMs = 250;
           _maxFocusVerifyAttempts = 20;
           _duplicateIgnoreWindowMs = 600;
-      }
-    });
-    _markChanged();
-  }
-
-  String? get _thumbnailPresetName {
-    if (_thumbnailWidth == 260 && _thumbnailQuality == 95) return 'Excellent';
-    if (_thumbnailWidth == 200 && _thumbnailQuality == 90) return 'High';
-    if (_thumbnailWidth == 170 && _thumbnailQuality == 80) return 'Medium';
-    if (_thumbnailWidth == 130 && _thumbnailQuality == 65) return 'Low';
-    if (_thumbnailWidth == 90 && _thumbnailQuality == 50) return 'Minimal';
-    return null;
-  }
-
-  void _applyThumbnailPreset(String name) {
-    setState(() {
-      switch (name) {
-        case 'Excellent':
-          _thumbnailWidth = 260;
-          _thumbnailQuality = 95;
-        case 'High':
-          _thumbnailWidth = 200;
-          _thumbnailQuality = 90;
-        case 'Medium':
-          _thumbnailWidth = 170;
-          _thumbnailQuality = 80;
-        case 'Low':
-          _thumbnailWidth = 130;
-          _thumbnailQuality = 65;
-        case 'Minimal':
-          _thumbnailWidth = 90;
-          _thumbnailQuality = 50;
       }
     });
     _markChanged();
@@ -717,33 +667,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Thumbnails
-        _SectionCard(
-          colors: colors,
-          icon: Icons.photo_size_select_actual_rounded,
-          title: l.sectionThumbnails,
-          subtitle: l.subtitleThumbnails,
-          warningBorder: true,
-          children: [
-            _SettingsRow(
-              label: l.settingThumbnailQuality,
-              subtitle: l.subtitleThumbnailQuality,
-              colors: colors,
-              trailing: _PresetDropdown(
-                value: _thumbnailPresetName,
-                items: const [
-                  'Excellent',
-                  'High',
-                  'Medium',
-                  'Low',
-                  'Minimal',
-                ],
-                colors: colors,
-                onChanged: _applyThumbnailPreset,
-              ),
-            ),
-          ],
-        ),
         const SizedBox(height: 16),
       ],
     );
@@ -921,27 +844,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Icons.toggle_on_rounded,
           title: l.sectionBehavior,
           children: [
-            _ToggleRow(
-              label: l.settingKeepWindowVisible,
-              subtitle: l.subtitleKeepWindowVisible,
-              value: _pinWindow,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _pinWindow = v);
-                _markChanged();
-              },
-            ),
-            _ToggleRow(
-              label: l.settingScrollToTopOnPaste,
-              subtitle: l.subtitleScrollToTopOnPaste,
-              value: _scrollToTopOnPaste,
-              enable: _pinWindow,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _scrollToTopOnPaste = v);
-                _markChanged();
-              },
-            ),
             _ToggleRow(
               label: l.settingHideOnDeactivate,
               subtitle: l.subtitleHideOnDeactivate,
@@ -1397,14 +1299,12 @@ class _SectionCard extends StatelessWidget {
     required this.title,
     required this.children,
     this.subtitle,
-    this.warningBorder = false,
   });
 
   final AppThemeColorScheme colors;
   final IconData icon;
   final String title;
   final String? subtitle;
-  final bool warningBorder;
   final List<Widget> children;
 
   @override
@@ -1416,9 +1316,7 @@ class _SectionCard extends StatelessWidget {
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: warningBorder
-              ? colors.warning.withValues(alpha: 0.4)
-              : colors.cardBorder,
+          color: colors.cardBorder,
         ),
       ),
       child: Column(
@@ -1429,7 +1327,7 @@ class _SectionCard extends StatelessWidget {
               Icon(
                 icon,
                 size: 14,
-                color: warningBorder ? colors.warning : colors.onSurfaceMuted,
+                color: colors.onSurfaceMuted,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1519,13 +1417,11 @@ class _ToggleRow extends StatelessWidget {
     required this.colors,
     required this.onChanged,
     this.subtitle,
-    this.enable = true,
   });
 
   final String label;
   final String? subtitle;
   final bool value;
-  final bool enable;
   final AppThemeColorScheme colors;
   final ValueChanged<bool> onChanged;
 
@@ -1543,9 +1439,7 @@ class _ToggleRow extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 12.5,
-                    color: enable
-                        ? colors.onSurface
-                        : colors.onSurfaceMuted,
+                    color: colors.onSurface,
                   ),
                 ),
                 if (subtitle != null)
@@ -1565,7 +1459,7 @@ class _ToggleRow extends StatelessWidget {
           Switch(
             value: value,
             activeThumbColor: colors.primary,
-            onChanged: enable ? onChanged : null,
+            onChanged: onChanged,
           ),
         ],
       ),

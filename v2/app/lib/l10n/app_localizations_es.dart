@@ -327,9 +327,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionPaste => 'PEGADO';
 
   @override
-  String get sectionThumbnails => 'MINIATURAS (AVANZADO)';
-
-  @override
   String get sectionBackupRestore => 'RESPALDO Y RESTAURACIÓN';
 
   @override
@@ -381,12 +378,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingLinesExpanded => 'Líneas expandidas';
 
   @override
-  String get settingKeepWindowVisible => 'Mantener ventana visible';
-
-  @override
-  String get settingScrollToTopOnPaste => 'Ir al inicio al pegar';
-
-  @override
   String get settingHideOnDeactivate => 'Ocultar al hacer clic fuera';
 
   @override
@@ -394,9 +385,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingClearSearchOnOpen => 'Limpiar búsqueda al abrir';
-
-  @override
-  String get settingThumbnailQuality => 'Calidad de miniaturas';
 
   @override
   String get settingRetentionDaysLabel => 'Días de retención (0 = sin límite)';
@@ -412,14 +400,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se inicia en segundo plano al iniciar sesión';
 
   @override
-  String get subtitleKeepWindowVisible =>
-      'La ventana permanece abierta al hacer clic en otras apps';
-
-  @override
-  String get subtitleScrollToTopOnPaste =>
-      'Solo cuando la ventana está anclada';
-
-  @override
   String get subtitleHideOnDeactivate =>
       'Cerrar la ventana al hacer clic fuera';
 
@@ -432,13 +412,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitlePasteSpeed => 'Ajustar tiempos de restauración y pegado';
-
-  @override
-  String get subtitleThumbnails =>
-      'Modificar puede afectar el uso de RAM y espacio en disco.';
-
-  @override
-  String get subtitleThumbnailQuality => 'Solo afecta las miniaturas futuras';
 
   @override
   String get subtitleCategories =>
