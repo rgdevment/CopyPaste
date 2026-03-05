@@ -1,0 +1,301 @@
+{
+  "@@locale": "en",
+
+  "searchPlaceholder": "Search clipboard\u2026",
+  "@searchPlaceholder": { "description": "Search box placeholder" },
+
+  "emptyState": "No items in this section",
+  "@emptyState": { "description": "Empty list message" },
+
+  "emptyStateSubtitle": "Copy something to get started",
+  "@emptyStateSubtitle": { "description": "Empty state subtitle" },
+
+  "hintBannerText": "Customize your experience in",
+  "@hintBannerText": { "description": "First-run hint banner text" },
+
+  "hintBannerAction": "Settings",
+  "@hintBannerAction": { "description": "First-run hint banner action" },
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": { "description": "Settings screen title" },
+
+  "sectionShortcuts": "KEYBOARD SHORTCUTS",
+  "@sectionShortcuts": { "description": "Shortcuts section header" },
+
+  "sectionStorage": "STORAGE",
+  "@sectionStorage": { "description": "Storage section header" },
+
+  "settingRunOnStartup": "Run on startup",
+  "@settingRunOnStartup": { "description": "Run on startup toggle label" },
+
+  "settingLanguage": "Interface language",
+  "@settingLanguage": { "description": "Language picker label" },
+
+  "hotkeyWillApply": "Hotkey will apply immediately",
+  "@hotkeyWillApply": { "description": "Hint when hotkey changes" },
+
+  "clearHistoryConfirmTitle": "Clear history?",
+  "@clearHistoryConfirmTitle": { "description": "Clear history dialog title" },
+
+  "clearHistoryConfirmMessage": "This will permanently delete all non-pinned clipboard items. This action cannot be undone.",
+  "@clearHistoryConfirmMessage": { "description": "Clear history dialog message" },
+
+  "clearHistoryConfirmButton": "Clear",
+  "@clearHistoryConfirmButton": { "description": "Clear history confirm button" },
+
+  "backupLastDate": "Last backup: {date}",
+  "@backupLastDate": {
+    "description": "Last backup date",
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+
+  "backupNone": "No backup created yet.",
+  "@backupNone": { "description": "No backup yet message" },
+
+  "backupCreateLabel": "Create backup",
+  "@backupCreateLabel": { "description": "Create backup label" },
+
+  "backupRestoreLabel": "Restore backup",
+  "@backupRestoreLabel": { "description": "Restore backup label" },
+
+  "backupError": "Failed to create backup. Check permissions.",
+  "@backupError": { "description": "Backup error message" },
+
+  "restoreDialogTitle": "Restore backup",
+  "@restoreDialogTitle": { "description": "Restore dialog title" },
+
+  "restoreDialogWarning": "This will replace all current data with the backup contents. Continue?",
+  "@restoreDialogWarning": { "description": "Restore confirmation warning" },
+
+  "restoreFileNotFound": "File not found.",
+  "@restoreFileNotFound": { "description": "File not found error" },
+
+  "restoreSuccess": "Restored {count} items.",
+  "@restoreSuccess": {
+    "description": "Restore success message",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "restoreError": "Restore failed. Your previous data has been preserved.",
+  "@restoreError": { "description": "Restore error message" },
+
+  "buttonSave": "Save",
+  "@buttonSave": { "description": "Save button" },
+
+  "buttonCancel": "Cancel",
+  "@buttonCancel": { "description": "Cancel button" },
+
+  "buttonReset": "Reset",
+  "@buttonReset": { "description": "Reset button" },
+
+  "menuPaste": "Paste",
+  "@menuPaste": { "description": "Context menu paste" },
+
+  "menuPastePlain": "Paste plain",
+  "@menuPastePlain": { "description": "Context menu paste plain" },
+
+  "menuPin": "Pin",
+  "@menuPin": { "description": "Context menu pin" },
+
+  "menuUnpin": "Unpin",
+  "@menuUnpin": { "description": "Context menu unpin" },
+
+  "menuEdit": "Edit card",
+  "@menuEdit": { "description": "Context menu edit" },
+
+  "menuDelete": "Delete",
+  "@menuDelete": { "description": "Context menu delete" },
+
+  "editColorLabel": "Color",
+  "@editColorLabel": { "description": "Color picker label in edit dialog" },
+
+  "colorRed": "Red",
+  "colorGreen": "Green",
+  "colorPurple": "Purple",
+  "colorYellow": "Yellow",
+  "colorBlue": "Blue",
+  "colorOrange": "Orange",
+
+  "typeText": "Text",
+  "typeImage": "Image",
+  "typeFile": "File",
+  "typeFolder": "Folder",
+  "typeLink": "Link",
+  "typeAudio": "Audio",
+  "typeVideo": "Video",
+  "filterAll": "All",
+  "filterPinned": "Pinned",
+
+  "trayTooltip": "CopyPaste",
+  "@trayTooltip": { "description": "System tray tooltip" },
+
+  "trayExit": "Exit",
+  "@trayExit": { "description": "Tray menu exit item" },
+
+  "shortcutOpenClose": "Open / close CopyPaste",
+  "shortcutEscape": "Clear search or close window",
+  "shortcutTab1": "Switch to Recent tab",
+  "shortcutTab2": "Switch to Pinned tab",
+  "shortcutArrows": "Navigate between items",
+  "shortcutEnter": "Paste selected item",
+  "shortcutDelete": "Delete selected item",
+  "shortcutPin": "Pin / Unpin selected item",
+  "shortcutEdit": "Edit card (label and color)",
+
+  "tabGeneral": "General",
+  "@tabGeneral": { "description": "General nav tab" },
+  "tabBackupRestore": "Backup",
+  "@tabBackupRestore": { "description": "Backup nav tab" },
+  "tabAppearance": "Appearance",
+  "@tabAppearance": { "description": "Appearance nav tab" },
+  "tabShortcuts": "Shortcuts",
+  "@tabShortcuts": { "description": "Shortcuts nav tab" },
+  "tabAbout": "About",
+  "@tabAbout": { "description": "About nav tab" },
+
+  "sectionLanguage": "LANGUAGE",
+  "@sectionLanguage": { "description": "Language section title" },
+  "sectionStartup": "STARTUP",
+  "@sectionStartup": { "description": "Startup section title" },
+  "sectionKeyboardShortcut": "KEYBOARD SHORTCUT",
+  "@sectionKeyboardShortcut": { "description": "Keyboard shortcut section title" },
+  "sectionCategories": "CATEGORIES",
+  "@sectionCategories": { "description": "Categories section title" },
+  "sectionPerformance": "PERFORMANCE",
+  "@sectionPerformance": { "description": "Performance section title" },
+  "sectionPaste": "PASTE",
+  "@sectionPaste": { "description": "Paste section title" },
+  "sectionBackupRestore": "BACKUP & RESTORE",
+  "@sectionBackupRestore": { "description": "Backup and restore section title" },
+  "sectionAppearance": "APPEARANCE",
+  "@sectionAppearance": { "description": "Appearance section title" },
+  "settingTheme": "Theme",
+  "@settingTheme": { "description": "Theme selector label" },
+  "themeLight": "Light",
+  "@themeLight": { "description": "Light theme option" },
+  "themeDark": "Dark",
+  "@themeDark": { "description": "Dark theme option" },
+  "themeAuto": "Auto",
+  "@themeAuto": { "description": "Auto theme option" },
+  "sectionBehavior": "BEHAVIOR",
+  "@sectionBehavior": { "description": "Behavior section title" },
+  "sectionAbout": "COPYPASTE",
+  "@sectionAbout": { "description": "About section title" },
+  "sectionLinks": "LINKS",
+  "@sectionLinks": { "description": "Links section title" },
+
+  "settingItemsPerPage": "Items per page",
+  "@settingItemsPerPage": { "description": "Items per page label" },
+  "settingMemoryLimit": "Memory limit",
+  "@settingMemoryLimit": { "description": "Memory limit label" },
+  "settingScrollThreshold": "Scroll threshold (px)",
+  "@settingScrollThreshold": { "description": "Scroll threshold label" },
+  "settingPasteSpeed": "Paste speed",
+  "@settingPasteSpeed": { "description": "Paste speed label" },
+  "settingPanelWidth": "Panel width (px)",
+  "@settingPanelWidth": { "description": "Panel width label" },
+  "settingPanelHeight": "Panel height (px)",
+  "@settingPanelHeight": { "description": "Panel height label" },
+  "settingLinesCollapsed": "Lines collapsed",
+  "@settingLinesCollapsed": { "description": "Lines collapsed label" },
+  "settingLinesExpanded": "Lines expanded",
+  "@settingLinesExpanded": { "description": "Lines expanded label" },
+  "settingHideOnDeactivate": "Hide on deactivate",
+  "@settingHideOnDeactivate": { "description": "Hide on deactivate label" },
+  "settingScrollToTopOnOpen": "Scroll to top on open",
+  "@settingScrollToTopOnOpen": { "description": "Scroll to top on open label" },
+  "settingClearSearchOnOpen": "Clear search on open",
+  "@settingClearSearchOnOpen": { "description": "Clear search on open label" },
+  "settingRetentionDaysLabel": "Retention days (0 = unlimited)",
+  "@settingRetentionDaysLabel": { "description": "Retention days label" },
+  "settingClearHistoryLabel": "Clear clipboard history",
+  "@settingClearHistoryLabel": { "description": "Clear clipboard history label" },
+  "settingHotkeyShortcutLabel": "Shortcut to open/close CopyPaste",
+  "@settingHotkeyShortcutLabel": { "description": "Hotkey shortcut label" },
+
+  "subtitleStartupDesc": "Launches in background when you sign in",
+  "@subtitleStartupDesc": { "description": "Startup subtitle" },
+  "subtitleHideOnDeactivate": "Close window when clicking outside",
+  "@subtitleHideOnDeactivate": { "description": "Hide on deactivate subtitle" },
+  "subtitleScrollToTopOnOpen": "Resets scroll and selects latest item",
+  "@subtitleScrollToTopOnOpen": { "description": "Scroll to top on open subtitle" },
+  "subtitleClearSearchOnOpen": "Clears the search text each time",
+  "@subtitleClearSearchOnOpen": { "description": "Clear search on open subtitle" },
+  "subtitlePasteSpeed": "Adjust restoration and paste timings",
+  "@subtitlePasteSpeed": { "description": "Paste speed subtitle" },
+  "subtitleCategories": "Customize the names of color categories.",
+  "@subtitleCategories": { "description": "Categories subtitle" },
+
+  "linkGitHub": "Support & Source code \u2014 GitHub",
+  "@linkGitHub": { "description": "GitHub link label" },
+  "linkCoffee": "Buy me a coffee",
+  "@linkCoffee": { "description": "Buy me a coffee link label" },
+
+  "editDialogTitle": "Label & Color",
+  "@editDialogTitle": { "description": "Edit card dialog title" },
+  "editDialogHint": "Add a label...",
+  "@editDialogHint": { "description": "Label input hint in edit dialog" },
+
+  "historyCleared": "History cleared",
+  "@historyCleared": { "description": "Snackbar after clearing history" },
+
+  "backupSavedFile": "Backup saved: {filename}",
+  "@backupSavedFile": {
+    "description": "Backup saved snackbar",
+    "placeholders": {
+      "filename": { "type": "String" }
+    }
+  },
+
+  "buttonRestore": "Restore",
+  "@buttonRestore": { "description": "Restore action button" },
+
+  "restoreCompleted": "Restore completed",
+  "@restoreCompleted": { "description": "Restore completed snackbar" },
+
+  "shortcutExpand": "Expand / collapse card",
+  "@shortcutExpand": { "description": "Expand collapse shortcut" },
+
+  "shortcutFocusSearch": "Focus search box",
+  "@shortcutFocusSearch": { "description": "Focus search shortcut" },
+
+  "trayShowHide": "Show/Hide",
+  "@trayShowHide": { "description": "Tray menu show/hide item" },
+
+  "fileNotFound": "Not found",
+  "@fileNotFound": { "description": "Badge when file is missing" },
+
+  "audioFile": "Audio file",
+  "@audioFile": { "description": "Fallback name for audio items" },
+
+  "videoFile": "Video file",
+  "@videoFile": { "description": "Fallback name for video items" },
+
+  "timeNow": "now",
+  "@timeNow": { "description": "Timestamp for less than 1 minute ago" },
+
+  "clearAllFilters": "Clear all filters",
+  "@clearAllFilters": { "description": "Filter menu clear action" },
+
+  "colorSectionLabel": "COLOR",
+  "@colorSectionLabel": { "description": "Filter menu color section header" },
+
+  "colorNone": "None",
+  "@colorNone": { "description": "No color option" },
+
+  "subtitlePastePreset": "Automatic paste speed. Normal/Safe recommended for most computers.",
+  "@subtitlePastePreset": { "description": "Paste preset subtitle" },
+
+  "subtitleBackup": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
+  "@subtitleBackup": { "description": "Backup section subtitle" },
+
+  "aboutDescription": "A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere \u2014 your clipboard history, always at hand.",
+  "@aboutDescription": { "description": "About section description" },
+
+  "aboutLicense": "GPL v3 License \u2014 Free and open source.",
+  "@aboutLicense": { "description": "License footer text" }
+}

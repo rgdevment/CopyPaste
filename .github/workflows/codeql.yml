@@ -2,9 +2,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [main]
+    branches: [v1-stable]
   pull_request:
-    branches: [main]
+    branches: [v1-stable]
   schedule:
     - cron: '39 11 * * 5'
 
@@ -51,8 +51,8 @@ jobs:
           # XAML compiler are incompatible with the CodeQL build tracer.
           # Security-relevant code (SQLite, file I/O, networking, clipboard)
           # lives in Core and Listener.
-          dotnet build CopyPaste.Core/CopyPaste.Core.csproj -c Release -p:Platform=x64
-          dotnet build CopyPaste.Listener/CopyPaste.Listener.csproj -c Release -p:Platform=x64
+          dotnet build v1/CopyPaste.Core/CopyPaste.Core.csproj -c Release -p:Platform=x64
+          dotnet build v1/CopyPaste.Listener/CopyPaste.Listener.csproj -c Release -p:Platform=x64
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [v1-stable]
   pull_request:
-    branches: [main]
+    branches: [v1-stable]
 
 permissions:
   contents: read
@@ -32,16 +32,16 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore -p:Platform=x64
+        run: dotnet restore v1/CopyPaste.slnx -p:Platform=x64
 
       - name: Lint (Check format)
-        run: dotnet format --verify-no-changes --no-restore
+        run: dotnet format v1/CopyPaste.slnx --verify-no-changes --no-restore
 
       - name: Build Solution (Release)
-        run: dotnet build CopyPaste.slnx -c Release -p:Platform=x64 --no-restore
+        run: dotnet build v1/CopyPaste.slnx -c Release -p:Platform=x64 --no-restore
 
       - name: Run Tests
-        run: dotnet test CopyPaste.slnx -c Release -p:Platform=x64 --no-build --verbosity normal --logger "console;verbosity=detailed"
+        run: dotnet test v1/CopyPaste.slnx -c Release -p:Platform=x64 --no-build --verbosity normal --logger "console;verbosity=detailed"
 
   sonarcloud:
     name: SonarCloud
@@ -84,28 +84,28 @@ jobs:
           /o:"${{ vars.SONAR_ORGANIZATION }}"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          /d:sonar.cs.opencover.reportsPaths="coverage/core/**/coverage.opencover.xml,coverage/listener/**/coverage.opencover.xml,coverage/ui/**/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="v1/coverage/core/**/coverage.opencover.xml,v1/coverage/listener/**/coverage.opencover.xml,v1/coverage/ui/**/coverage.opencover.xml"
           /d:sonar.dotnet.excludeTestProjects=true
-          /d:sonar.exclusions="**/obj/**,**/bin/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.xaml,**/Assets/**,**/Localization/Languages/**,CopyPaste.Launcher/**"
+          /d:sonar.exclusions="**/obj/**,**/bin/**,**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/*.xaml,**/Assets/**,**/Localization/Languages/**,v1/CopyPaste.Launcher/**"
           /d:sonar.coverage.exclusions="**/AssemblyInfo.cs,**/GlobalSuppressions.cs,**/App.xaml.cs,**/*Window.xaml.cs,**/*Window.cs,**/*Panel.cs,**/Win32WindowHelper.cs,**/HotkeyHelper.cs,**/ClipboardFilterChipsHelper.cs,**/WindowsClipboardListener.cs,**/ClipboardHelper.cs,**/CopyPasteEngine.cs,**/FocusHelper.cs,**/WindowsThumbnailExtractor.cs"
 
       - name: Restore dependencies
-        run: dotnet restore -p:Platform=x64
+        run: dotnet restore v1/CopyPaste.slnx -p:Platform=x64
 
       - name: Build Solution
-        run: dotnet build CopyPaste.slnx -c Debug -p:Platform=x64 -p:DeterministicSourcePaths=false --no-restore
+        run: dotnet build v1/CopyPaste.slnx -c Debug -p:Platform=x64 -p:DeterministicSourcePaths=false --no-restore
 
       - name: Run Tests with Coverage
         run: |
-          dotnet test Tests/CopyPaste.Core.Tests/ -c Debug -p:Platform=x64 --no-build `
-            --collect:"XPlat Code Coverage" --results-directory coverage/core `
-            --settings coverage.core.runsettings
-          dotnet test Tests/CopyPaste.Listener.Tests/ -c Debug -p:Platform=x64 --no-build `
-            --collect:"XPlat Code Coverage" --results-directory coverage/listener `
-            --settings coverage.listener.runsettings
-          dotnet test Tests/CopyPaste.UI.Tests/ -c Debug -p:Platform=x64 --no-build `
-            --collect:"XPlat Code Coverage" --results-directory coverage/ui `
-            --settings coverage.ui.runsettings
+          dotnet test v1/Tests/CopyPaste.Core.Tests/ -c Debug -p:Platform=x64 --no-build `
+            --collect:"XPlat Code Coverage" --results-directory v1/coverage/core `
+            --settings v1/coverage.core.runsettings
+          dotnet test v1/Tests/CopyPaste.Listener.Tests/ -c Debug -p:Platform=x64 --no-build `
+            --collect:"XPlat Code Coverage" --results-directory v1/coverage/listener `
+            --settings v1/coverage.listener.runsettings
+          dotnet test v1/Tests/CopyPaste.UI.Tests/ -c Debug -p:Platform=x64 --no-build `
+            --collect:"XPlat Code Coverage" --results-directory v1/coverage/ui `
+            --settings v1/coverage.ui.runsettings
 
       - name: SonarScanner End
         env:

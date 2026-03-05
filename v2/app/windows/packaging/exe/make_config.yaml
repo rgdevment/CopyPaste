@@ -1,0 +1,13 @@
+app_id: "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+display_name: CopyPaste
+executable_name: CopyPaste
+publisher_name: RGDevment
+publisher_url: https://github.com/rgdevment/CopyPaste
+install_dir_name: "{localappdata}\\CopyPaste"
+privileges_required: lowest
+setup_icon_file: windows/runner/resources/app_icon.ico
+create_desktop_icon: true
+launch_at_startup: true
+locales:
+  - en
+  - es

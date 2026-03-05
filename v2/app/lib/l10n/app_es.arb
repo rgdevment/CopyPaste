@@ -1,0 +1,155 @@
+{
+  "@@locale": "es",
+
+  "searchPlaceholder": "Buscar en portapapeles\u2026",
+  "emptyState": "No hay elementos en esta sección",
+
+  "emptyStateSubtitle": "Copia algo para comenzar",
+
+  "hintBannerText": "Personaliza tu experiencia en",
+  "hintBannerAction": "Ajustes",
+
+  "settingsTitle": "Configuración",
+  "sectionShortcuts": "ATAJOS DE TECLADO",
+
+  "sectionStorage": "ALMACENAMIENTO",
+
+  "settingRunOnStartup": "Iniciar con Windows",
+  "settingLanguage": "Idioma de la interfaz",
+  "hotkeyWillApply": "El atajo se aplicará de inmediato",
+
+  "clearHistoryConfirmTitle": "¿Limpiar historial?",
+  "clearHistoryConfirmMessage": "Esto eliminará permanentemente todos los elementos no anclados. Esta acción no se puede deshacer.",
+  "clearHistoryConfirmButton": "Limpiar",
+
+  "backupLastDate": "Último respaldo: {date}",
+  "backupNone": "Aún no se ha creado un respaldo.",
+  "backupCreateLabel": "Crear respaldo",
+  "backupRestoreLabel": "Restaurar respaldo",
+  "backupError": "Error al crear el respaldo. Verifica los permisos.",
+
+  "restoreDialogTitle": "Restaurar respaldo",
+  "restoreDialogWarning": "Esto reemplazará todos los datos actuales con el contenido del respaldo. ¿Continuar?",
+  "restoreFileNotFound": "Archivo no encontrado.",
+  "restoreSuccess": "Se restauraron {count} elementos.",
+  "restoreError": "Error al restaurar. Tus datos anteriores se han preservado.",
+
+  "buttonSave": "Guardar",
+  "buttonCancel": "Cancelar",
+  "buttonReset": "Restablecer",
+
+  "menuPaste": "Pegar",
+  "menuPastePlain": "Pegar sin formato",
+  "menuPin": "Anclar",
+  "menuUnpin": "Desanclar",
+  "menuEdit": "Editar tarjeta",
+  "menuDelete": "Eliminar",
+
+  "editColorLabel": "Color",
+
+  "colorRed": "Rojo",
+  "colorGreen": "Verde",
+  "colorPurple": "Morado",
+  "colorYellow": "Amarillo",
+  "colorBlue": "Azul",
+  "colorOrange": "Naranja",
+
+  "typeText": "Texto",
+  "typeImage": "Imagen",
+  "typeFile": "Archivo",
+  "typeFolder": "Carpeta",
+  "typeLink": "Enlace",
+  "typeAudio": "Audio",
+  "typeVideo": "Video",
+  "filterAll": "Todo",
+  "filterPinned": "Anclados",
+
+  "trayTooltip": "CopyPaste",
+  "trayExit": "Salir",
+
+  "shortcutOpenClose": "Abrir / cerrar CopyPaste",
+  "shortcutEscape": "Limpiar búsqueda o cerrar ventana",
+  "shortcutTab1": "Cambiar a pestaña Recientes",
+  "shortcutTab2": "Cambiar a pestaña Anclados",
+  "shortcutArrows": "Navegar entre elementos",
+  "shortcutEnter": "Pegar elemento seleccionado",
+  "shortcutDelete": "Eliminar elemento seleccionado",
+  "shortcutPin": "Anclar / Desanclar elemento",
+  "shortcutEdit": "Editar tarjeta (etiqueta y color)",
+
+  "tabGeneral": "General",
+  "tabBackupRestore": "Respaldo",
+  "tabAppearance": "Apariencia",
+  "tabShortcuts": "Atajos",
+  "tabAbout": "Acerca de",
+
+  "sectionLanguage": "IDIOMA",
+  "sectionStartup": "INICIO",
+  "sectionKeyboardShortcut": "ATAJO DE TECLADO",
+  "sectionCategories": "CATEGOR\u00cdAS",
+  "sectionPerformance": "RENDIMIENTO",
+  "sectionPaste": "PEGADO",
+  "sectionBackupRestore": "RESPALDO Y RESTAURACI\u00d3N",
+  "sectionAppearance": "APARIENCIA",
+  "settingTheme": "Tema",
+  "themeLight": "Claro",
+  "themeDark": "Oscuro",
+  "themeAuto": "Auto",
+  "sectionBehavior": "COMPORTAMIENTO",
+  "sectionAbout": "COPYPASTE",
+  "sectionLinks": "ENLACES",
+
+  "settingItemsPerPage": "Elementos por p\u00e1gina",
+  "settingMemoryLimit": "L\u00edmite de memoria",
+  "settingScrollThreshold": "Umbral de desplazamiento (px)",
+  "settingPasteSpeed": "Velocidad de pegado",
+  "settingPanelWidth": "Ancho del panel (px)",
+  "settingPanelHeight": "Alto del panel (px)",
+  "settingLinesCollapsed": "L\u00edneas contra\u00eddas",
+  "settingLinesExpanded": "L\u00edneas expandidas",
+  "settingHideOnDeactivate": "Ocultar al hacer clic fuera",
+  "settingScrollToTopOnOpen": "Ir al inicio al abrir",
+  "settingClearSearchOnOpen": "Limpiar b\u00fasqueda al abrir",
+  "settingRetentionDaysLabel": "D\u00edas de retenci\u00f3n (0 = sin l\u00edmite)",
+  "settingClearHistoryLabel": "Limpiar historial del portapapeles",
+  "settingHotkeyShortcutLabel": "Atajo para abrir/cerrar CopyPaste",
+
+  "subtitleStartupDesc": "Se inicia en segundo plano al iniciar sesi\u00f3n",
+  "subtitleHideOnDeactivate": "Cerrar la ventana al hacer clic fuera",
+  "subtitleScrollToTopOnOpen": "Restablece el desplazamiento y selecciona el \u00faltimo elemento",
+  "subtitleClearSearchOnOpen": "Borra el texto de b\u00fasqueda cada vez",
+  "subtitlePasteSpeed": "Ajustar tiempos de restauraci\u00f3n y pegado",
+  "subtitleCategories": "Personaliza los nombres de las categor\u00edas de color.",
+
+  "linkGitHub": "Soporte y C\u00f3digo fuente \u2014 GitHub",
+  "linkCoffee": "Inv\u00edtame un caf\u00e9",
+
+  "editDialogTitle": "Etiqueta y Color",
+  "editDialogHint": "Agregar una etiqueta...",
+
+  "historyCleared": "Historial limpiado",
+
+  "backupSavedFile": "Respaldo guardado: {filename}",
+
+  "buttonRestore": "Restaurar",
+
+  "restoreCompleted": "Restauraci\u00f3n completada",
+
+  "shortcutExpand": "Expandir / contraer tarjeta",
+
+  "shortcutFocusSearch": "Enfocar el buscador",
+
+  "trayShowHide": "Mostrar/Ocultar",
+
+  "fileNotFound": "No encontrado",
+  "audioFile": "Archivo de audio",
+  "videoFile": "Archivo de video",
+  "timeNow": "ahora",
+  "clearAllFilters": "Limpiar todos los filtros",
+  "colorSectionLabel": "COLOR",
+  "colorNone": "Ninguno",
+  "subtitlePastePreset": "Velocidad de pegado autom\u00e1tico. Normal/Seguro recomendado para la mayor\u00eda.",
+  "subtitleBackup": "Crea un respaldo de tu historial, im\u00e1genes y configuraci\u00f3n. Restaura en cualquier momento en este u otro dispositivo.",
+  "aboutDescription": "Un gestor de portapapeles ligero, r\u00e1pido y de c\u00f3digo abierto para Windows, macOS y Linux.\nCopia una vez, pega en cualquier lugar \u2014 tu historial del portapapeles, siempre a mano.",
+  "aboutLicense": "Licencia GPL v3 \u2014 Libre y de c\u00f3digo abierto."
+}
