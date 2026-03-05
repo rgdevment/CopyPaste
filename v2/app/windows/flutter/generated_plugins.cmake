@@ -5,11 +5,9 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   flutter_acrylic
   hotkey_manager_windows
-  irondash_engine_context
   listener
   screen_retriever_windows
   sqlite3_flutter_libs
-  super_native_extensions
   tray_manager
   window_manager
 )

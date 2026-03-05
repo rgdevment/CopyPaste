@@ -15,6 +15,8 @@ abstract interface class IClipboardRepository {
   Future<List<ClipboardItem>> getAll();
   Future<void> delete(String id);
   Future<int> clearOldItems(int days, {bool excludePinned = true});
+  Future<int> deleteAllUnpinned();
+  Future<int> count();
   Future<List<ClipboardItem>> search(
     String query, {
     int limit = 50,
@@ -28,5 +30,7 @@ abstract interface class IClipboardRepository {
     required int limit,
     required int skip,
   });
+  Future<List<String>> getImagePaths();
+  Future<void> walCheckpoint();
   Future<void> close();
 }

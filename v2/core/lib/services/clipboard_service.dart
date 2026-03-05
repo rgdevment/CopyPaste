@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -8,6 +9,8 @@ import '../models/card_color.dart';
 import '../models/clipboard_content_type.dart';
 import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
+import 'app_logger.dart';
+import 'image_processor.dart';
 
 class ClipboardService {
   ClipboardService(this._repository, {String? imagesPath})
@@ -17,12 +20,17 @@ class ClipboardService {
   final String? _imagesPath;
   final _itemAdded = StreamController<ClipboardItem>.broadcast();
   final _itemReactivated = StreamController<ClipboardItem>.broadcast();
+  final _thumbnailReady = StreamController<ClipboardItem>.broadcast();
+  bool _disposed = false;
 
   Stream<ClipboardItem> get onItemAdded => _itemAdded.stream;
   Stream<ClipboardItem> get onItemReactivated => _itemReactivated.stream;
+  Stream<ClipboardItem> get onThumbnailReady => _thumbnailReady.stream;
 
   String? _thumbnailsPath;
   int pasteIgnoreWindowMs = 450;
+  int thumbnailWidth = 200;
+  int thumbnailQuality = 80;
 
   void setThumbnailsPath(String path) => _thumbnailsPath = path;
 
@@ -110,15 +118,69 @@ class ClipboardService {
     var savedItem = item;
     if (imageBytes != null && imageBytes.isNotEmpty && _imagesPath != null) {
       try {
-        final savedPath = p.join(_imagesPath, '${item.id}.bmp');
-        await File(savedPath).writeAsBytes(imageBytes);
-        savedItem = item.copyWith(content: savedPath);
+        final tempPath = p.join(_imagesPath, '${item.id}.bmp');
+        await File(tempPath).writeAsBytes(imageBytes);
+        savedItem = item.copyWith(content: tempPath);
       } catch (_) {}
     }
 
     await _repository.save(savedItem);
     _itemAdded.add(savedItem);
+
+    // Process image in background isolate (BMP→PNG + thumbnail)
+    if (imageBytes != null &&
+        imageBytes.isNotEmpty &&
+        _imagesPath != null &&
+        _thumbnailsPath != null) {
+      unawaited(_processImageBackground(savedItem, imageBytes));
+    }
+
     return savedItem;
+  }
+
+  Future<void> _processImageBackground(
+    ClipboardItem item,
+    List<int> imageBytes,
+  ) async {
+    try {
+      final bytes = imageBytes is Uint8List
+          ? imageBytes
+          : Uint8List.fromList(imageBytes);
+      final result = await ImageProcessor.processAndSave(
+        imageBytes: bytes,
+        id: item.id,
+        imagesDir: _imagesPath!,
+        thumbsDir: _thumbnailsPath!,
+        thumbnailWidth: thumbnailWidth,
+        thumbnailQuality: thumbnailQuality,
+      );
+      if (result == null || _disposed) return;
+
+      // Delete temp BMP
+      final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
+      try {
+        final bmp = File(bmpPath);
+        if (bmp.existsSync()) bmp.deleteSync();
+      } catch (_) {}
+
+      // Update item with PNG path and metadata
+      final meta = <String, Object>{
+        'width': result.width,
+        'height': result.height,
+        'thumb_path': result.thumbPath,
+        'thumb_width': result.thumbWidth,
+        'thumb_height': result.thumbHeight,
+        'size': result.fileSize,
+      };
+      final updated = item.copyWith(
+        content: result.imagePath,
+        metadata: jsonEncode(meta),
+      );
+      await _repository.update(updated);
+      if (!_disposed) _thumbnailReady.add(updated);
+    } catch (e, s) {
+      AppLogger.error('Image processing failed for ${item.id}: $e\n$s');
+    }
   }
 
   Future<ClipboardItem?> processFiles(
@@ -167,11 +229,12 @@ class ClipboardService {
   }
 
   Future<ClipboardItem?> recordPaste(String itemId) async {
+    final now = DateTime.now().toUtc();
     final item = await _repository.getById(itemId);
     if (item == null) return null;
     final updated = item.copyWith(
       pasteCount: item.pasteCount + 1,
-      modifiedAt: DateTime.now().toUtc(),
+      modifiedAt: now,
     );
     await _repository.update(updated);
     await notifyPasteInitiated(itemId);
@@ -180,10 +243,10 @@ class ClipboardService {
 
   Future<void> removeItem(String id) async {
     final item = await _repository.getById(id);
+    await _repository.delete(id);
     if (item != null) {
       _cleanupItemFiles(item);
     }
-    await _repository.delete(id);
   }
 
   void _cleanupItemFiles(ClipboardItem item) {
@@ -196,8 +259,7 @@ class ClipboardService {
     }
 
     if (_thumbnailsPath != null) {
-      const thumbExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
-      for (final ext in thumbExtensions) {
+      for (final ext in const ['.png', '.jpg', '.jpeg', '.webp']) {
         try {
           final thumbPath = p.join(_thumbnailsPath!, '${item.id}_t$ext');
           final thumbFile = File(thumbPath);
@@ -206,9 +268,6 @@ class ClipboardService {
       }
     }
   }
-
-  Future<List<ClipboardItem>> getHistory({int limit = 50, int skip = 0}) =>
-      _repository.search('', limit: limit, skip: skip);
 
   Future<List<ClipboardItem>> getHistoryAdvanced({
     String? query,
@@ -251,8 +310,24 @@ class ClipboardService {
     );
   }
 
+  Future<int> clearUnpinnedHistory() => _repository.deleteAllUnpinned();
+
+  Future<int> getItemCount() => _repository.count();
+
+  Future<void> walCheckpoint() => _repository.walCheckpoint();
+
+  Future<void> updateMetadata(String id, String metadata) async {
+    final item = await _repository.getById(id);
+    if (item == null) return;
+    final updated = item.copyWith(metadata: metadata);
+    await _repository.update(updated);
+    if (!_disposed) _thumbnailReady.add(updated);
+  }
+
   void dispose() {
+    _disposed = true;
     _itemAdded.close();
     _itemReactivated.close();
+    _thumbnailReady.close();
   }
 }

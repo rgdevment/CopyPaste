@@ -38,11 +38,25 @@ class _AppDatabase extends _$_AppDatabase {
   _AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+          await _createIndexes();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await _createIndexes();
+          }
+        },
         beforeOpen: (details) async {
+          await customStatement('PRAGMA journal_mode = WAL');
+          await customStatement('PRAGMA synchronous = NORMAL');
+          await customStatement('PRAGMA cache_size = -2000');
+          await customStatement('PRAGMA auto_vacuum = INCREMENTAL');
+
           await customStatement('''
             CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardItems_fts USING fts5(
               content,
@@ -77,25 +91,36 @@ class _AppDatabase extends _$_AppDatabase {
           ''');
         },
       );
+
+  Future<void> _createIndexes() async {
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_content_hash ON clipboard_items(content_hash)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_content_type ON clipboard_items(content, type)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_modified_at ON clipboard_items(modified_at DESC)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_created_at ON clipboard_items(created_at)');
+    await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_is_pinned ON clipboard_items(is_pinned)');
+  }
 }
 
 class SqliteRepository implements IClipboardRepository {
   SqliteRepository._(this._db);
 
   factory SqliteRepository.fromPath(String dbPath) {
-    try {
-      final db = _AppDatabase(
-        LazyDatabase(() async => NativeDatabase(File(dbPath))),
-      );
-      return SqliteRepository._(db);
-    } catch (_) {
-      _handleCorruptDatabase(dbPath);
-      return SqliteRepository._(
-        _AppDatabase(
-          LazyDatabase(() async => NativeDatabase(File(dbPath))),
-        ),
-      );
-    }
+    final db = _AppDatabase(
+      LazyDatabase(() async {
+        try {
+          return NativeDatabase(File(dbPath));
+        } catch (_) {
+          _handleCorruptDatabase(dbPath);
+          return NativeDatabase(File(dbPath));
+        }
+      }),
+    );
+    return SqliteRepository._(db);
   }
 
   factory SqliteRepository.inMemory() =>
@@ -109,6 +134,8 @@ class SqliteRepository implements IClipboardRepository {
     try {
       final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
       file.renameSync('$dbPath.backup.$timestamp');
+    } catch (_) {}
+    try {
       File('$dbPath-wal').deleteSync();
     } catch (_) {}
     try {
@@ -228,18 +255,39 @@ class SqliteRepository implements IClipboardRepository {
     final cutoff = DateTime.now().toUtc().subtract(Duration(days: days));
     final deleted = await (_db.delete(_db.clipboardItems)
           ..where((t) {
-            final isOld = t.modifiedAt.isSmallerThanValue(cutoff);
+            final isOld = t.createdAt.isSmallerThanValue(cutoff);
             return excludePinned ? isOld & t.isPinned.equals(false) : isOld;
           }))
         .go();
 
     if (deleted > 50) {
       try {
-        await _db.customStatement('VACUUM');
+        await _db.customStatement('PRAGMA incremental_vacuum');
       } catch (_) {}
     }
 
     return deleted;
+  }
+
+  @override
+  Future<int> deleteAllUnpinned() async {
+    final deleted = await (_db.delete(_db.clipboardItems)
+          ..where((t) => t.isPinned.equals(false)))
+        .go();
+    if (deleted > 50) {
+      try {
+        await _db.customStatement('PRAGMA incremental_vacuum');
+      } catch (_) {}
+    }
+    return deleted;
+  }
+
+  @override
+  Future<int> count() async {
+    final result = await _db
+        .customSelect('SELECT COUNT(*) AS c FROM clipboard_items')
+        .getSingle();
+    return result.read<int>('c');
   }
 
   @override
@@ -277,6 +325,7 @@ class SqliteRepository implements IClipboardRepository {
         FROM clipboard_items c
         WHERE (LOWER(c.content) LIKE ? OR LOWER(c.label) LIKE ? OR LOWER(c.app_source) LIKE ?)
           AND c.id NOT IN (SELECT id FROM fts_results)
+        LIMIT ?
       )
       SELECT * FROM (
         SELECT * FROM fts_results
@@ -291,6 +340,7 @@ class SqliteRepository implements IClipboardRepository {
         Variable.withString(likePattern),
         Variable.withString(likePattern),
         Variable.withString(likePattern),
+        Variable.withInt(limit),
         Variable.withInt(limit),
         Variable.withInt(skip),
       ],
@@ -365,6 +415,7 @@ class SqliteRepository implements IClipboardRepository {
           WHERE $filterClause
             AND (LOWER(c.content) LIKE ? OR LOWER(c.label) LIKE ? OR LOWER(c.app_source) LIKE ?)
             AND c.id NOT IN (SELECT id FROM fts_results)
+          LIMIT ?
         )
         SELECT * FROM (
           SELECT * FROM fts_results
@@ -381,6 +432,7 @@ class SqliteRepository implements IClipboardRepository {
           Variable.withString(likePattern),
           Variable.withString(likePattern),
           Variable.withString(likePattern),
+          Variable.withInt(limit),
           Variable.withInt(limit),
           Variable.withInt(skip),
         ],
@@ -406,6 +458,22 @@ class SqliteRepository implements IClipboardRepository {
     ).get();
 
     return results.map((row) => _fromQueryRow(row)).toList();
+  }
+
+  @override
+  Future<List<String>> getImagePaths() async {
+    final rows = await (_db.select(_db.clipboardItems)
+          ..where((t) => t.type.equals(ClipboardContentType.image.value))
+          ..where((t) => t.content.length.isBiggerThanValue(0)))
+        .get();
+    return rows.map((r) => r.content).toList();
+  }
+
+  @override
+  Future<void> walCheckpoint() async {
+    try {
+      await _db.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');
+    } catch (_) {}
   }
 
   @override

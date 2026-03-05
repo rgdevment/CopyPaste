@@ -39,11 +39,12 @@ class AppLogger {
 
   static void error(String message) => _log('ERROR', message);
 
-  static void exception(Object? error, [String context = '']) {
+  static void exception(Object? error, [StackTrace? stackTrace, String context = '']) {
     if (!isEnabled || !_isInitialized || error == null) return;
     final sb = StringBuffer();
     if (context.isNotEmpty) sb.write('$context - ');
     sb.write(error.toString());
+    if (stackTrace != null) sb.write('\n$stackTrace');
     _log('ERROR', sb.toString());
   }
 

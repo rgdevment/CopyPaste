@@ -60,8 +60,11 @@ class BackupService {
     String appVersion, {
     int itemCount = 0,
     bool hasPinnedItems = false,
+    Future<void> Function()? walCheckpoint,
   }) async {
-    _walCheckpoint(storage.databasePath);
+    if (walCheckpoint != null) {
+      await walCheckpoint();
+    }
 
     final archive = Archive();
     var imageCount = 0;
@@ -98,6 +101,17 @@ class BackupService {
       }
     }
 
+    final thumbsDir = Directory(storage.thumbnailsPath);
+    if (thumbsDir.existsSync()) {
+      for (final file in thumbsDir.listSync().whereType<File>()) {
+        archive.addFile(ArchiveFile(
+          'thumbs/${file.uri.pathSegments.last}',
+          file.lengthSync(),
+          file.readAsBytesSync(),
+        ));
+      }
+    }
+
     final manifest = BackupManifest(
       version: BackupManifest.currentVersion,
       appVersion: appVersion,
@@ -116,9 +130,7 @@ class BackupService {
     );
 
     final zipData = ZipEncoder().encode(archive);
-    if (zipData != null) {
-      await File(outputPath).writeAsBytes(zipData);
-    }
+    await File(outputPath).writeAsBytes(zipData);
 
     return manifest;
   }
@@ -154,7 +166,9 @@ class BackupService {
 
       for (final file in archive) {
         if (file.isFile && file.name != 'manifest.json') {
-          final outPath = '${storage.baseDir}/${file.name}';
+          if (file.name.contains('..')) continue;
+          final outPath = p.normalize('${storage.baseDir}/${file.name}');
+          if (!outPath.startsWith(storage.baseDir)) continue;
           final outFile = File(outPath);
           await outFile.create(recursive: true);
           await outFile.writeAsBytes(file.content as List<int>);
@@ -193,19 +207,6 @@ class BackupService {
     } catch (_) {
       return null;
     }
-  }
-
-  static void _walCheckpoint(String dbPath) {
-    try {
-      final walFile = File('$dbPath-wal');
-      final shmFile = File('$dbPath-shm');
-      if (walFile.existsSync() && walFile.lengthSync() == 0) {
-        walFile.deleteSync();
-      }
-      if (shmFile.existsSync() && !walFile.existsSync()) {
-        shmFile.deleteSync();
-      }
-    } catch (_) {}
   }
 
   static void _deleteWalFiles(String dbPath) {
@@ -255,6 +256,18 @@ class BackupService {
       }
     }
 
+    final thumbsDir = Directory(storage.thumbnailsPath);
+    if (thumbsDir.existsSync()) {
+      final snapThumbsDir =
+          Directory(p.join(snapshotDir, 'thumbs'));
+      await snapThumbsDir.create();
+      for (final file in thumbsDir.listSync().whereType<File>()) {
+        await file.copy(
+          p.join(snapThumbsDir.path, p.basename(file.path)),
+        );
+      }
+    }
+
     return snapshotDir;
   }
 
@@ -282,6 +295,15 @@ class BackupService {
         for (final file in snapConfig.listSync().whereType<File>()) {
           await file.copy(
             p.join(storage.configPath, p.basename(file.path)),
+          );
+        }
+      }
+
+      final snapThumbs = Directory(p.join(snapshotDir, 'thumbs'));
+      if (snapThumbs.existsSync()) {
+        for (final file in snapThumbs.listSync().whereType<File>()) {
+          await file.copy(
+            p.join(storage.thumbnailsPath, p.basename(file.path)),
           );
         }
       }

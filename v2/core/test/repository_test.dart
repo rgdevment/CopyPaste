@@ -140,7 +140,7 @@ void main() {
       expect(deleted, equals(0));
     });
 
-    test('clearOldItems keeps recently modified items', () async {
+    test('clearOldItems uses createdAt to determine age', () async {
       final oldCreatedButRecentlyUsed = ClipboardItem(
         content: 'recently used',
         type: ClipboardContentType.text,
@@ -149,8 +149,18 @@ void main() {
         modifiedAt: DateTime.now().toUtc(),
       );
       await repo.save(oldCreatedButRecentlyUsed);
+      // Item was created 60 days ago — should be deleted even if recently modified
       final deleted = await repo.clearOldItems(30);
-      expect(deleted, equals(0));
+      expect(deleted, equals(1));
+
+      // Item created recently should be kept
+      final recentItem = ClipboardItem(
+        content: 'recent',
+        type: ClipboardContentType.text,
+      );
+      await repo.save(recentItem);
+      final deleted2 = await repo.clearOldItems(30);
+      expect(deleted2, equals(0));
       final remaining = await repo.getAll();
       expect(remaining.length, equals(1));
     });

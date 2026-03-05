@@ -12,32 +12,6 @@ class HotkeyHandler {
   final void Function() onHotkey;
   HotKey? _hotkey;
 
-  Future<void> register() async {
-    final modifiers = <HotKeyModifier>[];
-    if (config.hotkeyUseCtrl) modifiers.add(HotKeyModifier.control);
-    if (config.hotkeyUseWin) modifiers.add(HotKeyModifier.meta);
-    if (config.hotkeyUseAlt) modifiers.add(HotKeyModifier.alt);
-    if (config.hotkeyUseShift) modifiers.add(HotKeyModifier.shift);
-
-    final keyCode = _mapVirtualKey(config.hotkeyVirtualKey);
-    if (keyCode == null) return;
-
-    _hotkey = HotKey(
-      key: keyCode,
-      modifiers: modifiers,
-      scope: HotKeyScope.system,
-    );
-
-    try {
-      await hotKeyManager.register(
-        _hotkey!,
-        keyDownHandler: (_) => onHotkey(),
-      );
-    } catch (_) {
-      _hotkey = null;
-    }
-  }
-
   Future<bool> _tryRegister(HotKey hotkey) async {
     try {
       await hotKeyManager.register(

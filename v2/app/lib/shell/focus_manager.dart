@@ -94,26 +94,14 @@ class WindowFocusManager {
     if (hwnd != 0 && _isWindow(hwnd) != 0 && _isWindowVisible(hwnd) != 0) {
       _previousWindow = hwnd;
       final pidPtr = calloc<Uint32>();
-      _previousThreadId = _getWindowThreadProcessId(hwnd, pidPtr);
-      calloc.free(pidPtr);
+      try {
+        _previousThreadId = _getWindowThreadProcessId(hwnd, pidPtr);
+      } finally {
+        calloc.free(pidPtr);
+      }
     } else {
       _previousWindow = 0;
       _previousThreadId = 0;
-    }
-  }
-
-  void updatePasteTarget(int ownWindowHandle) {
-    if (!Platform.isWindows) return;
-
-    final hwnd = _getForegroundWindow();
-    if (hwnd != 0 &&
-        hwnd != ownWindowHandle &&
-        _isWindow(hwnd) != 0 &&
-        _isWindowVisible(hwnd) != 0) {
-      _previousWindow = hwnd;
-      final pidPtr = calloc<Uint32>();
-      _previousThreadId = _getWindowThreadProcessId(hwnd, pidPtr);
-      calloc.free(pidPtr);
     }
   }
 

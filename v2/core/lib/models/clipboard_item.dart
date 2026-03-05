@@ -25,7 +25,7 @@ class ClipboardItem {
         createdAt = createdAt ?? DateTime.now().toUtc(),
         modifiedAt = modifiedAt ?? DateTime.now().toUtc();
 
-  static const int maxLabelLength = 40;
+  static const int maxLabelLength = 50;
 
   final String id;
   final String content;

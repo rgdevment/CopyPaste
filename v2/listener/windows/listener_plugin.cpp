@@ -7,13 +7,22 @@
 #include <flutter/standard_method_codec.h>
 #include <flutter/encodable_value.h>
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <shellapi.h>
+#include <shlobj.h>
+#include <shobjidl.h>
+#include <propsys.h>
+#include <propkey.h>
+#include <propvarutil.h>
 
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -21,6 +30,7 @@
 #include <vector>
 
 #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "propsys.lib")
 
 namespace listener {
 
@@ -49,6 +59,174 @@ std::vector<uint8_t> ConvertDibToBmp(const std::vector<uint8_t>& dib) {
   std::memcpy(bmp.data(), &bfh, sizeof(BITMAPFILEHEADER));
   std::memcpy(bmp.data() + sizeof(BITMAPFILEHEADER), dib.data(), dib.size());
   return bmp;
+}
+
+std::vector<uint8_t> HBitmapToBmpBytes(HBITMAP hBitmap) {
+  BITMAP bmp = {};
+  if (GetObject(hBitmap, sizeof(BITMAP), &bmp) == 0) return {};
+  if (bmp.bmWidth <= 0 || bmp.bmHeight <= 0) return {};
+
+  BITMAPINFOHEADER bi = {};
+  bi.biSize = sizeof(BITMAPINFOHEADER);
+  bi.biWidth = bmp.bmWidth;
+  bi.biHeight = -bmp.bmHeight;
+  bi.biPlanes = 1;
+  bi.biBitCount = 32;
+  bi.biCompression = BI_RGB;
+
+  int stride = bmp.bmWidth * 4;
+  int dataSize = stride * bmp.bmHeight;
+  std::vector<uint8_t> pixels(dataSize);
+
+  HDC hdc = CreateCompatibleDC(nullptr);
+  if (!hdc) return {};
+
+  BITMAPINFO bmi = {};
+  bmi.bmiHeader = bi;
+  int scanLines = GetDIBits(hdc, hBitmap, 0, bmp.bmHeight,
+                            pixels.data(), &bmi, DIB_RGB_COLORS);
+  DeleteDC(hdc);
+  if (scanLines == 0) return {};
+
+  BITMAPFILEHEADER bfh = {};
+  bfh.bfType = 0x4D42;
+  int headerSize =
+      static_cast<int>(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER));
+  bfh.bfSize = headerSize + dataSize;
+  bfh.bfOffBits = headerSize;
+
+  std::vector<uint8_t> result(bfh.bfSize);
+  std::memcpy(result.data(), &bfh, sizeof(BITMAPFILEHEADER));
+  std::memcpy(result.data() + sizeof(BITMAPFILEHEADER), &bi,
+              sizeof(BITMAPINFOHEADER));
+  std::memcpy(result.data() + headerSize, pixels.data(), dataSize);
+  return result;
+}
+
+std::vector<uint8_t> GetShellThumbnail(const std::wstring& filePath,
+                                       int width) {
+  IShellItemImageFactory* pFactory = nullptr;
+  HRESULT hr = SHCreateItemFromParsingName(
+      filePath.c_str(), nullptr, IID_PPV_ARGS(&pFactory));
+  if (FAILED(hr) || !pFactory) return {};
+
+  SIZE size = {width, width};
+  HBITMAP hBitmap = nullptr;
+
+  // Try ThumbnailOnly first (strict — real preview frames)
+  hr = pFactory->GetImage(size, SIIGBF_THUMBNAILONLY | SIIGBF_BIGGERSIZEOK,
+                          &hBitmap);
+  if (FAILED(hr) || !hBitmap) {
+    hBitmap = nullptr;
+    hr = pFactory->GetImage(size, SIIGBF_BIGGERSIZEOK | SIIGBF_MEMORYONLY,
+                            &hBitmap);
+  }
+  if (FAILED(hr) || !hBitmap) {
+    hBitmap = nullptr;
+    hr = pFactory->GetImage(size, SIIGBF_RESIZETOFIT, &hBitmap);
+  }
+
+  std::vector<uint8_t> result;
+  if (SUCCEEDED(hr) && hBitmap) {
+    result = HBitmapToBmpBytes(hBitmap);
+    DeleteObject(hBitmap);
+  }
+
+  pFactory->Release();
+  return result;
+}
+
+std::string WideToUtf8Helper(const std::wstring& wide) {
+  if (wide.empty()) return {};
+  int sz = WideCharToMultiByte(CP_UTF8, 0, wide.data(),
+                                static_cast<int>(wide.size()), nullptr, 0,
+                                nullptr, nullptr);
+  if (sz <= 0) return {};
+  std::string result(sz, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, wide.data(),
+                      static_cast<int>(wide.size()), result.data(), sz,
+                      nullptr, nullptr);
+  return result;
+}
+
+flutter::EncodableMap GetMediaInfo(const std::wstring& filePath) {
+  flutter::EncodableMap info;
+
+  IPropertyStore* pStore = nullptr;
+  HRESULT hr = SHGetPropertyStoreFromParsingName(
+      filePath.c_str(), nullptr, GPS_DEFAULT, IID_PPV_ARGS(&pStore));
+  if (FAILED(hr) || !pStore) return info;
+
+  // Duration (100-nanosecond units → seconds as int)
+  PROPVARIANT pv;
+  PropVariantInit(&pv);
+  if (SUCCEEDED(pStore->GetValue(PKEY_Media_Duration, &pv)) &&
+      pv.vt == VT_UI8) {
+    auto seconds =
+        static_cast<int64_t>(pv.uhVal.QuadPart / 10000000ULL);
+    info[flutter::EncodableValue("duration")] =
+        flutter::EncodableValue(seconds);
+  }
+  PropVariantClear(&pv);
+
+  // Video dimensions
+  PropVariantInit(&pv);
+  if (SUCCEEDED(pStore->GetValue(PKEY_Video_FrameWidth, &pv)) &&
+      pv.vt == VT_UI4) {
+    info[flutter::EncodableValue("video_width")] =
+        flutter::EncodableValue(static_cast<int>(pv.ulVal));
+  }
+  PropVariantClear(&pv);
+
+  PropVariantInit(&pv);
+  if (SUCCEEDED(pStore->GetValue(PKEY_Video_FrameHeight, &pv)) &&
+      pv.vt == VT_UI4) {
+    info[flutter::EncodableValue("video_height")] =
+        flutter::EncodableValue(static_cast<int>(pv.ulVal));
+  }
+  PropVariantClear(&pv);
+
+  // Artist (album artist — single-valued, matches v1's FirstAlbumArtist)
+  PropVariantInit(&pv);
+  if (SUCCEEDED(pStore->GetValue(PKEY_Music_AlbumArtist, &pv))) {
+    PWSTR str = nullptr;
+    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str &&
+        wcslen(str) > 0) {
+      info[flutter::EncodableValue("artist")] =
+          flutter::EncodableValue(WideToUtf8Helper(str));
+      CoTaskMemFree(str);
+    }
+  }
+  PropVariantClear(&pv);
+
+  // Title
+  PropVariantInit(&pv);
+  if (SUCCEEDED(pStore->GetValue(PKEY_Title, &pv))) {
+    PWSTR str = nullptr;
+    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str &&
+        wcslen(str) > 0) {
+      info[flutter::EncodableValue("title")] =
+          flutter::EncodableValue(WideToUtf8Helper(str));
+      CoTaskMemFree(str);
+    }
+  }
+  PropVariantClear(&pv);
+
+  // Album
+  PropVariantInit(&pv);
+  if (SUCCEEDED(pStore->GetValue(PKEY_Music_AlbumTitle, &pv))) {
+    PWSTR str = nullptr;
+    if (SUCCEEDED(PropVariantToStringAlloc(pv, &str)) && str &&
+        wcslen(str) > 0) {
+      info[flutter::EncodableValue("album")] =
+          flutter::EncodableValue(WideToUtf8Helper(str));
+      CoTaskMemFree(str);
+    }
+  }
+  PropVariantClear(&pv);
+
+  pStore->Release();
+  return info;
 }
 
 class ClipboardStreamHandler
@@ -126,8 +304,12 @@ void ListenerPlugin::StartListening(
   sink_ = std::move(sink);
 
   HWND hwnd = registrar_->GetView()->GetNativeWindow();
-  if (hwnd) {
-    AddClipboardFormatListener(hwnd);
+  // Use the top-level window for AddClipboardFormatListener so that
+  // WM_CLIPBOARDUPDATE arrives at the same WndProc that dispatches
+  // to RegisterTopLevelWindowProcDelegate callbacks.
+  HWND topHwnd = hwnd ? GetAncestor(hwnd, GA_ROOT) : nullptr;
+  if (topHwnd) {
+    AddClipboardFormatListener(topHwnd);
   }
 
   window_proc_id_ = registrar_->RegisterTopLevelWindowProcDelegate(
@@ -145,9 +327,10 @@ void ListenerPlugin::StopListening() {
 
   HWND hwnd = registrar_->GetView() ? registrar_->GetView()->GetNativeWindow()
                                      : nullptr;
-  if (hwnd) {
-    KillTimer(hwnd, kClipboardTimerId);
-    RemoveClipboardFormatListener(hwnd);
+  HWND topHwnd = hwnd ? GetAncestor(hwnd, GA_ROOT) : nullptr;
+  if (topHwnd) {
+    KillTimer(topHwnd, kClipboardTimerId);
+    RemoveClipboardFormatListener(topHwnd);
   }
 
   std::lock_guard<std::mutex> lock(sink_mutex_);
@@ -169,7 +352,8 @@ std::optional<LRESULT> ListenerPlugin::HandleWindowMessage(
 void ListenerPlugin::OnClipboardChanged() {
   HWND hwnd = registrar_->GetView() ? registrar_->GetView()->GetNativeWindow()
                                      : nullptr;
-  if (!hwnd || !OpenClipboard(hwnd)) return;
+  if (!hwnd) return;
+  if (!OpenClipboard(hwnd)) return;
 
   flutter::EncodableMap event;
 
@@ -262,7 +446,12 @@ void ListenerPlugin::OnClipboardChanged() {
         };
       }
     }
+  } catch (const std::exception& e) {
+    std::cerr << "[CopyPaste Listener] Clipboard read error: " << e.what()
+              << std::endl;
   } catch (...) {
+    std::cerr << "[CopyPaste Listener] Unknown clipboard read error"
+              << std::endl;
   }
 
   CloseClipboard();
@@ -321,7 +510,7 @@ std::string ListenerPlugin::ComputeClipboardHash() const {
       SIZE_T sz = GlobalSize(hData);
       void* ptr = GlobalLock(hData);
       if (ptr) {
-        size_t sample = std::min(sz, static_cast<SIZE_T>(256));
+        size_t sample = (std::min)(sz, static_cast<SIZE_T>(256));
         std::ostringstream oss;
         oss << "I:" << sz << ":";
         const uint8_t* bytes = static_cast<const uint8_t*>(ptr);
@@ -486,6 +675,55 @@ std::wstring ListenerPlugin::Utf8ToWide(const std::string& utf8) {
 void ListenerPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue>& call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+  if (call.method_name() == "getThumbnail") {
+    const auto* args =
+        std::get_if<flutter::EncodableMap>(call.arguments());
+    if (!args) {
+      result->Success(flutter::EncodableValue());
+      return;
+    }
+    auto path_it = args->find(flutter::EncodableValue("path"));
+    auto width_it = args->find(flutter::EncodableValue("width"));
+    if (path_it == args->end()) {
+      result->Success(flutter::EncodableValue());
+      return;
+    }
+    std::string pathUtf8 = std::get<std::string>(path_it->second);
+    int width = 300;
+    if (width_it != args->end()) {
+      width = std::get<int>(width_it->second);
+    }
+    auto bytes = GetShellThumbnail(Utf8ToWide(pathUtf8), width);
+    if (bytes.empty()) {
+      result->Success(flutter::EncodableValue());
+    } else {
+      result->Success(flutter::EncodableValue(bytes));
+    }
+    return;
+  }
+
+  if (call.method_name() == "getMediaInfo") {
+    const auto* args =
+        std::get_if<flutter::EncodableMap>(call.arguments());
+    if (!args) {
+      result->Success(flutter::EncodableValue());
+      return;
+    }
+    auto path_it = args->find(flutter::EncodableValue("path"));
+    if (path_it == args->end()) {
+      result->Success(flutter::EncodableValue());
+      return;
+    }
+    std::string pathUtf8 = std::get<std::string>(path_it->second);
+    auto info = GetMediaInfo(Utf8ToWide(pathUtf8));
+    if (info.empty()) {
+      result->Success(flutter::EncodableValue());
+    } else {
+      result->Success(flutter::EncodableValue(info));
+    }
+    return;
+  }
+
   if (call.method_name() != "setClipboardContent") {
     result->NotImplemented();
     return;
