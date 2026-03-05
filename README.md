@@ -2,10 +2,10 @@
   <img src="CopyPaste.UI/Assets/CopyPasteLogo.ico" width="140" height="140" alt="CopyPaste App Logo"/>
 
   <h1>CopyPaste</h1>
-  <h3>The Modern Clipboard Manager for Copy paste on Windows</h3>
+  <h3>A modern clipboard manager — minimal, beautiful, and built to feel native</h3>
 
   <p>
-    <strong>High Performance • Open Source • Native Design</strong>
+    <strong>Local-First • Open Source • Zero Friction</strong>
   </p>
 
   <p>
@@ -64,17 +64,17 @@ My goal was to create something that felt truly **native**: a piece of software 
 
 Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't — without friction or unnecessary visual noise.
 
-* **Aesthetics and Fluidity:** I was inspired by the cleanest workspaces to bring that same sense of calm to Windows. I use **WinUI 3** to ensure that every transition and every pixel feels like an integral part of the system, blending beauty and speed.
+* **Aesthetics and Fluidity:** I was inspired by the cleanest workspaces to bring that same sense of calm to Windows. Built on a **cross-platform UI and core** — so every transition feels like an integral part of the OS, not a widget dropped on top of it. The same foundation that makes it beautiful on Windows today is what will let it reach other platforms tomorrow.
 * **A Commitment to Respect:** Your data is yours. CopyPaste is **local-first**: nothing leaves your computer — no accounts, no telemetry, no tracking of any kind. A tool designed with privacy and absolute respect for your digital space.
-* **Open Source and Shared:** This project is **GPL v3** because I want it to belong to the community. It's my way of sharing a tool I use every day to keep my workflow organized and pleasant.
+* **Open Source and Free:** This project is **GPL v3**. Free to use, free to fork, and always without subscriptions, telemetry, or data harvesting — ever.
 
 ---
 
-### 🤝 Built for (and by) us
+### � Built to Belong
 
-I don't see those who use CopyPaste as "end users," but as **collaborators** in this search for a better experience. If you value simplicity, speed, and above all, an aesthetic that respects your focus, this tool is for you. Your reports and suggestions are what help CopyPaste continue to evolve toward that perfect tool we always wanted to have.
+CopyPaste isn't a "power tool" you learn to tolerate — it's something that should feel like it was always part of the OS. Lightweight enough to forget it's running. Fast enough to never slow you down. Quiet enough to stay out of your way.
 
-> 🚀 I use CopyPaste every day on Windows 11, but every setup is different. If something feels off, [let me know](#-found-a-bug-have-feedback). Your feedback is what shapes this project.
+> 🚀 I use CopyPaste every day on Windows 11 and MAC. If something feels off, [let me know](#-found-a-bug-have-feedback) — this project keeps improving because of real-world use.
 
 ---
 
@@ -127,27 +127,27 @@ I was tired of:
 - Applications that treat you as a customer, not a collaborator
 - Closed ecosystems where you're locked into someone else's vision
 
-### What I'm Building (With Your Help)
+### What I Built
 
-**This started as a passion project**, not a startup chasing metrics. It's a personal project that I'm sharing with you:
-- 🔒 **Your data stays yours** — Everything is local. I don't collect, track, or send anything anywhere. There's no analytics, no telemetry, nothing. Because I don't need to know what you're copying.
-- 💻 **100% Open Source** — Every line of code is here for you to read, modify, or learn from
-- 🆓 **Completely free** — No premium versions, no "pro" features locked behind paywalls
-- 🤝 **Built together** — Your feedback shapes what this becomes. You're not a user, you're part of this
+**This is a passion project**, not a startup chasing metrics. It started because I needed it, and ended up becoming something I'm proud to share:
+- 🔒 **Your data stays yours** — Everything is local. No analytics, no telemetry, no accounts. I genuinely don't need to know what you're copying.
+- 💻 **100% Open Source** — Every line of code is public. Read it, fork it, learn from it.
+- 🆓 **Completely free** — No premium tiers, no subscriptions, no paywalls — now or ever.
 
-### What I'm Trying to Do
+### What I'm After
 
 I wanted to bring the **polish and fluidity** you find in great tools to Windows. Things like:
-- **Windows 11 design language** — so it feels native, not foreign
+- **Native system integration** — adapts to the OS light/dark theme and behaves like it belongs, wherever it runs
 - **Performance** — every millisecond counts when you use something hundreds of times a day
 - **Reliability** — something you can count on without thinking about it
+- **Multiplatform by design** — Windows today, macOS and Linux on the way
 
 ---
 
 ## ✅ What It Is / ❌ What It Isn’t
 
 **CopyPaste is:**
-- A **local-first clipboard history** app for Windows 10/11.
+- A **local-first clipboard history** app — currently on Windows, with macOS and Linux support on the way.
 - A **fast** tool designed for keyboard workflows.
 - **Open source**, so you can inspect how it works.
 
@@ -166,7 +166,7 @@ If you copy and paste all day, this is for you:
 - **Developers** juggling snippets, commands, and logs.
 - **Creators & writers** reusing text fragments and assets.
 - **Support & operations** teams handling repetitive responses.
-- **Anyone** who wants a clean, private clipboard history on Windows 10/11.
+- **Anyone** who wants a clean, private clipboard history on their computer.
 
 ---
 
@@ -200,13 +200,12 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 
 > 🚀 **Latest Release** — See all features and improvements in our [Release Notes](https://github.com/rgdevment/CopyPaste/releases/latest).
 
-* 🎨 **Feels Like Windows:** Uses your system theme (Light/Dark) and native controls—it doesn't feel foreign.
+* 🎨 **Adapts to Your System:** Follows your OS light or dark theme automatically — it doesn't feel foreign.
 * ⚡ **Fast & Light:** Starts quickly and doesn't hog resources.
 * 📂 **Handles Everything:** Text, images, files, audio, and video—with thumbnails so you know what's what.
 * 🏷️ **Card Labels & Colors:** Personalize your clipboard items with custom labels (up to 40 characters) and 6 color options (Red, Green, Purple, Yellow, Blue, or None).
 * 📌 **Pin Important Items:** Keep your most-used items always accessible at the top.
-* � **Always-On-Top Mode (PinWindow):** Keep the CopyPaste window visible while you work in other apps. Available in both Default and Compact themes — perfect for paste-heavy workflows.
-* �🔒 **Private by Default:** Everything stays on your computer. No cloud, no sync, no servers.
+* 🔒 **Private by Default:** Everything stays on your computer. No cloud, no sync, no servers.
 * 🔐 **Respects Sensitive Data:** Passwords and API keys aren't stored. Password managers (1Password, Bitwarden, etc.) are ignored—their clipboard content never gets saved.
 * 🌐 **Multi-language:** English and Spanish supported, with automatic detection.
 * ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
@@ -216,8 +215,8 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 * 🎛️ **Advanced Filters:** Three filter modes—Content (text search), Category (color selection), and Type (item type selection)—with intuitive dropdown multi-selection.
 * 🔄 **Smart Filter Behavior:** Filters only apply to their active mode—switching modes automatically uses the relevant filter without mixing criteria.
 * 📌 **Pin Indicators:** When searching or filtering, pinned items display a subtle pin icon in the footer, making them easy to identify among results.
-* ⚙️ **Configurable:** Hotkeys, appearance, panel width (400-600px), retention days, filter reset behavior, and more.
-* 🎨 **Multiple Themes:** Switch between built-in themes (Default and Compact) from settings to match your workflow.
+* ⚙️ **Configurable:** Hotkeys, appearance, panel width, retention days, filter reset behavior, and more.
+* 🎨 **Light & Dark:** Follows your system theme automatically, or lock it to your preference in Settings.
 
 ---
 ## ⌨️ Keyboard Shortcuts
@@ -332,7 +331,7 @@ The fastest and easiest way to get CopyPaste:
 2. Click **Install** — no security warnings, automatic updates via the Store.
 3. Open CopyPaste with `Win+Alt+V`.
 
-> The Store version is framework-dependent (smaller download), updates automatically through Windows, and requires no additional setup.
+> The Store version updates automatically through Windows and requires no additional setup.
 
 <details>
 <summary><strong>📥 Alternative: Standalone Installer (GitHub Releases)</strong></summary>
@@ -366,20 +365,9 @@ Get-FileHash .\CopyPaste-Installer.exe -Algorithm SHA256
 
 </details>
 
-### How It Works
-
-**Standalone (GitHub Releases):** CopyPaste uses a dual-process architecture:
-- **`CopyPaste.exe`** — A lightweight native C++ launcher that shows a splash screen instantly.
-- **`CopyPaste.App.exe`** — The main .NET application that runs in the background.
-
-When you launch CopyPaste, the native launcher appears immediately while the .NET app initializes. Once ready, the splash closes automatically. This only takes a few seconds on first run; subsequent launches are nearly instant.
-
-**Microsoft Store (MSIX):** The Store version launches `CopyPaste.App.exe` directly — no splash screen is needed because the .NET runtime and Windows App SDK are pre-installed as framework dependencies, resulting in fast startup times.
-
 ### Compatibility
 * **OS:** Windows 10 (1809+) or Windows 11.
-* **Architecture:** x64 and ARM64 supported on both distribution channels.
-* **ARM64 Note:** Fully supported since v1.0.0. If you're running Windows on ARM and encounter any issues, please [open an issue](https://github.com/rgdevment/CopyPaste/issues).
+* **Architecture:** x64 and ARM — a single universal build covers both on both distribution channels.
 
 ---
 
@@ -404,10 +392,10 @@ No. There’s intentionally no cloud sync.
 Under `%LOCALAPPDATA%\CopyPaste\` (database, images, thumbnails, config, logs). Same location for both Store and standalone versions.
 
 **What's the difference between the Store and standalone versions?**
-Same features and same codebase. The **Microsoft Store version is recommended** — it's smaller (framework-dependent), updates automatically via Windows, and installs without any security warnings. The standalone version is available as an alternative for users who can't access the Store.
+Same features and same codebase. The **Microsoft Store version is recommended** — it updates automatically via Windows and installs without any security warnings. The standalone version is available as an alternative for users who prefer it or can't access the Store.
 
 **Is it compatible with Windows 10 and 11?**
-Yes, Windows 10 (1809+) and Windows 11 are supported.
+Yes. Windows 10 (1809+) and Windows 11 are supported. macOS and Linux support is in progress.
 
 ## 🤝 Found a Bug? Have Feedback?
 
@@ -454,11 +442,9 @@ CopyPaste should speak your language. Currently we support English and Spanish, 
 - **Regional Fallback:** If your exact region isn't available (e.g., `es-MX`), it falls back to the base language (e.g., `es-CL`).
 - **Manual Override:** You can force a specific language in the Settings panel.
 
-### 🤝 Help Us Translate—Your Language Matters!
+### 🤝 Help Add a New Language
 
-**Can you contribute a translation?** We need help from people who care about their language and community. Whether it's German, French, Portuguese, Japanese, or anything else—your translation makes CopyPaste accessible to more people.
-
-This isn't just translation work. **It's bridge-building.** You're bringing a tool to your community in the language they think in, speak in, and deserve to use.
+CopyPaste uses Flutter's standard ARB-based localization. Adding a new language requires creating one file.
 
 #### Steps to Add a New Translation
 
@@ -466,78 +452,51 @@ This isn't just translation work. **It's bridge-building.** You're bringing a to
 
 2. **Copy the base language file:**
    ```
-   CopyPaste.UI/Localization/Languages/en-US.json
+   v2/app/lib/l10n/app_en.arb
    ```
    This is the reference file with all translation keys.
 
-3. **Name your file using BCP 47 language tags:**
-   - `de-DE.json` (German - Germany)
-   - `fr-FR.json` (French - France)
-   - `pt-BR.json` (Portuguese - Brazil)
-   - `ja-JP.json` (Japanese - Japan)
-   - `zh-CN.json` (Chinese - Simplified)
+3. **Name your file using the language code:**
+   - `app_de.arb` (German)
+   - `app_fr.arb` (French)
+   - `app_pt.arb` (Portuguese - Brazil)
+   - `app_ja.arb` (Japanese)
 
-   > 📖 [Full list of BCP 47 language tags](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-lcid/a9eac961-e77d-41a6-90a5-ce1a8b0cdb9c)
-
-4. **Translate all values** (keep the JSON keys in English):
+4. **Translate the values** (keep the keys in English — only change values):
    ```json
    {
-     "window": {
-       "title": "CopyPaste",
-       "appBranding": "CopyPaste"
-     },
-     "ui": {
-       "section": {
-         "recent": "Récents",  // ← Translate this value
-         "pinned": "Épinglés" // ← Translate this value
-       }
-       // ... continue for all keys
-     }
+     "@@locale": "de",
+     "searchPlaceholder": "Suche im Zwischenablage…",
+     "emptyStateSubtitle": "Kopiere etwas, um zu starten",
+     "pinned": "Angeheftet",
+     "recent": "Zuletzt"
    }
    ```
 
-5. **Register your language** in `LocalizationService.cs`:
-   ```csharp
-   private static readonly string[] _availableLanguages = ["en-US", "es-CL", "de-DE"]; // Add yours
-   ```
+5. **Run `flutter gen-l10n`** (or `flutter pub get`) to regenerate the localization classes.
 
-6. **(Optional) Add regional fallback** in `language-config.json`:
-   ```json
-   {
-     "fallbacks": {
-       "de": "de-DE",  // German variants → de-DE
-       "fr": "fr-FR"   // French variants → fr-FR
-     }
-   }
-   ```
+6. **Test your translation** by changing your Windows language or using the manual override in Settings.
 
-7. **Test your translation** by changing your Windows language or using the manual override.
-
-8. **Submit a Pull Request** with your translation!
+7. **Submit a Pull Request** with your ARB file!
 
 #### Translation Guidelines
-- ✅ Keep translations concise (UI space is limited)
-- ✅ Use formal/neutral tone
-- ✅ Preserve placeholders like `{shortcut}` or `{time}`
-- ✅ Test that all strings fit in the UI
+- ✅ Keep translations concise — UI space is limited
+- ✅ Use formal or neutral tone
+- ✅ Preserve ARB placeholders like `{name}` or `{count}`
+- ✅ Include `"@@locale": "xx"` at the top of the file
 - ❌ Don't translate brand names (`CopyPaste`, `Windows`, etc.)
-- ❌ Don't change JSON keys (only values)
+- ❌ Don't change ARB keys (only values)
 
 ---
 
 ## 🤝 Want to Help?
 
-**CopyPaste** gets better when people contribute. That doesn't just mean code:
+Contributions are always appreciated — whether that's a bug report, a translation, or a pull request:
 
-- **Write Code** — Fix bugs, add features. All skill levels welcome.
-- **Improve Docs** — If something's confusing, help me explain it better.
-- **Translate** — Add your language so more people can use it. [See guide](#-help-us-translate).
-- **Report Bugs** — If something breaks, let me know.
+- **Write Code** — Fix bugs or add features. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup.
+- **Translate** — Add your language. [See guide](#-localization-help-us-go-global).
+- **Report Bugs** — If something breaks, [open an issue](https://github.com/rgdevment/CopyPaste/issues/new).
 - **Share Ideas** — Tell me what you wish it could do.
-- **Spread the Word** — If you like it, tell people about it.
-- **Just Use It** — Honestly? Using it and giving feedback is huge.
-
-Please read our [**CONTRIBUTING.md**](CONTRIBUTING.md) for details on our code of conduct, setup instructions, and the process for submitting pull requests.
 
 ---
 
@@ -547,46 +506,29 @@ If you're curious about what's under the hood:
 
 | Technology | Why |
 | :--- | :--- |
-| **C# / .NET 10** | Modern C# features, good performance. |
-| **WinUI 3** | Native Windows UI—looks and feels like it belongs. |
-| **ReadyToRun** | Pre-compiled to start faster (standalone builds). |
-| **Native C++ Launcher** | Shows something immediately while .NET loads. |
-| **Win32 Interop** | Low-level clipboard hooks to catch everything. |
-| **SQLite + FTS5** | Local storage with full-text search. |
-| **SkiaSharp** | Generates image thumbnails. |
-| **Theme System** | Multiple built-in themes via internal `ITheme` interface. |
+| **Flutter** | Cross-platform UI toolkit — Windows-first today, multiplatform foundation for tomorrow. |
+| **Dart** | Clean, performant language for core logic, services, and domain models. |
+| **Windows APIs + Mica** | Native translucent effect and system theme integration — looks like it belongs. |
+| **C++ Plugin** | Low-level clipboard hook to capture every content type before the OS discards it. |
+| **Native C++ Launcher** | Lightweight splash process that appears instantly while Flutter warms up. |
+| **SQLite + FTS5** | Local database with full-text search across content and labels. |
+| **Theme System** | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---
 
 ## 🎨 Themes
 
-CopyPaste includes multiple built-in themes that let you change how the application looks and behaves.
+CopyPaste follows your system theme automatically — no configuration needed.
 
-- **Default** — Full-featured sidebar layout with all options visible.
-- **Compact** — Minimal popup that appears near your cursor, optimized for quick access.
-- You can switch between themes from **Settings → General → Theme**.
-- Changes require a restart to take effect.
-
-### 📌 PinWindow (Always-On-Top Mode)
-
-Both themes support **PinWindow**, which keeps the CopyPaste window visible even when you click on other apps. Enable it in each theme's settings.
-
-| Behavior | Normal Mode | PinWindow ON |
-| :--- | :--- | :--- |
-| Window visibility | Hides when you click away | Stays on screen always |
-| Scroll on re-focus | Resets to top (configurable) | Scroll position preserved |
-| Scroll after paste | — | Animated scroll to top (configurable) |
-| Paste target | Captured at hotkey press | Tracked as you switch apps |
-
-**Default theme** shows a **Hide button** (↑) at the top of the sidebar when PinWindow is active, so you can dismiss the window manually.
-
-**Compact theme** already has a ✕ close button visible at all times.
+- **Light** — Clean and bright, matching a light OS theme.
+- **Dark** — Easy on the eyes, matching a dark OS theme.
+- You can override the automatic selection in **Settings → General → Theme**.
 
 ---
 
 ## 📜 License & Spirit
 
-**CopyPaste** - The ultimate clipboard tool for Windows.
+**CopyPaste** - A modern clipboard manager for Windows, macOS, and Linux.
 Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
 This program comes with ABSOLUTELY NO WARRANTY.
@@ -597,16 +539,14 @@ Distributed under the **GNU General Public License v3.0**. See `LICENSE` for mor
 
 ## 🙏 One Last Thing
 
-I believe software should make your life easier, not more complicated. I built CopyPaste because I was tired of the alternatives—and I figured maybe you were too.
+I believe software should make your life easier, not more complicated. I built CopyPaste because I was tired of the alternatives — toolbar-heavy, resource-hungry, or just plain ugly.
 
-**Here's the deal:** This started as my personal tool, but it's better when we build it together. Every bug report, feature suggestion, or translation makes it better for everyone using it.
+**Here's what this is:** A personal tool, built from a real need, shared because others might need it too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell — ever.
 
-I'm not trying to build a startup or make money from this. I just want to prove you can build something useful, share it freely, and do it all in the open.
-
-If that sounds good to you, welcome. I'm glad you're here.
+If that sounds good to you, I hope it serves you well.
 
 **Thanks for giving CopyPaste a shot. 💙**
 
 <div align="center">
-  <p>Built with ❤️, C#, and too much coffee.</p>
+  <p>Built with ❤️, Flutter, and too much coffee.</p>
 </div>

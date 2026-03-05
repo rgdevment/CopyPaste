@@ -23,7 +23,7 @@ I'm not protecting a brand or business. I'm protecting *you* and everyone using 
 - **Open Source** — Every line of code is public. You can inspect, audit, and verify what we're doing.
 
 ### Development Practices
-- **Modern .NET Stack** — Built on .NET 10 Preview with the latest security features and updates.
+- **Modern Flutter Stack** — Built with Flutter and Dart, with dependencies regularly audited and updated.
 - **Dependency Updates** — We regularly update dependencies to patch known vulnerabilities.
 - **Code Reviews** — All contributions go through review before merging.
 
@@ -176,7 +176,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 
 ### For Developers
 - **Read the Code** — The entire codebase is open source: [CopyPaste Repository](https://github.com/rgdevment/CopyPaste)
-- **Review Dependencies** — Check `*.csproj` files for third-party libraries we use
+- **Review Dependencies** — Check `pubspec.yaml` for third-party packages we use
 - **Security Best Practices** — Follow secure coding guidelines when contributing
 
 ---
