@@ -1,5 +1,5 @@
 ﻿<div align="center">
-  <img src="CopyPaste.UI/Assets/CopyPasteLogo.ico" width="140" height="140" alt="CopyPaste App Logo"/>
+  <img src="v1/CopyPaste.UI/Assets/CopyPasteLogo.ico" width="140" height="140" alt="CopyPaste App Logo"/>
 
   <h1>CopyPaste</h1>
   <h3>A modern clipboard manager — minimal, beautiful, and built to feel native</h3>
@@ -98,16 +98,16 @@ CopyPaste isn't a "power tool" you learn to tolerate — it's something that sho
 ## 📸 See It in Action
 
 <div align="center">
-    <img src="Resources/Samples.gif" alt="CopyPaste Demo — Fast search, clean cards, native Windows design"/>
+    <img src="v1/Resources/Samples.gif" alt="CopyPaste Demo — Fast search, clean cards, native Windows design"/>
 </div>
 <div align="center"><em>Fast search, clean cards, and a native feel. This is CopyPaste in action.</em></div>
 
 <br/>
 
 <div align="center">
-    <img src="Resources/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode on Windows 11"/>
+    <img src="v1/Resources/CopyPasteCompactModeFill.png" alt="CopyPaste Compact Mode on Windows 11"/>
     &nbsp;&nbsp;
-    <img src="Resources/ConfigCopyPaste.png" alt="CopyPaste Settings — privacy-friendly configuration"/>
+    <img src="v1/Resources/ConfigCopyPaste.png" alt="CopyPaste Settings — privacy-friendly configuration"/>
 </div>
 <div align="center"><em>Compact mode for quick access (left) and privacy-friendly settings (right).</em></div>
 
