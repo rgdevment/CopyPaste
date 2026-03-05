@@ -1,15 +1,6 @@
 {
   "@@locale": "en",
 
-  "appTitle": "CopyPaste",
-  "@appTitle": { "description": "Application name" },
-
-  "tabRecent": "Recent",
-  "@tabRecent": { "description": "Recent tab label" },
-
-  "tabPinned": "Pinned",
-  "@tabPinned": { "description": "Pinned tab label" },
-
   "searchPlaceholder": "Search...",
   "@searchPlaceholder": { "description": "Search box placeholder" },
 
@@ -33,20 +24,11 @@
   "settingsTitle": "Settings",
   "@settingsTitle": { "description": "Settings screen title" },
 
-  "sectionGeneral": "GENERAL",
-  "@sectionGeneral": { "description": "General section header" },
-
-  "sectionHotkey": "HOTKEY",
-  "@sectionHotkey": { "description": "Hotkey section header" },
+  "sectionShortcuts": "KEYBOARD SHORTCUTS",
+  "@sectionShortcuts": { "description": "Shortcuts section header" },
 
   "sectionStorage": "STORAGE",
   "@sectionStorage": { "description": "Storage section header" },
-
-  "sectionBackup": "BACKUP",
-  "@sectionBackup": { "description": "Backup section header" },
-
-  "sectionShortcuts": "KEYBOARD SHORTCUTS",
-  "@sectionShortcuts": { "description": "Shortcuts section header" },
 
   "settingRunOnStartup": "Run on startup",
   "@settingRunOnStartup": { "description": "Run on startup toggle label" },
@@ -54,32 +36,8 @@
   "settingLanguage": "Interface language",
   "@settingLanguage": { "description": "Language picker label" },
 
-  "languageAuto": "Auto",
-  "@languageAuto": { "description": "Auto language option" },
-
-  "languageEnglish": "English",
-  "@languageEnglish": { "description": "English language option" },
-
-  "languageSpanish": "Español",
-  "@languageSpanish": { "description": "Spanish language option" },
-
-  "settingHotkeyLabel": "Global shortcut to open CopyPaste",
-  "@settingHotkeyLabel": { "description": "Hotkey description" },
-
   "hotkeyWillApply": "Hotkey will apply immediately",
   "@hotkeyWillApply": { "description": "Hint when hotkey changes" },
-
-  "settingRetentionDays": "History retention",
-  "@settingRetentionDays": { "description": "Retention days setting label" },
-
-  "settingRetentionDaysDesc": "Days to keep history (0 = unlimited)",
-  "@settingRetentionDaysDesc": { "description": "Retention days description" },
-
-  "settingClearHistory": "Clear all history",
-  "@settingClearHistory": { "description": "Clear history button label" },
-
-  "settingClearHistoryDesc": "Permanently delete all clipboard items",
-  "@settingClearHistoryDesc": { "description": "Clear history description" },
 
   "clearHistoryConfirmTitle": "Clear history?",
   "@clearHistoryConfirmTitle": { "description": "Clear history dialog title" },
@@ -104,26 +62,8 @@
   "backupCreateLabel": "Create backup",
   "@backupCreateLabel": { "description": "Create backup label" },
 
-  "backupCreateDesc": "Export all data to a ZIP file",
-  "@backupCreateDesc": { "description": "Create backup description" },
-
   "backupRestoreLabel": "Restore backup",
   "@backupRestoreLabel": { "description": "Restore backup label" },
-
-  "backupRestoreDesc": "Import data from a backup file",
-  "@backupRestoreDesc": { "description": "Restore backup description" },
-
-  "backupCreating": "Creating backup...",
-  "@backupCreating": { "description": "Creating backup snackbar" },
-
-  "backupSuccess": "Backup created: {count} items, {images} images.",
-  "@backupSuccess": {
-    "description": "Backup created success message",
-    "placeholders": {
-      "count": { "type": "int" },
-      "images": { "type": "int" }
-    }
-  },
 
   "backupError": "Failed to create backup. Check permissions.",
   "@backupError": { "description": "Backup error message" },
@@ -131,17 +71,11 @@
   "restoreDialogTitle": "Restore backup",
   "@restoreDialogTitle": { "description": "Restore dialog title" },
 
-  "restoreDialogHint": "Path to .zip backup file",
-  "@restoreDialogHint": { "description": "Restore path input hint" },
-
   "restoreDialogWarning": "This will replace all current data with the backup contents. Continue?",
   "@restoreDialogWarning": { "description": "Restore confirmation warning" },
 
   "restoreFileNotFound": "File not found.",
   "@restoreFileNotFound": { "description": "File not found error" },
-
-  "restoreInvalidFile": "Invalid backup file. Select a valid CopyPaste backup (.zip).",
-  "@restoreInvalidFile": { "description": "Invalid backup file error" },
 
   "restoreSuccess": "Restored {count} items.",
   "@restoreSuccess": {
@@ -181,19 +115,9 @@
   "menuDelete": "Delete",
   "@menuDelete": { "description": "Context menu delete" },
 
-  "editCardTitle": "Edit card",
-  "@editCardTitle": { "description": "Edit card dialog title" },
-
-  "editLabelPlaceholder": "Label (optional)",
-  "@editLabelPlaceholder": { "description": "Label input placeholder" },
-
-  "editLabelHint": "40 characters max",
-  "@editLabelHint": { "description": "Label input hint" },
-
   "editColorLabel": "Color",
   "@editColorLabel": { "description": "Color picker label in edit dialog" },
 
-  "colorNone": "None",
   "colorRed": "Red",
   "colorGreen": "Green",
   "colorPurple": "Purple",
@@ -211,24 +135,11 @@
   "filterAll": "All",
   "filterPinned": "Pinned",
 
-  "fileNotAvailable": "File not available",
-  "@fileNotAvailable": { "description": "File not available warning on card" },
-
   "trayTooltip": "CopyPaste",
   "@trayTooltip": { "description": "System tray tooltip" },
 
   "trayExit": "Exit",
   "@trayExit": { "description": "Tray menu exit item" },
-
-  "shortcutsTitle": "Keyboard Shortcuts",
-  "@shortcutsTitle": { "description": "Keyboard shortcuts section title" },
-
-  "shortcutsSubtitle": "Power your workflow",
-  "@shortcutsSubtitle": { "description": "Keyboard shortcuts subtitle" },
-
-  "shortcutsGroupGeneral": "GENERAL",
-  "shortcutsGroupNavigation": "NAVIGATION",
-  "shortcutsGroupActions": "ACTIONS",
 
   "shortcutOpenClose": "Open / close CopyPaste",
   "shortcutEscape": "Clear search or close window",

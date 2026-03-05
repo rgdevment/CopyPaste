@@ -98,24 +98,6 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
-  /// Application name
-  ///
-  /// In en, this message translates to:
-  /// **'CopyPaste'**
-  String get appTitle;
-
-  /// Recent tab label
-  ///
-  /// In en, this message translates to:
-  /// **'Recent'**
-  String get tabRecent;
-
-  /// Pinned tab label
-  ///
-  /// In en, this message translates to:
-  /// **'Pinned'**
-  String get tabPinned;
-
   /// Search box placeholder
   ///
   /// In en, this message translates to:
@@ -152,35 +134,17 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
-  /// General section header
+  /// Shortcuts section header
   ///
   /// In en, this message translates to:
-  /// **'GENERAL'**
-  String get sectionGeneral;
-
-  /// Hotkey section header
-  ///
-  /// In en, this message translates to:
-  /// **'HOTKEY'**
-  String get sectionHotkey;
+  /// **'KEYBOARD SHORTCUTS'**
+  String get sectionShortcuts;
 
   /// Storage section header
   ///
   /// In en, this message translates to:
   /// **'STORAGE'**
   String get sectionStorage;
-
-  /// Backup section header
-  ///
-  /// In en, this message translates to:
-  /// **'BACKUP'**
-  String get sectionBackup;
-
-  /// Shortcuts section header
-  ///
-  /// In en, this message translates to:
-  /// **'KEYBOARD SHORTCUTS'**
-  String get sectionShortcuts;
 
   /// Run on startup toggle label
   ///
@@ -194,59 +158,11 @@ abstract class AppLocalizations {
   /// **'Interface language'**
   String get settingLanguage;
 
-  /// Auto language option
-  ///
-  /// In en, this message translates to:
-  /// **'Auto'**
-  String get languageAuto;
-
-  /// English language option
-  ///
-  /// In en, this message translates to:
-  /// **'English'**
-  String get languageEnglish;
-
-  /// Spanish language option
-  ///
-  /// In en, this message translates to:
-  /// **'Español'**
-  String get languageSpanish;
-
-  /// Hotkey description
-  ///
-  /// In en, this message translates to:
-  /// **'Global shortcut to open CopyPaste'**
-  String get settingHotkeyLabel;
-
   /// Hint when hotkey changes
   ///
   /// In en, this message translates to:
   /// **'Hotkey will apply immediately'**
   String get hotkeyWillApply;
-
-  /// Retention days setting label
-  ///
-  /// In en, this message translates to:
-  /// **'History retention'**
-  String get settingRetentionDays;
-
-  /// Retention days description
-  ///
-  /// In en, this message translates to:
-  /// **'Days to keep history (0 = unlimited)'**
-  String get settingRetentionDaysDesc;
-
-  /// Clear history button label
-  ///
-  /// In en, this message translates to:
-  /// **'Clear all history'**
-  String get settingClearHistory;
-
-  /// Clear history description
-  ///
-  /// In en, this message translates to:
-  /// **'Permanently delete all clipboard items'**
-  String get settingClearHistoryDesc;
 
   /// Clear history dialog title
   ///
@@ -284,35 +200,11 @@ abstract class AppLocalizations {
   /// **'Create backup'**
   String get backupCreateLabel;
 
-  /// Create backup description
-  ///
-  /// In en, this message translates to:
-  /// **'Export all data to a ZIP file'**
-  String get backupCreateDesc;
-
   /// Restore backup label
   ///
   /// In en, this message translates to:
   /// **'Restore backup'**
   String get backupRestoreLabel;
-
-  /// Restore backup description
-  ///
-  /// In en, this message translates to:
-  /// **'Import data from a backup file'**
-  String get backupRestoreDesc;
-
-  /// Creating backup snackbar
-  ///
-  /// In en, this message translates to:
-  /// **'Creating backup...'**
-  String get backupCreating;
-
-  /// Backup created success message
-  ///
-  /// In en, this message translates to:
-  /// **'Backup created: {count} items, {images} images.'**
-  String backupSuccess(int count, int images);
 
   /// Backup error message
   ///
@@ -326,12 +218,6 @@ abstract class AppLocalizations {
   /// **'Restore backup'**
   String get restoreDialogTitle;
 
-  /// Restore path input hint
-  ///
-  /// In en, this message translates to:
-  /// **'Path to .zip backup file'**
-  String get restoreDialogHint;
-
   /// Restore confirmation warning
   ///
   /// In en, this message translates to:
@@ -343,12 +229,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'File not found.'**
   String get restoreFileNotFound;
-
-  /// Invalid backup file error
-  ///
-  /// In en, this message translates to:
-  /// **'Invalid backup file. Select a valid CopyPaste backup (.zip).'**
-  String get restoreInvalidFile;
 
   /// Restore success message
   ///
@@ -416,35 +296,11 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get menuDelete;
 
-  /// Edit card dialog title
-  ///
-  /// In en, this message translates to:
-  /// **'Edit card'**
-  String get editCardTitle;
-
-  /// Label input placeholder
-  ///
-  /// In en, this message translates to:
-  /// **'Label (optional)'**
-  String get editLabelPlaceholder;
-
-  /// Label input hint
-  ///
-  /// In en, this message translates to:
-  /// **'40 characters max'**
-  String get editLabelHint;
-
   /// Color picker label in edit dialog
   ///
   /// In en, this message translates to:
   /// **'Color'**
   String get editColorLabel;
-
-  /// No description provided for @colorNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get colorNone;
 
   /// No description provided for @colorRed.
   ///
@@ -536,12 +392,6 @@ abstract class AppLocalizations {
   /// **'Pinned'**
   String get filterPinned;
 
-  /// File not available warning on card
-  ///
-  /// In en, this message translates to:
-  /// **'File not available'**
-  String get fileNotAvailable;
-
   /// System tray tooltip
   ///
   /// In en, this message translates to:
@@ -553,36 +403,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exit'**
   String get trayExit;
-
-  /// Keyboard shortcuts section title
-  ///
-  /// In en, this message translates to:
-  /// **'Keyboard Shortcuts'**
-  String get shortcutsTitle;
-
-  /// Keyboard shortcuts subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Power your workflow'**
-  String get shortcutsSubtitle;
-
-  /// No description provided for @shortcutsGroupGeneral.
-  ///
-  /// In en, this message translates to:
-  /// **'GENERAL'**
-  String get shortcutsGroupGeneral;
-
-  /// No description provided for @shortcutsGroupNavigation.
-  ///
-  /// In en, this message translates to:
-  /// **'NAVIGATION'**
-  String get shortcutsGroupNavigation;
-
-  /// No description provided for @shortcutsGroupActions.
-  ///
-  /// In en, this message translates to:
-  /// **'ACTIONS'**
-  String get shortcutsGroupActions;
 
   /// No description provided for @shortcutOpenClose.
   ///
