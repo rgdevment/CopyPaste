@@ -120,7 +120,7 @@ class CopyPasteApp extends StatefulWidget {
   State<CopyPasteApp> createState() => _CopyPasteAppState();
 }
 
-class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
+class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, WidgetsBindingObserver {
   late final AppWindow _appWindow;
   late final TrayIcon _trayIcon;
   late HotkeyHandler _hotkeyHandler;
@@ -133,6 +133,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _config = widget.config;
     _appWindow = AppWindow(
       onVisibilityChanged: _onWindowVisibilityChanged,
@@ -149,6 +150,13 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
     );
 
     _initShell();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (_config.themeMode == 'auto' && Platform.isWindows) {
+      _appWindow.applyMica(dark: _isMicaDark('auto'));
+    }
   }
 
   Future<void> _initShell() async {
@@ -393,6 +401,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     windowManager.removeListener(this);
     unawaited(_cleanup());
     super.dispose();
