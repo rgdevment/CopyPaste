@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** February 7, 2026
+**Last updated:** March 4, 2026
 
 ---
 
@@ -74,10 +74,8 @@ All data is stored under your Windows user profile:
 |:---|:---|
 | **Database** | `%LOCALAPPDATA%\CopyPaste\clipboard.db` |
 | **Images** | `%LOCALAPPDATA%\CopyPaste\images\` |
-| **Thumbnails** | `%LOCALAPPDATA%\CopyPaste\thumbs\` |
 | **Configuration** | `%LOCALAPPDATA%\CopyPaste\config\` |
 | **Logs** | `%LOCALAPPDATA%\CopyPaste\logs\` |
-| **Themes** | `%LOCALAPPDATA%\CopyPaste\themes\` |
 
 These folders are protected by your Windows user account permissions. Other users on the same computer cannot access them under normal conditions.
 
@@ -229,5 +227,5 @@ If you have questions or concerns about this privacy policy:
 ---
 
 <div align="center">
-  <p><em>Your clipboard is yours. We built CopyPaste to keep it that way.</em></p>
+  <p><em>Your clipboard is yours. I built CopyPaste to keep it that way.</em></p>
 </div>
