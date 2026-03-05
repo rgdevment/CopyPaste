@@ -97,6 +97,7 @@ class MainScreenState extends State<MainScreen> {
         setState(() => _updateInfo = info);
       }
     });
+_searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     _scrollController.addListener(_onScroll);
     _loadItems();
   }
@@ -241,6 +242,19 @@ class MainScreenState extends State<MainScreen> {
   ) async {
     await widget.clipboardService.updateLabelAndColor(item.id, label, color);
     _reload();
+  }
+
+  KeyEventResult _onSearchKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
+        _items.isNotEmpty) {
+      setState(() => _selectedIndex = 0);
+      _focusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -402,12 +416,6 @@ class MainScreenState extends State<MainScreen> {
             searchController: _searchController,
             searchFocusNode: _searchFocusNode,
             onSearchChanged: _onSearchChanged,
-            onDownArrow: () {
-              if (_items.isNotEmpty) {
-                setState(() => _selectedIndex = 0);
-                _focusNode.requestFocus();
-              }
-            },
             trailing: FilterBar(
               key: _filterBarKey,
               selectedTypes: _typeFilters,
