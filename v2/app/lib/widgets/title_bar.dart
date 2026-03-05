@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../l10n/app_localizations.dart';
@@ -12,7 +11,6 @@ class TitleBar extends StatelessWidget {
     required this.searchController,
     required this.searchFocusNode,
     required this.onSearchChanged,
-    required this.onDownArrow,
     required this.trailing,
     super.key,
   });
@@ -20,7 +18,6 @@ class TitleBar extends StatelessWidget {
   final TextEditingController searchController;
   final FocusNode searchFocusNode;
   final void Function(String) onSearchChanged;
-  final VoidCallback onDownArrow;
   final Widget? trailing;
 
   @override
@@ -34,7 +31,6 @@ class TitleBar extends StatelessWidget {
           controller: searchController,
           focusNode: searchFocusNode,
           onChanged: onSearchChanged,
-          onDownArrow: onDownArrow,
           trailing: trailing,
         ),
       ),
@@ -47,14 +43,12 @@ class _SearchBar extends StatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.onChanged,
-    required this.onDownArrow,
     this.trailing,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final void Function(String) onChanged;
-  final VoidCallback onDownArrow;
   final Widget? trailing;
 
   @override
@@ -94,15 +88,7 @@ class _SearchBarState extends State<_SearchBar> {
     final theme = CopyPasteTheme.of(context);
     final colors = CopyPasteTheme.colorsOf(context);
 
-    return KeyboardListener(
-      focusNode: FocusNode(skipTraversal: true),
-      onKeyEvent: (event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          widget.onDownArrow();
-        }
-      },
-      child: AnimatedContainer(
+    return AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         height: theme.sizing.searchBoxHeight,
         decoration: BoxDecoration(
@@ -196,7 +182,6 @@ class _SearchBarState extends State<_SearchBar> {
             isDense: true,
           ),
         ),
-      ),
     );
   }
 }
