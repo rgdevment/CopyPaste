@@ -548,5 +548,5 @@ If that sounds good to you, I hope it serves you well.
 **Thanks for giving CopyPaste a shot. 💙**
 
 <div align="center">
-  <p>Built with ❤️, Flutter, and too much coffee.</p>
+  <p>Built with ❤️ and too much coffee.</p>
 </div>

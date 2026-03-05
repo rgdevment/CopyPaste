@@ -3,10 +3,14 @@ name: CI v2
 on:
   push:
     branches: [main]
-    paths: ["v2/**"]
+    paths:
+      - "v2/**"
+      - ".github/workflows/ci-v2.yml"
   pull_request:
     branches: [main]
-    paths: ["v2/**"]
+    paths:
+      - "v2/**"
+      - ".github/workflows/ci-v2.yml"
 
 permissions:
   contents: read
@@ -63,12 +67,37 @@ jobs:
       - name: Get dependencies
         run: cd v2/app && flutter pub get
 
-      - name: Build Windows (Release)
-        run: cd v2/app && flutter build windows --release
+      - name: Install Fastforge
+        run: dart pub global activate fastforge
 
-      - name: Upload Windows build
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
+      - name: Build standalone (exe installer)
+        shell: pwsh
+        run: |
+          Push-Location v2/app
+          fastforge package `
+            --platform windows `
+            --targets exe `
+            --build-dart-define "STORE_BUILD=false" `
+            --build-dart-define "APP_VERSION=0.0.0-dev"
+          Pop-Location
+
+      - name: Build store MSIX
+        shell: pwsh
+        run: |
+          Push-Location v2/app
+          fastforge package `
+            --platform windows `
+            --targets msix `
+            --build-dart-define "STORE_BUILD=true" `
+            --build-dart-define "APP_VERSION=0.0.0-dev"
+          Pop-Location
+
+      - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: v2/app/build/windows/x64/runner/Release/
-          retention-days: 5
+          name: windows-installers
+          path: v2/app/dist/
+          retention-days: 3
