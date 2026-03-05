@@ -65,3 +65,10 @@ jobs:
 
       - name: Build Windows (Release)
         run: cd v2/app && flutter build windows --release
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: v2/app/build/windows/x64/runner/Release/
+          retention-days: 5
