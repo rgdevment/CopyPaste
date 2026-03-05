@@ -160,7 +160,8 @@ class MainScreenState extends State<MainScreen> {
         _hasMore = items.length >= _pageSize;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('Failed to load items: $e');
       setState(() => _loading = false);
     }
   }

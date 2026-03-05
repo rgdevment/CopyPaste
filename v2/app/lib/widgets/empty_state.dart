@@ -40,7 +40,7 @@ class EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Copy something to get started',
+              AppLocalizations.of(context).emptyStateSubtitle,
               style: theme.typography.cardFooter.copyWith(
                 color: colors.onSurfaceMuted,
               ),

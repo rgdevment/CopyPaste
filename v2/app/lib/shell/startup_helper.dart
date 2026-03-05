@@ -1,6 +1,7 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:core/core.dart';
 import 'package:ffi/ffi.dart';
 
 typedef _RegOpenKeyExNative = Int32 Function(
@@ -70,7 +71,10 @@ class StartupHelper {
       final result = _regOpenKeyEx(
         _hkeyCurrentUser, subKey, 0, _keySetValue, hKeyPtr,
       );
-      if (result != 0) return;
+      if (result != 0) {
+        AppLogger.error('Failed to open registry key for set: $result');
+        return;
+      }
 
       final hKey = hKeyPtr.value;
       final valueName = _appName.toNativeUtf16();
@@ -78,7 +82,10 @@ class StartupHelper {
       final dataSize = ('"$exePath"'.length + 1) * 2;
 
       try {
-        _regSetValueEx(hKey, valueName, 0, _regSz, valueData, dataSize);
+        final setResult = _regSetValueEx(hKey, valueName, 0, _regSz, valueData, dataSize);
+        if (setResult != 0) {
+          AppLogger.error('Failed to set registry value: $setResult');
+        }
       } finally {
         calloc.free(valueName);
         calloc.free(valueData);
@@ -98,7 +105,10 @@ class StartupHelper {
       final result = _regOpenKeyEx(
         _hkeyCurrentUser, subKey, 0, _keySetValue, hKeyPtr,
       );
-      if (result != 0) return;
+      if (result != 0) {
+        AppLogger.error('Failed to open registry key for delete: $result');
+        return;
+      }
 
       final hKey = hKeyPtr.value;
       final valueName = _appName.toNativeUtf16();

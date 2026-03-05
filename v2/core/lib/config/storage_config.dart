@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import '../services/app_logger.dart';
+
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -46,7 +48,9 @@ class StorageConfig {
       File(_initFlagPath)
         ..createSync(recursive: true)
         ..writeAsStringSync(DateTime.now().toUtc().toIso8601String());
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('Failed to mark as initialized: $e');
+    }
   }
 
   void cleanOrphanImages(List<String> validImagePaths) {
@@ -60,7 +64,9 @@ class StorageConfig {
       if (!validFiles.contains(file.path)) {
         try {
           file.deleteSync();
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.error('Failed to delete orphan file: $e');
+        }
       }
     }
   }

@@ -9,10 +9,13 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
-  String get searchPlaceholder => 'Buscar...';
+  String get searchPlaceholder => 'Buscar en portapapeles…';
 
   @override
   String get emptyState => 'No hay elementos en esta sección';
+
+  @override
+  String get emptyStateSubtitle => 'Copia algo para comenzar';
 
   @override
   String updateBannerLabel(String version) {
@@ -356,4 +359,40 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get trayShowHide => 'Mostrar/Ocultar';
+
+  @override
+  String get fileNotFound => 'No encontrado';
+
+  @override
+  String get audioFile => 'Archivo de audio';
+
+  @override
+  String get videoFile => 'Archivo de video';
+
+  @override
+  String get timeNow => 'ahora';
+
+  @override
+  String get clearAllFilters => 'Limpiar todos los filtros';
+
+  @override
+  String get colorSectionLabel => 'COLOR';
+
+  @override
+  String get colorNone => 'Ninguno';
+
+  @override
+  String get subtitlePastePreset =>
+      'Velocidad de pegado automático. Normal/Seguro recomendado para la mayoría.';
+
+  @override
+  String get subtitleBackup =>
+      'Crea un respaldo de tu historial, imágenes y configuración. Restaura en cualquier momento en este u otro dispositivo.';
+
+  @override
+  String get aboutDescription =>
+      'Un gestor de portapapeles ligero, rápido y de código abierto para Windows.\nCopia una vez, pega en cualquier lugar — tu historial del portapapeles, siempre a mano.';
+
+  @override
+  String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';
 }

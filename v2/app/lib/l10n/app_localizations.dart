@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// Search box placeholder
   ///
   /// In en, this message translates to:
-  /// **'Search...'**
+  /// **'Search clipboard…'**
   String get searchPlaceholder;
 
   /// Empty list message
@@ -109,6 +109,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No items in this section'**
   String get emptyState;
+
+  /// Empty state subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Copy something to get started'**
+  String get emptyStateSubtitle;
 
   /// Update available banner text
   ///
@@ -763,6 +769,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show/Hide'**
   String get trayShowHide;
+
+  /// Badge when file is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get fileNotFound;
+
+  /// Fallback name for audio items
+  ///
+  /// In en, this message translates to:
+  /// **'Audio file'**
+  String get audioFile;
+
+  /// Fallback name for video items
+  ///
+  /// In en, this message translates to:
+  /// **'Video file'**
+  String get videoFile;
+
+  /// Timestamp for less than 1 minute ago
+  ///
+  /// In en, this message translates to:
+  /// **'now'**
+  String get timeNow;
+
+  /// Filter menu clear action
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all filters'**
+  String get clearAllFilters;
+
+  /// Filter menu color section header
+  ///
+  /// In en, this message translates to:
+  /// **'COLOR'**
+  String get colorSectionLabel;
+
+  /// No color option
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get colorNone;
+
+  /// Paste preset subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
+  String get subtitlePastePreset;
+
+  /// Backup section subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.'**
+  String get subtitleBackup;
+
+  /// About section description
+  ///
+  /// In en, this message translates to:
+  /// **'A lightweight, fast, and open-source clipboard manager for Windows.\nCopy once, paste anywhere — your clipboard history, always at hand.'**
+  String get aboutDescription;
+
+  /// License footer text
+  ///
+  /// In en, this message translates to:
+  /// **'GPL v3 License — Free and open source.'**
+  String get aboutLicense;
 }
 
 class _AppLocalizationsDelegate

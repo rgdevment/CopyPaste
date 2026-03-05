@@ -21,6 +21,13 @@ import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 
+bool _isMicaDark(String themeMode) => switch (themeMode) {
+      'dark' => true,
+      'auto' || 'system' =>
+        PlatformDispatcher.instance.platformBrightness == Brightness.dark,
+      _ => false,
+    };
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -69,16 +76,10 @@ void main() async {
   await StartupHelper.apply(config.runOnStartup);
 
   if (Platform.isWindows) {
-    final micaDark = switch (config.themeMode) {
-      'dark' => true,
-      'auto' || 'system' =>
-        PlatformDispatcher.instance.platformBrightness == Brightness.dark,
-      _ => false,
-    };
     await Window.setEffect(
       effect: WindowEffect.mica,
       color: const Color(0x00000000),
-      dark: micaDark,
+      dark: _isMicaDark(config.themeMode),
     );
   }
 
@@ -324,21 +325,14 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener {
   }
 
   Future<void> _cleanup() async {
-    try { await _listenerSubscription?.cancel(); } catch (_) {}
-    try { await _hotkeyHandler.unregister(); } catch (_) {}
-    try { await _trayIcon.dispose(); } catch (_) {}
-    try { widget.clipboardService.dispose(); } catch (_) {}
-    try { widget.cleanupService.dispose(); } catch (_) {}
-    try { widget.updateChecker.dispose(); } catch (_) {}
-    try { await widget.repo.close(); } catch (_) {}
+    try { await _listenerSubscription?.cancel(); } catch (e) { AppLogger.error('cleanup listener: $e'); }
+    try { await _hotkeyHandler.unregister(); } catch (e) { AppLogger.error('cleanup hotkey: $e'); }
+    try { await _trayIcon.dispose(); } catch (e) { AppLogger.error('cleanup tray: $e'); }
+    try { widget.clipboardService.dispose(); } catch (e) { AppLogger.error('cleanup clipboard: $e'); }
+    try { widget.cleanupService.dispose(); } catch (e) { AppLogger.error('cleanup cleanup: $e'); }
+    try { widget.updateChecker.dispose(); } catch (e) { AppLogger.error('cleanup update: $e'); }
+    try { await widget.repo.close(); } catch (e) { AppLogger.error('cleanup repo: $e'); }
   }
-
-  bool _isMicaDark(String themeMode) => switch (themeMode) {
-        'dark' => true,
-        'auto' || 'system' =>
-          PlatformDispatcher.instance.platformBrightness == Brightness.dark,
-        _ => false,
-      };
 
   Future<void> _exitApp() async {
     await _cleanup();

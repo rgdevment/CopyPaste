@@ -46,6 +46,7 @@ class FilterBarState extends State<FilterBar> {
   void _showFilterMenu(BuildContext context) {
     final theme = CopyPasteTheme.of(context);
     final colors = CopyPasteTheme.colorsOf(context);
+    final l = AppLocalizations.of(context);
     final renderBox = context.findRenderObject()! as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
 
@@ -75,7 +76,7 @@ class FilterBarState extends State<FilterBar> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Clear all filters',
+                  l.clearAllFilters,
                   style: theme.typography.filterChip.copyWith(
                     color: colors.danger,
                   ),
@@ -89,7 +90,7 @@ class FilterBarState extends State<FilterBar> {
           enabled: false,
           height: 28,
           child: Text(
-            'COLOR',
+            l.colorSectionLabel,
             style: theme.typography.filterChip.copyWith(
               color: colors.onSurfaceMuted,
               fontSize: 10,

@@ -467,7 +467,16 @@ std::wstring ListenerPlugin::ExtractText() {
   void* ptr = GlobalLock(hData);
   if (!ptr) return {};
 
-  std::wstring text(static_cast<const wchar_t*>(ptr));
+  SIZE_T sz = GlobalSize(hData);
+  size_t maxChars = sz / sizeof(wchar_t);
+  if (maxChars == 0) {
+    GlobalUnlock(hData);
+    return {};
+  }
+
+  const wchar_t* wptr = static_cast<const wchar_t*>(ptr);
+  size_t len = wcsnlen(wptr, maxChars);
+  std::wstring text(wptr, len);
   GlobalUnlock(hData);
   return text;
 }
@@ -513,13 +522,24 @@ std::vector<std::wstring> ListenerPlugin::ExtractFilePaths() {
 }
 
 bool ListenerPlugin::IsUrl(const std::wstring& text) {
-  if (text.size() < 8) return false;
+  if (text.size() < 5) return false;
   auto lower = text;
   std::transform(lower.begin(), lower.end(), lower.begin(), ::towlower);
-  if (lower.substr(0, 7) != L"http://" &&
-      lower.substr(0, 8) != L"https://") {
-    return false;
+
+  static const std::wstring kPrefixes[] = {
+      L"https://", L"http://", L"ftp://", L"file:///", L"mailto:",
+  };
+
+  bool matched = false;
+  for (const auto& prefix : kPrefixes) {
+    if (lower.size() >= prefix.size() &&
+        lower.substr(0, prefix.size()) == prefix) {
+      matched = true;
+      break;
+    }
   }
+  if (!matched) return false;
+
   return text.find(L' ') == std::wstring::npos &&
          text.find(L'\n') == std::wstring::npos;
 }

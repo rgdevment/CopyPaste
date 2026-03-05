@@ -7,6 +7,7 @@ import '../models/card_color.dart';
 import '../models/clipboard_content_type.dart';
 import '../models/clipboard_item.dart';
 import '../search/search_helper.dart';
+import '../services/app_logger.dart';
 import 'i_clipboard_repository.dart';
 
 part 'sqlite_repository.g.dart';
@@ -263,7 +264,9 @@ class SqliteRepository implements IClipboardRepository {
     if (deleted > 50) {
       try {
         await _db.customStatement('PRAGMA incremental_vacuum');
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.error('incremental_vacuum failed: $e');
+      }
     }
 
     return deleted;
@@ -277,7 +280,9 @@ class SqliteRepository implements IClipboardRepository {
     if (deleted > 50) {
       try {
         await _db.customStatement('PRAGMA incremental_vacuum');
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.error('incremental_vacuum failed: $e');
+      }
     }
     return deleted;
   }
@@ -295,59 +300,8 @@ class SqliteRepository implements IClipboardRepository {
     String query, {
     int limit = 50,
     int skip = 0,
-  }) async {
-    final normalized = SearchHelper.normalize(query);
-    if (normalized.isEmpty) {
-      final rows = await (_db.select(_db.clipboardItems)
-            ..orderBy([
-              (t) => OrderingTerm.desc(t.modifiedAt),
-            ])
-            ..limit(limit, offset: skip))
-          .get();
-      return rows.map(_fromRow).toList();
-    }
-
-    final ftsQuery =
-        '${normalized.replaceAll('"', '""')}*';
-    final likePattern = '%$normalized%';
-
-    final results = await _db.customSelect(
-      '''
-      WITH fts_results AS (
-        SELECT c.*, bm25(ClipboardItems_fts) AS rank, 1 AS source
-        FROM clipboard_items c
-        INNER JOIN ClipboardItems_fts fts ON c.rowid = fts.rowid
-        WHERE ClipboardItems_fts MATCH ?
-      ),
-      like_results AS (
-        SELECT c.*, 0.0 AS rank, 2 AS source
-        FROM clipboard_items c
-        WHERE (LOWER(c.content) LIKE ? OR LOWER(c.label) LIKE ? OR LOWER(c.app_source) LIKE ?)
-          AND c.id NOT IN (SELECT id FROM fts_results)
-        LIMIT ?
-      )
-      SELECT * FROM (
-        SELECT * FROM fts_results
-        UNION ALL
-        SELECT * FROM like_results
-      )
-      ORDER BY source ASC, rank ASC, modified_at DESC
-      LIMIT ? OFFSET ?
-      ''',
-      variables: [
-        Variable.withString(ftsQuery),
-        Variable.withString(likePattern),
-        Variable.withString(likePattern),
-        Variable.withString(likePattern),
-        Variable.withInt(limit),
-        Variable.withInt(limit),
-        Variable.withInt(skip),
-      ],
-      readsFrom: {_db.clipboardItems},
-    ).get();
-
-    return results.map((row) => _fromQueryRow(row)).toList();
-  }
+  }) =>
+      searchAdvanced(query: query, limit: limit, skip: skip);
 
   @override
   Future<List<ClipboardItem>> searchAdvanced({
@@ -472,7 +426,9 @@ class SqliteRepository implements IClipboardRepository {
   Future<void> walCheckpoint() async {
     try {
       await _db.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('walCheckpoint failed: $e');
+    }
   }
 
   @override

@@ -339,7 +339,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      item.label ?? _contentTypeName(item.type),
+                      item.label ?? _contentTypeName(item.type, l),
                       style: theme.typography.cardLabel.copyWith(
                         color: item.label != null
                             ? typeColor.withValues(alpha: 0.85)
@@ -396,7 +396,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
                       ),
                     ),
                   Text(
-                    _formatTimestamp(item.modifiedAt),
+                    _formatTimestamp(item.modifiedAt, l),
                     style: theme.typography.cardTimestamp.copyWith(
                       color: colors.onSurface.withValues(
                         alpha: theme.cardStyle.timestampOpacity,
@@ -600,7 +600,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ],
               if (!available) ...[
                 if (files.length > 1) const SizedBox(width: 4),
-                _ExtBadge(label: 'Not found', color: colors.warning),
+                _ExtBadge(label: AppLocalizations.of(context).fileNotFound, color: colors.warning),
               ],
             ],
           ),
@@ -668,7 +668,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
           ),
           const SizedBox(height: 4),
           Text(
-            filename.isEmpty ? 'Video file' : filename,
+            filename.isEmpty ? AppLocalizations.of(context).videoFile : filename,
             style: theme.typography.cardContent.copyWith(
               color: colors.onSurface.withValues(
                 alpha: theme.cardStyle.contentOpacity,
@@ -684,7 +684,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
 
     // Audio or video without thumbnail: just show filename (type shown in header + footer badge)
     return Text(
-      filename.isEmpty ? (isAudio ? 'Audio file' : 'Video file') : filename,
+      filename.isEmpty ? (isAudio ? AppLocalizations.of(context).audioFile : AppLocalizations.of(context).videoFile) : filename,
       style: theme.typography.cardContent.copyWith(
         color: colors.onSurface.withValues(
           alpha: theme.cardStyle.contentOpacity,
@@ -891,22 +891,23 @@ class _ClipboardCardState extends State<ClipboardCard> {
     };
   }
 
-  String _contentTypeName(ClipboardContentType type) => switch (type) {
-        ClipboardContentType.text => 'Text',
-        ClipboardContentType.image => 'Image',
-        ClipboardContentType.file => 'File',
-        ClipboardContentType.folder => 'Folder',
-        ClipboardContentType.link => 'Link',
-        ClipboardContentType.audio => 'Audio',
-        ClipboardContentType.video => 'Video',
+  String _contentTypeName(ClipboardContentType type, AppLocalizations l) =>
+      switch (type) {
+        ClipboardContentType.text => l.typeText,
+        ClipboardContentType.image => l.typeImage,
+        ClipboardContentType.file => l.typeFile,
+        ClipboardContentType.folder => l.typeFolder,
+        ClipboardContentType.link => l.typeLink,
+        ClipboardContentType.audio => l.typeAudio,
+        ClipboardContentType.video => l.typeVideo,
         ClipboardContentType.unknown => 'Unknown',
       };
 
-  String _formatTimestamp(DateTime dt) {
+  String _formatTimestamp(DateTime dt, AppLocalizations l) {
     final now = DateTime.now();
     final diff = now.difference(dt);
 
-    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 1) return l.timeNow;
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}d';
