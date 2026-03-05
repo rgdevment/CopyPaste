@@ -12,6 +12,9 @@
 #endif
 #include <windows.h>
 
+#include <objidl.h>
+#include <gdiplus.h>
+
 #include <memory>
 #include <mutex>
 #include <string>
@@ -56,6 +59,7 @@ class ListenerPlugin : public flutter::Plugin {
   UINT cf_html_ = 0;
   UINT cf_exclude_history_ = 0;
   UINT cf_can_include_ = 0;
+  ULONG_PTR gdip_token_ = 0;
 
   std::optional<LRESULT> HandleWindowMessage(HWND hwnd, UINT message,
                                               WPARAM wparam, LPARAM lparam);

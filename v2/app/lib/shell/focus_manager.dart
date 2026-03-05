@@ -164,6 +164,9 @@ class WindowFocusManager {
     final focused = await _waitForFocus(maxFocusVerifyAttempts);
     if (!focused) {
       await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
+    } else {
+      // Brief stabilization delay for clipboard propagation
+      await Future<void>.delayed(const Duration(milliseconds: 30));
     }
 
     simulatePaste();
