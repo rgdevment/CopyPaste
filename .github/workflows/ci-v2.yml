@@ -36,8 +36,17 @@ jobs:
 
       - name: Run tests
         run: |
-          cd v2/core && flutter test
-          cd ../app && flutter test
+          cd v2/core && flutter test --coverage
+          cd ../listener && flutter test --coverage
+          cd ../app && flutter test --coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
+          flags: core,listener,app
+          fail_ci_if_error: false
 
   build-windows:
     runs-on: windows-latest

@@ -224,4 +224,148 @@ void main() {
       );
     });
   });
+
+  group('ClipboardService.getHistoryAdvanced', () {
+    test('returns all items when no filters are applied', () async {
+      await service.processText('item1', ClipboardContentType.text);
+      await service.processText('item2', ClipboardContentType.text);
+      final results = await service.getHistoryAdvanced(limit: 50, skip: 0);
+      expect(results.length, equals(2));
+    });
+
+    test('filters by type', () async {
+      await service.processText('text item', ClipboardContentType.text);
+      await service.processText('link item', ClipboardContentType.link);
+      final results = await service.getHistoryAdvanced(
+        types: [ClipboardContentType.text],
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.type, equals(ClipboardContentType.text));
+    });
+
+    test('filters by color', () async {
+      final item = await service.processText('colored', ClipboardContentType.text);
+      await service.updateLabelAndColor(item!.id, null, CardColor.red);
+      await service.processText('no color', ClipboardContentType.text);
+      final results = await service.getHistoryAdvanced(
+        colors: [CardColor.red],
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.cardColor, equals(CardColor.red));
+    });
+
+    test('filters by isPinned', () async {
+      final item = await service.processText('pinned', ClipboardContentType.text);
+      await service.updatePin(item!.id, true);
+      await service.processText('normal', ClipboardContentType.text);
+      final results = await service.getHistoryAdvanced(
+        isPinned: true,
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.isPinned, isTrue);
+    });
+
+    test('filters by query', () async {
+      await service.processText('hello world', ClipboardContentType.text);
+      await service.processText('something else', ClipboardContentType.text);
+      final results = await service.getHistoryAdvanced(
+        query: 'hello',
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.content, equals('hello world'));
+    });
+
+    test('respects limit and skip', () async {
+      for (var i = 0; i < 5; i++) {
+        await service.processText('item$i unique_$i', ClipboardContentType.text);
+      }
+      final page1 = await service.getHistoryAdvanced(limit: 3, skip: 0);
+      final page2 = await service.getHistoryAdvanced(limit: 3, skip: 3);
+      expect(page1.length, equals(3));
+      expect(page2.length, equals(2));
+    });
+  });
+
+  group('ClipboardService.clearUnpinnedHistory', () {
+    test('removes all non-pinned items', () async {
+      final item = await service.processText('to be pinned', ClipboardContentType.text);
+      await service.updatePin(item!.id, true);
+      await service.processText('to be deleted', ClipboardContentType.text);
+
+      final deleted = await service.clearUnpinnedHistory();
+      expect(deleted, equals(1));
+
+      final remaining = await service.getHistoryAdvanced(limit: 50, skip: 0);
+      expect(remaining.length, equals(1));
+      expect(remaining.first.isPinned, isTrue);
+    });
+
+    test('returns 0 when nothing to delete', () async {
+      final count = await service.clearUnpinnedHistory();
+      expect(count, equals(0));
+    });
+  });
+
+  group('ClipboardService.getItemCount', () {
+    test('returns correct count', () async {
+      expect(await service.getItemCount(), equals(0));
+      await service.processText('one', ClipboardContentType.text);
+      expect(await service.getItemCount(), equals(1));
+      await service.processText('two', ClipboardContentType.text);
+      expect(await service.getItemCount(), equals(2));
+    });
+  });
+
+  group('ClipboardService.walCheckpoint', () {
+    test('completes without error', () async {
+      await service.processText('checkpoint test', ClipboardContentType.text);
+      await expectLater(service.walCheckpoint(), completes);
+    });
+  });
+
+  group('ClipboardService.updateMetadata', () {
+    test('updates metadata and emits onItemReactivated', () async {
+      ClipboardItem? reactivated;
+      service.onItemReactivated.listen((item) => reactivated = item);
+
+      final item =
+          await service.processText('meta', ClipboardContentType.text);
+      await service.updateMetadata(item!.id, '{"key":"value"}');
+      await Future<void>.delayed(Duration.zero);
+
+      final stored = await repo.getById(item.id);
+      expect(stored!.metadata, equals('{"key":"value"}'));
+      expect(reactivated, isNotNull);
+      expect(reactivated!.metadata, equals('{"key":"value"}'));
+    });
+
+    test('silently ignores unknown id', () async {
+      await expectLater(
+        service.updateMetadata('nonexistent', '{}'),
+        completes,
+      );
+    });
+  });
+
+  group('ClipboardService.dispose', () {
+    test('closes streams after dispose', () async {
+      var addedDone = false;
+      var reactivatedDone = false;
+      service.onItemAdded.listen(null, onDone: () => addedDone = true);
+      service.onItemReactivated
+          .listen(null, onDone: () => reactivatedDone = true);
+      service.dispose();
+      await Future<void>.delayed(Duration.zero);
+      expect(addedDone, isTrue);
+      expect(reactivatedDone, isTrue);
+    });
+  });
 }

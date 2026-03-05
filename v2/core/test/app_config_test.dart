@@ -78,4 +78,177 @@ void main() {
       expect(restored.lastBackupDateUtc, equals(date));
     });
   });
+
+  group('AppConfig.copyWith sentinel fields', () {
+    test('copyWith can clear lastBackupDateUtc to null', () {
+      final date = DateTime.utc(2026, 1, 1);
+      final config = AppConfig(lastBackupDateUtc: date);
+      final updated = config.copyWith(lastBackupDateUtc: null);
+      expect(updated.lastBackupDateUtc, isNull);
+    });
+
+    test('copyWith without lastBackupDateUtc preserves existing value', () {
+      final date = DateTime.utc(2026, 1, 1);
+      final config = AppConfig(lastBackupDateUtc: date);
+      final updated = config.copyWith(pageSize: 20);
+      expect(updated.lastBackupDateUtc, equals(date));
+    });
+
+    test('copyWith can clear dismissedUpdateVersion to null', () {
+      const config = AppConfig(dismissedUpdateVersion: '2.1.0');
+      final updated = config.copyWith(dismissedUpdateVersion: null);
+      expect(updated.dismissedUpdateVersion, isNull);
+    });
+
+    test('copyWith without dismissedUpdateVersion preserves existing value',
+        () {
+      const config = AppConfig(dismissedUpdateVersion: '2.0.1');
+      final updated = config.copyWith(retentionDays: 60);
+      expect(updated.dismissedUpdateVersion, equals('2.0.1'));
+    });
+  });
+
+  group('AppConfig hotkey fields', () {
+    test('hotkey defaults are correct', () {
+      const config = AppConfig();
+      expect(config.hotkeyUseCtrl, isFalse);
+      expect(config.hotkeyUseWin, isTrue);
+      expect(config.hotkeyUseAlt, isTrue);
+      expect(config.hotkeyUseShift, isFalse);
+      expect(config.hotkeyVirtualKey, equals(0x56));
+      expect(config.hotkeyKeyName, equals('V'));
+    });
+
+    test('copyWith all hotkey fields', () {
+      const config = AppConfig();
+      final updated = config.copyWith(
+        hotkeyUseCtrl: true,
+        hotkeyUseWin: false,
+        hotkeyUseAlt: false,
+        hotkeyUseShift: true,
+        hotkeyVirtualKey: 0x43,
+        hotkeyKeyName: 'C',
+      );
+      expect(updated.hotkeyUseCtrl, isTrue);
+      expect(updated.hotkeyUseWin, isFalse);
+      expect(updated.hotkeyUseAlt, isFalse);
+      expect(updated.hotkeyUseShift, isTrue);
+      expect(updated.hotkeyVirtualKey, equals(0x43));
+      expect(updated.hotkeyKeyName, equals('C'));
+    });
+
+    test('hotkey fields round-trip via JSON', () {
+      const config = AppConfig(
+        hotkeyUseCtrl: true,
+        hotkeyUseWin: false,
+        hotkeyUseAlt: false,
+        hotkeyUseShift: true,
+        hotkeyVirtualKey: 0x43,
+        hotkeyKeyName: 'C',
+      );
+      final restored = AppConfig.fromJson(config.toJson());
+      expect(restored.hotkeyUseCtrl, isTrue);
+      expect(restored.hotkeyUseWin, isFalse);
+      expect(restored.hotkeyKeyName, equals('C'));
+    });
+  });
+
+  group('AppConfig appearance and behavior fields', () {
+    test('themeMode defaults to auto', () {
+      const config = AppConfig();
+      expect(config.themeMode, equals('auto'));
+    });
+
+    test('themeMode round-trips via JSON', () {
+      const config = AppConfig(themeMode: 'dark');
+      expect(AppConfig.fromJson(config.toJson()).themeMode, equals('dark'));
+    });
+
+    test('colorLabels round-trip', () {
+      const config = AppConfig(colorLabels: {'1': 'Work', '2': 'Home'});
+      final restored = AppConfig.fromJson(config.toJson());
+      expect(restored.colorLabels['1'], equals('Work'));
+      expect(restored.colorLabels['2'], equals('Home'));
+    });
+
+    test('colorLabels defaults to empty map', () {
+      const config = AppConfig();
+      expect(config.colorLabels, isEmpty);
+    });
+
+    test('timing fields have correct defaults', () {
+      const config = AppConfig();
+      expect(config.duplicateIgnoreWindowMs, equals(450));
+      expect(config.delayBeforeFocusMs, equals(100));
+      expect(config.delayBeforePasteMs, equals(180));
+      expect(config.maxFocusVerifyAttempts, equals(15));
+    });
+
+    test('popup size defaults', () {
+      const config = AppConfig();
+      expect(config.popupWidth, equals(368));
+      expect(config.popupHeight, equals(480));
+    });
+
+    test('card line defaults', () {
+      const config = AppConfig();
+      expect(config.cardMinLines, equals(2));
+      expect(config.cardMaxLines, equals(5));
+    });
+
+    test('toJson omits lastBackupDateUtc when null', () {
+      const config = AppConfig();
+      expect(config.toJson().containsKey('lastBackupDateUtc'), isFalse);
+    });
+
+    test('toJson omits dismissedUpdateVersion when null', () {
+      const config = AppConfig();
+      expect(
+          config.toJson().containsKey('dismissedUpdateVersion'), isFalse);
+    });
+
+    test('toJson includes lastBackupDateUtc when set', () {
+      final config = AppConfig(lastBackupDateUtc: DateTime.utc(2026, 3, 5));
+      expect(config.toJson()['lastBackupDateUtc'], isA<String>());
+    });
+
+    test('full serialization round-trip with all fields', () {
+      final config = AppConfig(
+        preferredLanguage: 'es',
+        runOnStartup: false,
+        hotkeyUseCtrl: true,
+        pageSize: 50,
+        retentionDays: 60,
+        colorLabels: const {'1': 'Work'},
+        duplicateIgnoreWindowMs: 600,
+        delayBeforeFocusMs: 120,
+        delayBeforePasteMs: 200,
+        maxFocusVerifyAttempts: 20,
+        popupWidth: 400,
+        popupHeight: 520,
+        cardMinLines: 3,
+        cardMaxLines: 8,
+        hideOnDeactivate: false,
+        resetScrollOnShow: false,
+        resetSearchOnShow: false,
+        hasSeenHint: true,
+        dismissedUpdateVersion: '2.0.0',
+        themeMode: 'light',
+      );
+      final restored = AppConfig.fromJson(config.toJson());
+      expect(restored.preferredLanguage, equals('es'));
+      expect(restored.runOnStartup, isFalse);
+      expect(restored.hotkeyUseCtrl, isTrue);
+      expect(restored.pageSize, equals(50));
+      expect(restored.retentionDays, equals(60));
+      expect(restored.colorLabels['1'], equals('Work'));
+      expect(restored.duplicateIgnoreWindowMs, equals(600));
+      expect(restored.popupWidth, equals(400));
+      expect(restored.cardMinLines, equals(3));
+      expect(restored.hideOnDeactivate, isFalse);
+      expect(restored.hasSeenHint, isTrue);
+      expect(restored.dismissedUpdateVersion, equals('2.0.0'));
+      expect(restored.themeMode, equals('light'));
+    });
+  });
 }
