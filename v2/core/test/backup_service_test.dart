@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -178,6 +179,138 @@ void main() {
 
       final manifest = await BackupService.validateBackup(badFile.path);
       expect(manifest, isNull);
+    });
+  });
+
+  group('BackupService additional coverage', () {
+    test('createBackup calls walCheckpoint when provided', () async {
+      var checkpointed = false;
+      final outputPath = p.join(tempDir.path, 'wal_backup.zip');
+      await BackupService.createBackup(
+        outputPath,
+        storage,
+        '2.0.0',
+        walCheckpoint: () async {
+          checkpointed = true;
+        },
+      );
+      expect(checkpointed, isTrue);
+      expect(File(outputPath).existsSync(), isTrue);
+    });
+
+    test(
+      'createBackup includes itemCount and hasPinnedItems in manifest',
+      () async {
+        final outputPath = p.join(tempDir.path, 'metadata_backup.zip');
+        final manifest = await BackupService.createBackup(
+          outputPath,
+          storage,
+          '2.0.0',
+          itemCount: 42,
+          hasPinnedItems: true,
+        );
+        expect(manifest.itemCount, equals(42));
+        expect(manifest.hasPinnedItems, isTrue);
+      },
+    );
+
+    test('createBackup includes config files', () async {
+      await storage.ensureDirectories();
+      File(p.join(storage.configPath, 'config.json')).writeAsStringSync('{}');
+
+      final outputPath = p.join(tempDir.path, 'config_backup.zip');
+      await BackupService.createBackup(outputPath, storage, '2.0.0');
+
+      final manifest = await BackupService.validateBackup(outputPath);
+      expect(manifest, isNotNull);
+    });
+
+    test('restoreBackup returns null for version greater than current', () async {
+      // Create a backup with a valid archive but version > current
+      File(storage.databasePath).writeAsBytesSync([83, 81, 76]);
+      final outputPath = p.join(tempDir.path, 'v99_backup.zip');
+      // Create a fake zip with version 99 manifest
+      final archive = Archive();
+      final manifestJson =
+          '{"version":99,"appVersion":"99.0","createdAtUtc":"${DateTime.now().toUtc().toIso8601String()}","itemCount":0,"imageCount":0,"hasPinnedItems":false,"machineName":"test"}';
+      final manifestBytes = manifestJson.codeUnits;
+      archive.addFile(
+        ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+      );
+      await File(outputPath).writeAsBytes(ZipEncoder().encode(archive));
+
+      final restoreDir = Directory.systemTemp.createTempSync('restore_v99_');
+      try {
+        final restoreStorage = await StorageConfig.create(
+          baseDir: restoreDir.path,
+        );
+        final result = await BackupService.restoreBackup(
+          outputPath,
+          restoreStorage,
+        );
+        expect(result, isNull);
+      } finally {
+        restoreDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('restoreBackup skips files with path traversal', () async {
+      final archive = Archive();
+      final manifestJson =
+          '{"version":1,"appVersion":"2.0","createdAtUtc":"${DateTime.now().toUtc().toIso8601String()}","itemCount":0,"imageCount":0,"hasPinnedItems":false,"machineName":"test"}';
+      final manifestBytes = manifestJson.codeUnits;
+      archive.addFile(
+        ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+      );
+      // Add a file with path traversal
+      archive.addFile(ArchiveFile('../evil.txt', 5, [104, 101, 108, 108, 111]));
+
+      final zipPath = p.join(tempDir.path, 'traversal.zip');
+      await File(zipPath).writeAsBytes(ZipEncoder().encode(archive));
+
+      final restoreDir = Directory.systemTemp.createTempSync('traversal_r_');
+      try {
+        final restoreStorage = await StorageConfig.create(
+          baseDir: restoreDir.path,
+        );
+        final result = await BackupService.restoreBackup(
+          zipPath,
+          restoreStorage,
+        );
+        expect(result, isNotNull); // succeeds but skips traversal file
+        final evil = File(p.join(restoreDir.path, '..', 'evil.txt'));
+        expect(evil.existsSync(), isFalse);
+      } finally {
+        restoreDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('restoreBackup with images directory restores images', () async {
+      await storage.ensureDirectories();
+      File(storage.databasePath).writeAsBytesSync([83, 81, 76]);
+      File(p.join(storage.imagesPath, 'img.png')).writeAsBytesSync([1, 2, 3]);
+
+      final outputPath = p.join(tempDir.path, 'with_images.zip');
+      await BackupService.createBackup(outputPath, storage, '2.0.0');
+
+      final restoreDir = Directory.systemTemp.createTempSync('img_restore_');
+      try {
+        final restoreStorage = await StorageConfig.create(
+          baseDir: restoreDir.path,
+        );
+        final manifest = await BackupService.restoreBackup(
+          outputPath,
+          restoreStorage,
+        );
+        expect(manifest, isNotNull);
+        expect(manifest!.imageCount, equals(1));
+        expect(
+          File(p.join(restoreStorage.imagesPath, 'img.png')).existsSync(),
+          isTrue,
+        );
+      } finally {
+        restoreDir.deleteSync(recursive: true);
+      }
     });
   });
 }

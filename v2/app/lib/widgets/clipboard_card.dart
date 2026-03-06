@@ -742,18 +742,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: typeColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(theme.radii.sm),
-          ),
-          child: Center(
-            child: Icon(theme.icons.link, size: 16, color: typeColor),
-          ),
-        ),
-        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
