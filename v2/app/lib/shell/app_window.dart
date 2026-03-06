@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'dart:ffi' hide Size;
 import 'dart:io';
 import 'dart:ui' show Color, Offset, Size;

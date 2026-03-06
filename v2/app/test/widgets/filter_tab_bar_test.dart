@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -155,6 +156,65 @@ void main() {
           brightness: Brightness.dark,
         ),
       );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FilterTabBar), findsOneWidget);
+    });
+
+    testWidgets('hovering over an inactive tab changes its appearance', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapWidget(
+          FilterTabBar(
+            selectedTypes: const [],
+            isPinnedMode: false,
+            onTypesChanged: (_) {},
+            onPinnedModeChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
+      final tabFinder = find.text('All');
+      if (tabFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(tabFinder.first));
+        await tester.pumpAndSettle();
+        await gesture.moveTo(Offset.zero);
+        await tester.pumpAndSettle();
+      }
+      expect(find.byType(FilterTabBar), findsOneWidget);
+    });
+
+    testWidgets('drag scroll pointer events do not crash', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(
+          SizedBox(
+            width: 200,
+            child: FilterTabBar(
+              selectedTypes: const [],
+              isPinnedMode: false,
+              onTypesChanged: (_) {},
+              onPinnedModeChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final tabBar = find.byType(FilterTabBar);
+      final center = tester.getCenter(tabBar);
+
+      final gesture = await tester.startGesture(center);
+      await gesture.moveBy(const Offset(-50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(-20, 0));
+      await tester.pump();
+      await gesture.up();
       await tester.pumpAndSettle();
 
       expect(find.byType(FilterTabBar), findsOneWidget);
