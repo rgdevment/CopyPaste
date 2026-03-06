@@ -12,15 +12,15 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      switch (call.method) {
-        case 'setClipboardContent':
-          return true;
-        case 'getMediaInfo':
-          return <String, Object?>{'width': 1920, 'height': 1080};
-        default:
-          return null;
-      }
-    });
+          switch (call.method) {
+            case 'setClipboardContent':
+              return true;
+            case 'getMediaInfo':
+              return <String, Object?>{'width': 1920, 'height': 1080};
+            default:
+              return null;
+          }
+        });
   });
 
   tearDown(() {
@@ -38,9 +38,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setText('hi', plainText: true);
       expect(captured!.arguments['plainText'], isTrue);
     });
@@ -49,9 +49,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       final rtfBytes = utf8.encode('{\\rtf1 hello}');
       final meta = jsonEncode({'rtf': base64Encode(rtfBytes)});
       await ClipboardWriter.setText('hello', metadata: meta);
@@ -62,9 +62,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       final htmlBytes = utf8.encode('<b>hello</b>');
       final meta = jsonEncode({'html': base64Encode(htmlBytes)});
       await ClipboardWriter.setText('hello', metadata: meta);
@@ -83,9 +83,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       final rtfBytes = utf8.encode('{\\rtf1 hello}');
       final meta = jsonEncode({'rtf': base64Encode(rtfBytes)});
       await ClipboardWriter.setText('hi', metadata: meta, plainText: true);
@@ -110,9 +110,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setImage('/img/photo.png');
       expect(captured!.arguments['type'], equals(1));
       expect(captured!.arguments['content'], equals('/img/photo.png'));
@@ -129,9 +129,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setFiles('/file.mp3', 5);
       expect(captured!.arguments['type'], equals(5));
     });
@@ -158,13 +158,10 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
-      await ClipboardWriter.setFromItem(
-        typeValue: 1,
-        content: '/path/img.png',
-      );
+            captured = call;
+            return true;
+          });
+      await ClipboardWriter.setFromItem(typeValue: 1, content: '/path/img.png');
       expect(captured!.arguments['type'], equals(1));
     });
 
@@ -172,9 +169,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setFromItem(typeValue: 2, content: '/file.txt');
       expect(captured!.arguments['type'], equals(2));
     });
@@ -183,9 +180,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setFromItem(typeValue: 3, content: '/folder/');
       expect(captured!.arguments['type'], equals(3));
     });
@@ -194,9 +191,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setFromItem(typeValue: 5, content: '/audio.mp3');
       expect(captured!.arguments['type'], equals(5));
     });
@@ -205,9 +202,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setFromItem(typeValue: 6, content: '/video.mp4');
       expect(captured!.arguments['type'], equals(6));
     });
@@ -216,9 +213,9 @@ void main() {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        captured = call;
-        return true;
-      });
+            captured = call;
+            return true;
+          });
       await ClipboardWriter.setFromItem(typeValue: 99, content: 'fallback');
       expect(captured!.arguments['plainText'], isTrue);
     });
@@ -234,8 +231,8 @@ void main() {
     test('returns null when channel throws', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (_) async {
-        throw PlatformException(code: 'ERROR', message: 'fail');
-      });
+            throw PlatformException(code: 'ERROR', message: 'fail');
+          });
       final result = await ClipboardWriter.getMediaInfo('/bad/path');
       expect(result, isNull);
     });

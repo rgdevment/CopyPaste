@@ -492,10 +492,9 @@ void main() {
       try {
         final file = File(p.join(dir.path, 'test.txt'))
           ..writeAsStringSync('hello world');
-        final result = await service.processFiles(
-          [file.path],
-          ClipboardContentType.file,
-        );
+        final result = await service.processFiles([
+          file.path,
+        ], ClipboardContentType.file);
         expect(result, isNotNull);
         expect(result!.metadata, contains('file_size'));
       } finally {

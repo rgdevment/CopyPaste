@@ -145,13 +145,16 @@ void main() {
       expect(item.isFileAvailable(), isFalse);
     });
 
-    test('isFileAvailable returns false when content is only whitespace lines', () {
-      final item = ClipboardItem(
-        content: '\n\n',
-        type: ClipboardContentType.file,
-      );
-      expect(item.isFileAvailable(), isFalse);
-    });
+    test(
+      'isFileAvailable returns false when content is only whitespace lines',
+      () {
+        final item = ClipboardItem(
+          content: '\n\n',
+          type: ClipboardContentType.file,
+        );
+        expect(item.isFileAvailable(), isFalse);
+      },
+    );
 
     test('isFileAvailable returns true when file exists', () {
       final dir = Directory.systemTemp.createTempSync('item_test_');
@@ -167,17 +170,20 @@ void main() {
       }
     });
 
-    test('isFileAvailable returns true for folder type when directory exists', () {
-      final dir = Directory.systemTemp.createTempSync('folder_item_test_');
-      try {
-        final item = ClipboardItem(
-          content: dir.path,
-          type: ClipboardContentType.folder,
-        );
-        expect(item.isFileAvailable(), isTrue);
-      } finally {
-        dir.deleteSync(recursive: true);
-      }
-    });
+    test(
+      'isFileAvailable returns true for folder type when directory exists',
+      () {
+        final dir = Directory.systemTemp.createTempSync('folder_item_test_');
+        try {
+          final item = ClipboardItem(
+            content: dir.path,
+            type: ClipboardContentType.folder,
+          );
+          expect(item.isFileAvailable(), isTrue);
+        } finally {
+          dir.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }

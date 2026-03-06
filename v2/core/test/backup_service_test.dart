@@ -198,18 +198,21 @@ void main() {
       expect(File(outputPath).existsSync(), isTrue);
     });
 
-    test('createBackup includes itemCount and hasPinnedItems in manifest', () async {
-      final outputPath = p.join(tempDir.path, 'metadata_backup.zip');
-      final manifest = await BackupService.createBackup(
-        outputPath,
-        storage,
-        '2.0.0',
-        itemCount: 42,
-        hasPinnedItems: true,
-      );
-      expect(manifest.itemCount, equals(42));
-      expect(manifest.hasPinnedItems, isTrue);
-    });
+    test(
+      'createBackup includes itemCount and hasPinnedItems in manifest',
+      () async {
+        final outputPath = p.join(tempDir.path, 'metadata_backup.zip');
+        final manifest = await BackupService.createBackup(
+          outputPath,
+          storage,
+          '2.0.0',
+          itemCount: 42,
+          hasPinnedItems: true,
+        );
+        expect(manifest.itemCount, equals(42));
+        expect(manifest.hasPinnedItems, isTrue);
+      },
+    );
 
     test('createBackup includes config files', () async {
       await storage.ensureDirectories();
@@ -234,7 +237,7 @@ void main() {
       archive.addFile(
         ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
       );
-      await File(outputPath).writeAsBytes(ZipEncoder().encode(archive)!);
+      await File(outputPath).writeAsBytes(ZipEncoder().encode(archive));
 
       final restoreDir = Directory.systemTemp.createTempSync('restore_v99_');
       try {
@@ -263,14 +266,17 @@ void main() {
       archive.addFile(ArchiveFile('../evil.txt', 5, [104, 101, 108, 108, 111]));
 
       final zipPath = p.join(tempDir.path, 'traversal.zip');
-      await File(zipPath).writeAsBytes(ZipEncoder().encode(archive)!);
+      await File(zipPath).writeAsBytes(ZipEncoder().encode(archive));
 
       final restoreDir = Directory.systemTemp.createTempSync('traversal_r_');
       try {
         final restoreStorage = await StorageConfig.create(
           baseDir: restoreDir.path,
         );
-        final result = await BackupService.restoreBackup(zipPath, restoreStorage);
+        final result = await BackupService.restoreBackup(
+          zipPath,
+          restoreStorage,
+        );
         expect(result, isNotNull); // succeeds but skips traversal file
         final evil = File(p.join(restoreDir.path, '..', 'evil.txt'));
         expect(evil.existsSync(), isFalse);

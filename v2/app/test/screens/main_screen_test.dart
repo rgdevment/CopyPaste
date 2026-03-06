@@ -517,10 +517,7 @@ void main() {
     testWidgets('ArrowDown from selected item moves to next', (tester) async {
       for (var i = 0; i < 3; i++) {
         await repo.save(
-          ClipboardItem(
-            content: 'Item $i',
-            type: ClipboardContentType.text,
-          ),
+          ClipboardItem(content: 'Item $i', type: ClipboardContentType.text),
         );
       }
 
@@ -696,10 +693,7 @@ void main() {
 
     testWidgets('pinned tab shows only pinned items', (tester) async {
       await repo.save(
-        ClipboardItem(
-          content: 'Normal item',
-          type: ClipboardContentType.text,
-        ),
+        ClipboardItem(content: 'Normal item', type: ClipboardContentType.text),
       );
       await repo.save(
         ClipboardItem(

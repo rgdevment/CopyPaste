@@ -374,33 +374,39 @@ void main() {
       }
     });
 
-    test('clearOldItems triggers vacuum when more than 50 items deleted', () async {
-      for (var i = 0; i < 55; i++) {
-        await repo.save(
-          ClipboardItem(
-            content: 'old item $i',
-            type: ClipboardContentType.text,
-            createdAt: DateTime.utc(2000, 1, 1),
-            modifiedAt: DateTime.utc(2000, 1, 1),
-          ),
-        );
-      }
-      final deleted = await repo.clearOldItems(1);
-      expect(deleted, greaterThanOrEqualTo(55));
-    });
+    test(
+      'clearOldItems triggers vacuum when more than 50 items deleted',
+      () async {
+        for (var i = 0; i < 55; i++) {
+          await repo.save(
+            ClipboardItem(
+              content: 'old item $i',
+              type: ClipboardContentType.text,
+              createdAt: DateTime.utc(2000, 1, 1),
+              modifiedAt: DateTime.utc(2000, 1, 1),
+            ),
+          );
+        }
+        final deleted = await repo.clearOldItems(1);
+        expect(deleted, greaterThanOrEqualTo(55));
+      },
+    );
 
-    test('deleteAllUnpinned triggers vacuum when more than 50 items deleted', () async {
-      for (var i = 0; i < 55; i++) {
-        await repo.save(
-          ClipboardItem(
-            content: 'bulk item $i',
-            type: ClipboardContentType.text,
-          ),
-        );
-      }
-      final deleted = await repo.deleteAllUnpinned();
-      expect(deleted, greaterThanOrEqualTo(55));
-    });
+    test(
+      'deleteAllUnpinned triggers vacuum when more than 50 items deleted',
+      () async {
+        for (var i = 0; i < 55; i++) {
+          await repo.save(
+            ClipboardItem(
+              content: 'bulk item $i',
+              type: ClipboardContentType.text,
+            ),
+          );
+        }
+        final deleted = await repo.deleteAllUnpinned();
+        expect(deleted, greaterThanOrEqualTo(55));
+      },
+    );
 
     test('clearOldItems respects excludePinned=false', () async {
       await repo.save(

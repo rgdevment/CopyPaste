@@ -253,9 +253,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Hover to show action buttons
-      final gesture = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
       final card = find.byType(ClipboardCard);
@@ -288,9 +286,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final gesture = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
       final card = find.byType(ClipboardCard);
@@ -375,7 +371,8 @@ void main() {
     ) async {
       final sep = Platform.pathSeparator;
       final item = ClipboardItem(
-        content: '${sep}home${sep}user${sep}a.pdf\n${sep}home${sep}user${sep}b.txt\n${sep}home${sep}user${sep}c.docx',
+        content:
+            '${sep}home${sep}user${sep}a.pdf\n${sep}home${sep}user${sep}b.txt\n${sep}home${sep}user${sep}c.docx',
         type: ClipboardContentType.file,
       );
 
@@ -423,10 +420,7 @@ void main() {
     testWidgets('image type with empty content shows placeholder', (
       tester,
     ) async {
-      final item = ClipboardItem(
-        content: '',
-        type: ClipboardContentType.image,
-      );
+      final item = ClipboardItem(content: '', type: ClipboardContentType.image);
 
       await tester.pumpWidget(
         wrapWidget(
@@ -452,15 +446,75 @@ void main() {
       final imgFile = File('${tmpDir.path}/test.png');
       // Minimal 1x1 PNG
       imgFile.writeAsBytesSync([
-        0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,
-        0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52,
-        0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,
-        0x08,0x02,0x00,0x00,0x00,0x90,0x77,0x53,
-        0xDE,0x00,0x00,0x00,0x0C,0x49,0x44,0x41,
-        0x54,0x08,0xD7,0x63,0xF8,0xCF,0xC0,0x00,
-        0x00,0x00,0x02,0x00,0x01,0xE2,0x21,0xBC,
-        0x33,0x00,0x00,0x00,0x00,0x49,0x45,0x4E,
-        0x44,0xAE,0x42,0x60,0x82,
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        0x00,
+        0x00,
+        0x00,
+        0x0D,
+        0x49,
+        0x48,
+        0x44,
+        0x52,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x90,
+        0x77,
+        0x53,
+        0xDE,
+        0x00,
+        0x00,
+        0x00,
+        0x0C,
+        0x49,
+        0x44,
+        0x41,
+        0x54,
+        0x08,
+        0xD7,
+        0x63,
+        0xF8,
+        0xCF,
+        0xC0,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x01,
+        0xE2,
+        0x21,
+        0xBC,
+        0x33,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4E,
+        0x44,
+        0xAE,
+        0x42,
+        0x60,
+        0x82,
       ]);
 
       final item = ClipboardItem(
@@ -607,9 +661,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final gesture = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
 
@@ -716,7 +768,6 @@ void main() {
     testWidgets('image item with dimensions metadata shows footer', (
       tester,
     ) async {
-
       final meta = jsonEncode({'width': 1920, 'height': 1080});
       final item = ClipboardItem(
         content: '',
@@ -743,7 +794,6 @@ void main() {
     testWidgets('file item with file_size metadata shows size footer', (
       tester,
     ) async {
-
       final sep = Platform.pathSeparator;
       final meta = jsonEncode({'file_size': 512 * 1024}); // 512 KB
       final item = ClipboardItem(
@@ -772,7 +822,6 @@ void main() {
     testWidgets('video item with duration metadata shows duration footer', (
       tester,
     ) async {
-
       final sep = Platform.pathSeparator;
       final meta = jsonEncode({'duration': 125}); // 2m5s
       final item = ClipboardItem(
@@ -873,9 +922,7 @@ void main() {
       expect(find.text('Paste'), findsOneWidget);
     });
 
-    testWidgets('right-click menu paste action triggers onTap', (
-      tester,
-    ) async {
+    testWidgets('right-click menu paste action triggers onTap', (tester) async {
       var tapCount = 0;
       await tester.pumpWidget(
         wrapWidget(
@@ -943,7 +990,6 @@ void main() {
     });
 
     testWidgets('image with large file size shows GB format', (tester) async {
-
       final meta = jsonEncode({'file_size': 2 * 1024 * 1024 * 1024}); // 2GB
       final item = ClipboardItem(
         content: '',
@@ -970,7 +1016,6 @@ void main() {
     testWidgets('image with small file size shows bytes format', (
       tester,
     ) async {
-
       final meta = jsonEncode({'file_size': 500}); // 500 bytes
       final item = ClipboardItem(
         content: '',
@@ -997,7 +1042,6 @@ void main() {
     testWidgets('video item with duration over 1 hour shows H:MM:SS format', (
       tester,
     ) async {
-
       final meta = jsonEncode({'duration': 3700}); // 1h 1m 40s
       final item = ClipboardItem(
         content: '/video.mp4',
@@ -1022,7 +1066,6 @@ void main() {
     });
 
     testWidgets('card with MB file size shows MB format', (tester) async {
-
       final meta = jsonEncode({'file_size': 5 * 1024 * 1024}); // 5MB
       final item = ClipboardItem(
         content: '/big_file.bin',
@@ -1165,9 +1208,7 @@ void main() {
       expect(find.byType(ClipboardCard), findsOneWidget);
     });
 
-    testWidgets('right-click delete action triggers onDelete', (
-      tester,
-    ) async {
+    testWidgets('right-click delete action triggers onDelete', (tester) async {
       var deleted = false;
       await tester.pumpWidget(
         wrapWidget(

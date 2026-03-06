@@ -59,7 +59,7 @@ void main() {
     testWidgets('renders with title and text field', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          LabelColorDialog(
+          const LabelColorDialog(
             currentLabel: 'My Label',
             currentColor: CardColor.none,
           ),
@@ -74,10 +74,7 @@ void main() {
     testWidgets('pre-fills existing label in text field', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          LabelColorDialog(
-            currentLabel: 'Work',
-            currentColor: CardColor.red,
-          ),
+          const LabelColorDialog(currentLabel: 'Work', currentColor: CardColor.red),
         ),
       );
       await tester.pumpAndSettle();
@@ -88,10 +85,7 @@ void main() {
     testWidgets('renders color grid with multiple options', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          LabelColorDialog(
-            currentLabel: null,
-            currentColor: CardColor.none,
-          ),
+          const LabelColorDialog(currentLabel: null, currentColor: CardColor.none),
         ),
       );
       await tester.pumpAndSettle();
@@ -103,10 +97,7 @@ void main() {
     testWidgets('tapping a color chip selects it', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          LabelColorDialog(
-            currentLabel: null,
-            currentColor: CardColor.none,
-          ),
+          const LabelColorDialog(currentLabel: null, currentColor: CardColor.none),
         ),
       );
       await tester.pumpAndSettle();
@@ -201,9 +192,7 @@ void main() {
     testWidgets('Enter in text field submits the dialog', (tester) async {
       LabelColorResult? result;
 
-      await tester.pumpWidget(
-        _buildDialogApp(onResult: (r) => result = r),
-      );
+      await tester.pumpWidget(_buildDialogApp(onResult: (r) => result = r));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Open'));
@@ -261,8 +250,7 @@ void main() {
               body: Builder(
                 builder: (ctx) => ElevatedButton(
                   onPressed: () async {
-                    result =
-                        await LabelColorDialog.show(ctx); // defaults only
+                    result = await LabelColorDialog.show(ctx); // defaults only
                   },
                   child: const Text('Open'),
                 ),
@@ -292,7 +280,7 @@ void main() {
           theme: ThemeData.dark(),
           home: CopyPasteTheme(
             themeData: CompactTheme(),
-            child: Scaffold(
+            child: const Scaffold(
               body: LabelColorDialog(
                 currentLabel: null,
                 currentColor: CardColor.none,
@@ -308,10 +296,7 @@ void main() {
     testWidgets('button hover state changes appearance', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          LabelColorDialog(
-            currentLabel: null,
-            currentColor: CardColor.none,
-          ),
+          const LabelColorDialog(currentLabel: null, currentColor: CardColor.none),
         ),
       );
       await tester.pumpAndSettle();
@@ -319,9 +304,7 @@ void main() {
       // Hover over Save button
       final saveButton = find.text('Save');
       expect(saveButton, findsOneWidget);
-      final gesture = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
       await gesture.moveTo(tester.getCenter(saveButton));

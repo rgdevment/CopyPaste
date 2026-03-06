@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
-import 'package:core/core.dart';
 import 'package:core/services/image_processor.dart';
 
 void main() {
@@ -16,7 +15,7 @@ void main() {
 
   tearDown(() => tempDir.deleteSync(recursive: true));
 
-  Uint8List _makeTestPng({int width = 4, int height = 4}) {
+  Uint8List makeTestPng({int width = 4, int height = 4}) {
     final image = img.Image(width: width, height: height);
     for (var x = 0; x < width; x++) {
       for (var y = 0; y < height; y++) {
@@ -43,7 +42,7 @@ void main() {
 
   group('ImageProcessor.processAndSave', () {
     test('returns result with correct dimensions for valid PNG', () async {
-      final pngBytes = _makeTestPng(width: 4, height: 4);
+      final pngBytes = makeTestPng(width: 4, height: 4);
 
       final result = await ImageProcessor.processAndSave(
         imageBytes: pngBytes,
@@ -58,7 +57,7 @@ void main() {
     });
 
     test('saves PNG file to imagesDir', () async {
-      final pngBytes = _makeTestPng(width: 2, height: 2);
+      final pngBytes = makeTestPng(width: 2, height: 2);
 
       final result = await ImageProcessor.processAndSave(
         imageBytes: pngBytes,
@@ -72,7 +71,7 @@ void main() {
     });
 
     test('saved file is valid PNG', () async {
-      final pngBytes = _makeTestPng(width: 3, height: 3);
+      final pngBytes = makeTestPng(width: 3, height: 3);
 
       final result = await ImageProcessor.processAndSave(
         imageBytes: pngBytes,
@@ -111,7 +110,7 @@ void main() {
     });
 
     test('imagePath contains the provided id', () async {
-      final pngBytes = _makeTestPng();
+      final pngBytes = makeTestPng();
 
       final result = await ImageProcessor.processAndSave(
         imageBytes: pngBytes,
@@ -124,7 +123,7 @@ void main() {
     });
 
     test('fileSize matches actual saved file size', () async {
-      final pngBytes = _makeTestPng(width: 8, height: 8);
+      final pngBytes = makeTestPng(width: 8, height: 8);
 
       final result = await ImageProcessor.processAndSave(
         imageBytes: pngBytes,

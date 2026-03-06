@@ -18,10 +18,7 @@ void main() {
     });
 
     test('exception returns early when not initialized', () {
-      expect(
-        () => AppLogger.exception(Exception('test')),
-        returnsNormally,
-      );
+      expect(() => AppLogger.exception(Exception('test')), returnsNormally);
     });
 
     test('logFilePath is null before init', () {
@@ -108,11 +105,7 @@ void main() {
     });
 
     test('exception with context writes context and error', () {
-      AppLogger.exception(
-        Exception('test exception'),
-        null,
-        'TestContext',
-      );
+      AppLogger.exception(Exception('test exception'), null, 'TestContext');
       final content = File(AppLogger.logFilePath!).readAsStringSync();
       expect(content, contains('TestContext'));
       expect(content, contains('test exception'));

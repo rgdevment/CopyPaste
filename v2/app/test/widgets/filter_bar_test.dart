@@ -137,7 +137,9 @@ void main() {
       expect(find.byType(FilterBar), findsOneWidget);
     });
 
-    testWidgets('openMenu with active color shows clear option', (tester) async {
+    testWidgets('openMenu with active color shows clear option', (
+      tester,
+    ) async {
       final key = GlobalKey<FilterBarState>();
       var clearCalled = false;
 
