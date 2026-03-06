@@ -24,11 +24,11 @@ import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
-      'dark' => true,
-      'auto' || 'system' =>
-        PlatformDispatcher.instance.platformBrightness == Brightness.dark,
-      _ => false,
-    };
+  'dark' => true,
+  'auto' ||
+  'system' => PlatformDispatcher.instance.platformBrightness == Brightness.dark,
+  _ => false,
+};
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,9 +61,10 @@ void main() async {
   );
 
   final repo = SqliteRepository.fromPath(storage.databasePath);
-  final clipboardService =
-      ClipboardService(repo, imagesPath: storage.imagesPath)
-        ..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
+  final clipboardService = ClipboardService(
+    repo,
+    imagesPath: storage.imagesPath,
+  )..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
 
   final cleanupService = CleanupService(
     repo,
@@ -117,7 +118,8 @@ class CopyPasteApp extends StatefulWidget {
   State<CopyPasteApp> createState() => _CopyPasteAppState();
 }
 
-class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, WidgetsBindingObserver {
+class _CopyPasteAppState extends State<CopyPasteApp>
+    with WindowListener, WidgetsBindingObserver {
   late final AppWindow _appWindow;
   late final TrayIcon _trayIcon;
   late HotkeyHandler _hotkeyHandler;
@@ -137,14 +139,8 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
       popupWidth: _config.popupWidth.toDouble(),
       popupHeight: _config.popupHeight.toDouble(),
     );
-    _trayIcon = TrayIcon(
-      onToggle: _toggleWindow,
-      onExit: _exitApp,
-    );
-    _hotkeyHandler = HotkeyHandler(
-      config: _config,
-      onHotkey: _onHotkey,
-    );
+    _trayIcon = TrayIcon(onToggle: _toggleWindow, onExit: _exitApp);
+    _hotkeyHandler = HotkeyHandler(config: _config, onHotkey: _onHotkey);
 
     _initShell();
   }
@@ -175,9 +171,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
 
   void _startListening() {
     if (!Platform.isWindows) return;
-    _listenerSubscription = widget.listener.onEvent.listen(
-      _onClipboardEvent,
-    );
+    _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
   }
 
   Future<void> _onClipboardEvent(ClipboardEvent event) async {
@@ -258,8 +252,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
     try {
       final meta = <String, Object>{};
       if (item.metadata != null && item.metadata!.isNotEmpty) {
-        final existing =
-            jsonDecode(item.metadata!) as Map<String, dynamic>;
+        final existing = jsonDecode(item.metadata!) as Map<String, dynamic>;
         existing.forEach((k, v) {
           if (v != null) meta[k] = v as Object;
         });
@@ -273,8 +266,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
       }
 
       if (meta.isNotEmpty) {
-        await widget.clipboardService
-            .updateMetadata(item.id, jsonEncode(meta));
+        await widget.clipboardService.updateMetadata(item.id, jsonEncode(meta));
       }
     } catch (e, s) {
       AppLogger.error('Media metadata failed: $e\n$s');
@@ -289,8 +281,7 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
   void _dismissHint() {
     if (_config.hasSeenHint) return;
     _config = _config.copyWith(hasSeenHint: true);
-    _config
-        .save('${widget.storage.configPath}/${AppConfig.fileName}');
+    _config.save('${widget.storage.configPath}/${AppConfig.fileName}');
     if (mounted) setState(() {});
   }
 
@@ -306,7 +297,10 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
     }
   }
 
-  Future<void> _onPasteItem(ClipboardItem item, {bool plainText = false}) async {
+  Future<void> _onPasteItem(
+    ClipboardItem item, {
+    bool plainText = false,
+  }) async {
     if (item.isFileBasedType && !item.isFileAvailable()) return;
     await widget.clipboardService.notifyPasteInitiated(item.id);
     await widget.clipboardService.recordPaste(item.id);
@@ -326,12 +320,36 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
   }
 
   Future<void> _cleanup() async {
-    try { await _listenerSubscription?.cancel(); } catch (e) { AppLogger.error('cleanup listener: $e'); }
-    try { await _hotkeyHandler.unregister(); } catch (e) { AppLogger.error('cleanup hotkey: $e'); }
-    try { await _trayIcon.dispose(); } catch (e) { AppLogger.error('cleanup tray: $e'); }
-    try { widget.clipboardService.dispose(); } catch (e) { AppLogger.error('cleanup clipboard: $e'); }
-    try { widget.cleanupService.dispose(); } catch (e) { AppLogger.error('cleanup cleanup: $e'); }
-    try { await widget.repo.close(); } catch (e) { AppLogger.error('cleanup repo: $e'); }
+    try {
+      await _listenerSubscription?.cancel();
+    } catch (e) {
+      AppLogger.error('cleanup listener: $e');
+    }
+    try {
+      await _hotkeyHandler.unregister();
+    } catch (e) {
+      AppLogger.error('cleanup hotkey: $e');
+    }
+    try {
+      await _trayIcon.dispose();
+    } catch (e) {
+      AppLogger.error('cleanup tray: $e');
+    }
+    try {
+      widget.clipboardService.dispose();
+    } catch (e) {
+      AppLogger.error('cleanup clipboard: $e');
+    }
+    try {
+      widget.cleanupService.dispose();
+    } catch (e) {
+      AppLogger.error('cleanup cleanup: $e');
+    }
+    try {
+      await widget.repo.close();
+    } catch (e) {
+      AppLogger.error('cleanup repo: $e');
+    }
   }
 
   Future<void> _exitApp() async {
@@ -437,14 +455,18 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {
               _lastTrayLocale = currentLocale;
-              unawaited(_trayIcon.rebuild(
-                showHideLabel: l.trayShowHide,
-                exitLabel: l.trayExit,
-                tooltip: l.trayTooltip,
-              ));
+              unawaited(
+                _trayIcon.rebuild(
+                  showHideLabel: l.trayShowHide,
+                  exitLabel: l.trayExit,
+                  tooltip: l.trayTooltip,
+                ),
+              );
             }
             final bg = Platform.isWindows
-                ? CopyPasteTheme.colorsOf(ctx).background.withValues(alpha: 0.85)
+                ? CopyPasteTheme.colorsOf(
+                    ctx,
+                  ).background.withValues(alpha: 0.85)
                 : CopyPasteTheme.colorsOf(ctx).background;
             return Scaffold(
               backgroundColor: bg,
@@ -470,4 +492,3 @@ class _CopyPasteAppState extends State<CopyPasteApp> with WindowListener, Widget
     );
   }
 }
-

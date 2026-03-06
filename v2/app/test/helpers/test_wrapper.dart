@@ -3,10 +3,7 @@ import 'package:app/l10n/app_localizations.dart';
 import 'package:app/theme/compact_theme.dart';
 import 'package:app/theme/theme_provider.dart';
 
-Widget wrapWidget(
-  Widget child, {
-  Brightness brightness = Brightness.light,
-}) {
+Widget wrapWidget(Widget child, {Brightness brightness = Brightness.light}) {
   return MaterialApp(
     locale: const Locale('en'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,

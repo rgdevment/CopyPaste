@@ -24,23 +24,23 @@ typedef _ShowWindowDart = int Function(int hWnd, int nCmdShow);
 typedef _GetWindowLongPtrNative = IntPtr Function(IntPtr hWnd, Int32 nIndex);
 typedef _GetWindowLongPtrDart = int Function(int hWnd, int nIndex);
 
-typedef _GetWindowThreadProcessIdNative = Uint32 Function(
-    IntPtr hWnd, Pointer<Uint32> lpdwProcessId);
-typedef _GetWindowThreadProcessIdDart = int Function(
-    int hWnd, Pointer<Uint32> lpdwProcessId);
+typedef _GetWindowThreadProcessIdNative =
+    Uint32 Function(IntPtr hWnd, Pointer<Uint32> lpdwProcessId);
+typedef _GetWindowThreadProcessIdDart =
+    int Function(int hWnd, Pointer<Uint32> lpdwProcessId);
 
 typedef _GetCurrentThreadIdNative = Uint32 Function();
 typedef _GetCurrentThreadIdDart = int Function();
 
-typedef _AttachThreadInputNative = Int32 Function(
-    Uint32 idAttach, Uint32 idAttachTo, Int32 fAttach);
-typedef _AttachThreadInputDart = int Function(
-    int idAttach, int idAttachTo, int fAttach);
+typedef _AttachThreadInputNative =
+    Int32 Function(Uint32 idAttach, Uint32 idAttachTo, Int32 fAttach);
+typedef _AttachThreadInputDart =
+    int Function(int idAttach, int idAttachTo, int fAttach);
 
-typedef _KeybdEventNative = Void Function(
-    Uint8 bVk, Uint8 bScan, Uint32 dwFlags, IntPtr dwExtraInfo);
-typedef _KeybdEventDart = void Function(
-    int bVk, int bScan, int dwFlags, int dwExtraInfo);
+typedef _KeybdEventNative =
+    Void Function(Uint8 bVk, Uint8 bScan, Uint32 dwFlags, IntPtr dwExtraInfo);
+typedef _KeybdEventDart =
+    void Function(int bVk, int bScan, int dwFlags, int dwExtraInfo);
 
 class WindowFocusManager {
   static const int _swRestore = 9;
@@ -55,34 +55,43 @@ class WindowFocusManager {
 
   static final _getForegroundWindow = _user32
       .lookupFunction<_GetForegroundWindowNative, _GetForegroundWindowDart>(
-          'GetForegroundWindow');
-  static final _isWindow =
-      _user32.lookupFunction<_IsWindowNative, _IsWindowDart>('IsWindow');
-  static final _isWindowVisible =
-      _user32.lookupFunction<_IsWindowVisibleNative, _IsWindowVisibleDart>(
-          'IsWindowVisible');
+        'GetForegroundWindow',
+      );
+  static final _isWindow = _user32
+      .lookupFunction<_IsWindowNative, _IsWindowDart>('IsWindow');
+  static final _isWindowVisible = _user32
+      .lookupFunction<_IsWindowVisibleNative, _IsWindowVisibleDart>(
+        'IsWindowVisible',
+      );
   static final _setForegroundWindow = _user32
       .lookupFunction<_SetForegroundWindowNative, _SetForegroundWindowDart>(
-          'SetForegroundWindow');
-  static final _bringWindowToTop =
-      _user32.lookupFunction<_BringWindowToTopNative, _BringWindowToTopDart>(
-          'BringWindowToTop');
-  static final _showWindow =
-      _user32.lookupFunction<_ShowWindowNative, _ShowWindowDart>('ShowWindow');
-  static final _getWindowLongPtr =
-      _user32.lookupFunction<_GetWindowLongPtrNative, _GetWindowLongPtrDart>(
-          'GetWindowLongPtrW');
-  static final _getWindowThreadProcessId = _user32.lookupFunction<
-      _GetWindowThreadProcessIdNative,
-      _GetWindowThreadProcessIdDart>('GetWindowThreadProcessId');
+        'SetForegroundWindow',
+      );
+  static final _bringWindowToTop = _user32
+      .lookupFunction<_BringWindowToTopNative, _BringWindowToTopDart>(
+        'BringWindowToTop',
+      );
+  static final _showWindow = _user32
+      .lookupFunction<_ShowWindowNative, _ShowWindowDart>('ShowWindow');
+  static final _getWindowLongPtr = _user32
+      .lookupFunction<_GetWindowLongPtrNative, _GetWindowLongPtrDart>(
+        'GetWindowLongPtrW',
+      );
+  static final _getWindowThreadProcessId = _user32
+      .lookupFunction<
+        _GetWindowThreadProcessIdNative,
+        _GetWindowThreadProcessIdDart
+      >('GetWindowThreadProcessId');
   static final _getCurrentThreadId = _kernel32
       .lookupFunction<_GetCurrentThreadIdNative, _GetCurrentThreadIdDart>(
-          'GetCurrentThreadId');
-  static final _attachThreadInput =
-      _user32.lookupFunction<_AttachThreadInputNative, _AttachThreadInputDart>(
-          'AttachThreadInput');
-  static final _keybdEvent =
-      _user32.lookupFunction<_KeybdEventNative, _KeybdEventDart>('keybd_event');
+        'GetCurrentThreadId',
+      );
+  static final _attachThreadInput = _user32
+      .lookupFunction<_AttachThreadInputNative, _AttachThreadInputDart>(
+        'AttachThreadInput',
+      );
+  static final _keybdEvent = _user32
+      .lookupFunction<_KeybdEventNative, _KeybdEventDart>('keybd_event');
 
   int _previousWindow = 0;
   int _previousThreadId = 0;

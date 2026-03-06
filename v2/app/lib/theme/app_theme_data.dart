@@ -68,14 +68,14 @@ class AppThemeColorScheme {
   final Color accentOrange;
 
   Color accentForIndex(int index) => switch (index) {
-        1 => accentRed,
-        2 => accentGreen,
-        3 => accentPurple,
-        4 => accentYellow,
-        5 => accentBlue,
-        6 => accentOrange,
-        _ => Colors.transparent,
-      };
+    1 => accentRed,
+    2 => accentGreen,
+    3 => accentPurple,
+    4 => accentYellow,
+    5 => accentBlue,
+    6 => accentOrange,
+    _ => Colors.transparent,
+  };
 }
 
 class AppThemeTypography {
@@ -256,15 +256,15 @@ class AppThemeIcons {
   final IconData colorLabel;
 
   IconData forContentType(int typeValue) => switch (typeValue) {
-        0 => text,
-        1 => image,
-        2 => file,
-        3 => folder,
-        4 => link,
-        5 => audio,
-        6 => video,
-        _ => unknown,
-      };
+    0 => text,
+    1 => image,
+    2 => file,
+    3 => folder,
+    4 => link,
+    5 => audio,
+    6 => video,
+    _ => unknown,
+  };
 }
 
 class AppThemeCardStyle {

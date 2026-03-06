@@ -118,10 +118,7 @@ void main() {
     });
 
     test('handles unknown type value returns unknown', () {
-      final event = ClipboardEvent.fromMap({
-        'type': 999,
-        'contentHash': 'u',
-      });
+      final event = ClipboardEvent.fromMap({'type': 999, 'contentHash': 'u'});
       expect(event.type, equals(ClipboardContentType.unknown));
     });
 
@@ -131,10 +128,7 @@ void main() {
     });
 
     test('handles null type defaults to unknown', () {
-      final event = ClipboardEvent.fromMap({
-        'type': null,
-        'contentHash': 'u',
-      });
+      final event = ClipboardEvent.fromMap({'type': null, 'contentHash': 'u'});
       expect(event.type, equals(ClipboardContentType.unknown));
     });
 
@@ -180,8 +174,11 @@ void main() {
           'type': entry.key,
           'contentHash': 'h',
         });
-        expect(event.type, equals(entry.value),
-            reason: 'type ${entry.key} should map to ${entry.value}');
+        expect(
+          event.type,
+          equals(entry.value),
+          reason: 'type ${entry.key} should map to ${entry.value}',
+        );
       }
     });
   });

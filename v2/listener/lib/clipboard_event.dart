@@ -21,9 +21,7 @@ class ClipboardEvent {
       contentHash: map['contentHash'] as String? ?? '',
       text: map['text'] as String?,
       bytes: map['bytes'] as Uint8List?,
-      files: (map['files'] as List<Object?>?)
-          ?.whereType<String>()
-          .toList(),
+      files: (map['files'] as List<Object?>?)?.whereType<String>().toList(),
       source: map['source'] as String?,
       rtfBytes: map['rtf'] as Uint8List?,
       htmlBytes: map['html'] as Uint8List?,

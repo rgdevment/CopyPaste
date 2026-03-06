@@ -83,9 +83,10 @@ class MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _addedSub = widget.clipboardService.onItemAdded.listen((_) => _reload());
-    _reactivatedSub =
-        widget.clipboardService.onItemReactivated.listen((_) => _reload());
-_searchFocusNode.onKeyEvent = _onSearchKeyEvent;
+    _reactivatedSub = widget.clipboardService.onItemReactivated.listen(
+      (_) => _reload(),
+    );
+    _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     _scrollController.addListener(_onScroll);
     _loadItems();
   }
@@ -237,8 +238,7 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
-        _items.isNotEmpty) {
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown && _items.isNotEmpty) {
       setState(() => _selectedIndex = 0);
       _focusNode.requestFocus();
       _ensureVisible(0);
@@ -276,8 +276,7 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
     }
 
     if (alt &&
-        (key == LogicalKeyboardKey.keyG ||
-            key == LogicalKeyboardKey.keyT)) {
+        (key == LogicalKeyboardKey.keyG || key == LogicalKeyboardKey.keyT)) {
       _filterBarKey.currentState?.openMenu();
       return KeyEventResult.handled;
     }
@@ -340,8 +339,7 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
 
     if (key == LogicalKeyboardKey.arrowRight && _selectedIndex >= 0) {
       setState(() {
-        _expandedIndex =
-            _expandedIndex == _selectedIndex ? -1 : _selectedIndex;
+        _expandedIndex = _expandedIndex == _selectedIndex ? -1 : _selectedIndex;
       });
       return KeyEventResult.handled;
     }
@@ -439,55 +437,63 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
       color: colors.primary.withValues(alpha: 0.06),
       child: Row(
         children: [
-          Icon(Icons.lightbulb_outline_rounded,
-              size: 14, color: colors.primary),
+          Icon(
+            Icons.lightbulb_outline_rounded,
+            size: 14,
+            color: colors.primary,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text.rich(
-              TextSpan(children: [
-                TextSpan(
-                  text: l.hintBannerText,
-                  style: TextStyle(fontSize: 11, color: colors.onSurface),
-                ),
-                const TextSpan(text: ' '),
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.baseline,
-                  baseline: TextBaseline.alphabetic,
-                  child: GestureDetector(
-                    onTap: () {
-                      widget.onDismissHint?.call();
-                      widget.onSettings();
-                    },
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: Text(
-                        l.hintBannerAction,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.primary,
-                          decoration: TextDecoration.underline,
-                          decorationColor:
-                              colors.primary.withValues(alpha: 0.5),
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: l.hintBannerText,
+                    style: TextStyle(fontSize: 11, color: colors.onSurface),
+                  ),
+                  const TextSpan(text: ' '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: () {
+                        widget.onDismissHint?.call();
+                        widget.onSettings();
+                      },
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: Text(
+                          l.hintBannerAction,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colors.primary,
+                            decoration: TextDecoration.underline,
+                            decorationColor: colors.primary.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
           ),
           GestureDetector(
             onTap: widget.onDismissHint,
-            child: Icon(Icons.close_rounded,
-                size: 14, color: colors.onSurfaceMuted),
+            child: Icon(
+              Icons.close_rounded,
+              size: 14,
+              color: colors.onSurfaceMuted,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRealList(
-      AppThemeData theme, List<ClipboardItem> items) {
+  Widget _buildRealList(AppThemeData theme, List<ClipboardItem> items) {
     final animate = _isFirstRender;
     if (_isFirstRender) {
       _isFirstRender = false;
@@ -511,21 +517,19 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
             onTap: () => _onItemTap(item),
             onPin: () => _onItemPin(item),
             onDelete: () => _onItemDelete(item),
-            onLabelColor: (label, color) => _onItemLabelColor(item, label, color),            onPastePlain: () => widget.onPastePlain(item),
+            onLabelColor: (label, color) =>
+                _onItemLabelColor(item, label, color),
+            onPastePlain: () => widget.onPastePlain(item),
             onExpandToggle: () {
               setState(() {
-                _expandedIndex =
-                    _expandedIndex == index ? -1 : index;
+                _expandedIndex = _expandedIndex == index ? -1 : index;
               });
             },
           ),
         );
 
         if (animate && index < _pageSize) {
-          return _StaggeredFadeIn(
-            index: index,
-            child: card,
-          );
+          return _StaggeredFadeIn(index: index, child: card);
         }
         return card;
       },
@@ -566,7 +570,8 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
             icon: Icons.bug_report_outlined,
             iconSize: 14,
             opacity: 0.4,
-            onTap: () => UrlHelper.open('https://github.com/rgdevment/CopyPaste/issues'),
+            onTap: () =>
+                UrlHelper.open('https://github.com/rgdevment/CopyPaste/issues'),
           ),
           const SizedBox(width: 2),
           _BottomBarAction(
@@ -579,14 +584,10 @@ _searchFocusNode.onKeyEvent = _onSearchKeyEvent;
       ),
     );
   }
-
 }
 
 class _StaggeredFadeIn extends StatefulWidget {
-  const _StaggeredFadeIn({
-    required this.index,
-    required this.child,
-  });
+  const _StaggeredFadeIn({required this.index, required this.child});
 
   final int index;
   final Widget child;
@@ -632,10 +633,7 @@ class _StaggeredFadeInState extends State<_StaggeredFadeIn>
       builder: (context, child) {
         return Transform.translate(
           offset: _offset.value,
-          child: Opacity(
-            opacity: _opacity.value,
-            child: child,
-          ),
+          child: Opacity(opacity: _opacity.value, child: child),
         );
       },
       child: widget.child,

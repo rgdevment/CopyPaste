@@ -110,10 +110,13 @@ void main() {
 
       final restoreDir = Directory.systemTemp.createTempSync('restore_');
       try {
-        final restoreStorage =
-            await StorageConfig.create(baseDir: restoreDir.path);
-        final manifest =
-            await BackupService.restoreBackup(outputPath, restoreStorage);
+        final restoreStorage = await StorageConfig.create(
+          baseDir: restoreDir.path,
+        );
+        final manifest = await BackupService.restoreBackup(
+          outputPath,
+          restoreStorage,
+        );
 
         expect(manifest, isNotNull);
         expect(manifest!.appVersion, equals('2.0.0'));
@@ -131,8 +134,9 @@ void main() {
 
       final restoreDir = Directory.systemTemp.createTempSync('snapshot_');
       try {
-        final restoreStorage =
-            await StorageConfig.create(baseDir: restoreDir.path);
+        final restoreStorage = await StorageConfig.create(
+          baseDir: restoreDir.path,
+        );
         await restoreStorage.ensureDirectories();
         File(restoreStorage.databasePath).writeAsBytesSync([1, 2, 3]);
 
