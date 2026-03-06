@@ -69,6 +69,14 @@ jobs:
       - name: Get dependencies
         run: cd v2/app && flutter pub get
 
+      - name: Update pubspec version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          $pubspec = "v2/app/pubspec.yaml"
+          (Get-Content $pubspec) -replace '^version:\s+.*', "version: $version" | Set-Content $pubspec
+          Write-Host "Updated pubspec.yaml version to: $version"
+
       - name: Build standalone (exe installer)
         shell: pwsh
         run: |
