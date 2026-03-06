@@ -9,8 +9,8 @@
   </p>
 
   <p>
-    <a href="https://github.com/rgdevment/CopyPaste/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
+    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci-v2.yml">
+      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci-v2.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
     </a>
     <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/codeql.yml">
       <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/codeql.yml?style=flat-square&logo=github&label=CodeQL" alt="CodeQL"/>
@@ -18,8 +18,8 @@
     <a href="https://sonarcloud.io/summary/overall?id=rgdevment_CopyPaste">
       <img src="https://img.shields.io/sonar/quality_gate/rgdevment_CopyPaste?server=https%3A%2F%2Fsonarcloud.io&style=flat-square&logo=sonarcloud&label=Quality%20Gate" alt="Quality Gate"/>
     </a>
-    <a href="https://sonarcloud.io/component_measures?id=rgdevment_CopyPaste&metric=coverage">
-      <img src="https://img.shields.io/sonar/coverage/rgdevment_CopyPaste?server=https%3A%2F%2Fsonarcloud.io&style=flat-square&logo=sonarcloud&label=Coverage" alt="Coverage"/>
+    <a href="https://codecov.io/gh/rgdevment/CopyPaste">
+      <img src="https://codecov.io/gh/rgdevment/CopyPaste/branch/main/graph/badge.svg?style=flat-square" alt="Coverage"/>
     </a>
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
