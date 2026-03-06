@@ -63,7 +63,7 @@ jobs:
         uses: codecov/codecov-action@v4
         if: always()
         with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
           flags: core,listener,app
           fail_ci_if_error: false
