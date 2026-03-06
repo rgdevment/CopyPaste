@@ -123,33 +123,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   AppConfig _buildConfig() => widget.config.copyWith(
-        preferredLanguage: _preferredLanguage,
-        runOnStartup: _runOnStartup,
-        hotkeyUseCtrl: _hotkeyCtrl,
-        hotkeyUseWin: _hotkeyWin,
-        hotkeyUseAlt: _hotkeyAlt,
-        hotkeyUseShift: _hotkeyShift,
-        hotkeyVirtualKey: _hotkeyVirtualKey,
-        hotkeyKeyName: _hotkeyKeyName,
-        colorLabels: _colorLabels,
-        pageSize: _pageSize,
-        maxItemsBeforeCleanup: _maxItemsBeforeCleanup,
-        scrollLoadThreshold: _scrollLoadThreshold,
-        retentionDays: _retentionDays,
-        duplicateIgnoreWindowMs: _duplicateIgnoreWindowMs,
-        delayBeforeFocusMs: _delayBeforeFocusMs,
-        delayBeforePasteMs: _delayBeforePasteMs,
-        maxFocusVerifyAttempts: _maxFocusVerifyAttempts,
-        lastBackupDateUtc: _lastBackupDateUtc,
-        popupWidth: _popupWidth,
-        popupHeight: _popupHeight,
-        cardMinLines: _cardMinLines,
-        cardMaxLines: _cardMaxLines,
-        themeMode: _themeMode,
-        hideOnDeactivate: _hideOnDeactivate,
-        resetScrollOnShow: _resetScrollOnShow,
-        resetSearchOnShow: _resetSearchOnShow,
-      );
+    preferredLanguage: _preferredLanguage,
+    runOnStartup: _runOnStartup,
+    hotkeyUseCtrl: _hotkeyCtrl,
+    hotkeyUseWin: _hotkeyWin,
+    hotkeyUseAlt: _hotkeyAlt,
+    hotkeyUseShift: _hotkeyShift,
+    hotkeyVirtualKey: _hotkeyVirtualKey,
+    hotkeyKeyName: _hotkeyKeyName,
+    colorLabels: _colorLabels,
+    pageSize: _pageSize,
+    maxItemsBeforeCleanup: _maxItemsBeforeCleanup,
+    scrollLoadThreshold: _scrollLoadThreshold,
+    retentionDays: _retentionDays,
+    duplicateIgnoreWindowMs: _duplicateIgnoreWindowMs,
+    delayBeforeFocusMs: _delayBeforeFocusMs,
+    delayBeforePasteMs: _delayBeforePasteMs,
+    maxFocusVerifyAttempts: _maxFocusVerifyAttempts,
+    lastBackupDateUtc: _lastBackupDateUtc,
+    popupWidth: _popupWidth,
+    popupHeight: _popupHeight,
+    cardMinLines: _cardMinLines,
+    cardMaxLines: _cardMaxLines,
+    themeMode: _themeMode,
+    hideOnDeactivate: _hideOnDeactivate,
+    resetScrollOnShow: _resetScrollOnShow,
+    resetSearchOnShow: _resetSearchOnShow,
+  );
 
   Future<void> _save() async {
     final hotkeyChanged = _hotkeyChanged;
@@ -635,8 +635,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           colors: colors,
           icon: Icons.content_paste_go_rounded,
           title: l.sectionPaste,
-          subtitle:
-              l.subtitlePastePreset,
+          subtitle: l.subtitlePastePreset,
           children: [
             _SettingsRow(
               label: l.settingPasteSpeed,
@@ -655,14 +654,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: BoxDecoration(
                 color: colors.warning.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
-                border:
-                    Border.all(color: colors.warning.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: colors.warning.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
                 '\u26a0\ufe0f Fast: May cause strange behavior in heavy apps.\n'
                 '\u26a0\ufe0f Slow: May feel like a failure on modern computers.',
-                style:
-                    TextStyle(fontSize: 10.5, color: colors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -686,16 +688,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           colors: colors,
           icon: Icons.archive_rounded,
           title: l.sectionBackupRestore,
-          subtitle:
-              l.subtitleBackup,
+          subtitle: l.subtitleBackup,
           children: [
             if (_lastBackupDateUtc != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   l.backupLastDate(_formatDate(_lastBackupDateUtc!)),
-                  style:
-                      TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
+                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
                 ),
               )
             else
@@ -703,8 +703,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   l.backupNone,
-                  style:
-                      TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
+                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
                 ),
               ),
             Row(
@@ -748,17 +747,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Icons.keyboard_rounded,
           title: l.sectionShortcuts,
           children: [
-            _ShortcutRow(keys: _hotkeyString(), description: l.shortcutOpenClose, colors: colors),
-            _ShortcutRow(keys: '\u2191 / \u2193', description: l.shortcutArrows, colors: colors),
-            _ShortcutRow(keys: 'Enter', description: l.shortcutEnter, colors: colors),
-            _ShortcutRow(keys: 'Delete', description: l.shortcutDelete, colors: colors),
+            _ShortcutRow(
+              keys: _hotkeyString(),
+              description: l.shortcutOpenClose,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: '\u2191 / \u2193',
+              description: l.shortcutArrows,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Enter',
+              description: l.shortcutEnter,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Delete',
+              description: l.shortcutDelete,
+              colors: colors,
+            ),
             _ShortcutRow(keys: 'P', description: l.shortcutPin, colors: colors),
-            _ShortcutRow(keys: 'E', description: l.shortcutEdit, colors: colors),
-            _ShortcutRow(keys: '\u2192', description: l.shortcutExpand, colors: colors),
-            _ShortcutRow(keys: 'Escape', description: l.shortcutEscape, colors: colors),
-            _ShortcutRow(keys: 'Ctrl+1', description: l.shortcutTab1, colors: colors),
-            _ShortcutRow(keys: 'Ctrl+2', description: l.shortcutTab2, colors: colors),
-            _ShortcutRow(keys: 'Shift+Tab', description: l.shortcutFocusSearch, colors: colors),
+            _ShortcutRow(
+              keys: 'E',
+              description: l.shortcutEdit,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: '\u2192',
+              description: l.shortcutExpand,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Escape',
+              description: l.shortcutEscape,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Ctrl+1',
+              description: l.shortcutTab1,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Ctrl+2',
+              description: l.shortcutTab2,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Shift+Tab',
+              description: l.shortcutFocusSearch,
+              colors: colors,
+            ),
           ],
         ),
       ],
@@ -1051,9 +1090,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         final l = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.backupError)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.backupError)));
       }
     }
   }
@@ -1071,9 +1110,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final path = result.files.single.path;
     if (path == null || !File(path).existsSync()) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.restoreFileNotFound)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.restoreFileNotFound)));
       }
       return;
     }
@@ -1085,9 +1124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text(
           l.restoreDialogTitle,
           style: TextStyle(fontSize: 14, color: colors.onSurface),
@@ -1117,8 +1154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed != true) return;
 
     try {
-      final manifest =
-          await BackupService.restoreBackup(path, widget.storage);
+      final manifest = await BackupService.restoreBackup(path, widget.storage);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1133,9 +1169,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.restoreError)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.restoreError)));
       }
     }
   }
@@ -1148,16 +1184,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       '${dt.day.toString().padLeft(2, '0')}/'
       '${dt.month.toString().padLeft(2, '0')}/${dt.year}';
 
-  Future<bool?> _showConfirmDialog(String title, String message, String confirmLabel) {
+  Future<bool?> _showConfirmDialog(
+    String title,
+    String message,
+    String confirmLabel,
+  ) {
     final colors = CopyPasteTheme.colorsOf(context);
     final l = AppLocalizations.of(context);
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text(
           title,
           style: TextStyle(fontSize: 14, color: colors.onSurface),
@@ -1176,10 +1214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              confirmLabel,
-              style: TextStyle(color: colors.danger),
-            ),
+            child: Text(confirmLabel, style: TextStyle(color: colors.danger)),
           ),
         ],
       ),
@@ -1196,18 +1231,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         textStyle: const TextStyle(fontSize: 12),
       );
 
-  static List<({String key, String defaultName, Color color})>
-      _colorEntries(AppLocalizations l) => [
-            (key: 'Red', defaultName: l.colorRed, color: const Color(0xFFE53935)),
-            (key: 'Green', defaultName: l.colorGreen, color: const Color(0xFF43A047)),
-            (key: 'Purple', defaultName: l.colorPurple, color: const Color(0xFF8E24AA)),
-            (key: 'Yellow', defaultName: l.colorYellow, color: const Color(0xFFFDD835)),
-            (key: 'Blue', defaultName: l.colorBlue, color: const Color(0xFF1E88E5)),
-            (key: 'Orange', defaultName: l.colorOrange, color: const Color(0xFFFB8C00)),
-          ];
-
-
-
+  static List<({String key, String defaultName, Color color})> _colorEntries(
+    AppLocalizations l,
+  ) => [
+    (key: 'Red', defaultName: l.colorRed, color: const Color(0xFFE53935)),
+    (key: 'Green', defaultName: l.colorGreen, color: const Color(0xFF43A047)),
+    (key: 'Purple', defaultName: l.colorPurple, color: const Color(0xFF8E24AA)),
+    (key: 'Yellow', defaultName: l.colorYellow, color: const Color(0xFFFDD835)),
+    (key: 'Blue', defaultName: l.colorBlue, color: const Color(0xFF1E88E5)),
+    (key: 'Orange', defaultName: l.colorOrange, color: const Color(0xFFFB8C00)),
+  ];
 }
 
 // ═════════════════════════════════════════════════════════════════
@@ -1241,10 +1274,11 @@ class _NavItemState extends State<_NavItem> {
     final bg = widget.selected
         ? widget.colors.primary.withValues(alpha: 0.12)
         : (_hovering
-            ? widget.colors.onSurface.withValues(alpha: 0.05)
-            : Colors.transparent);
-    final fg =
-        widget.selected ? widget.colors.primary : widget.colors.onSurface;
+              ? widget.colors.onSurface.withValues(alpha: 0.05)
+              : Colors.transparent);
+    final fg = widget.selected
+        ? widget.colors.primary
+        : widget.colors.onSurface;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -1268,8 +1302,9 @@ class _NavItemState extends State<_NavItem> {
                   widget.label,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        widget.selected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: widget.selected
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                     color: fg,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -1306,20 +1341,14 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colors.cardBorder,
-        ),
+        border: Border.all(color: colors.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                size: 14,
-                color: colors.onSurfaceMuted,
-              ),
+              Icon(icon, size: 14, color: colors.onSurfaceMuted),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1340,8 +1369,7 @@ class _SectionCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 subtitle!,
-                style:
-                    TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
+                style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
               ),
             ),
           const SizedBox(height: 12),
@@ -1377,8 +1405,7 @@ class _SettingsRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style:
-                      TextStyle(fontSize: 12.5, color: colors.onSurface),
+                  style: TextStyle(fontSize: 12.5, color: colors.onSurface),
                 ),
                 if (subtitle != null)
                   Padding(
@@ -1428,10 +1455,7 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: colors.onSurface,
-                  ),
+                  style: TextStyle(fontSize: 12.5, color: colors.onSurface),
                 ),
                 if (subtitle != null)
                   Padding(
@@ -1489,7 +1513,9 @@ class _ThemeRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.surfaceVariant,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: colors.onSurface.withValues(alpha: 0.08)),
+              border: Border.all(
+                color: colors.onSurface.withValues(alpha: 0.08),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1687,8 +1713,7 @@ class _CompactTextFieldState extends State<_CompactTextField> {
       decoration: InputDecoration(
         isDense: true,
         counterText: '',
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide(color: widget.colors.divider),
@@ -1794,11 +1819,7 @@ class _ActionTileState extends State<_ActionTile> {
           ),
           child: Row(
             children: [
-              Icon(
-                widget.icon,
-                size: 16,
-                color: widget.colors.onSurfaceMuted,
-              ),
+              Icon(widget.icon, size: 16, color: widget.colors.onSurfaceMuted),
               const SizedBox(width: 10),
               Text(
                 widget.label,
@@ -1874,13 +1895,32 @@ class _KeySelector extends StatelessWidget {
   final void Function(String key, int virtualKey) onChanged;
 
   static const _keys = [
-    ('A', 0x41), ('B', 0x42), ('C', 0x43), ('D', 0x44),
-    ('E', 0x45), ('F', 0x46), ('G', 0x47), ('H', 0x48),
-    ('I', 0x49), ('J', 0x4A), ('K', 0x4B), ('L', 0x4C),
-    ('M', 0x4D), ('N', 0x4E), ('O', 0x4F), ('P', 0x50),
-    ('Q', 0x51), ('R', 0x52), ('S', 0x53), ('T', 0x54),
-    ('U', 0x55), ('V', 0x56), ('W', 0x57), ('X', 0x58),
-    ('Y', 0x59), ('Z', 0x5A),
+    ('A', 0x41),
+    ('B', 0x42),
+    ('C', 0x43),
+    ('D', 0x44),
+    ('E', 0x45),
+    ('F', 0x46),
+    ('G', 0x47),
+    ('H', 0x48),
+    ('I', 0x49),
+    ('J', 0x4A),
+    ('K', 0x4B),
+    ('L', 0x4C),
+    ('M', 0x4D),
+    ('N', 0x4E),
+    ('O', 0x4F),
+    ('P', 0x50),
+    ('Q', 0x51),
+    ('R', 0x52),
+    ('S', 0x53),
+    ('T', 0x54),
+    ('U', 0x55),
+    ('V', 0x56),
+    ('W', 0x57),
+    ('X', 0x58),
+    ('Y', 0x59),
+    ('Z', 0x5A),
   ];
 
   @override
@@ -1902,11 +1942,7 @@ class _KeySelector extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: colors.primary,
           ),
-          icon: Icon(
-            Icons.arrow_drop_down,
-            size: 16,
-            color: colors.primary,
-          ),
+          icon: Icon(Icons.arrow_drop_down, size: 16, color: colors.primary),
           items: _keys
               .map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$1)))
               .toList(),
@@ -1953,8 +1989,7 @@ class _ShortcutRow extends StatelessWidget {
           Expanded(
             child: Text(
               description,
-              style:
-                  TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
+              style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
             ),
           ),
         ],
@@ -1998,13 +2033,13 @@ class _SmallButtonState extends State<_SmallButton> {
           decoration: BoxDecoration(
             color: widget.primary
                 ? (enabled
-                    ? (_hovering
-                        ? widget.colors.primary.withValues(alpha: 0.9)
-                        : widget.colors.primary)
-                    : widget.colors.primary.withValues(alpha: 0.4))
+                      ? (_hovering
+                            ? widget.colors.primary.withValues(alpha: 0.9)
+                            : widget.colors.primary)
+                      : widget.colors.primary.withValues(alpha: 0.4))
                 : (_hovering
-                    ? widget.colors.onSurface.withValues(alpha: 0.08)
-                    : Colors.transparent),
+                      ? widget.colors.onSurface.withValues(alpha: 0.08)
+                      : Colors.transparent),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(

@@ -20,14 +20,14 @@ void main() {
 
   group('CleanupService', () {
     test('runCleanupIfNeeded via start() clears old items', () async {
-      await repo.save(ClipboardItem(
-        content: 'old',
-        type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'old',
+          type: ClipboardContentType.text,
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+          modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        ),
+      );
 
       final service = CleanupService(repo, () => 30);
       service.start(tempDir.path);
@@ -42,14 +42,14 @@ void main() {
       final file = File('${tempDir.path}/last_cleanup.txt');
       file.writeAsStringSync(DateTime.now().toUtc().toIso8601String());
 
-      await repo.save(ClipboardItem(
-        content: 'old',
-        type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'old',
+          type: ClipboardContentType.text,
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+          modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        ),
+      );
 
       final service = CleanupService(repo, () => 30);
       service.start(tempDir.path);
@@ -62,14 +62,14 @@ void main() {
     });
 
     test('skips cleanup when retentionDays is 0', () async {
-      await repo.save(ClipboardItem(
-        content: 'old',
-        type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'old',
+          type: ClipboardContentType.text,
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+          modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        ),
+      );
 
       final service = CleanupService(repo, () => 0);
       service.start(tempDir.path);
@@ -81,14 +81,16 @@ void main() {
     });
 
     test('skips cleanup when retentionDays is negative', () async {
-      await repo.save(ClipboardItem(
-        content: 'item',
-        type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 100)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 100)),
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'item',
+          type: ClipboardContentType.text,
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 100)),
+          modifiedAt: DateTime.now().toUtc().subtract(
+            const Duration(days: 100),
+          ),
+        ),
+      );
 
       final service = CleanupService(repo, () => -1);
       service.start(tempDir.path);
@@ -104,10 +106,8 @@ void main() {
         content: 'pinned old',
         type: ClipboardContentType.text,
         isPinned: true,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        createdAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
       );
       await repo.save(pinned);
 
@@ -140,19 +140,20 @@ void main() {
     });
 
     test('runs cleanup with previous-day date file', () async {
-      final yesterday =
-          DateTime.now().toUtc().subtract(const Duration(days: 1));
+      final yesterday = DateTime.now().toUtc().subtract(
+        const Duration(days: 1),
+      );
       final file = File('${tempDir.path}/last_cleanup.txt');
       file.writeAsStringSync(yesterday.toIso8601String());
 
-      await repo.save(ClipboardItem(
-        content: 'old',
-        type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'old',
+          type: ClipboardContentType.text,
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+          modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        ),
+      );
 
       final service = CleanupService(repo, () => 30);
       service.start(tempDir.path);
@@ -168,14 +169,14 @@ void main() {
       service.dispose();
       // After dispose, runCleanupIfNeeded is a no-op
 
-      await repo.save(ClipboardItem(
-        content: 'old',
-        type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 40)),
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'old',
+          type: ClipboardContentType.text,
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+          modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 40)),
+        ),
+      );
 
       await service.runCleanupIfNeeded();
 

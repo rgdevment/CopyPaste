@@ -14,7 +14,7 @@ import 'image_processor.dart';
 
 class ClipboardService {
   ClipboardService(this._repository, {String? imagesPath})
-      : _imagesPath = imagesPath;
+    : _imagesPath = imagesPath;
 
   final IClipboardRepository _repository;
   final String? _imagesPath;
@@ -27,8 +27,7 @@ class ClipboardService {
 
   int pasteIgnoreWindowMs = 450;
 
-  DateTime _lastPasteTime =
-      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  DateTime _lastPasteTime = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   String? _lastPastedContent;
 
   Future<void> notifyPasteInitiated(String itemId) async {
@@ -59,11 +58,9 @@ class ClipboardService {
   }) async {
     if (_shouldIgnore(content)) return null;
 
-    final existing =
-        await _repository.findByContentAndType(content, type);
+    final existing = await _repository.findByContentAndType(content, type);
     if (existing != null) {
-      final updated =
-          existing.copyWith(modifiedAt: DateTime.now().toUtc());
+      final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
       return updated;
@@ -94,8 +91,7 @@ class ClipboardService {
 
     final existing = await _repository.findByContentHash(contentHash);
     if (existing != null) {
-      final updated =
-          existing.copyWith(modifiedAt: DateTime.now().toUtc());
+      final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
       return updated;
@@ -121,9 +117,7 @@ class ClipboardService {
     _itemAdded.add(savedItem);
 
     // Process image in background isolate (BMP→PNG)
-    if (imageBytes != null &&
-        imageBytes.isNotEmpty &&
-        _imagesPath != null) {
+    if (imageBytes != null && imageBytes.isNotEmpty && _imagesPath != null) {
       unawaited(_processImageBackground(savedItem, imageBytes));
     }
 
@@ -178,11 +172,9 @@ class ClipboardService {
     if (_shouldIgnore(null)) return null;
 
     final content = files.join('\n');
-    final existing =
-        await _repository.findByContentAndType(content, type);
+    final existing = await _repository.findByContentAndType(content, type);
     if (existing != null) {
-      final updated =
-          existing.copyWith(modifiedAt: DateTime.now().toUtc());
+      final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
       return updated;
@@ -236,8 +228,7 @@ class ClipboardService {
   }
 
   void _cleanupItemFiles(ClipboardItem item) {
-    if (item.type == ClipboardContentType.image &&
-        item.content.isNotEmpty) {
+    if (item.type == ClipboardContentType.image && item.content.isNotEmpty) {
       try {
         final file = File(item.content);
         if (file.existsSync()) file.deleteSync();
@@ -252,15 +243,14 @@ class ClipboardService {
     bool? isPinned,
     int limit = 50,
     int skip = 0,
-  }) =>
-      _repository.searchAdvanced(
-        query: query,
-        types: types,
-        colors: colors,
-        isPinned: isPinned,
-        limit: limit,
-        skip: skip,
-      );
+  }) => _repository.searchAdvanced(
+    query: query,
+    types: types,
+    colors: colors,
+    isPinned: isPinned,
+    limit: limit,
+    skip: skip,
+  );
 
   Future<void> updatePin(String id, bool isPinned) async {
     final item = await _repository.getById(id);

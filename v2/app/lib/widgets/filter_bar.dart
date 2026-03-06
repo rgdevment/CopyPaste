@@ -84,8 +84,7 @@ class FilterBarState extends State<FilterBar> {
               ],
             ),
           ),
-        if (widget.selectedColors.isNotEmpty)
-          const PopupMenuDivider(height: 8),
+        if (widget.selectedColors.isNotEmpty) const PopupMenuDivider(height: 8),
         PopupMenuItem<void>(
           enabled: false,
           height: 28,
@@ -148,26 +147,18 @@ class FilterBarState extends State<FilterBar> {
             decoration: BoxDecoration(
               color: dotColor,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: dotColor.withValues(alpha: 0.5),
-              ),
+              border: Border.all(color: dotColor.withValues(alpha: 0.5)),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             label,
             style: theme.typography.filterChip.copyWith(
-              color:
-                  isSelected ? colors.onSurface : colors.onSurfaceVariant,
+              color: isSelected ? colors.onSurface : colors.onSurfaceVariant,
             ),
           ),
           const Spacer(),
-          if (isSelected)
-            Icon(
-              Icons.check,
-              size: 14,
-              color: colors.primary,
-            ),
+          if (isSelected) Icon(Icons.check, size: 14, color: colors.primary),
         ],
       ),
     );

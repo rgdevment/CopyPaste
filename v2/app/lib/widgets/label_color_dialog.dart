@@ -212,9 +212,7 @@ class _LabelColorDialogState extends State<LabelColorDialog> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected
-                    ? colors.primary
-                    : Colors.transparent,
+                color: isSelected ? colors.primary : Colors.transparent,
                 width: 2,
               ),
             ),
@@ -223,9 +221,7 @@ class _LabelColorDialogState extends State<LabelColorDialog> {
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
-                  color: e.$1 == CardColor.none
-                      ? Colors.transparent
-                      : dotColor,
+                  color: e.$1 == CardColor.none ? Colors.transparent : dotColor,
                   shape: BoxShape.circle,
                   border: e.$1 == CardColor.none
                       ? Border.all(color: colors.onSurfaceSubtle, width: 1.5)
@@ -284,11 +280,11 @@ class _DialogButtonState extends State<_DialogButton> {
           decoration: BoxDecoration(
             color: widget.isPrimary
                 ? (_hovering
-                    ? widget.colors.primary.withValues(alpha: 0.9)
-                    : widget.colors.primary)
+                      ? widget.colors.primary.withValues(alpha: 0.9)
+                      : widget.colors.primary)
                 : (_hovering
-                    ? widget.colors.onSurface.withValues(alpha: 0.08)
-                    : Colors.transparent),
+                      ? widget.colors.onSurface.withValues(alpha: 0.08)
+                      : Colors.transparent),
             borderRadius: BorderRadius.circular(widget.theme.radii.button),
           ),
           child: Text(

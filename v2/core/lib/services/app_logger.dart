@@ -21,8 +21,7 @@ class AppLogger {
     try {
       _logDirectory = logsPath;
       final now = DateTime.now();
-      final dateStr =
-          '${now.year}-${_pad(now.month)}-${_pad(now.day)}';
+      final dateStr = '${now.year}-${_pad(now.month)}-${_pad(now.day)}';
       _logFilePath = p.join(logsPath, 'copypaste_$dateStr.log');
       Directory(logsPath).createSync(recursive: true);
       _cleanOldLogs();
@@ -39,7 +38,11 @@ class AppLogger {
 
   static void error(String message) => _log('ERROR', message);
 
-  static void exception(Object? error, [StackTrace? stackTrace, String context = '']) {
+  static void exception(
+    Object? error, [
+    StackTrace? stackTrace,
+    String context = '',
+  ]) {
     if (!isEnabled || !_isInitialized || error == null) return;
     final sb = StringBuffer();
     if (context.isNotEmpty) sb.write('$context - ');

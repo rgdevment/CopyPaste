@@ -7,9 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 class StorageConfig {
   StorageConfig._({required this.baseDir})
-      : databasePath = p.join(baseDir, 'clipboard.db'),
-        imagesPath = p.join(baseDir, 'images'),
-        configPath = p.join(baseDir, 'config');
+    : databasePath = p.join(baseDir, 'clipboard.db'),
+      imagesPath = p.join(baseDir, 'images'),
+      configPath = p.join(baseDir, 'config');
 
   final String baseDir;
   final String databasePath;
@@ -29,8 +29,7 @@ class StorageConfig {
           ? p.join(localAppData, 'CopyPaste')
           : p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');
     } else {
-      base =
-          p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');
+      base = p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');
     }
     return StorageConfig._(baseDir: base);
   }

@@ -3,12 +3,18 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
-typedef _CreateMutexWNative = IntPtr Function(
-    Pointer<Void> lpMutexAttributes, Int32 bInitialOwner,
-    Pointer<Utf16> lpName);
-typedef _CreateMutexWDart = int Function(
-    Pointer<Void> lpMutexAttributes, int bInitialOwner,
-    Pointer<Utf16> lpName);
+typedef _CreateMutexWNative =
+    IntPtr Function(
+      Pointer<Void> lpMutexAttributes,
+      Int32 bInitialOwner,
+      Pointer<Utf16> lpName,
+    );
+typedef _CreateMutexWDart =
+    int Function(
+      Pointer<Void> lpMutexAttributes,
+      int bInitialOwner,
+      Pointer<Utf16> lpName,
+    );
 
 typedef _GetLastErrorNative = Uint32 Function();
 typedef _GetLastErrorDart = int Function();
@@ -25,18 +31,14 @@ class SingleInstance {
 
   static final _kernel32 = DynamicLibrary.open('kernel32.dll');
 
-  static final _createMutex =
-      _kernel32.lookupFunction<_CreateMutexWNative, _CreateMutexWDart>(
-          'CreateMutexW');
-  static final _getLastError =
-      _kernel32.lookupFunction<_GetLastErrorNative, _GetLastErrorDart>(
-          'GetLastError');
-  static final _closeHandle =
-      _kernel32.lookupFunction<_CloseHandleNative, _CloseHandleDart>(
-          'CloseHandle');
-  static final _releaseMutex =
-      _kernel32.lookupFunction<_ReleaseMutexNative, _ReleaseMutexDart>(
-          'ReleaseMutex');
+  static final _createMutex = _kernel32
+      .lookupFunction<_CreateMutexWNative, _CreateMutexWDart>('CreateMutexW');
+  static final _getLastError = _kernel32
+      .lookupFunction<_GetLastErrorNative, _GetLastErrorDart>('GetLastError');
+  static final _closeHandle = _kernel32
+      .lookupFunction<_CloseHandleNative, _CloseHandleDart>('CloseHandle');
+  static final _releaseMutex = _kernel32
+      .lookupFunction<_ReleaseMutexNative, _ReleaseMutexDart>('ReleaseMutex');
 
   static int _mutexHandle = 0;
 
