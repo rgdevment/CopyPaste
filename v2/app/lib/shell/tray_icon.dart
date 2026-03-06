@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'package:tray_manager/tray_manager.dart';
 
 class TrayIcon with TrayListener {

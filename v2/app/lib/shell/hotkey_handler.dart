@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';

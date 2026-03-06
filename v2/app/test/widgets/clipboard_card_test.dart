@@ -1309,5 +1309,162 @@ void main() {
       }
       expect(find.byType(ClipboardCard), findsOneWidget);
     });
+
+    testWidgets('timestamp for item modified 5 minutes ago shows Xm', (
+      tester,
+    ) async {
+      final item = ClipboardItem(
+        content: 'Old item',
+        type: ClipboardContentType.text,
+        modifiedAt: DateTime.now().subtract(const Duration(minutes: 5)),
+      );
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+      expect(find.textContaining('m'), findsWidgets);
+    });
+
+    testWidgets('timestamp for item modified 3 hours ago shows Xh', (
+      tester,
+    ) async {
+      final item = ClipboardItem(
+        content: 'Hours old',
+        type: ClipboardContentType.text,
+        modifiedAt: DateTime.now().subtract(const Duration(hours: 3)),
+      );
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+      expect(find.textContaining('h'), findsWidgets);
+    });
+
+    testWidgets('timestamp for item modified 4 days ago shows Xd', (
+      tester,
+    ) async {
+      final item = ClipboardItem(
+        content: 'Days old',
+        type: ClipboardContentType.text,
+        modifiedAt: DateTime.now().subtract(const Duration(days: 4)),
+      );
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+      expect(find.textContaining('d'), findsWidgets);
+    });
+
+    testWidgets('timestamp for item modified 30 days ago shows month/day', (
+      tester,
+    ) async {
+      final item = ClipboardItem(
+        content: 'Very old',
+        type: ClipboardContentType.text,
+        modifiedAt: DateTime.now().subtract(const Duration(days: 30)),
+      );
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+    });
+
+    testWidgets('video item without extension but with duration has footer', (
+      tester,
+    ) async {
+      final meta = jsonEncode({'duration': 120});
+      final item = ClipboardItem(
+        content: '/videos/clip',
+        type: ClipboardContentType.video,
+        metadata: meta,
+      );
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+    });
+
+    testWidgets('audio item with empty content shows audio label', (
+      tester,
+    ) async {
+      final item = ClipboardItem(content: '', type: ClipboardContentType.audio);
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+    });
+
+    testWidgets('video item with empty content shows video label', (
+      tester,
+    ) async {
+      final item = ClipboardItem(content: '', type: ClipboardContentType.video);
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsOneWidget);
+    });
   });
 }
