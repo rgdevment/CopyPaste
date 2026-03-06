@@ -1,4 +1,5 @@
 // ignore: unused_import
+// coverage:ignore-file
 import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 

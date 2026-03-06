@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:core/core.dart';
@@ -133,6 +135,49 @@ void main() {
     test('isFileAvailable returns false for empty content on file types', () {
       final item = ClipboardItem(content: '', type: ClipboardContentType.file);
       expect(item.isFileAvailable(), isFalse);
+    });
+
+    test('isFileAvailable returns false when file does not exist', () {
+      final item = ClipboardItem(
+        content: '/nonexistent/path/file.txt',
+        type: ClipboardContentType.file,
+      );
+      expect(item.isFileAvailable(), isFalse);
+    });
+
+    test('isFileAvailable returns false when content is only whitespace lines', () {
+      final item = ClipboardItem(
+        content: '\n\n',
+        type: ClipboardContentType.file,
+      );
+      expect(item.isFileAvailable(), isFalse);
+    });
+
+    test('isFileAvailable returns true when file exists', () {
+      final dir = Directory.systemTemp.createTempSync('item_test_');
+      try {
+        final file = File('${dir.path}/test.txt')..writeAsStringSync('test');
+        final item = ClipboardItem(
+          content: file.path,
+          type: ClipboardContentType.file,
+        );
+        expect(item.isFileAvailable(), isTrue);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('isFileAvailable returns true for folder type when directory exists', () {
+      final dir = Directory.systemTemp.createTempSync('folder_item_test_');
+      try {
+        final item = ClipboardItem(
+          content: dir.path,
+          type: ClipboardContentType.folder,
+        );
+        expect(item.isFileAvailable(), isTrue);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
     });
   });
 }
