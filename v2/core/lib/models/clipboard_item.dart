@@ -22,9 +22,9 @@ class ClipboardItem {
     this.metadata,
     this.pasteCount = 0,
     this.contentHash,
-  })  : id = id ?? _uuid.v4(),
-        createdAt = createdAt ?? DateTime.now().toUtc(),
-        modifiedAt = modifiedAt ?? DateTime.now().toUtc();
+  }) : id = id ?? _uuid.v4(),
+       createdAt = createdAt ?? DateTime.now().toUtc(),
+       modifiedAt = modifiedAt ?? DateTime.now().toUtc();
 
   static const int maxLabelLength = 50;
 
@@ -59,39 +59,36 @@ class ClipboardItem {
     Object? metadata = _sentinel,
     int? pasteCount,
     Object? contentHash = _sentinel,
-  }) =>
-      ClipboardItem(
-        id: id,
-        content: content ?? this.content,
-        type: type ?? this.type,
-        createdAt: createdAt ?? this.createdAt,
-        modifiedAt: modifiedAt ?? this.modifiedAt,
-        appSource:
-            appSource == _sentinel ? this.appSource : appSource as String?,
-        isPinned: isPinned ?? this.isPinned,
-        label: label == _sentinel ? this.label : label as String?,
-        cardColor: cardColor ?? this.cardColor,
-        metadata:
-            metadata == _sentinel ? this.metadata : metadata as String?,
-        pasteCount: pasteCount ?? this.pasteCount,
-        contentHash:
-            contentHash == _sentinel ? this.contentHash : contentHash as String?,
-      );
+  }) => ClipboardItem(
+    id: id,
+    content: content ?? this.content,
+    type: type ?? this.type,
+    createdAt: createdAt ?? this.createdAt,
+    modifiedAt: modifiedAt ?? this.modifiedAt,
+    appSource: appSource == _sentinel ? this.appSource : appSource as String?,
+    isPinned: isPinned ?? this.isPinned,
+    label: label == _sentinel ? this.label : label as String?,
+    cardColor: cardColor ?? this.cardColor,
+    metadata: metadata == _sentinel ? this.metadata : metadata as String?,
+    pasteCount: pasteCount ?? this.pasteCount,
+    contentHash: contentHash == _sentinel
+        ? this.contentHash
+        : contentHash as String?,
+  );
 
   bool isFileAvailable() {
     if (!isFileBasedType) return true;
     if (content.isEmpty) return false;
-    final paths =
-        content.split('\n').where((s) => s.isNotEmpty).toList();
+    final paths = content.split('\n').where((s) => s.isNotEmpty).toList();
     if (paths.isEmpty) return false;
-    return paths
-        .every((p) => File(p).existsSync() || Directory(p).existsSync());
+    return paths.every(
+      (p) => File(p).existsSync() || Directory(p).existsSync(),
+    );
   }
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ClipboardItem && id == other.id;
+      identical(this, other) || other is ClipboardItem && id == other.id;
 
   @override
   int get hashCode => id.hashCode;

@@ -20,14 +20,11 @@ class ClipboardItems extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get modifiedAt => dateTime()();
   TextColumn get appSource => text().nullable()();
-  BoolColumn get isPinned =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
   TextColumn get label => text().nullable()();
-  IntColumn get cardColor =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get cardColor => integer().withDefault(const Constant(0))();
   TextColumn get metadata => text().nullable()();
-  IntColumn get pasteCount =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get pasteCount => integer().withDefault(const Constant(0))();
   TextColumn get contentHash => text().nullable()();
 
   @override
@@ -43,22 +40,22 @@ class _AppDatabase extends _$_AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-          await _createIndexes();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await _createIndexes();
-          }
-        },
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA journal_mode = WAL');
-          await customStatement('PRAGMA synchronous = NORMAL');
-          await customStatement('PRAGMA cache_size = -2000');
-          await customStatement('PRAGMA auto_vacuum = INCREMENTAL');
+    onCreate: (m) async {
+      await m.createAll();
+      await _createIndexes();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await _createIndexes();
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA journal_mode = WAL');
+      await customStatement('PRAGMA synchronous = NORMAL');
+      await customStatement('PRAGMA cache_size = -2000');
+      await customStatement('PRAGMA auto_vacuum = INCREMENTAL');
 
-          await customStatement('''
+      await customStatement('''
             CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardItems_fts USING fts5(
               content,
               app_source,
@@ -68,21 +65,21 @@ class _AppDatabase extends _$_AppDatabase {
             )
           ''');
 
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER IF NOT EXISTS clipboard_items_ai AFTER INSERT ON clipboard_items BEGIN
               INSERT INTO ClipboardItems_fts(rowid, content, app_source, label)
               VALUES (NEW.rowid, NEW.content, NEW.app_source, NEW.label);
             END
           ''');
 
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER IF NOT EXISTS clipboard_items_ad AFTER DELETE ON clipboard_items BEGIN
               INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, content, app_source, label)
               VALUES ('delete', OLD.rowid, OLD.content, OLD.app_source, OLD.label);
             END
           ''');
 
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER IF NOT EXISTS clipboard_items_au AFTER UPDATE ON clipboard_items BEGIN
               INSERT INTO ClipboardItems_fts(ClipboardItems_fts, rowid, content, app_source, label)
               VALUES ('delete', OLD.rowid, OLD.content, OLD.app_source, OLD.label);
@@ -90,20 +87,25 @@ class _AppDatabase extends _$_AppDatabase {
               VALUES (NEW.rowid, NEW.content, NEW.app_source, NEW.label);
             END
           ''');
-        },
-      );
+    },
+  );
 
   Future<void> _createIndexes() async {
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_content_hash ON clipboard_items(content_hash)');
+      'CREATE INDEX IF NOT EXISTS idx_content_hash ON clipboard_items(content_hash)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_content_type ON clipboard_items(content, type)');
+      'CREATE INDEX IF NOT EXISTS idx_content_type ON clipboard_items(content, type)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_modified_at ON clipboard_items(modified_at DESC)');
+      'CREATE INDEX IF NOT EXISTS idx_modified_at ON clipboard_items(modified_at DESC)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_created_at ON clipboard_items(created_at)');
+      'CREATE INDEX IF NOT EXISTS idx_created_at ON clipboard_items(created_at)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_is_pinned ON clipboard_items(is_pinned)');
+      'CREATE INDEX IF NOT EXISTS idx_is_pinned ON clipboard_items(is_pinned)',
+    );
   }
 }
 
@@ -145,19 +147,19 @@ class SqliteRepository implements IClipboardRepository {
   }
 
   ClipboardItem _fromRow(ClipboardRow row) => ClipboardItem(
-        id: row.id,
-        content: row.content,
-        type: ClipboardContentType.fromValue(row.type),
-        createdAt: row.createdAt,
-        modifiedAt: row.modifiedAt,
-        appSource: row.appSource,
-        isPinned: row.isPinned,
-        label: row.label,
-        cardColor: CardColor.fromValue(row.cardColor),
-        metadata: row.metadata,
-        pasteCount: row.pasteCount,
-        contentHash: row.contentHash,
-      );
+    id: row.id,
+    content: row.content,
+    type: ClipboardContentType.fromValue(row.type),
+    createdAt: row.createdAt,
+    modifiedAt: row.modifiedAt,
+    appSource: row.appSource,
+    isPinned: row.isPinned,
+    label: row.label,
+    cardColor: CardColor.fromValue(row.cardColor),
+    metadata: row.metadata,
+    pasteCount: row.pasteCount,
+    contentHash: row.contentHash,
+  );
 
   ClipboardItemsCompanion _toCompanion(ClipboardItem item) =>
       ClipboardItemsCompanion(
@@ -176,19 +178,19 @@ class SqliteRepository implements IClipboardRepository {
       );
 
   ClipboardItem _fromQueryRow(QueryRow row) => ClipboardItem(
-        id: row.read<String>('id'),
-        content: row.read<String>('content'),
-        type: ClipboardContentType.fromValue(row.read<int>('type')),
-        createdAt: row.read<DateTime>('created_at'),
-        modifiedAt: row.read<DateTime>('modified_at'),
-        appSource: row.readNullable<String>('app_source'),
-        isPinned: row.read<bool>('is_pinned'),
-        label: row.readNullable<String>('label'),
-        cardColor: CardColor.fromValue(row.read<int>('card_color')),
-        metadata: row.readNullable<String>('metadata'),
-        pasteCount: row.read<int>('paste_count'),
-        contentHash: row.readNullable<String>('content_hash'),
-      );
+    id: row.read<String>('id'),
+    content: row.read<String>('content'),
+    type: ClipboardContentType.fromValue(row.read<int>('type')),
+    createdAt: row.read<DateTime>('created_at'),
+    modifiedAt: row.read<DateTime>('modified_at'),
+    appSource: row.readNullable<String>('app_source'),
+    isPinned: row.read<bool>('is_pinned'),
+    label: row.readNullable<String>('label'),
+    cardColor: CardColor.fromValue(row.read<int>('card_color')),
+    metadata: row.readNullable<String>('metadata'),
+    pasteCount: row.read<int>('paste_count'),
+    contentHash: row.readNullable<String>('content_hash'),
+  );
 
   @override
   Future<void> save(ClipboardItem item) =>
@@ -196,25 +198,26 @@ class SqliteRepository implements IClipboardRepository {
 
   @override
   Future<void> update(ClipboardItem item) async {
-    await (_db.update(_db.clipboardItems)
-          ..where((t) => t.id.equals(item.id)))
-        .write(_toCompanion(item));
+    await (_db.update(
+      _db.clipboardItems,
+    )..where((t) => t.id.equals(item.id))).write(_toCompanion(item));
   }
 
   @override
   Future<ClipboardItem?> getById(String id) async {
-    final row = await (_db.select(_db.clipboardItems)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.clipboardItems,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _fromRow(row);
   }
 
   @override
   Future<ClipboardItem?> getLatest() async {
-    final row = await (_db.select(_db.clipboardItems)
-          ..orderBy([(t) => OrderingTerm.desc(t.modifiedAt)])
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.clipboardItems)
+              ..orderBy([(t) => OrderingTerm.desc(t.modifiedAt)])
+              ..limit(1))
+            .getSingleOrNull();
     return row == null ? null : _fromRow(row);
   }
 
@@ -223,27 +226,27 @@ class SqliteRepository implements IClipboardRepository {
     String content,
     ClipboardContentType type,
   ) async {
-    final row = await (_db.select(_db.clipboardItems)
-          ..where(
-            (t) => t.content.equals(content) & t.type.equals(type.value),
-          ))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.clipboardItems)..where(
+              (t) => t.content.equals(content) & t.type.equals(type.value),
+            ))
+            .getSingleOrNull();
     return row == null ? null : _fromRow(row);
   }
 
   @override
   Future<ClipboardItem?> findByContentHash(String contentHash) async {
-    final row = await (_db.select(_db.clipboardItems)
-          ..where((t) => t.contentHash.equals(contentHash)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.clipboardItems,
+    )..where((t) => t.contentHash.equals(contentHash))).getSingleOrNull();
     return row == null ? null : _fromRow(row);
   }
 
   @override
   Future<List<ClipboardItem>> getAll() async {
-    final rows = await (_db.select(_db.clipboardItems)
-          ..orderBy([(t) => OrderingTerm.desc(t.modifiedAt)]))
-        .get();
+    final rows = await (_db.select(
+      _db.clipboardItems,
+    )..orderBy([(t) => OrderingTerm.desc(t.modifiedAt)])).get();
     return rows.map(_fromRow).toList();
   }
 
@@ -254,12 +257,12 @@ class SqliteRepository implements IClipboardRepository {
   @override
   Future<int> clearOldItems(int days, {bool excludePinned = true}) async {
     final cutoff = DateTime.now().toUtc().subtract(Duration(days: days));
-    final deleted = await (_db.delete(_db.clipboardItems)
-          ..where((t) {
-            final isOld = t.createdAt.isSmallerThanValue(cutoff);
-            return excludePinned ? isOld & t.isPinned.equals(false) : isOld;
-          }))
-        .go();
+    final deleted =
+        await (_db.delete(_db.clipboardItems)..where((t) {
+              final isOld = t.createdAt.isSmallerThanValue(cutoff);
+              return excludePinned ? isOld & t.isPinned.equals(false) : isOld;
+            }))
+            .go();
 
     if (deleted > 50) {
       try {
@@ -274,9 +277,9 @@ class SqliteRepository implements IClipboardRepository {
 
   @override
   Future<int> deleteAllUnpinned() async {
-    final deleted = await (_db.delete(_db.clipboardItems)
-          ..where((t) => t.isPinned.equals(false)))
-        .go();
+    final deleted = await (_db.delete(
+      _db.clipboardItems,
+    )..where((t) => t.isPinned.equals(false))).go();
     if (deleted > 50) {
       try {
         await _db.customStatement('PRAGMA incremental_vacuum');
@@ -300,8 +303,7 @@ class SqliteRepository implements IClipboardRepository {
     String query, {
     int limit = 50,
     int skip = 0,
-  }) =>
-      searchAdvanced(query: query, limit: limit, skip: skip);
+  }) => searchAdvanced(query: query, limit: limit, skip: skip);
 
   @override
   Future<List<ClipboardItem>> searchAdvanced({
@@ -312,8 +314,9 @@ class SqliteRepository implements IClipboardRepository {
     required int limit,
     required int skip,
   }) async {
-    final normalized =
-        (query != null && query.isNotEmpty) ? SearchHelper.normalize(query) : null;
+    final normalized = (query != null && query.isNotEmpty)
+        ? SearchHelper.normalize(query)
+        : null;
 
     final hasTextQuery = normalized != null && normalized.isNotEmpty;
     final hasTypeFilter = types != null && types.isNotEmpty;
@@ -346,16 +349,15 @@ class SqliteRepository implements IClipboardRepository {
       }
     }
 
-    final filterClause =
-        conditions.isEmpty ? '1=1' : conditions.join(' AND ');
+    final filterClause = conditions.isEmpty ? '1=1' : conditions.join(' AND ');
 
     if (hasTextQuery) {
-      final ftsQuery =
-          '${normalized.replaceAll('"', '""')}*';
+      final ftsQuery = '${normalized.replaceAll('"', '""')}*';
       final likePattern = '%$normalized%';
 
-      final results = await _db.customSelect(
-        '''
+      final results = await _db
+          .customSelect(
+            '''
         WITH fts_results AS (
           SELECT c.*, bm25(ClipboardItems_fts) AS rank, 1 AS source
           FROM clipboard_items c
@@ -378,47 +380,51 @@ class SqliteRepository implements IClipboardRepository {
         ORDER BY source ASC, rank ASC, modified_at DESC
         LIMIT ? OFFSET ?
         ''',
-        variables: [
-          Variable.withString(ftsQuery),
-          ...variables,
-          ...variables,
-          Variable.withString(likePattern),
-          Variable.withString(likePattern),
-          Variable.withString(likePattern),
-          Variable.withInt(limit),
-          Variable.withInt(limit),
-          Variable.withInt(skip),
-        ],
-        readsFrom: {_db.clipboardItems},
-      ).get();
+            variables: [
+              Variable.withString(ftsQuery),
+              ...variables,
+              ...variables,
+              Variable.withString(likePattern),
+              Variable.withString(likePattern),
+              Variable.withString(likePattern),
+              Variable.withInt(limit),
+              Variable.withInt(limit),
+              Variable.withInt(skip),
+            ],
+            readsFrom: {_db.clipboardItems},
+          )
+          .get();
 
       return results.map((row) => _fromQueryRow(row)).toList();
     }
 
-    final results = await _db.customSelect(
-      '''
+    final results = await _db
+        .customSelect(
+          '''
       SELECT c.* FROM clipboard_items c
       WHERE $filterClause
       ORDER BY c.modified_at DESC
       LIMIT ? OFFSET ?
       ''',
-      variables: [
-        ...variables,
-        Variable.withInt(limit),
-        Variable.withInt(skip),
-      ],
-      readsFrom: {_db.clipboardItems},
-    ).get();
+          variables: [
+            ...variables,
+            Variable.withInt(limit),
+            Variable.withInt(skip),
+          ],
+          readsFrom: {_db.clipboardItems},
+        )
+        .get();
 
     return results.map((row) => _fromQueryRow(row)).toList();
   }
 
   @override
   Future<List<String>> getImagePaths() async {
-    final rows = await (_db.select(_db.clipboardItems)
-          ..where((t) => t.type.equals(ClipboardContentType.image.value))
-          ..where((t) => t.content.length.isBiggerThanValue(0)))
-        .get();
+    final rows =
+        await (_db.select(_db.clipboardItems)
+              ..where((t) => t.type.equals(ClipboardContentType.image.value))
+              ..where((t) => t.content.length.isBiggerThanValue(0)))
+            .get();
     return rows.map((r) => r.content).toList();
   }
 

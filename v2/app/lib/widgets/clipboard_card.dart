@@ -155,18 +155,20 @@ class _ClipboardCardState extends State<ClipboardCard> {
           value: _ContextAction.paste,
           height: 32,
           child: _ContextMenuItem(
-              icon: Icons.content_paste_rounded,
-              label: l.menuPaste,
-              colors: colors),
+            icon: Icons.content_paste_rounded,
+            label: l.menuPaste,
+            colors: colors,
+          ),
         ),
         if (_isPlainPasteable && widget.onPastePlain != null)
           PopupMenuItem(
             value: _ContextAction.pastePlain,
             height: 32,
             child: _ContextMenuItem(
-                icon: Icons.format_clear_rounded,
-                label: l.menuPastePlain,
-                colors: colors),
+              icon: Icons.format_clear_rounded,
+              label: l.menuPastePlain,
+              colors: colors,
+            ),
           ),
         const PopupMenuDivider(height: 1),
         PopupMenuItem(
@@ -184,7 +186,10 @@ class _ClipboardCardState extends State<ClipboardCard> {
           value: _ContextAction.edit,
           height: 32,
           child: _ContextMenuItem(
-              icon: Icons.edit_rounded, label: l.menuEdit, colors: colors),
+            icon: Icons.edit_rounded,
+            label: l.menuEdit,
+            colors: colors,
+          ),
         ),
         const PopupMenuDivider(height: 1),
         PopupMenuItem(
@@ -235,9 +240,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           constraints: BoxConstraints(minHeight: theme.sizing.cardMinHeight),
-          transform: _hovering
-              ? Matrix4.translationValues(0, -1, 0)
-              : null,
+          transform: _hovering ? Matrix4.translationValues(0, -1, 0) : null,
           decoration: BoxDecoration(
             color: _hovering && isDark
                 ? colors.surfaceVariant
@@ -247,8 +250,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
               color: widget.isSelected
                   ? colors.primary.withValues(alpha: 0.5)
                   : _hovering
-                      ? colors.onSurface.withValues(alpha: isDark ? 0.1 : 0.18)
-                      : colors.cardBorder,
+                  ? colors.onSurface.withValues(alpha: isDark ? 0.1 : 0.18)
+                  : colors.cardBorder,
               width: theme.cardStyle.borderWidth,
             ),
             boxShadow: [
@@ -260,17 +263,13 @@ class _ClipboardCardState extends State<ClipboardCard> {
                 ),
               if (isDark)
                 BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: _hovering ? 0.3 : 0.2,
-                  ),
+                  color: Colors.black.withValues(alpha: _hovering ? 0.3 : 0.2),
                   blurRadius: _hovering ? 12 : 6,
                   offset: Offset(0, _hovering ? 3 : 1),
                 )
               else
                 BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: _hovering ? 0.1 : 0.07,
-                  ),
+                  color: Colors.black.withValues(alpha: _hovering ? 0.1 : 0.07),
                   blurRadius: _hovering ? 10 : 4,
                   offset: Offset(0, _hovering ? 3 : 1),
                 ),
@@ -295,8 +294,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
                 padding: theme.spacing.cardPadding.copyWith(
                   left: hasColor
                       ? theme.spacing.cardPadding.left +
-                          theme.sizing.colorIndicatorWidth +
-                          2
+                            theme.sizing.colorIndicatorWidth +
+                            2
                       : theme.spacing.cardPadding.left,
                 ),
                 child: Column(
@@ -400,82 +399,83 @@ class _ClipboardCardState extends State<ClipboardCard> {
           child: Align(
             alignment: Alignment.centerRight,
             child: Stack(
-          alignment: Alignment.centerRight,
-          children: [
-            AnimatedOpacity(
-              opacity: _hovering ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 120),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (item.isPinned)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Icon(
-                        theme.icons.pinFilled,
-                        size: theme.sizing.iconSizeXs,
-                        color: colors.primary.withValues(alpha: 0.5),
+              alignment: Alignment.centerRight,
+              children: [
+                AnimatedOpacity(
+                  opacity: _hovering ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 120),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (item.isPinned)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Icon(
+                            theme.icons.pinFilled,
+                            size: theme.sizing.iconSizeXs,
+                            color: colors.primary.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      Text(
+                        _formatTimestamp(item.modifiedAt, l),
+                        style: theme.typography.cardTimestamp.copyWith(
+                          color: colors.onSurface.withValues(
+                            alpha: theme.cardStyle.timestampOpacity,
+                          ),
+                        ),
                       ),
-                    ),
-                  Text(
-                    _formatTimestamp(item.modifiedAt, l),
-                    style: theme.typography.cardTimestamp.copyWith(
-                      color: colors.onSurface.withValues(
-                        alpha: theme.cardStyle.timestampOpacity,
-                      ),
+                    ],
+                  ),
+                ),
+                IgnorePointer(
+                  ignoring: !_hovering,
+                  child: AnimatedOpacity(
+                    opacity: _hovering ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 120),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _CardActionButton(
+                          icon: theme.icons.paste,
+                          tooltip: l.menuPaste,
+                          onTap: widget.onTap,
+                        ),
+                        const SizedBox(width: 3),
+                        if (_isPlainPasteable &&
+                            widget.onPastePlain != null) ...[
+                          _CardActionButton(
+                            icon: Icons.notes_rounded,
+                            tooltip: l.menuPastePlain,
+                            onTap: widget.onPastePlain!,
+                          ),
+                          const SizedBox(width: 3),
+                        ],
+                        _CardActionButton(
+                          icon: theme.icons.edit,
+                          tooltip: l.menuEdit,
+                          onTap: () => _editLabelColor(context),
+                        ),
+                        const SizedBox(width: 3),
+                        _CardActionButton(
+                          icon: item.isPinned
+                              ? theme.icons.pinFilled
+                              : theme.icons.pin,
+                          tooltip: item.isPinned ? l.menuUnpin : l.menuPin,
+                          onTap: widget.onPin,
+                        ),
+                        const SizedBox(width: 3),
+                        _CardActionButton(
+                          icon: theme.icons.delete,
+                          tooltip: l.menuDelete,
+                          onTap: widget.onDelete,
+                          isDanger: true,
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            IgnorePointer(
-              ignoring: !_hovering,
-              child: AnimatedOpacity(
-                opacity: _hovering ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 120),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _CardActionButton(
-                      icon: theme.icons.paste,
-                      tooltip: l.menuPaste,
-                      onTap: widget.onTap,
-                    ),
-                    const SizedBox(width: 3),
-                    if (_isPlainPasteable && widget.onPastePlain != null) ...[
-                      _CardActionButton(
-                        icon: Icons.notes_rounded,
-                        tooltip: l.menuPastePlain,
-                        onTap: widget.onPastePlain!,
-                      ),
-                      const SizedBox(width: 3),
-                    ],
-                    _CardActionButton(
-                      icon: theme.icons.edit,
-                      tooltip: l.menuEdit,
-                      onTap: () => _editLabelColor(context),
-                    ),
-                    const SizedBox(width: 3),
-                    _CardActionButton(
-                      icon: item.isPinned
-                          ? theme.icons.pinFilled
-                          : theme.icons.pin,
-                      tooltip: item.isPinned ? l.menuUnpin : l.menuPin,
-                      onTap: widget.onPin,
-                    ),
-                    const SizedBox(width: 3),
-                    _CardActionButton(
-                      icon: theme.icons.delete,
-                      tooltip: l.menuDelete,
-                      onTap: widget.onDelete,
-                      isDanger: true,
-                    ),
-                  ],
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       ],
@@ -594,7 +594,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
   ) {
     final files = item.content.split('\n').where((s) => s.isNotEmpty).toList();
     final available = item.isFileAvailable();
-    final firstName = files.isEmpty ? '' : files.first.split(Platform.pathSeparator).last;
+    final firstName = files.isEmpty
+        ? ''
+        : files.first.split(Platform.pathSeparator).last;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +624,10 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ],
               if (!available) ...[
                 if (files.length > 1) const SizedBox(width: 4),
-                _ExtBadge(label: AppLocalizations.of(context).fileNotFound, color: colors.warning),
+                _ExtBadge(
+                  label: AppLocalizations.of(context).fileNotFound,
+                  color: colors.warning,
+                ),
               ],
             ],
           ),
@@ -637,7 +642,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
     ClipboardItem item,
   ) {
     final path = item.content.trim();
-    final filename = path.isEmpty ? '' : path.split(Platform.pathSeparator).last;
+    final filename = path.isEmpty
+        ? ''
+        : path.split(Platform.pathSeparator).last;
     final isAudio = item.type == ClipboardContentType.audio;
     final typeColor = _typeColor(item.type, colors);
 
@@ -690,7 +697,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
           ),
           const SizedBox(height: 4),
           Text(
-            filename.isEmpty ? AppLocalizations.of(context).videoFile : filename,
+            filename.isEmpty
+                ? AppLocalizations.of(context).videoFile
+                : filename,
             style: theme.typography.cardContent.copyWith(
               color: colors.onSurface.withValues(
                 alpha: theme.cardStyle.contentOpacity,
@@ -706,7 +715,11 @@ class _ClipboardCardState extends State<ClipboardCard> {
 
     // Audio or video without thumbnail: just show filename (type shown in header + footer badge)
     return Text(
-      filename.isEmpty ? (isAudio ? AppLocalizations.of(context).audioFile : AppLocalizations.of(context).videoFile) : filename,
+      filename.isEmpty
+          ? (isAudio
+                ? AppLocalizations.of(context).audioFile
+                : AppLocalizations.of(context).videoFile)
+          : filename,
       style: theme.typography.cardContent.copyWith(
         color: colors.onSurface.withValues(
           alpha: theme.cardStyle.contentOpacity,
@@ -737,11 +750,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
             borderRadius: BorderRadius.circular(theme.radii.sm),
           ),
           child: Center(
-            child: Icon(
-              theme.icons.link,
-              size: 16,
-              color: typeColor,
-            ),
+            child: Icon(theme.icons.link, size: 16, color: typeColor),
           ),
         ),
         const SizedBox(width: 10),
@@ -765,9 +774,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
                 const SizedBox(height: 3),
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ExtBadge(label: domain, color: typeColor),
-                  ],
+                  children: [_ExtBadge(label: domain, color: typeColor)],
                 ),
               ],
             ],
@@ -797,7 +804,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final lines = item.content.split('\n').where((s) => s.isNotEmpty).toList();
     if (lines.isEmpty) return '';
     final firstName = lines.first.split(Platform.pathSeparator).last;
-    return firstName.contains('.') ? firstName.split('.').last.toUpperCase() : '';
+    return firstName.contains('.')
+        ? firstName.split('.').last.toUpperCase()
+        : '';
   }
 
   bool _hasFooter(ClipboardItem item) {
@@ -820,7 +829,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final meta = _parseMetadata(item);
     final footerAlpha = theme.cardStyle.footerOpacity;
     final footerColor = colors.onSurface.withValues(alpha: footerAlpha);
-    final footerStyle = theme.typography.cardFooter.copyWith(color: footerColor);
+    final footerStyle = theme.typography.cardFooter.copyWith(
+      color: footerColor,
+    );
     final iconColor = colors.onSurface.withValues(alpha: footerAlpha - 0.1);
 
     final ext = _getExtForItem(item);
@@ -831,37 +842,43 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final w = meta?['width'] ?? meta?['video_width'];
     final h = meta?['height'] ?? meta?['video_height'];
     if (w != null && h != null) {
-      widgets.add(_FooterChip(
-        icon: Icons.aspect_ratio_rounded,
-        label: '$w×$h',
-        style: footerStyle,
-        iconColor: iconColor,
-        iconSize: theme.sizing.iconSizeXs,
-      ));
+      widgets.add(
+        _FooterChip(
+          icon: Icons.aspect_ratio_rounded,
+          label: '$w×$h',
+          style: footerStyle,
+          iconColor: iconColor,
+          iconSize: theme.sizing.iconSizeXs,
+        ),
+      );
     }
 
     // File size
     final fileSize = meta?['file_size'] ?? meta?['size'];
     if (fileSize != null && fileSize is num && fileSize > 0) {
-      widgets.add(_FooterChip(
-        icon: Icons.storage_rounded,
-        label: _formatFileSize(fileSize.toInt()),
-        style: footerStyle,
-        iconColor: iconColor,
-        iconSize: theme.sizing.iconSizeXs,
-      ));
+      widgets.add(
+        _FooterChip(
+          icon: Icons.storage_rounded,
+          label: _formatFileSize(fileSize.toInt()),
+          style: footerStyle,
+          iconColor: iconColor,
+          iconSize: theme.sizing.iconSizeXs,
+        ),
+      );
     }
 
     // Media duration
     final duration = meta?['duration'];
     if (duration != null && duration is num && duration > 0) {
-      widgets.add(_FooterChip(
-        icon: Icons.timer_outlined,
-        label: _formatDuration(duration.toInt()),
-        style: footerStyle,
-        iconColor: iconColor,
-        iconSize: theme.sizing.iconSizeXs,
-      ));
+      widgets.add(
+        _FooterChip(
+          icon: Icons.timer_outlined,
+          label: _formatDuration(duration.toInt()),
+          style: footerStyle,
+          iconColor: iconColor,
+          iconSize: theme.sizing.iconSizeXs,
+        ),
+      );
     }
 
     // Paste count
@@ -894,7 +911,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     final s = seconds % 60;
-    if (h > 0) return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    if (h > 0)
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 
@@ -1006,6 +1024,7 @@ class _CardActionButton extends StatelessWidget {
     return button;
   }
 }
+
 class _MediaIcon extends StatelessWidget {
   const _MediaIcon({
     required this.isAudio,

@@ -39,7 +39,10 @@ void main() {
       final first = await service.processText('dup', ClipboardContentType.text);
       expect(first, isNotNull);
 
-      final second = await service.processText('dup', ClipboardContentType.text);
+      final second = await service.processText(
+        'dup',
+        ClipboardContentType.text,
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(second, isNotNull);
@@ -50,7 +53,10 @@ void main() {
       service.pasteIgnoreWindowMs = 60000;
       await service.notifyPasteInitiated('any-id');
 
-      final result = await service.processText('ignored', ClipboardContentType.text);
+      final result = await service.processText(
+        'ignored',
+        ClipboardContentType.text,
+      );
       expect(result, isNull);
     });
 
@@ -103,7 +109,10 @@ void main() {
 
   group('ClipboardService.recordPaste', () {
     test('increments pasteCount and returns updated item', () async {
-      final item = await service.processText('paste me', ClipboardContentType.text);
+      final item = await service.processText(
+        'paste me',
+        ClipboardContentType.text,
+      );
       expect(item, isNotNull);
 
       final updated = await service.recordPaste(item!.id);
@@ -143,10 +152,7 @@ void main() {
     });
 
     test('returns null for empty file list', () async {
-      final result = await service.processFiles(
-        [],
-        ClipboardContentType.file,
-      );
+      final result = await service.processFiles([], ClipboardContentType.file);
       expect(result, isNull);
     });
 
@@ -154,24 +160,17 @@ void main() {
       ClipboardItem? reactivated;
       service.onItemReactivated.listen((item) => reactivated = item);
 
-      await service.processFiles(
-        ['C:\\same.txt'],
-        ClipboardContentType.file,
-      );
-      await service.processFiles(
-        ['C:\\same.txt'],
-        ClipboardContentType.file,
-      );
+      await service.processFiles(['C:\\same.txt'], ClipboardContentType.file);
+      await service.processFiles(['C:\\same.txt'], ClipboardContentType.file);
       await Future<void>.delayed(Duration.zero);
 
       expect(reactivated, isNotNull);
     });
 
     test('sets is_directory true for folder type', () async {
-      final result = await service.processFiles(
-        ['C:\\MyFolder'],
-        ClipboardContentType.folder,
-      );
+      final result = await service.processFiles([
+        'C:\\MyFolder',
+      ], ClipboardContentType.folder);
       expect(result, isNotNull);
       expect(result!.metadata, contains('"is_directory":true'));
     });
@@ -188,7 +187,10 @@ void main() {
 
   group('ClipboardService.updatePin', () {
     test('pins and unpins item', () async {
-      final item = await service.processText('pin me', ClipboardContentType.text);
+      final item = await service.processText(
+        'pin me',
+        ClipboardContentType.text,
+      );
 
       await service.updatePin(item!.id, true);
       var found = await repo.getById(item.id);
@@ -200,16 +202,16 @@ void main() {
     });
 
     test('silently ignores unknown id', () async {
-      await expectLater(
-        service.updatePin('nonexistent', true),
-        completes,
-      );
+      await expectLater(service.updatePin('nonexistent', true), completes);
     });
   });
 
   group('ClipboardService.updateLabelAndColor', () {
     test('updates label and color', () async {
-      final item = await service.processText('label', ClipboardContentType.text);
+      final item = await service.processText(
+        'label',
+        ClipboardContentType.text,
+      );
 
       await service.updateLabelAndColor(item!.id, 'My Label', CardColor.blue);
       final found = await repo.getById(item.id);
@@ -246,7 +248,10 @@ void main() {
     });
 
     test('filters by color', () async {
-      final item = await service.processText('colored', ClipboardContentType.text);
+      final item = await service.processText(
+        'colored',
+        ClipboardContentType.text,
+      );
       await service.updateLabelAndColor(item!.id, null, CardColor.red);
       await service.processText('no color', ClipboardContentType.text);
       final results = await service.getHistoryAdvanced(
@@ -259,7 +264,10 @@ void main() {
     });
 
     test('filters by isPinned', () async {
-      final item = await service.processText('pinned', ClipboardContentType.text);
+      final item = await service.processText(
+        'pinned',
+        ClipboardContentType.text,
+      );
       await service.updatePin(item!.id, true);
       await service.processText('normal', ClipboardContentType.text);
       final results = await service.getHistoryAdvanced(
@@ -285,7 +293,10 @@ void main() {
 
     test('respects limit and skip', () async {
       for (var i = 0; i < 5; i++) {
-        await service.processText('item$i unique_$i', ClipboardContentType.text);
+        await service.processText(
+          'item$i unique_$i',
+          ClipboardContentType.text,
+        );
       }
       final page1 = await service.getHistoryAdvanced(limit: 3, skip: 0);
       final page2 = await service.getHistoryAdvanced(limit: 3, skip: 3);
@@ -296,7 +307,10 @@ void main() {
 
   group('ClipboardService.clearUnpinnedHistory', () {
     test('removes all non-pinned items', () async {
-      final item = await service.processText('to be pinned', ClipboardContentType.text);
+      final item = await service.processText(
+        'to be pinned',
+        ClipboardContentType.text,
+      );
       await service.updatePin(item!.id, true);
       await service.processText('to be deleted', ClipboardContentType.text);
 
@@ -336,8 +350,7 @@ void main() {
       ClipboardItem? reactivated;
       service.onItemReactivated.listen((item) => reactivated = item);
 
-      final item =
-          await service.processText('meta', ClipboardContentType.text);
+      final item = await service.processText('meta', ClipboardContentType.text);
       await service.updateMetadata(item!.id, '{"key":"value"}');
       await Future<void>.delayed(Duration.zero);
 
@@ -348,10 +361,7 @@ void main() {
     });
 
     test('silently ignores unknown id', () async {
-      await expectLater(
-        service.updateMetadata('nonexistent', '{}'),
-        completes,
-      );
+      await expectLater(service.updateMetadata('nonexistent', '{}'), completes);
     });
   });
 
@@ -360,8 +370,10 @@ void main() {
       var addedDone = false;
       var reactivatedDone = false;
       service.onItemAdded.listen(null, onDone: () => addedDone = true);
-      service.onItemReactivated
-          .listen(null, onDone: () => reactivatedDone = true);
+      service.onItemReactivated.listen(
+        null,
+        onDone: () => reactivatedDone = true,
+      );
       service.dispose();
       await Future<void>.delayed(Duration.zero);
       expect(addedDone, isTrue);

@@ -107,10 +107,8 @@ void main() {
       final old = ClipboardItem(
         content: 'old',
         type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 35)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 35)),
+        createdAt: DateTime.now().toUtc().subtract(const Duration(days: 35)),
+        modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 35)),
       );
       final fresh = ClipboardItem(
         content: 'fresh',
@@ -130,10 +128,8 @@ void main() {
         content: 'pinned old',
         type: ClipboardContentType.text,
         isPinned: true,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 35)),
-        modifiedAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 35)),
+        createdAt: DateTime.now().toUtc().subtract(const Duration(days: 35)),
+        modifiedAt: DateTime.now().toUtc().subtract(const Duration(days: 35)),
       );
       await repo.save(pinned);
       final deleted = await repo.clearOldItems(30);
@@ -144,8 +140,7 @@ void main() {
       final oldCreatedButRecentlyUsed = ClipboardItem(
         content: 'recently used',
         type: ClipboardContentType.text,
-        createdAt:
-            DateTime.now().toUtc().subtract(const Duration(days: 60)),
+        createdAt: DateTime.now().toUtc().subtract(const Duration(days: 60)),
         modifiedAt: DateTime.now().toUtc(),
       );
       await repo.save(oldCreatedButRecentlyUsed);
@@ -346,8 +341,7 @@ void main() {
           ClipboardItem(
             content: 'item $i',
             type: ClipboardContentType.text,
-            modifiedAt:
-                DateTime.utc(2024, 1, i + 1),
+            modifiedAt: DateTime.utc(2024, 1, i + 1),
           ),
         );
       }

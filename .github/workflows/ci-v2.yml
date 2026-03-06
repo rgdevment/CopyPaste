@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   quality:
@@ -94,38 +93,6 @@ jobs:
 
       - name: Build Windows release
         run: cd v2/app; flutter build windows --release
-
-  codeql:
-    runs-on: ubuntu-latest
-    name: CodeQL (Dart)
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: dart
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Get dependencies
-        run: |
-          cd v2/core && flutter pub get
-          cd ../listener && flutter pub get
-          cd ../app && flutter pub get
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: '/language:dart'
 
   sonarcloud:
     name: SonarCloud

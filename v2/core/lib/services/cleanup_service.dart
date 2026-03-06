@@ -7,8 +7,11 @@ import '../config/storage_config.dart';
 import '../repository/i_clipboard_repository.dart';
 
 class CleanupService {
-  CleanupService(this._repository, this._getRetentionDays, {StorageConfig? storage})
-      : _storage = storage;
+  CleanupService(
+    this._repository,
+    this._getRetentionDays, {
+    StorageConfig? storage,
+  }) : _storage = storage;
 
   static const Duration _checkInterval = Duration(hours: 18);
   static const String _lastCleanupFileName = 'last_cleanup.txt';

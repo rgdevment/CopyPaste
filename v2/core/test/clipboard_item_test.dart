@@ -21,10 +21,7 @@ void main() {
     });
 
     test('default field values', () {
-      final item = ClipboardItem(
-        content: 'x',
-        type: ClipboardContentType.text,
-      );
+      final item = ClipboardItem(content: 'x', type: ClipboardContentType.text);
       expect(item.isPinned, isFalse);
       expect(item.pasteCount, equals(0));
       expect(item.cardColor, equals(CardColor.none));
@@ -36,23 +33,31 @@ void main() {
 
     test('isFileBasedType true for file, folder, audio, video', () {
       expect(
-        ClipboardItem(content: '', type: ClipboardContentType.file)
-            .isFileBasedType,
+        ClipboardItem(
+          content: '',
+          type: ClipboardContentType.file,
+        ).isFileBasedType,
         isTrue,
       );
       expect(
-        ClipboardItem(content: '', type: ClipboardContentType.folder)
-            .isFileBasedType,
+        ClipboardItem(
+          content: '',
+          type: ClipboardContentType.folder,
+        ).isFileBasedType,
         isTrue,
       );
       expect(
-        ClipboardItem(content: '', type: ClipboardContentType.audio)
-            .isFileBasedType,
+        ClipboardItem(
+          content: '',
+          type: ClipboardContentType.audio,
+        ).isFileBasedType,
         isTrue,
       );
       expect(
-        ClipboardItem(content: '', type: ClipboardContentType.video)
-            .isFileBasedType,
+        ClipboardItem(
+          content: '',
+          type: ClipboardContentType.video,
+        ).isFileBasedType,
         isTrue,
       );
     });
@@ -89,10 +94,7 @@ void main() {
     });
 
     test('copyWith with all card colors', () {
-      final item = ClipboardItem(
-        content: 'x',
-        type: ClipboardContentType.text,
-      );
+      final item = ClipboardItem(content: 'x', type: ClipboardContentType.text);
       for (final color in CardColor.values) {
         final copy = item.copyWith(cardColor: color);
         expect(copy.cardColor, equals(color));
@@ -129,10 +131,7 @@ void main() {
     });
 
     test('isFileAvailable returns false for empty content on file types', () {
-      final item = ClipboardItem(
-        content: '',
-        type: ClipboardContentType.file,
-      );
+      final item = ClipboardItem(content: '', type: ClipboardContentType.file);
       expect(item.isFileAvailable(), isFalse);
     });
   });

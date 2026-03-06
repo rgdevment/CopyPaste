@@ -18,18 +18,17 @@ class BackupManifest {
     required this.machineName,
   });
 
-  factory BackupManifest.fromJson(Map<String, dynamic> json) =>
-      BackupManifest(
-        version: json['version'] as int? ?? 1,
-        appVersion: json['appVersion'] as String? ?? '',
-        createdAtUtc:
-            DateTime.tryParse(json['createdAtUtc'] as String? ?? '') ??
-                DateTime.now().toUtc(),
-        itemCount: json['itemCount'] as int? ?? 0,
-        imageCount: json['imageCount'] as int? ?? 0,
-        hasPinnedItems: json['hasPinnedItems'] as bool? ?? false,
-        machineName: json['machineName'] as String? ?? '',
-      );
+  factory BackupManifest.fromJson(Map<String, dynamic> json) => BackupManifest(
+    version: json['version'] as int? ?? 1,
+    appVersion: json['appVersion'] as String? ?? '',
+    createdAtUtc:
+        DateTime.tryParse(json['createdAtUtc'] as String? ?? '') ??
+        DateTime.now().toUtc(),
+    itemCount: json['itemCount'] as int? ?? 0,
+    imageCount: json['imageCount'] as int? ?? 0,
+    hasPinnedItems: json['hasPinnedItems'] as bool? ?? false,
+    machineName: json['machineName'] as String? ?? '',
+  );
 
   static const int currentVersion = 1;
 
@@ -42,14 +41,14 @@ class BackupManifest {
   final String machineName;
 
   Map<String, dynamic> toJson() => {
-        'version': version,
-        'appVersion': appVersion,
-        'createdAtUtc': createdAtUtc.toIso8601String(),
-        'itemCount': itemCount,
-        'imageCount': imageCount,
-        'hasPinnedItems': hasPinnedItems,
-        'machineName': machineName,
-      };
+    'version': version,
+    'appVersion': appVersion,
+    'createdAtUtc': createdAtUtc.toIso8601String(),
+    'itemCount': itemCount,
+    'imageCount': imageCount,
+    'hasPinnedItems': hasPinnedItems,
+    'machineName': machineName,
+  };
 }
 
 class BackupService {
@@ -72,21 +71,25 @@ class BackupService {
 
     final dbFile = File(storage.databasePath);
     if (dbFile.existsSync()) {
-      archive.addFile(ArchiveFile(
-        'clipboard.db',
-        dbFile.lengthSync(),
-        dbFile.readAsBytesSync(),
-      ));
+      archive.addFile(
+        ArchiveFile(
+          'clipboard.db',
+          dbFile.lengthSync(),
+          dbFile.readAsBytesSync(),
+        ),
+      );
     }
 
     final imagesDir = Directory(storage.imagesPath);
     if (imagesDir.existsSync()) {
       for (final file in imagesDir.listSync().whereType<File>()) {
-        archive.addFile(ArchiveFile(
-          'images/${file.uri.pathSegments.last}',
-          file.lengthSync(),
-          file.readAsBytesSync(),
-        ));
+        archive.addFile(
+          ArchiveFile(
+            'images/${file.uri.pathSegments.last}',
+            file.lengthSync(),
+            file.readAsBytesSync(),
+          ),
+        );
         imageCount++;
       }
     }
@@ -94,11 +97,13 @@ class BackupService {
     final configDir = Directory(storage.configPath);
     if (configDir.existsSync()) {
       for (final file in configDir.listSync().whereType<File>()) {
-        archive.addFile(ArchiveFile(
-          'config/${file.uri.pathSegments.last}',
-          file.lengthSync(),
-          file.readAsBytesSync(),
-        ));
+        archive.addFile(
+          ArchiveFile(
+            'config/${file.uri.pathSegments.last}',
+            file.lengthSync(),
+            file.readAsBytesSync(),
+          ),
+        );
       }
     }
 
@@ -135,15 +140,14 @@ class BackupService {
     String? snapshotDir;
 
     try {
-      final archive =
-          ZipDecoder().decodeBytes(backupFile.readAsBytesSync());
+      final archive = ZipDecoder().decodeBytes(backupFile.readAsBytesSync());
 
       final manifestEntry = archive.findFile('manifest.json');
       if (manifestEntry == null) return null;
 
-      final manifestJson = jsonDecode(
-        utf8.decode(manifestEntry.content as List<int>),
-      ) as Map<String, dynamic>;
+      final manifestJson =
+          jsonDecode(utf8.decode(manifestEntry.content as List<int>))
+              as Map<String, dynamic>;
 
       final manifest = BackupManifest.fromJson(manifestJson);
       if (manifest.version > BackupManifest.currentVersion) return null;
@@ -181,15 +185,14 @@ class BackupService {
     if (!backupFile.existsSync()) return null;
 
     try {
-      final archive =
-          ZipDecoder().decodeBytes(backupFile.readAsBytesSync());
+      final archive = ZipDecoder().decodeBytes(backupFile.readAsBytesSync());
 
       final manifestEntry = archive.findFile('manifest.json');
       if (manifestEntry == null) return null;
 
-      final manifestJson = jsonDecode(
-        utf8.decode(manifestEntry.content as List<int>),
-      ) as Map<String, dynamic>;
+      final manifestJson =
+          jsonDecode(utf8.decode(manifestEntry.content as List<int>))
+              as Map<String, dynamic>;
 
       final manifest = BackupManifest.fromJson(manifestJson);
       if (manifest.version > BackupManifest.currentVersion) return null;
@@ -212,12 +215,9 @@ class BackupService {
     }
   }
 
-  static Future<String> _createPreRestoreSnapshot(
-    StorageConfig storage,
-  ) async {
+  static Future<String> _createPreRestoreSnapshot(StorageConfig storage) async {
     final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
-    final snapshotDir =
-        p.join(storage.baseDir, '.pre-restore-$timestamp');
+    final snapshotDir = p.join(storage.baseDir, '.pre-restore-$timestamp');
     final dir = Directory(snapshotDir);
     await dir.create(recursive: true);
 
@@ -228,25 +228,19 @@ class BackupService {
 
     final imagesDir = Directory(storage.imagesPath);
     if (imagesDir.existsSync()) {
-      final snapImagesDir =
-          Directory(p.join(snapshotDir, 'images'));
+      final snapImagesDir = Directory(p.join(snapshotDir, 'images'));
       await snapImagesDir.create();
       for (final file in imagesDir.listSync().whereType<File>()) {
-        await file.copy(
-          p.join(snapImagesDir.path, p.basename(file.path)),
-        );
+        await file.copy(p.join(snapImagesDir.path, p.basename(file.path)));
       }
     }
 
     final configDir = Directory(storage.configPath);
     if (configDir.existsSync()) {
-      final snapConfigDir =
-          Directory(p.join(snapshotDir, 'config'));
+      final snapConfigDir = Directory(p.join(snapshotDir, 'config'));
       await snapConfigDir.create();
       for (final file in configDir.listSync().whereType<File>()) {
-        await file.copy(
-          p.join(snapConfigDir.path, p.basename(file.path)),
-        );
+        await file.copy(p.join(snapConfigDir.path, p.basename(file.path)));
       }
     }
 
@@ -266,18 +260,14 @@ class BackupService {
       final snapImages = Directory(p.join(snapshotDir, 'images'));
       if (snapImages.existsSync()) {
         for (final file in snapImages.listSync().whereType<File>()) {
-          await file.copy(
-            p.join(storage.imagesPath, p.basename(file.path)),
-          );
+          await file.copy(p.join(storage.imagesPath, p.basename(file.path)));
         }
       }
 
       final snapConfig = Directory(p.join(snapshotDir, 'config'));
       if (snapConfig.existsSync()) {
         for (final file in snapConfig.listSync().whereType<File>()) {
-          await file.copy(
-            p.join(storage.configPath, p.basename(file.path)),
-          );
+          await file.copy(p.join(storage.configPath, p.basename(file.path)));
         }
       }
 

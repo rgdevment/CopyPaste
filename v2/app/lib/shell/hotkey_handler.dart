@@ -3,10 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
 class HotkeyHandler {
-  HotkeyHandler({
-    required this.config,
-    required this.onHotkey,
-  });
+  HotkeyHandler({required this.config, required this.onHotkey});
 
   final AppConfig config;
   final void Function() onHotkey;
@@ -14,10 +11,7 @@ class HotkeyHandler {
 
   Future<bool> _tryRegister(HotKey hotkey) async {
     try {
-      await hotKeyManager.register(
-        hotkey,
-        keyDownHandler: (_) => onHotkey(),
-      );
+      await hotKeyManager.register(hotkey, keyDownHandler: (_) => onHotkey());
       _hotkey = hotkey;
       return true;
     } catch (e) {
@@ -45,10 +39,9 @@ class HotkeyHandler {
     if (await _tryRegister(primary)) return;
 
     if (config.hotkeyUseWin) {
-      final fallbackMods = modifiers
-          .where((m) => m != HotKeyModifier.meta)
-          .toList()
-        ..add(HotKeyModifier.control);
+      final fallbackMods =
+          modifiers.where((m) => m != HotKeyModifier.meta).toList()
+            ..add(HotKeyModifier.control);
 
       final fallback = HotKey(
         key: keyCode,

@@ -12,15 +12,21 @@ void main() {
     test('all non-none colors have non-zero argb', () {
       for (final color in CardColor.values) {
         if (color == CardColor.none) continue;
-        expect(color.argb, isNot(equals(0)),
-            reason: '${color.name} should have non-zero argb');
+        expect(
+          color.argb,
+          isNot(equals(0)),
+          reason: '${color.name} should have non-zero argb',
+        );
       }
     });
 
     test('all values are unique', () {
       final values = CardColor.values.map((c) => c.value).toList();
-      expect(values.toSet().length, equals(values.length),
-          reason: 'all CardColor values must be unique');
+      expect(
+        values.toSet().length,
+        equals(values.length),
+        reason: 'all CardColor values must be unique',
+      );
     });
 
     test('fromValue returns correct color for each defined value', () {
@@ -45,8 +51,11 @@ void main() {
 
     test('roundtrip: value → fromValue for all colors', () {
       for (final color in CardColor.values) {
-        expect(CardColor.fromValue(color.value), equals(color),
-            reason: 'roundtrip failed for ${color.name}');
+        expect(
+          CardColor.fromValue(color.value),
+          equals(color),
+          reason: 'roundtrip failed for ${color.name}',
+        );
       }
     });
 

@@ -1,10 +1,7 @@
 import 'package:tray_manager/tray_manager.dart';
 
 class TrayIcon with TrayListener {
-  TrayIcon({
-    required this.onToggle,
-    required this.onExit,
-  });
+  TrayIcon({required this.onToggle, required this.onExit});
 
   final void Function() onToggle;
   final Future<void> Function() onExit;

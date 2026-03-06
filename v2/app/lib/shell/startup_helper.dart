@@ -4,24 +4,46 @@ import 'dart:io';
 import 'package:core/core.dart';
 import 'package:ffi/ffi.dart';
 
-typedef _RegOpenKeyExNative = Int32 Function(
-    IntPtr hKey, Pointer<Utf16> lpSubKey, Uint32 ulOptions,
-    Int32 samDesired, Pointer<IntPtr> phkResult);
-typedef _RegOpenKeyExDart = int Function(
-    int hKey, Pointer<Utf16> lpSubKey, int ulOptions,
-    int samDesired, Pointer<IntPtr> phkResult);
+typedef _RegOpenKeyExNative =
+    Int32 Function(
+      IntPtr hKey,
+      Pointer<Utf16> lpSubKey,
+      Uint32 ulOptions,
+      Int32 samDesired,
+      Pointer<IntPtr> phkResult,
+    );
+typedef _RegOpenKeyExDart =
+    int Function(
+      int hKey,
+      Pointer<Utf16> lpSubKey,
+      int ulOptions,
+      int samDesired,
+      Pointer<IntPtr> phkResult,
+    );
 
-typedef _RegSetValueExNative = Int32 Function(
-    IntPtr hKey, Pointer<Utf16> lpValueName, Uint32 reserved,
-    Uint32 dwType, Pointer<Utf16> lpData, Uint32 cbData);
-typedef _RegSetValueExDart = int Function(
-    int hKey, Pointer<Utf16> lpValueName, int reserved,
-    int dwType, Pointer<Utf16> lpData, int cbData);
+typedef _RegSetValueExNative =
+    Int32 Function(
+      IntPtr hKey,
+      Pointer<Utf16> lpValueName,
+      Uint32 reserved,
+      Uint32 dwType,
+      Pointer<Utf16> lpData,
+      Uint32 cbData,
+    );
+typedef _RegSetValueExDart =
+    int Function(
+      int hKey,
+      Pointer<Utf16> lpValueName,
+      int reserved,
+      int dwType,
+      Pointer<Utf16> lpData,
+      int cbData,
+    );
 
-typedef _RegDeleteValueNative = Int32 Function(
-    IntPtr hKey, Pointer<Utf16> lpValueName);
-typedef _RegDeleteValueDart = int Function(
-    int hKey, Pointer<Utf16> lpValueName);
+typedef _RegDeleteValueNative =
+    Int32 Function(IntPtr hKey, Pointer<Utf16> lpValueName);
+typedef _RegDeleteValueDart =
+    int Function(int hKey, Pointer<Utf16> lpValueName);
 
 typedef _RegCloseKeyNative = Int32 Function(IntPtr hKey);
 typedef _RegCloseKeyDart = int Function(int hKey);
@@ -36,18 +58,18 @@ class StartupHelper {
 
   static final _advapi32 = DynamicLibrary.open('advapi32.dll');
 
-  static final _regOpenKeyEx =
-      _advapi32.lookupFunction<_RegOpenKeyExNative, _RegOpenKeyExDart>(
-          'RegOpenKeyExW');
-  static final _regSetValueEx =
-      _advapi32.lookupFunction<_RegSetValueExNative, _RegSetValueExDart>(
-          'RegSetValueExW');
-  static final _regDeleteValue =
-      _advapi32.lookupFunction<_RegDeleteValueNative, _RegDeleteValueDart>(
-          'RegDeleteValueW');
-  static final _regCloseKey =
-      _advapi32.lookupFunction<_RegCloseKeyNative, _RegCloseKeyDart>(
-          'RegCloseKey');
+  static final _regOpenKeyEx = _advapi32
+      .lookupFunction<_RegOpenKeyExNative, _RegOpenKeyExDart>('RegOpenKeyExW');
+  static final _regSetValueEx = _advapi32
+      .lookupFunction<_RegSetValueExNative, _RegSetValueExDart>(
+        'RegSetValueExW',
+      );
+  static final _regDeleteValue = _advapi32
+      .lookupFunction<_RegDeleteValueNative, _RegDeleteValueDart>(
+        'RegDeleteValueW',
+      );
+  static final _regCloseKey = _advapi32
+      .lookupFunction<_RegCloseKeyNative, _RegCloseKeyDart>('RegCloseKey');
 
   static Future<void> apply(bool runOnStartup) async {
     if (!Platform.isWindows) return;
@@ -69,7 +91,11 @@ class StartupHelper {
 
     try {
       final result = _regOpenKeyEx(
-        _hkeyCurrentUser, subKey, 0, _keySetValue, hKeyPtr,
+        _hkeyCurrentUser,
+        subKey,
+        0,
+        _keySetValue,
+        hKeyPtr,
       );
       if (result != 0) {
         AppLogger.error('Failed to open registry key for set: $result');
@@ -82,7 +108,14 @@ class StartupHelper {
       final dataSize = ('"$exePath"'.length + 1) * 2;
 
       try {
-        final setResult = _regSetValueEx(hKey, valueName, 0, _regSz, valueData, dataSize);
+        final setResult = _regSetValueEx(
+          hKey,
+          valueName,
+          0,
+          _regSz,
+          valueData,
+          dataSize,
+        );
         if (setResult != 0) {
           AppLogger.error('Failed to set registry value: $setResult');
         }
@@ -103,7 +136,11 @@ class StartupHelper {
 
     try {
       final result = _regOpenKeyEx(
-        _hkeyCurrentUser, subKey, 0, _keySetValue, hKeyPtr,
+        _hkeyCurrentUser,
+        subKey,
+        0,
+        _keySetValue,
+        hKeyPtr,
       );
       if (result != 0) {
         AppLogger.error('Failed to open registry key for delete: $result');
