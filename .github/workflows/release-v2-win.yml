@@ -218,25 +218,33 @@ jobs:
           ASSET_SIZE=$(echo "$RELEASE" | jq -r '.assets[] | select(.name | endswith("_Setup.exe")) | .size')
           PUB_DATE=$(date -d "$DATE" -R)
 
-          cat > /tmp/appcast.xml << APPCAST_EOF
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>CopyPaste</title>
-    <description>CopyPaste update feed</description>
-    <language>en</language>
-    <item>
-      <title>CopyPaste ${VERSION}</title>
-      <pubDate>${PUB_DATE}</pubDate>
-      <enclosure
-        url="${ASSET_URL}"
-        sparkle:version="${VERSION}"
-        sparkle:os="windows"
-        type="application/octet-stream"
-        length="${ASSET_SIZE}" />
-    </item>
-  </channel>
-</rss>
-APPCAST_EOF
+          cat > /tmp/appcast.xml << 'APPCAST_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>CopyPaste</title>
+              <description>CopyPaste update feed</description>
+              <language>en</language>
+              <item>
+                <title>CopyPaste APPCAST_VERSION_PLACEHOLDER</title>
+                <pubDate>APPCAST_PUBDATE_PLACEHOLDER</pubDate>
+                <enclosure
+                  url="APPCAST_URL_PLACEHOLDER"
+                  sparkle:version="APPCAST_VERSION_PLACEHOLDER"
+                  sparkle:os="windows"
+                  type="application/octet-stream"
+                  length="APPCAST_SIZE_PLACEHOLDER" />
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
 
-          gh gist edit ${{ vars.APPCAST_GIST_ID }} -f appcast.xml /tmp/appcast.xml
+          sed -i 's/^          //' /tmp/appcast.xml
+          sed -i "s|APPCAST_VERSION_PLACEHOLDER|${VERSION}|g" /tmp/appcast.xml
+          sed -i "s|APPCAST_PUBDATE_PLACEHOLDER|${PUB_DATE}|g" /tmp/appcast.xml
+          sed -i "s|APPCAST_URL_PLACEHOLDER|${ASSET_URL}|g" /tmp/appcast.xml
+          sed -i "s|APPCAST_SIZE_PLACEHOLDER|${ASSET_SIZE}|g" /tmp/appcast.xml
+
+          jq -n --arg content "$(cat /tmp/appcast.xml)" \
+            '{"files":{"appcast.xml":{"content":$content}}}' | \
+            gh api --method PATCH "/gists/${{ vars.APPCAST_GIST_ID }}" --input -
