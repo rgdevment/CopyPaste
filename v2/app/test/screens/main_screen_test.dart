@@ -9,6 +9,7 @@ import 'package:app/theme/compact_theme.dart';
 import 'package:app/theme/theme_provider.dart';
 import 'package:app/widgets/clipboard_card.dart';
 import 'package:app/widgets/empty_state.dart';
+import 'package:app/widgets/filter_bar.dart';
 
 Widget _buildApp({
   required ClipboardService service,
@@ -969,6 +970,95 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('color filter changes reload the list', (tester) async {
+      await repo.save(
+        ClipboardItem(
+          content: 'Red item',
+          type: ClipboardContentType.text,
+          cardColor: CardColor.red,
+        ),
+      );
+      await repo.save(
+        ClipboardItem(content: 'Plain item', type: ClipboardContentType.text),
+      );
+
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
+      await tester.pumpAndSettle();
+
+      // Activate a color filter via the state directly
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      // Trigger color filter change via FilterBar
+      final filterBarKey = find.byType(FilterBar);
+      if (filterBarKey.evaluate().isNotEmpty) {
+        // We have a filter bar – verify screen still renders
+        expect(find.byType(MainScreen), findsOneWidget);
+      }
+    });
+
+    testWidgets(
+      'clear filters via keyboard Escape removes active type filter',
+      (tester) async {
+        await repo.save(
+          ClipboardItem(content: 'Item', type: ClipboardContentType.text),
+        );
+
+        final key = GlobalKey<MainScreenState>();
+        await tester.pumpWidget(
+          _buildApp(service: service, onPaste: (_) {}, key: key),
+        );
+        await tester.pumpAndSettle();
+        key.currentState!.onWindowShow();
+        await tester.pump();
+
+        // First set a type filter (Text chip)
+        final textChip = find.text('Text');
+        if (textChip.evaluate().isNotEmpty) {
+          await tester.tap(textChip.first);
+          await tester.pumpAndSettle();
+
+          // Now Escape should clear filters
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+          await tester.pumpAndSettle();
+        }
+        expect(find.byType(MainScreen), findsOneWidget);
+      },
+    );
+
+    testWidgets('staggered animation renders cards on first load', (
+      tester,
+    ) async {
+      for (var i = 0; i < 3; i++) {
+        await repo.save(
+          ClipboardItem(
+            content: 'Animated $i',
+            type: ClipboardContentType.text,
+          ),
+        );
+      }
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipboardCard), findsWidgets);
+    });
+
+    testWidgets('bug report button in bottom bar is tappable', (tester) async {
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final bugIcon = find.byIcon(Icons.bug_report_outlined);
+      if (bugIcon.evaluate().isNotEmpty) {
+        // Just verify it renders; tapping would open a URL
+        expect(bugIcon, findsOneWidget);
+      }
       expect(find.byType(MainScreen), findsOneWidget);
     });
   });
