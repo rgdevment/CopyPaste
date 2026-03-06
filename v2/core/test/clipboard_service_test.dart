@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 
 import 'package:core/core.dart';
 
@@ -378,6 +383,123 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(addedDone, isTrue);
       expect(reactivatedDone, isTrue);
+    });
+  });
+
+  group('ClipboardService._shouldIgnore second window', () {
+    test('ignores duplicate content within 2x paste window', () async {
+      service.pasteIgnoreWindowMs = 50;
+      final item = await service.processText(
+        'dup-window',
+        ClipboardContentType.text,
+      );
+      // Trigger notifyPasteInitiated so _lastPastedContent = 'dup-window'
+      await service.notifyPasteInitiated(item!.id);
+
+      // Wait longer than 1x window but less than 2x window
+      await Future<void>.delayed(const Duration(milliseconds: 65));
+
+      // Should be ignored because content matches and elapsed < 2x window
+      final result = await service.processText(
+        'dup-window',
+        ClipboardContentType.text,
+      );
+      expect(result, isNull);
+    });
+  });
+
+  group('ClipboardService.processImage with imageBytes', () {
+    test('saves temp BMP when imageBytes and imagesPath provided', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_img_bmp_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
+        final result = await svc.processImage(
+          'hash-temp-bmp',
+          imageBytes: [1, 2, 3, 4, 5],
+        );
+        expect(result, isNotNull);
+        // Content should point to temp BMP file
+        expect(result!.content, contains(imagesDir.path));
+        svc.dispose();
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('background processing with valid PNG updates item', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_img_png_');
+      try {
+        // Build a small valid PNG in memory
+        final image = img.Image(width: 2, height: 2);
+        image.setPixelRgb(0, 0, 255, 0, 0);
+        final pngBytes = img.encodePng(image);
+
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
+        final reactivatedCompleter = Completer<ClipboardItem>();
+        svc.onItemReactivated.listen((item) {
+          if (!reactivatedCompleter.isCompleted) {
+            reactivatedCompleter.complete(item);
+          }
+        });
+
+        final result = await svc.processImage(
+          'hash-valid-png',
+          imageBytes: pngBytes,
+        );
+        expect(result, isNotNull);
+
+        // Wait for background isolate to finish processing
+        final updated = await reactivatedCompleter.future.timeout(
+          const Duration(seconds: 10),
+        );
+        expect(updated.content, endsWith('.png'));
+        expect(updated.metadata, isNotNull);
+        expect(updated.metadata, contains('width'));
+
+        svc.dispose();
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
+  group('ClipboardService.removeItem for image', () {
+    test('cleans up image file when removing image item', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_rm_img_');
+      try {
+        final imageFile = File(p.join(imagesDir.path, 'img.png'))
+          ..writeAsBytesSync([137, 80, 78, 71]);
+        final item = ClipboardItem(
+          content: imageFile.path,
+          type: ClipboardContentType.image,
+          contentHash: 'rm-hash',
+        );
+        await repo.save(item);
+
+        await service.removeItem(item.id);
+
+        expect(await repo.getById(item.id), isNull);
+        expect(imageFile.existsSync(), isFalse);
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
+  group('ClipboardService.processFiles single file with size', () {
+    test('includes file_size in metadata for single existing file', () async {
+      final dir = Directory.systemTemp.createTempSync('svc_files_');
+      try {
+        final file = File(p.join(dir.path, 'test.txt'))
+          ..writeAsStringSync('hello world');
+        final result = await service.processFiles([
+          file.path,
+        ], ClipboardContentType.file);
+        expect(result, isNotNull);
+        expect(result!.metadata, contains('file_size'));
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
     });
   });
 }

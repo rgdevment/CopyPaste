@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:core/core.dart';
 
@@ -349,6 +352,75 @@ void main() {
       final page2 = await repo.searchAdvanced(limit: 3, skip: 3);
       expect(page1.length, equals(3));
       expect(page2.length, equals(2));
+    });
+
+    test('fromPath creates working repository with persisted data', () async {
+      final dir = Directory.systemTemp.createTempSync('repo_path_test_');
+      try {
+        final dbPath = p.join(dir.path, 'test.db');
+        final fileRepo = SqliteRepository.fromPath(dbPath);
+        final item = ClipboardItem(
+          content: 'persisted',
+          type: ClipboardContentType.text,
+        );
+        await fileRepo.save(item);
+        final found = await fileRepo.getById(item.id);
+        expect(found, isNotNull);
+        expect(found!.content, equals('persisted'));
+        await fileRepo.close();
+        expect(File(dbPath).existsSync(), isTrue);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'clearOldItems triggers vacuum when more than 50 items deleted',
+      () async {
+        for (var i = 0; i < 55; i++) {
+          await repo.save(
+            ClipboardItem(
+              content: 'old item $i',
+              type: ClipboardContentType.text,
+              createdAt: DateTime.utc(2000, 1, 1),
+              modifiedAt: DateTime.utc(2000, 1, 1),
+            ),
+          );
+        }
+        final deleted = await repo.clearOldItems(1);
+        expect(deleted, greaterThanOrEqualTo(55));
+      },
+    );
+
+    test(
+      'deleteAllUnpinned triggers vacuum when more than 50 items deleted',
+      () async {
+        for (var i = 0; i < 55; i++) {
+          await repo.save(
+            ClipboardItem(
+              content: 'bulk item $i',
+              type: ClipboardContentType.text,
+            ),
+          );
+        }
+        final deleted = await repo.deleteAllUnpinned();
+        expect(deleted, greaterThanOrEqualTo(55));
+      },
+    );
+
+    test('clearOldItems respects excludePinned=false', () async {
+      await repo.save(
+        ClipboardItem(
+          content: 'pinned old',
+          type: ClipboardContentType.text,
+          isPinned: true,
+          createdAt: DateTime.utc(2000, 1, 1),
+          modifiedAt: DateTime.utc(2000, 1, 1),
+        ),
+      );
+      // With excludePinned=false, pinned items should also be deleted
+      final deleted = await repo.clearOldItems(1, excludePinned: false);
+      expect(deleted, greaterThan(0));
     });
   });
 }
