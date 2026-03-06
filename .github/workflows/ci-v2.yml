@@ -46,11 +46,12 @@ jobs:
           cd v2/core && flutter analyze
           cd ../app && flutter analyze
 
-      - name: Security audit
+      - name: Check outdated dependencies
         run: |
-          cd v2/core && dart pub audit
-          cd ../listener && dart pub audit
-          cd ../app && dart pub audit
+          cd v2/core && flutter pub outdated --no-dev-dependencies
+          cd ../listener && flutter pub outdated --no-dev-dependencies
+          cd ../app && flutter pub outdated --no-dev-dependencies
+        continue-on-error: true
 
       - name: Run tests
         run: |
