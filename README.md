@@ -12,9 +12,6 @@
     <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci-v2.yml">
       <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci-v2.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
     </a>
-    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/codeql.yml">
-      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/codeql.yml?style=flat-square&logo=github&label=CodeQL" alt="CodeQL"/>
-    </a>
     <a href="https://sonarcloud.io/summary/overall?id=rgdevment_CopyPaste">
       <img src="https://img.shields.io/sonar/quality_gate/rgdevment_CopyPaste?server=https%3A%2F%2Fsonarcloud.io&style=flat-square&logo=sonarcloud&label=Quality%20Gate" alt="Quality Gate"/>
     </a>
