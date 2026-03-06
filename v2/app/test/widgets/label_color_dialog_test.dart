@@ -74,7 +74,10 @@ void main() {
     testWidgets('pre-fills existing label in text field', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          const LabelColorDialog(currentLabel: 'Work', currentColor: CardColor.red),
+          const LabelColorDialog(
+            currentLabel: 'Work',
+            currentColor: CardColor.red,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -85,7 +88,10 @@ void main() {
     testWidgets('renders color grid with multiple options', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          const LabelColorDialog(currentLabel: null, currentColor: CardColor.none),
+          const LabelColorDialog(
+            currentLabel: null,
+            currentColor: CardColor.none,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -97,7 +103,10 @@ void main() {
     testWidgets('tapping a color chip selects it', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          const LabelColorDialog(currentLabel: null, currentColor: CardColor.none),
+          const LabelColorDialog(
+            currentLabel: null,
+            currentColor: CardColor.none,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -296,7 +305,10 @@ void main() {
     testWidgets('button hover state changes appearance', (tester) async {
       await tester.pumpWidget(
         _buildApp(
-          const LabelColorDialog(currentLabel: null, currentColor: CardColor.none),
+          const LabelColorDialog(
+            currentLabel: null,
+            currentColor: CardColor.none,
+          ),
         ),
       );
       await tester.pumpAndSettle();
