@@ -67,10 +67,12 @@ void main() {
     });
 
     testWidgets('shows ClipboardCard after items are loaded', (tester) async {
-      await repo.save(ClipboardItem(
-        content: 'Hello clipboard',
-        type: ClipboardContentType.text,
-      ));
+      await repo.save(
+        ClipboardItem(
+          content: 'Hello clipboard',
+          type: ClipboardContentType.text,
+        ),
+      );
 
       await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
       await tester.pumpAndSettle();
@@ -81,10 +83,9 @@ void main() {
 
     testWidgets('multiple items render multiple cards', (tester) async {
       for (var i = 0; i < 3; i++) {
-        await repo.save(ClipboardItem(
-          content: 'Item $i',
-          type: ClipboardContentType.text,
-        ));
+        await repo.save(
+          ClipboardItem(content: 'Item $i', type: ClipboardContentType.text),
+        );
       }
 
       await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
@@ -94,14 +95,14 @@ void main() {
     });
 
     testWidgets('ArrowDown from search selects first item', (tester) async {
-      await repo.save(ClipboardItem(
-        content: 'Select me',
-        type: ClipboardContentType.text,
-      ));
+      await repo.save(
+        ClipboardItem(content: 'Select me', type: ClipboardContentType.text),
+      );
 
       final key = GlobalKey<MainScreenState>();
       await tester.pumpWidget(
-          _buildApp(service: service, onPaste: (_) {}, key: key));
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();
@@ -115,18 +116,15 @@ void main() {
     });
 
     testWidgets('Enter fires onPaste with selected item', (tester) async {
-      await repo.save(ClipboardItem(
-        content: 'Paste me',
-        type: ClipboardContentType.text,
-      ));
+      await repo.save(
+        ClipboardItem(content: 'Paste me', type: ClipboardContentType.text),
+      );
 
       ClipboardItem? pasted;
       final key = GlobalKey<MainScreenState>();
-      await tester.pumpWidget(_buildApp(
-        service: service,
-        onPaste: (item) => pasted = item,
-        key: key,
-      ));
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (item) => pasted = item, key: key),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();
@@ -145,19 +143,20 @@ void main() {
     });
 
     testWidgets('Escape fires onExit when no active filters', (tester) async {
-      await repo.save(ClipboardItem(
-        content: 'Test item',
-        type: ClipboardContentType.text,
-      ));
+      await repo.save(
+        ClipboardItem(content: 'Test item', type: ClipboardContentType.text),
+      );
 
       var exitFired = false;
       final key = GlobalKey<MainScreenState>();
-      await tester.pumpWidget(_buildApp(
-        service: service,
-        onPaste: (_) {},
-        onExit: () => exitFired = true,
-        key: key,
-      ));
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onExit: () => exitFired = true,
+          key: key,
+        ),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();
@@ -176,7 +175,8 @@ void main() {
     testWidgets('Ctrl+1 switches to recent tab', (tester) async {
       final key = GlobalKey<MainScreenState>();
       await tester.pumpWidget(
-          _buildApp(service: service, onPaste: (_) {}, key: key));
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();
@@ -194,7 +194,8 @@ void main() {
     testWidgets('Ctrl+2 switches to pinned tab', (tester) async {
       final key = GlobalKey<MainScreenState>();
       await tester.pumpWidget(
-          _buildApp(service: service, onPaste: (_) {}, key: key));
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();
@@ -210,14 +211,14 @@ void main() {
     });
 
     testWidgets('onWindowHide resets selected index and state', (tester) async {
-      await repo.save(ClipboardItem(
-        content: 'Test',
-        type: ClipboardContentType.text,
-      ));
+      await repo.save(
+        ClipboardItem(content: 'Test', type: ClipboardContentType.text),
+      );
 
       final key = GlobalKey<MainScreenState>();
       await tester.pumpWidget(
-          _buildApp(service: service, onPaste: (_) {}, key: key));
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();
@@ -232,15 +233,17 @@ void main() {
       expect(find.byType(MainScreen), findsOneWidget);
     });
 
-    testWidgets('ArrowUp from first item returns focus to search', (tester) async {
-      await repo.save(ClipboardItem(
-        content: 'Item',
-        type: ClipboardContentType.text,
-      ));
+    testWidgets('ArrowUp from first item returns focus to search', (
+      tester,
+    ) async {
+      await repo.save(
+        ClipboardItem(content: 'Item', type: ClipboardContentType.text),
+      );
 
       final key = GlobalKey<MainScreenState>();
       await tester.pumpWidget(
-          _buildApp(service: service, onPaste: (_) {}, key: key));
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
       await tester.pumpAndSettle();
 
       key.currentState!.onWindowShow();

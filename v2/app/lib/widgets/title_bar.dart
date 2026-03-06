@@ -89,99 +89,99 @@ class _SearchBarState extends State<_SearchBar> {
     final colors = CopyPasteTheme.colorsOf(context);
 
     return AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: theme.sizing.searchBoxHeight,
-        decoration: BoxDecoration(
-          color: _focused ? colors.cardBackground : colors.searchBackground,
-          borderRadius: BorderRadius.circular(theme.radii.searchBox),
-          border: Border.all(
-            color: _focused
-                ? colors.primary.withValues(alpha: 0.5)
-                : colors.searchBorder,
-          ),
-          boxShadow: [
-            if (_focused)
-              BoxShadow(
-                color: colors.primary.withValues(alpha: 0.1),
-                blurRadius: 8,
-                spreadRadius: 2,
-              )
-            else
-              BoxShadow(
-                color: colors.onSurface.withValues(alpha: 0.06),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
-              ),
-          ],
+      duration: const Duration(milliseconds: 150),
+      height: theme.sizing.searchBoxHeight,
+      decoration: BoxDecoration(
+        color: _focused ? colors.cardBackground : colors.searchBackground,
+        borderRadius: BorderRadius.circular(theme.radii.searchBox),
+        border: Border.all(
+          color: _focused
+              ? colors.primary.withValues(alpha: 0.5)
+              : colors.searchBorder,
         ),
-        child: TextField(
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          onChanged: _onChanged,
-          textAlignVertical: TextAlignVertical.center,
-          style: theme.typography.searchInput.copyWith(
-            color: colors.onSurface.withValues(alpha: 0.8),
-          ),
-          cursorColor: colors.primary,
-          cursorWidth: 1.2,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context).searchPlaceholder,
-            hintStyle: theme.typography.searchInput.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.35),
+        boxShadow: [
+          if (_focused)
+            BoxShadow(
+              color: colors.primary.withValues(alpha: 0.1),
+              blurRadius: 8,
+              spreadRadius: 2,
+            )
+          else
+            BoxShadow(
+              color: colors.onSurface.withValues(alpha: 0.06),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
             ),
-            prefixIcon: Padding(
-              padding: const EdgeInsets.only(left: 14, right: 8),
-              child: Icon(
-                theme.icons.search,
-                size: 14,
-                color: colors.onSurface.withValues(
-                  alpha: theme.searchStyle.iconOpacity,
-                ),
+        ],
+      ),
+      child: TextField(
+        controller: widget.controller,
+        focusNode: widget.focusNode,
+        onChanged: _onChanged,
+        textAlignVertical: TextAlignVertical.center,
+        style: theme.typography.searchInput.copyWith(
+          color: colors.onSurface.withValues(alpha: 0.8),
+        ),
+        cursorColor: colors.primary,
+        cursorWidth: 1.2,
+        decoration: InputDecoration(
+          hintText: AppLocalizations.of(context).searchPlaceholder,
+          hintStyle: theme.typography.searchInput.copyWith(
+            color: colors.onSurface.withValues(alpha: 0.35),
+          ),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 14, right: 8),
+            child: Icon(
+              theme.icons.search,
+              size: 14,
+              color: colors.onSurface.withValues(
+                alpha: theme.searchStyle.iconOpacity,
               ),
             ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 0,
-              minHeight: 0,
-            ),
-            suffixIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.controller.text.isNotEmpty)
-                  GestureDetector(
-                    onTap: () {
-                      widget.controller.clear();
-                      widget.onChanged('');
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 12,
-                        color: colors.onSurfaceMuted,
-                      ),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.controller.text.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    widget.controller.clear();
+                    widget.onChanged('');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 12,
+                      color: colors.onSurfaceMuted,
                     ),
                   ),
-                if (widget.trailing != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: widget.trailing!,
-                  ),
-              ],
-            ),
-            suffixIconConstraints: const BoxConstraints(
-              minWidth: 0,
-              minHeight: 0,
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: theme.searchStyle.padding.left,
-              vertical: 0,
-            ),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            isDense: true,
+                ),
+              if (widget.trailing != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: widget.trailing!,
+                ),
+            ],
           ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: theme.searchStyle.padding.left,
+            vertical: 0,
+          ),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          isDense: true,
         ),
+      ),
     );
   }
 }

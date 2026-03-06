@@ -6,20 +6,24 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:window_manager/window_manager.dart';
 
-typedef _SystemParametersInfoWNative = Int32 Function(
-    Uint32 uiAction, Uint32 uiParam, Pointer lpvParam, Uint32 fWinIni);
-typedef _SystemParametersInfoWDart = int Function(
-    int uiAction, int uiParam, Pointer lpvParam, int fWinIni);
+typedef _SystemParametersInfoWNative =
+    Int32 Function(
+      Uint32 uiAction,
+      Uint32 uiParam,
+      Pointer lpvParam,
+      Uint32 fWinIni,
+    );
+typedef _SystemParametersInfoWDart =
+    int Function(int uiAction, int uiParam, Pointer lpvParam, int fWinIni);
 
 typedef _GetCursorPosNative = Int32 Function(Pointer<Int32> lpPoint);
 typedef _GetCursorPosDart = int Function(Pointer<Int32> lpPoint);
 
-typedef _MonitorFromPointNative = IntPtr Function(
-    Int32 x, Int32 y, Uint32 dwFlags);
+typedef _MonitorFromPointNative =
+    IntPtr Function(Int32 x, Int32 y, Uint32 dwFlags);
 typedef _MonitorFromPointDart = int Function(int x, int y, int dwFlags);
 
-typedef _GetMonitorInfoWNative = Int32 Function(
-    IntPtr hMonitor, Pointer lpmi);
+typedef _GetMonitorInfoWNative = Int32 Function(IntPtr hMonitor, Pointer lpmi);
 typedef _GetMonitorInfoWDart = int Function(int hMonitor, Pointer lpmi);
 
 class AppWindow {
@@ -27,8 +31,8 @@ class AppWindow {
     this.onVisibilityChanged,
     double popupWidth = 360,
     double popupHeight = 520,
-  })  : _popupWidth = popupWidth,
-        _popupHeight = popupHeight;
+  }) : _popupWidth = popupWidth,
+       _popupHeight = popupHeight;
 
   static const double _settingsWidth = 820;
   static const double _settingsHeight = 680;
@@ -133,15 +137,20 @@ class AppWindow {
   }
 
   static final _u32 = DynamicLibrary.open('user32.dll');
-  static final _spiFunc = _u32.lookupFunction<
-      _SystemParametersInfoWNative,
-      _SystemParametersInfoWDart>('SystemParametersInfoW');
-  static final _getCursorPosFunc = _u32.lookupFunction<
-      _GetCursorPosNative, _GetCursorPosDart>('GetCursorPos');
-  static final _monitorFromPointFunc = _u32.lookupFunction<
-      _MonitorFromPointNative, _MonitorFromPointDart>('MonitorFromPoint');
-  static final _getMonitorInfoFunc = _u32.lookupFunction<
-      _GetMonitorInfoWNative, _GetMonitorInfoWDart>('GetMonitorInfoW');
+  static final _spiFunc = _u32
+      .lookupFunction<_SystemParametersInfoWNative, _SystemParametersInfoWDart>(
+        'SystemParametersInfoW',
+      );
+  static final _getCursorPosFunc = _u32
+      .lookupFunction<_GetCursorPosNative, _GetCursorPosDart>('GetCursorPos');
+  static final _monitorFromPointFunc = _u32
+      .lookupFunction<_MonitorFromPointNative, _MonitorFromPointDart>(
+        'MonitorFromPoint',
+      );
+  static final _getMonitorInfoFunc = _u32
+      .lookupFunction<_GetMonitorInfoWNative, _GetMonitorInfoWDart>(
+        'GetMonitorInfoW',
+      );
 
   static (double, double)? _getCursorPos() {
     final pt = calloc<Int32>(2);
@@ -155,10 +164,15 @@ class AppWindow {
   }
 
   static (double, double, double, double)? _getWorkAreaForPoint(
-      double x, double y) {
+    double x,
+    double y,
+  ) {
     const monitorDefaultToNearest = 0x00000002;
     final hMonitor = _monitorFromPointFunc(
-        x.toInt(), y.toInt(), monitorDefaultToNearest);
+      x.toInt(),
+      y.toInt(),
+      monitorDefaultToNearest,
+    );
     if (hMonitor == 0) return _getWorkArea();
 
     // MONITORINFO: cbSize(4) + rcMonitor(16) + rcWork(16) + dwFlags(4) = 40 bytes
@@ -233,10 +247,10 @@ class AppWindow {
     _settingsMode = true;
     await windowManager.setResizable(true);
     await windowManager.setMinimumSize(
-        const Size(_settingsWidth, _settingsHeight));
+      const Size(_settingsWidth, _settingsHeight),
+    );
     await windowManager.setMaximumSize(const Size(1200, 900));
-    await windowManager.setSize(
-        const Size(_settingsWidth, _settingsHeight));
+    await windowManager.setSize(const Size(_settingsWidth, _settingsHeight));
     await windowManager.center();
   }
 

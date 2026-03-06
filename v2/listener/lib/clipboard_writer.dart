@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 class ClipboardWriter {
-  static const MethodChannel _channel =
-      MethodChannel('copypaste/clipboard_writer');
+  static const MethodChannel _channel = MethodChannel(
+    'copypaste/clipboard_writer',
+  );
 
   static Future<bool> setText(
     String content, {
@@ -31,17 +32,17 @@ class ClipboardWriter {
       } catch (_) {}
     }
 
-    final result = await _channel.invokeMethod<bool>('setClipboardContent', args);
+    final result = await _channel.invokeMethod<bool>(
+      'setClipboardContent',
+      args,
+    );
     return result ?? false;
   }
 
   static Future<bool> setImage(String imagePath) async {
     final result = await _channel.invokeMethod<bool>(
       'setClipboardContent',
-      <String, Object?>{
-        'type': 1,
-        'content': imagePath,
-      },
+      <String, Object?>{'type': 1, 'content': imagePath},
     );
     return result ?? false;
   }
@@ -49,10 +50,7 @@ class ClipboardWriter {
   static Future<bool> setFiles(String content, int typeValue) async {
     final result = await _channel.invokeMethod<bool>(
       'setClipboardContent',
-      <String, Object?>{
-        'type': typeValue,
-        'content': content,
-      },
+      <String, Object?>{'type': typeValue, 'content': content},
     );
     return result ?? false;
   }
