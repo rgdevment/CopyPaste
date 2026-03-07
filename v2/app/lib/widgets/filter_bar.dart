@@ -52,6 +52,7 @@ class FilterBarState extends State<FilterBar> {
 
     showMenu<void>(
       context: context,
+      popUpAnimationStyle: AnimationStyle.noAnimation,
       position: RelativeRect.fromLTRB(
         offset.dx,
         offset.dy + renderBox.size.height + 4,
@@ -75,10 +76,13 @@ class FilterBarState extends State<FilterBar> {
                   color: colors.danger,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  l.clearAllFilters,
-                  style: theme.typography.filterChip.copyWith(
-                    color: colors.danger,
+                Expanded(
+                  child: Text(
+                    l.clearAllFilters,
+                    style: theme.typography.filterChip.copyWith(
+                      color: colors.danger,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -151,13 +155,15 @@ class FilterBarState extends State<FilterBar> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: theme.typography.filterChip.copyWith(
-              color: isSelected ? colors.onSurface : colors.onSurfaceVariant,
+          Expanded(
+            child: Text(
+              label,
+              style: theme.typography.filterChip.copyWith(
+                color: isSelected ? colors.onSurface : colors.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Spacer(),
           if (isSelected) Icon(Icons.check, size: 14, color: colors.primary),
         ],
       ),

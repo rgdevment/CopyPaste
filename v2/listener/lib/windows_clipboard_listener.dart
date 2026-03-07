@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import 'clipboard_event.dart';
 
-class WindowsClipboardListener {
+class ClipboardListener {
   static const EventChannel _channel = EventChannel('copypaste/clipboard');
 
   late final Stream<ClipboardEvent> onEvent = _channel

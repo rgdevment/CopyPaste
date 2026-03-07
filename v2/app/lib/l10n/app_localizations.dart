@@ -829,6 +829,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'GPL v3 License — Free and open source.'**
   String get aboutLicense;
+
+  /// Title for the macOS accessibility permissions dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility Permission Required'**
+  String get permissionsTitle;
+
+  /// Body text explaining why accessibility permission is needed
+  ///
+  /// In en, this message translates to:
+  /// **'CopyPaste needs Accessibility permission to paste content into other apps.\n\nGo to System Settings → Privacy & Security → Accessibility and enable CopyPaste.'**
+  String get permissionsMessage;
+
+  /// Button to open macOS System Settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get permissionsOpenSettings;
+
+  /// Dismiss button for permissions dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get permissionsDismiss;
+
+  /// Snackbar message when permission is confirmed
+  ///
+  /// In en, this message translates to:
+  /// **'Permission granted'**
+  String get permissionsGranted;
 }
 
 class _AppLocalizationsDelegate

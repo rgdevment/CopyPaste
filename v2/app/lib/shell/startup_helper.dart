@@ -49,6 +49,27 @@ typedef _RegDeleteValueDart =
 typedef _RegCloseKeyNative = Int32 Function(IntPtr hKey);
 typedef _RegCloseKeyDart = int Function(int hKey);
 
+class _Win32Registry {
+  _Win32Registry._();
+  static _Win32Registry? _instance;
+  static _Win32Registry get instance => _instance ??= _Win32Registry._();
+
+  late final _advapi32 = DynamicLibrary.open('advapi32.dll');
+
+  late final regOpenKeyEx = _advapi32
+      .lookupFunction<_RegOpenKeyExNative, _RegOpenKeyExDart>('RegOpenKeyExW');
+  late final regSetValueEx = _advapi32
+      .lookupFunction<_RegSetValueExNative, _RegSetValueExDart>(
+        'RegSetValueExW',
+      );
+  late final regDeleteValue = _advapi32
+      .lookupFunction<_RegDeleteValueNative, _RegDeleteValueDart>(
+        'RegDeleteValueW',
+      );
+  late final regCloseKey = _advapi32
+      .lookupFunction<_RegCloseKeyNative, _RegCloseKeyDart>('RegCloseKey');
+}
+
 class StartupHelper {
   static const int _hkeyCurrentUser = 0x80000001;
   static const int _keySetValue = 0x0002;
@@ -56,42 +77,33 @@ class StartupHelper {
   static const String _registryPath =
       r'Software\Microsoft\Windows\CurrentVersion\Run';
   static const String _appName = 'CopyPaste';
-
-  static final _advapi32 = DynamicLibrary.open('advapi32.dll');
-
-  static final _regOpenKeyEx = _advapi32
-      .lookupFunction<_RegOpenKeyExNative, _RegOpenKeyExDart>('RegOpenKeyExW');
-  static final _regSetValueEx = _advapi32
-      .lookupFunction<_RegSetValueExNative, _RegSetValueExDart>(
-        'RegSetValueExW',
-      );
-  static final _regDeleteValue = _advapi32
-      .lookupFunction<_RegDeleteValueNative, _RegDeleteValueDart>(
-        'RegDeleteValueW',
-      );
-  static final _regCloseKey = _advapi32
-      .lookupFunction<_RegCloseKeyNative, _RegCloseKeyDart>('RegCloseKey');
+  static const String _macOsPlistLabel = 'com.rgdevment.copypaste';
 
   static Future<void> apply(bool runOnStartup) async {
-    if (!Platform.isWindows) return;
-
-    if (runOnStartup) {
-      _setRegistryValue(_getExecutablePath());
-    } else {
-      _removeRegistryValue();
+    if (Platform.isWindows) {
+      if (runOnStartup) {
+        _setRegistryValue(Platform.resolvedExecutable);
+      } else {
+        _removeRegistryValue();
+      }
+    } else if (Platform.isMacOS) {
+      if (runOnStartup) {
+        _installLaunchAgent();
+      } else {
+        _removeLaunchAgent();
+      }
     }
   }
 
-  static String _getExecutablePath() {
-    return Platform.resolvedExecutable;
-  }
+  // ---------- Windows ----------
 
   static void _setRegistryValue(String exePath) {
+    final r = _Win32Registry.instance;
     final subKey = _registryPath.toNativeUtf16();
     final hKeyPtr = calloc<IntPtr>();
 
     try {
-      final result = _regOpenKeyEx(
+      final result = r.regOpenKeyEx(
         _hkeyCurrentUser,
         subKey,
         0,
@@ -109,7 +121,7 @@ class StartupHelper {
       final dataSize = ('"$exePath"'.length + 1) * 2;
 
       try {
-        final setResult = _regSetValueEx(
+        final setResult = r.regSetValueEx(
           hKey,
           valueName,
           0,
@@ -123,7 +135,7 @@ class StartupHelper {
       } finally {
         calloc.free(valueName);
         calloc.free(valueData);
-        _regCloseKey(hKey);
+        r.regCloseKey(hKey);
       }
     } finally {
       calloc.free(subKey);
@@ -132,11 +144,12 @@ class StartupHelper {
   }
 
   static void _removeRegistryValue() {
+    final r = _Win32Registry.instance;
     final subKey = _registryPath.toNativeUtf16();
     final hKeyPtr = calloc<IntPtr>();
 
     try {
-      final result = _regOpenKeyEx(
+      final result = r.regOpenKeyEx(
         _hkeyCurrentUser,
         subKey,
         0,
@@ -152,14 +165,62 @@ class StartupHelper {
       final valueName = _appName.toNativeUtf16();
 
       try {
-        _regDeleteValue(hKey, valueName);
+        r.regDeleteValue(hKey, valueName);
       } finally {
         calloc.free(valueName);
-        _regCloseKey(hKey);
+        r.regCloseKey(hKey);
       }
     } finally {
       calloc.free(subKey);
       calloc.free(hKeyPtr);
+    }
+  }
+
+  // ---------- macOS ----------
+
+  static String get _launchAgentPath {
+    final home = Platform.environment['HOME'] ?? '/tmp';
+    return '$home/Library/LaunchAgents/$_macOsPlistLabel.plist';
+  }
+
+  static void _installLaunchAgent() {
+    try {
+      final exePath = Platform.resolvedExecutable;
+      final plist =
+          '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$_macOsPlistLabel</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$exePath</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+</dict>
+</plist>
+''';
+      final agentDir = Directory(
+        '${Platform.environment['HOME']}/Library/LaunchAgents',
+      );
+      if (!agentDir.existsSync()) agentDir.createSync(recursive: true);
+      File(_launchAgentPath).writeAsStringSync(plist);
+    } catch (e) {
+      AppLogger.error('Failed to install LaunchAgent: $e');
+    }
+  }
+
+  static void _removeLaunchAgent() {
+    try {
+      final file = File(_launchAgentPath);
+      if (file.existsSync()) file.deleteSync();
+    } catch (e) {
+      AppLogger.error('Failed to remove LaunchAgent: $e');
     }
   }
 }
