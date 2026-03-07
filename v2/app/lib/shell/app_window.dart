@@ -5,6 +5,7 @@ import 'dart:ui' show Color, Offset, Size;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
+import 'package:listener/listener.dart';
 import 'package:window_manager/window_manager.dart';
 
 // ---------- Win32 FFI typedefs ----------
@@ -154,43 +155,18 @@ class AppWindow {
 
   Future<void> _positionNearCursorMacOS() async {
     try {
-      final result = await Process.run('osascript', [
-        '-e',
-        'use framework "AppKit"\n'
-            'set mousePos to current application\'s NSEvent\'s mouseLocation()\n'
-            'set mainH to (current application\'s NSScreen\'s mainScreen()\'s frame()\'s |size|\'s height) as integer\n'
-            'set mx to (mousePos\'s x) as integer\n'
-            'set my to (mainH - (mousePos\'s y as integer))\n'
-            'set screens to current application\'s NSScreen\'s screens()\n'
-            'repeat with s in screens\n'
-            '  set f to s\'s frame()\n'
-            '  set fx to f\'s origin\'s x\n'
-            '  set fy to f\'s origin\'s y\n'
-            '  set fw to f\'s |size|\'s width\n'
-            '  set fh to f\'s |size|\'s height\n'
-            '  if (mousePos\'s x) >= fx and (mousePos\'s x) < (fx + fw) and (mousePos\'s y) >= fy and (mousePos\'s y) < (fy + fh) then\n'
-            '    set vf to s\'s visibleFrame()\n'
-            '    set vx to (vf\'s origin\'s x) as integer\n'
-            '    set vy to (mainH - ((vf\'s origin\'s y) as integer) - ((vf\'s |size|\'s height) as integer))\n'
-            '    set vw to (vf\'s |size|\'s width) as integer\n'
-            '    set vh to (vf\'s |size|\'s height) as integer\n'
-            '    return (mx as text) & "," & (my as text) & "," & (vx as text) & "," & (vy as text) & "," & ((vx + vw) as text) & "," & ((vy + vh) as text)\n'
-            '  end if\n'
-            'end repeat\n'
-            'return ""',
-      ]);
-      final parts = (result.stdout as String).trim().split(',');
-      if (parts.length != 6) {
+      final info = await ClipboardWriter.getCursorAndScreenInfo();
+      if (info == null) {
         await windowManager.center();
         return;
       }
-      final cursorX = double.tryParse(parts[0]) ?? 0;
-      final cursorY = double.tryParse(parts[1]) ?? 0;
+      final cursorX = info['cursorX'] ?? 0;
+      final cursorY = info['cursorY'] ?? 0;
       final workArea = (
-        double.tryParse(parts[2]) ?? 0,
-        double.tryParse(parts[3]) ?? 0,
-        double.tryParse(parts[4]) ?? 1440,
-        double.tryParse(parts[5]) ?? 900,
+        info['waLeft'] ?? 0,
+        info['waTop'] ?? 0,
+        info['waRight'] ?? 1440,
+        info['waBottom'] ?? 900,
       );
       await _applyPosition(cursorX, cursorY, workArea);
     } catch (_) {

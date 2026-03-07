@@ -390,4 +390,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';
+
+  @override
+  String get permissionsTitle => 'Permiso de Accesibilidad requerido';
+
+  @override
+  String get permissionsMessage =>
+      'CopyPaste necesita permiso de Accesibilidad para pegar contenido en otras apps.\n\nVe a Configuración del Sistema → Privacidad y Seguridad → Accesibilidad y activa CopyPaste.';
+
+  @override
+  String get permissionsOpenSettings => 'Abrir Configuración';
+
+  @override
+  String get permissionsDismiss => 'Después';
+
+  @override
+  String get permissionsGranted => 'Permiso concedido';
 }

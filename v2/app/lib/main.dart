@@ -23,6 +23,7 @@ import 'screens/settings_screen.dart';
 import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
+import 'widgets/accessibility_dialog.dart';
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
   'dark' => true,
@@ -175,6 +176,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
     _startListening();
     unawaited(AutoUpdateService.initialize());
+    if (Platform.isMacOS) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkMacOSPermissions();
+      });
+    }
+  }
+
+  Future<void> _checkMacOSPermissions() async {
+    if (!mounted) return;
+    await AccessibilityDialog.checkAndShow(context);
   }
 
   void _startListening() {
@@ -283,7 +294,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _onHotkey() async {
     if (!_appWindow.isVisible) {
-      _focusManager.capturePreviousWindow();
+      await _focusManager.capturePreviousWindow();
     }
     await _appWindow.toggle();
   }

@@ -1,6 +1,7 @@
 import Cocoa
 import FlutterMacOS
 import AVFoundation
+import ApplicationServices
 
 public class ListenerPlugin: NSObject, FlutterPlugin {
 
@@ -37,6 +38,19 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
       handleSetClipboard(call: call, result: result)
     case "getMediaInfo":
       handleGetMediaInfo(call: call, result: result)
+    case "captureFrontmostApp":
+      result(NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
+    case "activateAndPaste":
+      handleActivateAndPaste(call: call, result: result)
+    case "getCursorAndScreenInfo":
+      handleCursorAndScreenInfo(result: result)
+    case "checkAccessibility":
+      result(AXIsProcessTrusted())
+    case "openAccessibilitySettings":
+      NSWorkspace.shared.open(
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+      )
+      result(true)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -337,6 +351,88 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     pb.writeObjects(urls as [NSPasteboardWriting])
 
     return true
+  }
+
+  // MARK: - Activate & Paste (CGEvent)
+
+  private func handleActivateAndPaste(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let bundleId = args["bundleId"] as? String,
+          let delayMs = args["delayMs"] as? Int else {
+      result(false)
+      return
+    }
+
+    if !AXIsProcessTrusted() {
+      AXIsProcessTrustedWithOptions(
+        [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+      )
+      result(false)
+      return
+    }
+
+    guard let app = NSRunningApplication.runningApplications(
+      withBundleIdentifier: bundleId
+    ).first else {
+      result(false)
+      return
+    }
+
+    app.activate()
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(delayMs)) {
+      let src = CGEventSource(stateID: .combinedSessionState)
+      let vKey: CGKeyCode = 0x09
+
+      guard let keyDown = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: true),
+            let keyUp = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: false) else {
+        result(false)
+        return
+      }
+
+      keyDown.flags = .maskCommand
+      keyUp.flags = .maskCommand
+      keyDown.post(tap: .cghidEventTap)
+      keyUp.post(tap: .cghidEventTap)
+      result(true)
+    }
+  }
+
+  // MARK: - Cursor & Screen Info
+
+  private func handleCursorAndScreenInfo(result: @escaping FlutterResult) {
+    let mouseLocation = NSEvent.mouseLocation
+    guard let mainScreen = NSScreen.main else {
+      result(nil)
+      return
+    }
+
+    let mainH = mainScreen.frame.height
+    let cursorX = mouseLocation.x
+    let cursorY = mainH - mouseLocation.y
+
+    var info: [String: Double] = ["cursorX": cursorX, "cursorY": cursorY]
+
+    for screen in NSScreen.screens {
+      if screen.frame.contains(mouseLocation) {
+        let vf = screen.visibleFrame
+        info["waLeft"] = vf.origin.x
+        info["waTop"] = mainH - vf.origin.y - vf.height
+        info["waRight"] = vf.origin.x + vf.width
+        info["waBottom"] = mainH - vf.origin.y
+        break
+      }
+    }
+
+    if info["waLeft"] == nil {
+      let vf = mainScreen.visibleFrame
+      info["waLeft"] = vf.origin.x
+      info["waTop"] = mainH - vf.origin.y - vf.height
+      info["waRight"] = vf.origin.x + vf.width
+      info["waBottom"] = mainH - vf.origin.y
+    }
+
+    result(info)
   }
 
   // MARK: - Media Info

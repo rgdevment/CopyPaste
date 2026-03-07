@@ -88,4 +88,54 @@ class ClipboardWriter {
       return null;
     }
   }
+
+  static Future<String?> captureFrontmostApp() async {
+    try {
+      return await _channel.invokeMethod<String>('captureFrontmostApp');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> activateAndPaste({
+    required String bundleId,
+    required int delayMs,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'activateAndPaste',
+        <String, Object?>{'bundleId': bundleId, 'delayMs': delayMs},
+      );
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, double>?> getCursorAndScreenInfo() async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'getCursorAndScreenInfo',
+      );
+      if (result == null) return null;
+      return result.map((k, v) => MapEntry(k, (v as num).toDouble()));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> checkAccessibility() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('checkAccessibility');
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> openAccessibilitySettings() async {
+    try {
+      await _channel.invokeMethod<bool>('openAccessibilitySettings');
+    } catch (_) {}
+  }
 }

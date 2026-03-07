@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:listener/listener.dart';
 
 // ---------- Win32 FFI typedefs (only used on Windows) ----------
 
@@ -109,32 +110,13 @@ class _Win32 {
 class WindowFocusManager {
   int _previousWindow = 0;
   int _previousThreadId = 0;
-
-  // macOS: store the bundle-id of the previously focused app.
   String? _previousBundleId;
 
-  void capturePreviousWindow() {
+  Future<void> capturePreviousWindow() async {
     if (Platform.isWindows) {
       _capturePreviousWindows();
     } else if (Platform.isMacOS) {
-      _capturePreviousMacOS();
-    }
-  }
-
-  bool restorePreviousWindow() {
-    if (Platform.isWindows) {
-      return _restorePreviousWindows();
-    } else if (Platform.isMacOS) {
-      return _restorePreviousMacOS();
-    }
-    return false;
-  }
-
-  void simulatePaste() {
-    if (Platform.isWindows) {
-      _simulatePasteWindows();
-    } else if (Platform.isMacOS) {
-      _simulatePasteMacOS();
+      _previousBundleId = await ClipboardWriter.captureFrontmostApp();
     }
   }
 
@@ -149,11 +131,14 @@ class WindowFocusManager {
     await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
     if (Platform.isMacOS) {
-      await _restoreAndPasteMacOS(delayBeforePasteMs);
+      await ClipboardWriter.activateAndPaste(
+        bundleId: _previousBundleId!,
+        delayMs: delayBeforePasteMs,
+      );
       return;
     }
 
-    if (!restorePreviousWindow()) return;
+    if (!_restorePreviousWindows()) return;
 
     final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
     if (!focused) {
@@ -162,7 +147,7 @@ class WindowFocusManager {
       await Future<void>.delayed(const Duration(milliseconds: 30));
     }
 
-    simulatePaste();
+    _simulatePasteWindows();
   }
 
   void clear() {
@@ -236,64 +221,5 @@ class WindowFocusManager {
     w.keybdEvent(_Win32.vkV, 0, 0, 0);
     w.keybdEvent(_Win32.vkV, 0, _Win32.keyeventfKeyup, 0);
     w.keybdEvent(_Win32.vkControl, 0, _Win32.keyeventfKeyup, 0);
-  }
-
-  // ---------- macOS implementation ----------
-
-  void _capturePreviousMacOS() {
-    try {
-      final result = Process.runSync('osascript', [
-        '-e',
-        'tell application "System Events" to get bundle identifier '
-            'of first application process whose frontmost is true',
-      ]);
-      final bid = (result.stdout as String).trim();
-      _previousBundleId = bid.isNotEmpty ? bid : null;
-    } catch (_) {
-      _previousBundleId = null;
-    }
-  }
-
-  bool _restorePreviousMacOS() {
-    if (_previousBundleId == null) return false;
-    try {
-      Process.runSync('osascript', [
-        '-e',
-        'tell application id "$_previousBundleId" to activate',
-      ]);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<void> _restoreAndPasteMacOS(int delayBeforePasteMs) async {
-    if (_previousBundleId == null) return;
-    final delaySeconds = (delayBeforePasteMs / 1000).toStringAsFixed(2);
-    try {
-      await Process.run('osascript', [
-        '-e',
-        'tell application id "$_previousBundleId" to activate',
-        '-e',
-        'delay $delaySeconds',
-        '-e',
-        'tell application "System Events" to keystroke "v" using command down',
-      ]);
-    } catch (_) {
-      // Accessibility permission may be missing
-    }
-  }
-
-  void _simulatePasteMacOS() {
-    try {
-      // Use osascript to simulate Cmd+V via System Events
-      Process.runSync('osascript', [
-        '-e',
-        'tell application "System Events" to keystroke "v" '
-            'using command down',
-      ]);
-    } catch (_) {
-      // Silently fail — Accessibility permission may be missing
-    }
   }
 }

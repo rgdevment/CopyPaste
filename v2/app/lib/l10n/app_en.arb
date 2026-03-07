@@ -297,5 +297,20 @@
   "@aboutDescription": { "description": "About section description" },
 
   "aboutLicense": "GPL v3 License \u2014 Free and open source.",
-  "@aboutLicense": { "description": "License footer text" }
+  "@aboutLicense": { "description": "License footer text" },
+
+  "permissionsTitle": "Accessibility Permission Required",
+  "@permissionsTitle": { "description": "Title for the macOS accessibility permissions dialog" },
+
+  "permissionsMessage": "CopyPaste needs Accessibility permission to paste content into other apps.\n\nGo to System Settings → Privacy & Security → Accessibility and enable CopyPaste.",
+  "@permissionsMessage": { "description": "Body text explaining why accessibility permission is needed" },
+
+  "permissionsOpenSettings": "Open Settings",
+  "@permissionsOpenSettings": { "description": "Button to open macOS System Settings" },
+
+  "permissionsDismiss": "Later",
+  "@permissionsDismiss": { "description": "Dismiss button for permissions dialog" },
+
+  "permissionsGranted": "Permission granted",
+  "@permissionsGranted": { "description": "Snackbar message when permission is confirmed" }
 }
