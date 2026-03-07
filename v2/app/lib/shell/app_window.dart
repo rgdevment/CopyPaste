@@ -7,6 +7,8 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:window_manager/window_manager.dart';
 
+// ---------- Win32 FFI typedefs ----------
+
 typedef _SystemParametersInfoWNative =
     Int32 Function(
       Uint32 uiAction,
@@ -26,6 +28,30 @@ typedef _MonitorFromPointDart = int Function(int x, int y, int dwFlags);
 
 typedef _GetMonitorInfoWNative = Int32 Function(IntPtr hMonitor, Pointer lpmi);
 typedef _GetMonitorInfoWDart = int Function(int hMonitor, Pointer lpmi);
+
+// ---------- Lazy Win32 positioning helpers ----------
+
+class _Win32Pos {
+  _Win32Pos._();
+  static _Win32Pos? _instance;
+  static _Win32Pos get instance => _instance ??= _Win32Pos._();
+
+  late final _u32 = DynamicLibrary.open('user32.dll');
+  late final spiFunc = _u32
+      .lookupFunction<_SystemParametersInfoWNative, _SystemParametersInfoWDart>(
+        'SystemParametersInfoW',
+      );
+  late final getCursorPosFunc = _u32
+      .lookupFunction<_GetCursorPosNative, _GetCursorPosDart>('GetCursorPos');
+  late final monitorFromPointFunc = _u32
+      .lookupFunction<_MonitorFromPointNative, _MonitorFromPointDart>(
+        'MonitorFromPoint',
+      );
+  late final getMonitorInfoFunc = _u32
+      .lookupFunction<_GetMonitorInfoWNative, _GetMonitorInfoWDart>(
+        'GetMonitorInfoW',
+      );
+}
 
 class AppWindow {
   AppWindow({
@@ -68,7 +94,10 @@ class AppWindow {
       await windowManager.setSkipTaskbar(true);
       if (Platform.isWindows) {
         await windowManager.setBackgroundColor(const Color(0x00000000));
-        await applyMica();
+        await applyEffect();
+      } else if (Platform.isMacOS) {
+        await windowManager.setBackgroundColor(const Color(0x00000000));
+        await applyEffect();
       }
       await windowManager.hide();
     });
@@ -78,85 +107,153 @@ class AppWindow {
 
   bool _isDark = false;
 
-  Future<void> applyMica({bool? dark}) async {
+  Future<void> applyEffect({bool? dark}) async {
     if (dark != null) _isDark = dark;
-    await Window.setEffect(
-      effect: WindowEffect.mica,
-      color: const Color(0x00000000),
-      dark: _isDark,
-    );
+    if (Platform.isWindows) {
+      await Window.setEffect(
+        effect: WindowEffect.mica,
+        color: const Color(0x00000000),
+        dark: _isDark,
+      );
+    } else if (Platform.isMacOS) {
+      await Window.setEffect(
+        effect: WindowEffect.sidebar,
+        color: const Color(0x00000000),
+        dark: _isDark,
+      );
+    }
   }
 
   Future<void> _positionNearCursor() async {
-    if (!Platform.isWindows) {
+    if (Platform.isWindows) {
+      await _positionNearCursorWindows();
+    } else if (Platform.isMacOS) {
+      await _positionNearCursorMacOS();
+    } else {
       await windowManager.center();
-      return;
     }
+  }
+
+  Future<void> _positionNearCursorWindows() async {
     try {
-      final cursor = _getCursorPos();
+      final cursor = _getCursorPosWin32();
       if (cursor == null) {
         await windowManager.center();
         return;
       }
-      final workArea = _getWorkAreaForPoint(cursor.$1, cursor.$2);
+      final workArea = _getWorkAreaForPointWin32(cursor.$1, cursor.$2);
       if (workArea == null) {
         await windowManager.center();
         return;
       }
-      final waLeft = workArea.$1;
-      final waTop = workArea.$2;
-      final waRight = workArea.$3;
-      final waBottom = workArea.$4;
-
-      double x;
-      double y;
-      final cursorX = cursor.$1;
-      final cursorY = cursor.$2;
-
-      // Horizontal: try right of cursor, else left
-      if (cursorX + _popupWidth + 12 <= waRight) {
-        x = cursorX + 12;
-      } else if (cursorX - _popupWidth - 12 >= waLeft) {
-        x = cursorX - _popupWidth - 12;
-      } else {
-        x = waRight - _popupWidth - 12;
-      }
-
-      // Vertical: center on cursor, clamp to work area
-      y = cursorY - _popupHeight / 2;
-      if (y < waTop + 8) y = waTop + 8;
-      if (y + _popupHeight > waBottom - 8) y = waBottom - _popupHeight - 8;
-
-      // Final clamp
-      x = x.clamp(waLeft, waRight - _popupWidth);
-      y = y.clamp(waTop, waBottom - _popupHeight);
-
-      await windowManager.setPosition(Offset(x, y));
+      await _applyPosition(cursor.$1, cursor.$2, workArea);
     } catch (_) {
       await windowManager.center();
     }
   }
 
-  static final _u32 = DynamicLibrary.open('user32.dll');
-  static final _spiFunc = _u32
-      .lookupFunction<_SystemParametersInfoWNative, _SystemParametersInfoWDart>(
-        'SystemParametersInfoW',
-      );
-  static final _getCursorPosFunc = _u32
-      .lookupFunction<_GetCursorPosNative, _GetCursorPosDart>('GetCursorPos');
-  static final _monitorFromPointFunc = _u32
-      .lookupFunction<_MonitorFromPointNative, _MonitorFromPointDart>(
-        'MonitorFromPoint',
-      );
-  static final _getMonitorInfoFunc = _u32
-      .lookupFunction<_GetMonitorInfoWNative, _GetMonitorInfoWDart>(
-        'GetMonitorInfoW',
-      );
+  Future<void> _positionNearCursorMacOS() async {
+    try {
+      // Get mouse location via AppleScript (returns {x, y} in screen coords)
+      final result = Process.runSync('osascript', [
+        '-e',
+        'use framework "AppKit"\n'
+            'set mousePos to current application\'s NSEvent\'s mouseLocation()\n'
+            'set screenH to (current application\'s NSScreen\'s mainScreen()\'s frame()\'s |size|\'s height) as integer\n'
+            'set mx to (mousePos\'s x) as integer\n'
+            'set my to (screenH - (mousePos\'s y as integer))\n'
+            'return (mx as text) & "," & (my as text)',
+      ]);
+      final parts = (result.stdout as String).trim().split(',');
+      if (parts.length != 2) {
+        await windowManager.center();
+        return;
+      }
+      final cursorX = double.tryParse(parts[0]) ?? 0;
+      final cursorY = double.tryParse(parts[1]) ?? 0;
 
-  static (double, double)? _getCursorPos() {
+      // Get visible frame of the screen containing the cursor
+      final screenResult = Process.runSync('osascript', [
+        '-e',
+        'use framework "AppKit"\n'
+            'set screens to current application\'s NSScreen\'s screens()\n'
+            'set mousePos to current application\'s NSEvent\'s mouseLocation()\n'
+            'set mainH to (current application\'s NSScreen\'s mainScreen()\'s frame()\'s |size|\'s height) as integer\n'
+            'repeat with s in screens\n'
+            '  set f to s\'s frame()\n'
+            '  set fx to f\'s origin\'s x\n'
+            '  set fy to f\'s origin\'s y\n'
+            '  set fw to f\'s |size|\'s width\n'
+            '  set fh to f\'s |size|\'s height\n'
+            '  if (mousePos\'s x) >= fx and (mousePos\'s x) < (fx + fw) and (mousePos\'s y) >= fy and (mousePos\'s y) < (fy + fh) then\n'
+            '    set vf to s\'s visibleFrame()\n'
+            '    set vx to (vf\'s origin\'s x) as integer\n'
+            '    set vy to (mainH - ((vf\'s origin\'s y) as integer) - ((vf\'s |size|\'s height) as integer))\n'
+            '    set vw to (vf\'s |size|\'s width) as integer\n'
+            '    set vh to (vf\'s |size|\'s height) as integer\n'
+            '    return (vx as text) & "," & (vy as text) & "," & ((vx + vw) as text) & "," & ((vy + vh) as text)\n'
+            '  end if\n'
+            'end repeat\n'
+            'return ""',
+      ]);
+      final waParts = (screenResult.stdout as String).trim().split(',');
+      if (waParts.length != 4) {
+        await windowManager.center();
+        return;
+      }
+      final workArea = (
+        double.tryParse(waParts[0]) ?? 0,
+        double.tryParse(waParts[1]) ?? 0,
+        double.tryParse(waParts[2]) ?? 1440,
+        double.tryParse(waParts[3]) ?? 900,
+      );
+      await _applyPosition(cursorX, cursorY, workArea);
+    } catch (_) {
+      await windowManager.center();
+    }
+  }
+
+  Future<void> _applyPosition(
+    double cursorX,
+    double cursorY,
+    (double, double, double, double) workArea,
+  ) async {
+    final waLeft = workArea.$1;
+    final waTop = workArea.$2;
+    final waRight = workArea.$3;
+    final waBottom = workArea.$4;
+
+    double x;
+    double y;
+
+    // Horizontal: try right of cursor, else left
+    if (cursorX + _popupWidth + 12 <= waRight) {
+      x = cursorX + 12;
+    } else if (cursorX - _popupWidth - 12 >= waLeft) {
+      x = cursorX - _popupWidth - 12;
+    } else {
+      x = waRight - _popupWidth - 12;
+    }
+
+    // Vertical: center on cursor, clamp to work area
+    y = cursorY - _popupHeight / 2;
+    if (y < waTop + 8) y = waTop + 8;
+    if (y + _popupHeight > waBottom - 8) y = waBottom - _popupHeight - 8;
+
+    // Final clamp
+    x = x.clamp(waLeft, waRight - _popupWidth);
+    y = y.clamp(waTop, waBottom - _popupHeight);
+
+    await windowManager.setPosition(Offset(x, y));
+  }
+
+  // ---------- Win32 cursor/monitor helpers ----------
+
+  static (double, double)? _getCursorPosWin32() {
+    final w = _Win32Pos.instance;
     final pt = calloc<Int32>(2);
     try {
-      final result = _getCursorPosFunc(pt);
+      final result = w.getCursorPosFunc(pt);
       if (result == 0) return null;
       return (pt[0].toDouble(), pt[1].toDouble());
     } finally {
@@ -164,41 +261,41 @@ class AppWindow {
     }
   }
 
-  static (double, double, double, double)? _getWorkAreaForPoint(
+  static (double, double, double, double)? _getWorkAreaForPointWin32(
     double x,
     double y,
   ) {
     const monitorDefaultToNearest = 0x00000002;
-    final hMonitor = _monitorFromPointFunc(
+    final w = _Win32Pos.instance;
+    final hMonitor = w.monitorFromPointFunc(
       x.toInt(),
       y.toInt(),
       monitorDefaultToNearest,
     );
-    if (hMonitor == 0) return _getWorkArea();
+    if (hMonitor == 0) return _getWorkAreaWin32();
 
-    // MONITORINFO: cbSize(4) + rcMonitor(16) + rcWork(16) + dwFlags(4) = 40 bytes
     final mi = calloc<Int32>(10);
     try {
-      mi[0] = 40; // cbSize
-      final result = _getMonitorInfoFunc(hMonitor, mi);
-      if (result == 0) return _getWorkArea();
-      // rcWork starts at offset 20 bytes = index 5
+      mi[0] = 40;
+      final result = w.getMonitorInfoFunc(hMonitor, mi);
+      if (result == 0) return _getWorkAreaWin32();
       return (
-        mi[5].toDouble(), // left
-        mi[6].toDouble(), // top
-        mi[7].toDouble(), // right
-        mi[8].toDouble(), // bottom
+        mi[5].toDouble(),
+        mi[6].toDouble(),
+        mi[7].toDouble(),
+        mi[8].toDouble(),
       );
     } finally {
       calloc.free(mi);
     }
   }
 
-  static (double, double, double, double)? _getWorkArea() {
+  static (double, double, double, double)? _getWorkAreaWin32() {
     const spiGetWorkArea = 0x0030;
+    final w = _Win32Pos.instance;
     final rect = calloc<Int32>(4);
     try {
-      final result = _spiFunc(spiGetWorkArea, 0, rect, 0);
+      final result = w.spiFunc(spiGetWorkArea, 0, rect, 0);
       if (result == 0) return null;
       return (
         rect[0].toDouble(),
@@ -213,8 +310,8 @@ class AppWindow {
 
   Future<void> show() async {
     await _positionNearCursor();
-    if (Platform.isWindows) {
-      await applyMica();
+    if (Platform.isWindows || Platform.isMacOS) {
+      await applyEffect();
     }
     await windowManager.setSkipTaskbar(false);
     await windowManager.show();

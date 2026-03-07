@@ -1,4 +1,6 @@
 // coverage:ignore-file
+import 'dart:io';
+
 import 'package:tray_manager/tray_manager.dart';
 
 class TrayIcon with TrayListener {
@@ -7,9 +9,14 @@ class TrayIcon with TrayListener {
   final void Function() onToggle;
   final Future<void> Function() onExit;
 
+  static String get _iconPath {
+    if (Platform.isMacOS) return 'assets/icons/icon_tray_32.png';
+    return 'assets/icons/icon_tray.ico';
+  }
+
   Future<void> init() async {
     trayManager.addListener(this);
-    await trayManager.setIcon('assets/icons/icon_tray.ico');
+    await trayManager.setIcon(_iconPath);
     // Set a basic menu immediately so right-click works even before the first
     // build() triggers rebuild() with localized strings.
     await trayManager.setContextMenu(
