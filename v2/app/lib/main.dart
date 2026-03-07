@@ -23,6 +23,7 @@ import 'screens/settings_screen.dart';
 import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
+import 'widgets/accessibility_dialog.dart';
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
   'dark' => true,
@@ -35,7 +36,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
-  if (Platform.isWindows) {
+  if (Platform.isWindows || Platform.isMacOS) {
     await Window.initialize();
   }
 
@@ -73,13 +74,19 @@ void main() async {
     storage: storage,
   )..start(storage.baseDir);
 
-  final listener = WindowsClipboardListener();
+  final listener = ClipboardListener();
 
   await StartupHelper.apply(config.runOnStartup);
 
   if (Platform.isWindows) {
     await Window.setEffect(
       effect: WindowEffect.mica,
+      color: const Color(0x00000000),
+      dark: _isMicaDark(config.themeMode),
+    );
+  } else if (Platform.isMacOS) {
+    await Window.setEffect(
+      effect: WindowEffect.sidebar,
       color: const Color(0x00000000),
       dark: _isMicaDark(config.themeMode),
     );
@@ -113,7 +120,7 @@ class CopyPasteApp extends StatefulWidget {
   final SqliteRepository repo;
   final ClipboardService clipboardService;
   final CleanupService cleanupService;
-  final WindowsClipboardListener listener;
+  final ClipboardListener listener;
 
   @override
   State<CopyPasteApp> createState() => _CopyPasteAppState();
@@ -148,8 +155,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   @override
   void didChangePlatformBrightness() {
-    if (_config.themeMode == 'auto' && Platform.isWindows) {
-      _appWindow.applyMica(dark: _isMicaDark('auto'));
+    if (_config.themeMode == 'auto' &&
+        (Platform.isWindows || Platform.isMacOS)) {
+      _appWindow.applyEffect(dark: _isMicaDark('auto'));
     }
   }
 
@@ -157,8 +165,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     windowManager.addListener(this);
     final isFirstRun = widget.storage.isFirstRun;
     await _appWindow.init();
-    if (Platform.isWindows) {
-      await _appWindow.applyMica(dark: _isMicaDark(_config.themeMode));
+    if (Platform.isWindows || Platform.isMacOS) {
+      await _appWindow.applyEffect(dark: _isMicaDark(_config.themeMode));
     }
     await _trayIcon.init();
     await _hotkeyHandler.registerWithFallback();
@@ -170,8 +178,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     unawaited(AutoUpdateService.initialize());
   }
 
+  bool _permissionsChecked = false;
+
   void _startListening() {
-    if (!Platform.isWindows) return;
+    if (!Platform.isWindows && !Platform.isMacOS) return;
     _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
   }
 
@@ -275,7 +285,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onHotkey() async {
-    _focusManager.capturePreviousWindow();
+    if (!_appWindow.isVisible) {
+      await _focusManager.capturePreviousWindow();
+    }
     await _appWindow.toggle();
   }
 
@@ -375,8 +387,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               newConfig.popupWidth.toDouble(),
               newConfig.popupHeight.toDouble(),
             );
-            if (Platform.isWindows) {
-              await _appWindow.applyMica(
+            if (Platform.isWindows || Platform.isMacOS) {
+              await _appWindow.applyEffect(
                 dark: _isMicaDark(newConfig.themeMode),
               );
             }
@@ -391,8 +403,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           },
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 150),
+            child,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
       ),
     );
     await _appWindow.exitSettingsMode();
@@ -452,6 +465,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         },
         home: Builder(
           builder: (ctx) {
+            if (Platform.isMacOS && !_permissionsChecked) {
+              _permissionsChecked = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                AccessibilityDialog.checkAndShow(ctx);
+              });
+            }
             final l = AppLocalizations.of(ctx);
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {
@@ -464,7 +483,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 ),
               );
             }
-            final bg = Platform.isWindows
+            final bg = (Platform.isWindows || Platform.isMacOS)
                 ? CopyPasteTheme.colorsOf(
                     ctx,
                   ).background.withValues(alpha: 0.85)

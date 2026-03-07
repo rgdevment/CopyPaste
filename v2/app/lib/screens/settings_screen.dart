@@ -193,10 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _hotkeyString([String separator = '+']) {
+    final isMac = Platform.isMacOS;
     final parts = <String>[];
     if (_hotkeyCtrl) parts.add('Ctrl');
-    if (_hotkeyWin) parts.add('Win');
-    if (_hotkeyAlt) parts.add('Alt');
+    if (_hotkeyWin) parts.add(isMac ? 'Cmd' : 'Win');
+    if (_hotkeyAlt) parts.add(isMac ? 'Option' : 'Alt');
     if (_hotkeyShift) parts.add('Shift');
     parts.add(_hotkeyKeyName);
     return parts.join(separator);
@@ -481,7 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _ModifierChip(
-                  label: 'Win',
+                  label: Platform.isMacOS ? 'Cmd' : 'Win',
                   selected: _hotkeyWin,
                   colors: colors,
                   onTap: () {
@@ -490,7 +491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _ModifierChip(
-                  label: 'Alt',
+                  label: Platform.isMacOS ? 'Option' : 'Alt',
                   selected: _hotkeyAlt,
                   colors: colors,
                   onTap: () {
@@ -785,12 +786,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
             ),
             _ShortcutRow(
-              keys: 'Ctrl+1',
+              keys: Platform.isMacOS ? 'Cmd+1' : 'Ctrl+1',
               description: l.shortcutTab1,
               colors: colors,
             ),
             _ShortcutRow(
-              keys: 'Ctrl+2',
+              keys: Platform.isMacOS ? 'Cmd+2' : 'Ctrl+2',
               description: l.shortcutTab2,
               colors: colors,
             ),
