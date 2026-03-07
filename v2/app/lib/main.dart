@@ -169,7 +169,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (Platform.isWindows || Platform.isMacOS) {
       await _appWindow.applyEffect(dark: _isMicaDark(_config.themeMode));
     }
-    await _trayIcon.init();
+    if (!Platform.isMacOS || _config.showTrayIcon) {
+      await _trayIcon.init();
+    }
     await _hotkeyHandler.registerWithFallback();
     if (isFirstRun) {
       widget.storage.markAsInitialized();
@@ -390,6 +392,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           clipboardService: widget.clipboardService,
           storage: widget.storage,
           onSave: (newConfig, hotkeyChanged) async {
+            final oldShowTray = _config.showTrayIcon;
             setState(() => _config = newConfig);
             _appWindow.updatePopupSize(
               newConfig.popupWidth.toDouble(),
@@ -407,6 +410,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 onHotkey: _onHotkey,
               );
               await _hotkeyHandler.registerWithFallback();
+            }
+            if (Platform.isMacOS && newConfig.showTrayIcon != oldShowTray) {
+              if (newConfig.showTrayIcon) {
+                await _trayIcon.init();
+              } else {
+                await _trayIcon.dispose();
+              }
             }
           },
         ),
@@ -483,13 +493,15 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {
               _lastTrayLocale = currentLocale;
-              unawaited(
-                _trayIcon.rebuild(
-                  showHideLabel: l.trayShowHide,
-                  exitLabel: l.trayExit,
-                  tooltip: l.trayTooltip,
-                ),
-              );
+              if (!Platform.isMacOS || _config.showTrayIcon) {
+                unawaited(
+                  _trayIcon.rebuild(
+                    showHideLabel: l.trayShowHide,
+                    exitLabel: l.trayExit,
+                    tooltip: l.trayTooltip,
+                  ),
+                );
+              }
             }
             final bg = (Platform.isWindows || Platform.isMacOS)
                 ? CopyPasteTheme.colorsOf(

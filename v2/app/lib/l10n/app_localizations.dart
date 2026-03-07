@@ -644,6 +644,12 @@ abstract class AppLocalizations {
   /// **'Clear search on open'**
   String get settingClearSearchOnOpen;
 
+  /// Show tray icon label (macOS only)
+  ///
+  /// In en, this message translates to:
+  /// **'Show tray icon'**
+  String get settingShowTrayIcon;
+
   /// Retention days label
   ///
   /// In en, this message translates to:
@@ -685,6 +691,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clears the search text each time'**
   String get subtitleClearSearchOnOpen;
+
+  /// Show tray icon subtitle (macOS only)
+  ///
+  /// In en, this message translates to:
+  /// **'Show icon in the menu bar. Use hotkey if hidden'**
+  String get subtitleShowTrayIcon;
 
   /// Paste speed subtitle
   ///

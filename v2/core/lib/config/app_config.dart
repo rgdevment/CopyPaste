@@ -34,6 +34,7 @@ class AppConfig {
     this.resetSearchOnShow = true,
     this.hasSeenHint = false,
     this.themeMode = 'auto',
+    this.showTrayIcon = true,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(
@@ -70,6 +71,7 @@ class AppConfig {
     resetSearchOnShow: json['resetSearchOnShow'] as bool? ?? true,
     hasSeenHint: json['hasSeenHint'] as bool? ?? false,
     themeMode: json['themeMode'] as String? ?? 'auto',
+    showTrayIcon: json['showTrayIcon'] as bool? ?? true,
   );
 
   static const String fileName = 'config.json';
@@ -118,6 +120,7 @@ class AppConfig {
   final bool resetSearchOnShow;
   final bool hasSeenHint;
   final String themeMode;
+  final bool showTrayIcon;
 
   AppConfig copyWith({
     String? preferredLanguage,
@@ -147,6 +150,7 @@ class AppConfig {
     bool? resetSearchOnShow,
     bool? hasSeenHint,
     String? themeMode,
+    bool? showTrayIcon,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -179,6 +183,7 @@ class AppConfig {
     resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
     hasSeenHint: hasSeenHint ?? this.hasSeenHint,
     themeMode: themeMode ?? this.themeMode,
+    showTrayIcon: showTrayIcon ?? this.showTrayIcon,
   );
 
   Map<String, dynamic> toJson() => {
@@ -210,6 +215,7 @@ class AppConfig {
     'resetSearchOnShow': resetSearchOnShow,
     'hasSeenHint': hasSeenHint,
     'themeMode': themeMode,
+    'showTrayIcon': showTrayIcon,
   };
 
   static Future<AppConfig> load(String configPath) async {

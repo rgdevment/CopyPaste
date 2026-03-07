@@ -316,9 +316,14 @@ void main() {
             throw PlatformException(code: 'ACCESSIBILITY_DENIED');
           });
       expect(
-        () => ClipboardWriter.activateAndPaste(bundleId: 'com.test', delayMs: 0),
+        () =>
+            ClipboardWriter.activateAndPaste(bundleId: 'com.test', delayMs: 0),
         throwsA(
-          isA<PlatformException>().having((e) => e.code, 'code', 'ACCESSIBILITY_DENIED'),
+          isA<PlatformException>().having(
+            (e) => e.code,
+            'code',
+            'ACCESSIBILITY_DENIED',
+          ),
         ),
       );
     });
