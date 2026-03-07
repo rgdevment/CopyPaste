@@ -398,8 +398,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           },
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 150),
+            child,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
       ),
     );
     await _appWindow.exitSettingsMode();
