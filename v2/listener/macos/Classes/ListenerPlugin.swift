@@ -46,6 +46,11 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
       handleCursorAndScreenInfo(result: result)
     case "checkAccessibility":
       result(AXIsProcessTrusted())
+    case "requestAccessibility":
+      let options = [
+        kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true,
+      ] as CFDictionary
+      result(AXIsProcessTrustedWithOptions(options))
     case "openAccessibilitySettings":
       NSWorkspace.shared.open(
         URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!

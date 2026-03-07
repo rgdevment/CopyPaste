@@ -9,7 +9,7 @@ class AccessibilityDialog extends StatefulWidget {
   const AccessibilityDialog({super.key});
 
   static Future<void> checkAndShow(BuildContext context) async {
-    final granted = await ClipboardWriter.checkAccessibility();
+    final granted = await ClipboardWriter.requestAccessibility();
     if (granted || !context.mounted) return;
     await showDialog<void>(
       context: context,

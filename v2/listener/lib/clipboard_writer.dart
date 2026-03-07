@@ -133,6 +133,17 @@ class ClipboardWriter {
     }
   }
 
+  static Future<bool> requestAccessibility() async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'requestAccessibility',
+      );
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> openAccessibilitySettings() async {
     try {
       await _channel.invokeMethod<bool>('openAccessibilitySettings');
