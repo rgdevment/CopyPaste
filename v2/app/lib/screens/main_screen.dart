@@ -254,7 +254,8 @@ class MainScreenState extends State<MainScreen> {
     }
 
     final key = event.logicalKey;
-    final ctrl = HardwareKeyboard.instance.isControlPressed ||
+    final ctrl =
+        HardwareKeyboard.instance.isControlPressed ||
         (Platform.isMacOS && HardwareKeyboard.instance.isMetaPressed);
     final alt = HardwareKeyboard.instance.isAltPressed;
 

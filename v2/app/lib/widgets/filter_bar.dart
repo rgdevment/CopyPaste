@@ -85,8 +85,7 @@ class FilterBarState extends State<FilterBar> {
               ],
             ),
           ),
-        if (widget.selectedColors.isNotEmpty)
-          const PopupMenuDivider(height: 8),
+        if (widget.selectedColors.isNotEmpty) const PopupMenuDivider(height: 8),
         PopupMenuItem<void>(
           enabled: false,
           height: 28,
