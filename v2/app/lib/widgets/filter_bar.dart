@@ -52,6 +52,7 @@ class FilterBarState extends State<FilterBar> {
 
     showMenu<void>(
       context: context,
+      popUpAnimationStyle: AnimationStyle.noAnimation,
       position: RelativeRect.fromLTRB(
         offset.dx,
         offset.dy + renderBox.size.height + 4,
@@ -84,7 +85,8 @@ class FilterBarState extends State<FilterBar> {
               ],
             ),
           ),
-        if (widget.selectedColors.isNotEmpty) const PopupMenuDivider(height: 8),
+        if (widget.selectedColors.isNotEmpty)
+          const PopupMenuDivider(height: 8),
         PopupMenuItem<void>(
           enabled: false,
           height: 28,

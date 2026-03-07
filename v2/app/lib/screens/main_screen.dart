@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
@@ -253,7 +254,8 @@ class MainScreenState extends State<MainScreen> {
     }
 
     final key = event.logicalKey;
-    final ctrl = HardwareKeyboard.instance.isControlPressed;
+    final ctrl = HardwareKeyboard.instance.isControlPressed ||
+        (Platform.isMacOS && HardwareKeyboard.instance.isMetaPressed);
     final alt = HardwareKeyboard.instance.isAltPressed;
 
     if (key == LogicalKeyboardKey.escape) {

@@ -57,7 +57,7 @@ class AppWindow {
   AppWindow({
     this.onVisibilityChanged,
     double popupWidth = 360,
-    double popupHeight = 520,
+    double popupHeight = 500,
   }) : _popupWidth = popupWidth,
        _popupHeight = popupHeight;
 
@@ -86,16 +86,16 @@ class AppWindow {
       await windowManager.setSize(Size(_popupWidth, _popupHeight));
       await windowManager.setMinimumSize(Size(_popupWidth, 400));
       await windowManager.setMaximumSize(Size(_popupWidth, 900));
-      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      await windowManager.setTitleBarStyle(
+        TitleBarStyle.hidden,
+        windowButtonVisibility: !Platform.isMacOS,
+      );
       await windowManager.setAlwaysOnTop(true);
       await windowManager.setResizable(false);
       await windowManager.setMaximizable(false);
       await windowManager.setPreventClose(true);
       await windowManager.setSkipTaskbar(true);
-      if (Platform.isWindows) {
-        await windowManager.setBackgroundColor(const Color(0x00000000));
-        await applyEffect();
-      } else if (Platform.isMacOS) {
+      if (Platform.isWindows || Platform.isMacOS) {
         await windowManager.setBackgroundColor(const Color(0x00000000));
         await applyEffect();
       }

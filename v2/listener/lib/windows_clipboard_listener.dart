@@ -12,6 +12,3 @@ class ClipboardListener {
         return ClipboardEvent.fromMap(map);
       });
 }
-
-/// Backward-compatible alias.
-typedef WindowsClipboardListener = ClipboardListener;
