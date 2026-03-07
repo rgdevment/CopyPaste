@@ -14,7 +14,7 @@
 
   "sectionStorage": "ALMACENAMIENTO",
 
-  "settingRunOnStartup": "Iniciar con Windows",
+  "settingRunOnStartup": "Iniciar con el sistema",
   "settingLanguage": "Idioma de la interfaz",
   "hotkeyWillApply": "El atajo se aplicará de inmediato",
 

@@ -33,7 +33,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionStorage => 'ALMACENAMIENTO';
 
   @override
-  String get settingRunOnStartup => 'Iniciar con Windows';
+  String get settingRunOnStartup => 'Iniciar con el sistema';
 
   @override
   String get settingLanguage => 'Idioma de la interfaz';

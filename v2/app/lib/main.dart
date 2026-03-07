@@ -176,17 +176,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
     _startListening();
     unawaited(AutoUpdateService.initialize());
-    if (Platform.isMacOS) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkMacOSPermissions();
-      });
-    }
   }
 
-  Future<void> _checkMacOSPermissions() async {
-    if (!mounted) return;
-    await AccessibilityDialog.checkAndShow(context);
-  }
+  bool _permissionsChecked = false;
 
   void _startListening() {
     if (!Platform.isWindows && !Platform.isMacOS) return;
@@ -473,6 +465,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         },
         home: Builder(
           builder: (ctx) {
+            if (Platform.isMacOS && !_permissionsChecked) {
+              _permissionsChecked = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                AccessibilityDialog.checkAndShow(ctx);
+              });
+            }
             final l = AppLocalizations.of(ctx);
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {

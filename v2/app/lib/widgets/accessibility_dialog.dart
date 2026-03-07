@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:listener/listener.dart';
 
 import '../l10n/app_localizations.dart';
-import '../theme/theme_provider.dart';
 
 class AccessibilityDialog extends StatefulWidget {
   const AccessibilityDialog({super.key});
@@ -12,18 +11,12 @@ class AccessibilityDialog extends StatefulWidget {
   static Future<void> checkAndShow(BuildContext context) async {
     final granted = await ClipboardWriter.checkAccessibility();
     if (granted || !context.mounted) return;
-    final theme = CopyPasteTheme.of(context);
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black26,
-      builder: (_) => CopyPasteTheme(
-        themeData: theme,
-        child: Theme(
-          data: Theme.of(context),
-          child: const AccessibilityDialog(),
-        ),
-      ),
+      builder: (_) =>
+          Theme(data: Theme.of(context), child: const AccessibilityDialog()),
     );
   }
 
@@ -60,10 +53,10 @@ class _AccessibilityDialogState extends State<AccessibilityDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final colors = CopyPasteTheme.colorsOf(context);
+    final cs = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      backgroundColor: colors.surface,
+      backgroundColor: cs.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       icon: const Icon(Icons.security, size: 40, color: Colors.orange),
       title: Text(
@@ -71,13 +64,13 @@ class _AccessibilityDialogState extends State<AccessibilityDialog> {
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: colors.onSurface,
+          color: cs.onSurface,
         ),
         textAlign: TextAlign.center,
       ),
       content: Text(
         l.permissionsMessage,
-        style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+        style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
         textAlign: TextAlign.center,
       ),
       actionsAlignment: MainAxisAlignment.center,
@@ -86,7 +79,7 @@ class _AccessibilityDialogState extends State<AccessibilityDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(
             l.permissionsDismiss,
-            style: TextStyle(color: colors.onSurfaceVariant),
+            style: TextStyle(color: cs.onSurfaceVariant),
           ),
         ),
         const SizedBox(width: 8),
