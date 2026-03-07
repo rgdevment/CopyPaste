@@ -80,6 +80,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _hideOnDeactivate;
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
+  late bool _showTrayIcon;
 
   bool get _hotkeyChanged =>
       _hotkeyCtrl != widget.config.hotkeyUseCtrl ||
@@ -117,6 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _hideOnDeactivate = widget.config.hideOnDeactivate;
     _resetScrollOnShow = widget.config.resetScrollOnShow;
     _resetSearchOnShow = widget.config.resetSearchOnShow;
+    _showTrayIcon = widget.config.showTrayIcon;
   }
 
   void _markChanged() {
@@ -150,6 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     hideOnDeactivate: _hideOnDeactivate,
     resetScrollOnShow: _resetScrollOnShow,
     resetSearchOnShow: _resetSearchOnShow,
+    showTrayIcon: _showTrayIcon,
   );
 
   Future<void> _save() async {
@@ -188,6 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _hideOnDeactivate = d.hideOnDeactivate;
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;
+      _showTrayIcon = d.showTrayIcon;
       _hasChanges = true;
     });
   }
@@ -915,6 +919,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _markChanged();
               },
             ),
+            if (Platform.isMacOS)
+              _ToggleRow(
+                label: l.settingShowTrayIcon,
+                subtitle: l.subtitleShowTrayIcon,
+                value: _showTrayIcon,
+                colors: colors,
+                onChanged: (v) {
+                  setState(() => _showTrayIcon = v);
+                  _markChanged();
+                },
+              ),
           ],
         ),
       ],

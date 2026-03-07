@@ -290,6 +290,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingClearSearchOnOpen => 'Limpiar búsqueda al abrir';
 
   @override
+  String get settingShowTrayIcon => 'Mostrar icono en la bandeja';
+
+  @override
   String get settingRetentionDaysLabel => 'Días de retención (0 = sin límite)';
 
   @override
@@ -312,6 +315,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitleClearSearchOnOpen => 'Borra el texto de búsqueda cada vez';
+
+  @override
+  String get subtitleShowTrayIcon =>
+      'Mostrar icono en la barra de menú. Usa el atajo si está oculto';
 
   @override
   String get subtitlePasteSpeed => 'Ajustar tiempos de restauración y pegado';

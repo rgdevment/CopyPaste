@@ -289,6 +289,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingClearSearchOnOpen => 'Clear search on open';
 
   @override
+  String get settingShowTrayIcon => 'Show tray icon';
+
+  @override
   String get settingRetentionDaysLabel => 'Retention days (0 = unlimited)';
 
   @override
@@ -309,6 +312,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitleClearSearchOnOpen => 'Clears the search text each time';
+
+  @override
+  String get subtitleShowTrayIcon =>
+      'Show icon in the menu bar. Use hotkey if hidden';
 
   @override
   String get subtitlePasteSpeed => 'Adjust restoration and paste timings';
