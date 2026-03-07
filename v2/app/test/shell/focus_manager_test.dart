@@ -106,8 +106,9 @@ void main() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, (call) async {
               calls.add(call);
-              if (call.method == 'captureFrontmostApp')
+              if (call.method == 'captureFrontmostApp') {
                 return 'com.apple.safari';
+              }
               if (call.method == 'activateAndPaste') return true;
               return null;
             });
@@ -135,8 +136,9 @@ void main() {
 
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, (call) async {
-              if (call.method == 'captureFrontmostApp')
+              if (call.method == 'captureFrontmostApp') {
                 return 'com.apple.finder';
+              }
               return null;
             });
 
