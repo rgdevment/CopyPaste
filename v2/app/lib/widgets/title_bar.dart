@@ -88,8 +88,7 @@ class _SearchBarState extends State<_SearchBar> {
     final theme = CopyPasteTheme.of(context);
     final colors = CopyPasteTheme.colorsOf(context);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
+    return Container(
       height: theme.sizing.searchBoxHeight,
       decoration: BoxDecoration(
         color: _focused ? colors.cardBackground : colors.searchBackground,

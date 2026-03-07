@@ -1,145 +1,174 @@
 name: CI v2
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  quality:
-    runs-on: ubuntu-latest
-    name: Lint, Format & Test
+    quality:
+        runs-on: ubuntu-latest
+        name: Lint, Format & Test
 
-    steps:
-      - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
 
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: ${{ runner.os }}-pub-
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
 
-      - name: Get dependencies
-        run: |
-          cd v2/core && flutter pub get
-          cd ../listener && flutter pub get
-          cd ../app && flutter pub get
+            - name: Get dependencies
+              run: |
+                  cd v2/core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
 
-      - name: Check formatting
-        run: |
-          cd v2/core && dart format --output=none --set-exit-if-changed .
-          cd ../listener && dart format --output=none --set-exit-if-changed .
-          cd ../app && dart format --output=none --set-exit-if-changed .
+            - name: Check formatting
+              run: |
+                  cd v2/core && dart format --output=none --set-exit-if-changed .
+                  cd ../listener && dart format --output=none --set-exit-if-changed .
+                  cd ../app && dart format --output=none --set-exit-if-changed .
 
-      - name: Analyze
-        run: |
-          cd v2/core && flutter analyze
-          cd ../app && flutter analyze
+            - name: Analyze
+              run: |
+                  cd v2/core && flutter analyze
+                  cd ../app && flutter analyze
 
-      - name: Check outdated dependencies
-        run: |
-          cd v2/core && flutter pub outdated --no-dev-dependencies
-          cd ../listener && flutter pub outdated --no-dev-dependencies
-          cd ../app && flutter pub outdated --no-dev-dependencies
-        continue-on-error: true
+            - name: Check outdated dependencies
+              run: |
+                  cd v2/core && flutter pub outdated --no-dev-dependencies
+                  cd ../listener && flutter pub outdated --no-dev-dependencies
+                  cd ../app && flutter pub outdated --no-dev-dependencies
+              continue-on-error: true
 
-      - name: Run tests
-        run: |
-          cd v2/core && flutter test --coverage
-          cd ../listener && flutter test --coverage
-          cd ../app && flutter test --coverage
+            - name: Run tests
+              run: |
+                  cd v2/core && flutter test --coverage
+                  cd ../listener && flutter test --coverage
+                  cd ../app && flutter test --coverage
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: always()
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
-          flags: core,listener,app
-          fail_ci_if_error: false
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v4
+              if: always()
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
+                  flags: core,listener,app
+                  fail_ci_if_error: false
 
-  build:
-    runs-on: windows-latest
-    name: Build Verification (Windows)
+    build:
+        runs-on: windows-latest
+        name: Build Verification (Windows)
 
-    steps:
-      - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
 
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: ${{ runner.os }}-pub-
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
 
-      - name: Get dependencies
-        run: |
-          cd v2/core; flutter pub get
-          cd ../listener; flutter pub get
-          cd ../app; flutter pub get
+            - name: Get dependencies
+              run: |
+                  cd v2/core; flutter pub get
+                  cd ../listener; flutter pub get
+                  cd ../app; flutter pub get
 
-      - name: Build Windows release
-        run: cd v2/app; flutter build windows --release
+            - name: Build Windows release
+              run: cd v2/app; flutter build windows --release
 
-  sonarcloud:
-    name: SonarCloud
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    build-macos:
+        runs-on: macos-latest
+        name: Build Verification (macOS)
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
 
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: ${{ runner.os }}-pub-
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
 
-      - name: Get dependencies
-        run: |
-          cd v2/core && flutter pub get
-          cd ../listener && flutter pub get
-          cd ../app && flutter pub get
+            - name: Get dependencies
+              run: |
+                  cd v2/core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
 
-      - name: Run tests with coverage
-        run: |
-          cd v2/core && flutter test --coverage
-          cd ../listener && flutter test --coverage
-          cd ../app && flutter test --coverage
+            - name: Build macOS release
+              run: cd v2/app && flutter build macos --release
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-            -Dsonar.sources=v2/core/lib,v2/listener/lib,v2/app/lib
-            -Dsonar.tests=v2/core/test,v2/listener/test,v2/app/test
-            -Dsonar.dart.lcov.reportPaths=v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
-            -Dsonar.exclusions=**/generated/**,**/*.g.dart,**/*.freezed.dart,**/l10n/**,**/core.dart
-            -Dsonar.coverage.exclusions=**/main.dart,**/shell/**,**/theme/**,**/services/auto_update_service.dart,**/widgets/empty_state.dart,**/widgets/label_color_dialog.dart,**/widgets/title_bar.dart,**/windows_clipboard_listener.dart,**/l10n/**,**/*.g.dart,**/*.freezed.dart,**/core.dart
+    sonarcloud:
+        name: SonarCloud
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Get dependencies
+              run: |
+                  cd v2/core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Run tests with coverage
+              run: |
+                  cd v2/core && flutter test --coverage
+                  cd ../listener && flutter test --coverage
+                  cd ../app && flutter test --coverage
+
+            - name: SonarCloud Scan
+              uses: SonarSource/sonarcloud-github-action@v5
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              with:
+                  args: >
+                      -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+                      -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+                      -Dsonar.sources=v2/core/lib,v2/listener/lib,v2/app/lib
+                      -Dsonar.tests=v2/core/test,v2/listener/test,v2/app/test
+                      -Dsonar.dart.lcov.reportPaths=v2/core/coverage/lcov.info,v2/listener/coverage/lcov.info,v2/app/coverage/lcov.info
+                      -Dsonar.exclusions=**/generated/**,**/*.g.dart,**/*.freezed.dart,**/l10n/**,**/core.dart
+                      -Dsonar.coverage.exclusions=**/main.dart,**/shell/**,**/theme/**,**/services/auto_update_service.dart,**/widgets/empty_state.dart,**/widgets/label_color_dialog.dart,**/widgets/title_bar.dart,**/windows_clipboard_listener.dart,**/l10n/**,**/*.g.dart,**/*.freezed.dart,**/core.dart
+

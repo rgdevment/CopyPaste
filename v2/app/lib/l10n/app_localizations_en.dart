@@ -1,5 +1,5 @@
 // ignore: unused_import
-// coverage:ignore-file
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -386,4 +386,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutLicense => 'GPL v3 License — Free and open source.';
+
+  @override
+  String get permissionsTitle => 'Accessibility Permission Required';
+
+  @override
+  String get permissionsMessage =>
+      'CopyPaste needs Accessibility permission to paste content into other apps.\n\nGo to System Settings → Privacy & Security → Accessibility and enable CopyPaste.';
+
+  @override
+  String get permissionsOpenSettings => 'Open Settings';
+
+  @override
+  String get permissionsDismiss => 'Later';
+
+  @override
+  String get permissionsGranted => 'Permission granted';
 }

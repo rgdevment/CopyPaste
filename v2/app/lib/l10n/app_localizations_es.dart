@@ -1,5 +1,5 @@
 // ignore: unused_import
-// coverage:ignore-file
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -33,7 +33,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionStorage => 'ALMACENAMIENTO';
 
   @override
-  String get settingRunOnStartup => 'Iniciar con Windows';
+  String get settingRunOnStartup => 'Iniciar con el sistema';
 
   @override
   String get settingLanguage => 'Idioma de la interfaz';
@@ -390,4 +390,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';
+
+  @override
+  String get permissionsTitle => 'Permiso de Accesibilidad requerido';
+
+  @override
+  String get permissionsMessage =>
+      'CopyPaste necesita permiso de Accesibilidad para pegar contenido en otras apps.\n\nVe a Configuración del Sistema → Privacidad y Seguridad → Accesibilidad y activa CopyPaste.';
+
+  @override
+  String get permissionsOpenSettings => 'Abrir Configuración';
+
+  @override
+  String get permissionsDismiss => 'Después';
+
+  @override
+  String get permissionsGranted => 'Permiso concedido';
 }

@@ -237,4 +237,259 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  // ── macOS-specific methods ──────────────────────────────────────────────
+
+  group('ClipboardWriter.captureFrontmostApp', () {
+    test('returns bundle id on success', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'captureFrontmostApp') {
+              return 'com.apple.finder';
+            }
+            return null;
+          });
+      final result = await ClipboardWriter.captureFrontmostApp();
+      expect(result, equals('com.apple.finder'));
+    });
+
+    test('returns null when channel returns null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => null);
+      final result = await ClipboardWriter.captureFrontmostApp();
+      expect(result, isNull);
+    });
+
+    test('returns null when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'UNAVAILABLE');
+          });
+      final result = await ClipboardWriter.captureFrontmostApp();
+      expect(result, isNull);
+    });
+  });
+
+  group('ClipboardWriter.activateAndPaste', () {
+    test('returns true on success', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'activateAndPaste') return true;
+            return null;
+          });
+      final result = await ClipboardWriter.activateAndPaste(
+        bundleId: 'com.apple.safari',
+        delayMs: 150,
+      );
+      expect(result, isTrue);
+    });
+
+    test('sends bundleId and delayMs as arguments', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            captured = call;
+            return true;
+          });
+      await ClipboardWriter.activateAndPaste(
+        bundleId: 'com.example.app',
+        delayMs: 200,
+      );
+      expect(captured!.method, equals('activateAndPaste'));
+      expect(captured!.arguments['bundleId'], equals('com.example.app'));
+      expect(captured!.arguments['delayMs'], equals(200));
+    });
+
+    test('returns false when channel returns null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async => null);
+      final result = await ClipboardWriter.activateAndPaste(
+        bundleId: 'com.test',
+        delayMs: 0,
+      );
+      expect(result, isFalse);
+    });
+
+    test('returns false when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'ACCESSIBILITY_DENIED');
+          });
+      final result = await ClipboardWriter.activateAndPaste(
+        bundleId: 'com.test',
+        delayMs: 0,
+      );
+      expect(result, isFalse);
+    });
+  });
+
+  group('ClipboardWriter.getCursorAndScreenInfo', () {
+    test('returns typed map on success', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'getCursorAndScreenInfo') {
+              return <String, Object?>{
+                'cursorX': 100.0,
+                'cursorY': 200.0,
+                'waLeft': 0.0,
+                'waTop': 25.0,
+                'waRight': 1440.0,
+                'waBottom': 900.0,
+              };
+            }
+            return null;
+          });
+      final result = await ClipboardWriter.getCursorAndScreenInfo();
+      expect(result, isNotNull);
+      expect(result!['cursorX'], equals(100.0));
+      expect(result['cursorY'], equals(200.0));
+      expect(result['waLeft'], equals(0.0));
+      expect(result['waTop'], equals(25.0));
+      expect(result['waRight'], equals(1440.0));
+      expect(result['waBottom'], equals(900.0));
+    });
+
+    test('converts integer values to double', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'getCursorAndScreenInfo') {
+              return <String, Object?>{
+                'cursorX': 50,
+                'cursorY': 75,
+                'waLeft': 0,
+                'waTop': 0,
+                'waRight': 1280,
+                'waBottom': 800,
+              };
+            }
+            return null;
+          });
+      final result = await ClipboardWriter.getCursorAndScreenInfo();
+      expect(result, isNotNull);
+      expect(result!['cursorX'], isA<double>());
+      expect(result['cursorX'], equals(50.0));
+    });
+
+    test('returns null when channel returns null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => null);
+      final result = await ClipboardWriter.getCursorAndScreenInfo();
+      expect(result, isNull);
+    });
+
+    test('returns null when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'ERROR');
+          });
+      final result = await ClipboardWriter.getCursorAndScreenInfo();
+      expect(result, isNull);
+    });
+  });
+
+  group('ClipboardWriter.checkAccessibility', () {
+    test('returns true when accessibility is granted', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'checkAccessibility') return true;
+            return null;
+          });
+      final result = await ClipboardWriter.checkAccessibility();
+      expect(result, isTrue);
+    });
+
+    test('returns false when accessibility is denied', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'checkAccessibility') return false;
+            return null;
+          });
+      final result = await ClipboardWriter.checkAccessibility();
+      expect(result, isFalse);
+    });
+
+    test('returns false when channel returns null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async => null);
+      final result = await ClipboardWriter.checkAccessibility();
+      expect(result, isFalse);
+    });
+
+    test('returns false when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'ERROR');
+          });
+      final result = await ClipboardWriter.checkAccessibility();
+      expect(result, isFalse);
+    });
+  });
+
+  group('ClipboardWriter.requestAccessibility', () {
+    test('returns true when user grants permission', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'requestAccessibility') return true;
+            return null;
+          });
+      final result = await ClipboardWriter.requestAccessibility();
+      expect(result, isTrue);
+    });
+
+    test('returns false when user denies permission', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'requestAccessibility') return false;
+            return null;
+          });
+      final result = await ClipboardWriter.requestAccessibility();
+      expect(result, isFalse);
+    });
+
+    test('returns false when channel returns null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async => null);
+      final result = await ClipboardWriter.requestAccessibility();
+      expect(result, isFalse);
+    });
+
+    test('returns false when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'ERROR');
+          });
+      final result = await ClipboardWriter.requestAccessibility();
+      expect(result, isFalse);
+    });
+  });
+
+  group('ClipboardWriter.openAccessibilitySettings', () {
+    test('completes without error on success', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'openAccessibilitySettings') return true;
+            return null;
+          });
+      await expectLater(ClipboardWriter.openAccessibilitySettings(), completes);
+    });
+
+    test('completes without error even when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'ERROR');
+          });
+      await expectLater(ClipboardWriter.openAccessibilitySettings(), completes);
+    });
+
+    test('invokes correct method name', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            captured = call;
+            return null;
+          });
+      await ClipboardWriter.openAccessibilitySettings();
+      expect(captured!.method, equals('openAccessibilitySettings'));
+    });
+  });
 }

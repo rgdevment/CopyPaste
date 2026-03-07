@@ -26,7 +26,7 @@ class AppConfig {
     this.maxFocusVerifyAttempts = 15,
     this.lastBackupDateUtc,
     this.popupWidth = 368,
-    this.popupHeight = 480,
+    this.popupHeight = 500,
     this.cardMinLines = 2,
     this.cardMaxLines = 5,
     this.hideOnDeactivate = true,
@@ -62,7 +62,7 @@ class AppConfig {
         ? DateTime.tryParse(json['lastBackupDateUtc'] as String)
         : null,
     popupWidth: json['popupWidth'] as int? ?? 368,
-    popupHeight: json['popupHeight'] as int? ?? 480,
+    popupHeight: json['popupHeight'] as int? ?? 500,
     cardMinLines: json['cardMinLines'] as int? ?? 2,
     cardMaxLines: json['cardMaxLines'] as int? ?? 5,
     hideOnDeactivate: json['hideOnDeactivate'] as bool? ?? true,
