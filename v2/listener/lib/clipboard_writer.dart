@@ -107,7 +107,8 @@ class ClipboardWriter {
         <String, Object?>{'bundleId': bundleId, 'delayMs': delayMs},
       );
       return result ?? false;
-    } catch (_) {
+    } on PlatformException catch (e) {
+      if (e.code == 'ACCESSIBILITY_DENIED') rethrow;
       return false;
     }
   }

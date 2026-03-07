@@ -6,6 +6,7 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
 import 'package:window_manager/window_manager.dart';
@@ -325,11 +326,18 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     );
     if (!ok) return;
     await _appWindow.hide();
-    await _focusManager.restoreAndPaste(
-      delayBeforeFocusMs: _config.delayBeforeFocusMs,
-      maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
-      delayBeforePasteMs: _config.delayBeforePasteMs,
-    );
+    try {
+      await _focusManager.restoreAndPaste(
+        delayBeforeFocusMs: _config.delayBeforeFocusMs,
+        maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
+        delayBeforePasteMs: _config.delayBeforePasteMs,
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
+        await _appWindow.show();
+        if (mounted) await AccessibilityDialog.checkAndShow(context);
+      }
+    }
   }
 
   Future<void> _cleanup() async {
