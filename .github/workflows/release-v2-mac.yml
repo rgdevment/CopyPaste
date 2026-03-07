@@ -16,22 +16,9 @@ permissions:
 
 jobs:
     build-macos:
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - runner: macos-15
-                      arch: arm64
-                      flutter_arch: arm64
-                      label: Apple Silicon
-                    - runner: macos-13
-                      arch: x86_64
-                      flutter_arch: x64
-                      label: Intel
-
-        runs-on: ${{ matrix.runner }}
+        runs-on: macos-15
         timeout-minutes: 45
-        name: Build macOS (${{ matrix.label }})
+        name: Build macOS (Universal)
 
         env:
             MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
@@ -80,8 +67,8 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: ~/.pub-cache
-                  key: ${{ runner.os }}-${{ matrix.arch }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-                  restore-keys: ${{ runner.os }}-${{ matrix.arch }}-pub-
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
 
             - name: Get dependencies
               run: |
@@ -160,9 +147,8 @@ jobs:
             - name: Create DMG
               run: |
                   VERSION="${{ steps.get_version.outputs.VERSION }}"
-                  ARCH="${{ matrix.arch }}"
                   APP_PATH="v2/app/build/macos/Build/Products/Release/CopyPaste.app"
-                  DMG_NAME="CopyPaste_${VERSION}_${ARCH}.dmg"
+                  DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
 
                   mkdir -p v2/app/dist
 
@@ -193,7 +179,7 @@ jobs:
             - name: Sign DMG
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
-                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_${{ matrix.arch }}.dmg"
+                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
                   codesign --force --sign "Developer ID Application" "$DMG_PATH"
                   codesign --verify "$DMG_PATH"
                   echo "DMG signed"
@@ -201,7 +187,7 @@ jobs:
             - name: Notarize DMG
               if: env.APPLE_ID != '' && env.MACOS_CERTIFICATE_P12 != ''
               run: |
-                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_${{ matrix.arch }}.dmg"
+                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
 
                   echo "Submitting for notarization..."
                   xcrun notarytool submit "$DMG_PATH" \
@@ -227,7 +213,7 @@ jobs:
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
-                  name: release-macos-${{ matrix.arch }}
+                  name: release-macos
                   path: v2/app/dist/*.dmg
                   retention-days: 5
 
@@ -243,16 +229,10 @@ jobs:
               with:
                   ref: ${{ github.ref_name }}
 
-            - name: Download arm64 artifact
+            - name: Download macOS artifact
               uses: actions/download-artifact@v4
               with:
-                  name: release-macos-arm64
-                  path: artifacts
-
-            - name: Download x86_64 artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: release-macos-x86_64
+                  name: release-macos
                   path: artifacts
 
             - name: Create or update GitHub Release
