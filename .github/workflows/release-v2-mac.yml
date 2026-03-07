@@ -18,7 +18,7 @@ jobs:
     build-macos:
         runs-on: macos-15
         timeout-minutes: 45
-        name: Build macOS (Universal)
+        name: Build macOS (Apple Silicon)
 
         env:
             MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
@@ -148,7 +148,7 @@ jobs:
               run: |
                   VERSION="${{ steps.get_version.outputs.VERSION }}"
                   APP_PATH="v2/app/build/macos/Build/Products/Release/CopyPaste.app"
-                  DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
+                  DMG_NAME="CopyPaste_${VERSION}_arm64.dmg"
 
                   mkdir -p v2/app/dist
 
@@ -179,7 +179,7 @@ jobs:
             - name: Sign DMG
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
-                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
+                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_arm64.dmg"
                   codesign --force --sign "Developer ID Application" "$DMG_PATH"
                   codesign --verify "$DMG_PATH"
                   echo "DMG signed"
@@ -187,7 +187,7 @@ jobs:
             - name: Notarize DMG
               if: env.APPLE_ID != '' && env.MACOS_CERTIFICATE_P12 != ''
               run: |
-                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
+                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_arm64.dmg"
 
                   echo "Submitting for notarization..."
                   xcrun notarytool submit "$DMG_PATH" \
