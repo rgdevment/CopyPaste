@@ -52,9 +52,15 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
       ] as CFDictionary
       result(AXIsProcessTrustedWithOptions(options))
     case "openAccessibilitySettings":
-      NSWorkspace.shared.open(
-        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-      )
+      if #available(macOS 13.0, *) {
+        NSWorkspace.shared.open(
+          URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")!
+        )
+      } else {
+        NSWorkspace.shared.open(
+          URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        )
+      }
       result(true)
     default:
       result(FlutterMethodNotImplemented)
@@ -369,10 +375,13 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     }
 
     if !AXIsProcessTrusted() {
-      AXIsProcessTrustedWithOptions(
-        [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+      result(
+        FlutterError(
+          code: "ACCESSIBILITY_DENIED",
+          message: "Accessibility permission not granted",
+          details: nil
+        )
       )
-      result(false)
       return
     }
 
