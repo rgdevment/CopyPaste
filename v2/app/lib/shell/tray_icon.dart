@@ -10,7 +10,7 @@ class TrayIcon with TrayListener {
   final Future<void> Function() onExit;
 
   static String get _iconPath {
-    if (Platform.isMacOS) return 'assets/icons/icon_tray_32.png';
+    if (Platform.isMacOS) return 'assets/icons/icon_mac_tray.png';
     return 'assets/icons/icon_tray.ico';
   }
 
