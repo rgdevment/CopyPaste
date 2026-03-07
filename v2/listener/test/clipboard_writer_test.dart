@@ -310,10 +310,23 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('returns false when channel throws', () async {
+    test('rethrows when channel throws ACCESSIBILITY_DENIED', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (_) async {
             throw PlatformException(code: 'ACCESSIBILITY_DENIED');
+          });
+      expect(
+        () => ClipboardWriter.activateAndPaste(bundleId: 'com.test', delayMs: 0),
+        throwsA(
+          isA<PlatformException>().having((e) => e.code, 'code', 'ACCESSIBILITY_DENIED'),
+        ),
+      );
+    });
+
+    test('returns false when channel throws other error', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            throw PlatformException(code: 'UNKNOWN_ERROR');
           });
       final result = await ClipboardWriter.activateAndPaste(
         bundleId: 'com.test',
