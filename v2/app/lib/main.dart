@@ -282,7 +282,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onHotkey() async {
-    _focusManager.capturePreviousWindow();
+    if (!_appWindow.isVisible) {
+      _focusManager.capturePreviousWindow();
+    }
     await _appWindow.toggle();
   }
 

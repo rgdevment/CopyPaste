@@ -154,31 +154,14 @@ class AppWindow {
 
   Future<void> _positionNearCursorMacOS() async {
     try {
-      // Get mouse location via AppleScript (returns {x, y} in screen coords)
-      final result = Process.runSync('osascript', [
+      final result = await Process.run('osascript', [
         '-e',
         'use framework "AppKit"\n'
-            'set mousePos to current application\'s NSEvent\'s mouseLocation()\n'
-            'set screenH to (current application\'s NSScreen\'s mainScreen()\'s frame()\'s |size|\'s height) as integer\n'
-            'set mx to (mousePos\'s x) as integer\n'
-            'set my to (screenH - (mousePos\'s y as integer))\n'
-            'return (mx as text) & "," & (my as text)',
-      ]);
-      final parts = (result.stdout as String).trim().split(',');
-      if (parts.length != 2) {
-        await windowManager.center();
-        return;
-      }
-      final cursorX = double.tryParse(parts[0]) ?? 0;
-      final cursorY = double.tryParse(parts[1]) ?? 0;
-
-      // Get visible frame of the screen containing the cursor
-      final screenResult = Process.runSync('osascript', [
-        '-e',
-        'use framework "AppKit"\n'
-            'set screens to current application\'s NSScreen\'s screens()\n'
             'set mousePos to current application\'s NSEvent\'s mouseLocation()\n'
             'set mainH to (current application\'s NSScreen\'s mainScreen()\'s frame()\'s |size|\'s height) as integer\n'
+            'set mx to (mousePos\'s x) as integer\n'
+            'set my to (mainH - (mousePos\'s y as integer))\n'
+            'set screens to current application\'s NSScreen\'s screens()\n'
             'repeat with s in screens\n'
             '  set f to s\'s frame()\n'
             '  set fx to f\'s origin\'s x\n'
@@ -191,21 +174,23 @@ class AppWindow {
             '    set vy to (mainH - ((vf\'s origin\'s y) as integer) - ((vf\'s |size|\'s height) as integer))\n'
             '    set vw to (vf\'s |size|\'s width) as integer\n'
             '    set vh to (vf\'s |size|\'s height) as integer\n'
-            '    return (vx as text) & "," & (vy as text) & "," & ((vx + vw) as text) & "," & ((vy + vh) as text)\n'
+            '    return (mx as text) & "," & (my as text) & "," & (vx as text) & "," & (vy as text) & "," & ((vx + vw) as text) & "," & ((vy + vh) as text)\n'
             '  end if\n'
             'end repeat\n'
             'return ""',
       ]);
-      final waParts = (screenResult.stdout as String).trim().split(',');
-      if (waParts.length != 4) {
+      final parts = (result.stdout as String).trim().split(',');
+      if (parts.length != 6) {
         await windowManager.center();
         return;
       }
+      final cursorX = double.tryParse(parts[0]) ?? 0;
+      final cursorY = double.tryParse(parts[1]) ?? 0;
       final workArea = (
-        double.tryParse(waParts[0]) ?? 0,
-        double.tryParse(waParts[1]) ?? 0,
-        double.tryParse(waParts[2]) ?? 1440,
-        double.tryParse(waParts[3]) ?? 900,
+        double.tryParse(parts[2]) ?? 0,
+        double.tryParse(parts[3]) ?? 0,
+        double.tryParse(parts[4]) ?? 1440,
+        double.tryParse(parts[5]) ?? 900,
       );
       await _applyPosition(cursorX, cursorY, workArea);
     } catch (_) {
@@ -310,10 +295,10 @@ class AppWindow {
 
   Future<void> show() async {
     await _positionNearCursor();
-    if (Platform.isWindows || Platform.isMacOS) {
+    if (Platform.isWindows) {
       await applyEffect();
+      await windowManager.setSkipTaskbar(false);
     }
-    await windowManager.setSkipTaskbar(false);
     await windowManager.show();
     await windowManager.focus();
     _visible = true;
@@ -321,9 +306,12 @@ class AppWindow {
   }
 
   Future<void> hide() async {
-    await windowManager.hide();
-    await windowManager.setSkipTaskbar(true);
+    if (!_visible) return;
     _visible = false;
+    await windowManager.hide();
+    if (!Platform.isMacOS) {
+      await windowManager.setSkipTaskbar(true);
+    }
     onVisibilityChanged?.call(false);
   }
 

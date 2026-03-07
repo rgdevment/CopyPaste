@@ -148,18 +148,18 @@ class WindowFocusManager {
 
     await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
+    if (Platform.isMacOS) {
+      await _restoreAndPasteMacOS(delayBeforePasteMs);
+      return;
+    }
+
     if (!restorePreviousWindow()) return;
 
-    if (Platform.isWindows) {
-      final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
-      if (!focused) {
-        await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
-      } else {
-        await Future<void>.delayed(const Duration(milliseconds: 30));
-      }
-    } else {
-      // macOS: give target app time to become active
+    final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
+    if (!focused) {
       await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
+    } else {
+      await Future<void>.delayed(const Duration(milliseconds: 30));
     }
 
     simulatePaste();
@@ -264,6 +264,23 @@ class WindowFocusManager {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _restoreAndPasteMacOS(int delayBeforePasteMs) async {
+    if (_previousBundleId == null) return;
+    final delaySeconds = (delayBeforePasteMs / 1000).toStringAsFixed(2);
+    try {
+      await Process.run('osascript', [
+        '-e',
+        'tell application id "$_previousBundleId" to activate',
+        '-e',
+        'delay $delaySeconds',
+        '-e',
+        'tell application "System Events" to keystroke "v" using command down',
+      ]);
+    } catch (_) {
+      // Accessibility permission may be missing
     }
   }
 
