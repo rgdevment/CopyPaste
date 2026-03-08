@@ -244,3 +244,78 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    update-homebrew-cask:
+        runs-on: ubuntu-latest
+        needs: github-release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        timeout-minutes: 5
+        name: Update Homebrew Cask
+
+        steps:
+            - name: Update Homebrew Tap
+              env:
+                  GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+              run: |
+                  TAG="${GITHUB_REF_NAME}"
+                  VERSION="${TAG#v}"
+
+                  DMG_NAME="CopyPaste_${VERSION}_arm64.dmg"
+                  DMG_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DMG_NAME}"
+
+                  echo "Downloading DMG to compute SHA256..."
+                  curl -fSL -o "/tmp/${DMG_NAME}" "${DMG_URL}"
+                  SHA256=$(sha256sum "/tmp/${DMG_NAME}" | awk '{print $1}')
+                  rm -f "/tmp/${DMG_NAME}"
+
+                  echo "Version: ${VERSION}"
+                  echo "URL: ${DMG_URL}"
+                  echo "SHA256: ${SHA256}"
+
+                  # Determine cask file: stable → copypaste.rb, pre-release → copypaste-beta.rb
+                  if [[ "$VERSION" == *-* ]]; then
+                    CASK_FILE="Casks/copypaste-beta.rb"
+                    CASK_NAME="copypaste-beta"
+                    CASK_DESC="Clipboard history manager for macOS (beta)"
+                  else
+                    CASK_FILE="Casks/copypaste.rb"
+                    CASK_NAME="copypaste"
+                    CASK_DESC="Clipboard history manager for macOS"
+                  fi
+
+                  git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/homebrew-tap.git" /tmp/homebrew-tap
+                  cd /tmp/homebrew-tap
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
+                  mkdir -p Casks
+
+                  cat > "${CASK_FILE}" << CASK_EOF
+                  cask "${CASK_NAME}" do
+                    version "${VERSION}"
+                    sha256 "${SHA256}"
+
+                    url "${DMG_URL}"
+                    name "CopyPaste"
+                    desc "${CASK_DESC}"
+                    homepage "https://github.com/${{ github.repository }}"
+
+                    depends_on macos: ">= :ventura"
+                    arch arm_only: true
+
+                    app "CopyPaste.app"
+
+                    zap trash: [
+                      "~/Library/Application Support/com.rgdevment.copypaste",
+                    ]
+                  end
+                  CASK_EOF
+
+                  sed -i 's/^                  //' "${CASK_FILE}"
+
+                  git add "${CASK_FILE}"
+                  git commit -m "Update ${CASK_NAME} to ${VERSION}"
+                  git push origin main
+
+                  echo "Homebrew Tap updated: ${CASK_NAME} → ${VERSION}"
+
