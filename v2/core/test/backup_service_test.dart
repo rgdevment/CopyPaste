@@ -93,31 +93,33 @@ void main() {
       expect(manifest.imageCount, equals(0));
     });
 
-    test('does not leave temp files in systemTemp after successful backup',
-        () async {
-      final outputPath = p.join(tempDir.path, 'backup_no_leak.zip');
+    test(
+      'does not leave temp files in systemTemp after successful backup',
+      () async {
+        final outputPath = p.join(tempDir.path, 'backup_no_leak.zip');
 
-      // Snapshot temp files before
-      final before = Directory.systemTemp
-          .listSync()
-          .whereType<File>()
-          .where((f) => p.basename(f.path).startsWith('copypaste_backup_'))
-          .map((f) => f.path)
-          .toSet();
+        // Snapshot temp files before
+        final before = Directory.systemTemp
+            .listSync()
+            .whereType<File>()
+            .where((f) => p.basename(f.path).startsWith('copypaste_backup_'))
+            .map((f) => f.path)
+            .toSet();
 
-      await BackupService.createBackup(outputPath, storage, '2.0.0');
+        await BackupService.createBackup(outputPath, storage, '2.0.0');
 
-      // No new copypaste_backup_* files should remain
-      final after = Directory.systemTemp
-          .listSync()
-          .whereType<File>()
-          .where((f) => p.basename(f.path).startsWith('copypaste_backup_'))
-          .map((f) => f.path)
-          .toSet();
+        // No new copypaste_backup_* files should remain
+        final after = Directory.systemTemp
+            .listSync()
+            .whereType<File>()
+            .where((f) => p.basename(f.path).startsWith('copypaste_backup_'))
+            .map((f) => f.path)
+            .toSet();
 
-      final leaked = after.difference(before);
-      expect(leaked, isEmpty, reason: 'Temp backup file was not cleaned up');
-    });
+        final leaked = after.difference(before);
+        expect(leaked, isEmpty, reason: 'Temp backup file was not cleaned up');
+      },
+    );
   });
 
   group('BackupService.restoreBackup', () {
