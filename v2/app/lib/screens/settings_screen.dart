@@ -1172,17 +1172,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       final manifest = await BackupService.restoreBackup(path, widget.storage);
-      if (mounted) {
+      if (manifest != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              manifest != null
-                  ? l.restoreSuccess(manifest.itemCount)
-                  : l.restoreCompleted,
-            ),
-            duration: const Duration(seconds: 3),
+            content: Text(l.restoreRestartRequired),
+            duration: const Duration(seconds: 2),
           ),
         );
+        await Future<void>.delayed(const Duration(seconds: 2));
+        exit(0);
+      } else if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.restoreCompleted)));
       }
     } catch (e) {
       if (mounted) {

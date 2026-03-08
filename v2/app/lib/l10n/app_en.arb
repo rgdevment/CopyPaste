@@ -261,6 +261,9 @@
   "restoreCompleted": "Restore completed",
   "@restoreCompleted": { "description": "Restore completed snackbar" },
 
+  "restoreRestartRequired": "Restore completed. The app will restart to apply changes.",
+  "@restoreRestartRequired": { "description": "Restore requires restart message" },
+
   "shortcutExpand": "Expand / collapse card",
   "@shortcutExpand": { "description": "Expand collapse shortcut" },
 

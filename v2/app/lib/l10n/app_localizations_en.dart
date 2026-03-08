@@ -350,6 +350,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreCompleted => 'Restore completed';
 
   @override
+  String get restoreRestartRequired =>
+      'Restore completed. The app will restart to apply changes.';
+
+  @override
   String get shortcutExpand => 'Expand / collapse card';
 
   @override
