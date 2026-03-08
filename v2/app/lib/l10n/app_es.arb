@@ -137,6 +137,8 @@
 
   "restoreCompleted": "Restauraci\u00f3n completada",
 
+  "restoreRestartRequired": "Restauraci\u00f3n completada. La app se reiniciar\u00e1 para aplicar los cambios.",
+
   "shortcutExpand": "Expandir / contraer tarjeta",
 
   "shortcutFocusSearch": "Enfocar el buscador",

@@ -394,22 +394,44 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
 
     app.activate()
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(delayMs)) {
-      let src = CGEventSource(stateID: .combinedSessionState)
-      let vKey: CGKeyCode = 0x09
+    let maxAttempts = max(delayMs / 10, 15)
+    waitForFocusThenPaste(bundleId: bundleId, attempt: 0, maxAttempts: maxAttempts, result: result)
+  }
 
-      guard let keyDown = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: true),
-            let keyUp = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: false) else {
-        result(false)
-        return
+  private func waitForFocusThenPaste(bundleId: String, attempt: Int, maxAttempts: Int, result: @escaping FlutterResult) {
+    let focused = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundleId
+
+    if focused || attempt >= maxAttempts {
+      if !focused {
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(30)) {
+          self.simulatePaste(result: result)
+        }
+      } else {
+        simulatePaste(result: result)
       }
-
-      keyDown.flags = .maskCommand
-      keyUp.flags = .maskCommand
-      keyDown.post(tap: .cghidEventTap)
-      keyUp.post(tap: .cghidEventTap)
-      result(true)
+      return
     }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(10)) {
+      self.waitForFocusThenPaste(bundleId: bundleId, attempt: attempt + 1, maxAttempts: maxAttempts, result: result)
+    }
+  }
+
+  private func simulatePaste(result: @escaping FlutterResult) {
+    let src = CGEventSource(stateID: .combinedSessionState)
+    let vKey: CGKeyCode = 0x09
+
+    guard let keyDown = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: true),
+          let keyUp = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: false) else {
+      result(false)
+      return
+    }
+
+    keyDown.flags = .maskCommand
+    keyUp.flags = .maskCommand
+    keyDown.post(tap: .cghidEventTap)
+    keyUp.post(tap: .cghidEventTap)
+    result(true)
   }
 
   // MARK: - Cursor & Screen Info

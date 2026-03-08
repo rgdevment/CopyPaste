@@ -758,6 +758,12 @@ abstract class AppLocalizations {
   /// **'Restore completed'**
   String get restoreCompleted;
 
+  /// Restore requires restart message
+  ///
+  /// In en, this message translates to:
+  /// **'Restore completed. The app will restart to apply changes.'**
+  String get restoreRestartRequired;
+
   /// Expand collapse shortcut
   ///
   /// In en, this message translates to:

@@ -354,6 +354,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get restoreCompleted => 'Restauración completada';
 
   @override
+  String get restoreRestartRequired =>
+      'Restauración completada. La app se reiniciará para aplicar los cambios.';
+
+  @override
   String get shortcutExpand => 'Expandir / contraer tarjeta';
 
   @override
