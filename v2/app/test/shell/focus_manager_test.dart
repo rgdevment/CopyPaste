@@ -203,5 +203,44 @@ void main() {
         expect(pasteCall.arguments['bundleId'], equals('com.second.app'));
       },
     );
+
+    test(
+      'restoreAndPaste propagates ACCESSIBILITY_DENIED PlatformException',
+      () async {
+        if (!Platform.isMacOS) return;
+
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              if (call.method == 'captureFrontmostApp') {
+                return 'com.apple.safari';
+              }
+              if (call.method == 'activateAndPaste') {
+                throw PlatformException(
+                  code: 'ACCESSIBILITY_DENIED',
+                  message: 'Accessibility permission not granted',
+                );
+              }
+              return null;
+            });
+
+        final manager = WindowFocusManager();
+        await manager.capturePreviousWindow();
+
+        expect(
+          () => manager.restoreAndPaste(
+            delayBeforeFocusMs: 0,
+            maxFocusVerifyAttempts: 1,
+            delayBeforePasteMs: 0,
+          ),
+          throwsA(
+            isA<PlatformException>().having(
+              (e) => e.code,
+              'code',
+              equals('ACCESSIBILITY_DENIED'),
+            ),
+          ),
+        );
+      },
+    );
   });
 }

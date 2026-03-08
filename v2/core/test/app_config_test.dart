@@ -183,6 +183,29 @@ void main() {
       expect(config.cardMaxLines, equals(5));
     });
 
+    test('showTrayIcon defaults to true', () {
+      const config = AppConfig();
+      expect(config.showTrayIcon, isTrue);
+    });
+
+    test('showTrayIcon round-trips via JSON', () {
+      const config = AppConfig(showTrayIcon: false);
+      final restored = AppConfig.fromJson(config.toJson());
+      expect(restored.showTrayIcon, isFalse);
+    });
+
+    test('showTrayIcon absent in JSON defaults to true', () {
+      final config = AppConfig.fromJson({});
+      expect(config.showTrayIcon, isTrue);
+    });
+
+    test('copyWith showTrayIcon updates value', () {
+      const config = AppConfig();
+      final updated = config.copyWith(showTrayIcon: false);
+      expect(updated.showTrayIcon, isFalse);
+      expect(config.showTrayIcon, isTrue);
+    });
+
     test('toJson omits lastBackupDateUtc when null', () {
       const config = AppConfig();
       expect(config.toJson().containsKey('lastBackupDateUtc'), isFalse);
