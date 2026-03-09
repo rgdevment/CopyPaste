@@ -124,9 +124,12 @@ jobs:
               run: |
                   APP_PATH="v2/app/build/macos/Build/Products/Release/CopyPaste.app"
 
+                  SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk '{print $2}')
+                  echo "Signing with identity: $SIGN_IDENTITY"
+
                   codesign --deep --force --options runtime \
                     --entitlements "v2/app/macos/Runner/Release.entitlements" \
-                    --sign "Developer ID Application" \
+                    --sign "$SIGN_IDENTITY" \
                     "$APP_PATH"
 
                   echo "Verifying signature..."
@@ -166,8 +169,6 @@ jobs:
                     "$APP_PATH" \
                     || true
 
-                  # create-dmg exits 2 when it can't set the volicon (common in CI)
-                  # Verify the DMG was actually created
                   if [[ ! -f "v2/app/dist/$DMG_NAME" ]]; then
                     echo "::error::DMG was not created"
                     exit 1
@@ -180,7 +181,11 @@ jobs:
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
                   DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_arm64.dmg"
-                  codesign --force --sign "Developer ID Application" "$DMG_PATH"
+
+                  SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk '{print $2}')
+                  echo "Signing DMG with identity: $SIGN_IDENTITY"
+
+                  codesign --force --sign "$SIGN_IDENTITY" "$DMG_PATH"
                   codesign --verify "$DMG_PATH"
                   echo "DMG signed"
 
@@ -290,29 +295,29 @@ jobs:
                   mkdir -p Casks
 
                   cat > "${CASK_FILE}" <<- CASK_EOF
-                    cask "${CASK_NAME}" do
-                      version "${VERSION}"
-                      sha256 "${SHA256}"
+                  	cask "${CASK_NAME}" do
+                  	  version "${VERSION}"
+                  	  sha256 "${SHA256}"
 
-                      url "${DMG_URL}"
-                      name "CopyPaste"
-                      desc "${CASK_DESC}"
-                      homepage "https://github.com/${{ github.repository }}"
+                  	  url "${DMG_URL}"
+                  	  name "CopyPaste"
+                  	  desc "${CASK_DESC}"
+                  	  homepage "https://github.com/${{ github.repository }}"
 
-                      depends_on macos: ">= :ventura"
+                  	  depends_on macos: ">= :ventura"
 
-                      on_arm do
-                        app "CopyPaste.app"
-                      end
+                  	  on_arm do
+                  	    app "CopyPaste.app"
+                  	  end
 
-                      on_intel do
-                        odie "CopyPaste only supports Apple Silicon (ARM) Macs."
-                      end
+                  	  on_intel do
+                  	    odie "CopyPaste only supports Apple Silicon (ARM) Macs."
+                  	  end
 
-                      zap trash: [
-                        "~/Library/Application Support/com.rgdevment.copypaste",
-                      ]
-                    end
+                  	  zap trash: [
+                  	    "~/Library/Application Support/com.rgdevment.copypaste",
+                  	  ]
+                  	end
                   CASK_EOF
 
                   git add "${CASK_FILE}"
@@ -320,4 +325,3 @@ jobs:
                   git push origin main
 
                   echo "Homebrew Tap updated: ${CASK_NAME} → ${VERSION}"
-
