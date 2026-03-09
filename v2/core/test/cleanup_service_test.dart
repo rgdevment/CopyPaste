@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:core/core.dart';
 import 'package:core/repository/i_clipboard_repository.dart';
 
-// Fake repository whose clearOldItems always throws.
 class _FailingRepo implements IClipboardRepository {
   bool failGetImagePaths = false;
 
@@ -21,7 +20,6 @@ class _FailingRepo implements IClipboardRepository {
     return Future.value([]);
   }
 
-  // Remaining interface methods — not exercised in these tests.
   @override
   Future<void> save(ClipboardItem item) => Future.value();
   @override
@@ -248,42 +246,23 @@ void main() {
 
     test('does not crash on missing base dir', () async {
       final service = CleanupService(repo, () => 30);
-      // Do NOT call start(), baseDirPath is null
-      // runCleanupIfNeeded uses '' as basePath — may fail file write gracefully
       await expectLater(service.runCleanupIfNeeded(), completes);
       service.dispose();
     });
 
     test('logs error when clearOldItems throws', () async {
-      // Covers the AppLogger.error('Cleanup failed: $e') catch branch.
       final failingRepo = _FailingRepo();
       final service = CleanupService(failingRepo, () => 30);
       service.start(tempDir.path);
       await Future<void>.delayed(const Duration(milliseconds: 50));
       service.dispose();
-      // No exception propagated — error was logged internally.
     });
 
     test('logs error when getImagePaths throws during orphan cleanup', () async {
-      // Covers the AppLogger.error('Orphan image cleanup failed: $e') catch branch.
-      // We need a StorageConfig passed so _cleanOrphanImages is attempted.
       final storage = await StorageConfig.create(baseDir: tempDir.path);
       await storage.ensureDirectories();
 
-      final failingRepo = _FailingRepo()..failGetImagePaths = true;
-      // Wrap in a repo that succeeds on clearOldItems but fails on getImagePaths.
-      // _FailingRepo.clearOldItems throws, so swap to a version that succeeds there.
       final repoWithPassingClear = SqliteRepository.inMemory();
-      // Use the real repo for clearOldItems and override getImagePaths via storage.
-      // Simplest: use _FailingRepo with failGetImagePaths=true and set retentionDays
-      // such that clearOldItems succeeds — but _FailingRepo always throws.
-      // Instead, directly test the _cleanOrphanImages path independently:
-      // Create a service with a repo where getImagePaths fails.
-
-      // Build a fresh CleanupService with a partially-failing custom repo.
-      // Since _FailingRepo.clearOldItems throws, clearOldItems catch fires first,
-      // which prevents _cleanOrphanImages from being reached. So we need a repo
-      // that succeeds on clearOldItems but fails on getImagePaths.
       final hybridRepo = _HybridRepo(repoWithPassingClear);
       final hybridService = CleanupService(
         hybridRepo,
@@ -291,7 +270,6 @@ void main() {
         storage: storage,
       );
 
-      // Write a last-cleanup date of yesterday so cleanup runs.
       final yesterday = DateTime.now().toUtc().subtract(
         const Duration(days: 1),
       );
@@ -303,12 +281,10 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
       hybridService.dispose();
       await repoWithPassingClear.close();
-      // No exception propagated — error was logged internally.
     });
   });
 }
 
-/// Delegates everything to [_inner] except getImagePaths which always throws.
 class _HybridRepo implements IClipboardRepository {
   _HybridRepo(this._inner);
   final IClipboardRepository _inner;
