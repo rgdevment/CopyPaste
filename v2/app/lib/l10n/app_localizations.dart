@@ -901,6 +901,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check Again'**
   String get permissionsCheckAgain;
+
+  /// Label shown while polling for the accessibility permission grant
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for permission…'**
+  String get permissionsWaiting;
 }
 
 class _AppLocalizationsDelegate
