@@ -18,7 +18,7 @@ jobs:
     build-macos:
         runs-on: macos-15
         timeout-minutes: 45
-        name: Build macOS (Apple Silicon)
+        name: Build macOS (Universal)
 
         env:
             MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
@@ -109,14 +109,25 @@ jobs:
                   echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
                   echo "Certificate imported successfully"
 
-            # ── Build ──
-            - name: Build macOS release
+            # ── Build (universal: arm64 + x86_64) ──
+            - name: Build macOS release (universal)
               run: |
                   cd v2/app
                   flutter build macos --release \
                     --build-name="${{ steps.get_version.outputs.BUILD_NAME }}" \
                     --build-number="${{ steps.get_version.outputs.BUILD_NUMBER }}" \
                     --dart-define="APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
+
+            - name: Verify universal binary
+              run: |
+                  APP="v2/app/build/macos/Build/Products/Release/CopyPaste.app"
+                  ARCHS=$(lipo -archs "$APP/Contents/MacOS/CopyPaste")
+                  echo "Architectures: $ARCHS"
+                  if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
+                    echo "::error::Expected universal binary (x86_64 + arm64), got: $ARCHS"
+                    exit 1
+                  fi
+                  echo "Universal binary verified (x86_64 + arm64)"
 
             # ── Code Sign the .app ──
             - name: Sign application
@@ -151,7 +162,7 @@ jobs:
               run: |
                   VERSION="${{ steps.get_version.outputs.VERSION }}"
                   APP_PATH="v2/app/build/macos/Build/Products/Release/CopyPaste.app"
-                  DMG_NAME="CopyPaste_${VERSION}_arm64.dmg"
+                  DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
 
                   mkdir -p v2/app/dist
 
@@ -180,7 +191,7 @@ jobs:
             - name: Sign DMG
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
-                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_arm64.dmg"
+                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
 
                   SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk '{print $2}')
                   echo "Signing DMG with identity: $SIGN_IDENTITY"
@@ -192,7 +203,7 @@ jobs:
             - name: Notarize DMG
               if: env.APPLE_ID != '' && env.MACOS_CERTIFICATE_P12 != ''
               run: |
-                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_arm64.dmg"
+                  DMG_PATH="v2/app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
 
                   echo "Submitting for notarization..."
                   xcrun notarytool submit "$DMG_PATH" \
@@ -264,7 +275,7 @@ jobs:
                   TAG="${GITHUB_REF_NAME}"
                   VERSION="${TAG#v}"
 
-                  DMG_NAME="CopyPaste_${VERSION}_arm64.dmg"
+                  DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
                   DMG_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DMG_NAME}"
 
                   echo "Downloading DMG to compute SHA256..."
@@ -306,13 +317,7 @@ jobs:
 
                   	  depends_on macos: ">= :ventura"
 
-                  	  on_arm do
-                  	    app "CopyPaste.app"
-                  	  end
-
-                  	  on_intel do
-                  	    odie "CopyPaste only supports Apple Silicon (ARM) Macs."
-                  	  end
+                  	  app "CopyPaste.app"
 
                   	  zap trash: [
                   	    "~/Library/Application Support/com.rgdevment.copypaste",
@@ -325,3 +330,4 @@ jobs:
                   git push origin main
 
                   echo "Homebrew Tap updated: ${CASK_NAME} → ${VERSION}"
+
