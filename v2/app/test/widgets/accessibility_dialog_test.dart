@@ -94,8 +94,9 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('open settings FilledButton calls openAccessibilitySettings',
-        (tester) async {
+    testWidgets('open settings FilledButton calls openAccessibilitySettings', (
+      tester,
+    ) async {
       var settingsOpened = false;
 
       _setMockHandler(channel, (call) async {
@@ -112,74 +113,76 @@ void main() {
       expect(settingsOpened, isTrue);
     });
 
-    testWidgets('checkAndShow skips dialog when accessibility already granted',
-        (tester) async {
-      _setMockHandler(channel, (call) async {
-        if (call.method == 'checkAccessibility') return true;
-        return null;
-      });
+    testWidgets(
+      'checkAndShow skips dialog when accessibility already granted',
+      (tester) async {
+        _setMockHandler(channel, (call) async {
+          if (call.method == 'checkAccessibility') return true;
+          return null;
+        });
 
-      var completed = false;
+        var completed = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Builder(
-            builder: (ctx) => ElevatedButton(
-              onPressed: () async {
-                await AccessibilityDialog.checkAndShow(ctx);
-                completed = true;
-              },
-              child: const Text('Check'),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Check'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(AlertDialog), findsNothing);
-      expect(completed, isTrue);
-    });
-
-    testWidgets('poll timer auto-closes dialog when accessibility becomes granted',
-        (tester) async {
-      var checkCallCount = 0;
-
-      _setMockHandler(channel, (call) async {
-        if (call.method == 'requestAccessibility') return false;
-        if (call.method == 'checkAccessibility') {
-          checkCallCount++;
-          return checkCallCount >= 2;
-        }
-        return null;
-      });
-
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: CopyPasteTheme(
-            themeData: CompactTheme(),
-            child: Scaffold(
-              body: Builder(
-                builder: (ctx) => const AccessibilityDialog(),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () async {
+                  await AccessibilityDialog.checkAndShow(ctx);
+                  completed = true;
+                },
+                child: const Text('Check'),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
 
-      expect(find.byType(AccessibilityDialog), findsOneWidget);
+        await tester.tap(find.text('Check'));
+        await tester.pumpAndSettle();
 
-      // Advance clock past two timer ticks (2s each)
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(completed, isTrue);
+      },
+    );
 
-      expect(checkCallCount, greaterThanOrEqualTo(2));
-    });
+    testWidgets(
+      'poll timer auto-closes dialog when accessibility becomes granted',
+      (tester) async {
+        var checkCallCount = 0;
+
+        _setMockHandler(channel, (call) async {
+          if (call.method == 'requestAccessibility') return false;
+          if (call.method == 'checkAccessibility') {
+            checkCallCount++;
+            return checkCallCount >= 2;
+          }
+          return null;
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CopyPasteTheme(
+              themeData: CompactTheme(),
+              child: Scaffold(
+                body: Builder(builder: (ctx) => const AccessibilityDialog()),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AccessibilityDialog), findsOneWidget);
+
+        // Advance clock past two timer ticks (2s each)
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+
+        expect(checkCallCount, greaterThanOrEqualTo(2));
+      },
+    );
 
     testWidgets('dispose cancels poll timer without errors', (tester) async {
       await tester.pumpWidget(wrapWidget(const AccessibilityDialog()));
