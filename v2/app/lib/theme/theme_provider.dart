@@ -13,8 +13,10 @@ class CopyPasteTheme extends InheritedWidget {
 
   static AppThemeData of(BuildContext context) {
     final widget = context.dependOnInheritedWidgetOfExactType<CopyPasteTheme>();
-    assert(widget != null, 'No CopyPasteTheme found in context');
-    return widget!.themeData;
+    if (widget == null) {
+      throw FlutterError('No CopyPasteTheme found in context');
+    }
+    return widget.themeData;
   }
 
   static AppThemeColorScheme colorsOf(BuildContext context) {

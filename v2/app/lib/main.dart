@@ -398,6 +398,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           onSave: (newConfig, hotkeyChanged) async {
             final oldShowTray = _config.showTrayIcon;
             setState(() => _config = newConfig);
+            widget.clipboardService.pasteIgnoreWindowMs =
+                newConfig.duplicateIgnoreWindowMs;
             _appWindow.updatePopupSize(
               newConfig.popupWidth.toDouble(),
               newConfig.popupHeight.toDouble(),

@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
 import '../repository/i_clipboard_repository.dart';
+import 'app_logger.dart';
 
 class CleanupService {
   CleanupService(
@@ -50,7 +51,9 @@ class CleanupService {
       await _repository.clearOldItems(retentionDays, excludePinned: true);
       _saveLastCleanupDate(now);
       await _cleanOrphanImages();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('Cleanup failed: $e');
+    }
   }
 
   DateTime _loadLastCleanupDate() {
@@ -84,6 +87,8 @@ class CleanupService {
     try {
       final validPaths = await _repository.getImagePaths();
       storage.cleanOrphanImages(validPaths);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('Orphan image cleanup failed: $e');
+    }
   }
 }

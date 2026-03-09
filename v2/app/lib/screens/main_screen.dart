@@ -372,8 +372,9 @@ class MainScreenState extends State<MainScreen> {
 
   void _ensureVisible(int index) {
     if (index < 0 || index >= _items.length) return;
+    final item = _items[index];
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _cardKeys[_items[index].id]?.currentContext;
+      final ctx = _cardKeys[item.id]?.currentContext;
       if (ctx != null) {
         Scrollable.ensureVisible(
           ctx,

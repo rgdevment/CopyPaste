@@ -326,7 +326,7 @@ class SqliteRepository implements IClipboardRepository {
     final conditions = <String>[];
     final variables = <Variable>[];
 
-    if (!hasAnyFilter && isPinned != null) {
+    if (isPinned != null) {
       conditions.add('c.is_pinned = ?');
       variables.add(Variable.withBool(isPinned));
     }
