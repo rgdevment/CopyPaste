@@ -135,6 +135,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   late AppConfig _config;
   final WindowFocusManager _focusManager = WindowFocusManager();
   final _mainScreenKey = GlobalKey<MainScreenState>();
+  final _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
 
@@ -337,7 +338,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     } on PlatformException catch (e) {
       if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
         await _appWindow.show();
-        if (mounted) await AccessibilityDialog.checkAndShow(context);
+        final navContext = _navigatorKey.currentContext;
+        if (navContext != null && navContext.mounted) {
+          await AccessibilityDialog.checkAndShow(navContext);
+        }
       }
     }
   }
@@ -454,6 +458,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     return CopyPasteTheme(
       themeData: CompactTheme(),
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'CopyPaste',
         debugShowCheckedModeBanner: false,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -510,20 +515,27 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 : CopyPasteTheme.colorsOf(ctx).background;
             return Scaffold(
               backgroundColor: bg,
-              body: MainScreen(
-                key: _mainScreenKey,
-                clipboardService: widget.clipboardService,
-                colorLabels: _config.colorLabels,
-                resetScrollOnShow: _config.resetScrollOnShow,
-                resetSearchOnShow: _config.resetSearchOnShow,
-                cardMinLines: _config.cardMinLines,
-                cardMaxLines: _config.cardMaxLines,
-                showHint: !_config.hasSeenHint,
-                onDismissHint: _dismissHint,
-                onPaste: _onPasteItem,
-                onPastePlain: (item) => _onPasteItem(item, plainText: true),
-                onExit: () => _appWindow.hide(),
-                onSettings: () => _openSettings(ctx),
+              body: LayoutBuilder(
+                builder: (_, constraints) {
+                  if (constraints.maxHeight < 100) {
+                    return const SizedBox.shrink();
+                  }
+                  return MainScreen(
+                    key: _mainScreenKey,
+                    clipboardService: widget.clipboardService,
+                    colorLabels: _config.colorLabels,
+                    resetScrollOnShow: _config.resetScrollOnShow,
+                    resetSearchOnShow: _config.resetSearchOnShow,
+                    cardMinLines: _config.cardMinLines,
+                    cardMaxLines: _config.cardMaxLines,
+                    showHint: !_config.hasSeenHint,
+                    onDismissHint: _dismissHint,
+                    onPaste: _onPasteItem,
+                    onPastePlain: (item) => _onPasteItem(item, plainText: true),
+                    onExit: () => _appWindow.hide(),
+                    onSettings: () => _openSettings(ctx),
+                  );
+                },
               ),
             );
           },
