@@ -877,6 +877,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Permission granted'**
   String get permissionsGranted;
+
+  /// Title shown when permission was previously granted but is no longer recognised (Gatekeeper identity change)
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility Permission Lost'**
+  String get permissionsResetTitle;
+
+  /// Instructions for fixing stale TCC entries after Gatekeeper re-authorisation
+  ///
+  /// In en, this message translates to:
+  /// **'macOS no longer recognises CopyPaste\'s permission because the app was re-authorised through Gatekeeper.\n\nTo fix this:\n1. Open Accessibility settings below\n2. Remove CopyPaste from the list (−)\n3. Re-add it or toggle it back on'**
+  String get permissionsResetMessage;
+
+  /// Shown after polling times out without detecting the permission grant
+  ///
+  /// In en, this message translates to:
+  /// **'If you have already granted the permission, macOS may need CopyPaste to restart for the change to take effect.\n\nClose and reopen CopyPaste, or click Check Again.'**
+  String get permissionsRestartMessage;
+
+  /// Button to manually re-check accessibility permission
+  ///
+  /// In en, this message translates to:
+  /// **'Check Again'**
+  String get permissionsCheckAgain;
 }
 
 class _AppLocalizationsDelegate

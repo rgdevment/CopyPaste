@@ -413,4 +413,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionsGranted => 'Permission granted';
+
+  @override
+  String get permissionsResetTitle => 'Accessibility Permission Lost';
+
+  @override
+  String get permissionsResetMessage =>
+      'macOS no longer recognises CopyPaste\'s permission because the app was re-authorised through Gatekeeper.\n\nTo fix this:\n1. Open Accessibility settings below\n2. Remove CopyPaste from the list (−)\n3. Re-add it or toggle it back on';
+
+  @override
+  String get permissionsRestartMessage =>
+      'If you have already granted the permission, macOS may need CopyPaste to restart for the change to take effect.\n\nClose and reopen CopyPaste, or click Check Again.';
+
+  @override
+  String get permissionsCheckAgain => 'Check Again';
 }

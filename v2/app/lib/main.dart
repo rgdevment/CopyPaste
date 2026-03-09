@@ -340,7 +340,18 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         await _appWindow.show();
         final navContext = _navigatorKey.currentContext;
         if (navContext != null && navContext.mounted) {
-          await AccessibilityDialog.checkAndShow(navContext);
+          final granted = await AccessibilityDialog.checkAndShow(
+            navContext,
+            previouslyGranted: _config.accessibilityWasGranted,
+          );
+          if (granted && !_config.accessibilityWasGranted) {
+            _config = _config.copyWith(accessibilityWasGranted: true);
+            unawaited(
+              _config.save(
+                '${widget.storage.configPath}/${AppConfig.fileName}',
+              ),
+            );
+          }
         }
       }
     }
@@ -492,8 +503,20 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           builder: (ctx) {
             if (Platform.isMacOS && !_permissionsChecked) {
               _permissionsChecked = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                AccessibilityDialog.checkAndShow(ctx);
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                final wasGranted = _config.accessibilityWasGranted;
+                final granted = await AccessibilityDialog.checkAndShow(
+                  ctx,
+                  previouslyGranted: wasGranted,
+                );
+                if (granted && !wasGranted) {
+                  _config = _config.copyWith(accessibilityWasGranted: true);
+                  unawaited(
+                    _config.save(
+                      '${widget.storage.configPath}/${AppConfig.fileName}',
+                    ),
+                  );
+                }
               });
             }
             final l = AppLocalizations.of(ctx);
