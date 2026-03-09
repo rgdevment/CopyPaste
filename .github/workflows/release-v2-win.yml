@@ -144,20 +144,30 @@ jobs:
               run: |
                   $version = "${{ steps.get_version.outputs.VERSION }}"
                   $distDir = "v2/app/dist"
-                  $searchDirs = @("v2/app/dist", "v2/app/build")
-                  $msix = $searchDirs | ForEach-Object {
-                    if (Test-Path $_) { Get-ChildItem -Path $_ -Recurse -Filter "*.msix" }
-                  } | Select-Object -First 1
 
-                  if ($msix) {
-                    $newName = "CopyPaste_${version}_x64_store.msix"
+                  # store: true generates .msixupload, not .msix
+                  $extensions = @("*.msixupload", "*.msixbundle", "*.msix")
+                  $searchDirs = @("v2/app/dist", "v2/app/build")
+                  $found = $null
+                  foreach ($ext in $extensions) {
+                    $found = $searchDirs | ForEach-Object {
+                      if (Test-Path $_) { Get-ChildItem -Path $_ -Recurse -Filter $ext }
+                    } | Select-Object -First 1
+                    if ($found) { break }
+                  }
+
+                  if ($found) {
+                    $newName = "CopyPaste_${version}_x64_store$($found.Extension)"
                     $newPath = Join-Path $distDir $newName
                     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
-                    Move-Item -Path $msix.FullName -Destination $newPath
-                    Write-Host "Moved MSIX to: $newPath"
+                    Move-Item -Path $found.FullName -Destination $newPath
+                    Write-Host "Moved $($found.Name) to: $newPath"
                   } else {
-                    Write-Warning "No .msix file found in dist/ or build/"
-                    Get-ChildItem -Path "v2/app" -Recurse -Filter "*.msix" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "Found: $($_.FullName)" }
+                    Write-Warning "No MSIX package found"
+                    Write-Host "--- All files under v2/app/dist and v2/app/build ---"
+                    @("v2/app/dist", "v2/app/build") | ForEach-Object {
+                      if (Test-Path $_) { Get-ChildItem -Path $_ -Recurse -File | ForEach-Object { Write-Host $_.FullName } }
+                    }
                   }
 
             - name: Upload artifacts
@@ -202,7 +212,7 @@ jobs:
                   prerelease: ${{ contains(github.ref_name, '-') }}
                   files: |
                       artifacts/**/*_Setup.exe
-                      artifacts/**/*_store.msix
+                      artifacts/**/*_store.msix*
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
