@@ -271,7 +271,6 @@ jobs:
                   echo "URL: ${DMG_URL}"
                   echo "SHA256: ${SHA256}"
 
-                  # Determine cask file: stable → copypaste.rb, pre-release → copypaste-beta.rb
                   if [[ "$VERSION" == *-* ]]; then
                     CASK_FILE="Casks/copypaste-beta.rb"
                     CASK_NAME="copypaste-beta"
@@ -290,28 +289,31 @@ jobs:
 
                   mkdir -p Casks
 
-                  cat > "${CASK_FILE}" << CASK_EOF
-                  cask "${CASK_NAME}" do
-                    version "${VERSION}"
-                    sha256 "${SHA256}"
+                  cat > "${CASK_FILE}" <<- CASK_EOF
+                    cask "${CASK_NAME}" do
+                      version "${VERSION}"
+                      sha256 "${SHA256}"
 
-                    url "${DMG_URL}"
-                    name "CopyPaste"
-                    desc "${CASK_DESC}"
-                    homepage "https://github.com/${{ github.repository }}"
+                      url "${DMG_URL}"
+                      name "CopyPaste"
+                      desc "${CASK_DESC}"
+                      homepage "https://github.com/${{ github.repository }}"
 
-                    depends_on macos: ">= :ventura"
-                    arch arm_only: true
+                      depends_on macos: ">= :ventura"
 
-                    app "CopyPaste.app"
+                      on_arm do
+                        app "CopyPaste.app"
+                      end
 
-                    zap trash: [
-                      "~/Library/Application Support/com.rgdevment.copypaste",
-                    ]
-                  end
+                      on_intel do
+                        odie "CopyPaste only supports Apple Silicon (ARM) Macs."
+                      end
+
+                      zap trash: [
+                        "~/Library/Application Support/com.rgdevment.copypaste",
+                      ]
+                    end
                   CASK_EOF
-
-                  sed -i 's/^                  //' "${CASK_FILE}"
 
                   git add "${CASK_FILE}"
                   git commit -m "Update ${CASK_NAME} to ${VERSION}"
