@@ -1,7 +1,7 @@
-display_name: CopyPaste
+display_name: CopyPaste - Clipboard Manager
 publisher_display_name: RGDevment
-publisher: CN=RGDevment
-identity_name: RGDevment.CopyPaste
+publisher: CN=AC154EDC-DBFC-482B-AF3B-A1A6FF12DA84
+identity_name: rgdevment.CopyPaste-ClipboardManager
 logo_path: assets/icons/icon_app_256.png
 store: "true"
 build_windows: "false"
