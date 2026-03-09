@@ -11,8 +11,8 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
   private var lastContentHash: String = ""
   private var lastChangeTick: UInt64 = 0
 
-  private static let debounceMs: UInt64 = 500
-  private static let pollingIntervalSec: TimeInterval = 0.5
+  private static let debounceMs: UInt64 = 250
+  private static let pollingIntervalSec: TimeInterval = 0.25
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let instance = ListenerPlugin()

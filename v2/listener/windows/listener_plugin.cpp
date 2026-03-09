@@ -40,7 +40,7 @@ namespace {
 static const UINT kWmClipboardUpdate = 0x031D;
 
 std::vector<uint8_t> ConvertDibToBmp(const std::vector<uint8_t>& dib) {
-  if (dib.size() < sizeof(BITMAPINFOHEADER)) return dib;
+  if (dib.size() < sizeof(BITMAPINFOHEADER)) return {};
 
   const auto* bih = reinterpret_cast<const BITMAPINFOHEADER*>(dib.data());
   DWORD colorTableSize = 0;
@@ -223,7 +223,9 @@ void ListenerPlugin::StartListening(
   std::lock_guard<std::mutex> lock(sink_mutex_);
   sink_ = std::move(sink);
 
-  HWND hwnd = registrar_->GetView()->GetNativeWindow();
+  HWND hwnd = registrar_->GetView()
+                   ? registrar_->GetView()->GetNativeWindow()
+                   : nullptr;
   // Use the top-level window for AddClipboardFormatListener so that
   // WM_CLIPBOARDUPDATE arrives at the same WndProc that dispatches
   // to RegisterTopLevelWindowProcDelegate callbacks.
@@ -354,6 +356,7 @@ void ListenerPlugin::OnClipboardChanged() {
       auto dib = ExtractBytes(CF_DIB);
       if (!dib.empty()) {
         auto bytes = ConvertDibToBmp(dib);
+        if (!bytes.empty()) {
         event = {
             {flutter::EncodableValue("type"),
              flutter::EncodableValue(1)},  // image=1
@@ -364,6 +367,7 @@ void ListenerPlugin::OnClipboardChanged() {
             {flutter::EncodableValue("contentHash"),
              flutter::EncodableValue(hash)},
         };
+        }
       }
     }
   } catch (const std::exception& e) {
@@ -832,12 +836,17 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
 
   HDC hDC = GetDC(nullptr);
   auto* bi = reinterpret_cast<BITMAPINFO*>(ptr);
-  GetDIBits(hDC, hBitmap, 0, bm.bmHeight,
+  int scanLines = GetDIBits(hDC, hBitmap, 0, bm.bmHeight,
             static_cast<uint8_t*>(ptr) + sizeof(BITMAPINFOHEADER),
             bi, DIB_RGB_COLORS);
   ReleaseDC(nullptr, hDC);
   GlobalUnlock(hMem);
   DeleteObject(hBitmap);
+
+  if (scanLines == 0) {
+    GlobalFree(hMem);
+    return false;
+  }
 
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()

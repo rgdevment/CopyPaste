@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class ClipboardWriter {
@@ -29,7 +30,9 @@ class ClipboardWriter {
         if (htmlB64 != null && htmlB64.isNotEmpty) {
           args['html'] = base64Decode(htmlB64);
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('ClipboardWriter: metadata parse error: $e');
+      }
     }
 
     final result = await _channel.invokeMethod<bool>(
