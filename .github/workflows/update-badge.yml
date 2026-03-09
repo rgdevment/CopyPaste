@@ -25,5 +25,5 @@ jobs:
                   STORE_CLIENT_ID: ${{ secrets.STORE_CLIENT_ID }}
                   STORE_CLIENT_SECRET: ${{ secrets.STORE_CLIENT_SECRET }}
                   STORE_APP_ID: ${{ vars.STORE_APP_ID }}
-              run: uv run tools/scripts/update_badge.py
+              run: uv run resources/scripts/update_badge.py
 
