@@ -328,7 +328,7 @@ class AppWindow {
   // ---------- Permission gate mode ----------
 
   static const double _gateWidth = 480;
-  static const double _gateHeight = 420;
+  static const double _gateHeight = 480;
 
   bool _gateMode = false;
   bool get isGateMode => _gateMode;

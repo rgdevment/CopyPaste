@@ -423,10 +423,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionsRestartMessage =>
-      'If you have already granted the permission, macOS may need CopyPaste to restart for the change to take effect.\n\nClose and reopen CopyPaste, or click Check Again.';
+      'Make sure CopyPaste is enabled in Privacy & Security > Accessibility.\n\nThe app will continue automatically when the permission is detected.';
 
   @override
   String get permissionsCheckAgain => 'Check Again';
+
+  @override
+  String get permissionsRestartApp => 'Restart App';
 
   @override
   String get permissionsWaiting => 'Waiting for permission…';

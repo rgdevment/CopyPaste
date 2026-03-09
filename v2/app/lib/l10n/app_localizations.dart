@@ -893,7 +893,7 @@ abstract class AppLocalizations {
   /// Shown after polling times out without detecting the permission grant
   ///
   /// In en, this message translates to:
-  /// **'If you have already granted the permission, macOS may need CopyPaste to restart for the change to take effect.\n\nClose and reopen CopyPaste, or click Check Again.'**
+  /// **'Make sure CopyPaste is enabled in Privacy & Security > Accessibility.\n\nThe app will continue automatically when the permission is detected.'**
   String get permissionsRestartMessage;
 
   /// Button to manually re-check accessibility permission
@@ -901,6 +901,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check Again'**
   String get permissionsCheckAgain;
+
+  /// Button to restart the app when permission detection is stuck
+  ///
+  /// In en, this message translates to:
+  /// **'Restart App'**
+  String get permissionsRestartApp;
 
   /// Label shown while polling for the accessibility permission grant
   ///
