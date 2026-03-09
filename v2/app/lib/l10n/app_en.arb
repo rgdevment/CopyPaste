@@ -331,5 +331,8 @@
   "@permissionsRestartMessage": { "description": "Shown after polling times out without detecting the permission grant" },
 
   "permissionsCheckAgain": "Check Again",
-  "@permissionsCheckAgain": { "description": "Button to manually re-check accessibility permission" }
+  "@permissionsCheckAgain": { "description": "Button to manually re-check accessibility permission" },
+
+  "permissionsWaiting": "Waiting for permission…",
+  "@permissionsWaiting": { "description": "Label shown while polling for the accessibility permission grant" }
 }

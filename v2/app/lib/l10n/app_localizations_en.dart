@@ -427,4 +427,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionsCheckAgain => 'Check Again';
+
+  @override
+  String get permissionsWaiting => 'Waiting for permission…';
 }

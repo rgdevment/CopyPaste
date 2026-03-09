@@ -24,7 +24,7 @@ import 'screens/settings_screen.dart';
 import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
-import 'widgets/accessibility_dialog.dart';
+import 'screens/permission_gate_screen.dart';
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
   'dark' => true,
@@ -138,6 +138,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   final _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
+  bool _showPermissionGate = false;
 
   @override
   void initState() {
@@ -174,15 +175,36 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       await _trayIcon.init();
     }
     await _hotkeyHandler.registerWithFallback();
-    if (isFirstRun) {
-      widget.storage.markAsInitialized();
-      await _appWindow.show();
+
+    // macOS: check accessibility before allowing normal operation.
+    if (Platform.isMacOS) {
+      final granted = await ClipboardWriter.checkAccessibility();
+      if (!granted) {
+        setState(() => _showPermissionGate = true);
+        await _appWindow.enterGateMode();
+      } else {
+        // Persist that we know it was granted.
+        if (!_config.accessibilityWasGranted) {
+          _config = _config.copyWith(accessibilityWasGranted: true);
+          unawaited(
+            _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+          );
+        }
+        if (isFirstRun) {
+          widget.storage.markAsInitialized();
+          await _appWindow.show();
+        }
+      }
+    } else {
+      if (isFirstRun) {
+        widget.storage.markAsInitialized();
+        await _appWindow.show();
+      }
     }
+
     _startListening();
     unawaited(AutoUpdateService.initialize());
   }
-
-  bool _permissionsChecked = false;
 
   void _startListening() {
     if (!Platform.isWindows && !Platform.isMacOS) return;
@@ -337,22 +359,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       );
     } on PlatformException catch (e) {
       if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
-        await _appWindow.show();
-        final navContext = _navigatorKey.currentContext;
-        if (navContext != null && navContext.mounted) {
-          final granted = await AccessibilityDialog.checkAndShow(
-            navContext,
-            previouslyGranted: _config.accessibilityWasGranted,
-          );
-          if (granted && !_config.accessibilityWasGranted) {
-            _config = _config.copyWith(accessibilityWasGranted: true);
-            unawaited(
-              _config.save(
-                '${widget.storage.configPath}/${AppConfig.fileName}',
-              ),
-            );
-          }
-        }
+        _enterPermissionGate();
       }
     }
   }
@@ -449,6 +456,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   @override
   void onWindowBlur() {
     if (!_appWindow.isReady || !_appWindow.isVisible) return;
+    if (_appWindow.isGateMode) return;
     if (!_config.hideOnDeactivate) return;
     _appWindow.hideIfNotPinned();
   }
@@ -456,6 +464,20 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   @override
   void onWindowClose() {
     _appWindow.hide();
+  }
+
+  void _enterPermissionGate() {
+    setState(() => _showPermissionGate = true);
+    _appWindow.enterGateMode();
+  }
+
+  Future<void> _onPermissionGranted() async {
+    _config = _config.copyWith(accessibilityWasGranted: true);
+    unawaited(
+      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+    );
+    await _appWindow.exitGateMode();
+    if (mounted) setState(() => _showPermissionGate = false);
   }
 
   @override
@@ -501,24 +523,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         },
         home: Builder(
           builder: (ctx) {
-            if (Platform.isMacOS && !_permissionsChecked) {
-              _permissionsChecked = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                final wasGranted = _config.accessibilityWasGranted;
-                final granted = await AccessibilityDialog.checkAndShow(
-                  ctx,
-                  previouslyGranted: wasGranted,
-                );
-                if (granted && !wasGranted) {
-                  _config = _config.copyWith(accessibilityWasGranted: true);
-                  unawaited(
-                    _config.save(
-                      '${widget.storage.configPath}/${AppConfig.fileName}',
-                    ),
-                  );
-                }
-              });
-            }
             final l = AppLocalizations.of(ctx);
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {
@@ -533,6 +537,15 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 );
               }
             }
+
+            // macOS permission gate — blocks access to the main UI.
+            if (_showPermissionGate) {
+              return PermissionGateScreen(
+                previouslyGranted: _config.accessibilityWasGranted,
+                onGranted: _onPermissionGranted,
+              );
+            }
+
             final bg = (Platform.isWindows || Platform.isMacOS)
                 ? CopyPasteTheme.colorsOf(
                     ctx,

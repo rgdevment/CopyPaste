@@ -324,4 +324,35 @@ class AppWindow {
     await windowManager.setResizable(false);
     await _positionNearCursor();
   }
+
+  // ---------- Permission gate mode ----------
+
+  static const double _gateWidth = 480;
+  static const double _gateHeight = 420;
+
+  bool _gateMode = false;
+  bool get isGateMode => _gateMode;
+
+  Future<void> enterGateMode() async {
+    _gateMode = true;
+    await windowManager.setResizable(false);
+    await windowManager.setMinimumSize(const Size(_gateWidth, _gateHeight));
+    await windowManager.setMaximumSize(const Size(_gateWidth, _gateHeight));
+    await windowManager.setSize(const Size(_gateWidth, _gateHeight));
+    await windowManager.setAlwaysOnTop(false);
+    await windowManager.center();
+    await windowManager.show();
+    await windowManager.focus();
+    _visible = true;
+  }
+
+  Future<void> exitGateMode() async {
+    _gateMode = false;
+    await windowManager.setAlwaysOnTop(true);
+    await windowManager.setMinimumSize(Size(_popupWidth, 400));
+    await windowManager.setMaximumSize(Size(_popupWidth, 900));
+    await windowManager.setSize(Size(_popupWidth, _popupHeight));
+    await windowManager.hide();
+    _visible = false;
+  }
 }
