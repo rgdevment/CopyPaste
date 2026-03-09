@@ -145,7 +145,6 @@ def main():
     if gist_id and gist_token:
         try:
             update_gist(gist_id, gist_token, windows_total, macos_total, grand_total)
-            update_gist(gist_id, gist_token, total)
             print("Badge updated successfully")
         except Exception as e:
             print(f"Error updating gist: {e}")
