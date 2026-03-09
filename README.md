@@ -115,7 +115,12 @@ CopyPaste isn't a "power tool" you learn to tolerate — it's something that sho
 <br/>
 
 <div align="center">
-    <img src="resources/v2/copypaste_v2_en_screenshot1_panel.png" alt="CopyPaste v2 — Main panel with clipboard history"/>
+    <img src="resources/v2/copypaste_v2_en_screenshot1_panel.png" alt="CopyPaste v2 — Main panel with clipboard history" width="49%"/>
+    <img src="resources/v2/copypaste_v2_en_screenshot2_categories.png" alt="CopyPaste v2 — Category filters and color labels" width="49%"/>
+    <br/><br/>
+    <img src="resources/v2/copypaste_v2_en_screenshot3_settings.png" alt="CopyPaste v2 — Settings panel" width="49%"/>
+    <img src="resources/v2/copypaste_v2_en_screenshot4_multiplatform.png" alt="CopyPaste v2 — Multiplatform: Windows and macOS" width="49%"/>
+</div>
 
 ---
 
