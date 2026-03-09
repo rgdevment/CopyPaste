@@ -258,30 +258,33 @@ void main() {
       service.dispose();
     });
 
-    test('logs error when getImagePaths throws during orphan cleanup', () async {
-      final storage = await StorageConfig.create(baseDir: tempDir.path);
-      await storage.ensureDirectories();
+    test(
+      'logs error when getImagePaths throws during orphan cleanup',
+      () async {
+        final storage = await StorageConfig.create(baseDir: tempDir.path);
+        await storage.ensureDirectories();
 
-      final repoWithPassingClear = SqliteRepository.inMemory();
-      final hybridRepo = _HybridRepo(repoWithPassingClear);
-      final hybridService = CleanupService(
-        hybridRepo,
-        () => 30,
-        storage: storage,
-      );
+        final repoWithPassingClear = SqliteRepository.inMemory();
+        final hybridRepo = _HybridRepo(repoWithPassingClear);
+        final hybridService = CleanupService(
+          hybridRepo,
+          () => 30,
+          storage: storage,
+        );
 
-      final yesterday = DateTime.now().toUtc().subtract(
-        const Duration(days: 1),
-      );
-      File(
-        '${tempDir.path}/last_cleanup.txt',
-      ).writeAsStringSync(yesterday.toIso8601String());
+        final yesterday = DateTime.now().toUtc().subtract(
+          const Duration(days: 1),
+        );
+        File(
+          '${tempDir.path}/last_cleanup.txt',
+        ).writeAsStringSync(yesterday.toIso8601String());
 
-      hybridService.start(tempDir.path);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      hybridService.dispose();
-      await repoWithPassingClear.close();
-    });
+        hybridService.start(tempDir.path);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        hybridService.dispose();
+        await repoWithPassingClear.close();
+      },
+    );
   });
 }
 
