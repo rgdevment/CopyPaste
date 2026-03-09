@@ -8,8 +8,13 @@ import '../l10n/app_localizations.dart';
 class AccessibilityDialog extends StatefulWidget {
   const AccessibilityDialog({super.key});
 
+  /// Checks accessibility status and shows the dialog if not granted.
+  ///
+  /// Uses [checkAccessibility] (read-only check) instead of
+  /// [requestAccessibility] to avoid triggering the macOS system prompt
+  /// before the user has had a chance to read the explanation dialog.
   static Future<void> checkAndShow(BuildContext context) async {
-    final granted = await ClipboardWriter.requestAccessibility();
+    final granted = await ClipboardWriter.checkAccessibility();
     if (granted || !context.mounted) return;
     await showDialog<void>(
       context: context,
@@ -33,13 +38,8 @@ class _AccessibilityDialogState extends State<AccessibilityDialog> {
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final granted = await ClipboardWriter.checkAccessibility();
       if (granted && mounted) {
+        _pollTimer?.cancel();
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).permissionsGranted),
-            duration: const Duration(seconds: 2),
-          ),
-        );
       }
     });
   }

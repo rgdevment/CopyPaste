@@ -115,7 +115,7 @@ void main() {
     testWidgets('checkAndShow skips dialog when accessibility already granted',
         (tester) async {
       _setMockHandler(channel, (call) async {
-        if (call.method == 'requestAccessibility') return true;
+        if (call.method == 'checkAccessibility') return true;
         return null;
       });
 
