@@ -5,17 +5,32 @@ import urllib.request
 
 USER_AGENT = "CopyPaste-Badge-Updater"
 
+WINDOWS_EXTENSIONS = (".exe", ".msix", ".msixbundle")
+MACOS_EXTENSIONS = (".dmg",)
 
-def get_gh_downloads(repo):
+
+def get_gh_downloads_by_os(repo):
     url = f"https://api.github.com/repos/{repo}/releases"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    windows = 0
+    macos = 0
+    other = 0
     try:
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read())
-        return sum(asset["download_count"] for release in data for asset in release.get("assets", []))
+        for release in data:
+            for asset in release.get("assets", []):
+                name = asset.get("name", "").lower()
+                count = asset.get("download_count", 0)
+                if any(name.endswith(ext) for ext in WINDOWS_EXTENSIONS):
+                    windows += count
+                elif any(name.endswith(ext) for ext in MACOS_EXTENSIONS):
+                    macos += count
+                else:
+                    other += count
     except Exception as e:
         print(f"Warning: Failed to get GitHub downloads: {e}")
-        return 0
+    return windows, macos, other
 
 def get_ms_token(tenant, client_id, client_secret):
     url = f"https://login.microsoftonline.com/{tenant}/oauth2/token"
@@ -46,7 +61,15 @@ def get_ms_downloads(token, app_id):
         print(f"Warning: Failed to get MS Store downloads: {e}")
         return 0
 
-def update_gist(gist_id, token, total):
+def format_count(n):
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}k"
+    return str(n)
+
+
+def update_gist(gist_id, token, windows_total, macos_total, grand_total):
     url = f"https://api.github.com/gists/{gist_id}"
     payload = {
         "files": {
@@ -54,8 +77,28 @@ def update_gist(gist_id, token, total):
                 "content": json.dumps({
                     "schemaVersion": 1,
                     "label": "downloads",
-                    "message": str(total),
+                    "message": format_count(grand_total),
                     "color": "0078D7"
+                })
+            },
+            "copypaste_downloads_windows.json": {
+                "content": json.dumps({
+                    "schemaVersion": 1,
+                    "label": "Windows downloads",
+                    "message": format_count(windows_total),
+                    "color": "0078D4",
+                    "namedLogo": "windows",
+                    "logoColor": "white"
+                })
+            },
+            "copypaste_downloads_macos.json": {
+                "content": json.dumps({
+                    "schemaVersion": 1,
+                    "label": "macOS downloads",
+                    "message": format_count(macos_total),
+                    "color": "333333",
+                    "namedLogo": "apple",
+                    "logoColor": "white"
                 })
             }
         }
@@ -77,8 +120,8 @@ def main():
     client_secret = os.environ.get("STORE_CLIENT_SECRET")
     app_id = os.environ.get("STORE_APP_ID")
 
-    gh_total = get_gh_downloads(repo)
-    print(f"GitHub downloads: {gh_total}")
+    gh_windows, gh_macos, gh_other = get_gh_downloads_by_os(repo)
+    print(f"GitHub downloads — Windows: {gh_windows}, macOS: {gh_macos}, Other: {gh_other}")
 
     ms_total = 0
     if all([tenant_id, client_id, client_secret, app_id]):
@@ -91,11 +134,17 @@ def main():
     else:
         print("MS Store credentials not configured, skipping")
 
-    total = gh_total + ms_total
-    print(f"Total downloads: {total}")
+    windows_total = gh_windows + ms_total
+    macos_total = gh_macos
+    grand_total = windows_total + macos_total + gh_other
+
+    print(f"Windows total: {windows_total} (GitHub: {gh_windows} + Store: {ms_total})")
+    print(f"macOS total: {macos_total}")
+    print(f"Grand total: {grand_total}")
 
     if gist_id and gist_token:
         try:
+            update_gist(gist_id, gist_token, windows_total, macos_total, grand_total)
             update_gist(gist_id, gist_token, total)
             print("Badge updated successfully")
         except Exception as e:
