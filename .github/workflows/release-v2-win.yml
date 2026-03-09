@@ -138,18 +138,26 @@ jobs:
                     --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
                   Pop-Location
 
-            - name: Rename store MSIX
+            - name: Move and rename store MSIX
               if: steps.get_version.outputs.IS_PRERELEASE != 'true'
               shell: pwsh
               run: |
                   $version = "${{ steps.get_version.outputs.VERSION }}"
                   $distDir = "v2/app/dist"
-                  $msix = Get-ChildItem -Path $distDir -Recurse -Filter "*.msix" | Select-Object -First 1
+                  $searchDirs = @("v2/app/dist", "v2/app/build")
+                  $msix = $searchDirs | ForEach-Object {
+                    if (Test-Path $_) { Get-ChildItem -Path $_ -Recurse -Filter "*.msix" }
+                  } | Select-Object -First 1
+
                   if ($msix) {
                     $newName = "CopyPaste_${version}_x64_store.msix"
-                    $newPath = Join-Path $msix.DirectoryName $newName
+                    $newPath = Join-Path $distDir $newName
+                    New-Item -ItemType Directory -Path $distDir -Force | Out-Null
                     Move-Item -Path $msix.FullName -Destination $newPath
-                    Write-Host "Renamed to: $newName"
+                    Write-Host "Moved MSIX to: $newPath"
+                  } else {
+                    Write-Warning "No .msix file found in dist/ or build/"
+                    Get-ChildItem -Path "v2/app" -Recurse -Filter "*.msix" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "Found: $($_.FullName)" }
                   }
 
             - name: Upload artifacts
