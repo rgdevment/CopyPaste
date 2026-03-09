@@ -1082,41 +1082,42 @@ void main() {
       failService.dispose();
     });
 
-    testWidgets('color filter change via FilterBar menu calls _onColorFilterChanged', (
-      tester,
-    ) async {
-      await repo.save(
-        ClipboardItem(
-          content: 'Red item',
-          type: ClipboardContentType.text,
-          cardColor: CardColor.red,
-        ),
-      );
+    testWidgets(
+      'color filter change via FilterBar menu calls _onColorFilterChanged',
+      (tester) async {
+        await repo.save(
+          ClipboardItem(
+            content: 'Red item',
+            type: ClipboardContentType.text,
+            cardColor: CardColor.red,
+          ),
+        );
 
-      final key = GlobalKey<MainScreenState>();
-      await tester.pumpWidget(
-        _buildApp(service: service, onPaste: (_) {}, key: key),
-      );
-      await tester.pumpAndSettle();
-
-      key.currentState!.onWindowShow();
-      await tester.pump();
-
-      // Open the filter bar popup via Alt+G.
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-      await tester.pumpAndSettle();
-
-      // Tap the "Red" color chip inside the popup menu.
-      final redOption = find.text('Red');
-      if (redOption.evaluate().isNotEmpty) {
-        await tester.tap(redOption.first);
+        final key = GlobalKey<MainScreenState>();
+        await tester.pumpWidget(
+          _buildApp(service: service, onPaste: (_) {}, key: key),
+        );
         await tester.pumpAndSettle();
-      }
 
-      // Screen renders correctly after applying color filter.
-      expect(find.byType(MainScreen), findsOneWidget);
-    });
+        key.currentState!.onWindowShow();
+        await tester.pump();
+
+        // Open the filter bar popup via Alt+G.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+        await tester.pumpAndSettle();
+
+        // Tap the "Red" color chip inside the popup menu.
+        final redOption = find.text('Red');
+        if (redOption.evaluate().isNotEmpty) {
+          await tester.tap(redOption.first);
+          await tester.pumpAndSettle();
+        }
+
+        // Screen renders correctly after applying color filter.
+        expect(find.byType(MainScreen), findsOneWidget);
+      },
+    );
   });
 }

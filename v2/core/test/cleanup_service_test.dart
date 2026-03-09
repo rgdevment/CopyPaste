@@ -15,7 +15,9 @@ class _FailingRepo implements IClipboardRepository {
 
   @override
   Future<List<String>> getImagePaths() {
-    if (failGetImagePaths) return Future.error(Exception('forced getImagePaths error'));
+    if (failGetImagePaths) {
+      return Future.error(Exception('forced getImagePaths error'));
+    }
     return Future.value([]);
   }
 
@@ -44,8 +46,11 @@ class _FailingRepo implements IClipboardRepository {
   @override
   Future<int> count() => Future.value(0);
   @override
-  Future<List<ClipboardItem>> search(String q, {int limit = 50, int skip = 0}) =>
-      Future.value([]);
+  Future<List<ClipboardItem>> search(
+    String q, {
+    int limit = 50,
+    int skip = 0,
+  }) => Future.value([]);
   @override
   Future<List<ClipboardItem>> searchAdvanced({
     String? query,
@@ -280,12 +285,19 @@ void main() {
       // which prevents _cleanOrphanImages from being reached. So we need a repo
       // that succeeds on clearOldItems but fails on getImagePaths.
       final hybridRepo = _HybridRepo(repoWithPassingClear);
-      final hybridService = CleanupService(hybridRepo, () => 30, storage: storage);
+      final hybridService = CleanupService(
+        hybridRepo,
+        () => 30,
+        storage: storage,
+      );
 
       // Write a last-cleanup date of yesterday so cleanup runs.
-      final yesterday = DateTime.now().toUtc().subtract(const Duration(days: 1));
-      File('${tempDir.path}/last_cleanup.txt')
-          .writeAsStringSync(yesterday.toIso8601String());
+      final yesterday = DateTime.now().toUtc().subtract(
+        const Duration(days: 1),
+      );
+      File(
+        '${tempDir.path}/last_cleanup.txt',
+      ).writeAsStringSync(yesterday.toIso8601String());
 
       hybridService.start(tempDir.path);
       await Future<void>.delayed(const Duration(milliseconds: 50));
