@@ -321,7 +321,6 @@ class SqliteRepository implements IClipboardRepository {
     final hasTextQuery = normalized != null && normalized.isNotEmpty;
     final hasTypeFilter = types != null && types.isNotEmpty;
     final hasColorFilter = colors != null && colors.isNotEmpty;
-    final hasAnyFilter = hasTextQuery || hasTypeFilter || hasColorFilter;
 
     final conditions = <String>[];
     final variables = <Variable>[];
