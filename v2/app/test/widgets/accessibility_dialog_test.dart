@@ -44,7 +44,9 @@ void main() {
 
   group('AccessibilityDialog', () {
     testWidgets('renders dialog with icon and buttons', (tester) async {
-      await tester.pumpWidget(wrapWidget(const AccessibilityDialog()));
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: false)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(AccessibilityDialog), findsOneWidget);
@@ -70,7 +72,8 @@ void main() {
                   onPressed: () async {
                     await showDialog<void>(
                       context: ctx,
-                      builder: (_) => const AccessibilityDialog(),
+                      builder: (_) =>
+                          const AccessibilityDialog(previouslyGranted: false),
                     );
                     popped = true;
                   },
@@ -104,7 +107,9 @@ void main() {
         return null;
       });
 
-      await tester.pumpWidget(wrapWidget(const AccessibilityDialog()));
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: false)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(FilledButton));
@@ -167,7 +172,10 @@ void main() {
             home: CopyPasteTheme(
               themeData: CompactTheme(),
               child: Scaffold(
-                body: Builder(builder: (ctx) => const AccessibilityDialog()),
+                body: Builder(
+                  builder: (ctx) =>
+                      const AccessibilityDialog(previouslyGranted: false),
+                ),
               ),
             ),
           ),
@@ -176,8 +184,8 @@ void main() {
 
         expect(find.byType(AccessibilityDialog), findsOneWidget);
 
-        // Advance clock past two timer ticks (2s each)
-        await tester.pump(const Duration(seconds: 5));
+        // Advance clock past two timer ticks (1s each)
+        await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
 
         expect(checkCallCount, greaterThanOrEqualTo(2));
@@ -185,7 +193,9 @@ void main() {
     );
 
     testWidgets('dispose cancels poll timer without errors', (tester) async {
-      await tester.pumpWidget(wrapWidget(const AccessibilityDialog()));
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: false)),
+      );
       await tester.pumpAndSettle();
 
       // Replacing widget tree disposes the dialog state
