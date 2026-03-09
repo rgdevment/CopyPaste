@@ -340,5 +340,55 @@ void main() {
         restoreDir.deleteSync(recursive: true);
       }
     });
+
+    test('restoreBackup returns null for invalid zip', () async {
+      // Triggers AppLogger.error('restoreBackup failed: $e') in the catch block.
+      // snapshotDir is null here because ZipDecoder throws before _createPreRestoreSnapshot.
+      final badFile = File(p.join(tempDir.path, 'bad_restore.zip'));
+      badFile.writeAsBytesSync([0, 1, 2, 3]);
+
+      final result = await BackupService.restoreBackup(badFile.path, storage);
+      expect(result, isNull);
+    });
+
+    test(
+      'restoreBackup triggers rollback when file extraction fails',
+      () async {
+        // Build a valid zip with a clipboard.db entry.
+        final archive = Archive();
+        final manifestJson =
+            '{"version":1,"appVersion":"2.0","createdAtUtc":"${DateTime.now().toUtc().toIso8601String()}","itemCount":0,"imageCount":0,"hasPinnedItems":false,"machineName":"test"}';
+        final manifestBytes = manifestJson.codeUnits;
+        archive.addFile(
+          ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+        );
+        const dbBytes = [83, 81, 76, 105]; // fake SQLite header bytes
+        archive.addFile(ArchiveFile('clipboard.db', dbBytes.length, dbBytes));
+
+        final zipPath = p.join(tempDir.path, 'extraction_fail.zip');
+        await File(zipPath).writeAsBytes(ZipEncoder().encode(archive));
+
+        final restoreDir = Directory.systemTemp.createTempSync('rollback_t_');
+        try {
+          final restoreStorage = await StorageConfig.create(
+            baseDir: restoreDir.path,
+          );
+          // Create a DIRECTORY at the path where clipboard.db would be written.
+          // File.create(recursive: true) on a directory path throws EISDIR,
+          // which causes the catch block to fire with snapshotDir != null,
+          // triggering _rollbackFromSnapshot.
+          Directory(restoreStorage.databasePath).createSync(recursive: true);
+
+          final result = await BackupService.restoreBackup(
+            zipPath,
+            restoreStorage,
+          );
+          // The error is caught; rollback runs; null is returned.
+          expect(result, isNull);
+        } finally {
+          restoreDir.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }
