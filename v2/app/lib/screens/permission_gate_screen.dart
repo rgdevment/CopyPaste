@@ -9,14 +9,13 @@ class PermissionGateScreen extends StatefulWidget {
   const PermissionGateScreen({
     required this.onGranted,
     required this.previouslyGranted,
+    this.onRestart,
     super.key,
   });
 
-  /// Called once accessibility permission is confirmed.
   final VoidCallback onGranted;
-
-  /// When `true`, shows Gatekeeper-specific "remove & re-add" instructions.
   final bool previouslyGranted;
+  final VoidCallback? onRestart;
 
   @override
   State<PermissionGateScreen> createState() => _PermissionGateScreenState();
@@ -90,23 +89,20 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
     return Scaffold(
       backgroundColor: cs.surface,
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // App icon
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
                   'assets/icons/icon_app_256.png',
-                  width: 80,
-                  height: 80,
+                  width: 72,
+                  height: 72,
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // App name
+              const SizedBox(height: 16),
               Text(
                 'CopyPaste',
                 style: TextStyle(
@@ -116,9 +112,7 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
                   letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 28),
-
-              // Status indicator
+              const SizedBox(height: 20),
               _StatusRow(
                 icon: isStale
                     ? Icons.warning_amber_rounded
@@ -127,9 +121,7 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
                 label: isStale ? l.permissionsResetTitle : l.permissionsTitle,
                 colorScheme: cs,
               ),
-              const SizedBox(height: 20),
-
-              // Description
+              const SizedBox(height: 16),
               Text(
                 isStale
                     ? l.permissionsResetMessage
@@ -143,9 +135,7 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 28),
-
-              // Buttons
+              const SizedBox(height: 24),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -176,9 +166,23 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-
-              // Waiting indicator
+              const SizedBox(height: 20),
+              if (_timedOut || isStale)
+                TextButton.icon(
+                  onPressed: widget.onRestart,
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    size: 16,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                  label: Text(
+                    l.permissionsRestartApp,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
               if (!_timedOut && !isStale)
                 FadeTransition(
                   opacity: _pulseAnimation,

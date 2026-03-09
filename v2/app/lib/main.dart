@@ -480,6 +480,17 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (mounted) setState(() => _showPermissionGate = false);
   }
 
+  Future<void> _restartApp() async {
+    await _cleanup();
+    SingleInstance.release();
+    await Process.start(
+      Platform.resolvedExecutable,
+      [],
+      mode: ProcessStartMode.detached,
+    );
+    exit(0);
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -543,6 +554,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               return PermissionGateScreen(
                 previouslyGranted: _config.accessibilityWasGranted,
                 onGranted: _onPermissionGranted,
+                onRestart: _restartApp,
               );
             }
 

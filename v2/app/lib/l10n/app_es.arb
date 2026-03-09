@@ -163,7 +163,8 @@
   "permissionsGranted": "Permiso concedido",
   "permissionsResetTitle": "Permiso de Accesibilidad perdido",
   "permissionsResetMessage": "macOS ya no reconoce el permiso de CopyPaste porque la app fue re-autorizada a trav\u00e9s de Gatekeeper.\n\nPara solucionarlo:\n1. Abre la configuraci\u00f3n de Accesibilidad\n2. Elimina CopyPaste de la lista (\u2212)\n3. Vuelve a a\u00f1adirlo o act\u00edvalo de nuevo",
-  "permissionsRestartMessage": "Si ya concediste el permiso, es posible que macOS necesite que reinicies CopyPaste para que el cambio surta efecto.\n\nCierra y vuelve a abrir CopyPaste, o pulsa Verificar.",
+  "permissionsRestartMessage": "Aseg\u00farate de que CopyPaste est\u00e9 activado en Privacidad y seguridad > Accesibilidad.\n\nLa app continuar\u00e1 autom\u00e1ticamente cuando detecte el permiso.",
   "permissionsCheckAgain": "Verificar",
+  "permissionsRestartApp": "Reiniciar app",
   "permissionsWaiting": "Esperando permiso\u2026"
 }
