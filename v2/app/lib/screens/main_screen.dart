@@ -524,6 +524,10 @@ class MainScreenState extends State<MainScreen> {
             onLabelColor: (label, color) =>
                 _onItemLabelColor(item, label, color),
             onPastePlain: () => widget.onPastePlain(item),
+            onSelect: () {
+              setState(() => _selectedIndex = index);
+              _focusNode.requestFocus();
+            },
             onExpandToggle: () {
               setState(() {
                 _expandedIndex = _expandedIndex == index ? -1 : index;
