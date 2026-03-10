@@ -10,24 +10,31 @@ MACOS_EXTENSIONS = (".dmg",)
 
 
 def get_gh_downloads_by_os(repo):
-    url = f"https://api.github.com/repos/{repo}/releases"
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     windows = 0
     macos = 0
     other = 0
+    page = 1
     try:
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read())
-        for release in data:
-            for asset in release.get("assets", []):
-                name = asset.get("name", "").lower()
-                count = asset.get("download_count", 0)
-                if any(name.endswith(ext) for ext in WINDOWS_EXTENSIONS):
-                    windows += count
-                elif any(name.endswith(ext) for ext in MACOS_EXTENSIONS):
-                    macos += count
-                else:
-                    other += count
+        while True:
+            url = f"https://api.github.com/repos/{repo}/releases?per_page=150&page={page}"
+            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read())
+            if not data:
+                break
+            for release in data:
+                for asset in release.get("assets", []):
+                    name = asset.get("name", "").lower()
+                    count = asset.get("download_count", 0)
+                    if any(name.endswith(ext) for ext in WINDOWS_EXTENSIONS):
+                        windows += count
+                    elif any(name.endswith(ext) for ext in MACOS_EXTENSIONS):
+                        macos += count
+                    else:
+                        other += count
+            if len(data) < 150:
+                break
+            page += 1
     except Exception as e:
         print(f"Warning: Failed to get GitHub downloads: {e}")
     return windows, macos, other
