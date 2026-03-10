@@ -103,17 +103,13 @@ void main() {
       expect(selectCount, equals(1));
     });
 
-    testWidgets('expand toggle button triggers onExpandToggle', (
-      tester,
-    ) async {
+    testWidgets('expand toggle button triggers onExpandToggle', (tester) async {
       var expandCount = 0;
 
       await tester.pumpWidget(
         wrapWidget(
           ClipboardCard(
-            item: _makeTextItem(
-              content: 'Line1\nLine2\nLine3\nLine4\nLine5',
-            ),
+            item: _makeTextItem(content: 'Line1\nLine2\nLine3\nLine4\nLine5'),
             onTap: () {},
             onPin: () {},
             onDelete: () {},
