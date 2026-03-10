@@ -1,8 +1,8 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:core/core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme_data.dart';
@@ -18,6 +18,7 @@ class ClipboardCard extends StatefulWidget {
     required this.onLabelColor,
     this.onPastePlain,
     this.onExpandToggle,
+    this.onSelect,
     this.isSelected = false,
     this.isExpanded = false,
     this.cardMinLines,
@@ -32,6 +33,7 @@ class ClipboardCard extends StatefulWidget {
   final void Function(String? label, CardColor color) onLabelColor;
   final VoidCallback? onPastePlain;
   final VoidCallback? onExpandToggle;
+  final VoidCallback? onSelect;
   final bool isSelected;
   final bool isExpanded;
   final int? cardMinLines;
@@ -45,8 +47,22 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _hovering = false;
   String? _resolvedImagePath;
   bool _imagePathResolved = false;
-  Timer? _tapTimer;
-  int _tapCount = 0;
+  DateTime? _lastPrimaryDown;
+
+  static const _doubleTapTimeout = Duration(milliseconds: 300);
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if (event.buttons != kPrimaryButton) return;
+    widget.onSelect?.call();
+    final now = DateTime.now();
+    if (_lastPrimaryDown != null &&
+        now.difference(_lastPrimaryDown!) < _doubleTapTimeout) {
+      _lastPrimaryDown = null;
+      widget.onTap();
+    } else {
+      _lastPrimaryDown = now;
+    }
+  }
 
   @override
   void initState() {
@@ -65,24 +81,17 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
   }
 
-  @override
-  void dispose() {
-    _tapTimer?.cancel();
-    super.dispose();
-  }
-
-  void _handleTap() {
-    _tapCount++;
-    if (_tapCount == 1) {
-      _tapTimer = Timer(const Duration(milliseconds: 200), () {
-        _tapCount = 0;
-        widget.onExpandToggle?.call();
-      });
-    } else {
-      _tapTimer?.cancel();
-      _tapCount = 0;
-      widget.onTap();
+  bool _needsExpandToggle(ClipboardItem item) {
+    if (widget.isExpanded) return true;
+    final type = item.type;
+    if (type == ClipboardContentType.text ||
+        type == ClipboardContentType.unknown) {
+      return item.content.contains('\n') || item.content.length > 80;
     }
+    if (type == ClipboardContentType.link) {
+      return item.content.trim().length > 50;
+    }
+    return false;
   }
 
   void _resolveImagePath() {
@@ -124,7 +133,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
       currentLabel: widget.item.label,
       currentColor: widget.item.cardColor,
     );
-    if (result != null) {
+    if (result != null && mounted) {
       widget.onLabelColor(result.label, result.color);
     }
   }
@@ -233,10 +242,11 @@ class _ClipboardCardState extends State<ClipboardCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      child: GestureDetector(
-        onTap: _handleTap,
-        onSecondaryTapUp: (d) => _showContextMenu(context, d.globalPosition),
-        child: AnimatedContainer(
+      child: Listener(
+        onPointerDown: _handlePointerDown,
+        child: GestureDetector(
+          onSecondaryTapUp: (d) => _showContextMenu(context, d.globalPosition),
+          child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           constraints: BoxConstraints(minHeight: theme.sizing.cardMinHeight),
@@ -315,6 +325,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -798,6 +809,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
   }
 
   bool _hasFooter(ClipboardItem item) {
+    if (_needsExpandToggle(item)) return true;
     if (item.pasteCount > 0) return true;
     if (_getExtForItem(item).isNotEmpty) return true;
     final meta = _parseMetadata(item);
@@ -874,9 +886,37 @@ class _ClipboardCardState extends State<ClipboardCard> {
       widgets.add(Text('×${item.pasteCount}', style: footerStyle));
     }
 
+    final showExpand = _needsExpandToggle(item);
+
     return Row(
       children: [
         if (ext.isNotEmpty) _ExtBadge(label: ext, color: typeColor),
+        if (showExpand)
+          Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onExpandToggle?.call(),
+                canRequestFocus: false,
+                borderRadius: BorderRadius.circular(8),
+                hoverColor: colors.onSurface.withValues(alpha: 0.06),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  child: Icon(
+                    widget.isExpanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 14,
+                    color: colors.onSurface.withValues(alpha: 0.35),
+                  ),
+                ),
+              ),
+            ),
+          ),
         const Spacer(),
         for (int i = 0; i < widgets.length; i++) ...[
           if (i > 0) const SizedBox(width: 8),
