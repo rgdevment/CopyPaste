@@ -49,7 +49,7 @@ void main() {
 
     testWidgets('double-tap triggers onTap', (tester) async {
       var tapCount = 0;
-      var expandCount = 0;
+      var selectCount = 0;
 
       await tester.pumpWidget(
         wrapWidget(
@@ -59,33 +59,58 @@ void main() {
             onPin: () {},
             onDelete: () {},
             onLabelColor: (_, _) {},
-            onExpandToggle: () => expandCount++,
+            onSelect: () => selectCount++,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Double-tap: two taps within 200ms
-      await tester.tap(find.byType(ClipboardCard));
+      // Two pointer-downs within 300ms triggers paste
+      final center = tester.getCenter(find.byType(ClipboardCard));
+      final gesture = await tester.startGesture(center);
+      await gesture.up();
       await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(find.byType(ClipboardCard));
-      await tester.pump(const Duration(milliseconds: 50));
+      final gesture2 = await tester.startGesture(center);
+      await gesture2.up();
+      await tester.pumpAndSettle();
 
       expect(tapCount, equals(1));
-      expect(expandCount, equals(0));
+      expect(selectCount, equals(2));
     });
 
-    testWidgets('single tap triggers onExpandToggle after 200ms delay', (
-      tester,
-    ) async {
-      var expandCount = 0;
-      var tapCount = 0;
+    testWidgets('single tap triggers onSelect', (tester) async {
+      var selectCount = 0;
 
       await tester.pumpWidget(
         wrapWidget(
           ClipboardCard(
             item: _makeTextItem(),
-            onTap: () => tapCount++,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onSelect: () => selectCount++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final center = tester.getCenter(find.byType(ClipboardCard));
+      final gesture = await tester.startGesture(center);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(selectCount, equals(1));
+    });
+
+    testWidgets('expand toggle button triggers onExpandToggle', (tester) async {
+      var expandCount = 0;
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: _makeTextItem(content: 'Line1\nLine2\nLine3\nLine4\nLine5'),
+            onTap: () {},
             onPin: () {},
             onDelete: () {},
             onLabelColor: (_, _) {},
@@ -95,11 +120,31 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(ClipboardCard));
-      await tester.pump(const Duration(milliseconds: 250)); // past 200ms
+      // Find and tap the expand icon button
+      final expandIcon = find.byIcon(Icons.expand_more_rounded);
+      expect(expandIcon, findsOneWidget);
+      await tester.tap(expandIcon);
+      await tester.pumpAndSettle();
 
       expect(expandCount, equals(1));
-      expect(tapCount, equals(0));
+    });
+
+    testWidgets('expand toggle hidden for short content', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: _makeTextItem(content: 'Short text'),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onExpandToggle: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.expand_more_rounded), findsNothing);
     });
 
     testWidgets('shows selection border when isSelected is true', (
