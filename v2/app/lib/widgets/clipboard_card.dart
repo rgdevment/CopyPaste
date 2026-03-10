@@ -244,85 +244,90 @@ class _ClipboardCardState extends State<ClipboardCard> {
         child: GestureDetector(
           onSecondaryTapUp: (d) => _showContextMenu(context, d.globalPosition),
           child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          constraints: BoxConstraints(minHeight: theme.sizing.cardMinHeight),
-          transform: _hovering ? Matrix4.translationValues(0, -1, 0) : null,
-          decoration: BoxDecoration(
-            color: _hovering && isDark
-                ? colors.surfaceVariant
-                : colors.cardBackground,
-            borderRadius: BorderRadius.circular(theme.radii.card),
-            border: Border.all(
-              color: widget.isSelected
-                  ? colors.primary.withValues(alpha: 0.5)
-                  : _hovering
-                  ? colors.onSurface.withValues(alpha: isDark ? 0.1 : 0.18)
-                  : colors.cardBorder,
-              width: theme.cardStyle.borderWidth,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            constraints: BoxConstraints(minHeight: theme.sizing.cardMinHeight),
+            transform: _hovering ? Matrix4.translationValues(0, -1, 0) : null,
+            decoration: BoxDecoration(
+              color: _hovering && isDark
+                  ? colors.surfaceVariant
+                  : colors.cardBackground,
+              borderRadius: BorderRadius.circular(theme.radii.card),
+              border: Border.all(
+                color: widget.isSelected
+                    ? colors.primary.withValues(alpha: 0.5)
+                    : _hovering
+                    ? colors.onSurface.withValues(alpha: isDark ? 0.1 : 0.18)
+                    : colors.cardBorder,
+                width: theme.cardStyle.borderWidth,
+              ),
+              boxShadow: [
+                if (widget.isSelected)
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                if (isDark)
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: _hovering ? 0.3 : 0.2,
+                    ),
+                    blurRadius: _hovering ? 12 : 6,
+                    offset: Offset(0, _hovering ? 3 : 1),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: _hovering ? 0.1 : 0.07,
+                    ),
+                    blurRadius: _hovering ? 10 : 4,
+                    offset: Offset(0, _hovering ? 3 : 1),
+                  ),
+              ],
             ),
-            boxShadow: [
-              if (widget.isSelected)
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-              if (isDark)
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: _hovering ? 0.3 : 0.2),
-                  blurRadius: _hovering ? 12 : 6,
-                  offset: Offset(0, _hovering ? 3 : 1),
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: _hovering ? 0.1 : 0.07),
-                  blurRadius: _hovering ? 10 : 4,
-                  offset: Offset(0, _hovering ? 3 : 1),
-                ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              if (hasColor)
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: theme.sizing.colorIndicatorWidth,
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      borderRadius: theme.cardStyle.colorIndicatorBorderRadius,
+            child: Stack(
+              children: [
+                if (hasColor)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: theme.sizing.colorIndicatorWidth,
+                      decoration: BoxDecoration(
+                        color: accentColor,
+                        borderRadius:
+                            theme.cardStyle.colorIndicatorBorderRadius,
+                      ),
                     ),
                   ),
-                ),
-              Padding(
-                padding: theme.spacing.cardPadding.copyWith(
-                  left: hasColor
-                      ? theme.spacing.cardPadding.left +
-                            theme.sizing.colorIndicatorWidth +
-                            2
-                      : theme.spacing.cardPadding.left,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildHeader(theme, colors, item),
-                    const SizedBox(height: 4),
-                    _buildContent(theme, colors, item),
-                    if (_hasFooter(item)) ...[
-                      const SizedBox(height: 6),
-                      _buildFooter(theme, colors, item),
+                Padding(
+                  padding: theme.spacing.cardPadding.copyWith(
+                    left: hasColor
+                        ? theme.spacing.cardPadding.left +
+                              theme.sizing.colorIndicatorWidth +
+                              2
+                        : theme.spacing.cardPadding.left,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildHeader(theme, colors, item),
+                      const SizedBox(height: 4),
+                      _buildContent(theme, colors, item),
+                      if (_hasFooter(item)) ...[
+                        const SizedBox(height: 6),
+                        _buildFooter(theme, colors, item),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
