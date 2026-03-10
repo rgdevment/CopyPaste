@@ -88,9 +88,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
         type == ClipboardContentType.unknown) {
       return item.content.contains('\n') || item.content.length > 80;
     }
-    if (type == ClipboardContentType.link) {
-      return item.content.trim().length > 50;
-    }
     return false;
   }
 
@@ -764,9 +761,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
                   decoration: TextDecoration.underline,
                   decorationColor: colors.primary.withValues(alpha: 0.3),
                 ),
-                maxLines: widget.isExpanded
-                    ? (widget.cardMaxLines ?? theme.sizing.cardMaxLines)
-                    : 1,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               if (domain.isNotEmpty) ...[
