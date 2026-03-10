@@ -40,7 +40,7 @@
       <img src="https://img.shields.io/badge/Windows-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store"/>
     </a>
     &nbsp;
-    <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
+    <a href="#-getting-started">
       <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install via Homebrew"/>
     </a>
     &nbsp;
