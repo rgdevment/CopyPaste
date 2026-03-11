@@ -33,6 +33,14 @@ bool _isMicaDark(String themeMode) => switch (themeMode) {
   _ => false,
 };
 
+/// Returns true when the current Linux session is running under Wayland.
+/// Exposed for testing.
+bool isWaylandSession() {
+  final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
+  final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
+  return sessionType == 'wayland' || waylandDisplay.isNotEmpty;
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -523,9 +531,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   void _checkWaylandLimitations() {
-    final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
-    final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
-    if (sessionType != 'wayland' && waylandDisplay.isEmpty) return;
+    if (!isWaylandSession()) return;
 
     AppLogger.info('Wayland session detected — hotkey and paste limited');
 

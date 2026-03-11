@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:auto_updater/auto_updater.dart';
 import 'package:core/core.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 const _isStoreBuild = bool.fromEnvironment('STORE_BUILD', defaultValue: false);
 
@@ -18,6 +19,13 @@ class AutoUpdateService {
 
   static Timer? _timer;
   static void Function(String version)? onUpdateAvailable;
+
+  /// Overrideable for testing — defaults to the real GitHub API URL.
+  @visibleForTesting
+  static String releasesUrlOverride = '';
+
+  static String get _effectiveReleasesUrl =>
+      releasesUrlOverride.isNotEmpty ? releasesUrlOverride : _releasesUrl;
 
   static Future<void> initialize() async {
     if (_isStoreBuild) return;
@@ -48,7 +56,7 @@ class AutoUpdateService {
     try {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 10);
-      final request = await client.getUrl(Uri.parse(_releasesUrl));
+      final request = await client.getUrl(Uri.parse(_effectiveReleasesUrl));
       request.headers.set('Accept', 'application/vnd.github.v3+json');
       request.headers.set('User-Agent', 'CopyPaste-UpdateChecker');
 
@@ -80,7 +88,11 @@ class AutoUpdateService {
     }
   }
 
-  static bool _isNewer(String latest, String current) {
+  static bool _isNewer(String latest, String current) =>
+      isNewerVersion(latest, current);
+
+  @visibleForTesting
+  static bool isNewerVersion(String latest, String current) {
     final latestParts = latest.split('-');
     final currentParts = current.split('-');
     final latestBase = latestParts[0].split('.').map(int.tryParse).toList();
@@ -101,5 +113,13 @@ class AutoUpdateService {
   static void dispose() {
     _timer?.cancel();
     _timer = null;
+  }
+
+  /// Resets internal state for testing.
+  @visibleForTesting
+  static void reset() {
+    dispose();
+    onUpdateAvailable = null;
+    releasesUrlOverride = '';
   }
 }
