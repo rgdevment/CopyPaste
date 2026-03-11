@@ -444,4 +444,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateDismiss => 'Later';
+
+  @override
+  String get waylandWarning =>
+      'Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.';
 }

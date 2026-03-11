@@ -269,6 +269,9 @@ class AppWindow {
       await windowManager.setSkipTaskbar(false);
     }
     await windowManager.show();
+    if (Platform.isLinux) {
+      await windowManager.setOpacity(1.0);
+    }
     await windowManager.focus();
     _visible = true;
     onVisibilityChanged?.call(true);

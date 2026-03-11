@@ -170,5 +170,7 @@
 
   "updateAvailable": "La versi\u00f3n {version} est\u00e1 disponible. Actualiza con Homebrew (brew upgrade copypaste) o descarga la \u00faltima versi\u00f3n desde GitHub.",
   "updateViewRelease": "Ver versi\u00f3n",
-  "updateDismiss": "Despu\u00e9s"
+  "updateDismiss": "Despu\u00e9s",
+
+  "waylandWarning": "Wayland detectado: el atajo global y el pegado autom\u00e1tico no est\u00e1n soportados. Usa una sesi\u00f3n X11 para funcionalidad completa."
 }

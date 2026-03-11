@@ -203,6 +203,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     _startListening();
     AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
     unawaited(AutoUpdateService.initialize());
+
+    if (Platform.isLinux) {
+      _checkWaylandLimitations();
+    }
   }
 
   void _startListening() {
@@ -516,6 +520,29 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         ),
       ),
     );
+  }
+
+  void _checkWaylandLimitations() {
+    final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
+    final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
+    if (sessionType != 'wayland' && waylandDisplay.isEmpty) return;
+
+    AppLogger.info('Wayland session detected — hotkey and paste limited');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      final l = AppLocalizations.of(ctx);
+      final messenger = ScaffoldMessenger.maybeOf(ctx);
+      if (messenger == null) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l.waylandWarning),
+          duration: const Duration(seconds: 12),
+        ),
+      );
+    });
   }
 
   @override

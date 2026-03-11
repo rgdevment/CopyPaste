@@ -931,6 +931,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Later'**
   String get updateDismiss;
+
+  /// Warning shown when running under Wayland instead of X11
+  ///
+  /// In en, this message translates to:
+  /// **'Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.'**
+  String get waylandWarning;
 }
 
 class _AppLocalizationsDelegate

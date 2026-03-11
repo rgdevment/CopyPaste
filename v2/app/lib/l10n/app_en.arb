@@ -346,5 +346,8 @@
   "@updateViewRelease": { "description": "Button to open the GitHub release page" },
 
   "updateDismiss": "Later",
-  "@updateDismiss": { "description": "Button to dismiss the update notification" }
+  "@updateDismiss": { "description": "Button to dismiss the update notification" },
+
+  "waylandWarning": "Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.",
+  "@waylandWarning": { "description": "Warning shown when running under Wayland instead of X11" }
 }

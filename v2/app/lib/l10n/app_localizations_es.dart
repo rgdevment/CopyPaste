@@ -448,4 +448,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get updateDismiss => 'Después';
+
+  @override
+  String get waylandWarning =>
+      'Wayland detectado: el atajo global y el pegado automático no están soportados. Usa una sesión X11 para funcionalidad completa.';
 }
