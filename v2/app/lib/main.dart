@@ -511,7 +511,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
         title: Text(l.updateDialogTitle),
-        content: Text(l.updateAvailable(version)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Text(l.updateAvailable(version)),
+        ),
+        actionsOverflowButtonSpacing: 8,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),

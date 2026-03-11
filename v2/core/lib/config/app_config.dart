@@ -33,7 +33,7 @@ class AppConfig {
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
     this.hasSeenHint = false,
-    this.themeMode = 'dark',
+    this.themeMode = 'auto',
     this.showTrayIcon = true,
     this.accessibilityWasGranted = false,
   });
@@ -71,7 +71,7 @@ class AppConfig {
     resetScrollOnShow: json['resetScrollOnShow'] as bool? ?? true,
     resetSearchOnShow: json['resetSearchOnShow'] as bool? ?? true,
     hasSeenHint: json['hasSeenHint'] as bool? ?? false,
-    themeMode: json['themeMode'] as String? ?? 'dark',
+    themeMode: json['themeMode'] as String? ?? 'auto',
     showTrayIcon: json['showTrayIcon'] as bool? ?? true,
     accessibilityWasGranted: json['accessibilityWasGranted'] as bool? ?? false,
   );
