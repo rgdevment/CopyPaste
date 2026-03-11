@@ -11,6 +11,7 @@
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/extensions/XTest.h>
 #endif
@@ -294,7 +295,13 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
              (int)(modifiers | modifier_combinations[i]), shell->root_window,
              True, GrabModeAsync, GrabModeAsync);
   }
-  XSelectInput(shell->xdisplay, shell->root_window, KeyPressMask);
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(shell->xdisplay, shell->root_window, &attrs) != 0) {
+      XSelectInput(shell->xdisplay, shell->root_window,
+                   attrs.your_event_mask | KeyPressMask);
+    } else {
+      XSelectInput(shell->xdisplay, shell->root_window, KeyPressMask);
+    }
   XFlush(shell->xdisplay);
 
   shell->hotkey_registered = TRUE;

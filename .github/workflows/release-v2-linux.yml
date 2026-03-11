@@ -105,7 +105,17 @@ jobs:
                   sed -i "s/^version:.*/version: $VERSION/" v2/app/pubspec.yaml
                   echo "Updated pubspec.yaml version to: $VERSION"
 
-            - name: Build AppImage
+            - name: Analyze Dart code
+              run: |
+                  cd v2/app && dart analyze --fatal-infos
+
+            - name: Build Linux release
+              run: |
+                  cd v2/app
+                  flutter build linux --release \
+                    --dart-define="APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
+
+            - name: Package AppImage
               run: |
                   cd v2/app
                   fastforge package \
@@ -116,14 +126,15 @@ jobs:
             - name: Rename AppImage
               run: |
                   VERSION="${{ steps.get_version.outputs.VERSION }}"
-                  mkdir -p v2/app/dist
-                  APPIMAGE=$(find v2/app/dist v2/app/build -type f -name "*.AppImage" | head -n 1)
+                  APPIMAGE=$(find v2/app/dist v2/app/build -type f -name "*.AppImage" 2>/dev/null | head -n 1)
                   if [[ -z "$APPIMAGE" ]]; then
                     echo "::error::No AppImage generated"
                     exit 1
                   fi
-                  DEST="$(dirname "$APPIMAGE")/CopyPaste_${VERSION}_x86_64.AppImage"
+                  mkdir -p v2/app/dist
+                  DEST="v2/app/dist/CopyPaste_${VERSION}_x86_64.AppImage"
                   mv "$APPIMAGE" "$DEST"
+                  chmod +x "$DEST"
                   echo "Renamed to: $(basename "$DEST")"
 
             - name: Upload artifact

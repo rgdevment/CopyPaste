@@ -377,10 +377,16 @@ static gchar* build_clipboard_signature(GtkClipboard* clipboard) {
 
   GdkPixbuf* image = gtk_clipboard_wait_for_image(clipboard);
   if (image != NULL) {
-    gint width = gdk_pixbuf_get_width(image);
+    const guchar* pixels = gdk_pixbuf_read_pixels(image);
+    gsize rowstride = (gsize)gdk_pixbuf_get_rowstride(image);
     gint height = gdk_pixbuf_get_height(image);
-    gint rowstride = gdk_pixbuf_get_rowstride(image);
-    g_string_append_printf(signature, "I:%d:%d:%d", width, height, rowstride);
+    gsize total = rowstride * (gsize)height;
+    gsize sample_len = total > 256 ? 256 : total;
+    g_string_append(signature, "I:");
+    g_string_append_printf(signature, "%" G_GSIZE_FORMAT ":", total);
+    for (gsize i = 0; i < sample_len; i++) {
+      g_string_append_printf(signature, "%02x", pixels[i]);
+    }
     g_object_unref(image);
     return g_string_free(signature, FALSE);
   }
@@ -743,17 +749,7 @@ static gboolean set_files_to_clipboard(const gchar* content) {
   return TRUE;
 }
 
-static FlValue* get_media_info(FlValue* args) {
-  FlValue* path_value = args != NULL ? fl_value_lookup_string(args, "path") : NULL;
-  if (path_value == NULL || fl_value_get_type(path_value) != FL_VALUE_TYPE_STRING) {
-    return NULL;
-  }
-
-  const gchar* path = fl_value_get_string(path_value);
-  if (path == NULL || !g_file_test(path, G_FILE_TEST_EXISTS)) {
-    return NULL;
-  }
-
+static FlValue* get_media_info(void) {
   return NULL;
 }
 
@@ -764,16 +760,20 @@ static void respond_success(FlMethodCall* method_call, FlValue* result) {
   }
 }
 
+#ifdef GDK_WINDOWING_X11
+static gboolean paste_after_delay_cb(gpointer data) {
+  FlMethodCall* mc = FL_METHOD_CALL(data);
+  simulate_paste_x11();
+  respond_success(mc, fl_value_new_bool(TRUE));
+  g_object_unref(mc);
+  return G_SOURCE_REMOVE;
+}
+#endif
+
 static void listener_plugin_handle_method_call(ListenerPlugin* self,
                                                FlMethodCall* method_call) {
   const gchar* method = fl_method_call_get_name(method_call);
   FlValue* args = fl_method_call_get_args(method_call);
-
-  if (strcmp(method, "getPlatformVersion") == 0) {
-    g_autoptr(FlMethodResponse) response = get_platform_version();
-    fl_method_call_respond(method_call, response, NULL);
-    return;
-  }
 
   if (strcmp(method, "setClipboardContent") == 0) {
     FlValue* type_value = args != NULL ? fl_value_lookup_string(args, "type") : NULL;
@@ -812,7 +812,7 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
   }
 
   if (strcmp(method, "getMediaInfo") == 0) {
-    respond_success(method_call, get_media_info(args));
+    respond_success(method_call, get_media_info());
     return;
   }
 
@@ -840,20 +840,23 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
                                     ? fl_value_get_string(id_value)
                                     : NULL;
       gint64 delay_ms = delay_value != NULL ? fl_value_get_int(delay_value) : 0;
-      gboolean success = FALSE;
+      gboolean activated = FALSE;
 
       if (identifier != NULL && g_str_has_prefix(identifier, "x11:0x")) {
         Window window = (Window)g_ascii_strtoull(identifier + 6, NULL, 16);
-        success = request_activate_x11_window(window);
-        if (success) {
-          if (delay_ms > 0) {
-            g_usleep((gulong)delay_ms * 1000);
-          }
-          success = simulate_paste_x11();
-        }
+        activated = request_activate_x11_window(window);
       }
 
-      respond_success(method_call, fl_value_new_bool(success));
+      if (activated && delay_ms > 0) {
+        FlMethodCall* held_call = FL_METHOD_CALL(g_object_ref(method_call));
+        g_timeout_add((guint)delay_ms, paste_after_delay_cb, held_call);
+        return;
+      }
+
+      if (activated) {
+        simulate_paste_x11();
+      }
+      respond_success(method_call, fl_value_new_bool(activated));
       return;
     }
 #endif
