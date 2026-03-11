@@ -1,9 +1,11 @@
 name: Release v2 (Windows)
 
 on:
-    push:
-        tags:
-            - "v2.*"
+    workflow_call:
+        inputs:
+            version:
+                required: true
+                type: string
     workflow_dispatch:
         inputs:
             version:
@@ -12,13 +14,13 @@ on:
                 default: "2.0.0-dev"
 
 permissions:
-    contents: write
+    contents: read
 
 jobs:
     release-windows:
         runs-on: windows-latest
         timeout-minutes: 30
-        name: Build & Release Windows
+        name: Build Windows
 
         env:
             PFX_BASE64: ${{ secrets.PFX_BASE64 }}
@@ -28,19 +30,12 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   ref: ${{ github.ref_name }}
-                  fetch-depth: 0
 
-            - name: Extract version from tag
+            - name: Resolve version
               id: get_version
               shell: pwsh
               run: |
-                  if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-                    $version = "${{ github.event.inputs.version }}"
-                  } elseif ($env:GITHUB_REF -match 'refs/tags/v2\.(.+)') {
-                    $version = "2.$($matches[1])"
-                  } else {
-                    $version = "2.0.0"
-                  }
+                  $version = "${{ inputs.version }}"
 
                   $isPrerelease = if ($version -match '-') { 'true' } else { 'false' }
                   $baseVersion = $version -replace '-.*', ''
@@ -176,102 +171,4 @@ jobs:
                   name: release-windows
                   path: v2/app/dist/
                   retention-days: 5
-
-    github-release:
-        runs-on: ubuntu-latest
-        needs: release-windows
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        timeout-minutes: 10
-        name: Create GitHub Release
-
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  ref: ${{ github.ref_name }}
-                  fetch-depth: 0
-
-            - name: Extract tag message
-              id: tag_message
-              run: |
-                  MSG=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | sed '/-----BEGIN SSH SIGNATURE-----/,$d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
-                  echo "TAG_BODY<<EOF" >> $GITHUB_OUTPUT
-                  echo "$MSG" >> $GITHUB_OUTPUT
-                  echo "EOF" >> $GITHUB_OUTPUT
-
-            - name: Download artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: release-windows
-                  path: artifacts
-
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  body: ${{ steps.tag_message.outputs.TAG_BODY }}
-                  generate_release_notes: true
-                  prerelease: ${{ contains(github.ref_name, '-') }}
-                  files: |
-                      artifacts/**/*_Setup.exe
-                      artifacts/**/*_store.msix*
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    update-appcast:
-        runs-on: ubuntu-latest
-        needs: github-release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        timeout-minutes: 5
-        name: Update Appcast
-
-        steps:
-            - name: Generate and update appcast Gist
-              env:
-                  GH_TOKEN: ${{ secrets.GIST_TOKEN }}
-              run: |
-                  RELEASE=$(gh api repos/${{ github.repository }}/releases \
-                    --jq '[.[] | select(.tag_name | startswith("v2.")) | select(.draft | not)] | sort_by(.published_at) | reverse | .[0]')
-
-                  TAG=$(echo "$RELEASE" | jq -r '.tag_name')
-                  VERSION=${TAG#v}
-                  DATE=$(echo "$RELEASE" | jq -r '.published_at')
-                  ASSET_URL=$(echo "$RELEASE" | jq -r '.assets[] | select(.name | endswith("_Setup.exe")) | .browser_download_url')
-
-                  if [ -z "$ASSET_URL" ]; then
-                    echo "No Setup.exe asset found in release $TAG, skipping appcast update"
-                    exit 0
-                  fi
-
-                  ASSET_SIZE=$(echo "$RELEASE" | jq -r '.assets[] | select(.name | endswith("_Setup.exe")) | .size')
-                  PUB_DATE=$(date -d "$DATE" -R)
-
-                  cat > /tmp/appcast.xml << 'APPCAST_EOF'
-                  <?xml version="1.0" encoding="utf-8"?>
-                  <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-                    <channel>
-                      <title>CopyPaste</title>
-                      <description>CopyPaste update feed</description>
-                      <language>en</language>
-                      <item>
-                        <title>CopyPaste APPCAST_VERSION_PLACEHOLDER</title>
-                        <pubDate>APPCAST_PUBDATE_PLACEHOLDER</pubDate>
-                        <enclosure
-                          url="APPCAST_URL_PLACEHOLDER"
-                          sparkle:version="APPCAST_VERSION_PLACEHOLDER"
-                          sparkle:os="windows"
-                          type="application/octet-stream"
-                          length="APPCAST_SIZE_PLACEHOLDER" />
-                      </item>
-                    </channel>
-                  </rss>
-                  APPCAST_EOF
-
-                  sed -i 's/^          //' /tmp/appcast.xml
-                  sed -i "s|APPCAST_VERSION_PLACEHOLDER|${VERSION}|g" /tmp/appcast.xml
-                  sed -i "s|APPCAST_PUBDATE_PLACEHOLDER|${PUB_DATE}|g" /tmp/appcast.xml
-                  sed -i "s|APPCAST_URL_PLACEHOLDER|${ASSET_URL}|g" /tmp/appcast.xml
-                  sed -i "s|APPCAST_SIZE_PLACEHOLDER|${ASSET_SIZE}|g" /tmp/appcast.xml
-
-                  jq -n --arg content "$(cat /tmp/appcast.xml)" \
-                    '{"files":{"appcast.xml":{"content":$content}}}' | \
-                    gh api --method PATCH "/gists/${{ vars.APPCAST_GIST_ID }}" --input -
 
