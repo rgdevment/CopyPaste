@@ -913,6 +913,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Waiting for permission…'**
   String get permissionsWaiting;
+
+  /// Short text shown in the footer when an update is available
+  ///
+  /// In en, this message translates to:
+  /// **'v{version} is available, please update'**
+  String updateBadge(String version);
+
+  /// Update dialog message for macOS
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nUpdate via Homebrew:\nbrew upgrade copypaste\n\nOr download the latest release from GitHub.'**
+  String updateAvailableMac(String version);
+
+  /// Update dialog message for Linux
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nDownload the latest release from GitHub.'**
+  String updateAvailableLinux(String version);
+
+  /// Title of the update available dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Update Available'**
+  String get updateDialogTitle;
+
+  /// Button to open the GitHub release page
+  ///
+  /// In en, this message translates to:
+  /// **'View release'**
+  String get updateViewRelease;
+
+  /// Button to dismiss the update notification
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateDismiss;
+
+  /// Warning shown when running under Wayland instead of X11
+  ///
+  /// In en, this message translates to:
+  /// **'Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.'**
+  String get waylandWarning;
 }
 
 class _AppLocalizationsDelegate

@@ -109,7 +109,7 @@ class WindowFocusManager {
   Future<void> capturePreviousWindow() async {
     if (Platform.isWindows) {
       _capturePreviousWindows();
-    } else if (Platform.isMacOS) {
+    } else if (Platform.isMacOS || Platform.isLinux) {
       _previousBundleId = await ClipboardWriter.captureFrontmostApp();
     }
   }
@@ -120,11 +120,13 @@ class WindowFocusManager {
     required int delayBeforePasteMs,
   }) async {
     if (Platform.isWindows && _previousWindow == 0) return;
-    if (Platform.isMacOS && _previousBundleId == null) return;
+    if ((Platform.isMacOS || Platform.isLinux) && _previousBundleId == null) {
+      return;
+    }
 
     await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
-    if (Platform.isMacOS) {
+    if (Platform.isMacOS || Platform.isLinux) {
       await ClipboardWriter.activateAndPaste(
         bundleId: _previousBundleId!,
         delayMs: delayBeforePasteMs,

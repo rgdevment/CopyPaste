@@ -124,8 +124,8 @@ class AppWindow {
   Future<void> _positionNearCursor() async {
     if (Platform.isWindows) {
       await _positionNearCursorWindows();
-    } else if (Platform.isMacOS) {
-      await _positionNearCursorMacOS();
+    } else if (Platform.isMacOS || Platform.isLinux) {
+      await _positionNearCursorNative();
     } else {
       await windowManager.center();
     }
@@ -149,7 +149,7 @@ class AppWindow {
     }
   }
 
-  Future<void> _positionNearCursorMacOS() async {
+  Future<void> _positionNearCursorNative() async {
     try {
       final info = await ClipboardWriter.getCursorAndScreenInfo();
       if (info == null) {
@@ -265,8 +265,13 @@ class AppWindow {
     if (Platform.isWindows) {
       await applyEffect();
       await windowManager.setSkipTaskbar(false);
+    } else if (Platform.isLinux) {
+      await windowManager.setSkipTaskbar(false);
     }
     await windowManager.show();
+    if (Platform.isLinux) {
+      await windowManager.setOpacity(1.0);
+    }
     await windowManager.focus();
     _visible = true;
     onVisibilityChanged?.call(true);

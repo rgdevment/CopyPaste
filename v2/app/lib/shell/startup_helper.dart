@@ -92,6 +92,12 @@ class StartupHelper {
       } else {
         _removeLaunchAgent();
       }
+    } else if (Platform.isLinux) {
+      if (runOnStartup) {
+        _installDesktopAutostart();
+      } else {
+        _removeDesktopAutostart();
+      }
     }
   }
 
@@ -217,6 +223,41 @@ class StartupHelper {
       if (file.existsSync()) file.deleteSync();
     } catch (e) {
       AppLogger.error('Failed to remove LaunchAgent: $e');
+    }
+  }
+
+  static String get _desktopAutostartPath {
+    final home = Platform.environment['HOME'] ?? '/tmp';
+    return '$home/.config/autostart/$_appName.desktop';
+  }
+
+  static void _installDesktopAutostart() {
+    try {
+      final exePath = Platform.resolvedExecutable;
+      final desktop =
+          '[Desktop Entry]\n'
+          'Type=Application\n'
+          'Name=$_appName\n'
+          'Exec=$exePath\n'
+          'X-GNOME-Autostart-enabled=true\n'
+          'StartupNotify=false\n'
+          'Terminal=false\n';
+      final autostartDir = Directory(
+        '${Platform.environment['HOME']}/.config/autostart',
+      );
+      if (!autostartDir.existsSync()) autostartDir.createSync(recursive: true);
+      File(_desktopAutostartPath).writeAsStringSync(desktop);
+    } catch (e) {
+      AppLogger.error('Failed to install autostart desktop entry: $e');
+    }
+  }
+
+  static void _removeDesktopAutostart() {
+    try {
+      final file = File(_desktopAutostartPath);
+      if (file.existsSync()) file.deleteSync();
+    } catch (e) {
+      AppLogger.error('Failed to remove autostart desktop entry: $e');
     }
   }
 }

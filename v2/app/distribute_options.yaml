@@ -20,3 +20,10 @@ releases:
           build_args:
             dart-define:
               STORE_BUILD: "true"
+
+  - name: linux-appimage
+    jobs:
+      - name: build-appimage
+        package:
+          platform: linux
+          target: appimage

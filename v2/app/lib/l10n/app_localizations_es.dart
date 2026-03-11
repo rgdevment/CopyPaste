@@ -437,4 +437,32 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get permissionsWaiting => 'Esperando permiso…';
+
+  @override
+  String updateBadge(String version) {
+    return 'v$version disponible, por favor actualiza';
+  }
+
+  @override
+  String updateAvailableMac(String version) {
+    return 'La versión $version está disponible.\n\nActualiza con Homebrew:\nbrew upgrade copypaste\n\nO descarga la última versión desde GitHub.';
+  }
+
+  @override
+  String updateAvailableLinux(String version) {
+    return 'La versión $version está disponible.\n\nDescarga la última versión desde GitHub.';
+  }
+
+  @override
+  String get updateDialogTitle => 'Actualización disponible';
+
+  @override
+  String get updateViewRelease => 'Ver versión';
+
+  @override
+  String get updateDismiss => 'Después';
+
+  @override
+  String get waylandWarning =>
+      'Wayland detectado: el atajo global y el pegado automático no están soportados. Usa una sesión X11 para funcionalidad completa.';
 }

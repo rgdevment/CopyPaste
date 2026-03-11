@@ -21,7 +21,7 @@
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
-    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-0078D4?style=flat-square&logo=windows" alt="Platform"/>
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4?style=flat-square&logo=windows" alt="Platform"/>
     <a href="#license">
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License"/>
     </a>
@@ -30,6 +30,9 @@
     </a>
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_macos.json&style=flat-square&logo=apple&logoColor=white" alt="macOS Downloads"/>
+    </a>
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_linux.json&style=flat-square&logo=linux&logoColor=black" alt="Linux Downloads"/>
     </a>
   </p>
 
@@ -45,12 +48,16 @@
     </a>
     &nbsp;
     <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
+      <img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"/>
+    </a>
+    &nbsp;
+    <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
       <img src="https://img.shields.io/badge/Standalone-GitHub_Releases-181717?style=for-the-badge&logo=github" alt="Standalone Installer"/>
     </a>
   </p>
 
   <p align="center">
-    <sub>Windows (.exe) &bull; macOS (.dmg universal — Apple Silicon + Intel) &bull; <a href="#-getting-started">Installation guide</a></sub>
+    <sub>Windows (.exe) &bull; macOS (.dmg universal — Apple Silicon + Intel) &bull; Linux (.AppImage) &bull; <a href="#-getting-started">Installation guide</a></sub>
   </p>
 
   <p>
@@ -74,7 +81,7 @@ My goal was to create something that felt truly **native**: a piece of software 
 
 Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't — without friction or unnecessary visual noise.
 
-- **Aesthetics and Fluidity:** I was inspired by the cleanest workspaces to bring that same sense of calm to your desktop. Built on a **cross-platform UI and core** — so every transition feels like an integral part of the OS, not a widget dropped on top of it. The same foundation that makes it beautiful on Windows and macOS today is what will let it reach Linux tomorrow.
+- **Aesthetics and Fluidity:** I was inspired by the cleanest workspaces to bring that same sense of calm to your desktop. Built on a **cross-platform UI and core** — so every transition feels like an integral part of the OS, not a widget dropped on top of it. The same foundation powers Windows, macOS, and Linux with a native feel on each.
 - **A Commitment to Respect:** Your data is yours. CopyPaste is **local-first**: nothing leaves your computer — no accounts, no telemetry, no tracking of any kind. A tool designed with privacy and absolute respect for your digital space.
 - **Open Source and Free:** This project is **GPL v3**. Free to use, free to fork, and always without subscriptions, telemetry, or data harvesting — ever.
 
@@ -155,7 +162,7 @@ I wanted to bring the **polish and fluidity** you find in great tools to Windows
 - **Native system integration** — adapts to the OS light/dark theme and behaves like it belongs, wherever it runs. Mica effect on Windows, Sidebar material on macOS.
 - **Performance** — every millisecond counts when you use something hundreds of times a day
 - **Reliability** — something you can count on without thinking about it
-- **Multiplatform** — Windows and macOS today, Linux on the way
+- **Multiplatform** — Windows, macOS, and Linux
 
 ---
 
@@ -163,7 +170,7 @@ I wanted to bring the **polish and fluidity** you find in great tools to Windows
 
 **CopyPaste is:**
 
-- A **local-first clipboard history** app for Windows and macOS (Linux coming soon).
+- A **local-first clipboard history** app for Windows, macOS, and Linux.
 - A **fast** tool designed for keyboard workflows.
 - **Open source**, so you can inspect how it works.
 
@@ -212,9 +219,15 @@ CopyPaste stores its data locally under your user profile:
 
 **macOS:**
 
-- **Database:** `~/Library/Application Support/CopyPaste/clipboard.db`
-- **Images:** `~/Library/Application Support/CopyPaste/images`
-- **Config:** `~/Library/Application Support/CopyPaste/config`
+- **Database:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/clipboard.db`
+- **Images:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images`
+- **Config:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config`
+
+**Linux:**
+
+- **Database:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/clipboard.db`
+- **Images:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/images`
+- **Config:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/config`
 
 </details>
 
@@ -236,9 +249,9 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 - 🔍 **Smart Search:** Diacritic-insensitive full-text search (handles é, ñ, ø, ß, æ and more) across content and labels.
 - 🎛️ **Advanced Filters:** Three filter modes — Content (text search), Category (color selection), and Type (item type selection) — with intuitive dropdown multi-selection.
 - 💾 **Backup & Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
-- 🔄 **Automatic Updates:** The Windows Store version updates via Windows. The standalone version checks for updates in the background. macOS uses Homebrew or Sparkle.
+- 🔄 **Automatic Updates:** The Windows Store version updates via Windows. The standalone version checks for updates in the background. macOS and Linux notify you when a new version is available.
 - ⚙️ **Highly Configurable:** Hotkeys, appearance, panel dimensions, retention days, paste timings, performance tuning, filter reset behavior, and more.
-- 🖥️ **Multiplatform:** Windows and macOS with native look and feel. Linux coming soon.
+- 🖥️ **Multiplatform:** Windows, macOS, and Linux with native look and feel.
 
 ---
 
@@ -362,8 +375,9 @@ In the **Settings** window, you can customize filter behavior:
 | :---------- | :-------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
 | **Windows** | [**Microsoft Store**](https://apps.microsoft.com/detail/9NBJRZF3K856) — one click, auto-updates                                   | [Standalone .exe](https://github.com/rgdevment/CopyPaste/releases/latest) from GitHub Releases   |
 | **macOS**   | [**Homebrew**](https://github.com/rgdevment/CopyPaste/releases/latest): `brew tap rgdevment/tap && brew install --cask copypaste` | [Universal .dmg](https://github.com/rgdevment/CopyPaste/releases/latest) (Apple Silicon + Intel) |
+| **Linux**   | [**AppImage**](https://github.com/rgdevment/CopyPaste/releases/latest) — download and run, no installation needed                 | —                                                                                                |
 
-After installing, open CopyPaste with **`Win+Alt+V`** (Windows) or **`Cmd+Alt+V`** (macOS).
+After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Super+Alt+V`** (Linux).
 
 ### Compatibility
 
@@ -371,7 +385,7 @@ After installing, open CopyPaste with **`Win+Alt+V`** (Windows) or **`Cmd+Alt+V`
 | :---------- | :----------------------------- | :-------------------------------- |
 | **Windows** | Windows 10 (1809+), Windows 11 | x64                               |
 | **macOS**   | Ventura (13.0+)                | Universal (Apple Silicon + Intel) |
-| **Linux**   | Coming soon                    | —                                 |
+| **Linux**   | Ubuntu 22.04+, Fedora 38+    | x64                               |
 
 <details>
 <summary><strong>⚠️ Windows Standalone: Security Warnings</strong></summary>
@@ -404,10 +418,10 @@ No. It works fully offline. The standalone version makes a lightweight check for
 No. There’s intentionally no cloud sync.
 
 **Where are my files stored?**
-Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/CopyPaste/`. Both contain the database, images, config, and logs.
+Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
 
 **What platforms are supported?**
-Windows 10/11 and macOS (Ventura+). Linux support is coming soon.
+Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+, Fedora 38+ via AppImage).
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
@@ -528,14 +542,14 @@ If you're curious about what's under the hood:
 
 | Technology                         | Why                                                                                   |
 | :--------------------------------- | :------------------------------------------------------------------------------------ |
-| **Flutter**                        | Cross-platform UI toolkit — native on Windows and macOS today, Linux coming soon.     |
+| **Flutter**                        | Cross-platform UI toolkit — native on Windows, macOS, and Linux.                      |
 | **Dart**                           | Clean, performant language for core logic, services, and domain models.               |
 | **Platform Channels + FFI**        | Native integration with each OS for clipboard hooks and system APIs.                  |
 | **Windows Mica / macOS Sidebar**   | Native translucent effects that match each platform's design language.                |
 | **C++ Plugin (Win) / Swift (Mac)** | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**      | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**          | Local database with full-text search across content and labels.                       |
-| **Sparkle (macOS)**                | Auto-update framework for macOS standalone distribution.                              |
+| **WinSparkle (Windows)**           | Auto-update framework for standalone Windows distribution.                            |
 | **Theme System**                   | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---
