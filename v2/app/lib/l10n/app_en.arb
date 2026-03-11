@@ -337,5 +337,26 @@
   "@permissionsRestartApp": { "description": "Button to restart the app when permission detection is stuck" },
 
   "permissionsWaiting": "Waiting for permission…",
-  "@permissionsWaiting": { "description": "Label shown while polling for the accessibility permission grant" }
+  "@permissionsWaiting": { "description": "Label shown while polling for the accessibility permission grant" },
+
+  "updateBadge": "v{version} is available, please update",
+  "@updateBadge": { "description": "Short text shown in the footer when an update is available", "placeholders": { "version": { "type": "String" } } },
+
+  "updateAvailableMac": "Version {version} is available.\n\nUpdate via Homebrew:\nbrew upgrade copypaste\n\nOr download the latest release from GitHub.",
+  "@updateAvailableMac": { "description": "Update dialog message for macOS", "placeholders": { "version": { "type": "String" } } },
+
+  "updateAvailableLinux": "Version {version} is available.\n\nDownload the latest release from GitHub.",
+  "@updateAvailableLinux": { "description": "Update dialog message for Linux", "placeholders": { "version": { "type": "String" } } },
+
+  "updateDialogTitle": "Update Available",
+  "@updateDialogTitle": { "description": "Title of the update available dialog" },
+
+  "updateViewRelease": "View release",
+  "@updateViewRelease": { "description": "Button to open the GitHub release page" },
+
+  "updateDismiss": "Later",
+  "@updateDismiss": { "description": "Button to dismiss the update notification" },
+
+  "waylandWarning": "Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.",
+  "@waylandWarning": { "description": "Warning shown when running under Wayland instead of X11" }
 }

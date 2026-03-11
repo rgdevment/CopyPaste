@@ -1,7 +1,12 @@
 // coverage:ignore-file
+import 'dart:async';
+import 'dart:io';
+
 import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+
+import 'linux_shell.dart';
 
 class HotkeyHandler {
   HotkeyHandler({required this.config, required this.onHotkey});
@@ -9,6 +14,7 @@ class HotkeyHandler {
   final AppConfig config;
   final void Function() onHotkey;
   HotKey? _hotkey;
+  StreamSubscription<String>? _linuxEventsSubscription;
 
   Future<bool> _tryRegister(HotKey hotkey) async {
     try {
@@ -22,6 +28,14 @@ class HotkeyHandler {
   }
 
   Future<void> registerWithFallback() async {
+    if (Platform.isLinux) {
+      _linuxEventsSubscription ??= LinuxShell.events.listen((event) {
+        if (event == 'hotkey') onHotkey();
+      });
+      await _registerLinuxWithFallback();
+      return;
+    }
+
     final modifiers = <HotKeyModifier>[];
     if (config.hotkeyUseCtrl) modifiers.add(HotKeyModifier.control);
     if (config.hotkeyUseWin) modifiers.add(HotKeyModifier.meta);
@@ -54,6 +68,14 @@ class HotkeyHandler {
   }
 
   Future<void> unregister() async {
+    if (Platform.isLinux) {
+      await _linuxEventsSubscription?.cancel();
+      _linuxEventsSubscription = null;
+      await LinuxShell.unregisterHotkey();
+      _hotkey = null;
+      return;
+    }
+
     if (_hotkey != null) {
       await hotKeyManager.unregister(_hotkey!);
       _hotkey = null;
@@ -90,5 +112,26 @@ class HotkeyHandler {
       0x5A: PhysicalKeyboardKey.keyZ,
     };
     return map[vk];
+  }
+
+  Future<void> _registerLinuxWithFallback() async {
+    final registered = await LinuxShell.registerHotkey(
+      virtualKey: config.hotkeyVirtualKey,
+      useCtrl: config.hotkeyUseCtrl,
+      useWin: config.hotkeyUseWin,
+      useAlt: config.hotkeyUseAlt,
+      useShift: config.hotkeyUseShift,
+    );
+    if (registered) return;
+
+    if (config.hotkeyUseWin) {
+      await LinuxShell.registerHotkey(
+        virtualKey: config.hotkeyVirtualKey,
+        useCtrl: true,
+        useWin: false,
+        useAlt: config.hotkeyUseAlt,
+        useShift: config.hotkeyUseShift,
+      );
+    }
   }
 }

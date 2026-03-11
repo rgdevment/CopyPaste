@@ -33,6 +33,14 @@ bool _isMicaDark(String themeMode) => switch (themeMode) {
   _ => false,
 };
 
+/// Returns true when the current Linux session is running under Wayland.
+/// Exposed for testing.
+bool isWaylandSession() {
+  final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
+  final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
+  return sessionType == 'wayland' || waylandDisplay.isNotEmpty;
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -139,6 +147,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
   bool _showPermissionGate = false;
+  String? _availableUpdateVersion;
 
   @override
   void initState() {
@@ -201,11 +210,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     _startListening();
+    AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
     unawaited(AutoUpdateService.initialize());
+
+    if (Platform.isLinux) {
+      _checkWaylandLimitations();
+    }
   }
 
   void _startListening() {
-    if (!Platform.isWindows && !Platform.isMacOS) return;
+    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
     _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
   }
 
@@ -489,10 +503,37 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     exit(0);
   }
 
+  void _onUpdateAvailable(String version) {
+    if (!mounted) return;
+    setState(() => _availableUpdateVersion = version);
+  }
+
+  void _checkWaylandLimitations() {
+    if (!isWaylandSession()) return;
+
+    AppLogger.info('Wayland session detected — hotkey and paste limited');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      final l = AppLocalizations.of(ctx);
+      final messenger = ScaffoldMessenger.maybeOf(ctx);
+      if (messenger == null) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l.waylandWarning),
+          duration: const Duration(seconds: 12),
+        ),
+      );
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     windowManager.removeListener(this);
+    AutoUpdateService.dispose();
     unawaited(_cleanup());
     super.dispose();
   }
@@ -581,6 +622,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     onPastePlain: (item) => _onPasteItem(item, plainText: true),
                     onExit: () => _appWindow.hide(),
                     onSettings: () => _openSettings(ctx),
+                    updateVersion: _availableUpdateVersion,
                   );
                 },
               ),

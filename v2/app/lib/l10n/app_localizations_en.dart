@@ -433,4 +433,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionsWaiting => 'Waiting for permission…';
+
+  @override
+  String updateBadge(String version) {
+    return 'v$version is available, please update';
+  }
+
+  @override
+  String updateAvailableMac(String version) {
+    return 'Version $version is available.\n\nUpdate via Homebrew:\nbrew upgrade copypaste\n\nOr download the latest release from GitHub.';
+  }
+
+  @override
+  String updateAvailableLinux(String version) {
+    return 'Version $version is available.\n\nDownload the latest release from GitHub.';
+  }
+
+  @override
+  String get updateDialogTitle => 'Update Available';
+
+  @override
+  String get updateViewRelease => 'View release';
+
+  @override
+  String get updateDismiss => 'Later';
+
+  @override
+  String get waylandWarning =>
+      'Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.';
 }
