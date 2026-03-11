@@ -337,5 +337,14 @@
   "@permissionsRestartApp": { "description": "Button to restart the app when permission detection is stuck" },
 
   "permissionsWaiting": "Waiting for permission…",
-  "@permissionsWaiting": { "description": "Label shown while polling for the accessibility permission grant" }
+  "@permissionsWaiting": { "description": "Label shown while polling for the accessibility permission grant" },
+
+  "updateAvailable": "Version {version} is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.",
+  "@updateAvailable": { "description": "Snackbar message when a new version is available", "placeholders": { "version": { "type": "String" } } },
+
+  "updateViewRelease": "View release",
+  "@updateViewRelease": { "description": "Button to open the GitHub release page" },
+
+  "updateDismiss": "Later",
+  "@updateDismiss": { "description": "Button to dismiss the update notification" }
 }

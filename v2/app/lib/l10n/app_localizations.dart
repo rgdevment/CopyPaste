@@ -913,6 +913,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Waiting for permission…'**
   String get permissionsWaiting;
+
+  /// Snackbar message when a new version is available
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.'**
+  String updateAvailable(String version);
+
+  /// Button to open the GitHub release page
+  ///
+  /// In en, this message translates to:
+  /// **'View release'**
+  String get updateViewRelease;
+
+  /// Button to dismiss the update notification
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateDismiss;
 }
 
 class _AppLocalizationsDelegate

@@ -105,20 +105,25 @@ CopyPaste makes **one type of network request**, and only in the standalone vers
 | Detail | Value |
 |:---|:---|
 | **Purpose** | Check if a newer version of CopyPaste is available |
-| **URL** | `https://gist.githubusercontent.com/rgdevment/.../raw/appcast.xml` |
+| **URL (Windows)** | `https://gist.githubusercontent.com/rgdevment/.../raw/appcast.xml` |
+| **URL (macOS/Linux)** | `https://api.github.com/repos/rgdevment/CopyPaste/releases/latest` |
 | **Method** | `GET` (read-only) |
 | **Data sent** | Standard HTTP headers only — **no user data** |
-| **Data received** | A small XML feed (Sparkle/WinSparkle appcast) containing the latest version number, download URL, and file size |
-| **Frequency** | On startup, then every 12 hours |
+| **Data received** | Windows: A small XML feed (Sparkle/WinSparkle appcast) containing the latest version number, download URL, and file size. macOS/Linux: A JSON response with the latest release tag name |
+| **Frequency** | Every 24 hours |
 | **Can be disabled?** | See below |
 
 **Important notes:**
-- This request is **read-only** — it only downloads a small public XML file from a GitHub Gist
+- This request is **read-only** — it only downloads a small public file (XML on Windows, JSON on macOS/Linux)
 - **No clipboard content, no usage data, no personal information** is ever sent
-- The feed is hosted on a public GitHub Gist, not on any server we operate
+- Windows feed is hosted on a public GitHub Gist; macOS/Linux uses the public GitHub Releases API
+- **Windows:** If an update is found, WinSparkle offers to download and install it automatically
+- **macOS/Linux:** If an update is found, a notification suggests downloading the new version from GitHub Releases. No automatic download or installation occurs
 - **Microsoft Store version:** The update checker is **completely disabled**. The Store handles updates automatically through its own infrastructure
 
 > **Standalone users:** The update checker cannot currently be disabled via settings, but it sends zero user data. If you require fully offline operation, the Microsoft Store version makes no network requests at all.
+>
+> **macOS/Linux users:** The update check only retrieves the latest release tag from GitHub's public API. If an update is available, a notification is shown — no files are downloaded automatically.
 
 ### User-Initiated Browser Navigation
 

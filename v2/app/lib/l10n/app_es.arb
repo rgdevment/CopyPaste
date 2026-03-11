@@ -166,5 +166,9 @@
   "permissionsRestartMessage": "Aseg\u00farate de que CopyPaste est\u00e9 activado en Privacidad y seguridad > Accesibilidad.\n\nLa app continuar\u00e1 autom\u00e1ticamente cuando detecte el permiso.",
   "permissionsCheckAgain": "Verificar",
   "permissionsRestartApp": "Reiniciar app",
-  "permissionsWaiting": "Esperando permiso\u2026"
+  "permissionsWaiting": "Esperando permiso\u2026",
+
+  "updateAvailable": "La versi\u00f3n {version} est\u00e1 disponible. Actualiza con Homebrew (brew upgrade copypaste) o descarga la \u00faltima versi\u00f3n desde GitHub.",
+  "updateViewRelease": "Ver versi\u00f3n",
+  "updateDismiss": "Despu\u00e9s"
 }

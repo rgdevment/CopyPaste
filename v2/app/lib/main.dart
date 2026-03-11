@@ -201,6 +201,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     _startListening();
+    AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
     unawaited(AutoUpdateService.initialize());
   }
 
@@ -489,10 +490,39 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     exit(0);
   }
 
+  void _onUpdateAvailable(String version) {
+    final ctx = _navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    final l = AppLocalizations.of(ctx);
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    if (messenger == null) return;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l.updateAvailable(version)),
+        duration: const Duration(seconds: 20),
+        action: SnackBarAction(
+          label: l.updateViewRelease,
+          onPressed: () {
+            final uri = Uri.parse(
+              'https://github.com/rgdevment/CopyPaste/releases/latest',
+            );
+            Process.start(
+              Platform.isMacOS ? 'open' : 'xdg-open',
+              [uri.toString()],
+              mode: ProcessStartMode.detached,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     windowManager.removeListener(this);
+    AutoUpdateService.dispose();
     unawaited(_cleanup());
     super.dispose();
   }

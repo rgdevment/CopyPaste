@@ -433,4 +433,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionsWaiting => 'Waiting for permission…';
+
+  @override
+  String updateAvailable(String version) {
+    return 'Version $version is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.';
+  }
+
+  @override
+  String get updateViewRelease => 'View release';
+
+  @override
+  String get updateDismiss => 'Later';
 }

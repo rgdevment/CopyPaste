@@ -236,9 +236,9 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 - 🔍 **Smart Search:** Diacritic-insensitive full-text search (handles é, ñ, ø, ß, æ and more) across content and labels.
 - 🎛️ **Advanced Filters:** Three filter modes — Content (text search), Category (color selection), and Type (item type selection) — with intuitive dropdown multi-selection.
 - 💾 **Backup & Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
-- 🔄 **Automatic Updates:** The Windows Store version updates via Windows. The standalone version checks for updates in the background. macOS uses Homebrew or Sparkle.
+- 🔄 **Automatic Updates:** The Windows Store version updates via Windows. The standalone version checks for updates in the background. macOS and Linux notify you when a new version is available.
 - ⚙️ **Highly Configurable:** Hotkeys, appearance, panel dimensions, retention days, paste timings, performance tuning, filter reset behavior, and more.
-- 🖥️ **Multiplatform:** Windows and macOS with native look and feel. Linux coming soon.
+- 🖥️ **Multiplatform:** Windows, macOS, and Linux with native look and feel.
 
 ---
 
@@ -528,14 +528,14 @@ If you're curious about what's under the hood:
 
 | Technology                         | Why                                                                                   |
 | :--------------------------------- | :------------------------------------------------------------------------------------ |
-| **Flutter**                        | Cross-platform UI toolkit — native on Windows and macOS today, Linux coming soon.     |
+| **Flutter**                        | Cross-platform UI toolkit — native on Windows, macOS, and Linux.                      |
 | **Dart**                           | Clean, performant language for core logic, services, and domain models.               |
 | **Platform Channels + FFI**        | Native integration with each OS for clipboard hooks and system APIs.                  |
 | **Windows Mica / macOS Sidebar**   | Native translucent effects that match each platform's design language.                |
 | **C++ Plugin (Win) / Swift (Mac)** | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**      | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**          | Local database with full-text search across content and labels.                       |
-| **Sparkle (macOS)**                | Auto-update framework for macOS standalone distribution.                              |
+| **WinSparkle (Windows)**           | Auto-update framework for standalone Windows distribution.                            |
 | **Theme System**                   | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---
