@@ -529,9 +529,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
         ? (widget.cardMaxLines ?? theme.sizing.cardMaxLines)
         : minLines;
     final textStyle = theme.typography.cardContent.copyWith(
-      color: colors.onSurface.withValues(
-        alpha: theme.cardStyle.contentOpacity,
-      ),
+      color: colors.onSurface.withValues(alpha: theme.cardStyle.contentOpacity),
     );
 
     return LayoutBuilder(
