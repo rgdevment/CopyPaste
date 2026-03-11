@@ -212,9 +212,15 @@ CopyPaste stores its data locally under your user profile:
 
 **macOS:**
 
-- **Database:** `~/Library/Application Support/CopyPaste/clipboard.db`
-- **Images:** `~/Library/Application Support/CopyPaste/images`
-- **Config:** `~/Library/Application Support/CopyPaste/config`
+- **Database:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/clipboard.db`
+- **Images:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images`
+- **Config:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config`
+
+**Linux:**
+
+- **Database:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/clipboard.db`
+- **Images:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/images`
+- **Config:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/config`
 
 </details>
 
@@ -404,7 +410,7 @@ No. It works fully offline. The standalone version makes a lightweight check for
 No. There’s intentionally no cloud sync.
 
 **Where are my files stored?**
-Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/CopyPaste/`. Both contain the database, images, config, and logs.
+Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
 
 **What platforms are supported?**
 Windows 10/11 and macOS (Ventura+). Linux support is coming soon.

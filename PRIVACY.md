@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** March 4, 2026
+**Last updated:** March 11, 2026
 
 ---
 
@@ -60,7 +60,9 @@ Your settings are stored locally:
 
 ### Logs
 Application logs are stored locally for troubleshooting:
-- **Location:** `%LOCALAPPDATA%\CopyPaste\logs\`
+- **Windows:** `%LOCALAPPDATA%\CopyPaste\logs\`
+- **macOS:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/`
+- **Linux:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/`
 - **Content:** Application events, errors, and diagnostic information
 - **No personal data:** Logs do not contain clipboard content
 
@@ -68,7 +70,9 @@ Application logs are stored locally for troubleshooting:
 
 ## Where Is Everything Stored?
 
-All data is stored under your Windows user profile:
+All data is stored locally under your user profile:
+
+**Windows:**
 
 | Data | Location |
 |:---|:---|
@@ -77,7 +81,25 @@ All data is stored under your Windows user profile:
 | **Configuration** | `%LOCALAPPDATA%\CopyPaste\config\` |
 | **Logs** | `%LOCALAPPDATA%\CopyPaste\logs\` |
 
-These folders are protected by your Windows user account permissions. Other users on the same computer cannot access them under normal conditions.
+**macOS:**
+
+| Data | Location |
+|:---|:---|
+| **Database** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/clipboard.db` |
+| **Images** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images/` |
+| **Configuration** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config/` |
+| **Logs** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/` |
+
+**Linux:**
+
+| Data | Location |
+|:---|:---|
+| **Database** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/clipboard.db` |
+| **Images** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/images/` |
+| **Configuration** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/config/` |
+| **Logs** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/` |
+
+These folders are protected by your operating system's user account permissions. Other users on the same computer cannot access them under normal conditions.
 
 ---
 
@@ -118,7 +140,7 @@ CopyPaste makes **one type of network request**, and only in the standalone vers
 - **No clipboard content, no usage data, no personal information** is ever sent
 - Windows feed is hosted on a public GitHub Gist; macOS/Linux uses the public GitHub Releases API
 - **Windows:** If an update is found, WinSparkle offers to download and install it automatically
-- **macOS/Linux:** If an update is found, a notification suggests downloading the new version from GitHub Releases. No automatic download or installation occurs
+- **macOS/Linux:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details and a link to the release page. No automatic download or installation occurs
 - **Microsoft Store version:** The update checker is **completely disabled**. The Store handles updates automatically through its own infrastructure
 
 > **Standalone users:** The update checker cannot currently be disabled via settings, but it sends zero user data. If you require fully offline operation, the Microsoft Store version makes no network requests at all.
@@ -129,7 +151,7 @@ CopyPaste makes **one type of network request**, and only in the standalone vers
 
 When you explicitly click certain UI buttons, CopyPaste opens URLs in your default browser:
 - **"Report issue"** button → Opens `https://github.com/rgdevment/CopyPaste/issues`
-- **"Download update"** dialog → Opens the GitHub release page
+- **"Download update"** indicator → Opens the GitHub release page
 
 These are standard browser navigations initiated by your action — CopyPaste does not make these requests itself.
 
@@ -172,8 +194,17 @@ You can delete any clipboard item at any time:
 ### Complete Data Removal
 To completely remove all CopyPaste data from your computer:
 
-1. **Uninstall CopyPaste** (via Settings → Apps or the standalone uninstaller)
-2. **Delete the data folder:** `%LOCALAPPDATA%\CopyPaste\`
+**Windows:**
+1. Uninstall CopyPaste (via Settings → Apps or the standalone uninstaller)
+2. Delete the data folder: `%LOCALAPPDATA%\CopyPaste\`
+
+**macOS:**
+1. Move CopyPaste to Trash from Applications
+2. Delete the data folder: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/`
+
+**Linux:**
+1. Uninstall CopyPaste (via your package manager or remove the binary)
+2. Delete the data folder: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`
 
 After these steps, no CopyPaste data remains on your system.
 
