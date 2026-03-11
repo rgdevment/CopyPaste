@@ -205,7 +205,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   void _startListening() {
-    if (!Platform.isWindows && !Platform.isMacOS) return;
+    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
     _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
   }
 

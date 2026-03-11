@@ -124,7 +124,7 @@ class AppWindow {
   Future<void> _positionNearCursor() async {
     if (Platform.isWindows) {
       await _positionNearCursorWindows();
-    } else if (Platform.isMacOS) {
+    } else if (Platform.isMacOS || Platform.isLinux) {
       await _positionNearCursorMacOS();
     } else {
       await windowManager.center();

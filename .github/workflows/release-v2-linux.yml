@@ -1,0 +1,156 @@
+name: Release v2 (Linux)
+
+on:
+    push:
+        tags:
+            - "v2.*"
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version to use (e.g. 2.1.0). Defaults to 2.0.0-dev"
+                required: false
+                default: "2.0.0-dev"
+
+permissions:
+    contents: write
+
+jobs:
+    build-linux:
+        if: false
+        runs-on: ubuntu-22.04
+        timeout-minutes: 45
+        name: Build Linux (AppImage)
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.ref_name }}
+                  fetch-depth: 0
+
+            - name: Extract version from tag
+              id: get_version
+              run: |
+                  if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+                    VERSION="${{ github.event.inputs.version }}"
+                  elif [[ "$GITHUB_REF" =~ refs/tags/v2\.(.+) ]]; then
+                    VERSION="2.${BASH_REMATCH[1]}"
+                  else
+                    VERSION="2.0.0"
+                  fi
+
+                  IS_PRERELEASE="false"
+                  if [[ "$VERSION" == *-* ]]; then
+                    IS_PRERELEASE="true"
+                  fi
+
+                  echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+                  echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+                  echo "Version: $VERSION  PreRelease: $IS_PRERELEASE"
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Install Linux build dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    clang \
+                    cmake \
+                    desktop-file-utils \
+                    libayatana-appindicator3-dev \
+                    libfuse2 \
+                    libgstreamer-plugins-base1.0-dev \
+                    libgstreamer1.0-dev \
+                    libgtk-3-dev \
+                    libkeybinder-3.0-dev \
+                    liblzma-dev \
+                    libx11-dev \
+                    libxtst-dev \
+                    lld-14 \
+                    ninja-build \
+                    patchelf \
+                    pkg-config
+
+            - name: Verify Linux toolchain preflight
+              run: |
+                  set -euo pipefail
+                  test -x /usr/lib/llvm-14/bin/ld.lld || test -x /usr/bin/ld.lld-14 || test -x /usr/bin/ld.lld
+                  pkg-config --modversion gtk+-3.0
+                  pkg-config --modversion keybinder-3.0
+                  pkg-config --modversion ayatana-appindicator3-0.1
+                  pkg-config --modversion x11
+                  pkg-config --modversion xtst
+
+            - name: Install Fastforge
+              run: dart pub global activate fastforge
+
+            - name: Get dependencies
+              run: |
+                  cd v2/core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Update pubspec version from tag
+              run: |
+                  VERSION="${{ steps.get_version.outputs.VERSION }}"
+                  sed -i "s/^version:.*/version: $VERSION/" v2/app/pubspec.yaml
+                  echo "Updated pubspec.yaml version to: $VERSION"
+
+            - name: Build AppImage
+              run: |
+                  cd v2/app
+                  fastforge package \
+                    --platform linux \
+                    --targets appimage \
+                    --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
+
+            - name: Rename AppImage
+              run: |
+                  VERSION="${{ steps.get_version.outputs.VERSION }}"
+                  mkdir -p v2/app/dist
+                  APPIMAGE=$(find v2/app/dist v2/app/build -type f -name "*.AppImage" | head -n 1)
+                  if [[ -z "$APPIMAGE" ]]; then
+                    echo "::error::No AppImage generated"
+                    exit 1
+                  fi
+                  DEST="$(dirname "$APPIMAGE")/CopyPaste_${VERSION}_x86_64.AppImage"
+                  mv "$APPIMAGE" "$DEST"
+                  echo "Renamed to: $(basename "$DEST")"
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: release-linux
+                  path: v2/app/dist/*.AppImage
+                  retention-days: 5
+
+    github-release:
+        if: false
+        runs-on: ubuntu-latest
+        needs: build-linux
+        timeout-minutes: 10
+        name: Create GitHub Release
+
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  name: release-linux
+                  path: artifacts
+
+            - name: Create or update GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  prerelease: ${{ contains(github.ref_name, '-') }}
+                  make_latest: true
+                  files: artifacts/*.AppImage
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

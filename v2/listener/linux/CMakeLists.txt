@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.10)
 
 # Project-level configuration.
 set(PROJECT_NAME "listener")
-project(${PROJECT_NAME} LANGUAGES CXX)
+project(${PROJECT_NAME} LANGUAGES C CXX)
 
 # This value is used when generating builds using this plugin, so it must
 # not be changed.
@@ -13,7 +13,7 @@ set(PLUGIN_NAME "listener_plugin")
 
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
-  "listener_plugin.cc"
+  "listener_plugin.c"
 )
 
 # Define the plugin library target. Its name must not be changed (see comment
@@ -40,6 +40,11 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(X11 REQUIRED IMPORTED_TARGET x11 xtst)
+
+target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::X11)
 
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
