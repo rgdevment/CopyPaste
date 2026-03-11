@@ -9,7 +9,7 @@ const _isStoreBuild = bool.fromEnvironment('STORE_BUILD', defaultValue: false);
 class AutoUpdateService {
   static const _feedUrl =
       'https://gist.githubusercontent.com/rgdevment/7e343fffd2920f2de7f8899c10e18ca4/raw/appcast.xml';
-  static const _checkIntervalSeconds = 43200; // 12 hours
+  static const _checkIntervalSeconds = 43200;
 
   static Future<void> initialize() async {
     if (_isStoreBuild || !Platform.isWindows) return;

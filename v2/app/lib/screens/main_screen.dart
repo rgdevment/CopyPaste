@@ -352,8 +352,6 @@ class MainScreenState extends State<MainScreen> {
 
   void _editSelectedItem() {
     if (_selectedIndex < 0 || _selectedIndex >= _items.length) return;
-    // Trigger label/color edit via the card widget
-    // We'll post a callback so the card can show the dialog.
     final item = _items[_selectedIndex];
     _showEditDialog(item);
   }

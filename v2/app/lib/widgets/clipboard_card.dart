@@ -48,6 +48,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
   String? _resolvedImagePath;
   bool _imagePathResolved = false;
   DateTime? _lastPrimaryDown;
+  bool _isTextOverflowing = false;
 
   static const _doubleTapTimeout = Duration(milliseconds: 300);
 
@@ -86,7 +87,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final type = item.type;
     if (type == ClipboardContentType.text ||
         type == ClipboardContentType.unknown) {
-      return item.content.contains('\n') || item.content.length > 80;
+      return _isTextOverflowing;
     }
     return false;
   }
@@ -523,17 +524,39 @@ class _ClipboardCardState extends State<ClipboardCard> {
     AppThemeColorScheme colors,
     ClipboardItem item,
   ) {
-    return Text(
-      item.content,
-      style: theme.typography.cardContent.copyWith(
-        color: colors.onSurface.withValues(
-          alpha: theme.cardStyle.contentOpacity,
-        ),
+    final minLines = widget.cardMinLines ?? theme.sizing.cardMinLines;
+    final displayMaxLines = widget.isExpanded
+        ? (widget.cardMaxLines ?? theme.sizing.cardMaxLines)
+        : minLines;
+    final textStyle = theme.typography.cardContent.copyWith(
+      color: colors.onSurface.withValues(
+        alpha: theme.cardStyle.contentOpacity,
       ),
-      maxLines: widget.isExpanded
-          ? (widget.cardMaxLines ?? theme.sizing.cardMaxLines)
-          : 2,
-      overflow: TextOverflow.ellipsis,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tp = TextPainter(
+          text: TextSpan(text: item.content, style: textStyle),
+          maxLines: minLines,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = tp.didExceedMaxLines;
+        tp.dispose();
+        if (overflows != _isTextOverflowing) {
+          _isTextOverflowing = overflows;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() {});
+          });
+        }
+
+        return Text(
+          item.content,
+          style: textStyle,
+          maxLines: displayMaxLines,
+          overflow: TextOverflow.ellipsis,
+        );
+      },
     );
   }
 
@@ -542,7 +565,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
     AppThemeColorScheme colors,
     ClipboardItem item,
   ) {
-    // Show loading placeholder until path resolution completes
     if (!_imagePathResolved) {
       return Container(
         height: theme.sizing.cardImageHeight,
@@ -553,8 +575,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    // Always use the original file for image type — best quality.
-    // cacheWidth limits decode memory while keeping enough pixels for sharp display.
     final originalPath = item.content.trim();
     if (originalPath.isEmpty) {
       return Container(
@@ -663,7 +683,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
 
     final hasThumb = _imagePathResolved && _resolvedImagePath != null;
 
-    // Video with thumbnail: show full-width thumbnail like images
     if (!isAudio && hasThumb) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,7 +745,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    // Audio or video without thumbnail: just show filename (type shown in header + footer badge)
     return Text(
       filename.isEmpty
           ? (isAudio
@@ -838,7 +856,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final typeColor = _typeColor(item.type, colors);
     final widgets = <Widget>[];
 
-    // Image dimensions
     final w = meta?['width'] ?? meta?['video_width'];
     final h = meta?['height'] ?? meta?['video_height'];
     if (w != null && h != null) {
@@ -853,7 +870,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    // File size
     final fileSize = meta?['file_size'] ?? meta?['size'];
     if (fileSize != null && fileSize is num && fileSize > 0) {
       widgets.add(
@@ -867,7 +883,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    // Media duration
     final duration = meta?['duration'];
     if (duration != null && duration is num && duration > 0) {
       widgets.add(
@@ -881,7 +896,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    // Paste count
     if (item.pasteCount > 0) {
       widgets.add(Text('×${item.pasteCount}', style: footerStyle));
     }

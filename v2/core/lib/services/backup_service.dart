@@ -126,9 +126,6 @@ class BackupService {
 
     final zipData = ZipEncoder().encode(archive);
 
-    // Write to a temp file first, then move to the target path.
-    // This avoids permission issues on macOS where NSSavePanel
-    // security-scoped access may expire before a direct write.
     final tempFile = File(
       '${Directory.systemTemp.path}/copypaste_backup_${DateTime.now().millisecondsSinceEpoch}.zip',
     );

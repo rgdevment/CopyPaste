@@ -37,11 +37,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _selectedTab = 0;
   bool _hasChanges = false;
 
-  // General
   late String _preferredLanguage;
   late bool _runOnStartup;
 
-  // Hotkey
   late bool _hotkeyCtrl;
   late bool _hotkeyWin;
   late bool _hotkeyAlt;
@@ -49,34 +47,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _hotkeyVirtualKey;
   late String _hotkeyKeyName;
 
-  // Categories
   late Map<String, String> _colorLabels;
 
-  // Performance
   late int _pageSize;
   late int _maxItemsBeforeCleanup;
   late int _scrollLoadThreshold;
 
-  // Storage
   late int _retentionDays;
 
-  // Paste
   late int _duplicateIgnoreWindowMs;
   late int _delayBeforeFocusMs;
   late int _delayBeforePasteMs;
   late int _maxFocusVerifyAttempts;
 
-  // Backup
   late DateTime? _lastBackupDateUtc;
 
-  // Appearance
   late int _popupWidth;
   late int _popupHeight;
   late int _cardMinLines;
   late int _cardMaxLines;
   late String _themeMode;
 
-  // Behavior
   late bool _hideOnDeactivate;
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
@@ -307,8 +298,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Sidebar ──────────────────────────────────────────────────
-
   Widget _buildSidebar(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
     return Container(
@@ -389,8 +378,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Content router ──────────────────────────────────────────
-
   Widget _buildContent(AppThemeData theme, AppThemeColorScheme colors) {
     return switch (_selectedTab) {
       0 => _buildGeneralTab(colors),
@@ -402,16 +389,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB: GENERAL
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildGeneralTab(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        // Language
         _SectionCard(
           colors: colors,
           icon: Icons.language_rounded,
@@ -438,7 +420,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Startup
         _SectionCard(
           colors: colors,
           icon: Icons.power_settings_new_rounded,
@@ -460,7 +441,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Hotkey
         _SectionCard(
           colors: colors,
           icon: Icons.keyboard_rounded,
@@ -529,7 +509,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Categories
         _SectionCard(
           colors: colors,
           icon: Icons.category_rounded,
@@ -567,7 +546,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Performance
         _SectionCard(
           colors: colors,
           icon: Icons.speed_rounded,
@@ -609,7 +587,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Storage
         _SectionCard(
           colors: colors,
           icon: Icons.storage_rounded,
@@ -636,7 +613,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
-        // Paste
         _SectionCard(
           colors: colors,
           icon: Icons.content_paste_go_rounded,
@@ -680,10 +656,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB: BACKUP
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildBackupTab(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
@@ -738,10 +710,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB: SHORTCUTS
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildShortcutsTab(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
@@ -809,10 +777,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB: APPEARANCE
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildAppearanceTab(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
@@ -936,10 +900,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB: ABOUT
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildAboutTab(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
     return ListView(
@@ -999,8 +959,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Footer ──────────────────────────────────────────────────
-
   Widget _buildFooter(AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
     return Container(
@@ -1044,8 +1002,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-  // ── Actions ─────────────────────────────────────────────────
 
   Future<void> _clearHistory() async {
     final l = AppLocalizations.of(context);
@@ -1134,7 +1090,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    // Confirm restore
     if (!mounted) return;
     final colors = CopyPasteTheme.colorsOf(context);
     final confirmed = await showDialog<bool>(
@@ -1261,10 +1216,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     (key: 'Orange', defaultName: l.colorOrange, color: const Color(0xFFFB8C00)),
   ];
 }
-
-// ═════════════════════════════════════════════════════════════════
-//  Reusable widgets
-// ═════════════════════════════════════════════════════════════════
 
 class _NavItem extends StatefulWidget {
   const _NavItem({

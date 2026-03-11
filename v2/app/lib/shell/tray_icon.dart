@@ -17,8 +17,6 @@ class TrayIcon with TrayListener {
   Future<void> init() async {
     trayManager.addListener(this);
     await trayManager.setIcon(_iconPath);
-    // Set a basic menu immediately so right-click works even before the first
-    // build() triggers rebuild() with localized strings.
     await trayManager.setContextMenu(
       Menu(
         items: [

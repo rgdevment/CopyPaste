@@ -116,7 +116,6 @@ class ClipboardService {
     await _repository.save(savedItem);
     _itemAdded.add(savedItem);
 
-    // Process image in background isolate (BMP→PNG)
     if (imageBytes != null && imageBytes.isNotEmpty && _imagesPath != null) {
       unawaited(_processImageBackground(savedItem, imageBytes));
     }
@@ -139,14 +138,12 @@ class ClipboardService {
       );
       if (result == null || _disposed) return;
 
-      // Delete temp BMP
       final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
       try {
         final bmp = File(bmpPath);
         if (bmp.existsSync()) bmp.deleteSync();
       } catch (_) {}
 
-      // Update item with PNG path and dimensions
       final meta = <String, Object>{
         'width': result.width,
         'height': result.height,

@@ -95,8 +95,6 @@ class StartupHelper {
     }
   }
 
-  // ---------- Windows ----------
-
   static void _setRegistryValue(String exePath) {
     final r = _Win32Registry.instance;
     final subKey = _registryPath.toNativeUtf16();
@@ -175,8 +173,6 @@ class StartupHelper {
       calloc.free(hKeyPtr);
     }
   }
-
-  // ---------- macOS ----------
 
   static String get _launchAgentPath {
     final home = Platform.environment['HOME'] ?? '/tmp';
