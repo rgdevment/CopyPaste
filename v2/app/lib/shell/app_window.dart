@@ -8,8 +8,6 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
 import 'package:window_manager/window_manager.dart';
 
-// ---------- Win32 FFI typedefs ----------
-
 typedef _SystemParametersInfoWNative =
     Int32 Function(
       Uint32 uiAction,
@@ -29,8 +27,6 @@ typedef _MonitorFromPointDart = int Function(int x, int y, int dwFlags);
 
 typedef _GetMonitorInfoWNative = Int32 Function(IntPtr hMonitor, Pointer lpmi);
 typedef _GetMonitorInfoWDart = int Function(int hMonitor, Pointer lpmi);
-
-// ---------- Lazy Win32 positioning helpers ----------
 
 class _Win32Pos {
   _Win32Pos._();
@@ -187,7 +183,6 @@ class AppWindow {
     double x;
     double y;
 
-    // Horizontal: try right of cursor, else left
     if (cursorX + _popupWidth + 12 <= waRight) {
       x = cursorX + 12;
     } else if (cursorX - _popupWidth - 12 >= waLeft) {
@@ -196,19 +191,15 @@ class AppWindow {
       x = waRight - _popupWidth - 12;
     }
 
-    // Vertical: center on cursor, clamp to work area
     y = cursorY - _popupHeight / 2;
     if (y < waTop + 8) y = waTop + 8;
     if (y + _popupHeight > waBottom - 8) y = waBottom - _popupHeight - 8;
 
-    // Final clamp
     x = x.clamp(waLeft, waRight - _popupWidth);
     y = y.clamp(waTop, waBottom - _popupHeight);
 
     await windowManager.setPosition(Offset(x, y));
   }
-
-  // ---------- Win32 cursor/monitor helpers ----------
 
   static (double, double)? _getCursorPosWin32() {
     final w = _Win32Pos.instance;
@@ -324,8 +315,6 @@ class AppWindow {
     await windowManager.setResizable(false);
     await _positionNearCursor();
   }
-
-  // ---------- Permission gate mode ----------
 
   static const double _gateWidth = 480;
   static const double _gateHeight = 480;

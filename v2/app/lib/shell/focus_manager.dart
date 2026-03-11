@@ -5,8 +5,6 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:listener/listener.dart';
 
-// ---------- Win32 FFI typedefs (only used on Windows) ----------
-
 typedef _GetForegroundWindowNative = IntPtr Function();
 typedef _GetForegroundWindowDart = int Function();
 
@@ -45,8 +43,6 @@ typedef _KeybdEventNative =
     Void Function(Uint8 bVk, Uint8 bScan, Uint32 dwFlags, IntPtr dwExtraInfo);
 typedef _KeybdEventDart =
     void Function(int bVk, int bScan, int dwFlags, int dwExtraInfo);
-
-// ---------- Lazy Win32 helpers (never loaded on macOS/Linux) ----------
 
 class _Win32 {
   _Win32._();
@@ -105,8 +101,6 @@ class _Win32 {
       .lookupFunction<_KeybdEventNative, _KeybdEventDart>('keybd_event');
 }
 
-// ---------- WindowFocusManager ----------
-
 class WindowFocusManager {
   int _previousWindow = 0;
   int _previousThreadId = 0;
@@ -155,8 +149,6 @@ class WindowFocusManager {
     _previousThreadId = 0;
     _previousBundleId = null;
   }
-
-  // ---------- Windows implementation ----------
 
   void _capturePreviousWindows() {
     final w = _Win32.instance;

@@ -176,14 +176,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
     await _hotkeyHandler.registerWithFallback();
 
-    // macOS: check accessibility before allowing normal operation.
     if (Platform.isMacOS) {
       final granted = await ClipboardWriter.checkAccessibility();
       if (!granted) {
         setState(() => _showPermissionGate = true);
         await _appWindow.enterGateMode();
       } else {
-        // Persist that we know it was granted.
         if (!_config.accessibilityWasGranted) {
           _config = _config.copyWith(accessibilityWasGranted: true);
           unawaited(
@@ -549,7 +547,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               }
             }
 
-            // macOS permission gate — blocks access to the main UI.
             if (_showPermissionGate) {
               return PermissionGateScreen(
                 previouslyGranted: _config.accessibilityWasGranted,
