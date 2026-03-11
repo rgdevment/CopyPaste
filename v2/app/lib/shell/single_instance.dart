@@ -113,8 +113,7 @@ class SingleInstance {
       _lockFile?.unlockSync();
       _lockFile?.closeSync();
       File(_lockFilePath()).deleteSync();
-    } catch (_) {
-    }
+    } catch (_) {}
     _lockFile = null;
   }
 
