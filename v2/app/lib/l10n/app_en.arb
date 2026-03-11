@@ -339,8 +339,14 @@
   "permissionsWaiting": "Waiting for permission…",
   "@permissionsWaiting": { "description": "Label shown while polling for the accessibility permission grant" },
 
-  "updateAvailable": "Version {version} is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.",
-  "@updateAvailable": { "description": "Snackbar message when a new version is available", "placeholders": { "version": { "type": "String" } } },
+  "updateBadge": "v{version} is available, please update",
+  "@updateBadge": { "description": "Short text shown in the footer when an update is available", "placeholders": { "version": { "type": "String" } } },
+
+  "updateAvailableMac": "Version {version} is available.\n\nUpdate via Homebrew:\nbrew upgrade copypaste\n\nOr download the latest release from GitHub.",
+  "@updateAvailableMac": { "description": "Update dialog message for macOS", "placeholders": { "version": { "type": "String" } } },
+
+  "updateAvailableLinux": "Version {version} is available.\n\nDownload the latest release from GitHub.",
+  "@updateAvailableLinux": { "description": "Update dialog message for Linux", "placeholders": { "version": { "type": "String" } } },
 
   "updateDialogTitle": "Update Available",
   "@updateDialogTitle": { "description": "Title of the update available dialog" },

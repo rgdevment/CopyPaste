@@ -914,11 +914,23 @@ abstract class AppLocalizations {
   /// **'Waiting for permission…'**
   String get permissionsWaiting;
 
-  /// Snackbar message when a new version is available
+  /// Short text shown in the footer when an update is available
   ///
   /// In en, this message translates to:
-  /// **'Version {version} is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.'**
-  String updateAvailable(String version);
+  /// **'v{version} is available, please update'**
+  String updateBadge(String version);
+
+  /// Update dialog message for macOS
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nUpdate via Homebrew:\nbrew upgrade copypaste\n\nOr download the latest release from GitHub.'**
+  String updateAvailableMac(String version);
+
+  /// Update dialog message for Linux
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nDownload the latest release from GitHub.'**
+  String updateAvailableLinux(String version);
 
   /// Title of the update available dialog
   ///

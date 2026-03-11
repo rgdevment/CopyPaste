@@ -147,6 +147,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
   bool _showPermissionGate = false;
+  String? _availableUpdateVersion;
 
   @override
   void initState() {
@@ -503,41 +504,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   void _onUpdateAvailable(String version) {
-    final ctx = _navigatorKey.currentContext;
-    if (ctx == null || !ctx.mounted) return;
-    final l = AppLocalizations.of(ctx);
-
-    showDialog<void>(
-      context: ctx,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text(l.updateDialogTitle),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Text(l.updateAvailable(version)),
-        ),
-        actionsOverflowButtonSpacing: 8,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text(l.updateDismiss),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              final uri = Uri.parse(
-                'https://github.com/rgdevment/CopyPaste/releases/latest',
-              );
-              Process.start(
-                Platform.isMacOS ? 'open' : 'xdg-open',
-                [uri.toString()],
-                mode: ProcessStartMode.detached,
-              );
-            },
-            child: Text(l.updateViewRelease),
-          ),
-        ],
-      ),
-    );
+    if (!mounted) return;
+    setState(() => _availableUpdateVersion = version);
   }
 
   void _checkWaylandLimitations() {
@@ -654,6 +622,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     onPastePlain: (item) => _onPasteItem(item, plainText: true),
                     onExit: () => _appWindow.hide(),
                     onSettings: () => _openSettings(ctx),
+                    updateVersion: _availableUpdateVersion,
                   );
                 },
               ),

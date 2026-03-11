@@ -439,8 +439,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get permissionsWaiting => 'Esperando permiso…';
 
   @override
-  String updateAvailable(String version) {
-    return 'La versión $version está disponible. Actualiza con Homebrew (brew upgrade copypaste) o descarga la última versión desde GitHub.';
+  String updateBadge(String version) {
+    return 'v$version disponible, por favor actualiza';
+  }
+
+  @override
+  String updateAvailableMac(String version) {
+    return 'La versión $version está disponible.\n\nActualiza con Homebrew:\nbrew upgrade copypaste\n\nO descarga la última versión desde GitHub.';
+  }
+
+  @override
+  String updateAvailableLinux(String version) {
+    return 'La versión $version está disponible.\n\nDescarga la última versión desde GitHub.';
   }
 
   @override

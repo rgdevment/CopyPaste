@@ -32,6 +32,7 @@ class MainScreen extends StatefulWidget {
     this.colorLabels = const {},
     this.showHint = false,
     this.onDismissHint,
+    this.updateVersion,
     super.key,
   });
 
@@ -47,6 +48,7 @@ class MainScreen extends StatefulWidget {
   final Map<String, String> colorLabels;
   final bool showHint;
   final VoidCallback? onDismissHint;
+  final String? updateVersion;
 
   @override
   State<MainScreen> createState() => MainScreenState();
@@ -543,34 +545,66 @@ class MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildBottomBar(AppThemeData theme, AppThemeColorScheme colors) {
+    final l = AppLocalizations.of(context);
+    final updateVersion = widget.updateVersion;
+
     return Container(
       height: theme.spacing.bottomBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          Opacity(
-            opacity: 0.35,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/icons/icon_notification.png',
-                  width: 12,
-                  height: 12,
-                  color: colors.onSurface,
-                  colorBlendMode: BlendMode.srcIn,
+          if (updateVersion != null)
+            Tooltip(
+              message: Platform.isMacOS
+                  ? l.updateAvailableMac(updateVersion)
+                  : l.updateAvailableLinux(updateVersion),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: () => _showUpdateDialog(context, updateVersion),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.system_update_outlined,
+                      size: 13,
+                      color: colors.primary,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      l.updateBadge(updateVersion),
+                      style: theme.typography.branding.copyWith(
+                        color: colors.primary,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  'CopyPaste',
-                  style: theme.typography.branding.copyWith(
+              ),
+            )
+          else
+            Opacity(
+              opacity: 0.35,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/icons/icon_notification.png',
+                    width: 12,
+                    height: 12,
                     color: colors.onSurface,
-                    letterSpacing: 0.3,
+                    colorBlendMode: BlendMode.srcIn,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 5),
+                  Text(
+                    'CopyPaste',
+                    style: theme.typography.branding.copyWith(
+                      color: colors.onSurface,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           const Spacer(),
           _BottomBarAction(
             icon: Icons.bug_report_outlined,
@@ -585,6 +619,40 @@ class MainScreenState extends State<MainScreen> {
             iconSize: 14,
             opacity: 0.4,
             onTap: widget.onSettings,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpdateDialog(BuildContext context, String version) {
+    final l = AppLocalizations.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(l.updateDialogTitle),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Text(
+            Platform.isMacOS
+                ? l.updateAvailableMac(version)
+                : l.updateAvailableLinux(version),
+          ),
+        ),
+        actionsOverflowButtonSpacing: 8,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text(l.updateDismiss),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              UrlHelper.open(
+                'https://github.com/rgdevment/CopyPaste/releases/latest',
+              );
+            },
+            child: Text(l.updateViewRelease),
           ),
         ],
       ),

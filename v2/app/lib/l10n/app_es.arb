@@ -168,7 +168,9 @@
   "permissionsRestartApp": "Reiniciar app",
   "permissionsWaiting": "Esperando permiso\u2026",
 
-  "updateAvailable": "La versi\u00f3n {version} est\u00e1 disponible. Actualiza con Homebrew (brew upgrade copypaste) o descarga la \u00faltima versi\u00f3n desde GitHub.",
+  "updateBadge": "v{version} disponible, por favor actualiza",
+  "updateAvailableMac": "La versi\u00f3n {version} est\u00e1 disponible.\n\nActualiza con Homebrew:\nbrew upgrade copypaste\n\nO descarga la \u00faltima versi\u00f3n desde GitHub.",
+  "updateAvailableLinux": "La versi\u00f3n {version} est\u00e1 disponible.\n\nDescarga la \u00faltima versi\u00f3n desde GitHub.",
   "updateDialogTitle": "Actualizaci\u00f3n disponible",
   "updateViewRelease": "Ver versi\u00f3n",
   "updateDismiss": "Despu\u00e9s",
