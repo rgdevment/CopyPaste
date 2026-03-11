@@ -506,26 +506,32 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     final ctx = _navigatorKey.currentContext;
     if (ctx == null || !ctx.mounted) return;
     final l = AppLocalizations.of(ctx);
-    final messenger = ScaffoldMessenger.maybeOf(ctx);
-    if (messenger == null) return;
 
-    messenger.showSnackBar(
-      SnackBar(
+    showDialog<void>(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(l.updateDialogTitle),
         content: Text(l.updateAvailable(version)),
-        duration: const Duration(seconds: 20),
-        action: SnackBarAction(
-          label: l.updateViewRelease,
-          onPressed: () {
-            final uri = Uri.parse(
-              'https://github.com/rgdevment/CopyPaste/releases/latest',
-            );
-            Process.start(
-              Platform.isMacOS ? 'open' : 'xdg-open',
-              [uri.toString()],
-              mode: ProcessStartMode.detached,
-            );
-          },
-        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text(l.updateDismiss),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              final uri = Uri.parse(
+                'https://github.com/rgdevment/CopyPaste/releases/latest',
+              );
+              Process.start(
+                Platform.isMacOS ? 'open' : 'xdg-open',
+                [uri.toString()],
+                mode: ProcessStartMode.detached,
+              );
+            },
+            child: Text(l.updateViewRelease),
+          ),
+        ],
       ),
     );
   }

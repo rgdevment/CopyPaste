@@ -920,6 +920,12 @@ abstract class AppLocalizations {
   /// **'Version {version} is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.'**
   String updateAvailable(String version);
 
+  /// Title of the update available dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Update Available'**
+  String get updateDialogTitle;
+
   /// Button to open the GitHub release page
   ///
   /// In en, this message translates to:

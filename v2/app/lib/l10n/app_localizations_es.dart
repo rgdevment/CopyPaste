@@ -444,6 +444,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get updateDialogTitle => 'Actualización disponible';
+
+  @override
   String get updateViewRelease => 'Ver versión';
 
   @override

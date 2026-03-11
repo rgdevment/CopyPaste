@@ -169,6 +169,7 @@
   "permissionsWaiting": "Esperando permiso\u2026",
 
   "updateAvailable": "La versi\u00f3n {version} est\u00e1 disponible. Actualiza con Homebrew (brew upgrade copypaste) o descarga la \u00faltima versi\u00f3n desde GitHub.",
+  "updateDialogTitle": "Actualizaci\u00f3n disponible",
   "updateViewRelease": "Ver versi\u00f3n",
   "updateDismiss": "Despu\u00e9s",
 

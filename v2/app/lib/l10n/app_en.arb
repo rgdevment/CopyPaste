@@ -342,6 +342,9 @@
   "updateAvailable": "Version {version} is available. Update via Homebrew (brew upgrade copypaste) or download the latest release from GitHub.",
   "@updateAvailable": { "description": "Snackbar message when a new version is available", "placeholders": { "version": { "type": "String" } } },
 
+  "updateDialogTitle": "Update Available",
+  "@updateDialogTitle": { "description": "Title of the update available dialog" },
+
   "updateViewRelease": "View release",
   "@updateViewRelease": { "description": "Button to open the GitHub release page" },
 
