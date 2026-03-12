@@ -48,7 +48,7 @@
     </a>
     &nbsp;
     <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
-      <img src="https://img.shields.io/badge/Linux-AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage"/>
+      <img src="https://img.shields.io/badge/Linux-.deb_%2F_.rpm_%2F_AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste for Linux — .deb / .rpm / .AppImage"/>
     </a>
     &nbsp;
     <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
@@ -57,7 +57,7 @@
   </p>
 
   <p align="center">
-    <sub>Windows (.exe) &bull; macOS (.dmg universal — Apple Silicon + Intel) &bull; Linux (.AppImage) &bull; <a href="#-getting-started">Installation guide</a></sub>
+    <sub>Windows (.exe) &bull; macOS (.dmg universal — Apple Silicon + Intel) &bull; Linux (.deb / .rpm / .AppImage) &bull; <a href="#-getting-started">Installation guide</a></sub>
   </p>
 
   <p>
@@ -69,7 +69,7 @@
 
 ---
 
-### A tool born from a personal need for harmony.
+### An open source clipboard manager built for harmony, not just productivity.
 
 **CopyPaste** is not just a clipboard manager focused on performance. I don't believe power should be synonymous with something clunky or purely functional — this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
 
@@ -375,7 +375,7 @@ In the **Settings** window, you can customize filter behavior:
 | :---------- | :-------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
 | **Windows** | [**Microsoft Store**](https://apps.microsoft.com/detail/9NBJRZF3K856) — one click, auto-updates                                   | [Standalone .exe](https://github.com/rgdevment/CopyPaste/releases/latest) from GitHub Releases   |
 | **macOS**   | [**Homebrew**](https://github.com/rgdevment/CopyPaste/releases/latest): `brew tap rgdevment/tap && brew install --cask copypaste` | [Universal .dmg](https://github.com/rgdevment/CopyPaste/releases/latest) (Apple Silicon + Intel) |
-| **Linux**   | [**AppImage**](https://github.com/rgdevment/CopyPaste/releases/latest) — download and run, no installation needed                 | —                                                                                                |
+| **Linux**   | [**.deb**](https://github.com/rgdevment/CopyPaste/releases/latest) — Debian, Ubuntu, Pop!_OS and derivatives                      | [**.rpm**](https://github.com/rgdevment/CopyPaste/releases/latest) (Fedora / RHEL) · [**.AppImage**](https://github.com/rgdevment/CopyPaste/releases/latest) (universal, no install needed)  |
 
 After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Super+Alt+V`** (Linux).
 
@@ -384,8 +384,32 @@ After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`**
 | Platform    | Versions                       | Architecture                      |
 | :---------- | :----------------------------- | :-------------------------------- |
 | **Windows** | Windows 10 (1809+), Windows 11 | x64                               |
-| **macOS**   | Ventura (13.0+)                | Universal (Apple Silicon + Intel) |
-| **Linux**   | Ubuntu 22.04+, Fedora 38+    | x64                               |
+| **macOS**   | Ventura (13.0+)                | Universal (Apple Silicon + Intel)            |
+| **Linux**   | Ubuntu 22.04+ · Fedora 38+ · RHEL-compatible | x64 · `.deb`, `.rpm`, `.AppImage`            |
+
+<details>
+<summary><strong>🐧 Linux: Installation Instructions</strong></summary>
+
+**AppImage** — universal, no installation needed:
+```bash
+chmod +x CopyPaste-*.AppImage
+./CopyPaste-*.AppImage
+```
+
+**Debian / Ubuntu (.deb):**
+```bash
+sudo dpkg -i copypaste_*.deb
+```
+
+**Fedora / RHEL (.rpm):**
+```bash
+sudo dnf install copypaste_*.rpm
+# or: sudo rpm -i copypaste_*.rpm
+```
+
+> **Note:** On first launch CopyPaste will ask for Accessibility (AT-SPI2) permissions — this is required to detect the frontmost app and paste back to it.
+
+</details>
 
 <details>
 <summary><strong>⚠️ Windows Standalone: Security Warnings</strong></summary>
@@ -421,7 +445,7 @@ No. There’s intentionally no cloud sync.
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
 
 **What platforms are supported?**
-Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+, Fedora 38+ via AppImage).
+Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ via `.deb` or `.AppImage` · Fedora 38+ via `.rpm` or `.AppImage`).
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
