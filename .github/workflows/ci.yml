@@ -14,6 +14,19 @@ permissions:
     contents: read
 
 jobs:
+    markdown:
+        runs-on: ubuntu-latest
+        name: Markdown Lint
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Lint Markdown files
+              uses: DavidAnson/markdownlint-cli2-action@v19
+              with:
+                  globs: "**/*.md"
+                  config: ".markdownlint.yaml"
+
     quality:
         runs-on: ubuntu-latest
         name: Lint, Format & Test
