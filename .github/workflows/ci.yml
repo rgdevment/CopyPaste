@@ -1,0 +1,230 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+
+jobs:
+    quality:
+        runs-on: ubuntu-latest
+        name: Lint, Format & Test
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Get dependencies
+              run: |
+                  cd core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Check formatting
+              run: |
+                  dart format --output=none --set-exit-if-changed .
+
+            - name: Analyze
+              run: |
+                  cd core && flutter analyze
+                  cd ../listener && flutter analyze
+                  cd ../app && flutter analyze
+
+            - name: Check outdated dependencies
+              run: |
+                  cd core && flutter pub outdated --no-dev-dependencies
+                  cd ../listener && flutter pub outdated --no-dev-dependencies
+                  cd ../app && flutter pub outdated --no-dev-dependencies
+              continue-on-error: true
+
+            - name: Run tests
+              run: |
+                  cd core && flutter test --coverage
+                  cd ../listener && flutter test --coverage
+                  cd ../app && flutter test --coverage
+
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v4
+              if: always()
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: core/coverage/lcov.info,listener/coverage/lcov.info,app/coverage/lcov.info
+                  flags: core,listener,app
+                  fail_ci_if_error: false
+
+    build:
+        runs-on: windows-latest
+        name: Build Verification (Windows)
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Get dependencies
+              run: |
+                  cd core; flutter pub get
+                  cd ../listener; flutter pub get
+                  cd ../app; flutter pub get
+
+            - name: Build Windows release
+              run: cd app; flutter build windows --release
+
+    build-linux:
+        runs-on: ubuntu-22.04
+        name: Build Verification (Linux)
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Install Linux build dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    clang \
+                    cmake \
+                    desktop-file-utils \
+                    libayatana-appindicator3-dev \
+                    libfuse2 \
+                    libgtk-3-dev \
+                    libkeybinder-3.0-dev \
+                    liblzma-dev \
+                    libx11-dev \
+                    libxtst-dev \
+                    lld-14 \
+                    ninja-build \
+                    patchelf \
+                    pkg-config
+
+            - name: Verify Linux toolchain preflight
+              run: |
+                  set -euo pipefail
+                  test -x /usr/lib/llvm-14/bin/ld.lld || test -x /usr/bin/ld.lld-14 || test -x /usr/bin/ld.lld
+                  pkg-config --modversion gtk+-3.0
+                  pkg-config --modversion keybinder-3.0
+                  pkg-config --modversion ayatana-appindicator3-0.1
+                  pkg-config --modversion x11
+                  pkg-config --modversion xtst
+
+            - name: Get dependencies
+              run: |
+                  cd core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Build Linux release
+              run: cd app && flutter build linux --release
+
+    build-macos:
+        runs-on: macos-latest
+        name: Build Verification (macOS)
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Get dependencies
+              run: |
+                  cd core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Build macOS release
+              run: cd app && flutter build macos --release
+
+    sonarcloud:
+        name: SonarCloud
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Get dependencies
+              run: |
+                  cd core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Run tests with coverage
+              run: |
+                  cd core && flutter test --coverage
+                  cd ../listener && flutter test --coverage
+                  cd ../app && flutter test --coverage
+
+            - name: SonarCloud Scan
+              uses: SonarSource/sonarcloud-github-action@v5
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              with:
+                  args: >
+                      -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+                      -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+                      -Dsonar.sources=core/lib,listener/lib,app/lib
+                      -Dsonar.tests=core/test,listener/test,app/test
+                      -Dsonar.dart.lcov.reportPaths=core/coverage/lcov.info,listener/coverage/lcov.info,app/coverage/lcov.info
+                      -Dsonar.exclusions=**/generated/**,**/*.g.dart,**/*.freezed.dart,**/l10n/**,**/core.dart
+                      -Dsonar.coverage.exclusions=**/main.dart,**/shell/**,**/theme/**,**/services/auto_update_service.dart,**/widgets/empty_state.dart,**/widgets/label_color_dialog.dart,**/widgets/title_bar.dart,**/windows_clipboard_listener.dart,**/l10n/**,**/*.g.dart,**/*.freezed.dart,**/core.dart
+

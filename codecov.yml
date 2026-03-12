@@ -3,15 +3,15 @@ coverage:
     round: down
     ignore:
         # Generated localization files — coverage annotations not processed by CI runner
-        - "v2/app/lib/l10n/app_localizations_en.dart"
-        - "v2/app/lib/l10n/app_localizations_es.dart"
+        - "app/lib/l10n/app_localizations_en.dart"
+        - "app/lib/l10n/app_localizations_es.dart"
         # Platform-specific shell integrations (Win32 FFI, hotkeys, tray — untestable in headless CI)
-        - "v2/app/lib/shell"
-        - "v2/app/lib/services"
-        - "v2/app/lib/screens/settings_screen.dart"
-        - "v2/app/lib/main.dart"
+        - "app/lib/shell"
+        - "app/lib/services"
+        - "app/lib/screens/settings_screen.dart"
+        - "app/lib/main.dart"
         # Platform-conditional helper — only one OS branch can be hit per CI run
-        - "v2/app/lib/helpers/url_helper.dart"
+        - "app/lib/helpers/url_helper.dart"
 
 comment: false
 

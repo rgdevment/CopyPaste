@@ -1,0 +1,46 @@
+name: app
+description: "CopyPaste — Flutter desktop clipboard manager."
+publish_to: "none"
+version: 0.0.0-dev
+
+environment:
+    sdk: ^3.11.1
+
+dependencies:
+    flutter:
+        sdk: flutter
+    flutter_localizations:
+        sdk: flutter
+    intl: any
+    core:
+        path: ../core
+    listener:
+        path: ../listener
+    tray_manager: ^0.2.0
+    hotkey_manager: ^0.2.0
+    window_manager: ^0.4.0
+    ffi: ^2.2.0
+    file_picker: ^9.2.1
+    flutter_acrylic: ^1.1.4
+    auto_updater: ^1.0.0
+
+dev_dependencies:
+    flutter_test:
+        sdk: flutter
+    flutter_lints: ^6.0.0
+    msix: ^3.16.8
+
+flutter:
+    uses-material-design: true
+
+    assets:
+        - assets/icons/icon_app_256.png
+        - assets/icons/icon_tray_32.png
+        - assets/icons/icon_tray_64.png
+        - assets/icons/icon_notification.png
+        - assets/icons/icon_tray.ico
+        - assets/icons/icon_mac_tray.png
+        - assets/icons/icon_mac_tray@2x.png
+
+    generate: true
+
