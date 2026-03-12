@@ -1,8 +1,4 @@
-import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image/image.dart' as img;
 
 import 'package:core/core.dart';
 
@@ -36,20 +32,16 @@ void main() {
     });
 
     test('creates folder item from path', () async {
-      final result = await service.processFiles(
-        ['C:\\MyFolder'],
-        ClipboardContentType.folder,
-      );
+      final result = await service.processFiles([
+        'C:\\MyFolder',
+      ], ClipboardContentType.folder);
 
       expect(result, isNotNull);
       expect(result!.type, equals(ClipboardContentType.folder));
     });
 
     test('returns null for empty file list', () async {
-      final result = await service.processFiles(
-        [],
-        ClipboardContentType.file,
-      );
+      final result = await service.processFiles([], ClipboardContentType.file);
 
       expect(result, isNull);
     });
@@ -101,7 +93,7 @@ void main() {
     });
 
     test('reactivates existing image by contentHash', () async {
-      final hash = 'dup-hash';
+      const hash = 'dup-hash';
       final first = await service.processImage(hash, imagePath: '/img1.png');
 
       ClipboardItem? reactivated;
@@ -169,11 +161,8 @@ void main() {
     test('same content ignored within double window', () async {
       service.pasteIgnoreWindowMs = 50;
 
-      final text = 'duplicate content';
-      final first = await service.processText(
-        text,
-        ClipboardContentType.text,
-      );
+      const text = 'duplicate content';
+      final first = await service.processText(text, ClipboardContentType.text);
       expect(first, isNotNull);
 
       await service.notifyPasteInitiated(first!.id);
@@ -204,10 +193,9 @@ void main() {
         'text content',
         ClipboardContentType.text,
       );
-      final files = await service.processFiles(
-        ['C:\\document.docx'],
-        ClipboardContentType.file,
-      );
+      final files = await service.processFiles([
+        'C:\\document.docx',
+      ], ClipboardContentType.file);
 
       expect(text, isNotNull);
       expect(files, isNotNull);
@@ -217,19 +205,15 @@ void main() {
     });
 
     test('can process all content types', () async {
-      final text = await service.processText(
-        'text',
-        ClipboardContentType.text,
-      );
+      final text = await service.processText('text', ClipboardContentType.text);
       final link = await service.processText(
         'https://example.com',
         ClipboardContentType.link,
       );
       final image = await service.processImage('img-hash');
-      final files = await service.processFiles(
-        ['file.txt'],
-        ClipboardContentType.file,
-      );
+      final files = await service.processFiles([
+        'file.txt',
+      ], ClipboardContentType.file);
 
       expect(text, isNotNull);
       expect(link, isNotNull);

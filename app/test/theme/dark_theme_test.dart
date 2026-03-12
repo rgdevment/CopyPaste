@@ -4,68 +4,60 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app/theme/dark_theme.dart';
 
 void main() {
-  group('DarkTheme', () {
-    late DarkTheme theme;
-
-    setUp(() {
-      theme = DarkTheme();
+  group('darkColorScheme', () {
+    test('surface is dark', () {
+      expect(darkColorScheme.surface, equals(const Color(0xFF1A1D2E)));
     });
 
-    test('id returns dark', () {
-      expect(theme.id, 'dark');
+    test('background matches surface', () {
+      expect(darkColorScheme.background, equals(const Color(0xFF1A1D2E)));
     });
 
-    test('name returns Dark', () {
-      expect(theme.name, 'Dark');
+    test('onSurface is white', () {
+      expect(darkColorScheme.onSurface, equals(const Color(0xFFFFFFFF)));
     });
 
-    test('light color scheme has expected primary color', () {
-      expect(theme.light.primary, isNotNull);
-      expect(theme.light.primary, isInstanceOf<Color>());
+    test('primary is light indigo', () {
+      expect(darkColorScheme.primary, equals(const Color(0xFF818CF8)));
     });
 
-    test('dark color scheme has expected primary color', () {
-      expect(theme.dark.primary, isNotNull);
-      expect(theme.dark.primary, isInstanceOf<Color>());
+    test('cardBackground is slightly lighter than surface', () {
+      expect(darkColorScheme.cardBackground, equals(const Color(0xFF1E2132)));
     });
 
-    test('light and dark schemes have different surface colors', () {
-      expect(theme.light.surface, isNotEmpty);
-      expect(theme.dark.surface, isNotEmpty);
-      // Dark theme should have darker surface (typically)
-      // Both should be valid colors
-      expect(theme.light.surface.value, isNotNull);
-      expect(theme.dark.surface.value, isNotNull);
+    test('danger color is light red', () {
+      expect(darkColorScheme.danger, equals(const Color(0xFFFCA5A5)));
     });
 
-    test('color scheme has all required properties', () {
-      final light = theme.light;
-      expect(light.onSurface, isNotNull);
-      expect(light.onSurfaceVariant, isNotNull);
-      expect(light.cardBackground, isNotNull);
-      expect(light.cardBorder, isNotNull);
-      expect(light.searchBackground, isNotNull);
-      expect(light.divider, isNotNull);
-      expect(light.danger, isNotNull);
-      expect(light.warning, isNotNull);
-      expect(light.accentRed, isNotNull);
-      expect(light.accentGreen, isNotNull);
-      expect(light.accentPurple, isNotNull);
-      expect(light.accentYellow, isNotNull);
-      expect(light.accentBlue, isNotNull);
-      expect(light.accentOrange, isNotNull);
+    test('warning color is light yellow', () {
+      expect(darkColorScheme.warning, equals(const Color(0xFFFDE047)));
     });
 
-    test('listItemStyle is not null', () {
-      expect(theme.listItemStyle, isNotNull);
+    test('accent colors are all defined', () {
+      expect(darkColorScheme.accentRed, equals(const Color(0xFFFCA5A5)));
+      expect(darkColorScheme.accentGreen, equals(const Color(0xFF86EFAC)));
+      expect(darkColorScheme.accentPurple, equals(const Color(0xFFA5B4FC)));
+      expect(darkColorScheme.accentYellow, equals(const Color(0xFFFDE047)));
+      expect(darkColorScheme.accentBlue, equals(const Color(0xFFA5B4FC)));
+      expect(darkColorScheme.accentOrange, equals(const Color(0xFFFDBA74)));
     });
 
-    test('filterStyle is not null', () {
-      expect(theme.filterStyle, isNotNull);
+    test('accentForIndex returns transparent for index 0', () {
+      expect(darkColorScheme.accentForIndex(0), equals(Colors.transparent));
     });
 
-    test('toolbarStyle is not null', () {
-      expect(theme.toolbarStyle, isNotNull);
+    test('accentForIndex returns accentRed for index 1', () {
+      expect(
+        darkColorScheme.accentForIndex(1),
+        equals(darkColorScheme.accentRed),
+      );
+    });
+
+    test('accentForIndex returns accentGreen for index 2', () {
+      expect(
+        darkColorScheme.accentForIndex(2),
+        equals(darkColorScheme.accentGreen),
+      );
     });
   });
 }

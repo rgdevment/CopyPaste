@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -89,8 +88,19 @@ void main() {
         0x74,
         0x7D,
       ]); // {\\rtf1 test}
-      final html =
-          Uint8List.fromList([0x3C, 0x62, 0x3E, 0x74, 0x65, 0x73, 0x74, 0x3C, 0x2F, 0x62, 0x3E]); // <b>test</b>
+      final html = Uint8List.fromList([
+        0x3C,
+        0x62,
+        0x3E,
+        0x74,
+        0x65,
+        0x73,
+        0x74,
+        0x3C,
+        0x2F,
+        0x62,
+        0x3E,
+      ]); // <b>test</b>
 
       final event = ClipboardEvent.fromMap({
         'type': 0,
@@ -154,7 +164,8 @@ void main() {
         'contentHash': 'mixed_hash',
       });
 
-      expect(event.files!.every((f) => f is String), true);
+      expect(event.files, isNotNull);
+      expect(event.files!.isNotEmpty, true);
     });
 
     test('ClipboardEvent maintains content hash uniqueness', () {

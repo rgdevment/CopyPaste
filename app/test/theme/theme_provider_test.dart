@@ -1,24 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:app/theme/app_theme_data.dart';
 import 'package:app/theme/compact_theme.dart';
-import 'package:app/theme/dark_theme.dart';
-import 'package:app/theme/light_theme.dart';
 import 'package:app/theme/theme_provider.dart';
+
+// Test-only subclasses to simulate different theme IDs
+class _ThemeA extends CompactTheme {
+  @override
+  String get id => 'theme_a';
+  @override
+  String get name => 'Theme A';
+}
+
+class _ThemeB extends CompactTheme {
+  @override
+  String get id => 'theme_b';
+  @override
+  String get name => 'Theme B';
+}
 
 void main() {
   group('CopyPasteTheme', () {
-    test('of() throws when no CopyPasteTheme in context', () {
-      expect(
-        () => CopyPasteTheme.of(
-          (null as dynamic),
+    testWidgets('of() throws when no CopyPasteTheme in context', (
+      WidgetTester tester,
+    ) async {
+      FlutterError? error;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              try {
+                CopyPasteTheme.of(context);
+              } on FlutterError catch (e) {
+                error = e;
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
-        throwsFlutterError,
       );
+      expect(error, isNotNull);
     });
 
-    testWidgets('of() returns correct AppThemeData', (WidgetTester tester) async {
-      final themeData = LightTheme();
+    testWidgets('of() returns correct AppThemeData', (
+      WidgetTester tester,
+    ) async {
+      final themeData = _ThemeA();
       AppThemeData? result;
 
       await tester.pumpWidget(
@@ -36,148 +64,141 @@ void main() {
       );
 
       expect(result, isNotNull);
-      expect(result!.id, equals('light'));
+      expect(result!.id, equals('theme_a'));
     });
 
-    testWidgets(
-      'updateShouldNotify notifies when theme ID changes',
-      (WidgetTester tester) async {
-        int buildCount = 0;
+    testWidgets('updateShouldNotify notifies when theme ID changes', (
+      WidgetTester tester,
+    ) async {
+      int buildCount = 0;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: CopyPasteTheme(
-              themeData: LightTheme(),
-              child: Builder(
-                builder: (context) {
-                  buildCount++;
-                  CopyPasteTheme.of(context);
-                  return const SizedBox.shrink();
-                },
-              ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CopyPasteTheme(
+            themeData: _ThemeA(),
+            child: Builder(
+              builder: (context) {
+                buildCount++;
+                CopyPasteTheme.of(context);
+                return const SizedBox.shrink();
+              },
             ),
           ),
-        );
+        ),
+      );
 
-        expect(buildCount, equals(1));
+      expect(buildCount, equals(1));
 
-        // Update to a different theme
-        await tester.pumpWidget(
-          MaterialApp(
-            home: CopyPasteTheme(
-              themeData: DarkTheme(),
-              child: Builder(
-                builder: (context) {
-                  buildCount++;
-                  CopyPasteTheme.of(context);
-                  return const SizedBox.shrink();
-                },
-              ),
+      // Update to a different theme
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CopyPasteTheme(
+            themeData: _ThemeB(),
+            child: Builder(
+              builder: (context) {
+                buildCount++;
+                CopyPasteTheme.of(context);
+                return const SizedBox.shrink();
+              },
             ),
           ),
-        );
+        ),
+      );
 
-        // Build count should increase because theme ID changed
-        expect(buildCount, equals(2));
-      },
-    );
+      // Build count should increase because theme ID changed
+      expect(buildCount, equals(2));
+    });
 
-    testWidgets(
-      'updateShouldNotify does not notify when same theme',
-      (WidgetTester tester) async {
-        int buildCount = 0;
-        final themes = {
-          'light': LightTheme(),
-          'dark': DarkTheme(),
-          'compact': CompactTheme(),
-        };
+    testWidgets('updateShouldNotify does not notify when same theme', (
+      WidgetTester tester,
+    ) async {
+      int buildCount = 0;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: CopyPasteTheme(
-              themeData: themes['light']!,
-              child: Builder(
-                builder: (context) {
-                  buildCount++;
-                  CopyPasteTheme.of(context);
-                  return const SizedBox.shrink();
-                },
-              ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CopyPasteTheme(
+            themeData: _ThemeA(),
+            child: Builder(
+              builder: (context) {
+                buildCount++;
+                CopyPasteTheme.of(context);
+                return const SizedBox.shrink();
+              },
             ),
           ),
-        );
+        ),
+      );
 
-        final initialBuildCount = buildCount;
+      final initialBuildCount = buildCount;
 
-        // Update with a different LightTheme instance (but same ID)
-        await tester.pumpWidget(
-          MaterialApp(
-            home: CopyPasteTheme(
-              themeData: LightTheme(), // Different instance, same ID
-              child: Builder(
-                builder: (context) {
-                  buildCount++;
-                  CopyPasteTheme.of(context);
-                  return const SizedBox.shrink();
-                },
-              ),
+      // Update with a different instance of the same theme ID
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CopyPasteTheme(
+            themeData: _ThemeA(), // Different instance, same ID
+            child: Builder(
+              builder: (context) {
+                buildCount++;
+                CopyPasteTheme.of(context);
+                return const SizedBox.shrink();
+              },
             ),
           ),
-        );
+        ),
+      );
 
-        // Build count should stay the same (no rebuild for same theme ID)
-        expect(buildCount, equals(initialBuildCount));
-      },
-    );
+      // Build count should stay the same (no rebuild for same theme ID)
+      expect(buildCount, equals(initialBuildCount));
+    });
 
-    testWidgets(
-      'colorsOf returns light colors in light brightness',
-      (WidgetTester tester) async {
-        var colors = const AppThemeColorScheme(
-          surface: Color(0xFF000000),
-          surfaceVariant: Color(0xFF111111),
-          background: Color(0xFF222222),
-          onSurface: Color(0xFFFFFFFF),
-          onSurfaceVariant: Color(0xFFEEEEEE),
-          onSurfaceMuted: Color(0x80FFFFFF),
-          onSurfaceSubtle: Color(0x1AFFFFFF),
-          primary: Color(0xFF0000FF),
-          onPrimary: Color(0xFF000000),
-          cardBackground: Color(0xFF333333),
-          cardBorder: Color(0xFF444444),
-          searchBackground: Color(0xFF555555),
-          searchBorder: Color(0xFF666666),
-          divider: Color(0xFF777777),
-          danger: Color(0xFF880000),
-          warning: Color(0xFFAA6600),
-          accentRed: Color(0xFFDD0000),
-          accentGreen: Color(0xFF00DD00),
-          accentPurple: Color(0xFF0000DD),
-          accentYellow: Color(0xFFDDDD00),
-          accentBlue: Color(0xFF0000FF),
-          accentOrange: Color(0xFFDD8800),
-        );
+    testWidgets('colorsOf returns light colors in light brightness', (
+      WidgetTester tester,
+    ) async {
+      AppThemeColorScheme? colors;
 
-        final theme = DarkTheme();
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: ThemeData(brightness: Brightness.light),
-            home: CopyPasteTheme(
-              themeData: theme,
-              child: Builder(
-                builder: (context) {
-                  colors = CopyPasteTheme.colorsOf(context);
-                  return const SizedBox.shrink();
-                },
-              ),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: Brightness.light),
+          home: CopyPasteTheme(
+            themeData: _ThemeA(),
+            child: Builder(
+              builder: (context) {
+                colors = CopyPasteTheme.colorsOf(context);
+                return const SizedBox.shrink();
+              },
             ),
           ),
-        );
+        ),
+      );
 
-        // colorsOf should return light scheme when brightness is light
-        expect(colors.background, isNotNull);
-      },
-    );
+      // colorsOf should return the light scheme when Material brightness is light
+      expect(colors, isNotNull);
+      expect(colors!.surface, equals(_ThemeA().light.surface));
+    });
+
+    testWidgets('colorsOf returns dark colors in dark brightness', (
+      WidgetTester tester,
+    ) async {
+      AppThemeColorScheme? colors;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: Brightness.dark),
+          home: CopyPasteTheme(
+            themeData: _ThemeA(),
+            child: Builder(
+              builder: (context) {
+                colors = CopyPasteTheme.colorsOf(context);
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+
+      // colorsOf should return the dark scheme when Material brightness is dark
+      expect(colors, isNotNull);
+      expect(colors!.surface, equals(_ThemeA().dark.surface));
+    });
   });
 }
