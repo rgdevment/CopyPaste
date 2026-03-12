@@ -197,7 +197,9 @@ void main() {
       expect(granted, isTrue);
     });
 
-    testWidgets('onRestart button tap calls onRestart callback', (tester) async {
+    testWidgets('onRestart button tap calls onRestart callback', (
+      tester,
+    ) async {
       var restarted = false;
 
       await tester.pumpWidget(
@@ -226,12 +228,7 @@ void main() {
       });
 
       await tester.pumpWidget(
-        _wrap(
-          PermissionGateScreen(
-            previouslyGranted: true,
-            onGranted: () {},
-          ),
-        ),
+        _wrap(PermissionGateScreen(previouslyGranted: true, onGranted: () {})),
       );
       await tester.pump();
 
