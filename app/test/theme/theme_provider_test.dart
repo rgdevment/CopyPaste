@@ -112,43 +112,38 @@ void main() {
     testWidgets('updateShouldNotify does not notify when same theme', (
       WidgetTester tester,
     ) async {
+      late StateSetter setTheme;
+      AppThemeData currentTheme = _ThemeA();
       int buildCount = 0;
 
       await tester.pumpWidget(
         MaterialApp(
-          home: CopyPasteTheme(
-            themeData: _ThemeA(),
-            child: Builder(
-              builder: (context) {
-                buildCount++;
-                CopyPasteTheme.of(context);
-                return const SizedBox.shrink();
-              },
-            ),
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setTheme = setState;
+              return CopyPasteTheme(
+                themeData: currentTheme,
+                child: Builder(
+                  builder: (context) {
+                    CopyPasteTheme.of(context);
+                    buildCount++;
+                    return const SizedBox.shrink();
+                  },
+                ),
+              );
+            },
           ),
         ),
       );
 
-      final initialBuildCount = buildCount;
+      expect(buildCount, equals(1));
 
-      // Update with a different instance of the same theme ID
-      await tester.pumpWidget(
-        MaterialApp(
-          home: CopyPasteTheme(
-            themeData: _ThemeA(), // Different instance, same ID
-            child: Builder(
-              builder: (context) {
-                buildCount++;
-                CopyPasteTheme.of(context);
-                return const SizedBox.shrink();
-              },
-            ),
-          ),
-        ),
-      );
+      // Update with a different instance of the same theme ID via setState
+      setTheme(() => currentTheme = _ThemeA());
+      await tester.pump();
 
-      // Build count should stay the same (no rebuild for same theme ID)
-      expect(buildCount, equals(initialBuildCount));
+      // Builder should NOT rebuild since updateShouldNotify returns false (same ID)
+      expect(buildCount, equals(1));
     });
 
     testWidgets('colorsOf returns light colors in light brightness', (
