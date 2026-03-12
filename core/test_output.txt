@@ -1,0 +1,450 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 93.0.0 (97.0.0 available)
+  analyzer 10.0.1 (11.0.0 available)
+  build_config 1.2.0 (1.3.0 available)
+  build_runner 2.11.1 (2.12.2 available)
+  dart_style 3.1.6 (3.1.7 available)
+  hooks 1.0.1 (1.0.2 available)
+  matcher 0.12.18 (0.12.19 available)
+  meta 1.17.0 (1.18.1 available)
+  native_toolchain_c 0.17.4 (0.17.5 available)
+  sqlite3 3.1.6 (3.2.0 available)
+  sqlite3_flutter_libs 0.5.41 (0.6.0+eol available)
+  sqlparser 0.44.1 (0.44.2 available)
+  test 1.29.0 (1.30.0 available)
+  test_api 0.7.9 (0.7.10 available)
+  test_core 0.6.15 (0.6.16 available)
+Got dependencies!
+15 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart
+00:00 +0: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig default values are correct
+00:00 +1: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig serialization round-trip preserves all fields
+00:00 +2: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig copyWith produces new instance with changes
+00:00 +3: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig fromJson uses defaults for missing fields
+00:00 +4: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig load returns default when file does not exist
+00:00 +5: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig save and load round-trip
+00:00 +6: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig lastBackupDateUtc serializes correctly
+00:00 +7: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig.copyWith sentinel fields copyWith can clear lastBackupDateUtc to null
+00:00 +8: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig.copyWith sentinel fields copyWith without lastBackupDateUtc preserves existing value
+00:00 +9: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig hotkey fields hotkey defaults are correct
+00:00 +10: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig hotkey fields copyWith all hotkey fields
+00:00 +11: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig hotkey fields hotkey fields round-trip via JSON
+00:00 +12: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields themeMode defaults to auto
+00:00 +13: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields themeMode round-trips via JSON
+00:00 +14: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields colorLabels round-trip
+00:00 +15: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields colorLabels defaults to empty map
+00:00 +16: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields timing fields have correct defaults
+00:00 +17: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields popup size defaults
+00:00 +18: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields card line defaults
+00:00 +19: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields showTrayIcon defaults to true
+00:00 +20: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields showTrayIcon round-trips via JSON
+00:00 +21: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields showTrayIcon absent in JSON defaults to true
+00:00 +22: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields copyWith showTrayIcon updates value
+00:00 +23: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields toJson omits lastBackupDateUtc when null
+00:00 +24: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields toJson includes lastBackupDateUtc when set
+00:00 +25: Z:/Code/Personal/CopyPaste/core/test/app_config_test.dart: AppConfig appearance and behavior fields full serialization round-trip with all fields
+00:00 +26: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger before initialization info/warn/error do nothing before init
+00:00 +27: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger before initialization exception returns early when not initialized
+00:00 +28: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger before initialization logFilePath is null before init
+00:00 +29: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger before initialization logDirectory is null before init
+00:00 +30: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization (setUpAll)
+00:00 +30: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization logFilePath is set after init
+00:00 +31: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization logDirectory matches provided path
+00:00 +32: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization isEnabled is true after successful init
+00:00 +33: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization old log files are cleaned up during init
+00:00 +34: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization non-log files are not cleaned up
+00:00 +35: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization second call to initialize is a no-op
+00:00 +36: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization info writes INFO entry to log
+00:00 +37: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization warn writes WARN entry to log
+00:00 +38: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization error writes ERROR entry to log
+00:00 +39: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization exception with context writes context and error
+00:00 +40: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization exception with stackTrace includes stack trace
+00:00 +41: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization exception without context writes error only
+00:00 +42: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization exception with null error does nothing
+00:00 +43: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization log entry format includes timestamp brackets
+00:00 +44: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization isEnabled=false suppresses all logging
+00:00 +45: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization log rotation triggered when file exceeds max size
+00:00 +46: Z:/Code/Personal/CopyPaste/core/test/app_logger_test.dart: AppLogger initialization (tearDownAll)
+00:00 +46: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupManifest toJson and fromJson round-trip
+00:00 +47: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupManifest fromJson uses defaults for missing fields
+00:00 +48: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup creates zip file at outputPath
+00:00 +49: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup manifest has correct appVersion
+00:00 +50: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup counts image files correctly
+00:00 +51: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup works without database file
+00:00 +52: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +53: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +54: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +55: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +56: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +57: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +58: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +59: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +60: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +61: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.createBackup does not leave temp files in systemTemp after successful backup
+00:00 +62: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.restoreBackup returns null for nonexistent backup file
+00:00 +63: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.restoreBackup round-trip create and restore
+00:00 +64: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.restoreBackup restore creates and cleans up pre-restore snapshot
+00:00 +65: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.validateBackup returns manifest for valid backup
+00:00 +66: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.validateBackup returns null for nonexistent file
+00:00 +67: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService.validateBackup returns null for invalid zip
+00:00 +68: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService additional coverage createBackup calls walCheckpoint when provided
+00:00 +69: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService additional coverage createBackup includes itemCount and hasPinnedItems in manifest
+00:00 +70: Z:/Code/Personal/CopyPaste/core/test/backup_service_test.dart: BackupService additional coverage createBackup includes config files
+00:00 +71: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runCleanupIfNeeded via start() clears old items
+00:00 +72: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runCleanupIfNeeded via start() clears old items
+00:00 +73: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runCleanupIfNeeded via start() clears old items
+00:00 +74: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runCleanupIfNeeded via start() clears old items
+00:00 +75: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runCleanupIfNeeded via start() clears old items
+test/clipboard_service_extended_test.dart:23:36: Error: The method 'processFile' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'processFile'.
+      final result = await service.processFile(
+                                   ^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:37:21: Error: The method 'processFile' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'processFile'.
+      await service.processFile(
+                    ^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:57:15: Error: The getter 'onItemDeleted' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemDeleted'.
+      service.onItemDeleted.listen((item) => deleted = item);
+              ^^^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:59:21: Error: The method 'deleteItem' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'deleteItem'.
+      await service.deleteItem(added!.id);
+                    ^^^^^^^^^^
+test/clipboard_service_extended_test.dart:78:15: Error: The getter 'onItemUpdated' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemUpdated'.
+      service.onItemUpdated.listen((u) => updated = u);
+              ^^^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:80:21: Error: The method 'updateLabel' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'updateLabel'.
+      await service.updateLabel(item.id, 'My Label');
+                    ^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:95:21: Error: The method 'updateLabel' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'updateLabel'.
+      await service.updateLabel(item!.id, 'Initial');
+                    ^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:99:21: Error: The method 'updateLabel' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'updateLabel'.
+      await service.updateLabel(item.id, '');
+                    ^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:113:15: Error: The getter 'onItemUpdated' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemUpdated'.
+      service.onItemUpdated.listen((u) => updated = u);
+              ^^^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:115:21: Error: The method 'updateCardColor' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'updateCardColor'.
+      await service.updateCardColor(item!.id, CardColor.red);
+                    ^^^^^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:131:15: Error: The getter 'onItemUpdated' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemUpdated'.
+      service.onItemUpdated.listen((u) => updated = u);
+              ^^^^^^^^^^^^^
+test/clipboard_service_extended_test.dart:133:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+      await service.togglePin(item.id);
+                    ^^^^^^^^^
+test/clipboard_service_extended_test.dart:147:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+      await service.togglePin(item!.id);
+                    ^^^^^^^^^
+test/clipboard_service_extended_test.dart:151:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+      await service.togglePin(item.id);
+                    ^^^^^^^^^
+test/clipboard_service_extended_test.dart:195:21: Error: The method 'clearAll' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'clearAll'.
+      await service.clearAll();
+                    ^^^^^^^^
+test/clipboard_service_extended_test.dart:204:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+      await service.togglePin(item2!.id);
+                    ^^^^^^^^^
+test/clipboard_service_extended_test.dart:206:21: Error: The method 'clearAll' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'clearAll'.
+      await service.clearAll();
+                    ^^^^^^^^
+test/clipboard_service_extended_test.dart:220:37: Error: The method 'search' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'search'.
+      final results = await service.search('app', limit: 10);
+                                    ^^^^^^
+test/clipboard_service_extended_test.dart:229:37: Error: The method 'search' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'search'.
+      final results = await service.search('xyz');
+                                    ^^^^^^
+test/clipboard_service_extended_test.dart:243:33: Error: The method 'getAll' isn't defined for the type 'ClipboardService'.
+ - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'getAll'.
+      final all = await service.getAll(limit: 10);
+                                ^^^^^^
+00:00 +76: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runCleanupIfNeeded via start() clears old items
+00:00 +77: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when same day as last run
+00:00 +78: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when same day as last run
+00:00 +79: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when same day as last run
+00:00 +80: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when same day as last run
+00:00 +80 -1: loading Z:/Code/Personal/CopyPaste/core/test/clipboard_service_extended_test.dart [E]
+  Failed to load "Z:/Code/Personal/CopyPaste/core/test/clipboard_service_extended_test.dart":
+  Compilation failed for testPath=Z:/Code/Personal/CopyPaste/core/test/clipboard_service_extended_test.dart: test/clipboard_service_extended_test.dart:23:36: Error: The method 'processFile' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'processFile'.
+        final result = await service.processFile(
+                                     ^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:37:21: Error: The method 'processFile' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'processFile'.
+        await service.processFile(
+                      ^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:57:15: Error: The getter 'onItemDeleted' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemDeleted'.
+        service.onItemDeleted.listen((item) => deleted = item);
+                ^^^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:59:21: Error: The method 'deleteItem' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'deleteItem'.
+        await service.deleteItem(added!.id);
+                      ^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:78:15: Error: The getter 'onItemUpdated' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemUpdated'.
+        service.onItemUpdated.listen((u) => updated = u);
+                ^^^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:80:21: Error: The method 'updateLabel' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'updateLabel'.
+        await service.updateLabel(item.id, 'My Label');
+                      ^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:95:21: Error: The method 'updateLabel' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'updateLabel'.
+        await service.updateLabel(item!.id, 'Initial');
+                      ^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:99:21: Error: The method 'updateLabel' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'updateLabel'.
+        await service.updateLabel(item.id, '');
+                      ^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:113:15: Error: The getter 'onItemUpdated' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemUpdated'.
+        service.onItemUpdated.listen((u) => updated = u);
+                ^^^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:115:21: Error: The method 'updateCardColor' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'updateCardColor'.
+        await service.updateCardColor(item!.id, CardColor.red);
+                      ^^^^^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:131:15: Error: The getter 'onItemUpdated' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'onItemUpdated'.
+        service.onItemUpdated.listen((u) => updated = u);
+                ^^^^^^^^^^^^^
+  test/clipboard_service_extended_test.dart:133:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+        await service.togglePin(item.id);
+                      ^^^^^^^^^
+  test/clipboard_service_extended_test.dart:147:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+        await service.togglePin(item!.id);
+                      ^^^^^^^^^
+  test/clipboard_service_extended_test.dart:151:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+        await service.togglePin(item.id);
+                      ^^^^^^^^^
+  test/clipboard_service_extended_test.dart:195:21: Error: The method 'clearAll' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'clearAll'.
+        await service.clearAll();
+                      ^^^^^^^^
+  test/clipboard_service_extended_test.dart:204:21: Error: The method 'togglePin' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'togglePin'.
+        await service.togglePin(item2!.id);
+                      ^^^^^^^^^
+  test/clipboard_service_extended_test.dart:206:21: Error: The method 'clearAll' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'clearAll'.
+        await service.clearAll();
+                      ^^^^^^^^
+  test/clipboard_service_extended_test.dart:220:37: Error: The method 'search' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'search'.
+        final results = await service.search('app', limit: 10);
+                                      ^^^^^^
+  test/clipboard_service_extended_test.dart:229:37: Error: The method 'search' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'search'.
+        final results = await service.search('xyz');
+                                      ^^^^^^
+  test/clipboard_service_extended_test.dart:243:33: Error: The method 'getAll' isn't defined for the type 'ClipboardService'.
+   - 'ClipboardService' is from 'package:core/services/clipboard_service.dart' ('lib/services/clipboard_service.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'getAll'.
+        final all = await service.getAll(limit: 10);
+                                  ^^^^^^
+  .
+00:00 +81 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when same day as last run
+00:00 +82 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is 0
+00:00 +83 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +84 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +85 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +86 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +87 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +88 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +89 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +90 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +91 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +92 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +93 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +94 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +95 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +96 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +97 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService skips cleanup when retentionDays is negative
+00:00 +98 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService preserves pinned items during cleanup
+00:00 +99 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService writes last cleanup date to file after running
+00:00 +100 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService runs cleanup with previous-day date file
+00:01 +101 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService dispose prevents further cleanup
+00:01 +102 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService does not crash on missing base dir
+00:01 +103 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService logs error when clearOldItems throws
+00:01 +104 -1: Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart: CleanupService logs error when getImagePaths throws during orphan cleanup
+WARNING (drift): It looks like you've created the database class _AppDatabase multiple times. When these two databases use the same QueryExecutor, race conditions will occur and might corrupt the database. 
+Try to follow the advice at https://drift.simonbinder.eu/faq/#using-the-database or, if you know what you're doing, set driftRuntimeOptions.dontWarnAboutMultipleDatabases = true
+Here is the stacktrace from when the database was opened a second time:
+#0      GeneratedDatabase._handleInstantiated (package:drift/src/runtime/api/db_base.dart:96:30)
+#1      GeneratedDatabase._whenConstructed (package:drift/src/runtime/api/db_base.dart:73:12)
+#2      new GeneratedDatabase (package:drift/src/runtime/api/db_base.dart:64:5)
+#3      new _$_AppDatabase (package:core/repository/sqlite_repository.g.dart:718:37)
+#4      new _AppDatabase (package:core/repository/sqlite_repository.dart)
+#5      new SqliteRepository.inMemory (package:core/repository/sqlite_repository.dart:130:26)
+#6      main.<anonymous closure>.<anonymous closure> (file:///Z:/Code/Personal/CopyPaste/core/test/cleanup_service_test.dart:267:55)
+<asynchronous suspension>
+#7      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#8      Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#9      Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+This warning will only appear on debug builds.
+00:01 +105 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processText saves new item and emits onItemAdded
+00:01 +106 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processText reactivates existing item and emits onItemReactivated
+00:01 +107 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processText returns null when inside paste ignore window
+00:01 +108 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processText saves item with source and rtf/html metadata
+00:01 +109 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processText saves item without metadata when no rtf/html provided
+00:01 +110 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage saves new image item by contentHash
+00:01 +111 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage reactivates duplicate image by hash
+00:01 +112 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.recordPaste increments pasteCount and returns updated item
+00:01 +113 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.recordPaste returns null for unknown id
+00:01 +114 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processFiles saves file list with metadata
+00:01 +115 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processFiles returns null for empty file list
+00:01 +116 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processFiles reactivates duplicate file list
+00:01 +117 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processFiles sets is_directory true for folder type
+00:01 +118 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.removeItem deletes item from repository
+00:01 +119 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessResult stores all properties correctly
+00:01 +120 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessResult stores all properties correctly
+00:01 +121 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessResult stores all properties correctly
+00:01 +122 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.updateLabelAndColor updates label and color
+00:01 +123 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave returns result with correct dimensions for valid PNG
+00:01 +124 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave returns result with correct dimensions for valid PNG
+00:01 +125 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave returns result with correct dimensions for valid PNG
+00:01 +126 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getHistoryAdvanced filters by type
+00:01 +127 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave saves PNG file to imagesDir
+00:01 +128 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getHistoryAdvanced filters by color
+00:01 +129 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave saved file is valid PNG
+00:01 +130 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getHistoryAdvanced filters by isPinned
+00:01 +131 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave returns null for invalid image bytes
+00:01 +132 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getHistoryAdvanced filters by query
+00:01 +133 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getHistoryAdvanced filters by query
+00:01 +134 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave imagePath contains the provided id
+00:01 +135 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getHistoryAdvanced respects limit and skip
+00:01 +136 -1: Z:/Code/Personal/CopyPaste/core/test/image_processor_test.dart: ImageProcessor.processAndSave fileSize matches actual saved file size
+00:01 +137 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.clearUnpinnedHistory removes all non-pinned items
+00:01 +138 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.clearUnpinnedHistory returns 0 when nothing to delete
+00:01 +139 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.getItemCount returns correct count
+00:01 +140 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.walCheckpoint completes without error
+00:01 +141 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.updateMetadata updates metadata and emits onItemReactivated
+00:01 +142 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.updateMetadata silently ignores unknown id
+00:01 +143 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.dispose closes streams after dispose
+00:01 +144 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService._shouldIgnore second window ignores duplicate content within 2x paste window
+00:01 +145 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService._shouldIgnore second window ignores duplicate content within 2x paste window
+00:01 +146 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository update modifies existing item
+00:01 +147 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes saves temp BMP when imageBytes and imagesPath provided
+00:01 +148 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes saves temp BMP when imageBytes and imagesPath provided
+00:01 +149 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes saves temp BMP when imageBytes and imagesPath provided
+00:01 +150 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository findByContentAndType returns null for wrong type
+00:01 +151 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes background processing with valid PNG updates item
+00:02 +152 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes background processing with valid PNG updates item
+00:02 +153 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes background processing with valid PNG updates item
+00:02 +154 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processImage with imageBytes background processing with valid PNG updates item
+00:02 +155 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository clearOldItems preserves pinned items
+00:02 +156 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.removeItem for image cleans up image file when removing image item
+00:02 +157 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository clearOldItems uses createdAt to determine age
+00:02 +158 -1: Z:/Code/Personal/CopyPaste/core/test/clipboard_service_test.dart: ClipboardService.processFiles single file with size includes file_size in metadata for single existing file
+00:02 +159 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository search finds items by content
+00:02 +160 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository searchAdvanced filters by type
+00:02 +161 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository searchAdvanced filters by color
+00:02 +162 -1: Z:/Code/Personal/CopyPaste/core/test/search_helper_test.dart: SearchHelper normalizes accented characters
+00:02 +163 -1: Z:/Code/Personal/CopyPaste/core/test/search_helper_test.dart: SearchHelper normalizes accented characters
+00:02 +164 -1: Z:/Code/Personal/CopyPaste/core/test/search_helper_test.dart: SearchHelper normalizes accented characters
+00:02 +165 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getLatest returns most recently modified item
+00:02 +166 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getLatest returns most recently modified item
+00:02 +167 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getLatest returns most recently modified item
+00:02 +168 -1: Z:/Code/Personal/CopyPaste/core/test/search_helper_test.dart: SearchHelper handles already normalized text
+00:02 +169 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getLatest returns null on empty repository
+00:02 +170 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getLatest returns null on empty repository
+00:02 +171 -1: Z:/Code/Personal/CopyPaste/core/test/search_helper_test.dart: SearchHelper normalizes extended Latin characters
+00:02 +172 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository deleteAllUnpinned removes only non-pinned items
+00:02 +173 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository count returns correct number of items
+00:02 +174 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getImagePaths returns content of image items
+00:02 +175 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository getImagePaths returns empty list when no images
+00:02 +176 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository walCheckpoint completes without error
+00:02 +177 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository searchAdvanced with skip paginates results
+00:02 +178 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository fromPath creates working repository with persisted data
+WARNING (drift): It looks like you've created the database class _AppDatabase multiple times. When these two databases use the same QueryExecutor, race conditions will occur and might corrupt the database. 
+Try to follow the advice at https://drift.simonbinder.eu/faq/#using-the-database or, if you know what you're doing, set driftRuntimeOptions.dontWarnAboutMultipleDatabases = true
+Here is the stacktrace from when the database was opened a second time:
+#0      GeneratedDatabase._handleInstantiated (package:drift/src/runtime/api/db_base.dart:96:30)
+#1      GeneratedDatabase._whenConstructed (package:drift/src/runtime/api/db_base.dart:73:12)
+#2      new GeneratedDatabase (package:drift/src/runtime/api/db_base.dart:64:5)
+#3      new _$_AppDatabase (package:core/repository/sqlite_repository.g.dart:718:37)
+#4      new _AppDatabase (package:core/repository/sqlite_repository.dart)
+#5      new SqliteRepository.fromPath (package:core/repository/sqlite_repository.dart:116:16)
+#6      main.<anonymous closure>.<anonymous closure> (file:///Z:/Code/Personal/CopyPaste/core/test/repository_test.dart:361:43)
+#7      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:25)
+<asynchronous suspension>
+#8      Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#9      Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+This warning will only appear on debug builds.
+00:02 +179 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository clearOldItems triggers vacuum when more than 50 items deleted
+00:02 +180 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository deleteAllUnpinned triggers vacuum when more than 50 items deleted
+00:02 +181 -1: Z:/Code/Personal/CopyPaste/core/test/repository_test.dart: SqliteRepository clearOldItems respects excludePinned=false
+00:02 +182 -1: Z:/Code/Personal/CopyPaste/core/test/storage_config_test.dart: StorageConfig paths are derived from baseDir
+00:02 +183 -1: Z:/Code/Personal/CopyPaste/core/test/storage_config_test.dart: StorageConfig ensureDirectories creates all required directories
+00:02 +184 -1: Z:/Code/Personal/CopyPaste/core/test/storage_config_test.dart: StorageConfig isFirstRun is true before markAsInitialized
+00:02 +185 -1: Z:/Code/Personal/CopyPaste/core/test/storage_config_test.dart: StorageConfig markAsInitialized makes isFirstRun false
+00:02 +186 -1: Z:/Code/Personal/CopyPaste/core/test/storage_config_test.dart: StorageConfig cleanOrphanImages removes unlisted image files
+00:02 +187 -1: Z:/Code/Personal/CopyPaste/core/test/storage_config_test.dart: StorageConfig cleanOrphanImages does not throw when directory is missing
+00:02 +188 -1: Some tests failed.
