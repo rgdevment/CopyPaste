@@ -1,7 +1,7 @@
 ﻿<div align="center">
   <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste App Logo"/>
 
-  <h1>CopyPaste</h1>
+  <h1>Copy Paste</h1>
   <h3>A modern clipboard manager — minimal, beautiful, and built to feel native</h3>
 
   <p>
