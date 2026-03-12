@@ -135,7 +135,7 @@ jobs:
                     --platform linux \
                     --targets deb \
                     --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}" \
-                    --build-skip
+                    --skip-clean
 
             - name: Rename deb
               run: |
@@ -157,7 +157,7 @@ jobs:
                     --platform linux \
                     --targets rpm \
                     --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}" \
-                    --build-skip
+                    --skip-clean
 
             - name: Rename rpm
               run: |
