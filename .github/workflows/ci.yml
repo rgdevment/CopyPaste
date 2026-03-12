@@ -6,6 +6,10 @@ on:
     pull_request:
         branches: [main]
 
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
 permissions:
     contents: read
 
@@ -36,14 +40,23 @@ jobs:
                   cd ../app && flutter pub get
 
             - name: Check formatting
-              run: |
-                  dart format --output=none --set-exit-if-changed .
+              run: dart format --output=none --set-exit-if-changed .
 
             - name: Analyze
               run: |
                   cd core && flutter analyze
                   cd ../listener && flutter analyze
                   cd ../app && flutter analyze
+
+            - name: Verify generated code (Drift)
+              run: |
+                  cd core && dart run build_runner build --delete-conflicting-outputs
+                  git diff --exit-code . || { echo "::error::Generated code is out of date. Run 'dart run build_runner build --delete-conflicting-outputs' in core/ and commit."; exit 1; }
+
+            - name: Verify generated localizations
+              run: |
+                  cd app && flutter gen-l10n
+                  git diff --exit-code lib/l10n/ || { echo "::error::Generated l10n files are out of date. Run 'flutter gen-l10n' in app/ and commit."; exit 1; }
 
             - name: Check outdated dependencies
               run: |
@@ -58,6 +71,17 @@ jobs:
                   cd ../listener && flutter test --coverage
                   cd ../app && flutter test --coverage
 
+            - name: Upload coverage artifacts
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: coverage-reports
+                  path: |
+                      core/coverage/lcov.info
+                      listener/coverage/lcov.info
+                      app/coverage/lcov.info
+                  retention-days: 1
+
             - name: Upload coverage to Codecov
               uses: codecov/codecov-action@v4
               if: always()
@@ -67,7 +91,91 @@ jobs:
                   flags: core,listener,app
                   fail_ci_if_error: false
 
+    release-readiness:
+        runs-on: ubuntu-latest
+        name: Release Readiness
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Validate pubspec structure
+              run: |
+                  errors=0
+                  for pkg in app core listener; do
+                    if [ ! -f "$pkg/pubspec.yaml" ]; then
+                      echo "::error::Missing $pkg/pubspec.yaml"
+                      errors=$((errors + 1))
+                      continue
+                    fi
+                    version=$(grep '^version:' "$pkg/pubspec.yaml" | head -1 | awk '{print $2}')
+                    name=$(grep '^name:' "$pkg/pubspec.yaml" | head -1 | awk '{print $2}')
+                    if [ -z "$version" ]; then
+                      echo "::error::Missing version field in $pkg/pubspec.yaml"
+                      errors=$((errors + 1))
+                    fi
+                    if [ -z "$name" ]; then
+                      echo "::error::Missing name field in $pkg/pubspec.yaml"
+                      errors=$((errors + 1))
+                    fi
+                    echo "✓ $pkg: name=$name version=$version"
+                  done
+                  [ $errors -eq 0 ] || exit 1
+
+            - name: Validate release workflow references
+              run: |
+                  errors=0
+                  for wf in release-win.yml release-mac.yml release-linux.yml; do
+                    if [ ! -f ".github/workflows/$wf" ]; then
+                      echo "::error::Missing .github/workflows/$wf (referenced by release.yml)"
+                      errors=$((errors + 1))
+                    else
+                      echo "✓ .github/workflows/$wf"
+                    fi
+                  done
+                  [ $errors -eq 0 ] || exit 1
+
+            - name: Validate project structure
+              run: |
+                  errors=0
+                  for dir in app/lib app/windows app/macos app/linux app/assets; do
+                    if [ ! -d "$dir" ]; then
+                      echo "::error::Missing required directory: $dir"
+                      errors=$((errors + 1))
+                    else
+                      echo "✓ $dir/"
+                    fi
+                  done
+                  for file in app/l10n.yaml app/pubspec.yaml core/pubspec.yaml listener/pubspec.yaml; do
+                    if [ ! -f "$file" ]; then
+                      echo "::error::Missing required file: $file"
+                      errors=$((errors + 1))
+                    else
+                      echo "✓ $file"
+                    fi
+                  done
+                  [ $errors -eq 0 ] || exit 1
+
+            - name: Simulate release version extraction
+              run: |
+                  test_tags=("v2.1.0" "v2.0.0-beta.1" "v3.0.0" "v1.0.0-rc.1")
+                  for tag in "${test_tags[@]}"; do
+                    ref="refs/tags/$tag"
+                    if [[ "$ref" =~ refs/tags/v(.+) ]]; then
+                      VERSION="${BASH_REMATCH[1]}"
+                      # Validate version format (semver)
+                      if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                        echo "::error::Tag $tag produces invalid version: $VERSION"
+                        exit 1
+                      fi
+                      echo "✓ $tag → $VERSION"
+                    else
+                      echo "::error::Tag $tag would fail version extraction in release.yml"
+                      exit 1
+                    fi
+                  done
+
     build:
+        needs: quality
         runs-on: windows-latest
         name: Build Verification (Windows)
 
@@ -96,6 +204,7 @@ jobs:
               run: cd app; flutter build windows --release
 
     build-linux:
+        needs: quality
         runs-on: ubuntu-22.04
         name: Build Verification (Linux)
 
@@ -153,6 +262,7 @@ jobs:
               run: cd app && flutter build linux --release
 
     build-macos:
+        needs: quality
         runs-on: macos-latest
         name: Build Verification (macOS)
 
@@ -182,6 +292,7 @@ jobs:
 
     sonarcloud:
         name: SonarCloud
+        needs: quality
         runs-on: ubuntu-latest
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
 
@@ -190,29 +301,11 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - uses: subosito/flutter-action@v2
+            - name: Download coverage reports
+              uses: actions/download-artifact@v4
               with:
-                  channel: stable
-                  cache: true
-
-            - name: Cache pub dependencies
-              uses: actions/cache@v4
-              with:
-                  path: ~/.pub-cache
-                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-                  restore-keys: ${{ runner.os }}-pub-
-
-            - name: Get dependencies
-              run: |
-                  cd core && flutter pub get
-                  cd ../listener && flutter pub get
-                  cd ../app && flutter pub get
-
-            - name: Run tests with coverage
-              run: |
-                  cd core && flutter test --coverage
-                  cd ../listener && flutter test --coverage
-                  cd ../app && flutter test --coverage
+                  name: coverage-reports
+                  path: .
 
             - name: SonarCloud Scan
               uses: SonarSource/sonarcloud-github-action@v5
