@@ -1,4 +1,0 @@
-#include <windows.h>
-
-// Application icon (shown in Explorer, taskbar, task manager)
-IDI_APPICON ICON "..\\CopyPaste.UI\\Assets\\CopyPasteLogoSimple.ico"

@@ -1,0 +1,230 @@
+name: Release (macOS)
+
+on:
+    workflow_call:
+        inputs:
+            version:
+                required: true
+                type: string
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version to use (e.g. 2.1.0). Defaults to 2.0.0-dev"
+                required: false
+                default: "2.0.0-dev"
+
+permissions:
+    contents: read
+
+jobs:
+    build-macos:
+        runs-on: macos-15
+        timeout-minutes: 45
+        name: Build macOS (Universal)
+
+        env:
+            MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+            MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+            APPLE_ID: ${{ secrets.APPLE_ID }}
+            APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+            APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  ref: ${{ github.ref_name }}
+
+            - name: Resolve version
+              id: get_version
+              run: |
+                  VERSION="${{ inputs.version }}"
+
+                  IS_PRERELEASE="false"
+                  if [[ "$VERSION" == *-* ]]; then
+                    IS_PRERELEASE="true"
+                  fi
+
+                  BUILD_NAME="${VERSION%-*}"
+                  BUILD_NUMBER=$(echo "$BUILD_NAME" | awk -F. '{printf "%d%03d%03d", $1, $2, $3}')
+
+                  echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+                  echo "BUILD_NAME=$BUILD_NAME" >> "$GITHUB_OUTPUT"
+                  echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+                  echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+                  echo "Version: $VERSION  Build: $BUILD_NAME ($BUILD_NUMBER)  PreRelease: $IS_PRERELEASE"
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  channel: stable
+                  cache: true
+
+            - name: Cache pub dependencies
+              uses: actions/cache@v5
+              with:
+                  path: ~/.pub-cache
+                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+                  restore-keys: ${{ runner.os }}-pub-
+
+            - name: Get dependencies
+              run: |
+                  cd core && flutter pub get
+                  cd ../listener && flutter pub get
+                  cd ../app && flutter pub get
+
+            - name: Update pubspec version
+              run: |
+                  VERSION="${{ steps.get_version.outputs.VERSION }}"
+                  sed -i '' "s/^version:.*/version: $VERSION/" app/pubspec.yaml
+                  echo "Updated pubspec.yaml version to: $VERSION"
+
+            # ── Code Signing Setup ──
+            - name: Import signing certificate
+              if: env.MACOS_CERTIFICATE_P12 != ''
+              run: |
+                  KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+                  KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+                  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+                  security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+                  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+                  CERT_PATH="$RUNNER_TEMP/certificate.p12"
+                  echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+
+                  security import "$CERT_PATH" \
+                    -k "$KEYCHAIN_PATH" \
+                    -P "$MACOS_CERTIFICATE_PASSWORD" \
+                    -T /usr/bin/codesign \
+                    -T /usr/bin/security
+
+                  security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+                  security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+                  rm -f "$CERT_PATH"
+                  echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+                  echo "Certificate imported successfully"
+
+            # ── Build (universal: arm64 + x86_64) ──
+            - name: Build macOS release (universal)
+              run: |
+                  cd app
+                  flutter build macos --release \
+                    --build-name="${{ steps.get_version.outputs.BUILD_NAME }}" \
+                    --build-number="${{ steps.get_version.outputs.BUILD_NUMBER }}" \
+                    --dart-define="APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
+
+            - name: Verify universal binary
+              run: |
+                  APP="app/build/macos/Build/Products/Release/CopyPaste.app"
+                  ARCHS=$(lipo -archs "$APP/Contents/MacOS/CopyPaste")
+                  echo "Architectures: $ARCHS"
+                  if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
+                    echo "::error::Expected universal binary (x86_64 + arm64), got: $ARCHS"
+                    exit 1
+                  fi
+                  echo "Universal binary verified (x86_64 + arm64)"
+
+            # ── Code Sign the .app ──
+            - name: Sign application
+              if: env.MACOS_CERTIFICATE_P12 != ''
+              run: |
+                  APP_PATH="app/build/macos/Build/Products/Release/CopyPaste.app"
+
+                  SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk '{print $2}')
+                  echo "Signing with identity: $SIGN_IDENTITY"
+
+                  codesign --deep --force --options runtime \
+                    --entitlements "app/macos/Runner/Release.entitlements" \
+                    --sign "$SIGN_IDENTITY" \
+                    "$APP_PATH"
+
+                  echo "Verifying signature..."
+                  codesign --verify --deep --strict "$APP_PATH"
+                  echo "Signature verified"
+
+            - name: Ad-hoc sign (unsigned build)
+              if: env.MACOS_CERTIFICATE_P12 == ''
+              run: |
+                  APP_PATH="app/build/macos/Build/Products/Release/CopyPaste.app"
+                  codesign --deep --force --sign - "$APP_PATH"
+                  echo "Ad-hoc signed (unsigned build)"
+
+            # ── Create DMG ──
+            - name: Install create-dmg
+              run: brew install create-dmg
+
+            - name: Create DMG
+              run: |
+                  VERSION="${{ steps.get_version.outputs.VERSION }}"
+                  APP_PATH="app/build/macos/Build/Products/Release/CopyPaste.app"
+                  DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
+
+                  mkdir -p app/dist
+
+                  create-dmg \
+                    --volname "CopyPaste" \
+                    --volicon "app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png" \
+                    --window-pos 200 120 \
+                    --window-size 660 400 \
+                    --icon-size 80 \
+                    --icon "CopyPaste.app" 180 190 \
+                    --app-drop-link 480 190 \
+                    --hide-extension "CopyPaste.app" \
+                    --no-internet-enable \
+                    "app/dist/$DMG_NAME" \
+                    "$APP_PATH" \
+                    || true
+
+                  if [[ ! -f "app/dist/$DMG_NAME" ]]; then
+                    echo "::error::DMG was not created"
+                    exit 1
+                  fi
+
+                  echo "DMG created: $DMG_NAME ($(du -h "app/dist/$DMG_NAME" | cut -f1))"
+
+            # ── Sign & Notarize DMG ──
+            - name: Sign DMG
+              if: env.MACOS_CERTIFICATE_P12 != ''
+              run: |
+                  DMG_PATH="app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
+
+                  SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk '{print $2}')
+                  echo "Signing DMG with identity: $SIGN_IDENTITY"
+
+                  codesign --force --sign "$SIGN_IDENTITY" "$DMG_PATH"
+                  codesign --verify "$DMG_PATH"
+                  echo "DMG signed"
+
+            - name: Notarize DMG
+              if: env.APPLE_ID != '' && env.MACOS_CERTIFICATE_P12 != ''
+              run: |
+                  DMG_PATH="app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_universal.dmg"
+
+                  echo "Submitting for notarization..."
+                  xcrun notarytool submit "$DMG_PATH" \
+                    --apple-id "$APPLE_ID" \
+                    --password "$APPLE_APP_PASSWORD" \
+                    --team-id "$APPLE_TEAM_ID" \
+                    --wait \
+                    --timeout 600
+
+                  echo "Stapling notarization ticket..."
+                  xcrun stapler staple "$DMG_PATH"
+
+                  echo "Verifying notarization..."
+                  spctl --assess --type open --context context:primary-signature "$DMG_PATH"
+                  echo "Notarization complete"
+
+            # ── Cleanup ──
+            - name: Cleanup keychain
+              if: always() && env.KEYCHAIN_PATH != ''
+              run: security delete-keychain "$KEYCHAIN_PATH" || true
+
+            # ── Upload ──
+            - name: Upload artifact
+              uses: actions/upload-artifact@v6
+              with:
+                  name: release-macos
+                  path: app/dist/*.dmg
+                  retention-days: 5
+
