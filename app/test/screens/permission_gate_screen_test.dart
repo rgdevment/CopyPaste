@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -165,6 +167,86 @@ void main() {
       await tester.pump();
 
       expect(find.byType(PermissionGateScreen), findsNothing);
+    });
+
+    testWidgets('_manualCheck success calls onGranted', (tester) async {
+      _setMockHandler(channel, (call) async {
+        if (call.method == 'requestAccessibility') return true;
+        if (call.method == 'checkAccessibility') return false;
+        return null;
+      });
+
+      var granted = false;
+
+      await tester.pumpWidget(
+        _wrap(
+          PermissionGateScreen(
+            previouslyGranted: true,
+            onGranted: () => granted = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(OutlinedButton), findsOneWidget);
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+      await tester.pump();
+
+      expect(granted, isTrue);
+    });
+
+    testWidgets('onRestart button tap calls onRestart callback', (tester) async {
+      var restarted = false;
+
+      await tester.pumpWidget(
+        _wrap(
+          PermissionGateScreen(
+            previouslyGranted: true,
+            onGranted: () {},
+            onRestart: () => restarted = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byType(TextButton));
+      await tester.pump();
+
+      expect(restarted, isTrue);
+    });
+
+    testWidgets('shows ... and disables button while checking', (tester) async {
+      final completer = Completer<Object?>();
+      _setMockHandler(channel, (call) async {
+        if (call.method == 'requestAccessibility') return completer.future;
+        if (call.method == 'checkAccessibility') return false;
+        return null;
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          PermissionGateScreen(
+            previouslyGranted: true,
+            onGranted: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+
+      expect(find.text('...'), findsOneWidget);
+      final btn = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
+      expect(btn.onPressed, isNull);
+
+      completer.complete(false);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('...'), findsNothing);
     });
   });
 }

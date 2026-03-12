@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -204,6 +206,169 @@ void main() {
 
       // No exception after disposal
       expect(find.byType(AccessibilityDialog), findsNothing);
+    });
+
+    testWidgets('renders warning icon and stale content when previouslyGranted is true', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: true)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.security), findsNothing);
+      expect(find.byType(OutlinedButton), findsOneWidget);
+    });
+
+    testWidgets('_manualCheck success path closes dialog', (tester) async {
+      _setMockHandler(channel, (call) async {
+        if (call.method == 'checkAccessibility') return false;
+        if (call.method == 'requestAccessibility') return true;
+        return null;
+      });
+
+      var popped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CopyPasteTheme(
+            themeData: CompactTheme(),
+            child: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () async {
+                    await showDialog<void>(
+                      context: ctx,
+                      builder: (_) =>
+                          const AccessibilityDialog(previouslyGranted: true),
+                    );
+                    popped = true;
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(popped, isTrue);
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('_manualCheck failure sets retryNeeded phase', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: true)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OutlinedButton), findsOneWidget);
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+      await tester.pump();
+
+      // After failure, button is re-enabled (not showing '...')
+      expect(find.text('...'), findsNothing);
+      expect(find.byType(OutlinedButton), findsOneWidget);
+    });
+
+    testWidgets('shows ... and disables button while checking', (tester) async {
+      final completer = Completer<Object?>();
+      _setMockHandler(channel, (call) async {
+        if (call.method == 'requestAccessibility') return completer.future;
+        if (call.method == 'checkAccessibility') return false;
+        return null;
+      });
+
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: true)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+
+      expect(find.text('...'), findsOneWidget);
+      final btn = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
+      expect(btn.onPressed, isNull);
+
+      completer.complete(false);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('...'), findsNothing);
+    });
+
+    testWidgets('phase transitions to retryNeeded after 30 timer ticks', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(const AccessibilityDialog(previouslyGranted: false)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OutlinedButton), findsNothing);
+
+      for (var i = 0; i < 31; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await tester.pump();
+
+      expect(find.byType(OutlinedButton), findsOneWidget);
+    });
+
+    testWidgets('checkAndShow shows dialog when not initially granted', (tester) async {
+      _setMockHandler(channel, (call) async {
+        if (call.method == 'checkAccessibility') return false;
+        return null;
+      });
+
+      bool? result;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CopyPasteTheme(
+            themeData: CompactTheme(),
+            child: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () async {
+                    result = await AccessibilityDialog.checkAndShow(ctx);
+                  },
+                  child: const Text('Check'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Check'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      await tester.tap(find.byType(TextButton));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(result, isFalse);
+      expect(find.byType(AlertDialog), findsNothing);
     });
   });
 }
