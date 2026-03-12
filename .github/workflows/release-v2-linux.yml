@@ -62,8 +62,6 @@ jobs:
                     desktop-file-utils \
                     libayatana-appindicator3-dev \
                     libfuse2 \
-                    libgstreamer-plugins-base1.0-dev \
-                    libgstreamer1.0-dev \
                     libgtk-3-dev \
                     libkeybinder-3.0-dev \
                     liblzma-dev \
