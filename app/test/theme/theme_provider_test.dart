@@ -109,41 +109,28 @@ void main() {
       expect(buildCount, equals(2));
     });
 
-    testWidgets('updateShouldNotify does not notify when same theme', (
-      WidgetTester tester,
-    ) async {
-      late StateSetter setTheme;
-      AppThemeData currentTheme = _ThemeA();
-      int buildCount = 0;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: StatefulBuilder(
-            builder: (context, setState) {
-              setTheme = setState;
-              return CopyPasteTheme(
-                themeData: currentTheme,
-                child: Builder(
-                  builder: (context) {
-                    CopyPasteTheme.of(context);
-                    buildCount++;
-                    return const SizedBox.shrink();
-                  },
-                ),
-              );
-            },
-          ),
-        ),
+    test('updateShouldNotify returns false when theme ID is the same', () {
+      final widget1 = CopyPasteTheme(
+        themeData: _ThemeA(),
+        child: const SizedBox.shrink(),
       );
+      final widget2 = CopyPasteTheme(
+        themeData: _ThemeA(),
+        child: const SizedBox.shrink(),
+      );
+      expect(widget1.updateShouldNotify(widget2), isFalse);
+    });
 
-      expect(buildCount, equals(1));
-
-      // Update with a different instance of the same theme ID via setState
-      setTheme(() => currentTheme = _ThemeA());
-      await tester.pump();
-
-      // Builder should NOT rebuild since updateShouldNotify returns false (same ID)
-      expect(buildCount, equals(1));
+    test('updateShouldNotify returns true when theme ID changes', () {
+      final widgetA = CopyPasteTheme(
+        themeData: _ThemeA(),
+        child: const SizedBox.shrink(),
+      );
+      final widgetB = CopyPasteTheme(
+        themeData: _ThemeB(),
+        child: const SizedBox.shrink(),
+      );
+      expect(widgetA.updateShouldNotify(widgetB), isTrue);
     });
 
     testWidgets('colorsOf returns light colors in light brightness', (
