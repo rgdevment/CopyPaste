@@ -325,5 +325,5 @@ jobs:
                       -Dsonar.tests=core/test,listener/test,app/test
                       -Dsonar.dart.lcov.reportPaths=core/coverage/lcov.info,listener/coverage/lcov.info,app/coverage/lcov.info
                       -Dsonar.exclusions=**/generated/**,**/*.g.dart,**/*.freezed.dart,**/l10n/**,**/core.dart
-                      -Dsonar.coverage.exclusions=**/main.dart,**/shell/**,**/theme/**,**/services/auto_update_service.dart,**/widgets/empty_state.dart,**/widgets/label_color_dialog.dart,**/widgets/title_bar.dart,**/windows_clipboard_listener.dart,**/l10n/**,**/*.g.dart,**/*.freezed.dart,**/core.dart,**/screens/settings_screen.dart
+                      -Dsonar.coverage.exclusions=**/main.dart,**/shell/**,**/services/auto_update_service.dart,**/windows_clipboard_listener.dart,**/l10n/**,**/*.g.dart,**/*.freezed.dart,**/core.dart,**/screens/settings_screen.dart
 
