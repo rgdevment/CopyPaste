@@ -208,16 +208,19 @@ void main() {
       expect(find.byType(AccessibilityDialog), findsNothing);
     });
 
-    testWidgets('renders warning icon and stale content when previouslyGranted is true', (tester) async {
-      await tester.pumpWidget(
-        wrapWidget(const AccessibilityDialog(previouslyGranted: true)),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'renders warning icon and stale content when previouslyGranted is true',
+      (tester) async {
+        await tester.pumpWidget(
+          wrapWidget(const AccessibilityDialog(previouslyGranted: true)),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.security), findsNothing);
-      expect(find.byType(OutlinedButton), findsOneWidget);
-    });
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.security), findsNothing);
+        expect(find.byType(OutlinedButton), findsOneWidget);
+      },
+    );
 
     testWidgets('_manualCheck success path closes dialog', (tester) async {
       _setMockHandler(channel, (call) async {
@@ -312,7 +315,9 @@ void main() {
       expect(find.text('...'), findsNothing);
     });
 
-    testWidgets('phase transitions to retryNeeded after 30 timer ticks', (tester) async {
+    testWidgets('phase transitions to retryNeeded after 30 timer ticks', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrapWidget(const AccessibilityDialog(previouslyGranted: false)),
       );
@@ -328,7 +333,9 @@ void main() {
       expect(find.byType(OutlinedButton), findsOneWidget);
     });
 
-    testWidgets('checkAndShow shows dialog when not initially granted', (tester) async {
+    testWidgets('checkAndShow shows dialog when not initially granted', (
+      tester,
+    ) async {
       _setMockHandler(channel, (call) async {
         if (call.method == 'checkAccessibility') return false;
         return null;
