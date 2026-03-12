@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "CopyPaste.UI": {
-      "commandName": "Project",
-      "nativeDebugging": true
-    }
-  }
-}

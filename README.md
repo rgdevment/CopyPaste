@@ -1,5 +1,5 @@
 ﻿<div align="center">
-  <img src="v2/app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste App Logo"/>
+  <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste App Logo"/>
 
   <h1>CopyPaste</h1>
   <h3>A modern clipboard manager — minimal, beautiful, and built to feel native</h3>
@@ -9,8 +9,8 @@
   </p>
 
   <p>
-    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci-v2.yml">
-      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci-v2.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
+    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci.yml">
+      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
     </a>
     <a href="https://sonarcloud.io/summary/overall?id=rgdevment_CopyPaste">
       <img src="https://img.shields.io/sonar/quality_gate/rgdevment_CopyPaste?server=https%3A%2F%2Fsonarcloud.io&style=flat-square&logo=sonarcloud&label=Quality%20Gate" alt="Quality Gate"/>
@@ -115,18 +115,18 @@ CopyPaste isn't a "power tool" you learn to tolerate — it's something that sho
 ## 📸 See It in Action
 
 <div align="center">
-    <img src="resources/v2/demo.gif" alt="CopyPaste v2 Demo — Fast search, clean cards, multiplatform design"/>
+    <img src="resources/demo.gif" alt="CopyPaste Demo — Fast search, clean cards, multiplatform design"/>
 </div>
-<div align="center"><em>Fast search, clean cards, and a native feel. This is CopyPaste v2 in action.</em></div>
+<div align="center"><em>Fast search, clean cards, and a native feel. This is CopyPaste in action.</em></div>
 
 <br/>
 
 <div align="center">
-    <img src="resources/v2/copypaste_v2_en_screenshot1_panel.png" alt="CopyPaste v2 — Main panel with clipboard history" width="49%"/>
-    <img src="resources/v2/copypaste_v2_en_screenshot2_categories.png" alt="CopyPaste v2 — Category filters and color labels" width="49%"/>
+    <img src="resources/copypaste_v2_en_screenshot1_panel.png" alt="CopyPaste — Main panel with clipboard history" width="49%"/>
+    <img src="resources/copypaste_v2_en_screenshot2_categories.png" alt="CopyPaste — Category filters and color labels" width="49%"/>
     <br/><br/>
-    <img src="resources/v2/copypaste_v2_en_screenshot3_settings.png" alt="CopyPaste v2 — Settings panel" width="49%"/>
-    <img src="resources/v2/copypaste_v2_en_screenshot4_multiplatform.png" alt="CopyPaste v2 — Multiplatform: Windows and macOS" width="49%"/>
+    <img src="resources/copypaste_v2_en_screenshot3_settings.png" alt="CopyPaste — Settings panel" width="49%"/>
+    <img src="resources/copypaste_v2_en_screenshot4_multiplatform.png" alt="CopyPaste — Multiplatform: Windows and macOS" width="49%"/>
 </div>
 
 ---
@@ -485,7 +485,7 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
 2. **Copy the base language file:**
 
     ```
-    v2/app/lib/l10n/app_en.arb
+    app/lib/l10n/app_en.arb
     ```
 
     This is the reference file with all translation keys.
