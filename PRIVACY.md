@@ -30,6 +30,7 @@ CopyPaste was built with a **privacy-first** mindset from day one. This isn't an
 CopyPaste monitors your system clipboard to maintain a local history. The following data is stored **exclusively on your computer**:
 
 ### Clipboard Content
+
 | Type | What's Stored | Where |
 |:---|:---|:---|
 | **Text** | The copied text content | SQLite database |
@@ -39,17 +40,21 @@ CopyPaste monitors your system clipboard to maintain a local history. The follow
 | **Audio & Video** | File paths only | SQLite database |
 
 ### Metadata
+
 For each clipboard item, CopyPaste also stores:
+
 - **Timestamp** — When the item was copied
 - **Content type** — Text, Image, File, Folder, Link, Audio, or Video
-- **Source application** — The name of the app where you copied from (*window title*)
+- **Source application** — The name of the app where you copied from (_window title_)
 - **User labels** — Custom labels you assign to items (optional)
 - **Color tags** — Color categories you assign (optional)
 - **Pin status** — Whether you pinned the item
 - **Image thumbnails** — Smaller preview versions of copied images
 
 ### Configuration
+
 Your settings are stored locally:
+
 - Hotkey preferences
 - Theme selection
 - Language preference
@@ -59,7 +64,9 @@ Your settings are stored locally:
 - Startup preferences
 
 ### Logs
+
 Application logs are stored locally for troubleshooting:
+
 - **Windows:** `%LOCALAPPDATA%\CopyPaste\logs\`
 - **macOS:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/`
 - **Linux:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/`
@@ -136,6 +143,7 @@ CopyPaste makes **one type of network request**, and only in the standalone vers
 | **Can be disabled?** | See below |
 
 **Important notes:**
+
 - This request is **read-only** — it only downloads a small public file (XML on Windows, JSON on macOS/Linux)
 - **No clipboard content, no usage data, no personal information** is ever sent
 - Windows feed is hosted on a public GitHub Gist; macOS/Linux uses the public GitHub Releases API
@@ -150,6 +158,7 @@ CopyPaste makes **one type of network request**, and only in the standalone vers
 ### User-Initiated Browser Navigation
 
 When you explicitly click certain UI buttons, CopyPaste opens URLs in your default browser:
+
 - **"Report issue"** button → Opens `https://github.com/rgdevment/CopyPaste/issues`
 - **"Download update"** indicator → Opens the GitHub release page
 
@@ -162,7 +171,9 @@ These are standard browser navigations initiated by your action — CopyPaste do
 CopyPaste includes built-in protections for sensitive content:
 
 ### Password Manager Exclusion
+
 Clipboard content from recognized password managers is **automatically excluded** from history. Supported password managers include:
+
 - 1Password
 - Bitwarden
 - LastPass
@@ -170,11 +181,13 @@ Clipboard content from recognized password managers is **automatically excluded*
 - And others that use standard clipboard security flags
 
 ### How It Works
+
 - Password managers typically set a clipboard format flag indicating sensitive content
 - CopyPaste detects these flags and **skips storing** the content entirely
 - The sensitive data is never written to the database or disk
 
 ### Windows Clipboard History
+
 CopyPaste operates independently from Windows' built-in clipboard history (`Win+V`). Your CopyPaste settings do not affect Windows clipboard behavior, and vice versa.
 
 ---
@@ -182,27 +195,34 @@ CopyPaste operates independently from Windows' built-in clipboard history (`Win+
 ## Data Retention & Deletion
 
 ### Automatic Cleanup
+
 - CopyPaste automatically deletes unpinned items older than your configured retention period (default: **30 days**)
 - Cleanup runs periodically in the background
 - **Pinned items are preserved** regardless of the retention setting
 
 ### Manual Deletion
+
 You can delete any clipboard item at any time:
+
 - Select an item and press `Delete`
 - Right-click and choose "Delete"
 
 ### Complete Data Removal
+
 To completely remove all CopyPaste data from your computer:
 
 **Windows:**
+
 1. Uninstall CopyPaste (via Settings → Apps or the standalone uninstaller)
 2. Delete the data folder: `%LOCALAPPDATA%\CopyPaste\`
 
 **macOS:**
+
 1. Move CopyPaste to Trash from Applications
 2. Delete the data folder: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/`
 
 **Linux:**
+
 1. Uninstall CopyPaste (via your package manager or remove the binary)
 2. Delete the data folder: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`
 
@@ -244,6 +264,7 @@ We encourage security researchers and privacy advocates to inspect the code. See
 ## Changes to This Policy
 
 If we ever change this privacy policy, the changes will be:
+
 - Committed to the public repository with a clear commit message
 - Reflected in the "Last updated" date at the top
 - Documented in the release notes

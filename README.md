@@ -69,7 +69,7 @@
 
 ---
 
-### An open source clipboard manager built for harmony, not just productivity.
+### An open source clipboard manager built for harmony, not just productivity
 
 **CopyPaste** is not just a clipboard manager focused on performance. I don't believe power should be synonymous with something clunky or purely functional — this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
 
@@ -391,17 +391,20 @@ After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`**
 <summary><strong>🐧 Linux: Installation Instructions</strong></summary>
 
 **AppImage** — universal, no installation needed:
+
 ```bash
 chmod +x CopyPaste-*.AppImage
 ./CopyPaste-*.AppImage
 ```
 
 **Debian / Ubuntu (.deb):**
+
 ```bash
 sudo dpkg -i copypaste_*.deb
 ```
 
 **Fedora / RHEL (.rpm):**
+
 ```bash
 sudo dnf install copypaste_*.rpm
 # or: sudo rpm -i copypaste_*.rpm
@@ -508,7 +511,7 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
 
 2. **Copy the base language file:**
 
-    ```
+    ```bash
     app/lib/l10n/app_en.arb
     ```
 
@@ -607,9 +610,8 @@ I believe software should make your life easier, not more complicated. I built C
 
 If that sounds good to you, I hope it serves you well — on Windows, macOS, or wherever you work.
 
-**Thanks for giving CopyPaste a shot. 💙**
+### Thanks for giving CopyPaste a shot. 💙
 
 <div align="center">
   <p>Built with ❤️ and too much coffee.</p>
 </div>
-

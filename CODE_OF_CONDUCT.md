@@ -12,7 +12,7 @@ We as contributors and maintainers of **CopyPaste** pledge to make participation
 
 **CopyPaste** is a community effort, not a corporate product. We believe:
 
-- 🤝 **Collaboration over competition** — We're building *with* you, not *for* you.
+- 🤝 **Collaboration over competition** — We're building _with_ you, not _for_ you.
 - 💬 **Respect over ego** — Good ideas can come from anywhere, regardless of experience level.
 - 🌐 **Inclusion over exclusion** — Everyone deserves to contribute to and benefit from open source.
 - 🎯 **Focus over drama** — We're here to build great software, not to argue.
@@ -72,7 +72,7 @@ This Code of Conduct applies to:
 If you experience or witness unacceptable behavior, please report it by:
 
 1. **Opening a private issue** on GitHub (if the feature is available).
-2. **Emailing the project maintainer** at: **github@apirest.cl**
+2. **Emailing the project maintainer** at: **<github@apirest.cl>**
 
 All complaints will be reviewed and investigated promptly and fairly. We are committed to respecting the privacy and security of the reporter.
 
@@ -87,7 +87,8 @@ All complaints will be reviewed and investigated promptly and fairly. We are com
 
 ### Appeal Process
 
-If you believe you were unfairly moderated, you can appeal by emailing me at **github@apirest.cl** with:
+If you believe you were unfairly moderated, you can appeal by emailing me at **<github@apirest.cl>** with:
+
 - A brief explanation of why you believe the action was unfair
 - Any relevant context or evidence
 
@@ -100,21 +101,25 @@ I'll review appeals with an open mind, but the final decision is mine as the pro
 We follow these principles when enforcing the Code of Conduct:
 
 ### 1. **Correction**
+
 **Community Impact:** Use of inappropriate language or other behavior deemed unprofessional.
 
 **Consequence:** A private, written warning with clarity about the violation and an explanation of why the behavior was inappropriate. A public apology may be requested.
 
 ### 2. **Warning**
+
 **Community Impact:** A violation through a single incident or series of actions.
 
 **Consequence:** A warning with consequences for continued behavior. No interaction with the people involved, including unsolicited interaction with those enforcing the Code of Conduct, for a specified period. This includes avoiding interactions in community spaces as well as external channels like social media. Violating these terms may lead to a temporary or permanent ban.
 
 ### 3. **Temporary Ban**
+
 **Community Impact:** A serious violation of community standards, including sustained inappropriate behavior.
 
 **Consequence:** A temporary ban from any sort of interaction or public communication with the community for a specified period. No public or private interaction with the people involved, including unsolicited interaction with those enforcing the Code of Conduct, is allowed during this period. Violating these terms may lead to a permanent ban.
 
 ### 4. **Permanent Ban**
+
 **Community Impact:** Demonstrating a pattern of violation of community standards, including sustained inappropriate behavior, harassment of an individual, or aggression toward or disparagement of classes of individuals.
 
 **Consequence:** A permanent ban from any sort of public interaction within the community.
@@ -145,13 +150,14 @@ For answers to common questions about this code of conduct, see the FAQ at [http
 ## Questions?
 
 If you have questions about this Code of Conduct:
+
 - [Open a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — Ask publicly, I'm happy to clarify.
 - [Email me](mailto:github@apirest.cl) — If it's sensitive, reach out privately.
 
-**Thank you for helping make CopyPaste a welcoming and inclusive project. 💙**
+### Thank you for helping make CopyPaste a welcoming and inclusive project. 💙
 
 ---
 
 <div align="center">
-  <p><em>Built with ❤️ by the community, for the community.</em></p>
+  <p><em>Built with ❤️, for the community.</em></p>
 </div>

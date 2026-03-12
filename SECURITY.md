@@ -6,23 +6,26 @@
 
 **This isn't corporate security theater.** This is a personal project shared with the community. It's built on trust—transparency in the code, responsibility when issues come up, and treating security researchers as partners.
 
-I'm not protecting a brand or business. I'm protecting *you* and everyone using this tool.
+I'm not protecting a brand or business. I'm protecting _you_ and everyone using this tool.
 
 ---
 
 ## 🔒 What We Do to Keep You Safe
 
 ### Privacy by Design
+
 - **100% Local Storage** — Your clipboard history never leaves your machine. No cloud sync, no telemetry, no remote servers.
 - **Sensitive Data Exclusion** — Password manager content (1Password, Bitwarden, etc.) is automatically excluded from history.
 - **No Tracking** — I don't collect anything. No analytics, no usage data, nothing.
 
 ### Security Features
+
 - **Local SQLite Database** — Your clipboard history is stored in a local database on your machine, not in the cloud.
 - **Configurable Retention** — Automatically delete old clipboard items based on your retention settings.
 - **Open Source** — Every line of code is public. You can inspect, audit, and verify what we're doing.
 
 ### Development Practices
+
 - **Modern Flutter Stack** — Built with Flutter and Dart, with dependencies regularly audited and updated.
 - **Dependency Updates** — We regularly update dependencies to patch known vulnerabilities.
 - **Code Reviews** — All contributions go through review before merging.
@@ -50,6 +53,7 @@ If you discover a security vulnerability in **CopyPaste**, please help us protec
 ### What Qualifies as a Security Vulnerability?
 
 **Please report:**
+
 - ✅ Unauthorized access to clipboard history
 - ✅ Privilege escalation issues
 - ✅ Data leakage or unintended storage of sensitive information
@@ -58,6 +62,7 @@ If you discover a security vulnerability in **CopyPaste**, please help us protec
 - ✅ Critical bugs that could lead to data loss or corruption
 
 **Not security issues:**
+
 - ❌ Feature requests or enhancements
 - ❌ General bugs that don't have security implications
 - ❌ Issues with third-party dependencies (report those upstream)
@@ -68,13 +73,15 @@ If you discover a security vulnerability in **CopyPaste**, please help us protec
 **DO NOT** open a public GitHub issue for security vulnerabilities. Instead, use one of these private channels:
 
 #### 📧 Email (Simplest & Direct)
-Send an email to: **github@apirest.cl**
+
+Send an email to: **<github@apirest.cl>**
 
 **Subject:** `[SECURITY] Brief description of the issue`
 
 This is the fastest way to reach us. We check email daily and will respond within 48 hours.
 
 #### 🔒 GitHub Security Advisory (Alternative)
+
 1. Go to the [Security tab](https://github.com/rgdevment/CopyPaste/security) in the repository
 2. Click **"Report a vulnerability"**
 3. Fill in the details using the template provided
@@ -83,6 +90,7 @@ This is the fastest way to reach us. We check email daily and will respond withi
 **Choose whichever method is most comfortable for you.** What matters is that we hear from you.
 
 **Include in your report:**
+
 - **Description** — Clear explanation of the vulnerability
 - **Impact** — What could an attacker do? Who is affected?
 - **Steps to Reproduce** — How can we reproduce the issue?
@@ -137,6 +145,7 @@ I believe in **coordinated disclosure** to protect users:
 ### My Promise to Security Researchers
 
 **I WILL:**
+
 - ✅ Treat you with respect and gratitude—you're helping protect users
 - ✅ Respond promptly to your report (within 48 hours)
 - ✅ Keep you updated throughout the investigation and fix process
@@ -144,6 +153,7 @@ I believe in **coordinated disclosure** to protect users:
 - ✅ Be transparent about the timeline and progress
 
 **I will NEVER:**
+
 - ❌ Threaten legal action against good-faith security researchers
 - ❌ Ignore or dismiss legitimate reports
 - ❌ Retaliate against reporters in any way
@@ -160,7 +170,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 
 <!-- This section will be updated as we receive and resolve security reports -->
 
-- *No security issues reported yet. Help us stay secure!*
+- _No security issues reported yet. Help us stay secure!_
 
 **Want to be listed here?** Report a verified security vulnerability and choose to be credited. We'll add your name (or handle) and a link to your profile if you'd like.
 
@@ -169,12 +179,14 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 ## 📚 Additional Security Resources
 
 ### For Users
+
 - **Keep CopyPaste Updated** — Enable automatic updates or check for new releases regularly
 - **Review Clipboard History** — Periodically check what's being stored and delete sensitive items
 - **Configure Retention** — Set shorter retention periods if you handle highly sensitive data
 - **Use Password Managers** — Their clipboard content is automatically excluded from history
 
 ### For Developers
+
 - **Read the Code** — The entire codebase is open source: [CopyPaste Repository](https://github.com/rgdevment/CopyPaste)
 - **Review Dependencies** — Check `pubspec.yaml` for third-party packages we use
 - **Security Best Practices** — Follow secure coding guidelines when contributing
@@ -190,6 +202,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 - No encryption is applied to stored clipboard data
 
 **Why?**
+
 - The database is local-only and protected by your Windows user account
 - Encryption would add complexity and potential key management issues
 - Performance and startup time would be impacted
@@ -204,7 +217,7 @@ If there's community demand for at-rest encryption, we're open to discussing it.
 
 We're here to help and answer questions:
 
-- **Security Questions:** Email us at **github@apirest.cl** — we're happy to discuss concerns privately
+- **Security Questions:** Email us at **<github@apirest.cl>** — we're happy to discuss concerns privately
 - **General Questions:** [Open a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — ask publicly, we'll answer openly
 - **Vulnerability Reports:** Use the private channels above — never post security issues publicly
 - **Policy Feedback:** [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — help us improve this policy
@@ -216,5 +229,5 @@ We're here to help and answer questions:
 ---
 
 <div align="center">
-  <p><em>Built securely, transparently, and with ❤️ by the community.</em></p>
+  <p><em>Built securely, transparently, and with ❤️.</em></p>
 </div>
