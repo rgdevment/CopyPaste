@@ -48,6 +48,12 @@ jobs:
                   cd ../listener && flutter analyze
                   cd ../app && flutter analyze
 
+            - name: Check auto-fixable issues
+              run: |
+                  OUTPUT=$(dart fix --dry-run . 2>&1)
+                  echo "$OUTPUT"
+                  echo "$OUTPUT" | grep -q "Nothing to fix!" || { echo "::error::Auto-fixable issues found. Run 'dart fix --apply' and commit."; exit 1; }
+
             - name: Verify generated code (Drift)
               run: |
                   cd core && dart run build_runner build --delete-conflicting-outputs
