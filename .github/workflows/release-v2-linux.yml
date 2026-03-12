@@ -85,6 +85,12 @@ jobs:
             - name: Install Fastforge
               run: dart pub global activate fastforge
 
+            - name: Install appimagetool
+              run: |
+                  wget -qO /usr/local/bin/appimagetool \
+                    "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+                  chmod +x /usr/local/bin/appimagetool
+
             - name: Get dependencies
               run: |
                   cd v2/core && flutter pub get
@@ -98,6 +104,8 @@ jobs:
                   echo "Updated pubspec.yaml version to: $VERSION"
 
             - name: Package AppImage
+              env:
+                  APPIMAGE_EXTRACT_AND_RUN: "1"
               run: |
                   cd v2/app
                   fastforge package \
