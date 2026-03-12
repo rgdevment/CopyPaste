@@ -30,7 +30,7 @@ jobs:
             APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
                   ref: ${{ github.ref_name }}
 
@@ -59,7 +59,7 @@ jobs:
                   cache: true
 
             - name: Cache pub dependencies
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: ~/.pub-cache
                   key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
@@ -222,7 +222,7 @@ jobs:
 
             # ── Upload ──
             - name: Upload artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: release-macos
                   path: v2/app/dist/*.dmg

@@ -1,0 +1,17 @@
+display_name: CopyPaste
+package_name: copypaste
+maintainer:
+  name: rgdevment
+  email: rgdevment@apirest.cl
+priority: optional
+section: x11
+essential: false
+icon: assets/icons/icon_app_256.png
+generic_name: Clipboard Manager
+startup_notify: true
+categories:
+  - Utility
+keywords:
+  - clipboard
+  - copy
+  - paste
