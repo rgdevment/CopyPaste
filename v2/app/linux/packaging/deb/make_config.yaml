@@ -5,6 +5,7 @@ maintainer:
   email: rgdevment@apirest.cl
 priority: optional
 section: x11
+installed_size: 51200
 essential: false
 icon: assets/icons/icon_app_256.png
 generic_name: Clipboard Manager
