@@ -18,4 +18,3 @@
 
 - [ ] I've tested my changes
 - [ ] I've read [CONTRIBUTING.md](../CONTRIBUTING.md)
-
