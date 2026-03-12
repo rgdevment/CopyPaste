@@ -5,7 +5,7 @@ import urllib.request
 
 USER_AGENT = "CopyPaste-Badge-Updater"
 
-WINDOWS_EXTENSIONS = (".exe", ".msix", ".msixbundle")
+WINDOWS_EXTENSIONS = (".exe", ".msix", ".msixupload", ".msixbundle")
 MACOS_EXTENSIONS = (".dmg",)
 LINUX_EXTENSIONS = (".appimage", ".deb", ".rpm", ".tar.gz")
 
