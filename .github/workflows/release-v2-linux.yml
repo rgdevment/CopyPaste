@@ -97,12 +97,6 @@ jobs:
                   sed -i "s/^version:.*/version: $VERSION/" v2/app/pubspec.yaml
                   echo "Updated pubspec.yaml version to: $VERSION"
 
-            - name: Build Linux release
-              run: |
-                  cd v2/app
-                  flutter build linux --release \
-                    --dart-define="APP_VERSION=${{ steps.get_version.outputs.VERSION }}"
-
             - name: Package AppImage
               run: |
                   cd v2/app
