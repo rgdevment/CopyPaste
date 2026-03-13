@@ -460,5 +460,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get waylandWarning =>
-      'Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.';
+      'Wayland is not supported yet on Linux for global hotkeys and auto-paste because of desktop/session restrictions. Please use X11 or a compatible session.';
+
+  @override
+  String linuxHotkeyFallbackWarning(String requested, String fallback) {
+    return 'The shortcut $requested is unavailable on this X11 desktop. CopyPaste is temporarily using $fallback. You can change it in Settings.';
+  }
+
+  @override
+  String linuxHotkeyConflictWarning(String requested, String fallback) {
+    return 'The shortcut $requested is unavailable on this X11 desktop, and the temporary fallback $fallback also failed. Open Settings to choose another shortcut.';
+  }
 }

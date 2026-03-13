@@ -258,23 +258,23 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 
 CopyPaste is designed for power users who prefer keyboard navigation:
 
-| Shortcut                  | Action                                              |
-| :------------------------ | :-------------------------------------------------- |
-| `Win+Alt+V` / `Cmd+Alt+V` | Open/close CopyPaste (default hotkey, customizable) |
-| `↓` or `Tab`              | Navigate from search to clipboard items             |
-| `↑` / `↓`                 | Navigate between clipboard items                    |
-| `Space`                   | Expand/collapse selected card to see more text      |
-| `Ctrl+F` / `Cmd+F`        | Focus search box                                    |
-| `Enter`                   | Paste selected item and return to previous app      |
-| `Delete`                  | Delete selected item                                |
-| `P`                       | Pin/Unpin selected item                             |
-| `E`                       | Edit card (add label and color)                     |
-| `Ctrl+1`                  | Switch to Recent tab                                |
-| `Ctrl+2`                  | Switch to Pinned tab                                |
-| `Alt+C`                   | Switch to Content filter mode (text search)         |
-| `Alt+G`                   | Switch to Category filter mode (by color)           |
-| `Alt+T`                   | Switch to Type filter mode (by item type)           |
-| `Esc`                     | Clear current filter or close window                |
+| Shortcut                                 | Action                                              |
+| :--------------------------------------- | :-------------------------------------------------- |
+| `Win+Alt+V` / `Cmd+Alt+V` / `Ctrl+Alt+V` | Open/close CopyPaste (default hotkey, customizable) |
+| `↓` or `Tab`                             | Navigate from search to clipboard items             |
+| `↑` / `↓`                                | Navigate between clipboard items                    |
+| `Space`                                  | Expand/collapse selected card to see more text      |
+| `Ctrl+F` / `Cmd+F`                       | Focus search box                                    |
+| `Enter`                                  | Paste selected item and return to previous app      |
+| `Delete`                                 | Delete selected item                                |
+| `P`                                      | Pin/Unpin selected item                             |
+| `E`                                      | Edit card (add label and color)                     |
+| `Ctrl+1`                                 | Switch to Recent tab                                |
+| `Ctrl+2`                                 | Switch to Pinned tab                                |
+| `Alt+C`                                  | Switch to Content filter mode (text search)         |
+| `Alt+G`                                  | Switch to Category filter mode (by color)           |
+| `Alt+T`                                  | Switch to Type filter mode (by item type)           |
+| `Esc`                                    | Clear current filter or close window                |
 
 ### Card Customization
 
@@ -344,7 +344,7 @@ Clipboard items (cards) can be expanded to show more text content:
 
 ### Keyboard-Only Workflow
 
-1. **Press `Win+Alt+V`** → Window opens with focus on search box
+1. **Press your platform default hotkey** (`Win+Alt+V` on Windows, `Cmd+Alt+V` on macOS, `Ctrl+Alt+V` on Linux) → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
 3. **Press `Esc`** (optional) → Clear search to see all items again
 4. **Press `↓`** → Navigate to first clipboard item
@@ -396,7 +396,7 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copypaste/) — set up the repository once, then get updates through your system package manager.
 
-**Debian, Ubuntu, Pop!_OS and derivatives:**
+**Debian, Ubuntu, Pop!\_OS and derivatives:**
 
 ```bash
 curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
@@ -411,6 +411,8 @@ sudo dnf install copypaste
 ```
 
 > **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
+> **Permissions note:** `apt`/`dnf` installation writes to system locations, so `sudo` is required. If your user cannot use `sudo`, those commands will fail with permission errors.
+> **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the `.AppImage` from your home directory (`chmod +x CopyPaste-*.AppImage && ./CopyPaste-*.AppImage`).
 
 **Alternative Linux (requires Homebrew installed):**
 
@@ -420,7 +422,9 @@ brew tap rgdevment/tap && brew install copypaste
 
 ---
 
-After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Super+Alt+V`** (Linux).
+After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Ctrl+Alt+V`** (Linux).
+
+If `Ctrl+Alt+V` is already taken on Linux/X11 by another app or desktop shortcut, CopyPaste temporarily uses **`Ctrl+Alt+Shift+V`** for that session and shows a warning.
 
 ### Compatibility
 
@@ -436,13 +440,13 @@ After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`**
 
 _Not a fan of package managers? Direct packages are on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest)._
 
-| Platform    | Download | Notes |
-| :---------- | :------- | :---- |
-| **Windows** | [`.exe`](https://github.com/rgdevment/CopyPaste/releases/latest) | Self-signed installer — see security note below |
-| **macOS**   | [`.dmg`](https://github.com/rgdevment/CopyPaste/releases/latest) | Universal binary (Apple Silicon + Intel) |
-| **Linux**   | [`.AppImage`](https://github.com/rgdevment/CopyPaste/releases/latest) | No install — `chmod +x` and run |
-| **Linux**   | [`.deb`](https://github.com/rgdevment/CopyPaste/releases/latest) | Debian, Ubuntu and derivatives |
-| **Linux**   | [`.rpm`](https://github.com/rgdevment/CopyPaste/releases/latest) | Fedora, RHEL and derivatives |
+| Platform    | Download                                                              | Notes                                           |
+| :---------- | :-------------------------------------------------------------------- | :---------------------------------------------- |
+| **Windows** | [`.exe`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Self-signed installer — see security note below |
+| **macOS**   | [`.dmg`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Universal binary (Apple Silicon + Intel)        |
+| **Linux**   | [`.AppImage`](https://github.com/rgdevment/CopyPaste/releases/latest) | No install — `chmod +x` and run                 |
+| **Linux**   | [`.deb`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Debian, Ubuntu and derivatives                  |
+| **Linux**   | [`.rpm`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Fedora, RHEL and derivatives                    |
 
 <details>
 <summary>⚠️ Windows standalone: security warnings</summary>
@@ -473,6 +477,9 @@ No. It works fully offline. The standalone version makes a lightweight check for
 
 **Does it sync between devices?**
 No. There’s intentionally no cloud sync.
+
+**Do I need `sudo` to install on Linux?**
+For `apt`/`dnf`, yes. They install to system paths, so without `sudo` (or equivalent admin rights) installation fails due to permissions. If you cannot use `sudo`, use Homebrew (if available) or the `.AppImage`.
 
 **Where are my files stored?**
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
@@ -597,17 +604,17 @@ Contributions are always appreciated — whether that's a bug report, a translat
 
 If you're curious about what's under the hood:
 
-| Technology                         | Why                                                                                   |
-| :--------------------------------- | :------------------------------------------------------------------------------------ |
-| **Flutter**                        | Cross-platform UI toolkit — native on Windows, macOS, and Linux.                      |
-| **Dart**                           | Clean, performant language for core logic, services, and domain models.               |
-| **Platform Channels + FFI**        | Native integration with each OS for clipboard hooks and system APIs.                  |
-| **Windows Mica / macOS Sidebar**   | Native translucent effects that match each platform's design language.                |
+| Technology                                            | Why                                                                                   |
+| :---------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| **Flutter**                                           | Cross-platform UI toolkit — native on Windows, macOS, and Linux.                      |
+| **Dart**                                              | Clean, performant language for core logic, services, and domain models.               |
+| **Platform Channels + FFI**                           | Native integration with each OS for clipboard hooks and system APIs.                  |
+| **Windows Mica / macOS Sidebar**                      | Native translucent effects that match each platform's design language.                |
 | **C++ Plugin (Win) / Swift (Mac) / C Plugin (Linux)** | Low-level clipboard listener to capture every content type before the OS discards it. |
-| **Native C++ Launcher (Win)**      | Lightweight splash process that appears instantly while Flutter warms up.             |
-| **SQLite (Drift) + FTS5**          | Local database with full-text search across content and labels.                       |
-| **Auto-update (Standalone)**       | WinSparkle appcast on Windows · GitHub Releases API notification on macOS and Linux.  |
-| **Theme System**                   | Built-in Default and Compact themes, plus custom theme support via external packages. |
+| **Native C++ Launcher (Win)**                         | Lightweight splash process that appears instantly while Flutter warms up.             |
+| **SQLite (Drift) + FTS5**                             | Local database with full-text search across content and labels.                       |
+| **Auto-update (Standalone)**                          | WinSparkle appcast on Windows · GitHub Releases API notification on macOS and Linux.  |
+| **Theme System**                                      | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---
 

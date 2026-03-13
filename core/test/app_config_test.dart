@@ -106,6 +106,16 @@ void main() {
       expect(config.hotkeyKeyName, equals('V'));
     });
 
+    test('linux platform defaults use Ctrl+Alt+V', () {
+      final config = AppConfig.defaultForPlatform('linux');
+      expect(config.hotkeyUseCtrl, isTrue);
+      expect(config.hotkeyUseWin, isFalse);
+      expect(config.hotkeyUseAlt, isTrue);
+      expect(config.hotkeyUseShift, isFalse);
+      expect(config.hotkeyVirtualKey, equals(0x56));
+      expect(config.hotkeyKeyName, equals('V'));
+    });
+
     test('copyWith all hotkey fields', () {
       const config = AppConfig();
       final updated = config.copyWith(

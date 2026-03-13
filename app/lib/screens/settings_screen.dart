@@ -27,7 +27,7 @@ class SettingsScreen extends StatefulWidget {
   final String configPath;
   final ClipboardService clipboardService;
   final StorageConfig storage;
-  final void Function(AppConfig newConfig, bool hotkeyChanged) onSave;
+  final Future<void> Function(AppConfig newConfig, bool hotkeyChanged) onSave;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -151,11 +151,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final newConfig = _buildConfig();
     await newConfig.save(widget.configPath);
     await StartupHelper.apply(_runOnStartup);
-    widget.onSave(newConfig, hotkeyChanged);
+    await widget.onSave(newConfig, hotkeyChanged);
   }
 
   void _resetToDefaults() {
-    const d = AppConfig();
+    final d = AppConfig.defaultForCurrentPlatform();
     setState(() {
       _preferredLanguage = d.preferredLanguage;
       _runOnStartup = d.runOnStartup;

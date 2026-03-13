@@ -16,6 +16,7 @@ import 'services/auto_update_service.dart';
 import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
 import 'shell/hotkey_handler.dart';
+import 'shell/linux_hotkey_registration.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
@@ -183,7 +184,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (!Platform.isMacOS || _config.showTrayIcon) {
       await _trayIcon.init();
     }
-    await _hotkeyHandler.registerWithFallback();
+    await _registerHotkeyWithFeedback();
 
     if (Platform.isMacOS) {
       final granted = await ClipboardWriter.checkAccessibility();
@@ -212,10 +213,66 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     _startListening();
     AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
     unawaited(AutoUpdateService.initialize());
+  }
 
-    if (Platform.isLinux) {
-      _checkWaylandLimitations();
+  Future<void> _registerHotkeyWithFeedback() async {
+    if (!Platform.isLinux) {
+      await _hotkeyHandler.registerWithFallback();
+      return;
     }
+
+    if (isWaylandSession()) {
+      AppLogger.info(
+        'Wayland session detected — global hotkey registration disabled',
+      );
+      _showLinuxNotice((l) => l.waylandWarning);
+      return;
+    }
+
+    final result = await _hotkeyHandler.registerWithFallback();
+    if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
+      AppLogger.info(
+        'Primary Linux hotkey failed, using temporary fallback: '
+        '${result.requestedBinding.label()} -> '
+        '${result.effectiveBinding?.label()}',
+      );
+      _showLinuxNotice(
+        (l) => l.linuxHotkeyFallbackWarning(
+          result.requestedBinding.label(),
+          result.effectiveBinding?.label() ??
+              kLinuxTemporaryFallbackHotkey.label(),
+        ),
+      );
+      return;
+    }
+
+    if (result.status == HotkeyRegistrationStatus.failed) {
+      AppLogger.error(
+        'Linux hotkey registration failed for ${result.requestedBinding.label()}',
+      );
+      _showLinuxNotice(
+        (l) => l.linuxHotkeyConflictWarning(
+          result.requestedBinding.label(),
+          kLinuxTemporaryFallbackHotkey.label(),
+        ),
+      );
+    }
+  }
+
+  void _showLinuxNotice(String Function(AppLocalizations l) messageBuilder) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(ctx);
+      if (messenger == null) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(messageBuilder(AppLocalizations.of(ctx))),
+          duration: const Duration(seconds: 12),
+        ),
+      );
+    });
   }
 
   void _startListening() {
@@ -445,7 +502,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 config: newConfig,
                 onHotkey: _onHotkey,
               );
-              await _hotkeyHandler.registerWithFallback();
+              await _registerHotkeyWithFeedback();
             }
             if (Platform.isMacOS && newConfig.showTrayIcon != oldShowTray) {
               if (newConfig.showTrayIcon) {
@@ -506,27 +563,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   void _onUpdateAvailable(String version) {
     if (!mounted) return;
     setState(() => _availableUpdateVersion = version);
-  }
-
-  void _checkWaylandLimitations() {
-    if (!isWaylandSession()) return;
-
-    AppLogger.info('Wayland session detected — hotkey and paste limited');
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _navigatorKey.currentContext;
-      if (ctx == null || !ctx.mounted) return;
-      final l = AppLocalizations.of(ctx);
-      final messenger = ScaffoldMessenger.maybeOf(ctx);
-      if (messenger == null) return;
-
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l.waylandWarning),
-          duration: const Duration(seconds: 12),
-        ),
-      );
-    });
   }
 
   @override
