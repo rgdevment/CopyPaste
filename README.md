@@ -632,6 +632,14 @@ Distributed under the **GNU General Public License v3.0**. See `LICENSE` for mor
 
 ---
 
+## 🙏 Acknowledgments
+
+Linux package hosting (`.deb` and `.rpm`) is graciously provided by [Cloudsmith](https://cloudsmith.com) — a fully hosted, cloud-native universal package management solution.
+
+[![Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-Cloudsmith-003F72?style=flat-square&logo=cloudsmith&logoColor=white)](https://cloudsmith.com)
+
+---
+
 ## 🙏 One Last Thing
 
 I believe software should make your life easier, not more complicated. I built CopyPaste because I was tired of the alternatives — toolbar-heavy, resource-hungry, or just plain ugly.
