@@ -175,5 +175,7 @@
   "updateViewRelease": "Ver versi\u00f3n",
   "updateDismiss": "Despu\u00e9s",
 
-  "waylandWarning": "Wayland detectado: el atajo global y el pegado autom\u00e1tico no est\u00e1n soportados. Usa una sesi\u00f3n X11 para funcionalidad completa."
+  "waylandWarning": "Wayland a\u00fan no est\u00e1 soportado en Linux para atajos globales y pegado autom\u00e1tico por restricciones del escritorio o la sesi\u00f3n. Usa X11 o una sesi\u00f3n compatible.",
+  "linuxHotkeyFallbackWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11. CopyPaste est\u00e1 usando temporalmente {fallback}. Puedes cambiarlo en Configuraci\u00f3n.",
+  "linuxHotkeyConflictWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11 y el fallback temporal {fallback} tambi\u00e9n fall\u00f3. Abre Configuraci\u00f3n para elegir otro atajo."
 }

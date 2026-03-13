@@ -6,6 +6,7 @@ import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
+import 'linux_hotkey_registration.dart';
 import 'linux_shell.dart';
 
 class HotkeyHandler {
@@ -16,7 +17,31 @@ class HotkeyHandler {
   HotKey? _hotkey;
   StreamSubscription<String>? _linuxEventsSubscription;
 
-  Future<bool> _tryRegister(HotKey hotkey) async {
+  HotkeyBinding get _requestedBinding => HotkeyBinding(
+    virtualKey: config.hotkeyVirtualKey,
+    keyName: config.hotkeyKeyName,
+    useCtrl: config.hotkeyUseCtrl,
+    useWin: config.hotkeyUseWin,
+    useAlt: config.hotkeyUseAlt,
+    useShift: config.hotkeyUseShift,
+  );
+
+  Future<bool> _tryRegisterBinding(HotkeyBinding binding) async {
+    final keyCode = _mapVirtualKey(binding.virtualKey);
+    if (keyCode == null) return false;
+
+    final modifiers = <HotKeyModifier>[];
+    if (binding.useCtrl) modifiers.add(HotKeyModifier.control);
+    if (binding.useWin) modifiers.add(HotKeyModifier.meta);
+    if (binding.useAlt) modifiers.add(HotKeyModifier.alt);
+    if (binding.useShift) modifiers.add(HotKeyModifier.shift);
+
+    final hotkey = HotKey(
+      key: keyCode,
+      modifiers: modifiers,
+      scope: HotKeyScope.system,
+    );
+
     try {
       await hotKeyManager.register(hotkey, keyDownHandler: (_) => onHotkey());
       _hotkey = hotkey;
@@ -27,44 +52,48 @@ class HotkeyHandler {
     }
   }
 
-  Future<void> registerWithFallback() async {
+  Future<HotkeyRegistrationResult> registerWithFallback() async {
     if (Platform.isLinux) {
       _linuxEventsSubscription ??= LinuxShell.events.listen((event) {
         if (event == 'hotkey') onHotkey();
       });
-      await _registerLinuxWithFallback();
-      return;
+      return registerLinuxHotkeyWithFallback(
+        api: const LinuxShellHotkeyBindingApi(),
+        requestedBinding: _requestedBinding,
+      );
     }
 
-    final modifiers = <HotKeyModifier>[];
-    if (config.hotkeyUseCtrl) modifiers.add(HotKeyModifier.control);
-    if (config.hotkeyUseWin) modifiers.add(HotKeyModifier.meta);
-    if (config.hotkeyUseAlt) modifiers.add(HotKeyModifier.alt);
-    if (config.hotkeyUseShift) modifiers.add(HotKeyModifier.shift);
-
-    final keyCode = _mapVirtualKey(config.hotkeyVirtualKey);
-    if (keyCode == null) return;
-
-    final primary = HotKey(
-      key: keyCode,
-      modifiers: modifiers,
-      scope: HotKeyScope.system,
-    );
-
-    if (await _tryRegister(primary)) return;
+    final requestedBinding = _requestedBinding;
+    if (await _tryRegisterBinding(requestedBinding)) {
+      return HotkeyRegistrationResult(
+        status: HotkeyRegistrationStatus.registered,
+        requestedBinding: requestedBinding,
+        effectiveBinding: requestedBinding,
+      );
+    }
 
     if (config.hotkeyUseWin) {
-      final fallbackMods =
-          modifiers.where((m) => m != HotKeyModifier.meta).toList()
-            ..add(HotKeyModifier.control);
-
-      final fallback = HotKey(
-        key: keyCode,
-        modifiers: fallbackMods,
-        scope: HotKeyScope.system,
+      final fallbackBinding = HotkeyBinding(
+        virtualKey: requestedBinding.virtualKey,
+        keyName: requestedBinding.keyName,
+        useCtrl: true,
+        useWin: false,
+        useAlt: requestedBinding.useAlt,
+        useShift: requestedBinding.useShift,
       );
-      await _tryRegister(fallback);
+      if (await _tryRegisterBinding(fallbackBinding)) {
+        return HotkeyRegistrationResult(
+          status: HotkeyRegistrationStatus.fallbackRegistered,
+          requestedBinding: requestedBinding,
+          effectiveBinding: fallbackBinding,
+        );
+      }
     }
+
+    return HotkeyRegistrationResult(
+      status: HotkeyRegistrationStatus.failed,
+      requestedBinding: requestedBinding,
+    );
   }
 
   Future<void> unregister() async {
@@ -112,26 +141,5 @@ class HotkeyHandler {
       0x5A: PhysicalKeyboardKey.keyZ,
     };
     return map[vk];
-  }
-
-  Future<void> _registerLinuxWithFallback() async {
-    final registered = await LinuxShell.registerHotkey(
-      virtualKey: config.hotkeyVirtualKey,
-      useCtrl: config.hotkeyUseCtrl,
-      useWin: config.hotkeyUseWin,
-      useAlt: config.hotkeyUseAlt,
-      useShift: config.hotkeyUseShift,
-    );
-    if (registered) return;
-
-    if (config.hotkeyUseWin) {
-      await LinuxShell.registerHotkey(
-        virtualKey: config.hotkeyVirtualKey,
-        useCtrl: true,
-        useWin: false,
-        useAlt: config.hotkeyUseAlt,
-        useShift: config.hotkeyUseShift,
-      );
-    }
   }
 }

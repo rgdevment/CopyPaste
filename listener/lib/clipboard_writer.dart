@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 
 class ClipboardWriter {
@@ -31,7 +31,7 @@ class ClipboardWriter {
           args['html'] = base64Decode(htmlB64);
         }
       } catch (e) {
-        debugPrint('ClipboardWriter: metadata parse error: $e');
+        AppLogger.error('ClipboardWriter metadata parse error: $e');
       }
     }
 
@@ -87,7 +87,8 @@ class ClipboardWriter {
         <String, Object?>{'path': path},
       );
       return result;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.getMediaInfo failed: $e');
       return null;
     }
   }
@@ -95,7 +96,8 @@ class ClipboardWriter {
   static Future<String?> captureFrontmostApp() async {
     try {
       return await _channel.invokeMethod<String>('captureFrontmostApp');
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.captureFrontmostApp failed: $e');
       return null;
     }
   }
@@ -112,6 +114,13 @@ class ClipboardWriter {
       return result ?? false;
     } on PlatformException catch (e) {
       if (e.code == 'ACCESSIBILITY_DENIED') rethrow;
+      AppLogger.error(
+        'ClipboardWriter.activateAndPaste platform failure '
+        '[${e.code}]: ${e.message}',
+      );
+      return false;
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.activateAndPaste failed: $e');
       return false;
     }
   }
@@ -123,7 +132,8 @@ class ClipboardWriter {
       );
       if (result == null) return null;
       return result.map((k, v) => MapEntry(k, (v as num).toDouble()));
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.getCursorAndScreenInfo failed: $e');
       return null;
     }
   }
@@ -132,7 +142,8 @@ class ClipboardWriter {
     try {
       final result = await _channel.invokeMethod<bool>('checkAccessibility');
       return result ?? false;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.checkAccessibility failed: $e');
       return false;
     }
   }
@@ -141,7 +152,8 @@ class ClipboardWriter {
     try {
       final result = await _channel.invokeMethod<bool>('requestAccessibility');
       return result ?? false;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.requestAccessibility failed: $e');
       return false;
     }
   }
@@ -149,6 +161,8 @@ class ClipboardWriter {
   static Future<void> openAccessibilitySettings() async {
     try {
       await _channel.invokeMethod<bool>('openAccessibilitySettings');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.openAccessibilitySettings failed: $e');
+    }
   }
 }

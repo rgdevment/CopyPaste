@@ -950,11 +950,23 @@ abstract class AppLocalizations {
   /// **'Later'**
   String get updateDismiss;
 
-  /// Warning shown when running under Wayland instead of X11
+  /// Warning shown immediately when running under Wayland on Linux
   ///
   /// In en, this message translates to:
-  /// **'Wayland detected: global hotkey and auto-paste are not supported. Use an X11 session for full functionality.'**
+  /// **'Wayland is not supported yet on Linux for global hotkeys and auto-paste because of desktop/session restrictions. Please use X11 or a compatible session.'**
   String get waylandWarning;
+
+  /// Shown when the preferred Linux hotkey is unavailable and a temporary fallback is active
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {requested} is unavailable on this X11 desktop. CopyPaste is temporarily using {fallback}. You can change it in Settings.'**
+  String linuxHotkeyFallbackWarning(String requested, String fallback);
+
+  /// Shown when both the requested Linux hotkey and the temporary fallback fail
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
+  String linuxHotkeyConflictWarning(String requested, String fallback);
 }
 
 class _AppLocalizationsDelegate

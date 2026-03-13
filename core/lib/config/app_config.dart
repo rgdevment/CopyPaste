@@ -38,43 +38,80 @@ class AppConfig {
     this.accessibilityWasGranted = false,
   });
 
-  factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(
-    preferredLanguage: json['preferredLanguage'] as String? ?? 'auto',
-    runOnStartup: json['runOnStartup'] as bool? ?? true,
-    hotkeyUseCtrl: json['hotkeyUseCtrl'] as bool? ?? false,
-    hotkeyUseWin: json['hotkeyUseWin'] as bool? ?? true,
-    hotkeyUseAlt: json['hotkeyUseAlt'] as bool? ?? true,
-    hotkeyUseShift: json['hotkeyUseShift'] as bool? ?? false,
-    hotkeyVirtualKey: json['hotkeyVirtualKey'] as int? ?? 0x56,
-    hotkeyKeyName: json['hotkeyKeyName'] as String? ?? 'V',
-    pageSize: json['pageSize'] as int? ?? 30,
-    maxItemsBeforeCleanup: json['maxItemsBeforeCleanup'] as int? ?? 100,
-    scrollLoadThreshold: json['scrollLoadThreshold'] as int? ?? 400,
-    retentionDays: json['retentionDays'] as int? ?? 30,
-    colorLabels:
-        (json['colorLabels'] as Map<String, dynamic>?)?.map(
-          (k, v) => MapEntry(k, v as String),
-        ) ??
-        const {},
-    duplicateIgnoreWindowMs: json['duplicateIgnoreWindowMs'] as int? ?? 450,
-    delayBeforeFocusMs: json['delayBeforeFocusMs'] as int? ?? 100,
-    delayBeforePasteMs: json['delayBeforePasteMs'] as int? ?? 180,
-    maxFocusVerifyAttempts: json['maxFocusVerifyAttempts'] as int? ?? 15,
-    lastBackupDateUtc: json['lastBackupDateUtc'] != null
-        ? DateTime.tryParse(json['lastBackupDateUtc'] as String)
-        : null,
-    popupWidth: json['popupWidth'] as int? ?? 368,
-    popupHeight: json['popupHeight'] as int? ?? 500,
-    cardMinLines: json['cardMinLines'] as int? ?? 2,
-    cardMaxLines: json['cardMaxLines'] as int? ?? 5,
-    hideOnDeactivate: json['hideOnDeactivate'] as bool? ?? true,
-    resetScrollOnShow: json['resetScrollOnShow'] as bool? ?? true,
-    resetSearchOnShow: json['resetSearchOnShow'] as bool? ?? true,
-    hasSeenHint: json['hasSeenHint'] as bool? ?? false,
-    themeMode: json['themeMode'] as String? ?? 'auto',
-    showTrayIcon: json['showTrayIcon'] as bool? ?? true,
-    accessibilityWasGranted: json['accessibilityWasGranted'] as bool? ?? false,
-  );
+  factory AppConfig.fromJson(Map<String, dynamic> json) {
+    final defaults = defaultForCurrentPlatform();
+    return AppConfig(
+      preferredLanguage:
+          json['preferredLanguage'] as String? ?? defaults.preferredLanguage,
+      runOnStartup: json['runOnStartup'] as bool? ?? defaults.runOnStartup,
+      hotkeyUseCtrl: json['hotkeyUseCtrl'] as bool? ?? defaults.hotkeyUseCtrl,
+      hotkeyUseWin: json['hotkeyUseWin'] as bool? ?? defaults.hotkeyUseWin,
+      hotkeyUseAlt: json['hotkeyUseAlt'] as bool? ?? defaults.hotkeyUseAlt,
+      hotkeyUseShift:
+          json['hotkeyUseShift'] as bool? ?? defaults.hotkeyUseShift,
+      hotkeyVirtualKey:
+          json['hotkeyVirtualKey'] as int? ?? defaults.hotkeyVirtualKey,
+      hotkeyKeyName: json['hotkeyKeyName'] as String? ?? defaults.hotkeyKeyName,
+      pageSize: json['pageSize'] as int? ?? defaults.pageSize,
+      maxItemsBeforeCleanup:
+          json['maxItemsBeforeCleanup'] as int? ??
+          defaults.maxItemsBeforeCleanup,
+      scrollLoadThreshold:
+          json['scrollLoadThreshold'] as int? ?? defaults.scrollLoadThreshold,
+      retentionDays: json['retentionDays'] as int? ?? defaults.retentionDays,
+      colorLabels:
+          (json['colorLabels'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, v as String),
+          ) ??
+          const {},
+      duplicateIgnoreWindowMs:
+          json['duplicateIgnoreWindowMs'] as int? ??
+          defaults.duplicateIgnoreWindowMs,
+      delayBeforeFocusMs:
+          json['delayBeforeFocusMs'] as int? ?? defaults.delayBeforeFocusMs,
+      delayBeforePasteMs:
+          json['delayBeforePasteMs'] as int? ?? defaults.delayBeforePasteMs,
+      maxFocusVerifyAttempts:
+          json['maxFocusVerifyAttempts'] as int? ??
+          defaults.maxFocusVerifyAttempts,
+      lastBackupDateUtc: json['lastBackupDateUtc'] != null
+          ? DateTime.tryParse(json['lastBackupDateUtc'] as String)
+          : null,
+      popupWidth: json['popupWidth'] as int? ?? defaults.popupWidth,
+      popupHeight: json['popupHeight'] as int? ?? defaults.popupHeight,
+      cardMinLines: json['cardMinLines'] as int? ?? defaults.cardMinLines,
+      cardMaxLines: json['cardMaxLines'] as int? ?? defaults.cardMaxLines,
+      hideOnDeactivate:
+          json['hideOnDeactivate'] as bool? ?? defaults.hideOnDeactivate,
+      resetScrollOnShow:
+          json['resetScrollOnShow'] as bool? ?? defaults.resetScrollOnShow,
+      resetSearchOnShow:
+          json['resetSearchOnShow'] as bool? ?? defaults.resetSearchOnShow,
+      hasSeenHint: json['hasSeenHint'] as bool? ?? defaults.hasSeenHint,
+      themeMode: json['themeMode'] as String? ?? defaults.themeMode,
+      showTrayIcon: json['showTrayIcon'] as bool? ?? defaults.showTrayIcon,
+      accessibilityWasGranted:
+          json['accessibilityWasGranted'] as bool? ??
+          defaults.accessibilityWasGranted,
+    );
+  }
+
+  static AppConfig defaultForCurrentPlatform() =>
+      defaultForPlatform(Platform.isLinux ? 'linux' : 'default');
+
+  static AppConfig defaultForPlatform(String platform) {
+    if (platform == 'linux') {
+      return const AppConfig(
+        hotkeyUseCtrl: true,
+        hotkeyUseWin: false,
+        hotkeyUseAlt: true,
+        hotkeyUseShift: false,
+        hotkeyVirtualKey: 0x56,
+        hotkeyKeyName: 'V',
+      );
+    }
+    return const AppConfig();
+  }
 
   static const String fileName = 'config.json';
   static const String appVersion = String.fromEnvironment(
@@ -227,13 +264,13 @@ class AppConfig {
 
   static Future<AppConfig> load(String configPath) async {
     final file = File(configPath);
-    if (!file.existsSync()) return const AppConfig();
+    if (!file.existsSync()) return AppConfig.defaultForCurrentPlatform();
     try {
       final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       return AppConfig.fromJson(json);
     } catch (e) {
       AppLogger.error('Failed to load config: $e');
-      return const AppConfig();
+      return AppConfig.defaultForCurrentPlatform();
     }
   }
 
