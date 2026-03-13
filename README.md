@@ -34,9 +34,12 @@
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_linux.json&style=flat-square&logo=linux&logoColor=black" alt="Linux Downloads"/>
     </a>
+    <a href="https://cloudsmith.io/~rgdevment/repos/copypaste/">
+      <img src="https://img.shields.io/badge/Cloudsmith-Linux_Registry-003F72?style=flat-square&logo=cloudsmith&logoColor=white" alt="Cloudsmith Registry"/>
+    </a>
   </p>
 
-  <h4>⬇️ Download</h4>
+  <h4>⬇️ Install</h4>
 
   <p align="center">
     <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
@@ -47,17 +50,13 @@
       <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install via Homebrew"/>
     </a>
     &nbsp;
-    <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
-      <img src="https://img.shields.io/badge/Linux-.deb_%2F_.rpm_%2F_AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste for Linux — .deb / .rpm / .AppImage"/>
-    </a>
-    &nbsp;
-    <a href="https://github.com/rgdevment/CopyPaste/releases/latest">
-      <img src="https://img.shields.io/badge/Standalone-GitHub_Releases-181717?style=for-the-badge&logo=github" alt="Standalone Installer"/>
+    <a href="#-getting-started">
+      <img src="https://img.shields.io/badge/Linux-apt_%2F_dnf_%2F_Homebrew-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste for Linux — apt / dnf / Homebrew"/>
     </a>
   </p>
 
   <p align="center">
-    <sub>Windows (.exe) &bull; macOS (.dmg universal — Apple Silicon + Intel) &bull; Linux (.deb / .rpm / .AppImage) &bull; <a href="#-getting-started">Installation guide</a></sub>
+    <sub>Prefer a direct download? <a href="https://github.com/rgdevment/CopyPaste/releases/latest">GitHub Releases</a> has standalone installers — Windows (.exe) · macOS (.dmg) · Linux (.AppImage · .deb · .rpm)</sub>
   </p>
 
   <p>
@@ -73,7 +72,7 @@
 
 **CopyPaste** is not just a clipboard manager focused on performance. I don't believe power should be synonymous with something clunky or purely functional — this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
 
-My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of your OS — whether that's Windows or macOS — but that we can now enjoy together.
+My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of your OS — whether that's Windows, macOS, or Linux — but that we can now enjoy together.
 
 ---
 
@@ -281,8 +280,8 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 
 Each clipboard card can be personalized with:
 
-- **Custom Label:** Add a descriptive name (up to 40 characters) to identify your items quickly
-- **Color Indicator:** Choose from 6 colors (Red, Green, Purple, Yellow, Blue) or None to visually categorize your items
+- **Custom Label:** Add a descriptive name (up to 50 characters) to identify your items quickly
+- **Color Indicator:** Choose from 6 colors (Red, Green, Purple, Yellow, Blue, Orange) or None to visually categorize your items
 
 To edit a card:
 
@@ -371,57 +370,88 @@ In the **Settings** window, you can customize filter behavior:
 
 ## 🚀 Getting Started
 
-| Platform    | Recommended                                                                                                                       | Alternative                                                                                      |
-| :---------- | :-------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
-| **Windows** | [**Microsoft Store**](https://apps.microsoft.com/detail/9NBJRZF3K856) — one click, auto-updates                                   | [Standalone .exe](https://github.com/rgdevment/CopyPaste/releases/latest) from GitHub Releases   |
-| **macOS**   | [**Homebrew**](https://github.com/rgdevment/CopyPaste/releases/latest): `brew tap rgdevment/tap && brew install --cask copypaste` | [Universal .dmg](https://github.com/rgdevment/CopyPaste/releases/latest) (Apple Silicon + Intel) |
-| **Linux**   | [**.deb**](https://github.com/rgdevment/CopyPaste/releases/latest) — Debian, Ubuntu, Pop!_OS and derivatives                      | [**.rpm**](https://github.com/rgdevment/CopyPaste/releases/latest) (Fedora / RHEL) · [**.AppImage**](https://github.com/rgdevment/CopyPaste/releases/latest) (universal, no install needed)  |
+### 🏪 Microsoft Store — Windows
+
+The simplest way on Windows — one click, auto-updates, no security warnings.
+
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
+    <img src="https://img.shields.io/badge/Get_it_from-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store"/>
+  </a>
+</p>
+
+---
+
+### 🍺 Homebrew
+
+**macOS:**
+
+```bash
+brew tap rgdevment/tap && brew install --cask copypaste
+```
+
+**Linux (any distro with Homebrew):**
+
+```bash
+brew tap rgdevment/tap && brew install copypaste
+```
+
+---
+
+### 🐧 Linux — apt / dnf
+
+Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copypaste/) — set up the repository once, then get updates through your system package manager.
+
+**Debian, Ubuntu, Pop!_OS and derivatives:**
+
+```bash
+curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
+sudo apt install copypaste
+```
+
+**Fedora, RHEL, CentOS Stream and derivatives:**
+
+```bash
+curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.rpm.sh' | sudo -E bash
+sudo dnf install copypaste
+```
+
+> **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
+
+---
 
 After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Super+Alt+V`** (Linux).
 
 ### Compatibility
 
-| Platform    | Versions                       | Architecture                      |
-| :---------- | :----------------------------- | :-------------------------------- |
-| **Windows** | Windows 10 (1809+), Windows 11 | x64                               |
-| **macOS**   | Ventura (13.0+)                | Universal (Apple Silicon + Intel)            |
-| **Linux**   | Ubuntu 22.04+ · Fedora 38+ · RHEL-compatible | x64 · `.deb`, `.rpm`, `.AppImage`            |
+| Platform    | Versions                                     | Architecture                      |
+| :---------- | :------------------------------------------- | :-------------------------------- |
+| **Windows** | Windows 10 (1809+), Windows 11               | x64                               |
+| **macOS**   | Ventura (13.0+)                              | Universal (Apple Silicon + Intel) |
+| **Linux**   | Ubuntu 22.04+ · Fedora 38+ · RHEL-compatible | x64                               |
+
+---
+
+### 📦 Standalone Downloads
+
+_Not a fan of package managers? Direct packages are on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest)._
+
+| Platform    | Download | Notes |
+| :---------- | :------- | :---- |
+| **Windows** | [`.exe`](https://github.com/rgdevment/CopyPaste/releases/latest) | Self-signed installer — see security note below |
+| **macOS**   | [`.dmg`](https://github.com/rgdevment/CopyPaste/releases/latest) | Universal binary (Apple Silicon + Intel) |
+| **Linux**   | [`.AppImage`](https://github.com/rgdevment/CopyPaste/releases/latest) | No install — `chmod +x` and run |
+| **Linux**   | [`.deb`](https://github.com/rgdevment/CopyPaste/releases/latest) | Debian, Ubuntu and derivatives |
+| **Linux**   | [`.rpm`](https://github.com/rgdevment/CopyPaste/releases/latest) | Fedora, RHEL and derivatives |
 
 <details>
-<summary><strong>🐧 Linux: Installation Instructions</strong></summary>
+<summary>⚠️ Windows standalone: security warnings</summary>
 
-**AppImage** — universal, no installation needed:
-
-```bash
-chmod +x CopyPaste-*.AppImage
-./CopyPaste-*.AppImage
-```
-
-**Debian / Ubuntu (.deb):**
-
-```bash
-sudo dpkg -i copypaste_*.deb
-```
-
-**Fedora / RHEL (.rpm):**
-
-```bash
-sudo dnf install copypaste_*.rpm
-# or: sudo rpm -i copypaste_*.rpm
-```
-
-> **Note:** On first launch CopyPaste will ask for Accessibility (AT-SPI2) permissions — this is required to detect the frontmost app and paste back to it.
-
-</details>
-
-<details>
-<summary><strong>⚠️ Windows Standalone: Security Warnings</strong></summary>
-
-Since CopyPaste is an independent open-source project, we use a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
+Since CopyPaste is an independent open-source project, the installer uses a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
 
 - **Browser:** Chrome/Edge may block the download — click `Keep` or `Keep anyway`.
 - **SmartScreen:** Click `More info` → `Run anyway` (only happens once).
-- **Why?** Code signing certificates cost $200-800/year. The code is 100% open source — you can inspect every line. SHA256 checksums are provided for each release.
+- **Why?** Code signing certificates cost $200–800/year. The code is 100% open source — you can inspect every line. SHA256 checksums are provided for each release.
 
 </details>
 
@@ -448,7 +478,7 @@ No. There’s intentionally no cloud sync.
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
 
 **What platforms are supported?**
-Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ via `.deb` or `.AppImage` · Fedora 38+ via `.rpm` or `.AppImage`).
+Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage).
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
@@ -573,10 +603,10 @@ If you're curious about what's under the hood:
 | **Dart**                           | Clean, performant language for core logic, services, and domain models.               |
 | **Platform Channels + FFI**        | Native integration with each OS for clipboard hooks and system APIs.                  |
 | **Windows Mica / macOS Sidebar**   | Native translucent effects that match each platform's design language.                |
-| **C++ Plugin (Win) / Swift (Mac)** | Low-level clipboard listener to capture every content type before the OS discards it. |
+| **C++ Plugin (Win) / Swift (Mac) / C Plugin (Linux)** | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**      | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**          | Local database with full-text search across content and labels.                       |
-| **WinSparkle (Windows)**           | Auto-update framework for standalone Windows distribution.                            |
+| **Auto-update (Standalone)**       | WinSparkle appcast on Windows · GitHub Releases API notification on macOS and Linux.  |
 | **Theme System**                   | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---

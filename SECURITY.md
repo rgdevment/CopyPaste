@@ -95,7 +95,7 @@ This is the fastest way to reach us. We check email daily and will respond withi
 - **Impact** — What could an attacker do? Who is affected?
 - **Steps to Reproduce** — How can we reproduce the issue?
 - **CopyPaste Version** — Which version is affected?
-- **Windows Version** — OS version and build number
+- **OS and version** — e.g., Windows 11 23H2, macOS Sequoia 15.1, Ubuntu 24.04
 - **Proof of Concept** (optional) — Code or screenshots demonstrating the issue
 - **Suggested Fix** (optional) — If you have ideas on how to fix it
 
@@ -198,12 +198,12 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 **CopyPaste does not currently use cryptographic functions for data storage.**
 
 - Clipboard history is stored in **plaintext** in a local SQLite database
-- Database files are protected by **Windows file system permissions**
+- Database files are protected by **OS-level file system permissions** (Windows, macOS, and Linux)
 - No encryption is applied to stored clipboard data
 
 **Why?**
 
-- The database is local-only and protected by your Windows user account
+- The database is local-only and protected by your OS user account
 - Encryption would add complexity and potential key management issues
 - Performance and startup time would be impacted
 - You control physical access to your machine
