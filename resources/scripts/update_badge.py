@@ -18,6 +18,33 @@ MS_PAGE_SIZE = 10000
 MS_DEFAULT_START_DATE = "01/02/2026"
 
 
+def describe_http_error(error):
+    body_text = ""
+    body_json = None
+    try:
+        raw = error.read()
+        if raw:
+            body_text = raw.decode("utf-8", errors="replace").strip()
+            try:
+                body_json = json.loads(body_text)
+            except json.JSONDecodeError:
+                body_json = None
+    except Exception:
+        body_text = ""
+        body_json = None
+
+    return {
+        "status": error.code,
+        "reason": getattr(error, "reason", ""),
+        "url": getattr(error, "url", ""),
+        "retry_after": error.headers.get("Retry-After"),
+        "ms_request_id": error.headers.get("x-ms-request-id"),
+        "ms_correlation_id": error.headers.get("x-ms-correlation-id"),
+        "body_text": body_text,
+        "body_json": body_json,
+    }
+
+
 def get_gh_downloads_by_os(repo):
     windows = 0
     macos = 0
@@ -105,6 +132,7 @@ def get_ms_downloads(token, app_id):
     while next_url and page_count < max_pages:
         page_count += 1
         request_failed = False
+        error_details = None
 
         for attempt in range(1, MS_MAX_RETRIES + 1):
             req = urllib.request.Request(next_url, headers={
@@ -117,8 +145,9 @@ def get_ms_downloads(token, app_id):
                 break
             except urllib.error.HTTPError as e:
                 last_error = e
+                error_details = describe_http_error(e)
                 if e.code == 429 and attempt < MS_MAX_RETRIES:
-                    retry_after = e.headers.get("Retry-After")
+                    retry_after = error_details.get("retry_after")
                     if retry_after and retry_after.isdigit():
                         wait_seconds = int(retry_after)
                     else:
@@ -134,6 +163,18 @@ def get_ms_downloads(token, app_id):
                 break
 
         if request_failed:
+            if error_details is not None:
+                print(
+                    "MS Store error details: "
+                    f"status={error_details['status']} reason={error_details['reason']} "
+                    f"url={error_details['url']} "
+                    f"request_id={error_details['ms_request_id']} "
+                    f"correlation_id={error_details['ms_correlation_id']}"
+                )
+                if error_details["body_json"] is not None:
+                    print(f"MS Store error body: {json.dumps(error_details['body_json'], ensure_ascii=False)}")
+                elif error_details["body_text"]:
+                    print(f"MS Store error body: {error_details['body_text']}")
             break
 
         rows = data.get("Value")
