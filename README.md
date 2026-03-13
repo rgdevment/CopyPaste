@@ -375,7 +375,7 @@ In the **Settings** window, you can customize filter behavior:
 | :---------- | :-------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
 | **Windows** | [**Microsoft Store**](https://apps.microsoft.com/detail/9NBJRZF3K856) — one click, auto-updates                                   | [Standalone .exe](https://github.com/rgdevment/CopyPaste/releases/latest) from GitHub Releases   |
 | **macOS**   | [**Homebrew**](https://github.com/rgdevment/CopyPaste/releases/latest): `brew tap rgdevment/tap && brew install --cask copypaste` | [Universal .dmg](https://github.com/rgdevment/CopyPaste/releases/latest) (Apple Silicon + Intel) |
-| **Linux**   | [**.deb**](https://github.com/rgdevment/CopyPaste/releases/latest) — Debian, Ubuntu, Pop!_OS and derivatives                      | [**.rpm**](https://github.com/rgdevment/CopyPaste/releases/latest) (Fedora / RHEL) · [**.AppImage**](https://github.com/rgdevment/CopyPaste/releases/latest) (universal, no install needed)  |
+| **Linux**   | [**Homebrew**](https://github.com/rgdevment/CopyPaste/releases/latest): `brew tap rgdevment/tap && brew install copypaste` · [**.deb**](https://github.com/rgdevment/CopyPaste/releases/latest) (Debian/Ubuntu) | [**.rpm**](https://github.com/rgdevment/CopyPaste/releases/latest) (Fedora / RHEL) · [**.AppImage**](https://github.com/rgdevment/CopyPaste/releases/latest) (universal, no install needed)  |
 
 After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Super+Alt+V`** (Linux).
 

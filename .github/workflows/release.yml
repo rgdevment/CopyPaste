@@ -162,7 +162,7 @@ jobs:
         needs: github-release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         timeout-minutes: 5
-        name: Update Homebrew Cask
+        name: Update Homebrew Tap
 
         steps:
             - name: Update Homebrew Tap
@@ -175,23 +175,35 @@ jobs:
                   DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
                   DMG_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DMG_NAME}"
 
+                  DEB_NAME="CopyPaste_${VERSION}_amd64.deb"
+                  DEB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DEB_NAME}"
+
                   echo "Downloading DMG to compute SHA256..."
                   curl -fSL -o "/tmp/${DMG_NAME}" "${DMG_URL}"
-                  SHA256=$(sha256sum "/tmp/${DMG_NAME}" | awk '{print $1}')
+                  DMG_SHA256=$(sha256sum "/tmp/${DMG_NAME}" | awk '{print $1}')
                   rm -f "/tmp/${DMG_NAME}"
 
+                  echo "Downloading deb to compute SHA256..."
+                  curl -fSL -o "/tmp/${DEB_NAME}" "${DEB_URL}"
+                  DEB_SHA256=$(sha256sum "/tmp/${DEB_NAME}" | awk '{print $1}')
+                  rm -f "/tmp/${DEB_NAME}"
+
                   echo "Version: ${VERSION}"
-                  echo "URL: ${DMG_URL}"
-                  echo "SHA256: ${SHA256}"
+                  echo "DMG SHA256: ${DMG_SHA256}"
+                  echo "DEB SHA256: ${DEB_SHA256}"
 
                   if [[ "$VERSION" == *-* ]]; then
                     CASK_FILE="Casks/copypaste-beta.rb"
                     CASK_NAME="copypaste-beta"
                     CASK_DESC="Clipboard history manager for macOS (beta)"
+                    FORMULA_FILE="Formula/copypaste-beta.rb"
+                    FORMULA_CLASS="CopypasteBeta"
                   else
                     CASK_FILE="Casks/copypaste.rb"
                     CASK_NAME="copypaste"
                     CASK_DESC="Clipboard history manager for macOS"
+                    FORMULA_FILE="Formula/copypaste.rb"
+                    FORMULA_CLASS="Copypaste"
                   fi
 
                   git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/homebrew-tap.git" /tmp/homebrew-tap
@@ -200,12 +212,12 @@ jobs:
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
 
-                  mkdir -p Casks
+                  mkdir -p Casks Formula
 
                   cat > "${CASK_FILE}" <<- CASK_EOF
                   	cask "${CASK_NAME}" do
                   	  version "${VERSION}"
-                  	  sha256 "${SHA256}"
+                  	  sha256 "${DMG_SHA256}"
 
                   	  url "${DMG_URL}"
                   	  name "CopyPaste"
@@ -222,8 +234,38 @@ jobs:
                   	end
                   CASK_EOF
 
-                  git add "${CASK_FILE}"
-                  git commit -m "Update ${CASK_NAME} to ${VERSION}"
+                  cat > "${FORMULA_FILE}" <<- FORMULA_EOF
+                  	class ${FORMULA_CLASS} < Formula
+                  	  desc "Clipboard history manager"
+                  	  homepage "https://github.com/${{ github.repository }}"
+                  	  version "${VERSION}"
+
+                  	  on_linux do
+                  	    url "${DEB_URL}"
+                  	    sha256 "${DEB_SHA256}"
+                  	  end
+
+                  	  bottle :unneeded
+
+                  	  def install
+                  	    system "ar", "x", cached_download
+                  	    system "tar", "xf", Dir["data.tar.*"].first
+                  	    libexec.install Dir["opt/copypaste/*"]
+                  	    bin.write_exec_script libexec/"copypaste"
+                  	  end
+
+                  	  def caveats
+                  	    "Requires an X11 session. On Wayland, global hotkey and auto-paste are unavailable."
+                  	  end
+
+                  	  test do
+                  	    assert_predicate bin/"copypaste", :exist?
+                  	  end
+                  	end
+                  FORMULA_EOF
+
+                  git add "${CASK_FILE}" "${FORMULA_FILE}"
+                  git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
                   git push origin main
 
-                  echo "Homebrew Tap updated: ${CASK_NAME} → ${VERSION}"
+                  echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
