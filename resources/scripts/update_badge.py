@@ -9,6 +9,8 @@ WINDOWS_EXTENSIONS = (".exe", ".msix", ".msixupload", ".msixbundle")
 MACOS_EXTENSIONS = (".dmg",)
 LINUX_EXTENSIONS = (".appimage", ".deb", ".rpm", ".tar.gz")
 
+CLOUDSMITH_METRICS_URL = "https://api.cloudsmith.io/v1/metrics/packages/{owner}/{repo}/"
+
 
 def get_gh_downloads_by_os(repo):
     windows = 0
@@ -42,6 +44,21 @@ def get_gh_downloads_by_os(repo):
     except Exception as e:
         print(f"Warning: Failed to get GitHub downloads: {e}")
     return windows, macos, linux, other
+
+def get_cloudsmith_downloads(api_key, owner, repo):
+    url = CLOUDSMITH_METRICS_URL.format(owner=owner, repo=repo)
+    req = urllib.request.Request(url, headers={
+        "X-Api-Key": api_key,
+        "User-Agent": USER_AGENT
+    })
+    try:
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read())
+        return data.get("packages", {}).get("downloads", {}).get("total", {}).get("value", 0)
+    except Exception as e:
+        print(f"Warning: Failed to get Cloudsmith downloads: {e}")
+        return 0
+
 
 def get_ms_token(tenant, client_id, client_secret):
     url = f"https://login.microsoftonline.com/{tenant}/oauth2/token"
@@ -140,6 +157,7 @@ def main():
     client_id = os.environ.get("STORE_CLIENT_ID")
     client_secret = os.environ.get("STORE_CLIENT_SECRET")
     app_id = os.environ.get("STORE_APP_ID")
+    cloudsmith_api_key = os.environ.get("CLOUDSMITH_API_KEY")
 
     gh_windows, gh_macos, gh_linux, gh_other = get_gh_downloads_by_os(repo)
     print(f"GitHub downloads — Windows: {gh_windows}, macOS: {gh_macos}, Linux: {gh_linux}, Other: {gh_other}")
@@ -155,14 +173,21 @@ def main():
     else:
         print("MS Store credentials not configured, skipping")
 
+    cloudsmith_linux = 0
+    if cloudsmith_api_key:
+        cloudsmith_linux = get_cloudsmith_downloads(cloudsmith_api_key, "rgdevment", "copypaste")
+        print(f"Cloudsmith downloads: {cloudsmith_linux}")
+    else:
+        print("Cloudsmith API key not configured, skipping")
+
     windows_total = gh_windows + ms_total
     macos_total = gh_macos
-    linux_total = gh_linux
+    linux_total = gh_linux + cloudsmith_linux
     grand_total = windows_total + macos_total + linux_total + gh_other
 
     print(f"Windows total: {windows_total} (GitHub: {gh_windows} + Store: {ms_total})")
     print(f"macOS total: {macos_total}")
-    print(f"Linux total: {linux_total}")
+    print(f"Linux total: {linux_total} (GitHub: {gh_linux} + Cloudsmith: {cloudsmith_linux})")
     print(f"Grand total: {grand_total}")
 
     if gist_id and gist_token:
