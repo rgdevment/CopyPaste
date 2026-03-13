@@ -1,8 +1,10 @@
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import date
 
 USER_AGENT = "CopyPaste-Badge-Updater"
 
@@ -11,6 +13,9 @@ MACOS_EXTENSIONS = (".dmg",)
 LINUX_EXTENSIONS = (".appimage", ".deb", ".rpm", ".tar.gz")
 
 CLOUDSMITH_METRICS_URL = "https://api.cloudsmith.io/v1/metrics/packages/{owner}/{repo}/"
+MS_MAX_RETRIES = 4
+MS_PAGE_SIZE = 10000
+MS_DEFAULT_START_DATE = "01/02/2026"
 
 
 def get_gh_downloads_by_os(repo):
@@ -77,54 +82,87 @@ def get_ms_token(tenant, client_id, client_secret):
         return json.loads(response.read())['access_token']
 
 def get_ms_downloads(token, app_id):
-    base_url = "https://manage.devcenter.microsoft.com/v1.0/my/analytics/acquisitions"
-    query_variants = [
-        {
-            "applicationId": app_id,
-            "aggregationLevel": "day"
-        },
-        {
-            "filter": f"applicationId eq '{app_id}'",
-            "aggregationLevel": "day"
-        },
-        {
-            "applicationId": app_id
-        },
-    ]
+    base_url = "https://manage.devcenter.microsoft.com/v1.0/my/analytics/appacquisitions"
+    start_date = os.environ.get("STORE_START_DATE", MS_DEFAULT_START_DATE)
+    today = date.today()
+    end_date = f"{today.month}/{today.day}/{today.year}"
 
+    params = {
+        "applicationId": app_id,
+        "startDate": start_date,
+        "endDate": end_date,
+        "aggregationLevel": "day",
+        "top": MS_PAGE_SIZE,
+        "skip": 0,
+    }
+
+    next_url = f"{base_url}?{urllib.parse.urlencode(params)}"
+    total = 0
+    page_count = 0
+    max_pages = 20
     last_error = None
-    for query in query_variants:
-        url = f"{base_url}?{urllib.parse.urlencode(query)}"
-        req = urllib.request.Request(url, headers={
-            "Authorization": f"Bearer {token}",
-            "User-Agent": USER_AGENT
-        })
-        try:
-            with urllib.request.urlopen(req) as response:
-                data = json.loads(response.read())
 
-            rows = data.get("Value")
-            if rows is None:
-                rows = data.get("value", [])
+    while next_url and page_count < max_pages:
+        page_count += 1
+        request_failed = False
 
-            return sum(item.get("acquisitionQuantity", 0) for item in rows)
-        except urllib.error.HTTPError as e:
-            last_error = e
-            if e.code != 404:
+        for attempt in range(1, MS_MAX_RETRIES + 1):
+            req = urllib.request.Request(next_url, headers={
+                "Authorization": f"Bearer {token}",
+                "User-Agent": USER_AGENT
+            })
+            try:
+                with urllib.request.urlopen(req) as response:
+                    data = json.loads(response.read())
                 break
-        except Exception as e:
-            last_error = e
+            except urllib.error.HTTPError as e:
+                last_error = e
+                if e.code == 429 and attempt < MS_MAX_RETRIES:
+                    retry_after = e.headers.get("Retry-After")
+                    if retry_after and retry_after.isdigit():
+                        wait_seconds = int(retry_after)
+                    else:
+                        wait_seconds = min(2 ** attempt, 60)
+                    print(f"Warning: MS Store throttled (429). Retrying in {wait_seconds}s ({attempt}/{MS_MAX_RETRIES})")
+                    time.sleep(wait_seconds)
+                    continue
+                request_failed = True
+                break
+            except Exception as e:
+                last_error = e
+                request_failed = True
+                break
+
+        if request_failed:
             break
+
+        rows = data.get("Value")
+        if rows is None:
+            rows = data.get("value", [])
+        total += sum(item.get("acquisitionQuantity", 0) for item in rows)
+
+        next_url = data.get("@nextLink") or data.get("nextLink")
+
+    if next_url and page_count >= max_pages:
+        print("Warning: MS Store response pagination exceeded limit; stopping at 20 pages")
+
+    if last_error is None:
+        return total
 
     if isinstance(last_error, urllib.error.HTTPError) and last_error.code == 404:
         print(
-            "Warning: Failed to get MS Store downloads: HTTP 404 from Dev Center analytics endpoint. "
-            "Check STORE_APP_ID format and API permissions."
+            "Warning: Failed to get MS Store downloads: HTTP 404 from appacquisitions endpoint. "
+            "Check STORE_APP_ID and Partner Center app permissions."
+        )
+    elif isinstance(last_error, urllib.error.HTTPError) and last_error.code == 429:
+        print(
+            "Warning: Failed to get MS Store downloads: HTTP 429 Too Many Requests after retries. "
+            "Skipping Store contribution for this run."
         )
     elif last_error is not None:
         print(f"Warning: Failed to get MS Store downloads: {last_error}")
 
-    return 0
+    return None
 
 def format_count(n):
     if n >= 1_000_000:
@@ -200,12 +238,20 @@ def main():
     print(f"GitHub downloads — Windows: {gh_windows}, macOS: {gh_macos}, Linux: {gh_linux}, Other: {gh_other}")
 
     ms_total = 0
-    if all([tenant_id, client_id, client_secret, app_id]):
+    ms_fetch_ok = True
+    ms_enabled = all([tenant_id, client_id, client_secret, app_id])
+    if ms_enabled:
         try:
             ms_token = get_ms_token(tenant_id, client_id, client_secret)
-            ms_total = get_ms_downloads(ms_token, app_id)
-            print(f"MS Store downloads: {ms_total}")
+            ms_value = get_ms_downloads(ms_token, app_id)
+            if ms_value is None:
+                ms_fetch_ok = False
+                ms_total = 0
+            else:
+                ms_total = ms_value
+                print(f"MS Store downloads: {ms_total}")
         except Exception as e:
+            ms_fetch_ok = False
             print(f"Warning: MS Store auth failed: {e}")
     else:
         print("MS Store credentials not configured, skipping")
@@ -226,6 +272,10 @@ def main():
     print(f"macOS total: {macos_total}")
     print(f"Linux total: {linux_total} (GitHub: {gh_linux} + Cloudsmith: {cloudsmith_linux})")
     print(f"Grand total: {grand_total}")
+
+    if ms_enabled and not ms_fetch_ok:
+        print("Warning: Skipping badge update to avoid publishing partial totals due MS Store fetch failure")
+        return
 
     if gist_id and gist_token:
         try:
