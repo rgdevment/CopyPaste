@@ -73,7 +73,7 @@
 
 **CopyPaste** is not just a clipboard manager focused on performance. I don't believe power should be synonymous with something clunky or purely functional — this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
 
-My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of your OS — whether that's Windows or macOS — but that we can now enjoy together.
+My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of your OS — whether that's Windows, macOS, or Linux — but that we can now enjoy together.
 
 ---
 
@@ -281,8 +281,8 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 
 Each clipboard card can be personalized with:
 
-- **Custom Label:** Add a descriptive name (up to 40 characters) to identify your items quickly
-- **Color Indicator:** Choose from 6 colors (Red, Green, Purple, Yellow, Blue) or None to visually categorize your items
+- **Custom Label:** Add a descriptive name (up to 50 characters) to identify your items quickly
+- **Color Indicator:** Choose from 6 colors (Red, Green, Purple, Yellow, Blue, Orange) or None to visually categorize your items
 
 To edit a card:
 
@@ -410,7 +410,7 @@ sudo dnf install copypaste_*.rpm
 # or: sudo rpm -i copypaste_*.rpm
 ```
 
-> **Note:** On first launch CopyPaste will ask for Accessibility (AT-SPI2) permissions — this is required to detect the frontmost app and paste back to it.
+> **Note:** CopyPaste requires an **X11 session** for full functionality — global hotkey and auto-paste rely on X11. On Wayland, these features are unavailable and a warning is shown at startup.
 
 </details>
 
@@ -573,10 +573,10 @@ If you're curious about what's under the hood:
 | **Dart**                           | Clean, performant language for core logic, services, and domain models.               |
 | **Platform Channels + FFI**        | Native integration with each OS for clipboard hooks and system APIs.                  |
 | **Windows Mica / macOS Sidebar**   | Native translucent effects that match each platform's design language.                |
-| **C++ Plugin (Win) / Swift (Mac)** | Low-level clipboard listener to capture every content type before the OS discards it. |
+| **C++ Plugin (Win) / Swift (Mac) / C Plugin (Linux)** | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**      | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**          | Local database with full-text search across content and labels.                       |
-| **WinSparkle (Windows)**           | Auto-update framework for standalone Windows distribution.                            |
+| **Auto-update (Standalone)**       | WinSparkle appcast on Windows · GitHub Releases API notification on macOS and Linux.  |
 | **Theme System**                   | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---
