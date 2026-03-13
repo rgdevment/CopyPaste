@@ -390,12 +390,6 @@ The simplest way on Windows — one click, auto-updates, no security warnings.
 brew tap rgdevment/tap && brew install --cask copypaste
 ```
 
-**Linux (any distro with Homebrew):**
-
-```bash
-brew tap rgdevment/tap && brew install copypaste
-```
-
 ---
 
 ### 🐧 Linux — apt / dnf
@@ -417,6 +411,14 @@ sudo dnf install copypaste
 ```
 
 > **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
+
+#### Optional:
+
+**Linux (requires Homebrew installed):**
+
+```bash
+brew tap rgdevment/tap && brew install copypaste
+```
 
 ---
 
