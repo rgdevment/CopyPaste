@@ -71,8 +71,7 @@ jobs:
                     ninja-build \
                     patchelf \
                     pkg-config \
-                    rpm \
-                    rpmrebuild
+                    rpm
 
             - name: Verify Linux toolchain preflight
               run: |
@@ -159,14 +158,6 @@ jobs:
                     --targets rpm \
                     --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}" \
                     --skip-clean
-
-            - name: Fix rpm package name
-              run: |
-                  RPM=$(find app/dist app/build -type f -name "*.rpm" 2>/dev/null | head -n 1)
-                  HOME=/root rpmrebuild -p --change-spec-preamble="sed -i 's/^Name:.*/Name: copypaste/'" "$RPM"
-                  FIXED=$(find /root/rpmbuild/RPMS -name "*.rpm" 2>/dev/null | head -n 1)
-                  mv "$FIXED" "$(dirname "$RPM")/$(basename "$RPM" | sed 's/^app-/copypaste-/')"
-                  rm "$RPM"
 
             - name: Rename rpm
               run: |

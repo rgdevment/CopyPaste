@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/theme/app_theme_data.dart';
-import 'package:app/theme/compact_theme.dart';
-import 'package:app/theme/theme_provider.dart';
+import 'package:copypaste/theme/app_theme_data.dart';
+import 'package:copypaste/theme/compact_theme.dart';
+import 'package:copypaste/theme/theme_provider.dart';
 
 // Test-only subclasses to simulate different theme IDs
 class _ThemeA extends CompactTheme {

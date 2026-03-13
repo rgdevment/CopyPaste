@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/screens/main_screen.dart';
-import 'package:app/theme/compact_theme.dart';
-import 'package:app/theme/theme_provider.dart';
-import 'package:app/widgets/clipboard_card.dart';
-import 'package:app/widgets/empty_state.dart';
-import 'package:app/widgets/filter_bar.dart';
+import 'package:copypaste/l10n/app_localizations.dart';
+import 'package:copypaste/screens/main_screen.dart';
+import 'package:copypaste/theme/compact_theme.dart';
+import 'package:copypaste/theme/theme_provider.dart';
+import 'package:copypaste/widgets/clipboard_card.dart';
+import 'package:copypaste/widgets/empty_state.dart';
+import 'package:copypaste/widgets/filter_bar.dart';
 
 Widget _buildApp({
   required ClipboardService service,

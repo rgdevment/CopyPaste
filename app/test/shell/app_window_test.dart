@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/shell/app_window.dart';
+import 'package:copypaste/shell/app_window.dart';
 
 // ---------------------------------------------------------------------------
 // Mock for window_manager and screen_retriever MethodChannels

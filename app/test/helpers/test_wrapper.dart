@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/theme/compact_theme.dart';
-import 'package:app/theme/theme_provider.dart';
+import 'package:copypaste/l10n/app_localizations.dart';
+import 'package:copypaste/theme/compact_theme.dart';
+import 'package:copypaste/theme/theme_provider.dart';
 
 Widget wrapWidget(Widget child, {Brightness brightness = Brightness.light}) {
   return MaterialApp(

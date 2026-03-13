@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/shell/startup_helper.dart';
+import 'package:copypaste/shell/startup_helper.dart';
 
 String _plistPath() {
   const plistLabel = 'com.rgdevment.copypaste';

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/shell/single_instance.dart';
+import 'package:copypaste/shell/single_instance.dart';
 
 void main() {
   group('SingleInstance – Unix (macOS / Linux)', () {
