@@ -464,5 +464,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get waylandWarning =>
-      'Wayland detectado: el atajo global y el pegado automático no están soportados. Usa una sesión X11 para funcionalidad completa.';
+      'Wayland aún no está soportado en Linux para atajos globales y pegado automático por restricciones del escritorio o la sesión. Usa X11 o una sesión compatible.';
+
+  @override
+  String linuxHotkeyFallbackWarning(String requested, String fallback) {
+    return 'El atajo $requested no está disponible en este escritorio X11. CopyPaste está usando temporalmente $fallback. Puedes cambiarlo en Configuración.';
+  }
+
+  @override
+  String linuxHotkeyConflictWarning(String requested, String fallback) {
+    return 'El atajo $requested no está disponible en este escritorio X11 y el fallback temporal $fallback también falló. Abre Configuración para elegir otro atajo.';
+  }
 }

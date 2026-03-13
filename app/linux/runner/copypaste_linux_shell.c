@@ -213,6 +213,52 @@ static gboolean destroy_tray(CopyPasteLinuxShell* shell) {
 
 #ifdef GDK_WINDOWING_X11
 static guint modifier_combinations[] = {0, LockMask, Mod2Mask, LockMask | Mod2Mask};
+static int (*previous_x11_error_handler)(Display*, XErrorEvent*) = NULL;
+static Display* trapped_x11_display = NULL;
+static int trapped_x11_error_code = Success;
+
+static int hotkey_x11_error_handler(Display* display, XErrorEvent* event) {
+  if (display == trapped_x11_display) {
+    trapped_x11_error_code = event->error_code;
+    return 0;
+  }
+
+  if (previous_x11_error_handler != NULL) {
+    return previous_x11_error_handler(display, event);
+  }
+
+  return 0;
+}
+
+static gboolean trap_x11_grab(Display* display,
+                              Window root_window,
+                              KeyCode keycode,
+                              guint modifiers) {
+  previous_x11_error_handler = XSetErrorHandler(hotkey_x11_error_handler);
+  trapped_x11_display = display;
+  trapped_x11_error_code = Success;
+
+  XGrabKey(display, (int)keycode, (int)modifiers, root_window, True,
+           GrabModeAsync, GrabModeAsync);
+  XSync(display, False);
+
+  trapped_x11_display = NULL;
+  XSetErrorHandler(previous_x11_error_handler);
+  previous_x11_error_handler = NULL;
+
+  return trapped_x11_error_code == Success;
+}
+
+static void ungrab_hotkey_variants(Display* display,
+                                   Window root_window,
+                                   KeyCode keycode,
+                                   guint modifiers) {
+  for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
+    XUngrabKey(display, (int)keycode,
+               (int)(modifiers | modifier_combinations[i]), root_window);
+  }
+  XSync(display, False);
+}
 
 static KeySym virtual_key_to_keysym(gint64 virtual_key) {
   if (virtual_key >= 0x41 && virtual_key <= 0x5A) {
@@ -255,12 +301,9 @@ static void unregister_hotkey(CopyPasteLinuxShell* shell) {
     return;
   }
 
-  for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
-    XUngrabKey(shell->xdisplay, (int)shell->hotkey_keycode,
-               (int)(shell->hotkey_modifiers | modifier_combinations[i]),
-               shell->root_window);
-  }
-  XFlush(shell->xdisplay);
+  ungrab_hotkey_variants(shell->xdisplay, shell->root_window,
+                         (KeyCode)shell->hotkey_keycode,
+                         shell->hotkey_modifiers);
   shell->hotkey_registered = FALSE;
   shell->hotkey_keycode = 0;
   shell->hotkey_modifiers = 0;
@@ -291,18 +334,21 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   }
 
   for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
-    XGrabKey(shell->xdisplay, (int)keycode,
-             (int)(modifiers | modifier_combinations[i]), shell->root_window,
-             True, GrabModeAsync, GrabModeAsync);
-  }
-    XWindowAttributes attrs;
-    if (XGetWindowAttributes(shell->xdisplay, shell->root_window, &attrs) != 0) {
-      XSelectInput(shell->xdisplay, shell->root_window,
-                   attrs.your_event_mask | KeyPressMask);
-    } else {
-      XSelectInput(shell->xdisplay, shell->root_window, KeyPressMask);
+    if (!trap_x11_grab(shell->xdisplay, shell->root_window, keycode,
+                       modifiers | modifier_combinations[i])) {
+      ungrab_hotkey_variants(shell->xdisplay, shell->root_window, keycode,
+                             modifiers);
+      return FALSE;
     }
-  XFlush(shell->xdisplay);
+  }
+  XWindowAttributes attrs;
+  if (XGetWindowAttributes(shell->xdisplay, shell->root_window, &attrs) != 0) {
+    XSelectInput(shell->xdisplay, shell->root_window,
+                 attrs.your_event_mask | KeyPressMask);
+  } else {
+    XSelectInput(shell->xdisplay, shell->root_window, KeyPressMask);
+  }
+  XSync(shell->xdisplay, False);
 
   shell->hotkey_registered = TRUE;
   shell->hotkey_keycode = keycode;

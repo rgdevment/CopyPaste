@@ -1,6 +1,7 @@
 // coverage:ignore-file
 import 'dart:async';
 
+import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 
 class LinuxShell {
@@ -57,7 +58,9 @@ class LinuxShell {
   static Future<void> destroyTray() async {
     try {
       await _methodChannel.invokeMethod<bool>('destroyTray');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('LinuxShell.destroyTray failed: $e');
+    }
   }
 
   static Future<bool> registerHotkey({
@@ -76,7 +79,8 @@ class LinuxShell {
         'useShift': useShift,
       });
       return result ?? false;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('LinuxShell.registerHotkey failed: $e');
       return false;
     }
   }
@@ -84,6 +88,8 @@ class LinuxShell {
   static Future<void> unregisterHotkey() async {
     try {
       await _methodChannel.invokeMethod<bool>('unregisterHotkey');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('LinuxShell.unregisterHotkey failed: $e');
+    }
   }
 }
