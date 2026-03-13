@@ -1,5 +1,6 @@
 import json
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -76,18 +77,54 @@ def get_ms_token(tenant, client_id, client_secret):
         return json.loads(response.read())['access_token']
 
 def get_ms_downloads(token, app_id):
-    url = f"https://manage.devcenter.microsoft.com/v1.0/my/analytics/acquisitions?applicationId={app_id}&aggregationLevel=day"
-    req = urllib.request.Request(url, headers={
-        'Authorization': f'Bearer {token}',
-        'User-Agent': USER_AGENT
-    })
-    try:
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read())
-        return sum(item.get('acquisitionQuantity', 0) for item in data.get('Value', []))
-    except Exception as e:
-        print(f"Warning: Failed to get MS Store downloads: {e}")
-        return 0
+    base_url = "https://manage.devcenter.microsoft.com/v1.0/my/analytics/acquisitions"
+    query_variants = [
+        {
+            "applicationId": app_id,
+            "aggregationLevel": "day"
+        },
+        {
+            "filter": f"applicationId eq '{app_id}'",
+            "aggregationLevel": "day"
+        },
+        {
+            "applicationId": app_id
+        },
+    ]
+
+    last_error = None
+    for query in query_variants:
+        url = f"{base_url}?{urllib.parse.urlencode(query)}"
+        req = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": USER_AGENT
+        })
+        try:
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read())
+
+            rows = data.get("Value")
+            if rows is None:
+                rows = data.get("value", [])
+
+            return sum(item.get("acquisitionQuantity", 0) for item in rows)
+        except urllib.error.HTTPError as e:
+            last_error = e
+            if e.code != 404:
+                break
+        except Exception as e:
+            last_error = e
+            break
+
+    if isinstance(last_error, urllib.error.HTTPError) and last_error.code == 404:
+        print(
+            "Warning: Failed to get MS Store downloads: HTTP 404 from Dev Center analytics endpoint. "
+            "Check STORE_APP_ID format and API permissions."
+        )
+    elif last_error is not None:
+        print(f"Warning: Failed to get MS Store downloads: {last_error}")
+
+    return 0
 
 def format_count(n):
     if n >= 1_000_000:
