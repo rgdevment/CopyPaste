@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** March 11, 2026
+**Last updated:** March 12, 2026
 
 ---
 
@@ -49,6 +49,8 @@ For each clipboard item, CopyPaste also stores:
 - **User labels** — Custom labels you assign to items (optional)
 - **Color tags** — Color categories you assign (optional)
 - **Pin status** — Whether you pinned the item
+- **Paste count** — How many times you have pasted the item
+- **Media metadata** — Duration, dimensions, or codec info for audio and video files (stored as JSON)
 - **Image thumbnails** — Smaller preview versions of copied images
 
 ### Configuration

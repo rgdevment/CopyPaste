@@ -39,7 +39,7 @@ In many ways! Code is just one of them:
 2. If it doesn't exist, open a new one with:
    - Clear description of the problem
    - Steps to reproduce
-   - CopyPaste and Windows version
+   - CopyPaste version and OS (with version)
    - Screenshots if applicable
 
 ### 💻 Contribute Code
@@ -73,7 +73,7 @@ Found something confusing? Missing information? Documentation is also code—PRs
 
 We keep the code simple and consistent:
 
-- **Modern C#** — We leverage the latest language features
+- **Modern Dart** — We leverage the latest language features
 - **Descriptive names** — Code should read like prose
 - **Useful comments** — Explain the _why_, not the _what_
 - **KISS** — Keep It Simple, Stupid
@@ -81,7 +81,7 @@ We keep the code simple and consistent:
 
 **UI/UX:**
 
-- Native Windows 11 design
+- Native look and feel on each platform (Windows, macOS, Linux)
 - Functional minimalism
 - Smooth and fluid transitions
 - Respect for system Light/Dark themes
