@@ -172,6 +172,20 @@ jobs:
                   mv "$RPM" "$DEST"
                   echo "Renamed to: $(basename "$DEST")"
 
+            - name: Publish deb to Cloudsmith
+              if: github.event_name == 'workflow_call'
+              uses: cloudsmith-io/cloudsmith-cli-action@v2.0.2
+              with:
+                  api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+                  command: push deb rgdevment/copypaste/any-distro/any-version app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_amd64.deb --republish
+
+            - name: Publish rpm to Cloudsmith
+              if: github.event_name == 'workflow_call'
+              uses: cloudsmith-io/cloudsmith-cli-action@v2.0.2
+              with:
+                  api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+                  command: push rpm rgdevment/copypaste/any-distro/any-version app/dist/CopyPaste_${{ steps.get_version.outputs.VERSION }}_x86_64.rpm --republish
+
             - name: Upload artifact
               uses: actions/upload-artifact@v6
               with:
