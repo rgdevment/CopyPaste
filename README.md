@@ -51,7 +51,7 @@
     </a>
     &nbsp;
     <a href="#-getting-started">
-      <img src="https://img.shields.io/badge/Linux-apt_%2F_dnf_%2F_Homebrew-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste for Linux — apt / dnf / Homebrew"/>
+      <img src="https://img.shields.io/badge/Linux-apt_%2F_dnf_%2F_Homebrew-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste for Linux — apt / dnf / brew"/>
     </a>
   </p>
 
