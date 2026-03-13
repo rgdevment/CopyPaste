@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/theme/light_theme.dart';
+import 'package:copypaste/theme/light_theme.dart';
 
 void main() {
   group('lightColorScheme', () {

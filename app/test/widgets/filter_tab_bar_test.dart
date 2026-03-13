@@ -3,7 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/widgets/filter_tab_bar.dart';
+import 'package:copypaste/widgets/filter_tab_bar.dart';
 
 import '../helpers/test_wrapper.dart';
 

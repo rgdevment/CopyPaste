@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 // On the CI/test machine XDG_SESSION_TYPE and WAYLAND_DISPLAY are not set
 // (X11 or headless), so isWaylandSession() should return false by default.
 
-import 'package:app/main.dart' show isWaylandSession;
+import 'package:copypaste/main.dart' show isWaylandSession;
 
 void main() {
   group('isWaylandSession', () {

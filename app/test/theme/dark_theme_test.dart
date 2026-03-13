@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/theme/dark_theme.dart';
+import 'package:copypaste/theme/dark_theme.dart';
 
 void main() {
   group('darkColorScheme', () {

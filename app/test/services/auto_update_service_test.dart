@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/services/auto_update_service.dart';
+import 'package:copypaste/services/auto_update_service.dart';
 
 // ---------------------------------------------------------------------------
 // Minimal HTTP server helper

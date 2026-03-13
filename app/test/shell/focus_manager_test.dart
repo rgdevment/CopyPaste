@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/shell/focus_manager.dart';
+import 'package:copypaste/shell/focus_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

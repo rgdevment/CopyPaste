@@ -3,10 +3,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/theme/compact_theme.dart';
-import 'package:app/theme/theme_provider.dart';
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/widgets/label_color_dialog.dart';
+import 'package:copypaste/theme/compact_theme.dart';
+import 'package:copypaste/theme/theme_provider.dart';
+import 'package:copypaste/l10n/app_localizations.dart';
+import 'package:copypaste/widgets/label_color_dialog.dart';
 
 Widget _buildApp(Widget child) {
   return MaterialApp(

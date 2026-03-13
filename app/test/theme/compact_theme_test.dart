@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/theme/compact_theme.dart';
+import 'package:copypaste/theme/compact_theme.dart';
 
 void main() {
   group('CompactTheme', () {
