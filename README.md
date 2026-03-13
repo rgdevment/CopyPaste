@@ -660,4 +660,3 @@ If that sounds good to you, I hope it serves you well — on Windows, macOS, or 
 <div align="center">
   <p>Built with ❤️ and too much coffee.</p>
 </div>
-
