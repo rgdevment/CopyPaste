@@ -25,6 +25,7 @@ if [[ ! -f "$host_package" ]]; then
 fi
 
 if [[ "$package_type" == "deb" ]]; then
+  echo "[smoke] Running deb smoke in ubuntu:22.04"
   docker run --rm -v "$host_package:/tmp/copypaste.deb:ro" ubuntu:22.04 bash -lc '
     set -euo pipefail
     apt-get update
@@ -49,14 +50,24 @@ if [[ "$package_type" == "deb" ]]; then
     missing=0
     for elf in "${ELF_FILES[@]}"; do
       echo "Checking ELF deps: $elf"
-      if ldd "$elf" 2>/dev/null | tee -a /tmp/ldd.out | grep -q "not found"; then
+      ldd_output=$(ldd "$elf" 2>&1 || true)
+      echo "$ldd_output" >> /tmp/ldd.out
+      if echo "$ldd_output" | grep -q "not found"; then
+        echo "Missing libraries in: $elf"
+        echo "$ldd_output" | grep "not found"
         missing=1
       fi
     done
 
-    test "$missing" -eq 0
+    if [[ "$missing" -ne 0 ]]; then
+      echo "[smoke] deb package has unresolved shared libraries"
+      exit 1
+    fi
+
+    echo "[smoke] deb package passed"
   '
 elif [[ "$package_type" == "rpm" ]]; then
+  echo "[smoke] Running rpm smoke in fedora:40"
   docker run --rm -v "$host_package:/tmp/copypaste.rpm:ro" fedora:40 bash -lc '
     set -euo pipefail
     dnf -y install file /tmp/copypaste.rpm
@@ -80,12 +91,21 @@ elif [[ "$package_type" == "rpm" ]]; then
     missing=0
     for elf in "${ELF_FILES[@]}"; do
       echo "Checking ELF deps: $elf"
-      if ldd "$elf" 2>/dev/null | tee -a /tmp/ldd.out | grep -q "not found"; then
+      ldd_output=$(ldd "$elf" 2>&1 || true)
+      echo "$ldd_output" >> /tmp/ldd.out
+      if echo "$ldd_output" | grep -q "not found"; then
+        echo "Missing libraries in: $elf"
+        echo "$ldd_output" | grep "not found"
         missing=1
       fi
     done
 
-    test "$missing" -eq 0
+    if [[ "$missing" -ne 0 ]]; then
+      echo "[smoke] rpm package has unresolved shared libraries"
+      exit 1
+    fi
+
+    echo "[smoke] rpm package passed"
   '
 else
   usage
