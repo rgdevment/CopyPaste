@@ -8,6 +8,12 @@ packager: rgdevment
 packagerEmail: rgdevment@apirest.cl
 license: GPLv3
 url: https://github.com/rgdevment/CopyPaste
+requires:
+  - libayatana-appindicator-gtk3
+  - keybinder3
+  - gtk3
+  - libX11
+  - libXtst
 generic_name: Clipboard Manager
 startup_notify: true
 categories:
