@@ -330,6 +330,20 @@ jobs:
       - name: Install Fastforge
         run: dart pub global activate fastforge
 
+      - name: Normalize app version for Linux package smoke
+        run: |
+          set -euo pipefail
+          RAW_VERSION=$(grep '^version:' app/pubspec.yaml | awk '{print $2}')
+          BASE_VERSION="${RAW_VERSION%%-*}"
+
+          if [[ "$RAW_VERSION" != "$BASE_VERSION" ]]; then
+            echo "Using RPM-compatible version for smoke packaging: $RAW_VERSION -> $BASE_VERSION"
+            sed -i "s/^version:.*/version: $BASE_VERSION/" app/pubspec.yaml
+          fi
+
+          echo "Effective app version for package smoke:"
+          grep '^version:' app/pubspec.yaml
+
       - name: Build deb package
         run: |
           cd app
