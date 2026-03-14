@@ -68,6 +68,8 @@ if [[ "$package_type" == "deb" ]]; then
     )
 
     test "${#ELF_FILES[@]}" -gt 0
+    MAX_IGNORED_FLUTTER_GTK=30
+    ignored_flutter_gtk=0
     missing=0
     for elf in "${ELF_FILES[@]}"; do
       echo "Checking ELF deps: $elf"
@@ -78,6 +80,8 @@ if [[ "$package_type" == "deb" ]]; then
       if [[ -n "$missing_lines" ]]; then
         filtered_missing="$missing_lines"
         if [[ -n "$FLUTTER_GTK_LIB" ]]; then
+          ignored_in_block=$(echo "$filtered_missing" | grep -Ec "libflutter_linux_gtk\.so[[:space:]]*=>[[:space:]]*not found" || true)
+          ignored_flutter_gtk=$((ignored_flutter_gtk + ignored_in_block))
           filtered_missing=$(echo "$filtered_missing" | grep -vE "libflutter_linux_gtk\.so[[:space:]]*=>[[:space:]]*not found" || true)
           filtered_missing=$(echo "$filtered_missing" | sed "/^[[:space:]]*$/d" || true)
           if [[ -n "$missing_lines" && -z "$filtered_missing" ]]; then
@@ -86,12 +90,18 @@ if [[ "$package_type" == "deb" ]]; then
         fi
 
         if [[ -n "$filtered_missing" ]]; then
-        echo "Missing libraries in: $elf"
+          echo "Missing libraries in: $elf"
           echo "$filtered_missing"
-        missing=1
+          missing=1
         fi
       fi
     done
+
+    echo "[smoke] deb summary: checked=${#ELF_FILES[@]} ignored_flutter_linux_gtk=$ignored_flutter_gtk missing=$missing"
+    if [[ "$ignored_flutter_gtk" -gt "$MAX_IGNORED_FLUTTER_GTK" ]]; then
+      echo "[smoke] deb guardrail failed: too many ignored libflutter_linux_gtk.so entries ($ignored_flutter_gtk > $MAX_IGNORED_FLUTTER_GTK)"
+      exit 1
+    fi
 
     if [[ "$missing" -ne 0 ]]; then
       echo "[smoke] deb package has unresolved shared libraries"
@@ -143,6 +153,8 @@ elif [[ "$package_type" == "rpm" ]]; then
     )
 
     test "${#ELF_FILES[@]}" -gt 0
+    MAX_IGNORED_FLUTTER_GTK=30
+    ignored_flutter_gtk=0
     missing=0
     for elf in "${ELF_FILES[@]}"; do
       echo "Checking ELF deps: $elf"
@@ -153,6 +165,8 @@ elif [[ "$package_type" == "rpm" ]]; then
       if [[ -n "$missing_lines" ]]; then
         filtered_missing="$missing_lines"
         if [[ -n "$FLUTTER_GTK_LIB" ]]; then
+          ignored_in_block=$(echo "$filtered_missing" | grep -Ec "libflutter_linux_gtk\.so[[:space:]]*=>[[:space:]]*not found" || true)
+          ignored_flutter_gtk=$((ignored_flutter_gtk + ignored_in_block))
           filtered_missing=$(echo "$filtered_missing" | grep -vE "libflutter_linux_gtk\.so[[:space:]]*=>[[:space:]]*not found" || true)
           filtered_missing=$(echo "$filtered_missing" | sed "/^[[:space:]]*$/d" || true)
           if [[ -n "$missing_lines" && -z "$filtered_missing" ]]; then
@@ -161,12 +175,18 @@ elif [[ "$package_type" == "rpm" ]]; then
         fi
 
         if [[ -n "$filtered_missing" ]]; then
-        echo "Missing libraries in: $elf"
+          echo "Missing libraries in: $elf"
           echo "$filtered_missing"
-        missing=1
+          missing=1
         fi
       fi
     done
+
+    echo "[smoke] rpm summary: checked=${#ELF_FILES[@]} ignored_flutter_linux_gtk=$ignored_flutter_gtk missing=$missing"
+    if [[ "$ignored_flutter_gtk" -gt "$MAX_IGNORED_FLUTTER_GTK" ]]; then
+      echo "[smoke] rpm guardrail failed: too many ignored libflutter_linux_gtk.so entries ($ignored_flutter_gtk > $MAX_IGNORED_FLUTTER_GTK)"
+      exit 1
+    fi
 
     if [[ "$missing" -ne 0 ]]; then
       echo "[smoke] rpm package has unresolved shared libraries"
