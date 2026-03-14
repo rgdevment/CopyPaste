@@ -37,10 +37,16 @@ if [[ "$package_type" == "deb" ]]; then
     fi
     test -n "$BIN"
 
-    APP_DIR=$(dirname "$BIN")
-    APP_LIB_DIR="$APP_DIR/lib"
-    if [[ -d "$APP_LIB_DIR" ]]; then
-      export LD_LIBRARY_PATH="$APP_LIB_DIR:${LD_LIBRARY_PATH:-}"
+    BIN_REAL=$(readlink -f "$BIN" || echo "$BIN")
+    APP_DIR=$(dirname "$BIN_REAL")
+    LIB_PATHS=()
+    for candidate in "$APP_DIR/lib" "/usr/share/copypaste/lib"; do
+      if [[ -d "$candidate" ]]; then
+        LIB_PATHS+=("$candidate")
+      fi
+    done
+    if [[ "${#LIB_PATHS[@]}" -gt 0 ]]; then
+      export LD_LIBRARY_PATH="$(IFS=:; echo "${LIB_PATHS[*]}"):${LD_LIBRARY_PATH:-}"
       echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     fi
 
@@ -85,10 +91,16 @@ elif [[ "$package_type" == "rpm" ]]; then
     fi
     test -n "$BIN"
 
-    APP_DIR=$(dirname "$BIN")
-    APP_LIB_DIR="$APP_DIR/lib"
-    if [[ -d "$APP_LIB_DIR" ]]; then
-      export LD_LIBRARY_PATH="$APP_LIB_DIR:${LD_LIBRARY_PATH:-}"
+    BIN_REAL=$(readlink -f "$BIN" || echo "$BIN")
+    APP_DIR=$(dirname "$BIN_REAL")
+    LIB_PATHS=()
+    for candidate in "$APP_DIR/lib" "/usr/share/copypaste/lib"; do
+      if [[ -d "$candidate" ]]; then
+        LIB_PATHS+=("$candidate")
+      fi
+    done
+    if [[ "${#LIB_PATHS[@]}" -gt 0 ]]; then
+      export LD_LIBRARY_PATH="$(IFS=:; echo "${LIB_PATHS[*]}"):${LD_LIBRARY_PATH:-}"
       echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     fi
 
