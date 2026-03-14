@@ -37,6 +37,13 @@ if [[ "$package_type" == "deb" ]]; then
     fi
     test -n "$BIN"
 
+    APP_DIR=$(dirname "$BIN")
+    APP_LIB_DIR="$APP_DIR/lib"
+    if [[ -d "$APP_LIB_DIR" ]]; then
+      export LD_LIBRARY_PATH="$APP_LIB_DIR:${LD_LIBRARY_PATH:-}"
+      echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    fi
+
     mapfile -t ELF_FILES < <(
       dpkg -L copypaste | while read -r path; do
         [[ -f "$path" ]] || continue
@@ -77,6 +84,13 @@ elif [[ "$package_type" == "rpm" ]]; then
       BIN=$(find /usr -type f -name copypaste 2>/dev/null | head -n 1)
     fi
     test -n "$BIN"
+
+    APP_DIR=$(dirname "$BIN")
+    APP_LIB_DIR="$APP_DIR/lib"
+    if [[ -d "$APP_LIB_DIR" ]]; then
+      export LD_LIBRARY_PATH="$APP_LIB_DIR:${LD_LIBRARY_PATH:-}"
+      echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    fi
 
     mapfile -t ELF_FILES < <(
       rpm -ql copypaste | while read -r path; do
