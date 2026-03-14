@@ -413,6 +413,7 @@ sudo dnf install copypaste
 > **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
 > **Permissions note:** `apt`/`dnf` installation writes to system locations, so `sudo` is required. If your user cannot use `sudo`, those commands will fail with permission errors.
 > **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the `.AppImage` from your home directory (`chmod +x CopyPaste-*.AppImage && ./CopyPaste-*.AppImage`).
+> **Runtime note:** On standard desktop installs, `apt`/`dnf` resolve required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
 
 **Alternative Linux (requires Homebrew installed):**
 

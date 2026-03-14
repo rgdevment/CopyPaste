@@ -7,6 +7,12 @@ priority: optional
 section: x11
 installed_size: 51200
 essential: false
+dependencies:
+  - libayatana-appindicator3-1
+  - libkeybinder-3.0-0
+  - libgtk-3-0 | libgtk-3-0t64
+  - libx11-6
+  - libxtst6
 icon: assets/icons/icon_app_256.png
 generic_name: Clipboard Manager
 startup_notify: true
