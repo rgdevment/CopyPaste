@@ -50,6 +50,14 @@ if [[ "$package_type" == "deb" ]]; then
       echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     fi
 
+    FLUTTER_GTK_LIB=""
+    for candidate in "${LIB_PATHS[@]}"; do
+      if [[ -f "$candidate/libflutter_linux_gtk.so" ]]; then
+        FLUTTER_GTK_LIB="$candidate/libflutter_linux_gtk.so"
+        break
+      fi
+    done
+
     mapfile -t ELF_FILES < <(
       dpkg -L copypaste | while read -r path; do
         [[ -f "$path" ]] || continue
@@ -65,10 +73,23 @@ if [[ "$package_type" == "deb" ]]; then
       echo "Checking ELF deps: $elf"
       ldd_output=$(ldd "$elf" 2>&1 || true)
       echo "$ldd_output" >> /tmp/ldd.out
-      if echo "$ldd_output" | grep -q "not found"; then
+
+      missing_lines=$(echo "$ldd_output" | grep "not found" || true)
+      if [[ -n "$missing_lines" ]]; then
+        filtered_missing="$missing_lines"
+        if [[ -n "$FLUTTER_GTK_LIB" ]]; then
+          filtered_missing=$(echo "$filtered_missing" | grep -vE "libflutter_linux_gtk\.so[[:space:]]*=>[[:space:]]*not found" || true)
+          filtered_missing=$(echo "$filtered_missing" | sed "/^[[:space:]]*$/d" || true)
+          if [[ -n "$missing_lines" && -z "$filtered_missing" ]]; then
+            echo "Ignoring plugin-local unresolved libflutter_linux_gtk.so (resolved via bundled runtime at $FLUTTER_GTK_LIB)"
+          fi
+        fi
+
+        if [[ -n "$filtered_missing" ]]; then
         echo "Missing libraries in: $elf"
-        echo "$ldd_output" | grep "not found"
+          echo "$filtered_missing"
         missing=1
+        fi
       fi
     done
 
@@ -104,6 +125,14 @@ elif [[ "$package_type" == "rpm" ]]; then
       echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     fi
 
+    FLUTTER_GTK_LIB=""
+    for candidate in "${LIB_PATHS[@]}"; do
+      if [[ -f "$candidate/libflutter_linux_gtk.so" ]]; then
+        FLUTTER_GTK_LIB="$candidate/libflutter_linux_gtk.so"
+        break
+      fi
+    done
+
     mapfile -t ELF_FILES < <(
       rpm -ql copypaste | while read -r path; do
         [[ -f "$path" ]] || continue
@@ -119,10 +148,23 @@ elif [[ "$package_type" == "rpm" ]]; then
       echo "Checking ELF deps: $elf"
       ldd_output=$(ldd "$elf" 2>&1 || true)
       echo "$ldd_output" >> /tmp/ldd.out
-      if echo "$ldd_output" | grep -q "not found"; then
+
+      missing_lines=$(echo "$ldd_output" | grep "not found" || true)
+      if [[ -n "$missing_lines" ]]; then
+        filtered_missing="$missing_lines"
+        if [[ -n "$FLUTTER_GTK_LIB" ]]; then
+          filtered_missing=$(echo "$filtered_missing" | grep -vE "libflutter_linux_gtk\.so[[:space:]]*=>[[:space:]]*not found" || true)
+          filtered_missing=$(echo "$filtered_missing" | sed "/^[[:space:]]*$/d" || true)
+          if [[ -n "$missing_lines" && -z "$filtered_missing" ]]; then
+            echo "Ignoring plugin-local unresolved libflutter_linux_gtk.so (resolved via bundled runtime at $FLUTTER_GTK_LIB)"
+          fi
+        fi
+
+        if [[ -n "$filtered_missing" ]]; then
         echo "Missing libraries in: $elf"
-        echo "$ldd_output" | grep "not found"
+          echo "$filtered_missing"
         missing=1
+        fi
       fi
     done
 
