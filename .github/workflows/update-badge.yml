@@ -19,6 +19,7 @@ jobs:
 
             - name: Update downloads badge
               env:
+                  GITHUB_TOKEN: ${{ github.token }}
                   GIST_ID: ${{ vars.GIST_ID }}
                   GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
                   STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
