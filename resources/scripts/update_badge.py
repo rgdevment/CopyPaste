@@ -45,6 +45,18 @@ def describe_http_error(error):
     }
 
 
+def get_github_headers():
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    github_token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+    return headers
+
+
 def get_gh_downloads_by_os(repo):
     windows = 0
     macos = 0
@@ -54,7 +66,7 @@ def get_gh_downloads_by_os(repo):
     try:
         while True:
             url = f"https://api.github.com/repos/{repo}/releases?per_page=150&page={page}"
-            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            req = urllib.request.Request(url, headers=get_github_headers())
             with urllib.request.urlopen(req) as response:
                 data = json.loads(response.read())
             if not data:
@@ -74,6 +86,17 @@ def get_gh_downloads_by_os(repo):
             if len(data) < 150:
                 break
             page += 1
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            remaining = e.headers.get("X-RateLimit-Remaining")
+            reset_at = e.headers.get("X-RateLimit-Reset")
+            print(
+                "Warning: Failed to get GitHub downloads: HTTP 403 rate limit exceeded. "
+                f"remaining={remaining} reset={reset_at}. "
+                "Configure GITHUB_TOKEN in workflow env to use authenticated requests."
+            )
+        else:
+            print(f"Warning: Failed to get GitHub downloads: HTTP Error {e.code}: {e.reason}")
     except Exception as e:
         print(f"Warning: Failed to get GitHub downloads: {e}")
     return windows, macos, linux, other
@@ -128,6 +151,7 @@ def get_ms_downloads(token, app_id):
     page_count = 0
     max_pages = 20
     last_error = None
+    last_error_details = None
 
     while next_url and page_count < max_pages:
         page_count += 1
@@ -146,6 +170,7 @@ def get_ms_downloads(token, app_id):
             except urllib.error.HTTPError as e:
                 last_error = e
                 error_details = describe_http_error(e)
+                last_error_details = error_details
                 if e.code == 429 and attempt < MS_MAX_RETRIES:
                     retry_after = error_details.get("retry_after")
                     if retry_after and retry_after.isdigit():
@@ -191,6 +216,16 @@ def get_ms_downloads(token, app_id):
         return total
 
     if isinstance(last_error, urllib.error.HTTPError) and last_error.code == 404:
+        if (
+            last_error_details is not None
+            and "Could not find user" in (last_error_details.get("body_text") or "")
+        ):
+            print(
+                "Warning: Failed to get MS Store downloads: the Microsoft Entra application/service principal "
+                "was not found in Partner Center user policy. Add the app under Partner Center Users "
+                "(Microsoft Entra applications) and grant Manager role in the same tenant as STORE_TENANT_ID."
+            )
+            return None
         print(
             "Warning: Failed to get MS Store downloads: HTTP 404 from appacquisitions endpoint. "
             "Check STORE_APP_ID and Partner Center app permissions."
