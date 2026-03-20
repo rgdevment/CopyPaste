@@ -117,10 +117,10 @@ def get_cloudsmith_downloads(api_key, owner, repo):
 
 
 def get_ms_token(tenant, client_id, client_secret):
-    url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+    url = f"https://login.microsoftonline.com/{tenant}/oauth2/token"
     payload = urllib.parse.urlencode({
         'grant_type': 'client_credentials',
-        'scope': 'https://manage.devcenter.microsoft.com/.default',
+        'resource': 'https://manage.devcenter.microsoft.com',
         'client_id': client_id,
         'client_secret': client_secret
     }).encode('utf-8')
@@ -350,8 +350,7 @@ def main():
     print(f"Grand total: {grand_total}")
 
     if ms_enabled and not ms_fetch_ok:
-        print("Warning: Skipping badge update to avoid publishing partial totals due MS Store fetch failure")
-        return
+        print("Warning: MS Store fetch failed, badge will reflect GitHub + Cloudsmith totals only")
 
     if gist_id and gist_token:
         try:
