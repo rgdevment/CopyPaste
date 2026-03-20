@@ -54,6 +54,9 @@ class ListenerPlugin : public flutter::Plugin {
   static constexpr ULONGLONG kDebounceMs = 500;
   static constexpr UINT_PTR kClipboardTimerId = 1;
   static constexpr UINT kClipboardTimerDelayMs = 50;
+  static constexpr ULONGLONG kSelfWriteIgnoreMs = 700;
+
+  ULONGLONG last_write_tick_ = 0;
 
   UINT cf_rtf_ = 0;
   UINT cf_html_ = 0;
