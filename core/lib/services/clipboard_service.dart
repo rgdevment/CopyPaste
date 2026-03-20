@@ -27,23 +27,23 @@ class ClipboardService {
 
   int pasteIgnoreWindowMs = 450;
 
-  DateTime _lastPasteTime = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  Stopwatch? _pasteStopwatch;
   String? _lastPastedContent;
 
   Future<void> notifyPasteInitiated(String itemId) async {
-    _lastPasteTime = DateTime.now().toUtc();
+    _pasteStopwatch = Stopwatch()..start();
     final item = await _repository.getById(itemId);
     _lastPastedContent = item?.content;
   }
 
   bool _shouldIgnore(String? content) {
-    final elapsed = DateTime.now().toUtc().difference(_lastPasteTime);
-    if (elapsed.inMilliseconds < pasteIgnoreWindowMs) {
-      return true;
-    }
+    final sw = _pasteStopwatch;
+    if (sw == null) return false;
+    final elapsed = sw.elapsedMilliseconds;
+    if (elapsed < pasteIgnoreWindowMs) return true;
     if (content != null &&
         content == _lastPastedContent &&
-        elapsed.inMilliseconds < pasteIgnoreWindowMs * 2) {
+        elapsed < pasteIgnoreWindowMs * 2) {
       return true;
     }
     return false;
@@ -212,7 +212,6 @@ class ClipboardService {
       modifiedAt: now,
     );
     await _repository.update(updated);
-    await notifyPasteInitiated(itemId);
     return updated;
   }
 

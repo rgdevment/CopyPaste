@@ -176,6 +176,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _initShell() async {
     windowManager.addListener(this);
+    _startListening();
     final isFirstRun = widget.storage.isFirstRun;
     await _appWindow.init();
     if (Platform.isWindows || Platform.isMacOS) {
@@ -210,7 +211,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       }
     }
 
-    _startListening();
     AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
     unawaited(AutoUpdateService.initialize());
   }

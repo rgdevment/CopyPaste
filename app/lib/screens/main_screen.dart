@@ -65,6 +65,7 @@ class MainScreenState extends State<MainScreen> {
   ClipboardTab _currentTab = ClipboardTab.recent;
   List<ClipboardItem> _items = [];
   bool _loading = false;
+  bool _pendingReload = false;
   int _selectedIndex = -1;
   int _expandedIndex = -1;
   Timer? _reloadDebounce;
@@ -131,6 +132,7 @@ class MainScreenState extends State<MainScreen> {
 
   Future<void> _loadItems() async {
     if (_loading) return;
+    _pendingReload = false;
     setState(() => _loading = true);
 
     try {
@@ -158,11 +160,22 @@ class MainScreenState extends State<MainScreen> {
       AppLogger.error('Failed to load items: $e');
       setState(() => _loading = false);
     }
+
+    if (_pendingReload) {
+      _pendingReload = false;
+      _currentPage = 0;
+      _hasMore = true;
+      await _loadItems();
+    }
   }
 
   void _reload() {
     _reloadDebounce?.cancel();
     _reloadDebounce = Timer(const Duration(milliseconds: 80), () {
+      if (_loading) {
+        _pendingReload = true;
+        return;
+      }
       _currentPage = 0;
       _hasMore = true;
       _loadItems();
