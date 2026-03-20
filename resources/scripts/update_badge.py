@@ -117,10 +117,10 @@ def get_cloudsmith_downloads(api_key, owner, repo):
 
 
 def get_ms_token(tenant, client_id, client_secret):
-    url = f"https://login.microsoftonline.com/{tenant}/oauth2/token"
+    url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
     payload = urllib.parse.urlencode({
         'grant_type': 'client_credentials',
-        'resource': 'https://manage.devcenter.microsoft.com',
+        'scope': 'https://manage.devcenter.microsoft.com/.default',
         'client_id': client_id,
         'client_secret': client_secret
     }).encode('utf-8')
