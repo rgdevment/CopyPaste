@@ -26,6 +26,7 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <unordered_map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -36,8 +37,6 @@
 namespace listener {
 
 namespace {
-
-static const UINT kWmClipboardUpdate = 0x031D;
 
 std::vector<uint8_t> ConvertDibToBmp(const std::vector<uint8_t>& dib) {
   if (dib.size() < sizeof(BITMAPINFOHEADER)) return {};
@@ -261,7 +260,7 @@ void ListenerPlugin::StopListening() {
 
 std::optional<LRESULT> ListenerPlugin::HandleWindowMessage(
     HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
-  if (message == kWmClipboardUpdate) {
+  if (message == WM_CLIPBOARDUPDATE) {
     KillTimer(hwnd, kClipboardTimerId);
     SetTimer(hwnd, kClipboardTimerId, kClipboardTimerDelayMs, nullptr);
   } else if (message == WM_TIMER && wparam == kClipboardTimerId) {
@@ -275,6 +274,10 @@ void ListenerPlugin::OnClipboardChanged() {
   HWND hwnd = registrar_->GetView() ? registrar_->GetView()->GetNativeWindow()
                                      : nullptr;
   if (!hwnd) return;
+  if (last_write_tick_ > 0 &&
+      (GetTickCount64() - last_write_tick_) < kSelfWriteIgnoreMs) {
+    return;
+  }
   if (!OpenClipboard(hwnd)) return;
 
   flutter::EncodableMap event;
@@ -393,12 +396,17 @@ bool ListenerPlugin::ShouldExclude() const {
     return true;
   }
   if (cf_can_include_ && IsClipboardFormatAvailable(cf_can_include_)) {
-    auto data = ExtractBytes(cf_can_include_);
-    if (data.size() >= 4) {
-      int val = static_cast<int>(data[0]) | (static_cast<int>(data[1]) << 8) |
-                (static_cast<int>(data[2]) << 16) |
-                (static_cast<int>(data[3]) << 24);
-      if (val == 0) return true;
+    HANDLE hData = GetClipboardData(cf_can_include_);
+    if (hData && GlobalSize(hData) >= 4) {
+      const void* ptr = GlobalLock(hData);
+      if (ptr) {
+        const auto* bytes = static_cast<const uint8_t*>(ptr);
+        int val = static_cast<int>(bytes[0]) | (static_cast<int>(bytes[1]) << 8) |
+                  (static_cast<int>(bytes[2]) << 16) |
+                  (static_cast<int>(bytes[3]) << 24);
+        GlobalUnlock(hData);
+        if (val == 0) return true;
+      }
     }
   }
   return false;
@@ -535,17 +543,20 @@ std::vector<std::wstring> ListenerPlugin::ExtractFilePaths() {
 
 bool ListenerPlugin::IsUrl(const std::wstring& text) {
   if (text.size() < 5) return false;
-  auto lower = text;
-  std::transform(lower.begin(), lower.end(), lower.begin(), ::towlower);
 
   static const std::wstring kPrefixes[] = {
       L"https://", L"http://", L"ftp://", L"file:///", L"mailto:",
   };
 
+  static constexpr size_t kMaxPrefix = 9;  // longest prefix is "file:///"
+  const size_t checkLen = (std::min)(text.size(), kMaxPrefix);
+  std::wstring head(text.data(), checkLen);
+  std::transform(head.begin(), head.end(), head.begin(), ::towlower);
+
   bool matched = false;
   for (const auto& prefix : kPrefixes) {
-    if (lower.size() >= prefix.size() &&
-        lower.substr(0, prefix.size()) == prefix) {
+    if (head.size() >= prefix.size() &&
+        head.compare(0, prefix.size(), prefix) == 0) {
       matched = true;
       break;
     }
@@ -567,7 +578,7 @@ int ListenerPlugin::DetectFileType(const std::wstring& path) {
   std::wstring ext = p.extension().wstring();
   std::transform(ext.begin(), ext.end(), ext.begin(), ::towupper);
 
-  static const std::map<std::wstring, int> kExtMap = {
+  static const std::unordered_map<std::wstring, int> kExtMap = {
       {L".MP3", 5},  {L".WAV", 5},  {L".FLAC", 5}, {L".AAC", 5},
       {L".OGG", 5},  {L".WMA", 5},  {L".M4A", 5},
       {L".MP4", 6},  {L".AVI", 6},  {L".MKV", 6},  {L".MOV", 6},
@@ -734,6 +745,10 @@ bool ListenerPlugin::SetTextToClipboard(
   bool ok = false;
 
   std::wstring wide = Utf8ToWide(text);
+  if (wide.empty()) {
+    CloseClipboard();
+    return false;
+  }
   size_t sz = (wide.size() + 1) * sizeof(wchar_t);
   HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, sz);
   if (hMem) {
@@ -786,6 +801,7 @@ bool ListenerPlugin::SetTextToClipboard(
   }
 
   CloseClipboard();
+  if (ok) last_write_tick_ = GetTickCount64();
   return ok;
 }
 
@@ -861,6 +877,7 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
   if (!ok) GlobalFree(hMem);
 
   CloseClipboard();
+  if (ok) last_write_tick_ = GetTickCount64();
   return ok;
 }
 
@@ -919,6 +936,7 @@ bool ListenerPlugin::SetFilesToClipboard(
   if (!ok) GlobalFree(hMem);
 
   CloseClipboard();
+  if (ok) last_write_tick_ = GetTickCount64();
   return ok;
 }
 
