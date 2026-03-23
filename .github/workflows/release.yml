@@ -200,7 +200,7 @@ jobs:
                     find artifacts/windows -type f
                     exit 1
                   fi
-                  echo "MSIX_DIR=$(dirname "$MSIX")" >> $GITHUB_OUTPUT
+                  echo "MSIX_PATH=$MSIX" >> $GITHUB_OUTPUT
                   echo "Found: $MSIX"
 
             - name: Configure Microsoft Store CLI
@@ -215,9 +215,8 @@ jobs:
             - name: Upload package (draft, no commit)
               shell: bash
               run: |
-                  msstore publish . \
+                  msstore publish "${{ steps.find_msix.outputs.MSIX_PATH }}" \
                     --appId "${{ vars.STORE_APP_ID }}" \
-                    --inputDirectory "${{ steps.find_msix.outputs.MSIX_DIR }}" \
                     --noCommit
 
             - name: Update release notes
