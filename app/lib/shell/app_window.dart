@@ -67,6 +67,9 @@ class AppWindow {
   bool _visible = false;
   bool _ready = false;
   bool _settingsMode = false;
+  bool _waylandMode = false;
+
+  void setWaylandMode(bool enabled) => _waylandMode = enabled;
 
   bool get isVisible => _visible;
   bool get isReady => _ready;
@@ -77,7 +80,7 @@ class AppWindow {
     _popupHeight = height;
   }
 
-  Future<void> init() async {
+  Future<void> init({bool startVisible = false}) async {
     await windowManager.waitUntilReadyToShow(null, () async {
       await windowManager.setTitle('CopyPaste');
       await windowManager.setSize(Size(_popupWidth, _popupHeight));
@@ -91,14 +94,21 @@ class AppWindow {
       await windowManager.setResizable(false);
       await windowManager.setMaximizable(false);
       await windowManager.setPreventClose(true);
-      await windowManager.setSkipTaskbar(true);
+      if (!_waylandMode) {
+        await windowManager.setSkipTaskbar(true);
+      }
       if (Platform.isWindows || Platform.isMacOS) {
         await windowManager.setBackgroundColor(const Color(0x00000000));
         await applyEffect();
       }
-      await windowManager.hide();
+      if (startVisible) {
+        await windowManager.center();
+        await windowManager.focus();
+      } else {
+        await windowManager.hide();
+      }
     });
-    _visible = false;
+    _visible = startVisible;
     _ready = true;
   }
 
@@ -269,9 +279,6 @@ class AppWindow {
       await windowManager.setSkipTaskbar(false);
     }
     await windowManager.show();
-    if (Platform.isLinux) {
-      await windowManager.setOpacity(1.0);
-    }
     await windowManager.focus();
     _visible = true;
     onVisibilityChanged?.call(true);
@@ -281,7 +288,7 @@ class AppWindow {
     if (!_visible) return;
     _visible = false;
     await windowManager.hide();
-    if (!Platform.isMacOS) {
+    if (!Platform.isMacOS && !_waylandMode) {
       await windowManager.setSkipTaskbar(true);
     }
     onVisibilityChanged?.call(false);
@@ -295,9 +302,9 @@ class AppWindow {
     }
   }
 
-  void hideIfNotPinned() {
+  Future<void> hideIfNotPinned() async {
     if (_visible && !_settingsMode) {
-      hide();
+      await hide();
     }
   }
 

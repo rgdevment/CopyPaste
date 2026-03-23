@@ -42,7 +42,6 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 368, 500);
-  gtk_widget_set_opacity(GTK_WIDGET(window), 0.0);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -55,7 +54,7 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
-  gtk_widget_realize(GTK_WIDGET(view));
+  gtk_widget_realize(GTK_WIDGET(window));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 

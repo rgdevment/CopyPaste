@@ -37,6 +37,7 @@ bool _isMicaDark(String themeMode) => switch (themeMode) {
 /// Returns true when the current Linux session is running under Wayland.
 /// Exposed for testing.
 bool isWaylandSession() {
+  if ((Platform.environment['GDK_BACKEND'] ?? '') == 'x11') return false;
   final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
   final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
   return sessionType == 'wayland' || waylandDisplay.isNotEmpty;
@@ -178,7 +179,21 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     windowManager.addListener(this);
     _startListening();
     final isFirstRun = widget.storage.isFirstRun;
-    await _appWindow.init();
+    final wayland = Platform.isLinux && isWaylandSession();
+
+    if (wayland) {
+      _appWindow.setWaylandMode(true);
+    }
+
+    bool macosGranted = true;
+    if (Platform.isMacOS) {
+      macosGranted = await ClipboardWriter.checkAccessibility();
+    }
+
+    final showOnStart = isFirstRun && (Platform.isLinux || Platform.isWindows ||
+        (Platform.isMacOS && macosGranted));
+    await _appWindow.init(startVisible: showOnStart);
+
     if (Platform.isWindows || Platform.isMacOS) {
       await _appWindow.applyEffect(dark: _isMicaDark(_config.themeMode));
     }
@@ -188,8 +203,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     await _registerHotkeyWithFeedback();
 
     if (Platform.isMacOS) {
-      final granted = await ClipboardWriter.checkAccessibility();
-      if (!granted) {
+      if (!macosGranted) {
         setState(() => _showPermissionGate = true);
         await _appWindow.enterGateMode();
       } else {
@@ -201,13 +215,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         }
         if (isFirstRun) {
           widget.storage.markAsInitialized();
-          await _appWindow.show();
         }
       }
     } else {
       if (isFirstRun) {
         widget.storage.markAsInitialized();
-        await _appWindow.show();
       }
     }
 
@@ -527,7 +539,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (!_appWindow.isReady || !_appWindow.isVisible) return;
     if (_appWindow.isGateMode) return;
     if (!_config.hideOnDeactivate) return;
-    _appWindow.hideIfNotPinned();
+    unawaited(_appWindow.hideIfNotPinned());
   }
 
   @override
