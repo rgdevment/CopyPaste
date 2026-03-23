@@ -460,7 +460,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get waylandWarning =>
-      'Global hotkeys and auto-paste are not available in this Wayland session (GNOME, KDE, COSMIC, Sway). Your clipboard is still being monitored. To enable all features, log out and start an X11 session. We are working on Wayland support.';
+      'Wayland is not supported yet on Linux for global hotkeys and auto-paste because of desktop/session restrictions. Please use X11 or a compatible session.';
 
   @override
   String linuxHotkeyFallbackWarning(String requested, String fallback) {

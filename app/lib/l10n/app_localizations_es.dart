@@ -464,7 +464,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get waylandWarning =>
-      'Los atajos globales y el pegado automático no están disponibles en sesiones Wayland (GNOME, KDE, COSMIC, Sway). El portapapeles sigue siendo monitoreado. Para activar todas las funciones, cierra sesión e inicia una sesión X11. Estamos trabajando en el soporte para Wayland.';
+      'Wayland aún no está soportado en Linux para atajos globales y pegado automático por restricciones del escritorio o la sesión. Usa X11 o una sesión compatible.';
 
   @override
   String linuxHotkeyFallbackWarning(String requested, String fallback) {
