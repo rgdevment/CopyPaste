@@ -53,6 +53,10 @@ class HotkeyHandler {
   }
 
   Future<HotkeyRegistrationResult> registerWithFallback() async {
+    if (_hotkey != null || _linuxEventsSubscription != null) {
+      await unregister();
+    }
+
     if (Platform.isLinux) {
       _linuxEventsSubscription ??= LinuxShell.events.listen((event) {
         if (event == 'hotkey') onHotkey();

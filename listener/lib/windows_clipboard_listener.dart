@@ -7,6 +7,7 @@ class ClipboardListener {
 
   late final Stream<ClipboardEvent> onEvent = _channel
       .receiveBroadcastStream()
+      .where((dynamic event) => event is Map)
       .map((dynamic event) {
         final map = Map<Object?, Object?>.from(event as Map);
         return ClipboardEvent.fromMap(map);

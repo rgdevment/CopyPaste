@@ -154,7 +154,11 @@ class ClipboardService {
         metadata: jsonEncode(meta),
       );
       await _repository.update(updated);
-      if (!_disposed) _itemReactivated.add(updated);
+      if (!_disposed) {
+        try {
+          _itemReactivated.add(updated);
+        } on StateError catch (_) {}
+      }
     } catch (e, s) {
       AppLogger.error('Image processing failed for ${item.id}: $e\n$s');
     }

@@ -18,7 +18,7 @@ class CleanupService {
   static const String _lastCleanupFileName = 'last_cleanup.txt';
 
   final IClipboardRepository _repository;
-  final int Function() _getRetentionDays;
+  int Function() _getRetentionDays;
   final StorageConfig? _storage;
   Timer? _timer;
   bool _disposed = false;
@@ -74,6 +74,10 @@ class CleanupService {
       file.parent.createSync(recursive: true);
       file.writeAsStringSync(date.toIso8601String());
     } catch (_) {}
+  }
+
+  void updateRetentionCallback(int Function() getter) {
+    _getRetentionDays = getter;
   }
 
   void dispose() {

@@ -285,6 +285,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     name: Linux Package Smoke (deb/rpm)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4

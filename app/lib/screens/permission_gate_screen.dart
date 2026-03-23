@@ -53,6 +53,7 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
         return;
       }
       if (_pollCount >= _maxPollsBeforeHint && !_timedOut && mounted) {
+        _pollTimer?.cancel();
         setState(() => _timedOut = true);
       }
     });

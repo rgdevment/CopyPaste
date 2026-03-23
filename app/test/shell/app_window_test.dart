@@ -94,7 +94,7 @@ void main() {
 
     tearDown(_teardownWindowManagerMock);
 
-    test('calls setOpacity(1.0) on Linux after show()', () async {
+    test('calls show() and focus() on Linux without setOpacity', () async {
       if (!Platform.isLinux) return;
 
       bool visibilityChanged = false;
@@ -106,28 +106,17 @@ void main() {
 
       await window.show();
 
-      final opacityCall = calls.where((c) => c.method == 'setOpacity').toList();
       expect(
-        opacityCall,
-        isNotEmpty,
-        reason: 'setOpacity should be called on Linux',
+        calls.any((c) => c.method == 'show'),
+        isTrue,
+        reason: 'show() should be called',
       );
-      expect(opacityCall.last.arguments, equals({'opacity': 1.0}));
+      expect(
+        calls.any((c) => c.method == 'setOpacity'),
+        isFalse,
+        reason: 'setOpacity should not be called — opacity trick was removed',
+      );
       expect(visibilityChanged, isTrue);
-    });
-
-    test('does NOT call setOpacity on macOS', () async {
-      if (!Platform.isMacOS) return;
-
-      final window = AppWindow(popupWidth: 368, popupHeight: 500);
-      await window.show();
-
-      final opacityCall = calls.where((c) => c.method == 'setOpacity').toList();
-      expect(
-        opacityCall,
-        isEmpty,
-        reason: 'setOpacity should not be called on macOS',
-      );
     });
 
     test('isVisible becomes true after show()', () async {

@@ -17,6 +17,7 @@ import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
 import 'shell/hotkey_handler.dart';
 import 'shell/linux_hotkey_registration.dart';
+import 'shell/linux_shell.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
@@ -37,6 +38,7 @@ bool _isMicaDark(String themeMode) => switch (themeMode) {
 /// Returns true when the current Linux session is running under Wayland.
 /// Exposed for testing.
 bool isWaylandSession() {
+  if ((Platform.environment['GDK_BACKEND'] ?? '') == 'x11') return false;
   final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
   final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
   return sessionType == 'wayland' || waylandDisplay.isNotEmpty;
@@ -178,7 +180,24 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     windowManager.addListener(this);
     _startListening();
     final isFirstRun = widget.storage.isFirstRun;
-    await _appWindow.init();
+    final wayland = Platform.isLinux && isWaylandSession();
+
+    if (wayland) {
+      _appWindow.setWaylandMode(true);
+    }
+
+    bool macosGranted = true;
+    if (Platform.isMacOS) {
+      macosGranted = await ClipboardWriter.checkAccessibility();
+    }
+
+    final showOnStart =
+        isFirstRun &&
+        (Platform.isLinux ||
+            Platform.isWindows ||
+            (Platform.isMacOS && macosGranted));
+    await _appWindow.init(startVisible: showOnStart);
+
     if (Platform.isWindows || Platform.isMacOS) {
       await _appWindow.applyEffect(dark: _isMicaDark(_config.themeMode));
     }
@@ -188,8 +207,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     await _registerHotkeyWithFeedback();
 
     if (Platform.isMacOS) {
-      final granted = await ClipboardWriter.checkAccessibility();
-      if (!granted) {
+      if (!macosGranted) {
         setState(() => _showPermissionGate = true);
         await _appWindow.enterGateMode();
       } else {
@@ -201,13 +219,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         }
         if (isFirstRun) {
           widget.storage.markAsInitialized();
-          await _appWindow.show();
         }
       }
     } else {
       if (isFirstRun) {
         widget.storage.markAsInitialized();
-        await _appWindow.show();
       }
     }
 
@@ -389,7 +405,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   void _dismissHint() {
     if (_config.hasSeenHint) return;
     _config = _config.copyWith(hasSeenHint: true);
-    _config.save('${widget.storage.configPath}/${AppConfig.fileName}');
+    unawaited(
+      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+    );
     if (mounted) setState(() {});
   }
 
@@ -449,6 +467,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     } catch (e) {
       AppLogger.error('cleanup tray: $e');
     }
+    if (Platform.isLinux) {
+      try {
+        await LinuxShell.dispose();
+      } catch (e) {
+        AppLogger.error('cleanup linux shell: $e');
+      }
+    }
     try {
       widget.clipboardService.dispose();
     } catch (e) {
@@ -485,6 +510,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           onSave: (newConfig, hotkeyChanged) async {
             final oldShowTray = _config.showTrayIcon;
             setState(() => _config = newConfig);
+            widget.cleanupService.updateRetentionCallback(
+              () => newConfig.retentionDays,
+            );
             widget.clipboardService.pasteIgnoreWindowMs =
                 newConfig.duplicateIgnoreWindowMs;
             _appWindow.updatePopupSize(
@@ -527,7 +555,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (!_appWindow.isReady || !_appWindow.isVisible) return;
     if (_appWindow.isGateMode) return;
     if (!_config.hideOnDeactivate) return;
-    _appWindow.hideIfNotPinned();
+    unawaited(_appWindow.hideIfNotPinned());
   }
 
   @override

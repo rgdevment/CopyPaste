@@ -150,14 +150,26 @@ jobs:
           mv "$DEB" "$DEST"
           echo "Renamed to: $(basename "$DEST")"
 
+      - name: Normalize version for RPM
+        id: rpm_version
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          RPM_VERSION="${VERSION%%-*}"
+          echo "RPM_VERSION=$RPM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "RPM version (normalized): $RPM_VERSION"
+
       - name: Package rpm
         run: |
+          RPM_VERSION="${{ steps.rpm_version.outputs.RPM_VERSION }}"
           cd app
+          sed -i "s/^version:.*/version: $RPM_VERSION/" pubspec.yaml
           fastforge package \
             --platform linux \
             --targets rpm \
             --build-dart-define "APP_VERSION=${{ steps.get_version.outputs.VERSION }}" \
             --skip-clean
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          sed -i "s/^version:.*/version: $VERSION/" pubspec.yaml
 
       - name: Rename rpm
         run: |

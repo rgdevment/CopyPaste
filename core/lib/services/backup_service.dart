@@ -126,14 +126,15 @@ class BackupService {
 
     final zipData = ZipEncoder().encode(archive);
 
-    final tempFile = File(
-      '${Directory.systemTemp.path}/copypaste_backup_${DateTime.now().millisecondsSinceEpoch}.zip',
-    );
+    final tempDir = Directory.systemTemp.createTempSync('copypaste_backup_');
+    final tempFile = File(p.join(tempDir.path, 'backup.zip'));
     await tempFile.writeAsBytes(zipData);
     try {
       await tempFile.copy(outputPath);
     } finally {
-      if (tempFile.existsSync()) tempFile.deleteSync();
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     }
 
     return manifest;
@@ -141,8 +142,9 @@ class BackupService {
 
   static Future<BackupManifest?> restoreBackup(
     String backupPath,
-    StorageConfig storage,
-  ) async {
+    StorageConfig storage, {
+    Future<void> Function()? onBeforeRestore,
+  }) async {
     final backupFile = File(backupPath);
     if (!backupFile.existsSync()) return null;
 
@@ -161,6 +163,10 @@ class BackupService {
       final manifest = BackupManifest.fromJson(manifestJson);
       if (manifest.version > BackupManifest.currentVersion) return null;
 
+      if (onBeforeRestore != null) {
+        await onBeforeRestore();
+      }
+
       snapshotDir = await _createPreRestoreSnapshot(storage);
 
       _deleteWalFiles(storage.databasePath);
@@ -170,8 +176,11 @@ class BackupService {
       for (final file in archive) {
         if (file.isFile && file.name != 'manifest.json') {
           if (file.name.contains('..')) continue;
-          final outPath = p.normalize('${storage.baseDir}/${file.name}');
-          if (!outPath.startsWith(storage.baseDir)) continue;
+          final outPath = p.normalize(p.join(storage.baseDir, file.name));
+          final baseWithSep = storage.baseDir.endsWith(p.separator)
+              ? storage.baseDir
+              : '${storage.baseDir}${p.separator}';
+          if (!outPath.startsWith(baseWithSep)) continue;
           final outFile = File(outPath);
           await outFile.create(recursive: true);
           await outFile.writeAsBytes(file.content as List<int>);

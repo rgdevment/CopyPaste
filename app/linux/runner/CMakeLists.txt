@@ -23,4 +23,12 @@ else()
   message(WARNING "X11/XTest not found — hotkey and tray features will be X11-unavailable")
 endif()
 
+pkg_check_modules(APPINDICATOR IMPORTED_TARGET ayatana-appindicator3-0.1)
+if(APPINDICATOR_FOUND)
+  target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::APPINDICATOR)
+  target_compile_definitions(${BINARY_NAME} PRIVATE HAVE_APPINDICATOR)
+else()
+  message(WARNING "ayatana-appindicator3 not found — tray icon falls back to GtkStatusIcon (may not appear on GNOME)")
+endif()
+
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
