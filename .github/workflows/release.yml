@@ -158,7 +158,7 @@ jobs:
                     gh api --method PATCH "/gists/${{ vars.APPCAST_GIST_ID }}" --input -
 
     publish-to-store:
-        runs-on: ubuntu-latest
+        runs-on: windows-latest
         needs: [extract-version, github-release]
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && !contains(needs.extract-version.outputs.version, '-')
         timeout-minutes: 15
@@ -172,6 +172,7 @@ jobs:
 
             - name: Extract tag message
               id: tag_message
+              shell: bash
               run: |
                   MSG=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | sed '/-----BEGIN SSH SIGNATURE-----/,$d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
                   echo "TAG_BODY<<EOF" >> $GITHUB_OUTPUT
@@ -189,6 +190,7 @@ jobs:
 
             - name: Find MSIX package
               id: find_msix
+              shell: bash
               run: |
                   MSIX=$(find artifacts/windows -name "*.msixupload" | head -1)
                   [ -z "$MSIX" ] && MSIX=$(find artifacts/windows -name "*.msixbundle" | head -1)
@@ -201,10 +203,8 @@ jobs:
                   echo "MSIX_DIR=$(dirname "$MSIX")" >> $GITHUB_OUTPUT
                   echo "Found: $MSIX"
 
-            - name: Install libsecret (required by msstore CLI on Linux)
-              run: sudo apt-get install -y libsecret-1-0
-
             - name: Configure Microsoft Store CLI
+              shell: bash
               run: |
                   msstore reconfigure \
                     --tenantId "${{ secrets.STORE_TENANT_ID }}" \
@@ -213,6 +213,7 @@ jobs:
                     --clientSecret "${{ secrets.STORE_CLIENT_SECRET }}"
 
             - name: Upload package (draft, no commit)
+              shell: bash
               run: |
                   msstore publish . \
                     --appId "${{ vars.STORE_APP_ID }}" \
@@ -220,10 +221,11 @@ jobs:
                     --noCommit
 
             - name: Update release notes
+              shell: bash
               env:
                   STORE_NOTES: ${{ steps.tag_message.outputs.TAG_BODY }}
               run: |
-                  msstore submission get "${{ vars.STORE_APP_ID }}" > /tmp/store_metadata.json
+                  msstore submission get "${{ vars.STORE_APP_ID }}" > store_metadata.json
 
                   python3 << 'PYEOF'
                   import json, os, re, sys
@@ -236,7 +238,7 @@ jobs:
                   notes = re.sub(r'\n{3,}', '\n\n', notes).strip()[:1500]
 
                   try:
-                      with open('/tmp/store_metadata.json') as f:
+                      with open('store_metadata.json') as f:
                           data = json.load(f)
                   except Exception as e:
                       print(f'Warning: could not parse submission metadata: {e}', file=sys.stderr)
@@ -262,14 +264,15 @@ jobs:
                   if not found:
                       print(f'Note: no releaseNotes field matched. Top-level keys: {list(data.keys())}')
 
-                  with open('/tmp/store_metadata_updated.json', 'w') as f:
+                  with open('store_metadata_updated.json', 'w') as f:
                       json.dump(data, f)
                   PYEOF
 
                   msstore submission updateMetadata "${{ vars.STORE_APP_ID }}" \
-                    "$(cat /tmp/store_metadata_updated.json)"
+                    "$(cat store_metadata_updated.json)"
 
             - name: Commit submission
+              shell: bash
               run: msstore submission publish "${{ vars.STORE_APP_ID }}"
 
     update-homebrew-cask:
