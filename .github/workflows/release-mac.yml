@@ -105,6 +105,9 @@ jobs:
                   echo "Certificate imported successfully"
 
             # ── Build (universal: arm64 + x86_64) ──
+            - name: Refresh CocoaPods lock
+              run: rm -f app/macos/Podfile.lock
+
             - name: Build macOS release (universal)
               run: |
                   cd app
