@@ -106,7 +106,9 @@ jobs:
 
             # ── Build (universal: arm64 + x86_64) ──
             - name: Refresh CocoaPods lock
-              run: rm -f app/macos/Podfile.lock
+              run: |
+                  rm -f app/macos/Podfile.lock
+                  cd app/macos && pod install --repo-update
 
             - name: Build macOS release (universal)
               run: |
