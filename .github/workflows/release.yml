@@ -157,6 +157,118 @@ jobs:
                     '{"files":{"appcast.xml":{"content":$content}}}' | \
                     gh api --method PATCH "/gists/${{ vars.APPCAST_GIST_ID }}" --input -
 
+    publish-to-store:
+        runs-on: ubuntu-latest
+        needs: [extract-version, github-release]
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && !contains(needs.extract-version.outputs.version, '-')
+        timeout-minutes: 15
+        name: Publish to Microsoft Store
+
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  ref: ${{ github.ref_name }}
+                  fetch-depth: 0
+
+            - name: Extract tag message
+              id: tag_message
+              run: |
+                  MSG=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | sed '/-----BEGIN SSH SIGNATURE-----/,$d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
+                  echo "TAG_BODY<<EOF" >> $GITHUB_OUTPUT
+                  echo "$MSG" >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT
+
+            - name: Install Microsoft Store Developer CLI
+              uses: microsoft/microsoft-store-apppublisher@v1.3
+
+            - name: Download Windows artifacts
+              uses: actions/download-artifact@v7
+              with:
+                  name: release-windows
+                  path: artifacts/windows
+
+            - name: Find MSIX package
+              id: find_msix
+              run: |
+                  MSIX=$(find artifacts/windows -name "*.msixupload" | head -1)
+                  [ -z "$MSIX" ] && MSIX=$(find artifacts/windows -name "*.msixbundle" | head -1)
+                  [ -z "$MSIX" ] && MSIX=$(find artifacts/windows -name "*.msix" | head -1)
+                  if [ -z "$MSIX" ]; then
+                    echo "Error: No MSIX package found in release-windows artifact"
+                    find artifacts/windows -type f
+                    exit 1
+                  fi
+                  echo "MSIX_DIR=$(dirname "$MSIX")" >> $GITHUB_OUTPUT
+                  echo "Found: $MSIX"
+
+            - name: Configure Microsoft Store CLI
+              run: |
+                  msstore reconfigure \
+                    --tenantId "${{ secrets.STORE_TENANT_ID }}" \
+                    --sellerId "${{ secrets.STORE_SELLER_ID }}" \
+                    --clientId "${{ secrets.STORE_CLIENT_ID }}" \
+                    --clientSecret "${{ secrets.STORE_CLIENT_SECRET }}"
+
+            - name: Upload package (draft, no commit)
+              run: |
+                  msstore publish . \
+                    --appId "${{ vars.STORE_APP_ID }}" \
+                    --inputDirectory "${{ steps.find_msix.outputs.MSIX_DIR }}" \
+                    --noCommit
+
+            - name: Update release notes
+              env:
+                  STORE_NOTES: ${{ steps.tag_message.outputs.TAG_BODY }}
+              run: |
+                  msstore submission get "${{ vars.STORE_APP_ID }}" > /tmp/store_metadata.json
+
+                  python3 << 'PYEOF'
+                  import json, os, re, sys
+
+                  raw = os.environ.get('STORE_NOTES', '').strip()
+                  notes = re.sub(r'^#{1,6}\s*', '', raw, flags=re.MULTILINE)
+                  notes = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', notes, flags=re.DOTALL)
+                  notes = re.sub(r'_{1,2}(.+?)_{1,2}', r'\1', notes, flags=re.DOTALL)
+                  notes = re.sub(r'`([^`]+)`', r'\1', notes)
+                  notes = re.sub(r'\n{3,}', '\n\n', notes).strip()[:1500]
+
+                  try:
+                      with open('/tmp/store_metadata.json') as f:
+                          data = json.load(f)
+                  except Exception as e:
+                      print(f'Warning: could not parse submission metadata: {e}', file=sys.stderr)
+                      sys.exit(0)
+
+                  found = False
+                  for lk in ('listings', 'Listings'):
+                      listings = data.get(lk)
+                      if not isinstance(listings, dict):
+                          continue
+                      print(f'Found listings for locales: {list(listings.keys())}')
+                      for locale, listing in listings.items():
+                          for bk in ('baseListing', 'BaseListing'):
+                              base = listing.get(bk)
+                              if not isinstance(base, dict):
+                                  continue
+                              for rk in ('releaseNotes', 'ReleaseNotes', 'whatsNew', 'WhatsNew'):
+                                  if rk in base and notes:
+                                      base[rk] = notes
+                                      found = True
+                                      print(f"  [{locale}] Updated '{rk}' ({len(notes)} chars)")
+
+                  if not found:
+                      print(f'Note: no releaseNotes field matched. Top-level keys: {list(data.keys())}')
+
+                  with open('/tmp/store_metadata_updated.json', 'w') as f:
+                      json.dump(data, f)
+                  PYEOF
+
+                  msstore submission updateMetadata "${{ vars.STORE_APP_ID }}" \
+                    "$(cat /tmp/store_metadata_updated.json)"
+
+            - name: Commit submission
+              run: msstore submission publish "${{ vars.STORE_APP_ID }}"
+
     update-homebrew-cask:
         runs-on: ubuntu-latest
         needs: github-release
