@@ -162,9 +162,10 @@ class MainScreenState extends State<MainScreen> {
     }
 
     if (_pendingReload) {
-      _pendingReload = false;
       _currentPage = 0;
       _hasMore = true;
+      _pendingReload = false;
+      setState(() {});
       await _loadItems();
     }
   }

@@ -354,9 +354,22 @@ class SqliteRepository implements IClipboardRepository {
       final ftsQuery = '${normalized.replaceAll('"', '""')}*';
       final likePattern = '%$normalized%';
 
-      final results = await _db
-          .customSelect(
-            '''
+      final ftsFilterVars = [...variables];
+      final likeFilterVars = [...variables];
+
+      final allVariables = [
+        Variable.withString(ftsQuery),
+        ...ftsFilterVars,
+        ...likeFilterVars,
+        Variable.withString(likePattern),
+        Variable.withString(likePattern),
+        Variable.withString(likePattern),
+        Variable.withInt(limit),
+        Variable.withInt(limit),
+        Variable.withInt(skip),
+      ];
+
+      final sql = '''
         WITH fts_results AS (
           SELECT c.*, bm25(ClipboardItems_fts) AS rank, 1 AS source
           FROM clipboard_items c
@@ -378,18 +391,18 @@ class SqliteRepository implements IClipboardRepository {
         )
         ORDER BY source ASC, rank ASC, modified_at DESC
         LIMIT ? OFFSET ?
-        ''',
-            variables: [
-              Variable.withString(ftsQuery),
-              ...variables,
-              ...variables,
-              Variable.withString(likePattern),
-              Variable.withString(likePattern),
-              Variable.withString(likePattern),
-              Variable.withInt(limit),
-              Variable.withInt(limit),
-              Variable.withInt(skip),
-            ],
+        ''';
+
+      final expectedCount = '?'.allMatches(sql).length;
+      assert(
+        allVariables.length == expectedCount,
+        'SQL variable count mismatch: expected $expectedCount, got ${allVariables.length}',
+      );
+
+      final results = await _db
+          .customSelect(
+            sql,
+            variables: allVariables,
             readsFrom: {_db.clipboardItems},
           )
           .get();

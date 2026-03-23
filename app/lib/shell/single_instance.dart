@@ -27,7 +27,9 @@ typedef _ReleaseMutexNative = Int32 Function(IntPtr hMutex);
 typedef _ReleaseMutexDart = int Function(int hMutex);
 
 class _Win32Mutex {
-  _Win32Mutex._();
+  _Win32Mutex._() {
+    assert(Platform.isWindows, '_Win32Mutex requires Windows');
+  }
   static _Win32Mutex? _instance;
   static _Win32Mutex get instance => _instance ??= _Win32Mutex._();
 
@@ -104,7 +106,33 @@ class SingleInstance {
       return true;
     } catch (_) {
       _lockFile = null;
+      if (_isLockStale(lockPath)) {
+        try {
+          File(lockPath).deleteSync();
+        } catch (_) {}
+        try {
+          _lockFile = File(lockPath).openSync(mode: FileMode.write);
+          _lockFile!.lockSync(FileLock.exclusive);
+          _lockFile!.writeStringSync('$pid\n');
+          _lockFile!.flushSync();
+          return true;
+        } catch (_) {
+          _lockFile = null;
+        }
+      }
       return false;
+    }
+  }
+
+  static bool _isLockStale(String lockPath) {
+    try {
+      final content = File(lockPath).readAsStringSync().trim();
+      final existingPid = int.tryParse(content);
+      if (existingPid == null) return true;
+      final result = Process.runSync('kill', ['-0', '$existingPid']);
+      return result.exitCode != 0;
+    } catch (_) {
+      return true;
     }
   }
 

@@ -50,7 +50,9 @@ typedef _RegCloseKeyNative = Int32 Function(IntPtr hKey);
 typedef _RegCloseKeyDart = int Function(int hKey);
 
 class _Win32Registry {
-  _Win32Registry._();
+  _Win32Registry._() {
+    assert(Platform.isWindows, '_Win32Registry requires Windows');
+  }
   static _Win32Registry? _instance;
   static _Win32Registry get instance => _instance ??= _Win32Registry._();
 
@@ -103,7 +105,7 @@ class StartupHelper {
 
   static void _setRegistryValue(String exePath) {
     final r = _Win32Registry.instance;
-    final subKey = _registryPath.toNativeUtf16();
+    final subKey = _registryPath.toNativeUtf16(allocator: malloc);
     final hKeyPtr = calloc<IntPtr>();
 
     try {
@@ -120,8 +122,8 @@ class StartupHelper {
       }
 
       final hKey = hKeyPtr.value;
-      final valueName = _appName.toNativeUtf16();
-      final valueData = '"$exePath"'.toNativeUtf16();
+      final valueName = _appName.toNativeUtf16(allocator: malloc);
+      final valueData = '"$exePath"'.toNativeUtf16(allocator: malloc);
       final dataSize = ('"$exePath"'.length + 1) * 2;
 
       try {
@@ -137,19 +139,19 @@ class StartupHelper {
           AppLogger.error('Failed to set registry value: $setResult');
         }
       } finally {
-        calloc.free(valueName);
-        calloc.free(valueData);
+        malloc.free(valueName);
+        malloc.free(valueData);
         r.regCloseKey(hKey);
       }
     } finally {
-      calloc.free(subKey);
+      malloc.free(subKey);
       calloc.free(hKeyPtr);
     }
   }
 
   static void _removeRegistryValue() {
     final r = _Win32Registry.instance;
-    final subKey = _registryPath.toNativeUtf16();
+    final subKey = _registryPath.toNativeUtf16(allocator: malloc);
     final hKeyPtr = calloc<IntPtr>();
 
     try {
@@ -166,16 +168,16 @@ class StartupHelper {
       }
 
       final hKey = hKeyPtr.value;
-      final valueName = _appName.toNativeUtf16();
+      final valueName = _appName.toNativeUtf16(allocator: malloc);
 
       try {
         r.regDeleteValue(hKey, valueName);
       } finally {
-        calloc.free(valueName);
+        malloc.free(valueName);
         r.regCloseKey(hKey);
       }
     } finally {
-      calloc.free(subKey);
+      malloc.free(subKey);
       calloc.free(hKeyPtr);
     }
   }

@@ -401,7 +401,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   void _dismissHint() {
     if (_config.hasSeenHint) return;
     _config = _config.copyWith(hasSeenHint: true);
-    _config.save('${widget.storage.configPath}/${AppConfig.fileName}');
+    unawaited(_config.save('${widget.storage.configPath}/${AppConfig.fileName}'));
     if (mounted) setState(() {});
   }
 

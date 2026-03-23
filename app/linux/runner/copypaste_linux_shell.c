@@ -371,7 +371,8 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   unregister_hotkey(shell);
 
   FlValue* key_value = args != NULL ? fl_value_lookup_string(args, "virtualKey") : NULL;
-  gint64 virtual_key = key_value != NULL ? fl_value_get_int(key_value) : 0;
+  gint64 virtual_key = (key_value != NULL && fl_value_get_type(key_value) == FL_VALUE_TYPE_INT)
+      ? fl_value_get_int(key_value) : 0;
   KeySym keysym = virtual_key_to_keysym(virtual_key);
   if (keysym == NoSymbol) {
     return FALSE;
