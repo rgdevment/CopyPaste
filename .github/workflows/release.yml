@@ -270,12 +270,14 @@ jobs:
                   if not found:
                       print(f'Note: no releaseNotes field matched. Top-level keys: {list(data.keys())}')
 
-                  with open('store_metadata_updated.json', 'w') as f:
-                      json.dump(data, f)
+                  import subprocess
+                  metadata_json = json.dumps(data, ensure_ascii=False)
+                  result = subprocess.run(
+                      ['msstore', 'submission', 'updateMetadata', '${{ vars.STORE_APP_ID }}', metadata_json],
+                      capture_output=False
+                  )
+                  sys.exit(result.returncode)
                   PYEOF
-
-                  msstore submission updateMetadata "${{ vars.STORE_APP_ID }}" \
-                    "$(cat store_metadata_updated.json)"
 
             - name: Commit submission
               shell: bash
