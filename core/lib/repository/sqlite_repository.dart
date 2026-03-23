@@ -369,7 +369,8 @@ class SqliteRepository implements IClipboardRepository {
         Variable.withInt(skip),
       ];
 
-      final sql = '''
+      final sql =
+          '''
         WITH fts_results AS (
           SELECT c.*, bm25(ClipboardItems_fts) AS rank, 1 AS source
           FROM clipboard_items c

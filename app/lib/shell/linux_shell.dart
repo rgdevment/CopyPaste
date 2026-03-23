@@ -20,17 +20,18 @@ class LinuxShell {
   static Stream<String> get events {
     if (_eventsController == null) {
       _eventsController = StreamController<String>.broadcast();
-      _eventChannelSubscription = _eventChannel
-          .receiveBroadcastStream()
-          .listen((dynamic event) {
-            final map = Map<Object?, Object?>.from(event as Map);
-            final type = map['type'] as String? ?? '';
-            if (type.isNotEmpty) {
-              _eventsController?.add(type);
-            }
-          }, onError: (Object error) {
-            _eventsController?.addError(error);
-          });
+      _eventChannelSubscription = _eventChannel.receiveBroadcastStream().listen(
+        (dynamic event) {
+          final map = Map<Object?, Object?>.from(event as Map);
+          final type = map['type'] as String? ?? '';
+          if (type.isNotEmpty) {
+            _eventsController?.add(type);
+          }
+        },
+        onError: (Object error) {
+          _eventsController?.addError(error);
+        },
+      );
     }
     return _eventsController!.stream;
   }

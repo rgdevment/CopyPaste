@@ -190,8 +190,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       macosGranted = await ClipboardWriter.checkAccessibility();
     }
 
-    final showOnStart = isFirstRun && (Platform.isLinux || Platform.isWindows ||
-        (Platform.isMacOS && macosGranted));
+    final showOnStart =
+        isFirstRun &&
+        (Platform.isLinux ||
+            Platform.isWindows ||
+            (Platform.isMacOS && macosGranted));
     await _appWindow.init(startVisible: showOnStart);
 
     if (Platform.isWindows || Platform.isMacOS) {
@@ -401,7 +404,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   void _dismissHint() {
     if (_config.hasSeenHint) return;
     _config = _config.copyWith(hasSeenHint: true);
-    unawaited(_config.save('${widget.storage.configPath}/${AppConfig.fileName}'));
+    unawaited(
+      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+    );
     if (mounted) setState(() {});
   }
 
