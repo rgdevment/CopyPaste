@@ -201,6 +201,9 @@ jobs:
                   echo "MSIX_DIR=$(dirname "$MSIX")" >> $GITHUB_OUTPUT
                   echo "Found: $MSIX"
 
+            - name: Install libsecret (required by msstore CLI on Linux)
+              run: sudo apt-get install -y libsecret-1-0
+
             - name: Configure Microsoft Store CLI
               run: |
                   msstore reconfigure \
