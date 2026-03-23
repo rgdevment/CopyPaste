@@ -238,7 +238,14 @@ jobs:
 
                   try:
                       with open('store_metadata.json') as f:
-                          data = json.load(f)
+                          content = f.read()
+                      content = re.sub(r'\x1b\[[0-9;]*[mGKHFJ]', '', content)
+                      content = content.replace('\r', '')
+                      json_match = re.search(r'\{[\s\S]*\}', content)
+                      if not json_match:
+                          print('Warning: no JSON found in submission output', file=sys.stderr)
+                          sys.exit(0)
+                      data = json.loads(json_match.group())
                   except Exception as e:
                       print(f'Warning: could not parse submission metadata: {e}', file=sys.stderr)
                       sys.exit(0)
