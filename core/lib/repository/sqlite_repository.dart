@@ -351,7 +351,12 @@ class SqliteRepository implements IClipboardRepository {
     final filterClause = conditions.isEmpty ? '1=1' : conditions.join(' AND ');
 
     if (hasTextQuery) {
-      final ftsQuery = '${normalized.replaceAll('"', '""')}*';
+      final ftsSafe = normalized
+          .replaceAll('"', '""')
+          .replaceAll('*', '')
+          .replaceAll('(', '')
+          .replaceAll(')', '');
+      final ftsQuery = '$ftsSafe*';
       final likePattern = '%$normalized%';
 
       final ftsFilterVars = [...variables];

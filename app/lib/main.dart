@@ -17,6 +17,7 @@ import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
 import 'shell/hotkey_handler.dart';
 import 'shell/linux_hotkey_registration.dart';
+import 'shell/linux_shell.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
@@ -466,6 +467,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     } catch (e) {
       AppLogger.error('cleanup tray: $e');
     }
+    if (Platform.isLinux) {
+      try {
+        await LinuxShell.dispose();
+      } catch (e) {
+        AppLogger.error('cleanup linux shell: $e');
+      }
+    }
     try {
       widget.clipboardService.dispose();
     } catch (e) {
@@ -502,6 +510,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           onSave: (newConfig, hotkeyChanged) async {
             final oldShowTray = _config.showTrayIcon;
             setState(() => _config = newConfig);
+            widget.cleanupService.updateRetentionCallback(
+              () => newConfig.retentionDays,
+            );
             widget.clipboardService.pasteIgnoreWindowMs =
                 newConfig.duplicateIgnoreWindowMs;
             _appWindow.updatePopupSize(

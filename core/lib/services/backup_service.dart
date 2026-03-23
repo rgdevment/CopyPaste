@@ -176,7 +176,7 @@ class BackupService {
       for (final file in archive) {
         if (file.isFile && file.name != 'manifest.json') {
           if (file.name.contains('..')) continue;
-          final outPath = p.normalize('${storage.baseDir}/${file.name}');
+          final outPath = p.normalize(p.join(storage.baseDir, file.name));
           final baseWithSep = storage.baseDir.endsWith(p.separator)
               ? storage.baseDir
               : '${storage.baseDir}${p.separator}';
