@@ -993,8 +993,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             primary: true,
             onTap: _hasChanges
                 ? () async {
-                    await _save();
-                    if (mounted) Navigator.of(context).pop();
+                    try {
+                      await _save();
+                      if (mounted) Navigator.of(context).pop();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Save failed: $e')),
+                        );
+                      }
+                    }
                   }
                 : null,
           ),

@@ -75,3 +75,4 @@ $RECYCLE.BIN/
 # ── OS: Linux ──
 *~
 *.swp
+last_cleanup.txt

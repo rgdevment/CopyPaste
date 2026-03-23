@@ -45,7 +45,9 @@ typedef _KeybdEventDart =
     void Function(int bVk, int bScan, int dwFlags, int dwExtraInfo);
 
 class _Win32 {
-  _Win32._();
+  _Win32._() {
+    assert(Platform.isWindows, '_Win32 requires Windows');
+  }
   static _Win32? _instance;
   static _Win32 get instance => _instance ??= _Win32._();
 
@@ -124,26 +126,30 @@ class WindowFocusManager {
       return;
     }
 
-    await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
+    try {
+      await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
-    if (Platform.isMacOS || Platform.isLinux) {
-      await ClipboardWriter.activateAndPaste(
-        bundleId: _previousBundleId!,
-        delayMs: delayBeforePasteMs,
-      );
-      return;
+      if (Platform.isMacOS || Platform.isLinux) {
+        await ClipboardWriter.activateAndPaste(
+          bundleId: _previousBundleId!,
+          delayMs: delayBeforePasteMs,
+        );
+        return;
+      }
+
+      if (!_restorePreviousWindows()) return;
+
+      final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
+      if (!focused) {
+        await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
+      } else {
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      }
+
+      _simulatePasteWindows();
+    } finally {
+      clear();
     }
-
-    if (!_restorePreviousWindows()) return;
-
-    final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
-    if (!focused) {
-      await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
-    } else {
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-    }
-
-    _simulatePasteWindows();
   }
 
   void clear() {

@@ -14,16 +14,31 @@ class LinuxShell {
     'copypaste/linux_shell/events',
   );
 
-  static Stream<String>? _events;
+  static StreamController<String>? _eventsController;
+  static StreamSubscription<dynamic>? _eventChannelSubscription;
 
-  static Stream<String> get events => _events ??= _eventChannel
-      .receiveBroadcastStream()
-      .map((dynamic event) {
-        final map = Map<Object?, Object?>.from(event as Map);
-        return map['type'] as String? ?? '';
-      })
-      .where((event) => event.isNotEmpty)
-      .asBroadcastStream();
+  static Stream<String> get events {
+    if (_eventsController == null) {
+      _eventsController = StreamController<String>.broadcast();
+      _eventChannelSubscription = _eventChannel.receiveBroadcastStream().listen(
+        (dynamic event) {
+          if (event is! Map) return;
+          final map = Map<Object?, Object?>.from(event);
+          final type = map['type'] as String? ?? '';
+          if (type.isNotEmpty) _eventsController?.add(type);
+        },
+        onError: (Object error) => _eventsController?.addError(error),
+      );
+    }
+    return _eventsController!.stream;
+  }
+
+  static Future<void> dispose() async {
+    await _eventChannelSubscription?.cancel();
+    _eventChannelSubscription = null;
+    await _eventsController?.close();
+    _eventsController = null;
+  }
 
   static Future<bool> initTray({
     required String iconPath,

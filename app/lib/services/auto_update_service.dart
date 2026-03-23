@@ -53,9 +53,9 @@ class AutoUpdateService {
   }
 
   static Future<void> _checkGitHubRelease() async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10);
     try {
-      final client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 10);
       final request = await client.getUrl(Uri.parse(_effectiveReleasesUrl));
       request.headers.set('Accept', 'application/vnd.github.v3+json');
       request.headers.set('User-Agent', 'CopyPaste-UpdateChecker');
@@ -67,7 +67,9 @@ class AutoUpdateService {
       }
 
       final body = await response.transform(utf8.decoder).join();
-      final json = jsonDecode(body) as Map<String, dynamic>;
+      final decoded = jsonDecode(body);
+      if (decoded is! Map<String, dynamic>) return;
+      final json = decoded;
       final tagName = json['tag_name'] as String?;
       if (tagName == null) return;
 
@@ -85,6 +87,8 @@ class AutoUpdateService {
       // Bad response — silently ignore
     } catch (e) {
       AppLogger.error('Update check failed: $e');
+    } finally {
+      client.close();
     }
   }
 

@@ -162,9 +162,10 @@ class MainScreenState extends State<MainScreen> {
     }
 
     if (_pendingReload) {
-      _pendingReload = false;
       _currentPage = 0;
       _hasMore = true;
+      _pendingReload = false;
+      setState(() {});
       await _loadItems();
     }
   }
@@ -688,6 +689,7 @@ class _StaggeredFadeInState extends State<_StaggeredFadeIn>
   late final AnimationController _controller;
   late final Animation<double> _opacity;
   late final Animation<Offset> _offset;
+  Timer? _delayTimer;
 
   @override
   void initState() {
@@ -702,13 +704,14 @@ class _StaggeredFadeInState extends State<_StaggeredFadeIn>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    Future.delayed(Duration(milliseconds: 20 * widget.index), () {
+    _delayTimer = Timer(Duration(milliseconds: 20 * widget.index), () {
       if (mounted) _controller.forward();
     });
   }
 
   @override
   void dispose() {
+    _delayTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
