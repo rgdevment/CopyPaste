@@ -157,6 +157,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get typeVideo => 'Video';
 
   @override
+  String get typeEmail => 'Email';
+
+  @override
+  String get typePhone => 'Phone';
+
+  @override
+  String get typeColor => 'Color';
+
+  @override
+  String get typeIp => 'IP Address';
+
+  @override
+  String get typeUuid => 'UUID';
+
+  @override
+  String get typeJson => 'JSON';
+
+  @override
   String get filterAll => 'All';
 
   @override

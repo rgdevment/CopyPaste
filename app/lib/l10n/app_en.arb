@@ -127,6 +127,12 @@
   "typeLink": "Link",
   "typeAudio": "Audio",
   "typeVideo": "Video",
+  "typeEmail": "Email",
+  "typePhone": "Phone",
+  "typeColor": "Color",
+  "typeIp": "IP",
+  "typeUuid": "UUID",
+  "typeJson": "JSON",
   "filterAll": "All",
   "filterPinned": "Pinned",
 

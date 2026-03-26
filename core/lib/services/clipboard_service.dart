@@ -11,6 +11,7 @@ import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
 import 'image_processor.dart';
+import 'text_classifier.dart';
 
 class ClipboardService {
   ClipboardService(this._repository, {String? imagesPath})
@@ -58,7 +59,14 @@ class ClipboardService {
   }) async {
     if (_shouldIgnore(content)) return null;
 
-    final existing = await _repository.findByContentAndType(content, type);
+    final resolvedType = type == ClipboardContentType.text
+        ? TextClassifier.classify(content)
+        : type;
+
+    final existing = await _repository.findByContentAndType(
+      content,
+      resolvedType,
+    );
     if (existing != null) {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
@@ -72,7 +80,7 @@ class ClipboardService {
 
     final item = ClipboardItem(
       content: content,
-      type: type,
+      type: resolvedType,
       appSource: source,
       metadata: meta.isNotEmpty ? jsonEncode(meta) : null,
     );

@@ -362,6 +362,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             unawaited(_processMediaMetadata(item, event.files!.first));
           }
         }
+      case ClipboardContentType.email:
+      case ClipboardContentType.phone:
+      case ClipboardContentType.color:
+      case ClipboardContentType.ip:
+      case ClipboardContentType.uuid:
+      case ClipboardContentType.json:
       case ClipboardContentType.unknown:
         break;
     }

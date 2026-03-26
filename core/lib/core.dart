@@ -8,3 +8,4 @@ export 'services/app_logger.dart';
 export 'services/backup_service.dart';
 export 'services/cleanup_service.dart';
 export 'services/clipboard_service.dart';
+export 'services/text_classifier.dart';

@@ -242,6 +242,38 @@ class MainScreenState extends State<MainScreen> {
     _reload();
   }
 
+  Future<void> _onItemOpen(ClipboardItem item) async {
+    try {
+      switch (item.type) {
+        case ClipboardContentType.image:
+          await _openImageInTemp(item);
+        case ClipboardContentType.file:
+        case ClipboardContentType.folder:
+        case ClipboardContentType.audio:
+        case ClipboardContentType.video:
+          await UrlHelper.open(item.content.split('\n').first.trim());
+        case ClipboardContentType.link:
+          await UrlHelper.open(item.content.trim());
+        case ClipboardContentType.email:
+          await UrlHelper.open('mailto:${item.content.trim()}');
+        case ClipboardContentType.phone:
+          await UrlHelper.open('tel:${item.content.trim()}');
+        default:
+          break;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openImageInTemp(ClipboardItem item) async {
+    final src = File(item.content);
+    if (!src.existsSync()) return;
+    final name = item.content.split(Platform.pathSeparator).last;
+    final tmp = await Directory.systemTemp.createTemp('copypaste_');
+    final dest = File('${tmp.path}${Platform.pathSeparator}$name');
+    await src.copy(dest.path);
+    await UrlHelper.open(dest.path);
+  }
+
   Future<void> _onItemLabelColor(
     ClipboardItem item,
     String? label,
@@ -538,6 +570,7 @@ class MainScreenState extends State<MainScreen> {
             onLabelColor: (label, color) =>
                 _onItemLabelColor(item, label, color),
             onPastePlain: () => widget.onPastePlain(item),
+            onOpen: () => _onItemOpen(item),
             onSelect: () {
               setState(() => _selectedIndex = index);
               _focusNode.requestFocus();

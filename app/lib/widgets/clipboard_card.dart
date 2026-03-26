@@ -18,6 +18,7 @@ class ClipboardCard extends StatefulWidget {
     required this.onLabelColor,
     this.onPastePlain,
     this.onExpandToggle,
+    this.onOpen,
     this.onSelect,
     this.isSelected = false,
     this.isExpanded = false,
@@ -33,6 +34,7 @@ class ClipboardCard extends StatefulWidget {
   final void Function(String? label, CardColor color) onLabelColor;
   final VoidCallback? onPastePlain;
   final VoidCallback? onExpandToggle;
+  final VoidCallback? onOpen;
   final VoidCallback? onSelect;
   final bool isSelected;
   final bool isExpanded;
@@ -86,10 +88,25 @@ class _ClipboardCardState extends State<ClipboardCard> {
     if (widget.isExpanded) return true;
     final type = item.type;
     if (type == ClipboardContentType.text ||
-        type == ClipboardContentType.unknown) {
+        type == ClipboardContentType.unknown ||
+        type == ClipboardContentType.json) {
       return _isTextOverflowing;
     }
     return false;
+  }
+
+  bool _needsOpenAction(ClipboardItem item) {
+    return switch (item.type) {
+      ClipboardContentType.image ||
+      ClipboardContentType.file ||
+      ClipboardContentType.folder ||
+      ClipboardContentType.audio ||
+      ClipboardContentType.video ||
+      ClipboardContentType.link ||
+      ClipboardContentType.email ||
+      ClipboardContentType.phone => true,
+      _ => false,
+    };
   }
 
   void _resolveImagePath() {
@@ -515,7 +532,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
         return _buildLinkContent(theme, colors, item);
       case ClipboardContentType.text:
       case ClipboardContentType.unknown:
+      case ClipboardContentType.email:
+      case ClipboardContentType.phone:
+      case ClipboardContentType.ip:
+      case ClipboardContentType.uuid:
+      case ClipboardContentType.json:
         return _buildTextContent(theme, colors, item);
+      case ClipboardContentType.color:
+        return _buildColorContent(theme, colors, item);
     }
   }
 
@@ -555,6 +579,51 @@ class _ClipboardCardState extends State<ClipboardCard> {
           overflow: TextOverflow.ellipsis,
         );
       },
+    );
+  }
+
+  Widget _buildColorContent(
+    AppThemeData theme,
+    AppThemeColorScheme colors,
+    ClipboardItem item,
+  ) {
+    final textStyle = theme.typography.cardContent.copyWith(
+      color: colors.onSurface.withValues(alpha: theme.cardStyle.contentOpacity),
+    );
+    Color? swatch;
+    final t = item.content.trim();
+    if (t.startsWith('#')) {
+      final hex = t.replaceFirst('#', '');
+      final normalized = switch (hex.length) {
+        3 => 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}',
+        6 => 'FF$hex',
+        8 => hex,
+        _ => null,
+      };
+      if (normalized != null) {
+        final value = int.tryParse(normalized, radix: 16);
+        if (value != null) swatch = Color(value);
+      }
+    }
+
+    return Row(
+      children: [
+        if (swatch != null) ...[
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: swatch,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: colors.onSurface.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Text(item.content, style: textStyle),
+      ],
     );
   }
 
@@ -899,6 +968,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
 
     final showExpand = _needsExpandToggle(item);
+    final showOpen = !showExpand && _needsOpenAction(item);
 
     return Row(
       children: [
@@ -922,6 +992,30 @@ class _ClipboardCardState extends State<ClipboardCard> {
                     widget.isExpanded
                         ? Icons.expand_less_rounded
                         : Icons.expand_more_rounded,
+                    size: 14,
+                    color: colors.onSurface.withValues(alpha: 0.35),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (showOpen)
+          Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onOpen?.call(),
+                canRequestFocus: false,
+                borderRadius: BorderRadius.circular(8),
+                hoverColor: colors.onSurface.withValues(alpha: 0.06),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  child: Icon(
+                    Icons.open_in_new_rounded,
                     size: 14,
                     color: colors.onSurface.withValues(alpha: 0.35),
                   ),
@@ -968,6 +1062,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
       ClipboardContentType.audio =>
         isDark ? const Color(0xFF7DD3FC) : const Color(0xFF075985),
       ClipboardContentType.video => colors.accentRed,
+      ClipboardContentType.email => colors.accentBlue,
+      ClipboardContentType.phone => colors.accentGreen,
+      ClipboardContentType.color => colors.accentOrange,
+      ClipboardContentType.ip =>
+        isDark ? const Color(0xFFD4A5F5) : const Color(0xFF6B21A8),
+      ClipboardContentType.uuid =>
+        isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+      ClipboardContentType.json => colors.accentYellow,
       ClipboardContentType.unknown => colors.onSurfaceMuted,
     };
   }
@@ -981,6 +1083,12 @@ class _ClipboardCardState extends State<ClipboardCard> {
         ClipboardContentType.link => l.typeLink,
         ClipboardContentType.audio => l.typeAudio,
         ClipboardContentType.video => l.typeVideo,
+        ClipboardContentType.email => l.typeEmail,
+        ClipboardContentType.phone => l.typePhone,
+        ClipboardContentType.color => l.typeColor,
+        ClipboardContentType.ip => l.typeIp,
+        ClipboardContentType.uuid => l.typeUuid,
+        ClipboardContentType.json => l.typeJson,
         ClipboardContentType.unknown => 'Unknown',
       };
 
