@@ -167,7 +167,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get typeColor => 'Color';
 
   @override
-  String get typeIp => 'Dirección IP';
+  String get typeIp => 'IP';
 
   @override
   String get typeUuid => 'UUID';

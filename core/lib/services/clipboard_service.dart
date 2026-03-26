@@ -63,15 +63,28 @@ class ClipboardService {
         ? TextClassifier.classify(content)
         : type;
 
-    final existing = await _repository.findByContentAndType(
-      content,
-      resolvedType,
-    );
+    final existing = await _repository.findByContentAndType(content, resolvedType);
     if (existing != null) {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
       return updated;
+    }
+
+    if (resolvedType != ClipboardContentType.text) {
+      final legacy = await _repository.findByContentAndType(
+        content,
+        ClipboardContentType.text,
+      );
+      if (legacy != null) {
+        final updated = legacy.copyWith(
+          type: resolvedType,
+          modifiedAt: DateTime.now().toUtc(),
+        );
+        await _repository.update(updated);
+        _itemReactivated.add(updated);
+        return updated;
+      }
     }
 
     final meta = <String, Object>{};

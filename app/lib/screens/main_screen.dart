@@ -243,35 +243,45 @@ class MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _onItemOpen(ClipboardItem item) async {
+    bool opened = false;
     try {
       switch (item.type) {
         case ClipboardContentType.image:
-          await _openImageInTemp(item);
+          opened = await _openImageInTemp(item);
         case ClipboardContentType.file:
         case ClipboardContentType.folder:
         case ClipboardContentType.audio:
         case ClipboardContentType.video:
           await UrlHelper.open(item.content.split('\n').first.trim());
+          opened = true;
         case ClipboardContentType.link:
           await UrlHelper.open(item.content.trim());
+          opened = true;
         case ClipboardContentType.email:
           await UrlHelper.open('mailto:${item.content.trim()}');
+          opened = true;
         case ClipboardContentType.phone:
           await UrlHelper.open('tel:${item.content.trim()}');
+          opened = true;
         default:
           break;
       }
     } catch (_) {}
+    if (opened) {
+      await widget.clipboardService.recordPaste(item.id);
+      _reload();
+    }
   }
 
-  Future<void> _openImageInTemp(ClipboardItem item) async {
+  Future<bool> _openImageInTemp(ClipboardItem item) async {
     final src = File(item.content);
-    if (!src.existsSync()) return;
+    if (!src.existsSync()) return false;
     final name = item.content.split(Platform.pathSeparator).last;
     final tmp = await Directory.systemTemp.createTemp('copypaste_');
     final dest = File('${tmp.path}${Platform.pathSeparator}$name');
     await src.copy(dest.path);
     await UrlHelper.open(dest.path);
+    return true;
   }
 
   Future<void> _onItemLabelColor(

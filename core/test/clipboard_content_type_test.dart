@@ -13,6 +13,12 @@ void main() {
       expect(ClipboardContentType.link.value, equals(4));
       expect(ClipboardContentType.audio.value, equals(5));
       expect(ClipboardContentType.video.value, equals(6));
+      expect(ClipboardContentType.email.value, equals(7));
+      expect(ClipboardContentType.phone.value, equals(8));
+      expect(ClipboardContentType.color.value, equals(9));
+      expect(ClipboardContentType.ip.value, equals(10));
+      expect(ClipboardContentType.uuid.value, equals(11));
+      expect(ClipboardContentType.json.value, equals(12));
     });
   });
 
@@ -25,6 +31,12 @@ void main() {
       expect(ClipboardContentType.fromValue(4), ClipboardContentType.link);
       expect(ClipboardContentType.fromValue(5), ClipboardContentType.audio);
       expect(ClipboardContentType.fromValue(6), ClipboardContentType.video);
+      expect(ClipboardContentType.fromValue(7), ClipboardContentType.email);
+      expect(ClipboardContentType.fromValue(8), ClipboardContentType.phone);
+      expect(ClipboardContentType.fromValue(9), ClipboardContentType.color);
+      expect(ClipboardContentType.fromValue(10), ClipboardContentType.ip);
+      expect(ClipboardContentType.fromValue(11), ClipboardContentType.uuid);
+      expect(ClipboardContentType.fromValue(12), ClipboardContentType.json);
     });
 
     test('returns unknown for out-of-range values', () {

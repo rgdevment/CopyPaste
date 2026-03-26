@@ -401,7 +401,7 @@ abstract class AppLocalizations {
   /// No description provided for @typeIp.
   ///
   /// In en, this message translates to:
-  /// **'IP Address'**
+  /// **'IP'**
   String get typeIp;
 
   /// No description provided for @typeUuid.
