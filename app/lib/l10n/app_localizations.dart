@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// First-run hint banner text
   ///
   /// In en, this message translates to:
-  /// **'Customize your experience in'**
+  /// **'CopyPaste is active and running in the background. Look for it in the system tray or just use your shortcut. Feel free to customize your experience in'**
   String get hintBannerText;
 
   /// First-run hint banner action
@@ -163,6 +163,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hotkey will apply immediately'**
   String get hotkeyWillApply;
+
+  /// Support section header in About tab
+  ///
+  /// In en, this message translates to:
+  /// **'SUPPORT'**
+  String get sectionSupport;
+
+  /// Export logs action label
+  ///
+  /// In en, this message translates to:
+  /// **'Export logs'**
+  String get supportExportLogs;
+
+  /// Export logs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Save a zip with app logs for a bug report. Your clipboard content is never included.'**
+  String get supportExportLogsSubtitle;
+
+  /// Open logs folder label
+  ///
+  /// In en, this message translates to:
+  /// **'Open logs folder'**
+  String get supportOpenLogsFolder;
+
+  /// Open logs folder subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the raw log files in your file manager.'**
+  String get supportOpenLogsFolderSubtitle;
+
+  /// GitHub issue link label
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug on GitHub'**
+  String get supportGitHub;
+
+  /// Snackbar after successful log export
+  ///
+  /// In en, this message translates to:
+  /// **'Logs exported successfully.'**
+  String get supportExportSuccess;
+
+  /// Snackbar when no logs exist
+  ///
+  /// In en, this message translates to:
+  /// **'No log files found.'**
+  String get supportExportEmpty;
+
+  /// Snackbar on export error
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export logs.'**
+  String get supportExportError;
+
+  /// Reset section header in About tab
+  ///
+  /// In en, this message translates to:
+  /// **'RESET & CLEAN INSTALL'**
+  String get sectionReset;
+
+  /// Soft reset action label
+  ///
+  /// In en, this message translates to:
+  /// **'Soft Reset'**
+  String get resetSoftLabel;
+
+  /// Soft reset subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Resets all settings to defaults and marks app as fresh install. Clipboard history is preserved.'**
+  String get resetSoftSubtitle;
+
+  /// Hard reset action label
+  ///
+  /// In en, this message translates to:
+  /// **'Hard Reset'**
+  String get resetHardLabel;
+
+  /// Hard reset subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Deletes all clipboard history, images, and settings. This cannot be undone.'**
+  String get resetHardSubtitle;
+
+  /// Soft reset confirm dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Soft reset?'**
+  String get resetSoftConfirmTitle;
+
+  /// Soft reset confirm dialog message
+  ///
+  /// In en, this message translates to:
+  /// **'All settings will return to defaults and the app will restart as if freshly installed. Your clipboard history will not be deleted.'**
+  String get resetSoftConfirmMessage;
+
+  /// Hard reset confirm dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Hard reset?'**
+  String get resetHardConfirmTitle;
+
+  /// Hard reset confirm dialog message
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete all clipboard history, images, and settings, then restart the app. This cannot be undone.'**
+  String get resetHardConfirmMessage;
+
+  /// Reset confirm button label
+  ///
+  /// In en, this message translates to:
+  /// **'Reset & Restart'**
+  String get resetConfirmButton;
 
   /// Clear history dialog title
   ///
@@ -877,6 +991,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere — your clipboard history, always at hand.'**
   String get aboutDescription;
+
+  /// Privacy section title in About tab
+  ///
+  /// In en, this message translates to:
+  /// **'PRIVACY'**
+  String get sectionPrivacy;
+
+  /// Short privacy philosophy statement shown in About tab
+  ///
+  /// In en, this message translates to:
+  /// **'Everything local. Nothing leaves your PC — no telemetry, no sync, no accounts.'**
+  String get privacyStatement;
+
+  /// Link label to open the full privacy policy
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
 
   /// License footer text
   ///

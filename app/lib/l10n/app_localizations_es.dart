@@ -18,7 +18,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get emptyStateSubtitle => 'Copia algo para comenzar';
 
   @override
-  String get hintBannerText => 'Personaliza tu experiencia en';
+  String get hintBannerText =>
+      'CopyPaste se ejecuta en segundo plano — encuéntralo en la bandeja del sistema o usa tu atajo de teclado. Personaliza tu experiencia en';
 
   @override
   String get hintBannerAction => 'Ajustes';
@@ -40,6 +41,69 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hotkeyWillApply => 'El atajo se aplicará de inmediato';
+
+  @override
+  String get sectionSupport => 'SOPORTE';
+
+  @override
+  String get supportExportLogs => 'Exportar registros';
+
+  @override
+  String get supportExportLogsSubtitle =>
+      'Guarda un zip con registros de la app para adjuntar a un reporte. El contenido del portapapeles nunca se incluye.';
+
+  @override
+  String get supportOpenLogsFolder => 'Abrir carpeta de registros';
+
+  @override
+  String get supportOpenLogsFolderSubtitle =>
+      'Explora los archivos de registro en tu gestor de archivos.';
+
+  @override
+  String get supportGitHub => 'Reportar un error en GitHub';
+
+  @override
+  String get supportExportSuccess => 'Registros exportados correctamente.';
+
+  @override
+  String get supportExportEmpty => 'No se encontraron archivos de registro.';
+
+  @override
+  String get supportExportError => 'Error al exportar los registros.';
+
+  @override
+  String get sectionReset => 'RESTABLECER E INSTALACIÓN LIMPIA';
+
+  @override
+  String get resetSoftLabel => 'Restablecimiento suave';
+
+  @override
+  String get resetSoftSubtitle =>
+      'Restablece la configuración a los valores predeterminados y marca la app como nueva instalación. El historial del portapapeles se conserva.';
+
+  @override
+  String get resetHardLabel => 'Restablecimiento completo';
+
+  @override
+  String get resetHardSubtitle =>
+      'Elimina todo el historial, imágenes y configuración. Esta acción no se puede deshacer.';
+
+  @override
+  String get resetSoftConfirmTitle => '¿Restablecimiento suave?';
+
+  @override
+  String get resetSoftConfirmMessage =>
+      'Toda la configuración volverá a los valores predeterminados y la app se reiniciará como si fuera una instalación nueva. El historial del portapapeles no se eliminará.';
+
+  @override
+  String get resetHardConfirmTitle => '¿Restablecimiento completo?';
+
+  @override
+  String get resetHardConfirmMessage =>
+      'Se eliminará permanentemente todo el historial, imágenes y configuración, y luego la app se reiniciará. Esta acción no se puede deshacer.';
+
+  @override
+  String get resetConfirmButton => 'Restablecer y Reiniciar';
 
   @override
   String get clearHistoryConfirmTitle => '¿Limpiar historial?';
@@ -416,6 +480,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get aboutDescription =>
       'Un gestor de portapapeles ligero, rápido y de código abierto para Windows, macOS y Linux.\nCopia una vez, pega en cualquier lugar — tu historial del portapapeles, siempre a mano.';
+
+  @override
+  String get sectionPrivacy => 'PRIVACIDAD';
+
+  @override
+  String get privacyStatement =>
+      'Todo local. Nada sale de tu PC — sin telemetría, sin sincronización, sin cuentas.';
+
+  @override
+  String get privacyPolicy => 'Política de privacidad';
 
   @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';

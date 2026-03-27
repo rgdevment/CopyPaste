@@ -10,7 +10,7 @@
   "emptyStateSubtitle": "Copy something to get started",
   "@emptyStateSubtitle": { "description": "Empty state subtitle" },
 
-  "hintBannerText": "Customize your experience in",
+  "hintBannerText": "CopyPaste is active and running in the background. Look for it in the system tray or just use your shortcut. Feel free to customize your experience in",
   "@hintBannerText": { "description": "First-run hint banner text" },
 
   "hintBannerAction": "Settings",
@@ -33,6 +33,63 @@
 
   "hotkeyWillApply": "Hotkey will apply immediately",
   "@hotkeyWillApply": { "description": "Hint when hotkey changes" },
+
+  "sectionSupport": "SUPPORT",
+  "@sectionSupport": { "description": "Support section header in About tab" },
+
+  "supportExportLogs": "Export logs",
+  "@supportExportLogs": { "description": "Export logs action label" },
+
+  "supportExportLogsSubtitle": "Save a zip with app logs for a bug report. Your clipboard content is never included.",
+  "@supportExportLogsSubtitle": { "description": "Export logs subtitle" },
+
+  "supportOpenLogsFolder": "Open logs folder",
+  "@supportOpenLogsFolder": { "description": "Open logs folder label" },
+
+  "supportOpenLogsFolderSubtitle": "Browse the raw log files in your file manager.",
+  "@supportOpenLogsFolderSubtitle": { "description": "Open logs folder subtitle" },
+
+  "supportGitHub": "Report a bug on GitHub",
+  "@supportGitHub": { "description": "GitHub issue link label" },
+
+  "supportExportSuccess": "Logs exported successfully.",
+  "@supportExportSuccess": { "description": "Snackbar after successful log export" },
+
+  "supportExportEmpty": "No log files found.",
+  "@supportExportEmpty": { "description": "Snackbar when no logs exist" },
+
+  "supportExportError": "Failed to export logs.",
+  "@supportExportError": { "description": "Snackbar on export error" },
+
+  "sectionReset": "RESET & CLEAN INSTALL",
+  "@sectionReset": { "description": "Reset section header in About tab" },
+
+  "resetSoftLabel": "Soft Reset",
+  "@resetSoftLabel": { "description": "Soft reset action label" },
+
+  "resetSoftSubtitle": "Resets all settings to defaults and marks app as fresh install. Clipboard history is preserved.",
+  "@resetSoftSubtitle": { "description": "Soft reset subtitle" },
+
+  "resetHardLabel": "Hard Reset",
+  "@resetHardLabel": { "description": "Hard reset action label" },
+
+  "resetHardSubtitle": "Deletes all clipboard history, images, and settings. This cannot be undone.",
+  "@resetHardSubtitle": { "description": "Hard reset subtitle" },
+
+  "resetSoftConfirmTitle": "Soft reset?",
+  "@resetSoftConfirmTitle": { "description": "Soft reset confirm dialog title" },
+
+  "resetSoftConfirmMessage": "All settings will return to defaults and the app will restart as if freshly installed. Your clipboard history will not be deleted.",
+  "@resetSoftConfirmMessage": { "description": "Soft reset confirm dialog message" },
+
+  "resetHardConfirmTitle": "Hard reset?",
+  "@resetHardConfirmTitle": { "description": "Hard reset confirm dialog title" },
+
+  "resetHardConfirmMessage": "This will permanently delete all clipboard history, images, and settings, then restart the app. This cannot be undone.",
+  "@resetHardConfirmMessage": { "description": "Hard reset confirm dialog message" },
+
+  "resetConfirmButton": "Reset & Restart",
+  "@resetConfirmButton": { "description": "Reset confirm button label" },
 
   "clearHistoryConfirmTitle": "Clear history?",
   "@clearHistoryConfirmTitle": { "description": "Clear history dialog title" },
@@ -308,6 +365,13 @@
 
   "aboutDescription": "A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere \u2014 your clipboard history, always at hand.",
   "@aboutDescription": { "description": "About section description" },
+
+  "sectionPrivacy": "PRIVACY",
+  "@sectionPrivacy": { "description": "Privacy section title in About tab" },
+  "privacyStatement": "Everything local. Nothing leaves your PC \u2014 no telemetry, no sync, no accounts.",
+  "@privacyStatement": { "description": "Short privacy philosophy statement shown in About tab" },
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": { "description": "Link label to open the full privacy policy" },
 
   "aboutLicense": "GPL v3 License \u2014 Free and open source.",
   "@aboutLicense": { "description": "License footer text" },

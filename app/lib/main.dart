@@ -21,6 +21,7 @@ import 'shell/linux_shell.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
+import 'shell/windows_balloon.dart';
 import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/compact_theme.dart';
@@ -49,7 +50,11 @@ void main() async {
   await windowManager.ensureInitialized();
 
   if (Platform.isWindows || Platform.isMacOS) {
-    await Window.initialize();
+    try {
+      await Window.initialize();
+    } catch (_) {
+      // AppLogger not yet initialized here; app continues without acrylic effects
+    }
   }
 
   if (!SingleInstance.acquire()) {
@@ -58,7 +63,7 @@ void main() async {
 
   final storage = await StorageConfig.create();
   await storage.ensureDirectories();
-  AppLogger.initialize('${storage.baseDir}/logs');
+  AppLogger.initialize(storage.logsPath);
 
   FlutterError.onError = (details) {
     AppLogger.error(
@@ -90,18 +95,22 @@ void main() async {
 
   await StartupHelper.apply(config.runOnStartup);
 
-  if (Platform.isWindows) {
-    await Window.setEffect(
-      effect: WindowEffect.mica,
-      color: const Color(0x00000000),
-      dark: _isMicaDark(config.themeMode),
-    );
-  } else if (Platform.isMacOS) {
-    await Window.setEffect(
-      effect: WindowEffect.sidebar,
-      color: const Color(0x00000000),
-      dark: _isMicaDark(config.themeMode),
-    );
+  try {
+    if (Platform.isWindows) {
+      await Window.setEffect(
+        effect: WindowEffect.mica,
+        color: const Color(0x00000000),
+        dark: _isMicaDark(config.themeMode),
+      );
+    } else if (Platform.isMacOS) {
+      await Window.setEffect(
+        effect: WindowEffect.sidebar,
+        color: const Color(0x00000000),
+        dark: _isMicaDark(config.themeMode),
+      );
+    }
+  } catch (e) {
+    AppLogger.error('Window.setEffect failed: $e');
   }
 
   runApp(
@@ -165,14 +174,25 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     _trayIcon = TrayIcon(onToggle: _toggleWindow, onExit: _exitApp);
     _hotkeyHandler = HotkeyHandler(config: _config, onHotkey: _onHotkey);
 
-    _initShell();
+    unawaited(
+      _initShell().catchError(
+        (Object e, StackTrace s) =>
+            AppLogger.error('_initShell failed: $e\n$s'),
+      ),
+    );
   }
 
   @override
   void didChangePlatformBrightness() {
     if (_config.themeMode == 'auto' &&
         (Platform.isWindows || Platform.isMacOS)) {
-      _appWindow.applyEffect(dark: _isMicaDark('auto'));
+      unawaited(
+        _appWindow
+            .applyEffect(dark: _isMicaDark('auto'))
+            .catchError(
+              (Object e) => AppLogger.error('applyEffect failed: $e'),
+            ),
+      );
     }
   }
 
@@ -197,13 +217,28 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             Platform.isWindows ||
             (Platform.isMacOS && macosGranted));
     await _appWindow.init(startVisible: showOnStart);
+    SingleInstance.listenForWakeup(() => unawaited(_safeShow()));
 
-    if (Platform.isWindows || Platform.isMacOS) {
-      await _appWindow.applyEffect(dark: _isMicaDark(_config.themeMode));
+    try {
+      if (Platform.isWindows || Platform.isMacOS) {
+        await _appWindow.applyEffect(dark: _isMicaDark(_config.themeMode));
+      }
+    } catch (e) {
+      AppLogger.error('applyEffect in _initShell failed: $e');
     }
-    if (!Platform.isMacOS || _config.showTrayIcon) {
-      await _trayIcon.init();
+
+    try {
+      if (!Platform.isMacOS || _config.showTrayIcon) {
+        await _trayIcon.init();
+      }
+    } catch (e) {
+      AppLogger.error('trayIcon.init failed: $e');
     }
+
+    if (Platform.isWindows && !showOnStart) {
+      unawaited(_showStartupBalloon());
+    }
+
     await _registerHotkeyWithFeedback();
 
     if (Platform.isMacOS) {
@@ -327,7 +362,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   void _startListening() {
     if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
-    _listenerSubscription = widget.listener.onEvent.listen(_onClipboardEvent);
+    _listenerSubscription = widget.listener.onEvent.listen(
+      _onClipboardEvent,
+      onError: (Object e, StackTrace s) {
+        AppLogger.error('Clipboard listener error: $e\n$s');
+        // Re-subscribe so a single error does not permanently stop capturing.
+        _listenerSubscription?.cancel();
+        _startListening();
+      },
+      cancelOnError: false,
+    );
   }
 
   Future<void> _onClipboardEvent(ClipboardEvent event) async {
@@ -435,6 +479,35 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
   }
 
+  /// Shows the window safely — errors from Mica/acrylic effects are logged
+  /// but never propagate to callers (e.g. the wakeup signal callback).
+  Future<void> _safeShow() async {
+    try {
+      await _appWindow.show();
+    } catch (e) {
+      AppLogger.error('show failed: $e');
+    }
+  }
+
+  /// Builds the balloon body using the current hotkey so the user knows
+  /// how to open CopyPaste without finding the tray icon.
+  Future<void> _showStartupBalloon() async {
+    final binding = HotkeyBinding(
+      virtualKey: _config.hotkeyVirtualKey,
+      keyName: _config.hotkeyKeyName,
+      useCtrl: _config.hotkeyUseCtrl,
+      useWin: _config.hotkeyUseWin,
+      useAlt: _config.hotkeyUseAlt,
+      useShift: _config.hotkeyUseShift,
+    );
+    await WindowsBalloon.show(
+      title: 'CopyPaste',
+      body:
+          'Running in the background. '
+          'Press ${binding.label()} or click the tray icon to open it.',
+    );
+  }
+
   Future<void> _onHotkey() async {
     if (!_appWindow.isVisible) {
       await _focusManager.capturePreviousWindow();
@@ -492,6 +565,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _cleanup() async {
+    SingleInstance.stopListening();
     try {
       await _listenerSubscription?.cancel();
     } catch (e) {
@@ -537,6 +611,47 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     exit(0);
   }
 
+  /// Resets config and first-run flag, preserves clipboard history, restarts.
+  Future<void> _softReset() async {
+    await _cleanup();
+    SingleInstance.release();
+    try {
+      // Remove config so next run starts with defaults
+      final configFile = File(
+        '${widget.storage.configPath}/${AppConfig.fileName}',
+      );
+      if (configFile.existsSync()) configFile.deleteSync();
+      // Remove .initialized so first-run onboarding shows again
+      widget.storage.clearInitialized();
+    } catch (e) {
+      AppLogger.error('softReset file cleanup: $e');
+    }
+    await Process.start(
+      Platform.resolvedExecutable,
+      [],
+      mode: ProcessStartMode.detached,
+    );
+    exit(0);
+  }
+
+  /// Deletes all data (db, images, config, first-run flag), restarts.
+  Future<void> _hardReset() async {
+    await _cleanup();
+    SingleInstance.release();
+    try {
+      final base = Directory(widget.storage.baseDir);
+      if (base.existsSync()) base.deleteSync(recursive: true);
+    } catch (e) {
+      AppLogger.error('hardReset dir cleanup: $e');
+    }
+    await Process.start(
+      Platform.resolvedExecutable,
+      [],
+      mode: ProcessStartMode.detached,
+    );
+    exit(0);
+  }
+
   Future<void> _openSettings(BuildContext ctx) async {
     await _appWindow.enterSettingsMode();
     if (!ctx.mounted) return;
@@ -547,6 +662,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           configPath: '${widget.storage.configPath}/${AppConfig.fileName}',
           clipboardService: widget.clipboardService,
           storage: widget.storage,
+          onSoftReset: _softReset,
+          onHardReset: _hardReset,
           onSave: (newConfig, hotkeyChanged) async {
             final oldShowTray = _config.showTrayIcon;
             setState(() => _config = newConfig);

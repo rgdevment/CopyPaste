@@ -107,6 +107,8 @@ CopyPaste isn't a "power tool" you learn to tolerate — it's something that sho
 - [Keyboard Shortcuts](#️-keyboard-shortcuts)
 - [Getting Started](#-getting-started)
 - [FAQ](#-faq)
+- [Support & Bug Reporting](#-support--bug-reporting)
+- [Clean Install & Reset](#-clean-install--reset)
 - [Found a Bug? Have Feedback?](#-found-a-bug-have-feedback)
 - [Localization](#-localization-help-us-go-global)
 - [Want to Help?](#-want-to-help)
@@ -197,11 +199,13 @@ If you copy and paste all day, this is for you:
 
 ## 🔒 Privacy & Security
 
-CopyPaste is built with a **privacy-first** mindset:
+**Everything local.** CopyPaste is built on a single, non-negotiable principle: your data never leaves your computer.
 
 - **Local-only storage** — no cloud, no servers, no data syncing.
 - **No tracking** — no telemetry, no analytics, no hidden collection.
+- **No automatic reporting** — errors are logged locally only; nothing is ever sent without your explicit action.
 - **Sensitive content is ignored** — passwords and password-manager copies aren’t saved.
+- **Log export is voluntary** — you choose when and what to share for bug reports; logs never contain clipboard content.
 
 **Non-goals (by design):** No accounts, no subscriptions, no ads, no cloud sync, no “AI analysis” of your clipboard.
 
@@ -264,7 +268,7 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 
 | Shortcut                                 | Action                                              |
 | :--------------------------------------- | :-------------------------------------------------- |
-| `Win+Alt+V` / `Cmd+Alt+V` / `Ctrl+Alt+V` | Open/close CopyPaste (default hotkey, customizable) |
+| `Ctrl+Alt+V`                             | Open/close CopyPaste (default hotkey, customizable) |
 | `↓` or `Tab`                             | Navigate from search to clipboard items             |
 | `↑` / `↓`                                | Navigate between clipboard items                    |
 | `Space`                                  | Expand/collapse selected card to see more text      |
@@ -348,7 +352,7 @@ Clipboard items (cards) can be expanded to show more text content:
 
 ### Keyboard-Only Workflow
 
-1. **Press your platform default hotkey** (`Win+Alt+V` on Windows, `Cmd+Alt+V` on macOS, `Ctrl+Alt+V` on Linux) → Window opens with focus on search box
+1. **Press `Ctrl+Alt+V`** (default hotkey, customizable in Settings) → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
 3. **Press `Esc`** (optional) → Clear search to see all items again
 4. **Press `↓`** → Navigate to first clipboard item
@@ -429,7 +433,7 @@ brew tap rgdevment/tap && brew install copypaste
 
 ---
 
-After installing, open CopyPaste with **`Win+Alt+V`** (Windows), **`Cmd+Alt+V`** (macOS), or **`Ctrl+Alt+V`** (Linux).
+After installing, open CopyPaste with **`Ctrl+Alt+V`** (default on all platforms — customizable in Settings → Shortcuts).
 
 If `Ctrl+Alt+V` is already taken on Linux/X11 by another app or desktop shortcut, CopyPaste temporarily uses **`Ctrl+Alt+Shift+V`** for that session and shows a warning.
 
@@ -497,6 +501,76 @@ Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
 
+## 🛟 Support & Bug Reporting
+
+### Exporting Logs
+
+If CopyPaste is misbehaving, you can export a diagnostic log bundle directly from the app — no need to navigate file system folders manually.
+
+**Steps:**
+
+1. Open CopyPaste → **Settings** (gear icon)
+2. Go to the **About** tab
+3. Under **Support**, click **"Export Logs"**
+4. Save the `.zip` file to a location of your choice
+5. Attach the zip to your [GitHub issue](https://github.com/rgdevment/CopyPaste/issues/new)
+
+The zip includes:
+- Recent application log files (`.log`)
+- A `device_info.txt` with your OS version and app version — no personal data
+
+**Privacy guarantee:** Logs contain only application events and errors. **Your clipboard content is never written to logs.** The exported file stays on your machine until you explicitly share it. Nothing is sent automatically — ever.
+
+### Opening the Logs Folder
+
+If you prefer to inspect log files directly:
+
+1. Settings → About → Support → **"Open Logs Folder"**
+2. Your file manager opens at the logs directory
+
+Logs are plain text — you can review them before deciding what to share.
+
+### Reporting on GitHub
+
+1. [Open a new issue](https://github.com/rgdevment/CopyPaste/issues/new)
+2. Describe what happened and steps to reproduce
+3. Attach the exported log zip (optional but very helpful)
+4. Include your OS version and CopyPaste version (shown in Settings → About)
+
+You decide exactly what you share. The reporting process is fully manual and private.
+
+---
+
+## 🔄 Clean Install & Reset
+
+Sometimes you need a fresh start — for troubleshooting, transferring to a new machine, or just cleaning up years of settings drift.
+
+**Where to find it:** Settings → About → **Reset & Clean Install**
+
+### Soft Reset
+
+Resets all settings to defaults and marks the app as a new installation. **Your clipboard history is preserved.**
+
+Use this when:
+- Settings became corrupted or something isn't behaving correctly
+- You want to start fresh with default configuration without losing history
+
+### Hard Reset
+
+Deletes everything — clipboard history, images, settings, and logs — then restarts the app. **This action cannot be undone.**
+
+Use this when:
+- You want a completely clean slate
+- You're transferring to someone else or decommissioning the app
+
+### Microsoft Store Users
+
+Both reset options work identically on the Microsoft Store version. MSIX packaging uses filesystem virtualization, so the app's data folder is the real package data path — CopyPaste can find and wipe it without needing elevated permissions.
+
+> **Note:** The Windows Settings "Reset app" button does the same thing as Hard Reset. Both are safe to use.
+
+---
+
 ## 🤝 Found a Bug? Have Feedback?
 
 **Your feedback literally shapes what gets built next.** Here's how to reach me:
@@ -513,10 +587,11 @@ Yes. The DMG contains a universal binary that runs natively on both Apple Silico
 
 **When reporting bugs, include:**
 
-- OS and version (e.g., Windows 11 23H2, macOS Sonoma 14.5)
+- OS and version (e.g., Windows 11 24H2, macOS Sequoia 15.3)
 - What you were doing
 - Any error messages
-- CopyPaste version (check Settings)
+- CopyPaste version (check Settings → About)
+- Exported log zip if available (Settings → About → Support → Export Logs)
 
 ---
 

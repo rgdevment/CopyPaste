@@ -20,6 +20,8 @@ class SettingsScreen extends StatefulWidget {
     required this.clipboardService,
     required this.storage,
     required this.onSave,
+    required this.onSoftReset,
+    required this.onHardReset,
     super.key,
   });
 
@@ -28,6 +30,12 @@ class SettingsScreen extends StatefulWidget {
   final ClipboardService clipboardService;
   final StorageConfig storage;
   final Future<void> Function(AppConfig newConfig, bool hotkeyChanged) onSave;
+
+  /// Resets config + first-run flag, keeps clipboard history, then restarts.
+  final Future<void> Function() onSoftReset;
+
+  /// Deletes all data (db, images, config, first-run flag), then restarts.
+  final Future<void> Function() onHardReset;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -948,6 +956,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.shield_outlined,
+          title: l.sectionPrivacy,
+          children: [
+            Text(
+              l.privacyStatement,
+              style: TextStyle(
+                fontSize: 12,
+                color: colors.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            _ActionTile(
+              icon: Icons.open_in_new_rounded,
+              label: l.privacyPolicy,
+              colors: colors,
+              onTap: () => _openUrl(
+                'https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md',
+              ),
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.help_outline_rounded,
+          title: l.sectionSupport,
+          children: [
+            _ActionTile(
+              icon: Icons.download_rounded,
+              label: l.supportExportLogs,
+              subtitle: l.supportExportLogsSubtitle,
+              colors: colors,
+              onTap: _exportLogs,
+            ),
+            _ActionTile(
+              icon: Icons.folder_open_rounded,
+              label: l.supportOpenLogsFolder,
+              subtitle: l.supportOpenLogsFolderSubtitle,
+              colors: colors,
+              onTap: _openLogsFolder,
+            ),
+            _ActionTile(
+              icon: Icons.bug_report_outlined,
+              label: l.supportGitHub,
+              colors: colors,
+              onTap: () =>
+                  _openUrl('https://github.com/rgdevment/CopyPaste/issues'),
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.restart_alt_rounded,
+          title: l.sectionReset,
+          children: [
+            _ActionTile(
+              icon: Icons.settings_backup_restore_rounded,
+              label: l.resetSoftLabel,
+              subtitle: l.resetSoftSubtitle,
+              colors: colors,
+              onTap: _softReset,
+            ),
+            _ActionTile(
+              icon: Icons.delete_forever_rounded,
+              label: l.resetHardLabel,
+              subtitle: l.resetHardSubtitle,
+              colors: colors,
+              onTap: _hardReset,
+            ),
+          ],
+        ),
         Padding(
           padding: const EdgeInsets.only(top: 12, left: 4),
           child: Text(
@@ -1009,6 +1090,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _exportLogs() async {
+    final l = AppLocalizations.of(context);
+    try {
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .split('.')
+          .first;
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: l.supportExportLogs,
+        fileName: 'CopyPaste_logs_$ts.zip',
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+      );
+      if (path == null) return;
+
+      final count = await SupportService.exportLogs(
+        widget.storage,
+        AppConfig.appVersion,
+        path,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count > 0 ? l.supportExportSuccess : l.supportExportEmpty,
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l.supportExportError),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openLogsFolder() async {
+    await SupportService.openLogsFolder(widget.storage);
+  }
+
+  Future<void> _softReset() async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await _showConfirmDialog(
+      l.resetSoftConfirmTitle,
+      l.resetSoftConfirmMessage,
+      l.resetConfirmButton,
+    );
+    if (confirmed == true) await widget.onSoftReset();
+  }
+
+  Future<void> _hardReset() async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await _showConfirmDialog(
+      l.resetHardConfirmTitle,
+      l.resetHardConfirmMessage,
+      l.resetConfirmButton,
+    );
+    if (confirmed == true) await widget.onHardReset();
   }
 
   Future<void> _clearHistory() async {
@@ -1765,10 +1912,12 @@ class _ActionTile extends StatefulWidget {
     required this.label,
     required this.colors,
     required this.onTap,
+    this.subtitle,
   });
 
   final IconData icon;
   final String label;
+  final String? subtitle;
   final AppThemeColorScheme colors;
   final VoidCallback onTap;
 
@@ -1796,14 +1945,36 @@ class _ActionTileState extends State<_ActionTile> {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(widget.icon, size: 16, color: widget.colors.onSurfaceMuted),
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(widget.icon, size: 16, color: widget.colors.onSurfaceMuted),
+              ),
               const SizedBox(width: 10),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: widget.colors.onSurface,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: widget.colors.onSurface,
+                      ),
+                    ),
+                    if (widget.subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.subtitle!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: widget.colors.onSurfaceMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],

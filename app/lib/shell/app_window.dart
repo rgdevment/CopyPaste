@@ -116,18 +116,22 @@ class AppWindow {
 
   Future<void> applyEffect({bool? dark}) async {
     if (dark != null) _isDark = dark;
-    if (Platform.isWindows) {
-      await Window.setEffect(
-        effect: WindowEffect.mica,
-        color: const Color(0x00000000),
-        dark: _isDark,
-      );
-    } else if (Platform.isMacOS) {
-      await Window.setEffect(
-        effect: WindowEffect.sidebar,
-        color: const Color(0x00000000),
-        dark: _isDark,
-      );
+    try {
+      if (Platform.isWindows) {
+        await Window.setEffect(
+          effect: WindowEffect.mica,
+          color: const Color(0x00000000),
+          dark: _isDark,
+        );
+      } else if (Platform.isMacOS) {
+        await Window.setEffect(
+          effect: WindowEffect.sidebar,
+          color: const Color(0x00000000),
+          dark: _isDark,
+        );
+      }
+    } catch (_) {
+      // Effect failure is non-fatal — app runs without the acrylic effect.
     }
   }
 

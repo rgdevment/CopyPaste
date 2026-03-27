@@ -18,7 +18,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyStateSubtitle => 'Copy something to get started';
 
   @override
-  String get hintBannerText => 'Customize your experience in';
+  String get hintBannerText =>
+      'CopyPaste is active and running in the background. Look for it in the system tray or just use your shortcut. Feel free to customize your experience in';
 
   @override
   String get hintBannerAction => 'Settings';
@@ -40,6 +41,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hotkeyWillApply => 'Hotkey will apply immediately';
+
+  @override
+  String get sectionSupport => 'SUPPORT';
+
+  @override
+  String get supportExportLogs => 'Export logs';
+
+  @override
+  String get supportExportLogsSubtitle =>
+      'Save a zip with app logs for a bug report. Your clipboard content is never included.';
+
+  @override
+  String get supportOpenLogsFolder => 'Open logs folder';
+
+  @override
+  String get supportOpenLogsFolderSubtitle =>
+      'Browse the raw log files in your file manager.';
+
+  @override
+  String get supportGitHub => 'Report a bug on GitHub';
+
+  @override
+  String get supportExportSuccess => 'Logs exported successfully.';
+
+  @override
+  String get supportExportEmpty => 'No log files found.';
+
+  @override
+  String get supportExportError => 'Failed to export logs.';
+
+  @override
+  String get sectionReset => 'RESET & CLEAN INSTALL';
+
+  @override
+  String get resetSoftLabel => 'Soft Reset';
+
+  @override
+  String get resetSoftSubtitle =>
+      'Resets all settings to defaults and marks app as fresh install. Clipboard history is preserved.';
+
+  @override
+  String get resetHardLabel => 'Hard Reset';
+
+  @override
+  String get resetHardSubtitle =>
+      'Deletes all clipboard history, images, and settings. This cannot be undone.';
+
+  @override
+  String get resetSoftConfirmTitle => 'Soft reset?';
+
+  @override
+  String get resetSoftConfirmMessage =>
+      'All settings will return to defaults and the app will restart as if freshly installed. Your clipboard history will not be deleted.';
+
+  @override
+  String get resetHardConfirmTitle => 'Hard reset?';
+
+  @override
+  String get resetHardConfirmMessage =>
+      'This will permanently delete all clipboard history, images, and settings, then restart the app. This cannot be undone.';
+
+  @override
+  String get resetConfirmButton => 'Reset & Restart';
 
   @override
   String get clearHistoryConfirmTitle => 'Clear history?';
@@ -412,6 +476,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aboutDescription =>
       'A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere — your clipboard history, always at hand.';
+
+  @override
+  String get sectionPrivacy => 'PRIVACY';
+
+  @override
+  String get privacyStatement =>
+      'Everything local. Nothing leaves your PC — no telemetry, no sync, no accounts.';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
 
   @override
   String get aboutLicense => 'GPL v3 License — Free and open source.';

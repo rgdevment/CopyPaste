@@ -9,12 +9,14 @@ class StorageConfig {
   StorageConfig._({required this.baseDir})
     : databasePath = p.join(baseDir, 'clipboard.db'),
       imagesPath = p.join(baseDir, 'images'),
-      configPath = p.join(baseDir, 'config');
+      configPath = p.join(baseDir, 'config'),
+      logsPath = p.join(baseDir, 'logs');
 
   final String baseDir;
   final String databasePath;
   final String imagesPath;
   final String configPath;
+  final String logsPath;
 
   String get _initFlagPath => p.join(baseDir, '.initialized');
 
@@ -49,6 +51,15 @@ class StorageConfig {
         ..writeAsStringSync(DateTime.now().toUtc().toIso8601String());
     } catch (e) {
       AppLogger.error('Failed to mark as initialized: $e');
+    }
+  }
+
+  void clearInitialized() {
+    try {
+      final f = File(_initFlagPath);
+      if (f.existsSync()) f.deleteSync();
+    } catch (e) {
+      AppLogger.error('Failed to clear initialized flag: $e');
     }
   }
 
