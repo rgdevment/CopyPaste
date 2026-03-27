@@ -184,7 +184,7 @@ void main() {
 
     test('popup size defaults', () {
       const config = AppConfig();
-      expect(config.popupWidth, equals(368));
+      expect(config.popupWidth, equals(380));
       expect(config.popupHeight, equals(500));
     });
 
@@ -192,6 +192,26 @@ void main() {
       const config = AppConfig();
       expect(config.cardMinLines, equals(2));
       expect(config.cardMaxLines, equals(5));
+    });
+
+    test('showInTaskbar defaults to false', () {
+      const config = AppConfig();
+      expect(config.showInTaskbar, isFalse);
+    });
+
+    test('showInTaskbar round-trips via JSON', () {
+      const config = AppConfig(showInTaskbar: true);
+      expect(AppConfig.fromJson(config.toJson()).showInTaskbar, isTrue);
+    });
+
+    test('showInTaskbar absent in JSON defaults to false', () {
+      final config = AppConfig.fromJson({});
+      expect(config.showInTaskbar, isFalse);
+    });
+
+    test('copyWith showInTaskbar updates value', () {
+      const config = AppConfig();
+      expect(config.copyWith(showInTaskbar: true).showInTaskbar, isTrue);
     });
 
     test('showTrayIcon defaults to true', () {
