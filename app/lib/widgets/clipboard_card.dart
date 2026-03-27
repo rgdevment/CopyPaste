@@ -963,7 +963,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
 
     if (item.pasteCount > 0) {
-      widgets.add(Text('×${item.pasteCount}', style: footerStyle));
+      widgets.add(Text('×${item.pasteCount}', style: footerStyle, maxLines: 1, overflow: TextOverflow.ellipsis));
     }
 
     final showExpand = _needsExpandToggle(item);
@@ -1031,11 +1031,18 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ),
             ),
           ),
-        const Spacer(),
-        for (int i = 0; i < widgets.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          widgets[i],
-        ],
+        if (widgets.isNotEmpty)
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                for (int i = 0; i < widgets.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Flexible(fit: FlexFit.loose, child: widgets[i]),
+                ],
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -1464,7 +1471,9 @@ class _FooterChip extends StatelessWidget {
       children: [
         Icon(icon, size: iconSize, color: iconColor),
         const SizedBox(width: 3),
-        Text(label, style: style),
+        Flexible(
+          child: Text(label, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
     );
   }
@@ -1492,7 +1501,9 @@ class _ContextMenuItem extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: color.withValues(alpha: 0.7)),
         const SizedBox(width: 8),
-        Text(label, style: TextStyle(fontSize: 12, color: color)),
+        Expanded(
+          child: Text(label, style: TextStyle(fontSize: 12, color: color)),
+        ),
       ],
     );
   }
