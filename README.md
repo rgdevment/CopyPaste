@@ -516,6 +516,7 @@ If CopyPaste is misbehaving, you can export a diagnostic log bundle directly fro
 5. Attach the zip to your [GitHub issue](https://github.com/rgdevment/CopyPaste/issues/new)
 
 The zip includes:
+
 - Recent application log files (`.log`)
 - A `device_info.txt` with your OS version and app version — no personal data
 
@@ -552,6 +553,7 @@ Sometimes you need a fresh start — for troubleshooting, transferring to a new 
 Resets all settings to defaults and marks the app as a new installation. **Your clipboard history is preserved.**
 
 Use this when:
+
 - Settings became corrupted or something isn't behaving correctly
 - You want to start fresh with default configuration without losing history
 
@@ -560,6 +562,7 @@ Use this when:
 Deletes everything — clipboard history, images, settings, and logs — then restarts the app. **This action cannot be undone.**
 
 Use this when:
+
 - You want a completely clean slate
 - You're transferring to someone else or decommissioning the app
 
