@@ -618,7 +618,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
     return Text(
       item.content,
       style: theme.typography.cardContent.copyWith(
-        color: colors.onSurface.withValues(alpha: theme.cardStyle.contentOpacity),
+        color: colors.onSurface.withValues(
+          alpha: theme.cardStyle.contentOpacity,
+        ),
       ),
     );
   }
@@ -971,17 +973,13 @@ class _ClipboardCardState extends State<ClipboardCard> {
       children: [
         if (item.type == ClipboardContentType.color)
           _ColorBadge(value: item.content.trim())
-        else if (item.type == ClipboardContentType.phone)
-          ...[
-            if (_resolvePhoneCountry(item.content) case final c?)
-              _ExtBadge(label: c, color: typeColor),
-          ]
-        else if (item.type == ClipboardContentType.email)
-          ...[
-            if (_resolveEmailProvider(item.content) case final p?)
-              _ExtBadge(label: p, color: typeColor),
-          ]
-        else if (ext.isNotEmpty)
+        else if (item.type == ClipboardContentType.phone) ...[
+          if (_resolvePhoneCountry(item.content) case final c?)
+            _ExtBadge(label: c, color: typeColor),
+        ] else if (item.type == ClipboardContentType.email) ...[
+          if (_resolveEmailProvider(item.content) case final p?)
+            _ExtBadge(label: p, color: typeColor),
+        ] else if (ext.isNotEmpty)
           _ExtBadge(label: ext, color: typeColor),
         if (showExpand)
           Padding(
@@ -1103,43 +1101,115 @@ class _ClipboardCardState extends State<ClipboardCard> {
       };
 
   static const _phoneCountries = <String, String>{
-    '1': 'US/CA', '7': 'Russia', '20': 'Egypt', '27': 'S.Africa',
-    '30': 'Greece', '31': 'Netherlands', '32': 'Belgium', '33': 'France',
-    '34': 'Spain', '36': 'Hungary', '39': 'Italy', '40': 'Romania',
-    '41': 'Switzerland', '43': 'Austria', '44': 'UK', '45': 'Denmark',
-    '46': 'Sweden', '47': 'Norway', '48': 'Poland', '49': 'Germany',
-    '51': 'Peru', '52': 'Mexico', '53': 'Cuba', '54': 'Argentina',
-    '55': 'Brazil', '56': 'Chile', '57': 'Colombia', '58': 'Venezuela',
-    '60': 'Malaysia', '61': 'Australia', '62': 'Indonesia', '63': 'Philippines',
-    '64': 'NZ', '65': 'Singapore', '66': 'Thailand', '81': 'Japan',
-    '82': 'Korea', '84': 'Vietnam', '86': 'China', '90': 'Turkey',
-    '91': 'India', '92': 'Pakistan', '94': 'Sri Lanka', '98': 'Iran',
-    '212': 'Morocco', '213': 'Algeria', '216': 'Tunisia', '234': 'Nigeria',
-    '254': 'Kenya', '351': 'Portugal', '352': 'Luxembourg', '353': 'Ireland',
-    '354': 'Iceland', '358': 'Finland', '380': 'Ukraine', '381': 'Serbia',
-    '385': 'Croatia', '420': 'Czech', '421': 'Slovakia', '502': 'Guatemala',
-    '503': 'El Salvador', '504': 'Honduras', '505': 'Nicaragua',
-    '506': 'Costa Rica', '507': 'Panama', '591': 'Bolivia', '593': 'Ecuador',
-    '595': 'Paraguay', '598': 'Uruguay', '855': 'Cambodia', '880': 'Bangladesh',
-    '886': 'Taiwan', '961': 'Lebanon', '962': 'Jordan', '964': 'Iraq',
-    '965': 'Kuwait', '966': 'Saudi Arabia', '971': 'UAE', '972': 'Israel',
-    '974': 'Qatar', '977': 'Nepal', '994': 'Azerbaijan', '995': 'Georgia',
+    '1': 'US/CA',
+    '7': 'Russia',
+    '20': 'Egypt',
+    '27': 'S.Africa',
+    '30': 'Greece',
+    '31': 'Netherlands',
+    '32': 'Belgium',
+    '33': 'France',
+    '34': 'Spain',
+    '36': 'Hungary',
+    '39': 'Italy',
+    '40': 'Romania',
+    '41': 'Switzerland',
+    '43': 'Austria',
+    '44': 'UK',
+    '45': 'Denmark',
+    '46': 'Sweden',
+    '47': 'Norway',
+    '48': 'Poland',
+    '49': 'Germany',
+    '51': 'Peru',
+    '52': 'Mexico',
+    '53': 'Cuba',
+    '54': 'Argentina',
+    '55': 'Brazil',
+    '56': 'Chile',
+    '57': 'Colombia',
+    '58': 'Venezuela',
+    '60': 'Malaysia',
+    '61': 'Australia',
+    '62': 'Indonesia',
+    '63': 'Philippines',
+    '64': 'NZ',
+    '65': 'Singapore',
+    '66': 'Thailand',
+    '81': 'Japan',
+    '82': 'Korea',
+    '84': 'Vietnam',
+    '86': 'China',
+    '90': 'Turkey',
+    '91': 'India',
+    '92': 'Pakistan',
+    '94': 'Sri Lanka',
+    '98': 'Iran',
+    '212': 'Morocco',
+    '213': 'Algeria',
+    '216': 'Tunisia',
+    '234': 'Nigeria',
+    '254': 'Kenya',
+    '351': 'Portugal',
+    '352': 'Luxembourg',
+    '353': 'Ireland',
+    '354': 'Iceland',
+    '358': 'Finland',
+    '380': 'Ukraine',
+    '381': 'Serbia',
+    '385': 'Croatia',
+    '420': 'Czech',
+    '421': 'Slovakia',
+    '502': 'Guatemala',
+    '503': 'El Salvador',
+    '504': 'Honduras',
+    '505': 'Nicaragua',
+    '506': 'Costa Rica',
+    '507': 'Panama',
+    '591': 'Bolivia',
+    '593': 'Ecuador',
+    '595': 'Paraguay',
+    '598': 'Uruguay',
+    '855': 'Cambodia',
+    '880': 'Bangladesh',
+    '886': 'Taiwan',
+    '961': 'Lebanon',
+    '962': 'Jordan',
+    '964': 'Iraq',
+    '965': 'Kuwait',
+    '966': 'Saudi Arabia',
+    '971': 'UAE',
+    '972': 'Israel',
+    '974': 'Qatar',
+    '977': 'Nepal',
+    '994': 'Azerbaijan',
+    '995': 'Georgia',
     '998': 'Uzbekistan',
   };
 
   // Keyed by first domain label — covers all regional variants automatically.
   // e.g. outlook.com / outlook.com.ar / outlook.cl all resolve to 'Outlook'
   static const _emailPrefixes = <String, String>{
-    'gmail': 'Gmail', 'googlemail': 'Gmail',
-    'outlook': 'Outlook', 'hotmail': 'Hotmail', 'live': 'Outlook', 'msn': 'MSN',
+    'gmail': 'Gmail',
+    'googlemail': 'Gmail',
+    'outlook': 'Outlook',
+    'hotmail': 'Hotmail',
+    'live': 'Outlook',
+    'msn': 'MSN',
     'yahoo': 'Yahoo',
-    'icloud': 'iCloud', 'me': 'iCloud', 'mac': 'iCloud',
-    'proton': 'Proton', 'protonmail': 'Proton',
-    'tutanota': 'Tutanota', 'tuta': 'Tuta',
-    'zoho': 'Zoho', 'aol': 'AOL',
+    'icloud': 'iCloud',
+    'me': 'iCloud',
+    'mac': 'iCloud',
+    'proton': 'Proton',
+    'protonmail': 'Proton',
+    'tutanota': 'Tutanota',
+    'tuta': 'Tuta',
+    'zoho': 'Zoho',
+    'aol': 'AOL',
     'yandex': 'Yandex',
     'gmx': 'GMX',
-    'fastmail': 'FastMail', 'hey': 'HEY',
+    'fastmail': 'FastMail',
+    'hey': 'HEY',
   };
 
   static String? _resolvePhoneCountry(String phone) {
@@ -1296,14 +1366,25 @@ class _ColorBadge extends StatelessWidget {
     return v != null ? Color(v) : null;
   }
 
+  static String _format(String value) {
+    final v = value.trimLeft().toLowerCase();
+    if (v.startsWith('#')) return 'HEX';
+    if (v.startsWith('rgba')) return 'RGBA';
+    if (v.startsWith('rgb')) return 'RGB';
+    if (v.startsWith('hsla')) return 'HSLA';
+    if (v.startsWith('hsl')) return 'HSL';
+    return 'COLOR';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = CopyPasteTheme.of(context);
     final colors = CopyPasteTheme.colorsOf(context);
     final color = _parse(value);
+    final label = _format(value);
 
     if (color == null) {
-      return _ExtBadge(label: value.toUpperCase(), color: colors.accentOrange);
+      return _ExtBadge(label: label, color: colors.accentOrange);
     }
 
     final onColor = color.computeLuminance() > 0.4
@@ -1317,7 +1398,7 @@ class _ColorBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        value.toUpperCase(),
+        label,
         style: theme.typography.cardFooter.copyWith(
           fontSize: 9,
           fontWeight: FontWeight.w600,

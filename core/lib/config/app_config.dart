@@ -36,6 +36,7 @@ class AppConfig {
     this.themeMode = 'auto',
     this.showTrayIcon = true,
     this.accessibilityWasGranted = false,
+    this.lastRunVersion = '',
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -93,6 +94,8 @@ class AppConfig {
       accessibilityWasGranted:
           json['accessibilityWasGranted'] as bool? ??
           defaults.accessibilityWasGranted,
+      lastRunVersion:
+          json['lastRunVersion'] as String? ?? defaults.lastRunVersion,
     );
   }
 
@@ -161,6 +164,7 @@ class AppConfig {
   final String themeMode;
   final bool showTrayIcon;
   final bool accessibilityWasGranted;
+  final String lastRunVersion;
 
   AppConfig copyWith({
     String? preferredLanguage,
@@ -192,6 +196,7 @@ class AppConfig {
     String? themeMode,
     bool? showTrayIcon,
     bool? accessibilityWasGranted,
+    String? lastRunVersion,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -227,6 +232,7 @@ class AppConfig {
     showTrayIcon: showTrayIcon ?? this.showTrayIcon,
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
+    lastRunVersion: lastRunVersion ?? this.lastRunVersion,
   );
 
   Map<String, dynamic> toJson() => {
@@ -260,6 +266,7 @@ class AppConfig {
     'themeMode': themeMode,
     'showTrayIcon': showTrayIcon,
     'accessibilityWasGranted': accessibilityWasGranted,
+    'lastRunVersion': lastRunVersion,
   };
 
   static Future<AppConfig> load(String configPath) async {

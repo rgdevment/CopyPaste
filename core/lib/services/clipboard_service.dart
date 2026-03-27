@@ -63,7 +63,10 @@ class ClipboardService {
         ? TextClassifier.classify(content)
         : type;
 
-    final existing = await _repository.findByContentAndType(content, resolvedType);
+    final existing = await _repository.findByContentAndType(
+      content,
+      resolvedType,
+    );
     if (existing != null) {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
@@ -300,6 +303,29 @@ class ClipboardService {
   Future<int> clearUnpinnedHistory() => _repository.deleteAllUnpinned();
 
   Future<int> getItemCount() => _repository.count();
+
+  Future<void> reclassifyLegacyTextItems() async {
+    const batchSize = 50;
+    var skip = 0;
+    while (true) {
+      if (_disposed) return;
+      final batch = await _repository.searchAdvanced(
+        types: [ClipboardContentType.text],
+        limit: batchSize,
+        skip: skip,
+      );
+      if (batch.isEmpty) return;
+      for (final item in batch) {
+        if (_disposed) return;
+        final resolved = TextClassifier.classify(item.content);
+        if (resolved != ClipboardContentType.text) {
+          await _repository.update(item.copyWith(type: resolved));
+        }
+      }
+      if (batch.length < batchSize) return;
+      skip += batchSize;
+    }
+  }
 
   Future<void> walCheckpoint() => _repository.walCheckpoint();
 

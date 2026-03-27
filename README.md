@@ -21,7 +21,7 @@
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
-    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4?style=flat-square&logo=windows" alt="Platform"/>
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux_(beta)-0078D4?style=flat-square&logo=windows" alt="Platform"/>
     <a href="#license">
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License"/>
     </a>
@@ -91,6 +91,8 @@ Sometimes, in our daily workflow, we just need something that's "just there" whe
 CopyPaste isn't a "power tool" you learn to tolerate — it's something that should feel like it was always part of the OS. Lightweight enough to forget it's running. Fast enough to never slow you down. Quiet enough to stay out of your way.
 
 > 🚀 I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#-found-a-bug-have-feedback) — this project keeps improving because of real-world use.
+
+> 🐧 **Linux is in beta.** It works, but there are edge cases we haven't seen yet — especially across different desktop environments and distributions. If you're on Linux and want to help improve it, [your feedback is invaluable](#-found-a-bug-have-feedback).
 
 ---
 
@@ -239,6 +241,8 @@ If you care about privacy and control, this is made for you. Read our full [Priv
 - 🎨 **Adapts to Your System:** Follows your OS light or dark theme automatically — Mica on Windows, Sidebar material on macOS.
 - ⚡ **Fast & Light:** Starts quickly and doesn't hog resources.
 - 📂 **Handles Everything:** Text, images, files, folders, links, audio, and video — with content-aware previews.
+- 🧠 **Smart Content Detection:** Automatically recognizes and categorizes clipboard content beyond plain text — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each gets its own icon, badge, and filter type.
+- 🔗 **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the clipboard manager stays out of the way.
 - 🏷️ **Card Labels & Colors:** Personalize your clipboard items with custom labels (up to 50 characters) and 7 color options (Red, Green, Purple, Yellow, Blue, Orange, or None).
 - 📌 **Pin Important Items:** Keep your most-used items always accessible at the top.
 - 🔒 **Private by Default:** Everything stays on your computer. No cloud, no sync, no servers.
@@ -297,7 +301,7 @@ CopyPaste includes three filter modes to help you find items quickly:
 | :----------- | :-------------------- | :------------------------------------------------------------------------------------------- |
 | **Content**  | Text search (default) | Type in the search box to filter by content or label                                         |
 | **Category** | Filter by color       | Select colors from the dropdown to show only items with selected colors                      |
-| **Type**     | Filter by item type   | Select types from the dropdown to show only Text, Image, File, Folder, Link, Audio, or Video |
+| **Type**     | Filter by item type   | Select types from the dropdown to show only Text, Image, File, Folder, Link, Audio, Video, Email, Phone, Color, IP, UUID, or JSON |
 
 **Switching Filter Modes:**
 
@@ -392,7 +396,9 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 ---
 
-### 🐧 Linux — apt / dnf
+### 🐧 Linux — apt / dnf <sup>beta</sup>
+
+> **Linux support is in beta.** Core features work well across tested distributions, but you may encounter issues depending on your desktop environment, display server, or distro. [Please report anything unusual](https://github.com/rgdevment/CopyPaste/issues/new) — your reports directly shape stability improvements.
 
 Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copypaste/) — set up the repository once, then get updates through your system package manager.
 
@@ -486,7 +492,7 @@ For `apt`/`dnf`, yes. They install to system paths, so without `sudo` (or equiva
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
 
 **What platforms are supported?**
-Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage).
+Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see [the Linux section](#-linux----apt--dnf-) for details.
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
