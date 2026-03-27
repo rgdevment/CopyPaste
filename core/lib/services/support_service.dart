@@ -68,6 +68,22 @@ class SupportService {
     return logFiles.length;
   }
 
+  /// Reveals [filePath] in the system file browser (Finder, Explorer, etc.).
+  static Future<void> revealFile(String filePath) async {
+    AppLogger.info('revealFile: $filePath');
+    try {
+      if (Platform.isWindows) {
+        await Process.run('explorer', ['/select,', filePath]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', ['-R', filePath]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [File(filePath).parent.path]);
+      }
+    } catch (e, s) {
+      AppLogger.exception(e, s, 'revealFile');
+    }
+  }
+
   /// Opens the logs directory in the system file browser.
   static Future<void> openLogsFolder(StorageConfig storage) async {
     final logsDir = Directory(storage.logsPath);

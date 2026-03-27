@@ -40,7 +40,8 @@
   "supportOpenLogsFolder": "Abrir carpeta de registros",
   "supportOpenLogsFolderSubtitle": "Explora los archivos de registro en tu gestor de archivos.",
   "supportGitHub": "Reportar un error en GitHub",
-  "supportExportSuccess": "Registros exportados correctamente.",
+  "supportExportSuccess": "Registros guardados en Descargas.",
+  "supportShowInFiles": "Mostrar",
   "supportExportEmpty": "No se encontraron archivos de registro.",
   "supportExportError": "Error al exportar los registros.",
 

@@ -203,8 +203,14 @@ abstract class AppLocalizations {
   /// Snackbar after successful log export
   ///
   /// In en, this message translates to:
-  /// **'Logs exported successfully.'**
+  /// **'Logs saved to Downloads.'**
   String get supportExportSuccess;
+
+  /// Snackbar action to reveal the exported file in Finder/Explorer
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get supportShowInFiles;
 
   /// Snackbar when no logs exist
   ///

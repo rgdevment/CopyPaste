@@ -1,6 +1,8 @@
 // coverage:ignore-file
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import 'package:core/core.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -1118,18 +1120,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           .replaceAll(':', '-')
           .split('.')
           .first;
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: l.supportExportLogs,
-        fileName: 'CopyPaste_logs_$ts.zip',
-        type: FileType.custom,
-        allowedExtensions: ['zip'],
-      );
-      if (path == null) return;
+      final fileName = 'CopyPaste_logs_$ts.zip';
+      final savePath = _resolveDownloadsPath(fileName);
 
       final count = await SupportService.exportLogs(
         widget.storage,
         AppConfig.appVersion,
-        path,
+        savePath,
       );
 
       if (!mounted) return;
@@ -1138,7 +1135,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           content: Text(
             count > 0 ? l.supportExportSuccess : l.supportExportEmpty,
           ),
-          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: l.supportShowInFiles,
+            onPressed: () => SupportService.revealFile(savePath),
+          ),
+          duration: const Duration(seconds: 5),
         ),
       );
     } catch (e, s) {
@@ -1151,6 +1152,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+  String _resolveDownloadsPath(String fileName) {
+    final String base;
+    if (Platform.isWindows) {
+      base = p.join(Platform.environment['USERPROFILE'] ?? '', 'Downloads');
+    } else {
+      base = p.join(Platform.environment['HOME'] ?? '', 'Downloads');
+    }
+    final dir = Directory(base);
+    if (dir.existsSync()) return p.join(base, fileName);
+    return p.join(widget.storage.logsPath, fileName);
   }
 
   Future<void> _openLogsFolder() async {
@@ -1972,7 +1985,11 @@ class _ActionTileState extends State<_ActionTile> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 1),
-                child: Icon(widget.icon, size: 16, color: widget.colors.onSurfaceMuted),
+                child: Icon(
+                  widget.icon,
+                  size: 16,
+                  color: widget.colors.onSurfaceMuted,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -2034,10 +2051,7 @@ class _AboutBadge extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10.5,
-              color: colors.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 10.5, color: colors.onSurfaceVariant),
           ),
         ],
       ),

@@ -63,7 +63,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportGitHub => 'Report a bug on GitHub';
 
   @override
-  String get supportExportSuccess => 'Logs exported successfully.';
+  String get supportExportSuccess => 'Logs saved to Downloads.';
+
+  @override
+  String get supportShowInFiles => 'Show';
 
   @override
   String get supportExportEmpty => 'No log files found.';

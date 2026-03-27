@@ -52,8 +52,10 @@
   "supportGitHub": "Report a bug on GitHub",
   "@supportGitHub": { "description": "GitHub issue link label" },
 
-  "supportExportSuccess": "Logs exported successfully.",
+  "supportExportSuccess": "Logs saved to Downloads.",
   "@supportExportSuccess": { "description": "Snackbar after successful log export" },
+  "supportShowInFiles": "Show",
+  "@supportShowInFiles": { "description": "Snackbar action to reveal the exported file in Finder/Explorer" },
 
   "supportExportEmpty": "No log files found.",
   "@supportExportEmpty": { "description": "Snackbar when no logs exist" },

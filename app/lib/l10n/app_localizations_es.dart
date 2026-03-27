@@ -63,7 +63,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get supportGitHub => 'Reportar un error en GitHub';
 
   @override
-  String get supportExportSuccess => 'Registros exportados correctamente.';
+  String get supportExportSuccess => 'Registros guardados en Descargas.';
+
+  @override
+  String get supportShowInFiles => 'Mostrar';
 
   @override
   String get supportExportEmpty => 'No se encontraron archivos de registro.';
