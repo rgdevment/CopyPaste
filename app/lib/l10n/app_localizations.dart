@@ -1161,9 +1161,15 @@ abstract class AppLocalizations {
   String linuxHotkeyConflictWarning(String requested, String fallback);
 
   /// Label for the Windows taskbar visibility toggle in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'Keep in taskbar'**
   String get settingShowInTaskbar;
 
   /// Subtitle for the Windows taskbar visibility toggle in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.'**
   String get subtitleShowInTaskbar;
 
   /// In-app snackbar shown inside the window when it is raised by a second launch attempt
