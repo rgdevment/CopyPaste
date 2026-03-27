@@ -581,6 +581,13 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get settingShowInTaskbar => 'Mantener en barra de tareas';
+
+  @override
+  String get subtitleShowInTaskbar =>
+      'La app permanece visible en la barra de tareas al cerrarla. Desactívalo para ocultarla solo en la bandeja del sistema.';
+
+  @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste se ejecuta en segundo plano — presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo cuando quieras.';
   }

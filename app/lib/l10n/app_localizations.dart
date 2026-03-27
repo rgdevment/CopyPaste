@@ -1160,6 +1160,12 @@ abstract class AppLocalizations {
   /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
   String linuxHotkeyConflictWarning(String requested, String fallback);
 
+  /// Label for the Windows taskbar visibility toggle in Settings
+  String get settingShowInTaskbar;
+
+  /// Subtitle for the Windows taskbar visibility toggle in Settings
+  String get subtitleShowInTaskbar;
+
   /// In-app snackbar shown inside the window when it is raised by a second launch attempt
   ///
   /// In en, this message translates to:

@@ -82,6 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
   late bool _showTrayIcon;
+  late bool _showInTaskbar;
 
   bool get _hotkeyChanged =>
       _hotkeyCtrl != widget.config.hotkeyUseCtrl ||
@@ -120,6 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _resetScrollOnShow = widget.config.resetScrollOnShow;
     _resetSearchOnShow = widget.config.resetSearchOnShow;
     _showTrayIcon = widget.config.showTrayIcon;
+    _showInTaskbar = widget.config.showInTaskbar;
   }
 
   void _markChanged() {
@@ -154,6 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     resetScrollOnShow: _resetScrollOnShow,
     resetSearchOnShow: _resetSearchOnShow,
     showTrayIcon: _showTrayIcon,
+    showInTaskbar: _showInTaskbar,
   );
 
   Future<void> _save() async {
@@ -193,6 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;
       _showTrayIcon = d.showTrayIcon;
+      _showInTaskbar = d.showInTaskbar;
       _hasChanges = true;
     });
   }
@@ -893,6 +897,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _markChanged();
               },
             ),
+            if (Platform.isWindows)
+              _ToggleRow(
+                label: l.settingShowInTaskbar,
+                subtitle: l.subtitleShowInTaskbar,
+                value: _showInTaskbar,
+                colors: colors,
+                onChanged: (v) {
+                  setState(() => _showInTaskbar = v);
+                  _markChanged();
+                },
+              ),
             if (Platform.isMacOS)
               _ToggleRow(
                 label: l.settingShowTrayIcon,

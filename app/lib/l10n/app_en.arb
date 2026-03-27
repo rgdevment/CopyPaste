@@ -457,6 +457,12 @@
     }
   },
 
+  "settingShowInTaskbar": "Keep in taskbar",
+  "@settingShowInTaskbar": { "description": "Label for the Windows taskbar visibility toggle in Settings" },
+
+  "subtitleShowInTaskbar": "The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.",
+  "@subtitleShowInTaskbar": { "description": "Subtitle for the Windows taskbar visibility toggle in Settings" },
+
   "wakeupHint": "CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.",
   "@wakeupHint": {
     "description": "In-app snackbar shown inside the window when it is raised by a second launch attempt",

@@ -168,6 +168,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     _config = widget.config;
     _appWindow = AppWindow(
       onVisibilityChanged: _onWindowVisibilityChanged,
+      showInTaskbar: _config.showInTaskbar,
       popupWidth: _config.popupWidth.toDouble(),
       popupHeight: _config.popupHeight.toDouble(),
     );
@@ -239,7 +240,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error('trayIcon.init failed: $e');
     }
 
-    if (Platform.isWindows && !showOnStart) {
+    if (Platform.isWindows && !showOnStart && !_config.showInTaskbar) {
       unawaited(_showStartupBalloon());
     }
 
@@ -720,6 +721,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               newConfig.popupWidth.toDouble(),
               newConfig.popupHeight.toDouble(),
             );
+            _appWindow.showInTaskbar = newConfig.showInTaskbar;
             if (Platform.isWindows || Platform.isMacOS) {
               await _appWindow.applyEffect(
                 dark: _isMicaDark(newConfig.themeMode),
@@ -762,6 +764,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   @override
   void onWindowClose() {
     _appWindow.hide();
+  }
+
+  @override
+  void onWindowRestore() {
+    if (_config.showInTaskbar && Platform.isWindows) {
+      unawaited(_safeShow());
+    }
   }
 
   void _enterPermissionGate() {

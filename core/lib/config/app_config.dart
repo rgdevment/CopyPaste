@@ -35,6 +35,7 @@ class AppConfig {
     this.hasSeenHint = false,
     this.themeMode = 'auto',
     this.showTrayIcon = true,
+    this.showInTaskbar = true,
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
   });
@@ -91,6 +92,7 @@ class AppConfig {
       hasSeenHint: json['hasSeenHint'] as bool? ?? defaults.hasSeenHint,
       themeMode: json['themeMode'] as String? ?? defaults.themeMode,
       showTrayIcon: json['showTrayIcon'] as bool? ?? defaults.showTrayIcon,
+      showInTaskbar: json['showInTaskbar'] as bool? ?? defaults.showInTaskbar,
       accessibilityWasGranted:
           json['accessibilityWasGranted'] as bool? ??
           defaults.accessibilityWasGranted,
@@ -151,6 +153,7 @@ class AppConfig {
   final bool hasSeenHint;
   final String themeMode;
   final bool showTrayIcon;
+  final bool showInTaskbar;
   final bool accessibilityWasGranted;
   final String lastRunVersion;
 
@@ -183,6 +186,7 @@ class AppConfig {
     bool? hasSeenHint,
     String? themeMode,
     bool? showTrayIcon,
+    bool? showInTaskbar,
     bool? accessibilityWasGranted,
     String? lastRunVersion,
   }) => AppConfig(
@@ -218,6 +222,7 @@ class AppConfig {
     hasSeenHint: hasSeenHint ?? this.hasSeenHint,
     themeMode: themeMode ?? this.themeMode,
     showTrayIcon: showTrayIcon ?? this.showTrayIcon,
+    showInTaskbar: showInTaskbar ?? this.showInTaskbar,
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
@@ -253,6 +258,7 @@ class AppConfig {
     'hasSeenHint': hasSeenHint,
     'themeMode': themeMode,
     'showTrayIcon': showTrayIcon,
+    'showInTaskbar': showInTaskbar,
     'accessibilityWasGranted': accessibilityWasGranted,
     'lastRunVersion': lastRunVersion,
   };

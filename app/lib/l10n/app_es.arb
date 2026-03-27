@@ -214,5 +214,8 @@
   "linuxHotkeyFallbackWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11. CopyPaste est\u00e1 usando temporalmente {fallback}. Puedes cambiarlo en Configuraci\u00f3n.",
   "linuxHotkeyConflictWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11 y el fallback temporal {fallback} tambi\u00e9n fall\u00f3. Abre Configuraci\u00f3n para elegir otro atajo.",
 
+  "settingShowInTaskbar": "Mantener en barra de tareas",
+  "subtitleShowInTaskbar": "La app permanece visible en la barra de tareas al cerrarla. Desact\u00edvalo para ocultarla solo en la bandeja del sistema.",
+
   "wakeupHint": "CopyPaste se ejecuta en segundo plano \u2014 presiona {hotkey} o haz clic en el \u00edcono de la bandeja para abrirlo cuando quieras."
 }

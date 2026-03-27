@@ -577,6 +577,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingShowInTaskbar => 'Keep in taskbar';
+
+  @override
+  String get subtitleShowInTaskbar =>
+      'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.';
+
+  @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste runs in the background — press $hotkey or click the tray icon to open it anytime.';
   }
