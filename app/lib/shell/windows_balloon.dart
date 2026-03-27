@@ -137,8 +137,9 @@ class WindowsBalloon {
         _writeWString(nid, _offSzinfotitle, title, 64);
         final iconFlags = (hBalloonIcon != 0 ? _niifUser : 0) | _niifNosound;
         _writeUint32(nid, _offDwinfoflags, iconFlags);
-        if (hBalloonIcon != 0)
+        if (hBalloonIcon != 0) {
           _writeUint64(nid, _offHBalloonIcon, hBalloonIcon);
+        }
 
         _shellNotify!(_nimAdd, nid);
         await Future<void>.delayed(
