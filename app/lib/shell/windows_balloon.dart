@@ -81,10 +81,10 @@ class WindowsBalloon {
   }
 
   static void _writeUint32(Pointer<Uint8> p, int offset, int value) =>
-      p.elementAt(offset).cast<Uint32>().value = value;
+      (p + offset).cast<Uint32>().value = value;
 
   static void _writeUint64(Pointer<Uint8> p, int offset, int value) =>
-      p.elementAt(offset).cast<Uint64>().value = value;
+      (p + offset).cast<Uint64>().value = value;
 
   static void _writeWString(
     Pointer<Uint8> p,
@@ -95,10 +95,10 @@ class WindowsBalloon {
     final units = text.codeUnits;
     final len = units.length < maxChars - 1 ? units.length : maxChars - 1;
     for (var i = 0; i < len; i++) {
-      p.elementAt(offset + i * 2).cast<Uint16>().value = units[i];
+      (p + offset + i * 2).cast<Uint16>().value = units[i];
     }
     // null-terminate
-    p.elementAt(offset + len * 2).cast<Uint16>().value = 0;
+    (p + offset + len * 2).cast<Uint16>().value = 0;
   }
 
   /// Shows a balloon notification with [title] and [body].
