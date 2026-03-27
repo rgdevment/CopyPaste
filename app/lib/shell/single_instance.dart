@@ -27,6 +27,9 @@ typedef _CloseHandleDart = int Function(int hObject);
 typedef _ReleaseMutexNative = Int32 Function(IntPtr hMutex);
 typedef _ReleaseMutexDart = int Function(int hMutex);
 
+typedef _AllowSetForegroundWindowNative = Int32 Function(Uint32 dwProcessId);
+typedef _AllowSetForegroundWindowDart = int Function(int dwProcessId);
+
 class _Win32Mutex {
   _Win32Mutex._() {
     assert(Platform.isWindows, '_Win32Mutex requires Windows');
@@ -43,6 +46,12 @@ class _Win32Mutex {
       .lookupFunction<_CloseHandleNative, _CloseHandleDart>('CloseHandle');
   late final releaseMutex = _kernel32
       .lookupFunction<_ReleaseMutexNative, _ReleaseMutexDart>('ReleaseMutex');
+  late final _user32 = DynamicLibrary.open('user32.dll');
+  late final allowSetForegroundWindow = _user32
+      .lookupFunction<
+        _AllowSetForegroundWindowNative,
+        _AllowSetForegroundWindowDart
+      >('AllowSetForegroundWindow');
 }
 
 class SingleInstance {
@@ -76,9 +85,15 @@ class SingleInstance {
   }
 
   /// Writes a wakeup signal file so the running instance can show its window.
+  /// On Windows also grants it foreground permission so SetForegroundWindow works.
   static void signalWakeup() {
     try {
       File(_wakeupFilePath()).writeAsStringSync('wakeup');
+      if (Platform.isWindows) {
+        // ASFW_ANY (-1) lets the first instance bring itself to front
+        // without Windows silently ignoring SetForegroundWindow.
+        _Win32Mutex.instance.allowSetForegroundWindow(0xFFFFFFFF);
+      }
     } catch (_) {}
   }
 
@@ -86,10 +101,15 @@ class SingleInstance {
   /// Safe to call multiple times — cancels any previous subscription.
   static void listenForWakeup(void Function() onWakeup) {
     _wakeupSubscription?.cancel();
-    // Clear any stale signal left by a previous crash
+    // Only discard signals older than 30 s — those are genuinely stale from a
+    // previous crash. Fresh files written by a second instance during our own
+    // startup must be processed, not silently deleted.
     try {
       final stale = File(_wakeupFilePath());
-      if (stale.existsSync()) stale.deleteSync();
+      if (stale.existsSync()) {
+        final age = DateTime.now().difference(stale.lastModifiedSync());
+        if (age.inSeconds > 30) stale.deleteSync();
+      }
     } catch (_) {}
     _wakeupSubscription =
         Stream<void>.periodic(const Duration(milliseconds: 500)).listen((_) {

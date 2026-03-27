@@ -1159,6 +1159,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
   String linuxHotkeyConflictWarning(String requested, String fallback);
+
+  /// In-app snackbar shown inside the window when it is raised by a second launch attempt
+  ///
+  /// In en, this message translates to:
+  /// **'CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.'**
+  String wakeupHint(String hotkey);
 }
 
 class _AppLocalizationsDelegate

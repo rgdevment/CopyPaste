@@ -16,6 +16,12 @@ class AppDelegate: FlutterAppDelegate {
     stripMenuBar()
   }
 
+  override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    let wakeupPath = (NSTemporaryDirectory() as NSString).appendingPathComponent("copypaste.wakeup")
+    try? "wakeup".write(toFile: wakeupPath, atomically: true, encoding: .utf8)
+    return true
+  }
+
   private func stripMenuBar() {
     guard let menu = NSApp.mainMenu else { return }
 

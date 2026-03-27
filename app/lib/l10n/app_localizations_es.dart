@@ -579,4 +579,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String linuxHotkeyConflictWarning(String requested, String fallback) {
     return 'El atajo $requested no está disponible en este escritorio X11 y el fallback temporal $fallback también falló. Abre Configuración para elegir otro atajo.';
   }
+
+  @override
+  String wakeupHint(String hotkey) {
+    return 'CopyPaste se ejecuta en segundo plano — presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo cuando quieras.';
+  }
 }

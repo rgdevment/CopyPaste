@@ -217,7 +217,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             Platform.isWindows ||
             (Platform.isMacOS && macosGranted));
     await _appWindow.init(startVisible: showOnStart);
-    SingleInstance.listenForWakeup(() => unawaited(_safeShow()));
+    SingleInstance.listenForWakeup(() {
+      unawaited(_safeShow());
+      if (Platform.isWindows) unawaited(_showWakeupBalloon());
+      _showWakeupHint();
+    });
 
     try {
       if (Platform.isWindows || Platform.isMacOS) {
@@ -342,6 +346,29 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         ),
       );
     }
+  }
+
+  void _showWakeupHint() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(ctx);
+      if (messenger == null) return;
+      final binding = HotkeyBinding(
+        virtualKey: _config.hotkeyVirtualKey,
+        keyName: _config.hotkeyKeyName,
+        useCtrl: _config.hotkeyUseCtrl,
+        useWin: _config.hotkeyUseWin,
+        useAlt: _config.hotkeyUseAlt,
+        useShift: _config.hotkeyUseShift,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(ctx).wakeupHint(binding.label())),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    });
   }
 
   void _showLinuxNotice(String Function(AppLocalizations l) messageBuilder) {
@@ -487,6 +514,23 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     } catch (e) {
       AppLogger.error('show failed: $e');
     }
+  }
+
+  Future<void> _showWakeupBalloon() async {
+    final binding = HotkeyBinding(
+      virtualKey: _config.hotkeyVirtualKey,
+      keyName: _config.hotkeyKeyName,
+      useCtrl: _config.hotkeyUseCtrl,
+      useWin: _config.hotkeyUseWin,
+      useAlt: _config.hotkeyUseAlt,
+      useShift: _config.hotkeyUseShift,
+    );
+    await WindowsBalloon.show(
+      title: 'CopyPaste is already running',
+      body:
+          'It lives in the background. '
+          'Press ${binding.label()} or click the tray icon to open it.',
+    );
   }
 
   /// Builds the balloon body using the current hotkey so the user knows

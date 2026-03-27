@@ -575,4 +575,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String linuxHotkeyConflictWarning(String requested, String fallback) {
     return 'The shortcut $requested is unavailable on this X11 desktop, and the temporary fallback $fallback also failed. Open Settings to choose another shortcut.';
   }
+
+  @override
+  String wakeupHint(String hotkey) {
+    return 'CopyPaste runs in the background — press $hotkey or click the tray icon to open it anytime.';
+  }
 }
