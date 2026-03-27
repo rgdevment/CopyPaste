@@ -963,7 +963,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
 
     if (item.pasteCount > 0) {
-      widgets.add(Text('×${item.pasteCount}', style: footerStyle, maxLines: 1, overflow: TextOverflow.ellipsis));
+      widgets.add(
+        Text(
+          '×${item.pasteCount}',
+          style: footerStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
     }
 
     final showExpand = _needsExpandToggle(item);
@@ -1472,7 +1479,12 @@ class _FooterChip extends StatelessWidget {
         Icon(icon, size: iconSize, color: iconColor),
         const SizedBox(width: 3),
         Flexible(
-          child: Text(label, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
+          child: Text(
+            label,
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
