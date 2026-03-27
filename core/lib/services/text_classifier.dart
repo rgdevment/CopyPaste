@@ -7,7 +7,11 @@ abstract final class TextClassifier {
     r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
   );
 
-  static final _phone = RegExp(r'^\+?[\d\s\(\)\-]{7,25}$');
+  static final _phone = RegExp(
+    r'^\+\d[\d\s\(\)\-]{4,18}$'
+    r'|'
+    r'^\(\+?\d{1,4}\)[\d\s\-]{4,14}$',
+  );
 
   static final _hexColor = RegExp(
     r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$',

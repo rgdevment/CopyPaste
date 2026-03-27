@@ -63,6 +63,34 @@ void main() {
         );
       });
 
+      test('detects area code format (55) number', () {
+        expect(
+          TextClassifier.classify('(55) 2222-2222'),
+          ClipboardContentType.phone,
+        );
+      });
+
+      test('detects area code format with + prefix', () {
+        expect(
+          TextClassifier.classify('(+1) 555-1234'),
+          ClipboardContentType.phone,
+        );
+      });
+
+      test('does not classify bare number without prefix as phone', () {
+        expect(
+          TextClassifier.classify('202117759'),
+          isNot(ClipboardContentType.phone),
+        );
+      });
+
+      test('does not classify 10-digit bare number as phone', () {
+        expect(
+          TextClassifier.classify('1025908953'),
+          isNot(ClipboardContentType.phone),
+        );
+      });
+
       test('does not classify short digit sequence as phone', () {
         expect(
           TextClassifier.classify('12345'),
