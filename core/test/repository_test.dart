@@ -251,6 +251,77 @@ void main() {
       expect(results.first.content, equals('hello text'));
     });
 
+    test('searchAdvanced with symbol-only query finds matching items', () async {
+      // FTS5 tokenizer splits on "@" — this must fall through to LIKE path
+      await repo.save(
+        ClipboardItem(
+          content: 'user@gmail.com',
+          type: ClipboardContentType.email,
+        ),
+      );
+      await repo.save(
+        ClipboardItem(content: 'no match here', type: ClipboardContentType.text),
+      );
+      final results = await repo.searchAdvanced(
+        query: '@',
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.content, equals('user@gmail.com'));
+    });
+
+    test('searchAdvanced symbol query paginates correctly beyond page 1',
+        () async {
+      // Verify LIKE-only path paginates: page 2 must return results when
+      // there are more than `limit` matches
+      for (var i = 0; i < 5; i++) {
+        await repo.save(
+          ClipboardItem(
+            content: 'addr$i@example.com',
+            type: ClipboardContentType.email,
+          ),
+        );
+      }
+      // Insert non-matching items to pad the table
+      for (var i = 0; i < 3; i++) {
+        await repo.save(
+          ClipboardItem(
+            content: 'no-at-sign-$i',
+            type: ClipboardContentType.text,
+          ),
+        );
+      }
+      final page1 = await repo.searchAdvanced(query: '@', limit: 3, skip: 0);
+      final page2 = await repo.searchAdvanced(query: '@', limit: 3, skip: 3);
+
+      expect(page1.length, equals(3));
+      expect(page2.length, equals(2)); // 5 total "@" items, page 2 has the rest
+      // All returned items must contain "@"
+      for (final item in [...page1, ...page2]) {
+        expect(item.content, contains('@'));
+      }
+    });
+
+    test('searchAdvanced dot query matches file paths', () async {
+      await repo.save(
+        ClipboardItem(
+          content: '/home/user/document.pdf',
+          type: ClipboardContentType.file,
+        ),
+      );
+      await repo.save(
+        ClipboardItem(content: 'plain text', type: ClipboardContentType.text),
+      );
+      final results = await repo.searchAdvanced(
+        query: '.pdf',
+        limit: 50,
+        skip: 0,
+      );
+      expect(results.length, equals(1));
+      expect(results.first.content, contains('.pdf'));
+    });
+
     test('getLatest returns most recently modified item', () async {
       final older = ClipboardItem(
         content: 'older',
