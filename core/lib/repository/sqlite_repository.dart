@@ -118,7 +118,11 @@ class SqliteRepository implements IClipboardRepository {
         try {
           return NativeDatabase(File(dbPath));
         } catch (e, s) {
-          AppLogger.exception(e, s, 'SqliteRepository.fromPath — attempting recovery');
+          AppLogger.exception(
+            e,
+            s,
+            'SqliteRepository.fromPath — attempting recovery',
+          );
           _handleCorruptDatabase(dbPath);
           return NativeDatabase(File(dbPath));
         }

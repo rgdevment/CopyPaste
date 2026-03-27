@@ -56,7 +56,7 @@ class SupportService {
     );
 
     final zipData = ZipEncoder().encode(archive);
-    if (zipData == null || zipData.isEmpty) {
+    if (zipData.isEmpty) {
       AppLogger.error('exportLogs: ZipEncoder returned empty data');
       throw StateError('Zip encoding produced no output');
     }

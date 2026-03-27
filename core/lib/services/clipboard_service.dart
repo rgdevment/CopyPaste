@@ -135,7 +135,9 @@ class ClipboardService {
         await File(tempPath).writeAsBytes(imageBytes);
         savedItem = item.copyWith(content: tempPath);
       } catch (e) {
-        AppLogger.warn('processImage: could not write temp BMP for ${item.id}: $e');
+        AppLogger.warn(
+          'processImage: could not write temp BMP for ${item.id}: $e',
+        );
       }
     }
 
@@ -163,7 +165,9 @@ class ClipboardService {
         imagesDir: _imagesPath!,
       );
       if (result == null) {
-        AppLogger.warn('_processImageBackground: ImageProcessor returned null for ${item.id}');
+        AppLogger.warn(
+          '_processImageBackground: ImageProcessor returned null for ${item.id}',
+        );
         return;
       }
       if (_disposed) return;
@@ -265,7 +269,9 @@ class ClipboardService {
         final file = File(item.content);
         if (file.existsSync()) file.deleteSync();
       } catch (e) {
-        AppLogger.warn('_cleanupItemFiles: could not delete image for ${item.id}: $e');
+        AppLogger.warn(
+          '_cleanupItemFiles: could not delete image for ${item.id}: $e',
+        );
       }
     }
   }
