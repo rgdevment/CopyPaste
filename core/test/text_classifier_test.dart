@@ -80,17 +80,11 @@ void main() {
 
     group('color', () {
       test('detects 6-digit hex', () {
-        expect(
-          TextClassifier.classify('#FF5733'),
-          ClipboardContentType.color,
-        );
+        expect(TextClassifier.classify('#FF5733'), ClipboardContentType.color);
       });
 
       test('detects 3-digit hex', () {
-        expect(
-          TextClassifier.classify('#F57'),
-          ClipboardContentType.color,
-        );
+        expect(TextClassifier.classify('#F57'), ClipboardContentType.color);
       });
 
       test('detects 8-digit hex with alpha', () {
@@ -138,17 +132,11 @@ void main() {
 
     group('ip address', () {
       test('detects valid IPv4', () {
-        expect(
-          TextClassifier.classify('192.168.1.1'),
-          ClipboardContentType.ip,
-        );
+        expect(TextClassifier.classify('192.168.1.1'), ClipboardContentType.ip);
       });
 
       test('detects edge case 0.0.0.0', () {
-        expect(
-          TextClassifier.classify('0.0.0.0'),
-          ClipboardContentType.ip,
-        );
+        expect(TextClassifier.classify('0.0.0.0'), ClipboardContentType.ip);
       });
 
       test('detects 255.255.255.255', () {
@@ -205,10 +193,7 @@ void main() {
       });
 
       test('detects JSON array', () {
-        expect(
-          TextClassifier.classify('[1, 2, 3]'),
-          ClipboardContentType.json,
-        );
+        expect(TextClassifier.classify('[1, 2, 3]'), ClipboardContentType.json);
       });
 
       test('detects multiline JSON', () {
