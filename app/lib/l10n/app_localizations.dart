@@ -1010,6 +1010,24 @@ abstract class AppLocalizations {
   /// **'Privacy Policy'**
   String get privacyPolicy;
 
+  /// Badge label: everything is stored locally
+  ///
+  /// In en, this message translates to:
+  /// **'Local-only'**
+  String get aboutTagLocal;
+
+  /// Badge label: the app is open source
+  ///
+  /// In en, this message translates to:
+  /// **'Open source'**
+  String get aboutTagOpenSource;
+
+  /// Badge label: the app is free
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get aboutTagFree;
+
   /// License footer text
   ///
   /// In en, this message translates to:

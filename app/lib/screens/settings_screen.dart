@@ -926,14 +926,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'v${AppConfig.appVersion}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: colors.onSurface,
-              ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _AboutBadge(
+                  icon: Icons.new_releases_outlined,
+                  label: 'v${AppConfig.appVersion}',
+                  colors: colors,
+                ),
+                _AboutBadge(
+                  icon: Icons.lock_outline_rounded,
+                  label: l.aboutTagLocal,
+                  colors: colors,
+                ),
+                _AboutBadge(
+                  icon: Icons.code_rounded,
+                  label: l.aboutTagOpenSource,
+                  colors: colors,
+                ),
+                _AboutBadge(
+                  icon: Icons.favorite_border_rounded,
+                  label: l.aboutTagFree,
+                  colors: colors,
+                ),
+              ],
             ),
           ],
         ),
@@ -1980,6 +1998,43 @@ class _ActionTileState extends State<_ActionTile> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AboutBadge extends StatelessWidget {
+  const _AboutBadge({
+    required this.icon,
+    required this.label,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String label;
+  final AppThemeColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: colors.onSurfaceMuted),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10.5,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

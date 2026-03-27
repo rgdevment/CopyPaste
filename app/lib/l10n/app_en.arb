@@ -373,6 +373,13 @@
   "privacyPolicy": "Privacy Policy",
   "@privacyPolicy": { "description": "Link label to open the full privacy policy" },
 
+  "aboutTagLocal": "Local-only",
+  "@aboutTagLocal": { "description": "Badge label: everything is stored locally" },
+  "aboutTagOpenSource": "Open source",
+  "@aboutTagOpenSource": { "description": "Badge label: the app is open source" },
+  "aboutTagFree": "Free",
+  "@aboutTagFree": { "description": "Badge label: the app is free" },
+
   "aboutLicense": "GPL v3 License \u2014 Free and open source.",
   "@aboutLicense": { "description": "License footer text" },
 

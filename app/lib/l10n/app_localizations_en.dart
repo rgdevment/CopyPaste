@@ -488,6 +488,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicy => 'Privacy Policy';
 
   @override
+  String get aboutTagLocal => 'Local-only';
+
+  @override
+  String get aboutTagOpenSource => 'Open source';
+
+  @override
+  String get aboutTagFree => 'Free';
+
+  @override
   String get aboutLicense => 'GPL v3 License — Free and open source.';
 
   @override

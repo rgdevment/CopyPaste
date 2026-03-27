@@ -492,6 +492,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get privacyPolicy => 'Política de privacidad';
 
   @override
+  String get aboutTagLocal => 'Todo local';
+
+  @override
+  String get aboutTagOpenSource => 'Código abierto';
+
+  @override
+  String get aboutTagFree => 'Gratis';
+
+  @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';
 
   @override
