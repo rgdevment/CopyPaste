@@ -1,4 +1,5 @@
 // coverage:ignore-file
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 
@@ -47,17 +48,23 @@ class _Win32Mutex {
 class SingleInstance {
   static const String _mutexName = r'Global\CopyPaste_SingleInstance_Mutex';
   static const int _errorAlreadyExists = 183;
+  static const String _wakeupFileName = 'copypaste.wakeup';
 
   static int _mutexHandle = 0;
   static RandomAccessFile? _lockFile;
+  static StreamSubscription<void>? _wakeupSubscription;
 
   static bool acquire() {
+    bool acquired;
     if (Platform.isWindows) {
-      return _acquireWindows();
+      acquired = _acquireWindows();
     } else if (Platform.isMacOS || Platform.isLinux) {
-      return _acquireUnix();
+      acquired = _acquireUnix();
+    } else {
+      return true;
     }
-    return true;
+    if (!acquired) signalWakeup();
+    return acquired;
   }
 
   static void release() {
@@ -67,6 +74,43 @@ class SingleInstance {
       _releaseUnix();
     }
   }
+
+  /// Writes a wakeup signal file so the running instance can show its window.
+  static void signalWakeup() {
+    try {
+      File(_wakeupFilePath()).writeAsStringSync('wakeup');
+    } catch (_) {}
+  }
+
+  /// Starts polling for a wakeup signal. Calls [onWakeup] when detected.
+  /// Safe to call multiple times — cancels any previous subscription.
+  static void listenForWakeup(void Function() onWakeup) {
+    _wakeupSubscription?.cancel();
+    // Clear any stale signal left by a previous crash
+    try {
+      final stale = File(_wakeupFilePath());
+      if (stale.existsSync()) stale.deleteSync();
+    } catch (_) {}
+    _wakeupSubscription =
+        Stream<void>.periodic(const Duration(milliseconds: 500)).listen((_) {
+          final f = File(_wakeupFilePath());
+          if (f.existsSync()) {
+            try {
+              f.deleteSync();
+            } catch (_) {}
+            onWakeup();
+          }
+        });
+  }
+
+  /// Stops listening for wakeup signals.
+  static void stopListening() {
+    _wakeupSubscription?.cancel();
+    _wakeupSubscription = null;
+  }
+
+  static String _wakeupFilePath() =>
+      '${Directory.systemTemp.path}/$_wakeupFileName';
 
   static bool _acquireWindows() {
     final w = _Win32Mutex.instance;

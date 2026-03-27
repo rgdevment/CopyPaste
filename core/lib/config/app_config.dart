@@ -9,8 +9,8 @@ class AppConfig {
   const AppConfig({
     this.preferredLanguage = 'auto',
     this.runOnStartup = true,
-    this.hotkeyUseCtrl = false,
-    this.hotkeyUseWin = true,
+    this.hotkeyUseCtrl = true,
+    this.hotkeyUseWin = false,
     this.hotkeyUseAlt = true,
     this.hotkeyUseShift = false,
     this.hotkeyVirtualKey = 0x56,
@@ -99,22 +99,10 @@ class AppConfig {
     );
   }
 
-  static AppConfig defaultForCurrentPlatform() =>
-      defaultForPlatform(Platform.isLinux ? 'linux' : 'default');
+  static AppConfig defaultForCurrentPlatform() => defaultForPlatform('default');
 
-  static AppConfig defaultForPlatform(String platform) {
-    if (platform == 'linux') {
-      return const AppConfig(
-        hotkeyUseCtrl: true,
-        hotkeyUseWin: false,
-        hotkeyUseAlt: true,
-        hotkeyUseShift: false,
-        hotkeyVirtualKey: 0x56,
-        hotkeyKeyName: 'V',
-      );
-    }
-    return const AppConfig();
-  }
+  // Kept for tests that pass a platform string explicitly.
+  static AppConfig defaultForPlatform(String platform) => const AppConfig();
 
   static const String fileName = 'config.json';
   static const String appVersion = String.fromEnvironment(

@@ -117,7 +117,12 @@ class SqliteRepository implements IClipboardRepository {
       LazyDatabase(() async {
         try {
           return NativeDatabase(File(dbPath));
-        } catch (_) {
+        } catch (e, s) {
+          AppLogger.exception(
+            e,
+            s,
+            'SqliteRepository.fromPath — attempting recovery',
+          );
           _handleCorruptDatabase(dbPath);
           return NativeDatabase(File(dbPath));
         }
@@ -136,14 +141,24 @@ class SqliteRepository implements IClipboardRepository {
     if (!file.existsSync()) return;
     try {
       final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
-      file.renameSync('$dbPath.backup.$timestamp');
-    } catch (_) {}
+      final backupPath = '$dbPath.backup.$timestamp';
+      file.renameSync(backupPath);
+      AppLogger.warn(
+        '_handleCorruptDatabase: renamed corrupt DB to $backupPath',
+      );
+    } catch (e) {
+      AppLogger.error('_handleCorruptDatabase: could not rename DB: $e');
+    }
     try {
       File('$dbPath-wal').deleteSync();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warn('_handleCorruptDatabase: could not delete WAL: $e');
+    }
     try {
       File('$dbPath-shm').deleteSync();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warn('_handleCorruptDatabase: could not delete SHM: $e');
+    }
   }
 
   ClipboardItem _fromRow(ClipboardRow row) => ClipboardItem(
@@ -351,31 +366,39 @@ class SqliteRepository implements IClipboardRepository {
     final filterClause = conditions.isEmpty ? '1=1' : conditions.join(' AND ');
 
     if (hasTextQuery) {
+      // Strip everything that isn't alphanumeric or whitespace for the FTS
+      // query.  FTS5 unicode61 tokenizer treats punctuation as delimiters, so
+      // passing ".pdf*" or "@*" causes a syntax error or zero matches.
+      // The full normalized string (with symbols) is kept for the LIKE pattern.
       final ftsSafe = normalized
-          .replaceAll('"', '""')
-          .replaceAll('*', '')
-          .replaceAll('(', '')
-          .replaceAll(')', '');
-      final ftsQuery = '$ftsSafe*';
+          .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
       final likePattern = '%$normalized%';
 
-      final ftsFilterVars = [...variables];
-      final likeFilterVars = [...variables];
+      // If nothing alphanumeric remains, skip FTS entirely and use LIKE only.
+      final hasFtsTokens = ftsSafe.isNotEmpty;
 
-      final allVariables = [
-        Variable.withString(ftsQuery),
-        ...ftsFilterVars,
-        ...likeFilterVars,
-        Variable.withString(likePattern),
-        Variable.withString(likePattern),
-        Variable.withString(likePattern),
-        Variable.withInt(limit),
-        Variable.withInt(limit),
-        Variable.withInt(skip),
-      ];
+      if (hasFtsTokens) {
+        final ftsQuery = '$ftsSafe*';
+        final ftsFilterVars = [...variables];
+        final likeFilterVars = [...variables];
 
-      final sql =
-          '''
+        // No inner LIMIT on like_results — the outer LIMIT/OFFSET controls
+        // pagination so scrolling past page 1 works correctly.
+        final allVariables = [
+          Variable.withString(ftsQuery),
+          ...ftsFilterVars,
+          ...likeFilterVars,
+          Variable.withString(likePattern),
+          Variable.withString(likePattern),
+          Variable.withString(likePattern),
+          Variable.withInt(limit),
+          Variable.withInt(skip),
+        ];
+
+        final sql =
+            '''
         WITH fts_results AS (
           SELECT c.*, bm25(ClipboardItems_fts) AS rank, 1 AS source
           FROM clipboard_items c
@@ -388,7 +411,6 @@ class SqliteRepository implements IClipboardRepository {
           WHERE $filterClause
             AND (LOWER(c.content) LIKE ? OR LOWER(c.label) LIKE ? OR LOWER(c.app_source) LIKE ?)
             AND c.id NOT IN (SELECT id FROM fts_results)
-          LIMIT ?
         )
         SELECT * FROM (
           SELECT * FROM fts_results
@@ -398,6 +420,44 @@ class SqliteRepository implements IClipboardRepository {
         ORDER BY source ASC, rank ASC, modified_at DESC
         LIMIT ? OFFSET ?
         ''';
+
+        final expectedCount = '?'.allMatches(sql).length;
+        assert(
+          allVariables.length == expectedCount,
+          'SQL variable count mismatch: expected $expectedCount, got ${allVariables.length}',
+        );
+
+        final results = await _db
+            .customSelect(
+              sql,
+              variables: allVariables,
+              readsFrom: {_db.clipboardItems},
+            )
+            .get();
+
+        return results.map((row) => _fromQueryRow(row)).toList();
+      }
+
+      // LIKE-only path: query is pure punctuation/symbols (e.g. "@", ".", "+").
+      // FTS5 would produce no results for these, so skip it entirely.
+      final allVariables = [
+        ...variables,
+        Variable.withString(likePattern),
+        Variable.withString(likePattern),
+        Variable.withString(likePattern),
+        Variable.withInt(limit),
+        Variable.withInt(skip),
+      ];
+
+      final sql =
+          '''
+      SELECT c.*, 0.0 AS rank
+      FROM clipboard_items c
+      WHERE $filterClause
+        AND (LOWER(c.content) LIKE ? OR LOWER(c.label) LIKE ? OR LOWER(c.app_source) LIKE ?)
+      ORDER BY c.modified_at DESC
+      LIMIT ? OFFSET ?
+      ''';
 
       final expectedCount = '?'.allMatches(sql).length;
       assert(
