@@ -91,7 +91,7 @@ Sometimes, in our daily workflow, we just need something that's "just there" whe
 CopyPaste isn't a "power tool" you learn to tolerate — it's something that should feel like it was always part of the OS. Lightweight enough to forget it's running. Fast enough to never slow you down. Quiet enough to stay out of your way.
 
 > 🚀 I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#-found-a-bug-have-feedback) — this project keeps improving because of real-world use.
-
+>
 > 🐧 **Linux is in beta.** It works, but there are edge cases we haven't seen yet — especially across different desktop environments and distributions. If you're on Linux and want to help improve it, [your feedback is invaluable](#-found-a-bug-have-feedback).
 
 ---
@@ -301,7 +301,7 @@ CopyPaste includes three filter modes to help you find items quickly:
 | :----------- | :-------------------- | :------------------------------------------------------------------------------------------- |
 | **Content**  | Text search (default) | Type in the search box to filter by content or label                                         |
 | **Category** | Filter by color       | Select colors from the dropdown to show only items with selected colors                      |
-| **Type**     | Filter by item type   | Select types from the dropdown to show only Text, Image, File, Folder, Link, Audio, Video, Email, Phone, Color, IP, UUID, or JSON |
+| **Type**     | Filter by item type   | Select from the dropdown to filter by content type                                           |
 
 **Switching Filter Modes:**
 
@@ -396,7 +396,7 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 ---
 
-### 🐧 Linux — apt / dnf <sup>beta</sup>
+### 🐧 Linux — apt / dnf
 
 > **Linux support is in beta.** Core features work well across tested distributions, but you may encounter issues depending on your desktop environment, display server, or distro. [Please report anything unusual](https://github.com/rgdevment/CopyPaste/issues/new) — your reports directly shape stability improvements.
 
@@ -492,7 +492,7 @@ For `apt`/`dnf`, yes. They install to system paths, so without `sudo` (or equiva
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
 
 **What platforms are supported?**
-Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see [the Linux section](#-linux----apt--dnf-) for details.
+Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see the [Getting Started](#-getting-started) section for details.
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
