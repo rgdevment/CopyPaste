@@ -380,6 +380,42 @@ abstract class AppLocalizations {
   /// **'Video'**
   String get typeVideo;
 
+  /// No description provided for @typeEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get typeEmail;
+
+  /// No description provided for @typePhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get typePhone;
+
+  /// No description provided for @typeColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get typeColor;
+
+  /// No description provided for @typeIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP'**
+  String get typeIp;
+
+  /// No description provided for @typeUuid.
+  ///
+  /// In en, this message translates to:
+  /// **'UUID'**
+  String get typeUuid;
+
+  /// No description provided for @typeJson.
+  ///
+  /// In en, this message translates to:
+  /// **'JSON'**
+  String get typeJson;
+
   /// No description provided for @filterAll.
   ///
   /// In en, this message translates to:

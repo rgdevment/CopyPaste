@@ -229,6 +229,40 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
     AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
     unawaited(AutoUpdateService.initialize());
+    if (_needsClassifierMigration(_config.lastRunVersion)) {
+      unawaited(_runClassifierMigration());
+    } else if (_config.lastRunVersion != AppConfig.appVersion) {
+      _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
+      unawaited(
+        _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+      );
+    }
+  }
+
+  Future<void> _runClassifierMigration() async {
+    try {
+      await widget.clipboardService.reclassifyLegacyTextItems();
+    } catch (e, s) {
+      AppLogger.error('Classifier migration failed: $e\n$s');
+      return; // version not saved → retries on next startup
+    }
+    _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
+    unawaited(
+      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+    );
+  }
+
+  static bool _needsClassifierMigration(String lastVersion) {
+    if (lastVersion.isEmpty) return true;
+    final parts = lastVersion.split('.');
+    if (parts.length < 3) return true;
+    final major = int.tryParse(parts[0]) ?? 0;
+    final minor = int.tryParse(parts[1]) ?? 0;
+    final patch = int.tryParse(parts[2]) ?? 0;
+    if (major < 2) return true;
+    if (major == 2 && minor < 1) return true;
+    if (major == 2 && minor == 1 && patch <= 5) return true;
+    return false;
   }
 
   Future<void> _registerHotkeyWithFeedback() async {
@@ -362,6 +396,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             unawaited(_processMediaMetadata(item, event.files!.first));
           }
         }
+      case ClipboardContentType.email:
+      case ClipboardContentType.phone:
+      case ClipboardContentType.color:
+      case ClipboardContentType.ip:
+      case ClipboardContentType.uuid:
+      case ClipboardContentType.json:
       case ClipboardContentType.unknown:
         break;
     }

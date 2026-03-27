@@ -18,6 +18,7 @@ class ClipboardCard extends StatefulWidget {
     required this.onLabelColor,
     this.onPastePlain,
     this.onExpandToggle,
+    this.onOpen,
     this.onSelect,
     this.isSelected = false,
     this.isExpanded = false,
@@ -33,6 +34,7 @@ class ClipboardCard extends StatefulWidget {
   final void Function(String? label, CardColor color) onLabelColor;
   final VoidCallback? onPastePlain;
   final VoidCallback? onExpandToggle;
+  final VoidCallback? onOpen;
   final VoidCallback? onSelect;
   final bool isSelected;
   final bool isExpanded;
@@ -47,6 +49,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _hovering = false;
   String? _resolvedImagePath;
   bool _imagePathResolved = false;
+  bool? _fileAvailable;
   DateTime? _lastPrimaryDown;
   bool _isTextOverflowing = false;
 
@@ -69,6 +72,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
   void initState() {
     super.initState();
     _resolveImagePath();
+    _resolveFileAvailability();
   }
 
   @override
@@ -78,7 +82,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
         oldWidget.item.content != widget.item.content ||
         oldWidget.item.metadata != widget.item.metadata) {
       _imagePathResolved = false;
+      _fileAvailable = null;
       _resolveImagePath();
+      _resolveFileAvailability();
     }
   }
 
@@ -86,10 +92,26 @@ class _ClipboardCardState extends State<ClipboardCard> {
     if (widget.isExpanded) return true;
     final type = item.type;
     if (type == ClipboardContentType.text ||
-        type == ClipboardContentType.unknown) {
+        type == ClipboardContentType.unknown ||
+        type == ClipboardContentType.json) {
       return _isTextOverflowing;
     }
     return false;
+  }
+
+  bool _needsOpenAction(ClipboardItem item) {
+    return switch (item.type) {
+      ClipboardContentType.image =>
+        _imagePathResolved && _resolvedImagePath != null,
+      ClipboardContentType.file ||
+      ClipboardContentType.folder ||
+      ClipboardContentType.audio ||
+      ClipboardContentType.video => _fileAvailable ?? false,
+      ClipboardContentType.link ||
+      ClipboardContentType.email ||
+      ClipboardContentType.phone => true,
+      _ => false,
+    };
   }
 
   void _resolveImagePath() {
@@ -123,6 +145,27 @@ class _ClipboardCardState extends State<ClipboardCard> {
     _resolvedImagePath = exists ? path : null;
     _imagePathResolved = true;
     if (mounted) setState(() {});
+  }
+
+  void _resolveFileAvailability() {
+    final item = widget.item;
+    if (item.type != ClipboardContentType.file &&
+        item.type != ClipboardContentType.folder &&
+        item.type != ClipboardContentType.audio &&
+        item.type != ClipboardContentType.video) {
+      return;
+    }
+    final path = item.content.split('\n').first.trim();
+    if (path.isEmpty) {
+      if (mounted) setState(() => _fileAvailable = false);
+      return;
+    }
+    _checkFileAvailableAsync(path);
+  }
+
+  Future<void> _checkFileAvailableAsync(String path) async {
+    final exists = await File(path).exists() || await Directory(path).exists();
+    if (mounted) setState(() => _fileAvailable = exists);
   }
 
   Future<void> _editLabelColor(BuildContext context) async {
@@ -386,15 +429,17 @@ class _ClipboardCardState extends State<ClipboardCard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (item.appSource != null) ...[
+                    if (item.appSource != null &&
+                        item.type != ClipboardContentType.color) ...[
                       const SizedBox(height: 1),
                       Text(
-                        item.appSource!,
+                        '· ${item.appSource!}',
                         style: theme.typography.cardFooter.copyWith(
                           color: colors.onSurface.withValues(
                             alpha: theme.cardStyle.appSourceOpacity,
                           ),
                           fontSize: 10,
+                          letterSpacing: 0.2,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -515,7 +560,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
         return _buildLinkContent(theme, colors, item);
       case ClipboardContentType.text:
       case ClipboardContentType.unknown:
+      case ClipboardContentType.email:
+      case ClipboardContentType.phone:
+      case ClipboardContentType.ip:
+      case ClipboardContentType.uuid:
+      case ClipboardContentType.json:
         return _buildTextContent(theme, colors, item);
+      case ClipboardContentType.color:
+        return _buildColorContent(theme, colors, item);
     }
   }
 
@@ -555,6 +607,21 @@ class _ClipboardCardState extends State<ClipboardCard> {
           overflow: TextOverflow.ellipsis,
         );
       },
+    );
+  }
+
+  Widget _buildColorContent(
+    AppThemeData theme,
+    AppThemeColorScheme colors,
+    ClipboardItem item,
+  ) {
+    return Text(
+      item.content,
+      style: theme.typography.cardContent.copyWith(
+        color: colors.onSurface.withValues(
+          alpha: theme.cardStyle.contentOpacity,
+        ),
+      ),
     );
   }
 
@@ -826,6 +893,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
 
   bool _hasFooter(ClipboardItem item) {
     if (_needsExpandToggle(item)) return true;
+    if (_needsOpenAction(item)) return true;
     if (item.pasteCount > 0) return true;
     if (_getExtForItem(item).isNotEmpty) return true;
     final meta = _parseMetadata(item);
@@ -895,14 +963,31 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
 
     if (item.pasteCount > 0) {
-      widgets.add(Text('×${item.pasteCount}', style: footerStyle));
+      widgets.add(
+        Text(
+          '×${item.pasteCount}',
+          style: footerStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
     }
 
     final showExpand = _needsExpandToggle(item);
+    final showOpen = !showExpand && _needsOpenAction(item);
 
     return Row(
       children: [
-        if (ext.isNotEmpty) _ExtBadge(label: ext, color: typeColor),
+        if (item.type == ClipboardContentType.color)
+          _ColorBadge(value: item.content.trim())
+        else if (item.type == ClipboardContentType.phone) ...[
+          if (_resolvePhoneCountry(item.content) case final c?)
+            _ExtBadge(label: c, color: typeColor),
+        ] else if (item.type == ClipboardContentType.email) ...[
+          if (_resolveEmailProvider(item.content) case final p?)
+            _ExtBadge(label: p, color: typeColor),
+        ] else if (ext.isNotEmpty)
+          _ExtBadge(label: ext, color: typeColor),
         if (showExpand)
           Padding(
             padding: const EdgeInsets.only(left: 6),
@@ -929,11 +1014,42 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ),
             ),
           ),
-        const Spacer(),
-        for (int i = 0; i < widgets.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          widgets[i],
-        ],
+        if (showOpen)
+          Padding(
+            padding: EdgeInsets.only(left: ext.isNotEmpty ? 6 : 0),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onOpen?.call(),
+                canRequestFocus: false,
+                borderRadius: BorderRadius.circular(8),
+                hoverColor: colors.onSurface.withValues(alpha: 0.06),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  child: Icon(
+                    Icons.open_in_new_rounded,
+                    size: 14,
+                    color: colors.onSurface.withValues(alpha: 0.35),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (widgets.isNotEmpty)
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                for (int i = 0; i < widgets.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Flexible(fit: FlexFit.loose, child: widgets[i]),
+                ],
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -968,6 +1084,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
       ClipboardContentType.audio =>
         isDark ? const Color(0xFF7DD3FC) : const Color(0xFF075985),
       ClipboardContentType.video => colors.accentRed,
+      ClipboardContentType.email => colors.accentBlue,
+      ClipboardContentType.phone => colors.accentGreen,
+      ClipboardContentType.color => colors.accentOrange,
+      ClipboardContentType.ip =>
+        isDark ? const Color(0xFFD4A5F5) : const Color(0xFF6B21A8),
+      ClipboardContentType.uuid =>
+        isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+      ClipboardContentType.json => colors.accentYellow,
       ClipboardContentType.unknown => colors.onSurfaceMuted,
     };
   }
@@ -981,8 +1105,146 @@ class _ClipboardCardState extends State<ClipboardCard> {
         ClipboardContentType.link => l.typeLink,
         ClipboardContentType.audio => l.typeAudio,
         ClipboardContentType.video => l.typeVideo,
+        ClipboardContentType.email => l.typeEmail,
+        ClipboardContentType.phone => l.typePhone,
+        ClipboardContentType.color => l.typeColor,
+        ClipboardContentType.ip => l.typeIp,
+        ClipboardContentType.uuid => l.typeUuid,
+        ClipboardContentType.json => l.typeJson,
         ClipboardContentType.unknown => 'Unknown',
       };
+
+  static const _phoneCountries = <String, String>{
+    '1': 'US/CA',
+    '7': 'Russia',
+    '20': 'Egypt',
+    '27': 'S.Africa',
+    '30': 'Greece',
+    '31': 'Netherlands',
+    '32': 'Belgium',
+    '33': 'France',
+    '34': 'Spain',
+    '36': 'Hungary',
+    '39': 'Italy',
+    '40': 'Romania',
+    '41': 'Switzerland',
+    '43': 'Austria',
+    '44': 'UK',
+    '45': 'Denmark',
+    '46': 'Sweden',
+    '47': 'Norway',
+    '48': 'Poland',
+    '49': 'Germany',
+    '51': 'Peru',
+    '52': 'Mexico',
+    '53': 'Cuba',
+    '54': 'Argentina',
+    '55': 'Brazil',
+    '56': 'Chile',
+    '57': 'Colombia',
+    '58': 'Venezuela',
+    '60': 'Malaysia',
+    '61': 'Australia',
+    '62': 'Indonesia',
+    '63': 'Philippines',
+    '64': 'NZ',
+    '65': 'Singapore',
+    '66': 'Thailand',
+    '81': 'Japan',
+    '82': 'Korea',
+    '84': 'Vietnam',
+    '86': 'China',
+    '90': 'Turkey',
+    '91': 'India',
+    '92': 'Pakistan',
+    '94': 'Sri Lanka',
+    '98': 'Iran',
+    '212': 'Morocco',
+    '213': 'Algeria',
+    '216': 'Tunisia',
+    '234': 'Nigeria',
+    '254': 'Kenya',
+    '351': 'Portugal',
+    '352': 'Luxembourg',
+    '353': 'Ireland',
+    '354': 'Iceland',
+    '358': 'Finland',
+    '380': 'Ukraine',
+    '381': 'Serbia',
+    '385': 'Croatia',
+    '420': 'Czech',
+    '421': 'Slovakia',
+    '502': 'Guatemala',
+    '503': 'El Salvador',
+    '504': 'Honduras',
+    '505': 'Nicaragua',
+    '506': 'Costa Rica',
+    '507': 'Panama',
+    '591': 'Bolivia',
+    '593': 'Ecuador',
+    '595': 'Paraguay',
+    '598': 'Uruguay',
+    '855': 'Cambodia',
+    '880': 'Bangladesh',
+    '886': 'Taiwan',
+    '961': 'Lebanon',
+    '962': 'Jordan',
+    '964': 'Iraq',
+    '965': 'Kuwait',
+    '966': 'Saudi Arabia',
+    '971': 'UAE',
+    '972': 'Israel',
+    '974': 'Qatar',
+    '977': 'Nepal',
+    '994': 'Azerbaijan',
+    '995': 'Georgia',
+    '998': 'Uzbekistan',
+  };
+
+  // Keyed by first domain label — covers all regional variants automatically.
+  // e.g. outlook.com / outlook.com.ar / outlook.cl all resolve to 'Outlook'
+  static const _emailPrefixes = <String, String>{
+    'gmail': 'Gmail',
+    'googlemail': 'Gmail',
+    'outlook': 'Outlook',
+    'hotmail': 'Hotmail',
+    'live': 'Outlook',
+    'msn': 'MSN',
+    'yahoo': 'Yahoo',
+    'icloud': 'iCloud',
+    'me': 'iCloud',
+    'mac': 'iCloud',
+    'proton': 'Proton',
+    'protonmail': 'Proton',
+    'tutanota': 'Tutanota',
+    'tuta': 'Tuta',
+    'zoho': 'Zoho',
+    'aol': 'AOL',
+    'yandex': 'Yandex',
+    'gmx': 'GMX',
+    'fastmail': 'FastMail',
+    'hey': 'HEY',
+  };
+
+  static String? _resolvePhoneCountry(String phone) {
+    if (!phone.trimLeft().startsWith('+')) return null;
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    for (final len in [3, 2, 1]) {
+      if (digits.length >= len) {
+        final country = _phoneCountries[digits.substring(0, len)];
+        if (country != null) return country;
+      }
+    }
+    return null;
+  }
+
+  static String? _resolveEmailProvider(String email) {
+    final at = email.indexOf('@');
+    if (at == -1 || at >= email.length - 1) return null;
+    final domain = email.substring(at + 1).toLowerCase();
+    final prefix = domain.split('.').first;
+    return _emailPrefixes[prefix] ?? domain;
+  }
 
   String _formatTimestamp(DateTime dt, AppLocalizations l) {
     final now = DateTime.now();
@@ -1099,6 +1361,69 @@ class _MediaIcon extends StatelessWidget {
   }
 }
 
+class _ColorBadge extends StatelessWidget {
+  const _ColorBadge({required this.value});
+
+  final String value;
+
+  static Color? _parse(String value) {
+    final hex = value.startsWith('#') ? value.substring(1) : null;
+    if (hex == null) return null;
+    final normalized = switch (hex.length) {
+      3 => 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}',
+      6 => 'FF$hex',
+      8 => hex,
+      _ => null,
+    };
+    if (normalized == null) return null;
+    final int? v = int.tryParse(normalized, radix: 16);
+    return v != null ? Color(v) : null;
+  }
+
+  static String _format(String value) {
+    final v = value.trimLeft().toLowerCase();
+    if (v.startsWith('#')) return 'HEX';
+    if (v.startsWith('rgba')) return 'RGBA';
+    if (v.startsWith('rgb')) return 'RGB';
+    if (v.startsWith('hsla')) return 'HSLA';
+    if (v.startsWith('hsl')) return 'HSL';
+    return 'COLOR';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = CopyPasteTheme.of(context);
+    final colors = CopyPasteTheme.colorsOf(context);
+    final color = _parse(value);
+    final label = _format(value);
+
+    if (color == null) {
+      return _ExtBadge(label: label, color: colors.accentOrange);
+    }
+
+    final onColor = color.computeLuminance() > 0.4
+        ? Colors.black.withValues(alpha: 0.75)
+        : Colors.white.withValues(alpha: 0.9);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: theme.typography.cardFooter.copyWith(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: onColor,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
 class _ExtBadge extends StatelessWidget {
   const _ExtBadge({required this.label, required this.color});
 
@@ -1107,19 +1432,24 @@ class _ExtBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-          color: color.withValues(alpha: 0.85),
-          letterSpacing: 0.3,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 120),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: color.withValues(alpha: 0.85),
+            letterSpacing: 0.3,
+          ),
         ),
       ),
     );
@@ -1148,7 +1478,14 @@ class _FooterChip extends StatelessWidget {
       children: [
         Icon(icon, size: iconSize, color: iconColor),
         const SizedBox(width: 3),
-        Text(label, style: style),
+        Flexible(
+          child: Text(
+            label,
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
@@ -1176,7 +1513,9 @@ class _ContextMenuItem extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: color.withValues(alpha: 0.7)),
         const SizedBox(width: 8),
-        Text(label, style: TextStyle(fontSize: 12, color: color)),
+        Expanded(
+          child: Text(label, style: TextStyle(fontSize: 12, color: color)),
+        ),
       ],
     );
   }

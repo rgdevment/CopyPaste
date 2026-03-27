@@ -100,7 +100,12 @@ void main() {
       await tester.pumpWidget(
         wrapWidget(
           FilterTabBar(
-            selectedTypes: const [ClipboardContentType.text],
+            selectedTypes: const [
+              ClipboardContentType.text,
+              ClipboardContentType.ip,
+              ClipboardContentType.uuid,
+              ClipboardContentType.json,
+            ],
             isPinnedMode: false,
             onTypesChanged: (t) => result = t,
             onPinnedModeChanged: (_) {},

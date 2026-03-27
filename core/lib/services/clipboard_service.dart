@@ -11,6 +11,7 @@ import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
 import 'image_processor.dart';
+import 'text_classifier.dart';
 
 class ClipboardService {
   ClipboardService(this._repository, {String? imagesPath})
@@ -58,12 +59,35 @@ class ClipboardService {
   }) async {
     if (_shouldIgnore(content)) return null;
 
-    final existing = await _repository.findByContentAndType(content, type);
+    final resolvedType = type == ClipboardContentType.text
+        ? TextClassifier.classify(content)
+        : type;
+
+    final existing = await _repository.findByContentAndType(
+      content,
+      resolvedType,
+    );
     if (existing != null) {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
       return updated;
+    }
+
+    if (resolvedType != ClipboardContentType.text) {
+      final legacy = await _repository.findByContentAndType(
+        content,
+        ClipboardContentType.text,
+      );
+      if (legacy != null) {
+        final updated = legacy.copyWith(
+          type: resolvedType,
+          modifiedAt: DateTime.now().toUtc(),
+        );
+        await _repository.update(updated);
+        _itemReactivated.add(updated);
+        return updated;
+      }
     }
 
     final meta = <String, Object>{};
@@ -72,7 +96,7 @@ class ClipboardService {
 
     final item = ClipboardItem(
       content: content,
-      type: type,
+      type: resolvedType,
       appSource: source,
       metadata: meta.isNotEmpty ? jsonEncode(meta) : null,
     );
@@ -279,6 +303,29 @@ class ClipboardService {
   Future<int> clearUnpinnedHistory() => _repository.deleteAllUnpinned();
 
   Future<int> getItemCount() => _repository.count();
+
+  Future<void> reclassifyLegacyTextItems() async {
+    const batchSize = 50;
+    var skip = 0;
+    while (true) {
+      if (_disposed) return;
+      final batch = await _repository.searchAdvanced(
+        types: [ClipboardContentType.text],
+        limit: batchSize,
+        skip: skip,
+      );
+      if (batch.isEmpty) return;
+      for (final item in batch) {
+        if (_disposed) return;
+        final resolved = TextClassifier.classify(item.content);
+        if (resolved != ClipboardContentType.text) {
+          await _repository.update(item.copyWith(type: resolved));
+        }
+      }
+      if (batch.length < batchSize) return;
+      skip += batchSize;
+    }
+  }
 
   Future<void> walCheckpoint() => _repository.walCheckpoint();
 

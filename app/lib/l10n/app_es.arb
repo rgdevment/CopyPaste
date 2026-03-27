@@ -61,6 +61,12 @@
   "typeLink": "Enlace",
   "typeAudio": "Audio",
   "typeVideo": "Video",
+  "typeEmail": "Email",
+  "typePhone": "Teléfono",
+  "typeColor": "Color",
+  "typeIp": "IP",
+  "typeUuid": "UUID",
+  "typeJson": "JSON",
   "filterAll": "Todo",
   "filterPinned": "Anclados",
 

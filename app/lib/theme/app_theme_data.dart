@@ -263,6 +263,12 @@ class AppThemeIcons {
     4 => link,
     5 => audio,
     6 => video,
+    7 => Icons.alternate_email_rounded,
+    8 => Icons.phone_outlined,
+    9 => Icons.palette_outlined,
+    10 => Icons.dns_outlined,
+    11 => Icons.fingerprint_rounded,
+    12 => Icons.data_object_rounded,
     _ => unknown,
   };
 }

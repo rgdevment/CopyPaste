@@ -651,7 +651,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Notepad'), findsOneWidget);
+      expect(find.text('· Notepad'), findsOneWidget);
     });
 
     testWidgets('card updates when item changes', (tester) async {
