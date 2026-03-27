@@ -1,6 +1,8 @@
 // coverage:ignore-file
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import 'package:core/core.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,8 @@ class SettingsScreen extends StatefulWidget {
     required this.clipboardService,
     required this.storage,
     required this.onSave,
+    required this.onSoftReset,
+    required this.onHardReset,
     super.key,
   });
 
@@ -28,6 +32,12 @@ class SettingsScreen extends StatefulWidget {
   final ClipboardService clipboardService;
   final StorageConfig storage;
   final Future<void> Function(AppConfig newConfig, bool hotkeyChanged) onSave;
+
+  /// Resets config + first-run flag, keeps clipboard history, then restarts.
+  final Future<void> Function() onSoftReset;
+
+  /// Deletes all data (db, images, config, first-run flag), then restarts.
+  final Future<void> Function() onHardReset;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -918,14 +928,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'v${AppConfig.appVersion}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: colors.onSurface,
-              ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _AboutBadge(
+                  icon: Icons.new_releases_outlined,
+                  label: 'v${AppConfig.appVersion}',
+                  colors: colors,
+                ),
+                _AboutBadge(
+                  icon: Icons.lock_outline_rounded,
+                  label: l.aboutTagLocal,
+                  colors: colors,
+                ),
+                _AboutBadge(
+                  icon: Icons.code_rounded,
+                  label: l.aboutTagOpenSource,
+                  colors: colors,
+                ),
+                _AboutBadge(
+                  icon: Icons.favorite_border_rounded,
+                  label: l.aboutTagFree,
+                  colors: colors,
+                ),
+              ],
             ),
           ],
         ),
@@ -945,6 +973,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: l.linkCoffee,
               colors: colors,
               onTap: () => _openUrl('https://buymeacoffee.com/rgdevment'),
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.shield_outlined,
+          title: l.sectionPrivacy,
+          children: [
+            Text(
+              l.privacyStatement,
+              style: TextStyle(
+                fontSize: 12,
+                color: colors.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            _ActionTile(
+              icon: Icons.open_in_new_rounded,
+              label: l.privacyPolicy,
+              colors: colors,
+              onTap: () => _openUrl(
+                'https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md',
+              ),
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.help_outline_rounded,
+          title: l.sectionSupport,
+          children: [
+            _ActionTile(
+              icon: Icons.download_rounded,
+              label: l.supportExportLogs,
+              subtitle: l.supportExportLogsSubtitle,
+              colors: colors,
+              onTap: _exportLogs,
+            ),
+            _ActionTile(
+              icon: Icons.folder_open_rounded,
+              label: l.supportOpenLogsFolder,
+              subtitle: l.supportOpenLogsFolderSubtitle,
+              colors: colors,
+              onTap: _openLogsFolder,
+            ),
+            _ActionTile(
+              icon: Icons.bug_report_outlined,
+              label: l.supportGitHub,
+              colors: colors,
+              onTap: () =>
+                  _openUrl('https://github.com/rgdevment/CopyPaste/issues'),
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.restart_alt_rounded,
+          title: l.sectionReset,
+          children: [
+            _ActionTile(
+              icon: Icons.settings_backup_restore_rounded,
+              label: l.resetSoftLabel,
+              subtitle: l.resetSoftSubtitle,
+              colors: colors,
+              onTap: _softReset,
+            ),
+            _ActionTile(
+              icon: Icons.delete_forever_rounded,
+              label: l.resetHardLabel,
+              subtitle: l.resetHardSubtitle,
+              colors: colors,
+              onTap: _hardReset,
             ),
           ],
         ),
@@ -1009,6 +1110,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _exportLogs() async {
+    final l = AppLocalizations.of(context);
+    try {
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .split('.')
+          .first;
+      final fileName = 'CopyPaste_logs_$ts.zip';
+      final savePath = _resolveDownloadsPath(fileName);
+
+      final count = await SupportService.exportLogs(
+        widget.storage,
+        AppConfig.appVersion,
+        savePath,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count > 0 ? l.supportExportSuccess : l.supportExportEmpty,
+          ),
+          action: SnackBarAction(
+            label: l.supportShowInFiles,
+            onPressed: () => SupportService.revealFile(savePath),
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e, s) {
+      AppLogger.exception(e, s, '_exportLogs');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l.supportExportError),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  String _resolveDownloadsPath(String fileName) {
+    final String base;
+    if (Platform.isWindows) {
+      base = p.join(Platform.environment['USERPROFILE'] ?? '', 'Downloads');
+    } else {
+      base = p.join(Platform.environment['HOME'] ?? '', 'Downloads');
+    }
+    final dir = Directory(base);
+    if (dir.existsSync()) return p.join(base, fileName);
+    return p.join(widget.storage.logsPath, fileName);
+  }
+
+  Future<void> _openLogsFolder() async {
+    try {
+      await SupportService.openLogsFolder(widget.storage);
+    } catch (e, s) {
+      AppLogger.exception(e, s, '_openLogsFolder');
+    }
+  }
+
+  Future<void> _softReset() async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await _showConfirmDialog(
+      l.resetSoftConfirmTitle,
+      l.resetSoftConfirmMessage,
+      l.resetConfirmButton,
+    );
+    if (confirmed == true) await widget.onSoftReset();
+  }
+
+  Future<void> _hardReset() async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await _showConfirmDialog(
+      l.resetHardConfirmTitle,
+      l.resetHardConfirmMessage,
+      l.resetConfirmButton,
+    );
+    if (confirmed == true) await widget.onHardReset();
   }
 
   Future<void> _clearHistory() async {
@@ -1765,10 +1948,12 @@ class _ActionTile extends StatefulWidget {
     required this.label,
     required this.colors,
     required this.onTap,
+    this.subtitle,
   });
 
   final IconData icon;
   final String label;
+  final String? subtitle;
   final AppThemeColorScheme colors;
   final VoidCallback onTap;
 
@@ -1796,19 +1981,79 @@ class _ActionTileState extends State<_ActionTile> {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(widget.icon, size: 16, color: widget.colors.onSurfaceMuted),
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  widget.icon,
+                  size: 16,
+                  color: widget.colors.onSurfaceMuted,
+                ),
+              ),
               const SizedBox(width: 10),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: widget.colors.onSurface,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: widget.colors.onSurface,
+                      ),
+                    ),
+                    if (widget.subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.subtitle!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: widget.colors.onSurfaceMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AboutBadge extends StatelessWidget {
+  const _AboutBadge({
+    required this.icon,
+    required this.label,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String label;
+  final AppThemeColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: colors.onSurfaceMuted),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10.5, color: colors.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

@@ -1,27 +1,30 @@
 # Privacy Policy
 
-**Last updated:** March 12, 2026
+**Last updated:** March 26, 2026
 
 ---
 
 ## The Short Version
 
-**CopyPaste does not collect, transmit, or share any of your data.** Everything stays on your computer. There's no cloud, no accounts, no telemetry, no analytics, no tracking — nothing leaves your machine.
+**Everything stays on your computer.** CopyPaste does not collect, transmit, or share any of your data. There's no cloud, no accounts, no telemetry, no analytics, no tracking — nothing leaves your machine, ever.
 
-This isn't a marketing claim. It's a technical fact you can verify yourself — the entire source code is [open and public](https://github.com/rgdevment/CopyPaste).
+**"Everything local" is not a feature — it's the foundation.** It's a technical fact you can verify yourself: the entire source code is [open and public](https://github.com/rgdevment/CopyPaste). Read the code, run a network monitor, check for yourself.
 
 ---
 
-## Our Privacy Philosophy
+## Our Privacy Philosophy: Everything Local
 
-CopyPaste was built with a **privacy-first** mindset from day one. This isn't an afterthought or a feature — it's a core design principle:
+CopyPaste was built with a **privacy-first** mindset from day one. This isn't an afterthought or a feature — it's a core design principle. **Everything stays on your machine.**
 
 - 🔒 **Local-only by design** — Your data never leaves your computer
 - 🚫 **No telemetry** — We don't measure, track, or analyze your usage
 - 🚫 **No analytics** — No Google Analytics, no App Insights, no Sentry, nothing
 - 🚫 **No accounts** — No sign-up, no login, no user profiles
 - 🚫 **No cloud sync** — Your clipboard history is yours alone
+- 🚫 **No automatic reporting** — Errors are logged locally only; nothing is sent anywhere without your action
 - 🔍 **Fully auditable** — Every line of code is open source under [GPLv3](LICENSE)
+
+**The data on your computer is yours.** I built CopyPaste to respect that boundary completely — not just in policy, but in code.
 
 ---
 
@@ -72,8 +75,37 @@ Application logs are stored locally for troubleshooting:
 - **Windows:** `%LOCALAPPDATA%\CopyPaste\logs\`
 - **macOS:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/`
 - **Linux:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/`
-- **Content:** Application events, errors, and diagnostic information
-- **No personal data:** Logs do not contain clipboard content
+- **Content:** Application events, errors, and diagnostic information only
+- **No personal data:** Logs do **not** contain clipboard content — your copied text, images, or file paths are never written to log files
+
+---
+
+## Support & Log Export — What Happens and What Doesn't
+
+CopyPaste includes a **Support** section in Settings → About that lets you export a diagnostic log bundle. Here is exactly what this does and doesn't do:
+
+### What the Export Does
+
+- Collects recent `.log` files from the local logs folder
+- Adds a `device_info.txt` with your OS version, OS build, system locale, and CopyPaste app version
+- Packages everything into a single `.zip` file saved to a location **you choose** on your computer
+
+### What the Export Does NOT Do
+
+- **Does not send anything anywhere automatically** — the zip stays on your disk until you manually share it
+- **Does not include clipboard content** — your copied text, images, or file paths are never in the logs and never in the export
+- **Does not connect to the internet** — the export is a local file operation only
+- **Does not run in the background** — it only happens when you explicitly click "Export Logs"
+
+### How to Share Safely
+
+If you want to attach logs to a GitHub issue:
+
+1. Open the exported zip and review it before sharing — you can read the log files in any text editor
+2. Redact anything you're uncomfortable sharing (though there should be no personal data)
+3. Attach the zip manually to your bug report
+
+**You are in control at every step.** Nothing goes anywhere without your explicit action.
 
 ---
 
@@ -123,7 +155,8 @@ To be absolutely clear:
 - ❌ **Does not use advertising or ad networks**
 - ❌ **Does not use AI or machine learning** on your data
 - ❌ **Does not sync across devices**
-- ❌ **Does not upload crash reports** — Errors are logged locally only
+- ❌ **Does not upload crash reports** — Errors are logged locally only; log export is always manual and user-initiated
+- ❌ **Does not phone home** — No background network calls except the standalone update checker (see below)
 
 ---
 
@@ -209,9 +242,18 @@ You can delete any clipboard item at any time:
 - Select an item and press `Delete`
 - Right-click and choose "Delete"
 
-### Complete Data Removal
+### Clean Install & Reset (In-App)
 
-To completely remove all CopyPaste data from your computer:
+CopyPaste includes in-app reset options at **Settings → About → Reset & Clean Install**:
+
+- **Soft Reset** — Resets all settings to defaults. Your clipboard history is preserved.
+- **Hard Reset** — Deletes everything: history, images, settings, and logs. The app restarts completely clean. **This cannot be undone.**
+
+These options work on all platforms including the Microsoft Store version.
+
+### Complete Data Removal (Uninstall)
+
+To completely remove all CopyPaste data when uninstalling:
 
 **Windows:**
 
@@ -286,5 +328,5 @@ If you have questions or concerns about this privacy policy:
 ---
 
 <div align="center">
-  <p><em>Your clipboard is yours. I built CopyPaste to keep it that way.</em></p>
+  <p><em>Everything local. Your clipboard is yours — I built CopyPaste to keep it that way.</em></p>
 </div>

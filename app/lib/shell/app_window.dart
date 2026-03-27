@@ -3,6 +3,7 @@ import 'dart:ffi' hide Size;
 import 'dart:io';
 import 'dart:ui' show Color, Offset, Size;
 
+import 'package:core/core.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
@@ -116,18 +117,23 @@ class AppWindow {
 
   Future<void> applyEffect({bool? dark}) async {
     if (dark != null) _isDark = dark;
-    if (Platform.isWindows) {
-      await Window.setEffect(
-        effect: WindowEffect.mica,
-        color: const Color(0x00000000),
-        dark: _isDark,
-      );
-    } else if (Platform.isMacOS) {
-      await Window.setEffect(
-        effect: WindowEffect.sidebar,
-        color: const Color(0x00000000),
-        dark: _isDark,
-      );
+    try {
+      if (Platform.isWindows) {
+        await Window.setEffect(
+          effect: WindowEffect.mica,
+          color: const Color(0x00000000),
+          dark: _isDark,
+        );
+      } else if (Platform.isMacOS) {
+        await Window.setEffect(
+          effect: WindowEffect.sidebar,
+          color: const Color(0x00000000),
+          dark: _isDark,
+        );
+      }
+    } catch (e) {
+      // Effect failure is non-fatal — app runs without the acrylic effect.
+      AppLogger.warn('applyEffect: window effect unavailable (non-fatal): $e');
     }
   }
 
@@ -154,7 +160,8 @@ class AppWindow {
         return;
       }
       await _applyPosition(cursor.$1, cursor.$2, workArea);
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warn('_positionNearCursorWindows: fallback to center: $e');
       await windowManager.center();
     }
   }
@@ -175,7 +182,8 @@ class AppWindow {
         info['waBottom'] ?? 900,
       );
       await _applyPosition(cursorX, cursorY, workArea);
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warn('_positionNearCursorNative: fallback to center: $e');
       await windowManager.center();
     }
   }

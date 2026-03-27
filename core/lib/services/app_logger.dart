@@ -27,8 +27,12 @@ class AppLogger {
       _cleanOldLogs();
       _isInitialized = true;
       info('Logger initialized');
-    } catch (_) {
+    } catch (e) {
       isEnabled = false;
+      // Can't use AppLogger here — write a fallback stderr line so the failure
+      // is at least visible when running in debug mode.
+      // ignore: avoid_print
+      print('[AppLogger] initialization failed, logging disabled: $e');
     }
   }
 

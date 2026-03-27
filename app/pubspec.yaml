@@ -23,7 +23,7 @@ dependencies:
     file_picker: ^10.0.0
     flutter_acrylic: ^1.1.4
     auto_updater: ^1.0.0
-
+    path: ^1.9.0
 dev_dependencies:
     flutter_test:
         sdk: flutter
