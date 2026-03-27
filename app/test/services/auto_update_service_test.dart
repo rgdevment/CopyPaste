@@ -25,6 +25,7 @@ Future<HttpServer> _startServer(
 }
 
 void main() {
+  setUpAll(() => TestWidgetsFlutterBinding.ensureInitialized());
   tearDown(() => AutoUpdateService.reset());
 
   // -------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
@@ -113,7 +114,7 @@ class SupportService {
 
   static String _buildDeviceInfo(String appVersion) {
     final osVersion = Platform.isWindows
-        ? _correctWindowsVersion(Platform.operatingSystemVersion)
+        ? correctWindowsVersion(Platform.operatingSystemVersion)
         : Platform.operatingSystemVersion;
     final lines = [
       'CopyPaste v$appVersion',
@@ -129,7 +130,8 @@ class SupportService {
 
   // Dart/Flutter always reports "Windows 10" even on Windows 11 due to Win32
   // backwards-compat shim. Windows 11 starts at build 22000.
-  static String _correctWindowsVersion(String raw) {
+  @visibleForTesting
+  static String correctWindowsVersion(String raw) {
     if (!raw.contains('Windows 10')) return raw;
     final match = RegExp(r'Build (\d+)').firstMatch(raw);
     if (match == null) return raw;
