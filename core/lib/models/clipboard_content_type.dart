@@ -6,7 +6,13 @@ enum ClipboardContentType {
   folder,
   link,
   audio,
-  video;
+  video,
+  email,
+  phone,
+  color,
+  ip,
+  uuid,
+  json;
 
   static ClipboardContentType fromValue(int value) => switch (value) {
     0 => text,
@@ -16,6 +22,12 @@ enum ClipboardContentType {
     4 => link,
     5 => audio,
     6 => video,
+    7 => email,
+    8 => phone,
+    9 => color,
+    10 => ip,
+    11 => uuid,
+    12 => json,
     _ => unknown,
   };
 
@@ -28,5 +40,11 @@ enum ClipboardContentType {
     link => 4,
     audio => 5,
     video => 6,
+    email => 7,
+    phone => 8,
+    color => 9,
+    ip => 10,
+    uuid => 11,
+    json => 12,
   };
 }

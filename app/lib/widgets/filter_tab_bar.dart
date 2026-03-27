@@ -42,41 +42,61 @@ class _FilterTabBarState extends State<FilterTabBar> {
     final isAllSelected = widget.selectedTypes.isEmpty && !widget.isPinnedMode;
 
     final tabs = <_TabDef>[
-      _TabDef(label: l.filterAll, type: null, isPinned: false),
-      _TabDef(label: l.filterPinned, type: null, isPinned: true),
+      _TabDef(label: l.filterAll, types: const [], isPinned: false),
+      _TabDef(label: l.filterPinned, types: const [], isPinned: true),
       _TabDef(
         label: l.typeText,
-        type: ClipboardContentType.text,
+        types: const [
+          ClipboardContentType.text,
+          ClipboardContentType.ip,
+          ClipboardContentType.uuid,
+          ClipboardContentType.json,
+        ],
         isPinned: false,
       ),
       _TabDef(
         label: l.typeImage,
-        type: ClipboardContentType.image,
+        types: const [ClipboardContentType.image],
         isPinned: false,
       ),
       _TabDef(
         label: l.typeFile,
-        type: ClipboardContentType.file,
+        types: const [ClipboardContentType.file],
         isPinned: false,
       ),
       _TabDef(
         label: l.typeFolder,
-        type: ClipboardContentType.folder,
+        types: const [ClipboardContentType.folder],
         isPinned: false,
       ),
       _TabDef(
         label: l.typeLink,
-        type: ClipboardContentType.link,
+        types: const [ClipboardContentType.link],
         isPinned: false,
       ),
       _TabDef(
         label: l.typeAudio,
-        type: ClipboardContentType.audio,
+        types: const [ClipboardContentType.audio],
         isPinned: false,
       ),
       _TabDef(
         label: l.typeVideo,
-        type: ClipboardContentType.video,
+        types: const [ClipboardContentType.video],
+        isPinned: false,
+      ),
+      _TabDef(
+        label: l.typeEmail,
+        types: const [ClipboardContentType.email],
+        isPinned: false,
+      ),
+      _TabDef(
+        label: l.typePhone,
+        types: const [ClipboardContentType.phone],
+        isPinned: false,
+      ),
+      _TabDef(
+        label: l.typeColor,
+        types: const [ClipboardContentType.color],
         isPinned: false,
       ),
     ];
@@ -126,13 +146,14 @@ class _FilterTabBarState extends State<FilterTabBar> {
                 separatorBuilder: (context, i) => const SizedBox(width: 4),
                 itemBuilder: (context, index) {
                   final tab = tabs[index];
+                  final tabTypes = tab.types;
                   final isActive = tab.isPinned
                       ? widget.isPinnedMode
-                      : tab.type == null
+                      : tabTypes.isEmpty
                       ? isAllSelected
                       : !widget.isPinnedMode &&
-                            widget.selectedTypes.length == 1 &&
-                            widget.selectedTypes.contains(tab.type);
+                            widget.selectedTypes.length == tabTypes.length &&
+                            widget.selectedTypes.toSet().containsAll(tabTypes);
 
                   return _FilterTab(
                     label: tab.label,
@@ -141,17 +162,16 @@ class _FilterTabBarState extends State<FilterTabBar> {
                       if (tab.isPinned) {
                         widget.onPinnedModeChanged(!widget.isPinnedMode);
                         if (!widget.isPinnedMode) widget.onTypesChanged([]);
-                      } else if (tab.type == null) {
+                      } else if (tabTypes.isEmpty) {
                         widget.onPinnedModeChanged(false);
                         widget.onTypesChanged([]);
                       } else {
                         widget.onPinnedModeChanged(false);
-                        final type = tab.type!;
                         final wasActive =
                             !widget.isPinnedMode &&
-                            widget.selectedTypes.length == 1 &&
-                            widget.selectedTypes.contains(type);
-                        widget.onTypesChanged(wasActive ? [] : [type]);
+                            widget.selectedTypes.length == tabTypes.length &&
+                            widget.selectedTypes.toSet().containsAll(tabTypes);
+                        widget.onTypesChanged(wasActive ? [] : tabTypes);
                       }
                     },
                   );
@@ -168,11 +188,11 @@ class _FilterTabBarState extends State<FilterTabBar> {
 class _TabDef {
   const _TabDef({
     required this.label,
-    required this.type,
+    required this.types,
     required this.isPinned,
   });
   final String label;
-  final ClipboardContentType? type;
+  final List<ClipboardContentType> types;
   final bool isPinned;
 }
 
