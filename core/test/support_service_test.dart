@@ -47,10 +47,7 @@ void main() {
 
     test('handles build exactly at boundary (22000 → Windows 11)', () {
       const raw = 'Windows 10.0.22000 Build 22000';
-      expect(
-        SupportService.correctWindowsVersion(raw),
-        contains('Windows 11'),
-      );
+      expect(SupportService.correctWindowsVersion(raw), contains('Windows 11'));
     });
 
     test('handles build one below boundary (21999 → unchanged)', () {
@@ -92,7 +89,9 @@ void main() {
       final count = await SupportService.exportLogs(storage, '2.0.0', savePath);
       expect(count, equals(1));
 
-      final archive = ZipDecoder().decodeBytes(File(savePath).readAsBytesSync());
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
       final names = archive.map((f) => f.name).toList();
       expect(names, contains('app.log'));
       expect(names, isNot(contains('readme.txt')));
@@ -102,7 +101,9 @@ void main() {
       final savePath = p.join(tempDir.path, 'out.zip');
       await SupportService.exportLogs(storage, '2.5.1', savePath);
 
-      final archive = ZipDecoder().decodeBytes(File(savePath).readAsBytesSync());
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
       final infoFile = archive.firstWhere((f) => f.name == 'device_info.txt');
       final content = String.fromCharCodes(infoFile.content as List<int>);
       expect(content, contains('CopyPaste v2.5.1'));
@@ -112,7 +113,9 @@ void main() {
       final savePath = p.join(tempDir.path, 'out.zip');
       await SupportService.exportLogs(storage, '2.0.0', savePath);
 
-      final archive = ZipDecoder().decodeBytes(File(savePath).readAsBytesSync());
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
       final infoFile = archive.firstWhere((f) => f.name == 'device_info.txt');
       final content = String.fromCharCodes(infoFile.content as List<int>);
       expect(content, contains('Platform'));
@@ -125,7 +128,9 @@ void main() {
       final savePath = p.join(tempDir.path, 'out.zip');
       await SupportService.exportLogs(storage, '2.0.0', savePath);
 
-      final archive = ZipDecoder().decodeBytes(File(savePath).readAsBytesSync());
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
       final logFile = archive.firstWhere((f) => f.name == 'app.log');
       final content = String.fromCharCodes(logFile.content as List<int>);
       expect(content, equals('hello log'));
