@@ -426,6 +426,8 @@
 
   "updateAvailableLinux": "Version {version} is available.\n\nDownload the latest release from GitHub.",
   "@updateAvailableLinux": { "description": "Update dialog message for Linux", "placeholders": { "version": { "type": "String" } } },
+  "updateAvailableStore": "Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.",
+  "@updateAvailableStore": { "description": "Update dialog message for MS Store builds", "placeholders": { "version": { "type": "String" } } },
 
   "updateDialogTitle": "Update Available",
   "@updateDialogTitle": { "description": "Title of the update available dialog" },

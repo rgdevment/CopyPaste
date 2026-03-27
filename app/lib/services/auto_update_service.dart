@@ -27,12 +27,14 @@ class AutoUpdateService {
   static String get _effectiveReleasesUrl =>
       releasesUrlOverride.isNotEmpty ? releasesUrlOverride : _releasesUrl;
 
-  static Future<void> initialize() async {
-    if (_isStoreBuild) return;
+  static bool get isStoreBuild => _isStoreBuild;
 
-    if (Platform.isWindows) {
+  static Future<void> initialize() async {
+    if (Platform.isWindows && !_isStoreBuild) {
       await _initWindows();
-    } else if (Platform.isMacOS || Platform.isLinux) {
+    }
+
+    if (_isStoreBuild || Platform.isMacOS || Platform.isLinux) {
       await _checkGitHubRelease();
       _timer = Timer.periodic(
         const Duration(seconds: _checkIntervalSeconds),

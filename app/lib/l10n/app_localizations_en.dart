@@ -554,6 +554,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String updateAvailableStore(String version) {
+    return 'Version $version is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.';
+  }
+
+  @override
   String get updateDialogTitle => 'Update Available';
 
   @override

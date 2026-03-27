@@ -184,7 +184,7 @@ void main() {
 
     test('popup size defaults', () {
       const config = AppConfig();
-      expect(config.popupWidth, equals(368));
+      expect(config.popupWidth, equals(380));
       expect(config.popupHeight, equals(500));
     });
 

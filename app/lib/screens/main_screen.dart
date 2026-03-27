@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../helpers/url_helper.dart';
 import '../l10n/app_localizations.dart';
+import '../services/auto_update_service.dart';
 import '../theme/app_theme_data.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/clipboard_card.dart';
@@ -612,7 +613,9 @@ class MainScreenState extends State<MainScreen> {
         children: [
           if (updateVersion != null)
             Tooltip(
-              message: Platform.isMacOS
+              message: AutoUpdateService.isStoreBuild
+                  ? l.updateAvailableStore(updateVersion)
+                  : Platform.isMacOS
                   ? l.updateAvailableMac(updateVersion)
                   : l.updateAvailableLinux(updateVersion),
               child: InkWell(
@@ -691,7 +694,9 @@ class MainScreenState extends State<MainScreen> {
         content: SizedBox(
           width: double.maxFinite,
           child: Text(
-            Platform.isMacOS
+            AutoUpdateService.isStoreBuild
+                ? l.updateAvailableStore(version)
+                : Platform.isMacOS
                 ? l.updateAvailableMac(version)
                 : l.updateAvailableLinux(version),
           ),
@@ -702,15 +707,16 @@ class MainScreenState extends State<MainScreen> {
             onPressed: () => Navigator.of(dialogCtx).pop(),
             child: Text(l.updateDismiss),
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              UrlHelper.open(
-                'https://github.com/rgdevment/CopyPaste/releases/latest',
-              );
-            },
-            child: Text(l.updateViewRelease),
-          ),
+          if (!AutoUpdateService.isStoreBuild)
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogCtx).pop();
+                UrlHelper.open(
+                  'https://github.com/rgdevment/CopyPaste/releases/latest',
+                );
+              },
+              child: Text(l.updateViewRelease),
+            ),
         ],
       ),
     );

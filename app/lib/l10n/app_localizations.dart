@@ -1124,6 +1124,12 @@ abstract class AppLocalizations {
   /// **'Version {version} is available.\n\nDownload the latest release from GitHub.'**
   String updateAvailableLinux(String version);
 
+  /// Update dialog message for MS Store builds
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.'**
+  String updateAvailableStore(String version);
+
   /// Title of the update available dialog
   ///
   /// In en, this message translates to:
