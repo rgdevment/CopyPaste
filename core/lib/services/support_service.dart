@@ -95,7 +95,11 @@ class SupportService {
     AppLogger.info('openLogsFolder: opening ${logsDir.path}');
     try {
       if (Platform.isWindows) {
-        await Process.run('explorer', [logsDir.path]);
+        // Process.run('explorer', path) silently fails in MSIX packages because
+        // Windows routes the open request via DDE to the existing shell process,
+        // and the AppContainer blocks cross-process DDE. Using cmd's start
+        // command calls ShellExecuteEx instead, which works correctly in MSIX.
+        await Process.run('cmd', ['/c', 'start', '', logsDir.path]);
       } else if (Platform.isMacOS) {
         await Process.run('open', [logsDir.path]);
       } else if (Platform.isLinux) {
