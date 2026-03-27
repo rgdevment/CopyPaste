@@ -1141,7 +1141,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (_) {
+    } catch (e, s) {
+      AppLogger.exception(e, s, '_exportLogs');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1153,7 +1154,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _openLogsFolder() async {
-    await SupportService.openLogsFolder(widget.storage);
+    try {
+      await SupportService.openLogsFolder(widget.storage);
+    } catch (e, s) {
+      AppLogger.exception(e, s, '_openLogsFolder');
+    }
   }
 
   Future<void> _softReset() async {

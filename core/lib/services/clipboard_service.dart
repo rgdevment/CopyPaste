@@ -134,7 +134,9 @@ class ClipboardService {
         final tempPath = p.join(_imagesPath, '${item.id}.bmp');
         await File(tempPath).writeAsBytes(imageBytes);
         savedItem = item.copyWith(content: tempPath);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warn('processImage: could not write temp BMP for ${item.id}: $e');
+      }
     }
 
     await _repository.save(savedItem);
@@ -160,7 +162,11 @@ class ClipboardService {
         id: item.id,
         imagesDir: _imagesPath!,
       );
-      if (result == null || _disposed) return;
+      if (result == null) {
+        AppLogger.warn('_processImageBackground: ImageProcessor returned null for ${item.id}');
+        return;
+      }
+      if (_disposed) return;
 
       final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
       try {
@@ -217,7 +223,9 @@ class ClipboardService {
       try {
         final fileSize = File(firstFile).lengthSync();
         meta['file_size'] = fileSize;
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warn('processFiles: could not read size of $firstFile: $e');
+      }
     }
 
     final item = ClipboardItem(
@@ -256,7 +264,9 @@ class ClipboardService {
       try {
         final file = File(item.content);
         if (file.existsSync()) file.deleteSync();
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warn('_cleanupItemFiles: could not delete image for ${item.id}: $e');
+      }
     }
   }
 

@@ -21,6 +21,7 @@ class SupportService {
     String appVersion,
     String savePath,
   ) async {
+    AppLogger.info('exportLogs: starting — savePath=$savePath');
     final logsDir = Directory(storage.logsPath);
     final archive = Archive();
 
@@ -32,9 +33,19 @@ class SupportService {
               .toList()
         : <File>[];
 
+    if (logFiles.isEmpty) {
+      AppLogger.warn('exportLogs: no .log files found in ${storage.logsPath}');
+    }
+
     for (final file in logFiles) {
-      final bytes = await file.readAsBytes();
-      archive.addFile(ArchiveFile(p.basename(file.path), bytes.length, bytes));
+      try {
+        final bytes = await file.readAsBytes();
+        archive.addFile(
+          ArchiveFile(p.basename(file.path), bytes.length, bytes),
+        );
+      } catch (e) {
+        AppLogger.error('exportLogs: failed to read ${file.path}: $e');
+      }
     }
 
     // Add device info so the report is self-contained
@@ -45,23 +56,38 @@ class SupportService {
     );
 
     final zipData = ZipEncoder().encode(archive);
+    if (zipData == null || zipData.isEmpty) {
+      AppLogger.error('exportLogs: ZipEncoder returned empty data');
+      throw StateError('Zip encoding produced no output');
+    }
 
     await File(savePath).writeAsBytes(zipData);
-    AppLogger.info('Logs exported to $savePath (${logFiles.length} files)');
+    AppLogger.info(
+      'exportLogs: done — ${logFiles.length} log file(s) → $savePath',
+    );
     return logFiles.length;
   }
 
   /// Opens the logs directory in the system file browser.
   static Future<void> openLogsFolder(StorageConfig storage) async {
     final logsDir = Directory(storage.logsPath);
-    if (!logsDir.existsSync()) await logsDir.create(recursive: true);
+    if (!logsDir.existsSync()) {
+      AppLogger.info('openLogsFolder: logs dir missing, creating it');
+      await logsDir.create(recursive: true);
+    }
 
-    if (Platform.isWindows) {
-      await Process.run('explorer', [logsDir.path]);
-    } else if (Platform.isMacOS) {
-      await Process.run('open', [logsDir.path]);
-    } else if (Platform.isLinux) {
-      await Process.run('xdg-open', [logsDir.path]);
+    AppLogger.info('openLogsFolder: opening ${logsDir.path}');
+    try {
+      if (Platform.isWindows) {
+        await Process.run('explorer', [logsDir.path]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', [logsDir.path]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [logsDir.path]);
+      }
+    } catch (e, s) {
+      AppLogger.exception(e, s, 'openLogsFolder');
+      rethrow;
     }
   }
 

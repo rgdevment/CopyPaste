@@ -117,7 +117,8 @@ class SqliteRepository implements IClipboardRepository {
       LazyDatabase(() async {
         try {
           return NativeDatabase(File(dbPath));
-        } catch (_) {
+        } catch (e, s) {
+          AppLogger.exception(e, s, 'SqliteRepository.fromPath — attempting recovery');
           _handleCorruptDatabase(dbPath);
           return NativeDatabase(File(dbPath));
         }
@@ -136,14 +137,24 @@ class SqliteRepository implements IClipboardRepository {
     if (!file.existsSync()) return;
     try {
       final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
-      file.renameSync('$dbPath.backup.$timestamp');
-    } catch (_) {}
+      final backupPath = '$dbPath.backup.$timestamp';
+      file.renameSync(backupPath);
+      AppLogger.warn(
+        '_handleCorruptDatabase: renamed corrupt DB to $backupPath',
+      );
+    } catch (e) {
+      AppLogger.error('_handleCorruptDatabase: could not rename DB: $e');
+    }
     try {
       File('$dbPath-wal').deleteSync();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warn('_handleCorruptDatabase: could not delete WAL: $e');
+    }
     try {
       File('$dbPath-shm').deleteSync();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warn('_handleCorruptDatabase: could not delete SHM: $e');
+    }
   }
 
   ClipboardItem _fromRow(ClipboardRow row) => ClipboardItem(
