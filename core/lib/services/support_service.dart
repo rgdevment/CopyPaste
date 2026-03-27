@@ -112,15 +112,28 @@ class SupportService {
   }
 
   static String _buildDeviceInfo(String appVersion) {
+    final osVersion = Platform.isWindows
+        ? _correctWindowsVersion(Platform.operatingSystemVersion)
+        : Platform.operatingSystemVersion;
     final lines = [
       'CopyPaste v$appVersion',
       'Generated: ${DateTime.now().toUtc().toIso8601String()}',
       '',
       'Platform : ${Platform.operatingSystem}',
-      'OS       : ${Platform.operatingSystemVersion}',
+      'OS       : $osVersion',
       'Locale   : ${Platform.localeName}',
       'Dart     : ${Platform.version}',
     ];
     return lines.join('\n');
+  }
+
+  // Dart/Flutter always reports "Windows 10" even on Windows 11 due to Win32
+  // backwards-compat shim. Windows 11 starts at build 22000.
+  static String _correctWindowsVersion(String raw) {
+    if (!raw.contains('Windows 10')) return raw;
+    final match = RegExp(r'Build (\d+)').firstMatch(raw);
+    if (match == null) return raw;
+    final build = int.tryParse(match.group(1) ?? '') ?? 0;
+    return build >= 22000 ? raw.replaceFirst('Windows 10', 'Windows 11') : raw;
   }
 }

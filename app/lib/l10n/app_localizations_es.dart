@@ -162,7 +162,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get buttonCancel => 'Cancelar';
 
   @override
-  String get buttonReset => 'Restablecer';
+  String get buttonReset => 'Restaurar predeterminados';
 
   @override
   String get menuPaste => 'Pegar';
@@ -482,7 +482,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'Un gestor de portapapeles ligero, rápido y de código abierto para Windows, macOS y Linux.\nCopia una vez, pega en cualquier lugar — tu historial del portapapeles, siempre a mano.';
+      'Un gestor de portapapeles moderno, nativo en Windows, macOS y Linux.\nTodo local — tu historial, siempre a mano. Sin cuentas, sin telemetría, sin suscripciones.';
 
   @override
   String get sectionPrivacy => 'PRIVACIDAD';
@@ -590,5 +590,23 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste se ejecuta en segundo plano — presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo cuando quieras.';
+  }
+
+  @override
+  String taskbarOpenHint(String hotkey) {
+    return 'Tip: presiona $hotkey para abrir y pegar automáticamente, sin perder el foco.';
+  }
+
+  @override
+  String balloonStartupBody(String hotkey) {
+    return 'Ejecutándose en segundo plano. Presiona $hotkey o haz clic en el ícono de la bandeja.';
+  }
+
+  @override
+  String get balloonWakeupTitle => 'CopyPaste ya está abierto';
+
+  @override
+  String balloonWakeupBody(String hotkey) {
+    return 'Presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo.';
   }
 }

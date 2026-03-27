@@ -25,7 +25,7 @@ class AppConfig {
     this.delayBeforePasteMs = 180,
     this.maxFocusVerifyAttempts = 15,
     this.lastBackupDateUtc,
-    this.popupWidth = 368,
+    this.popupWidth = 380,
     this.popupHeight = 500,
     this.cardMinLines = 2,
     this.cardMaxLines = 5,
@@ -35,7 +35,7 @@ class AppConfig {
     this.hasSeenHint = false,
     this.themeMode = 'auto',
     this.showTrayIcon = true,
-    this.showInTaskbar = true,
+    this.showInTaskbar = false,
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
   });

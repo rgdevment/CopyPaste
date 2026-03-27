@@ -148,7 +148,7 @@
   "buttonCancel": "Cancel",
   "@buttonCancel": { "description": "Cancel button" },
 
-  "buttonReset": "Reset",
+  "buttonReset": "Restore defaults",
   "@buttonReset": { "description": "Reset button" },
 
   "menuPaste": "Paste",
@@ -365,7 +365,7 @@
   "subtitleBackup": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
   "@subtitleBackup": { "description": "Backup section subtitle" },
 
-  "aboutDescription": "A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere \u2014 your clipboard history, always at hand.",
+  "aboutDescription": "A modern clipboard manager built to feel native on Windows, macOS, and Linux.\nLocal-first \u2014 your history, always at hand. No accounts, no telemetry, no subscriptions.",
   "@aboutDescription": { "description": "About section description" },
 
   "sectionPrivacy": "PRIVACY",
@@ -466,6 +466,33 @@
   "wakeupHint": "CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.",
   "@wakeupHint": {
     "description": "In-app snackbar shown inside the window when it is raised by a second launch attempt",
+    "placeholders": {
+      "hotkey": { "type": "String" }
+    }
+  },
+
+  "taskbarOpenHint": "Tip: press {hotkey} to open and paste automatically — no focus lost.",
+  "@taskbarOpenHint": {
+    "description": "Hint shown when user opens CopyPaste from the taskbar in taskbar mode",
+    "placeholders": {
+      "hotkey": { "type": "String" }
+    }
+  },
+
+  "balloonStartupBody": "Running in the background. Press {hotkey} or click the tray icon.",
+  "@balloonStartupBody": {
+    "description": "Windows balloon shown at startup when window starts hidden",
+    "placeholders": {
+      "hotkey": { "type": "String" }
+    }
+  },
+
+  "balloonWakeupTitle": "CopyPaste is already open",
+  "@balloonWakeupTitle": { "description": "Windows balloon title when a second instance is launched" },
+
+  "balloonWakeupBody": "Press {hotkey} or click the tray icon to bring it up.",
+  "@balloonWakeupBody": {
+    "description": "Windows balloon body when a second instance is launched",
     "placeholders": {
       "hotkey": { "type": "String" }
     }

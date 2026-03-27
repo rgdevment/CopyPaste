@@ -160,6 +160,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   String? _lastTrayLocale;
   bool _showPermissionGate = false;
   String? _availableUpdateVersion;
+  bool _programmaticRestore = false;
 
   @override
   void initState() {
@@ -240,8 +241,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error('trayIcon.init failed: $e');
     }
 
-    if (Platform.isWindows && !showOnStart && !_config.showInTaskbar) {
-      unawaited(_showStartupBalloon());
+    if (Platform.isWindows) {
+      if (showOnStart) {
+        Future<void>.delayed(const Duration(seconds: 2), _showStartupBalloon);
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => unawaited(_showStartupBalloon()),
+        );
+      }
     }
 
     await _registerHotkeyWithFeedback();
@@ -353,6 +360,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _navigatorKey.currentContext;
       if (ctx == null || !ctx.mounted) return;
+      if (_navigatorKey.currentState?.canPop() ?? false) return;
       final messenger = ScaffoldMessenger.maybeOf(ctx);
       if (messenger == null) return;
       final binding = HotkeyBinding(
@@ -363,12 +371,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         useAlt: _config.hotkeyUseAlt,
         useShift: _config.hotkeyUseShift,
       );
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(ctx).wakeupHint(binding.label())),
-          duration: const Duration(seconds: 10),
-        ),
-      );
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(ctx).wakeupHint(binding.label())),
+            duration: const Duration(seconds: 10),
+          ),
+        );
     });
   }
 
@@ -526,16 +536,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       useAlt: _config.hotkeyUseAlt,
       useShift: _config.hotkeyUseShift,
     );
+    final ctx = _navigatorKey.currentContext;
+    final l = ctx != null && ctx.mounted ? AppLocalizations.of(ctx) : null;
     await WindowsBalloon.show(
-      title: 'CopyPaste is already running',
+      title: l?.balloonWakeupTitle ?? 'CopyPaste is already open',
       body:
-          'It lives in the background. '
-          'Press ${binding.label()} or click the tray icon to open it.',
+          l?.balloonWakeupBody(binding.label()) ??
+          'Press ${binding.label()} or click the tray icon to bring it up.',
     );
   }
 
-  /// Builds the balloon body using the current hotkey so the user knows
-  /// how to open CopyPaste without finding the tray icon.
   Future<void> _showStartupBalloon() async {
     final binding = HotkeyBinding(
       virtualKey: _config.hotkeyVirtualKey,
@@ -545,19 +555,23 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       useAlt: _config.hotkeyUseAlt,
       useShift: _config.hotkeyUseShift,
     );
+    final ctx = _navigatorKey.currentContext;
+    final l = ctx != null && ctx.mounted ? AppLocalizations.of(ctx) : null;
     await WindowsBalloon.show(
       title: 'CopyPaste',
       body:
-          'Running in the background. '
-          'Press ${binding.label()} or click the tray icon to open it.',
+          l?.balloonStartupBody(binding.label()) ??
+          'Running in the background. Press ${binding.label()} or click the tray icon.',
     );
   }
 
   Future<void> _onHotkey() async {
+    _programmaticRestore = true;
     if (!_appWindow.isVisible) {
       await _focusManager.capturePreviousWindow();
     }
     await _appWindow.toggle();
+    _programmaticRestore = false; // fallback if onWindowRestore never fires
   }
 
   void _dismissHint() {
@@ -570,7 +584,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _toggleWindow() async {
+    _programmaticRestore = true;
     await _appWindow.toggle();
+    _programmaticRestore = false; // fallback if onWindowRestore never fires
   }
 
   void _onWindowVisibilityChanged(bool visible) {
@@ -578,6 +594,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       _mainScreenKey.currentState?.onWindowShow();
     } else {
       _mainScreenKey.currentState?.onWindowHide();
+      final ctx = _navigatorKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        ScaffoldMessenger.maybeOf(ctx)?.clearSnackBars();
+      }
     }
   }
 
@@ -768,9 +788,42 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   @override
   void onWindowRestore() {
-    if (_config.showInTaskbar && Platform.isWindows) {
-      unawaited(_safeShow());
+    if (!_config.showInTaskbar || !Platform.isWindows) return;
+    if (_programmaticRestore) {
+      _programmaticRestore = false; // consume the flag on the first event
+      return;
     }
+    // Native user click on the taskbar button
+    unawaited(_safeShow());
+    _showTaskbarOpenHint();
+  }
+
+  void _showTaskbarOpenHint() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      if (_navigatorKey.currentState?.canPop() ?? false) return;
+      final messenger = ScaffoldMessenger.maybeOf(ctx);
+      if (messenger == null) return;
+      final binding = HotkeyBinding(
+        virtualKey: _config.hotkeyVirtualKey,
+        keyName: _config.hotkeyKeyName,
+        useCtrl: _config.hotkeyUseCtrl,
+        useWin: _config.hotkeyUseWin,
+        useAlt: _config.hotkeyUseAlt,
+        useShift: _config.hotkeyUseShift,
+      );
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(ctx).taskbarOpenHint(binding.label()),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+    });
   }
 
   void _enterPermissionGate() {

@@ -921,6 +921,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
           ],
         ),
+
+        _SectionCard(
+          colors: colors,
+          icon: Icons.restart_alt_rounded,
+          title: l.sectionReset,
+          children: [
+            _ActionTile(
+              icon: Icons.settings_backup_restore_rounded,
+              label: l.resetSoftLabel,
+              subtitle: l.resetSoftSubtitle,
+              colors: colors,
+              onTap: _softReset,
+            ),
+            _ActionTile(
+              icon: Icons.delete_forever_rounded,
+              label: l.resetHardLabel,
+              subtitle: l.resetHardSubtitle,
+              colors: colors,
+              onTap: _hardReset,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -1040,27 +1062,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
               onTap: () =>
                   _openUrl('https://github.com/rgdevment/CopyPaste/issues'),
-            ),
-          ],
-        ),
-        _SectionCard(
-          colors: colors,
-          icon: Icons.restart_alt_rounded,
-          title: l.sectionReset,
-          children: [
-            _ActionTile(
-              icon: Icons.settings_backup_restore_rounded,
-              label: l.resetSoftLabel,
-              subtitle: l.resetSoftSubtitle,
-              colors: colors,
-              onTap: _softReset,
-            ),
-            _ActionTile(
-              icon: Icons.delete_forever_rounded,
-              label: l.resetHardLabel,
-              subtitle: l.resetHardSubtitle,
-              colors: colors,
-              onTap: _hardReset,
             ),
           ],
         ),
