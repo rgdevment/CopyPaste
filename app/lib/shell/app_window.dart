@@ -54,10 +54,13 @@ class _Win32Pos {
 class AppWindow {
   AppWindow({
     this.onVisibilityChanged,
+    this.showInTaskbar = true,
     double popupWidth = 360,
     double popupHeight = 500,
   }) : _popupWidth = popupWidth,
        _popupHeight = popupHeight;
+
+  bool showInTaskbar;
 
   static const double _settingsWidth = 820;
   static const double _settingsHeight = 680;
@@ -95,8 +98,9 @@ class AppWindow {
       await windowManager.setResizable(false);
       await windowManager.setMaximizable(false);
       await windowManager.setPreventClose(true);
+      final inTaskbar = showInTaskbar && Platform.isWindows;
       if (!_waylandMode) {
-        await windowManager.setSkipTaskbar(true);
+        await windowManager.setSkipTaskbar(!inTaskbar);
       }
       if (Platform.isWindows || Platform.isMacOS) {
         await windowManager.setBackgroundColor(const Color(0x00000000));
@@ -105,6 +109,8 @@ class AppWindow {
       if (startVisible) {
         await windowManager.center();
         await windowManager.focus();
+      } else if (inTaskbar) {
+        await windowManager.minimize();
       } else {
         await windowManager.hide();
       }
@@ -295,9 +301,13 @@ class AppWindow {
   Future<void> hide() async {
     if (!_visible) return;
     _visible = false;
-    await windowManager.hide();
-    if (!Platform.isMacOS && !_waylandMode) {
-      await windowManager.setSkipTaskbar(true);
+    if (showInTaskbar && Platform.isWindows) {
+      await windowManager.minimize();
+    } else {
+      await windowManager.hide();
+      if (!Platform.isMacOS && !_waylandMode) {
+        await windowManager.setSkipTaskbar(true);
+      }
     }
     onVisibilityChanged?.call(false);
   }

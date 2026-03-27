@@ -161,7 +161,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get buttonCancel => 'Cancel';
 
   @override
-  String get buttonReset => 'Reset';
+  String get buttonReset => 'Restore defaults';
 
   @override
   String get menuPaste => 'Paste';
@@ -478,7 +478,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere — your clipboard history, always at hand.';
+      'A modern clipboard manager built to feel native on Windows, macOS, and Linux.\nLocal-first — your history, always at hand. No accounts, no telemetry, no subscriptions.';
 
   @override
   String get sectionPrivacy => 'PRIVACY';
@@ -554,6 +554,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String updateAvailableStore(String version) {
+    return 'Version $version is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.';
+  }
+
+  @override
   String get updateDialogTitle => 'Update Available';
 
   @override
@@ -574,5 +579,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String linuxHotkeyConflictWarning(String requested, String fallback) {
     return 'The shortcut $requested is unavailable on this X11 desktop, and the temporary fallback $fallback also failed. Open Settings to choose another shortcut.';
+  }
+
+  @override
+  String get settingShowInTaskbar => 'Keep in taskbar';
+
+  @override
+  String get subtitleShowInTaskbar =>
+      'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.';
+
+  @override
+  String wakeupHint(String hotkey) {
+    return 'CopyPaste runs in the background — press $hotkey or click the tray icon to open it anytime.';
+  }
+
+  @override
+  String taskbarOpenHint(String hotkey) {
+    return 'Tip: press $hotkey to open and paste automatically — no focus lost.';
+  }
+
+  @override
+  String balloonStartupBody(String hotkey) {
+    return 'Running in the background. Press $hotkey or click the tray icon.';
+  }
+
+  @override
+  String get balloonWakeupTitle => 'CopyPaste is already open';
+
+  @override
+  String balloonWakeupBody(String hotkey) {
+    return 'Press $hotkey or click the tray icon to bring it up.';
   }
 }

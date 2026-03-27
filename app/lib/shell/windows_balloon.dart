@@ -10,28 +10,25 @@ const _nimAdd = 0;
 const _nimDelete = 2;
 
 // NIF flags
-const _nifIcon = 0x02;
 const _nifInfo = 0x10;
 
 // NIIF flags  (balloon icon + silence)
-const _niifInfo = 0x01;
+const _niifUser = 0x04; // use hBalloonIcon from the extended struct
 const _niifNosound = 0x10;
 
-// System icon resource id (IDI_APPLICATION)
-const _idiApplication = 32512;
-
-// NOTIFYICONDATAW struct size (Vista+ without GUID/hBalloonIcon)
-const _nidSize = 952;
+// NOTIFYICONDATAW struct size (Vista+ with GUID + hBalloonIcon on x64)
+const _nidSize = 976;
 
 // NOTIFYICONDATAW field offsets on x64
 const _offCbsize = 0; // DWORD  (+0)
 const _offHwnd = 8; // HWND   (+8, pointer-aligned)
 const _offUid = 16; // UINT   (+16)
 const _offUflags = 20; // UINT   (+20)
-const _offHicon = 32; // HICON  (+32, pointer-aligned)
 const _offSzinfo = 304; // WCHAR[256] (+304)
 const _offSzinfotitle = 820; // WCHAR[64] (+820)
 const _offDwinfoflags = 948; // DWORD (+948)
+// guidItem [952..967] GUID (16 bytes)
+const _offHBalloonIcon = 968; // HICON (+968, pointer-aligned)
 
 typedef _ShellNotifyNative =
     Int32 Function(Uint32 dwMessage, Pointer<Uint8> lpData);
@@ -42,14 +39,20 @@ typedef _FindWindowNative =
 typedef _FindWindowDart =
     int Function(Pointer<Utf16> lpClassName, Pointer<Utf16> lpWindowName);
 
-typedef _LoadIconNative = IntPtr Function(IntPtr hInstance, IntPtr lpIconName);
-typedef _LoadIconDart = int Function(int hInstance, int lpIconName);
+typedef _ExtractIconNative =
+    IntPtr Function(
+      IntPtr hInst,
+      Pointer<Utf16> pszExeFileName,
+      Uint32 nIconIndex,
+    );
+typedef _ExtractIconDart =
+    int Function(int hInst, Pointer<Utf16> pszExeFileName, int nIconIndex);
 
 /// Shows a Windows balloon notification near the system tray.
 ///
 /// Design rules:
 /// - Static: no sound, standard Windows fade animation only.
-/// - Non-intrusive: info icon, auto-dismisses, never blocks input.
+/// - Non-intrusive: app icon, auto-dismisses, never blocks input.
 /// - Informative: shows app name + current hotkey so user knows how to open it.
 ///
 /// Safe to call on any platform — no-op on non-Windows.
@@ -63,7 +66,7 @@ class WindowsBalloon {
 
   static _ShellNotifyDart? _shellNotify;
   static _FindWindowDart? _findWindow;
-  static _LoadIconDart? _loadIcon;
+  static _ExtractIconDart? _extractIcon;
 
   static void _ensureLoaded() {
     if (_shellNotify != null) return;
@@ -75,8 +78,8 @@ class WindowsBalloon {
     _findWindow = user32.lookupFunction<_FindWindowNative, _FindWindowDart>(
       'FindWindowW',
     );
-    _loadIcon = user32.lookupFunction<_LoadIconNative, _LoadIconDart>(
-      'LoadIconW',
+    _extractIcon = shell32.lookupFunction<_ExtractIconNative, _ExtractIconDart>(
+      'ExtractIconW',
     );
   }
 
@@ -118,9 +121,10 @@ class WindowsBalloon {
       calloc.free(winTitle);
       if (hwnd == 0) return;
 
-      // Load the default system app icon (IDI_APPLICATION).
-      // hInstance = 0 → load from system resources.
-      final hIcon = _loadIcon!(0, _idiApplication);
+      // Extract the app's own icon from the running executable.
+      final exePath = Platform.resolvedExecutable.toNativeUtf16();
+      final hBalloonIcon = _extractIcon!(0, exePath, 0);
+      calloc.free(exePath);
 
       // calloc zero-initialises all bytes.
       final nid = calloc<Uint8>(_nidSize);
@@ -128,11 +132,14 @@ class WindowsBalloon {
         _writeUint32(nid, _offCbsize, _nidSize);
         _writeUint64(nid, _offHwnd, hwnd);
         _writeUint32(nid, _offUid, _balloonUid);
-        _writeUint32(nid, _offUflags, _nifInfo | (hIcon != 0 ? _nifIcon : 0));
-        if (hIcon != 0) _writeUint64(nid, _offHicon, hIcon);
+        _writeUint32(nid, _offUflags, _nifInfo);
         _writeWString(nid, _offSzinfo, body, 256);
         _writeWString(nid, _offSzinfotitle, title, 64);
-        _writeUint32(nid, _offDwinfoflags, _niifInfo | _niifNosound);
+        final iconFlags = (hBalloonIcon != 0 ? _niifUser : 0) | _niifNosound;
+        _writeUint32(nid, _offDwinfoflags, iconFlags);
+        if (hBalloonIcon != 0) {
+          _writeUint64(nid, _offHBalloonIcon, hBalloonIcon);
+        }
 
         _shellNotify!(_nimAdd, nid);
         await Future<void>.delayed(

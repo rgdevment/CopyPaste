@@ -377,7 +377,7 @@ abstract class AppLocalizations {
   /// Reset button
   ///
   /// In en, this message translates to:
-  /// **'Reset'**
+  /// **'Restore defaults'**
   String get buttonReset;
 
   /// Context menu paste
@@ -995,7 +995,7 @@ abstract class AppLocalizations {
   /// About section description
   ///
   /// In en, this message translates to:
-  /// **'A lightweight, fast, and open-source clipboard manager for Windows, macOS, and Linux.\nCopy once, paste anywhere — your clipboard history, always at hand.'**
+  /// **'A modern clipboard manager built to feel native on Windows, macOS, and Linux.\nLocal-first — your history, always at hand. No accounts, no telemetry, no subscriptions.'**
   String get aboutDescription;
 
   /// Privacy section title in About tab
@@ -1124,6 +1124,12 @@ abstract class AppLocalizations {
   /// **'Version {version} is available.\n\nDownload the latest release from GitHub.'**
   String updateAvailableLinux(String version);
 
+  /// Update dialog message for MS Store builds
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.'**
+  String updateAvailableStore(String version);
+
   /// Title of the update available dialog
   ///
   /// In en, this message translates to:
@@ -1159,6 +1165,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
   String linuxHotkeyConflictWarning(String requested, String fallback);
+
+  /// Label for the Windows taskbar visibility toggle in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'Keep in taskbar'**
+  String get settingShowInTaskbar;
+
+  /// Subtitle for the Windows taskbar visibility toggle in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.'**
+  String get subtitleShowInTaskbar;
+
+  /// In-app snackbar shown inside the window when it is raised by a second launch attempt
+  ///
+  /// In en, this message translates to:
+  /// **'CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.'**
+  String wakeupHint(String hotkey);
+
+  /// Hint shown when user opens CopyPaste from the taskbar in taskbar mode
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: press {hotkey} to open and paste automatically — no focus lost.'**
+  String taskbarOpenHint(String hotkey);
+
+  /// Windows balloon shown at startup when window starts hidden
+  ///
+  /// In en, this message translates to:
+  /// **'Running in the background. Press {hotkey} or click the tray icon.'**
+  String balloonStartupBody(String hotkey);
+
+  /// Windows balloon title when a second instance is launched
+  ///
+  /// In en, this message translates to:
+  /// **'CopyPaste is already open'**
+  String get balloonWakeupTitle;
+
+  /// Windows balloon body when a second instance is launched
+  ///
+  /// In en, this message translates to:
+  /// **'Press {hotkey} or click the tray icon to bring it up.'**
+  String balloonWakeupBody(String hotkey);
 }
 
 class _AppLocalizationsDelegate
