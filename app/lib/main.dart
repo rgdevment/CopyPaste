@@ -264,12 +264,18 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         }
       }
     } else {
-      if (Platform.isWindows && !_config.hasSeenWindowsOnboarding) {
+      final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
+      final shouldShowOnboarding = Platform.isWindows && (! _config.hasSeenWindowsOnboarding || isUpdate);
+      if (shouldShowOnboarding) {
         if (isFirstRun) widget.storage.markAsInitialized();
         setState(() => _showWindowsOnboarding = true);
         await _appWindow.enterGateMode();
       } else if (isFirstRun) {
         widget.storage.markAsInitialized();
+      }
+      if (isUpdate && Platform.isWindows) {
+        _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
+        unawaited(_config.save('${widget.storage.configPath}/${AppConfig.fileName}'));
       }
     }
 
@@ -277,11 +283,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     unawaited(AutoUpdateService.initialize());
     if (_needsClassifierMigration(_config.lastRunVersion)) {
       unawaited(_runClassifierMigration());
-    } else if (_config.lastRunVersion != AppConfig.appVersion) {
-      _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
-      unawaited(
-        _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
-      );
     }
   }
 
@@ -814,7 +815,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onOnboardingDismissed() async {
-    _config = _config.copyWith(hasSeenWindowsOnboarding: true);
+    _config = _config.copyWith(
+      hasSeenWindowsOnboarding: true,
+      lastRunVersion: AppConfig.appVersion,
+    );
     unawaited(
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
@@ -824,7 +828,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onOnboardingGoSettings(BuildContext ctx) async {
-    _config = _config.copyWith(hasSeenWindowsOnboarding: true);
+    _config = _config.copyWith(
+      hasSeenWindowsOnboarding: true,
+      lastRunVersion: AppConfig.appVersion,
+    );
     unawaited(
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
