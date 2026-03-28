@@ -30,14 +30,12 @@ Future<void> _pump(
 void main() {
   const hotkey = 'Ctrl+Shift+V';
 
-  Widget screen({
-    VoidCallback? onDismiss,
-    VoidCallback? onSettings,
-  }) => WindowsOnboardingScreen(
-    hotkey: hotkey,
-    onDismiss: onDismiss ?? () {},
-    onSettings: onSettings ?? () {},
-  );
+  Widget screen({VoidCallback? onDismiss, VoidCallback? onSettings}) =>
+      WindowsOnboardingScreen(
+        hotkey: hotkey,
+        onDismiss: onDismiss ?? () {},
+        onSettings: onSettings ?? () {},
+      );
 
   group('WindowsOnboardingScreen', () {
     testWidgets('renders title and subtitle', (tester) async {
@@ -114,10 +112,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(brightness: Brightness.dark),
-          home: CopyPasteTheme(
-            themeData: CompactTheme(),
-            child: screen(),
-          ),
+          home: CopyPasteTheme(themeData: CompactTheme(), child: screen()),
         ),
       );
       await tester.pump();
@@ -126,11 +121,7 @@ void main() {
     });
 
     testWidgets('renders in Spanish locale', (tester) async {
-      await _pump(
-        tester,
-        screen(),
-        locale: const Locale('es'),
-      );
+      await _pump(tester, screen(), locale: const Locale('es'));
 
       expect(find.text('Bienvenido a CopyPaste'), findsOneWidget);
       expect(find.text('Sin nube · Sin rastreo · 100% local'), findsOneWidget);
@@ -148,13 +139,15 @@ void main() {
       tester.view.devicePixelRatio = 2.0;
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(_wrap(
-        WindowsOnboardingScreen(
-          hotkey: customHotkey,
-          onDismiss: () {},
-          onSettings: () {},
+      await tester.pumpWidget(
+        _wrap(
+          WindowsOnboardingScreen(
+            hotkey: customHotkey,
+            onDismiss: () {},
+            onSettings: () {},
+          ),
         ),
-      ));
+      );
       await tester.pump();
 
       expect(find.text(customHotkey), findsOneWidget);

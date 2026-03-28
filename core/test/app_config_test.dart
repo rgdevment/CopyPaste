@@ -259,7 +259,9 @@ void main() {
     test('copyWith hasSeenWindowsOnboarding updates value', () {
       const config = AppConfig();
       expect(
-        config.copyWith(hasSeenWindowsOnboarding: true).hasSeenWindowsOnboarding,
+        config
+            .copyWith(hasSeenWindowsOnboarding: true)
+            .hasSeenWindowsOnboarding,
         isTrue,
       );
     });
