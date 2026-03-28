@@ -614,4 +614,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String balloonWakeupBody(String hotkey) {
     return 'Presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo.';
   }
+
+  @override
+  String get onboardingTitle => 'Bienvenido a CopyPaste';
+
+  @override
+  String get onboardingSubtitle => 'Todo lo que copias, guardado.';
+
+  @override
+  String get onboardingPrivacyBadge => 'Sin nube · Sin rastreo · 100% local';
+
+  @override
+  String onboardingDescription(String hotkey) {
+    return 'Corre en segundo plano sin que lo notes. Presiona $hotkey cuando quieras para abrir tu historial.';
+  }
+
+  @override
+  String get onboardingTrayHint =>
+      'Encuéntralo junto al reloj, abajo a la derecha.';
+
+  @override
+  String get onboardingSettingsButton => 'Configuración';
+
+  @override
+  String get onboardingDismissButton => 'Empezar';
 }

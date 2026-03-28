@@ -498,5 +498,29 @@
     "placeholders": {
       "hotkey": { "type": "String" }
     }
-  }
+  },
+
+  "onboardingTitle": "Welcome to CopyPaste",
+  "@onboardingTitle": { "description": "Onboarding screen title" },
+
+  "onboardingSubtitle": "Everything you copy, saved.",
+  "@onboardingSubtitle": { "description": "Onboarding screen subtitle" },
+
+  "onboardingPrivacyBadge": "No cloud · No tracking · 100% local",
+  "@onboardingPrivacyBadge": { "description": "Onboarding privacy badge chip" },
+
+  "onboardingDescription": "Runs silently in the background. Press {hotkey} anytime to open your clipboard history.",
+  "@onboardingDescription": {
+    "description": "Onboarding main description",
+    "placeholders": { "hotkey": { "type": "String" } }
+  },
+
+  "onboardingTrayHint": "Look for the CP icon next to your clock.",
+  "@onboardingTrayHint": { "description": "Onboarding tray location hint" },
+
+  "onboardingSettingsButton": "Settings",
+  "@onboardingSettingsButton": { "description": "Onboarding settings button" },
+
+  "onboardingDismissButton": "Get started",
+  "@onboardingDismissButton": { "description": "Onboarding dismiss button" }
 }

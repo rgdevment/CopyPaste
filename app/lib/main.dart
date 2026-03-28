@@ -28,6 +28,7 @@ import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/permission_gate_screen.dart';
+import 'screens/windows_onboarding_screen.dart';
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
   'dark' => true,
@@ -47,6 +48,11 @@ bool isWaylandSession() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!SingleInstance.acquire()) {
+    exit(0);
+  }
+
   await windowManager.ensureInitialized();
 
   if (Platform.isWindows || Platform.isMacOS) {
@@ -55,10 +61,6 @@ void main() async {
     } catch (_) {
       // AppLogger not yet initialized here; app continues without acrylic effects
     }
-  }
-
-  if (!SingleInstance.acquire()) {
-    exit(0);
   }
 
   final storage = await StorageConfig.create();
@@ -159,6 +161,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
   bool _showPermissionGate = false;
+  bool _showWindowsOnboarding = false;
   String? _availableUpdateVersion;
   bool _programmaticRestore = false;
 
@@ -214,15 +217,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     final showOnStart =
-        isFirstRun &&
-        (Platform.isLinux ||
-            Platform.isWindows ||
-            (Platform.isMacOS && macosGranted));
+        isFirstRun && (Platform.isLinux || (Platform.isMacOS && macosGranted));
     await _appWindow.init(startVisible: showOnStart);
     SingleInstance.listenForWakeup(() {
       unawaited(_safeShow());
       if (Platform.isWindows) unawaited(_showWakeupBalloon());
-      _showWakeupHint();
     });
 
     try {
@@ -241,14 +240,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error('trayIcon.init failed: $e');
     }
 
-    if (Platform.isWindows) {
-      if (showOnStart) {
-        Future<void>.delayed(const Duration(seconds: 2), _showStartupBalloon);
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => unawaited(_showStartupBalloon()),
-        );
-      }
+    if (Platform.isWindows && !isFirstRun && _config.hasSeenWindowsOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(_showStartupBalloon()),
+      );
     }
 
     await _registerHotkeyWithFeedback();
@@ -269,7 +264,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         }
       }
     } else {
-      if (isFirstRun) {
+      if (Platform.isWindows && !_config.hasSeenWindowsOnboarding) {
+        if (isFirstRun) widget.storage.markAsInitialized();
+        setState(() => _showWindowsOnboarding = true);
+        await _appWindow.enterGateMode();
+      } else if (isFirstRun) {
         widget.storage.markAsInitialized();
       }
     }
@@ -354,32 +353,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         ),
       );
     }
-  }
-
-  void _showWakeupHint() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _navigatorKey.currentContext;
-      if (ctx == null || !ctx.mounted) return;
-      if (_navigatorKey.currentState?.canPop() ?? false) return;
-      final messenger = ScaffoldMessenger.maybeOf(ctx);
-      if (messenger == null) return;
-      final binding = HotkeyBinding(
-        virtualKey: _config.hotkeyVirtualKey,
-        keyName: _config.hotkeyKeyName,
-        useCtrl: _config.hotkeyUseCtrl,
-        useWin: _config.hotkeyUseWin,
-        useAlt: _config.hotkeyUseAlt,
-        useShift: _config.hotkeyUseShift,
-      );
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(ctx).wakeupHint(binding.label())),
-            duration: const Duration(seconds: 10),
-          ),
-        );
-    });
   }
 
   void _showLinuxNotice(String Function(AppLocalizations l) messageBuilder) {
@@ -840,6 +813,28 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (mounted) setState(() => _showPermissionGate = false);
   }
 
+  Future<void> _onOnboardingDismissed() async {
+    _config = _config.copyWith(hasSeenWindowsOnboarding: true);
+    unawaited(
+      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+    );
+    setState(() => _showWindowsOnboarding = false);
+    await _appWindow.exitGateMode();
+    unawaited(_showStartupBalloon());
+  }
+
+  Future<void> _onOnboardingGoSettings(BuildContext ctx) async {
+    _config = _config.copyWith(hasSeenWindowsOnboarding: true);
+    unawaited(
+      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+    );
+    setState(() => _showWindowsOnboarding = false);
+    await _appWindow.exitGateMode();
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    if (ctx.mounted) await _openSettings(ctx);
+    unawaited(_showStartupBalloon());
+  }
+
   Future<void> _restartApp() async {
     await _cleanup();
     SingleInstance.release();
@@ -913,6 +908,22 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                   ),
                 );
               }
+            }
+
+            if (_showWindowsOnboarding) {
+              final binding = HotkeyBinding(
+                virtualKey: _config.hotkeyVirtualKey,
+                keyName: _config.hotkeyKeyName,
+                useCtrl: _config.hotkeyUseCtrl,
+                useWin: _config.hotkeyUseWin,
+                useAlt: _config.hotkeyUseAlt,
+                useShift: _config.hotkeyUseShift,
+              );
+              return WindowsOnboardingScreen(
+                hotkey: binding.label(),
+                onDismiss: () => unawaited(_onOnboardingDismissed()),
+                onSettings: () => unawaited(_onOnboardingGoSettings(ctx)),
+              );
             }
 
             if (_showPermissionGate) {

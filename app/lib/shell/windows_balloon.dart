@@ -10,6 +10,7 @@ const _nimAdd = 0;
 const _nimDelete = 2;
 
 // NIF flags
+const _nifIcon = 0x02;
 const _nifInfo = 0x10;
 
 // NIIF flags  (balloon icon + silence)
@@ -24,6 +25,7 @@ const _offCbsize = 0; // DWORD  (+0)
 const _offHwnd = 8; // HWND   (+8, pointer-aligned)
 const _offUid = 16; // UINT   (+16)
 const _offUflags = 20; // UINT   (+20)
+const _offIcon = 24; // HICON  (+24, pointer-aligned)
 const _offSzinfo = 304; // WCHAR[256] (+304)
 const _offSzinfotitle = 820; // WCHAR[64] (+820)
 const _offDwinfoflags = 948; // DWORD (+948)
@@ -106,24 +108,24 @@ class WindowsBalloon {
 
   /// Shows a balloon notification with [title] and [body].
   ///
-  /// The body should include the current hotkey so users know how to open
-  /// the app without needing to find the tray icon.
-  static Future<void> show({
+  /// Returns true if the notification was shown successfully, false otherwise.
+  /// Callers can use a false return to trigger an in-app fallback.
+  static Future<bool> show({
     required String title,
     required String body,
   }) async {
-    if (!Platform.isWindows) return;
+    if (!Platform.isWindows) return false;
     try {
       _ensureLoaded();
 
-      final winTitle = 'CopyPaste'.toNativeUtf16();
-      final hwnd = _findWindow!(nullptr, winTitle);
-      calloc.free(winTitle);
-      if (hwnd == 0) return;
+      final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+      final hwnd = _findWindow!(className, nullptr);
+      calloc.free(className);
+      if (hwnd == 0) return false;
 
       // Extract the app's own icon from the running executable.
       final exePath = Platform.resolvedExecutable.toNativeUtf16();
-      final hBalloonIcon = _extractIcon!(0, exePath, 0);
+      final hIcon = _extractIcon!(0, exePath, 0);
       calloc.free(exePath);
 
       // calloc zero-initialises all bytes.
@@ -132,25 +134,31 @@ class WindowsBalloon {
         _writeUint32(nid, _offCbsize, _nidSize);
         _writeUint64(nid, _offHwnd, hwnd);
         _writeUint32(nid, _offUid, _balloonUid);
-        _writeUint32(nid, _offUflags, _nifInfo);
+        _writeUint32(nid, _offUflags, _nifIcon | _nifInfo);
+        if (hIcon != 0) {
+          _writeUint64(nid, _offIcon, hIcon);
+        }
         _writeWString(nid, _offSzinfo, body, 256);
         _writeWString(nid, _offSzinfotitle, title, 64);
-        final iconFlags = (hBalloonIcon != 0 ? _niifUser : 0) | _niifNosound;
+        final iconFlags = (hIcon != 0 ? _niifUser : 0) | _niifNosound;
         _writeUint32(nid, _offDwinfoflags, iconFlags);
-        if (hBalloonIcon != 0) {
-          _writeUint64(nid, _offHBalloonIcon, hBalloonIcon);
+        if (hIcon != 0) {
+          _writeUint64(nid, _offHBalloonIcon, hIcon);
         }
 
-        _shellNotify!(_nimAdd, nid);
+        final result = _shellNotify!(_nimAdd, nid);
+        if (result == 0) return false;
         await Future<void>.delayed(
           const Duration(milliseconds: _cleanupDelayMs),
         );
+        return true;
       } finally {
         _shellNotify!(_nimDelete, nid);
         calloc.free(nid);
       }
     } catch (_) {
       // Balloon is best-effort — a failure must never affect app startup.
+      return false;
     }
   }
 }

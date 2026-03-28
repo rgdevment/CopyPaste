@@ -14,7 +14,8 @@ void main() {
       expect(config.pageSize, equals(30));
       expect(config.hotkeyUseCtrl, isTrue);
       expect(config.hotkeyUseWin, isFalse);
-      expect(config.hotkeyUseAlt, isTrue);
+      expect(config.hotkeyUseAlt, isFalse);
+      expect(config.hotkeyUseShift, isTrue);
       expect(config.hotkeyKeyName, equals('V'));
     });
 
@@ -101,18 +102,19 @@ void main() {
       const config = AppConfig();
       expect(config.hotkeyUseCtrl, isTrue);
       expect(config.hotkeyUseWin, isFalse);
-      expect(config.hotkeyUseAlt, isTrue);
-      expect(config.hotkeyUseShift, isFalse);
+      expect(config.hotkeyUseAlt, isFalse);
+      expect(config.hotkeyUseShift, isTrue);
       expect(config.hotkeyVirtualKey, equals(0x56));
       expect(config.hotkeyKeyName, equals('V'));
     });
 
-    test('all platforms default to Ctrl+Alt+V', () {
+    test('all platforms default to Ctrl+Shift+V', () {
       for (final platform in ['default', 'linux', 'windows', 'macos']) {
         final config = AppConfig.defaultForPlatform(platform);
         expect(config.hotkeyUseCtrl, isTrue, reason: '$platform: useCtrl');
         expect(config.hotkeyUseWin, isFalse, reason: '$platform: useWin');
-        expect(config.hotkeyUseAlt, isTrue, reason: '$platform: useAlt');
+        expect(config.hotkeyUseAlt, isFalse, reason: '$platform: useAlt');
+        expect(config.hotkeyUseShift, isTrue, reason: '$platform: useShift');
         expect(config.hotkeyKeyName, equals('V'), reason: '$platform: key');
       }
     });
