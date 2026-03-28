@@ -239,6 +239,31 @@ void main() {
       expect(config.showTrayIcon, isTrue);
     });
 
+    test('hasSeenWindowsOnboarding defaults to false', () {
+      const config = AppConfig();
+      expect(config.hasSeenWindowsOnboarding, isFalse);
+    });
+
+    test('hasSeenWindowsOnboarding round-trips via JSON', () {
+      const config = AppConfig(hasSeenWindowsOnboarding: true);
+      expect(
+        AppConfig.fromJson(config.toJson()).hasSeenWindowsOnboarding,
+        isTrue,
+      );
+    });
+
+    test('hasSeenWindowsOnboarding absent in JSON defaults to false', () {
+      expect(AppConfig.fromJson({}).hasSeenWindowsOnboarding, isFalse);
+    });
+
+    test('copyWith hasSeenWindowsOnboarding updates value', () {
+      const config = AppConfig();
+      expect(
+        config.copyWith(hasSeenWindowsOnboarding: true).hasSeenWindowsOnboarding,
+        isTrue,
+      );
+    });
+
     test('toJson omits lastBackupDateUtc when null', () {
       const config = AppConfig();
       expect(config.toJson().containsKey('lastBackupDateUtc'), isFalse);

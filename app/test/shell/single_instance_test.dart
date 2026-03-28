@@ -292,13 +292,21 @@ void main() {
 
     test('debounce prevents duplicate callbacks from rapid signals', () async {
       var callCount = 0;
-      SingleInstance.listenForWakeup(() => callCount++);
+      final firstFired = Completer<void>();
+      SingleInstance.listenForWakeup(() {
+        callCount++;
+        if (!firstFired.isCompleted) firstFired.complete();
+      });
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       File(_wakeupFilePath).writeAsStringSync('wakeup');
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-      // Second signal within 2s debounce window
+      await firstFired.future.timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => fail('First callback did not fire'),
+      );
+
+      // Second signal within 2s debounce window — must be suppressed
       File(_wakeupFilePath).writeAsStringSync('wakeup');
       await Future<void>.delayed(const Duration(milliseconds: 600));
 

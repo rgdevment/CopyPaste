@@ -55,5 +55,21 @@ void main() {
     test('cleanOrphanImages does not throw when directory is missing', () {
       expect(() => config.cleanOrphanImages([]), returnsNormally);
     });
+
+    test('logsPath is derived from baseDir', () {
+      expect(config.logsPath, equals(p.join(tempDir.path, 'logs')));
+    });
+
+    test('clearInitialized removes the init flag', () {
+      config.markAsInitialized();
+      expect(config.isFirstRun, isFalse);
+      config.clearInitialized();
+      expect(config.isFirstRun, isTrue);
+    });
+
+    test('clearInitialized is safe when flag does not exist', () {
+      expect(() => config.clearInitialized(), returnsNormally);
+      expect(config.isFirstRun, isTrue);
+    });
   });
 }

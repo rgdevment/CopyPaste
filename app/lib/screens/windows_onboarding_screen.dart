@@ -75,8 +75,10 @@ class WindowsOnboardingScreen extends StatelessWidget {
                 const SizedBox(height: 14),
                 _HotkeyChip(hotkey: hotkey, colorScheme: cs),
                 const SizedBox(height: 28),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 8,
                   children: [
                     OutlinedButton(
                       onPressed: onSettings,
@@ -88,7 +90,6 @@ class WindowsOnboardingScreen extends StatelessWidget {
                       ),
                       child: Text(l.onboardingSettingsButton),
                     ),
-                    const SizedBox(width: 10),
                     FilledButton(
                       onPressed: onDismiss,
                       style: FilledButton.styleFrom(
@@ -133,12 +134,15 @@ class _PrivacyBadge extends StatelessWidget {
             color: colorScheme.primary,
           ),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: colorScheme.primary,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
