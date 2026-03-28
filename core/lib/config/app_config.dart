@@ -11,8 +11,8 @@ class AppConfig {
     this.runOnStartup = true,
     this.hotkeyUseCtrl = true,
     this.hotkeyUseWin = false,
-    this.hotkeyUseAlt = true,
-    this.hotkeyUseShift = false,
+    this.hotkeyUseAlt = false,
+    this.hotkeyUseShift = true,
     this.hotkeyVirtualKey = 0x56,
     this.hotkeyKeyName = 'V',
     this.pageSize = 30,
@@ -38,6 +38,7 @@ class AppConfig {
     this.showInTaskbar = false,
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
+    this.hasSeenWindowsOnboarding = false,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -98,6 +99,9 @@ class AppConfig {
           defaults.accessibilityWasGranted,
       lastRunVersion:
           json['lastRunVersion'] as String? ?? defaults.lastRunVersion,
+      hasSeenWindowsOnboarding:
+          json['hasSeenWindowsOnboarding'] as bool? ??
+          defaults.hasSeenWindowsOnboarding,
     );
   }
 
@@ -156,6 +160,7 @@ class AppConfig {
   final bool showInTaskbar;
   final bool accessibilityWasGranted;
   final String lastRunVersion;
+  final bool hasSeenWindowsOnboarding;
 
   AppConfig copyWith({
     String? preferredLanguage,
@@ -189,6 +194,7 @@ class AppConfig {
     bool? showInTaskbar,
     bool? accessibilityWasGranted,
     String? lastRunVersion,
+    bool? hasSeenWindowsOnboarding,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -226,6 +232,8 @@ class AppConfig {
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
+    hasSeenWindowsOnboarding:
+        hasSeenWindowsOnboarding ?? this.hasSeenWindowsOnboarding,
   );
 
   Map<String, dynamic> toJson() => {
@@ -261,6 +269,7 @@ class AppConfig {
     'showInTaskbar': showInTaskbar,
     'accessibilityWasGranted': accessibilityWasGranted,
     'lastRunVersion': lastRunVersion,
+    'hasSeenWindowsOnboarding': hasSeenWindowsOnboarding,
   };
 
   static Future<AppConfig> load(String configPath) async {

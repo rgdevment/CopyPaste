@@ -224,5 +224,13 @@
 
   "balloonStartupBody": "Ejecut\u00e1ndose en segundo plano. Presiona {hotkey} o haz clic en el \u00edcono de la bandeja.",
   "balloonWakeupTitle": "CopyPaste ya est\u00e1 abierto",
-  "balloonWakeupBody": "Presiona {hotkey} o haz clic en el \u00edcono de la bandeja para abrirlo."
+  "balloonWakeupBody": "Presiona {hotkey} o haz clic en el \u00edcono de la bandeja para abrirlo.",
+
+  "onboardingTitle": "Bienvenido a CopyPaste",
+  "onboardingSubtitle": "Todo lo que copias, guardado.",
+  "onboardingPrivacyBadge": "Sin nube \u00b7 Sin rastreo \u00b7 100% local",
+  "onboardingDescription": "Corre en segundo plano sin que lo notes. Presiona {hotkey} cuando quieras para abrir tu historial.",
+  "onboardingTrayHint": "Encu\u00e9ntralo junto al reloj, abajo a la derecha.",
+  "onboardingSettingsButton": "Configuraci\u00f3n",
+  "onboardingDismissButton": "Empezar"
 }

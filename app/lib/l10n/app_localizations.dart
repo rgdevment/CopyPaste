@@ -1207,6 +1207,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Press {hotkey} or click the tray icon to bring it up.'**
   String balloonWakeupBody(String hotkey);
+
+  /// Onboarding screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to CopyPaste'**
+  String get onboardingTitle;
+
+  /// Onboarding screen subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Everything you copy, saved.'**
+  String get onboardingSubtitle;
+
+  /// Onboarding privacy badge chip
+  ///
+  /// In en, this message translates to:
+  /// **'No cloud · No tracking · 100% local'**
+  String get onboardingPrivacyBadge;
+
+  /// Onboarding main description
+  ///
+  /// In en, this message translates to:
+  /// **'Runs silently in the background. Press {hotkey} anytime to open your clipboard history.'**
+  String onboardingDescription(String hotkey);
+
+  /// Onboarding tray location hint
+  ///
+  /// In en, this message translates to:
+  /// **'Look for the CP icon next to your clock.'**
+  String get onboardingTrayHint;
+
+  /// Onboarding settings button
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get onboardingSettingsButton;
+
+  /// Onboarding dismiss button
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get onboardingDismissButton;
 }
 
 class _AppLocalizationsDelegate
