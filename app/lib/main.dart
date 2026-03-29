@@ -265,7 +265,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       }
     } else {
       final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
-      final shouldShowOnboarding = Platform.isWindows && (! _config.hasSeenWindowsOnboarding || isUpdate);
+      final shouldShowOnboarding =
+          Platform.isWindows && (!_config.hasSeenWindowsOnboarding || isUpdate);
       if (shouldShowOnboarding) {
         if (isFirstRun) widget.storage.markAsInitialized();
         setState(() => _showWindowsOnboarding = true);
@@ -275,7 +276,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       }
       if (isUpdate && Platform.isWindows) {
         _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
-        unawaited(_config.save('${widget.storage.configPath}/${AppConfig.fileName}'));
+        unawaited(
+          _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+        );
       }
     }
 
