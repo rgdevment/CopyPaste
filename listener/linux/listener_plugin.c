@@ -255,19 +255,28 @@ static gchar* capture_frontmost_x11_identifier(void) {
   return g_strdup_printf("x11:0x%lx", (unsigned long)active.window);
 }
 
+static int activate_noop_error_handler(Display* display, XErrorEvent* event) {
+  (void)display;
+  (void)event;
+  return 0;
+}
+
 static gboolean request_activate_x11_window(Window window) {
   Display* display = get_xdisplay();
   if (display == NULL || window == 0) {
     return FALSE;
   }
 
+  // 1. Send the EWMH _NET_ACTIVE_WINDOW message (honours ICCCM; most WMs).
+  //    source=2 (pager) is more trusted than 1 (application) on WMs that
+  //    apply focus-stealing prevention (KDE Plasma, some GNOME configs).
   XEvent event;
   memset(&event, 0, sizeof(event));
   event.xclient.type = ClientMessage;
   event.xclient.window = window;
   event.xclient.message_type = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
   event.xclient.format = 32;
-  event.xclient.data.l[0] = 1;
+  event.xclient.data.l[0] = 2;  // pager source — more likely to bypass focus-steal guards
   event.xclient.data.l[1] = CurrentTime;
   event.xclient.data.l[2] = 0;
   event.xclient.data.l[3] = 0;
@@ -276,6 +285,17 @@ static gboolean request_activate_x11_window(Window window) {
   Status status = XSendEvent(display, DefaultRootWindow(display), False,
                              SubstructureNotifyMask | SubstructureRedirectMask,
                              &event);
+
+  // 2. Raise the window and attempt a direct input focus as a fallback for WMs
+  //    that ignore _NET_ACTIVE_WINDOW (tiling WMs, minimal WMs).
+  //    Trap X errors: XSetInputFocus produces BadMatch on unmapped/invisible windows.
+  XRaiseWindow(display, window);
+  XSync(display, False);
+  int (*prev_handler)(Display*, XErrorEvent*) = XSetErrorHandler(activate_noop_error_handler);
+  XSetInputFocus(display, window, RevertToParent, CurrentTime);
+  XSync(display, False);
+  XSetErrorHandler(prev_handler);
+
   XFlush(display);
   return status != 0;
 }

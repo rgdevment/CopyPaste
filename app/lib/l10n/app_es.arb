@@ -211,7 +211,11 @@
   "updateViewRelease": "Ver versi\u00f3n",
   "updateDismiss": "Despu\u00e9s",
 
-  "waylandWarning": "Wayland a\u00fan no est\u00e1 soportado en Linux para atajos globales y pegado autom\u00e1tico por restricciones del escritorio o la sesi\u00f3n. Usa X11 o una sesi\u00f3n compatible.",
+  "waylandUnsupportedTitle": "Wayland no est\u00e1 soportado a\u00fan",
+  "waylandUnsupportedBadge": "Open source \u00b7 Solo X11",
+  "waylandUnsupportedBody": "El soporte en Linux a\u00fan es limitado, trabajamos en ello. Por ahora, solo X11 est\u00e1 soportado. Inicia tu sesi\u00f3n en X11 para usar CopyPaste.",
+  "waylandUnsupportedGitHub": "Contribuir en GitHub",
+  "waylandUnsupportedClose": "Cerrar",
   "linuxHotkeyFallbackWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11. CopyPaste est\u00e1 usando temporalmente {fallback}. Puedes cambiarlo en Configuraci\u00f3n.",
   "linuxHotkeyConflictWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11 y el fallback temporal {fallback} tambi\u00e9n fall\u00f3. Abre Configuraci\u00f3n para elegir otro atajo.",
 

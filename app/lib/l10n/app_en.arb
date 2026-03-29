@@ -438,8 +438,20 @@
   "updateDismiss": "Later",
   "@updateDismiss": { "description": "Button to dismiss the update notification" },
 
-  "waylandWarning": "Wayland is not supported yet on Linux for global hotkeys and auto-paste because of desktop/session restrictions. Please use X11 or a compatible session.",
-  "@waylandWarning": { "description": "Warning shown immediately when running under Wayland on Linux" },
+  "waylandUnsupportedTitle": "Wayland is not supported yet",
+  "@waylandUnsupportedTitle": { "description": "Title for the Wayland-unsupported gate screen" },
+
+  "waylandUnsupportedBadge": "Open source · X11 only",
+  "@waylandUnsupportedBadge": { "description": "Badge chip on the Wayland-unsupported gate screen" },
+
+  "waylandUnsupportedBody": "Linux support is still limited — we're working on it. For now, only X11 is supported. Please start your session in X11 to use CopyPaste.",
+  "@waylandUnsupportedBody": { "description": "Body text on the Wayland-unsupported gate screen" },
+
+  "waylandUnsupportedGitHub": "Contribute on GitHub",
+  "@waylandUnsupportedGitHub": { "description": "Button to open the repo from the Wayland gate" },
+
+  "waylandUnsupportedClose": "Close",
+  "@waylandUnsupportedClose": { "description": "Button to exit the app from the Wayland gate" },
 
   "linuxHotkeyFallbackWarning": "The shortcut {requested} is unavailable on this X11 desktop. CopyPaste is temporarily using {fallback}. You can change it in Settings.",
   "@linuxHotkeyFallbackWarning": {

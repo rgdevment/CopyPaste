@@ -17,6 +17,7 @@ import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
 import 'shell/hotkey_handler.dart';
 import 'shell/linux_hotkey_registration.dart';
+import 'shell/linux_session.dart';
 import 'shell/linux_shell.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
@@ -24,11 +25,15 @@ import 'shell/tray_icon.dart';
 import 'shell/windows_balloon.dart';
 import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/wayland_unsupported_screen.dart';
 import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/permission_gate_screen.dart';
 import 'screens/windows_onboarding_screen.dart';
+
+// Re-exported so existing tests can import isWaylandSession from main.dart.
+export 'shell/linux_session.dart' show isWaylandSession;
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
   'dark' => true,
@@ -36,15 +41,6 @@ bool _isMicaDark(String themeMode) => switch (themeMode) {
   'system' => PlatformDispatcher.instance.platformBrightness == Brightness.dark,
   _ => false,
 };
-
-/// Returns true when the current Linux session is running under Wayland.
-/// Exposed for testing.
-bool isWaylandSession() {
-  if ((Platform.environment['GDK_BACKEND'] ?? '') == 'x11') return false;
-  final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
-  final waylandDisplay = Platform.environment['WAYLAND_DISPLAY'] ?? '';
-  return sessionType == 'wayland' || waylandDisplay.isNotEmpty;
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -162,6 +158,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   String? _lastTrayLocale;
   bool _showPermissionGate = false;
   bool _showWindowsOnboarding = false;
+  bool _showWaylandUnsupported = false;
   String? _availableUpdateVersion;
   bool _programmaticRestore = false;
 
@@ -203,13 +200,18 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _initShell() async {
     windowManager.addListener(this);
-    _startListening();
     final isFirstRun = widget.storage.isFirstRun;
     final wayland = Platform.isLinux && isWaylandSession();
 
     if (wayland) {
-      _appWindow.setWaylandMode(true);
+      // Show the unsupported screen and stop all further initialisation.
+      await _appWindow.init(startVisible: true);
+      await _appWindow.enterGateMode();
+      if (mounted) setState(() => _showWaylandUnsupported = true);
+      return;
     }
+
+    _startListening();
 
     bool macosGranted = true;
     if (Platform.isMacOS) {
@@ -321,14 +323,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       return;
     }
 
-    if (isWaylandSession()) {
-      AppLogger.info(
-        'Wayland session detected — global hotkey registration disabled',
-      );
-      _showLinuxNotice((l) => l.waylandWarning);
-      return;
-    }
-
+    // Wayland is blocked before this point in _initShell — only X11 reaches here.
     final result = await _hotkeyHandler.registerWithFallback();
     if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
       AppLogger.info(
@@ -918,6 +913,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                   ),
                 );
               }
+            }
+
+            if (_showWaylandUnsupported) {
+              return WaylandUnsupportedScreen(
+                onClose: () => unawaited(_exitApp()),
+              );
             }
 
             if (_showWindowsOnboarding) {

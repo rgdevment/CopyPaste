@@ -572,8 +572,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get updateDismiss => 'Después';
 
   @override
-  String get waylandWarning =>
-      'Wayland aún no está soportado en Linux para atajos globales y pegado automático por restricciones del escritorio o la sesión. Usa X11 o una sesión compatible.';
+  String get waylandUnsupportedTitle => 'Wayland no está soportado aún';
+
+  @override
+  String get waylandUnsupportedBadge => 'Open source · Solo X11';
+
+  @override
+  String get waylandUnsupportedBody =>
+      'El soporte en Linux aún es limitado, trabajamos en ello. Por ahora, solo X11 está soportado. Inicia tu sesión en X11 para usar CopyPaste.';
+
+  @override
+  String get waylandUnsupportedGitHub => 'Contribuir en GitHub';
+
+  @override
+  String get waylandUnsupportedClose => 'Cerrar';
 
   @override
   String linuxHotkeyFallbackWarning(String requested, String fallback) {
