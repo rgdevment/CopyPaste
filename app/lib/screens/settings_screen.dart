@@ -908,7 +908,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _markChanged();
                 },
               ),
-            if (Platform.isMacOS)
+            if (Platform.isWindows)
               _ToggleRow(
                 label: l.settingShowTrayIcon,
                 subtitle: l.subtitleShowTrayIcon,

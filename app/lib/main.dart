@@ -235,7 +235,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     try {
-      if (!Platform.isMacOS || _config.showTrayIcon) {
+      if (!Platform.isWindows || _config.showTrayIcon) {
         await _trayIcon.init();
       }
     } catch (e) {
@@ -727,7 +727,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               );
               await _registerHotkeyWithFeedback();
             }
-            if (Platform.isMacOS && newConfig.showTrayIcon != oldShowTray) {
+            if (Platform.isWindows && newConfig.showTrayIcon != oldShowTray) {
               if (newConfig.showTrayIcon) {
                 await _trayIcon.init();
               } else {
@@ -904,7 +904,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {
               _lastTrayLocale = currentLocale;
-              if (!Platform.isMacOS || _config.showTrayIcon) {
+              if (!Platform.isWindows || _config.showTrayIcon) {
                 unawaited(
                   _trayIcon.rebuild(
                     showHideLabel: l.trayShowHide,
