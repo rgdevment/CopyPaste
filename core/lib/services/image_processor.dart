@@ -35,22 +35,27 @@ class ImageProcessor {
     required String id,
     required String imagesDir,
   }) {
+    // Decode failures (unsupported format, truncated data) → return null so the
+    // caller can distinguish "format not supported" from I/O errors below.
+    final img.Image? decoded;
     try {
-      final decoded = img.decodeImage(imageBytes);
-      if (decoded == null) return null;
-
-      final pngBytes = img.encodePng(decoded);
-      final imagePath = p.join(imagesDir, '$id.png');
-      File(imagePath).writeAsBytesSync(pngBytes);
-
-      return ImageProcessResult(
-        imagePath: imagePath,
-        width: decoded.width,
-        height: decoded.height,
-        fileSize: pngBytes.length,
-      );
+      decoded = img.decodeImage(imageBytes);
     } catch (_) {
       return null;
     }
+    if (decoded == null) return null;
+
+    // Encoding and file-write errors (disk full, permissions) are NOT silenced —
+    // they propagate out of the Isolate and are caught + logged by the caller.
+    final pngBytes = img.encodePng(decoded);
+    final imagePath = p.join(imagesDir, '$id.png');
+    File(imagePath).writeAsBytesSync(pngBytes);
+
+    return ImageProcessResult(
+      imagePath: imagePath,
+      width: decoded.width,
+      height: decoded.height,
+      fileSize: pngBytes.length,
+    );
   }
 }

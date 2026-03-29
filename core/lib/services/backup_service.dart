@@ -288,10 +288,10 @@ class BackupService {
           await file.copy(p.join(storage.configPath, p.basename(file.path)));
         }
       }
-
-      _cleanupSnapshot(snapshotDir);
     } catch (e) {
       AppLogger.error('rollbackFromSnapshot failed: $e');
+    } finally {
+      _cleanupSnapshot(snapshotDir);
     }
   }
 

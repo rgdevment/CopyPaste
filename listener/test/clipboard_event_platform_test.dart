@@ -1,6 +1,6 @@
 /// Platform-agnostic tests that verify ClipboardEvent parsing is robust
 /// across all content types and unusual native payloads (Windows, macOS, Linux
-/// all send Map<dynamic, dynamic> via BasicMessageChannel).
+/// all send `Map<dynamic, dynamic>` via BasicMessageChannel).
 library;
 
 import 'dart:typed_data';
@@ -194,8 +194,9 @@ void main() {
         'type': 2,
         'files': ['/valid/path.txt', 42, null, '/other/path.txt'],
       });
-      // Only string entries must be kept
-      expect(event.files!.every((f) => f is String), isTrue);
+      // Only string entries must be kept — non-strings filtered by whereType
+      expect(event.files, hasLength(2));
+      expect(event.files, containsAll(['/valid/path.txt', '/other/path.txt']));
     });
 
     test('missing files field results in null', () {
