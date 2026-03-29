@@ -1,7 +1,7 @@
 ﻿<div align="center">
   <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste App Logo"/>
 
-  <h1>Copy Paste</h1>
+  <h1>CopyPaste</h1>
   <h3>A modern clipboard manager — minimal, beautiful, and built to feel native</h3>
 
   <p>
@@ -39,7 +39,7 @@
     </a>
   </p>
 
-  <h4>⬇️ Install</h4>
+  <h4>⬇️ Install Copy Paste</h4>
 
   <p align="center">
     <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
@@ -115,7 +115,7 @@ CopyPaste isn't a "power tool" you learn to tolerate — it's something that sho
 - [Tech Stack (For Developers)](#-tech-stack-for-developers)
 - [License & Spirit](#-license--spirit)
 
-## 📸 See It in Action
+## 📸 See Copy Paste in Action
 
 <div align="center">
     <img src="resources/demo.gif" alt="CopyPaste Demo — Fast search, clean cards, multiplatform design"/>
