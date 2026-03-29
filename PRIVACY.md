@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** March 26, 2026
+**Last updated:** March 28, 2026
 
 ---
 
@@ -156,39 +156,38 @@ To be absolutely clear:
 - ❌ **Does not use AI or machine learning** on your data
 - ❌ **Does not sync across devices**
 - ❌ **Does not upload crash reports** — Errors are logged locally only; log export is always manual and user-initiated
-- ❌ **Does not phone home** — No background network calls except the standalone update checker (see below)
+- ❌ **Does not phone home** — No background network calls except the update checker described below (all platforms)
 
 ---
 
 ## Network Requests
 
-CopyPaste makes **one type of network request**, and only in the standalone version:
+CopyPaste makes **one type of network request** for update checking:
 
-### Update Checker (Standalone Version Only)
+### Update Checker
 
 | Detail | Value |
 |:---|:---|
 | **Purpose** | Check if a newer version of CopyPaste is available |
-| **URL (Windows)** | `https://gist.githubusercontent.com/rgdevment/.../raw/appcast.xml` |
-| **URL (macOS/Linux)** | `https://api.github.com/repos/rgdevment/CopyPaste/releases/latest` |
+| **URL (Windows standalone)** | `https://gist.githubusercontent.com/rgdevment/.../raw/appcast.xml` |
+| **URL (macOS / Linux / Microsoft Store)** | `https://api.github.com/repos/rgdevment/CopyPaste/releases/latest` |
 | **Method** | `GET` (read-only) |
 | **Data sent** | Standard HTTP headers only — **no user data** |
-| **Data received** | Windows: A small XML feed (Sparkle/WinSparkle appcast) containing the latest version number, download URL, and file size. macOS/Linux: A JSON response with the latest release tag name |
+| **Data received** | Windows standalone: A small XML feed (Sparkle/WinSparkle appcast) containing the latest version number and download URL. All others: A JSON response with the latest release tag name |
 | **Frequency** | Every 24 hours |
 | **Can be disabled?** | See below |
 
 **Important notes:**
 
-- This request is **read-only** — it only downloads a small public file (XML on Windows, JSON on macOS/Linux)
+- This request is **read-only** — it only downloads a small public file; no data is ever uploaded
 - **No clipboard content, no usage data, no personal information** is ever sent
-- Windows feed is hosted on a public GitHub Gist; macOS/Linux uses the public GitHub Releases API
-- **Windows:** If an update is found, WinSparkle offers to download and install it automatically
-- **macOS/Linux:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details and a link to the release page. No automatic download or installation occurs
-- **Microsoft Store version:** The update checker is **completely disabled**. The Store handles updates automatically through its own infrastructure
+- **Windows standalone:** If an update is found, WinSparkle offers to download and install it automatically
+- **macOS / Linux:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details and a link to the release page. No automatic download or installation occurs
+- **Microsoft Store version:** Queries the GitHub Releases API (same as macOS/Linux) to check whether a newer version exists. If one is found, a non-invasive indicator appears in the footer bar. **No download link is shown and nothing is installed automatically** — updates are delivered through the Microsoft Store's own infrastructure
 
-> **Standalone users:** The update checker cannot currently be disabled via settings, but it sends zero user data. If you require fully offline operation, the Microsoft Store version makes no network requests at all.
+> **Standalone users:** The update checker cannot currently be disabled via settings, but it sends zero user data.
 >
-> **macOS/Linux users:** The update check only retrieves the latest release tag from GitHub's public API. If an update is available, a notification is shown — no files are downloaded automatically.
+> **macOS / Linux / Microsoft Store users:** The update check only retrieves the latest release tag from GitHub's public API. If an update is available, a notification is shown — no files are downloaded automatically.
 
 ### User-Initiated Browser Navigation
 
@@ -285,7 +284,7 @@ CopyPaste does not knowingly collect any personal information from anyone, inclu
 CopyPaste is available through the [Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856). The Store version:
 
 - **Follows the same privacy principles** as the standalone version
-- **Does not make network requests** — the update checker is disabled (the Store handles updates)
+- **Makes one read-only network request** — queries the GitHub Releases API every 24 hours to check if a newer version exists. If found, a non-invasive indicator appears in the footer bar. No download link is shown and nothing is installed automatically — updates are delivered through the Microsoft Store
 - **Uses MSIX packaging** — installs/uninstalls cleanly with Windows standard mechanisms
 - **Microsoft Store policies** apply to distribution, but CopyPaste itself does not share any data with Microsoft beyond what the Store platform requires for installation and updates
 
