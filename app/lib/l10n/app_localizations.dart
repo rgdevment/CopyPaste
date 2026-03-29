@@ -1148,11 +1148,35 @@ abstract class AppLocalizations {
   /// **'Later'**
   String get updateDismiss;
 
-  /// Warning shown immediately when running under Wayland on Linux
+  /// Title for the Wayland-unsupported gate screen
   ///
   /// In en, this message translates to:
-  /// **'Wayland is not supported yet on Linux for global hotkeys and auto-paste because of desktop/session restrictions. Please use X11 or a compatible session.'**
-  String get waylandWarning;
+  /// **'Wayland is not supported yet'**
+  String get waylandUnsupportedTitle;
+
+  /// Badge chip on the Wayland-unsupported gate screen
+  ///
+  /// In en, this message translates to:
+  /// **'Open source · X11 only'**
+  String get waylandUnsupportedBadge;
+
+  /// Body text on the Wayland-unsupported gate screen
+  ///
+  /// In en, this message translates to:
+  /// **'Linux support is still limited — we\'re working on it. For now, only X11 is supported. Please start your session in X11 to use CopyPaste.'**
+  String get waylandUnsupportedBody;
+
+  /// Button to open the repo from the Wayland gate
+  ///
+  /// In en, this message translates to:
+  /// **'Contribute on GitHub'**
+  String get waylandUnsupportedGitHub;
+
+  /// Button to exit the app from the Wayland gate
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get waylandUnsupportedClose;
 
   /// Shown when the preferred Linux hotkey is unavailable and a temporary fallback is active
   ///

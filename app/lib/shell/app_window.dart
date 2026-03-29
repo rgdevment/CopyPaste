@@ -71,9 +71,6 @@ class AppWindow {
   bool _visible = false;
   bool _ready = false;
   bool _settingsMode = false;
-  bool _waylandMode = false;
-
-  void setWaylandMode(bool enabled) => _waylandMode = enabled;
 
   bool get isVisible => _visible;
   bool get isReady => _ready;
@@ -99,9 +96,7 @@ class AppWindow {
       await windowManager.setMaximizable(false);
       await windowManager.setPreventClose(true);
       final inTaskbar = showInTaskbar && Platform.isWindows;
-      if (!_waylandMode) {
-        await windowManager.setSkipTaskbar(!inTaskbar);
-      }
+      await windowManager.setSkipTaskbar(!inTaskbar);
       if (Platform.isWindows || Platform.isMacOS) {
         await windowManager.setBackgroundColor(const Color(0x00000000));
         await applyEffect();
@@ -305,7 +300,7 @@ class AppWindow {
       await windowManager.minimize();
     } else {
       await windowManager.hide();
-      if (!Platform.isMacOS && !_waylandMode) {
+      if (!Platform.isMacOS) {
         await windowManager.setSkipTaskbar(true);
       }
     }
@@ -329,6 +324,11 @@ class AppWindow {
   Future<void> enterSettingsMode() async {
     _settingsMode = true;
     await windowManager.setResizable(true);
+    // GTK processes geometry hints asynchronously — wait one frame before
+    // applying new constraints so the WM doesn't reject the resize.
+    if (Platform.isLinux) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     await windowManager.setMinimumSize(
       const Size(_settingsWidth, _settingsHeight),
     );
@@ -339,9 +339,20 @@ class AppWindow {
 
   Future<void> exitSettingsMode() async {
     _settingsMode = false;
+    // On Linux the window may still be in resizable=true state from settings
+    // mode. Reset it explicitly and wait for GTK to process before resizing.
+    if (Platform.isLinux) {
+      await windowManager.setResizable(true);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));
+    // Wait for GTK to process the resize before locking with setResizable(false).
+    // Without this delay the WM may freeze the window at the old (large) size.
+    if (Platform.isLinux) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
     await windowManager.setResizable(false);
     await _positionNearCursor();
   }

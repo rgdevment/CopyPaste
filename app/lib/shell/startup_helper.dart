@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:core/core.dart';
 import 'package:ffi/ffi.dart';
 
+import 'linux_session.dart';
+
 typedef _RegOpenKeyExNative =
     Int32 Function(
       IntPtr hKey,
@@ -95,6 +97,13 @@ class StartupHelper {
         _removeLaunchAgent();
       }
     } else if (Platform.isLinux) {
+      // Never install autostart on Wayland — the app would launch and immediately
+      // show the unsupported screen, which is a poor experience.
+      if (isWaylandSession()) {
+        _removeDesktopAutostart();
+        AppLogger.info('Wayland session: autostart entry removed/skipped.');
+        return;
+      }
       if (runOnStartup) {
         _installDesktopAutostart();
       } else {
