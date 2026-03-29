@@ -101,8 +101,10 @@ void main() {
       },
     );
 
-    test('does not run orphan cleanup when retentionDays is 0', () async {
-      final orphan = File(p.join(storage.imagesPath, 'keep_me.png'))
+    test('runs orphan cleanup even when retentionDays is 0', () async {
+      // Bug fix: orphan image cleanup must run independently of retention setting.
+      // When retention=0, time-based deletion is skipped but orphan cleanup still runs.
+      final orphan = File(p.join(storage.imagesPath, 'orphan_zero_ret.png'))
         ..writeAsBytesSync([1, 2, 3]);
 
       final service = CleanupService(repo, () => 0, storage: storage);
@@ -110,8 +112,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
       service.dispose();
 
-      // Retention is 0 → cleanup is fully skipped, orphan must survive
-      expect(orphan.existsSync(), isTrue);
+      // Orphan cleanup runs regardless of retention → orphan must be deleted
+      expect(orphan.existsSync(), isFalse);
     });
 
     test('does not crash when images directory is missing', () async {

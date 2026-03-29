@@ -36,8 +36,6 @@ class CleanupService {
 
   Future<void> runCleanupIfNeeded() async {
     if (_disposed) return;
-    final retentionDays = _getRetentionDays();
-    if (retentionDays <= 0) return;
 
     final lastCleanup = _loadLastCleanupDate();
     final now = DateTime.now().toUtc();
@@ -48,7 +46,10 @@ class CleanupService {
     }
 
     try {
-      await _repository.clearOldItems(retentionDays, excludePinned: true);
+      final retentionDays = _getRetentionDays();
+      if (retentionDays > 0) {
+        await _repository.clearOldItems(retentionDays, excludePinned: true);
+      }
       _saveLastCleanupDate(now);
       await _cleanOrphanImages();
     } catch (e) {

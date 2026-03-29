@@ -94,10 +94,7 @@ void main() {
       );
       await service.updatePin(pinned!.id, true);
 
-      final normal = await service.processText(
-        'normal item',
-        ClipboardContentType.text,
-      );
+      await service.processText('normal item', ClipboardContentType.text);
       service.dispose();
 
       final backupPath = p.join(sourceDir.path, 'pinned_restore.zip');

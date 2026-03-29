@@ -37,7 +37,7 @@ class StorageConfig {
   }
 
   Future<void> ensureDirectories() async {
-    for (final dir in [baseDir, imagesPath, configPath]) {
+    for (final dir in [baseDir, imagesPath, configPath, logsPath]) {
       await Directory(dir).create(recursive: true);
     }
   }
