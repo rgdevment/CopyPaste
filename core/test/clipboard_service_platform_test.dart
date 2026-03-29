@@ -293,6 +293,46 @@ void main() {
     );
   });
 
+  group('ClipboardService – unsupported image format (SVG/PDF/etc.)', () {
+    test(
+      'temp BMP is deleted when image bytes cannot be decoded (e.g. SVG)',
+      () async {
+        // Simulate SVG bytes arriving as image clipboard content
+        final svgBytes =
+            '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'.codeUnits;
+        const fakeHash = 'svg-hash-001';
+
+        await service.processImage(fakeHash, imageBytes: svgBytes);
+
+        // Give background Isolate time to attempt decode and clean up
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+
+        // Temp .bmp must not exist — it should be cleaned up on decode failure
+        final tempBmp = File(p.join(imagesDir.path, '$fakeHash.bmp'));
+        expect(tempBmp.existsSync(), isFalse);
+      },
+    );
+
+    test(
+      'repository item is still saved even when image bytes cannot be decoded',
+      () async {
+        final svgBytes = '<svg xmlns="http://www.w3.org/2000/svg"/>'.codeUnits;
+        const fakeHash = 'svg-hash-002';
+
+        final item = await service.processImage(fakeHash, imageBytes: svgBytes);
+
+        expect(item, isNotNull);
+        expect(item!.contentHash, equals(fakeHash));
+
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+
+        // Item still present in repository
+        final found = await repo.getById(item.id);
+        expect(found, isNotNull);
+      },
+    );
+  });
+
   group('ClipboardService – file size metadata on all platforms', () {
     test('includes file_size for a single real file', () async {
       final testFile = File(p.join(imagesDir.path, 'sample.txt'))

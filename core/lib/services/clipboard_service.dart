@@ -166,8 +166,13 @@ class ClipboardService {
       );
       if (result == null) {
         AppLogger.warn(
-          '_processImageBackground: ImageProcessor returned null for ${item.id}',
+          '_processImageBackground: ImageProcessor returned null for ${item.id} (unsupported format)',
         );
+        final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
+        try {
+          final bmp = File(bmpPath);
+          if (bmp.existsSync()) bmp.deleteSync();
+        } catch (_) {}
         return;
       }
       if (_disposed) return;
