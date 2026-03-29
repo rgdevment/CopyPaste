@@ -375,27 +375,35 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
       ? fl_value_get_int(key_value) : 0;
   KeySym keysym = virtual_key_to_keysym(virtual_key);
   if (keysym == NoSymbol) {
+    g_warning("registerHotkey: unsupported virtual key 0x%llx", (unsigned long long)virtual_key);
     return FALSE;
   }
 
   guint modifiers = compute_modifier_mask(args);
   if (modifiers == 0) {
+    g_warning("registerHotkey: no modifier keys specified");
     return FALSE;
   }
 
   KeyCode keycode = XKeysymToKeycode(shell->xdisplay, keysym);
   if (keycode == 0) {
+    g_warning("registerHotkey: no keycode for keysym %lu", (unsigned long)keysym);
     return FALSE;
   }
 
   for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
     if (!trap_x11_grab(shell->xdisplay, shell->root_window, keycode,
                        modifiers | modifier_combinations[i])) {
+      g_warning("registerHotkey: XGrabKey failed (modifier variant 0x%x) — key may be in use",
+                modifiers | modifier_combinations[i]);
       ungrab_hotkey_variants(shell->xdisplay, shell->root_window, keycode,
                              modifiers);
       return FALSE;
     }
   }
+
+  // Flush pending requests before reading window attributes to avoid stale state.
+  XSync(shell->xdisplay, False);
   XWindowAttributes attrs;
   if (XGetWindowAttributes(shell->xdisplay, shell->root_window, &attrs) != 0) {
     XSelectInput(shell->xdisplay, shell->root_window,
