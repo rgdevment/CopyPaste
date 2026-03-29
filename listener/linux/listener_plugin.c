@@ -23,6 +23,15 @@
 
 #include "listener_plugin_private.h"
 
+// Clipboard content type codes — must match Dart ClipboardDataType enum order.
+#define CLIP_TYPE_TEXT    0
+#define CLIP_TYPE_IMAGE   1
+#define CLIP_TYPE_FILE    2
+#define CLIP_TYPE_FOLDER  3
+#define CLIP_TYPE_LINK    4
+#define CLIP_TYPE_AUDIO   5
+#define CLIP_TYPE_VIDEO   6
+
 #define LISTENER_PLUGIN(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), listener_plugin_get_type(), ListenerPlugin))
 
@@ -94,16 +103,16 @@ static gboolean is_url_text(const gchar* text) {
 
 static int detect_file_type(const gchar* path) {
   if (path == NULL || *path == '\0') {
-    return 2;
+    return CLIP_TYPE_FILE;
   }
 
   if (g_file_test(path, G_FILE_TEST_IS_DIR)) {
-    return 3;
+    return CLIP_TYPE_FOLDER;
   }
 
   gchar* lower = g_ascii_strdown(path, -1);
   const gchar* ext = strrchr(lower, '.');
-  int type = 2;
+  int type = CLIP_TYPE_FILE;
 
   if (ext != NULL) {
     if (g_strcmp0(ext, ".png") == 0 || g_strcmp0(ext, ".jpg") == 0 ||
@@ -111,16 +120,16 @@ static int detect_file_type(const gchar* path) {
         g_strcmp0(ext, ".bmp") == 0 || g_strcmp0(ext, ".webp") == 0 ||
         g_strcmp0(ext, ".svg") == 0 || g_strcmp0(ext, ".ico") == 0 ||
         g_strcmp0(ext, ".tiff") == 0 || g_strcmp0(ext, ".heic") == 0) {
-      type = 1;
+      type = CLIP_TYPE_IMAGE;
     } else if (g_strcmp0(ext, ".mp3") == 0 || g_strcmp0(ext, ".wav") == 0 ||
                g_strcmp0(ext, ".flac") == 0 || g_strcmp0(ext, ".aac") == 0 ||
                g_strcmp0(ext, ".ogg") == 0 || g_strcmp0(ext, ".m4a") == 0) {
-      type = 5;
+      type = CLIP_TYPE_AUDIO;
     } else if (g_strcmp0(ext, ".mp4") == 0 || g_strcmp0(ext, ".avi") == 0 ||
                g_strcmp0(ext, ".mkv") == 0 || g_strcmp0(ext, ".mov") == 0 ||
                g_strcmp0(ext, ".wmv") == 0 || g_strcmp0(ext, ".flv") == 0 ||
                g_strcmp0(ext, ".webm") == 0) {
-      type = 6;
+      type = CLIP_TYPE_VIDEO;
     }
   }
 
@@ -138,6 +147,42 @@ static gboolean plugin_is_x11(void) {
 }
 
 #ifdef GDK_WINDOWING_X11
+// Cached X11 atoms — interned once per process.
+static Atom s_atom_net_active_window = None;
+static Atom s_atom_net_wm_pid = None;
+
+static Atom atom_net_active_window(Display* display) {
+  if (s_atom_net_active_window == None) {
+    s_atom_net_active_window = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
+  }
+  return s_atom_net_active_window;
+}
+
+static Atom atom_net_wm_pid(Display* display) {
+  if (s_atom_net_wm_pid == None) {
+    s_atom_net_wm_pid = XInternAtom(display, "_NET_WM_PID", False);
+  }
+  return s_atom_net_wm_pid;
+}
+
+// XTest extension availability — checked once per process.
+static gboolean s_xtest_checked = FALSE;
+static gboolean s_xtest_available = FALSE;
+
+static gboolean ensure_xtest(Display* display) {
+  if (s_xtest_checked) {
+    return s_xtest_available;
+  }
+  s_xtest_checked = TRUE;
+  int event_base, error_base, major, minor;
+  s_xtest_available = XTestQueryExtension(display, &event_base, &error_base,
+                                          &major, &minor) != 0;
+  if (!s_xtest_available) {
+    g_warning("XTest extension not available — paste simulation disabled");
+  }
+  return s_xtest_available;
+}
+
 static Display* get_xdisplay(void) {
   GdkDisplay* display = gdk_display_get_default();
   if (display == NULL || !GDK_IS_X11_DISPLAY(display)) {
@@ -154,7 +199,7 @@ static ActiveX11Window get_active_x11_window(void) {
     return result;
   }
 
-  Atom property = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
+  Atom property = atom_net_active_window(display);
   Atom actual_type = None;
   int actual_format = 0;
   unsigned long item_count = 0;
@@ -215,7 +260,7 @@ static gchar* get_x11_window_source(Window window) {
     g_free(value);
   }
 
-  Atom pid_atom = XInternAtom(display, "_NET_WM_PID", False);
+  Atom pid_atom = atom_net_wm_pid(display);
   Atom actual_type = None;
   int actual_format = 0;
   unsigned long item_count = 0;
@@ -274,7 +319,7 @@ static gboolean request_activate_x11_window(Window window) {
   memset(&event, 0, sizeof(event));
   event.xclient.type = ClientMessage;
   event.xclient.window = window;
-  event.xclient.message_type = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
+  event.xclient.message_type = atom_net_active_window(display);
   event.xclient.format = 32;
   event.xclient.data.l[0] = 2;  // pager source — more likely to bypass focus-steal guards
   event.xclient.data.l[1] = CurrentTime;
@@ -303,6 +348,10 @@ static gboolean request_activate_x11_window(Window window) {
 static gboolean simulate_paste_x11(void) {
   Display* display = get_xdisplay();
   if (display == NULL) {
+    return FALSE;
+  }
+
+  if (!ensure_xtest(display)) {
     return FALSE;
   }
 
@@ -457,7 +506,7 @@ static FlValue* build_file_event(GtkClipboard* clipboard,
 
   g_autoptr(FlValue) files = fl_value_new_list();
   guint count = 0;
-  gint event_type = 2;
+  gint event_type = CLIP_TYPE_FILE;
   gchar* first_path = NULL;
 
   for (guint i = 0; uris[i] != NULL; i++) {
@@ -503,7 +552,7 @@ static FlValue* build_text_event(GtkClipboard* clipboard,
 
   g_autoptr(FlValue) event = fl_value_new_map();
   fl_value_set_string_take(event, "type",
-                           fl_value_new_int(is_url_text(text) ? 4 : 0));
+                           fl_value_new_int(is_url_text(text) ? CLIP_TYPE_LINK : CLIP_TYPE_TEXT));
   fl_value_set_string_take(event, "text", fl_value_new_string(text));
   fl_value_set_string_take(event, "source", fl_value_new_string(source));
   fl_value_set_string_take(event, "contentHash", fl_value_new_string(hash));
@@ -548,7 +597,7 @@ static FlValue* build_image_event(GtkClipboard* clipboard,
   }
 
   g_autoptr(FlValue) event = fl_value_new_map();
-  fl_value_set_string_take(event, "type", fl_value_new_int(1));
+  fl_value_set_string_take(event, "type", fl_value_new_int(CLIP_TYPE_IMAGE));
   fl_value_set_string_take(event, "bytes",
                            fl_value_new_uint8_list((const uint8_t*)buffer,
                                                    (size_t)buffer_size));
@@ -806,17 +855,17 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
     gboolean success = FALSE;
 
     switch (type) {
-      case 0:
-      case 4:
+      case CLIP_TYPE_TEXT:
+      case CLIP_TYPE_LINK:
         success = set_text_to_clipboard(content);
         break;
-      case 1:
+      case CLIP_TYPE_IMAGE:
         success = set_image_to_clipboard(content);
         break;
-      case 2:
-      case 3:
-      case 5:
-      case 6:
+      case CLIP_TYPE_FILE:
+      case CLIP_TYPE_FOLDER:
+      case CLIP_TYPE_AUDIO:
+      case CLIP_TYPE_VIDEO:
         success = set_files_to_clipboard(content);
         break;
       default:
@@ -869,8 +918,13 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
 
       if (activated && delay_ms > 0) {
         FlMethodCall* held_call = FL_METHOD_CALL(g_object_ref(method_call));
-        g_timeout_add((guint)delay_ms, paste_after_delay_cb, held_call);
-        return;
+        guint timer_id = g_timeout_add((guint)delay_ms, paste_after_delay_cb, held_call);
+        if (timer_id != 0) {
+          return;  // held_call will be released by paste_after_delay_cb
+        }
+        // Timer registration failed — release the ref and fall through to immediate paste.
+        g_object_unref(held_call);
+        g_warning("activateAndPaste: g_timeout_add failed, pasting immediately");
       }
 
       if (activated) {

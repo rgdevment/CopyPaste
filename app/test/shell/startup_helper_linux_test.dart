@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:copypaste/shell/linux_session.dart';
 import 'package:copypaste/shell/startup_helper.dart';
 
 String _desktopPath() {
@@ -117,5 +118,58 @@ void main() {
       final expectedDir = '$home/.config/autostart';
       expect(File(_desktopPath()).parent.path, equals(expectedDir));
     });
+  });
+
+  group('StartupHelper – Linux Wayland skip', () {
+    test(
+      'apply(true) does NOT create .desktop file on Wayland session',
+      () async {
+        if (!Platform.isLinux) return;
+        if (!isWaylandSession()) return; // only meaningful on Wayland
+
+        final f = File(_desktopPath());
+        if (f.existsSync()) f.deleteSync();
+
+        await StartupHelper.apply(true);
+
+        expect(
+          f.existsSync(),
+          isFalse,
+          reason: 'Autostart must be skipped on Wayland',
+        );
+      },
+    );
+
+    test(
+      'apply(true) removes existing .desktop file on Wayland session',
+      () async {
+        if (!Platform.isLinux) return;
+        if (!isWaylandSession()) return;
+
+        // Pre-create the file to simulate a stale entry from a previous X11 session.
+        final f = File(_desktopPath());
+        f.parent.createSync(recursive: true);
+        f.writeAsStringSync('[Desktop Entry]\nType=Application\n');
+
+        await StartupHelper.apply(true);
+
+        expect(
+          f.existsSync(),
+          isFalse,
+          reason: 'Stale autostart entry must be removed on Wayland',
+        );
+      },
+    );
+
+    test(
+      'on X11 session, apply(true) creates the .desktop file normally',
+      () async {
+        if (!Platform.isLinux) return;
+        if (isWaylandSession()) return; // skip on Wayland
+
+        await StartupHelper.apply(true);
+        expect(File(_desktopPath()).existsSync(), isTrue);
+      },
+    );
   });
 }
