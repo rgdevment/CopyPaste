@@ -389,8 +389,8 @@ jobs:
       - name: Run package smoke tests
         run: |
           set -euo pipefail
-          bash scripts/ci/linux-package-smoke.sh deb "$DEB_PATH"
-          bash scripts/ci/linux-package-smoke.sh rpm "$RPM_PATH"
+          bash resources/scripts/linux-package-smoke.sh deb "$DEB_PATH"
+          bash resources/scripts/linux-package-smoke.sh rpm "$RPM_PATH"
 
   build-macos:
     needs: quality
