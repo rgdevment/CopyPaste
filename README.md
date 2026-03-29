@@ -98,7 +98,7 @@ CopyPaste isn't a "power tool" you learn to tolerate — it's something that sho
 
 ## � Table of Contents
 
-- [See It in Action](#-see-it-in-action)
+- [See It in Action](#-see-copy-paste-in-action)
 - [Why I Built This](#-why-i-built-this)
 - [What It Is / What It Isn't](#-what-it-is---what-it-isnt)
 - [Who Is This For?](#-who-is-this-for)
