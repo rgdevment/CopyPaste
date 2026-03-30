@@ -31,6 +31,12 @@ typedef _ReleaseMutexDart = int Function(int hMutex);
 typedef _AllowSetForegroundWindowNative = Int32 Function(Uint32 dwProcessId);
 typedef _AllowSetForegroundWindowDart = int Function(int dwProcessId);
 
+typedef _WaitForSingleObjectNative = Uint32 Function(
+  IntPtr hHandle,
+  Uint32 dwMilliseconds,
+);
+typedef _WaitForSingleObjectDart = int Function(int hHandle, int dwMilliseconds);
+
 // Named pipe FFI types
 typedef _CreateNamedPipeWNative =
     IntPtr Function(
@@ -152,6 +158,10 @@ class _Win32 {
       .lookupFunction<_WriteFileNative, _WriteFileDart>('WriteFile');
   late final readFile = _kernel32
       .lookupFunction<_ReadFileNative, _ReadFileDart>('ReadFile');
+  late final waitForSingleObject = _kernel32
+      .lookupFunction<_WaitForSingleObjectNative, _WaitForSingleObjectDart>(
+        'WaitForSingleObject',
+      );
 
   late final _user32 = DynamicLibrary.open('user32.dll');
   late final allowSetForegroundWindow = _user32
@@ -173,8 +183,7 @@ const int _invalidHandleValue = -1;
 const String _pipeName = r'\\.\pipe\CopyPasteSingleInstance';
 
 class SingleInstance {
-  static const String _mutexName = r'Global\CopyPaste_SingleInstance_Mutex';
-  static const int _errorAlreadyExists = 183;
+  static const String _mutexName = r'Local\CopyPaste_SingleInstance_Mutex';
   static const String _wakeupFileName = 'copypaste.wakeup';
 
   static int _mutexHandle = 0;
@@ -420,19 +429,25 @@ class SingleInstance {
       '${Directory.systemTemp.path}/$_wakeupFileName';
 
   static bool _acquireWindows() {
+    if (_mutexHandle != 0) return false;
     final w = _Win32.instance;
     final name = _mutexName.toNativeUtf16();
     try {
-      final handle = w.createMutex(nullptr, 1, name);
+      final handle = w.createMutex(nullptr, 0, name);
       if (handle == 0) return false;
 
-      final error = w.getLastError();
-      if (error == _errorAlreadyExists) {
-        w.closeHandle(handle);
-        return false;
+      // WaitForSingleObject is reliable regardless of GetLastError state;
+      // the Dart FFI trampoline can clobber the thread-local error between
+      // consecutive calls, making GetLastError-based checks unreliable.
+      const waitObject0 = 0;
+      const waitAbandoned = 0x80;
+      final result = w.waitForSingleObject(handle, 0);
+      if (result == waitObject0 || result == waitAbandoned) {
+        _mutexHandle = handle;
+        return true;
       }
-      _mutexHandle = handle;
-      return true;
+      w.closeHandle(handle);
+      return false;
     } finally {
       calloc.free(name);
     }
