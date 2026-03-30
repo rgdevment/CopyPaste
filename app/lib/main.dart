@@ -227,8 +227,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         isFirstRun && (Platform.isLinux || (Platform.isMacOS && macosGranted));
     await _appWindow.init(startVisible: showOnStart);
     SingleInstance.listenForWakeup(() {
-      unawaited(_safeShow());
-      if (Platform.isWindows) unawaited(_showWakeupBalloon());
+      if (Platform.isWindows) {
+        unawaited(_showOnboardingFromWakeup());
+      } else {
+        unawaited(_safeShow());
+      }
     });
 
     try {
@@ -504,6 +507,23 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     } catch (e, s) {
       AppLogger.error('Media metadata failed: $e\n$s');
     }
+  }
+
+  Future<void> _showOnboardingFromWakeup() async {
+    if (_showWindowsOnboarding || _appWindow.isSettingsMode) {
+      try {
+        await windowManager.show();
+        await windowManager.focus();
+      } catch (_) {}
+      return;
+    }
+    setState(() => _showWindowsOnboarding = true);
+    try {
+      await _appWindow.enterGateMode();
+    } catch (e) {
+      AppLogger.error('enterGateMode failed on wakeup: $e');
+    }
+    unawaited(_showWakeupBalloon());
   }
 
   /// Shows the window safely — errors from Mica/acrylic effects are logged
