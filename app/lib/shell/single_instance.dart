@@ -31,11 +31,10 @@ typedef _ReleaseMutexDart = int Function(int hMutex);
 typedef _AllowSetForegroundWindowNative = Int32 Function(Uint32 dwProcessId);
 typedef _AllowSetForegroundWindowDart = int Function(int dwProcessId);
 
-typedef _WaitForSingleObjectNative = Uint32 Function(
-  IntPtr hHandle,
-  Uint32 dwMilliseconds,
-);
-typedef _WaitForSingleObjectDart = int Function(int hHandle, int dwMilliseconds);
+typedef _WaitForSingleObjectNative =
+    Uint32 Function(IntPtr hHandle, Uint32 dwMilliseconds);
+typedef _WaitForSingleObjectDart =
+    int Function(int hHandle, int dwMilliseconds);
 
 // Named pipe FFI types
 typedef _CreateNamedPipeWNative =
