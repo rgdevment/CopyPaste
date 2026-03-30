@@ -20,14 +20,14 @@ void main() {
 
   group('StartupHelper – Linux', () {
     test('apply(true) creates the autostart .desktop file', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       expect(File(_desktopPath()).existsSync(), isTrue);
     });
 
     test('.desktop file contains [Desktop Entry] header', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final content = File(_desktopPath()).readAsStringSync();
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('.desktop file has Type=Application', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final content = File(_desktopPath()).readAsStringSync();
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('.desktop file contains Name=CopyPaste', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final content = File(_desktopPath()).readAsStringSync();
@@ -53,7 +53,7 @@ void main() {
     test(
       '.desktop file contains Exec pointing to current executable',
       () async {
-        if (!Platform.isLinux) return;
+        if (!Platform.isLinux || isWaylandSession()) return;
 
         await StartupHelper.apply(true);
         final content = File(_desktopPath()).readAsStringSync();
@@ -62,7 +62,7 @@ void main() {
     );
 
     test('.desktop file has X-GNOME-Autostart-enabled=true', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final content = File(_desktopPath()).readAsStringSync();
@@ -70,7 +70,7 @@ void main() {
     });
 
     test('.desktop file has Terminal=false', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final content = File(_desktopPath()).readAsStringSync();
@@ -78,7 +78,7 @@ void main() {
     });
 
     test('apply(false) removes the autostart .desktop file', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       expect(File(_desktopPath()).existsSync(), isTrue);
@@ -98,7 +98,7 @@ void main() {
     );
 
     test('apply(true) overwrites an existing .desktop file', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final first = File(_desktopPath()).lastModifiedSync();
@@ -111,7 +111,7 @@ void main() {
     });
 
     test('.desktop file is placed in HOME/.config/autostart/', () async {
-      if (!Platform.isLinux) return;
+      if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
       final home = Platform.environment['HOME'] ?? '/tmp';

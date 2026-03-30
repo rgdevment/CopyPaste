@@ -52,4 +52,22 @@ void main() {
       }
     });
   });
+
+  group('ClipboardContentType extra coverage', () {
+    test('unknown is not equal to text', () {
+      expect(
+        ClipboardContentType.unknown == ClipboardContentType.text,
+        isFalse,
+      );
+    });
+    test('toString returns enum name', () {
+      expect(
+        ClipboardContentType.text.toString(),
+        contains('ClipboardContentType.text'),
+      );
+    });
+    test('unknown value is -1', () {
+      expect(ClipboardContentType.unknown.value, equals(-1));
+    });
+  });
 }

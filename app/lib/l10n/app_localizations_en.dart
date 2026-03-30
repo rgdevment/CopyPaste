@@ -568,17 +568,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateDismiss => 'Later';
 
   @override
-  String get waylandUnsupportedTitle => 'Wayland is not supported yet';
+  String get waylandUnsupportedTitle => 'Wayland is not supported';
 
   @override
   String get waylandUnsupportedBadge => 'Open source · X11 only';
 
   @override
   String get waylandUnsupportedBody =>
-      'Linux support is still limited — we\'re working on it. For now, only X11 is supported. Please start your session in X11 to use CopyPaste.';
+      'Linux support is still a work in progress. This project is maintained by a single person and we need more testers to move forward.\n\nCopyPaste works fully on X11 — to use it, log in with an X11 session. Sorry for the inconvenience.';
 
   @override
-  String get waylandUnsupportedGitHub => 'Contribute on GitHub';
+  String get waylandUnsupportedGitHub => 'View on GitHub';
 
   @override
   String get waylandUnsupportedClose => 'Close';

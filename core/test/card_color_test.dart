@@ -59,6 +59,16 @@ void main() {
       }
     });
 
+    test('none is not equal to red', () {
+      expect(CardColor.none == CardColor.red, isFalse);
+    });
+    test('toString returns enum name', () {
+      expect(CardColor.red.toString(), contains('CardColor.red'));
+    });
+    test('none value is 0', () {
+      expect(CardColor.none.value, equals(0));
+    });
+
     test('7 total colors exist', () {
       expect(CardColor.values.length, equals(7));
     });

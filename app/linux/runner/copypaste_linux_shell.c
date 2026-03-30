@@ -34,12 +34,15 @@ struct _CopyPasteLinuxShell {
   GtkWidget* exit_item;
   gchar* resolved_icon_path;
 
+  GtkWindow* gtk_window;
+
   gboolean hotkey_registered;
 #ifdef GDK_WINDOWING_X11
   Display* xdisplay;
   Window root_window;
   guint hotkey_keycode;
   guint hotkey_modifiers;
+  guint32 last_hotkey_time;
 #endif
 };
 
@@ -437,6 +440,7 @@ static GdkFilterReturn x11_event_filter(GdkXEvent* xevent,
   guint state = (guint)x_event->xkey.state & relevant_mask;
   if ((guint)x_event->xkey.keycode == shell->hotkey_keycode &&
       state == shell->hotkey_modifiers) {
+    shell->last_hotkey_time = x_event->xkey.time;
     send_shell_event(shell, "hotkey");
     return GDK_FILTER_REMOVE;
   }
@@ -508,6 +512,20 @@ static void shell_method_call_cb(FlMethodChannel* channel,
     return;
   }
 
+  if (strcmp(method, "focusWindow") == 0) {
+    if (shell->gtk_window != NULL) {
+#ifdef GDK_WINDOWING_X11
+      guint32 t = shell->last_hotkey_time != 0 ? shell->last_hotkey_time
+                                                : GDK_CURRENT_TIME;
+      gtk_window_present_with_time(shell->gtk_window, t);
+#else
+      gtk_window_present(shell->gtk_window);
+#endif
+    }
+    respond_method_success(method_call, fl_value_new_bool(TRUE));
+    return;
+  }
+
   g_autoptr(FlMethodResponse) response =
       FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   fl_method_call_respond(method_call, response, NULL);
@@ -515,8 +533,8 @@ static void shell_method_call_cb(FlMethodChannel* channel,
 
 CopyPasteLinuxShell* copypaste_linux_shell_new(FlBinaryMessenger* messenger,
                                                GtkWindow* window) {
-  (void)window;
   CopyPasteLinuxShell* shell = g_new0(CopyPasteLinuxShell, 1);
+  shell->gtk_window = window;
 
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
   shell->method_channel =

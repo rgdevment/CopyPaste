@@ -1151,7 +1151,7 @@ abstract class AppLocalizations {
   /// Title for the Wayland-unsupported gate screen
   ///
   /// In en, this message translates to:
-  /// **'Wayland is not supported yet'**
+  /// **'Wayland is not supported'**
   String get waylandUnsupportedTitle;
 
   /// Badge chip on the Wayland-unsupported gate screen
@@ -1163,13 +1163,13 @@ abstract class AppLocalizations {
   /// Body text on the Wayland-unsupported gate screen
   ///
   /// In en, this message translates to:
-  /// **'Linux support is still limited — we\'re working on it. For now, only X11 is supported. Please start your session in X11 to use CopyPaste.'**
+  /// **'Linux support is still a work in progress. This project is maintained by a single person and we need more testers to move forward.\n\nCopyPaste works fully on X11 — to use it, log in with an X11 session. Sorry for the inconvenience.'**
   String get waylandUnsupportedBody;
 
   /// Button to open the repo from the Wayland gate
   ///
   /// In en, this message translates to:
-  /// **'Contribute on GitHub'**
+  /// **'View on GitHub'**
   String get waylandUnsupportedGitHub;
 
   /// Button to exit the app from the Wayland gate
