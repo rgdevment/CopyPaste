@@ -154,9 +154,9 @@ void main() {
   });
 
   group('AppConfig appearance and behavior fields', () {
-    test('themeMode defaults to auto', () {
+    test('themeMode defaults to dark', () {
       const config = AppConfig();
-      expect(config.themeMode, equals('auto'));
+      expect(config.themeMode, equals('dark'));
     });
 
     test('themeMode round-trips via JSON', () {
@@ -283,7 +283,7 @@ void main() {
         hotkeyUseCtrl: true,
         pageSize: 50,
         retentionDays: 60,
-        colorLabels: {'1': 'Work'},
+        colorLabels: {'1': 'Work', '2': 'Home'},
         duplicateIgnoreWindowMs: 600,
         delayBeforeFocusMs: 120,
         delayBeforePasteMs: 200,
@@ -311,6 +311,108 @@ void main() {
       expect(restored.hideOnDeactivate, isFalse);
       expect(restored.hasSeenHint, isTrue);
       expect(restored.themeMode, equals('light'));
+    });
+  });
+
+  group('AppConfig edge cases', () {
+    test('load returns default on corrupt file', () async {
+      final dir = Directory.systemTemp.createTempSync('config_test_');
+      final path = '${dir.path}/config.json';
+      File(path).writeAsStringSync('{not valid json');
+      final config = await AppConfig.load(path);
+      expect(config, isA<AppConfig>());
+      dir.deleteSync(recursive: true);
+    });
+
+    test('fromJson throws on wrong types', () {
+      expect(
+        () => AppConfig.fromJson({
+          'preferredLanguage': 123,
+          'runOnStartup': 'yes',
+          'hotkeyUseCtrl': 'true',
+          'colorLabels': 'not a map',
+        }),
+        throwsA(isA<TypeError>()),
+      );
+    });
+
+    test('copyWith with all fields as null returns same values', () {
+      const config = AppConfig();
+      final updated = config.copyWith();
+      expect(updated.preferredLanguage, config.preferredLanguage);
+      expect(updated.runOnStartup, config.runOnStartup);
+      expect(updated.hotkeyUseCtrl, config.hotkeyUseCtrl);
+      expect(updated.themeMode, config.themeMode);
+    });
+
+    test('toJson includes all fields when set', () {
+      final config = AppConfig(
+        preferredLanguage: 'fr',
+        runOnStartup: false,
+        hotkeyUseCtrl: false,
+        hotkeyUseWin: true,
+        hotkeyUseAlt: true,
+        hotkeyUseShift: false,
+        hotkeyVirtualKey: 0x41,
+        hotkeyKeyName: 'A',
+        pageSize: 99,
+        maxItemsBeforeCleanup: 999,
+        scrollLoadThreshold: 888,
+        retentionDays: 77,
+        colorLabels: {'x': 'y'},
+        duplicateIgnoreWindowMs: 1,
+        delayBeforeFocusMs: 2,
+        delayBeforePasteMs: 3,
+        maxFocusVerifyAttempts: 4,
+        lastBackupDateUtc: DateTime.utc(2026, 1, 1),
+        popupWidth: 111,
+        popupHeight: 222,
+        cardMinLines: 3,
+        cardMaxLines: 4,
+        hideOnDeactivate: false,
+        resetScrollOnShow: false,
+        resetSearchOnShow: false,
+        hasSeenHint: true,
+        themeMode: 'test',
+        showTrayIcon: false,
+        showInTaskbar: true,
+        accessibilityWasGranted: true,
+        lastRunVersion: 'v',
+        hasSeenWindowsOnboarding: true,
+      );
+      final json = config.toJson();
+      expect(json['preferredLanguage'], 'fr');
+      expect(json['runOnStartup'], false);
+      expect(json['hotkeyUseCtrl'], false);
+      expect(json['hotkeyUseWin'], true);
+      expect(json['hotkeyUseAlt'], true);
+      expect(json['hotkeyUseShift'], false);
+      expect(json['hotkeyVirtualKey'], 0x41);
+      expect(json['hotkeyKeyName'], 'A');
+      expect(json['pageSize'], 99);
+      expect(json['maxItemsBeforeCleanup'], 999);
+      expect(json['scrollLoadThreshold'], 888);
+      expect(json['retentionDays'], 77);
+      expect(json['colorLabels'], {'x': 'y'});
+      expect(json['duplicateIgnoreWindowMs'], 1);
+      expect(json['delayBeforeFocusMs'], 2);
+      expect(json['delayBeforePasteMs'], 3);
+      expect(json['maxFocusVerifyAttempts'], 4);
+      expect(json['lastBackupDateUtc'], isA<String>());
+      expect(json['popupWidth'], 111);
+      expect(json['popupHeight'], 222);
+      expect(json['cardMinLines'], 3);
+      expect(json['cardMaxLines'], 4);
+      expect(json['hideOnDeactivate'], false);
+      expect(json['resetScrollOnShow'], false);
+      expect(json['resetSearchOnShow'], false);
+      expect(json['hasSeenHint'], true);
+      expect(json['themeMode'], 'test');
+      expect(json['showTrayIcon'], false);
+      expect(json['showInTaskbar'], true);
+      expect(json['accessibilityWasGranted'], true);
+      expect(json['lastRunVersion'], 'v');
+      expect(json['hasSeenWindowsOnboarding'], true);
     });
   });
 }
