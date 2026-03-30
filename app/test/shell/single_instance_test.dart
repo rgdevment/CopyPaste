@@ -35,8 +35,7 @@ void main() {
     test('acquire() returns false when mutex already held', () {
       if (!Platform.isWindows) return;
       expect(SingleInstance.acquire(), isTrue);
-      // Second call in same process creates/opens the same mutex
-      // and gets ERROR_ALREADY_EXISTS → false
+      // Second call while already holding the mutex → false
       expect(SingleInstance.acquire(), isFalse);
     });
 
