@@ -76,6 +76,40 @@ void main() {
       // Service strips "v" before calling isNewerVersion; verify raw also works
       expect(AutoUpdateService.isNewerVersion('2.5.0', '2.4.99'), isTrue);
     });
+
+    test('pre-release is NOT newer than the same base release', () {
+      // 2.0.0-beta.1 vs 2.0.0 → stable wins
+      expect(
+        AutoUpdateService.isNewerVersion('2.0.0-beta.1', '2.0.0'),
+        isFalse,
+      );
+    });
+
+    test('same pre-release versions are equal — not newer', () {
+      expect(
+        AutoUpdateService.isNewerVersion('2.0.0-alpha', '2.0.0-alpha'),
+        isFalse,
+      );
+    });
+
+    test('newer major always wins regardless of minor/patch', () {
+      expect(AutoUpdateService.isNewerVersion('3.0.0', '2.99.99'), isTrue);
+      expect(AutoUpdateService.isNewerVersion('2.99.99', '3.0.0'), isFalse);
+    });
+
+    test('segments missing from latest default to 0', () {
+      // '2.1' is treated as 2.1.0 — still newer than 2.0.9
+      expect(AutoUpdateService.isNewerVersion('2.1', '2.0.9'), isTrue);
+    });
+
+    test('segments missing from current default to 0', () {
+      // current '2.1' treated as 2.1.0; latest '2.0.9' is older
+      expect(AutoUpdateService.isNewerVersion('2.0.9', '2.1'), isFalse);
+    });
+
+    test('identical three-part versions return false', () {
+      expect(AutoUpdateService.isNewerVersion('2.2.2', '2.2.2'), isFalse);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -240,6 +274,98 @@ void main() {
       // Must have the "v" stripped
       expect(notified, isNotNull);
       expect(notified!.startsWith('v'), isFalse);
+    });
+
+    test('silently ignores non-JSON response body', () async {
+      if (!Platform.isMacOS && !Platform.isLinux) return;
+
+      final server = await _startServer('not json at all');
+      AutoUpdateService.releasesUrlOverride = 'http://127.0.0.1:${server.port}';
+
+      bool notified = false;
+      AutoUpdateService.onUpdateAvailable = (_) => notified = true;
+
+      await AutoUpdateService.initialize();
+      AutoUpdateService.dispose();
+      await server.close(force: true);
+
+      expect(notified, isFalse);
+    });
+
+    test(
+      'silently ignores JSON array response (decoded is not a Map)',
+      () async {
+        if (!Platform.isMacOS && !Platform.isLinux) return;
+
+        // JSON array instead of map — must not crash or notify
+        final payload = jsonEncode([
+          {'tag_name': 'v2.99.0'},
+        ]);
+        final server = await _startServer(payload);
+        AutoUpdateService.releasesUrlOverride =
+            'http://127.0.0.1:${server.port}';
+
+        bool notified = false;
+        AutoUpdateService.onUpdateAvailable = (_) => notified = true;
+
+        await AutoUpdateService.initialize();
+        AutoUpdateService.dispose();
+        await server.close(force: true);
+
+        expect(notified, isFalse);
+      },
+    );
+
+    test('silently ignores v1.x releases (non-v2 guard)', () async {
+      if (!Platform.isMacOS && !Platform.isLinux) return;
+
+      final payload = jsonEncode({'tag_name': 'v1.99.9'});
+      final server = await _startServer(payload);
+      AutoUpdateService.releasesUrlOverride = 'http://127.0.0.1:${server.port}';
+
+      bool notified = false;
+      AutoUpdateService.onUpdateAvailable = (_) => notified = true;
+
+      await AutoUpdateService.initialize();
+      AutoUpdateService.dispose();
+      await server.close(force: true);
+
+      expect(notified, isFalse);
+    });
+
+    test('fires when patch is one ahead of current', () async {
+      if (!Platform.isMacOS && !Platform.isLinux) return;
+
+      // AppConfig.appVersion defaults to '2.0.0'; one patch ahead = 2.0.1
+      final payload = jsonEncode({'tag_name': 'v2.0.1'});
+      final server = await _startServer(payload);
+      AutoUpdateService.releasesUrlOverride = 'http://127.0.0.1:${server.port}';
+
+      String? notified;
+      AutoUpdateService.onUpdateAvailable = (v) => notified = v;
+
+      await AutoUpdateService.initialize();
+      AutoUpdateService.dispose();
+      await server.close(force: true);
+
+      expect(notified, equals('2.0.1'));
+    });
+
+    test('onUpdateAvailable receives version without leading v', () async {
+      if (!Platform.isMacOS && !Platform.isLinux) return;
+
+      final payload = jsonEncode({'tag_name': 'v2.5.3'});
+      final server = await _startServer(payload);
+      AutoUpdateService.releasesUrlOverride = 'http://127.0.0.1:${server.port}';
+
+      String? notified;
+      AutoUpdateService.onUpdateAvailable = (v) => notified = v;
+
+      await AutoUpdateService.initialize();
+      AutoUpdateService.dispose();
+      await server.close(force: true);
+
+      expect(notified, equals('2.5.3'));
     });
   });
 
