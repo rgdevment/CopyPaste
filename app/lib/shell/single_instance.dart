@@ -19,11 +19,12 @@ typedef _CreateMutexWDart =
       Pointer<Utf16> lpName,
     );
 
-typedef _GetLastErrorNative = Uint32 Function();
-typedef _GetLastErrorDart = int Function();
-
 typedef _CloseHandleNative = Int32 Function(IntPtr hObject);
 typedef _CloseHandleDart = int Function(int hObject);
+
+// Used by the pipe server isolate (cannot access _Win32 singleton).
+typedef _GetLastErrorNative = Uint32 Function();
+typedef _GetLastErrorDart = int Function();
 
 typedef _ReleaseMutexNative = Int32 Function(IntPtr hMutex);
 typedef _ReleaseMutexDart = int Function(int hMutex);
@@ -133,8 +134,6 @@ class _Win32 {
   late final _kernel32 = DynamicLibrary.open('kernel32.dll');
   late final createMutex = _kernel32
       .lookupFunction<_CreateMutexWNative, _CreateMutexWDart>('CreateMutexW');
-  late final getLastError = _kernel32
-      .lookupFunction<_GetLastErrorNative, _GetLastErrorDart>('GetLastError');
   late final closeHandle = _kernel32
       .lookupFunction<_CloseHandleNative, _CloseHandleDart>('CloseHandle');
   late final releaseMutex = _kernel32
