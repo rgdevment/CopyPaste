@@ -159,6 +159,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   bool _showPermissionGate = false;
   bool _showWindowsOnboarding = false;
   bool _showWaylandUnsupported = false;
+  bool _linuxPrefersDark = false;
   String? _availableUpdateVersion;
   bool _programmaticRestore = false;
 
@@ -204,6 +205,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     final wayland = Platform.isLinux && isWaylandSession();
 
     if (wayland) {
+      // Detect dark mode before showing the gate so the screen respects it.
+      _linuxPrefersDark = await linuxPrefersDarkMode();
       // Show the unsupported screen and stop all further initialisation.
       await _appWindow.init(startVisible: true);
       await _appWindow.enterGateMode();
@@ -211,6 +214,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       return;
     }
 
+    _linuxPrefersDark = await linuxPrefersDarkMode();
     _startListening();
 
     bool macosGranted = true;
@@ -352,6 +356,18 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         ),
       );
     }
+  }
+
+  ThemeMode get _effectiveThemeMode {
+    final mode = _config.themeMode;
+    if (Platform.isLinux && (mode == 'auto' || mode == 'system')) {
+      return _linuxPrefersDark ? ThemeMode.dark : ThemeMode.light;
+    }
+    return switch (mode) {
+      'dark' => ThemeMode.dark,
+      'auto' || 'system' => ThemeMode.system,
+      _ => ThemeMode.light,
+    };
   }
 
   void _showLinuxNotice(String Function(AppLocalizations l) messageBuilder) {
@@ -893,11 +909,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           fontFamily: 'Inter',
           useMaterial3: true,
         ),
-        themeMode: switch (_config.themeMode) {
-          'dark' => ThemeMode.dark,
-          'auto' || 'system' => ThemeMode.system,
-          _ => ThemeMode.light,
-        },
+        themeMode: _effectiveThemeMode,
         home: Builder(
           builder: (ctx) {
             final l = AppLocalizations.of(ctx);

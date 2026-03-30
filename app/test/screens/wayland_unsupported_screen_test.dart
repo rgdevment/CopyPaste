@@ -35,7 +35,7 @@ void main() {
     testWidgets('renders title text', (tester) async {
       await _pump(tester, screen());
 
-      expect(find.text('Wayland is not supported yet'), findsOneWidget);
+      expect(find.text('Wayland is not supported'), findsOneWidget);
     });
 
     testWidgets('renders badge chip', (tester) async {
@@ -48,7 +48,7 @@ void main() {
       await _pump(tester, screen());
 
       expect(
-        find.textContaining('Linux support is still limited'),
+        find.textContaining('Linux support is still a work in progress'),
         findsOneWidget,
       );
     });
@@ -57,7 +57,7 @@ void main() {
       await _pump(tester, screen());
 
       expect(find.byType(FilledButton), findsOneWidget);
-      expect(find.text('Contribute on GitHub'), findsOneWidget);
+      expect(find.text('View on GitHub'), findsOneWidget);
     });
 
     testWidgets('renders Close OutlinedButton', (tester) async {
@@ -94,7 +94,7 @@ void main() {
     testWidgets('renders in Spanish locale', (tester) async {
       await _pump(tester, screen(), locale: const Locale('es'));
 
-      expect(find.text('Wayland no está soportado aún'), findsOneWidget);
+      expect(find.text('Wayland no está soportado'), findsOneWidget);
       expect(find.text('Open source · Solo X11'), findsOneWidget);
       expect(find.text('Cerrar'), findsOneWidget);
     });
@@ -115,7 +115,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Wayland is not supported yet'), findsOneWidget);
+      expect(find.text('Wayland is not supported'), findsOneWidget);
     });
 
     testWidgets('open_in_new icon is present on GitHub button', (tester) async {

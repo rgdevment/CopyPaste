@@ -358,7 +358,7 @@ class AppWindow {
   }
 
   static const double _gateWidth = 480;
-  static const double _gateHeight = 480;
+  static const double _gateHeight = 540;
 
   bool _gateMode = false;
   bool get isGateMode => _gateMode;
@@ -370,8 +370,8 @@ class AppWindow {
     await windowManager.setMaximumSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setAlwaysOnTop(false);
-    await windowManager.center();
     await windowManager.show();
+    await windowManager.center();
     await windowManager.focus();
     _visible = true;
   }

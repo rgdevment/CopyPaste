@@ -438,16 +438,16 @@
   "updateDismiss": "Later",
   "@updateDismiss": { "description": "Button to dismiss the update notification" },
 
-  "waylandUnsupportedTitle": "Wayland is not supported yet",
+  "waylandUnsupportedTitle": "Wayland is not supported",
   "@waylandUnsupportedTitle": { "description": "Title for the Wayland-unsupported gate screen" },
 
   "waylandUnsupportedBadge": "Open source · X11 only",
   "@waylandUnsupportedBadge": { "description": "Badge chip on the Wayland-unsupported gate screen" },
 
-  "waylandUnsupportedBody": "Linux support is still limited — we're working on it. For now, only X11 is supported. Please start your session in X11 to use CopyPaste.",
+  "waylandUnsupportedBody": "Linux support is still a work in progress. This project is maintained by a single person and we need more testers to move forward.\n\nCopyPaste works fully on X11 — to use it, log in with an X11 session. Sorry for the inconvenience.",
   "@waylandUnsupportedBody": { "description": "Body text on the Wayland-unsupported gate screen" },
 
-  "waylandUnsupportedGitHub": "Contribute on GitHub",
+  "waylandUnsupportedGitHub": "View on GitHub",
   "@waylandUnsupportedGitHub": { "description": "Button to open the repo from the Wayland gate" },
 
   "waylandUnsupportedClose": "Close",
