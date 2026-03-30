@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(dart format:*)",
-      "Bash(flutter test:*)"
-    ]
-  }
-}
