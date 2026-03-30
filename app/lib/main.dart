@@ -162,6 +162,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   bool _linuxPrefersDark = false;
   String? _availableUpdateVersion;
   bool _programmaticRestore = false;
+  Timer? _blurHideTimer;
 
   @override
   void initState() {
@@ -205,16 +206,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     final wayland = Platform.isLinux && isWaylandSession();
 
     if (wayland) {
-      // Detect dark mode before showing the gate so the screen respects it.
-      _linuxPrefersDark = await linuxPrefersDarkMode();
-      // Show the unsupported screen and stop all further initialisation.
       await _appWindow.init(startVisible: true);
       await _appWindow.enterGateMode();
       if (mounted) setState(() => _showWaylandUnsupported = true);
       return;
     }
 
-    _linuxPrefersDark = await linuxPrefersDarkMode();
+    if (Platform.isLinux) {
+      final isDark = await linuxPrefersDarkMode();
+      if (mounted) setState(() => _linuxPrefersDark = isDark);
+    }
     _startListening();
 
     bool macosGranted = true;
@@ -762,11 +763,27 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   @override
+  void onWindowFocus() {
+    _blurHideTimer?.cancel();
+    _blurHideTimer = null;
+  }
+
+  @override
   void onWindowBlur() {
     if (!_appWindow.isReady || !_appWindow.isVisible) return;
     if (_appWindow.isGateMode) return;
     if (!_config.hideOnDeactivate) return;
-    unawaited(_appWindow.hideIfNotPinned());
+    if (Platform.isLinux) {
+      // On Linux/GTK, window-move and other WM operations briefly steal focus.
+      // Delay the hide so we can cancel it if focus returns quickly (e.g. drag).
+      _blurHideTimer?.cancel();
+      _blurHideTimer = Timer(const Duration(milliseconds: 300), () {
+        _blurHideTimer = null;
+        unawaited(_appWindow.hideIfNotPinned());
+      });
+    } else {
+      unawaited(_appWindow.hideIfNotPinned());
+    }
   }
 
   @override

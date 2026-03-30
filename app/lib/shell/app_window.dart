@@ -9,6 +9,8 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'linux_shell.dart';
+
 typedef _SystemParametersInfoWNative =
     Int32 Function(
       Uint32 uiAction,
@@ -280,15 +282,24 @@ class AppWindow {
   }
 
   Future<void> show() async {
-    await _positionNearCursor();
-    if (Platform.isWindows) {
-      await applyEffect();
+    if (Platform.isLinux) {
+      // On X11/GTK, show the window first (so it gets realized/mapped by the WM),
+      // then set the position (avoids WM initial-placement overriding our offset),
+      // then focus via gtk_window_present_with_time so GNOME doesn't block focus
+      // and show a spurious "está preparado" notification.
       await windowManager.setSkipTaskbar(false);
-    } else if (Platform.isLinux) {
-      await windowManager.setSkipTaskbar(false);
+      await windowManager.show();
+      await _positionNearCursor();
+      await LinuxShell.focusWindow();
+    } else {
+      await _positionNearCursor();
+      if (Platform.isWindows) {
+        await applyEffect();
+        await windowManager.setSkipTaskbar(false);
+      }
+      await windowManager.show();
+      await windowManager.focus();
     }
-    await windowManager.show();
-    await windowManager.focus();
     _visible = true;
     onVisibilityChanged?.call(true);
   }

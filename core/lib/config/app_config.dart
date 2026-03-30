@@ -33,7 +33,7 @@ class AppConfig {
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
     this.hasSeenHint = false,
-    this.themeMode = 'auto',
+    this.themeMode = 'dark',
     this.showTrayIcon = true,
     this.showInTaskbar = false,
     this.accessibilityWasGranted = false,
