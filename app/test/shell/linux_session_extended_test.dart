@@ -31,8 +31,9 @@ void main() {
     test('returns true when XDG_SESSION_TYPE is wayland', () {
       if (!Platform.isLinux) return;
       final sessionType = Platform.environment['XDG_SESSION_TYPE'] ?? '';
-      if (sessionType != 'wayland')
+      if (sessionType != 'wayland') {
         return; // only meaningful on Wayland session
+      }
       expect(isWaylandSession(), isTrue);
     });
 
