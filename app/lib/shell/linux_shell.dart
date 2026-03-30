@@ -107,4 +107,14 @@ class LinuxShell {
       AppLogger.error('LinuxShell.unregisterHotkey failed: $e');
     }
   }
+
+  /// Raises and focuses the GTK window using the X11 hotkey event timestamp,
+  /// bypassing GNOME's focus-stealing prevention.
+  static Future<void> focusWindow() async {
+    try {
+      await _methodChannel.invokeMethod<bool>('focusWindow');
+    } catch (e) {
+      AppLogger.error('LinuxShell.focusWindow failed: $e');
+    }
+  }
 }
