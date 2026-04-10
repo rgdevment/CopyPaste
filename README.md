@@ -1,12 +1,8 @@
 ﻿<div align="center">
-  <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste App Logo"/>
+  <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows, macOS and Linux"/>
 
-  <h1>CopyPaste</h1>
-  <h3>A modern clipboard manager — minimal, beautiful, and built to feel native</h3>
-
-  <p>
-    <strong>Local-First • Open Source • Zero Friction</strong>
-  </p>
+  <h1>CopyPaste — Free Open Source Clipboard Manager</h1>
+  <p><strong>A local-first clipboard history and copy paste tool for Windows, macOS and Linux.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
 
   <p>
     <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci.yml">
@@ -21,37 +17,25 @@
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
-    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux_(beta)-0078D4?style=flat-square&logo=windows" alt="Platform"/>
-    <a href="#license">
-      <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License"/>
-    </a>
-    <a href="https://github.com/rgdevment/CopyPaste/releases">
-      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_windows.json&style=flat-square&logo=windows&logoColor=white" alt="Windows Downloads"/>
-    </a>
-    <a href="https://github.com/rgdevment/CopyPaste/releases">
-      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_macos.json&style=flat-square&logo=apple&logoColor=white" alt="macOS Downloads"/>
-    </a>
-    <a href="https://github.com/rgdevment/CopyPaste/releases">
-      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_linux.json&style=flat-square&logo=linux&logoColor=black" alt="Linux Downloads"/>
-    </a>
-    <a href="https://cloudsmith.io/~rgdevment/repos/copypaste/">
-      <img src="https://img.shields.io/badge/Cloudsmith-Linux_Registry-003F72?style=flat-square&logo=cloudsmith&logoColor=white" alt="Cloudsmith Registry"/>
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux_(beta)-0078D4?style=flat-square" alt="Platform: Windows, macOS, Linux"/>
+    <a href="#license-and-spirit">
+      <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License GPL-3.0"/>
     </a>
   </p>
 
-  <h4>⬇️ Install Copy Paste</h4>
+  <h4>Download CopyPaste</h4>
 
   <p align="center">
     <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
-      <img src="https://img.shields.io/badge/Windows-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store"/>
+      <img src="https://img.shields.io/badge/Windows-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get CopyPaste clipboard manager from Microsoft Store"/>
     </a>
     &nbsp;
-    <a href="#-getting-started">
-      <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install via Homebrew"/>
+    <a href="#getting-started">
+      <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install CopyPaste clipboard manager via Homebrew on macOS"/>
     </a>
     &nbsp;
-    <a href="#-getting-started">
-      <img src="https://img.shields.io/badge/Linux-apt_%2F_dnf_%2F_Homebrew-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste for Linux — apt / dnf / brew"/>
+    <a href="#getting-started">
+      <img src="https://img.shields.io/badge/Linux-apt_%2F_dnf_%2F_Homebrew-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste clipboard manager for Linux — apt, dnf or Homebrew"/>
     </a>
   </p>
 
@@ -68,153 +52,129 @@
 
 ---
 
-### An open source clipboard manager built for harmony, not just productivity
+**CopyPaste** is a free, open source **clipboard manager** and **clipboard history** tool I built because the alternatives frustrated me. Most copy paste utilities are either bloated, ugly, or treat you as a product. I wanted a **copy tool** that felt native, respected my privacy, and just worked — so I built one and shared it.
 
-**CopyPaste** is not just a clipboard manager focused on performance. I don't believe power should be synonymous with something clunky or purely functional — this project is a pursuit of **visual harmony, aesthetics, and minimalism**.
+This isn't a company product. I'm a developer who needed a better **copy paste** tool for my desktop, built it for myself, and decided to open source it for anyone who feels the same. No ads, no telemetry, no subscriptions, no data collection — just a lightweight **clipboard utility** that lives on your machine and nowhere else.
 
-My goal was to create something that felt truly **native**: a piece of software with the fluidity and care that feels like it should have always been there, integrated into the soul of your OS — whether that's Windows, macOS, or Linux — but that we can now enjoy together.
+**Why people choose CopyPaste over other clipboard managers:**
 
----
+- **100% local** — your clipboard history never leaves your computer. No cloud, no servers, no accounts.
+- **Truly free** — no premium tiers, no feature gates, no "free trial" tricks. GPL v3, forever.
+- **Cross-platform** — same native copy-paste experience on Windows, macOS, and Linux (beta).
+- **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
+- **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
 
-### ✨ What Drives This Project
-
-Sometimes, in our daily workflow, we just need something that's "just there" when we need it and disappears when we don't — without friction or unnecessary visual noise.
-
-- **Aesthetics and Fluidity:** I was inspired by the cleanest workspaces to bring that same sense of calm to your desktop. Built on a **cross-platform UI and core** — so every transition feels like an integral part of the OS, not a widget dropped on top of it. The same foundation powers Windows, macOS, and Linux with a native feel on each.
-- **A Commitment to Respect:** Your data is yours. CopyPaste is **local-first**: nothing leaves your computer — no accounts, no telemetry, no tracking of any kind. A tool designed with privacy and absolute respect for your digital space.
-- **Open Source and Free:** This project is **GPL v3**. Free to use, free to fork, and always without subscriptions, telemetry, or data harvesting — ever.
-
----
-
-### 🏠 Built to Belong
-
-CopyPaste isn't a "power tool" you learn to tolerate — it's something that should feel like it was always part of the OS. Lightweight enough to forget it's running. Fast enough to never slow you down. Quiet enough to stay out of your way.
-
-> 🚀 I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#-found-a-bug-have-feedback) — this project keeps improving because of real-world use.
+> I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
 >
-> 🐧 **Linux is in beta.** It works, but there are edge cases we haven't seen yet — especially across different desktop environments and distributions. If you're on Linux and want to help improve it, [your feedback is invaluable](#-found-a-bug-have-feedback).
+> **Linux is in beta.** It works, but there are edge cases across different desktop environments. If you're on Linux and want to help, [your feedback matters](#found-a-bug-have-feedback).
 
 ---
 
-## � Table of Contents
+## Table of Contents
 
-- [See It in Action](#-see-copy-paste-in-action)
-- [Why I Built This](#-why-i-built-this)
-- [What It Is / What It Isn't](#-what-it-is---what-it-isnt)
-- [Who Is This For?](#-who-is-this-for)
-- [Privacy & Security](#-privacy--security)
-- [Key Features](#-key-features)
-- [Keyboard Shortcuts](#️-keyboard-shortcuts)
-- [Getting Started](#-getting-started)
-- [FAQ](#-faq)
-- [Support & Bug Reporting](#-support--bug-reporting)
-- [Clean Install & Reset](#-clean-install--reset)
-- [Found a Bug? Have Feedback?](#-found-a-bug-have-feedback)
-- [Localization](#-localization-help-us-go-global)
-- [Want to Help?](#-want-to-help)
-- [Tech Stack (For Developers)](#-tech-stack-for-developers)
-- [License & Spirit](#-license--spirit)
+- [See It in Action](#see-copypaste-in-action)
+- [Why I Built This](#why-i-built-this)
+- [What It Is / What It Isn't](#what-it-is--what-it-isnt)
+- [Who Is This For?](#who-is-this-for)
+- [Privacy and Security](#privacy-and-security)
+- [Key Features](#key-features)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Getting Started](#getting-started)
+- [FAQ](#faq)
+- [Support and Bug Reporting](#support-and-bug-reporting)
+- [Clean Install and Reset](#clean-install-and-reset)
+- [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
+- [Localization](#localization-help-translate-copypaste)
+- [Want to Help?](#want-to-help)
+- [Tech Stack](#tech-stack-for-developers)
+- [License and Spirit](#license-and-spirit)
 
-## 📸 See Copy Paste in Action
+## See CopyPaste in Action
 
 <div align="center">
-    <img src="resources/demo.gif" alt="CopyPaste Demo — Fast search, clean cards, multiplatform design"/>
+    <img src="resources/demo.gif" alt="CopyPaste clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
 </div>
-<div align="center"><em>Fast search, clean cards, and a native feel. This is CopyPaste in action.</em></div>
+<div align="center"><em>Fast search, clean cards, and a native feel across Windows and macOS.</em></div>
 
 <br/>
 
 <div align="center">
-    <img src="resources/copypaste_v2_en_1_panel.png" alt="CopyPaste — Main panel with clipboard history" width="49%"/>
-    <img src="resources/copypaste_v2_en_2_categories.png" alt="CopyPaste — Category filters and color labels" width="49%"/>
+    <img src="resources/copypaste_v2_en_1_panel.png" alt="CopyPaste clipboard history — main panel showing copied text, images, files and links with previews" width="49%"/>
+    <img src="resources/copypaste_v2_en_2_categories.png" alt="CopyPaste copy tool — category filters and color labels for organizing clipboard items" width="49%"/>
     <br/><br/>
-    <img src="resources/copypaste_v2_en_3_settings.png" alt="CopyPaste — Settings panel" width="49%"/>
-    <img src="resources/copypaste_v2_en_4_multiplatform.png" alt="CopyPaste — Multiplatform: Windows and macOS" width="49%"/>
+    <img src="resources/copypaste_v2_en_3_settings.png" alt="CopyPaste settings — configure clipboard manager privacy, shortcuts and appearance" width="49%"/>
+    <img src="resources/copypaste_v2_en_4_multiplatform.png" alt="CopyPaste multiplatform clipboard manager — running natively on Windows and macOS side by side" width="49%"/>
 </div>
 
 ---
 
-## 💡 Why I Built This
+## Why I Built This
 
-I didn't build CopyPaste to sell you something. I built it because **I needed it**—and I believe you might need it too.
+I'm not a company. I'm a developer who copies and pastes things hundreds of times a day — and got frustrated.
 
-### The Problem
+Most **clipboard managers** out there are either bloated, ugly, Windows-only, or silently collecting your data. In 2026, a **copy paste tool** should feel native, responsive, and beautiful on every platform. I couldn't find one that did, so I built my own.
 
-There are clipboard managers out there, sure. But many feel clunky, outdated, or over-complicated. In 2026, software shouldn't feel like it was designed for a decade ago. It should feel **native, responsive, and beautiful** — on every platform.
+**CopyPaste started as a personal productivity tool.** I needed a lightweight **copy history** utility that:
 
-I was tired of:
+- Didn't hog system resources
+- Looked and felt like part of my OS, not a widget dropped on top
+- Worked on both Windows and macOS (and eventually Linux)
+- Didn't require an account, subscription, or internet connection
+- Actually respected my privacy — not just claimed to
 
-- Tools that hog system resources
-- Interfaces that feel disconnected from your OS
-- Applications that treat you as a customer, not a collaborator
-- Closed ecosystems where you're locked into someone else's vision
-- Windows-only tools that don't follow you to macOS
+After months of using it myself, I realized others might need it too. So I open sourced it — no ads, no monetization, no strings attached.
 
-### What I Built
-
-**This is a passion project**, not a startup chasing metrics. It started because I needed it, and ended up becoming something I'm proud to share:
-
-- 🔒 **Your data stays yours** — Everything is local. No analytics, no telemetry, no accounts. I genuinely don't need to know what you're copying.
-- 💻 **100% Open Source** — Every line of code is public. Read it, fork it, learn from it.
-- 🆓 **Completely free** — No premium tiers, no subscriptions, no paywalls — now or ever.
-
-### What I'm After
-
-I wanted to bring the **polish and fluidity** you find in great tools to Windows. Things like:
-
-- **Native system integration** — adapts to the OS light/dark theme and behaves like it belongs, wherever it runs. Mica effect on Windows, Sidebar material on macOS.
-- **Performance** — every millisecond counts when you use something hundreds of times a day
-- **Reliability** — something you can count on without thinking about it
-- **Multiplatform** — Windows, macOS, and Linux
+Every line of code is public. You can read it, fork it, or learn from it. This is a **free, open source productivity tool** — a copy tool built from a real need, not a business plan.
 
 ---
 
-## ✅ What It Is / ❌ What It Isn’t
+## What It Is / What It Isn't
 
 **CopyPaste is:**
 
-- A **local-first clipboard history** app for Windows, macOS, and Linux.
-- A **fast** tool designed for keyboard workflows.
-- **Open source**, so you can inspect how it works.
+- A **local-first clipboard manager** and **clipboard history** app for Windows, macOS, and Linux
+- A fast, keyboard-driven **copy-paste utility** for daily productivity and workflow efficiency
+- A **copy tool** you can trust — **open source** (GPL v3), inspect every line, fork it, contribute to it
 
-**CopyPaste isn’t:**
+**CopyPaste is not:**
 
-- A cloud clipboard or sync service.
-- A telemetry/analytics app.
-- A “platform” with accounts, subscriptions, or ads.
-
----
-
-## 👤 Who Is This For?
-
-If you copy and paste all day, this is for you:
-
-- **Students** collecting notes, quotes, and sources.
-- **Developers** juggling snippets, commands, and logs.
-- **Creators & writers** reusing text fragments and assets.
-- **Support & operations** teams handling repetitive responses.
-- **Anyone** who wants a clean, private clipboard history on their computer.
+- A cloud clipboard or sync service
+- A telemetry or analytics tool
+- A "platform" with accounts, subscriptions, or ads
+- A corporate product — it's a personal project shared with the community
 
 ---
 
-## 🔒 Privacy & Security
+## Who Is This For?
 
-**Everything local.** CopyPaste is built on a single, non-negotiable principle: your data never leaves your computer.
+If you copy and paste throughout your day, this **clipboard manager** is for you:
 
-- **Local-only storage** — no cloud, no servers, no data syncing.
-- **No tracking** — no telemetry, no analytics, no hidden collection.
-- **No automatic reporting** — errors are logged locally only; nothing is ever sent without your explicit action.
-- **Sensitive content is ignored** — passwords and password-manager copies aren’t saved.
-- **Log export is voluntary** — you choose when and what to share for bug reports; logs never contain clipboard content.
+- **Developers** juggling code snippets, terminal commands, and log outputs — a real productivity boost
+- **Students** collecting notes, quotes, and research sources into a searchable **copy history**
+- **Writers and creators** reusing text fragments and assets across documents
+- **Support and operations** teams handling repetitive copy-paste responses
+- **Anyone** who wants a clean, private, free **clipboard history** tool on their computer
 
-**Non-goals (by design):** No accounts, no subscriptions, no ads, no cloud sync, no “AI analysis” of your clipboard.
+---
+
+## Privacy and Security
+
+**Everything stays local.** CopyPaste is built on a single, non-negotiable principle: your clipboard data never leaves your computer. This copy-paste tool was designed with privacy as the foundation, not an afterthought.
+
+- **Local-only storage** — no cloud, no servers, no data syncing
+- **No tracking** — no telemetry, no analytics, no hidden collection of any kind
+- **No automatic reporting** — errors are logged locally; nothing is sent without your explicit action
+- **Sensitive content is ignored** — passwords and password-manager copies (1Password, Bitwarden, etc.) aren't saved
+- **Log export is voluntary** — you choose when and what to share; logs never contain clipboard content
+
+**By design, CopyPaste will never have:** accounts, subscriptions, ads, cloud sync, or "AI analysis" of your clipboard.
 
 For responsible disclosure and security contact info, see [SECURITY.md](SECURITY.md).
 
 <details>
-<summary><strong>Where is my data stored?</strong></summary>
+<summary><strong>Where is my clipboard data stored?</strong></summary>
 
-CopyPaste stores its data locally under your user profile:
+CopyPaste stores all data locally under your user profile:
 
 **Windows:**
 
@@ -236,53 +196,57 @@ CopyPaste stores its data locally under your user profile:
 
 </details>
 
-If you care about privacy and control, this is made for you. Read our full [Privacy Policy](PRIVACY.md) for complete details.
+If you care about privacy and control, this clipboard manager is made for you. Read the full [Privacy Policy](PRIVACY.md) for complete details.
 
-## ✨ Key Features
+## Key Features
 
-> 🚀 **Latest Release** — See all features and improvements in our [Release Notes](https://github.com/rgdevment/CopyPaste/releases/latest).
+**Latest Release** — See all features and improvements in the [Release Notes](https://github.com/rgdevment/CopyPaste/releases/latest).
 
-- 🎨 **Adapts to Your System:** Follows your OS light or dark theme automatically — Mica on Windows, Sidebar material on macOS.
-- ⚡ **Fast & Light:** Starts quickly and doesn't hog resources.
-- 📂 **Handles Everything:** Text, images, files, folders, links, audio, and video — with content-aware previews.
-- 🧠 **Smart Content Detection:** Automatically recognizes and categorizes clipboard content beyond plain text — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each gets its own icon, badge, and filter type.
-- 🔗 **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the clipboard manager stays out of the way.
-- 🏷️ **Card Labels & Colors:** Personalize your clipboard items with custom labels (up to 50 characters) and 7 color options (Red, Green, Purple, Yellow, Blue, Orange, or None).
-- 📌 **Pin Important Items:** Keep your most-used items always accessible at the top.
-- 🔒 **Private by Default:** Everything stays on your computer. No cloud, no sync, no servers.
-- 🔐 **Respects Sensitive Data:** Passwords and API keys aren't stored. Password managers (1Password, Bitwarden, etc.) are ignored — their clipboard content never gets saved.
-- 🌐 **Multi-language:** English and Spanish supported, with automatic detection and manual override.
-- ⌨️ **Full Keyboard Navigation:** Work without the mouse — navigate, search, and paste using only your keyboard.
-- 🔍 **Smart Search:** Diacritic-insensitive full-text search (handles é, ñ, ø, ß, æ and more) across content and labels.
-- 🎛️ **Advanced Filters:** Three filter modes — Content (text search), Category (color selection), and Type (item type selection) — with intuitive dropdown multi-selection.
-- 💾 **Backup & Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
-- 🔄 **Automatic Updates:** The Windows Store version updates via Windows. The standalone version checks for updates in the background. macOS and Linux notify you when a new version is available.
-- ⚙️ **Highly Configurable:** Hotkeys, appearance, panel dimensions, retention days, paste timings, performance tuning, filter reset behavior, and more.
-- 🖥️ **Multiplatform:** Windows, macOS, and Linux with native look and feel.
+### Privacy and Security
+- **Private by Default:** All clipboard history stays on your computer. No cloud, no sync, no servers.
+- **Respects Sensitive Data:** Passwords and API keys aren't stored. Password managers (1Password, Bitwarden, etc.) are ignored — their clipboard content never gets saved.
+
+### Design and Experience
+- **Adapts to Your System:** Follows your OS light or dark theme automatically — Mica on Windows, Sidebar material on macOS.
+- **Fast and Lightweight:** Starts quickly and doesn't hog resources. Lightweight enough to forget it's running.
+- **Multiplatform:** The same native look, feel, and functionality across Windows, macOS, and Linux.
+
+### Smart Clipboard Management
+- **Handles Everything:** Text, images, files, folders, links, audio, and video — with content-aware previews. A copy tool that actually understands what you copy.
+- **Smart Content Detection:** Automatically recognizes and categorizes content — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each type gets its own icon, badge, and filter.
+- **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the copy-paste manager stays out of the way.
+
+### Workflow and Productivity
+- **Full Keyboard Navigation:** Navigate, search, and paste your copy history using only your keyboard — a clipboard utility built for speed.
+- **Smart Search:** Diacritic-insensitive full-text search (handles é, ñ, ø, ß, æ and more) across content and labels.
+- **Card Labels and Colors:** Personalize your copy-paste items with custom labels (up to 50 characters) and 7 color options to identify your snippets at a glance.
+- **Advanced Filters:** Three filter modes — Content (text search), Category (color selection), and Type (item type) — with dropdown multi-selection.
+- **Pin Important Items:** Keep your most-used copy-paste fragments always accessible at the top.
+- **Backup and Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 CopyPaste is designed for power users who prefer keyboard navigation:
 
 | Shortcut                                 | Action                                              |
 | :--------------------------------------- | :-------------------------------------------------- |
-| `Ctrl+Alt+V`                             | Open/close CopyPaste (default hotkey, customizable) |
-| `↓` or `Tab`                             | Navigate from search to clipboard items             |
-| `↑` / `↓`                                | Navigate between clipboard items                    |
-| `Space`                                  | Expand/collapse selected card to see more text      |
-| `Ctrl+F` / `Cmd+F`                       | Focus search box                                    |
-| `Enter`                                  | Paste selected item and return to previous app      |
-| `Delete`                                 | Delete selected item                                |
-| `P`                                      | Pin/Unpin selected item                             |
-| `E`                                      | Edit card (add label and color)                     |
-| `Ctrl+1`                                 | Switch to Recent tab                                |
-| `Ctrl+2`                                 | Switch to Pinned tab                                |
-| `Alt+C`                                  | Switch to Content filter mode (text search)         |
-| `Alt+G`                                  | Switch to Category filter mode (by color)           |
-| `Alt+T`                                  | Switch to Type filter mode (by item type)           |
-| `Esc`                                    | Clear current filter or close window                |
+| Ctrl+Alt+V                               | Open/close CopyPaste (default hotkey, customizable) |
+| ↓ or Tab                                 | Navigate from search to clipboard items             |
+| ↑ / ↓                                    | Navigate between clipboard items                    |
+| Space                                    | Expand/collapse selected card to see more text      |
+| Ctrl+F / Cmd+F                           | Focus search box                                    |
+| Enter                                    | Paste selected item and return to previous app      |
+| Delete                                   | Delete selected item                                |
+| P                                        | Pin/Unpin selected item                             |
+| E                                        | Edit card (add label and color)                     |
+| Ctrl+1                                   | Switch to Recent tab                                |
+| Ctrl+2                                   | Switch to Pinned tab                                |
+| Alt+C                                    | Switch to Content filter mode (text search)         |
+| Alt+G                                    | Switch to Category filter mode (by color)           |
+| Alt+T                                    | Switch to Type filter mode (by item type)           |
+| Esc                                      | Clear current filter or close window                |
 
 ### Card Customization
 
@@ -294,33 +258,33 @@ Each clipboard card can be personalized with:
 To edit a card:
 
 - **Right-click** on any card → Select "Edit"
-- **Press `E`** with a card selected
-- **Click the `...` menu** on hover → Select "Edit" _(Default theme only)_
+- **Press E** with a card selected
+- **Click the ... menu** on hover → Select "Edit" _(Default theme only)_
 
 ### Advanced Filters
 
-CopyPaste includes three filter modes to help you find items quickly:
+CopyPaste includes three filter modes to help you find items in your clipboard history quickly:
 
 | Mode         | Description           | How to Use                                                                                   |
 | :----------- | :-------------------- | :------------------------------------------------------------------------------------------- |
-| **Content**  | Text search (default) | Type in the search box to filter by content or label                                         |
+| **Content** | Text search (default) | Type in the search box to filter by content or label                                         |
 | **Category** | Filter by color       | Select colors from the dropdown to show only items with selected colors                      |
-| **Type**     | Filter by item type   | Select from the dropdown to filter by content type                                           |
+| **Type** | Filter by item type   | Select from the dropdown to filter by content type                                           |
 
 **Switching Filter Modes:**
 
-- Click the filter icon (⚙) next to the search box → Select a mode from the flyout
-- Use keyboard shortcuts: `Alt+C` (Content), `Alt+G` (Category), `Alt+T` (Type)
+- Click the filter icon next to the search box and select a mode from the flyout
+- Use keyboard shortcuts: Alt+C (Content), Alt+G (Category), Alt+T (Type)
 
 **How Filters Work:**
 
-- Each mode applies only its relevant filter—text search in Content mode, colors in Category mode, types in Type mode
+- Each mode applies only its relevant filter — text search in Content mode, colors in Category mode, types in Type mode
 - Switching modes automatically uses the appropriate filter without mixing criteria
 - In Category and Type modes, select multiple options from the dropdown for precise filtering
-- Press `Esc` to clear the current filter
+- Press Esc to clear the current filter
 - When filtering, pinned items show a pin icon in the footer to help identify them
 
-**Clearing Filters:** Press `Esc` to clear the current filter (search text, colors, or types depending on the active mode).
+**Clearing Filters:** Press Esc to clear the current filter (search text, colors, or types depending on the active mode).
 
 **Configurable Reset Behavior:** In Settings, you can configure whether filters reset when the window opens:
 
@@ -342,26 +306,26 @@ Clipboard items (cards) can be expanded to show more text content:
 - In **Default** theme, hovering a card reveals quick action buttons
 - In **Compact** theme, cards have no hover effect (use right-click instead)
 
-> **Note:** Double-click always collapses the card before pasting, so your last click state is always clean.
+Double-click always collapses the card before pasting, so your last click state is always clean.
 
 **With Keyboard:**
 
-- **Right arrow `→`** → Expand/collapse the selected card
-- Cards automatically collapse when you navigate to a different item with `↑`/`↓`
+- **Right arrow →** → Expand/collapse the selected card
+- Cards automatically collapse when you navigate to a different item with ↑/↓
 - Only one card can be expanded at a time
 
 ### Keyboard-Only Workflow
 
-1. **Press `Ctrl+Alt+V`** (default hotkey, customizable in Settings) → Window opens with focus on search box
+1. **Press Ctrl+Alt+V** (default hotkey, customizable in Settings) → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
-3. **Press `Esc`** (optional) → Clear search to see all items again
-4. **Press `↓`** → Navigate to first clipboard item
-5. **Use `↑`/`↓`** → Select the desired item
-6. **Press `→`** (optional) → Expand card to see full text
-7. **Press `E`** (optional) → Edit card to add label/color
-8. **Press `Enter`** → Item is pasted to your previous application
+3. **Press Esc** (optional) → Clear search to see all items again
+4. **Press ↓** → Navigate to first clipboard item
+5. **Use ↑/↓** → Select the desired item
+6. **Press →** (optional) → Expand card to see full text
+7. **Press E** (optional) → Edit card to add label/color
+8. **Press Enter** → Item is pasted to your previous application
 
-This workflow matches the efficiency of double-clicking with your mouse but keeps your hands on the keyboard.
+This copy-paste workflow matches the efficiency of double-clicking with your mouse but keeps your hands on the keyboard.
 
 ### Filter Configuration
 
@@ -372,70 +336,62 @@ In the **Settings** window, you can customize filter behavior:
 - **Clear category filter on open:** Resets color selections when opening (only applies if not returning to Content mode)
 - **Clear type filter on open:** Resets type selections when opening (only applies if not returning to Content mode)
 
-**Note:** If "Return to Content mode on open" is enabled, the other clear options are automatically disabled since returning to Content mode achieves the same result.
+If "Return to Content mode on open" is enabled, the other clear options are automatically disabled since returning to Content mode achieves the same result.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### 🏪 Microsoft Store — Windows
+### Microsoft Store — Windows
 
 The simplest way on Windows — one click, auto-updates, no security warnings.
 
 <p align="center">
   <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
-    <img src="https://img.shields.io/badge/Get_it_from-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get it from Microsoft Store"/>
+    <img src="https://img.shields.io/badge/Get_it_from-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get CopyPaste clipboard manager from Microsoft Store"/>
   </a>
 </p>
 
 ---
 
-### 🍺 Homebrew
+### Homebrew
 
 **macOS:**
 
-```bash
-brew tap rgdevment/tap && brew install --cask copypaste
-```
+    brew tap rgdevment/tap && brew install --cask copypaste
 
 ---
 
-### 🐧 Linux — apt / dnf
+### Linux — apt / dnf
 
-> **Linux support is in beta.** Core features work well across tested distributions, but you may encounter issues depending on your desktop environment, display server, or distro. [Please report anything unusual](https://github.com/rgdevment/CopyPaste/issues/new) — your reports directly shape stability improvements.
+> **Linux support is in beta.** Core clipboard manager features work well across tested distributions, but you may encounter issues depending on your desktop environment, display server, or distro. [Please report anything unusual](https://github.com/rgdevment/CopyPaste/issues/new) — your reports directly shape stability improvements.
 
 Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copypaste/) — set up the repository once, then get updates through your system package manager.
 
 **Debian, Ubuntu, Pop!\_OS and derivatives:**
 
-```bash
-curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
-sudo apt install copypaste
-```
+    curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
+    sudo apt install copypaste
 
 **Fedora, RHEL, CentOS Stream and derivatives:**
 
-```bash
-curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.rpm.sh' | sudo -E bash
-sudo dnf install copypaste
-```
+    curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.rpm.sh' | sudo -E bash
+    sudo dnf install copypaste
 
 > **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
-> **Permissions note:** `apt`/`dnf` installation writes to system locations, so `sudo` is required. If your user cannot use `sudo`, those commands will fail with permission errors.
-> **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the `.AppImage` from your home directory (`chmod +x CopyPaste-*.AppImage && ./CopyPaste-*.AppImage`).
-> **Runtime note:** On standard desktop installs, `apt`/`dnf` resolve required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
+> **Permissions note:** apt/dnf installation writes to system locations, so sudo is required. If your user cannot use sudo, those commands will fail with permission errors.
+> **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the .AppImage from your home directory (chmod +x CopyPaste-*.AppImage && ./CopyPaste-*.AppImage).
+> **Runtime note:** On standard desktop installs, apt/dnf resolve required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
 
 **Alternative Linux (requires Homebrew installed):**
 
-```bash
-brew tap rgdevment/tap && brew install copypaste
-```
+    brew tap rgdevment/tap && brew install copypaste
 
 ---
 
-After installing, open CopyPaste with **`Ctrl+Alt+V`** (default on all platforms — customizable in Settings → Shortcuts).
+After installing, open CopyPaste with **Ctrl+Alt+V** (default on all platforms — customizable in Settings → Shortcuts).
 
-If `Ctrl+Alt+V` is already taken on Linux/X11 by another app or desktop shortcut, CopyPaste temporarily uses **`Ctrl+Alt+Shift+V`** for that session and shows a warning.
+If Ctrl+Alt+V is already taken on Linux/X11 by another app or desktop shortcut, CopyPaste temporarily uses **Ctrl+Alt+Shift+V** for that session and shows a warning.
 
 ### Compatibility
 
@@ -447,80 +403,85 @@ If `Ctrl+Alt+V` is already taken on Linux/X11 by another app or desktop shortcut
 
 ---
 
-### 📦 Standalone Downloads
+### Standalone Downloads
 
-_Not a fan of package managers? Direct packages are on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest)._
+Not a fan of package managers? Direct packages are on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest).
 
 | Platform    | Download                                                              | Notes                                           |
 | :---------- | :-------------------------------------------------------------------- | :---------------------------------------------- |
-| **Windows** | [`.exe`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Self-signed installer — see security note below |
-| **macOS**   | [`.dmg`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Universal binary (Apple Silicon + Intel)        |
-| **Linux**   | [`.AppImage`](https://github.com/rgdevment/CopyPaste/releases/latest) | No install — `chmod +x` and run                 |
-| **Linux**   | [`.deb`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Debian, Ubuntu and derivatives                  |
-| **Linux**   | [`.rpm`](https://github.com/rgdevment/CopyPaste/releases/latest)      | Fedora, RHEL and derivatives                    |
+| **Windows** | [.exe](https://github.com/rgdevment/CopyPaste/releases/latest)        | Self-signed installer — see security note below |
+| **macOS**   | [.dmg](https://github.com/rgdevment/CopyPaste/releases/latest)        | Universal binary (Apple Silicon + Intel)        |
+| **Linux**   | [.AppImage](https://github.com/rgdevment/CopyPaste/releases/latest)   | No install — chmod +x and run                   |
+| **Linux**   | [.deb](https://github.com/rgdevment/CopyPaste/releases/latest)        | Debian, Ubuntu and derivatives                  |
+| **Linux**   | [.rpm](https://github.com/rgdevment/CopyPaste/releases/latest)        | Fedora, RHEL and derivatives                    |
 
 <details>
-<summary>⚠️ Windows standalone: security warnings</summary>
+<summary><strong>Windows standalone: security warnings</strong></summary>
 
-Since CopyPaste is an independent open-source project, the installer uses a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
+Since CopyPaste is an independent open source project, the installer uses a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
 
-- **Browser:** Chrome/Edge may block the download — click `Keep` or `Keep anyway`.
-- **SmartScreen:** Click `More info` → `Run anyway` (only happens once).
+- **Browser:** Chrome/Edge may block the download — click Keep or Keep anyway.
+- **SmartScreen:** Click More info → Run anyway (only happens once).
 - **Why?** Code signing certificates cost $200–800/year. The code is 100% open source — you can inspect every line. SHA256 checksums are provided for each release.
 
 </details>
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 **Is CopyPaste free?**
-Yes. It’s completely free and open source.
+Yes. Completely free and open source. No premium tiers, no subscriptions, no paywalls — ever. A copy tool that costs nothing and respects you.
 
-**Does it upload my data?**
-No. Everything stays on your machine.
+**Does it upload my clipboard data?**
+No. Everything stays on your machine. There is no cloud, no server, no sync. CopyPaste is a local-first clipboard manager by design — your copy paste data never leaves your computer.
 
 **Does it store passwords?**
-No. Passwords and clipboard content from password managers are ignored.
+No. Passwords and clipboard content from password managers are automatically ignored.
 
 **Do I need internet to use it?**
-No. It works fully offline. The standalone version makes a lightweight check for updates (no user data sent), but works perfectly without a connection.
+No. CopyPaste works fully offline. The standalone version makes a lightweight check for updates (no user data sent), but works perfectly without a connection.
 
-**Does it sync between devices?**
-No. There’s intentionally no cloud sync.
+**Does it sync clipboard history between devices?**
+No. There's intentionally no cloud sync. Your copy history stays on the device where you copied it. This is a local-first copy tool, not a cloud service.
 
-**Do I need `sudo` to install on Linux?**
-For `apt`/`dnf`, yes. They install to system paths, so without `sudo` (or equivalent admin rights) installation fails due to permissions. If you cannot use `sudo`, use Homebrew (if available) or the `.AppImage`.
+**Do I need sudo to install on Linux?**
+For apt/dnf, yes — they install to system paths. If you cannot use sudo, use Homebrew (if available) or the .AppImage.
 
-**Where are my files stored?**
-Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. All contain the database, images, config, and logs.
+**Where is my clipboard history stored?**
+Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
-**What platforms are supported?**
-Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see the [Getting Started](#-getting-started) section for details.
+**What platforms does this copy-paste tool support?**
+Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see the [Getting Started](#getting-started) section for details.
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
 
-## 🛟 Support & Bug Reporting
+**How is CopyPaste different from other clipboard managers?**
+CopyPaste is a personal project, not a company product. There are no ads, no telemetry, no accounts, and no data collection. Unlike most copy paste tools, it's built to feel native on each platform (Mica on Windows, Sidebar material on macOS), it's fully keyboard-driven, and it respects your privacy completely. It's an open source clipboard utility focused on productivity — you can verify every line of code yourself.
+
+---
+
+## Support and Bug Reporting
 
 ### Exporting Logs
 
-If CopyPaste is misbehaving, you can export a diagnostic log bundle directly from the app — no need to navigate file system folders manually.
+If CopyPaste is misbehaving, you can export a diagnostic log bundle directly from the app.
 
 **Steps:**
 
 1. Open CopyPaste → **Settings** (gear icon)
 2. Go to the **About** tab
 3. Under **Support**, click **"Export Logs"**
-4. Save the `.zip` file to a location of your choice
+4. Save the .zip file to a location of your choice
 5. Attach the zip to your [GitHub issue](https://github.com/rgdevment/CopyPaste/issues/new)
 
 The zip includes:
 
-- Recent application log files (`.log`)
-- A `device_info.txt` with your OS version and app version — no personal data
+- Recent application log files (.log)
+- A device_info.txt with your OS version and app version — no personal data
 
-**Privacy guarantee:** Logs contain only application events and errors. **Your clipboard content is never written to logs.** The exported file stays on your machine until you explicitly share it. Nothing is sent automatically — ever.
+**Privacy guarantee:** Logs contain only application events and errors. **Your clipboard content is never written to logs.** The exported file stays on your machine until you explicitly share it. Nothing is sent automatically.
 
 ### Opening the Logs Folder
 
@@ -542,9 +503,9 @@ You decide exactly what you share. The reporting process is fully manual and pri
 
 ---
 
-## 🔄 Clean Install & Reset
+## Clean Install and Reset
 
-Sometimes you need a fresh start — for troubleshooting, transferring to a new machine, or just cleaning up years of settings drift.
+Sometimes you need a fresh start — for troubleshooting, transferring to a new machine, or just cleaning up.
 
 **Where to find it:** Settings → About → **Reset & Clean Install**
 
@@ -570,23 +531,21 @@ Use this when:
 
 Both reset options work identically on the Microsoft Store version. MSIX packaging uses filesystem virtualization, so the app's data folder is the real package data path — CopyPaste can find and wipe it without needing elevated permissions.
 
-> **Note:** The Windows Settings "Reset app" button does the same thing as Hard Reset. Both are safe to use.
+The Windows Settings "Reset app" button does the same thing as Hard Reset. Both are safe to use.
 
 ---
 
-## 🤝 Found a Bug? Have Feedback?
+## Found a Bug? Have Feedback?
 
-**Your feedback literally shapes what gets built next.** Here's how to reach me:
+**Your feedback shapes what gets built next.** Here's how to reach me:
 
-### How to Contribute Your Voice
-
-| Type                 | How                                                                                                                |
-| :------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| 🐞 **Found a Bug?**  | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what happened and how to reproduce it |
-| 💡 **Have an Idea?** | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what you'd like to see                |
-| 💬 **Want to Chat?** | [Start a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — ask anything or just say hi             |
-| ⭐ **Like It?**      | Star the repo — helps other people find it                                                                         |
-| 📝 **Want to Code?** | [Check CONTRIBUTING.md](CONTRIBUTING.md) — PRs welcome                                                             |
+| What you need                          | How                                                                                                                |
+| :------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| **Report a bug**                       | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what happened and how to reproduce it |
+| **Suggest a feature**                  | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what you'd like to see                |
+| **Ask a question**                     | [Start a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — ask anything or just say hi             |
+| **Show support**                       | Star the repo — helps other people find this clipboard manager                                                     |
+| **Contribute code**                    | [Check CONTRIBUTING.md](CONTRIBUTING.md) — PRs welcome                                                             |
 
 **When reporting bugs, include:**
 
@@ -598,96 +557,92 @@ Both reset options work identically on the Microsoft Store version. MSIX packagi
 
 ---
 
-## 🚧 What's Coming & What's Changed
+## What's Coming and What's Changed
 
-I try to keep a clear record of what's been added, fixed, and what's planned:
+I keep a clear record of what's been added, fixed, and planned:
 
-📋 **[View Release Notes & Changelog](https://github.com/rgdevment/CopyPaste/releases)** — Complete history of all changes.
+**[View Release Notes & Changelog](https://github.com/rgdevment/CopyPaste/releases)** — complete history of all changes.
 
 ---
 
-## 🌐 Localization: Help Us Go Global
+## Localization: Help Translate CopyPaste
 
-CopyPaste should speak your language. Currently we support English and Spanish, but **we want to reach people everywhere**.
+CopyPaste should speak your language. Currently it supports English and Spanish, but the goal is to reach people everywhere.
 
 ### Currently Supported Languages
 
-| Language           |   Tag   |   Status    |
-| :----------------- | :-----: | :---------: |
-| 🇨🇱 Spanish (Chile) | `es-CL` | ✅ Complete |
-| 🇺🇸 English (US)    | `en-US` | ✅ Complete |
+| Language            |  Tag  |  Status  |
+| :------------------ | :---: | :------: |
+| Spanish (Chile)     | es-CL | Complete |
+| English (US)        | en-US | Complete |
 
 ### How It Works
 
 - **Automatic Detection:** The app detects your system language and applies the appropriate translation.
-- **Regional Fallback:** If your exact region isn't available (e.g., `es-MX`), it falls back to the base language (e.g., `es-CL`).
+- **Regional Fallback:** If your exact region isn't available (e.g., es-MX), it falls back to the base language (e.g., es-CL).
 - **Manual Override:** You can force a specific language in the Settings panel.
 
-### 🤝 Help Add a New Language
+### Help Add a New Language
 
 CopyPaste uses Flutter's standard ARB-based localization. Adding a new language requires creating one file.
 
 #### Steps to Add a New Translation
 
-1. **Create a branch** from `main` in the repository.
+1. **Create a branch** from main in the repository.
 
 2. **Copy the base language file:**
 
-    ```bash
-    app/lib/l10n/app_en.arb
-    ```
+        app/lib/l10n/app_en.arb
 
     This is the reference file with all translation keys.
 
 3. **Name your file using the language code:**
-    - `app_de.arb` (German)
-    - `app_fr.arb` (French)
-    - `app_pt.arb` (Portuguese - Brazil)
-    - `app_ja.arb` (Japanese)
+    - app_de.arb (German)
+    - app_fr.arb (French)
+    - app_pt.arb (Portuguese - Brazil)
+    - app_ja.arb (Japanese)
 
 4. **Translate the values** (keep the keys in English — only change values):
 
-    ```json
-    {
-        "@@locale": "de",
-        "searchPlaceholder": "Suche im Zwischenablage…",
-        "emptyStateSubtitle": "Kopiere etwas, um zu starten",
-        "pinned": "Angeheftet",
-        "recent": "Zuletzt"
-    }
-    ```
+        {
+            "@@locale": "de",
+            "searchPlaceholder": "Suche im Zwischenablage…",
+            "emptyStateSubtitle": "Kopiere etwas, um zu starten",
+            "pinned": "Angeheftet",
+            "recent": "Zuletzt"
+        }
 
-5. **Run `flutter gen-l10n`** (or `flutter pub get`) to regenerate the localization classes.
+5. **Run flutter gen-l10n** (or flutter pub get) to regenerate the localization classes.
 
 6. **Test your translation** by changing your system language or using the manual override in Settings.
 
-7. **Submit a Pull Request** with your ARB file!
+7. **Submit a Pull Request** with your ARB file.
 
 #### Translation Guidelines
 
-- ✅ Keep translations concise — UI space is limited
-- ✅ Use formal or neutral tone
-- ✅ Preserve ARB placeholders like `{name}` or `{count}`
-- ✅ Include `"@@locale": "xx"` at the top of the file
-- ❌ Don't translate brand names (`CopyPaste`, `Windows`, etc.)
-- ❌ Don't change ARB keys (only values)
+- Keep translations concise — UI space is limited
+- Use formal or neutral tone
+- Preserve ARB placeholders like {name} or {count}
+- Include "@@locale": "xx" at the top of the file
+- Don't translate brand names (CopyPaste, Windows, etc.)
+- Don't change ARB keys (only values)
 
 ---
 
-## 🤝 Want to Help?
+## Want to Help?
 
 Contributions are always appreciated — whether that's a bug report, a translation, or a pull request:
 
 - **Write Code** — Fix bugs or add features. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup.
-- **Translate** — Add your language. [See guide](#-localization-help-us-go-global).
+- **Translate** — Add your language. [See guide](#localization-help-translate-copypaste).
 - **Report Bugs** — If something breaks, [open an issue](https://github.com/rgdevment/CopyPaste/issues/new).
-- **Share Ideas** — Tell me what you wish it could do.
+- **Share Ideas** — Tell me what you wish this clipboard manager could do.
 
 ---
 
-## 🛠 Tech Stack (For Developers)
+## Tech Stack (For Developers)
 
-If you're curious about what's under the hood:
+If you're curious about what's under the hood of this open source clipboard manager:
 
 | Technology                                            | Why                                                                                   |
 | :---------------------------------------------------- | :------------------------------------------------------------------------------------ |
@@ -703,7 +658,7 @@ If you're curious about what's under the hood:
 
 ---
 
-## 🎨 Themes
+## Themes
 
 CopyPaste follows your system theme automatically — no configuration needed.
 
@@ -713,35 +668,29 @@ CopyPaste follows your system theme automatically — no configuration needed.
 
 ---
 
-## 📜 License & Spirit
+## License and Spirit
 
-**CopyPaste** - A modern clipboard manager for Windows, macOS, and Linux.
+**CopyPaste** — A modern, open source clipboard manager and copy-paste tool for Windows, macOS, and Linux.
 Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
-Distributed under the **GNU General Public License v3.0**. See `LICENSE` for more information.
+Distributed under the **GNU General Public License v3.0**. See LICENSE for more information.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-Linux package hosting (`.deb` and `.rpm`) is graciously provided by [Cloudsmith](https://cloudsmith.com) — a fully hosted, cloud-native universal package management solution.
+Linux package hosting (.deb and .rpm) is provided by [Cloudsmith](https://cloudsmith.com) — a cloud-native universal package management solution.
 
 [![Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-Cloudsmith-003F72?style=flat-square&logo=cloudsmith&logoColor=white)](https://cloudsmith.com)
 
 ---
 
-## 🙏 One Last Thing
+I built CopyPaste because I was tired of the alternatives — bloated, resource-hungry, or disrespectful of my privacy. This is a personal copy paste productivity tool, built from a real need, shared because others might need a better clipboard manager too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell.
 
-I believe software should make your life easier, not more complicated. I built CopyPaste because I was tired of the alternatives — toolbar-heavy, resource-hungry, or just plain ugly.
-
-**Here's what this is:** A personal tool, built from a real need, shared because others might need it too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell — ever.
-
-If that sounds good to you, I hope it serves you well — on Windows, macOS, or wherever you work.
-
-### Thanks for giving CopyPaste a shot. 💙
+If you find it useful, I'm glad. If you want to help make it better, even better.
 
 <div align="center">
-  <p>Built with ❤️ and too much coffee.</p>
+  <p>Built with care and too much coffee.</p>
 </div>
