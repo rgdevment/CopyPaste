@@ -203,20 +203,24 @@ If you care about privacy and control, this clipboard manager is made for you. R
 **Latest Release** — See all features and improvements in the [Release Notes](https://github.com/rgdevment/CopyPaste/releases/latest).
 
 ### Privacy and Security
+
 - **Private by Default:** All clipboard history stays on your computer. No cloud, no sync, no servers.
 - **Respects Sensitive Data:** Passwords and API keys aren't stored. Password managers (1Password, Bitwarden, etc.) are ignored — their clipboard content never gets saved.
 
 ### Design and Experience
+
 - **Adapts to Your System:** Follows your OS light or dark theme automatically — Mica on Windows, Sidebar material on macOS.
 - **Fast and Lightweight:** Starts quickly and doesn't hog resources. Lightweight enough to forget it's running.
 - **Multiplatform:** The same native look, feel, and functionality across Windows, macOS, and Linux.
 
 ### Smart Clipboard Management
+
 - **Handles Everything:** Text, images, files, folders, links, audio, and video — with content-aware previews. A copy tool that actually understands what you copy.
 - **Smart Content Detection:** Automatically recognizes and categorizes content — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each type gets its own icon, badge, and filter.
 - **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the copy-paste manager stays out of the way.
 
 ### Workflow and Productivity
+
 - **Full Keyboard Navigation:** Navigate, search, and paste your copy history using only your keyboard — a clipboard utility built for speed.
 - **Smart Search:** Diacritic-insensitive full-text search (handles é, ñ, ø, ß, æ and more) across content and labels.
 - **Card Labels and Colors:** Personalize your copy-paste items with custom labels (up to 50 characters) and 7 color options to identify your snippets at a glance.
@@ -267,9 +271,9 @@ CopyPaste includes three filter modes to help you find items in your clipboard h
 
 | Mode         | Description           | How to Use                                                                                   |
 | :----------- | :-------------------- | :------------------------------------------------------------------------------------------- |
-| **Content** | Text search (default) | Type in the search box to filter by content or label                                         |
+| **Content**  | Text search (default) | Type in the search box to filter by content or label                                         |
 | **Category** | Filter by color       | Select colors from the dropdown to show only items with selected colors                      |
-| **Type** | Filter by item type   | Select from the dropdown to filter by content type                                           |
+| **Type**     | Filter by item type   | Select from the dropdown to filter by content type                                           |
 
 **Switching Filter Modes:**
 
@@ -358,7 +362,9 @@ The simplest way on Windows — one click, auto-updates, no security warnings.
 
 **macOS:**
 
-    brew tap rgdevment/tap && brew install --cask copypaste
+```sh
+brew tap rgdevment/tap && brew install --cask copypaste
+```
 
 ---
 
@@ -370,22 +376,28 @@ Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copyp
 
 **Debian, Ubuntu, Pop!\_OS and derivatives:**
 
-    curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
-    sudo apt install copypaste
+```sh
+curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
+sudo apt install copypaste
+```
 
 **Fedora, RHEL, CentOS Stream and derivatives:**
 
-    curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.rpm.sh' | sudo -E bash
-    sudo dnf install copypaste
+```sh
+curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.rpm.sh' | sudo -E bash
+sudo dnf install copypaste
+```
 
 > **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
 > **Permissions note:** apt/dnf installation writes to system locations, so sudo is required. If your user cannot use sudo, those commands will fail with permission errors.
-> **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the .AppImage from your home directory (chmod +x CopyPaste-*.AppImage && ./CopyPaste-*.AppImage).
+> **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the .AppImage from your home directory (chmod +x CopyPaste-\*.AppImage && ./CopyPaste-\*.AppImage).
 > **Runtime note:** On standard desktop installs, apt/dnf resolve required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
 
 **Alternative Linux (requires Homebrew installed):**
 
-    brew tap rgdevment/tap && brew install copypaste
+```sh
+brew tap rgdevment/tap && brew install copypaste
+```
 
 ---
 
@@ -592,7 +604,9 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
 
 2. **Copy the base language file:**
 
-        app/lib/l10n/app_en.arb
+    ```text
+    app/lib/l10n/app_en.arb
+    ```
 
     This is the reference file with all translation keys.
 
@@ -604,13 +618,15 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
 
 4. **Translate the values** (keep the keys in English — only change values):
 
-        {
-            "@@locale": "de",
-            "searchPlaceholder": "Suche im Zwischenablage…",
-            "emptyStateSubtitle": "Kopiere etwas, um zu starten",
-            "pinned": "Angeheftet",
-            "recent": "Zuletzt"
-        }
+    ```json
+    {
+        "@@locale": "de",
+        "searchPlaceholder": "Suche im Zwischenablage…",
+        "emptyStateSubtitle": "Kopiere etwas, um zu starten",
+        "pinned": "Angeheftet",
+        "recent": "Zuletzt"
+    }
+    ```
 
 5. **Run flutter gen-l10n** (or flutter pub get) to regenerate the localization classes.
 
