@@ -40,6 +40,20 @@
   </p>
 
   <p align="center">
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_windows.json&style=flat-square&logo=windows&logoColor=white" alt="Windows Downloads"/>
+    </a>
+    &nbsp;
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_macos.json&style=flat-square&logo=apple&logoColor=white" alt="macOS Downloads"/>
+    </a>
+    &nbsp;
+    <a href="https://github.com/rgdevment/CopyPaste/releases">
+      <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rgdevment/b0600cccb002e1956c0889743ef42ae6/raw/copypaste_downloads_linux.json&style=flat-square&logo=linux&logoColor=white" alt="Linux Downloads"/>
+    </a>
+  </p>
+
+  <p align="center">
     <sub>Prefer a direct download? <a href="https://github.com/rgdevment/CopyPaste/releases/latest">GitHub Releases</a> has standalone installers — Windows (.exe) · macOS (.dmg) · Linux (.AppImage · .deb · .rpm)</sub>
   </p>
 
