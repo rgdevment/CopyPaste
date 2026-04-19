@@ -129,12 +129,12 @@ class StartupHelper {
 
     final script = enable
         ? "\$t = [$taskType]::GetAsync('$_startupTaskId')"
-              ".GetAwaiter().GetResult(); "
-              "\$r = \$t.RequestEnableAsync().GetAwaiter().GetResult(); "
-              "if (\$r -ne 'Enabled' -and \$r -ne 'EnabledByPolicy') { exit 1 }"
+              '.GetAwaiter().GetResult(); '
+              r'$r = $t.RequestEnableAsync().GetAwaiter().GetResult(); '
+              r"if ($r -ne 'Enabled' -and $r -ne 'EnabledByPolicy') { exit 1 }"
         : "\$t = [$taskType]::GetAsync('$_startupTaskId')"
-              ".GetAwaiter().GetResult(); "
-              "\$t.Disable()";
+              '.GetAwaiter().GetResult(); '
+              r'$t.Disable()';
 
     try {
       final result = await Process.run('powershell.exe', [
