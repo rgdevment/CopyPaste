@@ -241,6 +241,7 @@ If you care about privacy and control, this clipboard manager is made for you. R
 - **Advanced Filters:** Three filter modes — Content (text search), Category (color selection), and Type (item type) — with dropdown multi-selection.
 - **Pin Important Items:** Keep your most-used copy-paste fragments always accessible at the top.
 - **Backup and Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
+- **Start with Windows:** Optionally launch at login — works natively on both the Microsoft Store (MSIX) and standalone installer versions, no admin rights required.
 
 ---
 
@@ -479,6 +480,9 @@ Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/c
 
 **What platforms does this copy-paste tool support?**
 Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see the [Getting Started](#getting-started) section for details.
+
+**Does it start automatically with Windows?**
+Optionally, yes. Enable it in Settings → General → Start with Windows. On the Microsoft Store version it uses the Windows StartupTask system; on the standalone installer it registers through the standard Windows startup mechanism. No administrator rights are required for either.
 
 **Does the macOS version work on Intel Macs?**
 Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
