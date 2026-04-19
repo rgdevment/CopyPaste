@@ -996,6 +996,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         _SectionCard(
           colors: colors,
+          icon: Icons.apps_rounded,
+          title: l.sectionOtherTools,
+          children: [
+            _ActionTile(
+              icon: Icons.open_in_new_rounded,
+              label: l.otherToolLinkUnbound,
+              subtitle: l.otherToolLinkUnboundDesc,
+              colors: colors,
+              leading: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.asset(
+                    'assets/icons/icon_linkunbound.png',
+                    width: 28,
+                    height: 28,
+                  ),
+                ),
+              ),
+              onTap: () => _openUrl('https://github.com/rgdevment/LinkUnbound'),
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
           icon: Icons.link_rounded,
           title: l.sectionLinks,
           children: [
@@ -1062,31 +1087,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
               onTap: () =>
                   _openUrl('https://github.com/rgdevment/CopyPaste/issues'),
-            ),
-          ],
-        ),
-        _SectionCard(
-          colors: colors,
-          icon: Icons.apps_rounded,
-          title: l.sectionOtherTools,
-          children: [
-            _ActionTile(
-              icon: Icons.open_in_new_rounded,
-              label: l.otherToolLinkUnbound,
-              subtitle: l.otherToolLinkUnboundDesc,
-              colors: colors,
-              leading: Padding(
-                padding: const EdgeInsets.only(top: 1),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: Image.asset(
-                    'assets/icons/icon_linkunbound.png',
-                    width: 28,
-                    height: 28,
-                  ),
-                ),
-              ),
-              onTap: () => _openUrl('https://github.com/rgdevment/LinkUnbound'),
             ),
           ],
         ),
