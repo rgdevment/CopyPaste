@@ -36,5 +36,8 @@ Source: "{{SOURCE_DIR}}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdir
 [Icons]
 Name: "{autoprograms}\{{DISPLAY_NAME}}"; Filename: "{app}\{{EXECUTABLE_NAME}}"
 
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "CopyPaste"; Flags: uninsdeletevalue
+
 [Run]
 Filename: "{app}\{{EXECUTABLE_NAME}}"; Flags: nowait postinstall skipifsilent
