@@ -61,8 +61,11 @@ jobs:
             - name: Install Inno Setup
               run: choco install innosetup --no-progress
 
+            - name: Install Melos
+              run: dart pub global activate melos
+
             - name: Get dependencies
-              run: cd app && flutter pub get
+              run: melos bootstrap
 
             - name: Update pubspec version from tag
               shell: pwsh

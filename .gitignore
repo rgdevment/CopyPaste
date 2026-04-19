@@ -16,10 +16,11 @@ build/
 coverage/
 *.lcov
 
-# Pub
+# Pub (keep workspace root lockfile)
 .pub-cache/
 .pub/
-pubspec.lock
+**/pubspec.lock
+!/pubspec.lock
 
 # ── IDE ──
 .vs/

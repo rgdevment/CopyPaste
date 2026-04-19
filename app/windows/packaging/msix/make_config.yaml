@@ -7,3 +7,6 @@ store: "true"
 build_windows: "false"
 languages: en-us, es-es
 capabilities: internetClient
+startup_task:
+  task_id: CopyPasteStartup
+  enabled: true

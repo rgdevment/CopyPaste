@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** March 28, 2026
+**Last updated:** April 19, 2026
 
 ---
 
@@ -67,6 +67,19 @@ Your settings are stored locally:
 - Retention period
 - Filter behavior
 - Startup preferences
+
+### Windows System Integration (Startup)
+
+When you enable **Start with Windows** in Settings, CopyPaste registers itself as a startup application using the appropriate mechanism for each distribution channel — and removes the registration when you disable it:
+
+| Distribution | Mechanism | What is written |
+|:---|:---|:---|
+| **Standalone installer (.exe)** | Windows registry key | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\CopyPaste` |
+| **Microsoft Store (MSIX)** | Windows StartupTask API | System startup catalog (no registry write) |
+
+Neither mechanism requires administrator rights. On uninstall, the standalone installer automatically removes the registry entry. The MSIX version is cleaned up by Windows when the app is uninstalled through the Store or Settings → Apps.
+
+If you never enable "Start with Windows," nothing is written to the registry or the startup catalog.
 
 ### Logs
 

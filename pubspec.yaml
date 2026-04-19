@@ -1,0 +1,58 @@
+name: copypaste_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
+
+workspace:
+  - core
+  - listener
+  - app
+
+dev_dependencies:
+  melos: ^7.5.1
+
+melos:
+  name: copypaste_workspace
+
+  command:
+    bootstrap:
+      enforceLockfile: false
+
+  scripts:
+    analyze:
+      exec: flutter analyze
+      description: Run flutter analyze in all packages
+      packageFilters:
+        orderDependents: true
+
+    test:
+      exec: flutter test
+      description: Run tests in all packages
+
+    test:coverage:
+      exec: flutter test --coverage
+      description: Run tests with coverage in all packages
+
+    format:
+      run: dart format .
+      description: Format all code from workspace root
+
+    format:check:
+      run: dart format --output=none --set-exit-if-changed .
+      description: Check formatting without modifying files
+
+    fix:
+      run: dart fix --apply .
+      description: Apply all auto-fixable lint fixes
+
+    fix:check:
+      run: |
+        OUTPUT=$(dart fix --dry-run . 2>&1)
+        echo "$OUTPUT"
+        echo "$OUTPUT" | grep -q "Nothing to fix!" || { echo "Auto-fixable issues found. Run 'melos run fix' and commit."; exit 1; }
+      description: Check for auto-fixable issues without applying
+
+    outdated:
+      exec: flutter pub outdated --no-dev-dependencies
+      description: Check for outdated dependencies

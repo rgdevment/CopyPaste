@@ -82,13 +82,22 @@ class StartupHelper {
       r'Software\Microsoft\Windows\CurrentVersion\Run';
   static const String _appName = 'CopyPaste';
   static const String _macOsPlistLabel = 'com.rgdevment.copypaste';
+  static const bool _isStoreBuild = bool.fromEnvironment(
+    'STORE_BUILD',
+    defaultValue: false,
+  );
+  static const String _startupTaskId = 'CopyPasteStartup';
 
   static Future<void> apply(bool runOnStartup) async {
     if (Platform.isWindows) {
-      if (runOnStartup) {
-        _setRegistryValue(Platform.resolvedExecutable);
+      if (_isStoreBuild) {
+        await _applyMsixStartupTask(runOnStartup);
       } else {
-        _removeRegistryValue();
+        if (runOnStartup) {
+          _setRegistryValue(Platform.resolvedExecutable);
+        } else {
+          _removeRegistryValue();
+        }
       }
     } else if (Platform.isMacOS) {
       if (runOnStartup) {
@@ -109,6 +118,39 @@ class StartupHelper {
       } else {
         _removeDesktopAutostart();
       }
+    }
+  }
+
+  static Future<void> _applyMsixStartupTask(bool enable) async {
+    const taskType =
+        'Windows.ApplicationModel.StartupTask,'
+        'Windows.ApplicationModel,'
+        'ContentType=WindowsRuntime';
+
+    final script = enable
+        ? "\$t = [$taskType]::GetAsync('$_startupTaskId')"
+              '.GetAwaiter().GetResult(); '
+              r'$r = $t.RequestEnableAsync().GetAwaiter().GetResult(); '
+              r"if ($r -ne 'Enabled' -and $r -ne 'EnabledByPolicy') { exit 1 }"
+        : "\$t = [$taskType]::GetAsync('$_startupTaskId')"
+              '.GetAwaiter().GetResult(); '
+              r'$t.Disable()';
+
+    try {
+      final result = await Process.run('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        script,
+      ]);
+      if (result.exitCode != 0) {
+        AppLogger.error(
+          'MSIX startup task failed (exit ${result.exitCode}): '
+          '${result.stderr}',
+        );
+      }
+    } catch (e) {
+      AppLogger.error('MSIX startup task error: $e');
     }
   }
 

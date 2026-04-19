@@ -1034,6 +1034,24 @@ abstract class AppLocalizations {
   /// **'Free'**
   String get aboutTagFree;
 
+  /// Other tools section title in About tab
+  ///
+  /// In en, this message translates to:
+  /// **'OTHER TOOLS'**
+  String get sectionOtherTools;
+
+  /// LinkUnbound app name
+  ///
+  /// In en, this message translates to:
+  /// **'LinkUnbound'**
+  String get otherToolLinkUnbound;
+
+  /// LinkUnbound app description
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source browser selector for Windows. Same philosophy: no ads, no telemetry, everything local.'**
+  String get otherToolLinkUnboundDesc;
+
   /// License footer text
   ///
   /// In en, this message translates to:

@@ -2,6 +2,7 @@ name: copypaste
 description: "CopyPaste — Flutter desktop clipboard manager."
 publish_to: "none"
 version: 0.0.0-dev
+resolution: workspace
 
 environment:
     sdk: ^3.11.1
@@ -41,6 +42,7 @@ flutter:
         - assets/icons/icon_tray.ico
         - assets/icons/icon_mac_tray.png
         - assets/icons/icon_mac_tray@2x.png
+        - assets/icons/icon_linkunbound.png
 
     generate: true
 
