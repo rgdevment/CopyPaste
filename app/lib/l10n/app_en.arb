@@ -382,6 +382,13 @@
   "aboutTagFree": "Free",
   "@aboutTagFree": { "description": "Badge label: the app is free" },
 
+  "sectionOtherTools": "OTHER TOOLS",
+  "@sectionOtherTools": { "description": "Other tools section title in About tab" },
+  "otherToolLinkUnbound": "LinkUnbound",
+  "@otherToolLinkUnbound": { "description": "LinkUnbound app name" },
+  "otherToolLinkUnboundDesc": "Open-source browser selector for Windows. Same philosophy: no ads, no telemetry, everything local.",
+  "@otherToolLinkUnboundDesc": { "description": "LinkUnbound app description" },
+
   "aboutLicense": "GPL v3 License \u2014 Free and open source.",
   "@aboutLicense": { "description": "License footer text" },
 

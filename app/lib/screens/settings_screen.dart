@@ -1065,6 +1065,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.apps_rounded,
+          title: l.sectionOtherTools,
+          children: [
+            _ActionTile(
+              icon: Icons.open_in_new_rounded,
+              label: l.otherToolLinkUnbound,
+              subtitle: l.otherToolLinkUnboundDesc,
+              colors: colors,
+              leading: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.asset(
+                    'assets/icons/icon_linkunbound.png',
+                    width: 28,
+                    height: 28,
+                  ),
+                ),
+              ),
+              onTap: () => _openUrl('https://github.com/rgdevment/LinkUnbound'),
+            ),
+          ],
+        ),
         Padding(
           padding: const EdgeInsets.only(top: 12, left: 4),
           child: Text(
@@ -1965,11 +1990,13 @@ class _ActionTile extends StatefulWidget {
     required this.colors,
     required this.onTap,
     this.subtitle,
+    this.leading,
   });
 
   final IconData icon;
   final String label;
   final String? subtitle;
+  final Widget? leading;
   final AppThemeColorScheme colors;
   final VoidCallback onTap;
 
@@ -1999,14 +2026,15 @@ class _ActionTileState extends State<_ActionTile> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 1),
-                child: Icon(
-                  widget.icon,
-                  size: 16,
-                  color: widget.colors.onSurfaceMuted,
-                ),
-              ),
+              widget.leading ??
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      widget.icon,
+                      size: 16,
+                      color: widget.colors.onSurfaceMuted,
+                    ),
+                  ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

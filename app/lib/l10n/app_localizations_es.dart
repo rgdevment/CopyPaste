@@ -504,6 +504,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get aboutTagFree => 'Gratis';
 
   @override
+  String get sectionOtherTools => 'OTRAS HERRAMIENTAS';
+
+  @override
+  String get otherToolLinkUnbound => 'LinkUnbound';
+
+  @override
+  String get otherToolLinkUnboundDesc =>
+      'Selector de navegadores de código abierto para Windows. Misma filosofía: sin anuncios, sin telemetría, todo local.';
+
+  @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';
 
   @override
