@@ -2,6 +2,7 @@ name: core
 description: "CopyPaste — Core library: models, repository, services, config."
 version: 0.0.1
 publish_to: 'none'
+resolution: workspace
 
 environment:
   sdk: ^3.11.1

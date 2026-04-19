@@ -92,11 +92,11 @@ jobs:
             "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x /usr/local/bin/appimagetool
 
+      - name: Install Melos
+        run: dart pub global activate melos
+
       - name: Get dependencies
-        run: |
-          cd core && flutter pub get
-          cd ../listener && flutter pub get
-          cd ../app && flutter pub get
+        run: melos bootstrap
 
       - name: Update pubspec version from tag
         run: |

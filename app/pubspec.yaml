@@ -2,6 +2,7 @@ name: copypaste
 description: "CopyPaste — Flutter desktop clipboard manager."
 publish_to: "none"
 version: 0.0.0-dev
+resolution: workspace
 
 environment:
     sdk: ^3.11.1
