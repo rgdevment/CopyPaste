@@ -2,6 +2,7 @@ name: listener
 description: "CopyPaste — Clipboard listener plugin (native per OS)."
 version: 0.0.1
 publish_to: 'none'
+resolution: workspace
 
 environment:
   sdk: ^3.11.1

@@ -65,11 +65,11 @@ jobs:
                   key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
                   restore-keys: ${{ runner.os }}-pub-
 
+            - name: Install Melos
+              run: dart pub global activate melos
+
             - name: Get dependencies
-              run: |
-                  cd core && flutter pub get
-                  cd ../listener && flutter pub get
-                  cd ../app && flutter pub get
+              run: melos bootstrap
 
             - name: Update pubspec version
               run: |
