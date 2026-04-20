@@ -84,36 +84,66 @@ class AppWindow {
   }
 
   Future<void> init({bool startVisible = false}) async {
-    await windowManager.waitUntilReadyToShow(null, () async {
-      await windowManager.setTitle('CopyPaste');
-      await windowManager.setSize(Size(_popupWidth, _popupHeight));
-      await windowManager.setMinimumSize(Size(_popupWidth, 400));
-      await windowManager.setMaximumSize(Size(_popupWidth, 900));
-      await windowManager.setTitleBarStyle(
-        TitleBarStyle.hidden,
-        windowButtonVisibility: !Platform.isMacOS,
+    AppLogger.info(
+      'AppWindow.init: startVisible=$startVisible, '
+      'showInTaskbar=$showInTaskbar, '
+      'size=${_popupWidth}x$_popupHeight',
+    );
+    try {
+      await windowManager
+          .waitUntilReadyToShow(null, () async {
+            await _configureWindow(startVisible);
+          })
+          .timeout(const Duration(seconds: 5));
+      AppLogger.info('AppWindow.init: waitUntilReadyToShow completed');
+    } catch (e) {
+      AppLogger.warn(
+        'AppWindow.init: waitUntilReadyToShow failed ($e), '
+        'attempting direct configuration',
       );
-      await windowManager.setAlwaysOnTop(true);
-      await windowManager.setResizable(false);
-      await windowManager.setMaximizable(false);
-      await windowManager.setPreventClose(true);
-      final inTaskbar = showInTaskbar && Platform.isWindows;
-      await windowManager.setSkipTaskbar(!inTaskbar);
-      if (Platform.isWindows || Platform.isMacOS) {
-        await windowManager.setBackgroundColor(const Color(0x00000000));
-        await applyEffect();
+      try {
+        await _configureWindow(startVisible);
+        AppLogger.info('AppWindow.init: direct configuration succeeded');
+      } catch (e2) {
+        AppLogger.error('Window configuration failed: $e2');
       }
-      if (startVisible) {
-        await windowManager.center();
-        await windowManager.focus();
-      } else if (inTaskbar) {
-        await windowManager.minimize();
-      } else {
-        await windowManager.hide();
-      }
-    });
+    }
     _visible = startVisible;
     _ready = true;
+    AppLogger.info('AppWindow.init: done, ready=$_ready, visible=$_visible');
+  }
+
+  Future<void> _configureWindow(bool startVisible) async {
+    await windowManager.setTitle('CopyPaste');
+    await windowManager.setSize(Size(_popupWidth, _popupHeight));
+    await windowManager.setMinimumSize(Size(_popupWidth, 400));
+    await windowManager.setMaximumSize(Size(_popupWidth, 900));
+    await windowManager.setTitleBarStyle(
+      TitleBarStyle.hidden,
+      windowButtonVisibility: !Platform.isMacOS,
+    );
+    await windowManager.setAlwaysOnTop(true);
+    await windowManager.setResizable(false);
+    await windowManager.setMaximizable(false);
+    await windowManager.setPreventClose(true);
+    final inTaskbar = showInTaskbar && Platform.isWindows;
+    await windowManager.setSkipTaskbar(!inTaskbar);
+    if (Platform.isWindows || Platform.isMacOS) {
+      await windowManager.setBackgroundColor(const Color(0x00000000));
+      AppLogger.info('_configureWindow: applying initial effect');
+      await applyEffect();
+    }
+    if (startVisible) {
+      AppLogger.info('_configureWindow: centering and focusing');
+      await windowManager.center();
+      await windowManager.focus();
+    } else if (inTaskbar) {
+      AppLogger.info('_configureWindow: minimizing to taskbar');
+      await windowManager.minimize();
+    } else {
+      AppLogger.info('_configureWindow: hiding window');
+      await windowManager.hide();
+    }
   }
 
   bool _isDark = false;
@@ -126,13 +156,13 @@ class AppWindow {
           effect: WindowEffect.mica,
           color: const Color(0x00000000),
           dark: _isDark,
-        );
+        ).timeout(const Duration(seconds: 2));
       } else if (Platform.isMacOS) {
         await Window.setEffect(
           effect: WindowEffect.sidebar,
           color: const Color(0x00000000),
           dark: _isDark,
-        );
+        ).timeout(const Duration(seconds: 2));
       }
     } catch (e) {
       // Effect failure is non-fatal — app runs without the acrylic effect.
@@ -282,6 +312,7 @@ class AppWindow {
   }
 
   Future<void> show() async {
+    AppLogger.info('AppWindow.show: starting');
     if (Platform.isLinux) {
       // On X11/GTK, show the window first (so it gets realized/mapped by the WM),
       // then set the position (avoids WM initial-placement overriding our offset),
@@ -294,11 +325,14 @@ class AppWindow {
     } else {
       await _positionNearCursor();
       if (Platform.isWindows) {
-        await applyEffect();
         await windowManager.setSkipTaskbar(false);
       }
       await windowManager.show();
       await windowManager.focus();
+      AppLogger.info('AppWindow.show: window shown and focused');
+      if (Platform.isWindows) {
+        await applyEffect();
+      }
     }
     _visible = true;
     onVisibilityChanged?.call(true);
@@ -375,16 +409,18 @@ class AppWindow {
   bool get isGateMode => _gateMode;
 
   Future<void> enterGateMode() async {
+    AppLogger.info('AppWindow.enterGateMode: starting');
     _gateMode = true;
     await windowManager.setResizable(false);
     await windowManager.setMinimumSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setMaximumSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setAlwaysOnTop(false);
-    await windowManager.show();
     await windowManager.center();
+    await windowManager.show();
     await windowManager.focus();
     _visible = true;
+    AppLogger.info('AppWindow.enterGateMode: done');
   }
 
   Future<void> exitGateMode() async {
