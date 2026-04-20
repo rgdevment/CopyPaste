@@ -939,6 +939,94 @@ void main() {
       expect(find.byType(ClipboardCard), findsOneWidget);
     });
 
+    testWidgets('link item open action triggers onOpen callback', (
+      tester,
+    ) async {
+      var openCount = 0;
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: ClipboardItem(
+              content: 'https://flutter.dev/docs',
+              type: ClipboardContentType.link,
+            ),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onOpen: () => openCount++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.open_in_new_rounded));
+      await tester.pumpAndSettle();
+
+      expect(openCount, equals(1));
+    });
+
+    testWidgets('email item shows provider badge and open action', (
+      tester,
+    ) async {
+      var openCount = 0;
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: ClipboardItem(
+              content: 'person@gmail.com',
+              type: ClipboardContentType.email,
+            ),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onOpen: () => openCount++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Gmail'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.open_in_new_rounded));
+      await tester.pumpAndSettle();
+
+      expect(openCount, equals(1));
+    });
+
+    testWidgets('phone item shows country badge and open action', (
+      tester,
+    ) async {
+      var openCount = 0;
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: ClipboardItem(
+              content: '+34 600 111 222',
+              type: ClipboardContentType.phone,
+            ),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onOpen: () => openCount++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Spain'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.open_in_new_rounded));
+      await tester.pumpAndSettle();
+
+      expect(openCount, equals(1));
+    });
+
     testWidgets('right-click shows context menu', (tester) async {
       await tester.pumpWidget(
         wrapWidget(

@@ -180,6 +180,68 @@ void main() {
         restoreDir.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'restoreBackup calls onBeforeRestore callback when provided',
+      () async {
+        File(storage.databasePath).writeAsBytesSync([83, 81, 76]);
+
+        final outputPath = p.join(tempDir.path, 'before_restore.zip');
+        await BackupService.createBackup(outputPath, storage, '2.0.0');
+
+        final restoreDir = Directory.systemTemp.createTempSync('before_r_');
+        try {
+          final restoreStorage = await StorageConfig.create(
+            baseDir: restoreDir.path,
+          );
+          var beforeRestoreCalled = false;
+
+          final manifest = await BackupService.restoreBackup(
+            outputPath,
+            restoreStorage,
+            onBeforeRestore: () async {
+              beforeRestoreCalled = true;
+            },
+          );
+
+          expect(beforeRestoreCalled, isTrue);
+          expect(manifest, isNotNull);
+        } finally {
+          restoreDir.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('restoreBackup deletes wal and shm files before restore', () async {
+      File(storage.databasePath).writeAsBytesSync([83, 81, 76]);
+
+      final outputPath = p.join(tempDir.path, 'wal_cleanup.zip');
+      await BackupService.createBackup(outputPath, storage, '2.0.0');
+
+      final restoreDir = Directory.systemTemp.createTempSync('wal_cleanup_');
+      try {
+        final restoreStorage = await StorageConfig.create(
+          baseDir: restoreDir.path,
+        );
+        await restoreStorage.ensureDirectories();
+
+        final walFile = File('${restoreStorage.databasePath}-wal')
+          ..writeAsBytesSync([1, 2, 3]);
+        final shmFile = File('${restoreStorage.databasePath}-shm')
+          ..writeAsBytesSync([4, 5, 6]);
+
+        final manifest = await BackupService.restoreBackup(
+          outputPath,
+          restoreStorage,
+        );
+
+        expect(manifest, isNotNull);
+        expect(walFile.existsSync(), isFalse);
+        expect(shmFile.existsSync(), isFalse);
+      } finally {
+        restoreDir.deleteSync(recursive: true);
+      }
+    });
   });
 
   group('BackupService.validateBackup', () {
@@ -206,6 +268,22 @@ void main() {
       badFile.writeAsBytesSync([0, 1, 2, 3]);
 
       final manifest = await BackupService.validateBackup(badFile.path);
+      expect(manifest, isNull);
+    });
+
+    test('returns null when manifest version is newer than supported', () async {
+      final archive = Archive();
+      final manifestJson =
+          '{"version":99,"appVersion":"99.0","createdAtUtc":"${DateTime.now().toUtc().toIso8601String()}","itemCount":0,"imageCount":0,"hasPinnedItems":false,"machineName":"test"}';
+      final manifestBytes = manifestJson.codeUnits;
+      archive.addFile(
+        ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+      );
+
+      final zipPath = p.join(tempDir.path, 'future_version_validate.zip');
+      await File(zipPath).writeAsBytes(ZipEncoder().encode(archive));
+
+      final manifest = await BackupService.validateBackup(zipPath);
       expect(manifest, isNull);
     });
   });
