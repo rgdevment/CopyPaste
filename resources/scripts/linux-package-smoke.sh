@@ -71,8 +71,19 @@ if [[ "$package_type" == "deb" ]]; then
     MAX_IGNORED_FLUTTER_GTK=30
     ignored_flutter_gtk=0
     missing=0
+    ignored_dartjni=0
     for elf in "${ELF_FILES[@]}"; do
       echo "Checking ELF deps: $elf"
+
+      # libdartjni.so is an Android JNI bridge pulled transitively by
+      # path_provider_android -> jni. It requires libjvm.so which is
+      # never present on desktop Linux. Skip it entirely.
+      if [[ "$(basename "$elf")" == "libdartjni.so" ]]; then
+        echo "Skipping $elf (Android JNI bridge, not used on Linux)"
+        ignored_dartjni=$((ignored_dartjni + 1))
+        continue
+      fi
+
       ldd_output=$(ldd "$elf" 2>&1 || true)
       echo "$ldd_output" >> /tmp/ldd.out
 
@@ -97,7 +108,7 @@ if [[ "$package_type" == "deb" ]]; then
       fi
     done
 
-    echo "[smoke] deb summary: checked=${#ELF_FILES[@]} ignored_flutter_linux_gtk=$ignored_flutter_gtk missing=$missing"
+    echo "[smoke] deb summary: checked=${#ELF_FILES[@]} ignored_flutter_linux_gtk=$ignored_flutter_gtk ignored_dartjni=$ignored_dartjni missing=$missing"
     if [[ "$ignored_flutter_gtk" -gt "$MAX_IGNORED_FLUTTER_GTK" ]]; then
       echo "[smoke] deb guardrail failed: too many ignored libflutter_linux_gtk.so entries ($ignored_flutter_gtk > $MAX_IGNORED_FLUTTER_GTK)"
       exit 1
@@ -156,8 +167,16 @@ elif [[ "$package_type" == "rpm" ]]; then
     MAX_IGNORED_FLUTTER_GTK=30
     ignored_flutter_gtk=0
     missing=0
+    ignored_dartjni=0
     for elf in "${ELF_FILES[@]}"; do
       echo "Checking ELF deps: $elf"
+
+      if [[ "$(basename "$elf")" == "libdartjni.so" ]]; then
+        echo "Skipping $elf (Android JNI bridge, not used on Linux)"
+        ignored_dartjni=$((ignored_dartjni + 1))
+        continue
+      fi
+
       ldd_output=$(ldd "$elf" 2>&1 || true)
       echo "$ldd_output" >> /tmp/ldd.out
 
@@ -182,7 +201,7 @@ elif [[ "$package_type" == "rpm" ]]; then
       fi
     done
 
-    echo "[smoke] rpm summary: checked=${#ELF_FILES[@]} ignored_flutter_linux_gtk=$ignored_flutter_gtk missing=$missing"
+    echo "[smoke] rpm summary: checked=${#ELF_FILES[@]} ignored_flutter_linux_gtk=$ignored_flutter_gtk ignored_dartjni=$ignored_dartjni missing=$missing"
     if [[ "$ignored_flutter_gtk" -gt "$MAX_IGNORED_FLUTTER_GTK" ]]; then
       echo "[smoke] rpm guardrail failed: too many ignored libflutter_linux_gtk.so entries ($ignored_flutter_gtk > $MAX_IGNORED_FLUTTER_GTK)"
       exit 1
