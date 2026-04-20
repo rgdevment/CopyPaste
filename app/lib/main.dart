@@ -51,9 +51,11 @@ void main() async {
 
   await windowManager.ensureInitialized();
 
+  bool _acrylicInitialized = false;
   if (Platform.isWindows || Platform.isMacOS) {
     try {
-      await Window.initialize();
+      await Window.initialize().timeout(const Duration(seconds: 3));
+      _acrylicInitialized = true;
     } catch (_) {
       // AppLogger not yet initialized here; app continues without acrylic effects
     }
@@ -62,6 +64,11 @@ void main() async {
   final storage = await StorageConfig.create();
   await storage.ensureDirectories();
   AppLogger.initialize(storage.logsPath);
+  AppLogger.info(
+    'Startup: platform=${Platform.operatingSystem}, '
+    'version=${Platform.operatingSystemVersion}, '
+    'acrylicInit=$_acrylicInitialized',
+  );
 
   FlutterError.onError = (details) {
     AppLogger.error(
@@ -95,20 +102,22 @@ void main() async {
 
   try {
     if (Platform.isWindows) {
+      AppLogger.info('main: applying initial Mica effect');
       await Window.setEffect(
         effect: WindowEffect.mica,
         color: const Color(0x00000000),
         dark: _isMicaDark(config.themeMode),
-      );
+      ).timeout(const Duration(seconds: 2));
+      AppLogger.info('main: Mica effect applied');
     } else if (Platform.isMacOS) {
       await Window.setEffect(
         effect: WindowEffect.sidebar,
         color: const Color(0x00000000),
         dark: _isMicaDark(config.themeMode),
-      );
+      ).timeout(const Duration(seconds: 2));
     }
   } catch (e) {
-    AppLogger.error('Window.setEffect failed: $e');
+    AppLogger.warn('main: Window.setEffect failed (non-fatal): $e');
   }
 
   runApp(
