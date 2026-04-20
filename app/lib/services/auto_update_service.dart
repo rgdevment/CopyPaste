@@ -34,13 +34,11 @@ class AutoUpdateService {
       await _initWindows();
     }
 
-    if (_isStoreBuild || Platform.isMacOS || Platform.isLinux) {
-      await _checkGitHubRelease();
-      _timer = Timer.periodic(
-        const Duration(seconds: _checkIntervalSeconds),
-        (_) => _checkGitHubRelease(),
-      );
-    }
+    await _checkGitHubRelease();
+    _timer = Timer.periodic(
+      const Duration(seconds: _checkIntervalSeconds),
+      (_) => _checkGitHubRelease(),
+    );
   }
 
   static Future<void> _initWindows() async {
