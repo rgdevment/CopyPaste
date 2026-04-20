@@ -876,6 +876,31 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
   bool ok = SetClipboardData(CF_DIB, hMem) != nullptr;
   if (!ok) GlobalFree(hMem);
 
+  if (ok) {
+    DWORD attr = GetFileAttributesW(wpath.c_str());
+    if (attr != INVALID_FILE_ATTRIBUTES) {
+      size_t pathBytes = (wpath.size() + 1) * sizeof(wchar_t);
+      size_t dropSize = sizeof(DROPFILES) + pathBytes + sizeof(wchar_t);
+      HGLOBAL hDrop = GlobalAlloc(GHND, dropSize);
+      if (hDrop) {
+        auto* df = static_cast<DROPFILES*>(GlobalLock(hDrop));
+        if (df) {
+          df->pFiles = sizeof(DROPFILES);
+          df->fWide = TRUE;
+          auto* dest = reinterpret_cast<wchar_t*>(
+              reinterpret_cast<uint8_t*>(df) + sizeof(DROPFILES));
+          memcpy(dest, wpath.c_str(), pathBytes);
+          GlobalUnlock(hDrop);
+          if (!SetClipboardData(CF_HDROP, hDrop)) {
+            GlobalFree(hDrop);
+          }
+        } else {
+          GlobalFree(hDrop);
+        }
+      }
+    }
+  }
+
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();
   return ok;

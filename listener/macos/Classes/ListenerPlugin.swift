@@ -343,8 +343,9 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
 
     let pb = NSPasteboard.general
     pb.clearContents()
-    pb.declareTypes([.tiff], owner: nil)
+    pb.declareTypes([.tiff, .fileURL], owner: nil)
     pb.setData(tiffData, forType: .tiff)
+    pb.setString(url.absoluteString, forType: .fileURL)
 
     return true
   }
