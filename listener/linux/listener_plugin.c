@@ -724,6 +724,35 @@ static gboolean set_text_to_clipboard(const gchar* text) {
   return TRUE;
 }
 
+typedef struct {
+  GdkPixbuf* pixbuf;
+  gchar* uri;
+} ImageClipData;
+
+static void image_clip_get_cb(GtkClipboard* clipboard,
+                               GtkSelectionData* selection_data,
+                               guint info,
+                               gpointer user_data) {
+  (void)clipboard;
+  ImageClipData* d = (ImageClipData*)user_data;
+
+  if (info == 0) {
+    GdkAtom target = gdk_atom_intern_static_string("text/uri-list");
+    gtk_selection_data_set(selection_data, target, 8,
+                          (const guchar*)d->uri, (gint)strlen(d->uri));
+  } else {
+    gtk_selection_data_set_pixbuf(selection_data, d->pixbuf);
+  }
+}
+
+static void image_clip_clear_cb(GtkClipboard* clipboard, gpointer user_data) {
+  (void)clipboard;
+  ImageClipData* d = (ImageClipData*)user_data;
+  if (d->pixbuf) g_object_unref(d->pixbuf);
+  g_free(d->uri);
+  g_free(d);
+}
+
 static gboolean set_image_to_clipboard(const gchar* image_path) {
   if (image_path == NULL || *image_path == '\0') {
     return FALSE;
@@ -744,9 +773,41 @@ static gboolean set_image_to_clipboard(const gchar* image_path) {
     return FALSE;
   }
 
-  gtk_clipboard_set_image(clipboard, pixbuf);
+  GtkTargetList* tl = gtk_target_list_new(NULL, 0);
+  gtk_target_list_add(tl, gdk_atom_intern_static_string("text/uri-list"), 0, 0);
+  gtk_target_list_add_image_targets(tl, 1, TRUE);
+
+  gint n_targets = 0;
+  GtkTargetEntry* targets = gtk_target_table_new_from_list(tl, &n_targets);
+  gtk_target_list_unref(tl);
+
+  gchar* uri = g_filename_to_uri(image_path, NULL, NULL);
+  if (uri == NULL) {
+    g_object_unref(pixbuf);
+    gtk_target_table_free(targets, n_targets);
+    return FALSE;
+  }
+
+  gchar* uri_line = g_strdup_printf("%s\r\n", uri);
+  g_free(uri);
+
+  ImageClipData* data = g_new0(ImageClipData, 1);
+  data->pixbuf = pixbuf;
+  data->uri = uri_line;
+
+  gboolean ok = gtk_clipboard_set_with_data(
+      clipboard, targets, n_targets,
+      image_clip_get_cb, image_clip_clear_cb, data);
+  gtk_target_table_free(targets, n_targets);
+
+  if (!ok) {
+    g_object_unref(pixbuf);
+    g_free(uri_line);
+    g_free(data);
+    return FALSE;
+  }
+
   gtk_clipboard_store(clipboard);
-  g_object_unref(pixbuf);
   return TRUE;
 }
 
