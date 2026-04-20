@@ -507,7 +507,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get otherToolLinkUnboundDesc =>
-      'Open-source browser selector for Windows. Same philosophy: no ads, no telemetry, everything local.';
+      'Open-source browser selector for Windows and Mac. Same philosophy: no ads, no telemetry, everything local.';
 
   @override
   String get aboutLicense => 'GPL v3 License — Free and open source.';

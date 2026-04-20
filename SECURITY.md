@@ -36,8 +36,8 @@ I'm not protecting a brand or business. I'm protecting _you_ and everyone using 
 
 Security updates are provided for:
 
-| Version | Supported          |
-| ------- | ------------------ |
+| Version | Supported |
+| :--- | :--- |
 | Latest Release | ✅ Actively Supported |
 | Beta Versions | ✅ Actively Supported |
 | Older Releases | ❌ Not Supported (please update) |

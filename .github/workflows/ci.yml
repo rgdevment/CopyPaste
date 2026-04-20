@@ -24,7 +24,9 @@ jobs:
       - name: Lint Markdown files
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
-          globs: "**/*.md"
+          globs: |
+            *.md
+            .github/**/*.md
           config: ".markdownlint.yaml"
 
   quality:

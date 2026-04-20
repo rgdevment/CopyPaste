@@ -154,7 +154,7 @@ If you have questions about this Code of Conduct:
 - [Open a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — Ask publicly, I'm happy to clarify.
 - [Email me](mailto:github@apirest.cl) — If it's sensitive, reach out privately.
 
-### Thank you for helping make CopyPaste a welcoming and inclusive project.
+### Thank you for helping make CopyPaste a welcoming and inclusive project
 
 ---
 
