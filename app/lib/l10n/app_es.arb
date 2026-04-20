@@ -208,6 +208,7 @@
   "permissionsWaiting": "Esperando permiso\u2026",
 
   "updateBadge": "v{version} disponible, por favor actualiza",
+  "updateAvailableWindows": "La versi\u00f3n {version} est\u00e1 disponible.\n\nDescarga el instalador m\u00e1s reciente desde GitHub.",
   "updateAvailableMac": "La versi\u00f3n {version} est\u00e1 disponible.\n\nActualiza con Homebrew:\nbrew upgrade copypaste\n\nO descarga la \u00faltima versi\u00f3n desde GitHub.",
   "updateAvailableLinux": "La versi\u00f3n {version} est\u00e1 disponible.\n\nDescarga la \u00faltima versi\u00f3n desde GitHub.",
   "updateAvailableStore": "La versi\u00f3n {version} est\u00e1 disponible.\n\nActualiza CopyPaste desde la Microsoft Store para obtener la \u00faltima versi\u00f3n.",

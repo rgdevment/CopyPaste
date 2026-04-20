@@ -558,6 +558,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String updateAvailableWindows(String version) {
+    return 'La versión $version está disponible.\n\nDescarga el instalador más reciente desde GitHub.';
+  }
+
+  @override
   String updateAvailableMac(String version) {
     return 'La versión $version está disponible.\n\nActualiza con Homebrew:\nbrew upgrade copypaste\n\nO descarga la última versión desde GitHub.';
   }

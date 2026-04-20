@@ -6,17 +6,17 @@ This project exists thanks to people like you. Whether it's your first open sour
 
 ---
 
-## 💡 Our Philosophy
+## Our Philosophy
 
 **CopyPaste** is a personal project that grew into something bigger—a community effort. It was created by an individual developer ([@rgdevment](https://github.com/rgdevment)) with a simple idea: build the clipboard tool he always wanted to use.
 
 We believe in:
 
-- 🎯 **Simplicity and minimalism** — Features that matter, no bloat
-- ⚡ **Performance and stability** — Every millisecond counts
-- 🔒 **Absolute privacy** — Your data is yours, always
-- 🤝 **Collaborative community** — We build together, not in silos
-- 💬 **Valuable feedback** — Your opinion matters as much as code
+- **Simplicity and minimalism** — Features that matter, no bloat
+- **Performance and stability** — Every millisecond counts
+- **Absolute privacy** — Your data is yours, always
+- **Collaborative community** — We build together, not in silos
+- **Valuable feedback** — Your opinion matters as much as code
 
 **This is not a commercial product.** There's no premium version, no monetization, no business plans. It's free software, created by and for the community.
 
@@ -26,14 +26,14 @@ We believe in:
 
 In many ways! Code is just one of them:
 
-### 💬 Share Your Feedback
+### Share Your Feedback
 
 - **Use the app** — The most valuable feedback comes from real users
 - **Report issues** — If something doesn't work, [let us know](https://github.com/rgdevment/CopyPaste/issues)
 - **Suggest improvements** — Have an idea? [Open an issue](https://github.com/rgdevment/CopyPaste/issues/new)
 - **Join discussions** — [GitHub Discussions](https://github.com/rgdevment/CopyPaste/discussions) is our space to talk
 
-### 🐛 Report Bugs
+### Report Bugs
 
 1. First search [Issues](https://github.com/rgdevment/CopyPaste/issues) to see if it was already reported
 2. If it doesn't exist, open a new one with:
@@ -42,7 +42,7 @@ In many ways! Code is just one of them:
    - CopyPaste version and OS (with version)
    - Screenshots if applicable
 
-### 💻 Contribute Code
+### Contribute Code
 
 1. **Fork** the repository
 2. **Create a branch** from `main` (`git checkout -b feature/my-improvement`)
@@ -53,15 +53,15 @@ In many ways! Code is just one of them:
 4. **Make sure** all tests pass
 5. **Open a Pull Request** to `main`
 
-### 🌐 Translate
+### Translate
 
 Do you speak another language? Help us bring CopyPaste to more people. Check the [localization guide](README.md#-localization-help-us-go-global) in the README.
 
-### 📖 Improve Documentation
+### Improve Documentation
 
 Found something confusing? Missing information? Documentation is also code—PRs welcome!
 
-### ⭐ Share the Project
+### Share the Project
 
 - Give us a star on GitHub
 - Tell your friends and colleagues
@@ -69,7 +69,7 @@ Found something confusing? Missing information? Documentation is also code—PRs
 
 ---
 
-## 📐 Style Guide
+## Style Guide
 
 We keep the code simple and consistent:
 
@@ -88,11 +88,11 @@ We keep the code simple and consistent:
 
 ---
 
-## 📜 License and Rights
+## License and Rights
 
 By contributing to **CopyPaste**, you agree that your contributions will be licensed under the **GNU General Public License v3.0 (GPLv3)**.
 
-### 🤝 Contributor License Agreement (CLA)
+### Contributor License Agreement (CLA)
 
 **Let's be honest and transparent:**
 
@@ -102,22 +102,22 @@ To protect the project long-term and maintain legal flexibility, by submitting a
 
 **Why do we ask for this?**
 
-- 🛡️ **Legal defense** — To defend the project against copyright infringement
-- 🔄 **Future flexibility** — Possibility to offer alternative licenses to companies that can't comply with GPLv3
-- 🌱 **Sustainability** — If we ever need to generate income to maintain the project, we can do so
+- **Legal defense** — To defend the project against copyright infringement
+- **Future flexibility** — Possibility to offer alternative licenses to companies that can't comply with GPLv3
+- **Sustainability** — If we ever need to generate income to maintain the project, we can do so
 
 **What does this mean for you?**
 
-- ✅ **You keep the copyright** of your code — you'll always be recognized as the author
-- ✅ **Your contribution stays open source** in this repository under GPLv3 forever
-- ✅ **The project remains free** — the community version will never disappear
-- ⚠️ **You give us permission** to use your code in potential future commercial versions
+- **You keep the copyright** of your code — you'll always be recognized as the author
+- **Your contribution stays open source** in this repository under GPLv3 forever
+- **The project remains free** — the community version will never disappear
+- **You give us permission** to use your code in potential future commercial versions
 
 **What we will NOT do:**
 
-- ❌ Close the current or future code of the community version
-- ❌ Remove your contributions from the open source project
-- ❌ Stop giving credit to contributors
+- Close the current or future code of the community version
+- Remove your contributions from the open source project
+- Stop giving credit to contributors
 
 **If you don't agree with this**, we completely understand. You can still:
 
@@ -130,7 +130,7 @@ To protect the project long-term and maintain legal flexibility, by submitting a
 
 ---
 
-## 🤝 Code of Conduct
+## Code of Conduct
 
 We want this to be a safe and welcoming space for everyone. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
@@ -138,7 +138,7 @@ We want this to be a safe and welcoming space for everyone. Please read our [Cod
 
 ---
 
-## 🙋 Questions?
+## Questions?
 
 - **GitHub Discussions** — For general questions and conversations
 - **Issues** — For specific bugs and suggestions

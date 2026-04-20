@@ -698,7 +698,9 @@ class MainScreenState extends State<MainScreen> {
                 ? l.updateAvailableStore(version)
                 : Platform.isMacOS
                 ? l.updateAvailableMac(version)
-                : l.updateAvailableLinux(version),
+                : Platform.isLinux
+                ? l.updateAvailableLinux(version)
+                : l.updateAvailableWindows(version),
           ),
         ),
         actionsOverflowButtonSpacing: 8,

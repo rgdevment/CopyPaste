@@ -1130,6 +1130,12 @@ abstract class AppLocalizations {
   /// **'v{version} is available, please update'**
   String updateBadge(String version);
 
+  /// Update dialog message for Windows standalone builds
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.\n\nDownload the latest installer from GitHub.'**
+  String updateAvailableWindows(String version);
+
   /// Update dialog message for macOS
   ///
   /// In en, this message translates to:

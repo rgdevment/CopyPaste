@@ -12,16 +12,16 @@ We as contributors and maintainers of **CopyPaste** pledge to make participation
 
 **CopyPaste** is a community effort, not a corporate product. We believe:
 
-- 🤝 **Collaboration over competition** — We're building _with_ you, not _for_ you.
-- 💬 **Respect over ego** — Good ideas can come from anywhere, regardless of experience level.
-- 🌐 **Inclusion over exclusion** — Everyone deserves to contribute to and benefit from open source.
-- 🎯 **Focus over drama** — We're here to build great software, not to argue.
+- **Collaboration over competition** — We're building _with_ you, not _for_ you.
+- **Respect over ego** — Good ideas can come from anywhere, regardless of experience level.
+- **Inclusion over exclusion** — Everyone deserves to contribute to and benefit from open source.
+- **Focus over drama** — We're here to build great software, not to argue.
 
 ---
 
 ## Our Standards
 
-### ✅ Examples of Behavior that Contributes to a Positive Environment
+### Examples of Behavior that Contributes to a Positive Environment
 
 - **Being welcoming and inclusive** — Assume good intentions and welcome newcomers.
 - **Using respectful language** — Disagreements are fine; personal attacks are not.
@@ -31,7 +31,7 @@ We as contributors and maintainers of **CopyPaste** pledge to make participation
 - **Helping others learn** — If someone asks a question, help them instead of dismissing them.
 - **Giving credit where it's due** — Acknowledge contributions, big or small.
 
-### ❌ Examples of Unacceptable Behavior
+### Examples of Unacceptable Behavior
 
 - **Harassment or trolling** — Insulting comments, personal attacks, or sustained disruption.
 - **Discrimination** — Any form of prejudice based on identity or background.
@@ -154,7 +154,7 @@ If you have questions about this Code of Conduct:
 - [Open a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — Ask publicly, I'm happy to clarify.
 - [Email me](mailto:github@apirest.cl) — If it's sensitive, reach out privately.
 
-### Thank you for helping make CopyPaste a welcoming and inclusive project. 💙
+### Thank you for helping make CopyPaste a welcoming and inclusive project.
 
 ---
 
