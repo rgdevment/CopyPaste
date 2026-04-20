@@ -35,7 +35,7 @@ CopyPaste monitors your system clipboard to maintain a local history. The follow
 ### Clipboard Content
 
 | Type | What's Stored | Where |
-|:---|:---|:---|
+| :--- | :--- | :--- |
 | **Text** | The copied text content | SQLite database |
 | **Images** | Image files (PNG) | Local `images` folder |
 | **Files & Folders** | File/folder paths (not the files themselves) | SQLite database |
@@ -73,7 +73,7 @@ Your settings are stored locally:
 When you enable **Start with Windows** in Settings, CopyPaste registers itself as a startup application using the appropriate mechanism for each distribution channel — and removes the registration when you disable it:
 
 | Distribution | Mechanism | What is written |
-|:---|:---|:---|
+| :--- | :--- | :--- |
 | **Standalone installer (.exe)** | Windows registry key | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\CopyPaste` |
 | **Microsoft Store (MSIX)** | Windows StartupTask API | System startup catalog (no registry write) |
 
@@ -129,7 +129,7 @@ All data is stored locally under your user profile:
 **Windows:**
 
 | Data | Location |
-|:---|:---|
+| :--- | :--- |
 | **Database** | `%LOCALAPPDATA%\CopyPaste\clipboard.db` |
 | **Images** | `%LOCALAPPDATA%\CopyPaste\images\` |
 | **Configuration** | `%LOCALAPPDATA%\CopyPaste\config\` |
@@ -138,7 +138,7 @@ All data is stored locally under your user profile:
 **macOS:**
 
 | Data | Location |
-|:---|:---|
+| :--- | :--- |
 | **Database** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/clipboard.db` |
 | **Images** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images/` |
 | **Configuration** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config/` |
@@ -147,7 +147,7 @@ All data is stored locally under your user profile:
 **Linux:**
 
 | Data | Location |
-|:---|:---|
+| :--- | :--- |
 | **Database** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/clipboard.db` |
 | **Images** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/images/` |
 | **Configuration** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/config/` |
@@ -180,7 +180,7 @@ CopyPaste makes **one type of network request** for update checking:
 ### Update Checker
 
 | Detail | Value |
-|:---|:---|
+| :--- | :--- |
 | **Purpose** | Check if a newer version of CopyPaste is available |
 | **URL (Windows standalone)** | `https://gist.githubusercontent.com/rgdevment/.../raw/appcast.xml` |
 | **URL (macOS / Linux / Microsoft Store)** | `https://api.github.com/repos/rgdevment/CopyPaste/releases/latest` |

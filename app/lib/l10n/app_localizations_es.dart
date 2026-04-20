@@ -511,7 +511,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get otherToolLinkUnboundDesc =>
-      'Selector de navegadores de código abierto para Windows. Misma filosofía: sin anuncios, sin telemetría, todo local.';
+      'Selector de navegadores de código abierto para Windows y Mac. Misma filosofía: sin anuncios, sin telemetría, todo local.';
 
   @override
   String get aboutLicense => 'Licencia GPL v3 — Libre y de código abierto.';

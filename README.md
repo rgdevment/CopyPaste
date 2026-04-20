@@ -101,6 +101,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Localization](#localization-help-translate-copypaste)
 - [Want to Help?](#want-to-help)
 - [Tech Stack](#tech-stack-for-developers)
+- [Other Tools by the Same Author](#other-tools-by-the-same-author)
 - [License and Spirit](#license-and-spirit)
 
 ## See CopyPaste in Action
@@ -699,6 +700,24 @@ CopyPaste follows your system theme automatically — no configuration needed.
 - **Light** — Clean and bright, matching a light OS theme.
 - **Dark** — Easy on the eyes, matching a dark OS theme.
 - You can override the automatic selection in **Settings → General → Theme**.
+
+---
+
+## Other Tools by the Same Author
+
+I build free, open source tools focused on privacy and productivity. If you like CopyPaste, you might also find this useful:
+
+<p align="center">
+  <a href="https://github.com/rgdevment/LinkUnbound">
+    <img src="https://raw.githubusercontent.com/rgdevment/LinkUnbound/main/resources/assets/icon_256.png" alt="LinkUnbound" width="72" height="72"/>
+  </a>
+</p>
+
+### [LinkUnbound](https://github.com/rgdevment/LinkUnbound)
+
+A free, open source browser picker for Windows and Mac. Every link you click gets intercepted — domain rules open the assigned browser instantly, or a small picker appears near your cursor to let you choose. Resolves Microsoft SafeLinks and redirect wrappers before matching rules.
+
+No ads. No telemetry. No accounts. Everything local.
 
 ---
 

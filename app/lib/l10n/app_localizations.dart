@@ -1049,7 +1049,7 @@ abstract class AppLocalizations {
   /// LinkUnbound app description
   ///
   /// In en, this message translates to:
-  /// **'Open-source browser selector for Windows. Same philosophy: no ads, no telemetry, everything local.'**
+  /// **'Open-source browser selector for Windows and Mac. Same philosophy: no ads, no telemetry, everything local.'**
   String get otherToolLinkUnboundDesc;
 
   /// License footer text
