@@ -15,6 +15,12 @@ Widget _buildApp({
   required ClipboardService service,
   required void Function(ClipboardItem) onPaste,
   VoidCallback? onExit,
+  VoidCallback? onSettings,
+  bool resetScrollOnShow = true,
+  bool resetSearchOnShow = true,
+  bool showHint = false,
+  VoidCallback? onDismissHint,
+  String? updateVersion,
   Key? key,
 }) {
   return MaterialApp(
@@ -31,7 +37,12 @@ Widget _buildApp({
           onPaste: onPaste,
           onPastePlain: (_) {},
           onExit: onExit ?? () {},
-          onSettings: () {},
+          onSettings: onSettings ?? () {},
+          resetScrollOnShow: resetScrollOnShow,
+          resetSearchOnShow: resetSearchOnShow,
+          showHint: showHint,
+          onDismissHint: onDismissHint,
+          updateVersion: updateVersion,
         ),
       ),
     ),
@@ -481,6 +492,30 @@ void main() {
       expect(dismissed, isTrue);
     });
 
+    testWidgets('hint banner settings link dismisses hint and opens settings', (
+      tester,
+    ) async {
+      var dismissed = false;
+      var settingsOpened = false;
+
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onSettings: () => settingsOpened = true,
+          showHint: true,
+          onDismissHint: () => dismissed = true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(dismissed, isTrue);
+      expect(settingsOpened, isTrue);
+    });
+
     testWidgets('settings button triggers onSettings', (tester) async {
       var settingsFired = false;
 
@@ -664,6 +699,39 @@ void main() {
 
       expect(find.byType(MainScreen), findsOneWidget);
     });
+
+    testWidgets(
+      'onWindowShow keeps search text when resetSearchOnShow is false',
+      (tester) async {
+        await repo.save(
+          ClipboardItem(
+            content: 'Kept search',
+            type: ClipboardContentType.text,
+          ),
+        );
+
+        final key = GlobalKey<MainScreenState>();
+        await tester.pumpWidget(
+          _buildApp(
+            service: service,
+            onPaste: (_) {},
+            key: key,
+            resetSearchOnShow: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final searchField = find.byType(TextField).first;
+        await tester.enterText(searchField, 'keep me');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+
+        key.currentState!.onWindowShow();
+        await tester.pumpAndSettle();
+
+        expect(find.text('keep me'), findsOneWidget);
+      },
+    );
 
     testWidgets('keyboard navigation at bottom of list does not crash', (
       tester,
@@ -1060,6 +1128,26 @@ void main() {
         expect(bugIcon, findsOneWidget);
       }
       expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('update badge opens dialog and can be dismissed', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (_) {}, updateVersion: '2.9.9'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('v2.9.9 is available, please update'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Update Available'), findsOneWidget);
+
+      await tester.tap(find.text('Later'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
     });
 
     testWidgets('_loadItems logs error gracefully when service throws', (

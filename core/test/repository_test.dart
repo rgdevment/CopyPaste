@@ -252,6 +252,56 @@ void main() {
     });
 
     test(
+      'searchAdvanced combines query, type, color and pin filters',
+      () async {
+        await repo.save(
+          ClipboardItem(
+            content: 'alpha target',
+            type: ClipboardContentType.text,
+            cardColor: CardColor.red,
+            isPinned: true,
+          ),
+        );
+        await repo.save(
+          ClipboardItem(
+            content: 'alpha wrong color',
+            type: ClipboardContentType.text,
+            cardColor: CardColor.blue,
+            isPinned: true,
+          ),
+        );
+        await repo.save(
+          ClipboardItem(
+            content: 'alpha wrong pin',
+            type: ClipboardContentType.text,
+            cardColor: CardColor.red,
+            isPinned: false,
+          ),
+        );
+        await repo.save(
+          ClipboardItem(
+            content: 'alpha wrong type',
+            type: ClipboardContentType.link,
+            cardColor: CardColor.red,
+            isPinned: true,
+          ),
+        );
+
+        final results = await repo.searchAdvanced(
+          query: 'alpha',
+          types: [ClipboardContentType.text],
+          colors: [CardColor.red],
+          isPinned: true,
+          limit: 50,
+          skip: 0,
+        );
+
+        expect(results.length, equals(1));
+        expect(results.first.content, equals('alpha target'));
+      },
+    );
+
+    test(
       'searchAdvanced with symbol-only query finds matching items',
       () async {
         // FTS5 tokenizer splits on "@" — this must fall through to LIKE path
