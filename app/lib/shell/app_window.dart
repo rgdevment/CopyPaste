@@ -90,9 +90,11 @@ class AppWindow {
       'size=${_popupWidth}x$_popupHeight',
     );
     try {
-      await windowManager.waitUntilReadyToShow(null, () async {
-        await _configureWindow(startVisible);
-      }).timeout(const Duration(seconds: 5));
+      await windowManager
+          .waitUntilReadyToShow(null, () async {
+            await _configureWindow(startVisible);
+          })
+          .timeout(const Duration(seconds: 5));
       AppLogger.info('AppWindow.init: waitUntilReadyToShow completed');
     } catch (e) {
       AppLogger.warn(

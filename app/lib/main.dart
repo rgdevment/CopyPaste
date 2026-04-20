@@ -51,11 +51,11 @@ void main() async {
 
   await windowManager.ensureInitialized();
 
-  bool _acrylicInitialized = false;
+  bool acrylicInitialized = false;
   if (Platform.isWindows || Platform.isMacOS) {
     try {
       await Window.initialize().timeout(const Duration(seconds: 3));
-      _acrylicInitialized = true;
+      acrylicInitialized = true;
     } catch (_) {
       // AppLogger not yet initialized here; app continues without acrylic effects
     }
@@ -67,7 +67,7 @@ void main() async {
   AppLogger.info(
     'Startup: platform=${Platform.operatingSystem}, '
     'version=${Platform.operatingSystemVersion}, '
-    'acrylicInit=$_acrylicInitialized',
+    'acrylicInit=$acrylicInitialized',
   );
 
   FlutterError.onError = (details) {
