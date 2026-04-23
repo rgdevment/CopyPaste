@@ -4,8 +4,10 @@ import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 
 import 'linux_session.dart';
+import 'msix_startup_task.dart';
 import 'win_package_context.dart';
 
 typedef _RegOpenKeyExNative =
@@ -82,6 +84,7 @@ class StartupHelper {
   static const String _registryPath =
       r'Software\Microsoft\Windows\CurrentVersion\Run';
   static const String _appName = 'CopyPaste';
+  static const String _msixStartupTaskId = 'CopyPasteStartup';
   static const String _macOsPlistLabel = 'com.rgdevment.copypaste';
 
   static Future<void> apply(
@@ -90,9 +93,15 @@ class StartupHelper {
   }) async {
     if (Platform.isWindows) {
       if (WinPackageContext.isMsix) {
-        if (fromUserAction) {
-          await openWindowsStartupSettings();
-        }
+        // MSIX uses the StartupTask declared in AppxManifest. Make sure no
+        // stale HKCU\...\Run entry from a previous standalone install lingers,
+        // otherwise Windows shows it with a generic icon and the raw registry
+        // path in the Startup settings page.
+        _removeRegistryValue();
+        await _applyMsixStartupTask(
+          runOnStartup,
+          fromUserAction: fromUserAction,
+        );
       } else {
         if (runOnStartup) {
           _setRegistryValue(Platform.resolvedExecutable);
@@ -130,7 +139,52 @@ class StartupHelper {
     }
   }
 
+  static Future<void> _applyMsixStartupTask(
+    bool runOnStartup, {
+    required bool fromUserAction,
+  }) async {
+    if (runOnStartup) {
+      final state = await MsixStartupTask.enable(_msixStartupTaskId);
+      AppLogger.info('MSIX StartupTask enable -> $state');
+      // When the user has explicitly disabled the task from Settings, only
+      // the user can re-enable it. Surface the system page so they can act.
+      if (fromUserAction && state == MsixStartupTaskState.disabledByUser) {
+        await openWindowsStartupSettings();
+      }
+    } else {
+      final state = await MsixStartupTask.disable(_msixStartupTaskId);
+      AppLogger.info('MSIX StartupTask disable -> $state');
+    }
+  }
+
+  // Detects executables running from a Flutter build folder (dev runs).
+  // Writing those paths to HKCU\...\Run produces stale entries that Windows
+  // renders with a generic icon and only the registry path text once the
+  // build folder is cleaned.
+  @visibleForTesting
+  static bool isDevBuildPath(String exePath) {
+    final normalized = exePath.replaceAll('/', r'\').toLowerCase();
+    return normalized.contains(r'\build\windows\');
+  }
+
   static void _setRegistryValue(String exePath) {
+    if (!exePath.toLowerCase().endsWith('.exe') ||
+        !File(exePath).existsSync()) {
+      AppLogger.error(
+        'Skipping startup registry write: executable not found at "$exePath".',
+      );
+      _removeRegistryValue();
+      return;
+    }
+
+    if (isDevBuildPath(exePath)) {
+      AppLogger.info(
+        'Skipping startup registry write: running from a Flutter build folder ("$exePath").',
+      );
+      _removeRegistryValue();
+      return;
+    }
+
     final r = _Win32Registry.instance;
     final subKey = _registryPath.toNativeUtf16(allocator: malloc);
     final hKeyPtr = calloc<IntPtr>();
