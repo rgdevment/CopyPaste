@@ -22,6 +22,8 @@ import 'shell/linux_shell.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
+import 'shell/win_known_folders.dart';
+import 'shell/win_package_context.dart';
 import 'shell/windows_balloon.dart';
 import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
@@ -61,13 +63,22 @@ void main() async {
     }
   }
 
-  final storage = await StorageConfig.create();
+  final storage = await StorageConfig.create(
+    windowsLocalAppDataResolver: Platform.isWindows
+        ? WinKnownFolders.localAppData
+        : null,
+  );
   await storage.ensureDirectories();
   AppLogger.initialize(storage.logsPath);
+  final isMsix = Platform.isWindows && WinPackageContext.isMsix;
   AppLogger.info(
-    'Startup: platform=${Platform.operatingSystem}, '
-    'version=${Platform.operatingSystemVersion}, '
-    'acrylicInit=$acrylicInitialized',
+    'Bootstrap: CopyPaste ${AppConfig.appVersion} starting '
+    '(platform=${Platform.operatingSystem}, '
+    'osVersion=${Platform.operatingSystemVersion}, '
+    'msix=$isMsix, '
+    'package=${WinPackageContext.packageFullName ?? '-'}, '
+    'base=${storage.baseDir}, '
+    'acrylicInit=$acrylicInitialized)',
   );
 
   FlutterError.onError = (details) {
