@@ -28,7 +28,8 @@ class StorageConfig {
     if (baseDir != null) {
       base = baseDir;
     } else if (Platform.isWindows) {
-      final resolved = windowsLocalAppDataResolver?.call() ??
+      final resolved =
+          windowsLocalAppDataResolver?.call() ??
           Platform.environment['LOCALAPPDATA'];
       base = resolved != null
           ? p.join(resolved, 'CopyPaste')

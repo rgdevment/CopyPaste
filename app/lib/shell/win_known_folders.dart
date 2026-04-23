@@ -41,22 +41,28 @@ class WinKnownFolders {
   static String? roamingAppData() => _resolve(_folderIdRoamingAppData);
 
   static const _folderIdLocalAppData = (
-    0xF1B32785, 0x6FBA, 0x4FCF, [0x9D, 0x55, 0x7B, 0x8E, 0x7F, 0x15, 0x70, 0x91],
+    0xF1B32785,
+    0x6FBA,
+    0x4FCF,
+    [0x9D, 0x55, 0x7B, 0x8E, 0x7F, 0x15, 0x70, 0x91],
   );
   static const _folderIdRoamingAppData = (
-    0x3EB685DB, 0x65F9, 0x4CF6, [0xA0, 0x3A, 0xE3, 0xEF, 0x65, 0x72, 0x9F, 0x3D],
+    0x3EB685DB,
+    0x65F9,
+    0x4CF6,
+    [0xA0, 0x3A, 0xE3, 0xEF, 0x65, 0x72, 0x9F, 0x3D],
   );
 
-  static String? _resolve(
-    (int, int, int, List<int>) guidParts,
-  ) {
+  static String? _resolve((int, int, int, List<int>) guidParts) {
     if (!Platform.isWindows) return null;
     try {
       final shell32 = DynamicLibrary.open('shell32.dll');
       final ole32 = DynamicLibrary.open('ole32.dll');
-      final shGetKnownFolderPath = shell32.lookupFunction<
-          _SHGetKnownFolderPathNative,
-          _SHGetKnownFolderPathDart>('SHGetKnownFolderPath');
+      final shGetKnownFolderPath = shell32
+          .lookupFunction<
+            _SHGetKnownFolderPathNative,
+            _SHGetKnownFolderPathDart
+          >('SHGetKnownFolderPath');
       final coTaskMemFree = ole32
           .lookupFunction<_CoTaskMemFreeNative, _CoTaskMemFreeDart>(
             'CoTaskMemFree',
