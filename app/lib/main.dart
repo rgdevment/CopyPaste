@@ -45,102 +45,121 @@ bool _isMicaDark(String themeMode) => switch (themeMode) {
 };
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  await runZonedGuarded<Future<void>>(_run, (error, stack) {
+    CrashLogger.report(error, stack, context: 'zoneGuarded');
+    AppLogger.error('Zone unhandled: $error\n$stack');
+  });
+}
 
-  if (!SingleInstance.acquire()) {
-    exit(0);
-  }
-
-  await windowManager.ensureInitialized();
-
-  bool acrylicInitialized = false;
-  if (Platform.isWindows || Platform.isMacOS) {
-    try {
-      await Window.initialize().timeout(const Duration(seconds: 3));
-      acrylicInitialized = true;
-    } catch (_) {
-      // AppLogger not yet initialized here; app continues without acrylic effects
-    }
-  }
-
-  final storage = await StorageConfig.create(
-    windowsLocalAppDataResolver: Platform.isWindows
-        ? WinKnownFolders.localAppData
-        : null,
-  );
-  await storage.ensureDirectories();
-  AppLogger.initialize(storage.logsPath);
-  final isMsix = Platform.isWindows && WinPackageContext.isMsix;
-  AppLogger.info(
-    'Bootstrap: CopyPaste ${AppConfig.appVersion} starting '
-    '(platform=${Platform.operatingSystem}, '
-    'osVersion=${Platform.operatingSystemVersion}, '
-    'msix=$isMsix, '
-    'package=${WinPackageContext.packageFullName ?? '-'}, '
-    'base=${storage.baseDir}, '
-    'acrylicInit=$acrylicInitialized)',
-  );
-
-  FlutterError.onError = (details) {
-    AppLogger.error(
-      'FlutterError: ${details.exceptionAsString()}\n${details.stack}',
-    );
-  };
-  PlatformDispatcher.instance.onError = (error, stack) {
-    AppLogger.error('Unhandled: $error\n$stack');
-    return false;
-  };
-
-  final config = await AppConfig.load(
-    '${storage.configPath}/${AppConfig.fileName}',
-  );
-
-  final repo = SqliteRepository.fromPath(storage.databasePath);
-  final clipboardService = ClipboardService(
-    repo,
-    imagesPath: storage.imagesPath,
-  )..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
-
-  final cleanupService = CleanupService(
-    repo,
-    () => config.retentionDays,
-    storage: storage,
-  )..start(storage.baseDir);
-
-  final listener = ClipboardListener();
-
-  await StartupHelper.apply(config.runOnStartup);
-
+Future<void> _run() async {
   try {
-    if (Platform.isWindows) {
-      AppLogger.info('main: applying initial Mica effect');
-      await Window.setEffect(
-        effect: WindowEffect.mica,
-        color: const Color(0x00000000),
-        dark: _isMicaDark(config.themeMode),
-      ).timeout(const Duration(seconds: 2));
-      AppLogger.info('main: Mica effect applied');
-    } else if (Platform.isMacOS) {
-      await Window.setEffect(
-        effect: WindowEffect.sidebar,
-        color: const Color(0x00000000),
-        dark: _isMicaDark(config.themeMode),
-      ).timeout(const Duration(seconds: 2));
-    }
-  } catch (e) {
-    AppLogger.warn('main: Window.setEffect failed (non-fatal): $e');
-  }
+    WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(
-    CopyPasteApp(
+    if (!SingleInstance.acquire()) {
+      exit(0);
+    }
+
+    await windowManager.ensureInitialized();
+
+    bool acrylicInitialized = false;
+    if (Platform.isWindows || Platform.isMacOS) {
+      try {
+        await Window.initialize().timeout(const Duration(seconds: 3));
+        acrylicInitialized = true;
+      } catch (e, s) {
+        CrashLogger.report(e, s, context: 'Window.initialize');
+      }
+    }
+
+    final storage = await StorageConfig.create(
+      windowsLocalAppDataResolver: Platform.isWindows
+          ? WinKnownFolders.localAppData
+          : null,
+    );
+    await storage.ensureDirectories();
+    CrashLogger.initialize(storage.baseDir);
+    AppLogger.initialize(storage.logsPath);
+    final isMsix = Platform.isWindows && WinPackageContext.isMsix;
+    AppLogger.info(
+      'Bootstrap: CopyPaste ${AppConfig.appVersion} starting '
+      '(platform=${Platform.operatingSystem}, '
+      'osVersion=${Platform.operatingSystemVersion}, '
+      'msix=$isMsix, '
+      'package=${WinPackageContext.packageFullName ?? '-'}, '
+      'base=${storage.baseDir}, '
+      'acrylicInit=$acrylicInitialized)',
+    );
+
+    FlutterError.onError = (details) {
+      AppLogger.error(
+        'FlutterError: ${details.exceptionAsString()}\n${details.stack}',
+      );
+      CrashLogger.report(
+        details.exception,
+        details.stack,
+        context: 'FlutterError',
+      );
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      AppLogger.error('Unhandled: $error\n$stack');
+      CrashLogger.report(error, stack, context: 'PlatformDispatcher');
+      return false;
+    };
+
+    final config = await AppConfig.load(
+      '${storage.configPath}/${AppConfig.fileName}',
+    );
+
+    final repo = SqliteRepository.fromPath(storage.databasePath);
+    final clipboardService = ClipboardService(
+      repo,
+      imagesPath: storage.imagesPath,
+    )..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
+
+    final cleanupService = CleanupService(
+      repo,
+      () => config.retentionDays,
       storage: storage,
-      config: config,
-      repo: repo,
-      clipboardService: clipboardService,
-      cleanupService: cleanupService,
-      listener: listener,
-    ),
-  );
+    )..start(storage.baseDir);
+
+    final listener = ClipboardListener();
+
+    await StartupHelper.apply(config.runOnStartup);
+
+    try {
+      if (Platform.isWindows) {
+        AppLogger.info('main: applying initial Mica effect');
+        await Window.setEffect(
+          effect: WindowEffect.mica,
+          color: const Color(0x00000000),
+          dark: _isMicaDark(config.themeMode),
+        ).timeout(const Duration(seconds: 2));
+        AppLogger.info('main: Mica effect applied');
+      } else if (Platform.isMacOS) {
+        await Window.setEffect(
+          effect: WindowEffect.sidebar,
+          color: const Color(0x00000000),
+          dark: _isMicaDark(config.themeMode),
+        ).timeout(const Duration(seconds: 2));
+      }
+    } catch (e) {
+      AppLogger.warn('main: Window.setEffect failed (non-fatal): $e');
+    }
+
+    runApp(
+      CopyPasteApp(
+        storage: storage,
+        config: config,
+        repo: repo,
+        clipboardService: clipboardService,
+        cleanupService: cleanupService,
+        listener: listener,
+      ),
+    );
+  } catch (e, s) {
+    CrashLogger.report(e, s, context: 'main');
+    rethrow;
+  }
 }
 
 class CopyPasteApp extends StatefulWidget {
@@ -221,6 +240,40 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _initShell() async {
+    var initCompleted = false;
+    final watchdog = Timer(const Duration(seconds: 10), () {
+      if (initCompleted) return;
+      AppLogger.error('Watchdog: _initShell did not complete within 10s');
+      CrashLogger.report(
+        StateError('Init watchdog fired'),
+        StackTrace.current,
+        context: '_initShell watchdog',
+      );
+      unawaited(_forceVisibleFallback());
+    });
+    try {
+      await _initShellBody();
+    } catch (e, s) {
+      AppLogger.error('_initShell crashed: $e\n$s');
+      CrashLogger.report(e, s, context: '_initShell');
+      await _forceVisibleFallback();
+    } finally {
+      initCompleted = true;
+      watchdog.cancel();
+    }
+  }
+
+  Future<void> _forceVisibleFallback() async {
+    try {
+      if (!_appWindow.isGateMode) {
+        await _appWindow.enterGateMode();
+      }
+    } catch (e) {
+      AppLogger.error('forceVisibleFallback failed: $e');
+    }
+  }
+
+  Future<void> _initShellBody() async {
     windowManager.addListener(this);
     final isFirstRun = widget.storage.isFirstRun;
     final wayland = Platform.isLinux && isWaylandSession();
@@ -243,9 +296,23 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       macosGranted = await ClipboardWriter.checkAccessibility();
     }
 
+    final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
+    final windowsNeedsOnboarding =
+        Platform.isWindows && (!_config.hasSeenWindowsOnboarding || isUpdate);
     final showOnStart =
-        isFirstRun && (Platform.isLinux || (Platform.isMacOS && macosGranted));
+        isFirstRun &&
+            (Platform.isLinux ||
+                (Platform.isMacOS && macosGranted) ||
+                Platform.isWindows) ||
+        windowsNeedsOnboarding;
     await _appWindow.init(startVisible: showOnStart);
+    if (showOnStart && Platform.isWindows) {
+      try {
+        await _appWindow.enterGateMode();
+      } catch (e) {
+        AppLogger.error('Initial enterGateMode failed: $e');
+      }
+    }
     SingleInstance.listenForWakeup(() {
       if (Platform.isWindows) {
         unawaited(_showOnboardingFromWakeup());
@@ -294,13 +361,17 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         }
       }
     } else {
-      final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
-      final shouldShowOnboarding =
-          Platform.isWindows && (!_config.hasSeenWindowsOnboarding || isUpdate);
+      final shouldShowOnboarding = windowsNeedsOnboarding;
       if (shouldShowOnboarding) {
         if (isFirstRun) widget.storage.markAsInitialized();
-        setState(() => _showWindowsOnboarding = true);
-        await _appWindow.enterGateMode();
+        if (mounted) setState(() => _showWindowsOnboarding = true);
+        if (!_appWindow.isGateMode) {
+          try {
+            await _appWindow.enterGateMode();
+          } catch (e) {
+            AppLogger.error('enterGateMode (post-init) failed: $e');
+          }
+        }
       } else if (isFirstRun) {
         widget.storage.markAsInitialized();
       }

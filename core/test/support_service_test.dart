@@ -143,5 +143,88 @@ void main() {
       expect(File(savePath).existsSync(), isTrue);
       expect(File(savePath).lengthSync(), greaterThan(0));
     });
+
+    test('includes crash.log in archive when it exists', () async {
+      File(
+        p.join(storage.baseDir, 'crash.log'),
+      ).writeAsStringSync('==== crash entry ====');
+      final savePath = p.join(tempDir.path, 'out.zip');
+      await SupportService.exportLogs(storage, '2.0.0', savePath);
+
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
+      final names = archive.map((f) => f.name).toList();
+      expect(names, contains('crash.log'));
+    });
+
+    test('does not include crash.log entry when file does not exist', () async {
+      File(p.join(storage.logsPath, 'app.log')).writeAsStringSync('log');
+      final savePath = p.join(tempDir.path, 'out.zip');
+      await SupportService.exportLogs(storage, '2.0.0', savePath);
+
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
+      final names = archive.map((f) => f.name).toList();
+      expect(names, isNot(contains('crash.log')));
+    });
+
+    test('crash.log count is not added to returned log file count', () async {
+      File(p.join(storage.logsPath, 'app.log')).writeAsStringSync('log');
+      File(
+        p.join(storage.baseDir, 'crash.log'),
+      ).writeAsStringSync('crash entry');
+      final savePath = p.join(tempDir.path, 'out.zip');
+      final count = await SupportService.exportLogs(storage, '2.0.0', savePath);
+      expect(count, equals(1));
+    });
+
+    test('log files are redacted in archive — email is replaced', () async {
+      File(
+        p.join(storage.logsPath, 'app.log'),
+      ).writeAsStringSync('error for admin@corp.example.com');
+      final savePath = p.join(tempDir.path, 'out.zip');
+      await SupportService.exportLogs(storage, '2.0.0', savePath);
+
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
+      final logFile = archive.firstWhere((f) => f.name == 'app.log');
+      final content = String.fromCharCodes(logFile.content as List<int>);
+      expect(content, isNot(contains('admin@corp.example.com')));
+      expect(content, contains('<EMAIL>'));
+    });
+
+    test('crash.log is redacted in archive — email is replaced', () async {
+      File(
+        p.join(storage.baseDir, 'crash.log'),
+      ).writeAsStringSync('crash for user@example.com');
+      final savePath = p.join(tempDir.path, 'out.zip');
+      await SupportService.exportLogs(storage, '2.0.0', savePath);
+
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
+      final crashFile = archive.firstWhere((f) => f.name == 'crash.log');
+      final content = String.fromCharCodes(crashFile.content as List<int>);
+      expect(content, isNot(contains('user@example.com')));
+      expect(content, contains('<EMAIL>'));
+    });
+
+    test('non-sensitive log content is preserved after redaction', () async {
+      File(
+        p.join(storage.logsPath, 'app.log'),
+      ).writeAsStringSync('[INFO] Bootstrap: CopyPaste 2.0 starting');
+      final savePath = p.join(tempDir.path, 'out.zip');
+      await SupportService.exportLogs(storage, '2.0.0', savePath);
+
+      final archive = ZipDecoder().decodeBytes(
+        File(savePath).readAsBytesSync(),
+      );
+      final logFile = archive.firstWhere((f) => f.name == 'app.log');
+      final content = String.fromCharCodes(logFile.content as List<int>);
+      expect(content, equals('[INFO] Bootstrap: CopyPaste 2.0 starting'));
+    });
   });
 }

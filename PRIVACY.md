@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** April 19, 2026
+**Last updated:** April 23, 2026
 
 ---
 
@@ -91,6 +91,17 @@ Application logs are stored locally for troubleshooting:
 - **Content:** Application events, errors, and diagnostic information only
 - **No personal data:** Logs do **not** contain clipboard content — your copied text, images, or file paths are never written to log files
 
+### Crash Log
+
+If the app fails to start or crashes during initialization, a single `crash.log` file is written next to the data folder so the failure is recoverable on the next launch. This file:
+
+- Lives at `<data folder>/crash.log` on every platform (e.g. `%LOCALAPPDATA%\CopyPaste\crash.log` on Windows)
+- Is **capped at 512 KB** — older content is overwritten automatically
+- Contains: timestamp (UTC), OS name and version, Dart runtime version, the failing operation, and the stack trace
+- Has **automatic redaction applied at write time**: your Windows/macOS/Linux user name, full home folder path, and any email addresses found in stack traces are replaced with `<USER>`, `<HOME>`, and `<EMAIL>` placeholders before being written to disk
+- **Never contains clipboard content** — clipboard data does not flow through error paths
+- **Is never sent anywhere automatically** — same rule as the regular logs
+
 ---
 
 ## Support & Log Export — What Happens and What Doesn't
@@ -100,6 +111,8 @@ CopyPaste includes a **Support** section in Settings → About that lets you exp
 ### What the Export Does
 
 - Collects recent `.log` files from the local logs folder
+- Includes the `crash.log` file if one exists
+- Applies an **additional redaction pass** before zipping: user name, home folder path and email addresses are replaced with `<USER>`, `<HOME>` and `<EMAIL>` in every file added to the archive
 - Adds a `device_info.txt` with your OS version, OS build, system locale, and CopyPaste app version
 - Packages everything into a single `.zip` file saved to a location **you choose** on your computer
 
@@ -134,6 +147,7 @@ All data is stored locally under your user profile:
 | **Images** | `%LOCALAPPDATA%\CopyPaste\images\` |
 | **Configuration** | `%LOCALAPPDATA%\CopyPaste\config\` |
 | **Logs** | `%LOCALAPPDATA%\CopyPaste\logs\` |
+| **Crash log** | `%LOCALAPPDATA%\CopyPaste\crash.log` |
 
 **macOS:**
 
@@ -143,6 +157,7 @@ All data is stored locally under your user profile:
 | **Images** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images/` |
 | **Configuration** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config/` |
 | **Logs** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/` |
+| **Crash log** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/crash.log` |
 
 **Linux:**
 
@@ -152,6 +167,7 @@ All data is stored locally under your user profile:
 | **Images** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/images/` |
 | **Configuration** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/config/` |
 | **Logs** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/` |
+| **Crash log** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/crash.log` |
 
 These folders are protected by your operating system's user account permissions. Other users on the same computer cannot access them under normal conditions.
 
@@ -168,7 +184,7 @@ To be absolutely clear:
 - ❌ **Does not use advertising or ad networks**
 - ❌ **Does not use AI or machine learning** on your data
 - ❌ **Does not sync across devices**
-- ❌ **Does not upload crash reports** — Errors are logged locally only; log export is always manual and user-initiated
+- ❌ **Does not upload crash reports** — Crashes are written to a local `crash.log` (with PII redacted at write time); log export is always manual and user-initiated
 - ❌ **Does not phone home** — No background network calls except the update checker described below (all platforms)
 
 ---

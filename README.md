@@ -510,9 +510,10 @@ If CopyPaste is misbehaving, you can export a diagnostic log bundle directly fro
 The zip includes:
 
 - Recent application log files (.log)
-- A device_info.txt with your OS version and app version — no personal data
+- The `crash.log` file if one exists (created when the app fails to start or crashes during initialization)
+- A `device_info.txt` with your OS version and app version — no personal data
 
-**Privacy guarantee:** Logs contain only application events and errors. **Your clipboard content is never written to logs.** The exported file stays on your machine until you explicitly share it. Nothing is sent automatically.
+**Privacy guarantee:** Logs and the crash file contain only application events, errors and stack traces. **Your clipboard content is never written to any of them.** Before zipping, an automatic redaction pass replaces your user name, home folder path and any email addresses with `<USER>`, `<HOME>` and `<EMAIL>` placeholders. The exported file stays on your machine until you explicitly share it. Nothing is sent automatically.
 
 ### Opening the Logs Folder
 
@@ -584,7 +585,7 @@ The Windows Settings "Reset app" button does the same thing as Hard Reset. Both 
 - What you were doing
 - Any error messages
 - CopyPaste version (check Settings → About)
-- Exported log zip if available (Settings → About → Support → Export Logs)
+- Exported log zip if available (Settings → About → Support → Export Logs) — it now also bundles `crash.log` if the app failed to start, with personal info redacted automatically
 
 ---
 
