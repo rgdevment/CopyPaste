@@ -416,6 +416,7 @@ class AppWindow {
     await windowManager.setMaximumSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setSize(const Size(_gateWidth, _gateHeight));
     await windowManager.setAlwaysOnTop(false);
+    await windowManager.setSkipTaskbar(false);
     await windowManager.center();
     await windowManager.show();
     await windowManager.focus();
@@ -426,6 +427,7 @@ class AppWindow {
   Future<void> exitGateMode() async {
     _gateMode = false;
     await windowManager.setAlwaysOnTop(true);
+    await windowManager.setSkipTaskbar(!(showInTaskbar && Platform.isWindows));
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));

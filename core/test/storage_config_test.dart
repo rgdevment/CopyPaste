@@ -71,5 +71,34 @@ void main() {
       expect(() => config.clearInitialized(), returnsNormally);
       expect(config.isFirstRun, isTrue);
     });
+
+    test('windowsLocalAppDataResolver overrides baseDir on Windows', () async {
+      if (!Platform.isWindows) return;
+      final customDir = Directory.systemTemp.createTempSync('resolver_test_');
+      try {
+        final resolved = await StorageConfig.create(
+          windowsLocalAppDataResolver: () => customDir.path,
+        );
+        expect(resolved.baseDir, equals(p.join(customDir.path, 'CopyPaste')));
+      } finally {
+        customDir.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'windowsLocalAppDataResolver is ignored on non-Windows platforms',
+      () async {
+        if (Platform.isWindows) return;
+        var called = false;
+        await StorageConfig.create(
+          baseDir: tempDir.path,
+          windowsLocalAppDataResolver: () {
+            called = true;
+            return tempDir.path;
+          },
+        );
+        expect(called, isFalse);
+      },
+    );
   });
 }

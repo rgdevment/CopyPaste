@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
 import 'app_logger.dart';
+import 'crash_logger.dart';
 
 class SupportService {
   SupportService._();
@@ -40,12 +41,26 @@ class SupportService {
 
     for (final file in logFiles) {
       try {
-        final bytes = await file.readAsBytes();
+        final raw = await file.readAsString();
+        final redacted = CrashLogger.redact(raw);
+        final bytes = redacted.codeUnits;
         archive.addFile(
           ArchiveFile(p.basename(file.path), bytes.length, bytes),
         );
       } catch (e) {
         AppLogger.error('exportLogs: failed to read ${file.path}: $e');
+      }
+    }
+
+    final crashFile = File(p.join(storage.baseDir, CrashLogger.fileName));
+    if (crashFile.existsSync()) {
+      try {
+        final raw = await crashFile.readAsString();
+        final redacted = CrashLogger.redact(raw);
+        final bytes = redacted.codeUnits;
+        archive.addFile(ArchiveFile(CrashLogger.fileName, bytes.length, bytes));
+      } catch (e) {
+        AppLogger.error('exportLogs: failed to read crash.log: $e');
       }
     }
 
