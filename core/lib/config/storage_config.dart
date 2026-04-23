@@ -20,15 +20,18 @@ class StorageConfig {
 
   String get _initFlagPath => p.join(baseDir, '.initialized');
 
-  static Future<StorageConfig> create({String? baseDir}) async {
+  static Future<StorageConfig> create({
+    String? baseDir,
+    String? Function()? windowsLocalAppDataResolver,
+  }) async {
     final String base;
     if (baseDir != null) {
       base = baseDir;
     } else if (Platform.isWindows) {
-      // Use %LOCALAPPDATA%\CopyPaste — same location as v1
-      final localAppData = Platform.environment['LOCALAPPDATA'];
-      base = localAppData != null
-          ? p.join(localAppData, 'CopyPaste')
+      final resolved = windowsLocalAppDataResolver?.call() ??
+          Platform.environment['LOCALAPPDATA'];
+      base = resolved != null
+          ? p.join(resolved, 'CopyPaste')
           : p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');
     } else {
       base = p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');

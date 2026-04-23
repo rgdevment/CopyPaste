@@ -163,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final hotkeyChanged = _hotkeyChanged;
     final newConfig = _buildConfig();
     await newConfig.save(widget.configPath);
-    await StartupHelper.apply(_runOnStartup);
+    await StartupHelper.apply(_runOnStartup, fromUserAction: true);
     await widget.onSave(newConfig, hotkeyChanged);
   }
 
