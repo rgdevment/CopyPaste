@@ -5,9 +5,15 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 typedef _GetCurrentPackageFullNameNative =
-    Int32 Function(Pointer<Uint32> packageFullNameLength, Pointer<Utf16> packageFullName);
+    Int32 Function(
+      Pointer<Uint32> packageFullNameLength,
+      Pointer<Utf16> packageFullName,
+    );
 typedef _GetCurrentPackageFullNameDart =
-    int Function(Pointer<Uint32> packageFullNameLength, Pointer<Utf16> packageFullName);
+    int Function(
+      Pointer<Uint32> packageFullNameLength,
+      Pointer<Utf16> packageFullName,
+    );
 
 class WinPackageContext {
   WinPackageContext._();
@@ -32,9 +38,11 @@ class WinPackageContext {
   static (bool, String?) _detect() {
     try {
       final kernel32 = DynamicLibrary.open('kernel32.dll');
-      final getCurrentPackageFullName = kernel32.lookupFunction<
-          _GetCurrentPackageFullNameNative,
-          _GetCurrentPackageFullNameDart>('GetCurrentPackageFullName');
+      final getCurrentPackageFullName = kernel32
+          .lookupFunction<
+            _GetCurrentPackageFullNameNative,
+            _GetCurrentPackageFullNameDart
+          >('GetCurrentPackageFullName');
 
       final lenPtr = calloc<Uint32>();
       try {
