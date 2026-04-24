@@ -63,10 +63,7 @@ void main() {
           'desktopEnv': 'GNOME',
           'wmName': 'Mutter',
         },
-        listenerResponse: const {
-          'isX11': true,
-          'hasXTest': true,
-        },
+        listenerResponse: const {'isX11': true, 'hasXTest': true},
       );
       final caps = await LinuxCapabilitiesService.detect(channel: channel);
       expect(caps.hasXTest, isTrue);
@@ -155,8 +152,10 @@ void main() {
     test('canShowTray requires X11 + AppIndicator', () {
       if (!Platform.isLinux) return;
       LinuxCapabilitiesService.resetForTesting(
-        LinuxCapabilities.unsupported
-            .copyWith(isX11: true, hasAppIndicator: true),
+        LinuxCapabilities.unsupported.copyWith(
+          isX11: true,
+          hasAppIndicator: true,
+        ),
       );
       expect(LinuxGuard.canShowTray, isTrue);
       LinuxCapabilitiesService.resetForTesting(

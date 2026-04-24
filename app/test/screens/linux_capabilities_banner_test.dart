@@ -64,23 +64,22 @@ void main() {
       expect(find.byType(Icon), findsNothing);
     });
 
-    testWidgets(
-      'renders AppIndicator banner when missing and not dismissed',
-      (tester) async {
-        if (!Platform.isLinux) return;
-        await tester.pumpWidget(
-          _wrap(
-            LinuxCapabilitiesBanner(
-              config: const AppConfig(),
-              capabilities: _caps(hasAppIndicator: false),
-              onDismiss: (_) async {},
-            ),
+    testWidgets('renders AppIndicator banner when missing and not dismissed', (
+      tester,
+    ) async {
+      if (!Platform.isLinux) return;
+      await tester.pumpWidget(
+        _wrap(
+          LinuxCapabilitiesBanner(
+            config: const AppConfig(),
+            capabilities: _caps(hasAppIndicator: false),
+            onDismiss: (_) async {},
           ),
-        );
-        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.close_rounded), findsOneWidget);
-      },
-    );
+        ),
+      );
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    });
 
     testWidgets(
       'renders nothing when capability missing but already dismissed',
@@ -107,7 +106,9 @@ void main() {
       },
     );
 
-    testWidgets('dismiss callback fires when close icon tapped', (tester) async {
+    testWidgets('dismiss callback fires when close icon tapped', (
+      tester,
+    ) async {
       if (!Platform.isLinux) return;
       AppConfig? captured;
       await tester.pumpWidget(

@@ -1252,8 +1252,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     linuxCapabilities: Platform.isLinux
                         ? LinuxCapabilitiesService.current
                         : null,
-                    onLinuxConfigUpdate:
-                        Platform.isLinux ? _updateLinuxConfig : null,
+                    onLinuxConfigUpdate: Platform.isLinux
+                        ? _updateLinuxConfig
+                        : null,
                   );
                 },
               ),

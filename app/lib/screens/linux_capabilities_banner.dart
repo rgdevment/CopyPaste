@@ -5,9 +5,8 @@ import '../l10n/app_localizations.dart';
 import '../services/linux_capabilities.dart';
 import '../theme/theme_provider.dart';
 
-typedef LinuxBannerDismissCallback = Future<void> Function(
-  AppConfig Function(AppConfig) update,
-);
+typedef LinuxBannerDismissCallback =
+    Future<void> Function(AppConfig Function(AppConfig) update);
 
 class LinuxCapabilitiesBanner extends StatelessWidget {
   const LinuxCapabilitiesBanner({
@@ -46,17 +45,14 @@ class LinuxCapabilitiesBanner extends StatelessWidget {
     final colors = CopyPasteTheme.colorsOf(context);
     final (title, body) = switch (kind) {
       _BannerKind.appIndicator => (
-          l.linuxAppindicatorBannerTitle,
-          l.linuxAppindicatorBannerBody,
-        ),
-      _BannerKind.xtest => (
-          l.linuxXtestBannerTitle,
-          l.linuxXtestBannerBody,
-        ),
+        l.linuxAppindicatorBannerTitle,
+        l.linuxAppindicatorBannerBody,
+      ),
+      _BannerKind.xtest => (l.linuxXtestBannerTitle, l.linuxXtestBannerBody),
       _BannerKind.clipboardManager => (
-          l.linuxClipboardManagerBannerTitle,
-          l.linuxClipboardManagerBannerBody,
-        ),
+        l.linuxClipboardManagerBannerTitle,
+        l.linuxClipboardManagerBannerBody,
+      ),
     };
 
     return Container(
@@ -65,11 +61,7 @@ class LinuxCapabilitiesBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            size: 16,
-            color: colors.primary,
-          ),
+          Icon(Icons.warning_amber_rounded, size: 16, color: colors.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -86,10 +78,7 @@ class LinuxCapabilitiesBanner extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   body,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: colors.onSurfaceMuted,
-                  ),
+                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
                 ),
               ],
             ),
