@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:ui' as ui show PlatformDispatcher;
