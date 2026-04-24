@@ -141,6 +141,29 @@ class $ClipboardItemsTable extends ClipboardItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _thumbPathMeta = const VerificationMeta(
+    'thumbPath',
+  );
+  @override
+  late final GeneratedColumn<String> thumbPath = GeneratedColumn<String>(
+    'thumb_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceModifiedAtMeta = const VerificationMeta(
+    'sourceModifiedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> sourceModifiedAt =
+      GeneratedColumn<DateTime>(
+        'source_modified_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -155,6 +178,8 @@ class $ClipboardItemsTable extends ClipboardItems
     metadata,
     pasteCount,
     contentHash,
+    thumbPath,
+    sourceModifiedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -250,6 +275,21 @@ class $ClipboardItemsTable extends ClipboardItems
         ),
       );
     }
+    if (data.containsKey('thumb_path')) {
+      context.handle(
+        _thumbPathMeta,
+        thumbPath.isAcceptableOrUnknown(data['thumb_path']!, _thumbPathMeta),
+      );
+    }
+    if (data.containsKey('source_modified_at')) {
+      context.handle(
+        _sourceModifiedAtMeta,
+        sourceModifiedAt.isAcceptableOrUnknown(
+          data['source_modified_at']!,
+          _sourceModifiedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -307,6 +347,14 @@ class $ClipboardItemsTable extends ClipboardItems
         DriftSqlType.string,
         data['${effectivePrefix}content_hash'],
       ),
+      thumbPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thumb_path'],
+      ),
+      sourceModifiedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}source_modified_at'],
+      ),
     );
   }
 
@@ -329,6 +377,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
   final String? metadata;
   final int pasteCount;
   final String? contentHash;
+  final String? thumbPath;
+  final DateTime? sourceModifiedAt;
   const ClipboardRow({
     required this.id,
     required this.content,
@@ -342,6 +392,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     this.metadata,
     required this.pasteCount,
     this.contentHash,
+    this.thumbPath,
+    this.sourceModifiedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -365,6 +417,12 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     map['paste_count'] = Variable<int>(pasteCount);
     if (!nullToAbsent || contentHash != null) {
       map['content_hash'] = Variable<String>(contentHash);
+    }
+    if (!nullToAbsent || thumbPath != null) {
+      map['thumb_path'] = Variable<String>(thumbPath);
+    }
+    if (!nullToAbsent || sourceModifiedAt != null) {
+      map['source_modified_at'] = Variable<DateTime>(sourceModifiedAt);
     }
     return map;
   }
@@ -391,6 +449,12 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       contentHash: contentHash == null && nullToAbsent
           ? const Value.absent()
           : Value(contentHash),
+      thumbPath: thumbPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(thumbPath),
+      sourceModifiedAt: sourceModifiedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceModifiedAt),
     );
   }
 
@@ -412,6 +476,10 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       metadata: serializer.fromJson<String?>(json['metadata']),
       pasteCount: serializer.fromJson<int>(json['pasteCount']),
       contentHash: serializer.fromJson<String?>(json['contentHash']),
+      thumbPath: serializer.fromJson<String?>(json['thumbPath']),
+      sourceModifiedAt: serializer.fromJson<DateTime?>(
+        json['sourceModifiedAt'],
+      ),
     );
   }
   @override
@@ -430,6 +498,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       'metadata': serializer.toJson<String?>(metadata),
       'pasteCount': serializer.toJson<int>(pasteCount),
       'contentHash': serializer.toJson<String?>(contentHash),
+      'thumbPath': serializer.toJson<String?>(thumbPath),
+      'sourceModifiedAt': serializer.toJson<DateTime?>(sourceModifiedAt),
     };
   }
 
@@ -446,6 +516,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     Value<String?> metadata = const Value.absent(),
     int? pasteCount,
     Value<String?> contentHash = const Value.absent(),
+    Value<String?> thumbPath = const Value.absent(),
+    Value<DateTime?> sourceModifiedAt = const Value.absent(),
   }) => ClipboardRow(
     id: id ?? this.id,
     content: content ?? this.content,
@@ -459,6 +531,10 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     metadata: metadata.present ? metadata.value : this.metadata,
     pasteCount: pasteCount ?? this.pasteCount,
     contentHash: contentHash.present ? contentHash.value : this.contentHash,
+    thumbPath: thumbPath.present ? thumbPath.value : this.thumbPath,
+    sourceModifiedAt: sourceModifiedAt.present
+        ? sourceModifiedAt.value
+        : this.sourceModifiedAt,
   );
   ClipboardRow copyWithCompanion(ClipboardItemsCompanion data) {
     return ClipboardRow(
@@ -480,6 +556,10 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       contentHash: data.contentHash.present
           ? data.contentHash.value
           : this.contentHash,
+      thumbPath: data.thumbPath.present ? data.thumbPath.value : this.thumbPath,
+      sourceModifiedAt: data.sourceModifiedAt.present
+          ? data.sourceModifiedAt.value
+          : this.sourceModifiedAt,
     );
   }
 
@@ -497,7 +577,9 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
           ..write('cardColor: $cardColor, ')
           ..write('metadata: $metadata, ')
           ..write('pasteCount: $pasteCount, ')
-          ..write('contentHash: $contentHash')
+          ..write('contentHash: $contentHash, ')
+          ..write('thumbPath: $thumbPath, ')
+          ..write('sourceModifiedAt: $sourceModifiedAt')
           ..write(')'))
         .toString();
   }
@@ -516,6 +598,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     metadata,
     pasteCount,
     contentHash,
+    thumbPath,
+    sourceModifiedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -532,7 +616,9 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
           other.cardColor == this.cardColor &&
           other.metadata == this.metadata &&
           other.pasteCount == this.pasteCount &&
-          other.contentHash == this.contentHash);
+          other.contentHash == this.contentHash &&
+          other.thumbPath == this.thumbPath &&
+          other.sourceModifiedAt == this.sourceModifiedAt);
 }
 
 class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
@@ -548,6 +634,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
   final Value<String?> metadata;
   final Value<int> pasteCount;
   final Value<String?> contentHash;
+  final Value<String?> thumbPath;
+  final Value<DateTime?> sourceModifiedAt;
   final Value<int> rowid;
   const ClipboardItemsCompanion({
     this.id = const Value.absent(),
@@ -562,6 +650,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     this.metadata = const Value.absent(),
     this.pasteCount = const Value.absent(),
     this.contentHash = const Value.absent(),
+    this.thumbPath = const Value.absent(),
+    this.sourceModifiedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipboardItemsCompanion.insert({
@@ -577,6 +667,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     this.metadata = const Value.absent(),
     this.pasteCount = const Value.absent(),
     this.contentHash = const Value.absent(),
+    this.thumbPath = const Value.absent(),
+    this.sourceModifiedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        content = Value(content),
@@ -596,6 +688,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     Expression<String>? metadata,
     Expression<int>? pasteCount,
     Expression<String>? contentHash,
+    Expression<String>? thumbPath,
+    Expression<DateTime>? sourceModifiedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -611,6 +705,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
       if (metadata != null) 'metadata': metadata,
       if (pasteCount != null) 'paste_count': pasteCount,
       if (contentHash != null) 'content_hash': contentHash,
+      if (thumbPath != null) 'thumb_path': thumbPath,
+      if (sourceModifiedAt != null) 'source_modified_at': sourceModifiedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -628,6 +724,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     Value<String?>? metadata,
     Value<int>? pasteCount,
     Value<String?>? contentHash,
+    Value<String?>? thumbPath,
+    Value<DateTime?>? sourceModifiedAt,
     Value<int>? rowid,
   }) {
     return ClipboardItemsCompanion(
@@ -643,6 +741,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
       metadata: metadata ?? this.metadata,
       pasteCount: pasteCount ?? this.pasteCount,
       contentHash: contentHash ?? this.contentHash,
+      thumbPath: thumbPath ?? this.thumbPath,
+      sourceModifiedAt: sourceModifiedAt ?? this.sourceModifiedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -686,6 +786,12 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     if (contentHash.present) {
       map['content_hash'] = Variable<String>(contentHash.value);
     }
+    if (thumbPath.present) {
+      map['thumb_path'] = Variable<String>(thumbPath.value);
+    }
+    if (sourceModifiedAt.present) {
+      map['source_modified_at'] = Variable<DateTime>(sourceModifiedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -707,6 +813,8 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
           ..write('metadata: $metadata, ')
           ..write('pasteCount: $pasteCount, ')
           ..write('contentHash: $contentHash, ')
+          ..write('thumbPath: $thumbPath, ')
+          ..write('sourceModifiedAt: $sourceModifiedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -738,6 +846,8 @@ typedef $$ClipboardItemsTableCreateCompanionBuilder =
       Value<String?> metadata,
       Value<int> pasteCount,
       Value<String?> contentHash,
+      Value<String?> thumbPath,
+      Value<DateTime?> sourceModifiedAt,
       Value<int> rowid,
     });
 typedef $$ClipboardItemsTableUpdateCompanionBuilder =
@@ -754,6 +864,8 @@ typedef $$ClipboardItemsTableUpdateCompanionBuilder =
       Value<String?> metadata,
       Value<int> pasteCount,
       Value<String?> contentHash,
+      Value<String?> thumbPath,
+      Value<DateTime?> sourceModifiedAt,
       Value<int> rowid,
     });
 
@@ -823,6 +935,16 @@ class $$ClipboardItemsTableFilterComposer
 
   ColumnFilters<String> get contentHash => $composableBuilder(
     column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get thumbPath => $composableBuilder(
+    column: $table.thumbPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get sourceModifiedAt => $composableBuilder(
+    column: $table.sourceModifiedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -895,6 +1017,16 @@ class $$ClipboardItemsTableOrderingComposer
     column: $table.contentHash,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get thumbPath => $composableBuilder(
+    column: $table.thumbPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get sourceModifiedAt => $composableBuilder(
+    column: $table.sourceModifiedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ClipboardItemsTableAnnotationComposer
@@ -947,6 +1079,14 @@ class $$ClipboardItemsTableAnnotationComposer
     column: $table.contentHash,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get thumbPath =>
+      $composableBuilder(column: $table.thumbPath, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get sourceModifiedAt => $composableBuilder(
+    column: $table.sourceModifiedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ClipboardItemsTableTableManager
@@ -994,6 +1134,8 @@ class $$ClipboardItemsTableTableManager
                 Value<String?> metadata = const Value.absent(),
                 Value<int> pasteCount = const Value.absent(),
                 Value<String?> contentHash = const Value.absent(),
+                Value<String?> thumbPath = const Value.absent(),
+                Value<DateTime?> sourceModifiedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipboardItemsCompanion(
                 id: id,
@@ -1008,6 +1150,8 @@ class $$ClipboardItemsTableTableManager
                 metadata: metadata,
                 pasteCount: pasteCount,
                 contentHash: contentHash,
+                thumbPath: thumbPath,
+                sourceModifiedAt: sourceModifiedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1024,6 +1168,8 @@ class $$ClipboardItemsTableTableManager
                 Value<String?> metadata = const Value.absent(),
                 Value<int> pasteCount = const Value.absent(),
                 Value<String?> contentHash = const Value.absent(),
+                Value<String?> thumbPath = const Value.absent(),
+                Value<DateTime?> sourceModifiedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipboardItemsCompanion.insert(
                 id: id,
@@ -1038,6 +1184,8 @@ class $$ClipboardItemsTableTableManager
                 metadata: metadata,
                 pasteCount: pasteCount,
                 contentHash: contentHash,
+                thumbPath: thumbPath,
+                sourceModifiedAt: sourceModifiedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
