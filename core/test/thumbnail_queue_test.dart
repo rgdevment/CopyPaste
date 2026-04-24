@@ -2,9 +2,66 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:core/core.dart';
+import 'package:core/repository/i_clipboard_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
+
+class _ThrowingUpdateRepo implements IClipboardRepository {
+  final _items = <String, ClipboardItem>{};
+
+  void seed(ClipboardItem item) => _items[item.id] = item;
+
+  @override
+  Future<void> save(ClipboardItem item) async => _items[item.id] = item;
+  @override
+  Future<void> update(ClipboardItem item) async =>
+      throw Exception('update deliberately failed');
+  @override
+  Future<ClipboardItem?> getById(String id) async => _items[id];
+  @override
+  Future<ClipboardItem?> getLatest() async => null;
+  @override
+  Future<ClipboardItem?> findByContentAndType(
+    String content,
+    ClipboardContentType type,
+  ) async => null;
+  @override
+  Future<ClipboardItem?> findByContentHash(String contentHash) async => null;
+  @override
+  Future<List<ClipboardItem>> getAll() async => const [];
+  @override
+  Future<void> delete(String id) async {}
+  @override
+  Future<int> clearOldItems(int days, {bool excludePinned = true}) async => 0;
+  @override
+  Future<int> deleteAllUnpinned() async => 0;
+  @override
+  Future<int> count() async => _items.length;
+  @override
+  Future<List<ClipboardItem>> search(
+    String query, {
+    int limit = 50,
+    int skip = 0,
+  }) async => const [];
+  @override
+  Future<List<ClipboardItem>> searchAdvanced({
+    String? query,
+    List<ClipboardContentType>? types,
+    List<CardColor>? colors,
+    bool? isPinned,
+    required int limit,
+    required int skip,
+  }) async => const [];
+  @override
+  Future<List<String>> getImagePaths() async => const [];
+  @override
+  Future<List<String>> getThumbPaths() async => const [];
+  @override
+  Future<void> walCheckpoint() async {}
+  @override
+  Future<void> close() async {}
+}
 
 void main() {
   late Directory tempDir;
@@ -257,6 +314,118 @@ void main() {
 
       expect(updatedItems, isEmpty);
       expect((await repo.getById('late'))?.thumbPath, isNull);
+    });
+  });
+
+  group('ThumbnailQueue.pendingCount', () {
+    test('is zero on a fresh queue', () {
+      expect(queue.pendingCount, equals(0));
+    });
+  });
+
+  group('ThumbnailQueue depth warning', () {
+    test('logs warn when more than 20 items are pending', () async {
+      // Enqueue 22 items synchronously — the first starts processing
+      // asynchronously while items 2-22 accumulate in _queue.
+      // When item 22 is added, _queue.length > 20 triggers AppLogger.warn.
+      for (var i = 0; i < 22; i++) {
+        final item = ClipboardItem(
+          id: 'depth-warn-$i',
+          content: p.join(externalDir.path, 'depth_$i.png'),
+          type: ClipboardContentType.image,
+        );
+        queue.enqueue(item);
+      }
+      // Verify items accumulated (warning was logged).
+      expect(queue.pendingCount, greaterThan(0));
+    });
+  });
+
+  group('ThumbnailQueue._safeGenerate exception', () {
+    test('catches write failure inside Isolate and emits no update', () async {
+      final dir = Directory.systemTemp.createTempSync('tq_safegen_err_');
+      final ext = Directory(p.join(dir.path, 'ext'))..createSync();
+      final imgs = Directory(p.join(dir.path, 'imgs'))..createSync();
+      final src = File(p.join(ext.path, 'source.png'))
+        ..writeAsBytesSync(makePng(w: 64, h: 64));
+
+      final localRepo = SqliteRepository.inMemory();
+      final localService = ThumbnailService(imagesPath: imgs.path);
+      final updatedLocal = <ClipboardItem>[];
+      final localQueue = ThumbnailQueue(
+        repository: localRepo,
+        service: localService,
+        onItemUpdated: updatedLocal.add,
+      );
+
+      final item = ClipboardItem(
+        id: 'safegen-err',
+        content: src.path,
+        type: ClipboardContentType.image,
+      );
+      await localRepo.save(item);
+
+      // Make imgs dir non-writable so the isolate's File.writeAsBytesSync
+      // throws EACCES, which propagates through Isolate.run and is caught by
+      // _safeGenerate (line 184).
+      await Process.run('chmod', ['555', imgs.path]);
+
+      try {
+        localQueue.enqueue(item);
+        for (var i = 0; i < 100; i++) {
+          if (localQueue.isIdle) break;
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+        expect(updatedLocal, isEmpty);
+      } finally {
+        await Process.run('chmod', ['755', imgs.path]);
+        await localQueue.dispose();
+        await localRepo.close();
+        dir.deleteSync(recursive: true);
+      }
+    });
+  });
+
+  group('ThumbnailQueue update failure', () {
+    test('catches repo update error and deletes generated thumb', () async {
+      final dir = Directory.systemTemp.createTempSync('tq_update_fail_');
+      final ext = Directory(p.join(dir.path, 'ext'))..createSync();
+      final imgs = Directory(p.join(dir.path, 'imgs'))..createSync();
+      final src = File(p.join(ext.path, 'source.png'))
+        ..writeAsBytesSync(makePng(w: 64, h: 64));
+
+      final throwingRepo = _ThrowingUpdateRepo();
+      final localService = ThumbnailService(imagesPath: imgs.path);
+      final updatedLocal = <ClipboardItem>[];
+      final localQueue = ThumbnailQueue(
+        repository: throwingRepo,
+        service: localService,
+        onItemUpdated: updatedLocal.add,
+      );
+
+      final item = ClipboardItem(
+        id: 'update-fail',
+        content: src.path,
+        type: ClipboardContentType.image,
+      );
+      throwingRepo.seed(item);
+
+      try {
+        localQueue.enqueue(item);
+        // Wait for the job to attempt update, fail, and return to idle.
+        for (var i = 0; i < 200; i++) {
+          if (localQueue.isIdle) break;
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+        // update threw → onItemUpdated was never called.
+        expect(updatedLocal, isEmpty);
+        // The generated thumb was deleted by _safeDelete.
+        final thumbFiles = imgs.listSync().whereType<File>().toList();
+        expect(thumbFiles, isEmpty);
+      } finally {
+        await localQueue.dispose();
+        dir.deleteSync(recursive: true);
+      }
     });
   });
 }

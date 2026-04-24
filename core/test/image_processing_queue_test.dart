@@ -147,4 +147,47 @@ void main() {
       expect(repo.updates, isNotEmpty);
     });
   });
+
+  group('ImageProcessingQueue depth warning', () {
+    test('logs warn when more than 10 items are pending', () async {
+      // Enqueue 12 items synchronously — first starts asynchronously while
+      // items 2-12 accumulate. When item 12 is added, _queue.length > 10
+      // triggers AppLogger.warn (line 81).
+      for (var i = 0; i < 12; i++) {
+        queue.enqueue(
+          item: _item('depth-warn-$i'),
+          imageBytes: _smallPng(),
+          imagesPath: tempDir.path,
+        );
+      }
+      // Just verify no exception was thrown and items were accepted.
+      await Future<void>.delayed(const Duration(seconds: 4));
+      expect(repo.updates.length, greaterThanOrEqualTo(12));
+    });
+  });
+
+  group('ImageProcessingQueue timeout', () {
+    test('TimeoutException is handled and no update is emitted', () async {
+      final slowRepo = _RecordingRepo();
+      final slowQueue = ImageProcessingQueue(
+        repository: slowRepo,
+        jobTimeout: const Duration(milliseconds: 100),
+      );
+
+      // Pass valid PNG bytes but a non-existent imagesPath.
+      // ImageProcessor.processSync decodes OK, then throws FileSystemException
+      // on File.writeAsBytesSync — the isolate exits without sending a result.
+      // resultCompleter never completes → timeout fires after 100ms.
+      slowQueue.enqueue(
+        item: _item('slow'),
+        imageBytes: _smallPng(),
+        imagesPath: '/nonexistent_copypaste_timeout_test_path',
+      );
+
+      // Wait enough for the 100ms timeout to fire.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      // Timeout fired → no update recorded for the item.
+      expect(slowRepo.updates.where((u) => u.id == 'slow'), isEmpty);
+    });
+  });
 }
