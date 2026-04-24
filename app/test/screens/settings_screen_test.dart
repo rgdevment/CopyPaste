@@ -95,6 +95,42 @@ void main() {
       expect(find.byType(SettingsScreen), findsOneWidget);
     });
 
+    testWidgets('Performance tab shows localized paste preset dropdown items', (
+      tester,
+    ) async {
+      await _pump(tester, _screen());
+      await tester.tap(find.text('Performance'));
+      await tester.pump();
+
+      // Open the DropdownButton to reveal items.
+      final dropdown = find.byType(DropdownButton<String>);
+      expect(dropdown, findsOneWidget);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+
+      // Localized labels should appear (not raw 'Fast'/'Slow' keys).
+      expect(find.text('Fast'), findsWidgets);
+      expect(find.text('Normal'), findsWidgets);
+      expect(find.text('Safe'), findsWidgets);
+      expect(find.text('Slow'), findsWidgets);
+    });
+
+    testWidgets('Performance tab shows Switch to All on open toggle', (
+      tester,
+    ) async {
+      await _pump(tester, _screen());
+      await tester.tap(find.text('Performance'));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Switch to All on open'),
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+
+      expect(find.text('Switch to All on open'), findsOneWidget);
+    });
+
     testWidgets('Cleanup & Privacy tab renders without crashing', (
       tester,
     ) async {
