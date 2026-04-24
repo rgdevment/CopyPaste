@@ -179,21 +179,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
     });
   }
 
-  Future<void> _checkFileAsync(String path) async {
-    if (path.isEmpty) {
-      _resolvedImagePath = null;
-      _resolvedIsThumb = false;
-      _imagePathResolved = true;
-      if (mounted) setState(() {});
-      return;
-    }
-    final exists = await File(path).exists();
-    _resolvedImagePath = exists ? path : null;
-    _resolvedIsThumb = false;
-    _imagePathResolved = true;
-    if (mounted) setState(() {});
-  }
-
   void _resolveFileAvailability() {
     final item = widget.item;
     if (item.type != ClipboardContentType.file &&
@@ -687,48 +672,81 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    final displayPath = _resolvedImagePath ?? item.content.trim();
-    if (displayPath.isEmpty) {
-      return Container(
-        height: theme.sizing.cardImageHeight,
-        decoration: BoxDecoration(
-          color: colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(theme.radii.thumbnail),
-        ),
-        child: Center(
-          child: Icon(
-            theme.icons.image,
-            size: theme.sizing.iconSizeLg,
-            color: colors.onSurfaceMuted,
+    final l10n = AppLocalizations.of(context);
+    final contentPath = item.content.trim();
+    final filename = contentPath.isEmpty
+        ? ''
+        : contentPath.split(Platform.pathSeparator).last;
+
+    // File is known to be missing: show explicit warning instead of
+    // letting Image.file fail silently via errorBuilder.
+    if (_resolvedImagePath == null) {
+      return Semantics(
+        label: filename.isEmpty
+            ? l10n.imageFile
+            : '${l10n.imageFile}: $filename, ${l10n.fileNotFound}',
+        child: Container(
+          height: theme.sizing.cardImageHeight,
+          decoration: BoxDecoration(
+            color: colors.surfaceVariant,
+            borderRadius: BorderRadius.circular(theme.radii.thumbnail),
           ),
+          child: contentPath.isEmpty
+              ? Center(
+                  child: Icon(
+                    theme.icons.image,
+                    size: theme.sizing.iconSizeLg,
+                    color: colors.onSurfaceMuted,
+                  ),
+                )
+              : Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        theme.icons.warning,
+                        size: theme.sizing.iconSizeLg,
+                        color: colors.warning,
+                      ),
+                      const SizedBox(height: 4),
+                      _ExtBadge(
+                        label: l10n.fileNotFound,
+                        color: colors.warning,
+                      ),
+                    ],
+                  ),
+                ),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(theme.radii.thumbnail),
-          child: Container(
-            height: theme.sizing.cardImageHeight,
-            width: double.infinity,
-            color: colors.surfaceVariant,
-            child: Image.file(
-              File(displayPath),
-              fit: BoxFit.cover,
-              cacheWidth: _resolvedIsThumb ? 256 : 700,
-              errorBuilder: (_, e, s) => Center(
-                child: Icon(
-                  theme.icons.warning,
-                  color: colors.warning,
-                  size: theme.sizing.iconSizeLg,
+    return Semantics(
+      label: filename.isEmpty ? l10n.imageFile : '${l10n.imageFile}: $filename',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(theme.radii.thumbnail),
+            child: Container(
+              height: theme.sizing.cardImageHeight,
+              width: double.infinity,
+              color: colors.surfaceVariant,
+              child: Image.file(
+                File(_resolvedImagePath!),
+                fit: BoxFit.cover,
+                cacheWidth: _resolvedIsThumb ? 256 : 700,
+                errorBuilder: (_, e, s) => Center(
+                  child: Icon(
+                    theme.icons.warning,
+                    color: colors.warning,
+                    size: theme.sizing.iconSizeLg,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -743,41 +761,49 @@ class _ClipboardCardState extends State<ClipboardCard> {
         ? ''
         : files.first.split(Platform.pathSeparator).last;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          firstName.isEmpty ? item.content : firstName,
-          style: theme.typography.cardContent.copyWith(
-            color: colors.onSurface.withValues(
-              alpha: theme.cardStyle.contentOpacity,
+    final semanticsLabel = [
+      if (firstName.isNotEmpty) firstName else item.content,
+      if (!available) AppLocalizations.of(context).fileNotFound,
+    ].join(', ');
+
+    return Semantics(
+      label: semanticsLabel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            firstName.isEmpty ? item.content : firstName,
+            style: theme.typography.cardContent.copyWith(
+              color: colors.onSurface.withValues(
+                alpha: theme.cardStyle.contentOpacity,
+              ),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        if (files.length > 1 || !available) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (files.length > 1) ...[
-                _ExtBadge(
-                  label: '+${files.length - 1}',
-                  color: colors.onSurfaceMuted,
-                ),
+          if (files.length > 1 || !available) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (files.length > 1) ...[
+                  _ExtBadge(
+                    label: '+${files.length - 1}',
+                    color: colors.onSurfaceMuted,
+                  ),
+                ],
+                if (!available) ...[
+                  if (files.length > 1) const SizedBox(width: 4),
+                  _ExtBadge(
+                    label: AppLocalizations.of(context).fileNotFound,
+                    color: colors.warning,
+                  ),
+                ],
               ],
-              if (!available) ...[
-                if (files.length > 1) const SizedBox(width: 4),
-                _ExtBadge(
-                  label: AppLocalizations.of(context).fileNotFound,
-                  color: colors.warning,
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -792,84 +818,115 @@ class _ClipboardCardState extends State<ClipboardCard> {
         : path.split(Platform.pathSeparator).last;
     final isAudio = item.type == ClipboardContentType.audio;
     final typeColor = _typeColor(item.type, colors);
+    final l10n = AppLocalizations.of(context);
+    final typeName = isAudio ? l10n.audioFile : l10n.videoFile;
+    final missing = _fileAvailable == false;
+
+    final semanticsLabel = [
+      filename.isEmpty ? typeName : filename,
+      if (missing) l10n.fileNotFound,
+    ].join(', ');
 
     final hasThumb = _imagePathResolved && _resolvedImagePath != null;
 
     if (!isAudio && hasThumb) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(theme.radii.thumbnail),
-            child: Container(
-              height: theme.sizing.cardImageHeight,
-              width: double.infinity,
-              color: colors.surfaceVariant,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.file(
-                    File(_resolvedImagePath!),
-                    fit: BoxFit.contain,
-                    cacheWidth: _resolvedIsThumb ? 256 : 700,
-                    errorBuilder: (_, e, st) => _MediaIcon(
-                      isAudio: false,
-                      typeColor: typeColor,
-                      radius: theme.radii.thumbnail,
-                    ),
-                  ),
-                  Center(
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
+      return Semantics(
+        label: semanticsLabel,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(theme.radii.thumbnail),
+              child: Container(
+                height: theme.sizing.cardImageHeight,
+                width: double.infinity,
+                color: colors.surfaceVariant,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      File(_resolvedImagePath!),
+                      fit: BoxFit.contain,
+                      cacheWidth: _resolvedIsThumb ? 256 : 700,
+                      errorBuilder: (_, e, st) => _MediaIcon(
+                        isAudio: false,
+                        typeColor: typeColor,
+                        radius: theme.radii.thumbnail,
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.play_arrow_rounded,
-                          size: 16,
-                          color: Colors.white,
+                    ),
+                    Center(
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.play_arrow_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
+            const SizedBox(height: 4),
+            Text(
+              filename.isEmpty ? l10n.videoFile : filename,
+              style: theme.typography.cardContent.copyWith(
+                color: colors.onSurface.withValues(
+                  alpha: theme.cardStyle.contentOpacity,
+                ),
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (missing) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ExtBadge(label: l10n.fileNotFound, color: colors.warning),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Semantics(
+      label: semanticsLabel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            filename.isEmpty
-                ? AppLocalizations.of(context).videoFile
-                : filename,
+            filename.isEmpty ? typeName : filename,
             style: theme.typography.cardContent.copyWith(
               color: colors.onSurface.withValues(
                 alpha: theme.cardStyle.contentOpacity,
               ),
-              fontSize: 11,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          if (missing) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ExtBadge(label: l10n.fileNotFound, color: colors.warning),
+              ],
+            ),
+          ],
         ],
-      );
-    }
-
-    return Text(
-      filename.isEmpty
-          ? (isAudio
-                ? AppLocalizations.of(context).audioFile
-                : AppLocalizations.of(context).videoFile)
-          : filename,
-      style: theme.typography.cardContent.copyWith(
-        color: colors.onSurface.withValues(
-          alpha: theme.cardStyle.contentOpacity,
-        ),
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 

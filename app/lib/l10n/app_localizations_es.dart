@@ -461,6 +461,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoFile => 'Archivo de video';
 
   @override
+  String get imageFile => 'Archivo de imagen';
+
+  @override
   String get timeNow => 'ahora';
 
   @override

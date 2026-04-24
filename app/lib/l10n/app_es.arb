@@ -176,6 +176,7 @@
   "fileNotFound": "No encontrado",
   "audioFile": "Archivo de audio",
   "videoFile": "Archivo de video",
+  "imageFile": "Archivo de imagen",
   "timeNow": "ahora",
   "clearAllFilters": "Limpiar todos los filtros",
   "colorSectionLabel": "COLOR",
