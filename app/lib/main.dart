@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
+import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import 'services/auto_update_service.dart';
@@ -804,8 +805,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     await _cleanup();
     SingleInstance.release();
     try {
-      final base = Directory(widget.storage.baseDir);
-      if (base.existsSync()) base.deleteSync(recursive: true);
+      final storage = widget.storage;
+      final baseDir = Directory(storage.baseDir);
+      if (baseDir.existsSync() && _isSafeToWipe(storage)) {
+        baseDir.deleteSync(recursive: true);
+      } else {
+        AppLogger.error(
+          'hardReset refused: baseDir failed safety check '
+          '("${storage.baseDir}")',
+        );
+      }
     } catch (e) {
       AppLogger.error('hardReset dir cleanup: $e');
     }
@@ -815,6 +824,26 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       mode: ProcessStartMode.detached,
     );
     exit(0);
+  }
+
+  /// Safety guard for [_hardReset]. Refuses to wipe a directory that does not
+  /// look like our own data folder. Requires the path to:
+  ///   - be non-empty and not a filesystem root,
+  ///   - end with "CopyPaste" (our fixed app folder name),
+  ///   - contain at least one of our known subpaths (db, images, config, logs).
+  bool _isSafeToWipe(StorageConfig storage) {
+    final base = storage.baseDir;
+    if (base.isEmpty) return false;
+    final canonical = p.canonicalize(base);
+    final parent = p.dirname(canonical);
+    if (canonical == parent) return false; // filesystem root
+    if (p.basename(canonical) != 'CopyPaste') return false;
+    final hasOwnedChild =
+        File(storage.databasePath).existsSync() ||
+        Directory(storage.imagesPath).existsSync() ||
+        Directory(storage.configPath).existsSync() ||
+        Directory(storage.logsPath).existsSync();
+    return hasOwnedChild;
   }
 
   Future<void> _openSettings(BuildContext ctx) async {

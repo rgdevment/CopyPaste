@@ -175,10 +175,7 @@ class ClipboardService {
       if (_disposed) return;
 
       final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
-      try {
-        final bmp = File(bmpPath);
-        if (bmp.existsSync()) bmp.deleteSync();
-      } catch (_) {}
+      _deleteAppFile(bmpPath);
 
       final meta = <String, Object>{
         'width': result.width,
@@ -265,16 +262,47 @@ class ClipboardService {
     }
   }
 
+  /// Deletes a file only if [path] is canonically contained inside the app's
+  /// own images directory. Any path outside is refused and logged.
+  ///
+  /// This is the single entry point for file deletion in this service. Never
+  /// call `File.delete*` directly on a path that comes from user input, item
+  /// content, or any source outside the app's own path builder.
+  bool _deleteAppFile(String path) {
+    final imagesPath = _imagesPath;
+    if (imagesPath == null || imagesPath.isEmpty) return false;
+    final String canonicalBase;
+    final String canonicalTarget;
+    try {
+      canonicalBase = p.canonicalize(imagesPath);
+      canonicalTarget = p.canonicalize(path);
+    } catch (e) {
+      AppLogger.warn('_deleteAppFile: canonicalize failed for "$path": $e');
+      return false;
+    }
+    final baseWithSep = canonicalBase.endsWith(p.separator)
+        ? canonicalBase
+        : '$canonicalBase${p.separator}';
+    if (!canonicalTarget.startsWith(baseWithSep)) {
+      AppLogger.error(
+        '_deleteAppFile: refused to delete out-of-scope path '
+        '"$canonicalTarget" (base="$canonicalBase")',
+      );
+      return false;
+    }
+    try {
+      final file = File(canonicalTarget);
+      if (file.existsSync()) file.deleteSync();
+      return true;
+    } catch (e) {
+      AppLogger.warn('_deleteAppFile: delete failed for "$path": $e');
+      return false;
+    }
+  }
+
   void _cleanupItemFiles(ClipboardItem item) {
     if (item.type == ClipboardContentType.image && item.content.isNotEmpty) {
-      try {
-        final file = File(item.content);
-        if (file.existsSync()) file.deleteSync();
-      } catch (e) {
-        AppLogger.warn(
-          '_cleanupItemFiles: could not delete image for ${item.id}: $e',
-        );
-      }
+      _deleteAppFile(item.content);
     }
   }
 
