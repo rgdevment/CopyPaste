@@ -149,5 +149,34 @@ void main() {
 
       // No error means the dynamic callback update works
     });
+
+    test('preserves thumbnail files referenced by thumbPath', () async {
+      // Regression: orphan sweep must NOT delete `<id>_thumb.png` files
+      // produced by ThumbnailService for items with external sources.
+      final externalDir = Directory(p.join(tempDir.path, 'ext'))
+        ..createSync(recursive: true);
+      final external = File(p.join(externalDir.path, 'photo.png'))
+        ..writeAsBytesSync([9, 9, 9]);
+
+      final thumb = File(p.join(storage.imagesPath, 'item-x_thumb.png'))
+        ..writeAsBytesSync([1, 2, 3, 4]);
+
+      await repo.save(
+        ClipboardItem(
+          id: 'item-x',
+          content: external.path,
+          type: ClipboardContentType.image,
+          thumbPath: thumb.path,
+        ),
+      );
+
+      final service = CleanupService(repo, () => 30, storage: storage);
+      service.start(tempDir.path);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      service.dispose();
+
+      expect(thumb.existsSync(), isTrue, reason: 'thumb must survive sweep');
+      expect(external.existsSync(), isTrue, reason: 'external file untouched');
+    });
   });
 }
