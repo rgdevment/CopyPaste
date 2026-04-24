@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../models/clipboard_content_type.dart';
 import '../models/clipboard_item.dart';
 import 'app_logger.dart';
+import 'native_thumbnail_provider.dart';
 
 /// Result of a thumbnail generation attempt.
 class ThumbnailResult {
@@ -25,21 +26,24 @@ class ThumbnailResult {
 }
 
 /// Generates 256-px PNG thumbnails for clipboard items that reference
-/// external image files.
+/// external media files.
 ///
-/// Scope of this implementation (PR #4):
-///   - Only [ClipboardContentType.image] with a single existing local path.
-///   - Writes `<imagesPath>/<id>_thumb.png` (always inside the app data dir).
+/// Two paths:
+///   1. **Native** (preferred when `nativeProvider` is set): asks the OS
+///      shell for a cached thumbnail (Win `IShellItemImageFactory`,
+///      macOS `QLThumbnailGenerator`, Linux `Tumbler`). Covers
+///      [ClipboardContentType.image], [video] and [audio] (cover art).
+///   2. **Dart fallback** (always available for images): decodes the file
+///      with `package:image` in a one-shot isolate. Only handles
+///      [ClipboardContentType.image].
 ///
-/// Out of scope (later PRs):
-///   - Video / audio / generic file thumbs (require OS shell APIs).
-///   - Native cache lookup (Win `IShellItemImageFactory`,
-///     Mac `QLThumbnailGenerator`, Linux `Tumbler`).
-///   - Snippets stored as `<id>.png` already inside `imagesPath` — those
-///     are small enough to be rendered directly with `Image.file(content)`.
+/// The output file is always written under `imagesPath/<id>_thumb.png`.
+/// Snippets we own (paths already inside `imagesPath`) are skipped — they
+/// are small enough to render directly.
 class ThumbnailService {
   ThumbnailService({
     required this.imagesPath,
+    this.nativeProvider,
     this.maxSourceBytes = 25 * 1024 * 1024,
     this.maxDimension = 256,
   });
@@ -48,8 +52,15 @@ class ThumbnailService {
   /// generated thumb is written here and only here.
   final String imagesPath;
 
+  /// Optional OS-backed provider tried before the Dart fallback. When set,
+  /// the service also accepts video and audio items. When null, only image
+  /// items are processed and the Dart fallback is used.
+  final NativeThumbnailProvider? nativeProvider;
+
   /// Skip generation if the source file is bigger than this many bytes.
   /// Default 25 MB matches `maxImageProcessingSizeMB` in Settings (Fase 4).
+  /// Only applied to the Dart fallback; native providers handle their own
+  /// limits (most just read the OS cache).
   final int maxSourceBytes;
 
   /// Longest side of the generated thumbnail, in pixels.
@@ -62,7 +73,7 @@ class ThumbnailService {
   /// This method is safe to call from the UI thread: heavy work runs in
   /// a one-shot isolate via `Isolate.run`.
   Future<ThumbnailResult?> generateForItem(ClipboardItem item) async {
-    if (item.type != ClipboardContentType.image) return null;
+    if (!_isAcceptedType(item.type)) return null;
     if (item.content.isEmpty) return null;
 
     final paths = item.content.split('\n').where((s) => s.isNotEmpty).toList();
@@ -89,7 +100,7 @@ class ThumbnailService {
       AppLogger.warn('ThumbnailService: stat failed for $sourcePath: $e');
       return null;
     }
-    if (stat.size <= 0 || stat.size > maxSourceBytes) return null;
+    if (stat.size <= 0) return null;
 
     final outPath = p.join(imagesPath, '${item.id}_thumb.png');
 
@@ -101,6 +112,30 @@ class ThumbnailService {
       );
       return null;
     }
+
+    // 1) Try native provider first (cheap cache hit when available).
+    final native = nativeProvider;
+    if (native != null) {
+      final bytes = await _safeNativeRequest(native, sourcePath);
+      if (bytes != null && bytes.isNotEmpty) {
+        try {
+          await File(outPath).writeAsBytes(bytes, flush: true);
+          return ThumbnailResult(
+            thumbPath: outPath,
+            sourceModifiedAt: stat.modified.toUtc(),
+          );
+        } catch (e, s) {
+          AppLogger.warn(
+            'ThumbnailService: failed to write native thumb $outPath: $e\n$s',
+          );
+          // Fall through to Dart fallback (only useful for images).
+        }
+      }
+    }
+
+    // 2) Dart fallback: only images, only within size limit.
+    if (item.type != ClipboardContentType.image) return null;
+    if (stat.size > maxSourceBytes) return null;
 
     final bytes = await sourceFile.readAsBytes();
 
@@ -117,6 +152,32 @@ class ThumbnailService {
       thumbPath: outPath,
       sourceModifiedAt: stat.modified.toUtc(),
     );
+  }
+
+  bool _isAcceptedType(ClipboardContentType type) {
+    if (type == ClipboardContentType.image) return true;
+    if (nativeProvider == null) return false;
+    return type == ClipboardContentType.video ||
+        type == ClipboardContentType.audio;
+  }
+
+  /// Whether the service will attempt to generate a thumbnail for items
+  /// of [type]. Visible so callers (e.g. [ThumbnailQueue]) can short-
+  /// circuit before enqueuing.
+  bool acceptsType(ClipboardContentType type) => _isAcceptedType(type);
+
+  Future<Uint8List?> _safeNativeRequest(
+    NativeThumbnailProvider provider,
+    String path,
+  ) async {
+    try {
+      return await provider
+          .request(path, sizePx: maxDimension)
+          .timeout(const Duration(seconds: 2));
+    } catch (e, s) {
+      AppLogger.warn('ThumbnailService: native provider failed: $e\n$s');
+      return null;
+    }
   }
 
   /// Decode + downscale + encode PNG, all synchronous. Designed to run
