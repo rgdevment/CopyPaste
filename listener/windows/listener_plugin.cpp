@@ -283,7 +283,22 @@ void ListenerPlugin::OnClipboardChanged() {
       (GetTickCount64() - last_write_tick_) < kSelfWriteIgnoreMs) {
     return;
   }
-  if (!OpenClipboard(hwnd)) return;
+
+  // Retry OpenClipboard up to kOpenClipboardRetries times with backoff.
+  // Another app may hold the clipboard lock briefly; retrying avoids silent
+  // drops. On exhaustion, log and bail — the next WM_CLIPBOARDUPDATE retries.
+  bool opened = false;
+  for (int attempt = 0; attempt < kOpenClipboardRetries; ++attempt) {
+    if (OpenClipboard(hwnd)) {
+      opened = true;
+      break;
+    }
+    Sleep(kOpenClipboardBackoffMs[attempt]);
+  }
+  if (!opened) {
+    OutputDebugStringA("[ClipboardListener] OpenClipboard failed after retries\n");
+    return;
+  }
 
   flutter::EncodableMap event;
 
