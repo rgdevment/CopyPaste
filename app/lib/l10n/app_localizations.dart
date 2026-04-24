@@ -1459,30 +1459,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unlimited'**
   String get imagesQuotaOff;
-
-  /// Onboarding personalize section title
-  ///
-  /// In en, this message translates to:
-  /// **'Personalize quickly'**
-  String get onboardingPersonalizeTitle;
-
-  /// Onboarding personalize section hint
-  ///
-  /// In en, this message translates to:
-  /// **'You can change these any time from Settings.'**
-  String get onboardingPersonalizeHint;
-
-  /// Master toggle covering image+video+audio thumbs
-  ///
-  /// In en, this message translates to:
-  /// **'Generate thumbnails for media'**
-  String get onboardingThumbnailsToggle;
-
-  /// Onboarding broken-retention slider label
-  ///
-  /// In en, this message translates to:
-  /// **'Keep unavailable items for {days} days'**
-  String onboardingKeepBrokenLabel(int days);
 }
 
 class _AppLocalizationsDelegate

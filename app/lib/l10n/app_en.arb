@@ -619,20 +619,5 @@
   "@subtitleImagesQuota": { "description": "Quota subtitle" },
 
   "imagesQuotaOff": "Unlimited",
-  "@imagesQuotaOff": { "description": "Quota disabled label" },
-
-  "onboardingPersonalizeTitle": "Personalize quickly",
-  "@onboardingPersonalizeTitle": { "description": "Onboarding personalize section title" },
-
-  "onboardingPersonalizeHint": "You can change these any time from Settings.",
-  "@onboardingPersonalizeHint": { "description": "Onboarding personalize section hint" },
-
-  "onboardingThumbnailsToggle": "Generate thumbnails for media",
-  "@onboardingThumbnailsToggle": { "description": "Master toggle covering image+video+audio thumbs" },
-
-  "onboardingKeepBrokenLabel": "Keep unavailable items for {days} days",
-  "@onboardingKeepBrokenLabel": {
-    "description": "Onboarding broken-retention slider label",
-    "placeholders": { "days": { "type": "int" } }
-  }
+  "@imagesQuotaOff": { "description": "Quota disabled label" }
 }

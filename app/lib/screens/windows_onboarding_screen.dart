@@ -23,26 +23,7 @@ class WindowsOnboardingScreen extends StatefulWidget {
 }
 
 class _WindowsOnboardingScreenState extends State<WindowsOnboardingScreen> {
-  late bool _generateThumbs;
-  late int _keepBrokenDays;
-
-  @override
-  void initState() {
-    super.initState();
-    final c = widget.initialConfig;
-    _generateThumbs =
-        c.generateImageThumbnails ||
-        c.generateVideoThumbnails ||
-        c.generateAudioThumbnails;
-    _keepBrokenDays = c.keepBrokenItemsDays;
-  }
-
-  AppConfig _buildConfig() => widget.initialConfig.copyWith(
-    generateImageThumbnails: _generateThumbs,
-    generateVideoThumbnails: _generateThumbs,
-    generateAudioThumbnails: _generateThumbs,
-    keepBrokenItemsDays: _keepBrokenDays,
-  );
+  AppConfig _buildConfig() => widget.initialConfig;
 
   @override
   Widget build(BuildContext context) {
@@ -103,47 +84,6 @@ class _WindowsOnboardingScreenState extends State<WindowsOnboardingScreen> {
                   l.onboardingTrayHint,
                   style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Divider(color: cs.outlineVariant, height: 1),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l.onboardingPersonalizeTitle,
-                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l.onboardingPersonalizeHint,
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _OnboardingToggle(
-                  label: l.onboardingThumbnailsToggle,
-                  value: _generateThumbs,
-                  colorScheme: cs,
-                  onChanged: (v) => setState(() => _generateThumbs = v),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l.onboardingKeepBrokenLabel(_keepBrokenDays),
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ),
-                Slider(
-                  value: _keepBrokenDays.toDouble(),
-                  min: 0,
-                  max: 90,
-                  divisions: 18,
-                  label: '$_keepBrokenDays',
-                  onChanged: (v) => setState(() => _keepBrokenDays = v.round()),
                 ),
                 const SizedBox(height: 20),
                 Wrap(
