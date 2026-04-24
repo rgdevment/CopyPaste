@@ -519,6 +519,17 @@ class SqliteRepository implements IClipboardRepository {
   }
 
   @override
+  Future<List<String>> getThumbPaths() async {
+    final rows = await (_db.select(
+      _db.clipboardItems,
+    )..where((t) => t.thumbPath.isNotNull())).get();
+    return [
+      for (final r in rows)
+        if (r.thumbPath != null && r.thumbPath!.isNotEmpty) r.thumbPath!,
+    ];
+  }
+
+  @override
   Future<void> walCheckpoint() async {
     try {
       await _db.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');

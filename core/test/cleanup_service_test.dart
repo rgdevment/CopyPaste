@@ -21,6 +21,9 @@ class _FailingRepo implements IClipboardRepository {
   }
 
   @override
+  Future<List<String>> getThumbPaths() => Future.value([]);
+
+  @override
   Future<void> save(ClipboardItem item) => Future.value();
   @override
   Future<void> update(ClipboardItem item) => Future.value();
@@ -295,6 +298,9 @@ class _HybridRepo implements IClipboardRepository {
   @override
   Future<List<String>> getImagePaths() =>
       Future.error(Exception('forced getImagePaths error'));
+
+  @override
+  Future<List<String>> getThumbPaths() => _inner.getThumbPaths();
 
   @override
   Future<int> clearOldItems(int days, {bool excludePinned = true}) =>
