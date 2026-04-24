@@ -122,35 +122,6 @@ class _WindowsOnboardingScreenState extends State<WindowsOnboardingScreen> {
   }
 }
 
-class _OnboardingToggle extends StatelessWidget {
-  const _OnboardingToggle({
-    required this.label,
-    required this.value,
-    required this.colorScheme,
-    required this.onChanged,
-  });
-
-  final String label;
-  final bool value;
-  final ColorScheme colorScheme;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
-          ),
-        ),
-        Switch(value: value, onChanged: onChanged),
-      ],
-    );
-  }
-}
-
 class _PrivacyBadge extends StatelessWidget {
   const _PrivacyBadge({required this.label, required this.colorScheme});
 
