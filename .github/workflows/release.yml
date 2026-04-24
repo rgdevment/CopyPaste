@@ -131,6 +131,33 @@ jobs:
                   sed -i "s|ms-windows-store://pdp/?productid=PLACEHOLDER|ms-windows-store://pdp/?productid=${STORE_APP_ID}|" release-manifest.json
                   grep -q "productid=${STORE_APP_ID}" release-manifest.json
 
+            - name: Override latest, URLs and standard release notes
+              run: |
+                  TAG="${GITHUB_REF_NAME}"
+                  VERSION="${TAG#v}"
+                  REPO="${{ github.repository }}"
+                  RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
+
+                  SEVERITY=$(jq -r '.severity // "recommended"' release-manifest.json)
+                  SUMMARY_EN="CopyPaste ${TAG} (${SEVERITY} update). See release notes for details."
+                  SUMMARY_ES="CopyPaste ${TAG} (actualización ${SEVERITY}). Consulta las notas de la versión."
+
+                  jq \
+                    --arg version "$VERSION" \
+                    --arg url "$RELEASE_URL" \
+                    --arg sum_en "$SUMMARY_EN" \
+                    --arg sum_es "$SUMMARY_ES" \
+                    '.latest = $version
+                     | .releaseNotes.en.summary = $sum_en
+                     | .releaseNotes.en.url = $url
+                     | .releaseNotes.es.summary = $sum_es
+                     | .releaseNotes.es.url = $url' \
+                    release-manifest.json > release-manifest.tmp.json
+                  mv release-manifest.tmp.json release-manifest.json
+
+                  echo "--- Final manifest to publish ---"
+                  cat release-manifest.json
+
             - name: Sign manifest
               working-directory: app
               env:
