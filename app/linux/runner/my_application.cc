@@ -47,9 +47,6 @@ static void my_application_activate(GApplication* application) {
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
 
-  // Complete the XDG startup notification before any widget becomes visible
-  // so desktop environments don't show a "CopyPaste is starting…" cursor or
-  // launcher pulse when the window first maps via hotkey.
   gdk_notify_startup_complete();
 
   FlView* view = fl_view_new(project);

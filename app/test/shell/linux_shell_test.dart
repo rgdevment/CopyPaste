@@ -24,7 +24,7 @@ void main() {
           const EventChannel(eventChannelName),
           MockStreamHandler.inline(
             onListen: (_, sink) {
-              controller!.stream.listen(sink.success, onError: sink.error);
+              controller!.stream.listen(sink.success);
             },
             onCancel: (_) {},
           ),

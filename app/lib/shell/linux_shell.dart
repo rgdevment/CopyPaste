@@ -159,8 +159,6 @@ class LinuxShell {
     }
   }
 
-  /// Raises and focuses the GTK window using the X11 hotkey event timestamp,
-  /// bypassing GNOME's focus-stealing prevention.
   static Future<void> focusWindow() async {
     try {
       await _methodChannel.invokeMethod<bool>('focusWindow');

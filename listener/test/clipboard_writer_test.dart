@@ -238,8 +238,6 @@ void main() {
     });
   });
 
-  // ── macOS-specific methods ──────────────────────────────────────────────
-
   group('ClipboardWriter.captureFrontmostApp', () {
     test('returns bundle id on success', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
