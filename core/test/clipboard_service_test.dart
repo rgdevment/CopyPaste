@@ -467,6 +467,7 @@ void main() {
     test('cleans up image file when removing image item', () async {
       final imagesDir = Directory.systemTemp.createTempSync('svc_rm_img_');
       try {
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
         final imageFile = File(p.join(imagesDir.path, 'img.png'))
           ..writeAsBytesSync([137, 80, 78, 71]);
         final item = ClipboardItem(
@@ -476,12 +477,46 @@ void main() {
         );
         await repo.save(item);
 
-        await service.removeItem(item.id);
+        await svc.removeItem(item.id);
 
         expect(await repo.getById(item.id), isNull);
         expect(imageFile.existsSync(), isFalse);
+
+        svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('refuses to delete image file outside imagesPath', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_rm_safe_');
+      final externalDir = Directory.systemTemp.createTempSync('svc_rm_ext_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
+        // Simulates a dragged image whose content path is the user's own file
+        // (outside the app's images directory). Must never be deleted.
+        final externalFile = File(p.join(externalDir.path, 'user_photo.png'))
+          ..writeAsBytesSync([137, 80, 78, 71]);
+        final item = ClipboardItem(
+          content: externalFile.path,
+          type: ClipboardContentType.image,
+          contentHash: 'ext-hash',
+        );
+        await repo.save(item);
+
+        await svc.removeItem(item.id);
+
+        expect(await repo.getById(item.id), isNull);
+        expect(
+          externalFile.existsSync(),
+          isTrue,
+          reason: 'external user files must never be deleted',
+        );
+
+        svc.dispose();
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+        externalDir.deleteSync(recursive: true);
       }
     });
   });
