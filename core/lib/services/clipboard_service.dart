@@ -20,16 +20,20 @@ class ClipboardService {
     this._repository, {
     String? imagesPath,
     NativeThumbnailProvider? nativeThumbnailProvider,
+    bool Function(ClipboardContentType type)? isThumbnailTypeEnabled,
+    int Function()? getMaxImageBytes,
   }) : _imagesPath = imagesPath,
        _thumbnailService = (imagesPath != null && imagesPath.isNotEmpty)
            ? ThumbnailService(
                imagesPath: imagesPath,
                nativeProvider: nativeThumbnailProvider,
+               isTypeEnabled: isThumbnailTypeEnabled,
              )
            : null {
     _imageQueue = ImageProcessingQueue(
       repository: _repository,
       onItemUpdated: _onImageItemUpdated,
+      getMaxImageBytes: getMaxImageBytes,
     );
     final service = _thumbnailService;
     _thumbQueue = service == null
@@ -77,6 +81,14 @@ class ClipboardService {
   /// asked to refresh the thumb).
   void requestThumbnailRefresh(ClipboardItem item) {
     _thumbQueue?.enqueue(item, reason: ThumbnailJobReason.manualRefresh);
+  }
+
+  void updateThumbnailTypeGate(bool Function(ClipboardContentType type)? gate) {
+    _thumbnailService?.isTypeEnabled = gate;
+  }
+
+  void updateMaxImageBytesGate(int Function()? gate) {
+    _imageQueue.getMaxImageBytes = gate;
   }
 
   Stream<ClipboardItem> get onItemAdded => _itemAdded.stream;

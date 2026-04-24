@@ -175,4 +175,39 @@ void main() {
       );
     });
   });
+
+  group('ThumbnailService isTypeEnabled gate (PR #10)', () {
+    test('skips generation when callback returns false for the type', () async {
+      service.isTypeEnabled = (_) => false;
+      final src = File(p.join(externalDir.path, 'gated.png'))
+        ..writeAsBytesSync(makePng());
+
+      final result = await service.generateForItem(imageItem(src.path));
+
+      expect(result, isNull);
+      expect(service.acceptsType(ClipboardContentType.image), isFalse);
+    });
+
+    test('proceeds when callback returns true', () async {
+      service.isTypeEnabled = (_) => true;
+      final src = File(p.join(externalDir.path, 'allowed.png'))
+        ..writeAsBytesSync(makePng());
+
+      final result = await service.generateForItem(imageItem(src.path));
+
+      expect(result, isNotNull);
+      expect(service.acceptsType(ClipboardContentType.image), isTrue);
+    });
+
+    test('mutating the gate is honored on the next call', () async {
+      final src = File(p.join(externalDir.path, 'mutating.png'))
+        ..writeAsBytesSync(makePng());
+
+      service.isTypeEnabled = (_) => false;
+      expect(await service.generateForItem(imageItem(src.path)), isNull);
+
+      service.isTypeEnabled = (_) => true;
+      expect(await service.generateForItem(imageItem(src.path)), isNotNull);
+    });
+  });
 }

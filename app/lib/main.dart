@@ -119,6 +119,13 @@ Future<void> _run() async {
       repo,
       imagesPath: storage.imagesPath,
       nativeThumbnailProvider: nativeThumbProvider,
+      isThumbnailTypeEnabled: (t) => switch (t) {
+        ClipboardContentType.image => config.generateImageThumbnails,
+        ClipboardContentType.video => config.generateVideoThumbnails,
+        ClipboardContentType.audio => config.generateAudioThumbnails,
+        _ => true,
+      },
+      getMaxImageBytes: () => config.maxImageProcessingSizeMB * 1024 * 1024,
     )..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
 
     final cleanupService = CleanupService(
@@ -216,7 +223,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     _config = widget.config;
     _appWindow = AppWindow(
       onVisibilityChanged: _onWindowVisibilityChanged,
-      showInTaskbar: _config.showInTaskbar,
+      showInTaskbar: false,
       popupWidth: _config.popupWidth.toDouble(),
       popupHeight: _config.popupHeight.toDouble(),
     );
@@ -336,9 +343,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     try {
-      if (!Platform.isWindows || _config.showTrayIcon) {
-        await _trayIcon.init();
-      }
+      await _trayIcon.init();
     } catch (e) {
       AppLogger.error('trayIcon.init failed: $e');
     }
@@ -864,7 +869,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
           onSoftReset: _softReset,
           onHardReset: _hardReset,
           onSave: (newConfig, hotkeyChanged) async {
-            final oldShowTray = _config.showTrayIcon;
             setState(() => _config = newConfig);
             widget.cleanupService.updateRetentionCallback(
               () => newConfig.retentionDays,
@@ -872,13 +876,23 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             widget.cleanupService.updateKeepBrokenCallback(
               () => newConfig.keepBrokenItemsDays,
             );
+            widget.clipboardService.updateThumbnailTypeGate(
+              (t) => switch (t) {
+                ClipboardContentType.image => newConfig.generateImageThumbnails,
+                ClipboardContentType.video => newConfig.generateVideoThumbnails,
+                ClipboardContentType.audio => newConfig.generateAudioThumbnails,
+                _ => true,
+              },
+            );
+            widget.clipboardService.updateMaxImageBytesGate(
+              () => newConfig.maxImageProcessingSizeMB * 1024 * 1024,
+            );
             widget.clipboardService.pasteIgnoreWindowMs =
                 newConfig.duplicateIgnoreWindowMs;
             _appWindow.updatePopupSize(
               newConfig.popupWidth.toDouble(),
               newConfig.popupHeight.toDouble(),
             );
-            _appWindow.showInTaskbar = newConfig.showInTaskbar;
             if (Platform.isWindows || Platform.isMacOS) {
               await _appWindow.applyEffect(
                 dark: _isMicaDark(newConfig.themeMode),
@@ -891,13 +905,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 onHotkey: _onHotkey,
               );
               await _registerHotkeyWithFeedback();
-            }
-            if (Platform.isWindows && newConfig.showTrayIcon != oldShowTray) {
-              if (newConfig.showTrayIcon) {
-                await _trayIcon.init();
-              } else {
-                await _trayIcon.dispose();
-              }
             }
           },
         ),
@@ -941,7 +948,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   @override
   void onWindowRestore() {
-    if (!_config.showInTaskbar || !Platform.isWindows) return;
+    if (!Platform.isWindows) return;
     if (_programmaticRestore) {
       _programmaticRestore = false; // consume the flag on the first event
       return;
@@ -993,11 +1000,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (mounted) setState(() => _showPermissionGate = false);
   }
 
-  Future<void> _onOnboardingDismissed() async {
-    _config = _config.copyWith(
+  Future<void> _onOnboardingDismissed(AppConfig fromOnboarding) async {
+    _config = fromOnboarding.copyWith(
       hasSeenWindowsOnboarding: true,
+      hasCompletedOnboarding: true,
       lastRunVersion: AppConfig.appVersion,
     );
+    _applyOnboardingPersistence();
     unawaited(
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
@@ -1006,11 +1015,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     unawaited(_showStartupBalloon());
   }
 
-  Future<void> _onOnboardingGoSettings(BuildContext ctx) async {
-    _config = _config.copyWith(
+  Future<void> _onOnboardingGoSettings(
+    BuildContext ctx,
+    AppConfig fromOnboarding,
+  ) async {
+    _config = fromOnboarding.copyWith(
       hasSeenWindowsOnboarding: true,
+      hasCompletedOnboarding: true,
       lastRunVersion: AppConfig.appVersion,
     );
+    _applyOnboardingPersistence();
     unawaited(
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
@@ -1019,6 +1033,23 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     await Future<void>.delayed(const Duration(milliseconds: 150));
     if (ctx.mounted) await _openSettings(ctx);
     unawaited(_showStartupBalloon());
+  }
+
+  void _applyOnboardingPersistence() {
+    widget.cleanupService.updateKeepBrokenCallback(
+      () => _config.keepBrokenItemsDays,
+    );
+    widget.clipboardService.updateThumbnailTypeGate(
+      (t) => switch (t) {
+        ClipboardContentType.image => _config.generateImageThumbnails,
+        ClipboardContentType.video => _config.generateVideoThumbnails,
+        ClipboardContentType.audio => _config.generateAudioThumbnails,
+        _ => true,
+      },
+    );
+    widget.clipboardService.updateMaxImageBytesGate(
+      () => _config.maxImageProcessingSizeMB * 1024 * 1024,
+    );
   }
 
   Future<void> _restartApp() async {
@@ -1081,15 +1112,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             final currentLocale = Localizations.localeOf(ctx).toString();
             if (_lastTrayLocale != currentLocale) {
               _lastTrayLocale = currentLocale;
-              if (!Platform.isWindows || _config.showTrayIcon) {
-                unawaited(
-                  _trayIcon.rebuild(
-                    showHideLabel: l.trayShowHide,
-                    exitLabel: l.trayExit,
-                    tooltip: l.trayTooltip,
-                  ),
-                );
-              }
+              unawaited(
+                _trayIcon.rebuild(
+                  showHideLabel: l.trayShowHide,
+                  exitLabel: l.trayExit,
+                  tooltip: l.trayTooltip,
+                ),
+              );
             }
 
             if (_showWaylandUnsupported) {
@@ -1109,8 +1138,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               );
               return WindowsOnboardingScreen(
                 hotkey: binding.label(),
-                onDismiss: () => unawaited(_onOnboardingDismissed()),
-                onSettings: () => unawaited(_onOnboardingGoSettings(ctx)),
+                initialConfig: _config,
+                onDismiss: (updated) =>
+                    unawaited(_onOnboardingDismissed(updated)),
+                onSettings: (updated) =>
+                    unawaited(_onOnboardingGoSettings(ctx, updated)),
               );
             }
 

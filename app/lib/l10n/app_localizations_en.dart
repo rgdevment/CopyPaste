@@ -158,10 +158,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get buttonSave => 'Save';
 
   @override
+  String get buttonClose => 'Close';
+
+  @override
   String get buttonCancel => 'Cancel';
 
   @override
   String get buttonReset => 'Restore defaults';
+
+  @override
+  String get savingIndicator => 'Saving…';
+
+  @override
+  String get savedIndicator => 'Saved';
 
   @override
   String get menuPaste => 'Paste';
@@ -284,7 +293,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabGeneral => 'General';
 
   @override
-  String get tabBackupRestore => 'Backup';
+  String get tabBackupRestore => 'Backup & Support';
 
   @override
   String get tabAppearance => 'Appearance';
@@ -374,9 +383,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingClearSearchOnOpen => 'Clear search on open';
 
   @override
-  String get settingShowTrayIcon => 'Show tray icon';
-
-  @override
   String get settingRetentionDaysLabel => 'Retention days (0 = unlimited)';
 
   @override
@@ -397,10 +403,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitleClearSearchOnOpen => 'Clears the search text each time';
-
-  @override
-  String get subtitleShowTrayIcon =>
-      'Show icon in the menu bar. Use hotkey if hidden';
 
   @override
   String get subtitlePasteSpeed => 'Adjust restoration and paste timings';
@@ -612,13 +614,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingShowInTaskbar => 'Keep in taskbar';
-
-  @override
-  String get subtitleShowInTaskbar =>
-      'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.';
-
-  @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste runs in the background — press $hotkey or click the tray icon to open it anytime.';
   }
@@ -663,4 +658,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingDismissButton => 'Get started';
+
+  @override
+  String get tabCapture => 'Performance';
+
+  @override
+  String get tabMultimedia => 'Multimedia';
+
+  @override
+  String get tabCleanupPrivacy => 'Cleanup & Privacy';
+
+  @override
+  String get sectionMultimedia => 'MULTIMEDIA & THUMBNAILS';
+
+  @override
+  String get subtitleMultimedia =>
+      'Control how images, videos and audio files are previewed.';
+
+  @override
+  String get settingGenerateImageThumbnails => 'Generate image thumbnails';
+
+  @override
+  String get subtitleGenerateImageThumbnails =>
+      'Show preview tiles for copied or referenced images.';
+
+  @override
+  String get settingGenerateVideoThumbnails => 'Generate video thumbnails';
+
+  @override
+  String get subtitleGenerateVideoThumbnails =>
+      'Use the OS shell cache to show a preview frame for video files.';
+
+  @override
+  String get settingGenerateAudioThumbnails => 'Generate audio thumbnails';
+
+  @override
+  String get subtitleGenerateAudioThumbnails =>
+      'Show cover art when available for audio files.';
+
+  @override
+  String get settingMaxImageSize => 'Max image size for processing (MB)';
+
+  @override
+  String get subtitleMaxImageSize =>
+      'Larger images keep their original bitmap fallback and are not re-encoded.';
+
+  @override
+  String get sectionCleanupPrivacy => 'CLEANUP & PRIVACY';
+
+  @override
+  String get settingKeepBrokenItemsLabel => 'Keep unavailable items (days)';
+
+  @override
+  String get subtitleKeepBrokenItems =>
+      'Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.';
+
+  @override
+  String get onboardingPersonalizeTitle => 'Personalize quickly';
+
+  @override
+  String get onboardingPersonalizeHint =>
+      'You can change these any time from Settings.';
+
+  @override
+  String get onboardingThumbnailsToggle => 'Generate thumbnails for media';
+
+  @override
+  String onboardingKeepBrokenLabel(int days) {
+    return 'Keep unavailable items for $days days';
+  }
 }

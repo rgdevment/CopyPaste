@@ -1,3 +1,4 @@
+import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,8 +34,9 @@ void main() {
   Widget screen({VoidCallback? onDismiss, VoidCallback? onSettings}) =>
       WindowsOnboardingScreen(
         hotkey: hotkey,
-        onDismiss: onDismiss ?? () {},
-        onSettings: onSettings ?? () {},
+        initialConfig: const AppConfig(),
+        onDismiss: (_) => (onDismiss ?? () {})(),
+        onSettings: (_) => (onSettings ?? () {})(),
       );
 
   group('WindowsOnboardingScreen', () {
@@ -143,8 +145,9 @@ void main() {
         _wrap(
           WindowsOnboardingScreen(
             hotkey: customHotkey,
-            onDismiss: () {},
-            onSettings: () {},
+            initialConfig: const AppConfig(),
+            onDismiss: (_) {},
+            onSettings: (_) {},
           ),
         ),
       );

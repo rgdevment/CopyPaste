@@ -368,6 +368,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get buttonSave;
 
+  /// Generic Close button
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get buttonClose;
+
   /// Cancel button
   ///
   /// In en, this message translates to:
@@ -379,6 +385,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore defaults'**
   String get buttonReset;
+
+  /// Footer indicator while autosave is in flight
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get savingIndicator;
+
+  /// Footer indicator after autosave completes
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedIndicator;
 
   /// Context menu paste
   ///
@@ -623,7 +641,7 @@ abstract class AppLocalizations {
   /// Backup nav tab
   ///
   /// In en, this message translates to:
-  /// **'Backup'**
+  /// **'Backup & Support'**
   String get tabBackupRestore;
 
   /// Appearance nav tab
@@ -800,12 +818,6 @@ abstract class AppLocalizations {
   /// **'Clear search on open'**
   String get settingClearSearchOnOpen;
 
-  /// Show tray icon label (macOS only)
-  ///
-  /// In en, this message translates to:
-  /// **'Show tray icon'**
-  String get settingShowTrayIcon;
-
   /// Retention days label
   ///
   /// In en, this message translates to:
@@ -847,12 +859,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clears the search text each time'**
   String get subtitleClearSearchOnOpen;
-
-  /// Show tray icon subtitle (macOS only)
-  ///
-  /// In en, this message translates to:
-  /// **'Show icon in the menu bar. Use hotkey if hidden'**
-  String get subtitleShowTrayIcon;
 
   /// Paste speed subtitle
   ///
@@ -1220,18 +1226,6 @@ abstract class AppLocalizations {
   /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
   String linuxHotkeyConflictWarning(String requested, String fallback);
 
-  /// Label for the Windows taskbar visibility toggle in Settings
-  ///
-  /// In en, this message translates to:
-  /// **'Keep in taskbar'**
-  String get settingShowInTaskbar;
-
-  /// Subtitle for the Windows taskbar visibility toggle in Settings
-  ///
-  /// In en, this message translates to:
-  /// **'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.'**
-  String get subtitleShowInTaskbar;
-
   /// In-app snackbar shown inside the window when it is raised by a second launch attempt
   ///
   /// In en, this message translates to:
@@ -1303,6 +1297,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get started'**
   String get onboardingDismissButton;
+
+  /// Performance tab label (paste, perf, multimedia)
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get tabCapture;
+
+  /// Multimedia tab label (legacy, unused since tabs were merged)
+  ///
+  /// In en, this message translates to:
+  /// **'Multimedia'**
+  String get tabMultimedia;
+
+  /// Cleanup & privacy tab label
+  ///
+  /// In en, this message translates to:
+  /// **'Cleanup & Privacy'**
+  String get tabCleanupPrivacy;
+
+  /// Multimedia section header
+  ///
+  /// In en, this message translates to:
+  /// **'MULTIMEDIA & THUMBNAILS'**
+  String get sectionMultimedia;
+
+  /// Multimedia section subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Control how images, videos and audio files are previewed.'**
+  String get subtitleMultimedia;
+
+  /// Image thumbs toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate image thumbnails'**
+  String get settingGenerateImageThumbnails;
+
+  /// Image thumbs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Show preview tiles for copied or referenced images.'**
+  String get subtitleGenerateImageThumbnails;
+
+  /// Video thumbs toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate video thumbnails'**
+  String get settingGenerateVideoThumbnails;
+
+  /// Video thumbs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Use the OS shell cache to show a preview frame for video files.'**
+  String get subtitleGenerateVideoThumbnails;
+
+  /// Audio thumbs toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate audio thumbnails'**
+  String get settingGenerateAudioThumbnails;
+
+  /// Audio thumbs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Show cover art when available for audio files.'**
+  String get subtitleGenerateAudioThumbnails;
+
+  /// Max image size label
+  ///
+  /// In en, this message translates to:
+  /// **'Max image size for processing (MB)'**
+  String get settingMaxImageSize;
+
+  /// Max image size subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Larger images keep their original bitmap fallback and are not re-encoded.'**
+  String get subtitleMaxImageSize;
+
+  /// Cleanup & privacy section header
+  ///
+  /// In en, this message translates to:
+  /// **'CLEANUP & PRIVACY'**
+  String get sectionCleanupPrivacy;
+
+  /// Days to keep broken external refs
+  ///
+  /// In en, this message translates to:
+  /// **'Keep unavailable items (days)'**
+  String get settingKeepBrokenItemsLabel;
+
+  /// Broken-items subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.'**
+  String get subtitleKeepBrokenItems;
+
+  /// Onboarding personalize section title
+  ///
+  /// In en, this message translates to:
+  /// **'Personalize quickly'**
+  String get onboardingPersonalizeTitle;
+
+  /// Onboarding personalize section hint
+  ///
+  /// In en, this message translates to:
+  /// **'You can change these any time from Settings.'**
+  String get onboardingPersonalizeHint;
+
+  /// Master toggle covering image+video+audio thumbs
+  ///
+  /// In en, this message translates to:
+  /// **'Generate thumbnails for media'**
+  String get onboardingThumbnailsToggle;
+
+  /// Onboarding broken-retention slider label
+  ///
+  /// In en, this message translates to:
+  /// **'Keep unavailable items for {days} days'**
+  String onboardingKeepBrokenLabel(int days);
 }
 
 class _AppLocalizationsDelegate

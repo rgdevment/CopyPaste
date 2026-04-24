@@ -1,4 +1,5 @@
 // coverage:ignore-file
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -45,7 +46,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   int _selectedTab = 0;
-  bool _hasChanges = false;
+  Timer? _autosaveTimer;
+  bool _saving = false;
+  bool _savedRecently = false;
+  static const _autosaveDebounce = Duration(milliseconds: 350);
 
   late String _preferredLanguage;
   late bool _runOnStartup;
@@ -81,8 +85,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _hideOnDeactivate;
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
-  late bool _showTrayIcon;
-  late bool _showInTaskbar;
+
+  // Cleanup & privacy
+  late int _keepBrokenItemsDays;
+
+  // Multimedia
+  late bool _generateImageThumbnails;
+  late bool _generateVideoThumbnails;
+  late bool _generateAudioThumbnails;
+  late int _maxImageProcessingSizeMB;
 
   bool get _hotkeyChanged =>
       _hotkeyCtrl != widget.config.hotkeyUseCtrl ||
@@ -120,12 +131,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _hideOnDeactivate = widget.config.hideOnDeactivate;
     _resetScrollOnShow = widget.config.resetScrollOnShow;
     _resetSearchOnShow = widget.config.resetSearchOnShow;
-    _showTrayIcon = widget.config.showTrayIcon;
-    _showInTaskbar = widget.config.showInTaskbar;
+    _keepBrokenItemsDays = widget.config.keepBrokenItemsDays;
+    _generateImageThumbnails = widget.config.generateImageThumbnails;
+    _generateVideoThumbnails = widget.config.generateVideoThumbnails;
+    _generateAudioThumbnails = widget.config.generateAudioThumbnails;
+    _maxImageProcessingSizeMB = widget.config.maxImageProcessingSizeMB;
   }
 
   void _markChanged() {
-    if (!_hasChanges) setState(() => _hasChanges = true);
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(_autosaveDebounce, _save);
+  }
+
+  @override
+  void dispose() {
+    if (_autosaveTimer?.isActive ?? false) {
+      _autosaveTimer!.cancel();
+      // Persist any pending change synchronously-ish before tearing down.
+      unawaited(_save());
+    }
+    super.dispose();
   }
 
   AppConfig _buildConfig() => widget.config.copyWith(
@@ -155,16 +180,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     hideOnDeactivate: _hideOnDeactivate,
     resetScrollOnShow: _resetScrollOnShow,
     resetSearchOnShow: _resetSearchOnShow,
-    showTrayIcon: _showTrayIcon,
-    showInTaskbar: _showInTaskbar,
+    keepBrokenItemsDays: _keepBrokenItemsDays,
+    generateImageThumbnails: _generateImageThumbnails,
+    generateVideoThumbnails: _generateVideoThumbnails,
+    generateAudioThumbnails: _generateAudioThumbnails,
+    maxImageProcessingSizeMB: _maxImageProcessingSizeMB,
   );
 
   Future<void> _save() async {
-    final hotkeyChanged = _hotkeyChanged;
-    final newConfig = _buildConfig();
-    await newConfig.save(widget.configPath);
-    await StartupHelper.apply(_runOnStartup, fromUserAction: true);
-    await widget.onSave(newConfig, hotkeyChanged);
+    _autosaveTimer?.cancel();
+    if (_saving) {
+      _autosaveTimer = Timer(_autosaveDebounce, _save);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _saving = true);
+    try {
+      final hotkeyChanged = _hotkeyChanged;
+      final newConfig = _buildConfig();
+      await newConfig.save(widget.configPath);
+      await StartupHelper.apply(_runOnStartup, fromUserAction: true);
+      await widget.onSave(newConfig, hotkeyChanged);
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _savedRecently = true;
+      });
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        setState(() => _savedRecently = false);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+    }
   }
 
   void _resetToDefaults() {
@@ -195,10 +247,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _hideOnDeactivate = d.hideOnDeactivate;
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;
-      _showTrayIcon = d.showTrayIcon;
-      _showInTaskbar = d.showInTaskbar;
-      _hasChanges = true;
+      _keepBrokenItemsDays = d.keepBrokenItemsDays;
+      _generateImageThumbnails = d.generateImageThumbnails;
+      _generateVideoThumbnails = d.generateVideoThumbnails;
+      _generateAudioThumbnails = d.generateAudioThumbnails;
+      _maxImageProcessingSizeMB = d.maxImageProcessingSizeMB;
     });
+    _markChanged();
   }
 
   String _hotkeyString([String separator = '+']) {
@@ -360,32 +415,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => setState(() => _selectedTab = 0),
           ),
           _NavItem(
-            icon: Icons.archive_rounded,
-            label: l.tabBackupRestore,
+            icon: Icons.keyboard_rounded,
+            label: l.tabShortcuts,
             selected: _selectedTab == 1,
             colors: colors,
             onTap: () => setState(() => _selectedTab = 1),
           ),
           _NavItem(
-            icon: Icons.palette_rounded,
-            label: l.tabAppearance,
+            icon: Icons.speed_rounded,
+            label: l.tabCapture,
             selected: _selectedTab == 2,
             colors: colors,
             onTap: () => setState(() => _selectedTab = 2),
           ),
           _NavItem(
-            icon: Icons.keyboard_rounded,
-            label: l.tabShortcuts,
+            icon: Icons.cleaning_services_rounded,
+            label: l.tabCleanupPrivacy,
             selected: _selectedTab == 3,
             colors: colors,
             onTap: () => setState(() => _selectedTab = 3),
           ),
           _NavItem(
-            icon: Icons.info_outline_rounded,
-            label: l.tabAbout,
+            icon: Icons.archive_rounded,
+            label: l.tabBackupRestore,
             selected: _selectedTab == 4,
             colors: colors,
             onTap: () => setState(() => _selectedTab = 4),
+          ),
+          _NavItem(
+            icon: Icons.info_outline_rounded,
+            label: l.tabAbout,
+            selected: _selectedTab == 5,
+            colors: colors,
+            onTap: () => setState(() => _selectedTab = 5),
           ),
         ],
       ),
@@ -395,10 +457,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildContent(AppThemeData theme, AppThemeColorScheme colors) {
     return switch (_selectedTab) {
       0 => _buildGeneralTab(colors),
-      1 => _buildBackupTab(colors),
-      2 => _buildAppearanceTab(colors),
-      3 => _buildShortcutsTab(colors),
-      4 => _buildAboutTab(colors),
+      1 => _buildShortcutsTab(colors),
+      2 => _buildPerformanceTab(colors),
+      3 => _buildCleanupTab(colors),
+      4 => _buildBackupTab(colors),
+      5 => _buildAboutTab(colors),
       _ => const SizedBox.shrink(),
     };
   }
@@ -455,6 +518,457 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
 
+        _SectionCard(
+          colors: colors,
+          icon: Icons.category_rounded,
+          title: l.sectionCategories,
+          subtitle: l.subtitleCategories,
+          children: [
+            ..._colorEntries(l).map(
+              (e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: e.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _CompactTextField(
+                        initialValue: _colorLabels[e.key] ?? e.defaultName,
+                        colors: colors,
+                        onChanged: (v) {
+                          _colorLabels[e.key] = v;
+                          _markChanged();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        _SectionCard(
+          colors: colors,
+          icon: Icons.aspect_ratio_rounded,
+          title: l.sectionAppearance,
+          children: [
+            _ThemeRow(
+              label: l.settingTheme,
+              value: _themeMode,
+              colors: colors,
+              options: [
+                (value: 'light', label: l.themeLight),
+                (value: 'dark', label: l.themeDark),
+                (value: 'auto', label: l.themeAuto),
+              ],
+              onChanged: (v) {
+                setState(() => _themeMode = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingPanelWidth,
+              value: _popupWidth,
+              min: 300,
+              max: 600,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _popupWidth = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingPanelHeight,
+              value: _popupHeight,
+              min: 300,
+              max: 800,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _popupHeight = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingLinesCollapsed,
+              value: _cardMinLines,
+              min: 1,
+              max: 10,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _cardMinLines = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingLinesExpanded,
+              value: _cardMaxLines,
+              min: 1,
+              max: 20,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _cardMaxLines = v);
+                _markChanged();
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildPerformanceTab(AppThemeColorScheme colors) {
+    final l = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _SectionCard(
+          colors: colors,
+          icon: Icons.speed_rounded,
+          title: l.sectionPerformance,
+          children: [
+            _NumberRow(
+              label: l.settingItemsPerPage,
+              value: _pageSize,
+              min: 5,
+              max: 100,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _pageSize = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingMemoryLimit,
+              value: _maxItemsBeforeCleanup,
+              min: 20,
+              max: 500,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _maxItemsBeforeCleanup = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingScrollThreshold,
+              value: _scrollLoadThreshold,
+              min: 50,
+              max: 500,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _scrollLoadThreshold = v);
+                _markChanged();
+              },
+            ),
+          ],
+        ),
+
+        _SectionCard(
+          colors: colors,
+          icon: Icons.content_paste_go_rounded,
+          title: l.sectionPaste,
+          subtitle: l.subtitlePastePreset,
+          children: [
+            _SettingsRow(
+              label: l.settingPasteSpeed,
+              subtitle: l.subtitlePasteSpeed,
+              colors: colors,
+              trailing: _PresetDropdown(
+                value: _pastePresetName,
+                items: const ['Fast', 'Normal', 'Safe', 'Slow'],
+                colors: colors,
+                onChanged: _applyPastePreset,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colors.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: colors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                '\u26a0\ufe0f Fast: May cause strange behavior in heavy apps.\n'
+                '\u26a0\ufe0f Slow: May feel like a failure on modern computers.',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        _SectionCard(
+          colors: colors,
+          icon: Icons.image_rounded,
+          title: l.sectionMultimedia,
+          subtitle: l.subtitleMultimedia,
+          children: [
+            _ToggleRow(
+              label: l.settingGenerateImageThumbnails,
+              subtitle: l.subtitleGenerateImageThumbnails,
+              value: _generateImageThumbnails,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _generateImageThumbnails = v);
+                _markChanged();
+              },
+            ),
+            _ToggleRow(
+              label: l.settingGenerateVideoThumbnails,
+              subtitle: l.subtitleGenerateVideoThumbnails,
+              value: _generateVideoThumbnails,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _generateVideoThumbnails = v);
+                _markChanged();
+              },
+            ),
+            _ToggleRow(
+              label: l.settingGenerateAudioThumbnails,
+              subtitle: l.subtitleGenerateAudioThumbnails,
+              value: _generateAudioThumbnails,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _generateAudioThumbnails = v);
+                _markChanged();
+              },
+            ),
+            const SizedBox(height: 8),
+            _NumberRow(
+              label: l.settingMaxImageSize,
+              value: _maxImageProcessingSizeMB,
+              min: 1,
+              max: 200,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _maxImageProcessingSizeMB = v);
+                _markChanged();
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l.subtitleMaxImageSize,
+              style: TextStyle(fontSize: 10.5, color: colors.onSurfaceMuted),
+            ),
+          ],
+        ),
+
+        _SectionCard(
+          colors: colors,
+          icon: Icons.toggle_on_rounded,
+          title: l.sectionBehavior,
+          children: [
+            _ToggleRow(
+              label: l.settingHideOnDeactivate,
+              subtitle: l.subtitleHideOnDeactivate,
+              value: _hideOnDeactivate,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _hideOnDeactivate = v);
+                _markChanged();
+              },
+            ),
+            _ToggleRow(
+              label: l.settingScrollToTopOnOpen,
+              subtitle: l.subtitleScrollToTopOnOpen,
+              value: _resetScrollOnShow,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _resetScrollOnShow = v);
+                _markChanged();
+              },
+            ),
+            _ToggleRow(
+              label: l.settingClearSearchOnOpen,
+              subtitle: l.subtitleClearSearchOnOpen,
+              value: _resetSearchOnShow,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _resetSearchOnShow = v);
+                _markChanged();
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildCleanupTab(AppThemeColorScheme colors) {
+    final l = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _SectionCard(
+          colors: colors,
+          icon: Icons.cleaning_services_rounded,
+          title: l.sectionCleanupPrivacy,
+          children: [
+            _NumberRow(
+              label: l.settingRetentionDaysLabel,
+              value: _retentionDays,
+              min: 0,
+              max: 365,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _retentionDays = v);
+                _markChanged();
+              },
+            ),
+            _NumberRow(
+              label: l.settingKeepBrokenItemsLabel,
+              value: _keepBrokenItemsDays,
+              min: 0,
+              max: 365,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _keepBrokenItemsDays = v);
+                _markChanged();
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l.subtitleKeepBrokenItems,
+              style: TextStyle(fontSize: 10.5, color: colors.onSurfaceMuted),
+            ),
+            const SizedBox(height: 12),
+            _ActionTile(
+              icon: Icons.delete_sweep_outlined,
+              label: l.settingClearHistoryLabel,
+              colors: colors,
+              onTap: _clearHistory,
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.restart_alt_rounded,
+          title: l.sectionReset,
+          children: [
+            _ActionTile(
+              icon: Icons.settings_backup_restore_rounded,
+              label: l.resetSoftLabel,
+              subtitle: l.resetSoftSubtitle,
+              colors: colors,
+              onTap: _softReset,
+            ),
+            _ActionTile(
+              icon: Icons.delete_forever_rounded,
+              label: l.resetHardLabel,
+              subtitle: l.resetHardSubtitle,
+              colors: colors,
+              onTap: _hardReset,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildBackupTab(AppThemeColorScheme colors) {
+    final l = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _SectionCard(
+          colors: colors,
+          icon: Icons.archive_rounded,
+          title: l.sectionBackupRestore,
+          subtitle: l.subtitleBackup,
+          children: [
+            if (_lastBackupDateUtc != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  l.backupLastDate(_formatDate(_lastBackupDateUtc!)),
+                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  l.backupNone,
+                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
+                ),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionTile(
+                    icon: Icons.backup_rounded,
+                    label: l.backupCreateLabel,
+                    colors: colors,
+                    onTap: _createBackup,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionTile(
+                    icon: Icons.restore_rounded,
+                    label: l.backupRestoreLabel,
+                    colors: colors,
+                    onTap: _restoreBackup,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        _SectionCard(
+          colors: colors,
+          icon: Icons.help_outline_rounded,
+          title: l.sectionSupport,
+          children: [
+            _ActionTile(
+              icon: Icons.download_rounded,
+              label: l.supportExportLogs,
+              subtitle: l.supportExportLogsSubtitle,
+              colors: colors,
+              onTap: _exportLogs,
+            ),
+            _ActionTile(
+              icon: Icons.folder_open_rounded,
+              label: l.supportOpenLogsFolder,
+              subtitle: l.supportOpenLogsFolderSubtitle,
+              colors: colors,
+              onTap: _openLogsFolder,
+            ),
+            _ActionTile(
+              icon: Icons.bug_report_outlined,
+              label: l.supportGitHub,
+              colors: colors,
+              onTap: () =>
+                  _openUrl('https://github.com/rgdevment/CopyPaste/issues'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShortcutsTab(AppThemeColorScheme colors) {
+    final l = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
         _SectionCard(
           colors: colors,
           icon: Icons.keyboard_rounded,
@@ -522,214 +1036,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-
-        _SectionCard(
-          colors: colors,
-          icon: Icons.category_rounded,
-          title: l.sectionCategories,
-          subtitle: l.subtitleCategories,
-          children: [
-            ..._colorEntries(l).map(
-              (e) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: e.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _CompactTextField(
-                        initialValue: _colorLabels[e.key] ?? e.defaultName,
-                        colors: colors,
-                        onChanged: (v) {
-                          _colorLabels[e.key] = v;
-                          _markChanged();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        _SectionCard(
-          colors: colors,
-          icon: Icons.speed_rounded,
-          title: l.sectionPerformance,
-          children: [
-            _NumberRow(
-              label: l.settingItemsPerPage,
-              value: _pageSize,
-              min: 5,
-              max: 100,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _pageSize = v);
-                _markChanged();
-              },
-            ),
-            _NumberRow(
-              label: l.settingMemoryLimit,
-              value: _maxItemsBeforeCleanup,
-              min: 20,
-              max: 500,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _maxItemsBeforeCleanup = v);
-                _markChanged();
-              },
-            ),
-            _NumberRow(
-              label: l.settingScrollThreshold,
-              value: _scrollLoadThreshold,
-              min: 50,
-              max: 500,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _scrollLoadThreshold = v);
-                _markChanged();
-              },
-            ),
-          ],
-        ),
-
-        _SectionCard(
-          colors: colors,
-          icon: Icons.storage_rounded,
-          title: l.sectionStorage,
-          children: [
-            _NumberRow(
-              label: l.settingRetentionDaysLabel,
-              value: _retentionDays,
-              min: 0,
-              max: 365,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _retentionDays = v);
-                _markChanged();
-              },
-            ),
-            const SizedBox(height: 8),
-            _ActionTile(
-              icon: Icons.delete_sweep_outlined,
-              label: l.settingClearHistoryLabel,
-              colors: colors,
-              onTap: _clearHistory,
-            ),
-          ],
-        ),
-
-        _SectionCard(
-          colors: colors,
-          icon: Icons.content_paste_go_rounded,
-          title: l.sectionPaste,
-          subtitle: l.subtitlePastePreset,
-          children: [
-            _SettingsRow(
-              label: l.settingPasteSpeed,
-              subtitle: l.subtitlePasteSpeed,
-              colors: colors,
-              trailing: _PresetDropdown(
-                value: _pastePresetName,
-                items: const ['Fast', 'Normal', 'Safe', 'Slow'],
-                colors: colors,
-                onChanged: _applyPastePreset,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: colors.warning.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: colors.warning.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                '\u26a0\ufe0f Fast: May cause strange behavior in heavy apps.\n'
-                '\u26a0\ufe0f Slow: May feel like a failure on modern computers.',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  Widget _buildBackupTab(AppThemeColorScheme colors) {
-    final l = AppLocalizations.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        _SectionCard(
-          colors: colors,
-          icon: Icons.archive_rounded,
-          title: l.sectionBackupRestore,
-          subtitle: l.subtitleBackup,
-          children: [
-            if (_lastBackupDateUtc != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  l.backupLastDate(_formatDate(_lastBackupDateUtc!)),
-                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  l.backupNone,
-                  style: TextStyle(fontSize: 11, color: colors.onSurfaceMuted),
-                ),
-              ),
-            Row(
-              children: [
-                Expanded(
-                  child: _ActionTile(
-                    icon: Icons.backup_rounded,
-                    label: l.backupCreateLabel,
-                    colors: colors,
-                    onTap: _createBackup,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ActionTile(
-                    icon: Icons.restore_rounded,
-                    label: l.backupRestoreLabel,
-                    colors: colors,
-                    onTap: _restoreBackup,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildShortcutsTab(AppThemeColorScheme colors) {
-    final l = AppLocalizations.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
         _SectionCard(
           colors: colors,
           icon: Icons.keyboard_rounded,
@@ -785,161 +1091,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               keys: 'Shift+Tab',
               description: l.shortcutFocusSearch,
               colors: colors,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAppearanceTab(AppThemeColorScheme colors) {
-    final l = AppLocalizations.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        _SectionCard(
-          colors: colors,
-          icon: Icons.aspect_ratio_rounded,
-          title: l.sectionAppearance,
-          children: [
-            _ThemeRow(
-              label: l.settingTheme,
-              value: _themeMode,
-              colors: colors,
-              options: [
-                (value: 'light', label: l.themeLight),
-                (value: 'dark', label: l.themeDark),
-                (value: 'auto', label: l.themeAuto),
-              ],
-              onChanged: (v) {
-                setState(() => _themeMode = v);
-                _markChanged();
-              },
-            ),
-            _NumberRow(
-              label: l.settingPanelWidth,
-              value: _popupWidth,
-              min: 300,
-              max: 600,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _popupWidth = v);
-                _markChanged();
-              },
-            ),
-            _NumberRow(
-              label: l.settingPanelHeight,
-              value: _popupHeight,
-              min: 300,
-              max: 800,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _popupHeight = v);
-                _markChanged();
-              },
-            ),
-            _NumberRow(
-              label: l.settingLinesCollapsed,
-              value: _cardMinLines,
-              min: 1,
-              max: 10,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _cardMinLines = v);
-                _markChanged();
-              },
-            ),
-            _NumberRow(
-              label: l.settingLinesExpanded,
-              value: _cardMaxLines,
-              min: 1,
-              max: 20,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _cardMaxLines = v);
-                _markChanged();
-              },
-            ),
-          ],
-        ),
-        _SectionCard(
-          colors: colors,
-          icon: Icons.toggle_on_rounded,
-          title: l.sectionBehavior,
-          children: [
-            _ToggleRow(
-              label: l.settingHideOnDeactivate,
-              subtitle: l.subtitleHideOnDeactivate,
-              value: _hideOnDeactivate,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _hideOnDeactivate = v);
-                _markChanged();
-              },
-            ),
-            _ToggleRow(
-              label: l.settingScrollToTopOnOpen,
-              subtitle: l.subtitleScrollToTopOnOpen,
-              value: _resetScrollOnShow,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _resetScrollOnShow = v);
-                _markChanged();
-              },
-            ),
-            _ToggleRow(
-              label: l.settingClearSearchOnOpen,
-              subtitle: l.subtitleClearSearchOnOpen,
-              value: _resetSearchOnShow,
-              colors: colors,
-              onChanged: (v) {
-                setState(() => _resetSearchOnShow = v);
-                _markChanged();
-              },
-            ),
-            if (Platform.isWindows)
-              _ToggleRow(
-                label: l.settingShowInTaskbar,
-                subtitle: l.subtitleShowInTaskbar,
-                value: _showInTaskbar,
-                colors: colors,
-                onChanged: (v) {
-                  setState(() => _showInTaskbar = v);
-                  _markChanged();
-                },
-              ),
-            if (Platform.isWindows)
-              _ToggleRow(
-                label: l.settingShowTrayIcon,
-                subtitle: l.subtitleShowTrayIcon,
-                value: _showTrayIcon,
-                colors: colors,
-                onChanged: (v) {
-                  setState(() => _showTrayIcon = v);
-                  _markChanged();
-                },
-              ),
-          ],
-        ),
-
-        _SectionCard(
-          colors: colors,
-          icon: Icons.restart_alt_rounded,
-          title: l.sectionReset,
-          children: [
-            _ActionTile(
-              icon: Icons.settings_backup_restore_rounded,
-              label: l.resetSoftLabel,
-              subtitle: l.resetSoftSubtitle,
-              colors: colors,
-              onTap: _softReset,
-            ),
-            _ActionTile(
-              icon: Icons.delete_forever_rounded,
-              label: l.resetHardLabel,
-              subtitle: l.resetHardSubtitle,
-              colors: colors,
-              onTap: _hardReset,
             ),
           ],
         ),
@@ -1062,34 +1213,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-        _SectionCard(
-          colors: colors,
-          icon: Icons.help_outline_rounded,
-          title: l.sectionSupport,
-          children: [
-            _ActionTile(
-              icon: Icons.download_rounded,
-              label: l.supportExportLogs,
-              subtitle: l.supportExportLogsSubtitle,
-              colors: colors,
-              onTap: _exportLogs,
-            ),
-            _ActionTile(
-              icon: Icons.folder_open_rounded,
-              label: l.supportOpenLogsFolder,
-              subtitle: l.supportOpenLogsFolderSubtitle,
-              colors: colors,
-              onTap: _openLogsFolder,
-            ),
-            _ActionTile(
-              icon: Icons.bug_report_outlined,
-              label: l.supportGitHub,
-              colors: colors,
-              onTap: () =>
-                  _openUrl('https://github.com/rgdevment/CopyPaste/issues'),
-            ),
-          ],
-        ),
         Padding(
           padding: const EdgeInsets.only(top: 12, left: 4),
           child: Text(
@@ -1123,30 +1246,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(fontSize: 10, color: colors.onSurfaceMuted),
               ),
             ),
+          if (_saving)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Text(
+                l.savingIndicator,
+                style: TextStyle(fontSize: 10, color: colors.onSurfaceMuted),
+              ),
+            )
+          else if (_savedRecently)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Text(
+                l.savedIndicator,
+                style: TextStyle(fontSize: 10, color: colors.onSurfaceMuted),
+              ),
+            ),
           _SmallButton(
-            label: l.buttonCancel,
+            label: l.buttonClose,
             colors: colors,
             onTap: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(width: 8),
-          _SmallButton(
-            label: l.buttonSave,
-            colors: colors,
-            primary: true,
-            onTap: _hasChanges
-                ? () async {
-                    try {
-                      await _save();
-                      if (mounted) Navigator.of(context).pop();
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Save failed: $e')),
-                        );
-                      }
-                    }
-                  }
-                : null,
           ),
         ],
       ),
@@ -2266,17 +2385,11 @@ class _ShortcutRow extends StatelessWidget {
 }
 
 class _SmallButton extends StatefulWidget {
-  const _SmallButton({
-    required this.label,
-    required this.colors,
-    this.onTap,
-    this.primary = false,
-  });
+  const _SmallButton({required this.label, required this.colors, this.onTap});
 
   final String label;
   final AppThemeColorScheme colors;
   final VoidCallback? onTap;
-  final bool primary;
 
   @override
   State<_SmallButton> createState() => _SmallButtonState();
@@ -2298,15 +2411,9 @@ class _SmallButtonState extends State<_SmallButton> {
           duration: const Duration(milliseconds: 100),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: widget.primary
-                ? (enabled
-                      ? (_hovering
-                            ? widget.colors.primary.withValues(alpha: 0.9)
-                            : widget.colors.primary)
-                      : widget.colors.primary.withValues(alpha: 0.4))
-                : (_hovering
-                      ? widget.colors.onSurface.withValues(alpha: 0.08)
-                      : Colors.transparent),
+            color: _hovering
+                ? widget.colors.onSurface.withValues(alpha: 0.08)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
@@ -2314,9 +2421,7 @@ class _SmallButtonState extends State<_SmallButton> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: widget.primary
-                  ? widget.colors.onPrimary
-                  : widget.colors.onSurface,
+              color: widget.colors.onSurface,
             ),
           ),
         ),

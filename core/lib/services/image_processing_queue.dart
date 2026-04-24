@@ -39,6 +39,7 @@ class ImageProcessingQueue {
     required IClipboardRepository repository,
     this.jobTimeout = const Duration(seconds: 10),
     this.onItemUpdated,
+    this.getMaxImageBytes,
   }) : _repository = repository;
 
   final IClipboardRepository _repository;
@@ -47,6 +48,8 @@ class ImageProcessingQueue {
   /// Called on the main isolate after a job completes and the repository
   /// entry has been updated with the final PNG path and dimensions.
   final void Function(ClipboardItem item)? onItemUpdated;
+
+  int Function()? getMaxImageBytes;
 
   final _queue = <_ImageJob>[];
   bool _processing = false;
@@ -63,6 +66,14 @@ class ImageProcessingQueue {
     final bytes = imageBytes is Uint8List
         ? imageBytes
         : Uint8List.fromList(imageBytes);
+    final maxBytes = getMaxImageBytes?.call() ?? 0;
+    if (maxBytes > 0 && bytes.length > maxBytes) {
+      AppLogger.info(
+        '[ImageQueue] skip ${item.id}: ${bytes.length}B exceeds cap ${maxBytes}B'
+        ' (BMP fallback kept)',
+      );
+      return;
+    }
     _queue.add(
       _ImageJob(item: item, imageBytes: bytes, imagesPath: imagesPath),
     );
