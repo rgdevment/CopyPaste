@@ -114,6 +114,8 @@ Future<void> _run() async {
     final repo = SqliteRepository.fromPath(storage.databasePath);
     final NativeThumbnailProvider? nativeThumbProvider = Platform.isWindows
         ? WindowsNativeThumbnailProvider()
+        : Platform.isMacOS
+        ? MacOSNativeThumbnailProvider()
         : null;
     final clipboardService = ClipboardService(
       repo,

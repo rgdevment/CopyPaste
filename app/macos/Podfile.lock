@@ -92,7 +92,7 @@ SPEC CHECKSUMS:
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
   hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
-  listener: 3c94459a76469955ba115fcb179079e9202123ff
+  listener: cccbc07a6a40a6acf872fd26216410100fd83104
   macos_window_utils: 23f54331a0fd51eea9e0ed347253bf48fd379d1d
   screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
   Sparkle: f4355f9ebbe9b7d932df4980d70f13922ac97b2a

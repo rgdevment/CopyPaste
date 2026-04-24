@@ -2,6 +2,7 @@ import Cocoa
 import FlutterMacOS
 import AVFoundation
 import ApplicationServices
+import QuickLookThumbnailing
 
 public class ListenerPlugin: NSObject, FlutterPlugin {
 
@@ -38,6 +39,8 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
       handleSetClipboard(call: call, result: result)
     case "getMediaInfo":
       handleGetMediaInfo(call: call, result: result)
+    case "getNativeThumbnail":
+      handleGetNativeThumbnail(call: call, result: result)
     case "captureFrontmostApp":
       result(NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
     case "activateAndPaste":
@@ -519,6 +522,89 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     }
 
     result(info.isEmpty ? nil : info)
+  }
+
+  // MARK: - Native Thumbnails (QuickLook)
+
+  private static let nativeThumbTimeoutSec: TimeInterval = 2.0
+  private static let nativeThumbBarrier = DispatchQueue(label: "copypaste.nativeThumb.barrier")
+
+  private final class OnceFlag { var done = false }
+
+  private func handleGetNativeThumbnail(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let path = args["path"] as? String,
+          !path.isEmpty,
+          let sizePx = args["sizePx"] as? Int,
+          sizePx > 0 else {
+      result(nil)
+      return
+    }
+
+    let url = URL(fileURLWithPath: path)
+    guard FileManager.default.fileExists(atPath: url.path) else {
+      result(nil)
+      return
+    }
+
+    // Dart side already pre-scales by devicePixelRatio. Treat the incoming
+    // value as pixels: pass `scale = 1.0` and a points size equal to the
+    // requested pixel side. This mirrors the Windows provider behavior so
+    // both platforms produce thumbs at the same effective resolution.
+    let pixelSide = CGFloat(sizePx)
+    let request = QLThumbnailGenerator.Request(
+      fileAt: url,
+      size: CGSize(width: pixelSide, height: pixelSide),
+      scale: 1.0,
+      representationTypes: .thumbnail
+    )
+
+    let flag = OnceFlag()
+    let returnOnce: (Any?) -> Void = { value in
+      ListenerPlugin.nativeThumbBarrier.async {
+        if flag.done { return }
+        flag.done = true
+        DispatchQueue.main.async { result(value) }
+      }
+    }
+
+    DispatchQueue.global().asyncAfter(deadline: .now() + ListenerPlugin.nativeThumbTimeoutSec) {
+      QLThumbnailGenerator.shared.cancel(request)
+      returnOnce(nil)
+    }
+
+    QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { rep, error in
+      if let nsError = error as NSError? {
+        // TCC: distinguish permission denied so the UI can surface a
+        // specific message (Settings → Privacy & Security) instead of a
+        // generic "file not found".
+        if nsError.domain == NSCocoaErrorDomain &&
+           nsError.code == NSFileReadNoPermissionError {
+          returnOnce(
+            FlutterError(
+              code: "permissionDenied",
+              message: "TCC permission denied for \(path)",
+              details: nil
+            )
+          )
+          return
+        }
+        returnOnce(nil)
+        return
+      }
+      guard let rep = rep else {
+        returnOnce(nil)
+        return
+      }
+      let nsImage = rep.nsImage
+      guard let tiff = nsImage.tiffRepresentation,
+            let bitmap = NSBitmapImageRep(data: tiff),
+            let png = bitmap.representation(using: .png, properties: [:]) else {
+        returnOnce(nil)
+        return
+      }
+      returnOnce(FlutterStandardTypedData(bytes: png))
+    }
   }
 }
 
