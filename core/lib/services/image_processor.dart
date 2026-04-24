@@ -26,11 +26,11 @@ class ImageProcessor {
     required String imagesDir,
   }) async {
     return Isolate.run(
-      () => _processSync(imageBytes: imageBytes, id: id, imagesDir: imagesDir),
+      () => processSync(imageBytes: imageBytes, id: id, imagesDir: imagesDir),
     );
   }
 
-  static ImageProcessResult? _processSync({
+  static ImageProcessResult? processSync({
     required Uint8List imageBytes,
     required String id,
     required String imagesDir,

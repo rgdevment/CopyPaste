@@ -755,7 +755,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       }
     }
     try {
-      widget.clipboardService.dispose();
+      await widget.clipboardService.dispose();
     } catch (e) {
       AppLogger.error('cleanup clipboard: $e');
     }
