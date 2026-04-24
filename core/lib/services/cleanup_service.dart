@@ -90,8 +90,27 @@ class CleanupService {
     final storage = _storage;
     if (storage == null) return;
     try {
-      final validPaths = await _repository.getImagePaths();
-      storage.cleanOrphanImages(validPaths);
+      final allImageItems = await _repository.getImagePaths();
+      final canonicalImagesDir = p.canonicalize(storage.imagesPath);
+      final baseWithSep = canonicalImagesDir.endsWith(p.separator)
+          ? canonicalImagesDir
+          : '$canonicalImagesDir${p.separator}';
+
+      // Items whose content is inside images/ (own captures): pass to orphan
+      // cleanup so files without a matching item get deleted.
+      // Items with external paths are never deleted — only logged if broken.
+      final ownedPaths = <String>[];
+      for (final path in allImageItems) {
+        if (p.canonicalize(path).startsWith(baseWithSep)) {
+          ownedPaths.add(path);
+        } else if (!File(path).existsSync()) {
+          // External reference whose file no longer exists. Log for
+          // observability. UI warning overlay comes in Phase 3.
+          AppLogger.warn('[CleanupService] broken external reference: "$path"');
+        }
+      }
+
+      storage.cleanOrphanImages(ownedPaths);
     } catch (e) {
       AppLogger.error('Orphan image cleanup failed: $e');
     }

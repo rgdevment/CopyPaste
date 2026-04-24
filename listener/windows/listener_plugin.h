@@ -55,6 +55,8 @@ class ListenerPlugin : public flutter::Plugin {
   static constexpr UINT_PTR kClipboardTimerId = 1;
   static constexpr UINT kClipboardTimerDelayMs = 50;
   static constexpr ULONGLONG kSelfWriteIgnoreMs = 700;
+  static constexpr int kOpenClipboardRetries = 3;
+  static constexpr DWORD kOpenClipboardBackoffMs[] = {5, 10, 20};
 
   ULONGLONG last_write_tick_ = 0;
 
