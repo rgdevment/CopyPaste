@@ -58,6 +58,12 @@ class ThumbnailQueue {
   /// one being processed, if any).
   int get pendingCount => _queue.length;
 
+  /// Visible for tests: `true` when there are no queued jobs **and** no
+  /// job is currently being processed. Use this to wait for full quiescence
+  /// instead of [pendingCount], which goes to zero as soon as a job is
+  /// taken off the queue (before encoding finishes).
+  bool get isIdle => _queue.isEmpty && !_processing;
+
   /// Enqueues a thumbnail job for [item]. No-ops if the queue is disposed,
   /// the item type is not eligible, or the same id is already queued.
   ///

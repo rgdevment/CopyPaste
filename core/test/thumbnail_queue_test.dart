@@ -53,13 +53,17 @@ void main() {
   }
 
   Future<void> drainQueue() async {
-    // The queue runs its jobs via Future.whenComplete; pumping a few
-    // microtasks is enough for jobs that don't block on I/O beyond what
-    // the OS resolves synchronously.
-    for (var i = 0; i < 50; i++) {
-      if (queue.pendingCount == 0) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        if (queue.pendingCount == 0) return;
+    // Wait until the queue is fully idle: no pending jobs AND no in-flight
+    // encode. `pendingCount` alone is not enough — it drops to zero as soon
+    // as a job is taken off the queue, while the isolate may still be
+    // encoding the PNG. Poll up to ~5 s, which is generous enough for
+    // slow Linux CI runners.
+    for (var i = 0; i < 100; i++) {
+      if (queue.isIdle) {
+        // One more pump so the `whenComplete` chain in `_scheduleNext`
+        // has a chance to flush its microtasks before the test asserts.
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        if (queue.isIdle) return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
