@@ -596,7 +596,77 @@ static gchar* read_wm_name(void) {
 #endif
 }
 
-static ue* result = fl_value_new_map();
+static FlValue* build_capabilities(void) {
+  FlValue* caps = fl_value_new_map();
+  fl_value_set_string_take(caps, "isX11", fl_value_new_bool(shell_is_x11()));
+  fl_value_set_string_take(caps, "hasAppIndicator",
+                           fl_value_new_bool(has_app_indicator_runtime()));
+  fl_value_set_string_take(caps, "hasEwmh",
+                           fl_value_new_bool(ewmh_supports_active_window()));
+  const gchar* desktop_env = g_getenv("XDG_CURRENT_DESKTOP");
+  if (desktop_env == NULL) desktop_env = g_getenv("DESKTOP_SESSION");
+  fl_value_set_string_take(caps, "desktopEnv",
+                           fl_value_new_string(desktop_env != NULL ? desktop_env : ""));
+  g_autofree gchar* wm = read_wm_name();
+  fl_value_set_string_take(caps, "wmName",
+                           fl_value_new_string(wm != NULL ? wm : ""));
+  return caps;
+}
+
+static FlValue* build_cursor_monitor(void) {
+  GdkDisplay* display = gdk_display_get_default();
+  if (display == NULL) {
+    return fl_value_new_null();
+  }
+  GdkSeat* seat = gdk_display_get_default_seat(display);
+  if (seat == NULL) {
+    return fl_value_new_null();
+  }
+  GdkDevice* pointer = gdk_seat_get_pointer(seat);
+  if (pointer == NULL) {
+    return fl_value_new_null();
+  }
+  gint cursor_x = 0;
+  gint cursor_y = 0;
+  GdkScreen* screen = NULL;
+  gdk_device_get_position(pointer, &screen, &cursor_x, &cursor_y);
+
+  GdkMonitor* monitor =
+      gdk_display_get_monitor_at_point(display, cursor_x, cursor_y);
+  if (monitor == NULL) {
+    monitor = gdk_display_get_primary_monitor(display);
+  }
+  if (monitor == NULL) {
+    return fl_value_new_null();
+  }
+
+  GdkRectangle workarea = {0, 0, 0, 0};
+  gdk_monitor_get_workarea(monitor, &workarea);
+  gint scale = gdk_monitor_get_scale_factor(monitor);
+  if (scale <= 0) {
+    scale = 1;
+  }
+
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "cursorX",
+                           fl_value_new_float((double)cursor_x));
+  fl_value_set_string_take(result, "cursorY",
+                           fl_value_new_float((double)cursor_y));
+  fl_value_set_string_take(result, "x",
+                           fl_value_new_float((double)workarea.x));
+  fl_value_set_string_take(result, "y",
+                           fl_value_new_float((double)workarea.y));
+  fl_value_set_string_take(result, "width",
+                           fl_value_new_float((double)workarea.width));
+  fl_value_set_string_take(result, "height",
+                           fl_value_new_float((double)workarea.height));
+  fl_value_set_string_take(result, "scaleFactor",
+                           fl_value_new_float((double)scale));
+  return result;
+}
+
+static FlValue* build_input_focus(CopyPasteLinuxShell* shell) {
+  FlValue* result = fl_value_new_map();
   fl_value_set_string_take(result, "ownsFocus", fl_value_new_bool(FALSE));
   fl_value_set_string_take(result, "focusWindow", fl_value_new_int(0));
   fl_value_set_string_take(result, "ownWindow", fl_value_new_int(0));
