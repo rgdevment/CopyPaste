@@ -368,6 +368,24 @@
   "subtitlePastePreset": "Automatic paste speed. Normal/Safe recommended for most computers.",
   "@subtitlePastePreset": { "description": "Paste preset subtitle" },
 
+  "pastePresetFast": "Fast",
+  "@pastePresetFast": { "description": "Fast paste preset label" },
+  "pastePresetNormal": "Normal",
+  "@pastePresetNormal": { "description": "Normal paste preset label" },
+  "pastePresetSafe": "Safe",
+  "@pastePresetSafe": { "description": "Safe paste preset label" },
+  "pastePresetSlow": "Slow",
+  "@pastePresetSlow": { "description": "Slow paste preset label" },
+  "pastePresetCustom": "Custom",
+  "@pastePresetCustom": { "description": "Custom paste preset placeholder" },
+  "pastePresetWarning": "\u26a0\ufe0f Fast: may cause unexpected behavior in heavy apps.\n\u26a0\ufe0f Slow: may feel sluggish on modern computers.",
+  "@pastePresetWarning": { "description": "Paste preset warning text" },
+
+  "settingResetFiltersOnOpen": "Switch to All on open",
+  "@settingResetFiltersOnOpen": { "description": "Reset filters on open label" },
+  "subtitleResetFiltersOnOpen": "Clears category and type filters and returns to the All tab",
+  "@subtitleResetFiltersOnOpen": { "description": "Reset filters on open subtitle" },
+
   "subtitleBackup": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
   "@subtitleBackup": { "description": "Backup section subtitle" },
 

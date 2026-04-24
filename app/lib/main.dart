@@ -1172,6 +1172,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     colorLabels: _config.colorLabels,
                     resetScrollOnShow: _config.resetScrollOnShow,
                     resetSearchOnShow: _config.resetSearchOnShow,
+                    resetFiltersOnShow: _config.resetFiltersOnShow,
                     cardMinLines: _config.cardMinLines,
                     cardMaxLines: _config.cardMaxLines,
                     showHint: !_config.hasSeenHint,

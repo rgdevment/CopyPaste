@@ -998,6 +998,54 @@ abstract class AppLocalizations {
   /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
   String get subtitlePastePreset;
 
+  /// Fast paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get pastePresetFast;
+
+  /// Normal paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get pastePresetNormal;
+
+  /// Safe paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Safe'**
+  String get pastePresetSafe;
+
+  /// Slow paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Slow'**
+  String get pastePresetSlow;
+
+  /// Custom paste preset placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get pastePresetCustom;
+
+  /// Paste preset warning text
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
+  String get pastePresetWarning;
+
+  /// Reset filters on open label
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to All on open'**
+  String get settingResetFiltersOnOpen;
+
+  /// Reset filters on open subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Clears category and type filters and returns to the All tab'**
+  String get subtitleResetFiltersOnOpen;
+
   /// Backup section subtitle
   ///
   /// In en, this message translates to:
