@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 
 import 'linux_shell.dart';
@@ -86,8 +88,16 @@ class HotkeyBinding {
   String label({bool isMac = false}) {
     final parts = <String>[];
     if (useCtrl) parts.add('Ctrl');
-    if (useWin) parts.add(isMac ? 'Cmd' : 'Win');
-    if (useAlt) parts.add(isMac ? 'Option' : 'Alt');
+    if (useWin) {
+      if (isMac || Platform.isMacOS) {
+        parts.add('Cmd');
+      } else if (Platform.isLinux) {
+        parts.add('Super');
+      } else {
+        parts.add('Win');
+      }
+    }
+    if (useAlt) parts.add(isMac || Platform.isMacOS ? 'Option' : 'Alt');
     if (useShift) parts.add('Shift');
     parts.add(keyName);
     return parts.join('+');

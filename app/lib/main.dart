@@ -330,14 +330,18 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
     final windowsNeedsOnboarding =
         Platform.isWindows && (!_config.hasSeenWindowsOnboarding || isUpdate);
+    final linuxNeedsOnboarding =
+        Platform.isLinux && !_config.hasCompletedOnboarding;
+    final desktopNeedsOnboarding =
+        windowsNeedsOnboarding || linuxNeedsOnboarding;
     final showOnStart =
         isFirstRun &&
             (Platform.isLinux ||
                 (Platform.isMacOS && macosGranted) ||
                 Platform.isWindows) ||
-        windowsNeedsOnboarding;
+        desktopNeedsOnboarding;
     await _appWindow.init(startVisible: showOnStart);
-    if (showOnStart && Platform.isWindows) {
+    if (showOnStart && (Platform.isWindows || linuxNeedsOnboarding)) {
       try {
         await _appWindow.enterGateMode();
       } catch (e) {
@@ -390,7 +394,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         }
       }
     } else {
-      final shouldShowOnboarding = windowsNeedsOnboarding;
+      final shouldShowOnboarding = desktopNeedsOnboarding;
       if (shouldShowOnboarding) {
         if (isFirstRun) widget.storage.markAsInitialized();
         if (mounted) setState(() => _showWindowsOnboarding = true);
