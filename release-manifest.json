@@ -22,7 +22,8 @@
     },
     "snap": {
       "command": "sudo snap refresh copypaste"
-    }
+    },
+    "flatpak": null
   },
   "releaseNotes": {
     "en": {

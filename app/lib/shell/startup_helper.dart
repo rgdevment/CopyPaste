@@ -324,7 +324,8 @@ class StartupHelper {
           'Exec=$exePath\n'
           'X-GNOME-Autostart-enabled=true\n'
           'StartupNotify=false\n'
-          'Terminal=false\n';
+          'Terminal=false\n'
+          'OnlyShowIn=GNOME;KDE;XFCE;Cinnamon;MATE;LXDE;LXQt;Pantheon;Unity;Budgie;Deepin;\n';
       final autostartDir = Directory(
         '${Platform.environment['HOME']}/.config/autostart',
       );

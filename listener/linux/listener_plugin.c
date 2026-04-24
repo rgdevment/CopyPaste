@@ -595,17 +595,19 @@ static FlValue* build_text_event(GtkClipboard* clipboard,
   fl_value_set_string_take(event, "source", fl_value_new_string(source));
   fl_value_set_string_take(event, "contentHash", fl_value_new_string(hash));
 
-  const gchar* const rtf_targets[] = {"text/rtf", "application/rtf",
-                                      "Rich Text Format", NULL};
-  const gchar* const html_targets[] = {"text/html", "HTML Format", NULL};
+  if (!is_url_text(text)) {
+    const gchar* const rtf_targets[] = {"text/rtf", "application/rtf",
+                                        "Rich Text Format", NULL};
+    const gchar* const html_targets[] = {"text/html", "HTML Format", NULL};
 
-  FlValue* rtf = get_selection_data_value(clipboard, rtf_targets);
-  if (rtf != NULL) {
-    fl_value_set_string_take(event, "rtf", rtf);
-  }
-  FlValue* html = get_selection_data_value(clipboard, html_targets);
-  if (html != NULL) {
-    fl_value_set_string_take(event, "html", html);
+    FlValue* rtf = get_selection_data_value(clipboard, rtf_targets);
+    if (rtf != NULL) {
+      fl_value_set_string_take(event, "rtf", rtf);
+    }
+    FlValue* html = get_selection_data_value(clipboard, html_targets);
+    if (html != NULL) {
+      fl_value_set_string_take(event, "html", html);
+    }
   }
 
   g_free(text);
