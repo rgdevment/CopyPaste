@@ -35,10 +35,19 @@ class WindowsNativeThumbnailProvider implements NativeThumbnailProvider {
         'getNativeThumbnail',
         <String, Object?>{'path': path, 'sizePx': scaled},
       );
-      if (result is Uint8List && result.isNotEmpty) return result;
+      if (result is Uint8List && result.isNotEmpty) {
+        AppLogger.info(
+          '[NativeThumb] OK ${result.length}B for $path (size=$scaled)',
+        );
+        return result;
+      }
       if (result is List<int> && result.isNotEmpty) {
+        AppLogger.info(
+          '[NativeThumb] OK ${result.length}B for $path (size=$scaled)',
+        );
         return Uint8List.fromList(result);
       }
+      AppLogger.info('[NativeThumb] empty for $path (size=$scaled)');
       return null;
     } on PlatformException catch (e, s) {
       AppLogger.warn(

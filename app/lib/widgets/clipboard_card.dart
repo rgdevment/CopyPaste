@@ -111,7 +111,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _needsOpenAction(ClipboardItem item) {
     return switch (item.type) {
       ClipboardContentType.image =>
-        _imagePathResolved && _resolvedImagePath != null,
+        _imagePathResolved &&
+            _resolvedImagePath != null &&
+            (_fileAvailable ?? true),
       ClipboardContentType.file ||
       ClipboardContentType.folder ||
       ClipboardContentType.audio ||
@@ -125,28 +127,32 @@ class _ClipboardCardState extends State<ClipboardCard> {
 
   void _resolveImagePath() {
     final item = widget.item;
-    if (item.type != ClipboardContentType.image &&
-        item.type != ClipboardContentType.video &&
-        item.type != ClipboardContentType.audio) {
+    final isImage = item.type == ClipboardContentType.image;
+    final isMedia =
+        item.type == ClipboardContentType.video ||
+        item.type == ClipboardContentType.audio;
+    if (!isImage && !isMedia) {
       return;
     }
-    if (item.type == ClipboardContentType.image) {
+    if (isImage) {
       // Always ask the host to refresh the thumb if the source mtime is
       // stale. The host is responsible for deciding (and rate-limiting).
       widget.onRequestThumbnailRefresh?.call(item);
-      _checkImagePathsAsync(item);
-    } else {
-      _resolvedImagePath = null;
-      _resolvedIsThumb = false;
-      _imagePathResolved = true;
-      if (mounted) setState(() {});
     }
+    _checkImagePathsAsync(item, allowContentFallback: isImage);
   }
 
   /// Resolves the best path to display for an image item: prefers
   /// `item.thumbPath` (when present and the file exists), falls back to
   /// `item.content`, finally null.
-  Future<void> _checkImagePathsAsync(ClipboardItem item) async {
+  ///
+  /// When [allowContentFallback] is false (video / audio items) the
+  /// content path is never used as a fallback because it points to the
+  /// external media file, not a renderable image.
+  Future<void> _checkImagePathsAsync(
+    ClipboardItem item, {
+    bool allowContentFallback = true,
+  }) async {
     final thumb = item.thumbPath;
     if (thumb != null && thumb.isNotEmpty) {
       if (await File(thumb).exists()) {
@@ -158,6 +164,16 @@ class _ClipboardCardState extends State<ClipboardCard> {
         });
         return;
       }
+    }
+
+    if (!allowContentFallback) {
+      if (!mounted) return;
+      setState(() {
+        _resolvedImagePath = null;
+        _resolvedIsThumb = false;
+        _imagePathResolved = true;
+      });
+      return;
     }
 
     final content = item.content;
@@ -184,7 +200,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
     if (item.type != ClipboardContentType.file &&
         item.type != ClipboardContentType.folder &&
         item.type != ClipboardContentType.audio &&
-        item.type != ClipboardContentType.video) {
+        item.type != ClipboardContentType.video &&
+        item.type != ClipboardContentType.image) {
       return;
     }
     final path = item.content.split('\n').first.trim();
@@ -721,7 +738,11 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
 
     return Semantics(
-      label: filename.isEmpty ? l10n.imageFile : '${l10n.imageFile}: $filename',
+      label: filename.isEmpty
+          ? l10n.imageFile
+          : (_fileAvailable == false
+                ? '${l10n.imageFile}: $filename, ${l10n.fileNotFound}'
+                : '${l10n.imageFile}: $filename'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -745,6 +766,15 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ),
             ),
           ),
+          if (_fileAvailable == false) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ExtBadge(label: l10n.fileNotFound, color: colors.warning),
+              ],
+            ),
+          ],
         ],
       ),
     );
