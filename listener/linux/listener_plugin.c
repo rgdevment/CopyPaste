@@ -38,7 +38,8 @@
 static const gchar* kClipboardChannelName = "copypaste/clipboard";
 static const gchar* kClipboardWriterChannelName = "copypaste/clipboard_writer";
 static const guint64 kClipboardDebounceMs = 500;
-static const guint kClipboardPollIntervalMs = 250;
+static const guint kClipboardPollIntervalMs = 1500;
+static const guint kClipboardOwnerDebounceMs = 80;
 static const guint64 kClipboardWriteIgnoreMs = 700;
 
 typedef struct {
@@ -58,6 +59,8 @@ struct _ListenerPlugin {
 
   gboolean is_listening;
   guint poll_timer_id;
+  gulong owner_change_handler_id;
+  guint owner_debounce_timer_id;
   gchar* last_content_hash;
   guint64 last_change_tick_ms;
   guint64 last_write_tick_ms;
@@ -333,16 +336,6 @@ static gboolean inject_paste_keystroke_x11(Display* display) {
   return TRUE;
 }
 
-// Synchronous activate-then-paste: sends EWMH _NET_ACTIVE_WINDOW, raises and
-// focuses the target window, then waits up to timeout_ms for the X server to
-// confirm focus before injecting Ctrl+V via XTest.
-//
-// Returns an FlValue map: {success: bool, errorCode?: string}.
-// errorCode values:
-//   - "noX11"        — display unavailable
-//   - "invalidWindow"— window id is 0
-//   - "noXTest"      — XTest extension missing
-//   - "focusTimeout" — focus did not transfer within timeout
 static FlValue* activate_and_paste_x11(Window window, gint timeout_ms) {
   Display* display = get_xdisplay();
   if (display == NULL) {
@@ -373,7 +366,7 @@ static FlValue* activate_and_paste_x11(Window window, gint timeout_ms) {
   event.xclient.window = window;
   event.xclient.message_type = atom_net_active_window(display);
   event.xclient.format = 32;
-  event.xclient.data.l[0] = 2;  // pager source — bypasses focus-steal guards
+  event.xclient.data.l[0] = 2;
   event.xclient.data.l[1] = CurrentTime;
   XSendEvent(display, DefaultRootWindow(display), False,
              SubstructureNotifyMask | SubstructureRedirectMask, &event);
@@ -382,7 +375,6 @@ static FlValue* activate_and_paste_x11(Window window, gint timeout_ms) {
   XSetInputFocus(display, window, RevertToParent, CurrentTime);
   XSync(display, False);
 
-  // Poll for FocusIn on the target window (250 ms default budget).
   gint64 deadline_us = g_get_monotonic_time() + ((gint64)timeout_ms * 1000);
   XEvent received;
   gboolean focus_in_received = FALSE;
@@ -391,11 +383,9 @@ static FlValue* activate_and_paste_x11(Window window, gint timeout_ms) {
       focus_in_received = TRUE;
       break;
     }
-    g_usleep(5000);  // 5 ms — keeps the loop responsive without busy-spin
+    g_usleep(5000);
   }
 
-  // Verify with XGetInputFocus regardless of whether FocusIn arrived (some WMs
-  // refocus a child of the requested window — that's still acceptable).
   Window focused = None;
   int revert_to = 0;
   XGetInputFocus(display, &focused, &revert_to);
@@ -702,10 +692,43 @@ static gboolean clipboard_poll_cb(gpointer user_data) {
   return G_SOURCE_CONTINUE;
 }
 
+static gboolean owner_debounce_cb(gpointer user_data) {
+  ListenerPlugin* self = LISTENER_PLUGIN(user_data);
+  self->owner_debounce_timer_id = 0;
+  if (self->is_listening) {
+    process_clipboard(self);
+  }
+  return G_SOURCE_REMOVE;
+}
+
+static void on_owner_change(GtkClipboard* clipboard,
+                            GdkEvent* event,
+                            gpointer user_data) {
+  (void)clipboard;
+  (void)event;
+  ListenerPlugin* self = LISTENER_PLUGIN(user_data);
+  if (!self->is_listening) {
+    return;
+  }
+  if (self->owner_debounce_timer_id != 0) {
+    g_source_remove(self->owner_debounce_timer_id);
+    self->owner_debounce_timer_id = 0;
+  }
+  self->owner_debounce_timer_id = g_timeout_add(
+      kClipboardOwnerDebounceMs, owner_debounce_cb, self);
+}
+
 static void ensure_polling(ListenerPlugin* self) {
   if (self->poll_timer_id == 0) {
     self->poll_timer_id = g_timeout_add(kClipboardPollIntervalMs,
                                         clipboard_poll_cb, self);
+  }
+  if (self->owner_change_handler_id == 0) {
+    GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    if (clipboard != NULL) {
+      self->owner_change_handler_id = g_signal_connect(
+          clipboard, "owner-change", G_CALLBACK(on_owner_change), self);
+    }
   }
 }
 
@@ -713,6 +736,17 @@ static void stop_polling(ListenerPlugin* self) {
   if (self->poll_timer_id != 0) {
     g_source_remove(self->poll_timer_id);
     self->poll_timer_id = 0;
+  }
+  if (self->owner_debounce_timer_id != 0) {
+    g_source_remove(self->owner_debounce_timer_id);
+    self->owner_debounce_timer_id = 0;
+  }
+  if (self->owner_change_handler_id != 0) {
+    GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    if (clipboard != NULL) {
+      g_signal_handler_disconnect(clipboard, self->owner_change_handler_id);
+    }
+    self->owner_change_handler_id = 0;
   }
 }
 
@@ -1068,6 +1102,7 @@ static FlMethodErrorResponse* stream_listen_cb(FlEventChannel* channel,
   ListenerPlugin* self = LISTENER_PLUGIN(user_data);
   self->is_listening = TRUE;
   ensure_polling(self);
+  process_clipboard(self);
   return NULL;
 }
 
@@ -1120,6 +1155,8 @@ static void listener_plugin_init(ListenerPlugin* self) {
   self->last_write_tick_ms = 0;
   self->is_listening = FALSE;
   self->poll_timer_id = 0;
+  self->owner_change_handler_id = 0;
+  self->owner_debounce_timer_id = 0;
 }
 
 void listener_plugin_register_with_registrar(FlPluginRegistrar* registrar) {

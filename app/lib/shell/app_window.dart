@@ -165,7 +165,6 @@ class AppWindow {
         ).timeout(const Duration(seconds: 2));
       }
     } catch (e) {
-      // Effect failure is non-fatal — app runs without the acrylic effect.
       AppLogger.warn('applyEffect: window effect unavailable (non-fatal): $e');
     }
   }
@@ -314,10 +313,6 @@ class AppWindow {
   Future<void> show() async {
     AppLogger.info('AppWindow.show: starting');
     if (Platform.isLinux) {
-      // On X11/GTK, show the window first (so it gets realized/mapped by the WM),
-      // then set the position (avoids WM initial-placement overriding our offset),
-      // then focus via gtk_window_present_with_time so GNOME doesn't block focus
-      // and show a spurious "está preparado" notification.
       await windowManager.setSkipTaskbar(false);
       await windowManager.show();
       await _positionNearCursor();
@@ -379,8 +374,6 @@ class AppWindow {
   Future<void> enterSettingsMode() async {
     _settingsMode = true;
     await windowManager.setResizable(true);
-    // GTK processes geometry hints asynchronously — wait one frame before
-    // applying new constraints so the WM doesn't reject the resize.
     if (Platform.isLinux) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
@@ -390,9 +383,6 @@ class AppWindow {
     await windowManager.setMaximumSize(const Size(1200, 900));
     await windowManager.setSize(const Size(_settingsWidth, _settingsHeight));
     await windowManager.center();
-    // Settings mode implies the window must be visible and focused. Without
-    // this, transitioning from gate/onboarding (which hides the window on
-    // exit) leaves Settings invisible behind other windows.
     if (!await windowManager.isVisible()) {
       await windowManager.show();
     }
@@ -402,8 +392,6 @@ class AppWindow {
 
   Future<void> exitSettingsMode() async {
     _settingsMode = false;
-    // On Linux the window may still be in resizable=true state from settings
-    // mode. Reset it explicitly and wait for GTK to process before resizing.
     if (Platform.isLinux) {
       await windowManager.setResizable(true);
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -411,8 +399,6 @@ class AppWindow {
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));
-    // Wait for GTK to process the resize before locking with setResizable(false).
-    // Without this delay the WM may freeze the window at the old (large) size.
     if (Platform.isLinux) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
