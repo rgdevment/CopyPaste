@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:tray_manager/tray_manager.dart';
 
+import '../services/linux_guard.dart';
 import 'linux_shell.dart';
 
 class TrayIcon with TrayListener {
@@ -22,6 +23,7 @@ class TrayIcon with TrayListener {
 
   Future<void> init() async {
     if (Platform.isLinux) {
+      if (!LinuxGuard.canShowTray) return;
       _linuxEventsSubscription ??= LinuxShell.events.listen((event) {
         switch (event) {
           case 'toggle':
@@ -58,6 +60,7 @@ class TrayIcon with TrayListener {
     required String tooltip,
   }) async {
     if (Platform.isLinux) {
+      if (!LinuxGuard.canShowTray) return;
       await LinuxShell.updateTray(
         iconPath: _iconPath,
         showHideLabel: showHideLabel,

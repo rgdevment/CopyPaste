@@ -45,6 +45,9 @@ class AppConfig {
     this.generateAudioThumbnails = true,
     this.maxImageProcessingSizeMB = 25,
     this.imagesQuotaMB = 0,
+    this.linuxAppindicatorWarningDismissed = false,
+    this.linuxClipboardManagerWarningDismissed = false,
+    this.linuxXtestWarningDismissed = false,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -127,6 +130,15 @@ class AppConfig {
           json['maxImageProcessingSizeMB'] as int? ??
           defaults.maxImageProcessingSizeMB,
       imagesQuotaMB: json['imagesQuotaMB'] as int? ?? defaults.imagesQuotaMB,
+      linuxAppindicatorWarningDismissed:
+          json['linuxAppindicatorWarningDismissed'] as bool? ??
+          defaults.linuxAppindicatorWarningDismissed,
+      linuxClipboardManagerWarningDismissed:
+          json['linuxClipboardManagerWarningDismissed'] as bool? ??
+          defaults.linuxClipboardManagerWarningDismissed,
+      linuxXtestWarningDismissed:
+          json['linuxXtestWarningDismissed'] as bool? ??
+          defaults.linuxXtestWarningDismissed,
     );
   }
 
@@ -199,6 +211,11 @@ class AppConfig {
   // owned bytes drop back below the limit. Pinned items are never purged.
   final int imagesQuotaMB;
 
+  // Linux capability warning banners (dismissible).
+  final bool linuxAppindicatorWarningDismissed;
+  final bool linuxClipboardManagerWarningDismissed;
+  final bool linuxXtestWarningDismissed;
+
   AppConfig copyWith({
     String? preferredLanguage,
     bool? runOnStartup,
@@ -238,6 +255,9 @@ class AppConfig {
     bool? generateAudioThumbnails,
     int? maxImageProcessingSizeMB,
     int? imagesQuotaMB,
+    bool? linuxAppindicatorWarningDismissed,
+    bool? linuxClipboardManagerWarningDismissed,
+    bool? linuxXtestWarningDismissed,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -288,6 +308,14 @@ class AppConfig {
     maxImageProcessingSizeMB:
         maxImageProcessingSizeMB ?? this.maxImageProcessingSizeMB,
     imagesQuotaMB: imagesQuotaMB ?? this.imagesQuotaMB,
+    linuxAppindicatorWarningDismissed:
+        linuxAppindicatorWarningDismissed ??
+        this.linuxAppindicatorWarningDismissed,
+    linuxClipboardManagerWarningDismissed:
+        linuxClipboardManagerWarningDismissed ??
+        this.linuxClipboardManagerWarningDismissed,
+    linuxXtestWarningDismissed:
+        linuxXtestWarningDismissed ?? this.linuxXtestWarningDismissed,
   );
 
   Map<String, dynamic> toJson() => {
@@ -330,6 +358,10 @@ class AppConfig {
     'generateAudioThumbnails': generateAudioThumbnails,
     'maxImageProcessingSizeMB': maxImageProcessingSizeMB,
     'imagesQuotaMB': imagesQuotaMB,
+    'linuxAppindicatorWarningDismissed': linuxAppindicatorWarningDismissed,
+    'linuxClipboardManagerWarningDismissed':
+        linuxClipboardManagerWarningDismissed,
+    'linuxXtestWarningDismissed': linuxXtestWarningDismissed,
   };
 
   static Future<AppConfig> load(String configPath) async {

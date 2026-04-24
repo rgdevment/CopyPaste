@@ -541,6 +541,35 @@
     }
   },
 
+  "linuxHotkeyGrabFailedWarning": "The shortcut {hotkey} is being used by another application. Change it in Settings → Shortcuts.",
+  "@linuxHotkeyGrabFailedWarning": {
+    "description": "Shown when XGrabKey fails because another app already owns the shortcut",
+    "placeholders": {
+      "hotkey": { "type": "String" }
+    }
+  },
+
+  "linuxAppindicatorBannerTitle": "System tray icon unavailable",
+  "@linuxAppindicatorBannerTitle": { "description": "Title of the AppIndicator missing banner" },
+
+  "linuxAppindicatorBannerBody": "Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.",
+  "@linuxAppindicatorBannerBody": { "description": "Body of the AppIndicator missing banner" },
+
+  "linuxClipboardManagerBannerTitle": "No clipboard manager detected",
+  "@linuxClipboardManagerBannerTitle": { "description": "Title of the missing clipboard manager banner" },
+
+  "linuxClipboardManagerBannerBody": "Without a clipboard manager (gpaste, klipper, clipman, copyq, …) clipboard data may be lost when CopyPaste quits. Install one and restart your session.",
+  "@linuxClipboardManagerBannerBody": { "description": "Body of the missing clipboard manager banner" },
+
+  "linuxXtestBannerTitle": "Automatic paste-back disabled",
+  "@linuxXtestBannerTitle": { "description": "Title of the missing XTest banner" },
+
+  "linuxXtestBannerBody": "The X11 XTest extension is not available, so CopyPaste cannot inject Ctrl+V automatically. Items are still copied to the clipboard — paste manually with Ctrl+V.",
+  "@linuxXtestBannerBody": { "description": "Body of the missing XTest banner" },
+
+  "linuxBannerDismiss": "Dismiss",
+  "@linuxBannerDismiss": { "description": "Action to dismiss a Linux capability banner" },
+
   "wakeupHint": "CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.",
   "@wakeupHint": {
     "description": "In-app snackbar shown inside the window when it is raised by a second launch attempt",
