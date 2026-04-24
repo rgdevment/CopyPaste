@@ -221,19 +221,16 @@ void main() {
     test('linux capability dismiss flags default to false', () {
       const config = AppConfig();
       expect(config.linuxAppindicatorWarningDismissed, isFalse);
-      expect(config.linuxClipboardManagerWarningDismissed, isFalse);
       expect(config.linuxXtestWarningDismissed, isFalse);
     });
 
     test('linux capability dismiss flags round-trip via JSON', () {
       const config = AppConfig(
         linuxAppindicatorWarningDismissed: true,
-        linuxClipboardManagerWarningDismissed: true,
         linuxXtestWarningDismissed: true,
       );
       final restored = AppConfig.fromJson(config.toJson());
       expect(restored.linuxAppindicatorWarningDismissed, isTrue);
-      expect(restored.linuxClipboardManagerWarningDismissed, isTrue);
       expect(restored.linuxXtestWarningDismissed, isTrue);
     });
 
@@ -243,12 +240,6 @@ void main() {
         config
             .copyWith(linuxAppindicatorWarningDismissed: true)
             .linuxAppindicatorWarningDismissed,
-        isTrue,
-      );
-      expect(
-        config
-            .copyWith(linuxClipboardManagerWarningDismissed: true)
-            .linuxClipboardManagerWarningDismissed,
         isTrue,
       );
       expect(

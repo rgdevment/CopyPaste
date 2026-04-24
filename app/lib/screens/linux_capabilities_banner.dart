@@ -29,10 +29,6 @@ class LinuxCapabilitiesBanner extends StatelessWidget {
     if (!capabilities.hasXTest && !config.linuxXtestWarningDismissed) {
       return _BannerKind.xtest;
     }
-    if (!capabilities.hasClipboardManager &&
-        !config.linuxClipboardManagerWarningDismissed) {
-      return _BannerKind.clipboardManager;
-    }
     return null;
   }
 
@@ -49,10 +45,6 @@ class LinuxCapabilitiesBanner extends StatelessWidget {
         l.linuxAppindicatorBannerBody,
       ),
       _BannerKind.xtest => (l.linuxXtestBannerTitle, l.linuxXtestBannerBody),
-      _BannerKind.clipboardManager => (
-        l.linuxClipboardManagerBannerTitle,
-        l.linuxClipboardManagerBannerBody,
-      ),
     };
 
     return Container(
@@ -110,11 +102,9 @@ class LinuxCapabilitiesBanner extends StatelessWidget {
           return c.copyWith(linuxAppindicatorWarningDismissed: true);
         case _BannerKind.xtest:
           return c.copyWith(linuxXtestWarningDismissed: true);
-        case _BannerKind.clipboardManager:
-          return c.copyWith(linuxClipboardManagerWarningDismissed: true);
       }
     });
   }
 }
 
-enum _BannerKind { appIndicator, xtest, clipboardManager }
+enum _BannerKind { appIndicator, xtest }

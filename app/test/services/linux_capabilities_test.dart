@@ -59,7 +59,6 @@ void main() {
         shellResponse: const {
           'isX11': true,
           'hasAppIndicator': true,
-          'hasClipboardManager': true,
           'hasEwmh': true,
           'desktopEnv': 'GNOME',
           'wmName': 'Mutter',
@@ -69,7 +68,6 @@ void main() {
       final caps = await LinuxCapabilitiesService.detect(channel: channel);
       expect(caps.hasXTest, isTrue);
       expect(caps.hasAppIndicator, isTrue);
-      expect(caps.hasClipboardManager, isTrue);
       expect(caps.hasEwmh, isTrue);
       expect(caps.detectedDesktopEnv, equals('GNOME'));
       expect(caps.detectedWmName, equals('Mutter'));
@@ -85,7 +83,6 @@ void main() {
       final caps = await LinuxCapabilitiesService.detect(channel: channel);
       expect(caps.hasXTest, isFalse);
       expect(caps.hasAppIndicator, isFalse);
-      expect(caps.hasClipboardManager, isFalse);
       expect(caps.hasEwmh, isFalse);
       expect(caps.detectionTimedOut, isFalse);
     });
@@ -133,7 +130,6 @@ void main() {
       expect(LinuxGuard.canRegisterHotkey, isFalse);
       expect(LinuxGuard.canPasteBack, isFalse);
       expect(LinuxGuard.canShowTray, isFalse);
-      expect(LinuxGuard.canPersistClipboard, isFalse);
       expect(LinuxGuard.canAutostart, isFalse);
       expect(LinuxGuard.usesNativeWindowEffects, isFalse);
     });
@@ -188,7 +184,6 @@ void main() {
         isX11: false,
         hasXTest: false,
         hasAppIndicator: false,
-        hasClipboardManager: false,
         hasEwmh: false,
         detectedDesktopEnv: '',
         detectedWmName: '',

@@ -1370,18 +1370,6 @@ abstract class AppLocalizations {
   /// **'Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.'**
   String get linuxAppindicatorBannerBody;
 
-  /// Title of the missing clipboard manager banner
-  ///
-  /// In en, this message translates to:
-  /// **'No clipboard manager detected'**
-  String get linuxClipboardManagerBannerTitle;
-
-  /// Body of the missing clipboard manager banner
-  ///
-  /// In en, this message translates to:
-  /// **'Without a clipboard manager (gpaste, klipper, clipman, copyq, …) clipboard data may be lost when CopyPaste quits. Install one and restart your session.'**
-  String get linuxClipboardManagerBannerBody;
-
   /// Title of the missing XTest banner
   ///
   /// In en, this message translates to:
