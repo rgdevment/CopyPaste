@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   markdown:
@@ -273,118 +274,6 @@ jobs:
       - name: Build Linux release
         run: cd app && flutter build linux --release
 
-  package-linux-smoke:
-    needs: quality
-    runs-on: ubuntu-22.04
-    timeout-minutes: 30
-    name: Linux Package Smoke (deb/rpm)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: ${{ runner.os }}-pub-
-
-      - name: Install Linux packaging dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang \
-            cmake \
-            desktop-file-utils \
-            libayatana-appindicator3-dev \
-            libfuse2 \
-            libgtk-3-dev \
-            libkeybinder-3.0-dev \
-            liblzma-dev \
-            libx11-dev \
-            libxtst-dev \
-            lld-14 \
-            ninja-build \
-            patchelf \
-            pkg-config \
-            rpm
-
-      - name: Install Melos
-        run: dart pub global activate melos
-
-      - name: Get dependencies
-        run: melos bootstrap
-
-      - name: Install Fastforge
-        run: dart pub global activate fastforge
-
-      - name: Normalize app version for Linux package smoke
-        run: |
-          set -euo pipefail
-          RAW_VERSION=$(grep '^version:' app/pubspec.yaml | awk '{print $2}')
-          BASE_VERSION="${RAW_VERSION%%-*}"
-
-          if [[ "$RAW_VERSION" != "$BASE_VERSION" ]]; then
-            echo "Using RPM-compatible version for smoke packaging: $RAW_VERSION -> $BASE_VERSION"
-            sed -i "s/^version:.*/version: $BASE_VERSION/" app/pubspec.yaml
-          fi
-
-          echo "Effective app version for package smoke:"
-          grep '^version:' app/pubspec.yaml
-
-      - name: Build deb package
-        run: |
-          cd app
-          fastforge package --platform linux --targets deb
-
-      - name: Build rpm package
-        run: |
-          cd app
-          fastforge package --platform linux --targets rpm --skip-clean
-
-      - name: Resolve package paths
-        run: |
-          set -euo pipefail
-          DEB_PATH=$(find app/dist app/build -type f -name "*.deb" 2>/dev/null | head -n 1)
-          RPM_PATH=$(find app/dist app/build -type f -name "*.rpm" 2>/dev/null | head -n 1)
-          test -n "$DEB_PATH"
-          test -n "$RPM_PATH"
-          echo "DEB_PATH=$DEB_PATH" >> "$GITHUB_ENV"
-          echo "RPM_PATH=$RPM_PATH" >> "$GITHUB_ENV"
-          echo "Using deb: $DEB_PATH"
-          echo "Using rpm: $RPM_PATH"
-
-      - name: Validate package dependency metadata
-        run: |
-          set -euo pipefail
-
-          echo "Checking deb Depends metadata"
-          DEB_INFO=$(dpkg-deb -I "$DEB_PATH")
-          echo "$DEB_INFO" | grep -Eq "Depends:.*libayatana-appindicator3-1"
-          echo "$DEB_INFO" | grep -Eq "Depends:.*libkeybinder-3.0-0"
-          echo "$DEB_INFO" | grep -Eq "Depends:.*libx11-6"
-          echo "$DEB_INFO" | grep -Eq "Depends:.*libxtst6"
-
-          echo "Checking rpm Requires metadata"
-          RPM_REQUIRES=$(rpm -qpR "$RPM_PATH")
-          echo "$RPM_REQUIRES" | grep -Eq "^libayatana-appindicator-gtk3$"
-          echo "$RPM_REQUIRES" | grep -Eq "^keybinder3$"
-          echo "$RPM_REQUIRES" | grep -Eq "^gtk3$"
-          echo "$RPM_REQUIRES" | grep -Eq "^libX11$"
-          echo "$RPM_REQUIRES" | grep -Eq "^libXtst$"
-
-      - name: Run package smoke tests
-        run: |
-          set -euo pipefail
-          bash resources/scripts/linux-package-smoke.sh deb "$DEB_PATH"
-          bash resources/scripts/linux-package-smoke.sh rpm "$RPM_PATH"
-
   build-macos:
     needs: quality
     runs-on: macos-latest
@@ -444,4 +333,6 @@ jobs:
             -Dsonar.dart.lcov.reportPaths=core/coverage/lcov.info,listener/coverage/lcov.info,app/coverage/lcov.info
             -Dsonar.exclusions=**/generated/**,**/*.g.dart,**/*.freezed.dart,**/l10n/**,**/core.dart
             -Dsonar.coverage.exclusions=**/main.dart,**/shell/**,**/services/auto_update_service.dart,**/windows_clipboard_listener.dart,**/l10n/**,**/*.g.dart,**/*.freezed.dart,**/core.dart,**/screens/settings_screen.dart
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 

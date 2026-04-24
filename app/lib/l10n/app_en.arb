@@ -144,12 +144,19 @@
 
   "buttonSave": "Save",
   "@buttonSave": { "description": "Save button" },
-
+  "buttonClose": "Close",
+  "@buttonClose": { "description": "Generic Close button" },
   "buttonCancel": "Cancel",
   "@buttonCancel": { "description": "Cancel button" },
 
   "buttonReset": "Restore defaults",
   "@buttonReset": { "description": "Reset button" },
+
+  "savingIndicator": "Saving\u2026",
+  "@savingIndicator": { "description": "Footer indicator while autosave is in flight" },
+
+  "savedIndicator": "Saved",
+  "@savedIndicator": { "description": "Footer indicator after autosave completes" },
 
   "menuPaste": "Paste",
   "@menuPaste": { "description": "Context menu paste" },
@@ -213,7 +220,7 @@
 
   "tabGeneral": "General",
   "@tabGeneral": { "description": "General nav tab" },
-  "tabBackupRestore": "Backup",
+  "tabBackupRestore": "Backup & Support",
   "@tabBackupRestore": { "description": "Backup nav tab" },
   "tabAppearance": "Appearance",
   "@tabAppearance": { "description": "Appearance nav tab" },
@@ -275,8 +282,6 @@
   "@settingScrollToTopOnOpen": { "description": "Scroll to top on open label" },
   "settingClearSearchOnOpen": "Clear search on open",
   "@settingClearSearchOnOpen": { "description": "Clear search on open label" },
-  "settingShowTrayIcon": "Show tray icon",
-  "@settingShowTrayIcon": { "description": "Show tray icon label (macOS only)" },
   "settingRetentionDaysLabel": "Retention days (0 = unlimited)",
   "@settingRetentionDaysLabel": { "description": "Retention days label" },
   "settingClearHistoryLabel": "Clear clipboard history",
@@ -292,8 +297,6 @@
   "@subtitleScrollToTopOnOpen": { "description": "Scroll to top on open subtitle" },
   "subtitleClearSearchOnOpen": "Clears the search text each time",
   "@subtitleClearSearchOnOpen": { "description": "Clear search on open subtitle" },
-  "subtitleShowTrayIcon": "Show icon in the menu bar. Use hotkey if hidden",
-  "@subtitleShowTrayIcon": { "description": "Show tray icon subtitle (macOS only)" },
   "subtitlePasteSpeed": "Adjust restoration and paste timings",
   "@subtitlePasteSpeed": { "description": "Paste speed subtitle" },
   "subtitleCategories": "Customize the names of color categories.",
@@ -347,6 +350,9 @@
   "videoFile": "Video file",
   "@videoFile": { "description": "Fallback name for video items" },
 
+  "imageFile": "Image file",
+  "@imageFile": { "description": "Fallback name / accessibility label for image items" },
+
   "timeNow": "now",
   "@timeNow": { "description": "Timestamp for less than 1 minute ago" },
 
@@ -361,6 +367,24 @@
 
   "subtitlePastePreset": "Automatic paste speed. Normal/Safe recommended for most computers.",
   "@subtitlePastePreset": { "description": "Paste preset subtitle" },
+
+  "pastePresetFast": "Fast",
+  "@pastePresetFast": { "description": "Fast paste preset label" },
+  "pastePresetNormal": "Normal",
+  "@pastePresetNormal": { "description": "Normal paste preset label" },
+  "pastePresetSafe": "Safe",
+  "@pastePresetSafe": { "description": "Safe paste preset label" },
+  "pastePresetSlow": "Slow",
+  "@pastePresetSlow": { "description": "Slow paste preset label" },
+  "pastePresetCustom": "Custom",
+  "@pastePresetCustom": { "description": "Custom paste preset placeholder" },
+  "pastePresetWarning": "\u26a0\ufe0f Fast: may cause unexpected behavior in heavy apps.\n\u26a0\ufe0f Slow: may feel sluggish on modern computers.",
+  "@pastePresetWarning": { "description": "Paste preset warning text" },
+
+  "settingResetFiltersOnOpen": "Switch to All on open",
+  "@settingResetFiltersOnOpen": { "description": "Reset filters on open label" },
+  "subtitleResetFiltersOnOpen": "Clears category and type filters and returns to the All tab",
+  "@subtitleResetFiltersOnOpen": { "description": "Reset filters on open subtitle" },
 
   "subtitleBackup": "Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.",
   "@subtitleBackup": { "description": "Backup section subtitle" },
@@ -436,8 +460,14 @@
 
   "updateAvailableLinux": "Version {version} is available.\n\nDownload the latest release from GitHub.",
   "@updateAvailableLinux": { "description": "Update dialog message for Linux", "placeholders": { "version": { "type": "String" } } },
-  "updateAvailableStore": "Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.",
+  "updateAvailableStore": "Version {version} is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.",
   "@updateAvailableStore": { "description": "Update dialog message for MS Store builds", "placeholders": { "version": { "type": "String" } } },
+
+  "updateTooltipStore": "Update {version} coming via Microsoft Store",
+  "@updateTooltipStore": { "description": "Short tooltip for MS Store badge", "placeholders": { "version": { "type": "String" } } },
+
+  "updateTooltipGeneric": "Update {version} available — click for details",
+  "@updateTooltipGeneric": { "description": "Short tooltip for non-Store badge", "placeholders": { "version": { "type": "String" } } },
 
   "updateDialogTitle": "Update Available",
   "@updateDialogTitle": { "description": "Title of the update available dialog" },
@@ -447,6 +477,36 @@
 
   "updateDismiss": "Later",
   "@updateDismiss": { "description": "Button to dismiss the update notification" },
+
+  "updateBadgeImportant": "v{version} available — important update",
+  "@updateBadgeImportant": { "description": "Footer badge text for minor/major updates", "placeholders": { "version": { "type": "String" } } },
+
+  "updateActionDownload": "Download installer",
+  "@updateActionDownload": { "description": "Action button to open the installer download page" },
+
+  "updateActionOpenStore": "Open Microsoft Store",
+  "@updateActionOpenStore": { "description": "Action button to open the MS Store update page" },
+
+  "updateActionCopyBrew": "Copy brew command",
+  "@updateActionCopyBrew": { "description": "Action button to copy the Homebrew upgrade command" },
+
+  "updateActionCopied": "Copied to clipboard",
+  "@updateActionCopied": { "description": "Snack/tooltip shown after copying the upgrade command" },
+
+  "blockedTitle": "Update required",
+  "@blockedTitle": { "description": "Title of the blocked-version full-screen gate" },
+
+  "blockedDescription": "Version {current} of CopyPaste is no longer supported. Please install version {required} or newer to continue using the app.",
+  "@blockedDescription": { "description": "Body of the blocked-version full-screen gate", "placeholders": { "current": { "type": "String" }, "required": { "type": "String" } } },
+
+  "blockedReasonGeneric": "This version was retired by the maintainers for safety or compatibility reasons.",
+  "@blockedReasonGeneric": { "description": "Generic reason shown in the blocked screen when the manifest does not provide one" },
+
+  "blockedQuit": "Quit CopyPaste",
+  "@blockedQuit": { "description": "Secondary action on the blocked-version screen" },
+
+  "blockedFallbackHint": "Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.",
+  "@blockedFallbackHint": { "description": "Hint shown when no channel-specific action is available" },
 
   "waylandUnsupportedTitle": "Wayland is not supported",
   "@waylandUnsupportedTitle": { "description": "Title for the Wayland-unsupported gate screen" },
@@ -480,12 +540,6 @@
       "fallback": { "type": "String" }
     }
   },
-
-  "settingShowInTaskbar": "Keep in taskbar",
-  "@settingShowInTaskbar": { "description": "Label for the Windows taskbar visibility toggle in Settings" },
-
-  "subtitleShowInTaskbar": "The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.",
-  "@subtitleShowInTaskbar": { "description": "Subtitle for the Windows taskbar visibility toggle in Settings" },
 
   "wakeupHint": "CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.",
   "@wakeupHint": {
@@ -544,5 +598,62 @@
   "@onboardingSettingsButton": { "description": "Onboarding settings button" },
 
   "onboardingDismissButton": "Get started",
-  "@onboardingDismissButton": { "description": "Onboarding dismiss button" }
+  "@onboardingDismissButton": { "description": "Onboarding dismiss button" },
+
+  "tabCapture": "Performance",
+  "@tabCapture": { "description": "Performance tab label (paste, perf, multimedia)" },
+
+  "tabMultimedia": "Multimedia",
+  "@tabMultimedia": { "description": "Multimedia tab label (legacy, unused since tabs were merged)" },
+
+  "tabCleanupPrivacy": "Cleanup & Privacy",
+  "@tabCleanupPrivacy": { "description": "Cleanup & privacy tab label" },
+
+  "sectionMultimedia": "MULTIMEDIA & THUMBNAILS",
+  "@sectionMultimedia": { "description": "Multimedia section header" },
+
+  "subtitleMultimedia": "Control how images, videos and audio files are previewed.",
+  "@subtitleMultimedia": { "description": "Multimedia section subtitle" },
+
+  "settingGenerateImageThumbnails": "Generate image thumbnails",
+  "@settingGenerateImageThumbnails": { "description": "Image thumbs toggle" },
+
+  "subtitleGenerateImageThumbnails": "Show preview tiles for copied or referenced images.",
+  "@subtitleGenerateImageThumbnails": { "description": "Image thumbs subtitle" },
+
+  "settingGenerateVideoThumbnails": "Generate video thumbnails",
+  "@settingGenerateVideoThumbnails": { "description": "Video thumbs toggle" },
+
+  "subtitleGenerateVideoThumbnails": "Use the OS shell cache to show a preview frame for video files.",
+  "@subtitleGenerateVideoThumbnails": { "description": "Video thumbs subtitle" },
+
+  "settingGenerateAudioThumbnails": "Generate audio thumbnails",
+  "@settingGenerateAudioThumbnails": { "description": "Audio thumbs toggle" },
+
+  "subtitleGenerateAudioThumbnails": "Show cover art when available for audio files.",
+  "@subtitleGenerateAudioThumbnails": { "description": "Audio thumbs subtitle" },
+
+  "settingMaxImageSize": "Max image size for processing (MB)",
+  "@settingMaxImageSize": { "description": "Max image size label" },
+
+  "subtitleMaxImageSize": "Larger images keep their original bitmap fallback and are not re-encoded.",
+  "@subtitleMaxImageSize": { "description": "Max image size subtitle" },
+
+  "sectionCleanupPrivacy": "CLEANUP & PRIVACY",
+  "@sectionCleanupPrivacy": { "description": "Cleanup & privacy section header" },
+
+  "settingKeepBrokenItemsLabel": "Keep unavailable items (days)",
+  "@settingKeepBrokenItemsLabel": { "description": "Days to keep broken external refs" },
+
+  "subtitleKeepBrokenItems": "Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.",
+  "@subtitleKeepBrokenItems": { "description": "Broken-items subtitle" },
+
+  "settingImagesQuotaLabel": "Storage cap for images",
+  "@settingImagesQuotaLabel": { "description": "Quota label" },
+
+  "subtitleImagesQuota": "When the images folder exceeds this size, oldest unpinned items are deleted to free space.",
+  "@subtitleImagesQuota": { "description": "Quota subtitle" },
+
+  "imagesQuotaOff": "Unlimited",
+  "@imagesQuotaOff": { "description": "Quota disabled label" }
 }

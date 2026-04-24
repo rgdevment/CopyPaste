@@ -585,6 +585,265 @@ void main() {
       tmpDir.deleteSync(recursive: true);
     });
 
+    testWidgets(
+      'prefers thumbPath over content and invokes onRequestThumbnailRefresh',
+      (tester) async {
+        final tmpDir = Directory.systemTemp.createTempSync('card_thumb_test_');
+        // Minimal valid 1x1 PNG bytes.
+        final png = <int>[
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+          0x00,
+          0x00,
+          0x00,
+          0x0D,
+          0x49,
+          0x48,
+          0x44,
+          0x52,
+          0x00,
+          0x00,
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          0x00,
+          0x01,
+          0x08,
+          0x02,
+          0x00,
+          0x00,
+          0x00,
+          0x90,
+          0x77,
+          0x53,
+          0xDE,
+          0x00,
+          0x00,
+          0x00,
+          0x0C,
+          0x49,
+          0x44,
+          0x41,
+          0x54,
+          0x08,
+          0xD7,
+          0x63,
+          0xF8,
+          0xCF,
+          0xC0,
+          0x00,
+          0x00,
+          0x00,
+          0x02,
+          0x00,
+          0x01,
+          0xE2,
+          0x21,
+          0xBC,
+          0x33,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x49,
+          0x45,
+          0x4E,
+          0x44,
+          0xAE,
+          0x42,
+          0x60,
+          0x82,
+        ];
+        final source = File('${tmpDir.path}/source.png')..writeAsBytesSync(png);
+        final thumb = File('${tmpDir.path}/source_thumb.png')
+          ..writeAsBytesSync(png);
+
+        ClipboardItem? refreshed;
+        final item = ClipboardItem(
+          content: source.path,
+          type: ClipboardContentType.image,
+          thumbPath: thumb.path,
+        );
+
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            wrapWidget(
+              ClipboardCard(
+                item: item,
+                onTap: () {},
+                onPin: () {},
+                onDelete: () {},
+                onLabelColor: (_, _) {},
+                onRequestThumbnailRefresh: (it) => refreshed = it,
+              ),
+            ),
+          );
+          for (var i = 0; i < 10; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+            await tester.pump();
+          }
+        });
+        await tester.pumpAndSettle();
+
+        expect(refreshed?.id, equals(item.id));
+
+        String? imageProviderPath(ImageProvider provider) {
+          if (provider is FileImage) return provider.file.path;
+          if (provider is ResizeImage) {
+            return imageProviderPath(provider.imageProvider);
+          }
+          return null;
+        }
+
+        final paths = tester
+            .widgetList<Image>(find.byType(Image))
+            .map((w) => imageProviderPath(w.image))
+            .whereType<String>()
+            .toList();
+        expect(
+          paths,
+          contains(thumb.path),
+          reason: 'card should render the thumbnail file when present',
+        );
+        expect(
+          paths,
+          isNot(contains(source.path)),
+          reason: 'card should not render the source when a thumb is available',
+        );
+
+        tmpDir.deleteSync(recursive: true);
+      },
+    );
+
+    testWidgets('falls back to content when thumbPath file is missing', (
+      tester,
+    ) async {
+      final tmpDir = Directory.systemTemp.createTempSync('card_thumb_fb_');
+      final png = <int>[
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        0x00,
+        0x00,
+        0x00,
+        0x0D,
+        0x49,
+        0x48,
+        0x44,
+        0x52,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x90,
+        0x77,
+        0x53,
+        0xDE,
+        0x00,
+        0x00,
+        0x00,
+        0x0C,
+        0x49,
+        0x44,
+        0x41,
+        0x54,
+        0x08,
+        0xD7,
+        0x63,
+        0xF8,
+        0xCF,
+        0xC0,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x01,
+        0xE2,
+        0x21,
+        0xBC,
+        0x33,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4E,
+        0x44,
+        0xAE,
+        0x42,
+        0x60,
+        0x82,
+      ];
+      final source = File('${tmpDir.path}/source.png')..writeAsBytesSync(png);
+      final missingThumb = '${tmpDir.path}/does_not_exist_thumb.png';
+
+      final item = ClipboardItem(
+        content: source.path,
+        type: ClipboardContentType.image,
+        thumbPath: missingThumb,
+      );
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          wrapWidget(
+            ClipboardCard(
+              item: item,
+              onTap: () {},
+              onPin: () {},
+              onDelete: () {},
+              onLabelColor: (_, _) {},
+            ),
+          ),
+        );
+        for (var i = 0; i < 10; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          await tester.pump();
+        }
+      });
+      await tester.pumpAndSettle();
+
+      String? imageProviderPath(ImageProvider provider) {
+        if (provider is FileImage) return provider.file.path;
+        if (provider is ResizeImage) {
+          return imageProviderPath(provider.imageProvider);
+        }
+        return null;
+      }
+
+      final paths = tester
+          .widgetList<Image>(find.byType(Image))
+          .map((w) => imageProviderPath(w.image))
+          .whereType<String>()
+          .toList();
+      expect(paths, contains(source.path));
+      expect(paths, isNot(contains(missingThumb)));
+
+      tmpDir.deleteSync(recursive: true);
+    });
+
     testWidgets('audio type item renders without error', (tester) async {
       final sep = Platform.pathSeparator;
       final item = ClipboardItem(

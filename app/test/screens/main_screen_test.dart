@@ -18,6 +18,7 @@ Widget _buildApp({
   VoidCallback? onSettings,
   bool resetScrollOnShow = true,
   bool resetSearchOnShow = true,
+  bool resetFiltersOnShow = true,
   bool showHint = false,
   VoidCallback? onDismissHint,
   String? updateVersion,
@@ -40,6 +41,7 @@ Widget _buildApp({
           onSettings: onSettings ?? () {},
           resetScrollOnShow: resetScrollOnShow,
           resetSearchOnShow: resetSearchOnShow,
+          resetFiltersOnShow: resetFiltersOnShow,
           showHint: showHint,
           onDismissHint: onDismissHint,
           updateVersion: updateVersion,
@@ -59,7 +61,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.dispose();
+    await service.dispose();
     await repo.close();
   });
 
@@ -1167,7 +1169,7 @@ void main() {
       // No exception propagated — error is handled internally.
       expect(find.byType(MainScreen), findsOneWidget);
 
-      failService.dispose();
+      await failService.dispose();
     });
 
     testWidgets(
@@ -1207,5 +1209,56 @@ void main() {
         expect(find.byType(MainScreen), findsOneWidget);
       },
     );
+
+    testWidgets('resetFiltersOnShow=true resets to all-items view on show', (
+      tester,
+    ) async {
+      await repo.save(
+        ClipboardItem(content: 'Item A', type: ClipboardContentType.text),
+      );
+
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          resetFiltersOnShow: true,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Show — should load without crash and render the item.
+      key.currentState!.onWindowShow();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainScreen), findsOneWidget);
+      expect(find.byType(FilterBar), findsOneWidget);
+    });
+
+    testWidgets('resetFiltersOnShow=false keeps current state on show', (
+      tester,
+    ) async {
+      await repo.save(
+        ClipboardItem(content: 'Item B', type: ClipboardContentType.text),
+      );
+
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          resetFiltersOnShow: false,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      key.currentState!.onWindowShow();
+      await tester.pumpAndSettle();
+
+      // Screen still renders correctly.
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
   });
 }

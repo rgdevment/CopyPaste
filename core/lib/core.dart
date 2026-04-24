@@ -9,5 +9,8 @@ export 'services/backup_service.dart';
 export 'services/cleanup_service.dart';
 export 'services/clipboard_service.dart';
 export 'services/crash_logger.dart';
+export 'services/native_thumbnail_provider.dart';
 export 'services/support_service.dart';
 export 'services/text_classifier.dart';
+export 'services/thumbnail_queue.dart';
+export 'services/thumbnail_service.dart';

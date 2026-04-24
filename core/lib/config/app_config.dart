@@ -19,6 +19,7 @@ class AppConfig {
     this.maxItemsBeforeCleanup = 100,
     this.scrollLoadThreshold = 400,
     this.retentionDays = 30,
+    this.keepBrokenItemsDays = 30,
     this.colorLabels = const {},
     this.duplicateIgnoreWindowMs = 450,
     this.delayBeforeFocusMs = 100,
@@ -32,13 +33,18 @@ class AppConfig {
     this.hideOnDeactivate = true,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
+    this.resetFiltersOnShow = true,
     this.hasSeenHint = false,
     this.themeMode = 'dark',
-    this.showTrayIcon = true,
-    this.showInTaskbar = false,
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
     this.hasSeenWindowsOnboarding = false,
+    this.hasCompletedOnboarding = false,
+    this.generateImageThumbnails = true,
+    this.generateVideoThumbnails = true,
+    this.generateAudioThumbnails = true,
+    this.maxImageProcessingSizeMB = 25,
+    this.imagesQuotaMB = 0,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -62,6 +68,8 @@ class AppConfig {
       scrollLoadThreshold:
           json['scrollLoadThreshold'] as int? ?? defaults.scrollLoadThreshold,
       retentionDays: json['retentionDays'] as int? ?? defaults.retentionDays,
+      keepBrokenItemsDays:
+          json['keepBrokenItemsDays'] as int? ?? defaults.keepBrokenItemsDays,
       colorLabels:
           (json['colorLabels'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, v as String),
@@ -90,10 +98,10 @@ class AppConfig {
           json['resetScrollOnShow'] as bool? ?? defaults.resetScrollOnShow,
       resetSearchOnShow:
           json['resetSearchOnShow'] as bool? ?? defaults.resetSearchOnShow,
+      resetFiltersOnShow:
+          json['resetFiltersOnShow'] as bool? ?? defaults.resetFiltersOnShow,
       hasSeenHint: json['hasSeenHint'] as bool? ?? defaults.hasSeenHint,
       themeMode: json['themeMode'] as String? ?? defaults.themeMode,
-      showTrayIcon: json['showTrayIcon'] as bool? ?? defaults.showTrayIcon,
-      showInTaskbar: json['showInTaskbar'] as bool? ?? defaults.showInTaskbar,
       accessibilityWasGranted:
           json['accessibilityWasGranted'] as bool? ??
           defaults.accessibilityWasGranted,
@@ -102,6 +110,23 @@ class AppConfig {
       hasSeenWindowsOnboarding:
           json['hasSeenWindowsOnboarding'] as bool? ??
           defaults.hasSeenWindowsOnboarding,
+      hasCompletedOnboarding:
+          json['hasCompletedOnboarding'] as bool? ??
+          (json['hasSeenWindowsOnboarding'] as bool? ??
+              defaults.hasCompletedOnboarding),
+      generateImageThumbnails:
+          json['generateImageThumbnails'] as bool? ??
+          defaults.generateImageThumbnails,
+      generateVideoThumbnails:
+          json['generateVideoThumbnails'] as bool? ??
+          defaults.generateVideoThumbnails,
+      generateAudioThumbnails:
+          json['generateAudioThumbnails'] as bool? ??
+          defaults.generateAudioThumbnails,
+      maxImageProcessingSizeMB:
+          json['maxImageProcessingSizeMB'] as int? ??
+          defaults.maxImageProcessingSizeMB,
+      imagesQuotaMB: json['imagesQuotaMB'] as int? ?? defaults.imagesQuotaMB,
     );
   }
 
@@ -135,6 +160,7 @@ class AppConfig {
 
   // Storage
   final int retentionDays;
+  final int keepBrokenItemsDays;
   final Map<String, String> colorLabels;
 
   // Paste behavior
@@ -154,13 +180,24 @@ class AppConfig {
   final bool hideOnDeactivate;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
+  final bool resetFiltersOnShow;
   final bool hasSeenHint;
   final String themeMode;
-  final bool showTrayIcon;
-  final bool showInTaskbar;
   final bool accessibilityWasGranted;
   final String lastRunVersion;
   final bool hasSeenWindowsOnboarding;
+  final bool hasCompletedOnboarding;
+
+  // Multimedia & thumbnails
+  final bool generateImageThumbnails;
+  final bool generateVideoThumbnails;
+  final bool generateAudioThumbnails;
+  final int maxImageProcessingSizeMB;
+
+  // Storage quota (total bytes allowed under images/). 0 disables the cap;
+  // anything > 0 triggers an LRU purge during the periodic cleanup until the
+  // owned bytes drop back below the limit. Pinned items are never purged.
+  final int imagesQuotaMB;
 
   AppConfig copyWith({
     String? preferredLanguage,
@@ -175,6 +212,7 @@ class AppConfig {
     int? maxItemsBeforeCleanup,
     int? scrollLoadThreshold,
     int? retentionDays,
+    int? keepBrokenItemsDays,
     Map<String, String>? colorLabels,
     int? duplicateIgnoreWindowMs,
     int? delayBeforeFocusMs,
@@ -188,13 +226,18 @@ class AppConfig {
     bool? hideOnDeactivate,
     bool? resetScrollOnShow,
     bool? resetSearchOnShow,
+    bool? resetFiltersOnShow,
     bool? hasSeenHint,
     String? themeMode,
-    bool? showTrayIcon,
-    bool? showInTaskbar,
     bool? accessibilityWasGranted,
     String? lastRunVersion,
     bool? hasSeenWindowsOnboarding,
+    bool? hasCompletedOnboarding,
+    bool? generateImageThumbnails,
+    bool? generateVideoThumbnails,
+    bool? generateAudioThumbnails,
+    int? maxImageProcessingSizeMB,
+    int? imagesQuotaMB,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -208,6 +251,7 @@ class AppConfig {
     maxItemsBeforeCleanup: maxItemsBeforeCleanup ?? this.maxItemsBeforeCleanup,
     scrollLoadThreshold: scrollLoadThreshold ?? this.scrollLoadThreshold,
     retentionDays: retentionDays ?? this.retentionDays,
+    keepBrokenItemsDays: keepBrokenItemsDays ?? this.keepBrokenItemsDays,
     colorLabels: colorLabels ?? this.colorLabels,
     duplicateIgnoreWindowMs:
         duplicateIgnoreWindowMs ?? this.duplicateIgnoreWindowMs,
@@ -225,15 +269,25 @@ class AppConfig {
     hideOnDeactivate: hideOnDeactivate ?? this.hideOnDeactivate,
     resetScrollOnShow: resetScrollOnShow ?? this.resetScrollOnShow,
     resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
+    resetFiltersOnShow: resetFiltersOnShow ?? this.resetFiltersOnShow,
     hasSeenHint: hasSeenHint ?? this.hasSeenHint,
     themeMode: themeMode ?? this.themeMode,
-    showTrayIcon: showTrayIcon ?? this.showTrayIcon,
-    showInTaskbar: showInTaskbar ?? this.showInTaskbar,
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
     hasSeenWindowsOnboarding:
         hasSeenWindowsOnboarding ?? this.hasSeenWindowsOnboarding,
+    hasCompletedOnboarding:
+        hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+    generateImageThumbnails:
+        generateImageThumbnails ?? this.generateImageThumbnails,
+    generateVideoThumbnails:
+        generateVideoThumbnails ?? this.generateVideoThumbnails,
+    generateAudioThumbnails:
+        generateAudioThumbnails ?? this.generateAudioThumbnails,
+    maxImageProcessingSizeMB:
+        maxImageProcessingSizeMB ?? this.maxImageProcessingSizeMB,
+    imagesQuotaMB: imagesQuotaMB ?? this.imagesQuotaMB,
   );
 
   Map<String, dynamic> toJson() => {
@@ -249,6 +303,7 @@ class AppConfig {
     'maxItemsBeforeCleanup': maxItemsBeforeCleanup,
     'scrollLoadThreshold': scrollLoadThreshold,
     'retentionDays': retentionDays,
+    'keepBrokenItemsDays': keepBrokenItemsDays,
     'colorLabels': colorLabels,
     'duplicateIgnoreWindowMs': duplicateIgnoreWindowMs,
     'delayBeforeFocusMs': delayBeforeFocusMs,
@@ -263,13 +318,18 @@ class AppConfig {
     'hideOnDeactivate': hideOnDeactivate,
     'resetScrollOnShow': resetScrollOnShow,
     'resetSearchOnShow': resetSearchOnShow,
+    'resetFiltersOnShow': resetFiltersOnShow,
     'hasSeenHint': hasSeenHint,
     'themeMode': themeMode,
-    'showTrayIcon': showTrayIcon,
-    'showInTaskbar': showInTaskbar,
     'accessibilityWasGranted': accessibilityWasGranted,
     'lastRunVersion': lastRunVersion,
     'hasSeenWindowsOnboarding': hasSeenWindowsOnboarding,
+    'hasCompletedOnboarding': hasCompletedOnboarding,
+    'generateImageThumbnails': generateImageThumbnails,
+    'generateVideoThumbnails': generateVideoThumbnails,
+    'generateAudioThumbnails': generateAudioThumbnails,
+    'maxImageProcessingSizeMB': maxImageProcessingSizeMB,
+    'imagesQuotaMB': imagesQuotaMB,
   };
 
   static Future<AppConfig> load(String configPath) async {

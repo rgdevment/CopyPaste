@@ -20,6 +20,7 @@ class ClipboardCard extends StatefulWidget {
     this.onExpandToggle,
     this.onOpen,
     this.onSelect,
+    this.onRequestThumbnailRefresh,
     this.isSelected = false,
     this.isExpanded = false,
     this.cardMinLines,
@@ -36,6 +37,11 @@ class ClipboardCard extends StatefulWidget {
   final VoidCallback? onExpandToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onSelect;
+
+  /// Invoked once per resolved image item to let the host trigger
+  /// background regeneration of `<id>_thumb.png` when the source file's
+  /// `mtime` no longer matches `item.sourceModifiedAt`.
+  final void Function(ClipboardItem item)? onRequestThumbnailRefresh;
   final bool isSelected;
   final bool isExpanded;
   final int? cardMinLines;
@@ -48,6 +54,7 @@ class ClipboardCard extends StatefulWidget {
 class _ClipboardCardState extends State<ClipboardCard> {
   bool _hovering = false;
   String? _resolvedImagePath;
+  bool _resolvedIsThumb = false;
   bool _imagePathResolved = false;
   bool? _fileAvailable;
   DateTime? _lastPrimaryDown;
@@ -80,8 +87,10 @@ class _ClipboardCardState extends State<ClipboardCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.id != widget.item.id ||
         oldWidget.item.content != widget.item.content ||
+        oldWidget.item.thumbPath != widget.item.thumbPath ||
         oldWidget.item.metadata != widget.item.metadata) {
       _imagePathResolved = false;
+      _resolvedIsThumb = false;
       _fileAvailable = null;
       _resolveImagePath();
       _resolveFileAvailability();
@@ -102,7 +111,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _needsOpenAction(ClipboardItem item) {
     return switch (item.type) {
       ClipboardContentType.image =>
-        _imagePathResolved && _resolvedImagePath != null,
+        _imagePathResolved &&
+            _resolvedImagePath != null &&
+            (_fileAvailable ?? true),
       ClipboardContentType.file ||
       ClipboardContentType.folder ||
       ClipboardContentType.audio ||
@@ -116,35 +127,72 @@ class _ClipboardCardState extends State<ClipboardCard> {
 
   void _resolveImagePath() {
     final item = widget.item;
-    if (item.type != ClipboardContentType.image &&
-        item.type != ClipboardContentType.video &&
-        item.type != ClipboardContentType.audio) {
+    final isImage = item.type == ClipboardContentType.image;
+    final isMedia =
+        item.type == ClipboardContentType.video ||
+        item.type == ClipboardContentType.audio;
+    if (!isImage && !isMedia) {
       return;
     }
-    String? path;
-    if (item.type == ClipboardContentType.image) {
-      path = item.content;
+    if (isImage) {
+      // Always ask the host to refresh the thumb if the source mtime is
+      // stale. The host is responsible for deciding (and rate-limiting).
+      widget.onRequestThumbnailRefresh?.call(item);
     }
-    if (path != null) {
-      _checkFileAsync(path);
-    } else {
-      _resolvedImagePath = null;
-      _imagePathResolved = true;
-      if (mounted) setState(() {});
-    }
+    _checkImagePathsAsync(item, allowContentFallback: isImage);
   }
 
-  Future<void> _checkFileAsync(String path) async {
-    if (path.isEmpty) {
-      _resolvedImagePath = null;
-      _imagePathResolved = true;
-      if (mounted) setState(() {});
+  /// Resolves the best path to display for an image item: prefers
+  /// `item.thumbPath` (when present and the file exists), falls back to
+  /// `item.content`, finally null.
+  ///
+  /// When [allowContentFallback] is false (video / audio items) the
+  /// content path is never used as a fallback because it points to the
+  /// external media file, not a renderable image.
+  Future<void> _checkImagePathsAsync(
+    ClipboardItem item, {
+    bool allowContentFallback = true,
+  }) async {
+    final thumb = item.thumbPath;
+    if (thumb != null && thumb.isNotEmpty) {
+      if (await File(thumb).exists()) {
+        if (!mounted) return;
+        setState(() {
+          _resolvedImagePath = thumb;
+          _resolvedIsThumb = true;
+          _imagePathResolved = true;
+        });
+        return;
+      }
+    }
+
+    if (!allowContentFallback) {
+      if (!mounted) return;
+      setState(() {
+        _resolvedImagePath = null;
+        _resolvedIsThumb = false;
+        _imagePathResolved = true;
+      });
       return;
     }
-    final exists = await File(path).exists();
-    _resolvedImagePath = exists ? path : null;
-    _imagePathResolved = true;
-    if (mounted) setState(() {});
+
+    final content = item.content;
+    if (content.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _resolvedImagePath = null;
+        _resolvedIsThumb = false;
+        _imagePathResolved = true;
+      });
+      return;
+    }
+    final exists = await File(content).exists();
+    if (!mounted) return;
+    setState(() {
+      _resolvedImagePath = exists ? content : null;
+      _resolvedIsThumb = false;
+      _imagePathResolved = true;
+    });
   }
 
   void _resolveFileAvailability() {
@@ -152,7 +200,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
     if (item.type != ClipboardContentType.file &&
         item.type != ClipboardContentType.folder &&
         item.type != ClipboardContentType.audio &&
-        item.type != ClipboardContentType.video) {
+        item.type != ClipboardContentType.video &&
+        item.type != ClipboardContentType.image) {
       return;
     }
     final path = item.content.split('\n').first.trim();
@@ -640,48 +689,94 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    final originalPath = item.content.trim();
-    if (originalPath.isEmpty) {
-      return Container(
-        height: theme.sizing.cardImageHeight,
-        decoration: BoxDecoration(
-          color: colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(theme.radii.thumbnail),
-        ),
-        child: Center(
-          child: Icon(
-            theme.icons.image,
-            size: theme.sizing.iconSizeLg,
-            color: colors.onSurfaceMuted,
+    final l10n = AppLocalizations.of(context);
+    final contentPath = item.content.trim();
+    final filename = contentPath.isEmpty
+        ? ''
+        : contentPath.split(Platform.pathSeparator).last;
+
+    // File is known to be missing: show explicit warning instead of
+    // letting Image.file fail silently via errorBuilder.
+    if (_resolvedImagePath == null) {
+      return Semantics(
+        label: filename.isEmpty
+            ? l10n.imageFile
+            : '${l10n.imageFile}: $filename, ${l10n.fileNotFound}',
+        child: Container(
+          height: theme.sizing.cardImageHeight,
+          decoration: BoxDecoration(
+            color: colors.surfaceVariant,
+            borderRadius: BorderRadius.circular(theme.radii.thumbnail),
           ),
+          child: contentPath.isEmpty
+              ? Center(
+                  child: Icon(
+                    theme.icons.image,
+                    size: theme.sizing.iconSizeLg,
+                    color: colors.onSurfaceMuted,
+                  ),
+                )
+              : Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        theme.icons.warning,
+                        size: theme.sizing.iconSizeLg,
+                        color: colors.warning,
+                      ),
+                      const SizedBox(height: 4),
+                      _ExtBadge(
+                        label: l10n.fileNotFound,
+                        color: colors.warning,
+                      ),
+                    ],
+                  ),
+                ),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(theme.radii.thumbnail),
-          child: Container(
-            height: theme.sizing.cardImageHeight,
-            width: double.infinity,
-            color: colors.surfaceVariant,
-            child: Image.file(
-              File(originalPath),
-              fit: BoxFit.cover,
-              cacheWidth: 700,
-              errorBuilder: (_, e, s) => Center(
-                child: Icon(
-                  theme.icons.warning,
-                  color: colors.warning,
-                  size: theme.sizing.iconSizeLg,
+    return Semantics(
+      label: filename.isEmpty
+          ? l10n.imageFile
+          : (_fileAvailable == false
+                ? '${l10n.imageFile}: $filename, ${l10n.fileNotFound}'
+                : '${l10n.imageFile}: $filename'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(theme.radii.thumbnail),
+            child: Container(
+              height: theme.sizing.cardImageHeight,
+              width: double.infinity,
+              color: colors.surfaceVariant,
+              child: Image.file(
+                File(_resolvedImagePath!),
+                fit: BoxFit.cover,
+                cacheWidth: _resolvedIsThumb ? 256 : 700,
+                errorBuilder: (_, e, s) => Center(
+                  child: Icon(
+                    theme.icons.warning,
+                    color: colors.warning,
+                    size: theme.sizing.iconSizeLg,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+          if (_fileAvailable == false) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ExtBadge(label: l10n.fileNotFound, color: colors.warning),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -696,41 +791,49 @@ class _ClipboardCardState extends State<ClipboardCard> {
         ? ''
         : files.first.split(Platform.pathSeparator).last;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          firstName.isEmpty ? item.content : firstName,
-          style: theme.typography.cardContent.copyWith(
-            color: colors.onSurface.withValues(
-              alpha: theme.cardStyle.contentOpacity,
+    final semanticsLabel = [
+      if (firstName.isNotEmpty) firstName else item.content,
+      if (!available) AppLocalizations.of(context).fileNotFound,
+    ].join(', ');
+
+    return Semantics(
+      label: semanticsLabel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            firstName.isEmpty ? item.content : firstName,
+            style: theme.typography.cardContent.copyWith(
+              color: colors.onSurface.withValues(
+                alpha: theme.cardStyle.contentOpacity,
+              ),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        if (files.length > 1 || !available) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (files.length > 1) ...[
-                _ExtBadge(
-                  label: '+${files.length - 1}',
-                  color: colors.onSurfaceMuted,
-                ),
+          if (files.length > 1 || !available) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (files.length > 1) ...[
+                  _ExtBadge(
+                    label: '+${files.length - 1}',
+                    color: colors.onSurfaceMuted,
+                  ),
+                ],
+                if (!available) ...[
+                  if (files.length > 1) const SizedBox(width: 4),
+                  _ExtBadge(
+                    label: AppLocalizations.of(context).fileNotFound,
+                    color: colors.warning,
+                  ),
+                ],
               ],
-              if (!available) ...[
-                if (files.length > 1) const SizedBox(width: 4),
-                _ExtBadge(
-                  label: AppLocalizations.of(context).fileNotFound,
-                  color: colors.warning,
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -745,84 +848,115 @@ class _ClipboardCardState extends State<ClipboardCard> {
         : path.split(Platform.pathSeparator).last;
     final isAudio = item.type == ClipboardContentType.audio;
     final typeColor = _typeColor(item.type, colors);
+    final l10n = AppLocalizations.of(context);
+    final typeName = isAudio ? l10n.audioFile : l10n.videoFile;
+    final missing = _fileAvailable == false;
+
+    final semanticsLabel = [
+      filename.isEmpty ? typeName : filename,
+      if (missing) l10n.fileNotFound,
+    ].join(', ');
 
     final hasThumb = _imagePathResolved && _resolvedImagePath != null;
 
     if (!isAudio && hasThumb) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(theme.radii.thumbnail),
-            child: Container(
-              height: theme.sizing.cardImageHeight,
-              width: double.infinity,
-              color: colors.surfaceVariant,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.file(
-                    File(_resolvedImagePath!),
-                    fit: BoxFit.contain,
-                    cacheWidth: 700,
-                    errorBuilder: (_, e, st) => _MediaIcon(
-                      isAudio: false,
-                      typeColor: typeColor,
-                      radius: theme.radii.thumbnail,
-                    ),
-                  ),
-                  Center(
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
+      return Semantics(
+        label: semanticsLabel,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(theme.radii.thumbnail),
+              child: Container(
+                height: theme.sizing.cardImageHeight,
+                width: double.infinity,
+                color: colors.surfaceVariant,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      File(_resolvedImagePath!),
+                      fit: BoxFit.contain,
+                      cacheWidth: _resolvedIsThumb ? 256 : 700,
+                      errorBuilder: (_, e, st) => _MediaIcon(
+                        isAudio: false,
+                        typeColor: typeColor,
+                        radius: theme.radii.thumbnail,
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.play_arrow_rounded,
-                          size: 16,
-                          color: Colors.white,
+                    ),
+                    Center(
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.play_arrow_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
+            const SizedBox(height: 4),
+            Text(
+              filename.isEmpty ? l10n.videoFile : filename,
+              style: theme.typography.cardContent.copyWith(
+                color: colors.onSurface.withValues(
+                  alpha: theme.cardStyle.contentOpacity,
+                ),
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (missing) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ExtBadge(label: l10n.fileNotFound, color: colors.warning),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Semantics(
+      label: semanticsLabel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            filename.isEmpty
-                ? AppLocalizations.of(context).videoFile
-                : filename,
+            filename.isEmpty ? typeName : filename,
             style: theme.typography.cardContent.copyWith(
               color: colors.onSurface.withValues(
                 alpha: theme.cardStyle.contentOpacity,
               ),
-              fontSize: 11,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          if (missing) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ExtBadge(label: l10n.fileNotFound, color: colors.warning),
+              ],
+            ),
+          ],
         ],
-      );
-    }
-
-    return Text(
-      filename.isEmpty
-          ? (isAudio
-                ? AppLocalizations.of(context).audioFile
-                : AppLocalizations.of(context).videoFile)
-          : filename,
-      style: theme.typography.cardContent.copyWith(
-        color: colors.onSurface.withValues(
-          alpha: theme.cardStyle.contentOpacity,
-        ),
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 

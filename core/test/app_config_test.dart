@@ -196,49 +196,6 @@ void main() {
       expect(config.cardMaxLines, equals(5));
     });
 
-    test('showInTaskbar defaults to false', () {
-      const config = AppConfig();
-      expect(config.showInTaskbar, isFalse);
-    });
-
-    test('showInTaskbar round-trips via JSON', () {
-      const config = AppConfig(showInTaskbar: true);
-      expect(AppConfig.fromJson(config.toJson()).showInTaskbar, isTrue);
-    });
-
-    test('showInTaskbar absent in JSON defaults to false', () {
-      final config = AppConfig.fromJson({});
-      expect(config.showInTaskbar, isFalse);
-    });
-
-    test('copyWith showInTaskbar updates value', () {
-      const config = AppConfig();
-      expect(config.copyWith(showInTaskbar: true).showInTaskbar, isTrue);
-    });
-
-    test('showTrayIcon defaults to true', () {
-      const config = AppConfig();
-      expect(config.showTrayIcon, isTrue);
-    });
-
-    test('showTrayIcon round-trips via JSON', () {
-      const config = AppConfig(showTrayIcon: false);
-      final restored = AppConfig.fromJson(config.toJson());
-      expect(restored.showTrayIcon, isFalse);
-    });
-
-    test('showTrayIcon absent in JSON defaults to true', () {
-      final config = AppConfig.fromJson({});
-      expect(config.showTrayIcon, isTrue);
-    });
-
-    test('copyWith showTrayIcon updates value', () {
-      const config = AppConfig();
-      final updated = config.copyWith(showTrayIcon: false);
-      expect(updated.showTrayIcon, isFalse);
-      expect(config.showTrayIcon, isTrue);
-    });
-
     test('hasSeenWindowsOnboarding defaults to false', () {
       const config = AppConfig();
       expect(config.hasSeenWindowsOnboarding, isFalse);
@@ -387,8 +344,6 @@ void main() {
         resetSearchOnShow: false,
         hasSeenHint: true,
         themeMode: 'test',
-        showTrayIcon: false,
-        showInTaskbar: true,
         accessibilityWasGranted: true,
         lastRunVersion: 'v',
         hasSeenWindowsOnboarding: true,
@@ -421,8 +376,6 @@ void main() {
       expect(json['resetSearchOnShow'], false);
       expect(json['hasSeenHint'], true);
       expect(json['themeMode'], 'test');
-      expect(json['showTrayIcon'], false);
-      expect(json['showInTaskbar'], true);
       expect(json['accessibilityWasGranted'], true);
       expect(json['lastRunVersion'], 'v');
       expect(json['hasSeenWindowsOnboarding'], true);
@@ -646,6 +599,151 @@ void main() {
     test('fromJson explicit false overrides default true for runOnStartup', () {
       final config = AppConfig.fromJson({'runOnStartup': false});
       expect(config.runOnStartup, isFalse);
+    });
+  });
+
+  group('AppConfig PR #10 fields (thumbnails / onboarding / image cap)', () {
+    test('default values', () {
+      const c = AppConfig();
+      expect(c.hasCompletedOnboarding, isFalse);
+      expect(c.generateImageThumbnails, isTrue);
+      expect(c.generateVideoThumbnails, isTrue);
+      expect(c.generateAudioThumbnails, isTrue);
+      expect(c.maxImageProcessingSizeMB, equals(25));
+    });
+
+    test('JSON round-trip preserves new fields', () {
+      const c = AppConfig(
+        hasCompletedOnboarding: true,
+        generateImageThumbnails: false,
+        generateVideoThumbnails: false,
+        generateAudioThumbnails: false,
+        maxImageProcessingSizeMB: 5,
+      );
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.hasCompletedOnboarding, isTrue);
+      expect(restored.generateImageThumbnails, isFalse);
+      expect(restored.generateVideoThumbnails, isFalse);
+      expect(restored.generateAudioThumbnails, isFalse);
+      expect(restored.maxImageProcessingSizeMB, equals(5));
+    });
+
+    test('copyWith updates each new field independently', () {
+      const c = AppConfig();
+      final u = c.copyWith(
+        hasCompletedOnboarding: true,
+        generateImageThumbnails: false,
+        maxImageProcessingSizeMB: 10,
+      );
+      expect(u.hasCompletedOnboarding, isTrue);
+      expect(u.generateImageThumbnails, isFalse);
+      expect(u.generateVideoThumbnails, isTrue); // unchanged
+      expect(u.maxImageProcessingSizeMB, equals(10));
+    });
+
+    test(
+      'hasCompletedOnboarding migrates from legacy hasSeenWindowsOnboarding',
+      () {
+        final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
+        expect(c.hasCompletedOnboarding, isTrue);
+      },
+    );
+
+    test(
+      'hasCompletedOnboarding stays false when neither legacy nor new is set',
+      () {
+        final c = AppConfig.fromJson({});
+        expect(c.hasCompletedOnboarding, isFalse);
+      },
+    );
+
+    test('explicit hasCompletedOnboarding overrides legacy', () {
+      final c = AppConfig.fromJson({
+        'hasSeenWindowsOnboarding': true,
+        'hasCompletedOnboarding': false,
+      });
+      expect(c.hasCompletedOnboarding, isFalse);
+    });
+  });
+
+  group('AppConfig PR #9 field (keepBrokenItemsDays)', () {
+    test('default value is 30', () {
+      const c = AppConfig();
+      expect(c.keepBrokenItemsDays, equals(30));
+    });
+
+    test('JSON round-trip preserves keepBrokenItemsDays', () {
+      const c = AppConfig(keepBrokenItemsDays: 7);
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.keepBrokenItemsDays, equals(7));
+    });
+
+    test('absent key in JSON falls back to default (30)', () {
+      final c = AppConfig.fromJson({});
+      expect(c.keepBrokenItemsDays, equals(30));
+    });
+
+    test('copyWith updates keepBrokenItemsDays independently', () {
+      const c = AppConfig();
+      final updated = c.copyWith(keepBrokenItemsDays: 14);
+      expect(updated.keepBrokenItemsDays, equals(14));
+      // Other fields unaffected
+      expect(updated.retentionDays, equals(c.retentionDays));
+    });
+  });
+
+  group('AppConfig PR #10b field (resetFiltersOnShow)', () {
+    test('default value is true', () {
+      const c = AppConfig();
+      expect(c.resetFiltersOnShow, isTrue);
+    });
+
+    test('JSON round-trip preserves resetFiltersOnShow', () {
+      const c = AppConfig(resetFiltersOnShow: false);
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.resetFiltersOnShow, isFalse);
+    });
+
+    test('absent key in JSON falls back to default (true)', () {
+      final c = AppConfig.fromJson({});
+      expect(c.resetFiltersOnShow, isTrue);
+    });
+
+    test('copyWith updates resetFiltersOnShow independently', () {
+      const c = AppConfig();
+      final updated = c.copyWith(resetFiltersOnShow: false);
+      expect(updated.resetFiltersOnShow, isFalse);
+      expect(updated.resetScrollOnShow, equals(c.resetScrollOnShow));
+      expect(updated.resetSearchOnShow, equals(c.resetSearchOnShow));
+    });
+  });
+
+  group('AppConfig PR #11 field (imagesQuotaMB)', () {
+    test('default value is 0 (unlimited)', () {
+      const c = AppConfig();
+      expect(c.imagesQuotaMB, equals(0));
+    });
+
+    test('JSON round-trip preserves imagesQuotaMB', () {
+      const c = AppConfig(imagesQuotaMB: 500);
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.imagesQuotaMB, equals(500));
+    });
+
+    test('absent key in JSON falls back to default (0)', () {
+      final c = AppConfig.fromJson({});
+      expect(c.imagesQuotaMB, equals(0));
+    });
+
+    test('copyWith updates imagesQuotaMB independently', () {
+      const c = AppConfig();
+      final updated = c.copyWith(imagesQuotaMB: 1024);
+      expect(updated.imagesQuotaMB, equals(1024));
+      // Other multimedia fields unaffected
+      expect(
+        updated.maxImageProcessingSizeMB,
+        equals(c.maxImageProcessingSizeMB),
+      );
     });
   });
 }

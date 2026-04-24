@@ -1,7 +1,4 @@
 PODS:
-  - auto_updater_macos (0.0.1):
-    - FlutterMacOS
-    - Sparkle
   - file_picker (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
@@ -15,7 +12,6 @@ PODS:
     - FlutterMacOS
   - screen_retriever_macos (0.0.1):
     - FlutterMacOS
-  - Sparkle (2.9.0)
   - sqlite3 (3.52.0):
     - sqlite3/common (= 3.52.0)
   - sqlite3/common (3.52.0)
@@ -47,7 +43,6 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
-  - auto_updater_macos (from `Flutter/ephemeral/.symlinks/plugins/auto_updater_macos/macos`)
   - file_picker (from `Flutter/ephemeral/.symlinks/plugins/file_picker/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
@@ -61,12 +56,9 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - HotKey
-    - Sparkle
     - sqlite3
 
 EXTERNAL SOURCES:
-  auto_updater_macos:
-    :path: Flutter/ephemeral/.symlinks/plugins/auto_updater_macos/macos
   file_picker:
     :path: Flutter/ephemeral/.symlinks/plugins/file_picker/macos
   FlutterMacOS:
@@ -87,15 +79,13 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
 
 SPEC CHECKSUMS:
-  auto_updater_macos: 3a42f1a06be6981f1a18be37e6e7bf86aa732118
   file_picker: 7584aae6fa07a041af2b36a2655122d42f578c1a
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
   hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
-  listener: 3c94459a76469955ba115fcb179079e9202123ff
+  listener: cccbc07a6a40a6acf872fd26216410100fd83104
   macos_window_utils: 23f54331a0fd51eea9e0ed347253bf48fd379d1d
   screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
-  Sparkle: f4355f9ebbe9b7d932df4980d70f13922ac97b2a
   sqlite3: a51c07cf16e023d6c48abd5e5791a61a47354921
   sqlite3_flutter_libs: b3e120efe9a82017e5552a620f696589ed4f62ab
   tray_manager: a104b5c81b578d83f3c3d0f40a997c8b10810166
