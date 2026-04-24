@@ -905,6 +905,20 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
   const gchar* method = fl_method_call_get_name(method_call);
   FlValue* args = fl_method_call_get_args(method_call);
 
+  if (strcmp(method, "getCapabilities") == 0) {
+    g_autoptr(FlValue) caps = fl_value_new_map();
+    fl_value_set_string_take(caps, "isX11", fl_value_new_bool(plugin_is_x11()));
+#ifdef GDK_WINDOWING_X11
+    Display* display = get_xdisplay();
+    gboolean has_xtest = display != NULL && ensure_xtest(display);
+#else
+    gboolean has_xtest = FALSE;
+#endif
+    fl_value_set_string_take(caps, "hasXTest", fl_value_new_bool(has_xtest));
+    respond_success(method_call, fl_value_ref(caps));
+    return;
+  }
+
   if (strcmp(method, "setClipboardContent") == 0) {
     FlValue* type_value = args != NULL ? fl_value_lookup_string(args, "type") : NULL;
     gint64 type = type_value != NULL ? fl_value_get_int(type_value) : -1;
