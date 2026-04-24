@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 const bool _isStoreBuild = bool.fromEnvironment(
   'STORE_BUILD',
   defaultValue: false,
@@ -19,16 +21,25 @@ enum InstallChannel {
 enum HostPlatform { macos, linux, windows, other }
 
 class InstallChannelDetector {
+  static HostPlatform? platformOverride;
+
+  @visibleForTesting
+  static InstallChannel? channelOverride;
+
   static InstallChannel detect({
     String? execPathOverride,
     HostPlatform? platformOverride,
   }) {
+    if (channelOverride != null) return channelOverride!;
     if (_isStoreBuild) return InstallChannel.msStore;
     final path = (execPathOverride ?? Platform.resolvedExecutable).replaceAll(
       r'\',
       '/',
     );
-    final host = platformOverride ?? _currentPlatform();
+    final host =
+        platformOverride ??
+        InstallChannelDetector.platformOverride ??
+        _currentPlatform();
 
     if (host == HostPlatform.macos) {
       if (_isHomebrewPath(path)) return InstallChannel.homebrew;
