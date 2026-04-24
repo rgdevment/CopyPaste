@@ -24,6 +24,7 @@ class ClipboardItem {
     this.contentHash,
     this.thumbPath,
     this.sourceModifiedAt,
+    this.brokenSince,
   }) : id = id ?? _uuid.v4(),
        createdAt = createdAt ?? DateTime.now().toUtc(),
        modifiedAt = modifiedAt ?? DateTime.now().toUtc();
@@ -52,6 +53,12 @@ class ClipboardItem {
   /// Si difiere del `mtime` actual, el thumb cacheado está obsoleto.
   final DateTime? sourceModifiedAt;
 
+  /// Primera vez (UTC) que el cleanup periódico detectó que la referencia
+  /// externa ya no existe (con el volumen presente). Null mientras el
+  /// archivo siga disponible o el volumen esté ausente. Se usa para purgar
+  /// el item cuando supera `keepBrokenItemsDays`.
+  final DateTime? brokenSince;
+
   bool get isFileBasedType =>
       type == ClipboardContentType.file ||
       type == ClipboardContentType.folder ||
@@ -72,6 +79,7 @@ class ClipboardItem {
     Object? contentHash = _sentinel,
     Object? thumbPath = _sentinel,
     Object? sourceModifiedAt = _sentinel,
+    Object? brokenSince = _sentinel,
   }) => ClipboardItem(
     id: id,
     content: content ?? this.content,
@@ -91,6 +99,9 @@ class ClipboardItem {
     sourceModifiedAt: sourceModifiedAt == _sentinel
         ? this.sourceModifiedAt
         : sourceModifiedAt as DateTime?,
+    brokenSince: brokenSince == _sentinel
+        ? this.brokenSince
+        : brokenSince as DateTime?,
   );
 
   bool isFileAvailable() {

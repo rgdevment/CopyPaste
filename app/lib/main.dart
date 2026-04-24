@@ -125,6 +125,7 @@ Future<void> _run() async {
       repo,
       () => config.retentionDays,
       storage: storage,
+      getKeepBrokenDays: () => config.keepBrokenItemsDays,
     )..start(storage.baseDir);
 
     final listener = ClipboardListener();
@@ -867,6 +868,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             setState(() => _config = newConfig);
             widget.cleanupService.updateRetentionCallback(
               () => newConfig.retentionDays,
+            );
+            widget.cleanupService.updateKeepBrokenCallback(
+              () => newConfig.keepBrokenItemsDays,
             );
             widget.clipboardService.pasteIgnoreWindowMs =
                 newConfig.duplicateIgnoreWindowMs;

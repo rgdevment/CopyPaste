@@ -28,6 +28,7 @@ class ClipboardItems extends Table {
   TextColumn get contentHash => text().nullable()();
   TextColumn get thumbPath => text().nullable()();
   DateTimeColumn get sourceModifiedAt => dateTime().nullable()();
+  DateTimeColumn get brokenSince => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -38,7 +39,7 @@ class _AppDatabase extends _$_AppDatabase {
   _AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -53,6 +54,9 @@ class _AppDatabase extends _$_AppDatabase {
       if (from < 3) {
         await m.addColumn(clipboardItems, clipboardItems.thumbPath);
         await m.addColumn(clipboardItems, clipboardItems.sourceModifiedAt);
+      }
+      if (from < 4) {
+        await m.addColumn(clipboardItems, clipboardItems.brokenSince);
       }
     },
     beforeOpen: (details) async {
@@ -182,6 +186,7 @@ class SqliteRepository implements IClipboardRepository {
     contentHash: row.contentHash,
     thumbPath: row.thumbPath,
     sourceModifiedAt: row.sourceModifiedAt,
+    brokenSince: row.brokenSince,
   );
 
   ClipboardItemsCompanion _toCompanion(ClipboardItem item) =>
@@ -200,6 +205,7 @@ class SqliteRepository implements IClipboardRepository {
         contentHash: Value(item.contentHash),
         thumbPath: Value(item.thumbPath),
         sourceModifiedAt: Value(item.sourceModifiedAt),
+        brokenSince: Value(item.brokenSince),
       );
 
   ClipboardItem _fromQueryRow(QueryRow row) => ClipboardItem(
@@ -217,6 +223,7 @@ class SqliteRepository implements IClipboardRepository {
     contentHash: row.readNullable<String>('content_hash'),
     thumbPath: row.readNullable<String>('thumb_path'),
     sourceModifiedAt: row.readNullable<DateTime>('source_modified_at'),
+    brokenSince: row.readNullable<DateTime>('broken_since'),
   );
 
   @override
