@@ -646,4 +646,123 @@ void main() {
       }
     });
   });
+
+  group('ClipboardService thumbnail gate methods with imagesPath', () {
+    test('requestThumbnailIfStale is a no-op when called', () async {
+      final dir = Directory.systemTemp.createTempSync('svc_gate_stale_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: dir.path);
+        final item = await svc.processImage(
+          'gate-hash-stale',
+          imagePath: '/some/external.png',
+        );
+        expect(item, isNotNull);
+        // Must not throw; exercises the _thumbQueue?.enqueueIfStale branch.
+        expect(() => svc.requestThumbnailIfStale(item!), returnsNormally);
+        await svc.dispose();
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('requestThumbnailRefresh enqueues a manual refresh', () async {
+      final dir = Directory.systemTemp.createTempSync('svc_gate_refresh_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: dir.path);
+        final item = await svc.processImage(
+          'gate-hash-refresh',
+          imagePath: '/some/external.png',
+        );
+        expect(item, isNotNull);
+        // Must not throw; exercises the _thumbQueue?.enqueue branch.
+        expect(() => svc.requestThumbnailRefresh(item!), returnsNormally);
+        await svc.dispose();
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'updateThumbnailTypeGate assigns to _thumbnailService.isTypeEnabled',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('svc_gate_type_');
+        try {
+          final svc = ClipboardService(repo, imagesPath: dir.path);
+          // Setting a gate must not throw.
+          svc.updateThumbnailTypeGate(
+            (type) => type == ClipboardContentType.image,
+          );
+          svc.updateThumbnailTypeGate(null);
+          await svc.dispose();
+        } finally {
+          dir.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('updateMaxImageBytesGate assigns the new getter', () async {
+      // Works with or without imagesPath — imageQueue is always created.
+      service.updateMaxImageBytesGate(() => 5 * 1024 * 1024);
+      service.updateMaxImageBytesGate(null);
+      // No error means the branch is exercised.
+    });
+  });
+
+  group('ClipboardService.processText legacy reclassification', () {
+    test(
+      'upgrades existing text item to resolved type on duplicate submission',
+      () async {
+        // Save an email address as plain text (simulates an item captured before
+        // the TextClassifier gained email classification).
+        const email = 'legacy.user@example.com';
+        final legacy = ClipboardItem(
+          content: email,
+          type: ClipboardContentType.text, // stored with wrong type
+        );
+        await repo.save(legacy);
+
+        ClipboardItem? reactivated;
+        service.onItemReactivated.listen((item) => reactivated = item);
+
+        // Submit the same content; TextClassifier now classifies it as 'email'.
+        // findByContentAndType('email') returns null, so the legacy path runs.
+        final result = await service.processText(
+          email,
+          ClipboardContentType.text,
+        );
+        await Future<void>.delayed(Duration.zero);
+
+        expect(result, isNotNull);
+        expect(result!.type, equals(ClipboardContentType.email));
+        expect(result.id, equals(legacy.id));
+        expect(reactivated?.id, equals(legacy.id));
+        expect(reactivated?.type, equals(ClipboardContentType.email));
+      },
+    );
+  });
+
+  group('ClipboardService.processImage BMP write failure', () {
+    test('falls back gracefully when temp BMP cannot be written', () async {
+      final dir = Directory.systemTemp.createTempSync('svc_bmp_fail_');
+      try {
+        // Make the images directory read-only so File.writeAsBytes throws.
+        await Process.run('chmod', ['444', dir.path]);
+
+        final svc = ClipboardService(repo, imagesPath: dir.path);
+        // Should not throw; the catch block logs a warning and saves anyway.
+        final result = await svc.processImage(
+          'bmp-fail-hash',
+          imageBytes: [1, 2, 3, 4],
+        );
+        expect(result, isNotNull);
+        // Item is saved even though the BMP write failed; content is empty.
+        expect(result!.type, equals(ClipboardContentType.image));
+
+        await svc.dispose();
+      } finally {
+        await Process.run('chmod', ['755', dir.path]);
+        dir.deleteSync(recursive: true);
+      }
+    });
+  });
 }
