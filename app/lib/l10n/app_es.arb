@@ -251,8 +251,6 @@
   "linuxPasteFocusTimeoutWarning": "El portapapeles tiene tu contenido. P\u00e9galo manualmente con Ctrl+V.",
   "linuxAppindicatorBannerTitle": "\u00cdcono de bandeja no disponible",
   "linuxAppindicatorBannerBody": "Tu escritorio no expone un host de AppIndicator, por lo que el \u00edcono de CopyPaste no aparecer\u00e1 en la bandeja. Instala una extensi\u00f3n de bandeja para tu distribuci\u00f3n y reinicia CopyPaste.",
-  "linuxClipboardManagerBannerTitle": "No se detect\u00f3 un gestor de portapapeles",
-  "linuxClipboardManagerBannerBody": "Sin un gestor de portapapeles (gpaste, klipper, clipman, copyq, \u2026) los datos copiados pueden perderse cuando CopyPaste se cierra. Instala uno y reinicia tu sesi\u00f3n.",
   "linuxXtestBannerTitle": "Pegado autom\u00e1tico deshabilitado",
   "linuxXtestBannerBody": "La extensi\u00f3n XTest de X11 no est\u00e1 disponible, por lo que CopyPaste no puede inyectar Ctrl+V autom\u00e1ticamente. Los elementos siguen copi\u00e1ndose al portapapeles \u2014 p\u00e9galos manualmente con Ctrl+V.",
   "linuxBannerDismiss": "Descartar",

@@ -14,7 +14,6 @@ class LinuxGuard {
   static bool get canRegisterHotkey => isUsable && _caps.hasEwmh;
   static bool get canPasteBack => isUsable && _caps.hasXTest;
   static bool get canShowTray => isUsable && _caps.hasAppIndicator;
-  static bool get canPersistClipboard => isUsable && _caps.hasClipboardManager;
   static bool get canAutostart => isUsable;
   static bool get usesNativeWindowEffects => false;
 }

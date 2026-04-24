@@ -46,7 +46,6 @@ class AppConfig {
     this.maxImageProcessingSizeMB = 25,
     this.imagesQuotaMB = 0,
     this.linuxAppindicatorWarningDismissed = false,
-    this.linuxClipboardManagerWarningDismissed = false,
     this.linuxXtestWarningDismissed = false,
   });
 
@@ -135,9 +134,6 @@ class AppConfig {
       linuxAppindicatorWarningDismissed:
           json['linuxAppindicatorWarningDismissed'] as bool? ??
           defaults.linuxAppindicatorWarningDismissed,
-      linuxClipboardManagerWarningDismissed:
-          json['linuxClipboardManagerWarningDismissed'] as bool? ??
-          defaults.linuxClipboardManagerWarningDismissed,
       linuxXtestWarningDismissed:
           json['linuxXtestWarningDismissed'] as bool? ??
           defaults.linuxXtestWarningDismissed,
@@ -215,7 +211,6 @@ class AppConfig {
 
   // Linux capability warning banners (dismissible).
   final bool linuxAppindicatorWarningDismissed;
-  final bool linuxClipboardManagerWarningDismissed;
   final bool linuxXtestWarningDismissed;
 
   AppConfig copyWith({
@@ -258,7 +253,6 @@ class AppConfig {
     int? maxImageProcessingSizeMB,
     int? imagesQuotaMB,
     bool? linuxAppindicatorWarningDismissed,
-    bool? linuxClipboardManagerWarningDismissed,
     bool? linuxXtestWarningDismissed,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
@@ -312,9 +306,6 @@ class AppConfig {
     linuxAppindicatorWarningDismissed:
         linuxAppindicatorWarningDismissed ??
         this.linuxAppindicatorWarningDismissed,
-    linuxClipboardManagerWarningDismissed:
-        linuxClipboardManagerWarningDismissed ??
-        this.linuxClipboardManagerWarningDismissed,
     linuxXtestWarningDismissed:
         linuxXtestWarningDismissed ?? this.linuxXtestWarningDismissed,
   );
@@ -360,8 +351,6 @@ class AppConfig {
     'maxImageProcessingSizeMB': maxImageProcessingSizeMB,
     'imagesQuotaMB': imagesQuotaMB,
     'linuxAppindicatorWarningDismissed': linuxAppindicatorWarningDismissed,
-    'linuxClipboardManagerWarningDismissed':
-        linuxClipboardManagerWarningDismissed,
     'linuxXtestWarningDismissed': linuxXtestWarningDismissed,
   };
 

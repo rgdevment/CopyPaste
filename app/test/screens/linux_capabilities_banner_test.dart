@@ -11,11 +11,7 @@ import 'package:copypaste/theme/compact_theme.dart';
 import 'package:copypaste/theme/theme_provider.dart';
 import 'package:core/core.dart';
 
-LinuxCapabilities _caps({
-  bool hasAppIndicator = true,
-  bool hasXTest = true,
-  bool hasClipboardManager = true,
-}) {
+LinuxCapabilities _caps({bool hasAppIndicator = true, bool hasXTest = true}) {
   return LinuxCapabilities(
     session: const LinuxSessionInfo(
       sessionType: 'x11',
@@ -28,7 +24,6 @@ LinuxCapabilities _caps({
     isX11: true,
     hasXTest: hasXTest,
     hasAppIndicator: hasAppIndicator,
-    hasClipboardManager: hasClipboardManager,
     hasEwmh: true,
     detectedDesktopEnv: 'gnome',
     detectedWmName: 'mutter',
@@ -91,13 +86,8 @@ void main() {
               config: const AppConfig(
                 linuxAppindicatorWarningDismissed: true,
                 linuxXtestWarningDismissed: true,
-                linuxClipboardManagerWarningDismissed: true,
               ),
-              capabilities: _caps(
-                hasAppIndicator: false,
-                hasXTest: false,
-                hasClipboardManager: false,
-              ),
+              capabilities: _caps(hasAppIndicator: false, hasXTest: false),
               onDismiss: (_) async {},
             ),
           ),

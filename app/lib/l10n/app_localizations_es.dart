@@ -706,14 +706,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu escritorio no expone un host de AppIndicator, por lo que el ícono de CopyPaste no aparecerá en la bandeja. Instala una extensión de bandeja para tu distribución y reinicia CopyPaste.';
 
   @override
-  String get linuxClipboardManagerBannerTitle =>
-      'No se detectó un gestor de portapapeles';
-
-  @override
-  String get linuxClipboardManagerBannerBody =>
-      'Sin un gestor de portapapeles (gpaste, klipper, clipman, copyq, …) los datos copiados pueden perderse cuando CopyPaste se cierra. Instala uno y reinicia tu sesión.';
-
-  @override
   String get linuxXtestBannerTitle => 'Pegado automático deshabilitado';
 
   @override

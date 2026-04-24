@@ -702,14 +702,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.';
 
   @override
-  String get linuxClipboardManagerBannerTitle =>
-      'No clipboard manager detected';
-
-  @override
-  String get linuxClipboardManagerBannerBody =>
-      'Without a clipboard manager (gpaste, klipper, clipman, copyq, …) clipboard data may be lost when CopyPaste quits. Install one and restart your session.';
-
-  @override
   String get linuxXtestBannerTitle => 'Automatic paste-back disabled';
 
   @override

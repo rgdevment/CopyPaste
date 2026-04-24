@@ -14,7 +14,6 @@ class LinuxCapabilities {
     required this.isX11,
     required this.hasXTest,
     required this.hasAppIndicator,
-    required this.hasClipboardManager,
     required this.hasEwmh,
     required this.detectedDesktopEnv,
     required this.detectedWmName,
@@ -25,7 +24,6 @@ class LinuxCapabilities {
   final bool isX11;
   final bool hasXTest;
   final bool hasAppIndicator;
-  final bool hasClipboardManager;
   final bool hasEwmh;
   final String detectedDesktopEnv;
   final String detectedWmName;
@@ -40,7 +38,6 @@ class LinuxCapabilities {
     isX11: false,
     hasXTest: false,
     hasAppIndicator: false,
-    hasClipboardManager: false,
     hasEwmh: false,
     detectedDesktopEnv: '',
     detectedWmName: '',
@@ -51,7 +48,6 @@ class LinuxCapabilities {
     bool? isX11,
     bool? hasXTest,
     bool? hasAppIndicator,
-    bool? hasClipboardManager,
     bool? hasEwmh,
     String? detectedDesktopEnv,
     String? detectedWmName,
@@ -62,7 +58,6 @@ class LinuxCapabilities {
       isX11: isX11 ?? this.isX11,
       hasXTest: hasXTest ?? this.hasXTest,
       hasAppIndicator: hasAppIndicator ?? this.hasAppIndicator,
-      hasClipboardManager: hasClipboardManager ?? this.hasClipboardManager,
       hasEwmh: hasEwmh ?? this.hasEwmh,
       detectedDesktopEnv: detectedDesktopEnv ?? this.detectedDesktopEnv,
       detectedWmName: detectedWmName ?? this.detectedWmName,
@@ -73,7 +68,7 @@ class LinuxCapabilities {
   @override
   String toString() =>
       'LinuxCapabilities(isX11=$isX11, hasXTest=$hasXTest, '
-      'hasAppIndicator=$hasAppIndicator, hasClipboardManager=$hasClipboardManager, '
+      'hasAppIndicator=$hasAppIndicator, '
       'hasEwmh=$hasEwmh, desktopEnv=$detectedDesktopEnv, wm=$detectedWmName, '
       'timedOut=$detectionTimedOut, session=$session)';
 }
@@ -167,7 +162,6 @@ class LinuxCapabilitiesService {
       isX11: _readBool(shellCaps, 'isX11', fallback: true),
       hasXTest: _readBool(listenerCaps, 'hasXTest'),
       hasAppIndicator: _readBool(shellCaps, 'hasAppIndicator'),
-      hasClipboardManager: _readBool(shellCaps, 'hasClipboardManager'),
       hasEwmh: _readBool(shellCaps, 'hasEwmh'),
       detectedDesktopEnv: _readString(shellCaps, 'desktopEnv'),
       detectedWmName: _readString(shellCaps, 'wmName'),
@@ -203,7 +197,6 @@ extension _LinuxCapabilitiesSession on LinuxCapabilities {
       isX11: isX11,
       hasXTest: hasXTest,
       hasAppIndicator: hasAppIndicator,
-      hasClipboardManager: hasClipboardManager,
       hasEwmh: hasEwmh,
       detectedDesktopEnv: detectedDesktopEnv,
       detectedWmName: detectedWmName,
