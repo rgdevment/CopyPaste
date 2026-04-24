@@ -674,6 +674,36 @@ void ListenerPlugin::HandleMethodCall(
     return;
   }
 
+  if (call.method_name() == "getNativeThumbnail") {
+    const auto* args =
+        std::get_if<flutter::EncodableMap>(call.arguments());
+    if (!args) {
+      result->Success(flutter::EncodableValue());
+      return;
+    }
+    auto path_it = args->find(flutter::EncodableValue("path"));
+    if (path_it == args->end()) {
+      result->Success(flutter::EncodableValue());
+      return;
+    }
+    const std::string path_utf8 = std::get<std::string>(path_it->second);
+
+    int size_px = 256;
+    auto size_it = args->find(flutter::EncodableValue("sizePx"));
+    if (size_it != args->end()) {
+      size_px = std::get<int>(size_it->second);
+    }
+    if (size_px <= 0) size_px = 256;
+
+    auto bytes = GetNativeThumbnail(Utf8ToWide(path_utf8), size_px);
+    if (bytes.empty()) {
+      result->Success(flutter::EncodableValue());
+    } else {
+      result->Success(flutter::EncodableValue(std::move(bytes)));
+    }
+    return;
+  }
+
   if (call.method_name() != "setClipboardContent") {
     result->NotImplemented();
     return;
@@ -983,6 +1013,100 @@ bool ListenerPlugin::SetFilesToClipboard(
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();
   return ok;
+}
+
+// --- Native shell thumbnail extraction (PR #6b) ----------------------------
+
+namespace {
+
+// CLSID for the PNG image encoder built into GDI+.
+// {557CF406-1A04-11D3-9A73-0000F81EF32E}
+constexpr CLSID kPngEncoderClsid = {
+    0x557CF406,
+    0x1A04,
+    0x11D3,
+    {0x9A, 0x73, 0x00, 0x00, 0xF8, 0x1E, 0xF3, 0x2E}};
+
+// Encodes [bitmap] as PNG into a fresh byte buffer. Returns empty on failure.
+std::vector<uint8_t> EncodePng(Gdiplus::Bitmap& bitmap) {
+  IStream* stream = nullptr;
+  if (CreateStreamOnHGlobal(nullptr, TRUE, &stream) != S_OK || !stream) {
+    return {};
+  }
+
+  std::vector<uint8_t> out;
+  if (bitmap.Save(stream, &kPngEncoderClsid, nullptr) == Gdiplus::Ok) {
+    HGLOBAL h_global = nullptr;
+    if (GetHGlobalFromStream(stream, &h_global) == S_OK && h_global) {
+      const SIZE_T size = GlobalSize(h_global);
+      void* ptr = GlobalLock(h_global);
+      if (ptr && size > 0) {
+        out.assign(static_cast<uint8_t*>(ptr),
+                   static_cast<uint8_t*>(ptr) + size);
+      }
+      if (ptr) GlobalUnlock(h_global);
+    }
+  }
+  stream->Release();
+  return out;
+}
+
+}  // namespace
+
+std::vector<uint8_t> ListenerPlugin::GetNativeThumbnail(
+    const std::wstring& path, int size_px) {
+  if (path.empty() || size_px <= 0) return {};
+
+  // Defensive: most Flutter platform-thread invocations are already in an
+  // STA, but `CoInitializeEx` is idempotent if the apartment matches and
+  // simply returns S_FALSE. RPC_E_CHANGED_MODE means another COM apartment
+  // is active — in that case we proceed without our own init.
+  HRESULT init_hr =
+      CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+  bool needs_uninit = SUCCEEDED(init_hr);
+
+  std::vector<uint8_t> result;
+  IShellItemImageFactory* factory = nullptr;
+  HRESULT hr = SHCreateItemFromParsingName(path.c_str(), nullptr,
+                                           IID_PPV_ARGS(&factory));
+  if (SUCCEEDED(hr) && factory) {
+    SIZE size = {size_px, size_px};
+    HBITMAP hbmp = nullptr;
+
+    // First attempt: cache-only, fast path. This avoids extractor invocation
+    // (no COM-out-of-process work, no I/O on the source file).
+    hr = factory->GetImage(
+        size, SIIGBF_THUMBNAILONLY | SIIGBF_INCACHEONLY, &hbmp);
+
+    // The shell may report E_PENDING when the cache entry is being built.
+    // Retry once without INCACHEONLY to let it materialize. We keep
+    // THUMBNAILONLY so we never get back a generic icon for unknown types.
+    if (hr == E_PENDING) {
+      hr = factory->GetImage(size, SIIGBF_THUMBNAILONLY, &hbmp);
+    }
+
+    if (SUCCEEDED(hr) && hbmp) {
+      BITMAP bm = {};
+      if (GetObject(hbmp, sizeof(bm), &bm) != 0) {
+        // Discard tiny bitmaps: when the OS has no real thumbnail it can
+        // still return a 32x32 file-type icon despite THUMBNAILONLY in
+        // some shell versions. Anything <= 64 px on either side at a 256
+        // px request is treated as a generic icon.
+        const bool too_small = bm.bmWidth <= 64 || bm.bmHeight <= 64;
+        if (!too_small) {
+          Gdiplus::Bitmap gdi_bitmap(hbmp, nullptr);
+          if (gdi_bitmap.GetLastStatus() == Gdiplus::Ok) {
+            result = EncodePng(gdi_bitmap);
+          }
+        }
+      }
+      DeleteObject(hbmp);
+    }
+    factory->Release();
+  }
+
+  if (needs_uninit) CoUninitialize();
+  return result;
 }
 
 }  // namespace listener

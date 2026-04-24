@@ -112,9 +112,13 @@ Future<void> _run() async {
     );
 
     final repo = SqliteRepository.fromPath(storage.databasePath);
+    final NativeThumbnailProvider? nativeThumbProvider = Platform.isWindows
+        ? WindowsNativeThumbnailProvider()
+        : null;
     final clipboardService = ClipboardService(
       repo,
       imagesPath: storage.imagesPath,
+      nativeThumbnailProvider: nativeThumbProvider,
     )..pasteIgnoreWindowMs = config.duplicateIgnoreWindowMs;
 
     final cleanupService = CleanupService(
