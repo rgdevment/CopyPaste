@@ -46,7 +46,12 @@ std::vector<uint8_t> ConvertDibToBmp(const std::vector<uint8_t>& dib) {
   if (bih->biBitCount <= 8) {
     DWORD colors = bih->biClrUsed ? bih->biClrUsed : (1u << bih->biBitCount);
     colorTableSize = colors * sizeof(RGBQUAD);
-  } else if (bih->biCompression == BI_BITFIELDS) {
+  } else if (bih->biCompression == BI_BITFIELDS &&
+             bih->biSize == sizeof(BITMAPINFOHEADER)) {
+    // BI_BITFIELDS masks only follow the header for the classic
+    // BITMAPINFOHEADER (40 bytes). For BITMAPV4HEADER (108) and
+    // BITMAPV5HEADER (124) — produced by the Windows Snipping Tool — the
+    // masks are embedded inside the header itself, so no extra offset.
     colorTableSize = 3 * sizeof(DWORD);
   }
 

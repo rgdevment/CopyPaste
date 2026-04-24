@@ -166,13 +166,10 @@ class ClipboardService {
       );
       if (result == null) {
         AppLogger.warn(
-          '_processImageBackground: ImageProcessor returned null for ${item.id} (unsupported format)',
+          '_processImageBackground: ImageProcessor returned null for ${item.id} (unsupported format) — keeping BMP fallback',
         );
-        final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
-        try {
-          final bmp = File(bmpPath);
-          if (bmp.existsSync()) bmp.deleteSync();
-        } catch (_) {}
+        // Keep the BMP on disk so the item remains pasteable. Deleting it here
+        // would leave the repository entry pointing to a missing file.
         return;
       }
       if (_disposed) return;
