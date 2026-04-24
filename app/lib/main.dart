@@ -14,6 +14,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'services/auto_update_service.dart';
 import 'services/install_channel.dart';
+import 'services/linux_capabilities.dart';
 import 'services/release_manifest_service.dart';
 
 import 'shell/app_window.dart';
@@ -163,6 +164,15 @@ Future<void> _run() async {
       }
     } catch (e) {
       AppLogger.warn('main: Window.setEffect failed (non-fatal): $e');
+    }
+
+    if (Platform.isLinux) {
+      try {
+        final caps = await LinuxCapabilitiesService.detect();
+        AppLogger.info('main: linux capabilities $caps');
+      } catch (e) {
+        AppLogger.warn('main: LinuxCapabilities.detect failed (non-fatal): $e');
+      }
     }
 
     runApp(

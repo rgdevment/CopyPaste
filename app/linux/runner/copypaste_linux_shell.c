@@ -14,6 +14,7 @@
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/extensions/XTest.h>
@@ -477,6 +478,140 @@ static void respond_method_success(FlMethodCall* method_call, FlValue* result) {
   }
 }
 
+static gboolean has_app_indicator_runtime(void) {
+#ifdef HAVE_APPINDICATOR
+  return TRUE;
+#else
+  return FALSE;
+#endif
+}
+
+static gboolean ewmh_supports_active_window(void) {
+#ifdef GDK_WINDOWING_X11
+  GdkDisplay* gdk_display = gdk_display_get_default();
+  if (gdk_display == NULL || !GDK_IS_X11_DISPLAY(gdk_display)) {
+    return FALSE;
+  }
+  Display* xdisplay = GDK_DISPLAY_XDISPLAY(gdk_display);
+  if (xdisplay == NULL) return FALSE;
+  Atom net_supported = XInternAtom(xdisplay, "_NET_SUPPORTED", True);
+  Atom net_active_window = XInternAtom(xdisplay, "_NET_ACTIVE_WINDOW", True);
+  if (net_supported == None || net_active_window == None) return FALSE;
+  Window root = DefaultRootWindow(xdisplay);
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long nitems = 0;
+  unsigned long bytes_after = 0;
+  unsigned char* data = NULL;
+  int status = XGetWindowProperty(xdisplay, root, net_supported, 0, 1024, False,
+                                  XA_ATOM, &actual_type, &actual_format,
+                                  &nitems, &bytes_after, &data);
+  gboolean found = FALSE;
+  if (status == Success && actual_type == XA_ATOM && actual_format == 32 && data != NULL) {
+    Atom* atoms = (Atom*)data;
+    for (unsigned long i = 0; i < nitems; ++i) {
+      if (atoms[i] == net_active_window) { found = TRUE; break; }
+    }
+  }
+  if (data != NULL) XFree(data);
+  return found;
+#else
+  return FALSE;
+#endif
+}
+
+static gchar* read_wm_name(void) {
+#ifdef GDK_WINDOWING_X11
+  GdkDisplay* gdk_display = gdk_display_get_default();
+  if (gdk_display == NULL || !GDK_IS_X11_DISPLAY(gdk_display)) return NULL;
+  Display* xdisplay = GDK_DISPLAY_XDISPLAY(gdk_display);
+  Atom check = XInternAtom(xdisplay, "_NET_SUPPORTING_WM_CHECK", True);
+  Atom utf8 = XInternAtom(xdisplay, "UTF8_STRING", True);
+  Atom wm_name = XInternAtom(xdisplay, "_NET_WM_NAME", True);
+  if (check == None || wm_name == None) return NULL;
+  Window root = DefaultRootWindow(xdisplay);
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long nitems = 0;
+  unsigned long bytes_after = 0;
+  unsigned char* data = NULL;
+  if (XGetWindowProperty(xdisplay, root, check, 0, 1, False, XA_WINDOW,
+                         &actual_type, &actual_format, &nitems, &bytes_after,
+                         &data) != Success || data == NULL) {
+    return NULL;
+  }
+  Window wm_window = *(Window*)data;
+  XFree(data);
+  data = NULL;
+  if (wm_window == None) return NULL;
+  Atom string_type = utf8 != None ? utf8 : XA_STRING;
+  if (XGetWindowProperty(xdisplay, wm_window, wm_name, 0, 256, False,
+                         string_type, &actual_type, &actual_format, &nitems,
+                         &bytes_after, &data) != Success || data == NULL) {
+    return NULL;
+  }
+  gchar* name = g_strndup((const gchar*)data, nitems);
+  XFree(data);
+  return name;
+#else
+  return NULL;
+#endif
+}
+
+static gboolean is_clipboard_manager_name(const gchar* comm) {
+  if (comm == NULL) return FALSE;
+  static const gchar* kKnown[] = {
+    "klipper", "gpaste-applet", "gpaste-client", "clipman", "copyq",
+    "xfce4-clipman", "parcellite", "diodon", "clipit", NULL,
+  };
+  for (int i = 0; kKnown[i] != NULL; ++i) {
+    if (g_strcmp0(comm, kKnown[i]) == 0) return TRUE;
+  }
+  return FALSE;
+}
+
+static gboolean clipboard_manager_running(void) {
+  GDir* dir = g_dir_open("/proc", 0, NULL);
+  if (dir == NULL) return FALSE;
+  gboolean found = FALSE;
+  const gchar* name = NULL;
+  while ((name = g_dir_read_name(dir)) != NULL) {
+    gboolean only_digits = TRUE;
+    for (const gchar* p = name; *p != '\0'; ++p) {
+      if (!g_ascii_isdigit(*p)) { only_digits = FALSE; break; }
+    }
+    if (!only_digits) continue;
+    g_autofree gchar* path = g_build_filename("/proc", name, "comm", NULL);
+    g_autofree gchar* contents = NULL;
+    gsize length = 0;
+    if (!g_file_get_contents(path, &contents, &length, NULL)) continue;
+    if (contents == NULL) continue;
+    g_strstrip(contents);
+    if (is_clipboard_manager_name(contents)) { found = TRUE; break; }
+  }
+  g_dir_close(dir);
+  return found;
+}
+
+static FlValue* build_capabilities(void) {
+  FlValue* caps = fl_value_new_map();
+  fl_value_set_string_take(caps, "isX11", fl_value_new_bool(shell_is_x11()));
+  fl_value_set_string_take(caps, "hasAppIndicator",
+                           fl_value_new_bool(has_app_indicator_runtime()));
+  fl_value_set_string_take(caps, "hasEwmh",
+                           fl_value_new_bool(ewmh_supports_active_window()));
+  fl_value_set_string_take(caps, "hasClipboardManager",
+                           fl_value_new_bool(clipboard_manager_running()));
+  const gchar* desktop_env = g_getenv("XDG_CURRENT_DESKTOP");
+  if (desktop_env == NULL) desktop_env = g_getenv("DESKTOP_SESSION");
+  fl_value_set_string_take(caps, "desktopEnv",
+                           fl_value_new_string(desktop_env != NULL ? desktop_env : ""));
+  g_autofree gchar* wm = read_wm_name();
+  fl_value_set_string_take(caps, "wmName",
+                           fl_value_new_string(wm != NULL ? wm : ""));
+  return caps;
+}
+
 static void shell_method_call_cb(FlMethodChannel* channel,
                                  FlMethodCall* method_call,
                                  gpointer user_data) {
@@ -484,6 +619,11 @@ static void shell_method_call_cb(FlMethodChannel* channel,
   CopyPasteLinuxShell* shell = (CopyPasteLinuxShell*)user_data;
   const gchar* method = fl_method_call_get_name(method_call);
   FlValue* args = fl_method_call_get_args(method_call);
+
+  if (strcmp(method, "getCapabilities") == 0) {
+    respond_method_success(method_call, build_capabilities());
+    return;
+  }
 
   if (strcmp(method, "initTray") == 0 || strcmp(method, "updateTray") == 0) {
     respond_method_success(method_call, fl_value_new_bool(init_tray(shell, args)));
