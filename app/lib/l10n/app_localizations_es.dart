@@ -482,6 +482,32 @@ class AppLocalizationsEs extends AppLocalizations {
       'Velocidad de pegado automático. Normal/Seguro recomendado para la mayoría.';
 
   @override
+  String get pastePresetFast => 'Rápido';
+
+  @override
+  String get pastePresetNormal => 'Normal';
+
+  @override
+  String get pastePresetSafe => 'Seguro';
+
+  @override
+  String get pastePresetSlow => 'Lento';
+
+  @override
+  String get pastePresetCustom => 'Personalizado';
+
+  @override
+  String get pastePresetWarning =>
+      '⚠️ Rápido: puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: puede sentirse pesado en equipos modernos.';
+
+  @override
+  String get settingResetFiltersOnOpen => 'Volver a Todos al abrir';
+
+  @override
+  String get subtitleResetFiltersOnOpen =>
+      'Limpia los filtros de categoría y tipo, y vuelve a la pestaña Todos';
+
+  @override
   String get subtitleBackup =>
       'Crea un respaldo de tu historial, imágenes y configuración. Restaura en cualquier momento en este u otro dispositivo.';
 

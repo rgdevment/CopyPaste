@@ -28,6 +28,7 @@ class MainScreen extends StatefulWidget {
     required this.onSettings,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
+    this.resetFiltersOnShow = true,
     this.cardMinLines = 2,
     this.cardMaxLines = 5,
     this.colorLabels = const {},
@@ -44,6 +45,7 @@ class MainScreen extends StatefulWidget {
   final VoidCallback onSettings;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
+  final bool resetFiltersOnShow;
   final int cardMinLines;
   final int cardMaxLines;
   final Map<String, String> colorLabels;
@@ -109,6 +111,11 @@ class MainScreenState extends State<MainScreen> {
   }
 
   void onWindowShow() {
+    if (widget.resetFiltersOnShow) {
+      _typeFilters = [];
+      _colorFilters = [];
+      _currentTab = ClipboardTab.recent;
+    }
     _reload();
     if (widget.resetScrollOnShow && _scrollController.hasClients) {
       _scrollController.jumpTo(0);

@@ -85,6 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _hideOnDeactivate;
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
+  late bool _resetFiltersOnShow;
 
   // Cleanup & privacy
   late int _keepBrokenItemsDays;
@@ -131,6 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _hideOnDeactivate = widget.config.hideOnDeactivate;
     _resetScrollOnShow = widget.config.resetScrollOnShow;
     _resetSearchOnShow = widget.config.resetSearchOnShow;
+    _resetFiltersOnShow = widget.config.resetFiltersOnShow;
     _keepBrokenItemsDays = widget.config.keepBrokenItemsDays;
     _generateImageThumbnails = widget.config.generateImageThumbnails;
     _generateVideoThumbnails = widget.config.generateVideoThumbnails;
@@ -180,6 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     hideOnDeactivate: _hideOnDeactivate,
     resetScrollOnShow: _resetScrollOnShow,
     resetSearchOnShow: _resetSearchOnShow,
+    resetFiltersOnShow: _resetFiltersOnShow,
     keepBrokenItemsDays: _keepBrokenItemsDays,
     generateImageThumbnails: _generateImageThumbnails,
     generateVideoThumbnails: _generateVideoThumbnails,
@@ -247,6 +250,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _hideOnDeactivate = d.hideOnDeactivate;
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;
+      _resetFiltersOnShow = d.resetFiltersOnShow;
       _keepBrokenItemsDays = d.keepBrokenItemsDays;
       _generateImageThumbnails = d.generateImageThumbnails;
       _generateVideoThumbnails = d.generateVideoThumbnails;
@@ -685,6 +689,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: _PresetDropdown(
                 value: _pastePresetName,
                 items: const ['Fast', 'Normal', 'Safe', 'Slow'],
+                labels: {
+                  'Fast': l.pastePresetFast,
+                  'Normal': l.pastePresetNormal,
+                  'Safe': l.pastePresetSafe,
+                  'Slow': l.pastePresetSlow,
+                },
+                hint: l.pastePresetCustom,
                 colors: colors,
                 onChanged: _applyPastePreset,
               ),
@@ -700,8 +711,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               child: Text(
-                '\u26a0\ufe0f Fast: May cause strange behavior in heavy apps.\n'
-                '\u26a0\ufe0f Slow: May feel like a failure on modern computers.',
+                l.pastePresetWarning,
                 style: TextStyle(
                   fontSize: 10.5,
                   color: colors.onSurfaceVariant,
@@ -799,6 +809,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
               onChanged: (v) {
                 setState(() => _resetSearchOnShow = v);
+                _markChanged();
+              },
+            ),
+            _ToggleRow(
+              label: l.settingResetFiltersOnOpen,
+              subtitle: l.subtitleResetFiltersOnOpen,
+              value: _resetFiltersOnShow,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _resetFiltersOnShow = v);
                 _markChanged();
               },
             ),
@@ -2059,10 +2079,14 @@ class _PresetDropdown extends StatelessWidget {
     required this.items,
     required this.colors,
     required this.onChanged,
+    this.labels = const {},
+    this.hint = 'Custom',
   });
 
   final String? value;
   final List<String> items;
+  final Map<String, String> labels;
+  final String hint;
   final AppThemeColorScheme colors;
   final ValueChanged<String> onChanged;
 
@@ -2079,7 +2103,7 @@ class _PresetDropdown extends StatelessWidget {
         child: DropdownButton<String>(
           value: value,
           hint: Text(
-            'Custom',
+            hint,
             style: TextStyle(fontSize: 12, color: colors.onSurfaceMuted),
           ),
           isDense: true,
@@ -2091,7 +2115,9 @@ class _PresetDropdown extends StatelessWidget {
             color: colors.onSurfaceMuted,
           ),
           items: items
-              .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+              .map(
+                (i) => DropdownMenuItem(value: i, child: Text(labels[i] ?? i)),
+              )
               .toList(),
           onChanged: (v) {
             if (v != null) onChanged(v);

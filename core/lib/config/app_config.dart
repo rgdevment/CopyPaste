@@ -33,6 +33,7 @@ class AppConfig {
     this.hideOnDeactivate = true,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
+    this.resetFiltersOnShow = true,
     this.hasSeenHint = false,
     this.themeMode = 'dark',
     this.accessibilityWasGranted = false,
@@ -96,6 +97,8 @@ class AppConfig {
           json['resetScrollOnShow'] as bool? ?? defaults.resetScrollOnShow,
       resetSearchOnShow:
           json['resetSearchOnShow'] as bool? ?? defaults.resetSearchOnShow,
+      resetFiltersOnShow:
+          json['resetFiltersOnShow'] as bool? ?? defaults.resetFiltersOnShow,
       hasSeenHint: json['hasSeenHint'] as bool? ?? defaults.hasSeenHint,
       themeMode: json['themeMode'] as String? ?? defaults.themeMode,
       accessibilityWasGranted:
@@ -175,6 +178,7 @@ class AppConfig {
   final bool hideOnDeactivate;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
+  final bool resetFiltersOnShow;
   final bool hasSeenHint;
   final String themeMode;
   final bool accessibilityWasGranted;
@@ -215,6 +219,7 @@ class AppConfig {
     bool? hideOnDeactivate,
     bool? resetScrollOnShow,
     bool? resetSearchOnShow,
+    bool? resetFiltersOnShow,
     bool? hasSeenHint,
     String? themeMode,
     bool? accessibilityWasGranted,
@@ -256,6 +261,7 @@ class AppConfig {
     hideOnDeactivate: hideOnDeactivate ?? this.hideOnDeactivate,
     resetScrollOnShow: resetScrollOnShow ?? this.resetScrollOnShow,
     resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
+    resetFiltersOnShow: resetFiltersOnShow ?? this.resetFiltersOnShow,
     hasSeenHint: hasSeenHint ?? this.hasSeenHint,
     themeMode: themeMode ?? this.themeMode,
     accessibilityWasGranted:
@@ -303,6 +309,7 @@ class AppConfig {
     'hideOnDeactivate': hideOnDeactivate,
     'resetScrollOnShow': resetScrollOnShow,
     'resetSearchOnShow': resetSearchOnShow,
+    'resetFiltersOnShow': resetFiltersOnShow,
     'hasSeenHint': hasSeenHint,
     'themeMode': themeMode,
     'accessibilityWasGranted': accessibilityWasGranted,

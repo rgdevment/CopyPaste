@@ -478,6 +478,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Automatic paste speed. Normal/Safe recommended for most computers.';
 
   @override
+  String get pastePresetFast => 'Fast';
+
+  @override
+  String get pastePresetNormal => 'Normal';
+
+  @override
+  String get pastePresetSafe => 'Safe';
+
+  @override
+  String get pastePresetSlow => 'Slow';
+
+  @override
+  String get pastePresetCustom => 'Custom';
+
+  @override
+  String get pastePresetWarning =>
+      '⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.';
+
+  @override
+  String get settingResetFiltersOnOpen => 'Switch to All on open';
+
+  @override
+  String get subtitleResetFiltersOnOpen =>
+      'Clears category and type filters and returns to the All tab';
+
+  @override
   String get subtitleBackup =>
       'Create a backup of your clipboard history, images, and settings. Restore at any time on this or another device.';
 
