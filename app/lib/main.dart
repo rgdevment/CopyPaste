@@ -461,13 +461,20 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         '${result.requestedBinding.label()} -> '
         '${result.effectiveBinding?.label()}',
       );
-      _showLinuxNotice(
-        (l) => l.linuxHotkeyFallbackWarning(
-          result.requestedBinding.label(),
-          result.effectiveBinding?.label() ??
-              kLinuxTemporaryFallbackHotkey.label(),
-        ),
-      );
+      if (result.failureReason == HotkeyFailureReason.grabFailed) {
+        _showLinuxNotice(
+          (l) =>
+              l.linuxHotkeyGrabFailedWarning(result.requestedBinding.label()),
+        );
+      } else {
+        _showLinuxNotice(
+          (l) => l.linuxHotkeyFallbackWarning(
+            result.requestedBinding.label(),
+            result.effectiveBinding?.label() ??
+                kLinuxTemporaryFallbackHotkey.label(),
+          ),
+        );
+      }
       return;
     }
 
@@ -475,12 +482,19 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error(
         'Linux hotkey registration failed for ${result.requestedBinding.label()}',
       );
-      _showLinuxNotice(
-        (l) => l.linuxHotkeyConflictWarning(
-          result.requestedBinding.label(),
-          kLinuxTemporaryFallbackHotkey.label(),
-        ),
-      );
+      if (result.failureReason == HotkeyFailureReason.grabFailed) {
+        _showLinuxNotice(
+          (l) =>
+              l.linuxHotkeyGrabFailedWarning(result.requestedBinding.label()),
+        );
+      } else {
+        _showLinuxNotice(
+          (l) => l.linuxHotkeyConflictWarning(
+            result.requestedBinding.label(),
+            kLinuxTemporaryFallbackHotkey.label(),
+          ),
+        );
+      }
     }
   }
 
@@ -712,6 +726,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
     if (mounted) setState(() {});
+  }
+
+  Future<void> _updateLinuxConfig(AppConfig Function(AppConfig) update) async {
+    final next = update(_config);
+    if (identical(next, _config)) return;
+    _config = next;
+    if (mounted) setState(() {});
+    await _config.save('${widget.storage.configPath}/${AppConfig.fileName}');
   }
 
   Future<void> _toggleWindow() async {
@@ -1223,6 +1245,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                       current: AppConfig.appVersion,
                       state: _manifestState,
                     ),
+                    appConfig: Platform.isLinux ? _config : null,
+                    linuxCapabilities: Platform.isLinux
+                        ? LinuxCapabilitiesService.current
+                        : null,
+                    onLinuxConfigUpdate:
+                        Platform.isLinux ? _updateLinuxConfig : null,
                   );
                 },
               ),

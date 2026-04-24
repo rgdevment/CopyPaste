@@ -40,34 +40,54 @@ class LinuxShell {
     _eventsController = null;
   }
 
-  static Future<bool> initTray({
+  static Future<TrayResponse> initTray({
     required String iconPath,
     required String showHideLabel,
     required String exitLabel,
     required String tooltip,
   }) async {
-    final result = await _methodChannel.invokeMethod<bool>('initTray', {
+    return _invokeTrayMethod('initTray', {
       'iconPath': iconPath,
       'showHideLabel': showHideLabel,
       'exitLabel': exitLabel,
       'tooltip': tooltip,
     });
-    return result ?? false;
   }
 
-  static Future<bool> updateTray({
+  static Future<TrayResponse> updateTray({
     required String iconPath,
     required String showHideLabel,
     required String exitLabel,
     required String tooltip,
   }) async {
-    final result = await _methodChannel.invokeMethod<bool>('updateTray', {
+    return _invokeTrayMethod('updateTray', {
       'iconPath': iconPath,
       'showHideLabel': showHideLabel,
       'exitLabel': exitLabel,
       'tooltip': tooltip,
     });
-    return result ?? false;
+  }
+
+  static Future<TrayResponse> _invokeTrayMethod(
+      String method, Map<String, Object?> args) async {
+    try {
+      final result = await _methodChannel.invokeMethod<Object>(method, args);
+      if (result is Map) {
+        final map = Map<Object?, Object?>.from(result);
+        final code = map['errorCode'];
+        return TrayResponse(
+          success: map['success'] == true,
+          errorCode: code is String ? code : null,
+        );
+      }
+      if (result is bool) {
+        return TrayResponse(success: result);
+      }
+      return const TrayResponse(success: false, errorCode: 'unknown');
+    } catch (e) {
+      AppLogger.error('LinuxShell.$method failed: $e');
+      return const TrayResponse(success: false, errorCode: 'channelError');
+    }
   }
 
   static Future<void> destroyTray() async {
@@ -133,6 +153,13 @@ class LinuxShell {
 
 class HotkeyRegisterResponse {
   const HotkeyRegisterResponse({required this.success, this.errorCode});
+
+  final bool success;
+  final String? errorCode;
+}
+
+class TrayResponse {
+  const TrayResponse({required this.success, this.errorCode});
 
   final bool success;
   final String? errorCode;

@@ -690,6 +690,36 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String linuxHotkeyGrabFailedWarning(String hotkey) {
+    return 'El atajo $hotkey está siendo usado por otra aplicación. Cámbialo en Configuración → Atajos.';
+  }
+
+  @override
+  String get linuxAppindicatorBannerTitle => 'Ícono de bandeja no disponible';
+
+  @override
+  String get linuxAppindicatorBannerBody =>
+      'Tu escritorio no expone un host de AppIndicator, por lo que el ícono de CopyPaste no aparecerá en la bandeja. Instala una extensión de bandeja para tu distribución y reinicia CopyPaste.';
+
+  @override
+  String get linuxClipboardManagerBannerTitle =>
+      'No se detectó un gestor de portapapeles';
+
+  @override
+  String get linuxClipboardManagerBannerBody =>
+      'Sin un gestor de portapapeles (gpaste, klipper, clipman, copyq, …) los datos copiados pueden perderse cuando CopyPaste se cierra. Instala uno y reinicia tu sesión.';
+
+  @override
+  String get linuxXtestBannerTitle => 'Pegado automático deshabilitado';
+
+  @override
+  String get linuxXtestBannerBody =>
+      'La extensión XTest de X11 no está disponible, por lo que CopyPaste no puede inyectar Ctrl+V automáticamente. Los elementos siguen copiándose al portapapeles — pégalos manualmente con Ctrl+V.';
+
+  @override
+  String get linuxBannerDismiss => 'Descartar';
+
+  @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste se ejecuta en segundo plano — presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo cuando quieras.';
   }

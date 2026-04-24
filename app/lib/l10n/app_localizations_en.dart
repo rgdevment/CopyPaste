@@ -686,6 +686,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String linuxHotkeyGrabFailedWarning(String hotkey) {
+    return 'The shortcut $hotkey is being used by another application. Change it in Settings → Shortcuts.';
+  }
+
+  @override
+  String get linuxAppindicatorBannerTitle => 'System tray icon unavailable';
+
+  @override
+  String get linuxAppindicatorBannerBody =>
+      'Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.';
+
+  @override
+  String get linuxClipboardManagerBannerTitle =>
+      'No clipboard manager detected';
+
+  @override
+  String get linuxClipboardManagerBannerBody =>
+      'Without a clipboard manager (gpaste, klipper, clipman, copyq, …) clipboard data may be lost when CopyPaste quits. Install one and restart your session.';
+
+  @override
+  String get linuxXtestBannerTitle => 'Automatic paste-back disabled';
+
+  @override
+  String get linuxXtestBannerBody =>
+      'The X11 XTest extension is not available, so CopyPaste cannot inject Ctrl+V automatically. Items are still copied to the clipboard — paste manually with Ctrl+V.';
+
+  @override
+  String get linuxBannerDismiss => 'Dismiss';
+
+  @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste runs in the background — press $hotkey or click the tray icon to open it anytime.';
   }

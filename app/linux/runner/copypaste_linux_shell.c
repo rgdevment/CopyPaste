@@ -27,8 +27,6 @@ struct _CopyPasteLinuxShell {
 
 #ifdef HAVE_APPINDICATOR
   AppIndicator* app_indicator;
-#else
-  GtkStatusIcon* tray_icon;
 #endif
   GtkWidget* tray_menu;
   GtkWidget* toggle_item;
@@ -128,27 +126,6 @@ static void tray_exit_cb(GtkMenuItem* item, gpointer user_data) {
   send_shell_event((CopyPasteLinuxShell*)user_data, "exit");
 }
 
-#ifndef HAVE_APPINDICATOR
-static void tray_activate_cb(GtkStatusIcon* status_icon, gpointer user_data) {
-  (void)status_icon;
-  send_shell_event((CopyPasteLinuxShell*)user_data, "toggle");
-}
-
-static void tray_popup_menu_cb(GtkStatusIcon* status_icon,
-                               guint button,
-                               guint activate_time,
-                               gpointer user_data) {
-  CopyPasteLinuxShell* shell = (CopyPasteLinuxShell*)user_data;
-  if (shell->tray_menu == NULL) {
-    return;
-  }
-
-  gtk_menu_popup(GTK_MENU(shell->tray_menu), NULL, NULL,
-                 gtk_status_icon_position_menu, status_icon, button,
-                 activate_time);
-}
-#endif
-
 static void rebuild_tray_menu(CopyPasteLinuxShell* shell,
                               const gchar* show_hide_label,
                               const gchar* exit_label) {
@@ -197,7 +174,17 @@ static void parse_tray_args(FlValue* args,
           : "Exit";
 }
 
-static gboolean init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
+static FlValue* make_tray_result(gboolean success, const char* error_code) {
+  FlValue* map = fl_value_new_map();
+  fl_value_set_string_take(map, "success", fl_value_new_bool(success));
+  if (error_code != NULL) {
+    fl_value_set_string_take(map, "errorCode", fl_value_new_string(error_code));
+  }
+  return map;
+}
+
+static FlValue* init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
+#ifdef HAVE_APPINDICATOR
   const gchar* icon_path;
   const gchar* tooltip;
   const gchar* show_hide;
@@ -207,11 +194,14 @@ static gboolean init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
   g_free(shell->resolved_icon_path);
   shell->resolved_icon_path = resolve_asset_path(icon_path);
 
-#ifdef HAVE_APPINDICATOR
   if (shell->app_indicator == NULL) {
     shell->app_indicator = app_indicator_new(
         "com.rgdevment.copypaste", "copypaste",
         APP_INDICATOR_CATEGORY_APPLICATION_STATUS);
+  }
+
+  if (shell->app_indicator == NULL) {
+    return make_tray_result(FALSE, "noAppIndicator");
   }
 
   if (shell->resolved_icon_path != NULL) {
@@ -229,28 +219,15 @@ static gboolean init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
   rebuild_tray_menu(shell, show_hide, exit_label);
   app_indicator_set_menu(shell->app_indicator, GTK_MENU(shell->tray_menu));
   app_indicator_set_status(shell->app_indicator, APP_INDICATOR_STATUS_ACTIVE);
+  return make_tray_result(TRUE, NULL);
 #else
-  if (shell->tray_icon == NULL) {
-    shell->tray_icon = gtk_status_icon_new();
-    g_signal_connect(shell->tray_icon, "activate",
-                     G_CALLBACK(tray_activate_cb), shell);
-    g_signal_connect(shell->tray_icon, "popup-menu",
-                     G_CALLBACK(tray_popup_menu_cb), shell);
-  }
-
-  if (shell->resolved_icon_path != NULL) {
-    gtk_status_icon_set_from_file(shell->tray_icon, shell->resolved_icon_path);
-  }
-
-  gtk_status_icon_set_tooltip_text(shell->tray_icon, tooltip);
-  gtk_status_icon_set_visible(shell->tray_icon, TRUE);
-  rebuild_tray_menu(shell, show_hide, exit_label);
+  (void)shell;
+  (void)args;
+  return make_tray_result(FALSE, "noAppIndicator");
 #endif
-
-  return TRUE;
 }
 
-static gboolean destroy_tray(CopyPasteLinuxShell* shell) {
+static FlValue* destroy_tray(CopyPasteLinuxShell* shell) {
   destroy_tray_menu(shell);
 
 #ifdef HAVE_APPINDICATOR
@@ -258,15 +235,10 @@ static gboolean destroy_tray(CopyPasteLinuxShell* shell) {
     app_indicator_set_status(shell->app_indicator, APP_INDICATOR_STATUS_PASSIVE);
     g_clear_object(&shell->app_indicator);
   }
-#else
-  if (shell->tray_icon != NULL) {
-    gtk_status_icon_set_visible(shell->tray_icon, FALSE);
-    g_clear_object(&shell->tray_icon);
-  }
 #endif
 
   g_clear_pointer(&shell->resolved_icon_path, g_free);
-  return TRUE;
+  return make_tray_result(TRUE, NULL);
 }
 
 static FlValue* make_hotkey_result(gboolean success, const char* error_code) {
@@ -668,12 +640,12 @@ static void shell_method_call_cb(FlMethodChannel* channel,
   }
 
   if (strcmp(method, "initTray") == 0 || strcmp(method, "updateTray") == 0) {
-    respond_method_success(method_call, fl_value_new_bool(init_tray(shell, args)));
+    respond_method_success(method_call, init_tray(shell, args));
     return;
   }
 
   if (strcmp(method, "destroyTray") == 0) {
-    respond_method_success(method_call, fl_value_new_bool(destroy_tray(shell)));
+    respond_method_success(method_call, destroy_tray(shell));
     return;
   }
 
