@@ -665,4 +665,85 @@ void main() {
       expect(c.hasCompletedOnboarding, isFalse);
     });
   });
+
+  group('AppConfig PR #9 field (keepBrokenItemsDays)', () {
+    test('default value is 30', () {
+      const c = AppConfig();
+      expect(c.keepBrokenItemsDays, equals(30));
+    });
+
+    test('JSON round-trip preserves keepBrokenItemsDays', () {
+      const c = AppConfig(keepBrokenItemsDays: 7);
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.keepBrokenItemsDays, equals(7));
+    });
+
+    test('absent key in JSON falls back to default (30)', () {
+      final c = AppConfig.fromJson({});
+      expect(c.keepBrokenItemsDays, equals(30));
+    });
+
+    test('copyWith updates keepBrokenItemsDays independently', () {
+      const c = AppConfig();
+      final updated = c.copyWith(keepBrokenItemsDays: 14);
+      expect(updated.keepBrokenItemsDays, equals(14));
+      // Other fields unaffected
+      expect(updated.retentionDays, equals(c.retentionDays));
+    });
+  });
+
+  group('AppConfig PR #10b field (resetFiltersOnShow)', () {
+    test('default value is true', () {
+      const c = AppConfig();
+      expect(c.resetFiltersOnShow, isTrue);
+    });
+
+    test('JSON round-trip preserves resetFiltersOnShow', () {
+      const c = AppConfig(resetFiltersOnShow: false);
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.resetFiltersOnShow, isFalse);
+    });
+
+    test('absent key in JSON falls back to default (true)', () {
+      final c = AppConfig.fromJson({});
+      expect(c.resetFiltersOnShow, isTrue);
+    });
+
+    test('copyWith updates resetFiltersOnShow independently', () {
+      const c = AppConfig();
+      final updated = c.copyWith(resetFiltersOnShow: false);
+      expect(updated.resetFiltersOnShow, isFalse);
+      expect(updated.resetScrollOnShow, equals(c.resetScrollOnShow));
+      expect(updated.resetSearchOnShow, equals(c.resetSearchOnShow));
+    });
+  });
+
+  group('AppConfig PR #11 field (imagesQuotaMB)', () {
+    test('default value is 0 (unlimited)', () {
+      const c = AppConfig();
+      expect(c.imagesQuotaMB, equals(0));
+    });
+
+    test('JSON round-trip preserves imagesQuotaMB', () {
+      const c = AppConfig(imagesQuotaMB: 500);
+      final restored = AppConfig.fromJson(c.toJson());
+      expect(restored.imagesQuotaMB, equals(500));
+    });
+
+    test('absent key in JSON falls back to default (0)', () {
+      final c = AppConfig.fromJson({});
+      expect(c.imagesQuotaMB, equals(0));
+    });
+
+    test('copyWith updates imagesQuotaMB independently', () {
+      const c = AppConfig();
+      final updated = c.copyWith(imagesQuotaMB: 1024);
+      expect(updated.imagesQuotaMB, equals(1024));
+      // Other multimedia fields unaffected
+      expect(
+        updated.maxImageProcessingSizeMB,
+        equals(c.maxImageProcessingSizeMB),
+      );
+    });
+  });
 }
