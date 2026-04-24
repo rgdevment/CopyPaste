@@ -78,7 +78,7 @@ class LinuxShell {
     }
   }
 
-  static Future<bool> registerHotkey({
+  static Future<HotkeyRegisterResponse> registerHotkey({
     required int virtualKey,
     required bool useCtrl,
     required bool useWin,
@@ -86,17 +86,29 @@ class LinuxShell {
     required bool useShift,
   }) async {
     try {
-      final result = await _methodChannel.invokeMethod<bool>('registerHotkey', {
+      final result = await _methodChannel.invokeMethod<Object>('registerHotkey', {
         'virtualKey': virtualKey,
         'useCtrl': useCtrl,
         'useWin': useWin,
         'useAlt': useAlt,
         'useShift': useShift,
       });
-      return result ?? false;
+      if (result is Map) {
+        final map = Map<Object?, Object?>.from(result);
+        final success = map['success'] == true;
+        final code = map['errorCode'];
+        return HotkeyRegisterResponse(
+          success: success,
+          errorCode: code is String ? code : null,
+        );
+      }
+      if (result is bool) {
+        return HotkeyRegisterResponse(success: result);
+      }
+      return const HotkeyRegisterResponse(success: false, errorCode: 'unknown');
     } catch (e) {
       AppLogger.error('LinuxShell.registerHotkey failed: $e');
-      return false;
+      return const HotkeyRegisterResponse(success: false, errorCode: 'channelError');
     }
   }
 
@@ -117,4 +129,11 @@ class LinuxShell {
       AppLogger.error('LinuxShell.focusWindow failed: $e');
     }
   }
+}
+
+class HotkeyRegisterResponse {
+  const HotkeyRegisterResponse({required this.success, this.errorCode});
+
+  final bool success;
+  final String? errorCode;
 }
