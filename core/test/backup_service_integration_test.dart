@@ -162,6 +162,31 @@ void main() {
       );
     });
 
+    test('backup includes <id>_thumb.png companion files', () async {
+      // Regression: BackupService relies on directory listing to bundle
+      // images/, so thumbs produced by ThumbnailService must round-trip.
+      final main = File(p.join(sourceStorage.imagesPath, 'item-7.png'))
+        ..writeAsBytesSync([10, 20, 30]);
+      final thumb = File(p.join(sourceStorage.imagesPath, 'item-7_thumb.png'))
+        ..writeAsBytesSync([40, 50, 60, 70]);
+
+      final backupPath = p.join(sourceDir.path, 'thumb_restore.zip');
+      final manifest =
+          await BackupService.createBackup(backupPath, sourceStorage, '2.0.0');
+      expect(manifest.imageCount, greaterThanOrEqualTo(2));
+
+      await BackupService.restoreBackup(backupPath, destStorage);
+
+      final restoredMain =
+          File(p.join(destStorage.imagesPath, 'item-7.png'));
+      final restoredThumb =
+          File(p.join(destStorage.imagesPath, 'item-7_thumb.png'));
+      expect(restoredMain.existsSync(), isTrue);
+      expect(restoredThumb.existsSync(), isTrue);
+      expect(restoredMain.readAsBytesSync(), main.readAsBytesSync());
+      expect(restoredThumb.readAsBytesSync(), thumb.readAsBytesSync());
+    });
+
     test('backup includes config files', () async {
       File(
         p.join(sourceStorage.configPath, 'app_config.json'),

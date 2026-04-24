@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../config/storage_config.dart';
+import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
 
@@ -12,13 +13,16 @@ class CleanupService {
     this._repository,
     this._getRetentionDays, {
     StorageConfig? storage,
-  }) : _storage = storage;
+    int Function()? getKeepBrokenDays,
+  }) : _storage = storage,
+       _getKeepBrokenDays = getKeepBrokenDays ?? (() => 30);
 
   static const Duration _checkInterval = Duration(hours: 18);
   static const String _lastCleanupFileName = 'last_cleanup.txt';
 
   final IClipboardRepository _repository;
   int Function() _getRetentionDays;
+  int Function() _getKeepBrokenDays;
   final StorageConfig? _storage;
   Timer? _timer;
   bool _disposed = false;
@@ -81,6 +85,10 @@ class CleanupService {
     _getRetentionDays = getter;
   }
 
+  void updateKeepBrokenCallback(int Function() getter) {
+    _getKeepBrokenDays = getter;
+  }
+
   void dispose() {
     _disposed = true;
     _timer?.cancel();
@@ -90,6 +98,8 @@ class CleanupService {
     final storage = _storage;
     if (storage == null) return;
     try {
+      await _trackBrokenExternalRefs();
+
       final allImageItems = await _repository.getImagePaths();
       final allThumbPaths = await _repository.getThumbPaths();
       final canonicalImagesDir = p.canonicalize(storage.imagesPath);
@@ -104,10 +114,6 @@ class CleanupService {
       for (final path in allImageItems) {
         if (p.canonicalize(path).startsWith(baseWithSep)) {
           ownedPaths.add(path);
-        } else if (!File(path).existsSync()) {
-          // External reference whose file no longer exists. Log for
-          // observability. UI warning overlay comes in Phase 3.
-          AppLogger.warn('[CleanupService] broken external reference: "$path"');
         }
       }
 
@@ -122,6 +128,147 @@ class CleanupService {
       storage.cleanOrphanImages(ownedPaths);
     } catch (e) {
       AppLogger.error('Orphan image cleanup failed: $e');
+    }
+  }
+
+  /// Walks all items with external file references; updates `brokenSince`
+  /// when the source disappears and the volume is present, clears it when
+  /// the source comes back, and purges items whose `brokenSince` exceeds
+  /// `keepBrokenItemsDays`. The external file is never touched.
+  Future<void> _trackBrokenExternalRefs() async {
+    final storage = _storage;
+    if (storage == null) return;
+    final keepDays = _getKeepBrokenDays();
+    final now = DateTime.now().toUtc();
+    final cutoff = now.subtract(Duration(days: keepDays));
+    final canonicalImagesDir = p.canonicalize(storage.imagesPath);
+    final baseWithSep = canonicalImagesDir.endsWith(p.separator)
+        ? canonicalImagesDir
+        : '$canonicalImagesDir${p.separator}';
+
+    final all = await _repository.getAll();
+    for (final item in all) {
+      final path = _externalPathForCheck(item, baseWithSep);
+      if (path == null) continue;
+
+      if (!isVolumePresent(path)) {
+        // Volume offline: assume the file still exists. Keep brokenSince as
+        // is so a temporary disconnection does not advance the purge clock.
+        continue;
+      }
+
+      final exists =
+          File(path).existsSync() || Directory(path).existsSync();
+      if (exists) {
+        if (item.brokenSince != null) {
+          await _repository.update(item.copyWith(brokenSince: null));
+        }
+        continue;
+      }
+
+      // File missing with volume present.
+      if (item.brokenSince == null) {
+        AppLogger.warn(
+          '[CleanupService] broken external reference: "$path"',
+        );
+        await _repository.update(item.copyWith(brokenSince: now));
+        continue;
+      }
+      if (keepDays > 0 && item.brokenSince!.isBefore(cutoff)) {
+        await _purgeBrokenItem(item);
+      }
+    }
+  }
+
+  /// Returns the external path to validate, or null when the item has no
+  /// external file reference (own captures live inside `images/`).
+  String? _externalPathForCheck(ClipboardItem item, String baseWithSep) {
+    if (item.isPinned) return null;
+    if (item.content.isEmpty) return null;
+    final paths = item.content
+        .split('\n')
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (paths.length != 1) return null;
+    final candidate = paths.first;
+    if (!item.isFileBasedType) {
+      // Image type: only treat as external when the path is outside images/.
+      // Plain text/code/etc. never carry filesystem references.
+      if (!_looksLikeFilesystemPath(candidate)) return null;
+    }
+    try {
+      if (p.canonicalize(candidate).startsWith(baseWithSep)) return null;
+    } catch (_) {
+      return null;
+    }
+    return candidate;
+  }
+
+  bool _looksLikeFilesystemPath(String value) {
+    if (value.length < 2) return false;
+    if (value.contains('\n')) return false;
+    if (Platform.isWindows) {
+      return RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(value) ||
+          value.startsWith(r'\\');
+    }
+    return value.startsWith('/');
+  }
+
+  Future<void> _purgeBrokenItem(ClipboardItem item) async {
+    AppLogger.warn(
+      '[CleanupService] purging item with broken external reference '
+      'beyond keepBrokenItemsDays: id=${item.id}',
+    );
+    final storage = _storage;
+    if (storage != null) {
+      final thumb = item.thumbPath;
+      if (thumb != null) {
+        try {
+          final f = File(thumb);
+          if (f.existsSync()) f.deleteSync();
+        } catch (e) {
+          AppLogger.warn('[CleanupService] could not delete thumb: $e');
+        }
+      }
+    }
+    await _repository.delete(item.id);
+  }
+
+  /// Best-effort check that the volume/mount carrying [path] is currently
+  /// present. When the volume is offline (drive not mounted, NAS down,
+  /// removable disk unplugged), callers should skip purge logic so the user
+  /// does not lose history entries on a temporary disconnection.
+  static bool isVolumePresent(String path) {
+    try {
+      if (Platform.isWindows) {
+        if (path.startsWith(r'\\')) {
+          // UNC: \\server\share\... — require server+share to be reachable.
+          final parts = path.substring(2).split(RegExp(r'[\\/]'));
+          if (parts.length < 2 || parts[0].isEmpty || parts[1].isEmpty) {
+            return false;
+          }
+          final share = '\\\\${parts[0]}\\${parts[1]}';
+          return Directory(share).existsSync();
+        }
+        final m = RegExp(r'^([a-zA-Z]):').firstMatch(path);
+        if (m == null) return true;
+        return Directory('${m.group(1)}:\\').existsSync();
+      }
+      if (Platform.isMacOS) {
+        if (path.startsWith('/Volumes/')) {
+          final rest = path.substring('/Volumes/'.length);
+          final slash = rest.indexOf('/');
+          final mount = slash < 0 ? rest : rest.substring(0, slash);
+          if (mount.isEmpty) return false;
+          return Directory('/Volumes/$mount').existsSync();
+        }
+        return true;
+      }
+      // Linux / others: best-effort; mount discovery is out of scope. Treat
+      // as present so purge proceeds when the file is genuinely missing.
+      return true;
+    } catch (_) {
+      return true;
     }
   }
 }

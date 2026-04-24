@@ -164,6 +164,17 @@ class $ClipboardItemsTable extends ClipboardItems
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _brokenSinceMeta = const VerificationMeta(
+    'brokenSince',
+  );
+  @override
+  late final GeneratedColumn<DateTime> brokenSince = GeneratedColumn<DateTime>(
+    'broken_since',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -180,6 +191,7 @@ class $ClipboardItemsTable extends ClipboardItems
     contentHash,
     thumbPath,
     sourceModifiedAt,
+    brokenSince,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -290,6 +302,15 @@ class $ClipboardItemsTable extends ClipboardItems
         ),
       );
     }
+    if (data.containsKey('broken_since')) {
+      context.handle(
+        _brokenSinceMeta,
+        brokenSince.isAcceptableOrUnknown(
+          data['broken_since']!,
+          _brokenSinceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -355,6 +376,10 @@ class $ClipboardItemsTable extends ClipboardItems
         DriftSqlType.dateTime,
         data['${effectivePrefix}source_modified_at'],
       ),
+      brokenSince: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}broken_since'],
+      ),
     );
   }
 
@@ -379,6 +404,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
   final String? contentHash;
   final String? thumbPath;
   final DateTime? sourceModifiedAt;
+  final DateTime? brokenSince;
   const ClipboardRow({
     required this.id,
     required this.content,
@@ -394,6 +420,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     this.contentHash,
     this.thumbPath,
     this.sourceModifiedAt,
+    this.brokenSince,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -423,6 +450,9 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     }
     if (!nullToAbsent || sourceModifiedAt != null) {
       map['source_modified_at'] = Variable<DateTime>(sourceModifiedAt);
+    }
+    if (!nullToAbsent || brokenSince != null) {
+      map['broken_since'] = Variable<DateTime>(brokenSince);
     }
     return map;
   }
@@ -455,6 +485,9 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       sourceModifiedAt: sourceModifiedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceModifiedAt),
+      brokenSince: brokenSince == null && nullToAbsent
+          ? const Value.absent()
+          : Value(brokenSince),
     );
   }
 
@@ -480,6 +513,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       sourceModifiedAt: serializer.fromJson<DateTime?>(
         json['sourceModifiedAt'],
       ),
+      brokenSince: serializer.fromJson<DateTime?>(json['brokenSince']),
     );
   }
   @override
@@ -500,6 +534,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       'contentHash': serializer.toJson<String?>(contentHash),
       'thumbPath': serializer.toJson<String?>(thumbPath),
       'sourceModifiedAt': serializer.toJson<DateTime?>(sourceModifiedAt),
+      'brokenSince': serializer.toJson<DateTime?>(brokenSince),
     };
   }
 
@@ -518,6 +553,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     Value<String?> contentHash = const Value.absent(),
     Value<String?> thumbPath = const Value.absent(),
     Value<DateTime?> sourceModifiedAt = const Value.absent(),
+    Value<DateTime?> brokenSince = const Value.absent(),
   }) => ClipboardRow(
     id: id ?? this.id,
     content: content ?? this.content,
@@ -535,6 +571,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     sourceModifiedAt: sourceModifiedAt.present
         ? sourceModifiedAt.value
         : this.sourceModifiedAt,
+    brokenSince: brokenSince.present ? brokenSince.value : this.brokenSince,
   );
   ClipboardRow copyWithCompanion(ClipboardItemsCompanion data) {
     return ClipboardRow(
@@ -560,6 +597,9 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
       sourceModifiedAt: data.sourceModifiedAt.present
           ? data.sourceModifiedAt.value
           : this.sourceModifiedAt,
+      brokenSince: data.brokenSince.present
+          ? data.brokenSince.value
+          : this.brokenSince,
     );
   }
 
@@ -579,7 +619,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
           ..write('pasteCount: $pasteCount, ')
           ..write('contentHash: $contentHash, ')
           ..write('thumbPath: $thumbPath, ')
-          ..write('sourceModifiedAt: $sourceModifiedAt')
+          ..write('sourceModifiedAt: $sourceModifiedAt, ')
+          ..write('brokenSince: $brokenSince')
           ..write(')'))
         .toString();
   }
@@ -600,6 +641,7 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
     contentHash,
     thumbPath,
     sourceModifiedAt,
+    brokenSince,
   );
   @override
   bool operator ==(Object other) =>
@@ -618,7 +660,8 @@ class ClipboardRow extends DataClass implements Insertable<ClipboardRow> {
           other.pasteCount == this.pasteCount &&
           other.contentHash == this.contentHash &&
           other.thumbPath == this.thumbPath &&
-          other.sourceModifiedAt == this.sourceModifiedAt);
+          other.sourceModifiedAt == this.sourceModifiedAt &&
+          other.brokenSince == this.brokenSince);
 }
 
 class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
@@ -636,6 +679,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
   final Value<String?> contentHash;
   final Value<String?> thumbPath;
   final Value<DateTime?> sourceModifiedAt;
+  final Value<DateTime?> brokenSince;
   final Value<int> rowid;
   const ClipboardItemsCompanion({
     this.id = const Value.absent(),
@@ -652,6 +696,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     this.contentHash = const Value.absent(),
     this.thumbPath = const Value.absent(),
     this.sourceModifiedAt = const Value.absent(),
+    this.brokenSince = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipboardItemsCompanion.insert({
@@ -669,6 +714,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     this.contentHash = const Value.absent(),
     this.thumbPath = const Value.absent(),
     this.sourceModifiedAt = const Value.absent(),
+    this.brokenSince = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        content = Value(content),
@@ -690,6 +736,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     Expression<String>? contentHash,
     Expression<String>? thumbPath,
     Expression<DateTime>? sourceModifiedAt,
+    Expression<DateTime>? brokenSince,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -707,6 +754,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
       if (contentHash != null) 'content_hash': contentHash,
       if (thumbPath != null) 'thumb_path': thumbPath,
       if (sourceModifiedAt != null) 'source_modified_at': sourceModifiedAt,
+      if (brokenSince != null) 'broken_since': brokenSince,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -726,6 +774,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     Value<String?>? contentHash,
     Value<String?>? thumbPath,
     Value<DateTime?>? sourceModifiedAt,
+    Value<DateTime?>? brokenSince,
     Value<int>? rowid,
   }) {
     return ClipboardItemsCompanion(
@@ -743,6 +792,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
       contentHash: contentHash ?? this.contentHash,
       thumbPath: thumbPath ?? this.thumbPath,
       sourceModifiedAt: sourceModifiedAt ?? this.sourceModifiedAt,
+      brokenSince: brokenSince ?? this.brokenSince,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -792,6 +842,9 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
     if (sourceModifiedAt.present) {
       map['source_modified_at'] = Variable<DateTime>(sourceModifiedAt.value);
     }
+    if (brokenSince.present) {
+      map['broken_since'] = Variable<DateTime>(brokenSince.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -815,6 +868,7 @@ class ClipboardItemsCompanion extends UpdateCompanion<ClipboardRow> {
           ..write('contentHash: $contentHash, ')
           ..write('thumbPath: $thumbPath, ')
           ..write('sourceModifiedAt: $sourceModifiedAt, ')
+          ..write('brokenSince: $brokenSince, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -848,6 +902,7 @@ typedef $$ClipboardItemsTableCreateCompanionBuilder =
       Value<String?> contentHash,
       Value<String?> thumbPath,
       Value<DateTime?> sourceModifiedAt,
+      Value<DateTime?> brokenSince,
       Value<int> rowid,
     });
 typedef $$ClipboardItemsTableUpdateCompanionBuilder =
@@ -866,6 +921,7 @@ typedef $$ClipboardItemsTableUpdateCompanionBuilder =
       Value<String?> contentHash,
       Value<String?> thumbPath,
       Value<DateTime?> sourceModifiedAt,
+      Value<DateTime?> brokenSince,
       Value<int> rowid,
     });
 
@@ -945,6 +1001,11 @@ class $$ClipboardItemsTableFilterComposer
 
   ColumnFilters<DateTime> get sourceModifiedAt => $composableBuilder(
     column: $table.sourceModifiedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get brokenSince => $composableBuilder(
+    column: $table.brokenSince,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1027,6 +1088,11 @@ class $$ClipboardItemsTableOrderingComposer
     column: $table.sourceModifiedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get brokenSince => $composableBuilder(
+    column: $table.brokenSince,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ClipboardItemsTableAnnotationComposer
@@ -1087,6 +1153,11 @@ class $$ClipboardItemsTableAnnotationComposer
     column: $table.sourceModifiedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get brokenSince => $composableBuilder(
+    column: $table.brokenSince,
+    builder: (column) => column,
+  );
 }
 
 class $$ClipboardItemsTableTableManager
@@ -1136,6 +1207,7 @@ class $$ClipboardItemsTableTableManager
                 Value<String?> contentHash = const Value.absent(),
                 Value<String?> thumbPath = const Value.absent(),
                 Value<DateTime?> sourceModifiedAt = const Value.absent(),
+                Value<DateTime?> brokenSince = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipboardItemsCompanion(
                 id: id,
@@ -1152,6 +1224,7 @@ class $$ClipboardItemsTableTableManager
                 contentHash: contentHash,
                 thumbPath: thumbPath,
                 sourceModifiedAt: sourceModifiedAt,
+                brokenSince: brokenSince,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1170,6 +1243,7 @@ class $$ClipboardItemsTableTableManager
                 Value<String?> contentHash = const Value.absent(),
                 Value<String?> thumbPath = const Value.absent(),
                 Value<DateTime?> sourceModifiedAt = const Value.absent(),
+                Value<DateTime?> brokenSince = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipboardItemsCompanion.insert(
                 id: id,
@@ -1186,6 +1260,7 @@ class $$ClipboardItemsTableTableManager
                 contentHash: contentHash,
                 thumbPath: thumbPath,
                 sourceModifiedAt: sourceModifiedAt,
+                brokenSince: brokenSince,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

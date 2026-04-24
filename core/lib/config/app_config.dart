@@ -19,6 +19,7 @@ class AppConfig {
     this.maxItemsBeforeCleanup = 100,
     this.scrollLoadThreshold = 400,
     this.retentionDays = 30,
+    this.keepBrokenItemsDays = 30,
     this.colorLabels = const {},
     this.duplicateIgnoreWindowMs = 450,
     this.delayBeforeFocusMs = 100,
@@ -62,6 +63,8 @@ class AppConfig {
       scrollLoadThreshold:
           json['scrollLoadThreshold'] as int? ?? defaults.scrollLoadThreshold,
       retentionDays: json['retentionDays'] as int? ?? defaults.retentionDays,
+      keepBrokenItemsDays:
+          json['keepBrokenItemsDays'] as int? ?? defaults.keepBrokenItemsDays,
       colorLabels:
           (json['colorLabels'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, v as String),
@@ -135,6 +138,7 @@ class AppConfig {
 
   // Storage
   final int retentionDays;
+  final int keepBrokenItemsDays;
   final Map<String, String> colorLabels;
 
   // Paste behavior
@@ -175,6 +179,7 @@ class AppConfig {
     int? maxItemsBeforeCleanup,
     int? scrollLoadThreshold,
     int? retentionDays,
+    int? keepBrokenItemsDays,
     Map<String, String>? colorLabels,
     int? duplicateIgnoreWindowMs,
     int? delayBeforeFocusMs,
@@ -208,6 +213,7 @@ class AppConfig {
     maxItemsBeforeCleanup: maxItemsBeforeCleanup ?? this.maxItemsBeforeCleanup,
     scrollLoadThreshold: scrollLoadThreshold ?? this.scrollLoadThreshold,
     retentionDays: retentionDays ?? this.retentionDays,
+    keepBrokenItemsDays: keepBrokenItemsDays ?? this.keepBrokenItemsDays,
     colorLabels: colorLabels ?? this.colorLabels,
     duplicateIgnoreWindowMs:
         duplicateIgnoreWindowMs ?? this.duplicateIgnoreWindowMs,
@@ -249,6 +255,7 @@ class AppConfig {
     'maxItemsBeforeCleanup': maxItemsBeforeCleanup,
     'scrollLoadThreshold': scrollLoadThreshold,
     'retentionDays': retentionDays,
+    'keepBrokenItemsDays': keepBrokenItemsDays,
     'colorLabels': colorLabels,
     'duplicateIgnoreWindowMs': duplicateIgnoreWindowMs,
     'delayBeforeFocusMs': delayBeforeFocusMs,
