@@ -12,7 +12,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.dispose();
+    await service.dispose();
     await repo.close();
   });
 
@@ -182,7 +182,7 @@ void main() {
       final testService = ClipboardService(repo);
 
       // Just verify dispose completes without errors
-      testService.dispose();
+      await testService.dispose();
       expect(true, isTrue);
     });
   });

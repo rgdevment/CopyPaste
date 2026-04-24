@@ -38,7 +38,7 @@ void main() {
       final service = ClipboardService(repo);
       await service.processText('item one', ClipboardContentType.text);
       await service.processText('item two', ClipboardContentType.text);
-      service.dispose();
+      await service.dispose();
 
       final backupPath = p.join(sourceDir.path, 'snapshot.zip');
       final manifest = await BackupService.createBackup(
@@ -57,7 +57,7 @@ void main() {
       final service = ClipboardService(repo);
       await service.processText('first entry', ClipboardContentType.text);
       await service.processText('second entry', ClipboardContentType.text);
-      service.dispose();
+      await service.dispose();
 
       final backupPath = p.join(sourceDir.path, 'full_restore.zip');
       await BackupService.createBackup(
@@ -95,7 +95,7 @@ void main() {
       await service.updatePin(pinned!.id, true);
 
       await service.processText('normal item', ClipboardContentType.text);
-      service.dispose();
+      await service.dispose();
 
       final backupPath = p.join(sourceDir.path, 'pinned_restore.zip');
       await BackupService.createBackup(
@@ -212,7 +212,7 @@ void main() {
       () async {
         final service = ClipboardService(repo);
         await service.processText('validate me', ClipboardContentType.text);
-        service.dispose();
+        await service.dispose();
 
         final backupPath = p.join(sourceDir.path, 'validate.zip');
         await BackupService.createBackup(
@@ -241,7 +241,7 @@ void main() {
           ClipboardContentType.text,
         );
         await service.updatePin(item!.id, true);
-        service.dispose();
+        await service.dispose();
 
         final backupPath = p.join(sourceDir.path, 'pinned_manifest.zip');
         final manifest = await BackupService.createBackup(

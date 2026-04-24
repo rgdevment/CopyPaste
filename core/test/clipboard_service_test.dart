@@ -17,7 +17,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.dispose();
+    await service.dispose();
     await repo.close();
   });
 
@@ -418,7 +418,7 @@ void main() {
         null,
         onDone: () => reactivatedDone = true,
       );
-      service.dispose();
+      await service.dispose();
       await Future<void>.delayed(Duration.zero);
       expect(addedDone, isTrue);
       expect(reactivatedDone, isTrue);
@@ -459,7 +459,7 @@ void main() {
         expect(result, isNotNull);
         // Content should point to temp BMP file
         expect(result!.content, contains(imagesDir.path));
-        svc.dispose();
+        await svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
       }
@@ -495,7 +495,7 @@ void main() {
         expect(updated.metadata, isNotNull);
         expect(updated.metadata, contains('width'));
 
-        svc.dispose();
+        await svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
       }
@@ -521,7 +521,7 @@ void main() {
         expect(await repo.getById(item.id), isNull);
         expect(imageFile.existsSync(), isFalse);
 
-        svc.dispose();
+        await svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
       }
@@ -552,7 +552,7 @@ void main() {
           reason: 'external user files must never be deleted',
         );
 
-        svc.dispose();
+        await svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
         externalDir.deleteSync(recursive: true);
@@ -591,7 +591,7 @@ void main() {
           reason: 'app-owned thumb must be removed when item is deleted',
         );
 
-        svc.dispose();
+        await svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
         externalDir.deleteSync(recursive: true);
@@ -622,7 +622,7 @@ void main() {
           reason: 'thumbPath outside imagesPath must be ignored',
         );
 
-        svc.dispose();
+        await svc.dispose();
       } finally {
         imagesDir.deleteSync(recursive: true);
         externalDir.deleteSync(recursive: true);

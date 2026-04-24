@@ -696,8 +696,9 @@ void main() {
 
         String? imageProviderPath(ImageProvider provider) {
           if (provider is FileImage) return provider.file.path;
-          if (provider is ResizeImage)
+          if (provider is ResizeImage) {
             return imageProviderPath(provider.imageProvider);
+          }
           return null;
         }
 
@@ -826,8 +827,9 @@ void main() {
 
       String? imageProviderPath(ImageProvider provider) {
         if (provider is FileImage) return provider.file.path;
-        if (provider is ResizeImage)
+        if (provider is ResizeImage) {
           return imageProviderPath(provider.imageProvider);
+        }
         return null;
       }
 

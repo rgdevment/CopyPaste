@@ -181,7 +181,7 @@ void main() {
   });
 
   group('CleanupService broken-external tracking', () {
-    Future<void> _runOnce(CleanupService service) async {
+    Future<void> runOnce(CleanupService service) async {
       final cleanupFile = File(p.join(tempDir.path, 'last_cleanup.txt'));
       if (cleanupFile.existsSync()) cleanupFile.deleteSync();
       service.start(tempDir.path);
@@ -211,7 +211,7 @@ void main() {
           storage: storage,
           getKeepBrokenDays: () => 30,
         );
-        await _runOnce(service);
+        await runOnce(service);
         service.dispose();
 
         final reloaded = await repo.getById('i1');
@@ -239,7 +239,7 @@ void main() {
         storage: storage,
         getKeepBrokenDays: () => 30,
       );
-      await _runOnce(service);
+      await runOnce(service);
       service.dispose();
 
       final reloaded = await repo.getById('i2');
@@ -273,7 +273,7 @@ void main() {
         storage: storage,
         getKeepBrokenDays: () => 30,
       );
-      await _runOnce(service);
+      await runOnce(service);
       service.dispose();
 
       expect(await repo.getById('i3'), isNull, reason: 'item purged');
@@ -304,7 +304,7 @@ void main() {
         storage: storage,
         getKeepBrokenDays: () => 30,
       );
-      await _runOnce(service);
+      await runOnce(service);
       service.dispose();
 
       final reloaded = await repo.getById('pinned');

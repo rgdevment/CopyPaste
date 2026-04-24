@@ -22,13 +22,13 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  Future<File> _writeOwned(String id, int sizeBytes) async {
+  Future<File> writeOwned(String id, int sizeBytes) async {
     final f = File(p.join(storage.imagesPath, '$id.png'));
     f.writeAsBytesSync(List<int>.filled(sizeBytes, 0xAA));
     return f;
   }
 
-  Future<ClipboardItem> _saveItem({
+  Future<ClipboardItem> saveItem({
     required String id,
     required String filePath,
     required DateTime createdAt,
@@ -49,7 +49,7 @@ void main() {
     return item;
   }
 
-  Future<void> _runCleanup(CleanupService service) async {
+  Future<void> runCleanup(CleanupService service) async {
     service.start(tempDir.path);
     // Give the async chain (`runCleanupIfNeeded`) time to drain.
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -58,8 +58,8 @@ void main() {
 
   group('CleanupService images quota (LRU purge)', () {
     test('does nothing when quotaMB <= 0', () async {
-      final f1 = await _writeOwned('a', 2 * 1024 * 1024);
-      await _saveItem(
+      final f1 = await writeOwned('a', 2 * 1024 * 1024);
+      await saveItem(
         id: 'a',
         filePath: f1.path,
         createdAt: DateTime.utc(2024, 1, 1),
@@ -71,7 +71,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => 0,
       );
-      await _runCleanup(service);
+      await runCleanup(service);
 
       expect(f1.existsSync(), isTrue);
       expect(await repo.count(), 1);
@@ -79,20 +79,20 @@ void main() {
 
     test('purges oldest unpinned items until under the cap', () async {
       // 3 items, ~600 KB each, cap = 1 MB → must drop the two oldest.
-      final f1 = await _writeOwned('old', 600 * 1024);
-      final f2 = await _writeOwned('mid', 600 * 1024);
-      final f3 = await _writeOwned('new', 600 * 1024);
-      await _saveItem(
+      final f1 = await writeOwned('old', 600 * 1024);
+      final f2 = await writeOwned('mid', 600 * 1024);
+      final f3 = await writeOwned('new', 600 * 1024);
+      await saveItem(
         id: 'old',
         filePath: f1.path,
         createdAt: DateTime.utc(2024, 1, 1),
       );
-      await _saveItem(
+      await saveItem(
         id: 'mid',
         filePath: f2.path,
         createdAt: DateTime.utc(2024, 6, 1),
       );
-      await _saveItem(
+      await saveItem(
         id: 'new',
         filePath: f3.path,
         createdAt: DateTime.utc(2024, 12, 1),
@@ -104,7 +104,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => 1,
       );
-      await _runCleanup(service);
+      await runCleanup(service);
 
       expect(f1.existsSync(), isFalse, reason: 'oldest must be purged');
       expect(f2.existsSync(), isFalse, reason: 'mid must be purged');
@@ -115,21 +115,21 @@ void main() {
     });
 
     test('skips pinned items even when oldest', () async {
-      final f1 = await _writeOwned('pinned', 600 * 1024);
-      final f2 = await _writeOwned('mid', 600 * 1024);
-      final f3 = await _writeOwned('new', 600 * 1024);
-      await _saveItem(
+      final f1 = await writeOwned('pinned', 600 * 1024);
+      final f2 = await writeOwned('mid', 600 * 1024);
+      final f3 = await writeOwned('new', 600 * 1024);
+      await saveItem(
         id: 'pinned',
         filePath: f1.path,
         createdAt: DateTime.utc(2024, 1, 1),
         isPinned: true,
       );
-      await _saveItem(
+      await saveItem(
         id: 'mid',
         filePath: f2.path,
         createdAt: DateTime.utc(2024, 6, 1),
       );
-      await _saveItem(
+      await saveItem(
         id: 'new',
         filePath: f3.path,
         createdAt: DateTime.utc(2024, 12, 1),
@@ -141,7 +141,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => 1,
       );
-      await _runCleanup(service);
+      await runCleanup(service);
 
       expect(f1.existsSync(), isTrue, reason: 'pinned must survive');
       expect(f2.existsSync(), isFalse, reason: 'unpinned mid purged');
@@ -149,18 +149,18 @@ void main() {
     });
 
     test('also deletes the per-item thumbnail when present', () async {
-      final f1 = await _writeOwned('a', 800 * 1024);
+      final f1 = await writeOwned('a', 800 * 1024);
       final thumb = File(p.join(storage.imagesPath, 'a_thumb.png'))
         ..writeAsBytesSync(List<int>.filled(300 * 1024, 0xBB));
-      await _saveItem(
+      await saveItem(
         id: 'a',
         filePath: f1.path,
         createdAt: DateTime.utc(2024, 1, 1),
         thumbPath: thumb.path,
       );
       // newer item to keep
-      final f2 = await _writeOwned('b', 200 * 1024);
-      await _saveItem(
+      final f2 = await writeOwned('b', 200 * 1024);
+      await saveItem(
         id: 'b',
         filePath: f2.path,
         createdAt: DateTime.utc(2024, 12, 1),
@@ -172,7 +172,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => 1,
       );
-      await _runCleanup(service);
+      await runCleanup(service);
 
       expect(f1.existsSync(), isFalse);
       expect(thumb.existsSync(), isFalse, reason: 'thumb must be deleted too');
@@ -183,14 +183,14 @@ void main() {
       // External "user file" outside images/.
       final external = File(p.join(tempDir.path, 'user_photo.png'))
         ..writeAsBytesSync(List<int>.filled(900 * 1024, 0xCC));
-      await _saveItem(
+      await saveItem(
         id: 'ext',
         filePath: external.path,
         createdAt: DateTime.utc(2024, 1, 1),
       );
       // Plus an oversized owned snippet.
-      final owned = await _writeOwned('owned', 1500 * 1024);
-      await _saveItem(
+      final owned = await writeOwned('owned', 1500 * 1024);
+      await saveItem(
         id: 'owned',
         filePath: owned.path,
         createdAt: DateTime.utc(2024, 6, 1),
@@ -202,7 +202,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => 1,
       );
-      await _runCleanup(service);
+      await runCleanup(service);
 
       expect(
         external.existsSync(),
@@ -215,14 +215,14 @@ void main() {
     });
 
     test('updateImagesQuotaCallback swaps the limit live', () async {
-      final f1 = await _writeOwned('a', 600 * 1024);
-      final f2 = await _writeOwned('b', 600 * 1024);
-      await _saveItem(
+      final f1 = await writeOwned('a', 600 * 1024);
+      final f2 = await writeOwned('b', 600 * 1024);
+      await saveItem(
         id: 'a',
         filePath: f1.path,
         createdAt: DateTime.utc(2024, 1, 1),
       );
-      await _saveItem(
+      await saveItem(
         id: 'b',
         filePath: f2.path,
         createdAt: DateTime.utc(2024, 12, 1),
@@ -235,7 +235,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => quota,
       );
-      await _runCleanup(service);
+      await runCleanup(service);
       expect(f1.existsSync(), isTrue);
       expect(f2.existsSync(), isTrue);
 
@@ -250,7 +250,7 @@ void main() {
         storage: storage,
         getImagesQuotaMB: () => quota,
       );
-      await _runCleanup(service2);
+      await runCleanup(service2);
       expect(f1.existsSync(), isFalse);
       expect(f2.existsSync(), isTrue);
     });
