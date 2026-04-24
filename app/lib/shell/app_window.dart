@@ -380,6 +380,14 @@ class AppWindow {
     await windowManager.setMaximumSize(const Size(1200, 900));
     await windowManager.setSize(const Size(_settingsWidth, _settingsHeight));
     await windowManager.center();
+    // Settings mode implies the window must be visible and focused. Without
+    // this, transitioning from gate/onboarding (which hides the window on
+    // exit) leaves Settings invisible behind other windows.
+    if (!await windowManager.isVisible()) {
+      await windowManager.show();
+    }
+    await windowManager.focus();
+    _visible = true;
   }
 
   Future<void> exitSettingsMode() async {

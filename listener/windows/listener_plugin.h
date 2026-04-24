@@ -55,6 +55,8 @@ class ListenerPlugin : public flutter::Plugin {
   static constexpr UINT_PTR kClipboardTimerId = 1;
   static constexpr UINT kClipboardTimerDelayMs = 50;
   static constexpr ULONGLONG kSelfWriteIgnoreMs = 700;
+  static constexpr int kOpenClipboardRetries = 3;
+  static constexpr DWORD kOpenClipboardBackoffMs[] = {5, 10, 20};
 
   ULONGLONG last_write_tick_ = 0;
 
@@ -85,6 +87,13 @@ class ListenerPlugin : public flutter::Plugin {
                           const std::vector<uint8_t>& html);
   bool SetImageToClipboard(const std::string& imagePath);
   bool SetFilesToClipboard(const std::vector<std::string>& paths);
+
+  // Native shell thumbnail extraction (PR #6b). Returns the encoded PNG
+  // bytes, or an empty vector when no usable thumbnail is available.
+  // Runs synchronously on the platform thread; the cache-hit fast path
+  // is typically < 50 ms.
+  static std::vector<uint8_t> GetNativeThumbnail(const std::wstring& path,
+                                                 int size_px);
 };
 
 }  // namespace listener

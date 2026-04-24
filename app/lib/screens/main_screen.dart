@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../helpers/url_helper.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auto_update_service.dart';
+import '../services/release_manifest_service.dart';
 import '../theme/app_theme_data.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/clipboard_card.dart';
@@ -28,12 +29,14 @@ class MainScreen extends StatefulWidget {
     required this.onSettings,
     this.resetScrollOnShow = true,
     this.resetSearchOnShow = true,
+    this.resetFiltersOnShow = true,
     this.cardMinLines = 2,
     this.cardMaxLines = 5,
     this.colorLabels = const {},
     this.showHint = false,
     this.onDismissHint,
     this.updateVersion,
+    this.updateSeverity,
     super.key,
   });
 
@@ -44,12 +47,14 @@ class MainScreen extends StatefulWidget {
   final VoidCallback onSettings;
   final bool resetScrollOnShow;
   final bool resetSearchOnShow;
+  final bool resetFiltersOnShow;
   final int cardMinLines;
   final int cardMaxLines;
   final Map<String, String> colorLabels;
   final bool showHint;
   final VoidCallback? onDismissHint;
   final String? updateVersion;
+  final ManifestSeverity? updateSeverity;
 
   @override
   State<MainScreen> createState() => MainScreenState();
@@ -109,6 +114,11 @@ class MainScreenState extends State<MainScreen> {
   }
 
   void onWindowShow() {
+    if (widget.resetFiltersOnShow) {
+      _typeFilters = [];
+      _colorFilters = [];
+      _currentTab = ClipboardTab.recent;
+    }
     _reload();
     if (widget.resetScrollOnShow && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -582,6 +592,8 @@ class MainScreenState extends State<MainScreen> {
                 _onItemLabelColor(item, label, color),
             onPastePlain: () => widget.onPastePlain(item),
             onOpen: () => _onItemOpen(item),
+            onRequestThumbnailRefresh:
+                widget.clipboardService.requestThumbnailIfStale,
             onSelect: () {
               setState(() => _selectedIndex = index);
               _focusNode.requestFocus();
@@ -605,6 +617,12 @@ class MainScreenState extends State<MainScreen> {
   Widget _buildBottomBar(AppThemeData theme, AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
     final updateVersion = widget.updateVersion;
+    final severity = widget.updateSeverity;
+    final isImportant = severity != null && severity != ManifestSeverity.patch;
+    final badgeColor = isImportant ? colors.accentRed : colors.primary;
+    final badgeText = isImportant
+        ? l.updateBadgeImportant(updateVersion ?? '')
+        : l.updateBadge(updateVersion ?? '');
 
     return Container(
       height: theme.spacing.bottomBarHeight,
@@ -614,10 +632,8 @@ class MainScreenState extends State<MainScreen> {
           if (updateVersion != null)
             Tooltip(
               message: AutoUpdateService.isStoreBuild
-                  ? l.updateAvailableStore(updateVersion)
-                  : Platform.isMacOS
-                  ? l.updateAvailableMac(updateVersion)
-                  : l.updateAvailableLinux(updateVersion),
+                  ? l.updateTooltipStore(updateVersion)
+                  : l.updateTooltipGeneric(updateVersion),
               child: InkWell(
                 borderRadius: BorderRadius.circular(4),
                 onTap: () => _showUpdateDialog(context, updateVersion),
@@ -627,13 +643,13 @@ class MainScreenState extends State<MainScreen> {
                     Icon(
                       Icons.system_update_outlined,
                       size: 13,
-                      color: colors.primary,
+                      color: badgeColor,
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      l.updateBadge(updateVersion),
+                      badgeText,
                       style: theme.typography.branding.copyWith(
-                        color: colors.primary,
+                        color: badgeColor,
                         letterSpacing: 0.3,
                       ),
                     ),

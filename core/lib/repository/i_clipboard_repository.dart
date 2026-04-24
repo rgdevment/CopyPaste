@@ -31,6 +31,7 @@ abstract interface class IClipboardRepository {
     required int skip,
   });
   Future<List<String>> getImagePaths();
+  Future<List<String>> getThumbPaths();
   Future<void> walCheckpoint();
   Future<void> close();
 }

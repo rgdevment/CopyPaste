@@ -243,6 +243,14 @@ If you care about privacy and control, this clipboard manager is made for you. R
 - **Pin Important Items:** Keep your most-used copy-paste fragments always accessible at the top.
 - **Backup and Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
 - **Start with Windows:** Optionally launch at login — works natively on both the Microsoft Store (MSIX) and standalone installer versions, no admin rights required.
+- **Guided Onboarding (Windows):** First-launch walkthrough on Windows — pick your preferences for thumbnails, broken-item retention and image quota before you start using the app. macOS and Linux open straight to the main panel.
+- **Live Settings (autosave):** The Settings panel is organized in 6 tabs (General · Shortcuts · Performance · Cleanup & Privacy · Backup & Support · About) and saves automatically as you tweak — no Save / Cancel buttons.
+
+### Storage Control
+
+- **Image Quota (MB):** Cap how much disk space copied images can use. When the cap is reached, oldest non-pinned images are evicted (LRU). Pinned items and external file references are never touched. Set to `0` (default) for unlimited.
+- **Broken-Item Retention:** When a copied file or image disappears from disk (moved, deleted, external drive disconnected) the entry is kept for `keepBrokenItemsDays` (default 30) before being purged — so reconnecting an external drive restores the previews instead of losing them.
+- **Native Thumbnails:** Image, video and audio previews are generated through the OS shell (QuickLook on macOS, `IShellItemImageFactory` on Windows). Linux uses a Dart fallback for images; video/audio show a generic icon.
 
 ---
 
@@ -689,7 +697,7 @@ If you're curious about what's under the hood of this open source clipboard mana
 | **C++ Plugin (Win) / Swift (Mac) / C Plugin (Linux)** | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**                         | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**                             | Local database with full-text search across content and labels.                       |
-| **Auto-update (Standalone)**                          | WinSparkle appcast on Windows · GitHub Releases API notification on macOS and Linux.  |
+| **Auto-update (Standalone)**                          | Ed25519-signed release manifest hosted on GitHub Releases; in-app badge notifies users of new versions and enforces blocks on versions with critical issues. |
 | **Theme System**                                      | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---

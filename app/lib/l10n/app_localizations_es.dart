@@ -159,10 +159,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get buttonSave => 'Guardar';
 
   @override
+  String get buttonClose => 'Cerrar';
+
+  @override
   String get buttonCancel => 'Cancelar';
 
   @override
   String get buttonReset => 'Restaurar predeterminados';
+
+  @override
+  String get savingIndicator => 'Guardando…';
+
+  @override
+  String get savedIndicator => 'Guardado';
 
   @override
   String get menuPaste => 'Pegar';
@@ -285,7 +294,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tabGeneral => 'General';
 
   @override
-  String get tabBackupRestore => 'Respaldo';
+  String get tabBackupRestore => 'Backup y soporte';
 
   @override
   String get tabAppearance => 'Apariencia';
@@ -375,9 +384,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingClearSearchOnOpen => 'Limpiar búsqueda al abrir';
 
   @override
-  String get settingShowTrayIcon => 'Mostrar icono en la bandeja';
-
-  @override
   String get settingRetentionDaysLabel => 'Días de retención (0 = sin límite)';
 
   @override
@@ -400,10 +406,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitleClearSearchOnOpen => 'Borra el texto de búsqueda cada vez';
-
-  @override
-  String get subtitleShowTrayIcon =>
-      'Mostrar icono en la barra de menú. Usa el atajo si está oculto';
 
   @override
   String get subtitlePasteSpeed => 'Ajustar tiempos de restauración y pegado';
@@ -461,6 +463,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoFile => 'Archivo de video';
 
   @override
+  String get imageFile => 'Archivo de imagen';
+
+  @override
   String get timeNow => 'ahora';
 
   @override
@@ -475,6 +480,32 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get subtitlePastePreset =>
       'Velocidad de pegado automático. Normal/Seguro recomendado para la mayoría.';
+
+  @override
+  String get pastePresetFast => 'Rápido';
+
+  @override
+  String get pastePresetNormal => 'Normal';
+
+  @override
+  String get pastePresetSafe => 'Seguro';
+
+  @override
+  String get pastePresetSlow => 'Lento';
+
+  @override
+  String get pastePresetCustom => 'Personalizado';
+
+  @override
+  String get pastePresetWarning =>
+      '⚠️ Rápido: puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: puede sentirse pesado en equipos modernos.';
+
+  @override
+  String get settingResetFiltersOnOpen => 'Volver a Todos al abrir';
+
+  @override
+  String get subtitleResetFiltersOnOpen =>
+      'Limpia los filtros de categoría y tipo, y vuelve a la pestaña Todos';
 
   @override
   String get subtitleBackup =>
@@ -574,7 +605,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String updateAvailableStore(String version) {
-    return 'La versión $version está disponible.\n\nActualiza CopyPaste desde la Microsoft Store para obtener la última versión.';
+    return 'La versión $version está disponible.\n\nLa Microsoft Store entrega las actualizaciones automáticamente. Las nuevas versiones pueden tardar unos días en aparecer tras su publicación.';
+  }
+
+  @override
+  String updateTooltipStore(String version) {
+    return 'Actualización $version en camino por Microsoft Store';
+  }
+
+  @override
+  String updateTooltipGeneric(String version) {
+    return 'Actualización $version disponible — haz clic para detalles';
   }
 
   @override
@@ -585,6 +626,42 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get updateDismiss => 'Después';
+
+  @override
+  String updateBadgeImportant(String version) {
+    return 'v$version disponible — actualización importante';
+  }
+
+  @override
+  String get updateActionDownload => 'Descargar instalador';
+
+  @override
+  String get updateActionOpenStore => 'Abrir Microsoft Store';
+
+  @override
+  String get updateActionCopyBrew => 'Copiar comando brew';
+
+  @override
+  String get updateActionCopied => 'Copiado al portapapeles';
+
+  @override
+  String get blockedTitle => 'Actualización requerida';
+
+  @override
+  String blockedDescription(String current, String required) {
+    return 'La versión $current de CopyPaste ya no está soportada. Instala la versión $required o más reciente para continuar.';
+  }
+
+  @override
+  String get blockedReasonGeneric =>
+      'Esta versión fue retirada por motivos de seguridad o compatibilidad.';
+
+  @override
+  String get blockedQuit => 'Salir de CopyPaste';
+
+  @override
+  String get blockedFallbackHint =>
+      'Visita https://github.com/rgdevment/CopyPaste/releases para descargar el instalador más reciente.';
 
   @override
   String get waylandUnsupportedTitle => 'Wayland no está soportado';
@@ -611,13 +688,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String linuxHotkeyConflictWarning(String requested, String fallback) {
     return 'El atajo $requested no está disponible en este escritorio X11 y el fallback temporal $fallback también falló. Abre Configuración para elegir otro atajo.';
   }
-
-  @override
-  String get settingShowInTaskbar => 'Mantener en barra de tareas';
-
-  @override
-  String get subtitleShowInTaskbar =>
-      'La app permanece visible en la barra de tareas al cerrarla. Desactívalo para ocultarla solo en la bandeja del sistema.';
 
   @override
   String wakeupHint(String hotkey) {
@@ -665,4 +735,70 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingDismissButton => 'Empezar';
+
+  @override
+  String get tabCapture => 'Rendimiento';
+
+  @override
+  String get tabMultimedia => 'Multimedia';
+
+  @override
+  String get tabCleanupPrivacy => 'Limpieza y privacidad';
+
+  @override
+  String get sectionMultimedia => 'MULTIMEDIA Y MINIATURAS';
+
+  @override
+  String get subtitleMultimedia =>
+      'Controla cómo se previsualizan imágenes, vídeos y archivos de audio.';
+
+  @override
+  String get settingGenerateImageThumbnails => 'Generar miniaturas de imágenes';
+
+  @override
+  String get subtitleGenerateImageThumbnails =>
+      'Muestra una vista previa de las imágenes copiadas o referenciadas.';
+
+  @override
+  String get settingGenerateVideoThumbnails => 'Generar miniaturas de vídeos';
+
+  @override
+  String get subtitleGenerateVideoThumbnails =>
+      'Usa la caché del sistema para mostrar un fotograma de los vídeos.';
+
+  @override
+  String get settingGenerateAudioThumbnails => 'Generar miniaturas de audio';
+
+  @override
+  String get subtitleGenerateAudioThumbnails =>
+      'Muestra la carátula cuando esté disponible.';
+
+  @override
+  String get settingMaxImageSize => 'Tamaño máximo a procesar (MB)';
+
+  @override
+  String get subtitleMaxImageSize =>
+      'Las imágenes más grandes mantienen su mapa de bits original sin reprocesarse.';
+
+  @override
+  String get sectionCleanupPrivacy => 'LIMPIEZA Y PRIVACIDAD';
+
+  @override
+  String get settingKeepBrokenItemsLabel =>
+      'Conservar elementos no disponibles (días)';
+
+  @override
+  String get subtitleKeepBrokenItems =>
+      'Los elementos que apuntan a archivos perdidos o volúmenes desconectados se eliminan tras estos días. 0 los elimina al instante.';
+
+  @override
+  String get settingImagesQuotaLabel =>
+      'Límite de almacenamiento para imágenes';
+
+  @override
+  String get subtitleImagesQuota =>
+      'Cuando la carpeta de imágenes supera este tamaño, se eliminan los elementos más antiguos no fijados para liberar espacio.';
+
+  @override
+  String get imagesQuotaOff => 'Sin límite';
 }

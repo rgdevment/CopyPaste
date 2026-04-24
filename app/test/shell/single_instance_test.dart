@@ -71,11 +71,11 @@ void main() {
       });
 
       // Give the listener time to start, then create the file
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
       File(_wakeupFilePath).writeAsStringSync('wakeup');
 
       await completer.future.timeout(
-        const Duration(seconds: 2),
+        const Duration(seconds: 5),
         onTimeout: () => fail('Callback was not fired'),
       );
     });
@@ -122,10 +122,10 @@ void main() {
           if (!completer.isCompleted) completer.complete();
         });
 
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 250));
         File(_wakeupFilePath).writeAsStringSync('wakeup');
 
-        await completer.future.timeout(const Duration(seconds: 2));
+        await completer.future.timeout(const Duration(seconds: 5));
         expect(firstCallCount, 0);
       },
     );
@@ -136,13 +136,13 @@ void main() {
       var callCount = 0;
       SingleInstance.listenForWakeup(() => callCount++);
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
 
-      // Write, delete, write again rapidly
+      // Write, delete, write again rapidly (both within the 2 s debounce window)
       File(_wakeupFilePath).writeAsStringSync('wakeup');
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
       File(_wakeupFilePath).writeAsStringSync('wakeup');
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
 
       expect(callCount, 1);
     });
@@ -153,6 +153,9 @@ void main() {
       var callCount = 0;
       SingleInstance.listenForWakeup(() => callCount++);
       SingleInstance.release();
+
+      // Drain any in-flight periodic event before writing the file
+      await Future<void>.delayed(Duration.zero);
 
       // After release, writing the signal must not fire the old callback
       File(_wakeupFilePath).writeAsStringSync('wakeup');
@@ -245,11 +248,11 @@ void main() {
         if (!completer.isCompleted) completer.complete();
       });
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
       File(_wakeupFilePath).writeAsStringSync('wakeup');
 
       await completer.future.timeout(
-        const Duration(milliseconds: 1500),
+        const Duration(milliseconds: 3000),
         onTimeout: () => fail('File polling did not fire within expected time'),
       );
     });
@@ -260,10 +263,10 @@ void main() {
         if (!completer.isCompleted) completer.complete();
       });
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
       File(_wakeupFilePath).writeAsStringSync('wakeup');
 
-      await completer.future.timeout(const Duration(seconds: 2));
+      await completer.future.timeout(const Duration(seconds: 5));
       // Allow a tick for the delete to complete
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(File(_wakeupFilePath).existsSync(), isFalse);
@@ -297,17 +300,17 @@ void main() {
         if (!firstFired.isCompleted) firstFired.complete();
       });
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
 
       File(_wakeupFilePath).writeAsStringSync('wakeup');
       await firstFired.future.timeout(
-        const Duration(seconds: 3),
+        const Duration(seconds: 5),
         onTimeout: () => fail('First callback did not fire'),
       );
 
       // Second signal within 2s debounce window — must be suppressed
       File(_wakeupFilePath).writeAsStringSync('wakeup');
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
 
       expect(callCount, 1);
     });

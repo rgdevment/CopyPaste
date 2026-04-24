@@ -1,18 +1,29 @@
+import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 
-class WindowsOnboardingScreen extends StatelessWidget {
+class WindowsOnboardingScreen extends StatefulWidget {
   const WindowsOnboardingScreen({
     required this.hotkey,
+    required this.initialConfig,
     required this.onDismiss,
     required this.onSettings,
     super.key,
   });
 
   final String hotkey;
-  final VoidCallback onDismiss;
-  final VoidCallback onSettings;
+  final AppConfig initialConfig;
+  final void Function(AppConfig updated) onDismiss;
+  final void Function(AppConfig updated) onSettings;
+
+  @override
+  State<WindowsOnboardingScreen> createState() =>
+      _WindowsOnboardingScreenState();
+}
+
+class _WindowsOnboardingScreenState extends State<WindowsOnboardingScreen> {
+  AppConfig _buildConfig() => widget.initialConfig;
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +35,9 @@ class WindowsOnboardingScreen extends StatelessWidget {
       backgroundColor: cs.surface,
       body: Center(
         child: SizedBox(
-          width: 320,
+          width: 360,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -55,33 +66,33 @@ class WindowsOnboardingScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _PrivacyBadge(label: l.onboardingPrivacyBadge, colorScheme: cs),
-                const SizedBox(height: 24),
-                Divider(color: cs.outlineVariant, height: 1),
                 const SizedBox(height: 20),
+                Divider(color: cs.outlineVariant, height: 1),
+                const SizedBox(height: 16),
                 Text(
-                  l.onboardingDescription(hotkey),
+                  l.onboardingDescription(widget.hotkey),
                   style: tt.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
-                    height: 1.55,
+                    height: 1.5,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                _HotkeyChip(hotkey: widget.hotkey, colorScheme: cs),
+                const SizedBox(height: 8),
                 Text(
                   l.onboardingTrayHint,
                   style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 14),
-                _HotkeyChip(hotkey: hotkey, colorScheme: cs),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
                 Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 10,
                   runSpacing: 8,
                   children: [
                     OutlinedButton(
-                      onPressed: onSettings,
+                      onPressed: () => widget.onSettings(_buildConfig()),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -91,7 +102,7 @@ class WindowsOnboardingScreen extends StatelessWidget {
                       child: Text(l.onboardingSettingsButton),
                     ),
                     FilledButton(
-                      onPressed: onDismiss,
+                      onPressed: () => widget.onDismiss(_buildConfig()),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,

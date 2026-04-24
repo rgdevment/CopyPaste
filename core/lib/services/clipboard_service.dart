@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -10,18 +9,87 @@ import '../models/clipboard_content_type.dart';
 import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
-import 'image_processor.dart';
+import 'image_processing_queue.dart';
+import 'native_thumbnail_provider.dart';
 import 'text_classifier.dart';
+import 'thumbnail_queue.dart';
+import 'thumbnail_service.dart';
 
 class ClipboardService {
-  ClipboardService(this._repository, {String? imagesPath})
-    : _imagesPath = imagesPath;
+  ClipboardService(
+    this._repository, {
+    String? imagesPath,
+    NativeThumbnailProvider? nativeThumbnailProvider,
+    bool Function(ClipboardContentType type)? isThumbnailTypeEnabled,
+    int Function()? getMaxImageBytes,
+  }) : _imagesPath = imagesPath,
+       _thumbnailService = (imagesPath != null && imagesPath.isNotEmpty)
+           ? ThumbnailService(
+               imagesPath: imagesPath,
+               nativeProvider: nativeThumbnailProvider,
+               isTypeEnabled: isThumbnailTypeEnabled,
+             )
+           : null {
+    _imageQueue = ImageProcessingQueue(
+      repository: _repository,
+      onItemUpdated: _onImageItemUpdated,
+      getMaxImageBytes: getMaxImageBytes,
+    );
+    final service = _thumbnailService;
+    _thumbQueue = service == null
+        ? null
+        : ThumbnailQueue(
+            repository: _repository,
+            service: service,
+            onItemUpdated: _onThumbItemUpdated,
+          );
+  }
 
   final IClipboardRepository _repository;
   final String? _imagesPath;
+  late final ImageProcessingQueue _imageQueue;
+  final ThumbnailService? _thumbnailService;
+  late final ThumbnailQueue? _thumbQueue;
   final _itemAdded = StreamController<ClipboardItem>.broadcast();
   final _itemReactivated = StreamController<ClipboardItem>.broadcast();
   bool _disposed = false;
+
+  void _onImageItemUpdated(ClipboardItem item) {
+    if (!_disposed) {
+      try {
+        _itemReactivated.add(item);
+      } on StateError catch (_) {}
+    }
+  }
+
+  void _onThumbItemUpdated(ClipboardItem item) {
+    if (_disposed) return;
+    try {
+      _itemReactivated.add(item);
+    } on StateError catch (_) {}
+  }
+
+  /// Requests background regeneration of [item]'s thumbnail if the source
+  /// file's `mtime` no longer matches the recorded `sourceModifiedAt`.
+  /// No-op when no `imagesPath` was configured. Safe to call from `build()`
+  /// — work is enqueued asynchronously.
+  void requestThumbnailIfStale(ClipboardItem item) {
+    _thumbQueue?.enqueueIfStale(item);
+  }
+
+  /// Forces an enqueue regardless of staleness (e.g. the user explicitly
+  /// asked to refresh the thumb).
+  void requestThumbnailRefresh(ClipboardItem item) {
+    _thumbQueue?.enqueue(item, reason: ThumbnailJobReason.manualRefresh);
+  }
+
+  void updateThumbnailTypeGate(bool Function(ClipboardContentType type)? gate) {
+    _thumbnailService?.isTypeEnabled = gate;
+  }
+
+  void updateMaxImageBytesGate(int Function()? gate) {
+    _imageQueue.getMaxImageBytes = gate;
+  }
 
   Stream<ClipboardItem> get onItemAdded => _itemAdded.stream;
   Stream<ClipboardItem> get onItemReactivated => _itemReactivated.stream;
@@ -118,6 +186,10 @@ class ClipboardService {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
+      // Items captured before the native thumb provider was wired may
+      // have no thumbPath yet. enqueueIfStale is a no-op when thumb is
+      // already up-to-date.
+      _thumbQueue?.enqueueIfStale(updated);
       return updated;
     }
 
@@ -145,62 +217,19 @@ class ClipboardService {
     _itemAdded.add(savedItem);
 
     if (imageBytes != null && imageBytes.isNotEmpty && _imagesPath != null) {
-      unawaited(_processImageBackground(savedItem, imageBytes));
+      _imageQueue.enqueue(
+        item: savedItem,
+        imageBytes: imageBytes,
+        imagesPath: _imagesPath,
+      );
+    } else {
+      // External image referenced by path: schedule thumb generation.
+      // (When imageBytes is non-empty the result will land inside
+      // imagesPath and ThumbnailService skips it by design.)
+      _thumbQueue?.enqueue(savedItem);
     }
 
     return savedItem;
-  }
-
-  Future<void> _processImageBackground(
-    ClipboardItem item,
-    List<int> imageBytes,
-  ) async {
-    try {
-      final bytes = imageBytes is Uint8List
-          ? imageBytes
-          : Uint8List.fromList(imageBytes);
-      final result = await ImageProcessor.processAndSave(
-        imageBytes: bytes,
-        id: item.id,
-        imagesDir: _imagesPath!,
-      );
-      if (result == null) {
-        AppLogger.warn(
-          '_processImageBackground: ImageProcessor returned null for ${item.id} (unsupported format)',
-        );
-        final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
-        try {
-          final bmp = File(bmpPath);
-          if (bmp.existsSync()) bmp.deleteSync();
-        } catch (_) {}
-        return;
-      }
-      if (_disposed) return;
-
-      final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
-      try {
-        final bmp = File(bmpPath);
-        if (bmp.existsSync()) bmp.deleteSync();
-      } catch (_) {}
-
-      final meta = <String, Object>{
-        'width': result.width,
-        'height': result.height,
-        'size': result.fileSize,
-      };
-      final updated = item.copyWith(
-        content: result.imagePath,
-        metadata: jsonEncode(meta),
-      );
-      await _repository.update(updated);
-      if (!_disposed) {
-        try {
-          _itemReactivated.add(updated);
-        } on StateError catch (_) {}
-      }
-    } catch (e, s) {
-      AppLogger.error('Image processing failed for ${item.id}: $e\n$s');
-    }
   }
 
   Future<ClipboardItem?> processFiles(
@@ -217,6 +246,10 @@ class ClipboardService {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
+      // Cover items captured before the native thumb provider was wired.
+      if (files.length == 1) {
+        _thumbQueue?.enqueueIfStale(updated);
+      }
       return updated;
     }
 
@@ -245,6 +278,14 @@ class ClipboardService {
     );
     await _repository.save(item);
     _itemAdded.add(item);
+
+    // Native-backed thumbs cover video/audio (and image when the path is
+    // external). The queue ignores types it cannot handle, so this is a
+    // safe fire-and-forget call.
+    if (files.length == 1) {
+      _thumbQueue?.enqueue(item);
+    }
+
     return item;
   }
 
@@ -268,16 +309,51 @@ class ClipboardService {
     }
   }
 
+  /// Deletes a file only if [path] is canonically contained inside the app's
+  /// own images directory. Any path outside is refused and logged.
+  ///
+  /// This is the single entry point for file deletion in this service. Never
+  /// call `File.delete*` directly on a path that comes from user input, item
+  /// content, or any source outside the app's own path builder.
+  bool _deleteAppFile(String path) {
+    final imagesPath = _imagesPath;
+    if (imagesPath == null || imagesPath.isEmpty) return false;
+    final String canonicalBase;
+    final String canonicalTarget;
+    try {
+      canonicalBase = p.canonicalize(imagesPath);
+      canonicalTarget = p.canonicalize(path);
+    } catch (e) {
+      AppLogger.warn('_deleteAppFile: canonicalize failed for "$path": $e');
+      return false;
+    }
+    final baseWithSep = canonicalBase.endsWith(p.separator)
+        ? canonicalBase
+        : '$canonicalBase${p.separator}';
+    if (!canonicalTarget.startsWith(baseWithSep)) {
+      AppLogger.error(
+        '_deleteAppFile: refused to delete out-of-scope path '
+        '"$canonicalTarget" (base="$canonicalBase")',
+      );
+      return false;
+    }
+    try {
+      final file = File(canonicalTarget);
+      if (file.existsSync()) file.deleteSync();
+      return true;
+    } catch (e) {
+      AppLogger.warn('_deleteAppFile: delete failed for "$path": $e');
+      return false;
+    }
+  }
+
   void _cleanupItemFiles(ClipboardItem item) {
     if (item.type == ClipboardContentType.image && item.content.isNotEmpty) {
-      try {
-        final file = File(item.content);
-        if (file.existsSync()) file.deleteSync();
-      } catch (e) {
-        AppLogger.warn(
-          '_cleanupItemFiles: could not delete image for ${item.id}: $e',
-        );
-      }
+      _deleteAppFile(item.content);
+    }
+    final thumb = item.thumbPath;
+    if (thumb != null && thumb.isNotEmpty) {
+      _deleteAppFile(thumb);
     }
   }
 
@@ -358,9 +434,11 @@ class ClipboardService {
     if (!_disposed) _itemReactivated.add(updated);
   }
 
-  void dispose() {
+  Future<void> dispose() async {
     _disposed = true;
-    _itemAdded.close();
-    _itemReactivated.close();
+    await _imageQueue.dispose();
+    await _thumbQueue?.dispose();
+    await _itemAdded.close();
+    await _itemReactivated.close();
   }
 }

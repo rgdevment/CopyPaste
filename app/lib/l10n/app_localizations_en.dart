@@ -158,10 +158,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get buttonSave => 'Save';
 
   @override
+  String get buttonClose => 'Close';
+
+  @override
   String get buttonCancel => 'Cancel';
 
   @override
   String get buttonReset => 'Restore defaults';
+
+  @override
+  String get savingIndicator => 'Saving…';
+
+  @override
+  String get savedIndicator => 'Saved';
 
   @override
   String get menuPaste => 'Paste';
@@ -284,7 +293,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabGeneral => 'General';
 
   @override
-  String get tabBackupRestore => 'Backup';
+  String get tabBackupRestore => 'Backup & Support';
 
   @override
   String get tabAppearance => 'Appearance';
@@ -374,9 +383,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingClearSearchOnOpen => 'Clear search on open';
 
   @override
-  String get settingShowTrayIcon => 'Show tray icon';
-
-  @override
   String get settingRetentionDaysLabel => 'Retention days (0 = unlimited)';
 
   @override
@@ -397,10 +403,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitleClearSearchOnOpen => 'Clears the search text each time';
-
-  @override
-  String get subtitleShowTrayIcon =>
-      'Show icon in the menu bar. Use hotkey if hidden';
 
   @override
   String get subtitlePasteSpeed => 'Adjust restoration and paste timings';
@@ -457,6 +459,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoFile => 'Video file';
 
   @override
+  String get imageFile => 'Image file';
+
+  @override
   String get timeNow => 'now';
 
   @override
@@ -471,6 +476,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subtitlePastePreset =>
       'Automatic paste speed. Normal/Safe recommended for most computers.';
+
+  @override
+  String get pastePresetFast => 'Fast';
+
+  @override
+  String get pastePresetNormal => 'Normal';
+
+  @override
+  String get pastePresetSafe => 'Safe';
+
+  @override
+  String get pastePresetSlow => 'Slow';
+
+  @override
+  String get pastePresetCustom => 'Custom';
+
+  @override
+  String get pastePresetWarning =>
+      '⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.';
+
+  @override
+  String get settingResetFiltersOnOpen => 'Switch to All on open';
+
+  @override
+  String get subtitleResetFiltersOnOpen =>
+      'Clears category and type filters and returns to the All tab';
 
   @override
   String get subtitleBackup =>
@@ -570,7 +601,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String updateAvailableStore(String version) {
-    return 'Version $version is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.';
+    return 'Version $version is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.';
+  }
+
+  @override
+  String updateTooltipStore(String version) {
+    return 'Update $version coming via Microsoft Store';
+  }
+
+  @override
+  String updateTooltipGeneric(String version) {
+    return 'Update $version available — click for details';
   }
 
   @override
@@ -581,6 +622,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateDismiss => 'Later';
+
+  @override
+  String updateBadgeImportant(String version) {
+    return 'v$version available — important update';
+  }
+
+  @override
+  String get updateActionDownload => 'Download installer';
+
+  @override
+  String get updateActionOpenStore => 'Open Microsoft Store';
+
+  @override
+  String get updateActionCopyBrew => 'Copy brew command';
+
+  @override
+  String get updateActionCopied => 'Copied to clipboard';
+
+  @override
+  String get blockedTitle => 'Update required';
+
+  @override
+  String blockedDescription(String current, String required) {
+    return 'Version $current of CopyPaste is no longer supported. Please install version $required or newer to continue using the app.';
+  }
+
+  @override
+  String get blockedReasonGeneric =>
+      'This version was retired by the maintainers for safety or compatibility reasons.';
+
+  @override
+  String get blockedQuit => 'Quit CopyPaste';
+
+  @override
+  String get blockedFallbackHint =>
+      'Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.';
 
   @override
   String get waylandUnsupportedTitle => 'Wayland is not supported';
@@ -607,13 +684,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String linuxHotkeyConflictWarning(String requested, String fallback) {
     return 'The shortcut $requested is unavailable on this X11 desktop, and the temporary fallback $fallback also failed. Open Settings to choose another shortcut.';
   }
-
-  @override
-  String get settingShowInTaskbar => 'Keep in taskbar';
-
-  @override
-  String get subtitleShowInTaskbar =>
-      'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.';
 
   @override
   String wakeupHint(String hotkey) {
@@ -660,4 +730,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingDismissButton => 'Get started';
+
+  @override
+  String get tabCapture => 'Performance';
+
+  @override
+  String get tabMultimedia => 'Multimedia';
+
+  @override
+  String get tabCleanupPrivacy => 'Cleanup & Privacy';
+
+  @override
+  String get sectionMultimedia => 'MULTIMEDIA & THUMBNAILS';
+
+  @override
+  String get subtitleMultimedia =>
+      'Control how images, videos and audio files are previewed.';
+
+  @override
+  String get settingGenerateImageThumbnails => 'Generate image thumbnails';
+
+  @override
+  String get subtitleGenerateImageThumbnails =>
+      'Show preview tiles for copied or referenced images.';
+
+  @override
+  String get settingGenerateVideoThumbnails => 'Generate video thumbnails';
+
+  @override
+  String get subtitleGenerateVideoThumbnails =>
+      'Use the OS shell cache to show a preview frame for video files.';
+
+  @override
+  String get settingGenerateAudioThumbnails => 'Generate audio thumbnails';
+
+  @override
+  String get subtitleGenerateAudioThumbnails =>
+      'Show cover art when available for audio files.';
+
+  @override
+  String get settingMaxImageSize => 'Max image size for processing (MB)';
+
+  @override
+  String get subtitleMaxImageSize =>
+      'Larger images keep their original bitmap fallback and are not re-encoded.';
+
+  @override
+  String get sectionCleanupPrivacy => 'CLEANUP & PRIVACY';
+
+  @override
+  String get settingKeepBrokenItemsLabel => 'Keep unavailable items (days)';
+
+  @override
+  String get subtitleKeepBrokenItems =>
+      'Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.';
+
+  @override
+  String get settingImagesQuotaLabel => 'Storage cap for images';
+
+  @override
+  String get subtitleImagesQuota =>
+      'When the images folder exceeds this size, oldest unpinned items are deleted to free space.';
+
+  @override
+  String get imagesQuotaOff => 'Unlimited';
 }

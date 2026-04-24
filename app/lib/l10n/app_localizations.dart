@@ -368,6 +368,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get buttonSave;
 
+  /// Generic Close button
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get buttonClose;
+
   /// Cancel button
   ///
   /// In en, this message translates to:
@@ -379,6 +385,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore defaults'**
   String get buttonReset;
+
+  /// Footer indicator while autosave is in flight
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get savingIndicator;
+
+  /// Footer indicator after autosave completes
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedIndicator;
 
   /// Context menu paste
   ///
@@ -623,7 +641,7 @@ abstract class AppLocalizations {
   /// Backup nav tab
   ///
   /// In en, this message translates to:
-  /// **'Backup'**
+  /// **'Backup & Support'**
   String get tabBackupRestore;
 
   /// Appearance nav tab
@@ -800,12 +818,6 @@ abstract class AppLocalizations {
   /// **'Clear search on open'**
   String get settingClearSearchOnOpen;
 
-  /// Show tray icon label (macOS only)
-  ///
-  /// In en, this message translates to:
-  /// **'Show tray icon'**
-  String get settingShowTrayIcon;
-
   /// Retention days label
   ///
   /// In en, this message translates to:
@@ -847,12 +859,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clears the search text each time'**
   String get subtitleClearSearchOnOpen;
-
-  /// Show tray icon subtitle (macOS only)
-  ///
-  /// In en, this message translates to:
-  /// **'Show icon in the menu bar. Use hotkey if hidden'**
-  String get subtitleShowTrayIcon;
 
   /// Paste speed subtitle
   ///
@@ -956,6 +962,12 @@ abstract class AppLocalizations {
   /// **'Video file'**
   String get videoFile;
 
+  /// Fallback name / accessibility label for image items
+  ///
+  /// In en, this message translates to:
+  /// **'Image file'**
+  String get imageFile;
+
   /// Timestamp for less than 1 minute ago
   ///
   /// In en, this message translates to:
@@ -985,6 +997,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
   String get subtitlePastePreset;
+
+  /// Fast paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get pastePresetFast;
+
+  /// Normal paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get pastePresetNormal;
+
+  /// Safe paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Safe'**
+  String get pastePresetSafe;
+
+  /// Slow paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Slow'**
+  String get pastePresetSlow;
+
+  /// Custom paste preset placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get pastePresetCustom;
+
+  /// Paste preset warning text
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
+  String get pastePresetWarning;
+
+  /// Reset filters on open label
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to All on open'**
+  String get settingResetFiltersOnOpen;
+
+  /// Reset filters on open subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Clears category and type filters and returns to the All tab'**
+  String get subtitleResetFiltersOnOpen;
 
   /// Backup section subtitle
   ///
@@ -1151,8 +1211,20 @@ abstract class AppLocalizations {
   /// Update dialog message for MS Store builds
   ///
   /// In en, this message translates to:
-  /// **'Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.'**
+  /// **'Version {version} is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.'**
   String updateAvailableStore(String version);
+
+  /// Short tooltip for MS Store badge
+  ///
+  /// In en, this message translates to:
+  /// **'Update {version} coming via Microsoft Store'**
+  String updateTooltipStore(String version);
+
+  /// Short tooltip for non-Store badge
+  ///
+  /// In en, this message translates to:
+  /// **'Update {version} available — click for details'**
+  String updateTooltipGeneric(String version);
 
   /// Title of the update available dialog
   ///
@@ -1171,6 +1243,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Later'**
   String get updateDismiss;
+
+  /// Footer badge text for minor/major updates
+  ///
+  /// In en, this message translates to:
+  /// **'v{version} available — important update'**
+  String updateBadgeImportant(String version);
+
+  /// Action button to open the installer download page
+  ///
+  /// In en, this message translates to:
+  /// **'Download installer'**
+  String get updateActionDownload;
+
+  /// Action button to open the MS Store update page
+  ///
+  /// In en, this message translates to:
+  /// **'Open Microsoft Store'**
+  String get updateActionOpenStore;
+
+  /// Action button to copy the Homebrew upgrade command
+  ///
+  /// In en, this message translates to:
+  /// **'Copy brew command'**
+  String get updateActionCopyBrew;
+
+  /// Snack/tooltip shown after copying the upgrade command
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get updateActionCopied;
+
+  /// Title of the blocked-version full-screen gate
+  ///
+  /// In en, this message translates to:
+  /// **'Update required'**
+  String get blockedTitle;
+
+  /// Body of the blocked-version full-screen gate
+  ///
+  /// In en, this message translates to:
+  /// **'Version {current} of CopyPaste is no longer supported. Please install version {required} or newer to continue using the app.'**
+  String blockedDescription(String current, String required);
+
+  /// Generic reason shown in the blocked screen when the manifest does not provide one
+  ///
+  /// In en, this message translates to:
+  /// **'This version was retired by the maintainers for safety or compatibility reasons.'**
+  String get blockedReasonGeneric;
+
+  /// Secondary action on the blocked-version screen
+  ///
+  /// In en, this message translates to:
+  /// **'Quit CopyPaste'**
+  String get blockedQuit;
+
+  /// Hint shown when no channel-specific action is available
+  ///
+  /// In en, this message translates to:
+  /// **'Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.'**
+  String get blockedFallbackHint;
 
   /// Title for the Wayland-unsupported gate screen
   ///
@@ -1213,18 +1345,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
   String linuxHotkeyConflictWarning(String requested, String fallback);
-
-  /// Label for the Windows taskbar visibility toggle in Settings
-  ///
-  /// In en, this message translates to:
-  /// **'Keep in taskbar'**
-  String get settingShowInTaskbar;
-
-  /// Subtitle for the Windows taskbar visibility toggle in Settings
-  ///
-  /// In en, this message translates to:
-  /// **'The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.'**
-  String get subtitleShowInTaskbar;
 
   /// In-app snackbar shown inside the window when it is raised by a second launch attempt
   ///
@@ -1297,6 +1417,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get started'**
   String get onboardingDismissButton;
+
+  /// Performance tab label (paste, perf, multimedia)
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get tabCapture;
+
+  /// Multimedia tab label (legacy, unused since tabs were merged)
+  ///
+  /// In en, this message translates to:
+  /// **'Multimedia'**
+  String get tabMultimedia;
+
+  /// Cleanup & privacy tab label
+  ///
+  /// In en, this message translates to:
+  /// **'Cleanup & Privacy'**
+  String get tabCleanupPrivacy;
+
+  /// Multimedia section header
+  ///
+  /// In en, this message translates to:
+  /// **'MULTIMEDIA & THUMBNAILS'**
+  String get sectionMultimedia;
+
+  /// Multimedia section subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Control how images, videos and audio files are previewed.'**
+  String get subtitleMultimedia;
+
+  /// Image thumbs toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate image thumbnails'**
+  String get settingGenerateImageThumbnails;
+
+  /// Image thumbs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Show preview tiles for copied or referenced images.'**
+  String get subtitleGenerateImageThumbnails;
+
+  /// Video thumbs toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate video thumbnails'**
+  String get settingGenerateVideoThumbnails;
+
+  /// Video thumbs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Use the OS shell cache to show a preview frame for video files.'**
+  String get subtitleGenerateVideoThumbnails;
+
+  /// Audio thumbs toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate audio thumbnails'**
+  String get settingGenerateAudioThumbnails;
+
+  /// Audio thumbs subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Show cover art when available for audio files.'**
+  String get subtitleGenerateAudioThumbnails;
+
+  /// Max image size label
+  ///
+  /// In en, this message translates to:
+  /// **'Max image size for processing (MB)'**
+  String get settingMaxImageSize;
+
+  /// Max image size subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Larger images keep their original bitmap fallback and are not re-encoded.'**
+  String get subtitleMaxImageSize;
+
+  /// Cleanup & privacy section header
+  ///
+  /// In en, this message translates to:
+  /// **'CLEANUP & PRIVACY'**
+  String get sectionCleanupPrivacy;
+
+  /// Days to keep broken external refs
+  ///
+  /// In en, this message translates to:
+  /// **'Keep unavailable items (days)'**
+  String get settingKeepBrokenItemsLabel;
+
+  /// Broken-items subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.'**
+  String get subtitleKeepBrokenItems;
+
+  /// Quota label
+  ///
+  /// In en, this message translates to:
+  /// **'Storage cap for images'**
+  String get settingImagesQuotaLabel;
+
+  /// Quota subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'When the images folder exceeds this size, oldest unpinned items are deleted to free space.'**
+  String get subtitleImagesQuota;
+
+  /// Quota disabled label
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get imagesQuotaOff;
 }
 
 class _AppLocalizationsDelegate
