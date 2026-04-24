@@ -105,7 +105,7 @@ class _DefaultLinuxCapabilitiesChannel implements LinuxCapabilitiesChannel {
 }
 
 class LinuxCapabilitiesService {
-  LinuxCapabilitiesService._();
+  LinuxCapabilitiesService._(); // coverage:ignore-line
 
   static LinuxCapabilities _cache = LinuxCapabilities.unsupported;
   static bool _initialized = false;

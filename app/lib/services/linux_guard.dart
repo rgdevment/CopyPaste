@@ -3,7 +3,7 @@ import 'dart:io';
 import 'linux_capabilities.dart';
 
 class LinuxGuard {
-  const LinuxGuard._();
+  const LinuxGuard._(); // coverage:ignore-line
 
   static LinuxCapabilities get _caps => LinuxCapabilitiesService.current;
 
