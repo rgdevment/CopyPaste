@@ -465,5 +465,58 @@ void main() {
         restoreDir.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'rollback restores images and config when restore fails after snapshot',
+      () async {
+        final baseDir = Directory.systemTemp.createTempSync('rollback_full_');
+        try {
+          final s = await StorageConfig.create(baseDir: baseDir.path);
+          await s.ensureDirectories();
+
+          // Pre-populate storage with an image and a config file so that
+          // _createPreRestoreSnapshot copies them (lines 252, 261) and
+          // _rollbackFromSnapshot restores them (lines 280-281, 287-288).
+          File(s.databasePath).writeAsBytesSync([83, 81, 76, 105]); // fake db
+          File(
+            p.join(s.imagesPath, 'keep.png'),
+          ).writeAsBytesSync([137, 80, 78, 71]);
+          File(
+            p.join(s.configPath, 'prefs.json'),
+          ).writeAsBytesSync('{"v":1}'.codeUnits);
+
+          // Build a zip whose 'images' entry (a plain file) conflicts with
+          // the existing images/ directory in storage, causing EISDIR when
+          // File(outPath).create() is called during extraction.
+          final archive = Archive();
+          final manifestJson =
+              '{"version":1,"appVersion":"2.0","createdAtUtc":"${DateTime.now().toUtc().toIso8601String()}","itemCount":0,"imageCount":0,"hasPinnedItems":false,"machineName":"ci"}';
+          final manifestBytes = manifestJson.codeUnits;
+          archive.addFile(
+            ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+          );
+          const dbBytes = [83, 81, 76, 105];
+          archive.addFile(ArchiveFile('clipboard.db', dbBytes.length, dbBytes));
+          // This entry's name matches the images/ directory name inside
+          // storage.baseDir, so extraction will throw FileSystemException.
+          final imgsDirName = p.basename(s.imagesPath);
+          archive.addFile(ArchiveFile(imgsDirName, 1, [0]));
+
+          final zipPath = p.join(tempDir.path, 'rollback_full.zip');
+          await File(zipPath).writeAsBytes(ZipEncoder().encode(archive));
+
+          final result = await BackupService.restoreBackup(zipPath, s);
+
+          // The EISDIR triggers the catch block; rollback runs;
+          // null is returned.
+          expect(result, isNull);
+          // After rollback the original image and config must be present.
+          expect(File(p.join(s.imagesPath, 'keep.png')).existsSync(), isTrue);
+          expect(File(p.join(s.configPath, 'prefs.json')).existsSync(), isTrue);
+        } finally {
+          if (baseDir.existsSync()) baseDir.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:core/models/clipboard_content_type.dart';
 import 'package:core/models/clipboard_item.dart';
+import 'package:core/services/native_thumbnail_provider.dart';
 import 'package:core/services/thumbnail_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -208,6 +209,39 @@ void main() {
 
       service.isTypeEnabled = (_) => true;
       expect(await service.generateForItem(imageItem(src.path)), isNotNull);
+    });
+  });
+
+  group('ThumbnailService.acceptsType with nativeProvider', () {
+    test('returns true for audio when nativeProvider is set', () {
+      final nativeService = ThumbnailService(
+        imagesPath: imagesDir.path,
+        nativeProvider: const NoopNativeThumbnailProvider(),
+      );
+      expect(nativeService.acceptsType(ClipboardContentType.audio), isTrue);
+    });
+  });
+
+  group('ThumbnailService._downscale portrait image', () {
+    test('constrains height when image is taller than maxDimension', () async {
+      // Portrait: width=64, height=512 — height > maxDimension(256) so
+      // _downscale uses copyResize(src, height: maxDim) branch (line 215).
+      final portraitImage = img.Image(width: 64, height: 512);
+      for (var x = 0; x < 64; x++) {
+        for (var y = 0; y < 512; y++) {
+          portraitImage.setPixelRgb(x, y, x * 4, y ~/ 2, 128);
+        }
+      }
+      final pngBytes = Uint8List.fromList(img.encodePng(portraitImage));
+      final src = File(p.join(externalDir.path, 'portrait.png'))
+        ..writeAsBytesSync(pngBytes);
+
+      final result = await service.generateForItem(imageItem(src.path));
+
+      expect(result, isNotNull);
+      final thumb = img.decodePng(await File(result!.thumbPath).readAsBytes())!;
+      expect(thumb.height, lessThanOrEqualTo(256));
+      expect(thumb.height, greaterThan(thumb.width));
     });
   });
 }
