@@ -956,6 +956,12 @@ abstract class AppLocalizations {
   /// **'Video file'**
   String get videoFile;
 
+  /// Fallback name / accessibility label for image items
+  ///
+  /// In en, this message translates to:
+  /// **'Image file'**
+  String get imageFile;
+
   /// Timestamp for less than 1 minute ago
   ///
   /// In en, this message translates to:

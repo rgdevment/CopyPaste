@@ -347,6 +347,9 @@
   "videoFile": "Video file",
   "@videoFile": { "description": "Fallback name for video items" },
 
+  "imageFile": "Image file",
+  "@imageFile": { "description": "Fallback name / accessibility label for image items" },
+
   "timeNow": "now",
   "@timeNow": { "description": "Timestamp for less than 1 minute ago" },
 
