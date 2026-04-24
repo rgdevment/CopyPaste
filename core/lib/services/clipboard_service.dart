@@ -174,6 +174,10 @@ class ClipboardService {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
+      // Items captured before the native thumb provider was wired may
+      // have no thumbPath yet. enqueueIfStale is a no-op when thumb is
+      // already up-to-date.
+      _thumbQueue?.enqueueIfStale(updated);
       return updated;
     }
 
@@ -230,6 +234,10 @@ class ClipboardService {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
+      // Cover items captured before the native thumb provider was wired.
+      if (files.length == 1) {
+        _thumbQueue?.enqueueIfStale(updated);
+      }
       return updated;
     }
 
