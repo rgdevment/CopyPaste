@@ -859,7 +859,8 @@ CopyPasteLinuxShell* copypaste_linux_shell_new(FlBinaryMessenger* messenger,
     GdkDisplay* display = gdk_display_get_default();
     shell->xdisplay = gdk_x11_display_get_xdisplay(display);
     shell->root_window = DefaultRootWindow(shell->xdisplay);
-    gdk_window_add_filter(NULL, x11_event_filter, shell);
+    GdkWindow* gdk_root = gdk_get_default_root_window();
+    gdk_window_add_filter(gdk_root, x11_event_filter, shell);
   }
 #endif
 
@@ -874,7 +875,8 @@ void copypaste_linux_shell_dispose(CopyPasteLinuxShell* shell) {
 #ifdef GDK_WINDOWING_X11
   if (shell_is_x11()) {
     unregister_hotkey(shell);
-    gdk_window_remove_filter(NULL, x11_event_filter, shell);
+    GdkWindow* gdk_root = gdk_get_default_root_window();
+    gdk_window_remove_filter(gdk_root, x11_event_filter, shell);
   }
 #endif
 

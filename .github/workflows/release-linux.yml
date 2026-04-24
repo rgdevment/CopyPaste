@@ -184,6 +184,27 @@ jobs:
           mv "$RPM" "$DEST"
           echo "Renamed to: $(basename "$DEST")"
 
+      - name: Validate bundled .desktop file
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          APPIMAGE="app/dist/CopyPaste_${VERSION}_x86_64.AppImage"
+          WORKDIR="$(mktemp -d)"
+          (cd "$WORKDIR" && "$GITHUB_WORKSPACE/$APPIMAGE" --appimage-extract '*.desktop' >/dev/null)
+          DESKTOP=$(find "$WORKDIR/squashfs-root" -maxdepth 2 -name '*.desktop' | head -n 1)
+          if [[ -z "$DESKTOP" ]]; then
+            echo "::error::No .desktop file inside AppImage"
+            exit 1
+          fi
+          desktop-file-validate "$DESKTOP"
+          echo "✓ desktop-file-validate passed"
+
+      - name: Compute SHA-256 checksums
+        run: |
+          cd app/dist
+          sha256sum *.AppImage *.deb *.rpm > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Publish deb to Cloudsmith
         if: github.event_name == 'push'
         env:
@@ -209,4 +230,5 @@ jobs:
             app/dist/*.AppImage
             app/dist/*.deb
             app/dist/*.rpm
+            app/dist/SHA256SUMS
           retention-days: 5

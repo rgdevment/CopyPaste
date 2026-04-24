@@ -1060,7 +1060,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _ModifierChip(
-                  label: Platform.isMacOS ? 'Cmd' : 'Win',
+                  label: Platform.isMacOS
+                      ? 'Cmd'
+                      : Platform.isLinux
+                      ? 'Super'
+                      : 'Win',
                   selected: _hotkeyWin,
                   colors: colors,
                   onTap: () {
