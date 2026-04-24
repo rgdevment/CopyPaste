@@ -10,34 +10,41 @@ import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
 import 'image_processing_queue.dart';
+import 'native_thumbnail_provider.dart';
 import 'text_classifier.dart';
 import 'thumbnail_queue.dart';
 import 'thumbnail_service.dart';
 
 class ClipboardService {
-  ClipboardService(this._repository, {String? imagesPath})
-    : _imagesPath = imagesPath {
+  ClipboardService(
+    this._repository, {
+    String? imagesPath,
+    NativeThumbnailProvider? nativeThumbnailProvider,
+  }) : _imagesPath = imagesPath,
+       _thumbnailService = (imagesPath != null && imagesPath.isNotEmpty)
+           ? ThumbnailService(
+               imagesPath: imagesPath,
+               nativeProvider: nativeThumbnailProvider,
+             )
+           : null {
     _imageQueue = ImageProcessingQueue(
       repository: _repository,
       onItemUpdated: _onImageItemUpdated,
     );
-    if (imagesPath != null && imagesPath.isNotEmpty) {
-      _thumbnailService = ThumbnailService(imagesPath: imagesPath);
-      _thumbQueue = ThumbnailQueue(
-        repository: _repository,
-        service: _thumbnailService!,
-        onItemUpdated: _onThumbItemUpdated,
-      );
-    } else {
-      _thumbnailService = null;
-      _thumbQueue = null;
-    }
+    final service = _thumbnailService;
+    _thumbQueue = service == null
+        ? null
+        : ThumbnailQueue(
+            repository: _repository,
+            service: service,
+            onItemUpdated: _onThumbItemUpdated,
+          );
   }
 
   final IClipboardRepository _repository;
   final String? _imagesPath;
   late final ImageProcessingQueue _imageQueue;
-  late final ThumbnailService? _thumbnailService;
+  final ThumbnailService? _thumbnailService;
   late final ThumbnailQueue? _thumbQueue;
   final _itemAdded = StreamController<ClipboardItem>.broadcast();
   final _itemReactivated = StreamController<ClipboardItem>.broadcast();
@@ -251,6 +258,14 @@ class ClipboardService {
     );
     await _repository.save(item);
     _itemAdded.add(item);
+
+    // Native-backed thumbs cover video/audio (and image when the path is
+    // external). The queue ignores types it cannot handle, so this is a
+    // safe fire-and-forget call.
+    if (files.length == 1) {
+      _thumbQueue?.enqueue(item);
+    }
+
     return item;
   }
 

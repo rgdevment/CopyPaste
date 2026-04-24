@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../models/clipboard_content_type.dart';
 import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
@@ -110,7 +109,7 @@ class ThumbnailQueue {
   }
 
   bool _isEligible(ClipboardItem item) {
-    if (item.type != ClipboardContentType.image) return false;
+    if (!_service.acceptsType(item.type)) return false;
     if (item.content.isEmpty) return false;
     return _singleSourcePath(item) != null;
   }
