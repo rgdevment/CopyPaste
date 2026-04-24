@@ -26,6 +26,8 @@ class ClipboardItems extends Table {
   TextColumn get metadata => text().nullable()();
   IntColumn get pasteCount => integer().withDefault(const Constant(0))();
   TextColumn get contentHash => text().nullable()();
+  TextColumn get thumbPath => text().nullable()();
+  DateTimeColumn get sourceModifiedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -36,7 +38,7 @@ class _AppDatabase extends _$_AppDatabase {
   _AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +49,10 @@ class _AppDatabase extends _$_AppDatabase {
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await _createIndexes();
+      }
+      if (from < 3) {
+        await m.addColumn(clipboardItems, clipboardItems.thumbPath);
+        await m.addColumn(clipboardItems, clipboardItems.sourceModifiedAt);
       }
     },
     beforeOpen: (details) async {
@@ -174,6 +180,8 @@ class SqliteRepository implements IClipboardRepository {
     metadata: row.metadata,
     pasteCount: row.pasteCount,
     contentHash: row.contentHash,
+    thumbPath: row.thumbPath,
+    sourceModifiedAt: row.sourceModifiedAt,
   );
 
   ClipboardItemsCompanion _toCompanion(ClipboardItem item) =>
@@ -190,6 +198,8 @@ class SqliteRepository implements IClipboardRepository {
         metadata: Value(item.metadata),
         pasteCount: Value(item.pasteCount),
         contentHash: Value(item.contentHash),
+        thumbPath: Value(item.thumbPath),
+        sourceModifiedAt: Value(item.sourceModifiedAt),
       );
 
   ClipboardItem _fromQueryRow(QueryRow row) => ClipboardItem(
@@ -205,6 +215,8 @@ class SqliteRepository implements IClipboardRepository {
     metadata: row.readNullable<String>('metadata'),
     pasteCount: row.read<int>('paste_count'),
     contentHash: row.readNullable<String>('content_hash'),
+    thumbPath: row.readNullable<String>('thumb_path'),
+    sourceModifiedAt: row.readNullable<DateTime>('source_modified_at'),
   );
 
   @override

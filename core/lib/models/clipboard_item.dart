@@ -22,6 +22,8 @@ class ClipboardItem {
     this.metadata,
     this.pasteCount = 0,
     this.contentHash,
+    this.thumbPath,
+    this.sourceModifiedAt,
   }) : id = id ?? _uuid.v4(),
        createdAt = createdAt ?? DateTime.now().toUtc(),
        modifiedAt = modifiedAt ?? DateTime.now().toUtc();
@@ -41,6 +43,15 @@ class ClipboardItem {
   final int pasteCount;
   final String? contentHash;
 
+  /// Path absoluto al thumbnail propio dentro de `images/<id>_thumb.png`.
+  /// Null cuando el item no tiene thumb propio (caso normal: usar el del SO).
+  final String? thumbPath;
+
+  /// `mtime` UTC del archivo externo en el momento de generar el thumb.
+  /// Solo aplica a items con `isFileBasedType == true` y referencia externa.
+  /// Si difiere del `mtime` actual, el thumb cacheado está obsoleto.
+  final DateTime? sourceModifiedAt;
+
   bool get isFileBasedType =>
       type == ClipboardContentType.file ||
       type == ClipboardContentType.folder ||
@@ -59,6 +70,8 @@ class ClipboardItem {
     Object? metadata = _sentinel,
     int? pasteCount,
     Object? contentHash = _sentinel,
+    Object? thumbPath = _sentinel,
+    Object? sourceModifiedAt = _sentinel,
   }) => ClipboardItem(
     id: id,
     content: content ?? this.content,
@@ -74,6 +87,10 @@ class ClipboardItem {
     contentHash: contentHash == _sentinel
         ? this.contentHash
         : contentHash as String?,
+    thumbPath: thumbPath == _sentinel ? this.thumbPath : thumbPath as String?,
+    sourceModifiedAt: sourceModifiedAt == _sentinel
+        ? this.sourceModifiedAt
+        : sourceModifiedAt as DateTime?,
   );
 
   bool isFileAvailable() {
