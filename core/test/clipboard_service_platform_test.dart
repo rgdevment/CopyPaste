@@ -24,7 +24,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.dispose();
+    await service.dispose();
     await repo.close();
     if (imagesDir.existsSync()) imagesDir.deleteSync(recursive: true);
   });

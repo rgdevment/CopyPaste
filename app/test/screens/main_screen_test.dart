@@ -59,7 +59,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.dispose();
+    await service.dispose();
     await repo.close();
   });
 
@@ -1167,7 +1167,7 @@ void main() {
       // No exception propagated — error is handled internally.
       expect(find.byType(MainScreen), findsOneWidget);
 
-      failService.dispose();
+      await failService.dispose();
     });
 
     testWidgets(

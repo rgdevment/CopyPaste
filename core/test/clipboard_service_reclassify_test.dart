@@ -12,7 +12,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.dispose();
+    await service.dispose();
     await repo.close();
   });
 
@@ -154,7 +154,7 @@ void main() {
         );
       }
       // Dispose immediately — should not throw
-      service.dispose();
+      await service.dispose();
       await expectLater(service.reclassifyLegacyTextItems(), completes);
     });
 
