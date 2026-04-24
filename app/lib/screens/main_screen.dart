@@ -632,10 +632,8 @@ class MainScreenState extends State<MainScreen> {
           if (updateVersion != null)
             Tooltip(
               message: AutoUpdateService.isStoreBuild
-                  ? l.updateAvailableStore(updateVersion)
-                  : Platform.isMacOS
-                  ? l.updateAvailableMac(updateVersion)
-                  : l.updateAvailableLinux(updateVersion),
+                  ? l.updateTooltipStore(updateVersion)
+                  : l.updateTooltipGeneric(updateVersion),
               child: InkWell(
                 borderRadius: BorderRadius.circular(4),
                 onTap: () => _showUpdateDialog(context, updateVersion),

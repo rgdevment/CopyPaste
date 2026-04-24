@@ -1211,8 +1211,20 @@ abstract class AppLocalizations {
   /// Update dialog message for MS Store builds
   ///
   /// In en, this message translates to:
-  /// **'Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.'**
+  /// **'Version {version} is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.'**
   String updateAvailableStore(String version);
+
+  /// Short tooltip for MS Store badge
+  ///
+  /// In en, this message translates to:
+  /// **'Update {version} coming via Microsoft Store'**
+  String updateTooltipStore(String version);
+
+  /// Short tooltip for non-Store badge
+  ///
+  /// In en, this message translates to:
+  /// **'Update {version} available — click for details'**
+  String updateTooltipGeneric(String version);
 
   /// Title of the update available dialog
   ///

@@ -601,7 +601,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String updateAvailableStore(String version) {
-    return 'Version $version is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.';
+    return 'Version $version is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.';
+  }
+
+  @override
+  String updateTooltipStore(String version) {
+    return 'Update $version coming via Microsoft Store';
+  }
+
+  @override
+  String updateTooltipGeneric(String version) {
+    return 'Update $version available — click for details';
   }
 
   @override

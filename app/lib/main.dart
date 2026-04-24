@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import 'services/auto_update_service.dart';
+import 'services/install_channel.dart';
 import 'services/release_manifest_service.dart';
 
 import 'shell/app_window.dart';
@@ -1169,6 +1170,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             }
 
             if (_manifestState != null &&
+                InstallChannelDetector.detect() != InstallChannel.msStore &&
                 ReleaseManifestService.isBlocked(
                   current: AppConfig.appVersion,
                   state: _manifestState,
