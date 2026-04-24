@@ -166,6 +166,74 @@ class LinuxShell {
       AppLogger.error('LinuxShell.focusWindow failed: $e');
     }
   }
+
+  static Future<CursorMonitorInfo?> getCursorMonitor() async {
+    try {
+      final result =
+          await _methodChannel.invokeMethod<Object>('getCursorMonitor');
+      if (result is! Map) return null;
+      return CursorMonitorInfo(
+        cursorX: (result['cursorX'] as num?)?.toDouble() ?? 0,
+        cursorY: (result['cursorY'] as num?)?.toDouble() ?? 0,
+        x: (result['x'] as num?)?.toDouble() ?? 0,
+        y: (result['y'] as num?)?.toDouble() ?? 0,
+        width: (result['width'] as num?)?.toDouble() ?? 0,
+        height: (result['height'] as num?)?.toDouble() ?? 0,
+        scaleFactor: (result['scaleFactor'] as num?)?.toDouble() ?? 1.0,
+      );
+    } catch (e) {
+      AppLogger.error('LinuxShell.getCursorMonitor failed: $e');
+      return null;
+    }
+  }
+
+  static Future<InputFocusInfo?> getInputFocus() async {
+    try {
+      final result =
+          await _methodChannel.invokeMethod<Object>('getInputFocus');
+      if (result is! Map) return null;
+      return InputFocusInfo(
+        ownsFocus: result['ownsFocus'] as bool? ?? false,
+        focusWindow: (result['focusWindow'] as num?)?.toInt() ?? 0,
+        ownWindow: (result['ownWindow'] as num?)?.toInt() ?? 0,
+      );
+    } catch (e) {
+      AppLogger.error('LinuxShell.getInputFocus failed: $e');
+      return null;
+    }
+  }
+}
+
+class CursorMonitorInfo {
+  const CursorMonitorInfo({
+    required this.cursorX,
+    required this.cursorY,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.scaleFactor,
+  });
+
+  final double cursorX;
+  final double cursorY;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final double scaleFactor;
+}
+
+class InputFocusInfo {
+  const InputFocusInfo({
+    required this.ownsFocus,
+    required this.focusWindow,
+    required this.ownWindow,
+  });
+
+  final bool ownsFocus;
+  final int focusWindow;
+  final int ownWindow;
 }
 
 class HotkeyRegisterResponse {

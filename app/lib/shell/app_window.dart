@@ -172,10 +172,32 @@ class AppWindow {
   Future<void> _positionNearCursor() async {
     if (Platform.isWindows) {
       await _positionNearCursorWindows();
-    } else if (Platform.isMacOS || Platform.isLinux) {
+    } else if (Platform.isLinux) {
+      await _positionNearCursorLinux();
+    } else if (Platform.isMacOS) {
       await _positionNearCursorNative();
     } else {
       await windowManager.center();
+    }
+  }
+
+  Future<void> _positionNearCursorLinux() async {
+    try {
+      final info = await LinuxShell.getCursorMonitor();
+      if (info == null) {
+        await _positionNearCursorNative();
+        return;
+      }
+      final workArea = (
+        info.x,
+        info.y,
+        info.x + info.width,
+        info.y + info.height,
+      );
+      await _applyPosition(info.cursorX, info.cursorY, workArea);
+    } catch (e) {
+      AppLogger.warn('_positionNearCursorLinux: fallback to native: $e');
+      await _positionNearCursorNative();
     }
   }
 
@@ -374,14 +396,21 @@ class AppWindow {
   Future<void> enterSettingsMode() async {
     _settingsMode = true;
     await windowManager.setResizable(true);
+    Future<bool>? configureFuture;
     if (Platform.isLinux) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      configureFuture = LinuxShell.awaitEvent(
+        'configureNotify',
+        timeout: const Duration(milliseconds: 250),
+      );
     }
     await windowManager.setMinimumSize(
       const Size(_settingsWidth, _settingsHeight),
     );
     await windowManager.setMaximumSize(const Size(1200, 900));
     await windowManager.setSize(const Size(_settingsWidth, _settingsHeight));
+    if (configureFuture != null) {
+      await configureFuture;
+    }
     await windowManager.center();
     if (!await windowManager.isVisible()) {
       await windowManager.show();
@@ -392,15 +421,19 @@ class AppWindow {
 
   Future<void> exitSettingsMode() async {
     _settingsMode = false;
+    Future<bool>? configureFuture;
     if (Platform.isLinux) {
       await windowManager.setResizable(true);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      configureFuture = LinuxShell.awaitEvent(
+        'configureNotify',
+        timeout: const Duration(milliseconds: 250),
+      );
     }
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));
-    if (Platform.isLinux) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+    if (configureFuture != null) {
+      await configureFuture;
     }
     await windowManager.setResizable(false);
     await _positionNearCursor();

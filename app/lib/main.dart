@@ -977,11 +977,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (_appWindow.isGateMode) return;
     if (!_config.hideOnDeactivate) return;
     if (Platform.isLinux) {
-      // On Linux/GTK, window-move and other WM operations briefly steal focus.
-      // Delay the hide so we can cancel it if focus returns quickly (e.g. drag).
       _blurHideTimer?.cancel();
-      _blurHideTimer = Timer(const Duration(milliseconds: 300), () {
+      _blurHideTimer = Timer(const Duration(milliseconds: 500), () async {
         _blurHideTimer = null;
+        final focus = await LinuxShell.getInputFocus();
+        if (focus != null && focus.ownsFocus) return;
         unawaited(_appWindow.hideIfNotPinned());
       });
     } else {

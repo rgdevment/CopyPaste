@@ -92,6 +92,14 @@ static gboolean window_map_event_cb(GtkWidget* widget, GdkEvent* event,
   return FALSE;
 }
 
+static gboolean window_configure_event_cb(GtkWidget* widget, GdkEvent* event,
+                                          gpointer user_data) {
+  (void)widget;
+  (void)event;
+  send_shell_event((CopyPasteLinuxShell*)user_data, "configureNotify");
+  return FALSE;
+}
+
 static gchar* resolve_asset_path(const gchar* asset_path) {
   if (asset_path == NULL || *asset_path == '\0') {
     return NULL;
@@ -642,6 +650,116 @@ static FlValue* build_capabilities(void) {
   return caps;
 }
 
+static FlValue* build_cursor_monitor(void) {
+  GdkDisplay* display = gdk_display_get_default();
+  if (display == NULL) {
+    return fl_value_new_null();
+  }
+  GdkSeat* seat = gdk_display_get_default_seat(display);
+  if (seat == NULL) {
+    return fl_value_new_null();
+  }
+  GdkDevice* pointer = gdk_seat_get_pointer(seat);
+  if (pointer == NULL) {
+    return fl_value_new_null();
+  }
+  gint cursor_x = 0;
+  gint cursor_y = 0;
+  GdkScreen* screen = NULL;
+  gdk_device_get_position(pointer, &screen, &cursor_x, &cursor_y);
+
+  GdkMonitor* monitor =
+      gdk_display_get_monitor_at_point(display, cursor_x, cursor_y);
+  if (monitor == NULL) {
+    monitor = gdk_display_get_primary_monitor(display);
+  }
+  if (monitor == NULL) {
+    return fl_value_new_null();
+  }
+
+  GdkRectangle workarea = {0, 0, 0, 0};
+  gdk_monitor_get_workarea(monitor, &workarea);
+  gint scale = gdk_monitor_get_scale_factor(monitor);
+  if (scale <= 0) {
+    scale = 1;
+  }
+
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "cursorX",
+                           fl_value_new_float((double)cursor_x));
+  fl_value_set_string_take(result, "cursorY",
+                           fl_value_new_float((double)cursor_y));
+  fl_value_set_string_take(result, "x",
+                           fl_value_new_float((double)workarea.x));
+  fl_value_set_string_take(result, "y",
+                           fl_value_new_float((double)workarea.y));
+  fl_value_set_string_take(result, "width",
+                           fl_value_new_float((double)workarea.width));
+  fl_value_set_string_take(result, "height",
+                           fl_value_new_float((double)workarea.height));
+  fl_value_set_string_take(result, "scaleFactor",
+                           fl_value_new_float((double)scale));
+  return result;
+}
+
+static FlValue* build_input_focus(CopyPasteLinuxShell* shell) {
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "ownsFocus", fl_value_new_bool(FALSE));
+  fl_value_set_string_take(result, "focusWindow", fl_value_new_int(0));
+  fl_value_set_string_take(result, "ownWindow", fl_value_new_int(0));
+#ifdef GDK_WINDOWING_X11
+  if (!shell_is_x11() || shell->xdisplay == NULL) {
+    return result;
+  }
+  Window focused = None;
+  int revert_to = 0;
+  XGetInputFocus(shell->xdisplay, &focused, &revert_to);
+  fl_value_set_string_take(result, "focusWindow",
+                           fl_value_new_int((gint64)focused));
+
+  if (shell->gtk_window == NULL) {
+    return result;
+  }
+  GdkWindow* gdk_window =
+      gtk_widget_get_window(GTK_WIDGET(shell->gtk_window));
+  if (gdk_window == NULL) {
+    return result;
+  }
+  Window own = gdk_x11_window_get_xid(gdk_window);
+  fl_value_set_string_take(result, "ownWindow", fl_value_new_int((gint64)own));
+
+  gboolean owns = (focused == own);
+  if (!owns && focused != None && focused != PointerRoot) {
+    Window root = None;
+    Window parent = None;
+    Window* children = NULL;
+    unsigned int nchildren = 0;
+    Window cursor = focused;
+    for (int depth = 0; depth < 8; depth++) {
+      if (XQueryTree(shell->xdisplay, cursor, &root, &parent, &children,
+                     &nchildren) == 0) {
+        break;
+      }
+      if (children != NULL) {
+        XFree(children);
+      }
+      if (parent == None || parent == root) {
+        break;
+      }
+      if (parent == own) {
+        owns = TRUE;
+        break;
+      }
+      cursor = parent;
+    }
+  }
+  fl_value_set_string_take(result, "ownsFocus", fl_value_new_bool(owns));
+#else
+  (void)shell;
+#endif
+  return result;
+}
+
 static void shell_method_call_cb(FlMethodChannel* channel,
                                  FlMethodCall* method_call,
                                  gpointer user_data) {
@@ -696,6 +814,16 @@ static void shell_method_call_cb(FlMethodChannel* channel,
     return;
   }
 
+  if (strcmp(method, "getCursorMonitor") == 0) {
+    respond_method_success(method_call, build_cursor_monitor());
+    return;
+  }
+
+  if (strcmp(method, "getInputFocus") == 0) {
+    respond_method_success(method_call, build_input_focus(shell));
+    return;
+  }
+
   g_autoptr(FlMethodResponse) response =
       FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   fl_method_call_respond(method_call, response, NULL);
@@ -722,6 +850,8 @@ CopyPasteLinuxShell* copypaste_linux_shell_new(FlBinaryMessenger* messenger,
                      G_CALLBACK(window_unmap_event_cb), shell);
     g_signal_connect(shell->gtk_window, "map-event",
                      G_CALLBACK(window_map_event_cb), shell);
+    g_signal_connect(shell->gtk_window, "configure-event",
+                     G_CALLBACK(window_configure_event_cb), shell);
   }
 
 #ifdef GDK_WINDOWING_X11
