@@ -36,7 +36,7 @@ import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/permission_gate_screen.dart';
-import 'screens/windows_onboarding_screen.dart';
+import 'screens/desktop_onboarding_screen.dart';
 import 'screens/blocked_version_screen.dart';
 
 // Re-exported so existing tests can import isWaylandSession from main.dart.
@@ -225,7 +225,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
   bool _showPermissionGate = false;
-  bool _showWindowsOnboarding = false;
+  bool _showOnboarding = false;
   bool _showWaylandUnsupported = false;
   bool _linuxPrefersDark = false;
   String? _availableUpdateVersion;
@@ -329,9 +329,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
     final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
     final windowsNeedsOnboarding =
-        Platform.isWindows && (!_config.hasSeenWindowsOnboarding || isUpdate);
+        Platform.isWindows && (!_config.hasSeenOnboarding || isUpdate);
     final linuxNeedsOnboarding =
-        Platform.isLinux && !_config.hasCompletedOnboarding;
+        Platform.isLinux && (!_config.hasCompletedOnboarding || isUpdate);
     final desktopNeedsOnboarding =
         windowsNeedsOnboarding || linuxNeedsOnboarding;
     final showOnStart =
@@ -370,7 +370,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error('trayIcon.init failed: $e');
     }
 
-    if (Platform.isWindows && !isFirstRun && _config.hasSeenWindowsOnboarding) {
+    if (Platform.isWindows && !isFirstRun && _config.hasSeenOnboarding) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => unawaited(_showStartupBalloon()),
       );
@@ -397,7 +397,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       final shouldShowOnboarding = desktopNeedsOnboarding;
       if (shouldShowOnboarding) {
         if (isFirstRun) widget.storage.markAsInitialized();
-        if (mounted) setState(() => _showWindowsOnboarding = true);
+        if (mounted) setState(() => _showOnboarding = true);
         if (!_appWindow.isGateMode) {
           try {
             await _appWindow.enterGateMode();
@@ -650,14 +650,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _showOnboardingFromWakeup() async {
-    if (_showWindowsOnboarding || _appWindow.isSettingsMode) {
+    if (_showOnboarding || _appWindow.isSettingsMode) {
       try {
         await windowManager.show();
         await windowManager.focus();
       } catch (_) {}
       return;
     }
-    setState(() => _showWindowsOnboarding = true);
+    setState(() => _showOnboarding = true);
     try {
       await _appWindow.enterGateMode();
     } catch (e) {
@@ -1054,7 +1054,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _onOnboardingDismissed(AppConfig fromOnboarding) async {
     _config = fromOnboarding.copyWith(
-      hasSeenWindowsOnboarding: true,
+      hasSeenOnboarding: true,
       hasCompletedOnboarding: true,
       lastRunVersion: AppConfig.appVersion,
     );
@@ -1062,7 +1062,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     unawaited(
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
-    setState(() => _showWindowsOnboarding = false);
+    setState(() => _showOnboarding = false);
     await _appWindow.exitGateMode();
     unawaited(_showStartupBalloon());
   }
@@ -1072,7 +1072,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     AppConfig fromOnboarding,
   ) async {
     _config = fromOnboarding.copyWith(
-      hasSeenWindowsOnboarding: true,
+      hasSeenOnboarding: true,
       hasCompletedOnboarding: true,
       lastRunVersion: AppConfig.appVersion,
     );
@@ -1080,7 +1080,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     unawaited(
       _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
     );
-    setState(() => _showWindowsOnboarding = false);
+    setState(() => _showOnboarding = false);
     await _appWindow.exitGateMode();
     await Future<void>.delayed(const Duration(milliseconds: 150));
     if (ctx.mounted) await _openSettings(ctx);
@@ -1181,7 +1181,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               );
             }
 
-            if (_showWindowsOnboarding) {
+            if (_showOnboarding) {
               final binding = HotkeyBinding(
                 virtualKey: _config.hotkeyVirtualKey,
                 keyName: _config.hotkeyKeyName,
@@ -1190,7 +1190,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                 useAlt: _config.hotkeyUseAlt,
                 useShift: _config.hotkeyUseShift,
               );
-              return WindowsOnboardingScreen(
+              return DesktopOnboardingScreen(
                 hotkey: binding.label(),
                 initialConfig: _config,
                 onDismiss: (updated) =>
