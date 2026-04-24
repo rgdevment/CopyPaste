@@ -47,8 +47,6 @@ static void my_application_activate(GApplication* application) {
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
 
-  gdk_notify_startup_complete();
-
   FlView* view = fl_view_new(project);
   GdkRGBA background_color;
   gdk_rgba_parse(&background_color, "#1a1a2e");
@@ -65,6 +63,8 @@ static void my_application_activate(GApplication* application) {
   self->shell = copypaste_linux_shell_new(messenger, window);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
+
+  gdk_notify_startup_complete();
 }
 
 static gboolean my_application_local_command_line(GApplication* application,

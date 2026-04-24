@@ -272,7 +272,13 @@ class MainScreenState extends State<MainScreen> {
         case ClipboardContentType.folder:
         case ClipboardContentType.audio:
         case ClipboardContentType.video:
-          await UrlHelper.open(item.content.split('\n').first.trim());
+          final path = item.content.split('\n').first.trim();
+          if (path.isEmpty ||
+              (!File(path).existsSync() && !Directory(path).existsSync())) {
+            _showFileNotFoundFeedback();
+            return;
+          }
+          await UrlHelper.open(path);
           opened = true;
         case ClipboardContentType.link:
           await UrlHelper.open(item.content.trim());
@@ -295,13 +301,30 @@ class MainScreenState extends State<MainScreen> {
 
   Future<bool> _openImageInTemp(ClipboardItem item) async {
     final src = File(item.content);
-    if (!src.existsSync()) return false;
+    if (!src.existsSync()) {
+      _showFileNotFoundFeedback();
+      return false;
+    }
     final name = item.content.split(Platform.pathSeparator).last;
     final tmp = await Directory.systemTemp.createTemp('copypaste_');
     final dest = File('${tmp.path}${Platform.pathSeparator}$name');
     await src.copy(dest.path);
     await UrlHelper.open(dest.path);
     return true;
+  }
+
+  void _showFileNotFoundFeedback() {
+    final ctx = context;
+    if (!ctx.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(ctx).fileNotFound),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _onItemLabelColor(
