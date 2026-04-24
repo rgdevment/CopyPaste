@@ -11,6 +11,8 @@ import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
 import 'image_processing_queue.dart';
 import 'text_classifier.dart';
+import 'thumbnail_queue.dart';
+import 'thumbnail_service.dart';
 
 class ClipboardService {
   ClipboardService(this._repository, {String? imagesPath})
@@ -19,11 +21,24 @@ class ClipboardService {
       repository: _repository,
       onItemUpdated: _onImageItemUpdated,
     );
+    if (imagesPath != null && imagesPath.isNotEmpty) {
+      _thumbnailService = ThumbnailService(imagesPath: imagesPath);
+      _thumbQueue = ThumbnailQueue(
+        repository: _repository,
+        service: _thumbnailService!,
+        onItemUpdated: _onThumbItemUpdated,
+      );
+    } else {
+      _thumbnailService = null;
+      _thumbQueue = null;
+    }
   }
 
   final IClipboardRepository _repository;
   final String? _imagesPath;
   late final ImageProcessingQueue _imageQueue;
+  late final ThumbnailService? _thumbnailService;
+  late final ThumbnailQueue? _thumbQueue;
   final _itemAdded = StreamController<ClipboardItem>.broadcast();
   final _itemReactivated = StreamController<ClipboardItem>.broadcast();
   bool _disposed = false;
@@ -34,6 +49,27 @@ class ClipboardService {
         _itemReactivated.add(item);
       } on StateError catch (_) {}
     }
+  }
+
+  void _onThumbItemUpdated(ClipboardItem item) {
+    if (_disposed) return;
+    try {
+      _itemReactivated.add(item);
+    } on StateError catch (_) {}
+  }
+
+  /// Requests background regeneration of [item]'s thumbnail if the source
+  /// file's `mtime` no longer matches the recorded `sourceModifiedAt`.
+  /// No-op when no `imagesPath` was configured. Safe to call from `build()`
+  /// — work is enqueued asynchronously.
+  void requestThumbnailIfStale(ClipboardItem item) {
+    _thumbQueue?.enqueueIfStale(item);
+  }
+
+  /// Forces an enqueue regardless of staleness (e.g. the user explicitly
+  /// asked to refresh the thumb).
+  void requestThumbnailRefresh(ClipboardItem item) {
+    _thumbQueue?.enqueue(item, reason: ThumbnailJobReason.manualRefresh);
   }
 
   Stream<ClipboardItem> get onItemAdded => _itemAdded.stream;
@@ -163,6 +199,11 @@ class ClipboardService {
         imageBytes: imageBytes,
         imagesPath: _imagesPath,
       );
+    } else {
+      // External image referenced by path: schedule thumb generation.
+      // (When imageBytes is non-empty the result will land inside
+      // imagesPath and ThumbnailService skips it by design.)
+      _thumbQueue?.enqueue(savedItem);
     }
 
     return savedItem;
@@ -275,6 +316,10 @@ class ClipboardService {
     if (item.type == ClipboardContentType.image && item.content.isNotEmpty) {
       _deleteAppFile(item.content);
     }
+    final thumb = item.thumbPath;
+    if (thumb != null && thumb.isNotEmpty) {
+      _deleteAppFile(thumb);
+    }
   }
 
   Future<List<ClipboardItem>> getHistoryAdvanced({
@@ -357,6 +402,7 @@ class ClipboardService {
   Future<void> dispose() async {
     _disposed = true;
     await _imageQueue.dispose();
+    await _thumbQueue?.dispose();
     await _itemAdded.close();
     await _itemReactivated.close();
   }

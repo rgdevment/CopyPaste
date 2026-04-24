@@ -582,6 +582,8 @@ class MainScreenState extends State<MainScreen> {
                 _onItemLabelColor(item, label, color),
             onPastePlain: () => widget.onPastePlain(item),
             onOpen: () => _onItemOpen(item),
+            onRequestThumbnailRefresh:
+                widget.clipboardService.requestThumbnailIfStale,
             onSelect: () {
               setState(() => _selectedIndex = index);
               _focusNode.requestFocus();
