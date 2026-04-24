@@ -110,6 +110,45 @@ void main() {
 
       expect(reactivated, isNotNull);
     });
+
+    test('enqueues thumbnail generation for external image path', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_proc_thumb_');
+      final externalDir = Directory.systemTemp.createTempSync('svc_proc_ext_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
+        // Real PNG so the ThumbnailService can decode it.
+        final pixels = img.Image(width: 64, height: 64);
+        final externalFile = File(p.join(externalDir.path, 'photo.png'))
+          ..writeAsBytesSync(img.encodePng(pixels));
+
+        ClipboardItem? reactivated;
+        final sub = svc.onItemReactivated.listen((it) => reactivated = it);
+
+        final created = await svc.processImage(
+          'thumb-enq-hash',
+          imagePath: externalFile.path,
+        );
+        expect(created, isNotNull);
+
+        // Wait for the thumbnail queue to finish (single short job).
+        for (var i = 0; i < 40; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          final stored = await repo.getById(created!.id);
+          if (stored?.thumbPath != null) break;
+        }
+
+        final stored = await repo.getById(created!.id);
+        expect(stored?.thumbPath, isNotNull);
+        expect(File(stored!.thumbPath!).existsSync(), isTrue);
+        expect(reactivated?.id, equals(stored.id));
+
+        await sub.cancel();
+        await svc.dispose();
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+        externalDir.deleteSync(recursive: true);
+      }
+    });
   });
 
   group('ClipboardService.recordPaste', () {
@@ -511,6 +550,76 @@ void main() {
           externalFile.existsSync(),
           isTrue,
           reason: 'external user files must never be deleted',
+        );
+
+        svc.dispose();
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+        externalDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('also deletes thumbPath file inside imagesPath', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_rm_thumb_');
+      final externalDir = Directory.systemTemp.createTempSync('svc_rm_ext2_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
+        final externalFile = File(p.join(externalDir.path, 'photo.png'))
+          ..writeAsBytesSync([137, 80, 78, 71]);
+        final thumbFile = File(p.join(imagesDir.path, 'thumb-id_thumb.png'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final item = ClipboardItem(
+          id: 'thumb-id',
+          content: externalFile.path,
+          type: ClipboardContentType.image,
+          contentHash: 'thumb-hash',
+          thumbPath: thumbFile.path,
+        );
+        await repo.save(item);
+
+        await svc.removeItem(item.id);
+
+        expect(await repo.getById(item.id), isNull);
+        expect(
+          externalFile.existsSync(),
+          isTrue,
+          reason: 'external user file must never be deleted',
+        );
+        expect(
+          thumbFile.existsSync(),
+          isFalse,
+          reason: 'app-owned thumb must be removed when item is deleted',
+        );
+
+        svc.dispose();
+      } finally {
+        imagesDir.deleteSync(recursive: true);
+        externalDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('refuses to delete thumbPath outside imagesPath', () async {
+      final imagesDir = Directory.systemTemp.createTempSync('svc_rm_thumb2_');
+      final externalDir = Directory.systemTemp.createTempSync('svc_rm_ext3_');
+      try {
+        final svc = ClipboardService(repo, imagesPath: imagesDir.path);
+        final externalThumb = File(p.join(externalDir.path, 'evil_thumb.png'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final item = ClipboardItem(
+          id: 'evil',
+          content: '',
+          type: ClipboardContentType.image,
+          contentHash: 'evil-hash',
+          thumbPath: externalThumb.path,
+        );
+        await repo.save(item);
+
+        await svc.removeItem(item.id);
+
+        expect(
+          externalThumb.existsSync(),
+          isTrue,
+          reason: 'thumbPath outside imagesPath must be ignored',
         );
 
         svc.dispose();

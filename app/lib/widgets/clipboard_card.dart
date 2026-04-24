@@ -20,6 +20,7 @@ class ClipboardCard extends StatefulWidget {
     this.onExpandToggle,
     this.onOpen,
     this.onSelect,
+    this.onRequestThumbnailRefresh,
     this.isSelected = false,
     this.isExpanded = false,
     this.cardMinLines,
@@ -36,6 +37,11 @@ class ClipboardCard extends StatefulWidget {
   final VoidCallback? onExpandToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onSelect;
+
+  /// Invoked once per resolved image item to let the host trigger
+  /// background regeneration of `<id>_thumb.png` when the source file's
+  /// `mtime` no longer matches `item.sourceModifiedAt`.
+  final void Function(ClipboardItem item)? onRequestThumbnailRefresh;
   final bool isSelected;
   final bool isExpanded;
   final int? cardMinLines;
@@ -48,6 +54,7 @@ class ClipboardCard extends StatefulWidget {
 class _ClipboardCardState extends State<ClipboardCard> {
   bool _hovering = false;
   String? _resolvedImagePath;
+  bool _resolvedIsThumb = false;
   bool _imagePathResolved = false;
   bool? _fileAvailable;
   DateTime? _lastPrimaryDown;
@@ -80,8 +87,10 @@ class _ClipboardCardState extends State<ClipboardCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.id != widget.item.id ||
         oldWidget.item.content != widget.item.content ||
+        oldWidget.item.thumbPath != widget.item.thumbPath ||
         oldWidget.item.metadata != widget.item.metadata) {
       _imagePathResolved = false;
+      _resolvedIsThumb = false;
       _fileAvailable = null;
       _resolveImagePath();
       _resolveFileAvailability();
@@ -121,28 +130,66 @@ class _ClipboardCardState extends State<ClipboardCard> {
         item.type != ClipboardContentType.audio) {
       return;
     }
-    String? path;
     if (item.type == ClipboardContentType.image) {
-      path = item.content;
-    }
-    if (path != null) {
-      _checkFileAsync(path);
+      // Always ask the host to refresh the thumb if the source mtime is
+      // stale. The host is responsible for deciding (and rate-limiting).
+      widget.onRequestThumbnailRefresh?.call(item);
+      _checkImagePathsAsync(item);
     } else {
       _resolvedImagePath = null;
+      _resolvedIsThumb = false;
       _imagePathResolved = true;
       if (mounted) setState(() {});
     }
   }
 
+  /// Resolves the best path to display for an image item: prefers
+  /// `item.thumbPath` (when present and the file exists), falls back to
+  /// `item.content`, finally null.
+  Future<void> _checkImagePathsAsync(ClipboardItem item) async {
+    final thumb = item.thumbPath;
+    if (thumb != null && thumb.isNotEmpty) {
+      if (await File(thumb).exists()) {
+        if (!mounted) return;
+        setState(() {
+          _resolvedImagePath = thumb;
+          _resolvedIsThumb = true;
+          _imagePathResolved = true;
+        });
+        return;
+      }
+    }
+
+    final content = item.content;
+    if (content.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _resolvedImagePath = null;
+        _resolvedIsThumb = false;
+        _imagePathResolved = true;
+      });
+      return;
+    }
+    final exists = await File(content).exists();
+    if (!mounted) return;
+    setState(() {
+      _resolvedImagePath = exists ? content : null;
+      _resolvedIsThumb = false;
+      _imagePathResolved = true;
+    });
+  }
+
   Future<void> _checkFileAsync(String path) async {
     if (path.isEmpty) {
       _resolvedImagePath = null;
+      _resolvedIsThumb = false;
       _imagePathResolved = true;
       if (mounted) setState(() {});
       return;
     }
     final exists = await File(path).exists();
     _resolvedImagePath = exists ? path : null;
+    _resolvedIsThumb = false;
     _imagePathResolved = true;
     if (mounted) setState(() {});
   }
@@ -640,8 +687,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
       );
     }
 
-    final originalPath = item.content.trim();
-    if (originalPath.isEmpty) {
+    final displayPath = _resolvedImagePath ?? item.content.trim();
+    if (displayPath.isEmpty) {
       return Container(
         height: theme.sizing.cardImageHeight,
         decoration: BoxDecoration(
@@ -668,9 +715,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
             width: double.infinity,
             color: colors.surfaceVariant,
             child: Image.file(
-              File(originalPath),
+              File(displayPath),
               fit: BoxFit.cover,
-              cacheWidth: 700,
+              cacheWidth: _resolvedIsThumb ? 256 : 700,
               errorBuilder: (_, e, s) => Center(
                 child: Icon(
                   theme.icons.warning,
@@ -764,7 +811,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
                   Image.file(
                     File(_resolvedImagePath!),
                     fit: BoxFit.contain,
-                    cacheWidth: 700,
+                    cacheWidth: _resolvedIsThumb ? 256 : 700,
                     errorBuilder: (_, e, st) => _MediaIcon(
                       isAudio: false,
                       typeColor: typeColor,
