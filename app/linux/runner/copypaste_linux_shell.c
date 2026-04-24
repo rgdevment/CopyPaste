@@ -269,6 +269,15 @@ static gboolean destroy_tray(CopyPasteLinuxShell* shell) {
   return TRUE;
 }
 
+static FlValue* make_hotkey_result(gboolean success, const char* error_code) {
+  FlValue* map = fl_value_new_map();
+  fl_value_set_string_take(map, "success", fl_value_new_bool(success));
+  if (error_code != NULL) {
+    fl_value_set_string_take(map, "errorCode", fl_value_new_string(error_code));
+  }
+  return map;
+}
+
 #ifdef GDK_WINDOWING_X11
 static guint modifier_combinations[] = {0, LockMask, Mod2Mask, LockMask | Mod2Mask};
 static int (*previous_x11_error_handler)(Display*, XErrorEvent*) = NULL;
@@ -322,7 +331,41 @@ static KeySym virtual_key_to_keysym(gint64 virtual_key) {
   if (virtual_key >= 0x41 && virtual_key <= 0x5A) {
     return (KeySym)(XK_A + (virtual_key - 0x41));
   }
-  return NoSymbol;
+  if (virtual_key >= 0x30 && virtual_key <= 0x39) {
+    return (KeySym)(XK_0 + (virtual_key - 0x30));
+  }
+  if (virtual_key >= 0x70 && virtual_key <= 0x87) {
+    return (KeySym)(XK_F1 + (virtual_key - 0x70));
+  }
+  switch (virtual_key) {
+    case 0x08: return XK_BackSpace;
+    case 0x09: return XK_Tab;
+    case 0x0D: return XK_Return;
+    case 0x1B: return XK_Escape;
+    case 0x20: return XK_space;
+    case 0x21: return XK_Page_Up;
+    case 0x22: return XK_Page_Down;
+    case 0x23: return XK_End;
+    case 0x24: return XK_Home;
+    case 0x25: return XK_Left;
+    case 0x26: return XK_Up;
+    case 0x27: return XK_Right;
+    case 0x28: return XK_Down;
+    case 0x2D: return XK_Insert;
+    case 0x2E: return XK_Delete;
+    case 0xBA: return XK_semicolon;
+    case 0xBB: return XK_equal;
+    case 0xBC: return XK_comma;
+    case 0xBD: return XK_minus;
+    case 0xBE: return XK_period;
+    case 0xBF: return XK_slash;
+    case 0xC0: return XK_grave;
+    case 0xDB: return XK_bracketleft;
+    case 0xDC: return XK_backslash;
+    case 0xDD: return XK_bracketright;
+    case 0xDE: return XK_apostrophe;
+    default: return NoSymbol;
+  }
 }
 
 static guint compute_modifier_mask(FlValue* args) {
@@ -367,9 +410,9 @@ static void unregister_hotkey(CopyPasteLinuxShell* shell) {
   shell->hotkey_modifiers = 0;
 }
 
-static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
+static FlValue* register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   if (!shell_is_x11() || shell->xdisplay == NULL) {
-    return FALSE;
+    return make_hotkey_result(FALSE, "noX11");
   }
 
   unregister_hotkey(shell);
@@ -380,19 +423,19 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   KeySym keysym = virtual_key_to_keysym(virtual_key);
   if (keysym == NoSymbol) {
     g_warning("registerHotkey: unsupported virtual key 0x%llx", (unsigned long long)virtual_key);
-    return FALSE;
+    return make_hotkey_result(FALSE, "unsupportedKey");
   }
 
   guint modifiers = compute_modifier_mask(args);
   if (modifiers == 0) {
     g_warning("registerHotkey: no modifier keys specified");
-    return FALSE;
+    return make_hotkey_result(FALSE, "noModifier");
   }
 
   KeyCode keycode = XKeysymToKeycode(shell->xdisplay, keysym);
   if (keycode == 0) {
     g_warning("registerHotkey: no keycode for keysym %lu", (unsigned long)keysym);
-    return FALSE;
+    return make_hotkey_result(FALSE, "unsupportedKey");
   }
 
   for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
@@ -402,11 +445,10 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
                 modifiers | modifier_combinations[i]);
       ungrab_hotkey_variants(shell->xdisplay, shell->root_window, keycode,
                              modifiers);
-      return FALSE;
+      return make_hotkey_result(FALSE, "grabFailed");
     }
   }
 
-  // Flush pending requests before reading window attributes to avoid stale state.
   XSync(shell->xdisplay, False);
   XWindowAttributes attrs;
   if (XGetWindowAttributes(shell->xdisplay, shell->root_window, &attrs) != 0) {
@@ -420,7 +462,7 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   shell->hotkey_registered = TRUE;
   shell->hotkey_keycode = keycode;
   shell->hotkey_modifiers = modifiers;
-  return TRUE;
+  return make_hotkey_result(TRUE, NULL);
 }
 
 static GdkFilterReturn x11_event_filter(GdkXEvent* xevent,
@@ -637,9 +679,9 @@ static void shell_method_call_cb(FlMethodChannel* channel,
 
   if (strcmp(method, "registerHotkey") == 0) {
 #ifdef GDK_WINDOWING_X11
-    respond_method_success(method_call, fl_value_new_bool(register_hotkey(shell, args)));
+    respond_method_success(method_call, register_hotkey(shell, args));
 #else
-    respond_method_success(method_call, fl_value_new_bool(FALSE));
+    respond_method_success(method_call, make_hotkey_result(FALSE, "noX11"));
 #endif
     return;
   }

@@ -585,7 +585,7 @@ static FlValue* build_image_event(GtkClipboard* clipboard,
   gchar* buffer = NULL;
   gsize buffer_size = 0;
   g_autoptr(GError) error = NULL;
-  gboolean ok = gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &buffer_size, "bmp",
+  gboolean ok = gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &buffer_size, "png",
                                           &error, NULL);
   g_object_unref(pixbuf);
   if (!ok || buffer == NULL || buffer_size == 0) {
