@@ -1,6 +1,7 @@
-// coverage:ignore-file
 import 'dart:async';
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 
 import 'windows_balloon.dart';
 
@@ -17,6 +18,12 @@ import 'windows_balloon.dart';
 /// Always returns a Future that completes — never throws.
 class DesktopNotifier {
   DesktopNotifier._();
+
+  /// Injectable process runner. Override in tests to avoid spawning real
+  /// system processes.
+  @visibleForTesting
+  static Future<ProcessResult> Function(String, List<String>)?
+  processRunnerOverride;
 
   /// Shows a transient notification with [title] and [body].
   /// Returns true when the platform layer accepted the request.
@@ -45,8 +52,9 @@ class DesktopNotifier {
     required String title,
     required String body,
   }) async {
+    final runner = processRunnerOverride ?? Process.run;
     try {
-      final result = await Process.run('notify-send', <String>[
+      final result = await runner('notify-send', <String>[
         '--app-name=CopyPaste',
         '--icon=copypaste',
         '--expire-time=7000',

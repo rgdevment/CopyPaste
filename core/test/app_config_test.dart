@@ -685,6 +685,28 @@ void main() {
       },
     );
 
+    test('hasSeenOnboarding migrates from legacy hasSeenWindowsOnboarding', () {
+      final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
+      expect(c.hasSeenOnboarding, isTrue);
+    });
+
+    test('hasSeenOnboarding new key takes precedence over legacy', () {
+      final c = AppConfig.fromJson({
+        'hasSeenWindowsOnboarding': false,
+        'hasSeenOnboarding': true,
+      });
+      expect(c.hasSeenOnboarding, isTrue);
+    });
+
+    test(
+      'both hasSeenOnboarding and hasCompletedOnboarding populated from legacy',
+      () {
+        final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
+        expect(c.hasSeenOnboarding, isTrue);
+        expect(c.hasCompletedOnboarding, isTrue);
+      },
+    );
+
     test(
       'hasCompletedOnboarding stays false when neither legacy nor new is set',
       () {
