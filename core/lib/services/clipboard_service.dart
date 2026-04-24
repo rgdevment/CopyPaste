@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -10,18 +9,32 @@ import '../models/clipboard_content_type.dart';
 import '../models/clipboard_item.dart';
 import '../repository/i_clipboard_repository.dart';
 import 'app_logger.dart';
-import 'image_processor.dart';
+import 'image_processing_queue.dart';
 import 'text_classifier.dart';
 
 class ClipboardService {
   ClipboardService(this._repository, {String? imagesPath})
-    : _imagesPath = imagesPath;
+    : _imagesPath = imagesPath {
+    _imageQueue = ImageProcessingQueue(
+      repository: _repository,
+      onItemUpdated: _onImageItemUpdated,
+    );
+  }
 
   final IClipboardRepository _repository;
   final String? _imagesPath;
+  late final ImageProcessingQueue _imageQueue;
   final _itemAdded = StreamController<ClipboardItem>.broadcast();
   final _itemReactivated = StreamController<ClipboardItem>.broadcast();
   bool _disposed = false;
+
+  void _onImageItemUpdated(ClipboardItem item) {
+    if (!_disposed) {
+      try {
+        _itemReactivated.add(item);
+      } on StateError catch (_) {}
+    }
+  }
 
   Stream<ClipboardItem> get onItemAdded => _itemAdded.stream;
   Stream<ClipboardItem> get onItemReactivated => _itemReactivated.stream;
@@ -145,56 +158,14 @@ class ClipboardService {
     _itemAdded.add(savedItem);
 
     if (imageBytes != null && imageBytes.isNotEmpty && _imagesPath != null) {
-      unawaited(_processImageBackground(savedItem, imageBytes));
+      _imageQueue.enqueue(
+        item: savedItem,
+        imageBytes: imageBytes,
+        imagesPath: _imagesPath,
+      );
     }
 
     return savedItem;
-  }
-
-  Future<void> _processImageBackground(
-    ClipboardItem item,
-    List<int> imageBytes,
-  ) async {
-    try {
-      final bytes = imageBytes is Uint8List
-          ? imageBytes
-          : Uint8List.fromList(imageBytes);
-      final result = await ImageProcessor.processAndSave(
-        imageBytes: bytes,
-        id: item.id,
-        imagesDir: _imagesPath!,
-      );
-      if (result == null) {
-        AppLogger.warn(
-          '_processImageBackground: ImageProcessor returned null for ${item.id} (unsupported format) — keeping BMP fallback',
-        );
-        // Keep the BMP on disk so the item remains pasteable. Deleting it here
-        // would leave the repository entry pointing to a missing file.
-        return;
-      }
-      if (_disposed) return;
-
-      final bmpPath = p.join(_imagesPath, '${item.id}.bmp');
-      _deleteAppFile(bmpPath);
-
-      final meta = <String, Object>{
-        'width': result.width,
-        'height': result.height,
-        'size': result.fileSize,
-      };
-      final updated = item.copyWith(
-        content: result.imagePath,
-        metadata: jsonEncode(meta),
-      );
-      await _repository.update(updated);
-      if (!_disposed) {
-        try {
-          _itemReactivated.add(updated);
-        } on StateError catch (_) {}
-      }
-    } catch (e, s) {
-      AppLogger.error('Image processing failed for ${item.id}: $e\n$s');
-    }
   }
 
   Future<ClipboardItem?> processFiles(
@@ -383,9 +354,10 @@ class ClipboardService {
     if (!_disposed) _itemReactivated.add(updated);
   }
 
-  void dispose() {
+  Future<void> dispose() async {
     _disposed = true;
-    _itemAdded.close();
-    _itemReactivated.close();
+    await _imageQueue.dispose();
+    await _itemAdded.close();
+    await _itemReactivated.close();
   }
 }
