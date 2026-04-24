@@ -1442,6 +1442,24 @@ abstract class AppLocalizations {
   /// **'Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.'**
   String get subtitleKeepBrokenItems;
 
+  /// Quota label
+  ///
+  /// In en, this message translates to:
+  /// **'Storage cap for images'**
+  String get settingImagesQuotaLabel;
+
+  /// Quota subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'When the images folder exceeds this size, oldest unpinned items are deleted to free space.'**
+  String get subtitleImagesQuota;
+
+  /// Quota disabled label
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get imagesQuotaOff;
+
   /// Onboarding personalize section title
   ///
   /// In en, this message translates to:

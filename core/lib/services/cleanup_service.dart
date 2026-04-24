@@ -14,8 +14,10 @@ class CleanupService {
     this._getRetentionDays, {
     StorageConfig? storage,
     int Function()? getKeepBrokenDays,
+    int Function()? getImagesQuotaMB,
   }) : _storage = storage,
-       _getKeepBrokenDays = getKeepBrokenDays ?? (() => 30);
+       _getKeepBrokenDays = getKeepBrokenDays ?? (() => 30),
+       _getImagesQuotaMB = getImagesQuotaMB ?? (() => 0);
 
   static const Duration _checkInterval = Duration(hours: 18);
   static const String _lastCleanupFileName = 'last_cleanup.txt';
@@ -23,6 +25,7 @@ class CleanupService {
   final IClipboardRepository _repository;
   int Function() _getRetentionDays;
   int Function() _getKeepBrokenDays;
+  int Function() _getImagesQuotaMB;
   final StorageConfig? _storage;
   Timer? _timer;
   bool _disposed = false;
@@ -56,6 +59,7 @@ class CleanupService {
       }
       _saveLastCleanupDate(now);
       await _cleanOrphanImages();
+      await _enforceImagesQuota();
     } catch (e) {
       AppLogger.error('Cleanup failed: $e');
     }
@@ -87,6 +91,10 @@ class CleanupService {
 
   void updateKeepBrokenCallback(int Function() getter) {
     _getKeepBrokenDays = getter;
+  }
+
+  void updateImagesQuotaCallback(int Function() getter) {
+    _getImagesQuotaMB = getter;
   }
 
   void dispose() {
@@ -226,6 +234,116 @@ class CleanupService {
       }
     }
     await _repository.delete(item.id);
+  }
+
+  /// Enforces the user-configured `imagesQuotaMB` cap. When the total bytes
+  /// stored under `images/` exceed the limit, deletes items from oldest to
+  /// newest (by `createdAt`) until the directory drops back below the cap.
+  /// Pinned items are never purged. Owned files are removed via the same
+  /// canonical path validation used elsewhere — external paths referenced by
+  /// items are never touched.
+  Future<void> _enforceImagesQuota() async {
+    final storage = _storage;
+    if (storage == null) return;
+    final quotaMB = _getImagesQuotaMB();
+    if (quotaMB <= 0) return;
+    final quotaBytes = quotaMB * 1024 * 1024;
+
+    final canonicalImagesDir = p.canonicalize(storage.imagesPath);
+    final baseWithSep = canonicalImagesDir.endsWith(p.separator)
+        ? canonicalImagesDir
+        : '$canonicalImagesDir${p.separator}';
+
+    int currentBytes = _measureDirectoryBytes(canonicalImagesDir);
+    if (currentBytes <= quotaBytes) return;
+
+    AppLogger.warn(
+      '[CleanupService] images/ ${(currentBytes / 1024 / 1024).toStringAsFixed(1)}MB '
+      'exceeds quota ${quotaMB}MB; starting LRU purge',
+    );
+
+    final all = await _repository.getAll();
+    final eligible = all.where((it) => !it.isPinned).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    var purged = 0;
+    for (final item in eligible) {
+      if (currentBytes <= quotaBytes) break;
+      final freed = await _purgeOwnedFiles(item, baseWithSep);
+      if (freed <= 0) continue;
+      try {
+        await _repository.delete(item.id);
+      } catch (e) {
+        AppLogger.warn('[CleanupService] quota: delete row failed: $e');
+        continue;
+      }
+      currentBytes -= freed;
+      purged++;
+    }
+
+    if (purged > 0) {
+      AppLogger.warn(
+        '[CleanupService] quota purge done: removed $purged items, '
+        'now ${(currentBytes / 1024 / 1024).toStringAsFixed(1)}MB',
+      );
+    }
+  }
+
+  /// Sums the byte size of regular files directly inside [dir]. Recursion
+  /// is intentionally omitted — `images/` is flat by design.
+  int _measureDirectoryBytes(String dir) {
+    try {
+      final d = Directory(dir);
+      if (!d.existsSync()) return 0;
+      var total = 0;
+      for (final entity in d.listSync(followLinks: false)) {
+        if (entity is File) {
+          try {
+            total += entity.lengthSync();
+          } catch (_) {}
+        }
+      }
+      return total;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Deletes the per-item files this app owns (`<id>.png`, `<id>.bmp`,
+  /// `<id>_thumb.png`, plus any path declared by the item that resolves
+  /// inside `images/`). Returns the freed bytes. The external file pointed
+  /// to by an item is never touched.
+  Future<int> _purgeOwnedFiles(ClipboardItem item, String baseWithSep) async {
+    final storage = _storage;
+    if (storage == null) return 0;
+    final candidates = <String>{
+      p.join(storage.imagesPath, '${item.id}.png'),
+      p.join(storage.imagesPath, '${item.id}.bmp'),
+      p.join(storage.imagesPath, '${item.id}_thumb.png'),
+    };
+    final declared = item.thumbPath;
+    if (declared != null && declared.isNotEmpty) candidates.add(declared);
+    if (item.content.isNotEmpty) {
+      for (final entry in item.content.split('\n')) {
+        if (entry.isNotEmpty) candidates.add(entry);
+      }
+    }
+
+    var freed = 0;
+    for (final path in candidates) {
+      try {
+        final canonical = p.canonicalize(path);
+        if (!canonical.startsWith(baseWithSep)) continue;
+        final f = File(canonical);
+        if (!f.existsSync()) continue;
+        final bytes = f.lengthSync();
+        f.deleteSync();
+        freed += bytes;
+      } catch (e) {
+        AppLogger.warn('[CleanupService] quota: delete file failed: $e');
+      }
+    }
+    return freed;
   }
 
   /// Best-effort check that the volume/mount carrying [path] is currently
