@@ -144,12 +144,19 @@
 
   "buttonSave": "Save",
   "@buttonSave": { "description": "Save button" },
-
+  "buttonClose": "Close",
+  "@buttonClose": { "description": "Generic Close button" },
   "buttonCancel": "Cancel",
   "@buttonCancel": { "description": "Cancel button" },
 
   "buttonReset": "Restore defaults",
   "@buttonReset": { "description": "Reset button" },
+
+  "savingIndicator": "Saving\u2026",
+  "@savingIndicator": { "description": "Footer indicator while autosave is in flight" },
+
+  "savedIndicator": "Saved",
+  "@savedIndicator": { "description": "Footer indicator after autosave completes" },
 
   "menuPaste": "Paste",
   "@menuPaste": { "description": "Context menu paste" },
@@ -213,7 +220,7 @@
 
   "tabGeneral": "General",
   "@tabGeneral": { "description": "General nav tab" },
-  "tabBackupRestore": "Backup",
+  "tabBackupRestore": "Backup & Support",
   "@tabBackupRestore": { "description": "Backup nav tab" },
   "tabAppearance": "Appearance",
   "@tabAppearance": { "description": "Appearance nav tab" },
@@ -275,8 +282,6 @@
   "@settingScrollToTopOnOpen": { "description": "Scroll to top on open label" },
   "settingClearSearchOnOpen": "Clear search on open",
   "@settingClearSearchOnOpen": { "description": "Clear search on open label" },
-  "settingShowTrayIcon": "Show tray icon",
-  "@settingShowTrayIcon": { "description": "Show tray icon label (macOS only)" },
   "settingRetentionDaysLabel": "Retention days (0 = unlimited)",
   "@settingRetentionDaysLabel": { "description": "Retention days label" },
   "settingClearHistoryLabel": "Clear clipboard history",
@@ -292,8 +297,6 @@
   "@subtitleScrollToTopOnOpen": { "description": "Scroll to top on open subtitle" },
   "subtitleClearSearchOnOpen": "Clears the search text each time",
   "@subtitleClearSearchOnOpen": { "description": "Clear search on open subtitle" },
-  "subtitleShowTrayIcon": "Show icon in the menu bar. Use hotkey if hidden",
-  "@subtitleShowTrayIcon": { "description": "Show tray icon subtitle (macOS only)" },
   "subtitlePasteSpeed": "Adjust restoration and paste timings",
   "@subtitlePasteSpeed": { "description": "Paste speed subtitle" },
   "subtitleCategories": "Customize the names of color categories.",
@@ -484,12 +487,6 @@
     }
   },
 
-  "settingShowInTaskbar": "Keep in taskbar",
-  "@settingShowInTaskbar": { "description": "Label for the Windows taskbar visibility toggle in Settings" },
-
-  "subtitleShowInTaskbar": "The app stays visible in the taskbar when closed. Turn off to hide it to the system tray only.",
-  "@subtitleShowInTaskbar": { "description": "Subtitle for the Windows taskbar visibility toggle in Settings" },
-
   "wakeupHint": "CopyPaste runs in the background — press {hotkey} or click the tray icon to open it anytime.",
   "@wakeupHint": {
     "description": "In-app snackbar shown inside the window when it is raised by a second launch attempt",
@@ -547,5 +544,68 @@
   "@onboardingSettingsButton": { "description": "Onboarding settings button" },
 
   "onboardingDismissButton": "Get started",
-  "@onboardingDismissButton": { "description": "Onboarding dismiss button" }
+  "@onboardingDismissButton": { "description": "Onboarding dismiss button" },
+
+  "tabCapture": "Performance",
+  "@tabCapture": { "description": "Performance tab label (paste, perf, multimedia)" },
+
+  "tabMultimedia": "Multimedia",
+  "@tabMultimedia": { "description": "Multimedia tab label (legacy, unused since tabs were merged)" },
+
+  "tabCleanupPrivacy": "Cleanup & Privacy",
+  "@tabCleanupPrivacy": { "description": "Cleanup & privacy tab label" },
+
+  "sectionMultimedia": "MULTIMEDIA & THUMBNAILS",
+  "@sectionMultimedia": { "description": "Multimedia section header" },
+
+  "subtitleMultimedia": "Control how images, videos and audio files are previewed.",
+  "@subtitleMultimedia": { "description": "Multimedia section subtitle" },
+
+  "settingGenerateImageThumbnails": "Generate image thumbnails",
+  "@settingGenerateImageThumbnails": { "description": "Image thumbs toggle" },
+
+  "subtitleGenerateImageThumbnails": "Show preview tiles for copied or referenced images.",
+  "@subtitleGenerateImageThumbnails": { "description": "Image thumbs subtitle" },
+
+  "settingGenerateVideoThumbnails": "Generate video thumbnails",
+  "@settingGenerateVideoThumbnails": { "description": "Video thumbs toggle" },
+
+  "subtitleGenerateVideoThumbnails": "Use the OS shell cache to show a preview frame for video files.",
+  "@subtitleGenerateVideoThumbnails": { "description": "Video thumbs subtitle" },
+
+  "settingGenerateAudioThumbnails": "Generate audio thumbnails",
+  "@settingGenerateAudioThumbnails": { "description": "Audio thumbs toggle" },
+
+  "subtitleGenerateAudioThumbnails": "Show cover art when available for audio files.",
+  "@subtitleGenerateAudioThumbnails": { "description": "Audio thumbs subtitle" },
+
+  "settingMaxImageSize": "Max image size for processing (MB)",
+  "@settingMaxImageSize": { "description": "Max image size label" },
+
+  "subtitleMaxImageSize": "Larger images keep their original bitmap fallback and are not re-encoded.",
+  "@subtitleMaxImageSize": { "description": "Max image size subtitle" },
+
+  "sectionCleanupPrivacy": "CLEANUP & PRIVACY",
+  "@sectionCleanupPrivacy": { "description": "Cleanup & privacy section header" },
+
+  "settingKeepBrokenItemsLabel": "Keep unavailable items (days)",
+  "@settingKeepBrokenItemsLabel": { "description": "Days to keep broken external refs" },
+
+  "subtitleKeepBrokenItems": "Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.",
+  "@subtitleKeepBrokenItems": { "description": "Broken-items subtitle" },
+
+  "onboardingPersonalizeTitle": "Personalize quickly",
+  "@onboardingPersonalizeTitle": { "description": "Onboarding personalize section title" },
+
+  "onboardingPersonalizeHint": "You can change these any time from Settings.",
+  "@onboardingPersonalizeHint": { "description": "Onboarding personalize section hint" },
+
+  "onboardingThumbnailsToggle": "Generate thumbnails for media",
+  "@onboardingThumbnailsToggle": { "description": "Master toggle covering image+video+audio thumbs" },
+
+  "onboardingKeepBrokenLabel": "Keep unavailable items for {days} days",
+  "@onboardingKeepBrokenLabel": {
+    "description": "Onboarding broken-retention slider label",
+    "placeholders": { "days": { "type": "int" } }
+  }
 }

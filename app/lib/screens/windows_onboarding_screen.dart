@@ -1,18 +1,48 @@
+import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 
-class WindowsOnboardingScreen extends StatelessWidget {
+class WindowsOnboardingScreen extends StatefulWidget {
   const WindowsOnboardingScreen({
     required this.hotkey,
+    required this.initialConfig,
     required this.onDismiss,
     required this.onSettings,
     super.key,
   });
 
   final String hotkey;
-  final VoidCallback onDismiss;
-  final VoidCallback onSettings;
+  final AppConfig initialConfig;
+  final void Function(AppConfig updated) onDismiss;
+  final void Function(AppConfig updated) onSettings;
+
+  @override
+  State<WindowsOnboardingScreen> createState() =>
+      _WindowsOnboardingScreenState();
+}
+
+class _WindowsOnboardingScreenState extends State<WindowsOnboardingScreen> {
+  late bool _generateThumbs;
+  late int _keepBrokenDays;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.initialConfig;
+    _generateThumbs =
+        c.generateImageThumbnails ||
+        c.generateVideoThumbnails ||
+        c.generateAudioThumbnails;
+    _keepBrokenDays = c.keepBrokenItemsDays;
+  }
+
+  AppConfig _buildConfig() => widget.initialConfig.copyWith(
+    generateImageThumbnails: _generateThumbs,
+    generateVideoThumbnails: _generateThumbs,
+    generateAudioThumbnails: _generateThumbs,
+    keepBrokenItemsDays: _keepBrokenDays,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +54,9 @@ class WindowsOnboardingScreen extends StatelessWidget {
       backgroundColor: cs.surface,
       body: Center(
         child: SizedBox(
-          width: 320,
+          width: 360,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -55,33 +85,74 @@ class WindowsOnboardingScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _PrivacyBadge(label: l.onboardingPrivacyBadge, colorScheme: cs),
-                const SizedBox(height: 24),
-                Divider(color: cs.outlineVariant, height: 1),
                 const SizedBox(height: 20),
+                Divider(color: cs.outlineVariant, height: 1),
+                const SizedBox(height: 16),
                 Text(
-                  l.onboardingDescription(hotkey),
+                  l.onboardingDescription(widget.hotkey),
                   style: tt.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
-                    height: 1.55,
+                    height: 1.5,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                _HotkeyChip(hotkey: widget.hotkey, colorScheme: cs),
+                const SizedBox(height: 8),
                 Text(
                   l.onboardingTrayHint,
                   style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 14),
-                _HotkeyChip(hotkey: hotkey, colorScheme: cs),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+                Divider(color: cs.outlineVariant, height: 1),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l.onboardingPersonalizeTitle,
+                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l.onboardingPersonalizeHint,
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _OnboardingToggle(
+                  label: l.onboardingThumbnailsToggle,
+                  value: _generateThumbs,
+                  colorScheme: cs,
+                  onChanged: (v) => setState(() => _generateThumbs = v),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l.onboardingKeepBrokenLabel(_keepBrokenDays),
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ),
+                Slider(
+                  value: _keepBrokenDays.toDouble(),
+                  min: 0,
+                  max: 90,
+                  divisions: 18,
+                  label: '$_keepBrokenDays',
+                  onChanged: (v) => setState(() => _keepBrokenDays = v.round()),
+                ),
+                const SizedBox(height: 20),
                 Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 10,
                   runSpacing: 8,
                   children: [
                     OutlinedButton(
-                      onPressed: onSettings,
+                      onPressed: () => widget.onSettings(_buildConfig()),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -91,7 +162,7 @@ class WindowsOnboardingScreen extends StatelessWidget {
                       child: Text(l.onboardingSettingsButton),
                     ),
                     FilledButton(
-                      onPressed: onDismiss,
+                      onPressed: () => widget.onDismiss(_buildConfig()),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -107,6 +178,35 @@ class WindowsOnboardingScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OnboardingToggle extends StatelessWidget {
+  const _OnboardingToggle({
+    required this.label,
+    required this.value,
+    required this.colorScheme,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ColorScheme colorScheme;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+          ),
+        ),
+        Switch(value: value, onChanged: onChanged),
+      ],
     );
   }
 }

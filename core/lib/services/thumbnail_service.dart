@@ -46,6 +46,7 @@ class ThumbnailService {
     this.nativeProvider,
     this.maxSourceBytes = 25 * 1024 * 1024,
     this.maxDimension = 256,
+    this.isTypeEnabled,
   });
 
   /// Absolute, canonicalized path to the app's `images/` directory. Every
@@ -58,13 +59,14 @@ class ThumbnailService {
   final NativeThumbnailProvider? nativeProvider;
 
   /// Skip generation if the source file is bigger than this many bytes.
-  /// Default 25 MB matches `maxImageProcessingSizeMB` in Settings (Fase 4).
   /// Only applied to the Dart fallback; native providers handle their own
   /// limits (most just read the OS cache).
   final int maxSourceBytes;
 
   /// Longest side of the generated thumbnail, in pixels.
   final int maxDimension;
+
+  bool Function(ClipboardContentType type)? isTypeEnabled;
 
   /// Generates a thumbnail for [item] if applicable. Returns the result
   /// metadata so the caller can persist `thumbPath` + `sourceModifiedAt`
@@ -155,6 +157,7 @@ class ThumbnailService {
   }
 
   bool _isAcceptedType(ClipboardContentType type) {
+    if (isTypeEnabled != null && !isTypeEnabled!(type)) return false;
     if (type == ClipboardContentType.image) return true;
     if (nativeProvider == null) return false;
     return type == ClipboardContentType.video ||

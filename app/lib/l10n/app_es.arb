@@ -57,8 +57,11 @@
   "resetConfirmButton": "Restablecer y Reiniciar",
 
   "buttonSave": "Guardar",
+  "buttonClose": "Cerrar",
   "buttonCancel": "Cancelar",
   "buttonReset": "Restaurar predeterminados",
+  "savingIndicator": "Guardando\u2026",
+  "savedIndicator": "Guardado",
 
   "menuPaste": "Pegar",
   "menuPastePlain": "Pegar sin formato",
@@ -106,7 +109,7 @@
   "shortcutEdit": "Editar tarjeta (etiqueta y color)",
 
   "tabGeneral": "General",
-  "tabBackupRestore": "Respaldo",
+  "tabBackupRestore": "Backup y soporte",
   "tabAppearance": "Apariencia",
   "tabShortcuts": "Atajos",
   "tabAbout": "Acerca de",
@@ -138,7 +141,6 @@
   "settingHideOnDeactivate": "Ocultar al hacer clic fuera",
   "settingScrollToTopOnOpen": "Ir al inicio al abrir",
   "settingClearSearchOnOpen": "Limpiar b\u00fasqueda al abrir",
-  "settingShowTrayIcon": "Mostrar icono en la bandeja",
   "settingRetentionDaysLabel": "D\u00edas de retenci\u00f3n (0 = sin l\u00edmite)",
   "settingClearHistoryLabel": "Limpiar historial del portapapeles",
   "settingHotkeyShortcutLabel": "Atajo para abrir/cerrar CopyPaste",
@@ -147,7 +149,6 @@
   "subtitleHideOnDeactivate": "Cerrar la ventana al hacer clic fuera",
   "subtitleScrollToTopOnOpen": "Restablece el desplazamiento y selecciona el \u00faltimo elemento",
   "subtitleClearSearchOnOpen": "Borra el texto de b\u00fasqueda cada vez",
-  "subtitleShowTrayIcon": "Mostrar icono en la barra de men\u00fa. Usa el atajo si est\u00e1 oculto",
   "subtitlePasteSpeed": "Ajustar tiempos de restauraci\u00f3n y pegado",
   "subtitleCategories": "Personaliza los nombres de las categor\u00edas de color.",
 
@@ -225,9 +226,6 @@
   "linuxHotkeyFallbackWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11. CopyPaste est\u00e1 usando temporalmente {fallback}. Puedes cambiarlo en Configuraci\u00f3n.",
   "linuxHotkeyConflictWarning": "El atajo {requested} no est\u00e1 disponible en este escritorio X11 y el fallback temporal {fallback} tambi\u00e9n fall\u00f3. Abre Configuraci\u00f3n para elegir otro atajo.",
 
-  "settingShowInTaskbar": "Mantener en barra de tareas",
-  "subtitleShowInTaskbar": "La app permanece visible en la barra de tareas al cerrarla. Desact\u00edvalo para ocultarla solo en la bandeja del sistema.",
-
   "wakeupHint": "CopyPaste se ejecuta en segundo plano \u2014 presiona {hotkey} o haz clic en el \u00edcono de la bandeja para abrirlo cuando quieras.",
 
   "taskbarOpenHint": "Tip: presiona {hotkey} para abrir y pegar autom\u00e1ticamente, sin perder el foco.",
@@ -242,5 +240,25 @@
   "onboardingDescription": "Corre en segundo plano sin que lo notes. Presiona {hotkey} cuando quieras para abrir tu historial.",
   "onboardingTrayHint": "Encu\u00e9ntralo junto al reloj, abajo a la derecha.",
   "onboardingSettingsButton": "Configuraci\u00f3n",
-  "onboardingDismissButton": "Empezar"
+  "onboardingDismissButton": "Empezar",
+  "tabCapture": "Rendimiento",
+  "tabMultimedia": "Multimedia",
+  "tabCleanupPrivacy": "Limpieza y privacidad",
+  "sectionMultimedia": "MULTIMEDIA Y MINIATURAS",
+  "subtitleMultimedia": "Controla c\u00f3mo se previsualizan im\u00e1genes, v\u00eddeos y archivos de audio.",
+  "settingGenerateImageThumbnails": "Generar miniaturas de im\u00e1genes",
+  "subtitleGenerateImageThumbnails": "Muestra una vista previa de las im\u00e1genes copiadas o referenciadas.",
+  "settingGenerateVideoThumbnails": "Generar miniaturas de v\u00eddeos",
+  "subtitleGenerateVideoThumbnails": "Usa la cach\u00e9 del sistema para mostrar un fotograma de los v\u00eddeos.",
+  "settingGenerateAudioThumbnails": "Generar miniaturas de audio",
+  "subtitleGenerateAudioThumbnails": "Muestra la car\u00e1tula cuando est\u00e9 disponible.",
+  "settingMaxImageSize": "Tama\u00f1o m\u00e1ximo a procesar (MB)",
+  "subtitleMaxImageSize": "Las im\u00e1genes m\u00e1s grandes mantienen su mapa de bits original sin reprocesarse.",
+  "sectionCleanupPrivacy": "LIMPIEZA Y PRIVACIDAD",
+  "settingKeepBrokenItemsLabel": "Conservar elementos no disponibles (d\u00edas)",
+  "subtitleKeepBrokenItems": "Los elementos que apuntan a archivos perdidos o vol\u00famenes desconectados se eliminan tras estos d\u00edas. 0 los elimina al instante.",
+  "onboardingPersonalizeTitle": "Personaliza r\u00e1pido",
+  "onboardingPersonalizeHint": "Puedes cambiar esto cuando quieras desde Configuraci\u00f3n.",
+  "onboardingThumbnailsToggle": "Generar miniaturas para multimedia",
+  "onboardingKeepBrokenLabel": "Conservar elementos no disponibles {days} d\u00edas"
 }

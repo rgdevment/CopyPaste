@@ -35,11 +35,14 @@ class AppConfig {
     this.resetSearchOnShow = true,
     this.hasSeenHint = false,
     this.themeMode = 'dark',
-    this.showTrayIcon = true,
-    this.showInTaskbar = false,
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
     this.hasSeenWindowsOnboarding = false,
+    this.hasCompletedOnboarding = false,
+    this.generateImageThumbnails = true,
+    this.generateVideoThumbnails = true,
+    this.generateAudioThumbnails = true,
+    this.maxImageProcessingSizeMB = 25,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -95,8 +98,6 @@ class AppConfig {
           json['resetSearchOnShow'] as bool? ?? defaults.resetSearchOnShow,
       hasSeenHint: json['hasSeenHint'] as bool? ?? defaults.hasSeenHint,
       themeMode: json['themeMode'] as String? ?? defaults.themeMode,
-      showTrayIcon: json['showTrayIcon'] as bool? ?? defaults.showTrayIcon,
-      showInTaskbar: json['showInTaskbar'] as bool? ?? defaults.showInTaskbar,
       accessibilityWasGranted:
           json['accessibilityWasGranted'] as bool? ??
           defaults.accessibilityWasGranted,
@@ -105,6 +106,22 @@ class AppConfig {
       hasSeenWindowsOnboarding:
           json['hasSeenWindowsOnboarding'] as bool? ??
           defaults.hasSeenWindowsOnboarding,
+      hasCompletedOnboarding:
+          json['hasCompletedOnboarding'] as bool? ??
+          (json['hasSeenWindowsOnboarding'] as bool? ??
+              defaults.hasCompletedOnboarding),
+      generateImageThumbnails:
+          json['generateImageThumbnails'] as bool? ??
+          defaults.generateImageThumbnails,
+      generateVideoThumbnails:
+          json['generateVideoThumbnails'] as bool? ??
+          defaults.generateVideoThumbnails,
+      generateAudioThumbnails:
+          json['generateAudioThumbnails'] as bool? ??
+          defaults.generateAudioThumbnails,
+      maxImageProcessingSizeMB:
+          json['maxImageProcessingSizeMB'] as int? ??
+          defaults.maxImageProcessingSizeMB,
     );
   }
 
@@ -160,11 +177,16 @@ class AppConfig {
   final bool resetSearchOnShow;
   final bool hasSeenHint;
   final String themeMode;
-  final bool showTrayIcon;
-  final bool showInTaskbar;
   final bool accessibilityWasGranted;
   final String lastRunVersion;
   final bool hasSeenWindowsOnboarding;
+  final bool hasCompletedOnboarding;
+
+  // Multimedia & thumbnails
+  final bool generateImageThumbnails;
+  final bool generateVideoThumbnails;
+  final bool generateAudioThumbnails;
+  final int maxImageProcessingSizeMB;
 
   AppConfig copyWith({
     String? preferredLanguage,
@@ -195,11 +217,14 @@ class AppConfig {
     bool? resetSearchOnShow,
     bool? hasSeenHint,
     String? themeMode,
-    bool? showTrayIcon,
-    bool? showInTaskbar,
     bool? accessibilityWasGranted,
     String? lastRunVersion,
     bool? hasSeenWindowsOnboarding,
+    bool? hasCompletedOnboarding,
+    bool? generateImageThumbnails,
+    bool? generateVideoThumbnails,
+    bool? generateAudioThumbnails,
+    int? maxImageProcessingSizeMB,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -233,13 +258,21 @@ class AppConfig {
     resetSearchOnShow: resetSearchOnShow ?? this.resetSearchOnShow,
     hasSeenHint: hasSeenHint ?? this.hasSeenHint,
     themeMode: themeMode ?? this.themeMode,
-    showTrayIcon: showTrayIcon ?? this.showTrayIcon,
-    showInTaskbar: showInTaskbar ?? this.showInTaskbar,
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
     hasSeenWindowsOnboarding:
         hasSeenWindowsOnboarding ?? this.hasSeenWindowsOnboarding,
+    hasCompletedOnboarding:
+        hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+    generateImageThumbnails:
+        generateImageThumbnails ?? this.generateImageThumbnails,
+    generateVideoThumbnails:
+        generateVideoThumbnails ?? this.generateVideoThumbnails,
+    generateAudioThumbnails:
+        generateAudioThumbnails ?? this.generateAudioThumbnails,
+    maxImageProcessingSizeMB:
+        maxImageProcessingSizeMB ?? this.maxImageProcessingSizeMB,
   );
 
   Map<String, dynamic> toJson() => {
@@ -272,11 +305,14 @@ class AppConfig {
     'resetSearchOnShow': resetSearchOnShow,
     'hasSeenHint': hasSeenHint,
     'themeMode': themeMode,
-    'showTrayIcon': showTrayIcon,
-    'showInTaskbar': showInTaskbar,
     'accessibilityWasGranted': accessibilityWasGranted,
     'lastRunVersion': lastRunVersion,
     'hasSeenWindowsOnboarding': hasSeenWindowsOnboarding,
+    'hasCompletedOnboarding': hasCompletedOnboarding,
+    'generateImageThumbnails': generateImageThumbnails,
+    'generateVideoThumbnails': generateVideoThumbnails,
+    'generateAudioThumbnails': generateAudioThumbnails,
+    'maxImageProcessingSizeMB': maxImageProcessingSizeMB,
   };
 
   static Future<AppConfig> load(String configPath) async {

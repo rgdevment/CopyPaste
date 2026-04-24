@@ -159,10 +159,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get buttonSave => 'Guardar';
 
   @override
+  String get buttonClose => 'Cerrar';
+
+  @override
   String get buttonCancel => 'Cancelar';
 
   @override
   String get buttonReset => 'Restaurar predeterminados';
+
+  @override
+  String get savingIndicator => 'Guardando…';
+
+  @override
+  String get savedIndicator => 'Guardado';
 
   @override
   String get menuPaste => 'Pegar';
@@ -285,7 +294,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tabGeneral => 'General';
 
   @override
-  String get tabBackupRestore => 'Respaldo';
+  String get tabBackupRestore => 'Backup y soporte';
 
   @override
   String get tabAppearance => 'Apariencia';
@@ -375,9 +384,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingClearSearchOnOpen => 'Limpiar búsqueda al abrir';
 
   @override
-  String get settingShowTrayIcon => 'Mostrar icono en la bandeja';
-
-  @override
   String get settingRetentionDaysLabel => 'Días de retención (0 = sin límite)';
 
   @override
@@ -400,10 +406,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitleClearSearchOnOpen => 'Borra el texto de búsqueda cada vez';
-
-  @override
-  String get subtitleShowTrayIcon =>
-      'Mostrar icono en la barra de menú. Usa el atajo si está oculto';
 
   @override
   String get subtitlePasteSpeed => 'Ajustar tiempos de restauración y pegado';
@@ -616,13 +618,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get settingShowInTaskbar => 'Mantener en barra de tareas';
-
-  @override
-  String get subtitleShowInTaskbar =>
-      'La app permanece visible en la barra de tareas al cerrarla. Desactívalo para ocultarla solo en la bandeja del sistema.';
-
-  @override
   String wakeupHint(String hotkey) {
     return 'CopyPaste se ejecuta en segundo plano — presiona $hotkey o haz clic en el ícono de la bandeja para abrirlo cuando quieras.';
   }
@@ -668,4 +663,74 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingDismissButton => 'Empezar';
+
+  @override
+  String get tabCapture => 'Rendimiento';
+
+  @override
+  String get tabMultimedia => 'Multimedia';
+
+  @override
+  String get tabCleanupPrivacy => 'Limpieza y privacidad';
+
+  @override
+  String get sectionMultimedia => 'MULTIMEDIA Y MINIATURAS';
+
+  @override
+  String get subtitleMultimedia =>
+      'Controla cómo se previsualizan imágenes, vídeos y archivos de audio.';
+
+  @override
+  String get settingGenerateImageThumbnails => 'Generar miniaturas de imágenes';
+
+  @override
+  String get subtitleGenerateImageThumbnails =>
+      'Muestra una vista previa de las imágenes copiadas o referenciadas.';
+
+  @override
+  String get settingGenerateVideoThumbnails => 'Generar miniaturas de vídeos';
+
+  @override
+  String get subtitleGenerateVideoThumbnails =>
+      'Usa la caché del sistema para mostrar un fotograma de los vídeos.';
+
+  @override
+  String get settingGenerateAudioThumbnails => 'Generar miniaturas de audio';
+
+  @override
+  String get subtitleGenerateAudioThumbnails =>
+      'Muestra la carátula cuando esté disponible.';
+
+  @override
+  String get settingMaxImageSize => 'Tamaño máximo a procesar (MB)';
+
+  @override
+  String get subtitleMaxImageSize =>
+      'Las imágenes más grandes mantienen su mapa de bits original sin reprocesarse.';
+
+  @override
+  String get sectionCleanupPrivacy => 'LIMPIEZA Y PRIVACIDAD';
+
+  @override
+  String get settingKeepBrokenItemsLabel =>
+      'Conservar elementos no disponibles (días)';
+
+  @override
+  String get subtitleKeepBrokenItems =>
+      'Los elementos que apuntan a archivos perdidos o volúmenes desconectados se eliminan tras estos días. 0 los elimina al instante.';
+
+  @override
+  String get onboardingPersonalizeTitle => 'Personaliza rápido';
+
+  @override
+  String get onboardingPersonalizeHint =>
+      'Puedes cambiar esto cuando quieras desde Configuración.';
+
+  @override
+  String get onboardingThumbnailsToggle => 'Generar miniaturas para multimedia';
+
+  @override
+  String onboardingKeepBrokenLabel(int days) {
+    return 'Conservar elementos no disponibles $days días';
+  }
 }
