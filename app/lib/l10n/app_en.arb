@@ -472,6 +472,36 @@
   "updateDismiss": "Later",
   "@updateDismiss": { "description": "Button to dismiss the update notification" },
 
+  "updateBadgeImportant": "v{version} available — important update",
+  "@updateBadgeImportant": { "description": "Footer badge text for minor/major updates", "placeholders": { "version": { "type": "String" } } },
+
+  "updateActionDownload": "Download installer",
+  "@updateActionDownload": { "description": "Action button to open the installer download page" },
+
+  "updateActionOpenStore": "Open Microsoft Store",
+  "@updateActionOpenStore": { "description": "Action button to open the MS Store update page" },
+
+  "updateActionCopyBrew": "Copy brew command",
+  "@updateActionCopyBrew": { "description": "Action button to copy the Homebrew upgrade command" },
+
+  "updateActionCopied": "Copied to clipboard",
+  "@updateActionCopied": { "description": "Snack/tooltip shown after copying the upgrade command" },
+
+  "blockedTitle": "Update required",
+  "@blockedTitle": { "description": "Title of the blocked-version full-screen gate" },
+
+  "blockedDescription": "Version {current} of CopyPaste is no longer supported. Please install version {required} or newer to continue using the app.",
+  "@blockedDescription": { "description": "Body of the blocked-version full-screen gate", "placeholders": { "current": { "type": "String" }, "required": { "type": "String" } } },
+
+  "blockedReasonGeneric": "This version was retired by the maintainers for safety or compatibility reasons.",
+  "@blockedReasonGeneric": { "description": "Generic reason shown in the blocked screen when the manifest does not provide one" },
+
+  "blockedQuit": "Quit CopyPaste",
+  "@blockedQuit": { "description": "Secondary action on the blocked-version screen" },
+
+  "blockedFallbackHint": "Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.",
+  "@blockedFallbackHint": { "description": "Hint shown when no channel-specific action is available" },
+
   "waylandUnsupportedTitle": "Wayland is not supported",
   "@waylandUnsupportedTitle": { "description": "Title for the Wayland-unsupported gate screen" },
 

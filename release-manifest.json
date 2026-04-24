@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "latest": "2.3.0",
+  "minimumSupported": "2.3.0",
+  "blockedVersions": ["2.2.6"],
+  "severity": "critical",
+  "channels": {
+    "github_windows": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "msstore": {
+      "url": "ms-windows-store://pdp/?productid=PLACEHOLDER"
+    },
+    "github_macos": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "homebrew": {
+      "command": "brew upgrade copypaste"
+    },
+    "github_linux": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "snap": {
+      "command": "sudo snap refresh copypaste"
+    }
+  },
+  "releaseNotes": {
+    "en": {
+      "summary": "Critical update. Older versions are no longer supported.",
+      "url": "https://github.com/rgdevment/CopyPaste/releases/tag/v2.3.0"
+    },
+    "es": {
+      "summary": "Actualización crítica. Las versiones anteriores ya no están soportadas.",
+      "url": "https://github.com/rgdevment/CopyPaste/releases/tag/v2.3.0"
+    }
+  }
+}

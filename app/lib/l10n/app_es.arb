@@ -226,6 +226,18 @@
   "updateViewRelease": "Ver versi\u00f3n",
   "updateDismiss": "Despu\u00e9s",
 
+  "updateBadgeImportant": "v{version} disponible — actualizaci\u00f3n importante",
+  "updateActionDownload": "Descargar instalador",
+  "updateActionOpenStore": "Abrir Microsoft Store",
+  "updateActionCopyBrew": "Copiar comando brew",
+  "updateActionCopied": "Copiado al portapapeles",
+
+  "blockedTitle": "Actualizaci\u00f3n requerida",
+  "blockedDescription": "La versi\u00f3n {current} de CopyPaste ya no est\u00e1 soportada. Instala la versi\u00f3n {required} o m\u00e1s reciente para continuar.",
+  "blockedReasonGeneric": "Esta versi\u00f3n fue retirada por motivos de seguridad o compatibilidad.",
+  "blockedQuit": "Salir de CopyPaste",
+  "blockedFallbackHint": "Visita https://github.com/rgdevment/CopyPaste/releases para descargar el instalador m\u00e1s reciente.",
+
   "waylandUnsupportedTitle": "Wayland no est\u00e1 soportado",
   "waylandUnsupportedBadge": "Open source \u00b7 Solo X11",
   "waylandUnsupportedBody": "El soporte en Linux est\u00e1 en progreso. Este proyecto lo mantiene una sola persona y necesitamos m\u00e1s testers para avanzar.\n\nCopyPaste funciona completamente en X11 \u2014 para usarlo, inicia sesi\u00f3n con X11. Lamentamos las molestias.",

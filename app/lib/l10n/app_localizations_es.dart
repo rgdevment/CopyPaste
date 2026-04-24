@@ -618,6 +618,42 @@ class AppLocalizationsEs extends AppLocalizations {
   String get updateDismiss => 'Después';
 
   @override
+  String updateBadgeImportant(String version) {
+    return 'v$version disponible — actualización importante';
+  }
+
+  @override
+  String get updateActionDownload => 'Descargar instalador';
+
+  @override
+  String get updateActionOpenStore => 'Abrir Microsoft Store';
+
+  @override
+  String get updateActionCopyBrew => 'Copiar comando brew';
+
+  @override
+  String get updateActionCopied => 'Copiado al portapapeles';
+
+  @override
+  String get blockedTitle => 'Actualización requerida';
+
+  @override
+  String blockedDescription(String current, String required) {
+    return 'La versión $current de CopyPaste ya no está soportada. Instala la versión $required o más reciente para continuar.';
+  }
+
+  @override
+  String get blockedReasonGeneric =>
+      'Esta versión fue retirada por motivos de seguridad o compatibilidad.';
+
+  @override
+  String get blockedQuit => 'Salir de CopyPaste';
+
+  @override
+  String get blockedFallbackHint =>
+      'Visita https://github.com/rgdevment/CopyPaste/releases para descargar el instalador más reciente.';
+
+  @override
   String get waylandUnsupportedTitle => 'Wayland no está soportado';
 
   @override

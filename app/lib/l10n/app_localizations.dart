@@ -1232,6 +1232,66 @@ abstract class AppLocalizations {
   /// **'Later'**
   String get updateDismiss;
 
+  /// Footer badge text for minor/major updates
+  ///
+  /// In en, this message translates to:
+  /// **'v{version} available — important update'**
+  String updateBadgeImportant(String version);
+
+  /// Action button to open the installer download page
+  ///
+  /// In en, this message translates to:
+  /// **'Download installer'**
+  String get updateActionDownload;
+
+  /// Action button to open the MS Store update page
+  ///
+  /// In en, this message translates to:
+  /// **'Open Microsoft Store'**
+  String get updateActionOpenStore;
+
+  /// Action button to copy the Homebrew upgrade command
+  ///
+  /// In en, this message translates to:
+  /// **'Copy brew command'**
+  String get updateActionCopyBrew;
+
+  /// Snack/tooltip shown after copying the upgrade command
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get updateActionCopied;
+
+  /// Title of the blocked-version full-screen gate
+  ///
+  /// In en, this message translates to:
+  /// **'Update required'**
+  String get blockedTitle;
+
+  /// Body of the blocked-version full-screen gate
+  ///
+  /// In en, this message translates to:
+  /// **'Version {current} of CopyPaste is no longer supported. Please install version {required} or newer to continue using the app.'**
+  String blockedDescription(String current, String required);
+
+  /// Generic reason shown in the blocked screen when the manifest does not provide one
+  ///
+  /// In en, this message translates to:
+  /// **'This version was retired by the maintainers for safety or compatibility reasons.'**
+  String get blockedReasonGeneric;
+
+  /// Secondary action on the blocked-version screen
+  ///
+  /// In en, this message translates to:
+  /// **'Quit CopyPaste'**
+  String get blockedQuit;
+
+  /// Hint shown when no channel-specific action is available
+  ///
+  /// In en, this message translates to:
+  /// **'Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.'**
+  String get blockedFallbackHint;
+
   /// Title for the Wayland-unsupported gate screen
   ///
   /// In en, this message translates to:

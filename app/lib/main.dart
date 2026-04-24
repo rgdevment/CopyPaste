@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import 'services/auto_update_service.dart';
+import 'services/release_manifest_service.dart';
 
 import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
@@ -34,6 +35,7 @@ import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/permission_gate_screen.dart';
 import 'screens/windows_onboarding_screen.dart';
+import 'screens/blocked_version_screen.dart';
 
 // Re-exported so existing tests can import isWaylandSession from main.dart.
 export 'shell/linux_session.dart' show isWaylandSession;
@@ -216,6 +218,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   bool _showWaylandUnsupported = false;
   bool _linuxPrefersDark = false;
   String? _availableUpdateVersion;
+  ManifestState? _manifestState;
+  StreamSubscription<ManifestState?>? _manifestSub;
   bool _programmaticRestore = false;
   Timer? _blurHideTimer;
 
@@ -398,7 +402,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     AutoUpdateService.onUpdateAvailable = _onUpdateAvailable;
-    unawaited(AutoUpdateService.initialize());
+    unawaited(
+      AutoUpdateService.initialize(storageConfigDir: widget.storage.configPath),
+    );
     if (_needsClassifierMigration(_config.lastRunVersion)) {
       unawaited(_runClassifierMigration());
     }
@@ -1078,7 +1084,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     windowManager.removeListener(this);
-    AutoUpdateService.dispose();
+    unawaited(_manifestSub?.cancel());
+    _manifestSub = null;
+    unawaited(AutoUpdateService.dispose());
     unawaited(_cleanup());
     super.dispose();
   }
@@ -1160,6 +1168,17 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               );
             }
 
+            if (_manifestState != null &&
+                ReleaseManifestService.isBlocked(
+                  current: AppConfig.appVersion,
+                  state: _manifestState,
+                )) {
+              return BlockedVersionScreen(
+                currentVersion: AppConfig.appVersion,
+                manifest: _manifestState!.manifest,
+              );
+            }
+
             final bg = (Platform.isWindows || Platform.isMacOS)
                 ? CopyPasteTheme.colorsOf(
                     ctx,
@@ -1188,6 +1207,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     onExit: () => _appWindow.hide(),
                     onSettings: () => _openSettings(ctx),
                     updateVersion: _availableUpdateVersion,
+                    updateSeverity: ReleaseManifestService.badgeSeverity(
+                      current: AppConfig.appVersion,
+                      state: _manifestState,
+                    ),
                   );
                 },
               ),

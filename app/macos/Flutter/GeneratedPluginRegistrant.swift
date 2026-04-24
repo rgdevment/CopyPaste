@@ -5,7 +5,6 @@
 import FlutterMacOS
 import Foundation
 
-import auto_updater_macos
 import file_picker
 import hotkey_manager_macos
 import listener
@@ -16,7 +15,6 @@ import tray_manager
 import window_manager
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  AutoUpdaterMacosPlugin.register(with: registry.registrar(forPlugin: "AutoUpdaterMacosPlugin"))
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   HotkeyManagerMacosPlugin.register(with: registry.registrar(forPlugin: "HotkeyManagerMacosPlugin"))
   ListenerPlugin.register(with: registry.registrar(forPlugin: "ListenerPlugin"))
