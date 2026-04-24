@@ -99,6 +99,33 @@ class ClipboardService {
   Stopwatch? _pasteStopwatch;
   String? _lastPastedContent;
 
+  static const Duration _suppressionTtl = Duration(seconds: 5);
+  final Map<String, DateTime> _suppressedKeys = <String, DateTime>{};
+
+  String? _suppressionKeyForItem(ClipboardItem item) {
+    if (item.type == ClipboardContentType.image) {
+      final hash = item.contentHash;
+      if (hash == null || hash.isEmpty) return null;
+      return 'i:$hash';
+    }
+    if (item.content.isEmpty) return null;
+    return 'c:${item.content}';
+  }
+
+  void _markSuppressed(ClipboardItem item) {
+    final key = _suppressionKeyForItem(item);
+    if (key == null) return;
+    _suppressedKeys[key] = DateTime.now().toUtc();
+  }
+
+  bool _consumeSuppression(String? key) {
+    if (key == null || key.isEmpty) return false;
+    const expiry = _suppressionTtl;
+    final now = DateTime.now().toUtc();
+    _suppressedKeys.removeWhere((_, ts) => now.difference(ts) > expiry);
+    return _suppressedKeys.remove(key) != null;
+  }
+
   Future<void> notifyPasteInitiated(String itemId) async {
     _pasteStopwatch = Stopwatch()..start();
     final item = await _repository.getById(itemId);
@@ -126,6 +153,7 @@ class ClipboardService {
     List<int>? htmlBytes,
   }) async {
     if (_shouldIgnore(content)) return null;
+    if (_consumeSuppression('c:$content')) return null;
 
     final resolvedType = type == ClipboardContentType.text
         ? TextClassifier.classify(content)
@@ -180,6 +208,7 @@ class ClipboardService {
     List<int>? imageBytes,
   }) async {
     if (_shouldIgnore(null)) return null;
+    if (_consumeSuppression('i:$contentHash')) return null;
 
     final existing = await _repository.findByContentHash(contentHash);
     if (existing != null) {
@@ -241,6 +270,7 @@ class ClipboardService {
     if (_shouldIgnore(null)) return null;
 
     final content = files.join('\n');
+    if (_consumeSuppression('c:$content')) return null;
     final existing = await _repository.findByContentAndType(content, type);
     if (existing != null) {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
@@ -303,6 +333,9 @@ class ClipboardService {
 
   Future<void> removeItem(String id) async {
     final item = await _repository.getById(id);
+    if (item != null) {
+      _markSuppressed(item);
+    }
     await _repository.delete(id);
     if (item != null) {
       _cleanupItemFiles(item);
@@ -397,7 +430,17 @@ class ClipboardService {
     );
   }
 
-  Future<int> clearUnpinnedHistory() => _repository.deleteAllUnpinned();
+  Future<int> clearUnpinnedHistory() async {
+    final unpinned = await _repository.searchAdvanced(
+      isPinned: false,
+      limit: 100000,
+      skip: 0,
+    );
+    for (final item in unpinned) {
+      _markSuppressed(item);
+    }
+    return _repository.deleteAllUnpinned();
+  }
 
   Future<int> getItemCount() => _repository.count();
 
@@ -436,6 +479,7 @@ class ClipboardService {
 
   Future<void> dispose() async {
     _disposed = true;
+    _suppressedKeys.clear();
     await _imageQueue.dispose();
     await _thumbQueue?.dispose();
     await _itemAdded.close();
