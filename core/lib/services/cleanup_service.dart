@@ -157,8 +157,7 @@ class CleanupService {
         continue;
       }
 
-      final exists =
-          File(path).existsSync() || Directory(path).existsSync();
+      final exists = File(path).existsSync() || Directory(path).existsSync();
       if (exists) {
         if (item.brokenSince != null) {
           await _repository.update(item.copyWith(brokenSince: null));
@@ -168,9 +167,7 @@ class CleanupService {
 
       // File missing with volume present.
       if (item.brokenSince == null) {
-        AppLogger.warn(
-          '[CleanupService] broken external reference: "$path"',
-        );
+        AppLogger.warn('[CleanupService] broken external reference: "$path"');
         await _repository.update(item.copyWith(brokenSince: now));
         continue;
       }
@@ -185,10 +182,7 @@ class CleanupService {
   String? _externalPathForCheck(ClipboardItem item, String baseWithSep) {
     if (item.isPinned) return null;
     if (item.content.isEmpty) return null;
-    final paths = item.content
-        .split('\n')
-        .where((s) => s.isNotEmpty)
-        .toList();
+    final paths = item.content.split('\n').where((s) => s.isNotEmpty).toList();
     if (paths.length != 1) return null;
     final candidate = paths.first;
     if (!item.isFileBasedType) {

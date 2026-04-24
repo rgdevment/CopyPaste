@@ -189,33 +189,35 @@ void main() {
       service.dispose();
     }
 
-    test('sets brokenSince when external file disappears (volume present)',
-        () async {
-      final extDir = Directory(p.join(tempDir.path, 'ext'))
-        ..createSync(recursive: true);
-      final ext = File(p.join(extDir.path, 'a.png'))..writeAsBytesSync([1]);
-      await repo.save(
-        ClipboardItem(
-          id: 'i1',
-          content: ext.path,
-          type: ClipboardContentType.image,
-        ),
-      );
+    test(
+      'sets brokenSince when external file disappears (volume present)',
+      () async {
+        final extDir = Directory(p.join(tempDir.path, 'ext'))
+          ..createSync(recursive: true);
+        final ext = File(p.join(extDir.path, 'a.png'))..writeAsBytesSync([1]);
+        await repo.save(
+          ClipboardItem(
+            id: 'i1',
+            content: ext.path,
+            type: ClipboardContentType.image,
+          ),
+        );
 
-      ext.deleteSync();
+        ext.deleteSync();
 
-      final service = CleanupService(
-        repo,
-        () => 30,
-        storage: storage,
-        getKeepBrokenDays: () => 30,
-      );
-      await _runOnce(service);
-      service.dispose();
+        final service = CleanupService(
+          repo,
+          () => 30,
+          storage: storage,
+          getKeepBrokenDays: () => 30,
+        );
+        await _runOnce(service);
+        service.dispose();
 
-      final reloaded = await repo.getById('i1');
-      expect(reloaded?.brokenSince, isNotNull);
-    });
+        final reloaded = await repo.getById('i1');
+        expect(reloaded?.brokenSince, isNotNull);
+      },
+    );
 
     test('clears brokenSince when external file reappears', () async {
       final extDir = Directory(p.join(tempDir.path, 'ext'))
@@ -244,49 +246,45 @@ void main() {
       expect(reloaded?.brokenSince, isNull);
     });
 
-    test(
-      'purges item + own thumb when brokenSince exceeds keepBrokenDays; '
-      'never touches the external path',
-      () async {
-        final extDir = Directory(p.join(tempDir.path, 'ext'))
-          ..createSync(recursive: true);
-        final ext = File(p.join(extDir.path, 'gone.png'))
-          ..writeAsBytesSync([3]);
-        final thumb = File(p.join(storage.imagesPath, 'i3_thumb.png'))
-          ..writeAsBytesSync([4]);
+    test('purges item + own thumb when brokenSince exceeds keepBrokenDays; '
+        'never touches the external path', () async {
+      final extDir = Directory(p.join(tempDir.path, 'ext'))
+        ..createSync(recursive: true);
+      final ext = File(p.join(extDir.path, 'gone.png'))..writeAsBytesSync([3]);
+      final thumb = File(p.join(storage.imagesPath, 'i3_thumb.png'))
+        ..writeAsBytesSync([4]);
 
-        await repo.save(
-          ClipboardItem(
-            id: 'i3',
-            content: ext.path,
-            type: ClipboardContentType.image,
-            thumbPath: thumb.path,
-            brokenSince:
-                DateTime.now().toUtc().subtract(const Duration(days: 60)),
+      await repo.save(
+        ClipboardItem(
+          id: 'i3',
+          content: ext.path,
+          type: ClipboardContentType.image,
+          thumbPath: thumb.path,
+          brokenSince: DateTime.now().toUtc().subtract(
+            const Duration(days: 60),
           ),
-        );
-        ext.deleteSync();
+        ),
+      );
+      ext.deleteSync();
 
-        final service = CleanupService(
-          repo,
-          () => 0,
-          storage: storage,
-          getKeepBrokenDays: () => 30,
-        );
-        await _runOnce(service);
-        service.dispose();
+      final service = CleanupService(
+        repo,
+        () => 0,
+        storage: storage,
+        getKeepBrokenDays: () => 30,
+      );
+      await _runOnce(service);
+      service.dispose();
 
-        expect(await repo.getById('i3'), isNull, reason: 'item purged');
-        expect(thumb.existsSync(), isFalse, reason: 'own thumb deleted');
-        // The external file was already deleted by the test itself; the
-        // assertion below documents the contract that the service never
-        // recreates or otherwise alters external paths.
-        expect(File(ext.path).existsSync(), isFalse);
-      },
-    );
+      expect(await repo.getById('i3'), isNull, reason: 'item purged');
+      expect(thumb.existsSync(), isFalse, reason: 'own thumb deleted');
+      // The external file was already deleted by the test itself; the
+      // assertion below documents the contract that the service never
+      // recreates or otherwise alters external paths.
+      expect(File(ext.path).existsSync(), isFalse);
+    });
 
-    test('does not touch pinned items even when external is broken',
-        () async {
+    test('does not touch pinned items even when external is broken', () async {
       final extDir = Directory(p.join(tempDir.path, 'ext'))
         ..createSync(recursive: true);
       final ext = File(p.join(extDir.path, 'p.png'))..writeAsBytesSync([5]);
