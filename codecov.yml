@@ -13,5 +13,8 @@ coverage:
         # Platform-conditional helper — only one OS branch can be hit per CI run
         - "app/lib/helpers/url_helper.dart"
 
-comment: false
+comment:
+    layout: "reach,diff,flags,files"
+    behavior: default
+    require_changes: true
 
