@@ -203,10 +203,7 @@ void main() {
 
     test('hasSeenOnboarding round-trips via JSON', () {
       const config = AppConfig(hasSeenOnboarding: true);
-      expect(
-        AppConfig.fromJson(config.toJson()).hasSeenOnboarding,
-        isTrue,
-      );
+      expect(AppConfig.fromJson(config.toJson()).hasSeenOnboarding, isTrue);
     });
 
     test('hasSeenOnboarding absent in JSON defaults to false', () {
@@ -216,9 +213,7 @@ void main() {
     test('copyWith hasSeenOnboarding updates value', () {
       const config = AppConfig();
       expect(
-        config
-            .copyWith(hasSeenOnboarding: true)
-            .hasSeenOnboarding,
+        config.copyWith(hasSeenOnboarding: true).hasSeenOnboarding,
         isTrue,
       );
     });

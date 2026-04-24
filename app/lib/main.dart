@@ -28,7 +28,7 @@ import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
 import 'shell/win_known_folders.dart';
 import 'shell/win_package_context.dart';
-import 'shell/windows_balloon.dart';
+import 'shell/desktop_notifier.dart';
 import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/wayland_unsupported_screen.dart';
@@ -120,6 +120,8 @@ Future<void> _run() async {
         ? WindowsNativeThumbnailProvider()
         : Platform.isMacOS
         ? MacOSNativeThumbnailProvider()
+        : Platform.isLinux
+        ? LinuxNativeThumbnailProvider()
         : null;
     final clipboardService = ClipboardService(
       repo,
@@ -687,7 +689,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     );
     final ctx = _navigatorKey.currentContext;
     final l = ctx != null && ctx.mounted ? AppLocalizations.of(ctx) : null;
-    await WindowsBalloon.show(
+    await DesktopNotifier.show(
       title: l?.balloonWakeupTitle ?? 'CopyPaste is already open',
       body:
           l?.balloonWakeupBody(binding.label()) ??
@@ -706,7 +708,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     );
     final ctx = _navigatorKey.currentContext;
     final l = ctx != null && ctx.mounted ? AppLocalizations.of(ctx) : null;
-    await WindowsBalloon.show(
+    await DesktopNotifier.show(
       title: 'CopyPaste',
       body:
           l?.balloonStartupBody(binding.label()) ??

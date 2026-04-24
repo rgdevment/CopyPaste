@@ -967,6 +967,55 @@ static FlValue* get_media_info(void) {
   return NULL;
 }
 
+// Generates a native PNG thumbnail for `path`, scaled so the longest side
+// is `size_px`. Returns a Uint8 list FlValue with PNG bytes, or NULL when
+// the file cannot be decoded by GdkPixbuf (e.g. video/audio without a
+// loader). Caller takes ownership of the returned FlValue.
+//
+// Uses gdk_pixbuf_new_from_file_at_size() which preserves aspect ratio.
+// Rejects results smaller than 64 px on the longest side (icon fallback).
+static FlValue* get_native_thumbnail(const gchar* path, gint size_px) {
+  if (path == NULL || *path == '\0' || size_px <= 0) return NULL;
+
+  GError* error = NULL;
+  GdkPixbuf* pixbuf =
+      gdk_pixbuf_new_from_file_at_size(path, size_px, size_px, &error);
+  if (pixbuf == NULL) {
+    if (error != NULL) {
+      g_warning("get_native_thumbnail: %s", error->message);
+      g_error_free(error);
+    }
+    return NULL;
+  }
+
+  gint w = gdk_pixbuf_get_width(pixbuf);
+  gint h = gdk_pixbuf_get_height(pixbuf);
+  gint longest = w > h ? w : h;
+  if (longest < 64) {
+    g_object_unref(pixbuf);
+    return NULL;
+  }
+
+  gchar* buffer = NULL;
+  gsize buffer_size = 0;
+  gboolean ok = gdk_pixbuf_save_to_buffer(
+      pixbuf, &buffer, &buffer_size, "png", &error, NULL);
+  g_object_unref(pixbuf);
+  if (!ok || buffer == NULL || buffer_size == 0) {
+    if (error != NULL) {
+      g_warning("get_native_thumbnail save: %s", error->message);
+      g_error_free(error);
+    }
+    g_free(buffer);
+    return NULL;
+  }
+
+  FlValue* value =
+      fl_value_new_uint8_list((const uint8_t*)buffer, buffer_size);
+  g_free(buffer);
+  return value;
+}
+
 static void respond_success(FlMethodCall* method_call, FlValue* result) {
   g_autoptr(GError) error = NULL;
   if (!fl_method_call_respond_success(method_call, result, &error) && error != NULL) {
@@ -1031,6 +1080,23 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
 
   if (strcmp(method, "getMediaInfo") == 0) {
     respond_success(method_call, get_media_info());
+    return;
+  }
+
+  if (strcmp(method, "getNativeThumbnail") == 0) {
+    FlValue* path_value =
+        args != NULL ? fl_value_lookup_string(args, "path") : NULL;
+    FlValue* size_value =
+        args != NULL ? fl_value_lookup_string(args, "sizePx") : NULL;
+    const gchar* path =
+        path_value != NULL && fl_value_get_type(path_value) == FL_VALUE_TYPE_STRING
+            ? fl_value_get_string(path_value)
+            : NULL;
+    gint size_px =
+        size_value != NULL && fl_value_get_type(size_value) == FL_VALUE_TYPE_INT
+            ? (gint)fl_value_get_int(size_value)
+            : 256;
+    respond_success(method_call, get_native_thumbnail(path, size_px));
     return;
   }
 

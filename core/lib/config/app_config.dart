@@ -297,8 +297,7 @@ class AppConfig {
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
-    hasSeenOnboarding:
-        hasSeenOnboarding ?? this.hasSeenOnboarding,
+    hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
     hasCompletedOnboarding:
         hasCompletedOnboarding ?? this.hasCompletedOnboarding,
     generateImageThumbnails:
