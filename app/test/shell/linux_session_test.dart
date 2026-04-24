@@ -56,4 +56,109 @@ void main() {
       expect(await linuxPrefersDarkMode(), isFalse);
     });
   });
+
+  group('LinuxSessionInfo', () {
+    test('unsupported is the safe default for non-Linux', () {
+      if (Platform.isLinux) return;
+      final info = detectLinuxSession();
+      expect(info, equals(LinuxSessionInfo.unsupported));
+      expect(info.isWayland, isFalse);
+      expect(info.isX11, isFalse);
+      expect(info.isUsable, isFalse);
+    });
+
+    test('detectLinuxSession returns a value type', () {
+      expect(detectLinuxSession(), isA<LinuxSessionInfo>());
+    });
+
+    test('isWayland prioritises XDG_SESSION_TYPE=wayland', () {
+      const info = LinuxSessionInfo(
+        sessionType: 'wayland',
+        hasDisplay: true,
+        hasWaylandDisplay: true,
+        hasWaylandSocket: true,
+        desktopEnv: 'GNOME',
+        wmName: '',
+      );
+      expect(info.isWayland, isTrue);
+      expect(info.isX11, isFalse);
+      expect(info.isXWayland, isTrue);
+    });
+
+    test('isX11 honours XDG_SESSION_TYPE=x11 even with Wayland socket', () {
+      const info = LinuxSessionInfo(
+        sessionType: 'x11',
+        hasDisplay: true,
+        hasWaylandDisplay: false,
+        hasWaylandSocket: true,
+        desktopEnv: 'KDE',
+        wmName: '',
+      );
+      expect(info.isX11, isTrue);
+      expect(info.isWayland, isFalse);
+    });
+
+    test('empty sessionType + WAYLAND_DISPLAY set => Wayland', () {
+      const info = LinuxSessionInfo(
+        sessionType: '',
+        hasDisplay: true,
+        hasWaylandDisplay: true,
+        hasWaylandSocket: true,
+        desktopEnv: '',
+        wmName: '',
+      );
+      expect(info.isWayland, isTrue);
+      expect(info.isX11, isFalse);
+    });
+
+    test('empty sessionType + only DISPLAY => X11', () {
+      const info = LinuxSessionInfo(
+        sessionType: '',
+        hasDisplay: true,
+        hasWaylandDisplay: false,
+        hasWaylandSocket: false,
+        desktopEnv: '',
+        wmName: '',
+      );
+      expect(info.isX11, isTrue);
+      expect(info.isWayland, isFalse);
+    });
+
+    test('TTY / headless => neither X11 nor Wayland', () {
+      const info = LinuxSessionInfo(
+        sessionType: 'tty',
+        hasDisplay: false,
+        hasWaylandDisplay: false,
+        hasWaylandSocket: false,
+        desktopEnv: '',
+        wmName: '',
+      );
+      expect(info.isUsable, isFalse);
+    });
+
+    test('isWaylandSession is a derived alias of detectLinuxSession', () {
+      expect(isWaylandSession(), equals(detectLinuxSession().isWayland));
+    });
+
+    test('equality and hashCode work for value type', () {
+      const a = LinuxSessionInfo(
+        sessionType: 'x11',
+        hasDisplay: true,
+        hasWaylandDisplay: false,
+        hasWaylandSocket: false,
+        desktopEnv: 'GNOME',
+        wmName: 'gnome',
+      );
+      const b = LinuxSessionInfo(
+        sessionType: 'x11',
+        hasDisplay: true,
+        hasWaylandDisplay: false,
+        hasWaylandSocket: false,
+        desktopEnv: 'GNOME',
+        wmName: 'gnome',
+      );
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+    });
+  });
 }
