@@ -748,19 +748,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get imagesQuotaOff => 'Unlimited';
-
-  @override
-  String get onboardingPersonalizeTitle => 'Personalize quickly';
-
-  @override
-  String get onboardingPersonalizeHint =>
-      'You can change these any time from Settings.';
-
-  @override
-  String get onboardingThumbnailsToggle => 'Generate thumbnails for media';
-
-  @override
-  String onboardingKeepBrokenLabel(int days) {
-    return 'Keep unavailable items for $days days';
-  }
 }

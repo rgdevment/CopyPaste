@@ -155,5 +155,56 @@ void main() {
 
       expect(find.text(customHotkey), findsOneWidget);
     });
+
+    testWidgets('no Switch or Slider rendered (personalize section removed)', (
+      tester,
+    ) async {
+      await _pump(tester, screen());
+
+      expect(find.byType(Switch), findsNothing);
+      expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('dismiss callback receives unmodified initialConfig', (
+      tester,
+    ) async {
+      const config = AppConfig();
+      AppConfig? received;
+      await _pump(
+        tester,
+        WindowsOnboardingScreen(
+          hotkey: hotkey,
+          initialConfig: config,
+          onDismiss: (c) => received = c,
+          onSettings: (_) {},
+        ),
+      );
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+
+      expect(received, equals(config));
+    });
+
+    testWidgets('settings callback receives unmodified initialConfig', (
+      tester,
+    ) async {
+      const config = AppConfig();
+      AppConfig? received;
+      await _pump(
+        tester,
+        WindowsOnboardingScreen(
+          hotkey: hotkey,
+          initialConfig: config,
+          onDismiss: (_) {},
+          onSettings: (c) => received = c,
+        ),
+      );
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+
+      expect(received, equals(config));
+    });
   });
 }

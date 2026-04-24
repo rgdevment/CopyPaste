@@ -267,9 +267,5 @@
   "subtitleKeepBrokenItems": "Los elementos que apuntan a archivos perdidos o vol\u00famenes desconectados se eliminan tras estos d\u00edas. 0 los elimina al instante.",
   "settingImagesQuotaLabel": "L\u00edmite de almacenamiento para im\u00e1genes",
   "subtitleImagesQuota": "Cuando la carpeta de im\u00e1genes supera este tama\u00f1o, se eliminan los elementos m\u00e1s antiguos no fijados para liberar espacio.",
-  "imagesQuotaOff": "Sin l\u00edmite",
-  "onboardingPersonalizeTitle": "Personaliza r\u00e1pido",
-  "onboardingPersonalizeHint": "Puedes cambiar esto cuando quieras desde Configuraci\u00f3n.",
-  "onboardingThumbnailsToggle": "Generar miniaturas para multimedia",
-  "onboardingKeepBrokenLabel": "Conservar elementos no disponibles {days} d\u00edas"
+  "imagesQuotaOff": "Sin l\u00edmite"
 }
