@@ -38,7 +38,7 @@ class AppConfig {
     this.themeMode = 'dark',
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
-    this.hasSeenWindowsOnboarding = false,
+    this.hasSeenOnboarding = false,
     this.hasCompletedOnboarding = false,
     this.generateImageThumbnails = true,
     this.generateVideoThumbnails = true,
@@ -110,12 +110,14 @@ class AppConfig {
           defaults.accessibilityWasGranted,
       lastRunVersion:
           json['lastRunVersion'] as String? ?? defaults.lastRunVersion,
-      hasSeenWindowsOnboarding:
+      hasSeenOnboarding:
+          json['hasSeenOnboarding'] as bool? ??
           json['hasSeenWindowsOnboarding'] as bool? ??
-          defaults.hasSeenWindowsOnboarding,
+          defaults.hasSeenOnboarding,
       hasCompletedOnboarding:
           json['hasCompletedOnboarding'] as bool? ??
-          (json['hasSeenWindowsOnboarding'] as bool? ??
+          (json['hasSeenOnboarding'] as bool? ??
+              json['hasSeenWindowsOnboarding'] as bool? ??
               defaults.hasCompletedOnboarding),
       generateImageThumbnails:
           json['generateImageThumbnails'] as bool? ??
@@ -197,7 +199,7 @@ class AppConfig {
   final String themeMode;
   final bool accessibilityWasGranted;
   final String lastRunVersion;
-  final bool hasSeenWindowsOnboarding;
+  final bool hasSeenOnboarding;
   final bool hasCompletedOnboarding;
 
   // Multimedia & thumbnails
@@ -248,7 +250,7 @@ class AppConfig {
     String? themeMode,
     bool? accessibilityWasGranted,
     String? lastRunVersion,
-    bool? hasSeenWindowsOnboarding,
+    bool? hasSeenOnboarding,
     bool? hasCompletedOnboarding,
     bool? generateImageThumbnails,
     bool? generateVideoThumbnails,
@@ -295,8 +297,8 @@ class AppConfig {
     accessibilityWasGranted:
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
-    hasSeenWindowsOnboarding:
-        hasSeenWindowsOnboarding ?? this.hasSeenWindowsOnboarding,
+    hasSeenOnboarding:
+        hasSeenOnboarding ?? this.hasSeenOnboarding,
     hasCompletedOnboarding:
         hasCompletedOnboarding ?? this.hasCompletedOnboarding,
     generateImageThumbnails:
@@ -351,7 +353,7 @@ class AppConfig {
     'themeMode': themeMode,
     'accessibilityWasGranted': accessibilityWasGranted,
     'lastRunVersion': lastRunVersion,
-    'hasSeenWindowsOnboarding': hasSeenWindowsOnboarding,
+    'hasSeenOnboarding': hasSeenOnboarding,
     'hasCompletedOnboarding': hasCompletedOnboarding,
     'generateImageThumbnails': generateImageThumbnails,
     'generateVideoThumbnails': generateVideoThumbnails,

@@ -196,29 +196,29 @@ void main() {
       expect(config.cardMaxLines, equals(5));
     });
 
-    test('hasSeenWindowsOnboarding defaults to false', () {
+    test('hasSeenOnboarding defaults to false', () {
       const config = AppConfig();
-      expect(config.hasSeenWindowsOnboarding, isFalse);
+      expect(config.hasSeenOnboarding, isFalse);
     });
 
-    test('hasSeenWindowsOnboarding round-trips via JSON', () {
-      const config = AppConfig(hasSeenWindowsOnboarding: true);
+    test('hasSeenOnboarding round-trips via JSON', () {
+      const config = AppConfig(hasSeenOnboarding: true);
       expect(
-        AppConfig.fromJson(config.toJson()).hasSeenWindowsOnboarding,
+        AppConfig.fromJson(config.toJson()).hasSeenOnboarding,
         isTrue,
       );
     });
 
-    test('hasSeenWindowsOnboarding absent in JSON defaults to false', () {
-      expect(AppConfig.fromJson({}).hasSeenWindowsOnboarding, isFalse);
+    test('hasSeenOnboarding absent in JSON defaults to false', () {
+      expect(AppConfig.fromJson({}).hasSeenOnboarding, isFalse);
     });
 
-    test('copyWith hasSeenWindowsOnboarding updates value', () {
+    test('copyWith hasSeenOnboarding updates value', () {
       const config = AppConfig();
       expect(
         config
-            .copyWith(hasSeenWindowsOnboarding: true)
-            .hasSeenWindowsOnboarding,
+            .copyWith(hasSeenOnboarding: true)
+            .hasSeenOnboarding,
         isTrue,
       );
     });
@@ -387,7 +387,7 @@ void main() {
         themeMode: 'test',
         accessibilityWasGranted: true,
         lastRunVersion: 'v',
-        hasSeenWindowsOnboarding: true,
+        hasSeenOnboarding: true,
       );
       final json = config.toJson();
       expect(json['preferredLanguage'], 'fr');
@@ -419,7 +419,7 @@ void main() {
       expect(json['themeMode'], 'test');
       expect(json['accessibilityWasGranted'], true);
       expect(json['lastRunVersion'], 'v');
-      expect(json['hasSeenWindowsOnboarding'], true);
+      expect(json['hasSeenOnboarding'], true);
     });
   });
 
