@@ -62,7 +62,8 @@ class MainScreen extends StatefulWidget {
   final ManifestSeverity? updateSeverity;
   final AppConfig? appConfig;
   final LinuxCapabilities? linuxCapabilities;
-  final Future<void> Function(AppConfig Function(AppConfig))? onLinuxConfigUpdate;
+  final Future<void> Function(AppConfig Function(AppConfig))?
+  onLinuxConfigUpdate;
 
   @override
   State<MainScreen> createState() => MainScreenState();

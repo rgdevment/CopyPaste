@@ -87,8 +87,9 @@ class _DefaultLinuxCapabilitiesChannel implements LinuxCapabilitiesChannel {
   const _DefaultLinuxCapabilitiesChannel();
 
   static const MethodChannel _shell = MethodChannel('copypaste/linux_shell');
-  static const MethodChannel _listener =
-      MethodChannel('copypaste/clipboard_writer');
+  static const MethodChannel _listener = MethodChannel(
+    'copypaste/clipboard_writer',
+  );
 
   @override
   Future<Map<Object?, Object?>?> invokeShell(String method) async {
@@ -129,7 +130,9 @@ class LinuxCapabilitiesService {
     }
 
     final session = detectLinuxSession();
-    final base = LinuxCapabilities.unsupported.copyWith().copyWithSession(session);
+    final base = LinuxCapabilities.unsupported.copyWith().copyWithSession(
+      session,
+    );
 
     if (!session.isX11) {
       _cache = base;
@@ -142,13 +145,17 @@ class LinuxCapabilitiesService {
     Map<Object?, Object?>? listenerCaps;
 
     try {
-      final results = await Future.wait([
-        channel.invokeShell('getCapabilities').catchError((_) => null),
-        channel.invokeListener('getCapabilities').catchError((_) => null),
-      ]).timeout(timeout, onTimeout: () {
-        timedOut = true;
-        return [null, null];
-      });
+      final results =
+          await Future.wait([
+            channel.invokeShell('getCapabilities').catchError((_) => null),
+            channel.invokeListener('getCapabilities').catchError((_) => null),
+          ]).timeout(
+            timeout,
+            onTimeout: () {
+              timedOut = true;
+              return [null, null];
+            },
+          );
       shellCaps = results[0];
       listenerCaps = results[1];
     } catch (e) {
@@ -172,8 +179,11 @@ class LinuxCapabilitiesService {
     return result;
   }
 
-  static bool _readBool(Map<Object?, Object?>? map, String key,
-      {bool fallback = false}) {
+  static bool _readBool(
+    Map<Object?, Object?>? map,
+    String key, {
+    bool fallback = false,
+  }) {
     if (map == null) return fallback;
     final value = map[key];
     return value is bool ? value : fallback;

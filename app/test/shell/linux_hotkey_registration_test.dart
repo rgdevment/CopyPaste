@@ -53,27 +53,29 @@ void main() {
       useShift: false,
     );
 
-    test('short-circuits when requested key is unsupported (no remote call)',
-        () async {
-      const unsupported = HotkeyBinding(
-        virtualKey: 0x99,
-        keyName: '?',
-        useCtrl: true,
-        useWin: false,
-        useAlt: true,
-        useShift: false,
-      );
-      final api = _FakeLinuxHotkeyBindingApi(<HotkeyRegisterResponse>[]);
+    test(
+      'short-circuits when requested key is unsupported (no remote call)',
+      () async {
+        const unsupported = HotkeyBinding(
+          virtualKey: 0x99,
+          keyName: '?',
+          useCtrl: true,
+          useWin: false,
+          useAlt: true,
+          useShift: false,
+        );
+        final api = _FakeLinuxHotkeyBindingApi(<HotkeyRegisterResponse>[]);
 
-      final result = await registerLinuxHotkeyWithFallback(
-        api: api,
-        requestedBinding: unsupported,
-      );
+        final result = await registerLinuxHotkeyWithFallback(
+          api: api,
+          requestedBinding: unsupported,
+        );
 
-      expect(result.status, HotkeyRegistrationStatus.failed);
-      expect(result.failureReason, HotkeyFailureReason.unsupportedKey);
-      expect(api.attempts, isEmpty);
-    });
+        expect(result.status, HotkeyRegistrationStatus.failed);
+        expect(result.failureReason, HotkeyFailureReason.unsupportedKey);
+        expect(api.attempts, isEmpty);
+      },
+    );
 
     test('registers requested binding when available', () async {
       final api = _FakeLinuxHotkeyBindingApi(<HotkeyRegisterResponse>[_ok()]);
@@ -125,21 +127,23 @@ void main() {
       expect(result.failureReason, HotkeyFailureReason.grabFailed);
     });
 
-    test('does not retry when requested binding equals temporary fallback',
-        () async {
-      final api = _FakeLinuxHotkeyBindingApi(<HotkeyRegisterResponse>[
-        _fail('grabFailed'),
-      ]);
+    test(
+      'does not retry when requested binding equals temporary fallback',
+      () async {
+        final api = _FakeLinuxHotkeyBindingApi(<HotkeyRegisterResponse>[
+          _fail('grabFailed'),
+        ]);
 
-      final result = await registerLinuxHotkeyWithFallback(
-        api: api,
-        requestedBinding: kLinuxTemporaryFallbackHotkey,
-      );
+        final result = await registerLinuxHotkeyWithFallback(
+          api: api,
+          requestedBinding: kLinuxTemporaryFallbackHotkey,
+        );
 
-      expect(result.status, HotkeyRegistrationStatus.failed);
-      expect(result.failureReason, HotkeyFailureReason.grabFailed);
-      expect(api.attempts, <HotkeyBinding>[kLinuxTemporaryFallbackHotkey]);
-    });
+        expect(result.status, HotkeyRegistrationStatus.failed);
+        expect(result.failureReason, HotkeyFailureReason.grabFailed);
+        expect(api.attempts, <HotkeyBinding>[kLinuxTemporaryFallbackHotkey]);
+      },
+    );
 
     test('maps unknown error code to HotkeyFailureReason.unknown', () async {
       final api = _FakeLinuxHotkeyBindingApi(<HotkeyRegisterResponse>[

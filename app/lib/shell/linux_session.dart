@@ -33,7 +33,9 @@ class LinuxSessionInfo {
 
   bool get isX11 {
     if (sessionType == 'x11') return true;
-    if (sessionType == 'wayland' || sessionType == 'mir' || sessionType == 'tty') {
+    if (sessionType == 'wayland' ||
+        sessionType == 'mir' ||
+        sessionType == 'tty') {
       return false;
     }
     if (hasDisplay && !hasWaylandDisplay && !hasWaylandSocket) return true;
@@ -41,7 +43,9 @@ class LinuxSessionInfo {
   }
 
   bool get isXWayland =>
-      hasDisplay && (hasWaylandDisplay || hasWaylandSocket) && sessionType == 'wayland';
+      hasDisplay &&
+      (hasWaylandDisplay || hasWaylandSocket) &&
+      sessionType == 'wayland';
 
   bool get isUsable => isX11 || isWayland;
 

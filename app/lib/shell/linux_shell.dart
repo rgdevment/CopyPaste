@@ -88,7 +88,9 @@ class LinuxShell {
   }
 
   static Future<TrayResponse> _invokeTrayMethod(
-      String method, Map<String, Object?> args) async {
+    String method,
+    Map<String, Object?> args,
+  ) async {
     try {
       final result = await _methodChannel.invokeMethod<Object>(method, args);
       if (result is Map) {
@@ -125,13 +127,14 @@ class LinuxShell {
     required bool useShift,
   }) async {
     try {
-      final result = await _methodChannel.invokeMethod<Object>('registerHotkey', {
-        'virtualKey': virtualKey,
-        'useCtrl': useCtrl,
-        'useWin': useWin,
-        'useAlt': useAlt,
-        'useShift': useShift,
-      });
+      final result = await _methodChannel
+          .invokeMethod<Object>('registerHotkey', {
+            'virtualKey': virtualKey,
+            'useCtrl': useCtrl,
+            'useWin': useWin,
+            'useAlt': useAlt,
+            'useShift': useShift,
+          });
       if (result is Map) {
         final map = Map<Object?, Object?>.from(result);
         final success = map['success'] == true;
@@ -147,7 +150,10 @@ class LinuxShell {
       return const HotkeyRegisterResponse(success: false, errorCode: 'unknown');
     } catch (e) {
       AppLogger.error('LinuxShell.registerHotkey failed: $e');
-      return const HotkeyRegisterResponse(success: false, errorCode: 'channelError');
+      return const HotkeyRegisterResponse(
+        success: false,
+        errorCode: 'channelError',
+      );
     }
   }
 
@@ -169,8 +175,9 @@ class LinuxShell {
 
   static Future<CursorMonitorInfo?> getCursorMonitor() async {
     try {
-      final result =
-          await _methodChannel.invokeMethod<Object>('getCursorMonitor');
+      final result = await _methodChannel.invokeMethod<Object>(
+        'getCursorMonitor',
+      );
       if (result is! Map) return null;
       return CursorMonitorInfo(
         cursorX: (result['cursorX'] as num?)?.toDouble() ?? 0,
@@ -189,8 +196,7 @@ class LinuxShell {
 
   static Future<InputFocusInfo?> getInputFocus() async {
     try {
-      final result =
-          await _methodChannel.invokeMethod<Object>('getInputFocus');
+      final result = await _methodChannel.invokeMethod<Object>('getInputFocus');
       if (result is! Map) return null;
       return InputFocusInfo(
         ownsFocus: result['ownsFocus'] as bool? ?? false,
