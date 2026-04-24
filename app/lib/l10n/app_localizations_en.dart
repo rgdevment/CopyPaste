@@ -691,6 +691,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get linuxPasteFocusTimeoutWarning =>
+      'The clipboard has your content. Paste manually with Ctrl+V.';
+
+  @override
   String get linuxAppindicatorBannerTitle => 'System tray icon unavailable';
 
   @override

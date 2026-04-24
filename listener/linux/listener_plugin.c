@@ -306,67 +306,115 @@ static int activate_noop_error_handler(Display* display, XErrorEvent* event) {
   return 0;
 }
 
-static gboolean request_activate_x11_window(Window window) {
-  Display* display = get_xdisplay();
-  if (display == NULL || window == 0) {
-    return FALSE;
+static FlValue* make_paste_result(gboolean success, const gchar* error_code) {
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "success", fl_value_new_bool(success));
+  if (error_code != NULL) {
+    fl_value_set_string_take(result, "errorCode",
+                             fl_value_new_string(error_code));
   }
-
-  // 1. Send the EWMH _NET_ACTIVE_WINDOW message (honours ICCCM; most WMs).
-  //    source=2 (pager) is more trusted than 1 (application) on WMs that
-  //    apply focus-stealing prevention (KDE Plasma, some GNOME configs).
-  XEvent event;
-  memset(&event, 0, sizeof(event));
-  event.xclient.type = ClientMessage;
-  event.xclient.window = window;
-  event.xclient.message_type = atom_net_active_window(display);
-  event.xclient.format = 32;
-  event.xclient.data.l[0] = 2;  // pager source — more likely to bypass focus-steal guards
-  event.xclient.data.l[1] = CurrentTime;
-  event.xclient.data.l[2] = 0;
-  event.xclient.data.l[3] = 0;
-  event.xclient.data.l[4] = 0;
-
-  Status status = XSendEvent(display, DefaultRootWindow(display), False,
-                             SubstructureNotifyMask | SubstructureRedirectMask,
-                             &event);
-
-  // 2. Raise the window and attempt a direct input focus as a fallback for WMs
-  //    that ignore _NET_ACTIVE_WINDOW (tiling WMs, minimal WMs).
-  //    Trap X errors: XSetInputFocus produces BadMatch on unmapped/invisible windows.
-  XRaiseWindow(display, window);
-  XSync(display, False);
-  int (*prev_handler)(Display*, XErrorEvent*) = XSetErrorHandler(activate_noop_error_handler);
-  XSetInputFocus(display, window, RevertToParent, CurrentTime);
-  XSync(display, False);
-  XSetErrorHandler(prev_handler);
-
-  XFlush(display);
-  return status != 0;
+  return result;
 }
 
-static gboolean simulate_paste_x11(void) {
-  Display* display = get_xdisplay();
-  if (display == NULL) {
-    return FALSE;
-  }
-
+static gboolean inject_paste_keystroke_x11(Display* display) {
   if (!ensure_xtest(display)) {
     return FALSE;
   }
-
   KeyCode ctrl = XKeysymToKeycode(display, XK_Control_L);
   KeyCode v = XKeysymToKeycode(display, XK_v);
   if (ctrl == 0 || v == 0) {
     return FALSE;
   }
-
   XTestFakeKeyEvent(display, ctrl, True, CurrentTime);
   XTestFakeKeyEvent(display, v, True, CurrentTime);
   XTestFakeKeyEvent(display, v, False, CurrentTime);
   XTestFakeKeyEvent(display, ctrl, False, CurrentTime);
   XFlush(display);
   return TRUE;
+}
+
+// Synchronous activate-then-paste: sends EWMH _NET_ACTIVE_WINDOW, raises and
+// focuses the target window, then waits up to timeout_ms for the X server to
+// confirm focus before injecting Ctrl+V via XTest.
+//
+// Returns an FlValue map: {success: bool, errorCode?: string}.
+// errorCode values:
+//   - "noX11"        — display unavailable
+//   - "invalidWindow"— window id is 0
+//   - "noXTest"      — XTest extension missing
+//   - "focusTimeout" — focus did not transfer within timeout
+static FlValue* activate_and_paste_x11(Window window, gint timeout_ms) {
+  Display* display = get_xdisplay();
+  if (display == NULL) {
+    return make_paste_result(FALSE, "noX11");
+  }
+  if (window == 0) {
+    return make_paste_result(FALSE, "invalidWindow");
+  }
+  if (!ensure_xtest(display)) {
+    return make_paste_result(FALSE, "noXTest");
+  }
+
+  XWindowAttributes prev_attrs;
+  long prev_event_mask = 0;
+  gboolean restored_mask = FALSE;
+  int (*prev_handler)(Display*, XErrorEvent*) =
+      XSetErrorHandler(activate_noop_error_handler);
+
+  if (XGetWindowAttributes(display, window, &prev_attrs) != 0) {
+    prev_event_mask = prev_attrs.your_event_mask;
+    XSelectInput(display, window, prev_event_mask | FocusChangeMask);
+    restored_mask = TRUE;
+  }
+
+  XEvent event;
+  memset(&event, 0, sizeof(event));
+  event.xclient.type = ClientMessage;
+  event.xclient.window = window;
+  event.xclient.message_type = atom_net_active_window(display);
+  event.xclient.format = 32;
+  event.xclient.data.l[0] = 2;  // pager source — bypasses focus-steal guards
+  event.xclient.data.l[1] = CurrentTime;
+  XSendEvent(display, DefaultRootWindow(display), False,
+             SubstructureNotifyMask | SubstructureRedirectMask, &event);
+
+  XRaiseWindow(display, window);
+  XSetInputFocus(display, window, RevertToParent, CurrentTime);
+  XSync(display, False);
+
+  // Poll for FocusIn on the target window (250 ms default budget).
+  gint64 deadline_us = g_get_monotonic_time() + ((gint64)timeout_ms * 1000);
+  XEvent received;
+  gboolean focus_in_received = FALSE;
+  while (g_get_monotonic_time() < deadline_us) {
+    if (XCheckTypedWindowEvent(display, window, FocusIn, &received)) {
+      focus_in_received = TRUE;
+      break;
+    }
+    g_usleep(5000);  // 5 ms — keeps the loop responsive without busy-spin
+  }
+
+  // Verify with XGetInputFocus regardless of whether FocusIn arrived (some WMs
+  // refocus a child of the requested window — that's still acceptable).
+  Window focused = None;
+  int revert_to = 0;
+  XGetInputFocus(display, &focused, &revert_to);
+  gboolean focus_ok = focus_in_received || focused == window;
+
+  if (restored_mask) {
+    XSelectInput(display, window, prev_event_mask);
+  }
+  XSetErrorHandler(prev_handler);
+
+  if (!focus_ok) {
+    return make_paste_result(FALSE, "focusTimeout");
+  }
+
+  if (!inject_paste_keystroke_x11(display)) {
+    return make_paste_result(FALSE, "noXTest");
+  }
+
+  return make_paste_result(TRUE, NULL);
 }
 #endif
 
@@ -890,16 +938,6 @@ static void respond_success(FlMethodCall* method_call, FlValue* result) {
   }
 }
 
-#ifdef GDK_WINDOWING_X11
-static gboolean paste_after_delay_cb(gpointer data) {
-  FlMethodCall* mc = FL_METHOD_CALL(data);
-  simulate_paste_x11();
-  respond_success(mc, fl_value_new_bool(TRUE));
-  g_object_unref(mc);
-  return G_SOURCE_REMOVE;
-}
-#endif
-
 static void listener_plugin_handle_method_call(ListenerPlugin* self,
                                                FlMethodCall* method_call) {
   const gchar* method = fl_method_call_get_name(method_call);
@@ -978,38 +1016,30 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
 #ifdef GDK_WINDOWING_X11
     if (plugin_is_x11()) {
       FlValue* id_value = args != NULL ? fl_value_lookup_string(args, "bundleId") : NULL;
-      FlValue* delay_value = args != NULL ? fl_value_lookup_string(args, "delayMs") : NULL;
+      FlValue* timeout_value =
+          args != NULL ? fl_value_lookup_string(args, "focusTimeoutMs") : NULL;
       const gchar* identifier = id_value != NULL &&
                                         fl_value_get_type(id_value) == FL_VALUE_TYPE_STRING
                                     ? fl_value_get_string(id_value)
                                     : NULL;
-      gint64 delay_ms = delay_value != NULL ? fl_value_get_int(delay_value) : 0;
-      gboolean activated = FALSE;
+      gint timeout_ms =
+          timeout_value != NULL && fl_value_get_type(timeout_value) == FL_VALUE_TYPE_INT
+              ? (gint)fl_value_get_int(timeout_value)
+              : 250;
+      if (timeout_ms < 50) timeout_ms = 50;
+      if (timeout_ms > 2000) timeout_ms = 2000;
 
-      if (identifier != NULL && g_str_has_prefix(identifier, "x11:0x")) {
-        Window window = (Window)g_ascii_strtoull(identifier + 6, NULL, 16);
-        activated = request_activate_x11_window(window);
+      if (identifier == NULL || !g_str_has_prefix(identifier, "x11:0x")) {
+        respond_success(method_call, make_paste_result(FALSE, "invalidWindow"));
+        return;
       }
 
-      if (activated && delay_ms > 0) {
-        FlMethodCall* held_call = FL_METHOD_CALL(g_object_ref(method_call));
-        guint timer_id = g_timeout_add((guint)delay_ms, paste_after_delay_cb, held_call);
-        if (timer_id != 0) {
-          return;  // held_call will be released by paste_after_delay_cb
-        }
-        // Timer registration failed — release the ref and fall through to immediate paste.
-        g_object_unref(held_call);
-        g_warning("activateAndPaste: g_timeout_add failed, pasting immediately");
-      }
-
-      if (activated) {
-        simulate_paste_x11();
-      }
-      respond_success(method_call, fl_value_new_bool(activated));
+      Window window = (Window)g_ascii_strtoull(identifier + 6, NULL, 16);
+      respond_success(method_call, activate_and_paste_x11(window, timeout_ms));
       return;
     }
 #endif
-    respond_success(method_call, fl_value_new_bool(FALSE));
+    respond_success(method_call, make_paste_result(FALSE, "noX11"));
     return;
   }
 

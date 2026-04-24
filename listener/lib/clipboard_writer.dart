@@ -102,26 +102,38 @@ class ClipboardWriter {
     }
   }
 
-  static Future<bool> activateAndPaste({
+  static Future<PasteResponse> activateAndPaste({
     required String bundleId,
     required int delayMs,
+    int focusTimeoutMs = 250,
   }) async {
     try {
-      final result = await _channel.invokeMethod<bool>(
+      final result = await _channel.invokeMethod<Object?>(
         'activateAndPaste',
-        <String, Object?>{'bundleId': bundleId, 'delayMs': delayMs},
+        <String, Object?>{
+          'bundleId': bundleId,
+          'delayMs': delayMs,
+          'focusTimeoutMs': focusTimeoutMs,
+        },
       );
-      return result ?? false;
+      if (result is Map) {
+        final map = Map<Object?, Object?>.from(result);
+        return PasteResponse(
+          success: map['success'] == true,
+          errorCode: map['errorCode'] as String?,
+        );
+      }
+      return PasteResponse(success: result == true);
     } on PlatformException catch (e) {
       if (e.code == 'ACCESSIBILITY_DENIED') rethrow;
       AppLogger.error(
         'ClipboardWriter.activateAndPaste platform failure '
         '[${e.code}]: ${e.message}',
       );
-      return false;
+      return const PasteResponse(success: false, errorCode: 'platformError');
     } catch (e) {
       AppLogger.error('ClipboardWriter.activateAndPaste failed: $e');
-      return false;
+      return const PasteResponse(success: false, errorCode: 'unknown');
     }
   }
 
@@ -165,4 +177,13 @@ class ClipboardWriter {
       AppLogger.error('ClipboardWriter.openAccessibilitySettings failed: $e');
     }
   }
+}
+
+class PasteResponse {
+  const PasteResponse({required this.success, this.errorCode});
+
+  final bool success;
+  final String? errorCode;
+
+  bool get isFocusTimeout => errorCode == 'focusTimeout';
 }

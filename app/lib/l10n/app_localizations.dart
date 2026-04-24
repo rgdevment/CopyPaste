@@ -1352,6 +1352,12 @@ abstract class AppLocalizations {
   /// **'The shortcut {hotkey} is being used by another application. Change it in Settings → Shortcuts.'**
   String linuxHotkeyGrabFailedWarning(String hotkey);
 
+  /// Shown when the X11 paste flow could not regain focus on the previous window in time
+  ///
+  /// In en, this message translates to:
+  /// **'The clipboard has your content. Paste manually with Ctrl+V.'**
+  String get linuxPasteFocusTimeoutWarning;
+
   /// Title of the AppIndicator missing banner
   ///
   /// In en, this message translates to:

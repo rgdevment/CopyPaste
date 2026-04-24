@@ -40,6 +40,25 @@ class LinuxShell {
     _eventsController = null;
   }
 
+  static Future<bool> awaitEvent(
+    String type, {
+    Duration timeout = const Duration(milliseconds: 300),
+  }) async {
+    final completer = Completer<bool>();
+    final sub = events.listen((event) {
+      if (event == type && !completer.isCompleted) completer.complete(true);
+    });
+    final timer = Timer(timeout, () {
+      if (!completer.isCompleted) completer.complete(false);
+    });
+    try {
+      return await completer.future;
+    } finally {
+      timer.cancel();
+      await sub.cancel();
+    }
+  }
+
   static Future<TrayResponse> initTray({
     required String iconPath,
     required String showHideLabel,

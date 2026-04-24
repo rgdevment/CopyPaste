@@ -344,9 +344,19 @@ class AppWindow {
     if (showInTaskbar && Platform.isWindows) {
       await windowManager.minimize();
     } else {
+      Future<bool>? unmappedFuture;
+      if (Platform.isLinux) {
+        unmappedFuture = LinuxShell.awaitEvent(
+          'unmapped',
+          timeout: const Duration(milliseconds: 300),
+        );
+      }
       await windowManager.hide();
       if (!Platform.isMacOS) {
         await windowManager.setSkipTaskbar(true);
+      }
+      if (unmappedFuture != null) {
+        await unmappedFuture;
       }
     }
     onVisibilityChanged?.call(false);
