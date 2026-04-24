@@ -47,6 +47,11 @@ static void my_application_activate(GApplication* application) {
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
 
+  // Complete the XDG startup notification before any widget becomes visible
+  // so desktop environments don't show a "CopyPaste is starting…" cursor or
+  // launcher pulse when the window first maps via hotkey.
+  gdk_notify_startup_complete();
+
   FlView* view = fl_view_new(project);
   GdkRGBA background_color;
   gdk_rgba_parse(&background_color, "#1a1a2e");
@@ -63,11 +68,6 @@ static void my_application_activate(GApplication* application) {
   self->shell = copypaste_linux_shell_new(messenger, window);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
-
-  // Complete the XDG startup notification immediately so desktop environments
-  // (GNOME Shell, KDE Plasma, etc.) don't show "CopyPaste is ready" when the
-  // window is first made visible on hotkey press.
-  gdk_notify_startup_complete();
 }
 
 static gboolean my_application_local_command_line(GApplication* application,

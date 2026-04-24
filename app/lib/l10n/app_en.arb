@@ -549,6 +549,11 @@
     }
   },
 
+  "linuxPasteFocusTimeoutWarning": "The clipboard has your content. Paste manually with Ctrl+V.",
+  "@linuxPasteFocusTimeoutWarning": {
+    "description": "Shown when the X11 paste flow could not regain focus on the previous window in time"
+  },
+
   "linuxAppindicatorBannerTitle": "System tray icon unavailable",
   "@linuxAppindicatorBannerTitle": { "description": "Title of the AppIndicator missing banner" },
 

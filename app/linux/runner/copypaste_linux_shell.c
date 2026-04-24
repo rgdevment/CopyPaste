@@ -76,6 +76,22 @@ static void send_shell_event(CopyPasteLinuxShell* shell, const gchar* type) {
   }
 }
 
+static gboolean window_unmap_event_cb(GtkWidget* widget, GdkEvent* event,
+                                      gpointer user_data) {
+  (void)widget;
+  (void)event;
+  send_shell_event((CopyPasteLinuxShell*)user_data, "unmapped");
+  return FALSE;
+}
+
+static gboolean window_map_event_cb(GtkWidget* widget, GdkEvent* event,
+                                    gpointer user_data) {
+  (void)widget;
+  (void)event;
+  send_shell_event((CopyPasteLinuxShell*)user_data, "mapped");
+  return FALSE;
+}
+
 static gchar* resolve_asset_path(const gchar* asset_path) {
   if (asset_path == NULL || *asset_path == '\0') {
     return NULL;
@@ -700,6 +716,13 @@ CopyPasteLinuxShell* copypaste_linux_shell_new(FlBinaryMessenger* messenger,
       fl_event_channel_new(messenger, kShellEventChannelName, FL_METHOD_CODEC(codec));
   fl_event_channel_set_stream_handlers(shell->event_channel, shell_listen_cb,
                                        shell_cancel_cb, shell, NULL);
+
+  if (shell->gtk_window != NULL) {
+    g_signal_connect(shell->gtk_window, "unmap-event",
+                     G_CALLBACK(window_unmap_event_cb), shell);
+    g_signal_connect(shell->gtk_window, "map-event",
+                     G_CALLBACK(window_map_event_cb), shell);
+  }
 
 #ifdef GDK_WINDOWING_X11
   if (shell_is_x11()) {

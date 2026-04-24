@@ -770,11 +770,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (!ok) return;
     await _appWindow.hide();
     try {
-      await _focusManager.restoreAndPaste(
+      final response = await _focusManager.restoreAndPaste(
         delayBeforeFocusMs: _config.delayBeforeFocusMs,
         maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
         delayBeforePasteMs: _config.delayBeforePasteMs,
       );
+      if (Platform.isLinux && response.isFocusTimeout) {
+        _showLinuxNotice((l) => l.linuxPasteFocusTimeoutWarning);
+      }
     } on PlatformException catch (e) {
       if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
         _enterPermissionGate();

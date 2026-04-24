@@ -271,7 +271,7 @@ void main() {
   });
 
   group('ClipboardWriter.activateAndPaste', () {
-    test('returns true on success', () async {
+    test('returns success on bool true', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
             if (call.method == 'activateAndPaste') return true;
@@ -281,10 +281,28 @@ void main() {
         bundleId: 'com.apple.safari',
         delayMs: 150,
       );
-      expect(result, isTrue);
+      expect(result.success, isTrue);
+      expect(result.errorCode, isNull);
     });
 
-    test('sends bundleId and delayMs as arguments', () async {
+    test('parses Map response with success and errorCode', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async {
+            return <String, Object?>{
+              'success': false,
+              'errorCode': 'focusTimeout',
+            };
+          });
+      final result = await ClipboardWriter.activateAndPaste(
+        bundleId: 'x11:0xabc',
+        delayMs: 0,
+      );
+      expect(result.success, isFalse);
+      expect(result.errorCode, equals('focusTimeout'));
+      expect(result.isFocusTimeout, isTrue);
+    });
+
+    test('sends bundleId, delayMs and focusTimeoutMs as arguments', () async {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
@@ -294,20 +312,22 @@ void main() {
       await ClipboardWriter.activateAndPaste(
         bundleId: 'com.example.app',
         delayMs: 200,
+        focusTimeoutMs: 350,
       );
       expect(captured!.method, equals('activateAndPaste'));
       expect(captured!.arguments['bundleId'], equals('com.example.app'));
       expect(captured!.arguments['delayMs'], equals(200));
+      expect(captured!.arguments['focusTimeoutMs'], equals(350));
     });
 
-    test('returns false when channel returns null', () async {
+    test('returns failure when channel returns null', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (_) async => null);
       final result = await ClipboardWriter.activateAndPaste(
         bundleId: 'com.test',
         delayMs: 0,
       );
-      expect(result, isFalse);
+      expect(result.success, isFalse);
     });
 
     test('rethrows when channel throws ACCESSIBILITY_DENIED', () async {
@@ -328,7 +348,7 @@ void main() {
       );
     });
 
-    test('returns false when channel throws other error', () async {
+    test('returns platformError on other PlatformException', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (_) async {
             throw PlatformException(code: 'UNKNOWN_ERROR');
@@ -337,7 +357,8 @@ void main() {
         bundleId: 'com.test',
         delayMs: 0,
       );
-      expect(result, isFalse);
+      expect(result.success, isFalse);
+      expect(result.errorCode, equals('platformError'));
     });
   });
 

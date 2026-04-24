@@ -695,6 +695,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get linuxPasteFocusTimeoutWarning =>
+      'El portapapeles tiene tu contenido. Pégalo manualmente con Ctrl+V.';
+
+  @override
   String get linuxAppindicatorBannerTitle => 'Ícono de bandeja no disponible';
 
   @override
