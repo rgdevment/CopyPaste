@@ -697,7 +697,7 @@ If you're curious about what's under the hood of this open source clipboard mana
 | **C++ Plugin (Win) / Swift (Mac) / C Plugin (Linux)** | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**                         | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**                             | Local database with full-text search across content and labels.                       |
-| **Auto-update (Standalone)**                          | WinSparkle appcast on Windows · GitHub Releases API notification on macOS and Linux.  |
+| **Auto-update (Standalone)**                          | Ed25519-signed release manifest hosted on GitHub Releases; in-app badge notifies users of new versions and enforces blocks on versions with critical issues. |
 | **Theme System**                                      | Built-in Default and Compact themes, plus custom theme support via external packages. |
 
 ---

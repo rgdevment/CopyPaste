@@ -460,8 +460,14 @@
 
   "updateAvailableLinux": "Version {version} is available.\n\nDownload the latest release from GitHub.",
   "@updateAvailableLinux": { "description": "Update dialog message for Linux", "placeholders": { "version": { "type": "String" } } },
-  "updateAvailableStore": "Version {version} is available.\n\nUpdate CopyPaste from the Microsoft Store to get the latest version.",
+  "updateAvailableStore": "Version {version} is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.",
   "@updateAvailableStore": { "description": "Update dialog message for MS Store builds", "placeholders": { "version": { "type": "String" } } },
+
+  "updateTooltipStore": "Update {version} coming via Microsoft Store",
+  "@updateTooltipStore": { "description": "Short tooltip for MS Store badge", "placeholders": { "version": { "type": "String" } } },
+
+  "updateTooltipGeneric": "Update {version} available — click for details",
+  "@updateTooltipGeneric": { "description": "Short tooltip for non-Store badge", "placeholders": { "version": { "type": "String" } } },
 
   "updateDialogTitle": "Update Available",
   "@updateDialogTitle": { "description": "Title of the update available dialog" },

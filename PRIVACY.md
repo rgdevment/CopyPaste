@@ -203,26 +203,23 @@ CopyPaste makes **one type of network request** for update checking:
 
 | Detail | Value |
 | :--- | :--- |
-| **Purpose** | Check if a newer version of CopyPaste is available |
-| **URL (Windows standalone)** | `https://gist.githubusercontent.com/rgdevment/.../raw/appcast.xml` |
-| **URL (macOS / Linux / Microsoft Store)** | `https://api.github.com/repos/rgdevment/CopyPaste/releases/latest` |
+| **Purpose** | Check if a newer version of CopyPaste is available and enforce blocks for versions with known critical issues |
+| **URL (all platforms)** | `https://github.com/rgdevment/CopyPaste/releases/latest/download/release-manifest.json` (and its `.sig` signature file) |
 | **Method** | `GET` (read-only) |
 | **Data sent** | Standard HTTP headers only — **no user data** |
-| **Data received** | Windows standalone: A small XML feed (Sparkle/WinSparkle appcast) containing the latest version number and download URL. All others: A JSON response with the latest release tag name |
-| **Frequency** | Every 24 hours |
-| **Can be disabled?** | See below |
+| **Data received** | A small signed JSON file listing the latest version, minimum supported version, any blocked versions, and per-channel install info. An accompanying Ed25519 signature is verified locally before the manifest is trusted |
+| **Frequency** | Every 24 hours, plus once at startup |
+| **Cached locally** | Yes — last successfully verified manifest is cached for up to 15 days so the app works offline |
 
 **Important notes:**
 
-- This request is **read-only** — it only downloads a small public file; no data is ever uploaded
+- This request is **read-only** — it only downloads two small public files; no data is ever uploaded
 - **No clipboard content, no usage data, no personal information** is ever sent
-- **Windows standalone:** If an update is found, WinSparkle offers to download and install it automatically
-- **macOS / Linux:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details and a link to the release page. No automatic download or installation occurs
-- **Microsoft Store version:** Queries the GitHub Releases API (same as macOS/Linux) to check whether a newer version exists. If one is found, a non-invasive indicator appears in the footer bar. **No download link is shown and nothing is installed automatically** — updates are delivered through the Microsoft Store's own infrastructure
-
-> **Standalone users:** The update checker cannot currently be disabled via settings, but it sends zero user data.
->
-> **macOS / Linux / Microsoft Store users:** The update check only retrieves the latest release tag from GitHub's public API. If an update is available, a notification is shown — no files are downloaded automatically.
+- The manifest is **cryptographically signed** with an Ed25519 key. If the signature does not verify, the manifest is discarded and no update indicator is shown
+- **All platforms:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details
+- **Standalone builds (Windows / macOS / Linux):** Clicking the indicator opens the GitHub release page (or shows a Homebrew / Snap command). Nothing is downloaded or installed automatically
+- **Microsoft Store version:** Clicking the indicator opens a dialog explaining that Microsoft Store delivers updates on its own schedule. The app is never blocked on Store builds, since update delivery is outside our control
+- **Blocked versions:** If the manifest flags the installed version as having a critical issue (for example, a severe security bug or data-corruption fix), standalone builds show a full-screen prompt with direct install/download instructions. This mechanism is disabled on Microsoft Store builds
 
 ### User-Initiated Browser Navigation
 
