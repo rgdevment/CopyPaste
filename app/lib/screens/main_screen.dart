@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../helpers/url_helper.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auto_update_service.dart';
+import '../services/release_manifest_service.dart';
 import '../theme/app_theme_data.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/clipboard_card.dart';
@@ -35,6 +36,7 @@ class MainScreen extends StatefulWidget {
     this.showHint = false,
     this.onDismissHint,
     this.updateVersion,
+    this.updateSeverity,
     super.key,
   });
 
@@ -52,6 +54,7 @@ class MainScreen extends StatefulWidget {
   final bool showHint;
   final VoidCallback? onDismissHint;
   final String? updateVersion;
+  final ManifestSeverity? updateSeverity;
 
   @override
   State<MainScreen> createState() => MainScreenState();
@@ -614,6 +617,12 @@ class MainScreenState extends State<MainScreen> {
   Widget _buildBottomBar(AppThemeData theme, AppThemeColorScheme colors) {
     final l = AppLocalizations.of(context);
     final updateVersion = widget.updateVersion;
+    final severity = widget.updateSeverity;
+    final isImportant = severity != null && severity != ManifestSeverity.patch;
+    final badgeColor = isImportant ? colors.accentRed : colors.primary;
+    final badgeText = isImportant
+        ? l.updateBadgeImportant(updateVersion ?? '')
+        : l.updateBadge(updateVersion ?? '');
 
     return Container(
       height: theme.spacing.bottomBarHeight,
@@ -636,13 +645,13 @@ class MainScreenState extends State<MainScreen> {
                     Icon(
                       Icons.system_update_outlined,
                       size: 13,
-                      color: colors.primary,
+                      color: badgeColor,
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      l.updateBadge(updateVersion),
+                      badgeText,
                       style: theme.typography.branding.copyWith(
-                        color: colors.primary,
+                        color: badgeColor,
                         letterSpacing: 0.3,
                       ),
                     ),

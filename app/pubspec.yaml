@@ -23,7 +23,7 @@ dependencies:
     ffi: ^2.2.0
     file_picker: ^10.0.0
     flutter_acrylic: ^1.1.4
-    auto_updater: ^1.0.0
+    cryptography: ^2.7.0
     path: ^1.9.0
 dev_dependencies:
     flutter_test:
@@ -43,6 +43,7 @@ flutter:
         - assets/icons/icon_mac_tray.png
         - assets/icons/icon_mac_tray@2x.png
         - assets/icons/icon_linkunbound.png
+        - assets/keys/release_pubkey.txt
 
     generate: true
 
