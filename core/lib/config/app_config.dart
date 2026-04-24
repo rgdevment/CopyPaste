@@ -44,6 +44,7 @@ class AppConfig {
     this.generateVideoThumbnails = true,
     this.generateAudioThumbnails = true,
     this.maxImageProcessingSizeMB = 25,
+    this.imagesQuotaMB = 0,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -125,6 +126,7 @@ class AppConfig {
       maxImageProcessingSizeMB:
           json['maxImageProcessingSizeMB'] as int? ??
           defaults.maxImageProcessingSizeMB,
+      imagesQuotaMB: json['imagesQuotaMB'] as int? ?? defaults.imagesQuotaMB,
     );
   }
 
@@ -192,6 +194,11 @@ class AppConfig {
   final bool generateAudioThumbnails;
   final int maxImageProcessingSizeMB;
 
+  // Storage quota (total bytes allowed under images/). 0 disables the cap;
+  // anything > 0 triggers an LRU purge during the periodic cleanup until the
+  // owned bytes drop back below the limit. Pinned items are never purged.
+  final int imagesQuotaMB;
+
   AppConfig copyWith({
     String? preferredLanguage,
     bool? runOnStartup,
@@ -230,6 +237,7 @@ class AppConfig {
     bool? generateVideoThumbnails,
     bool? generateAudioThumbnails,
     int? maxImageProcessingSizeMB,
+    int? imagesQuotaMB,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -279,6 +287,7 @@ class AppConfig {
         generateAudioThumbnails ?? this.generateAudioThumbnails,
     maxImageProcessingSizeMB:
         maxImageProcessingSizeMB ?? this.maxImageProcessingSizeMB,
+    imagesQuotaMB: imagesQuotaMB ?? this.imagesQuotaMB,
   );
 
   Map<String, dynamic> toJson() => {
@@ -320,6 +329,7 @@ class AppConfig {
     'generateVideoThumbnails': generateVideoThumbnails,
     'generateAudioThumbnails': generateAudioThumbnails,
     'maxImageProcessingSizeMB': maxImageProcessingSizeMB,
+    'imagesQuotaMB': imagesQuotaMB,
   };
 
   static Future<AppConfig> load(String configPath) async {

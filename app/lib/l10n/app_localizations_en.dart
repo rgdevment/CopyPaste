@@ -740,6 +740,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.';
 
   @override
+  String get settingImagesQuotaLabel => 'Storage cap for images';
+
+  @override
+  String get subtitleImagesQuota =>
+      'When the images folder exceeds this size, oldest unpinned items are deleted to free space.';
+
+  @override
+  String get imagesQuotaOff => 'Unlimited';
+
+  @override
   String get onboardingPersonalizeTitle => 'Personalize quickly';
 
   @override

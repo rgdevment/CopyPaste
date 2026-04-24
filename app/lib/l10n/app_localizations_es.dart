@@ -746,6 +746,17 @@ class AppLocalizationsEs extends AppLocalizations {
       'Los elementos que apuntan a archivos perdidos o volúmenes desconectados se eliminan tras estos días. 0 los elimina al instante.';
 
   @override
+  String get settingImagesQuotaLabel =>
+      'Límite de almacenamiento para imágenes';
+
+  @override
+  String get subtitleImagesQuota =>
+      'Cuando la carpeta de imágenes supera este tamaño, se eliminan los elementos más antiguos no fijados para liberar espacio.';
+
+  @override
+  String get imagesQuotaOff => 'Sin límite';
+
+  @override
   String get onboardingPersonalizeTitle => 'Personaliza rápido';
 
   @override

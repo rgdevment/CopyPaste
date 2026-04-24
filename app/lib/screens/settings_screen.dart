@@ -89,6 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Cleanup & privacy
   late int _keepBrokenItemsDays;
+  late int _imagesQuotaMB;
 
   // Multimedia
   late bool _generateImageThumbnails;
@@ -134,6 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _resetSearchOnShow = widget.config.resetSearchOnShow;
     _resetFiltersOnShow = widget.config.resetFiltersOnShow;
     _keepBrokenItemsDays = widget.config.keepBrokenItemsDays;
+    _imagesQuotaMB = widget.config.imagesQuotaMB;
     _generateImageThumbnails = widget.config.generateImageThumbnails;
     _generateVideoThumbnails = widget.config.generateVideoThumbnails;
     _generateAudioThumbnails = widget.config.generateAudioThumbnails;
@@ -188,6 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     generateVideoThumbnails: _generateVideoThumbnails,
     generateAudioThumbnails: _generateAudioThumbnails,
     maxImageProcessingSizeMB: _maxImageProcessingSizeMB,
+    imagesQuotaMB: _imagesQuotaMB,
   );
 
   Future<void> _save() async {
@@ -252,12 +255,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _resetSearchOnShow = d.resetSearchOnShow;
       _resetFiltersOnShow = d.resetFiltersOnShow;
       _keepBrokenItemsDays = d.keepBrokenItemsDays;
+      _imagesQuotaMB = d.imagesQuotaMB;
       _generateImageThumbnails = d.generateImageThumbnails;
       _generateVideoThumbnails = d.generateVideoThumbnails;
       _generateAudioThumbnails = d.generateAudioThumbnails;
       _maxImageProcessingSizeMB = d.maxImageProcessingSizeMB;
     });
     _markChanged();
+  }
+
+  String _imagesQuotaKey(int mb) {
+    if (mb <= 0) return 'off';
+    const presets = ['256', '512', '1024', '2048', '5120', '10240'];
+    final asString = mb.toString();
+    return presets.contains(asString) ? asString : 'off';
   }
 
   String _hotkeyString([String separator = '+']) {
@@ -866,6 +877,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               l.subtitleKeepBrokenItems,
               style: TextStyle(fontSize: 10.5, color: colors.onSurfaceMuted),
+            ),
+            const SizedBox(height: 12),
+            _SettingsRow(
+              label: l.settingImagesQuotaLabel,
+              subtitle: l.subtitleImagesQuota,
+              colors: colors,
+              trailing: _PresetDropdown(
+                value: _imagesQuotaKey(_imagesQuotaMB),
+                items: const [
+                  'off',
+                  '256',
+                  '512',
+                  '1024',
+                  '2048',
+                  '5120',
+                  '10240',
+                ],
+                labels: {
+                  'off': l.imagesQuotaOff,
+                  '256': '256 MB',
+                  '512': '512 MB',
+                  '1024': '1 GB',
+                  '2048': '2 GB',
+                  '5120': '5 GB',
+                  '10240': '10 GB',
+                },
+                hint: l.imagesQuotaOff,
+                colors: colors,
+                onChanged: (v) {
+                  setState(() {
+                    _imagesQuotaMB = v == 'off' ? 0 : int.parse(v);
+                  });
+                  _markChanged();
+                },
+              ),
             ),
             const SizedBox(height: 12),
             _ActionTile(

@@ -612,6 +612,15 @@
   "subtitleKeepBrokenItems": "Items that point to a missing file or unmounted volume are pruned after this many days. 0 prunes immediately.",
   "@subtitleKeepBrokenItems": { "description": "Broken-items subtitle" },
 
+  "settingImagesQuotaLabel": "Storage cap for images",
+  "@settingImagesQuotaLabel": { "description": "Quota label" },
+
+  "subtitleImagesQuota": "When the images folder exceeds this size, oldest unpinned items are deleted to free space.",
+  "@subtitleImagesQuota": { "description": "Quota subtitle" },
+
+  "imagesQuotaOff": "Unlimited",
+  "@imagesQuotaOff": { "description": "Quota disabled label" },
+
   "onboardingPersonalizeTitle": "Personalize quickly",
   "@onboardingPersonalizeTitle": { "description": "Onboarding personalize section title" },
 

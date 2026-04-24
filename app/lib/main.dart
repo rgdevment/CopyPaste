@@ -135,6 +135,7 @@ Future<void> _run() async {
       () => config.retentionDays,
       storage: storage,
       getKeepBrokenDays: () => config.keepBrokenItemsDays,
+      getImagesQuotaMB: () => config.imagesQuotaMB,
     )..start(storage.baseDir);
 
     final listener = ClipboardListener();
@@ -877,6 +878,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
             );
             widget.cleanupService.updateKeepBrokenCallback(
               () => newConfig.keepBrokenItemsDays,
+            );
+            widget.cleanupService.updateImagesQuotaCallback(
+              () => newConfig.imagesQuotaMB,
             );
             widget.clipboardService.updateThumbnailTypeGate(
               (t) => switch (t) {
