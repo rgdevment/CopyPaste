@@ -37,10 +37,6 @@ class ClipboardCard extends StatefulWidget {
   final VoidCallback? onExpandToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onSelect;
-
-  /// Invoked once per resolved image item to let the host trigger
-  /// background regeneration of `<id>_thumb.png` when the source file's
-  /// `mtime` no longer matches `item.sourceModifiedAt`.
   final void Function(ClipboardItem item)? onRequestThumbnailRefresh;
   final bool isSelected;
   final bool isExpanded;
