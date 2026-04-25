@@ -20,6 +20,8 @@ We believe in:
 
 **This is not a commercial product.** There's no premium version, no monetization, no business plans. It's free software, created by and for the community.
 
+> **Maintainers:** the full release process (tagging, manifest, store and OBS publication) lives in [RELEASING.md](RELEASING.md).
+
 ---
 
 ## 🛠 How Can I Contribute?

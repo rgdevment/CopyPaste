@@ -2,8 +2,8 @@
   "schema": 1,
   "latest": "2.3.0",
   "minimumSupported": "2.3.0",
-  "blockedVersions": ["2.2.6"],
-  "severity": "critical",
+  "blockedVersions": [],
+  "severity": "recommended",
   "channels": {
     "github_windows": {
       "url": "https://github.com/rgdevment/CopyPaste/releases/latest"

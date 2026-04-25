@@ -111,6 +111,7 @@ jobs:
             - uses: actions/checkout@v6
               with:
                   ref: ${{ github.ref_name }}
+                  fetch-depth: 0
 
             - name: Setup Flutter
               uses: subosito/flutter-action@v2
@@ -140,16 +141,59 @@ jobs:
                   REPO="${{ github.repository }}"
                   RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
 
-                  SEVERITY=$(jq -r '.severity // "recommended"' release-manifest.json)
+                  TAG_BODY=$(git tag -l --format='%(contents)' "$TAG" | sed '/-----BEGIN SSH SIGNATURE-----/,$d')
+                  read_trailer() {
+                    printf '%s\n' "$TAG_BODY" \
+                      | grep -iE "^$1:" \
+                      | head -n 1 \
+                      | sed -E "s/^[^:]+:[[:space:]]*//" \
+                      | tr -d '\r'
+                  }
+
+                  SEVERITY_OVERRIDE=$(read_trailer 'Severity')
+                  MIN_SUPPORTED_OVERRIDE=$(read_trailer 'Min-Supported')
+                  BLOCKED_OVERRIDE=$(read_trailer 'Blocked')
+
+                  SEVERITY_CURRENT=$(jq -r '.severity // "recommended"' release-manifest.json)
+                  SEVERITY="${SEVERITY_OVERRIDE:-recommended}"
+                  case "$SEVERITY" in
+                    critical|recommended|patch) ;;
+                    *)
+                      echo "::error::Invalid Severity trailer '$SEVERITY' (expected: critical|recommended|patch)"
+                      exit 1
+                      ;;
+                  esac
+                  echo "Severity: $SEVERITY (override=${SEVERITY_OVERRIDE:-<none>}, previous=${SEVERITY_CURRENT})"
+
+                  MIN_SUPPORTED="${MIN_SUPPORTED_OVERRIDE:-$VERSION}"
+                  echo "minimumSupported: $MIN_SUPPORTED (override=${MIN_SUPPORTED_OVERRIDE:-<none>})"
+
+                  if [[ -n "$BLOCKED_OVERRIDE" ]]; then
+                    BLOCKED_JSON=$(printf '%s' "$BLOCKED_OVERRIDE" \
+                      | tr ',' '\n' \
+                      | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' \
+                      | grep -v '^$' \
+                      | jq -R . | jq -s .)
+                  else
+                    BLOCKED_JSON='[]'
+                  fi
+                  echo "blockedVersions: $BLOCKED_JSON (override=${BLOCKED_OVERRIDE:-<none>})"
+
                   SUMMARY_EN="CopyPaste ${TAG} (${SEVERITY} update). See release notes for details."
                   SUMMARY_ES="CopyPaste ${TAG} (actualización ${SEVERITY}). Consulta las notas de la versión."
 
                   jq \
                     --arg version "$VERSION" \
                     --arg url "$RELEASE_URL" \
+                    --arg severity "$SEVERITY" \
+                    --arg min_supported "$MIN_SUPPORTED" \
+                    --argjson blocked "$BLOCKED_JSON" \
                     --arg sum_en "$SUMMARY_EN" \
                     --arg sum_es "$SUMMARY_ES" \
                     '.latest = $version
+                     | .severity = $severity
+                     | .minimumSupported = $min_supported
+                     | .blockedVersions = $blocked
                      | .releaseNotes.en.summary = $sum_en
                      | .releaseNotes.en.url = $url
                      | .releaseNotes.es.summary = $sum_es
