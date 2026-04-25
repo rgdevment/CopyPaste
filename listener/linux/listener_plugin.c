@@ -240,6 +240,28 @@ static gchar* read_proc_comm(unsigned long pid) {
   return content;
 }
 
+static gchar* prettify_app_id(gchar* value) {
+  if (value == NULL || *value == '\0') {
+    return value;
+  }
+  guint dots = 0;
+  for (const gchar* p = value; *p != '\0'; p++) {
+    if (*p == '.') {
+      dots++;
+    }
+  }
+  if (dots < 2) {
+    return value;
+  }
+  const gchar* last = strrchr(value, '.');
+  if (last == NULL || *(last + 1) == '\0') {
+    return value;
+  }
+  gchar* trimmed = g_strdup(last + 1);
+  g_free(value);
+  return trimmed;
+}
+
 static gchar* get_x11_window_source(Window window) {
   Display* display = get_xdisplay();
   if (display == NULL || window == 0) {
@@ -257,7 +279,7 @@ static gchar* get_x11_window_source(Window window) {
       XFree(class_hint.res_class);
     }
     if (value != NULL && *value != '\0') {
-      return value;
+      return prettify_app_id(value);
     }
     g_free(value);
   }
@@ -278,7 +300,7 @@ static gchar* get_x11_window_source(Window window) {
     data = NULL;
     gchar* comm = read_proc_comm(pid);
     if (comm != NULL) {
-      return comm;
+      return prettify_app_id(comm);
     }
   }
 

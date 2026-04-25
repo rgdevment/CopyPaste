@@ -17,7 +17,7 @@
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
-    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux_(beta)-0078D4?style=flat-square" alt="Platform: Windows, macOS, Linux"/>
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4?style=flat-square" alt="Platform: Windows, macOS, Linux"/>
     <a href="#license-and-spirit">
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License GPL-3.0"/>
     </a>
@@ -74,13 +74,13 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 
 - **100% local** — your clipboard history never leaves your computer. No cloud, no servers, no accounts.
 - **Truly free** — no premium tiers, no feature gates, no "free trial" tricks. GPL v3, forever.
-- **Cross-platform** — same native copy-paste experience on Windows, macOS, and Linux (beta).
+- **Cross-platform** — same native copy-paste experience on Windows, macOS, and Linux.
 - **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
 - **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
 
 > I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
 >
-> **Linux is in beta.** It works, but there are edge cases across different desktop environments. If you're on Linux and want to help, [your feedback matters](#found-a-bug-have-feedback).
+> **Linux:** standalone builds for **X11 sessions** (Ubuntu / Fedora / RHEL-compatible). Wayland is not supported yet — global hotkey and auto-paste rely on X11 APIs.
 
 ---
 
@@ -394,7 +394,7 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 ### Linux — apt / dnf
 
-> **Linux support is in beta.** Core clipboard manager features work well across tested distributions, but you may encounter issues depending on your desktop environment, display server, or distro. [Please report anything unusual](https://github.com/rgdevment/CopyPaste/issues/new) — your reports directly shape stability improvements.
+> **Linux requires an X11 session** (Xorg or XWayland). On a pure Wayland session, global hotkey and auto-paste are unavailable and a warning is shown at startup. CopyPaste is distributed as **standalone, unsandboxed builds** (Cloudsmith apt/dnf, Homebrew, .AppImage) — there is **no Snap, Flatpak or Flathub package**, because the sandbox would prevent the global hotkey, full clipboard polling and opening of arbitrary file paths from the history.
 
 Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copypaste/) — set up the repository once, then get updates through your system package manager.
 
@@ -488,7 +488,7 @@ For apt/dnf, yes — they install to system paths. If you cannot use sudo, use H
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
 **What platforms does this copy-paste tool support?**
-Windows 10/11, macOS (Ventura+), and Linux (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Linux is in beta — see the [Getting Started](#getting-started) section for details.
+Windows 10/11, macOS (Ventura+), and Linux on **X11 sessions** (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Wayland-only sessions are not supported yet — see the [Getting Started](#getting-started) section for details.
 
 **Does it start automatically with Windows?**
 Optionally, yes. Enable it in Settings → General → Start with Windows. On the Microsoft Store version it uses the Windows StartupTask system; on the standalone installer it registers through the standard Windows startup mechanism. No administrator rights are required for either.

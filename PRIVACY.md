@@ -217,7 +217,7 @@ CopyPaste makes **one type of network request** for update checking:
 - **No clipboard content, no usage data, no personal information** is ever sent
 - The manifest is **cryptographically signed** with an Ed25519 key. If the signature does not verify, the manifest is discarded and no update indicator is shown
 - **All platforms:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details
-- **Standalone builds (Windows / macOS / Linux):** Clicking the indicator opens the GitHub release page (or shows a Homebrew / Snap command). Nothing is downloaded or installed automatically
+- **Standalone builds (Windows / macOS / Linux):** Clicking the indicator opens the GitHub release page (or shows the Homebrew / apt / dnf upgrade command). Nothing is downloaded or installed automatically
 - **Microsoft Store version:** Clicking the indicator opens a dialog explaining that Microsoft Store delivers updates on its own schedule. The app is never blocked on Store builds, since update delivery is outside our control
 - **Blocked versions:** If the manifest flags the installed version as having a critical issue (for example, a severe security bug or data-corruption fix), standalone builds show a full-screen prompt with direct install/download instructions. This mechanism is disabled on Microsoft Store builds
 

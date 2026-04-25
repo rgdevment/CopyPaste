@@ -41,7 +41,7 @@ Security updates are provided for:
 | Version | Supported |
 | :--- | :--- |
 | Latest Release | ✅ Actively Supported |
-| Beta Versions | ✅ Actively Supported |
+| Pre-releases (`-rc`, `-beta`) | ✅ Actively Supported |
 | Older Releases | ❌ Not Supported (please update) |
 
 **We strongly recommend always using the latest version** from the [Releases Page](https://github.com/rgdevment/CopyPaste/releases/latest).
