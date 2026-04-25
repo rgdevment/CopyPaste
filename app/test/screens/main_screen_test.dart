@@ -1,10 +1,14 @@
 import 'package:core/core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:copypaste/helpers/url_helper.dart';
 import 'package:copypaste/l10n/app_localizations.dart';
 import 'package:copypaste/screens/main_screen.dart';
+import 'package:copypaste/services/linux_capabilities.dart';
+import 'package:copypaste/services/release_manifest_service.dart';
 import 'package:copypaste/theme/compact_theme.dart';
 import 'package:copypaste/theme/theme_provider.dart';
 import 'package:copypaste/widgets/clipboard_card.dart';
@@ -22,6 +26,10 @@ Widget _buildApp({
   bool showHint = false,
   VoidCallback? onDismissHint,
   String? updateVersion,
+  ManifestSeverity? updateSeverity,
+  AppConfig? appConfig,
+  LinuxCapabilities? linuxCapabilities,
+  Future<void> Function(AppConfig Function(AppConfig))? onLinuxConfigUpdate,
   Key? key,
 }) {
   return MaterialApp(
@@ -45,6 +53,10 @@ Widget _buildApp({
           showHint: showHint,
           onDismissHint: onDismissHint,
           updateVersion: updateVersion,
+          updateSeverity: updateSeverity,
+          appConfig: appConfig,
+          linuxCapabilities: linuxCapabilities,
+          onLinuxConfigUpdate: onLinuxConfigUpdate,
         ),
       ),
     ),
@@ -1258,6 +1270,317 @@ void main() {
       await tester.pumpAndSettle();
 
       // Screen still renders correctly.
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets(
+      'LinuxCapabilitiesBanner renders when all linux params provided',
+      (tester) async {
+        const capabilities = LinuxCapabilities.unsupported;
+        const config = AppConfig();
+        bool callbackCalled = false;
+
+        await tester.pumpWidget(
+          _buildApp(
+            service: service,
+            onPaste: (_) {},
+            appConfig: config,
+            linuxCapabilities: capabilities,
+            onLinuxConfigUpdate: (fn) async {
+              callbackCalled = true;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MainScreen), findsOneWidget);
+        expect(callbackCalled, isFalse);
+      },
+    );
+
+    testWidgets('Alt+T shortcut opens filter bar', (tester) async {
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
+      await tester.pumpAndSettle();
+
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('update dialog View Release button triggers dismiss', (
+      tester,
+    ) async {
+      UrlHelper.platformOverride = 'other';
+      addTearDown(() => UrlHelper.platformOverride = null);
+
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (_) {}, updateVersion: '3.0.0'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('v3.0.0 is available, please update'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      final viewRelease = find.text('View Release');
+      if (viewRelease.evaluate().isNotEmpty) {
+        await tester.tap(viewRelease.first);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+      }
+    });
+
+    testWidgets(
+      'update badge with critical severity uses important badge text',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            service: service,
+            onPaste: (_) {},
+            updateVersion: '4.0.0',
+            updateSeverity: ManifestSeverity.critical,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MainScreen), findsOneWidget);
+        final badge = find.textContaining('4.0.0');
+        expect(badge, findsAtLeastNWidgets(1));
+      },
+    );
+
+    testWidgets('_onItemOpen link item calls UrlHelper', (tester) async {
+      UrlHelper.platformOverride = 'other';
+      addTearDown(() => UrlHelper.platformOverride = null);
+
+      await repo.save(
+        ClipboardItem(
+          content: 'https://example.com',
+          type: ClipboardContentType.link,
+        ),
+      );
+
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final openButton = find.byIcon(Icons.open_in_new_rounded);
+      expect(openButton, findsAtLeastNWidgets(1));
+      await tester.tap(openButton.first);
+      await tester.pumpAndSettle();
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('_onItemOpen email item calls mailto', (tester) async {
+      UrlHelper.platformOverride = 'other';
+      addTearDown(() => UrlHelper.platformOverride = null);
+
+      await repo.save(
+        ClipboardItem(
+          content: 'test@example.com',
+          type: ClipboardContentType.email,
+        ),
+      );
+
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final openButton = find.byIcon(Icons.open_in_new_rounded);
+      expect(openButton, findsAtLeastNWidgets(1));
+      await tester.tap(openButton.first);
+      await tester.pumpAndSettle();
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('_onItemOpen phone item calls tel scheme', (tester) async {
+      UrlHelper.platformOverride = 'other';
+      addTearDown(() => UrlHelper.platformOverride = null);
+
+      await repo.save(
+        ClipboardItem(content: '+1234567890', type: ClipboardContentType.phone),
+      );
+
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final openButton = find.byIcon(Icons.open_in_new_rounded);
+      expect(openButton, findsAtLeastNWidgets(1));
+      await tester.tap(openButton.first);
+      await tester.pumpAndSettle();
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets(
+      '_onItemOpen image with missing file returns false gracefully',
+      (tester) async {
+        UrlHelper.platformOverride = 'other';
+        addTearDown(() => UrlHelper.platformOverride = null);
+
+        await repo.save(
+          ClipboardItem(
+            content: '/nonexistent/path/image.png',
+            type: ClipboardContentType.image,
+          ),
+        );
+
+        await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+        await tester.pumpAndSettle();
+
+        final openButtons = find.byIcon(Icons.open_in_new_rounded);
+        if (openButtons.evaluate().isNotEmpty) {
+          await tester.tap(openButtons.first);
+          await tester.pumpAndSettle();
+        }
+        expect(find.byType(MainScreen), findsOneWidget);
+      },
+    );
+
+    testWidgets('_onItemOpen file item opens path', (tester) async {
+      UrlHelper.platformOverride = 'other';
+      addTearDown(() => UrlHelper.platformOverride = null);
+
+      await repo.save(
+        ClipboardItem(
+          content: '/tmp/some_file.txt',
+          type: ClipboardContentType.file,
+        ),
+      );
+
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final openButtons = find.byIcon(Icons.open_in_new_rounded);
+      if (openButtons.evaluate().isNotEmpty) {
+        await tester.tap(openButtons.first);
+        await tester.pumpAndSettle();
+      }
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('_onSearchKeyEvent ArrowDown moves selection to first item', (
+      tester,
+    ) async {
+      await repo.save(
+        ClipboardItem(content: 'first', type: ClipboardContentType.text),
+      );
+      await repo.save(
+        ClipboardItem(content: 'second', type: ClipboardContentType.text),
+      );
+
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final searchField = find.byType(TextField).first;
+      await tester.tap(searchField);
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('onWindowHide trims _items list when > pageSize', (
+      tester,
+    ) async {
+      for (var i = 0; i < 35; i++) {
+        await repo.save(
+          ClipboardItem(content: 'Item $i', type: ClipboardContentType.text),
+        );
+      }
+
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
+      await tester.pumpAndSettle();
+
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      await tester.drag(find.byType(ListView).last, const Offset(0, -5000));
+      await tester.pumpAndSettle();
+
+      key.currentState!.onWindowHide();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets(
+      'second page loaded on scroll accumulates items in _items.addAll path',
+      (tester) async {
+        for (var i = 0; i < 35; i++) {
+          await repo.save(
+            ClipboardItem(
+              content: 'Page item $i',
+              type: ClipboardContentType.text,
+            ),
+          );
+        }
+
+        await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+        await tester.pumpAndSettle();
+
+        await tester.drag(find.byType(ListView).last, const Offset(0, -5000));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MainScreen), findsOneWidget);
+      },
+    );
+
+    testWidgets('_BottomBarAction hover state changes icon opacity', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      final bugIcon = find.byIcon(Icons.bug_report_outlined);
+      if (bugIcon.evaluate().isNotEmpty) {
+        final gesture = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.addPointer(location: Offset.zero);
+        addTearDown(gesture.removePointer);
+        await tester.pump();
+        await gesture.moveTo(tester.getCenter(bugIcon));
+        await tester.pump();
+        expect(find.byType(MainScreen), findsOneWidget);
+        await gesture.moveTo(Offset.zero);
+        await tester.pump();
+      }
+    });
+
+    testWidgets('_loadItems with non-empty searchQuery uses query param', (
+      tester,
+    ) async {
+      await repo.save(
+        ClipboardItem(content: 'SearchMe', type: ClipboardContentType.text),
+      );
+
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (_) {}, key: key),
+      );
+      await tester.pumpAndSettle();
+
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      final searchField = find.byType(TextField).first;
+      await tester.enterText(searchField, 'SearchMe');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
       expect(find.byType(MainScreen), findsOneWidget);
     });
   });

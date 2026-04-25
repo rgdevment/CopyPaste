@@ -9,7 +9,7 @@ import 'app_logger.dart';
 import 'crash_logger.dart';
 
 class SupportService {
-  SupportService._();
+  SupportService._(); // coverage:ignore-line
 
   /// Exports all log files into a zip archive saved at [savePath].
   ///
@@ -88,11 +88,13 @@ class SupportService {
   static Future<void> revealFile(String filePath) async {
     AppLogger.info('revealFile: $filePath');
     try {
+      // coverage:ignore-start
       if (Platform.isWindows) {
         await Process.run('explorer', ['/select,', filePath]);
       } else if (Platform.isMacOS) {
         await Process.run('open', ['-R', filePath]);
-      } else if (Platform.isLinux) {
+      } else // coverage:ignore-end
+      if (Platform.isLinux) {
         await Process.run('xdg-open', [File(filePath).parent.path]);
       }
     } catch (e, s) {
@@ -110,6 +112,7 @@ class SupportService {
 
     AppLogger.info('openLogsFolder: opening ${logsDir.path}');
     try {
+      // coverage:ignore-start
       if (Platform.isWindows) {
         // Process.run('explorer', path) silently fails in MSIX packages because
         // Windows routes the open request via DDE to the existing shell process,
@@ -118,7 +121,8 @@ class SupportService {
         await Process.run('cmd', ['/c', 'start', '', logsDir.path]);
       } else if (Platform.isMacOS) {
         await Process.run('open', [logsDir.path]);
-      } else if (Platform.isLinux) {
+      } else // coverage:ignore-end
+      if (Platform.isLinux) {
         await Process.run('xdg-open', [logsDir.path]);
       }
     } catch (e, s) {

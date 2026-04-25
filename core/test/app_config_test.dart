@@ -196,29 +196,56 @@ void main() {
       expect(config.cardMaxLines, equals(5));
     });
 
-    test('hasSeenWindowsOnboarding defaults to false', () {
+    test('hasSeenOnboarding defaults to false', () {
       const config = AppConfig();
-      expect(config.hasSeenWindowsOnboarding, isFalse);
+      expect(config.hasSeenOnboarding, isFalse);
     });
 
-    test('hasSeenWindowsOnboarding round-trips via JSON', () {
-      const config = AppConfig(hasSeenWindowsOnboarding: true);
+    test('hasSeenOnboarding round-trips via JSON', () {
+      const config = AppConfig(hasSeenOnboarding: true);
+      expect(AppConfig.fromJson(config.toJson()).hasSeenOnboarding, isTrue);
+    });
+
+    test('hasSeenOnboarding absent in JSON defaults to false', () {
+      expect(AppConfig.fromJson({}).hasSeenOnboarding, isFalse);
+    });
+
+    test('copyWith hasSeenOnboarding updates value', () {
+      const config = AppConfig();
       expect(
-        AppConfig.fromJson(config.toJson()).hasSeenWindowsOnboarding,
+        config.copyWith(hasSeenOnboarding: true).hasSeenOnboarding,
         isTrue,
       );
     });
 
-    test('hasSeenWindowsOnboarding absent in JSON defaults to false', () {
-      expect(AppConfig.fromJson({}).hasSeenWindowsOnboarding, isFalse);
+    test('linux capability dismiss flags default to false', () {
+      const config = AppConfig();
+      expect(config.linuxAppindicatorWarningDismissed, isFalse);
+      expect(config.linuxXtestWarningDismissed, isFalse);
     });
 
-    test('copyWith hasSeenWindowsOnboarding updates value', () {
+    test('linux capability dismiss flags round-trip via JSON', () {
+      const config = AppConfig(
+        linuxAppindicatorWarningDismissed: true,
+        linuxXtestWarningDismissed: true,
+      );
+      final restored = AppConfig.fromJson(config.toJson());
+      expect(restored.linuxAppindicatorWarningDismissed, isTrue);
+      expect(restored.linuxXtestWarningDismissed, isTrue);
+    });
+
+    test('copyWith updates linux capability dismiss flags individually', () {
       const config = AppConfig();
       expect(
         config
-            .copyWith(hasSeenWindowsOnboarding: true)
-            .hasSeenWindowsOnboarding,
+            .copyWith(linuxAppindicatorWarningDismissed: true)
+            .linuxAppindicatorWarningDismissed,
+        isTrue,
+      );
+      expect(
+        config
+            .copyWith(linuxXtestWarningDismissed: true)
+            .linuxXtestWarningDismissed,
         isTrue,
       );
     });
@@ -346,7 +373,7 @@ void main() {
         themeMode: 'test',
         accessibilityWasGranted: true,
         lastRunVersion: 'v',
-        hasSeenWindowsOnboarding: true,
+        hasSeenOnboarding: true,
       );
       final json = config.toJson();
       expect(json['preferredLanguage'], 'fr');
@@ -378,7 +405,7 @@ void main() {
       expect(json['themeMode'], 'test');
       expect(json['accessibilityWasGranted'], true);
       expect(json['lastRunVersion'], 'v');
-      expect(json['hasSeenWindowsOnboarding'], true);
+      expect(json['hasSeenOnboarding'], true);
     });
   });
 
@@ -645,6 +672,28 @@ void main() {
       'hasCompletedOnboarding migrates from legacy hasSeenWindowsOnboarding',
       () {
         final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
+        expect(c.hasCompletedOnboarding, isTrue);
+      },
+    );
+
+    test('hasSeenOnboarding migrates from legacy hasSeenWindowsOnboarding', () {
+      final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
+      expect(c.hasSeenOnboarding, isTrue);
+    });
+
+    test('hasSeenOnboarding new key takes precedence over legacy', () {
+      final c = AppConfig.fromJson({
+        'hasSeenWindowsOnboarding': false,
+        'hasSeenOnboarding': true,
+      });
+      expect(c.hasSeenOnboarding, isTrue);
+    });
+
+    test(
+      'both hasSeenOnboarding and hasCompletedOnboarding populated from legacy',
+      () {
+        final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
+        expect(c.hasSeenOnboarding, isTrue);
         expect(c.hasCompletedOnboarding, isTrue);
       },
     );

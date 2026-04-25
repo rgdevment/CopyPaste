@@ -165,7 +165,6 @@ class AppWindow {
         ).timeout(const Duration(seconds: 2));
       }
     } catch (e) {
-      // Effect failure is non-fatal — app runs without the acrylic effect.
       AppLogger.warn('applyEffect: window effect unavailable (non-fatal): $e');
     }
   }
@@ -173,10 +172,32 @@ class AppWindow {
   Future<void> _positionNearCursor() async {
     if (Platform.isWindows) {
       await _positionNearCursorWindows();
-    } else if (Platform.isMacOS || Platform.isLinux) {
+    } else if (Platform.isLinux) {
+      await _positionNearCursorLinux();
+    } else if (Platform.isMacOS) {
       await _positionNearCursorNative();
     } else {
       await windowManager.center();
+    }
+  }
+
+  Future<void> _positionNearCursorLinux() async {
+    try {
+      final info = await LinuxShell.getCursorMonitor();
+      if (info == null) {
+        await _positionNearCursorNative();
+        return;
+      }
+      final workArea = (
+        info.x,
+        info.y,
+        info.x + info.width,
+        info.y + info.height,
+      );
+      await _applyPosition(info.cursorX, info.cursorY, workArea);
+    } catch (e) {
+      AppLogger.warn('_positionNearCursorLinux: fallback to native: $e');
+      await _positionNearCursorNative();
     }
   }
 
@@ -314,10 +335,6 @@ class AppWindow {
   Future<void> show() async {
     AppLogger.info('AppWindow.show: starting');
     if (Platform.isLinux) {
-      // On X11/GTK, show the window first (so it gets realized/mapped by the WM),
-      // then set the position (avoids WM initial-placement overriding our offset),
-      // then focus via gtk_window_present_with_time so GNOME doesn't block focus
-      // and show a spurious "está preparado" notification.
       await windowManager.setSkipTaskbar(false);
       await windowManager.show();
       await _positionNearCursor();
@@ -344,9 +361,19 @@ class AppWindow {
     if (showInTaskbar && Platform.isWindows) {
       await windowManager.minimize();
     } else {
+      Future<bool>? unmappedFuture;
+      if (Platform.isLinux) {
+        unmappedFuture = LinuxShell.awaitEvent(
+          'unmapped',
+          timeout: const Duration(milliseconds: 300),
+        );
+      }
       await windowManager.hide();
       if (!Platform.isMacOS) {
         await windowManager.setSkipTaskbar(true);
+      }
+      if (unmappedFuture != null) {
+        await unmappedFuture;
       }
     }
     onVisibilityChanged?.call(false);
@@ -369,20 +396,22 @@ class AppWindow {
   Future<void> enterSettingsMode() async {
     _settingsMode = true;
     await windowManager.setResizable(true);
-    // GTK processes geometry hints asynchronously — wait one frame before
-    // applying new constraints so the WM doesn't reject the resize.
+    Future<bool>? configureFuture;
     if (Platform.isLinux) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      configureFuture = LinuxShell.awaitEvent(
+        'configureNotify',
+        timeout: const Duration(milliseconds: 250),
+      );
     }
     await windowManager.setMinimumSize(
       const Size(_settingsWidth, _settingsHeight),
     );
     await windowManager.setMaximumSize(const Size(1200, 900));
     await windowManager.setSize(const Size(_settingsWidth, _settingsHeight));
+    if (configureFuture != null) {
+      await configureFuture;
+    }
     await windowManager.center();
-    // Settings mode implies the window must be visible and focused. Without
-    // this, transitioning from gate/onboarding (which hides the window on
-    // exit) leaves Settings invisible behind other windows.
     if (!await windowManager.isVisible()) {
       await windowManager.show();
     }
@@ -392,19 +421,19 @@ class AppWindow {
 
   Future<void> exitSettingsMode() async {
     _settingsMode = false;
-    // On Linux the window may still be in resizable=true state from settings
-    // mode. Reset it explicitly and wait for GTK to process before resizing.
+    Future<bool>? configureFuture;
     if (Platform.isLinux) {
       await windowManager.setResizable(true);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      configureFuture = LinuxShell.awaitEvent(
+        'configureNotify',
+        timeout: const Duration(milliseconds: 250),
+      );
     }
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));
-    // Wait for GTK to process the resize before locking with setResizable(false).
-    // Without this delay the WM may freeze the window at the old (large) size.
-    if (Platform.isLinux) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+    if (configureFuture != null) {
+      await configureFuture;
     }
     await windowManager.setResizable(false);
     await _positionNearCursor();

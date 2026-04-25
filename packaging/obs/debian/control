@@ -1,0 +1,21 @@
+Source: copypaste
+Section: x11
+Priority: optional
+Maintainer: rgdevment <rgdevment@apirest.cl>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://github.com/rgdevment/CopyPaste
+
+Package: copypaste
+Architecture: amd64
+Depends: ${shlibs:Depends},
+ ${misc:Depends},
+ libayatana-appindicator3-1,
+ libkeybinder-3.0-0,
+ libgtk-3-0 | libgtk-3-0t64,
+ libx11-6,
+ libxtst6
+Description: Free, open source clipboard manager and clipboard history tool
+ CopyPaste is a free, open source, local-first clipboard manager and
+ clipboard history tool for X11 sessions on Linux. No telemetry, no
+ accounts, no cloud — your clipboard data never leaves your computer.

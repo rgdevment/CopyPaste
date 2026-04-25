@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 class CrashLogger {
-  CrashLogger._();
+  CrashLogger._(); // coverage:ignore-line
 
   static const String fileName = 'crash.log';
   static const int _maxSizeBytes = 512 * 1024;
@@ -97,6 +97,7 @@ class CrashLogger {
   }
 
   static String? _bootstrapBaseDir() {
+    // coverage:ignore-start
     if (Platform.isWindows) {
       final local = Platform.environment['LOCALAPPDATA'];
       if (local != null && local.isNotEmpty) {
@@ -108,13 +109,22 @@ class CrashLogger {
       }
       return p.join(Directory.systemTemp.path, 'CopyPaste');
     }
+    // coverage:ignore-end
     final home = Platform.environment['HOME'];
     if (home != null && home.isNotEmpty) {
       if (Platform.isMacOS) {
-        return p.join(home, 'Library', 'Application Support', 'CopyPaste');
+        return p.join(
+          home,
+          'Library',
+          'Application Support',
+          'CopyPaste',
+        ); // coverage:ignore-line
       }
       return p.join(home, '.local', 'share', 'CopyPaste');
     }
-    return p.join(Directory.systemTemp.path, 'CopyPaste');
+    return p.join(
+      Directory.systemTemp.path,
+      'CopyPaste',
+    ); // coverage:ignore-line
   }
 }

@@ -40,34 +40,75 @@ class LinuxShell {
     _eventsController = null;
   }
 
-  static Future<bool> initTray({
-    required String iconPath,
-    required String showHideLabel,
-    required String exitLabel,
-    required String tooltip,
+  static Future<bool> awaitEvent(
+    String type, {
+    Duration timeout = const Duration(milliseconds: 300),
   }) async {
-    final result = await _methodChannel.invokeMethod<bool>('initTray', {
-      'iconPath': iconPath,
-      'showHideLabel': showHideLabel,
-      'exitLabel': exitLabel,
-      'tooltip': tooltip,
+    final completer = Completer<bool>();
+    final sub = events.listen((event) {
+      if (event == type && !completer.isCompleted) completer.complete(true);
     });
-    return result ?? false;
+    final timer = Timer(timeout, () {
+      if (!completer.isCompleted) completer.complete(false);
+    });
+    try {
+      return await completer.future;
+    } finally {
+      timer.cancel();
+      await sub.cancel();
+    }
   }
 
-  static Future<bool> updateTray({
+  static Future<TrayResponse> initTray({
     required String iconPath,
     required String showHideLabel,
     required String exitLabel,
     required String tooltip,
   }) async {
-    final result = await _methodChannel.invokeMethod<bool>('updateTray', {
+    return _invokeTrayMethod('initTray', {
       'iconPath': iconPath,
       'showHideLabel': showHideLabel,
       'exitLabel': exitLabel,
       'tooltip': tooltip,
     });
-    return result ?? false;
+  }
+
+  static Future<TrayResponse> updateTray({
+    required String iconPath,
+    required String showHideLabel,
+    required String exitLabel,
+    required String tooltip,
+  }) async {
+    return _invokeTrayMethod('updateTray', {
+      'iconPath': iconPath,
+      'showHideLabel': showHideLabel,
+      'exitLabel': exitLabel,
+      'tooltip': tooltip,
+    });
+  }
+
+  static Future<TrayResponse> _invokeTrayMethod(
+    String method,
+    Map<String, Object?> args,
+  ) async {
+    try {
+      final result = await _methodChannel.invokeMethod<Object>(method, args);
+      if (result is Map) {
+        final map = Map<Object?, Object?>.from(result);
+        final code = map['errorCode'];
+        return TrayResponse(
+          success: map['success'] == true,
+          errorCode: code is String ? code : null,
+        );
+      }
+      if (result is bool) {
+        return TrayResponse(success: result);
+      }
+      return const TrayResponse(success: false, errorCode: 'unknown');
+    } catch (e) {
+      AppLogger.error('LinuxShell.$method failed: $e');
+      return const TrayResponse(success: false, errorCode: 'channelError');
+    }
   }
 
   static Future<void> destroyTray() async {
@@ -78,7 +119,7 @@ class LinuxShell {
     }
   }
 
-  static Future<bool> registerHotkey({
+  static Future<HotkeyRegisterResponse> registerHotkey({
     required int virtualKey,
     required bool useCtrl,
     required bool useWin,
@@ -86,17 +127,33 @@ class LinuxShell {
     required bool useShift,
   }) async {
     try {
-      final result = await _methodChannel.invokeMethod<bool>('registerHotkey', {
-        'virtualKey': virtualKey,
-        'useCtrl': useCtrl,
-        'useWin': useWin,
-        'useAlt': useAlt,
-        'useShift': useShift,
-      });
-      return result ?? false;
+      final result = await _methodChannel
+          .invokeMethod<Object>('registerHotkey', {
+            'virtualKey': virtualKey,
+            'useCtrl': useCtrl,
+            'useWin': useWin,
+            'useAlt': useAlt,
+            'useShift': useShift,
+          });
+      if (result is Map) {
+        final map = Map<Object?, Object?>.from(result);
+        final success = map['success'] == true;
+        final code = map['errorCode'];
+        return HotkeyRegisterResponse(
+          success: success,
+          errorCode: code is String ? code : null,
+        );
+      }
+      if (result is bool) {
+        return HotkeyRegisterResponse(success: result);
+      }
+      return const HotkeyRegisterResponse(success: false, errorCode: 'unknown');
     } catch (e) {
       AppLogger.error('LinuxShell.registerHotkey failed: $e');
-      return false;
+      return const HotkeyRegisterResponse(
+        success: false,
+        errorCode: 'channelError',
+      );
     }
   }
 
@@ -108,8 +165,6 @@ class LinuxShell {
     }
   }
 
-  /// Raises and focuses the GTK window using the X11 hotkey event timestamp,
-  /// bypassing GNOME's focus-stealing prevention.
   static Future<void> focusWindow() async {
     try {
       await _methodChannel.invokeMethod<bool>('focusWindow');
@@ -117,4 +172,86 @@ class LinuxShell {
       AppLogger.error('LinuxShell.focusWindow failed: $e');
     }
   }
+
+  static Future<CursorMonitorInfo?> getCursorMonitor() async {
+    try {
+      final result = await _methodChannel.invokeMethod<Object>(
+        'getCursorMonitor',
+      );
+      if (result is! Map) return null;
+      return CursorMonitorInfo(
+        cursorX: (result['cursorX'] as num?)?.toDouble() ?? 0,
+        cursorY: (result['cursorY'] as num?)?.toDouble() ?? 0,
+        x: (result['x'] as num?)?.toDouble() ?? 0,
+        y: (result['y'] as num?)?.toDouble() ?? 0,
+        width: (result['width'] as num?)?.toDouble() ?? 0,
+        height: (result['height'] as num?)?.toDouble() ?? 0,
+        scaleFactor: (result['scaleFactor'] as num?)?.toDouble() ?? 1.0,
+      );
+    } catch (e) {
+      AppLogger.error('LinuxShell.getCursorMonitor failed: $e');
+      return null;
+    }
+  }
+
+  static Future<InputFocusInfo?> getInputFocus() async {
+    try {
+      final result = await _methodChannel.invokeMethod<Object>('getInputFocus');
+      if (result is! Map) return null;
+      return InputFocusInfo(
+        ownsFocus: result['ownsFocus'] as bool? ?? false,
+        focusWindow: (result['focusWindow'] as num?)?.toInt() ?? 0,
+        ownWindow: (result['ownWindow'] as num?)?.toInt() ?? 0,
+      );
+    } catch (e) {
+      AppLogger.error('LinuxShell.getInputFocus failed: $e');
+      return null;
+    }
+  }
+}
+
+class CursorMonitorInfo {
+  const CursorMonitorInfo({
+    required this.cursorX,
+    required this.cursorY,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.scaleFactor,
+  });
+
+  final double cursorX;
+  final double cursorY;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final double scaleFactor;
+}
+
+class InputFocusInfo {
+  const InputFocusInfo({
+    required this.ownsFocus,
+    required this.focusWindow,
+    required this.ownWindow,
+  });
+
+  final bool ownsFocus;
+  final int focusWindow;
+  final int ownWindow;
+}
+
+class HotkeyRegisterResponse {
+  const HotkeyRegisterResponse({required this.success, this.errorCode});
+
+  final bool success;
+  final String? errorCode;
+}
+
+class TrayResponse {
+  const TrayResponse({required this.success, this.errorCode});
+
+  final bool success;
+  final String? errorCode;
 }
