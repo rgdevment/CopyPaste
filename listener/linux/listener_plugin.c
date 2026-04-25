@@ -37,7 +37,6 @@
 
 static const gchar* kClipboardChannelName = "copypaste/clipboard";
 static const gchar* kClipboardWriterChannelName = "copypaste/clipboard_writer";
-static const guint64 kClipboardDebounceMs = 500;
 static const guint kClipboardPollIntervalMs = 1500;
 static const guint kClipboardOwnerDebounceMs = 80;
 static const guint64 kClipboardWriteIgnoreMs = 700;
@@ -502,15 +501,13 @@ static gchar* build_clipboard_signature(GtkClipboard* clipboard) {
 }
 
 static gboolean is_duplicate_change(ListenerPlugin* self, const gchar* hash) {
-  guint64 now = now_ms();
-  if (self->last_content_hash != NULL && g_strcmp0(self->last_content_hash, hash) == 0 &&
-      (now - self->last_change_tick_ms) < kClipboardDebounceMs) {
+  if (self->last_content_hash != NULL && g_strcmp0(self->last_content_hash, hash) == 0) {
     return TRUE;
   }
 
   g_free(self->last_content_hash);
   self->last_content_hash = g_strdup(hash);
-  self->last_change_tick_ms = now;
+  self->last_change_tick_ms = now_ms();
   return FALSE;
 }
 
@@ -660,6 +657,10 @@ static void process_clipboard(ListenerPlugin* self) {
 
   g_autofree gchar* signature = build_clipboard_signature(clipboard);
   if (signature == NULL || *signature == '\0') {
+    if (self->last_content_hash != NULL) {
+      g_free(self->last_content_hash);
+      self->last_content_hash = NULL;
+    }
     return;
   }
 
@@ -711,6 +712,10 @@ static void on_owner_change(GtkClipboard* clipboard,
   ListenerPlugin* self = LISTENER_PLUGIN(user_data);
   if (!self->is_listening) {
     return;
+  }
+  if (self->last_content_hash != NULL) {
+    g_free(self->last_content_hash);
+    self->last_content_hash = NULL;
   }
   if (self->owner_debounce_timer_id != 0) {
     g_source_remove(self->owner_debounce_timer_id);
