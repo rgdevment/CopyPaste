@@ -296,6 +296,12 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: release-linux
+          path: linux-artifacts
+
       - name: Resolve version
         id: get_version
         run: |
@@ -346,9 +352,12 @@ jobs:
           find "$STAGE" -type f \( -name '*.spec' -o -name '*.dsc' -o -name 'changelog' \) \
             -exec sed -i "s/@VERSION@/$VERSION/g; s/Thu, 23 Apr 2026 00:00:00 +0000/$DATE_RFC/g" {} +
           TARBALL="CopyPaste-${VERSION}-linux-x64.tar.gz"
-          curl -fSL --retry 5 --retry-delay 5 \
-            -o "$STAGE/$TARBALL" \
-            "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/${TARBALL}"
+          if [[ ! -f "$GITHUB_WORKSPACE/linux-artifacts/$TARBALL" ]]; then
+            echo "::error::Tarball not found in artifacts: $TARBALL"
+            ls -la "$GITHUB_WORKSPACE/linux-artifacts/" || true
+            exit 1
+          fi
+          cp "$GITHUB_WORKSPACE/linux-artifacts/$TARBALL" "$STAGE/$TARBALL"
           cp "$STAGE/copypaste.spec" "$OBS_DIR/copypaste.spec"
           cp "$STAGE/copypaste.dsc" "$OBS_DIR/copypaste.dsc"
           cp "$STAGE/$TARBALL" "$OBS_DIR/$TARBALL"
