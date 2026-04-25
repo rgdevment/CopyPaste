@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+
+override_dh_auto_install:
+	install -d debian/copypaste/opt/copypaste
+	cp -a bundle/. debian/copypaste/opt/copypaste/
+	chmod 0755 debian/copypaste/opt/copypaste/copypaste
+	install -d debian/copypaste/usr/bin
+	ln -s /opt/copypaste/copypaste debian/copypaste/usr/bin/copypaste
+	install -Dm644 packaging/com.rgdevment.copypaste.desktop \
+	    debian/copypaste/usr/share/applications/com.rgdevment.copypaste.desktop
+	install -Dm644 packaging/icon_app_256.png \
+	    debian/copypaste/usr/share/icons/hicolor/256x256/apps/com.rgdevment.copypaste.png
+
+override_dh_strip:
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info -- -l/opt/copypaste/lib

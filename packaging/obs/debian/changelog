@@ -1,0 +1,6 @@
+copypaste (@VERSION@-1) unstable; urgency=medium
+
+  * Automated release from upstream tag v@VERSION@.
+    Full notes: https://github.com/rgdevment/CopyPaste/releases/tag/v@VERSION@
+
+ -- rgdevment <rgdevment@apirest.cl>  Thu, 23 Apr 2026 00:00:00 +0000
