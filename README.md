@@ -370,72 +370,103 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 
 ## Getting Started
 
-### Microsoft Store — Windows
+| OS          | Recommended                       | Alternatives                                       |
+| :---------- | :-------------------------------- | :------------------------------------------------- |
+| **Windows** | Microsoft Store                   | Standalone `.exe`                                  |
+| **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
+| **Linux**   | `apt` / `dnf` (OBS repo)          | Homebrew · self-updating AppImage · `.deb`/`.rpm`  |
 
-The simplest way on Windows — one click, auto-updates, no security warnings.
+After installing, open CopyPaste with **Ctrl+Alt+V** (default on every platform — customizable in Settings → Shortcuts). On Linux/X11, if `Ctrl+Alt+V` is taken by another app or desktop shortcut, CopyPaste falls back to **Ctrl+Alt+Shift+V** for that session and shows a warning.
 
-<p align="center">
-  <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
-    <img src="https://img.shields.io/badge/Get_it_from-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get CopyPaste clipboard manager from Microsoft Store"/>
-  </a>
-</p>
+### Windows
+
+**Microsoft Store** (recommended) — one click, automatic updates, no security warnings.
+
+> [Install from the Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856)
+
+**Standalone `.exe`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). The installer is self-signed; see the [security note](#standalone-downloads) below.
 
 ---
 
-### Homebrew
+### macOS
 
-**macOS:**
+**Homebrew** (recommended) — installs the universal binary (Apple Silicon + Intel) and tracks updates with `brew upgrade`:
 
 ```sh
 brew tap rgdevment/tap && brew install --cask copypaste
 ```
 
+**Standalone `.dmg`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). Same universal binary, manual updates.
+
 ---
 
-### Linux — apt / dnf (recommended)
+### Linux
 
-> **Linux requires an X11 session** (Xorg or XWayland). On a pure Wayland session, global hotkey and auto-paste are unavailable and a warning is shown at startup. CopyPaste is distributed as **standalone, unsandboxed builds** (OBS apt/dnf, Homebrew, .AppImage) — there is **no Snap, Flatpak or Flathub package**, because the sandbox would prevent the global hotkey, full clipboard polling and opening of arbitrary file paths from the history.
+> **Linux requires an X11 session** (Xorg or XWayland). On a pure Wayland session, the global hotkey and auto-paste are unavailable and a warning is shown at startup. CopyPaste is distributed as **standalone, unsandboxed builds** (OBS apt/dnf, Homebrew, AppImage). There is **no Snap, Flatpak or Flathub package**, because the sandbox would prevent the global hotkey, full clipboard polling, and opening of arbitrary file paths from the history.
 
-Native packages are built and hosted on the [openSUSE Build Service](https://build.opensuse.org/package/show/home:rgdevment/copypaste) (project `home:rgdevment`). Add the repo once, then get updates through your system package manager just like any other system package.
+#### 1. Native packages via the openSUSE Build Service (recommended)
 
-**Debian 13:**
+Native `.deb` and `.rpm` packages are built and hosted on the [openSUSE Build Service](https://build.opensuse.org/package/show/home:rgdevment/copypaste) (project `home:rgdevment`). Add the repo once, then get updates through your system package manager just like any other system package.
+
+<details open>
+<summary><strong>Debian 12 / 13</strong></summary>
 
 ```sh
-echo 'deb http://download.opensuse.org/repositories/home:/rgdevment/Debian_13/ /' | sudo tee /etc/apt/sources.list.d/home_rgdevment.list
-curl -fsSL https://download.opensuse.org/repositories/home:rgdevment/Debian_13/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_rgdevment.gpg > /dev/null
+DIST=Debian_13   # or: Debian_12
+echo "deb http://download.opensuse.org/repositories/home:/rgdevment/${DIST}/ /" \
+  | sudo tee /etc/apt/sources.list.d/home_rgdevment.list
+curl -fsSL "https://download.opensuse.org/repositories/home:rgdevment/${DIST}/Release.key" \
+  | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_rgdevment.gpg > /dev/null
 sudo apt update
 sudo apt install copypaste
 ```
 
-**Debian 12 / Ubuntu 22.04 / Ubuntu 24.04:** replace `Debian_13` above with `Debian_12`, `xUbuntu_22.04` or `xUbuntu_24.04`.
+</details>
 
-**Fedora 41:**
+<details>
+<summary><strong>Ubuntu 22.04 / 24.04</strong></summary>
 
 ```sh
-sudo dnf config-manager --add-repo https://download.opensuse.org/repositories/home:rgdevment/Fedora_41/home:rgdevment.repo
+DIST=xUbuntu_24.04   # or: xUbuntu_22.04
+echo "deb http://download.opensuse.org/repositories/home:/rgdevment/${DIST}/ /" \
+  | sudo tee /etc/apt/sources.list.d/home_rgdevment.list
+curl -fsSL "https://download.opensuse.org/repositories/home:rgdevment/${DIST}/Release.key" \
+  | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_rgdevment.gpg > /dev/null
+sudo apt update
+sudo apt install copypaste
+```
+
+</details>
+
+<details>
+<summary><strong>Fedora 40 / 41</strong></summary>
+
+```sh
+DIST=Fedora_41   # or: Fedora_40
+sudo dnf config-manager --add-repo \
+  "https://download.opensuse.org/repositories/home:rgdevment/${DIST}/home:rgdevment.repo"
 sudo dnf install copypaste
 ```
 
-**Fedora 40:** replace `Fedora_41` with `Fedora_40`.
+</details>
 
-**openSUSE Tumbleweed:**
+<details>
+<summary><strong>openSUSE Tumbleweed</strong></summary>
 
 ```sh
-sudo zypper addrepo https://download.opensuse.org/repositories/home:/rgdevment/openSUSE_Tumbleweed/home:rgdevment.repo
+sudo zypper addrepo \
+  https://download.opensuse.org/repositories/home:/rgdevment/openSUSE_Tumbleweed/home:rgdevment.repo
 sudo zypper refresh
 sudo zypper install copypaste
 ```
 
-> **Cloudsmith mirror (legacy):** the previous Cloudsmith repo at `dl.cloudsmith.io/public/rgdevment/copypaste/` is still receiving updates during a short transition window. New installs should prefer the OBS repos above.
+</details>
 
-> **Permissions note:** apt/dnf/zypper installation writes to system locations, so sudo is required. If your user cannot use sudo, use Homebrew or the AppImage instead.
-> **Runtime note:** On standard desktop installs, the package manager resolves required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
+> Repository signing is handled by the OBS project key; `apt`/`dnf`/`zypper` verify every package automatically. Installation requires `sudo` because system paths are written. If you cannot use `sudo`, use Homebrew or the AppImage below.
 
----
+#### 2. Homebrew
 
-### Homebrew (Linux)
-
-If you already use Homebrew, or you cannot use sudo, this is the fastest path:
+If you already use Homebrew, or you cannot use `sudo`, this is the fastest path:
 
 ```sh
 brew tap rgdevment/tap && brew install copypaste
@@ -443,9 +474,7 @@ brew tap rgdevment/tap && brew install copypaste
 
 Updates land via `brew upgrade copypaste`.
 
----
-
-### AppImage with auto-update
+#### 3. Self-updating AppImage
 
 A single portable file — no install, runs from your home directory. Once launched, the AppImage **updates itself** through [AppImageUpdate](https://github.com/AppImage/AppImageUpdate): each release embeds a `.zsync` URL pointing to the latest GitHub Release, so the binary delta-updates in place.
 
@@ -455,28 +484,20 @@ chmod +x CopyPaste_<version>_x86_64.AppImage
 ./CopyPaste_<version>_x86_64.AppImage
 ```
 
-To refresh without redownloading the whole AppImage, install AppImageUpdate from your distro and run:
+To refresh without redownloading the whole file, install AppImageUpdate from your distro and run:
 
 ```sh
 appimageupdate ./CopyPaste_<version>_x86_64.AppImage
 ```
 
----
-
-### Other options — manual install
+#### 4. Standalone `.deb` / `.rpm` (manual)
 
 If you don't want a repo and don't want the AppImage, grab the standalone packages directly from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest):
 
-- `CopyPaste_<version>_amd64.deb` for Debian/Ubuntu/derivatives
-- `CopyPaste_<version>_x86_64.rpm` for Fedora/RHEL/derivatives
+- `CopyPaste_<version>_amd64.deb` for Debian / Ubuntu and derivatives
+- `CopyPaste_<version>_x86_64.rpm` for Fedora / RHEL and derivatives
 
 These are the same artifacts the OBS repo ships, but installed with `dpkg -i` / `rpm -i` they don't get system-managed updates — you'd need to redownload manually for each release. For day-to-day use, prefer the OBS repo above.
-
----
-
-After installing, open CopyPaste with **Ctrl+Alt+V** (default on all platforms — customizable in Settings → Shortcuts).
-
-If Ctrl+Alt+V is already taken on Linux/X11 by another app or desktop shortcut, CopyPaste temporarily uses **Ctrl+Alt+Shift+V** for that session and shows a warning.
 
 ### Compatibility
 
@@ -484,21 +505,19 @@ If Ctrl+Alt+V is already taken on Linux/X11 by another app or desktop shortcut, 
 | :---------- | :------------------------------------------- | :-------------------------------- |
 | **Windows** | Windows 10 (1809+), Windows 11               | x64                               |
 | **macOS**   | Ventura (13.0+)                              | Universal (Apple Silicon + Intel) |
-| **Linux**   | Ubuntu 22.04+ · Fedora 38+ · RHEL-compatible | x64                               |
-
----
+| **Linux**   | Ubuntu 22.04+ · Fedora 40+ · openSUSE Tumbleweed · RHEL-compatible | x86_64               |
 
 ### Standalone Downloads
 
-Not a fan of package managers? Direct packages are on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest).
+Direct packages live on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest):
 
-| Platform    | Download                                                                  | Notes                                           |
-| :---------- | :------------------------------------------------------------------------ | :---------------------------------------------- |
-| **Windows** | [.exe](https://github.com/rgdevment/CopyPaste/releases/latest)            | Self-signed installer — see security note below |
-| **macOS**   | [.dmg](https://github.com/rgdevment/CopyPaste/releases/latest)            | Universal binary (Apple Silicon + Intel)        |
-| **Linux**   | [.AppImage](https://github.com/rgdevment/CopyPaste/releases/latest)       | Self-updating via AppImageUpdate (`.zsync` companion file ships alongside) |
-| **Linux**   | [.deb](https://github.com/rgdevment/CopyPaste/releases/latest)            | Debian/Ubuntu — manual updates                  |
-| **Linux**   | [.rpm](https://github.com/rgdevment/CopyPaste/releases/latest)            | Fedora/RHEL — manual updates                    |
+| Platform    | File                       | Notes                                                                       |
+| :---------- | :------------------------- | :-------------------------------------------------------------------------- |
+| **Windows** | `*_Setup.exe`              | Self-signed installer — see security note below                             |
+| **macOS**   | `*.dmg`                    | Universal binary (Apple Silicon + Intel)                                    |
+| **Linux**   | `*.AppImage` + `.zsync`    | Self-updating via AppImageUpdate                                            |
+| **Linux**   | `*.deb`                    | Debian/Ubuntu — manual updates                                              |
+| **Linux**   | `*.rpm`                    | Fedora/RHEL — manual updates                                                |
 
 <details>
 <summary><strong>Windows standalone: security warnings</strong></summary>
@@ -787,14 +806,6 @@ Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
 Distributed under the **GNU General Public License v3.0**. See LICENSE for more information.
-
----
-
-## Acknowledgments
-
-Linux package hosting (.deb and .rpm) is provided by [Cloudsmith](https://cloudsmith.com) — a cloud-native universal package management solution.
-
-[![Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-Cloudsmith-003F72?style=flat-square&logo=cloudsmith&logoColor=white)](https://cloudsmith.com)
 
 ---
 
