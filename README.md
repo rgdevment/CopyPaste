@@ -376,7 +376,7 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 | **Linux**   | `apt` / `dnf` (OBS repo)          | Homebrew · self-updating AppImage · `.deb`/`.rpm`  |
 
-After installing, open CopyPaste with **Ctrl+Alt+V** (default on every platform — customizable in Settings → Shortcuts). On Linux/X11, if `Ctrl+Alt+V` is taken by another app or desktop shortcut, CopyPaste falls back to **Ctrl+Alt+Shift+V** for that session and shows a warning.
+After installing, open CopyPaste with **Ctrl+Shift+V** (default on every platform — customizable in Settings → Shortcuts). On Linux/X11, if `Ctrl+Shift+V` is taken by another app or desktop shortcut, CopyPaste falls back to **Ctrl+Shift+Shift+V** for that session and shows a warning.
 
 ### Windows
 
