@@ -392,36 +392,85 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 ---
 
-### Linux — apt / dnf
+### Linux — apt / dnf (recommended)
 
-> **Linux requires an X11 session** (Xorg or XWayland). On a pure Wayland session, global hotkey and auto-paste are unavailable and a warning is shown at startup. CopyPaste is distributed as **standalone, unsandboxed builds** (Cloudsmith apt/dnf, Homebrew, .AppImage) — there is **no Snap, Flatpak or Flathub package**, because the sandbox would prevent the global hotkey, full clipboard polling and opening of arbitrary file paths from the history.
+> **Linux requires an X11 session** (Xorg or XWayland). On a pure Wayland session, global hotkey and auto-paste are unavailable and a warning is shown at startup. CopyPaste is distributed as **standalone, unsandboxed builds** (OBS apt/dnf, Homebrew, .AppImage) — there is **no Snap, Flatpak or Flathub package**, because the sandbox would prevent the global hotkey, full clipboard polling and opening of arbitrary file paths from the history.
 
-Packages are hosted on [Cloudsmith](https://cloudsmith.io/~rgdevment/repos/copypaste/) — set up the repository once, then get updates through your system package manager.
+Native packages are built and hosted on the [openSUSE Build Service](https://build.opensuse.org/package/show/home:rgdevment/copypaste) (project `home:rgdevment`). Add the repo once, then get updates through your system package manager just like any other system package.
 
-**Debian, Ubuntu, Pop!\_OS and derivatives:**
+**Debian 13:**
 
 ```sh
-curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.deb.sh' | sudo -E bash
+echo 'deb http://download.opensuse.org/repositories/home:/rgdevment/Debian_13/ /' | sudo tee /etc/apt/sources.list.d/home_rgdevment.list
+curl -fsSL https://download.opensuse.org/repositories/home:rgdevment/Debian_13/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_rgdevment.gpg > /dev/null
+sudo apt update
 sudo apt install copypaste
 ```
 
-**Fedora, RHEL, CentOS Stream and derivatives:**
+**Debian 12 / Ubuntu 22.04 / Ubuntu 24.04:** replace `Debian_13` above with `Debian_12`, `xUbuntu_22.04` or `xUbuntu_24.04`.
+
+**Fedora 41:**
 
 ```sh
-curl -1sLf 'https://dl.cloudsmith.io/public/rgdevment/copypaste/setup.rpm.sh' | sudo -E bash
+sudo dnf config-manager --add-repo https://download.opensuse.org/repositories/home:rgdevment/Fedora_41/home:rgdevment.repo
 sudo dnf install copypaste
 ```
 
-> **Note:** Requires an **X11 session**. On Wayland, global hotkey and auto-paste are unavailable — a warning is shown at startup.
-> **Permissions note:** apt/dnf installation writes to system locations, so sudo is required. If your user cannot use sudo, those commands will fail with permission errors.
-> **No-sudo alternatives:** Use **Homebrew (Linux)** if available for your user, or run the .AppImage from your home directory (chmod +x CopyPaste-\*.AppImage && ./CopyPaste-\*.AppImage).
-> **Runtime note:** On standard desktop installs, apt/dnf resolve required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
+**Fedora 40:** replace `Fedora_41` with `Fedora_40`.
 
-**Alternative Linux (requires Homebrew installed):**
+**openSUSE Tumbleweed:**
+
+```sh
+sudo zypper addrepo https://download.opensuse.org/repositories/home:/rgdevment/openSUSE_Tumbleweed/home:rgdevment.repo
+sudo zypper refresh
+sudo zypper install copypaste
+```
+
+> **Cloudsmith mirror (legacy):** the previous Cloudsmith repo at `dl.cloudsmith.io/public/rgdevment/copypaste/` is still receiving updates during a short transition window. New installs should prefer the OBS repos above.
+
+> **Permissions note:** apt/dnf/zypper installation writes to system locations, so sudo is required. If your user cannot use sudo, use Homebrew or the AppImage instead.
+> **Runtime note:** On standard desktop installs, the package manager resolves required libraries automatically. Very minimal VMs/containers may need additional desktop runtime libraries.
+
+---
+
+### Homebrew (Linux)
+
+If you already use Homebrew, or you cannot use sudo, this is the fastest path:
 
 ```sh
 brew tap rgdevment/tap && brew install copypaste
 ```
+
+Updates land via `brew upgrade copypaste`.
+
+---
+
+### AppImage with auto-update
+
+A single portable file — no install, runs from your home directory. Once launched, the AppImage **updates itself** through [AppImageUpdate](https://github.com/AppImage/AppImageUpdate): each release embeds a `.zsync` URL pointing to the latest GitHub Release, so the binary delta-updates in place.
+
+```sh
+wget https://github.com/rgdevment/CopyPaste/releases/latest/download/CopyPaste_<version>_x86_64.AppImage
+chmod +x CopyPaste_<version>_x86_64.AppImage
+./CopyPaste_<version>_x86_64.AppImage
+```
+
+To refresh without redownloading the whole AppImage, install AppImageUpdate from your distro and run:
+
+```sh
+appimageupdate ./CopyPaste_<version>_x86_64.AppImage
+```
+
+---
+
+### Other options — manual install
+
+If you don't want a repo and don't want the AppImage, grab the standalone packages directly from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest):
+
+- `CopyPaste_<version>_amd64.deb` for Debian/Ubuntu/derivatives
+- `CopyPaste_<version>_x86_64.rpm` for Fedora/RHEL/derivatives
+
+These are the same artifacts the OBS repo ships, but installed with `dpkg -i` / `rpm -i` they don't get system-managed updates — you'd need to redownload manually for each release. For day-to-day use, prefer the OBS repo above.
 
 ---
 
@@ -443,13 +492,13 @@ If Ctrl+Alt+V is already taken on Linux/X11 by another app or desktop shortcut, 
 
 Not a fan of package managers? Direct packages are on [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest).
 
-| Platform    | Download                                                              | Notes                                           |
-| :---------- | :-------------------------------------------------------------------- | :---------------------------------------------- |
-| **Windows** | [.exe](https://github.com/rgdevment/CopyPaste/releases/latest)        | Self-signed installer — see security note below |
-| **macOS**   | [.dmg](https://github.com/rgdevment/CopyPaste/releases/latest)        | Universal binary (Apple Silicon + Intel)        |
-| **Linux**   | [.AppImage](https://github.com/rgdevment/CopyPaste/releases/latest)   | No install — chmod +x and run                   |
-| **Linux**   | [.deb](https://github.com/rgdevment/CopyPaste/releases/latest)        | Debian, Ubuntu and derivatives                  |
-| **Linux**   | [.rpm](https://github.com/rgdevment/CopyPaste/releases/latest)        | Fedora, RHEL and derivatives                    |
+| Platform    | Download                                                                  | Notes                                           |
+| :---------- | :------------------------------------------------------------------------ | :---------------------------------------------- |
+| **Windows** | [.exe](https://github.com/rgdevment/CopyPaste/releases/latest)            | Self-signed installer — see security note below |
+| **macOS**   | [.dmg](https://github.com/rgdevment/CopyPaste/releases/latest)            | Universal binary (Apple Silicon + Intel)        |
+| **Linux**   | [.AppImage](https://github.com/rgdevment/CopyPaste/releases/latest)       | Self-updating via AppImageUpdate (`.zsync` companion file ships alongside) |
+| **Linux**   | [.deb](https://github.com/rgdevment/CopyPaste/releases/latest)            | Debian/Ubuntu — manual updates                  |
+| **Linux**   | [.rpm](https://github.com/rgdevment/CopyPaste/releases/latest)            | Fedora/RHEL — manual updates                    |
 
 <details>
 <summary><strong>Windows standalone: security warnings</strong></summary>
@@ -488,7 +537,7 @@ For apt/dnf, yes — they install to system paths. If you cannot use sudo, use H
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
 **What platforms does this copy-paste tool support?**
-Windows 10/11, macOS (Ventura+), and Linux on **X11 sessions** (Ubuntu 22.04+ · Fedora 38+ via apt/dnf · any distro via Homebrew or direct .deb, .rpm, .AppImage). Wayland-only sessions are not supported yet — see the [Getting Started](#getting-started) section for details.
+Windows 10/11, macOS (Ventura+), and Linux on **X11 sessions** (Ubuntu 22.04+ · Fedora 40+ via OBS apt/dnf · openSUSE Tumbleweed · any distro via Homebrew or the self-updating .AppImage). Wayland-only sessions are not supported yet — see the [Getting Started](#getting-started) section for details.
 
 **Does it start automatically with Windows?**
 Optionally, yes. Enable it in Settings → General → Start with Windows. On the Microsoft Store version it uses the Windows StartupTask system; on the standalone installer it registers through the standard Windows startup mechanism. No administrator rights are required for either.
