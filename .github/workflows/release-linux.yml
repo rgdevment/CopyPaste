@@ -348,7 +348,7 @@ jobs:
           cp "$STAGE/_service" "$OBS_DIR/_service"
           cp "$STAGE/copypaste.spec" "$OBS_DIR/copypaste.spec"
           cp "$STAGE/copypaste.dsc" "$OBS_DIR/copypaste.dsc"
-          tar -C "$STAGE" -cJf "$OBS_DIR/debian.tar.xz" debian
+          tar --force-local -C "$STAGE" -cJf "$OBS_DIR/debian.tar.xz" debian
           cd "$OBS_DIR"
           osc addremove
           osc commit -m "Release v$VERSION (automated from GitHub Actions)"
