@@ -349,6 +349,8 @@ jobs:
           rm -f "$OBS_DIR"/_service "$OBS_DIR"/copypaste.spec "$OBS_DIR"/copypaste.dsc "$OBS_DIR"/debian.* "$OBS_DIR"/CopyPaste-*.tar.gz 2>/dev/null || true
           STAGE="$(mktemp -d)"
           cp -a "$GITHUB_WORKSPACE/packaging/obs/." "$STAGE/"
+          find "$STAGE" -type f \( -name '*.spec' -o -name '*.dsc' -o -name 'rules' -o -name 'control' -o -name 'changelog' -o -name 'compat' -o -name 'copyright' -o -name 'format' \) \
+            -exec sed -i 's/\r$//' {} +
           find "$STAGE" -type f \( -name '*.spec' -o -name '*.dsc' -o -name 'changelog' \) \
             -exec sed -i "s/@VERSION@/$VERSION/g; s/Thu, 23 Apr 2026 00:00:00 +0000/$DATE_RFC/g" {} +
           TARBALL="CopyPaste-${VERSION}-linux-x64.tar.gz"
