@@ -117,6 +117,7 @@ class LinuxCapabilitiesService {
   static Future<LinuxCapabilities> detect({
     LinuxCapabilitiesChannel channel = const _DefaultLinuxCapabilitiesChannel(),
     Duration timeout = const Duration(milliseconds: 800),
+    @visibleForTesting LinuxSessionInfo? sessionOverride,
   }) async {
     if (!Platform.isLinux) {
       _cache = LinuxCapabilities.unsupported;
@@ -124,7 +125,7 @@ class LinuxCapabilitiesService {
       return _cache;
     }
 
-    final session = detectLinuxSession();
+    final session = sessionOverride ?? detectLinuxSession();
     final base = LinuxCapabilities.unsupported.copyWith().copyWithSession(
       session,
     );

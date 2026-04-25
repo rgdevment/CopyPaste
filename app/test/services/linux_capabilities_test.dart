@@ -39,11 +39,19 @@ class _FakeChannel implements LinuxCapabilitiesChannel {
   }
 }
 
+LinuxSessionInfo _x11Session() => const LinuxSessionInfo(
+  sessionType: 'x11',
+  hasDisplay: true,
+  hasWaylandDisplay: false,
+  hasWaylandSocket: false,
+  desktopEnv: 'GNOME',
+  wmName: 'Mutter',
+);
+
 void main() {
   setUp(() {
     LinuxCapabilitiesService.resetForTesting();
   });
-
   group('LinuxCapabilitiesService.detect', () {
     test('returns unsupported on non-Linux platforms', () async {
       if (Platform.isLinux) return;
@@ -65,7 +73,10 @@ void main() {
         },
         listenerResponse: const {'isX11': true, 'hasXTest': true},
       );
-      final caps = await LinuxCapabilitiesService.detect(channel: channel);
+      final caps = await LinuxCapabilitiesService.detect(
+        channel: channel,
+        sessionOverride: _x11Session(),
+      );
       expect(caps.hasXTest, isTrue);
       expect(caps.hasAppIndicator, isTrue);
       expect(caps.hasEwmh, isTrue);
@@ -80,7 +91,10 @@ void main() {
         shellThrows: Exception('shell boom'),
         listenerThrows: Exception('listener boom'),
       );
-      final caps = await LinuxCapabilitiesService.detect(channel: channel);
+      final caps = await LinuxCapabilitiesService.detect(
+        channel: channel,
+        sessionOverride: _x11Session(),
+      );
       expect(caps.hasXTest, isFalse);
       expect(caps.hasAppIndicator, isFalse);
       expect(caps.hasEwmh, isFalse);
@@ -96,6 +110,7 @@ void main() {
       final caps = await LinuxCapabilitiesService.detect(
         channel: channel,
         timeout: const Duration(milliseconds: 20),
+        sessionOverride: _x11Session(),
       );
       expect(caps.detectionTimedOut, isTrue);
       expect(caps.hasEwmh, isFalse);
@@ -115,7 +130,10 @@ void main() {
         shellResponse: const {'isX11': true, 'hasEwmh': true},
         listenerResponse: const {'hasXTest': true},
       );
-      final caps = await LinuxCapabilitiesService.detect(channel: channel);
+      final caps = await LinuxCapabilitiesService.detect(
+        channel: channel,
+        sessionOverride: _x11Session(),
+      );
       expect(LinuxCapabilitiesService.current, equals(caps));
     });
   });
