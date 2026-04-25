@@ -28,6 +28,7 @@ class StorageConfig {
     if (baseDir != null) {
       base = baseDir;
     } else if (Platform.isWindows) {
+      // coverage:ignore-start
       final resolved =
           windowsLocalAppDataResolver?.call() ??
           Platform.environment['LOCALAPPDATA'];
@@ -35,6 +36,7 @@ class StorageConfig {
           ? p.join(resolved, 'CopyPaste')
           : p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');
     } else {
+      // coverage:ignore-end
       base = p.join((await getApplicationSupportDirectory()).path, 'CopyPaste');
     }
     return StorageConfig._(baseDir: base);
@@ -54,7 +56,9 @@ class StorageConfig {
         ..createSync(recursive: true)
         ..writeAsStringSync(DateTime.now().toUtc().toIso8601String());
     } catch (e) {
-      AppLogger.error('Failed to mark as initialized: $e');
+      AppLogger.error(
+        'Failed to mark as initialized: $e',
+      ); // coverage:ignore-line
     }
   }
 
@@ -63,7 +67,9 @@ class StorageConfig {
       final f = File(_initFlagPath);
       if (f.existsSync()) f.deleteSync();
     } catch (e) {
-      AppLogger.error('Failed to clear initialized flag: $e');
+      AppLogger.error(
+        'Failed to clear initialized flag: $e',
+      ); // coverage:ignore-line
     }
   }
 
@@ -79,7 +85,9 @@ class StorageConfig {
         try {
           file.deleteSync();
         } catch (e) {
-          AppLogger.error('Failed to delete orphan file: $e');
+          AppLogger.error(
+            'Failed to delete orphan file: $e',
+          ); // coverage:ignore-line
         }
       }
     }

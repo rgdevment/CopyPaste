@@ -20,8 +20,8 @@
     "github_linux": {
       "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
     },
-    "snap": {
-      "command": "sudo snap refresh copypaste"
+    "appimage": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
     }
   },
   "releaseNotes": {

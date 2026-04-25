@@ -14,6 +14,7 @@
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/extensions/XTest.h>
@@ -26,8 +27,6 @@ struct _CopyPasteLinuxShell {
 
 #ifdef HAVE_APPINDICATOR
   AppIndicator* app_indicator;
-#else
-  GtkStatusIcon* tray_icon;
 #endif
   GtkWidget* tray_menu;
   GtkWidget* toggle_item;
@@ -75,6 +74,30 @@ static void send_shell_event(CopyPasteLinuxShell* shell, const gchar* type) {
       error != NULL) {
     g_warning("Failed to send linux shell event: %s", error->message);
   }
+}
+
+static gboolean window_unmap_event_cb(GtkWidget* widget, GdkEvent* event,
+                                      gpointer user_data) {
+  (void)widget;
+  (void)event;
+  send_shell_event((CopyPasteLinuxShell*)user_data, "unmapped");
+  return FALSE;
+}
+
+static gboolean window_map_event_cb(GtkWidget* widget, GdkEvent* event,
+                                    gpointer user_data) {
+  (void)widget;
+  (void)event;
+  send_shell_event((CopyPasteLinuxShell*)user_data, "mapped");
+  return FALSE;
+}
+
+static gboolean window_configure_event_cb(GtkWidget* widget, GdkEvent* event,
+                                          gpointer user_data) {
+  (void)widget;
+  (void)event;
+  send_shell_event((CopyPasteLinuxShell*)user_data, "configureNotify");
+  return FALSE;
 }
 
 static gchar* resolve_asset_path(const gchar* asset_path) {
@@ -127,27 +150,6 @@ static void tray_exit_cb(GtkMenuItem* item, gpointer user_data) {
   send_shell_event((CopyPasteLinuxShell*)user_data, "exit");
 }
 
-#ifndef HAVE_APPINDICATOR
-static void tray_activate_cb(GtkStatusIcon* status_icon, gpointer user_data) {
-  (void)status_icon;
-  send_shell_event((CopyPasteLinuxShell*)user_data, "toggle");
-}
-
-static void tray_popup_menu_cb(GtkStatusIcon* status_icon,
-                               guint button,
-                               guint activate_time,
-                               gpointer user_data) {
-  CopyPasteLinuxShell* shell = (CopyPasteLinuxShell*)user_data;
-  if (shell->tray_menu == NULL) {
-    return;
-  }
-
-  gtk_menu_popup(GTK_MENU(shell->tray_menu), NULL, NULL,
-                 gtk_status_icon_position_menu, status_icon, button,
-                 activate_time);
-}
-#endif
-
 static void rebuild_tray_menu(CopyPasteLinuxShell* shell,
                               const gchar* show_hide_label,
                               const gchar* exit_label) {
@@ -196,7 +198,17 @@ static void parse_tray_args(FlValue* args,
           : "Exit";
 }
 
-static gboolean init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
+static FlValue* make_tray_result(gboolean success, const char* error_code) {
+  FlValue* map = fl_value_new_map();
+  fl_value_set_string_take(map, "success", fl_value_new_bool(success));
+  if (error_code != NULL) {
+    fl_value_set_string_take(map, "errorCode", fl_value_new_string(error_code));
+  }
+  return map;
+}
+
+static FlValue* init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
+#ifdef HAVE_APPINDICATOR
   const gchar* icon_path;
   const gchar* tooltip;
   const gchar* show_hide;
@@ -206,11 +218,14 @@ static gboolean init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
   g_free(shell->resolved_icon_path);
   shell->resolved_icon_path = resolve_asset_path(icon_path);
 
-#ifdef HAVE_APPINDICATOR
   if (shell->app_indicator == NULL) {
     shell->app_indicator = app_indicator_new(
         "com.rgdevment.copypaste", "copypaste",
         APP_INDICATOR_CATEGORY_APPLICATION_STATUS);
+  }
+
+  if (shell->app_indicator == NULL) {
+    return make_tray_result(FALSE, "noAppIndicator");
   }
 
   if (shell->resolved_icon_path != NULL) {
@@ -228,28 +243,15 @@ static gboolean init_tray(CopyPasteLinuxShell* shell, FlValue* args) {
   rebuild_tray_menu(shell, show_hide, exit_label);
   app_indicator_set_menu(shell->app_indicator, GTK_MENU(shell->tray_menu));
   app_indicator_set_status(shell->app_indicator, APP_INDICATOR_STATUS_ACTIVE);
+  return make_tray_result(TRUE, NULL);
 #else
-  if (shell->tray_icon == NULL) {
-    shell->tray_icon = gtk_status_icon_new();
-    g_signal_connect(shell->tray_icon, "activate",
-                     G_CALLBACK(tray_activate_cb), shell);
-    g_signal_connect(shell->tray_icon, "popup-menu",
-                     G_CALLBACK(tray_popup_menu_cb), shell);
-  }
-
-  if (shell->resolved_icon_path != NULL) {
-    gtk_status_icon_set_from_file(shell->tray_icon, shell->resolved_icon_path);
-  }
-
-  gtk_status_icon_set_tooltip_text(shell->tray_icon, tooltip);
-  gtk_status_icon_set_visible(shell->tray_icon, TRUE);
-  rebuild_tray_menu(shell, show_hide, exit_label);
+  (void)shell;
+  (void)args;
+  return make_tray_result(FALSE, "noAppIndicator");
 #endif
-
-  return TRUE;
 }
 
-static gboolean destroy_tray(CopyPasteLinuxShell* shell) {
+static FlValue* destroy_tray(CopyPasteLinuxShell* shell) {
   destroy_tray_menu(shell);
 
 #ifdef HAVE_APPINDICATOR
@@ -257,15 +259,19 @@ static gboolean destroy_tray(CopyPasteLinuxShell* shell) {
     app_indicator_set_status(shell->app_indicator, APP_INDICATOR_STATUS_PASSIVE);
     g_clear_object(&shell->app_indicator);
   }
-#else
-  if (shell->tray_icon != NULL) {
-    gtk_status_icon_set_visible(shell->tray_icon, FALSE);
-    g_clear_object(&shell->tray_icon);
-  }
 #endif
 
   g_clear_pointer(&shell->resolved_icon_path, g_free);
-  return TRUE;
+  return make_tray_result(TRUE, NULL);
+}
+
+static FlValue* make_hotkey_result(gboolean success, const char* error_code) {
+  FlValue* map = fl_value_new_map();
+  fl_value_set_string_take(map, "success", fl_value_new_bool(success));
+  if (error_code != NULL) {
+    fl_value_set_string_take(map, "errorCode", fl_value_new_string(error_code));
+  }
+  return map;
 }
 
 #ifdef GDK_WINDOWING_X11
@@ -321,7 +327,41 @@ static KeySym virtual_key_to_keysym(gint64 virtual_key) {
   if (virtual_key >= 0x41 && virtual_key <= 0x5A) {
     return (KeySym)(XK_A + (virtual_key - 0x41));
   }
-  return NoSymbol;
+  if (virtual_key >= 0x30 && virtual_key <= 0x39) {
+    return (KeySym)(XK_0 + (virtual_key - 0x30));
+  }
+  if (virtual_key >= 0x70 && virtual_key <= 0x87) {
+    return (KeySym)(XK_F1 + (virtual_key - 0x70));
+  }
+  switch (virtual_key) {
+    case 0x08: return XK_BackSpace;
+    case 0x09: return XK_Tab;
+    case 0x0D: return XK_Return;
+    case 0x1B: return XK_Escape;
+    case 0x20: return XK_space;
+    case 0x21: return XK_Page_Up;
+    case 0x22: return XK_Page_Down;
+    case 0x23: return XK_End;
+    case 0x24: return XK_Home;
+    case 0x25: return XK_Left;
+    case 0x26: return XK_Up;
+    case 0x27: return XK_Right;
+    case 0x28: return XK_Down;
+    case 0x2D: return XK_Insert;
+    case 0x2E: return XK_Delete;
+    case 0xBA: return XK_semicolon;
+    case 0xBB: return XK_equal;
+    case 0xBC: return XK_comma;
+    case 0xBD: return XK_minus;
+    case 0xBE: return XK_period;
+    case 0xBF: return XK_slash;
+    case 0xC0: return XK_grave;
+    case 0xDB: return XK_bracketleft;
+    case 0xDC: return XK_backslash;
+    case 0xDD: return XK_bracketright;
+    case 0xDE: return XK_apostrophe;
+    default: return NoSymbol;
+  }
 }
 
 static guint compute_modifier_mask(FlValue* args) {
@@ -366,9 +406,9 @@ static void unregister_hotkey(CopyPasteLinuxShell* shell) {
   shell->hotkey_modifiers = 0;
 }
 
-static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
+static FlValue* register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   if (!shell_is_x11() || shell->xdisplay == NULL) {
-    return FALSE;
+    return make_hotkey_result(FALSE, "noX11");
   }
 
   unregister_hotkey(shell);
@@ -379,19 +419,19 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   KeySym keysym = virtual_key_to_keysym(virtual_key);
   if (keysym == NoSymbol) {
     g_warning("registerHotkey: unsupported virtual key 0x%llx", (unsigned long long)virtual_key);
-    return FALSE;
+    return make_hotkey_result(FALSE, "unsupportedKey");
   }
 
   guint modifiers = compute_modifier_mask(args);
   if (modifiers == 0) {
     g_warning("registerHotkey: no modifier keys specified");
-    return FALSE;
+    return make_hotkey_result(FALSE, "noModifier");
   }
 
   KeyCode keycode = XKeysymToKeycode(shell->xdisplay, keysym);
   if (keycode == 0) {
     g_warning("registerHotkey: no keycode for keysym %lu", (unsigned long)keysym);
-    return FALSE;
+    return make_hotkey_result(FALSE, "unsupportedKey");
   }
 
   for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
@@ -401,11 +441,10 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
                 modifiers | modifier_combinations[i]);
       ungrab_hotkey_variants(shell->xdisplay, shell->root_window, keycode,
                              modifiers);
-      return FALSE;
+      return make_hotkey_result(FALSE, "grabFailed");
     }
   }
 
-  // Flush pending requests before reading window attributes to avoid stale state.
   XSync(shell->xdisplay, False);
   XWindowAttributes attrs;
   if (XGetWindowAttributes(shell->xdisplay, shell->root_window, &attrs) != 0) {
@@ -419,7 +458,7 @@ static gboolean register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   shell->hotkey_registered = TRUE;
   shell->hotkey_keycode = keycode;
   shell->hotkey_modifiers = modifiers;
-  return TRUE;
+  return make_hotkey_result(TRUE, NULL);
 }
 
 static GdkFilterReturn x11_event_filter(GdkXEvent* xevent,
@@ -477,6 +516,213 @@ static void respond_method_success(FlMethodCall* method_call, FlValue* result) {
   }
 }
 
+static gboolean has_app_indicator_runtime(void) {
+#ifdef HAVE_APPINDICATOR
+  return TRUE;
+#else
+  return FALSE;
+#endif
+}
+
+static gboolean ewmh_supports_active_window(void) {
+#ifdef GDK_WINDOWING_X11
+  GdkDisplay* gdk_display = gdk_display_get_default();
+  if (gdk_display == NULL || !GDK_IS_X11_DISPLAY(gdk_display)) {
+    return FALSE;
+  }
+  Display* xdisplay = GDK_DISPLAY_XDISPLAY(gdk_display);
+  if (xdisplay == NULL) return FALSE;
+  Atom net_supported = XInternAtom(xdisplay, "_NET_SUPPORTED", True);
+  Atom net_active_window = XInternAtom(xdisplay, "_NET_ACTIVE_WINDOW", True);
+  if (net_supported == None || net_active_window == None) return FALSE;
+  Window root = DefaultRootWindow(xdisplay);
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long nitems = 0;
+  unsigned long bytes_after = 0;
+  unsigned char* data = NULL;
+  int status = XGetWindowProperty(xdisplay, root, net_supported, 0, 1024, False,
+                                  XA_ATOM, &actual_type, &actual_format,
+                                  &nitems, &bytes_after, &data);
+  gboolean found = FALSE;
+  if (status == Success && actual_type == XA_ATOM && actual_format == 32 && data != NULL) {
+    Atom* atoms = (Atom*)data;
+    for (unsigned long i = 0; i < nitems; ++i) {
+      if (atoms[i] == net_active_window) { found = TRUE; break; }
+    }
+  }
+  if (data != NULL) XFree(data);
+  return found;
+#else
+  return FALSE;
+#endif
+}
+
+static gchar* read_wm_name(void) {
+#ifdef GDK_WINDOWING_X11
+  GdkDisplay* gdk_display = gdk_display_get_default();
+  if (gdk_display == NULL || !GDK_IS_X11_DISPLAY(gdk_display)) return NULL;
+  Display* xdisplay = GDK_DISPLAY_XDISPLAY(gdk_display);
+  Atom check = XInternAtom(xdisplay, "_NET_SUPPORTING_WM_CHECK", True);
+  Atom utf8 = XInternAtom(xdisplay, "UTF8_STRING", True);
+  Atom wm_name = XInternAtom(xdisplay, "_NET_WM_NAME", True);
+  if (check == None || wm_name == None) return NULL;
+  Window root = DefaultRootWindow(xdisplay);
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long nitems = 0;
+  unsigned long bytes_after = 0;
+  unsigned char* data = NULL;
+  if (XGetWindowProperty(xdisplay, root, check, 0, 1, False, XA_WINDOW,
+                         &actual_type, &actual_format, &nitems, &bytes_after,
+                         &data) != Success || data == NULL) {
+    return NULL;
+  }
+  Window wm_window = *(Window*)data;
+  XFree(data);
+  data = NULL;
+  if (wm_window == None) return NULL;
+  Atom string_type = utf8 != None ? utf8 : XA_STRING;
+  if (XGetWindowProperty(xdisplay, wm_window, wm_name, 0, 256, False,
+                         string_type, &actual_type, &actual_format, &nitems,
+                         &bytes_after, &data) != Success || data == NULL) {
+    return NULL;
+  }
+  gchar* name = g_strndup((const gchar*)data, nitems);
+  XFree(data);
+  return name;
+#else
+  return NULL;
+#endif
+}
+
+static FlValue* build_capabilities(void) {
+  FlValue* caps = fl_value_new_map();
+  fl_value_set_string_take(caps, "isX11", fl_value_new_bool(shell_is_x11()));
+  fl_value_set_string_take(caps, "hasAppIndicator",
+                           fl_value_new_bool(has_app_indicator_runtime()));
+  fl_value_set_string_take(caps, "hasEwmh",
+                           fl_value_new_bool(ewmh_supports_active_window()));
+  const gchar* desktop_env = g_getenv("XDG_CURRENT_DESKTOP");
+  if (desktop_env == NULL) desktop_env = g_getenv("DESKTOP_SESSION");
+  fl_value_set_string_take(caps, "desktopEnv",
+                           fl_value_new_string(desktop_env != NULL ? desktop_env : ""));
+  g_autofree gchar* wm = read_wm_name();
+  fl_value_set_string_take(caps, "wmName",
+                           fl_value_new_string(wm != NULL ? wm : ""));
+  return caps;
+}
+
+static FlValue* build_cursor_monitor(void) {
+  GdkDisplay* display = gdk_display_get_default();
+  if (display == NULL) {
+    return fl_value_new_null();
+  }
+  GdkSeat* seat = gdk_display_get_default_seat(display);
+  if (seat == NULL) {
+    return fl_value_new_null();
+  }
+  GdkDevice* pointer = gdk_seat_get_pointer(seat);
+  if (pointer == NULL) {
+    return fl_value_new_null();
+  }
+  gint cursor_x = 0;
+  gint cursor_y = 0;
+  GdkScreen* screen = NULL;
+  gdk_device_get_position(pointer, &screen, &cursor_x, &cursor_y);
+
+  GdkMonitor* monitor =
+      gdk_display_get_monitor_at_point(display, cursor_x, cursor_y);
+  if (monitor == NULL) {
+    monitor = gdk_display_get_primary_monitor(display);
+  }
+  if (monitor == NULL) {
+    return fl_value_new_null();
+  }
+
+  GdkRectangle workarea = {0, 0, 0, 0};
+  gdk_monitor_get_workarea(monitor, &workarea);
+  gint scale = gdk_monitor_get_scale_factor(monitor);
+  if (scale <= 0) {
+    scale = 1;
+  }
+
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "cursorX",
+                           fl_value_new_float((double)cursor_x));
+  fl_value_set_string_take(result, "cursorY",
+                           fl_value_new_float((double)cursor_y));
+  fl_value_set_string_take(result, "x",
+                           fl_value_new_float((double)workarea.x));
+  fl_value_set_string_take(result, "y",
+                           fl_value_new_float((double)workarea.y));
+  fl_value_set_string_take(result, "width",
+                           fl_value_new_float((double)workarea.width));
+  fl_value_set_string_take(result, "height",
+                           fl_value_new_float((double)workarea.height));
+  fl_value_set_string_take(result, "scaleFactor",
+                           fl_value_new_float((double)scale));
+  return result;
+}
+
+static FlValue* build_input_focus(CopyPasteLinuxShell* shell) {
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "ownsFocus", fl_value_new_bool(FALSE));
+  fl_value_set_string_take(result, "focusWindow", fl_value_new_int(0));
+  fl_value_set_string_take(result, "ownWindow", fl_value_new_int(0));
+#ifdef GDK_WINDOWING_X11
+  if (!shell_is_x11() || shell->xdisplay == NULL) {
+    return result;
+  }
+  Window focused = None;
+  int revert_to = 0;
+  XGetInputFocus(shell->xdisplay, &focused, &revert_to);
+  fl_value_set_string_take(result, "focusWindow",
+                           fl_value_new_int((gint64)focused));
+
+  if (shell->gtk_window == NULL) {
+    return result;
+  }
+  GdkWindow* gdk_window =
+      gtk_widget_get_window(GTK_WIDGET(shell->gtk_window));
+  if (gdk_window == NULL) {
+    return result;
+  }
+  Window own = gdk_x11_window_get_xid(gdk_window);
+  fl_value_set_string_take(result, "ownWindow", fl_value_new_int((gint64)own));
+
+  gboolean owns = (focused == own);
+  if (!owns && focused != None && focused != PointerRoot) {
+    Window root = None;
+    Window parent = None;
+    Window* children = NULL;
+    unsigned int nchildren = 0;
+    Window cursor = focused;
+    for (int depth = 0; depth < 8; depth++) {
+      if (XQueryTree(shell->xdisplay, cursor, &root, &parent, &children,
+                     &nchildren) == 0) {
+        break;
+      }
+      if (children != NULL) {
+        XFree(children);
+      }
+      if (parent == None || parent == root) {
+        break;
+      }
+      if (parent == own) {
+        owns = TRUE;
+        break;
+      }
+      cursor = parent;
+    }
+  }
+  fl_value_set_string_take(result, "ownsFocus", fl_value_new_bool(owns));
+#else
+  (void)shell;
+#endif
+  return result;
+}
+
 static void shell_method_call_cb(FlMethodChannel* channel,
                                  FlMethodCall* method_call,
                                  gpointer user_data) {
@@ -485,21 +731,26 @@ static void shell_method_call_cb(FlMethodChannel* channel,
   const gchar* method = fl_method_call_get_name(method_call);
   FlValue* args = fl_method_call_get_args(method_call);
 
+  if (strcmp(method, "getCapabilities") == 0) {
+    respond_method_success(method_call, build_capabilities());
+    return;
+  }
+
   if (strcmp(method, "initTray") == 0 || strcmp(method, "updateTray") == 0) {
-    respond_method_success(method_call, fl_value_new_bool(init_tray(shell, args)));
+    respond_method_success(method_call, init_tray(shell, args));
     return;
   }
 
   if (strcmp(method, "destroyTray") == 0) {
-    respond_method_success(method_call, fl_value_new_bool(destroy_tray(shell)));
+    respond_method_success(method_call, destroy_tray(shell));
     return;
   }
 
   if (strcmp(method, "registerHotkey") == 0) {
 #ifdef GDK_WINDOWING_X11
-    respond_method_success(method_call, fl_value_new_bool(register_hotkey(shell, args)));
+    respond_method_success(method_call, register_hotkey(shell, args));
 #else
-    respond_method_success(method_call, fl_value_new_bool(FALSE));
+    respond_method_success(method_call, make_hotkey_result(FALSE, "noX11"));
 #endif
     return;
   }
@@ -526,6 +777,16 @@ static void shell_method_call_cb(FlMethodChannel* channel,
     return;
   }
 
+  if (strcmp(method, "getCursorMonitor") == 0) {
+    respond_method_success(method_call, build_cursor_monitor());
+    return;
+  }
+
+  if (strcmp(method, "getInputFocus") == 0) {
+    respond_method_success(method_call, build_input_focus(shell));
+    return;
+  }
+
   g_autoptr(FlMethodResponse) response =
       FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   fl_method_call_respond(method_call, response, NULL);
@@ -547,12 +808,22 @@ CopyPasteLinuxShell* copypaste_linux_shell_new(FlBinaryMessenger* messenger,
   fl_event_channel_set_stream_handlers(shell->event_channel, shell_listen_cb,
                                        shell_cancel_cb, shell, NULL);
 
+  if (shell->gtk_window != NULL) {
+    g_signal_connect(shell->gtk_window, "unmap-event",
+                     G_CALLBACK(window_unmap_event_cb), shell);
+    g_signal_connect(shell->gtk_window, "map-event",
+                     G_CALLBACK(window_map_event_cb), shell);
+    g_signal_connect(shell->gtk_window, "configure-event",
+                     G_CALLBACK(window_configure_event_cb), shell);
+  }
+
 #ifdef GDK_WINDOWING_X11
   if (shell_is_x11()) {
     GdkDisplay* display = gdk_display_get_default();
     shell->xdisplay = gdk_x11_display_get_xdisplay(display);
     shell->root_window = DefaultRootWindow(shell->xdisplay);
-    gdk_window_add_filter(NULL, x11_event_filter, shell);
+    GdkWindow* gdk_root = gdk_get_default_root_window();
+    gdk_window_add_filter(gdk_root, x11_event_filter, shell);
   }
 #endif
 
@@ -567,7 +838,8 @@ void copypaste_linux_shell_dispose(CopyPasteLinuxShell* shell) {
 #ifdef GDK_WINDOWING_X11
   if (shell_is_x11()) {
     unregister_hotkey(shell);
-    gdk_window_remove_filter(NULL, x11_event_filter, shell);
+    GdkWindow* gdk_root = gdk_get_default_root_window();
+    gdk_window_remove_filter(gdk_root, x11_event_filter, shell);
   }
 #endif
 

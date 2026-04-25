@@ -128,6 +128,31 @@ jobs:
           chmod +x "$DEST"
           echo "Renamed to: $(basename "$DEST")"
 
+      - name: Repack AppImage with AppImageUpdate metadata
+        if: env.STORE_BUILD != 'true'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          APPIMAGE="$GITHUB_WORKSPACE/app/dist/CopyPaste_${VERSION}_x86_64.AppImage"
+          BASENAME="$(basename "$APPIMAGE")"
+          WORK="$(mktemp -d)"
+          (cd "$WORK" && "$APPIMAGE" --appimage-extract >/dev/null)
+          UPDATE_INFO="gh-releases-zsync|rgdevment|CopyPaste|latest|CopyPaste_*_x86_64.AppImage.zsync"
+          (
+            cd "$WORK"
+            ARCH=x86_64 appimagetool \
+              --updateinformation "$UPDATE_INFO" \
+              squashfs-root \
+              "$BASENAME"
+          )
+          mv "$WORK/$BASENAME" "$APPIMAGE"
+          mv "$WORK/${BASENAME}.zsync" "$GITHUB_WORKSPACE/app/dist/${BASENAME}.zsync"
+          chmod +x "$APPIMAGE"
+          echo "Embedded update info: $UPDATE_INFO"
+          ls -la "$GITHUB_WORKSPACE/app/dist/${BASENAME}.zsync"
+
       - name: Package deb
         run: |
           cd app
@@ -184,6 +209,51 @@ jobs:
           mv "$RPM" "$DEST"
           echo "Renamed to: $(basename "$DEST")"
 
+      - name: Validate bundled .desktop file
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          APPIMAGE="app/dist/CopyPaste_${VERSION}_x86_64.AppImage"
+          WORKDIR="$(mktemp -d)"
+          (cd "$WORKDIR" && "$GITHUB_WORKSPACE/$APPIMAGE" --appimage-extract '*.desktop' >/dev/null)
+          DESKTOP=$(find "$WORKDIR/squashfs-root" -maxdepth 2 -name '*.desktop' | head -n 1)
+          if [[ -z "$DESKTOP" ]]; then
+            echo "::error::No .desktop file inside AppImage"
+            exit 1
+          fi
+          desktop-file-validate "$DESKTOP"
+          echo "✓ desktop-file-validate passed"
+
+      - name: Build portable tarball for OBS
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          BUNDLE="app/build/linux/x64/release/bundle"
+          if [[ ! -d "$BUNDLE" ]]; then
+            echo "::error::Flutter bundle not found at $BUNDLE"
+            exit 1
+          fi
+          STAGE="$(mktemp -d)/CopyPaste-${VERSION}-linux-x64"
+          mkdir -p "$STAGE/bundle" "$STAGE/packaging"
+          cp -a "$BUNDLE"/. "$STAGE/bundle/"
+          cp LICENSE "$STAGE/LICENSE"
+          cp app/assets/icons/icon_app_256.png "$STAGE/packaging/icon_app_256.png"
+          APPIMAGE="$GITHUB_WORKSPACE/app/dist/CopyPaste_${VERSION}_x86_64.AppImage"
+          EXTRACT="$(mktemp -d)"
+          (cd "$EXTRACT" && "$APPIMAGE" --appimage-extract '*.desktop' >/dev/null)
+          DESKTOP=$(find "$EXTRACT/squashfs-root" -maxdepth 2 -name '*.desktop' | head -n 1)
+          cp "$DESKTOP" "$STAGE/packaging/com.rgdevment.copypaste.desktop"
+          tar -czf "app/dist/CopyPaste-${VERSION}-linux-x64.tar.gz" \
+            -C "$(dirname "$STAGE")" "$(basename "$STAGE")"
+          ls -la "app/dist/CopyPaste-${VERSION}-linux-x64.tar.gz"
+
+      - name: Compute SHA-256 checksums
+        run: |
+          cd app/dist
+          sha256sum *.AppImage *.AppImage.zsync *.deb *.rpm *.tar.gz > SHA256SUMS 2>/dev/null || \
+            sha256sum *.AppImage *.deb *.rpm *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Publish deb to Cloudsmith
         if: github.event_name == 'push'
         env:
@@ -207,6 +277,78 @@ jobs:
           name: release-linux
           path: |
             app/dist/*.AppImage
+            app/dist/*.AppImage.zsync
             app/dist/*.deb
             app/dist/*.rpm
+            app/dist/*.tar.gz
+            app/dist/SHA256SUMS
           retention-days: 5
+
+  publish-obs:
+    runs-on: ubuntu-22.04
+    needs: build-linux
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 15
+    name: Publish to OpenSUSE Build Service
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Resolve version
+        id: get_version
+        run: |
+          VERSION="${{ inputs.version }}"
+          DATE_RFC="$(date -R)"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "DATE_RFC=$DATE_RFC" >> "$GITHUB_OUTPUT"
+
+      - name: Install osc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osc
+
+      - name: Configure osc credentials
+        env:
+          OBS_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OBS_PASSWORD }}
+        run: |
+          if [[ -z "$OBS_USERNAME" || -z "$OBS_PASSWORD" ]]; then
+            echo "::warning::OBS credentials missing — skipping OBS publish"
+            echo "SKIP=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          mkdir -p ~/.config/osc
+          cat > ~/.config/osc/oscrc <<EOF
+          [general]
+          apiurl = https://api.opensuse.org
+          [https://api.opensuse.org]
+          user = $OBS_USERNAME
+          pass = $OBS_PASSWORD
+          EOF
+          chmod 600 ~/.config/osc/oscrc
+
+      - name: Render and submit package to OBS
+        if: env.SKIP != 'true'
+        env:
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          DATE_RFC: ${{ steps.get_version.outputs.DATE_RFC }}
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          cd "$WORK"
+          osc checkout home:rgdevment copypaste
+          OBS_DIR="home:rgdevment/copypaste"
+          rm -f "$OBS_DIR"/_service "$OBS_DIR"/copypaste.spec "$OBS_DIR"/copypaste.dsc "$OBS_DIR"/debian.* 2>/dev/null || true
+          STAGE="$(mktemp -d)"
+          cp -a "$GITHUB_WORKSPACE/packaging/obs/." "$STAGE/"
+          find "$STAGE" -type f \( -name '_service' -o -name '*.spec' -o -name '*.dsc' -o -name 'changelog' \) \
+            -exec sed -i "s/@VERSION@/$VERSION/g; s/Thu, 23 Apr 2026 00:00:00 +0000/$DATE_RFC/g" {} +
+          cp "$STAGE/_service" "$OBS_DIR/_service"
+          cp "$STAGE/copypaste.spec" "$OBS_DIR/copypaste.spec"
+          cp "$STAGE/copypaste.dsc" "$OBS_DIR/copypaste.dsc"
+          tar -C "$STAGE" -cJf "$OBS_DIR/debian.tar.xz" debian
+          cd "$OBS_DIR"
+          osc addremove
+          osc commit -m "Release v$VERSION (automated from GitHub Actions)"

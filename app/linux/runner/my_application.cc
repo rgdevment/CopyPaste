@@ -64,9 +64,6 @@ static void my_application_activate(GApplication* application) {
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 
-  // Complete the XDG startup notification immediately so desktop environments
-  // (GNOME Shell, KDE Plasma, etc.) don't show "CopyPaste is ready" when the
-  // window is first made visible on hotkey press.
   gdk_notify_startup_complete();
 }
 

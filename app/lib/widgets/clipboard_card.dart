@@ -37,10 +37,6 @@ class ClipboardCard extends StatefulWidget {
   final VoidCallback? onExpandToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onSelect;
-
-  /// Invoked once per resolved image item to let the host trigger
-  /// background regeneration of `<id>_thumb.png` when the source file's
-  /// `mtime` no longer matches `item.sourceModifiedAt`.
   final void Function(ClipboardItem item)? onRequestThumbnailRefresh;
   final bool isSelected;
   final bool isExpanded;
@@ -56,7 +52,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
   String? _resolvedImagePath;
   bool _resolvedIsThumb = false;
   bool _imagePathResolved = false;
-  bool? _fileAvailable;
   DateTime? _lastPrimaryDown;
   bool _isTextOverflowing = false;
 
@@ -79,7 +74,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
   void initState() {
     super.initState();
     _resolveImagePath();
-    _resolveFileAvailability();
   }
 
   @override
@@ -91,9 +85,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
         oldWidget.item.metadata != widget.item.metadata) {
       _imagePathResolved = false;
       _resolvedIsThumb = false;
-      _fileAvailable = null;
       _resolveImagePath();
-      _resolveFileAvailability();
     }
   }
 
@@ -113,16 +105,22 @@ class _ClipboardCardState extends State<ClipboardCard> {
       ClipboardContentType.image =>
         _imagePathResolved &&
             _resolvedImagePath != null &&
-            (_fileAvailable ?? true),
+            _imageSourceExists(item),
       ClipboardContentType.file ||
       ClipboardContentType.folder ||
       ClipboardContentType.audio ||
-      ClipboardContentType.video => _fileAvailable ?? false,
+      ClipboardContentType.video => item.isFileAvailable(),
       ClipboardContentType.link ||
       ClipboardContentType.email ||
       ClipboardContentType.phone => true,
       _ => false,
     };
+  }
+
+  bool _imageSourceExists(ClipboardItem item) {
+    final path = item.content.trim();
+    if (path.isEmpty) return false;
+    return File(path).existsSync();
   }
 
   void _resolveImagePath() {
@@ -193,28 +191,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
       _resolvedIsThumb = false;
       _imagePathResolved = true;
     });
-  }
-
-  void _resolveFileAvailability() {
-    final item = widget.item;
-    if (item.type != ClipboardContentType.file &&
-        item.type != ClipboardContentType.folder &&
-        item.type != ClipboardContentType.audio &&
-        item.type != ClipboardContentType.video &&
-        item.type != ClipboardContentType.image) {
-      return;
-    }
-    final path = item.content.split('\n').first.trim();
-    if (path.isEmpty) {
-      if (mounted) setState(() => _fileAvailable = false);
-      return;
-    }
-    _checkFileAvailableAsync(path);
-  }
-
-  Future<void> _checkFileAvailableAsync(String path) async {
-    final exists = await File(path).exists() || await Directory(path).exists();
-    if (mounted) setState(() => _fileAvailable = exists);
   }
 
   Future<void> _editLabelColor(BuildContext context) async {
@@ -740,7 +716,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     return Semantics(
       label: filename.isEmpty
           ? l10n.imageFile
-          : (_fileAvailable == false
+          : (!_imageSourceExists(item)
                 ? '${l10n.imageFile}: $filename, ${l10n.fileNotFound}'
                 : '${l10n.imageFile}: $filename'),
       child: Column(
@@ -766,7 +742,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ),
             ),
           ),
-          if (_fileAvailable == false) ...[
+          if (!_imageSourceExists(item)) ...[
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -850,7 +826,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final typeColor = _typeColor(item.type, colors);
     final l10n = AppLocalizations.of(context);
     final typeName = isAudio ? l10n.audioFile : l10n.videoFile;
-    final missing = _fileAvailable == false;
+    final missing = !item.isFileAvailable();
 
     final semanticsLabel = [
       filename.isEmpty ? typeName : filename,

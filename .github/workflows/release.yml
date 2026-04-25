@@ -93,8 +93,10 @@ jobs:
                       artifacts/release-windows/**/*_store.msix*
                       artifacts/release-macos/*.dmg
                       artifacts/release-linux/*.AppImage
+                      artifacts/release-linux/*.AppImage.zsync
                       artifacts/release-linux/*.deb
                       artifacts/release-linux/*.rpm
+                      artifacts/release-linux/*.tar.gz
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -37,8 +37,8 @@
 
 static const gchar* kClipboardChannelName = "copypaste/clipboard";
 static const gchar* kClipboardWriterChannelName = "copypaste/clipboard_writer";
-static const guint64 kClipboardDebounceMs = 500;
-static const guint kClipboardPollIntervalMs = 250;
+static const guint kClipboardPollIntervalMs = 1500;
+static const guint kClipboardOwnerDebounceMs = 80;
 static const guint64 kClipboardWriteIgnoreMs = 700;
 
 typedef struct {
@@ -58,6 +58,8 @@ struct _ListenerPlugin {
 
   gboolean is_listening;
   guint poll_timer_id;
+  gulong owner_change_handler_id;
+  guint owner_debounce_timer_id;
   gchar* last_content_hash;
   guint64 last_change_tick_ms;
   guint64 last_write_tick_ms;
@@ -238,6 +240,28 @@ static gchar* read_proc_comm(unsigned long pid) {
   return content;
 }
 
+static gchar* prettify_app_id(gchar* value) {
+  if (value == NULL || *value == '\0') {
+    return value;
+  }
+  guint dots = 0;
+  for (const gchar* p = value; *p != '\0'; p++) {
+    if (*p == '.') {
+      dots++;
+    }
+  }
+  if (dots < 2) {
+    return value;
+  }
+  const gchar* last = strrchr(value, '.');
+  if (last == NULL || *(last + 1) == '\0') {
+    return value;
+  }
+  gchar* trimmed = g_strdup(last + 1);
+  g_free(value);
+  return trimmed;
+}
+
 static gchar* get_x11_window_source(Window window) {
   Display* display = get_xdisplay();
   if (display == NULL || window == 0) {
@@ -255,7 +279,7 @@ static gchar* get_x11_window_source(Window window) {
       XFree(class_hint.res_class);
     }
     if (value != NULL && *value != '\0') {
-      return value;
+      return prettify_app_id(value);
     }
     g_free(value);
   }
@@ -276,7 +300,7 @@ static gchar* get_x11_window_source(Window window) {
     data = NULL;
     gchar* comm = read_proc_comm(pid);
     if (comm != NULL) {
-      return comm;
+      return prettify_app_id(comm);
     }
   }
 
@@ -306,67 +330,102 @@ static int activate_noop_error_handler(Display* display, XErrorEvent* event) {
   return 0;
 }
 
-static gboolean request_activate_x11_window(Window window) {
-  Display* display = get_xdisplay();
-  if (display == NULL || window == 0) {
-    return FALSE;
+static FlValue* make_paste_result(gboolean success, const gchar* error_code) {
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "success", fl_value_new_bool(success));
+  if (error_code != NULL) {
+    fl_value_set_string_take(result, "errorCode",
+                             fl_value_new_string(error_code));
   }
-
-  // 1. Send the EWMH _NET_ACTIVE_WINDOW message (honours ICCCM; most WMs).
-  //    source=2 (pager) is more trusted than 1 (application) on WMs that
-  //    apply focus-stealing prevention (KDE Plasma, some GNOME configs).
-  XEvent event;
-  memset(&event, 0, sizeof(event));
-  event.xclient.type = ClientMessage;
-  event.xclient.window = window;
-  event.xclient.message_type = atom_net_active_window(display);
-  event.xclient.format = 32;
-  event.xclient.data.l[0] = 2;  // pager source — more likely to bypass focus-steal guards
-  event.xclient.data.l[1] = CurrentTime;
-  event.xclient.data.l[2] = 0;
-  event.xclient.data.l[3] = 0;
-  event.xclient.data.l[4] = 0;
-
-  Status status = XSendEvent(display, DefaultRootWindow(display), False,
-                             SubstructureNotifyMask | SubstructureRedirectMask,
-                             &event);
-
-  // 2. Raise the window and attempt a direct input focus as a fallback for WMs
-  //    that ignore _NET_ACTIVE_WINDOW (tiling WMs, minimal WMs).
-  //    Trap X errors: XSetInputFocus produces BadMatch on unmapped/invisible windows.
-  XRaiseWindow(display, window);
-  XSync(display, False);
-  int (*prev_handler)(Display*, XErrorEvent*) = XSetErrorHandler(activate_noop_error_handler);
-  XSetInputFocus(display, window, RevertToParent, CurrentTime);
-  XSync(display, False);
-  XSetErrorHandler(prev_handler);
-
-  XFlush(display);
-  return status != 0;
+  return result;
 }
 
-static gboolean simulate_paste_x11(void) {
-  Display* display = get_xdisplay();
-  if (display == NULL) {
-    return FALSE;
-  }
-
+static gboolean inject_paste_keystroke_x11(Display* display) {
   if (!ensure_xtest(display)) {
     return FALSE;
   }
-
   KeyCode ctrl = XKeysymToKeycode(display, XK_Control_L);
   KeyCode v = XKeysymToKeycode(display, XK_v);
   if (ctrl == 0 || v == 0) {
     return FALSE;
   }
-
   XTestFakeKeyEvent(display, ctrl, True, CurrentTime);
   XTestFakeKeyEvent(display, v, True, CurrentTime);
   XTestFakeKeyEvent(display, v, False, CurrentTime);
   XTestFakeKeyEvent(display, ctrl, False, CurrentTime);
   XFlush(display);
   return TRUE;
+}
+
+static FlValue* activate_and_paste_x11(Window window, gint timeout_ms) {
+  Display* display = get_xdisplay();
+  if (display == NULL) {
+    return make_paste_result(FALSE, "noX11");
+  }
+  if (window == 0) {
+    return make_paste_result(FALSE, "invalidWindow");
+  }
+  if (!ensure_xtest(display)) {
+    return make_paste_result(FALSE, "noXTest");
+  }
+
+  XWindowAttributes prev_attrs;
+  long prev_event_mask = 0;
+  gboolean restored_mask = FALSE;
+  int (*prev_handler)(Display*, XErrorEvent*) =
+      XSetErrorHandler(activate_noop_error_handler);
+
+  if (XGetWindowAttributes(display, window, &prev_attrs) != 0) {
+    prev_event_mask = prev_attrs.your_event_mask;
+    XSelectInput(display, window, prev_event_mask | FocusChangeMask);
+    restored_mask = TRUE;
+  }
+
+  XEvent event;
+  memset(&event, 0, sizeof(event));
+  event.xclient.type = ClientMessage;
+  event.xclient.window = window;
+  event.xclient.message_type = atom_net_active_window(display);
+  event.xclient.format = 32;
+  event.xclient.data.l[0] = 2;
+  event.xclient.data.l[1] = CurrentTime;
+  XSendEvent(display, DefaultRootWindow(display), False,
+             SubstructureNotifyMask | SubstructureRedirectMask, &event);
+
+  XRaiseWindow(display, window);
+  XSetInputFocus(display, window, RevertToParent, CurrentTime);
+  XSync(display, False);
+
+  gint64 deadline_us = g_get_monotonic_time() + ((gint64)timeout_ms * 1000);
+  XEvent received;
+  gboolean focus_in_received = FALSE;
+  while (g_get_monotonic_time() < deadline_us) {
+    if (XCheckTypedWindowEvent(display, window, FocusIn, &received)) {
+      focus_in_received = TRUE;
+      break;
+    }
+    g_usleep(5000);
+  }
+
+  Window focused = None;
+  int revert_to = 0;
+  XGetInputFocus(display, &focused, &revert_to);
+  gboolean focus_ok = focus_in_received || focused == window;
+
+  if (restored_mask) {
+    XSelectInput(display, window, prev_event_mask);
+  }
+  XSetErrorHandler(prev_handler);
+
+  if (!focus_ok) {
+    return make_paste_result(FALSE, "focusTimeout");
+  }
+
+  if (!inject_paste_keystroke_x11(display)) {
+    return make_paste_result(FALSE, "noXTest");
+  }
+
+  return make_paste_result(TRUE, NULL);
 }
 #endif
 
@@ -464,15 +523,13 @@ static gchar* build_clipboard_signature(GtkClipboard* clipboard) {
 }
 
 static gboolean is_duplicate_change(ListenerPlugin* self, const gchar* hash) {
-  guint64 now = now_ms();
-  if (self->last_content_hash != NULL && g_strcmp0(self->last_content_hash, hash) == 0 &&
-      (now - self->last_change_tick_ms) < kClipboardDebounceMs) {
+  if (self->last_content_hash != NULL && g_strcmp0(self->last_content_hash, hash) == 0) {
     return TRUE;
   }
 
   g_free(self->last_content_hash);
   self->last_content_hash = g_strdup(hash);
-  self->last_change_tick_ms = now;
+  self->last_change_tick_ms = now_ms();
   return FALSE;
 }
 
@@ -557,17 +614,19 @@ static FlValue* build_text_event(GtkClipboard* clipboard,
   fl_value_set_string_take(event, "source", fl_value_new_string(source));
   fl_value_set_string_take(event, "contentHash", fl_value_new_string(hash));
 
-  const gchar* const rtf_targets[] = {"text/rtf", "application/rtf",
-                                      "Rich Text Format", NULL};
-  const gchar* const html_targets[] = {"text/html", "HTML Format", NULL};
+  if (!is_url_text(text)) {
+    const gchar* const rtf_targets[] = {"text/rtf", "application/rtf",
+                                        "Rich Text Format", NULL};
+    const gchar* const html_targets[] = {"text/html", "HTML Format", NULL};
 
-  FlValue* rtf = get_selection_data_value(clipboard, rtf_targets);
-  if (rtf != NULL) {
-    fl_value_set_string_take(event, "rtf", rtf);
-  }
-  FlValue* html = get_selection_data_value(clipboard, html_targets);
-  if (html != NULL) {
-    fl_value_set_string_take(event, "html", html);
+    FlValue* rtf = get_selection_data_value(clipboard, rtf_targets);
+    if (rtf != NULL) {
+      fl_value_set_string_take(event, "rtf", rtf);
+    }
+    FlValue* html = get_selection_data_value(clipboard, html_targets);
+    if (html != NULL) {
+      fl_value_set_string_take(event, "html", html);
+    }
   }
 
   g_free(text);
@@ -585,7 +644,7 @@ static FlValue* build_image_event(GtkClipboard* clipboard,
   gchar* buffer = NULL;
   gsize buffer_size = 0;
   g_autoptr(GError) error = NULL;
-  gboolean ok = gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &buffer_size, "bmp",
+  gboolean ok = gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &buffer_size, "png",
                                           &error, NULL);
   g_object_unref(pixbuf);
   if (!ok || buffer == NULL || buffer_size == 0) {
@@ -620,6 +679,10 @@ static void process_clipboard(ListenerPlugin* self) {
 
   g_autofree gchar* signature = build_clipboard_signature(clipboard);
   if (signature == NULL || *signature == '\0') {
+    if (self->last_content_hash != NULL) {
+      g_free(self->last_content_hash);
+      self->last_content_hash = NULL;
+    }
     return;
   }
 
@@ -654,10 +717,47 @@ static gboolean clipboard_poll_cb(gpointer user_data) {
   return G_SOURCE_CONTINUE;
 }
 
+static gboolean owner_debounce_cb(gpointer user_data) {
+  ListenerPlugin* self = LISTENER_PLUGIN(user_data);
+  self->owner_debounce_timer_id = 0;
+  if (self->is_listening) {
+    process_clipboard(self);
+  }
+  return G_SOURCE_REMOVE;
+}
+
+static void on_owner_change(GtkClipboard* clipboard,
+                            GdkEvent* event,
+                            gpointer user_data) {
+  (void)clipboard;
+  (void)event;
+  ListenerPlugin* self = LISTENER_PLUGIN(user_data);
+  if (!self->is_listening) {
+    return;
+  }
+  if (self->last_content_hash != NULL) {
+    g_free(self->last_content_hash);
+    self->last_content_hash = NULL;
+  }
+  if (self->owner_debounce_timer_id != 0) {
+    g_source_remove(self->owner_debounce_timer_id);
+    self->owner_debounce_timer_id = 0;
+  }
+  self->owner_debounce_timer_id = g_timeout_add(
+      kClipboardOwnerDebounceMs, owner_debounce_cb, self);
+}
+
 static void ensure_polling(ListenerPlugin* self) {
   if (self->poll_timer_id == 0) {
     self->poll_timer_id = g_timeout_add(kClipboardPollIntervalMs,
                                         clipboard_poll_cb, self);
+  }
+  if (self->owner_change_handler_id == 0) {
+    GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    if (clipboard != NULL) {
+      self->owner_change_handler_id = g_signal_connect(
+          clipboard, "owner-change", G_CALLBACK(on_owner_change), self);
+    }
   }
 }
 
@@ -665,6 +765,17 @@ static void stop_polling(ListenerPlugin* self) {
   if (self->poll_timer_id != 0) {
     g_source_remove(self->poll_timer_id);
     self->poll_timer_id = 0;
+  }
+  if (self->owner_debounce_timer_id != 0) {
+    g_source_remove(self->owner_debounce_timer_id);
+    self->owner_debounce_timer_id = 0;
+  }
+  if (self->owner_change_handler_id != 0) {
+    GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    if (clipboard != NULL) {
+      g_signal_handler_disconnect(clipboard, self->owner_change_handler_id);
+    }
+    self->owner_change_handler_id = 0;
   }
 }
 
@@ -883,6 +994,55 @@ static FlValue* get_media_info(void) {
   return NULL;
 }
 
+// Generates a native PNG thumbnail for `path`, scaled so the longest side
+// is `size_px`. Returns a Uint8 list FlValue with PNG bytes, or NULL when
+// the file cannot be decoded by GdkPixbuf (e.g. video/audio without a
+// loader). Caller takes ownership of the returned FlValue.
+//
+// Uses gdk_pixbuf_new_from_file_at_size() which preserves aspect ratio.
+// Rejects results smaller than 64 px on the longest side (icon fallback).
+static FlValue* get_native_thumbnail(const gchar* path, gint size_px) {
+  if (path == NULL || *path == '\0' || size_px <= 0) return NULL;
+
+  GError* error = NULL;
+  GdkPixbuf* pixbuf =
+      gdk_pixbuf_new_from_file_at_size(path, size_px, size_px, &error);
+  if (pixbuf == NULL) {
+    if (error != NULL) {
+      g_warning("get_native_thumbnail: %s", error->message);
+      g_error_free(error);
+    }
+    return NULL;
+  }
+
+  gint w = gdk_pixbuf_get_width(pixbuf);
+  gint h = gdk_pixbuf_get_height(pixbuf);
+  gint longest = w > h ? w : h;
+  if (longest < 64) {
+    g_object_unref(pixbuf);
+    return NULL;
+  }
+
+  gchar* buffer = NULL;
+  gsize buffer_size = 0;
+  gboolean ok = gdk_pixbuf_save_to_buffer(
+      pixbuf, &buffer, &buffer_size, "png", &error, NULL);
+  g_object_unref(pixbuf);
+  if (!ok || buffer == NULL || buffer_size == 0) {
+    if (error != NULL) {
+      g_warning("get_native_thumbnail save: %s", error->message);
+      g_error_free(error);
+    }
+    g_free(buffer);
+    return NULL;
+  }
+
+  FlValue* value =
+      fl_value_new_uint8_list((const uint8_t*)buffer, buffer_size);
+  g_free(buffer);
+  return value;
+}
+
 static void respond_success(FlMethodCall* method_call, FlValue* result) {
   g_autoptr(GError) error = NULL;
   if (!fl_method_call_respond_success(method_call, result, &error) && error != NULL) {
@@ -890,20 +1050,24 @@ static void respond_success(FlMethodCall* method_call, FlValue* result) {
   }
 }
 
-#ifdef GDK_WINDOWING_X11
-static gboolean paste_after_delay_cb(gpointer data) {
-  FlMethodCall* mc = FL_METHOD_CALL(data);
-  simulate_paste_x11();
-  respond_success(mc, fl_value_new_bool(TRUE));
-  g_object_unref(mc);
-  return G_SOURCE_REMOVE;
-}
-#endif
-
 static void listener_plugin_handle_method_call(ListenerPlugin* self,
                                                FlMethodCall* method_call) {
   const gchar* method = fl_method_call_get_name(method_call);
   FlValue* args = fl_method_call_get_args(method_call);
+
+  if (strcmp(method, "getCapabilities") == 0) {
+    g_autoptr(FlValue) caps = fl_value_new_map();
+    fl_value_set_string_take(caps, "isX11", fl_value_new_bool(plugin_is_x11()));
+#ifdef GDK_WINDOWING_X11
+    Display* display = get_xdisplay();
+    gboolean has_xtest = display != NULL && ensure_xtest(display);
+#else
+    gboolean has_xtest = FALSE;
+#endif
+    fl_value_set_string_take(caps, "hasXTest", fl_value_new_bool(has_xtest));
+    respond_success(method_call, fl_value_ref(caps));
+    return;
+  }
 
   if (strcmp(method, "setClipboardContent") == 0) {
     FlValue* type_value = args != NULL ? fl_value_lookup_string(args, "type") : NULL;
@@ -946,6 +1110,23 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
     return;
   }
 
+  if (strcmp(method, "getNativeThumbnail") == 0) {
+    FlValue* path_value =
+        args != NULL ? fl_value_lookup_string(args, "path") : NULL;
+    FlValue* size_value =
+        args != NULL ? fl_value_lookup_string(args, "sizePx") : NULL;
+    const gchar* path =
+        path_value != NULL && fl_value_get_type(path_value) == FL_VALUE_TYPE_STRING
+            ? fl_value_get_string(path_value)
+            : NULL;
+    gint size_px =
+        size_value != NULL && fl_value_get_type(size_value) == FL_VALUE_TYPE_INT
+            ? (gint)fl_value_get_int(size_value)
+            : 256;
+    respond_success(method_call, get_native_thumbnail(path, size_px));
+    return;
+  }
+
   if (strcmp(method, "captureFrontmostApp") == 0) {
 #ifdef GDK_WINDOWING_X11
     if (plugin_is_x11()) {
@@ -964,38 +1145,30 @@ static void listener_plugin_handle_method_call(ListenerPlugin* self,
 #ifdef GDK_WINDOWING_X11
     if (plugin_is_x11()) {
       FlValue* id_value = args != NULL ? fl_value_lookup_string(args, "bundleId") : NULL;
-      FlValue* delay_value = args != NULL ? fl_value_lookup_string(args, "delayMs") : NULL;
+      FlValue* timeout_value =
+          args != NULL ? fl_value_lookup_string(args, "focusTimeoutMs") : NULL;
       const gchar* identifier = id_value != NULL &&
                                         fl_value_get_type(id_value) == FL_VALUE_TYPE_STRING
                                     ? fl_value_get_string(id_value)
                                     : NULL;
-      gint64 delay_ms = delay_value != NULL ? fl_value_get_int(delay_value) : 0;
-      gboolean activated = FALSE;
+      gint timeout_ms =
+          timeout_value != NULL && fl_value_get_type(timeout_value) == FL_VALUE_TYPE_INT
+              ? (gint)fl_value_get_int(timeout_value)
+              : 250;
+      if (timeout_ms < 50) timeout_ms = 50;
+      if (timeout_ms > 2000) timeout_ms = 2000;
 
-      if (identifier != NULL && g_str_has_prefix(identifier, "x11:0x")) {
-        Window window = (Window)g_ascii_strtoull(identifier + 6, NULL, 16);
-        activated = request_activate_x11_window(window);
+      if (identifier == NULL || !g_str_has_prefix(identifier, "x11:0x")) {
+        respond_success(method_call, make_paste_result(FALSE, "invalidWindow"));
+        return;
       }
 
-      if (activated && delay_ms > 0) {
-        FlMethodCall* held_call = FL_METHOD_CALL(g_object_ref(method_call));
-        guint timer_id = g_timeout_add((guint)delay_ms, paste_after_delay_cb, held_call);
-        if (timer_id != 0) {
-          return;  // held_call will be released by paste_after_delay_cb
-        }
-        // Timer registration failed — release the ref and fall through to immediate paste.
-        g_object_unref(held_call);
-        g_warning("activateAndPaste: g_timeout_add failed, pasting immediately");
-      }
-
-      if (activated) {
-        simulate_paste_x11();
-      }
-      respond_success(method_call, fl_value_new_bool(activated));
+      Window window = (Window)g_ascii_strtoull(identifier + 6, NULL, 16);
+      respond_success(method_call, activate_and_paste_x11(window, timeout_ms));
       return;
     }
 #endif
-    respond_success(method_call, fl_value_new_bool(FALSE));
+    respond_success(method_call, make_paste_result(FALSE, "noX11"));
     return;
   }
 
@@ -1024,6 +1197,7 @@ static FlMethodErrorResponse* stream_listen_cb(FlEventChannel* channel,
   ListenerPlugin* self = LISTENER_PLUGIN(user_data);
   self->is_listening = TRUE;
   ensure_polling(self);
+  process_clipboard(self);
   return NULL;
 }
 
@@ -1076,6 +1250,8 @@ static void listener_plugin_init(ListenerPlugin* self) {
   self->last_write_tick_ms = 0;
   self->is_listening = FALSE;
   self->poll_timer_id = 0;
+  self->owner_change_handler_id = 0;
+  self->owner_debounce_timer_id = 0;
 }
 
 void listener_plugin_register_with_registrar(FlPluginRegistrar* registrar) {

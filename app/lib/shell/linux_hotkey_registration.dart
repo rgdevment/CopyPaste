@@ -1,8 +1,71 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 
 import 'linux_shell.dart';
 
 enum HotkeyRegistrationStatus { registered, fallbackRegistered, failed }
+
+enum HotkeyFailureReason {
+  unsupportedKey,
+  noModifier,
+  grabFailed,
+  noX11,
+  channelError,
+  unknown,
+}
+
+HotkeyFailureReason _reasonFromCode(String? code) {
+  switch (code) {
+    case 'unsupportedKey':
+      return HotkeyFailureReason.unsupportedKey;
+    case 'noModifier':
+      return HotkeyFailureReason.noModifier;
+    case 'grabFailed':
+      return HotkeyFailureReason.grabFailed;
+    case 'noX11':
+      return HotkeyFailureReason.noX11;
+    case 'channelError':
+      return HotkeyFailureReason.channelError;
+    default:
+      return HotkeyFailureReason.unknown;
+  }
+}
+
+final Set<int> _supportedLinuxVirtualKeys = <int>{
+  for (var k = 0x41; k <= 0x5A; k++) k,
+  for (var k = 0x30; k <= 0x39; k++) k,
+  for (var k = 0x70; k <= 0x87; k++) k,
+  0x08,
+  0x09,
+  0x0D,
+  0x1B,
+  0x20,
+  0x21,
+  0x22,
+  0x23,
+  0x24,
+  0x25,
+  0x26,
+  0x27,
+  0x28,
+  0x2D,
+  0x2E,
+  0xBA,
+  0xBB,
+  0xBC,
+  0xBD,
+  0xBE,
+  0xBF,
+  0xC0,
+  0xDB,
+  0xDC,
+  0xDD,
+  0xDE,
+};
+
+bool isLinuxSupportedVirtualKey(int virtualKey) =>
+    _supportedLinuxVirtualKeys.contains(virtualKey);
 
 @immutable
 class HotkeyBinding {
@@ -25,8 +88,16 @@ class HotkeyBinding {
   String label({bool isMac = false}) {
     final parts = <String>[];
     if (useCtrl) parts.add('Ctrl');
-    if (useWin) parts.add(isMac ? 'Cmd' : 'Win');
-    if (useAlt) parts.add(isMac ? 'Option' : 'Alt');
+    if (useWin) {
+      if (isMac || Platform.isMacOS) {
+        parts.add('Cmd');
+      } else if (Platform.isLinux) {
+        parts.add('Super');
+      } else {
+        parts.add('Win');
+      }
+    }
+    if (useAlt) parts.add(isMac || Platform.isMacOS ? 'Option' : 'Alt');
     if (useShift) parts.add('Shift');
     parts.add(keyName);
     return parts.join('+');
@@ -64,11 +135,13 @@ class HotkeyRegistrationResult {
     required this.status,
     required this.requestedBinding,
     this.effectiveBinding,
+    this.failureReason,
   });
 
   final HotkeyRegistrationStatus status;
   final HotkeyBinding requestedBinding;
   final HotkeyBinding? effectiveBinding;
+  final HotkeyFailureReason? failureReason;
 
   bool get isRegistered =>
       status == HotkeyRegistrationStatus.registered ||
@@ -76,14 +149,14 @@ class HotkeyRegistrationResult {
 }
 
 abstract class LinuxHotkeyBindingApi {
-  Future<bool> registerHotkey(HotkeyBinding binding);
+  Future<HotkeyRegisterResponse> registerHotkey(HotkeyBinding binding);
 }
 
 class LinuxShellHotkeyBindingApi implements LinuxHotkeyBindingApi {
   const LinuxShellHotkeyBindingApi();
 
   @override
-  Future<bool> registerHotkey(HotkeyBinding binding) {
+  Future<HotkeyRegisterResponse> registerHotkey(HotkeyBinding binding) {
     return LinuxShell.registerHotkey(
       virtualKey: binding.virtualKey,
       useCtrl: binding.useCtrl,
@@ -99,7 +172,16 @@ Future<HotkeyRegistrationResult> registerLinuxHotkeyWithFallback({
   required HotkeyBinding requestedBinding,
   HotkeyBinding fallbackBinding = kLinuxTemporaryFallbackHotkey,
 }) async {
-  if (await api.registerHotkey(requestedBinding)) {
+  if (!isLinuxSupportedVirtualKey(requestedBinding.virtualKey)) {
+    return HotkeyRegistrationResult(
+      status: HotkeyRegistrationStatus.failed,
+      requestedBinding: requestedBinding,
+      failureReason: HotkeyFailureReason.unsupportedKey,
+    );
+  }
+
+  final primary = await api.registerHotkey(requestedBinding);
+  if (primary.success) {
     return HotkeyRegistrationResult(
       status: HotkeyRegistrationStatus.registered,
       requestedBinding: requestedBinding,
@@ -111,19 +193,23 @@ Future<HotkeyRegistrationResult> registerLinuxHotkeyWithFallback({
     return HotkeyRegistrationResult(
       status: HotkeyRegistrationStatus.failed,
       requestedBinding: requestedBinding,
+      failureReason: _reasonFromCode(primary.errorCode),
     );
   }
 
-  if (await api.registerHotkey(fallbackBinding)) {
+  final fallback = await api.registerHotkey(fallbackBinding);
+  if (fallback.success) {
     return HotkeyRegistrationResult(
       status: HotkeyRegistrationStatus.fallbackRegistered,
       requestedBinding: requestedBinding,
       effectiveBinding: fallbackBinding,
+      failureReason: _reasonFromCode(primary.errorCode),
     );
   }
 
   return HotkeyRegistrationResult(
     status: HotkeyRegistrationStatus.failed,
     requestedBinding: requestedBinding,
+    failureReason: _reasonFromCode(fallback.errorCode ?? primary.errorCode),
   );
 }

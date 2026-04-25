@@ -116,28 +116,31 @@ class WindowFocusManager {
     }
   }
 
-  Future<void> restoreAndPaste({
+  Future<PasteResponse> restoreAndPaste({
     required int delayBeforeFocusMs,
     required int maxFocusVerifyAttempts,
     required int delayBeforePasteMs,
   }) async {
-    if (Platform.isWindows && _previousWindow == 0) return;
+    if (Platform.isWindows && _previousWindow == 0) {
+      return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
+    }
     if ((Platform.isMacOS || Platform.isLinux) && _previousBundleId == null) {
-      return;
+      return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
     }
 
     try {
       await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
       if (Platform.isMacOS || Platform.isLinux) {
-        await ClipboardWriter.activateAndPaste(
+        return await ClipboardWriter.activateAndPaste(
           bundleId: _previousBundleId!,
           delayMs: delayBeforePasteMs,
         );
-        return;
       }
 
-      if (!_restorePreviousWindows()) return;
+      if (!_restorePreviousWindows()) {
+        return const PasteResponse(success: false, errorCode: 'restoreFailed');
+      }
 
       final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
       if (!focused) {
@@ -147,6 +150,7 @@ class WindowFocusManager {
       }
 
       _simulatePasteWindows();
+      return const PasteResponse(success: true);
     } finally {
       clear();
     }

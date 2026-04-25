@@ -1346,6 +1346,48 @@ abstract class AppLocalizations {
   /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
   String linuxHotkeyConflictWarning(String requested, String fallback);
 
+  /// Shown when XGrabKey fails because another app already owns the shortcut
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {hotkey} is being used by another application. Change it in Settings → Shortcuts.'**
+  String linuxHotkeyGrabFailedWarning(String hotkey);
+
+  /// Shown when the X11 paste flow could not regain focus on the previous window in time
+  ///
+  /// In en, this message translates to:
+  /// **'The clipboard has your content. Paste manually with Ctrl+V.'**
+  String get linuxPasteFocusTimeoutWarning;
+
+  /// Title of the AppIndicator missing banner
+  ///
+  /// In en, this message translates to:
+  /// **'System tray icon unavailable'**
+  String get linuxAppindicatorBannerTitle;
+
+  /// Body of the AppIndicator missing banner
+  ///
+  /// In en, this message translates to:
+  /// **'Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.'**
+  String get linuxAppindicatorBannerBody;
+
+  /// Title of the missing XTest banner
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic paste-back disabled'**
+  String get linuxXtestBannerTitle;
+
+  /// Body of the missing XTest banner
+  ///
+  /// In en, this message translates to:
+  /// **'The X11 XTest extension is not available, so CopyPaste cannot inject Ctrl+V automatically. Items are still copied to the clipboard — paste manually with Ctrl+V.'**
+  String get linuxXtestBannerBody;
+
+  /// Action to dismiss a Linux capability banner
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get linuxBannerDismiss;
+
   /// In-app snackbar shown inside the window when it is raised by a second launch attempt
   ///
   /// In en, this message translates to:
