@@ -44,6 +44,7 @@ accounts, no cloud — your clipboard data never leaves your computer.
 install -d %{buildroot}/opt/copypaste
 cp -a bundle/. %{buildroot}/opt/copypaste/
 chmod 0755 %{buildroot}/opt/copypaste/copypaste
+find %{buildroot}/opt/copypaste/lib -type f -name '*.so' -exec chmod 0755 {} +
 install -d %{buildroot}%{_bindir}
 ln -s /opt/copypaste/copypaste %{buildroot}%{_bindir}/copypaste
 install -Dm644 packaging/com.rgdevment.copypaste.desktop \
@@ -60,3 +61,5 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/com.rgdevment.copypas
 %{_datadir}/icons/hicolor/256x256/apps/com.rgdevment.copypaste.png
 
 %changelog
+* Thu Apr 23 2026 rgdevment <rgdevment@users.noreply.github.com> - @VERSION@-0
+- Automated release from GitHub Actions
