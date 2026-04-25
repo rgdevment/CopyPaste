@@ -340,14 +340,18 @@ jobs:
           cd "$WORK"
           osc checkout home:rgdevment copypaste
           OBS_DIR="home:rgdevment/copypaste"
-          rm -f "$OBS_DIR"/_service "$OBS_DIR"/copypaste.spec "$OBS_DIR"/copypaste.dsc "$OBS_DIR"/debian.* 2>/dev/null || true
+          rm -f "$OBS_DIR"/_service "$OBS_DIR"/copypaste.spec "$OBS_DIR"/copypaste.dsc "$OBS_DIR"/debian.* "$OBS_DIR"/CopyPaste-*.tar.gz 2>/dev/null || true
           STAGE="$(mktemp -d)"
           cp -a "$GITHUB_WORKSPACE/packaging/obs/." "$STAGE/"
-          find "$STAGE" -type f \( -name '_service' -o -name '*.spec' -o -name '*.dsc' -o -name 'changelog' \) \
+          find "$STAGE" -type f \( -name '*.spec' -o -name '*.dsc' -o -name 'changelog' \) \
             -exec sed -i "s/@VERSION@/$VERSION/g; s/Thu, 23 Apr 2026 00:00:00 +0000/$DATE_RFC/g" {} +
-          cp "$STAGE/_service" "$OBS_DIR/_service"
+          TARBALL="CopyPaste-${VERSION}-linux-x64.tar.gz"
+          curl -fSL --retry 5 --retry-delay 5 \
+            -o "$STAGE/$TARBALL" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/${TARBALL}"
           cp "$STAGE/copypaste.spec" "$OBS_DIR/copypaste.spec"
           cp "$STAGE/copypaste.dsc" "$OBS_DIR/copypaste.dsc"
+          cp "$STAGE/$TARBALL" "$OBS_DIR/$TARBALL"
           tar --force-local -C "$STAGE" -cJf "$OBS_DIR/debian.tar.xz" debian
           cd "$OBS_DIR"
           osc addremove
