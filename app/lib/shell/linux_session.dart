@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:core/core.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -116,7 +117,8 @@ bool _hasWaylandSocket(String? runtimeDir) {
     return Directory(runtimeDir)
         .listSync(followLinks: false)
         .any((e) => e.uri.pathSegments.last.startsWith('wayland'));
-  } catch (_) {
+  } catch (e) {
+    AppLogger.warn('linux_session: hasWaylandSocket failed: $e');
     return false;
   }
 }
@@ -133,7 +135,9 @@ Future<bool> linuxPrefersDarkMode() async {
     if (result.exitCode == 0) {
       return (result.stdout as String).contains('dark');
     }
-  } catch (_) {}
+  } catch (e) {
+    AppLogger.warn('linux_session: gsettings color-scheme failed: $e');
+  }
 
   final gtkTheme = (Platform.environment['GTK_THEME'] ?? '').toLowerCase();
   return gtkTheme.contains('dark');
