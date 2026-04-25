@@ -7,11 +7,13 @@ Group:          Productivity/Utilities
 URL:            https://github.com/rgdevment/CopyPaste
 Source0:        CopyPaste-%{version}-linux-x64.tar.gz
 BuildRequires:  desktop-file-utils
+BuildRequires:  hicolor-icon-theme
 ExclusiveArch:  x86_64
 
 %global __brp_check_rpaths %{nil}
 %global __requires_exclude_from ^/opt/copypaste/.*$
 %global __provides_exclude_from ^/opt/copypaste/.*$
+Requires:       hicolor-icon-theme
 %if 0%{?suse_version}
 Requires:       libayatana-appindicator3-1
 Requires:       libkeybinder-3_0-0
