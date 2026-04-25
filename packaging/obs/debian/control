@@ -8,8 +8,7 @@ Homepage: https://github.com/rgdevment/CopyPaste
 
 Package: copypaste
 Architecture: amd64
-Depends: ${shlibs:Depends},
- ${misc:Depends},
+Depends: ${misc:Depends},
  libayatana-appindicator3-1,
  libkeybinder-3.0-0,
  libgtk-3-0 | libgtk-3-0t64,
