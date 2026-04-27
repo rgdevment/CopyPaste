@@ -31,6 +31,11 @@ dev_dependencies:
     flutter_lints: ^6.0.0
     msix: ^3.16.8
 
+msix_config:
+    startup_task:
+        task_id: CopyPasteStartup
+        enabled: true
+
 flutter:
     uses-material-design: true
 

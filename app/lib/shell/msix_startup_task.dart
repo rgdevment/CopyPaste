@@ -41,7 +41,7 @@ class MsixStartupTask {
       return _parseState(raw);
     } on PlatformException catch (e) {
       AppLogger.error(
-        'MsixStartupTask.getState failed: ${e.code} ${e.message}',
+        'MsixStartupTask.getState failed: ${e.code} ${e.message} — ${e.details}',
       );
       return null;
     }
@@ -54,7 +54,9 @@ class MsixStartupTask {
       });
       return _parseState(raw);
     } on PlatformException catch (e) {
-      AppLogger.error('MsixStartupTask.enable failed: ${e.code} ${e.message}');
+      AppLogger.error(
+        'MsixStartupTask.enable failed: ${e.code} ${e.message} — ${e.details}',
+      );
       return null;
     }
   }
@@ -66,7 +68,9 @@ class MsixStartupTask {
       });
       return _parseState(raw);
     } on PlatformException catch (e) {
-      AppLogger.error('MsixStartupTask.disable failed: ${e.code} ${e.message}');
+      AppLogger.error(
+        'MsixStartupTask.disable failed: ${e.code} ${e.message} — ${e.details}',
+      );
       return null;
     }
   }
