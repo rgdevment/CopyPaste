@@ -83,6 +83,16 @@ void RegisterStartupTaskChannel(flutter::FlutterViewController* controller) {
             winrt::init_apartment();
             using namespace winrt::Windows::ApplicationModel;
             auto task = StartupTask::GetAsync(wtask_id).get();
+            if (!task) {
+              shared_result->Error(
+                  "task_not_found",
+                  "StartupTask not found in manifest",
+                  flutter::EncodableValue(
+                      "No startup task with id '" +
+                      winrt::to_string(wtask_id) +
+                      "' is declared in the AppxManifest."));
+              return;
+            }
             if (method == "getState") {
               shared_result->Success(
                   flutter::EncodableValue(StateToString(task.State())));
@@ -101,6 +111,9 @@ void RegisterStartupTaskChannel(flutter::FlutterViewController* controller) {
             char code_buf[32];
             snprintf(code_buf, sizeof(code_buf), "0x%08X",
                      static_cast<unsigned int>(e.code()));
+            // E_INVALIDARG (0x80070057) from GetAsync means the TaskId is not
+            // declared in the AppxManifest. Ensure windows.startupTask is
+            // present in the manifest with a matching TaskId attribute.
             shared_result->Error("winrt_error", code_buf,
                                  flutter::EncodableValue(
                                      winrt::to_string(e.message())));

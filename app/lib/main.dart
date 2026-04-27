@@ -331,9 +331,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
     final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
     final windowsNeedsOnboarding =
-        Platform.isWindows && (!_config.hasSeenOnboarding || isUpdate);
+        Platform.isWindows && !_config.hasSeenOnboarding;
     final linuxNeedsOnboarding =
-        Platform.isLinux && (!_config.hasCompletedOnboarding || isUpdate);
+        Platform.isLinux && !_config.hasCompletedOnboarding;
     final desktopNeedsOnboarding =
         windowsNeedsOnboarding || linuxNeedsOnboarding;
     final showOnStart =
@@ -534,6 +534,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   void _startListening() {
     if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
+    AppLogger.info('_startListening: subscribing to clipboard event stream');
     _listenerSubscription = widget.listener.onEvent.listen(
       _onClipboardEvent,
       onError: (Object e, StackTrace s) {

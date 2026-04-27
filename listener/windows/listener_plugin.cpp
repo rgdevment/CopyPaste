@@ -227,6 +227,8 @@ void ListenerPlugin::StartListening(
   std::lock_guard<std::mutex> lock(sink_mutex_);
   sink_ = std::move(sink);
 
+  clipboard_format_registered_ = false;
+
   HWND hwnd = registrar_->GetView()
                    ? registrar_->GetView()->GetNativeWindow()
                    : nullptr;
@@ -236,6 +238,7 @@ void ListenerPlugin::StartListening(
   HWND topHwnd = hwnd ? GetAncestor(hwnd, GA_ROOT) : nullptr;
   if (topHwnd) {
     AddClipboardFormatListener(topHwnd);
+    clipboard_format_registered_ = true;
   }
 
   window_proc_id_ = registrar_->RegisterTopLevelWindowProcDelegate(
@@ -258,6 +261,7 @@ void ListenerPlugin::StopListening() {
     KillTimer(topHwnd, kClipboardTimerId);
     RemoveClipboardFormatListener(topHwnd);
   }
+  clipboard_format_registered_ = false;
 
   std::lock_guard<std::mutex> lock(sink_mutex_);
   sink_ = nullptr;
@@ -265,6 +269,20 @@ void ListenerPlugin::StopListening() {
 
 std::optional<LRESULT> ListenerPlugin::HandleWindowMessage(
     HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+  // Deferred clipboard registration: if AddClipboardFormatListener was not
+  // called during StartListening (e.g. window handle not ready at plugin-start
+  // time after an MSIX/standalone update), register it here on the first
+  // window message. The hwnd passed to RegisterTopLevelWindowProcDelegate is
+  // always the top-level window, so no GetAncestor() call is needed.
+  if (!clipboard_format_registered_) {
+    if (AddClipboardFormatListener(hwnd)) {
+      clipboard_format_registered_ = true;
+      OutputDebugStringA(
+          "[CopyPaste Listener] AddClipboardFormatListener registered "
+          "deferred (was not ready at StartListening)\n");
+    }
+  }
+
   if (message == WM_CLIPBOARDUPDATE) {
     KillTimer(hwnd, kClipboardTimerId);
     SetTimer(hwnd, kClipboardTimerId, kClipboardTimerDelayMs, nullptr);
