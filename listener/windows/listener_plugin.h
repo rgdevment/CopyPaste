@@ -60,6 +60,8 @@ class ListenerPlugin : public flutter::Plugin {
 
   ULONGLONG last_write_tick_ = 0;
 
+  bool clipboard_format_registered_ = false;
+
   UINT cf_rtf_ = 0;
   UINT cf_html_ = 0;
   UINT cf_exclude_history_ = 0;
