@@ -155,7 +155,9 @@ void main() {
       );
 
       expect(result, isNotNull);
-      final decoded = img.decodeImage(File(result!.imagePath).readAsBytesSync());
+      final decoded = img.decodeImage(
+        File(result!.imagePath).readAsBytesSync(),
+      );
       expect(decoded, isNotNull);
       for (final px in decoded!) {
         expect(px.a, equals(255));
@@ -172,7 +174,11 @@ void main() {
         px.r = 80;
         px.g = 80;
         px.b = 80;
-        px.a = switch (i % 3) { 0 => 0, 1 => 128, _ => 255 };
+        px.a = switch (i % 3) {
+          0 => 0,
+          1 => 128,
+          _ => 255,
+        };
         i++;
       }
       final inputBytes = Uint8List.fromList(img.encodePng(src));
@@ -184,7 +190,9 @@ void main() {
       );
 
       expect(result, isNotNull);
-      final decoded = img.decodeImage(File(result!.imagePath).readAsBytesSync());
+      final decoded = img.decodeImage(
+        File(result!.imagePath).readAsBytesSync(),
+      );
       expect(decoded, isNotNull);
       final alphas = decoded!.map((px) => px.a).toList();
       expect(alphas.where((a) => a == 0).length, greaterThan(0));
@@ -192,34 +200,39 @@ void main() {
       expect(alphas.where((a) => a == 255).length, greaterThan(0));
     });
 
-    test('all-transparent RGBA16 alpha is not mutated (bitsPerChannel guard)', () {
-      final src = img.Image(
-        width: 4,
-        height: 4,
-        numChannels: 4,
-        format: img.Format.uint16,
-      );
-      for (final px in src) {
-        px.r = 1000;
-        px.g = 2000;
-        px.b = 3000;
-        px.a = 0;
-      }
-      final inputBytes = Uint8List.fromList(img.encodePng(src));
+    test(
+      'all-transparent RGBA16 alpha is not mutated (bitsPerChannel guard)',
+      () {
+        final src = img.Image(
+          width: 4,
+          height: 4,
+          numChannels: 4,
+          format: img.Format.uint16,
+        );
+        for (final px in src) {
+          px.r = 1000;
+          px.g = 2000;
+          px.b = 3000;
+          px.a = 0;
+        }
+        final inputBytes = Uint8List.fromList(img.encodePng(src));
 
-      final result = ImageProcessor.processSync(
-        imageBytes: inputBytes,
-        id: 'rgba16-transparent',
-        imagesDir: tempDir.path,
-      );
+        final result = ImageProcessor.processSync(
+          imageBytes: inputBytes,
+          id: 'rgba16-transparent',
+          imagesDir: tempDir.path,
+        );
 
-      expect(result, isNotNull);
-      final decoded = img.decodeImage(File(result!.imagePath).readAsBytesSync());
-      expect(decoded, isNotNull);
-      for (final px in decoded!) {
-        expect(px.a, equals(0));
-      }
-    });
+        expect(result, isNotNull);
+        final decoded = img.decodeImage(
+          File(result!.imagePath).readAsBytesSync(),
+        );
+        expect(decoded, isNotNull);
+        for (final px in decoded!) {
+          expect(px.a, equals(0));
+        }
+      },
+    );
 
     test('RGB8 (no alpha channel) round-trips with correct dimensions', () {
       final src = img.Image(width: 4, height: 4);
