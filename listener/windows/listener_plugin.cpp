@@ -878,31 +878,36 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
 
   std::wstring wpath = Utf8ToWide(imagePath);
 
-  // Use GDI+ to load any image format (PNG, BMP, JPEG, etc.)
   Gdiplus::Bitmap bitmap(wpath.c_str());
   if (bitmap.GetLastStatus() != Gdiplus::Ok) return false;
 
   HBITMAP hBitmap = nullptr;
-  Gdiplus::Color bg(0, 255, 255, 255);
+  Gdiplus::Color bg(255, 255, 255, 255);
   if (bitmap.GetHBITMAP(bg, &hBitmap) != Gdiplus::Ok || !hBitmap)
     return false;
 
   BITMAP bm = {};
   GetObject(hBitmap, sizeof(bm), &bm);
 
-  BITMAPINFOHEADER bih = {};
-  bih.biSize = sizeof(BITMAPINFOHEADER);
-  bih.biWidth = bm.bmWidth;
-  bih.biHeight = bm.bmHeight;
-  bih.biPlanes = 1;
-  bih.biBitCount = 32;
-  bih.biCompression = BI_RGB;
-
   size_t rowBytes = static_cast<size_t>(bm.bmWidth) * 4;
   size_t imgSize = rowBytes * bm.bmHeight;
-  bih.biSizeImage = static_cast<DWORD>(imgSize);
 
-  size_t dibSize = sizeof(BITMAPINFOHEADER) + imgSize;
+  BITMAPV5HEADER bv5 = {};
+  bv5.bV5Size = sizeof(BITMAPV5HEADER);
+  bv5.bV5Width = bm.bmWidth;
+  bv5.bV5Height = bm.bmHeight;
+  bv5.bV5Planes = 1;
+  bv5.bV5BitCount = 32;
+  bv5.bV5Compression = BI_BITFIELDS;
+  bv5.bV5SizeImage = static_cast<DWORD>(imgSize);
+  bv5.bV5RedMask = 0x00FF0000;
+  bv5.bV5GreenMask = 0x0000FF00;
+  bv5.bV5BlueMask = 0x000000FF;
+  bv5.bV5AlphaMask = 0xFF000000;
+  bv5.bV5CSType = LCS_WINDOWS_COLOR_SPACE;
+  bv5.bV5Intent = LCS_GM_IMAGES;
+
+  size_t dibSize = sizeof(BITMAPV5HEADER) + imgSize;
   HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, dibSize);
   if (!hMem) {
     DeleteObject(hBitmap);
@@ -916,14 +921,32 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
     return false;
   }
 
-  memcpy(ptr, &bih, sizeof(BITMAPINFOHEADER));
+  std::memcpy(ptr, &bv5, sizeof(BITMAPV5HEADER));
+
+  BITMAPINFOHEADER bih = {};
+  bih.biSize = sizeof(BITMAPINFOHEADER);
+  bih.biWidth = bm.bmWidth;
+  bih.biHeight = bm.bmHeight;
+  bih.biPlanes = 1;
+  bih.biBitCount = 32;
+  bih.biCompression = BI_RGB;
+  bih.biSizeImage = static_cast<DWORD>(imgSize);
 
   HDC hDC = GetDC(nullptr);
-  auto* bi = reinterpret_cast<BITMAPINFO*>(ptr);
-  int scanLines = GetDIBits(hDC, hBitmap, 0, bm.bmHeight,
-            static_cast<uint8_t*>(ptr) + sizeof(BITMAPINFOHEADER),
-            bi, DIB_RGB_COLORS);
+  auto* bi = reinterpret_cast<BITMAPINFO*>(&bih);
+  int scanLines = GetDIBits(
+      hDC, hBitmap, 0, bm.bmHeight,
+      static_cast<uint8_t*>(ptr) + sizeof(BITMAPV5HEADER),
+      bi, DIB_RGB_COLORS);
   ReleaseDC(nullptr, hDC);
+
+  if (scanLines > 0) {
+    uint8_t* pixels = static_cast<uint8_t*>(ptr) + sizeof(BITMAPV5HEADER);
+    for (size_t i = 3; i < imgSize; i += 4) {
+      pixels[i] = 0xFF;
+    }
+  }
+
   GlobalUnlock(hMem);
   DeleteObject(hBitmap);
 
@@ -941,33 +964,8 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
   }
 
   EmptyClipboard();
-  bool ok = SetClipboardData(CF_DIB, hMem) != nullptr;
+  bool ok = SetClipboardData(CF_DIBV5, hMem) != nullptr;
   if (!ok) GlobalFree(hMem);
-
-  if (ok) {
-    DWORD attr = GetFileAttributesW(wpath.c_str());
-    if (attr != INVALID_FILE_ATTRIBUTES) {
-      size_t pathBytes = (wpath.size() + 1) * sizeof(wchar_t);
-      size_t dropSize = sizeof(DROPFILES) + pathBytes + sizeof(wchar_t);
-      HGLOBAL hDrop = GlobalAlloc(GHND, dropSize);
-      if (hDrop) {
-        auto* df = static_cast<DROPFILES*>(GlobalLock(hDrop));
-        if (df) {
-          df->pFiles = sizeof(DROPFILES);
-          df->fWide = TRUE;
-          auto* dest = reinterpret_cast<wchar_t*>(
-              reinterpret_cast<uint8_t*>(df) + sizeof(DROPFILES));
-          memcpy(dest, wpath.c_str(), pathBytes);
-          GlobalUnlock(hDrop);
-          if (!SetClipboardData(CF_HDROP, hDrop)) {
-            GlobalFree(hDrop);
-          }
-        } else {
-          GlobalFree(hDrop);
-        }
-      }
-    }
-  }
 
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();

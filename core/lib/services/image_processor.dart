@@ -45,6 +45,21 @@ class ImageProcessor {
     }
     if (decoded == null) return null;
 
+    if (decoded.numChannels == 4 && decoded.bitsPerChannel == 8) {
+      var allTransparent = true;
+      for (final px in decoded) {
+        if (px.a != 0) {
+          allTransparent = false;
+          break;
+        }
+      }
+      if (allTransparent) {
+        for (final px in decoded) {
+          px.a = 255;
+        }
+      }
+    }
+
     // Encoding and file-write errors (disk full, permissions) are NOT silenced —
     // they propagate out of the Isolate and are caught + logged by the caller.
     final pngBytes = img.encodePng(decoded);
