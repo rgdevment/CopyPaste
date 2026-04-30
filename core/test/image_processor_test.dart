@@ -136,4 +136,110 @@ void main() {
       expect(result.fileSize, equals(savedSize));
     });
   });
+
+  group('alpha normalization', () {
+    test('all-transparent RGBA8 pixels are opaquified with RGB preserved', () {
+      final src = img.Image(width: 4, height: 4, numChannels: 4);
+      for (final px in src) {
+        px.r = 100;
+        px.g = 150;
+        px.b = 200;
+        px.a = 0;
+      }
+      final inputBytes = Uint8List.fromList(img.encodePng(src));
+
+      final result = ImageProcessor.processSync(
+        imageBytes: inputBytes,
+        id: 'all-transparent',
+        imagesDir: tempDir.path,
+      );
+
+      expect(result, isNotNull);
+      final decoded = img.decodeImage(File(result!.imagePath).readAsBytesSync());
+      expect(decoded, isNotNull);
+      for (final px in decoded!) {
+        expect(px.a, equals(255));
+        expect(px.r, equals(100));
+        expect(px.g, equals(150));
+        expect(px.b, equals(200));
+      }
+    });
+
+    test('partial-transparency RGBA8 alpha distribution is preserved', () {
+      final src = img.Image(width: 4, height: 4, numChannels: 4);
+      var i = 0;
+      for (final px in src) {
+        px.r = 80;
+        px.g = 80;
+        px.b = 80;
+        px.a = switch (i % 3) { 0 => 0, 1 => 128, _ => 255 };
+        i++;
+      }
+      final inputBytes = Uint8List.fromList(img.encodePng(src));
+
+      final result = ImageProcessor.processSync(
+        imageBytes: inputBytes,
+        id: 'partial-transparent',
+        imagesDir: tempDir.path,
+      );
+
+      expect(result, isNotNull);
+      final decoded = img.decodeImage(File(result!.imagePath).readAsBytesSync());
+      expect(decoded, isNotNull);
+      final alphas = decoded!.map((px) => px.a).toList();
+      expect(alphas.where((a) => a == 0).length, greaterThan(0));
+      expect(alphas.where((a) => a == 128).length, greaterThan(0));
+      expect(alphas.where((a) => a == 255).length, greaterThan(0));
+    });
+
+    test('all-transparent RGBA16 alpha is not mutated (bitsPerChannel guard)', () {
+      final src = img.Image(
+        width: 4,
+        height: 4,
+        numChannels: 4,
+        format: img.Format.uint16,
+      );
+      for (final px in src) {
+        px.r = 1000;
+        px.g = 2000;
+        px.b = 3000;
+        px.a = 0;
+      }
+      final inputBytes = Uint8List.fromList(img.encodePng(src));
+
+      final result = ImageProcessor.processSync(
+        imageBytes: inputBytes,
+        id: 'rgba16-transparent',
+        imagesDir: tempDir.path,
+      );
+
+      expect(result, isNotNull);
+      final decoded = img.decodeImage(File(result!.imagePath).readAsBytesSync());
+      expect(decoded, isNotNull);
+      for (final px in decoded!) {
+        expect(px.a, equals(0));
+      }
+    });
+
+    test('RGB8 (no alpha channel) round-trips with correct dimensions', () {
+      final src = img.Image(width: 4, height: 4);
+      for (final px in src) {
+        px.r = 10;
+        px.g = 20;
+        px.b = 30;
+      }
+      final inputBytes = Uint8List.fromList(img.encodePng(src));
+
+      final result = ImageProcessor.processSync(
+        imageBytes: inputBytes,
+        id: 'rgb-no-alpha',
+        imagesDir: tempDir.path,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.width, equals(4));
+      expect(result.height, equals(4));
+      expect(File(result.imagePath).existsSync(), isTrue);
+    });
+  });
 }

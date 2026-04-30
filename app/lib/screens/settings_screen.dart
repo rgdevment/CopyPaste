@@ -1453,7 +1453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           .first;
       final suggestedName = 'CopyPaste_Backup_$ts';
 
-      final path = await FilePicker.platform.saveFile(
+      final path = await FilePicker.saveFile(
         dialogTitle: 'Save Backup',
         fileName: '$suggestedName.zip',
         type: FileType.custom,
@@ -1494,7 +1494,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _restoreBackup() async {
     final l = AppLocalizations.of(context);
 
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       dialogTitle: l.restoreDialogTitle,
       type: FileType.custom,
       allowedExtensions: ['zip'],
