@@ -377,6 +377,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingHideOnDeactivate => 'Hide on deactivate';
 
   @override
+  String get settingRememberWindowPosition => 'Remember window position';
+
+  @override
   String get settingScrollToTopOnOpen => 'Scroll to top on open';
 
   @override
@@ -396,6 +399,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitleHideOnDeactivate => 'Close window when clicking outside';
+
+  @override
+  String get subtitleRememberWindowPosition =>
+      'Reopen the window where you left it last time';
 
   @override
   String get subtitleScrollToTopOnOpen =>

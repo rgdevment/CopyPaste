@@ -226,6 +226,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   final _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
   String? _lastTrayLocale;
+  Future<void>? _pendingConfigSave;
   bool _showPermissionGate = false;
   bool _showOnboarding = false;
   bool _showWaylandUnsupported = false;
@@ -246,6 +247,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       showInTaskbar: false,
       popupWidth: _config.popupWidth.toDouble(),
       popupHeight: _config.popupHeight.toDouble(),
+      rememberPositionEnabled: () => _config.rememberWindowPosition,
+      savedPositionProvider: () {
+        final x = _config.lastWindowX;
+        final y = _config.lastWindowY;
+        if (x == null || y == null) return null;
+        return (x, y);
+      },
+      onPositionPersist: _onPositionPersist,
     );
     _trayIcon = TrayIcon(onToggle: _toggleWindow, onExit: _exitApp);
     _hotkeyHandler = HotkeyHandler(config: _config, onHotkey: _onHotkey);
@@ -386,9 +395,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         await _appWindow.enterGateMode();
       } else {
         if (!_config.accessibilityWasGranted) {
-          _config = _config.copyWith(accessibilityWasGranted: true);
           unawaited(
-            _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+            _persistConfig((c) => c.copyWith(accessibilityWasGranted: true)),
           );
         }
         if (isFirstRun) {
@@ -411,9 +419,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         widget.storage.markAsInitialized();
       }
       if (isUpdate && Platform.isWindows) {
-        _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
         unawaited(
-          _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+          _persistConfig(
+            (c) => c.copyWith(lastRunVersion: AppConfig.appVersion),
+          ),
         );
       }
     }
@@ -434,9 +443,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error('Classifier migration failed: $e\n$s');
       return; // version not saved → retries on next startup
     }
-    _config = _config.copyWith(lastRunVersion: AppConfig.appVersion);
     unawaited(
-      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
+      _persistConfig((c) => c.copyWith(lastRunVersion: AppConfig.appVersion)),
     );
   }
 
@@ -728,11 +736,21 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   void _dismissHint() {
     if (_config.hasSeenHint) return;
-    _config = _config.copyWith(hasSeenHint: true);
-    unawaited(
-      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
-    );
+    unawaited(_persistConfig((c) => c.copyWith(hasSeenHint: true)));
     if (mounted) setState(() {});
+  }
+
+  Future<void> _persistConfig(AppConfig Function(AppConfig) update) {
+    _config = update(_config);
+    final path = '${widget.storage.configPath}/${AppConfig.fileName}';
+    final next = (_pendingConfigSave ?? Future<void>.value())
+        .catchError((Object _) {})
+        .then((_) => _config.save(path));
+    _pendingConfigSave = next;
+    next.catchError((Object e) {
+      AppLogger.warn('config save failed: $e');
+    });
+    return next;
   }
 
   Future<void> _updateLinuxConfig(AppConfig Function(AppConfig) update) async {
@@ -759,6 +777,13 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         ScaffoldMessenger.maybeOf(ctx)?.clearSnackBars();
       }
     }
+  }
+
+  void _onPositionPersist(double x, double y) {
+    if (_config.lastWindowX == x && _config.lastWindowY == y) return;
+    unawaited(
+      _persistConfig((c) => c.copyWith(lastWindowX: x, lastWindowY: y)),
+    );
   }
 
   Future<void> _onPasteItem(
@@ -1047,24 +1072,22 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onPermissionGranted() async {
-    _config = _config.copyWith(accessibilityWasGranted: true);
-    unawaited(
-      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
-    );
+    unawaited(_persistConfig((c) => c.copyWith(accessibilityWasGranted: true)));
     await _appWindow.exitGateMode();
     if (mounted) setState(() => _showPermissionGate = false);
   }
 
   Future<void> _onOnboardingDismissed(AppConfig fromOnboarding) async {
-    _config = fromOnboarding.copyWith(
-      hasSeenOnboarding: true,
-      hasCompletedOnboarding: true,
-      lastRunVersion: AppConfig.appVersion,
+    unawaited(
+      _persistConfig(
+        (_) => fromOnboarding.copyWith(
+          hasSeenOnboarding: true,
+          hasCompletedOnboarding: true,
+          lastRunVersion: AppConfig.appVersion,
+        ),
+      ),
     );
     _applyOnboardingPersistence();
-    unawaited(
-      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
-    );
     setState(() => _showOnboarding = false);
     await _appWindow.exitGateMode();
     unawaited(_showStartupBalloon());
@@ -1074,15 +1097,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     BuildContext ctx,
     AppConfig fromOnboarding,
   ) async {
-    _config = fromOnboarding.copyWith(
-      hasSeenOnboarding: true,
-      hasCompletedOnboarding: true,
-      lastRunVersion: AppConfig.appVersion,
+    unawaited(
+      _persistConfig(
+        (_) => fromOnboarding.copyWith(
+          hasSeenOnboarding: true,
+          hasCompletedOnboarding: true,
+          lastRunVersion: AppConfig.appVersion,
+        ),
+      ),
     );
     _applyOnboardingPersistence();
-    unawaited(
-      _config.save('${widget.storage.configPath}/${AppConfig.fileName}'),
-    );
     setState(() => _showOnboarding = false);
     await _appWindow.exitGateMode();
     await Future<void>.delayed(const Duration(milliseconds: 150));

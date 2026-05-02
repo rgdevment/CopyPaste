@@ -31,6 +31,36 @@ typedef _MonitorFromPointDart = int Function(int x, int y, int dwFlags);
 typedef _GetMonitorInfoWNative = Int32 Function(IntPtr hMonitor, Pointer lpmi);
 typedef _GetMonitorInfoWDart = int Function(int hMonitor, Pointer lpmi);
 
+typedef _SetWindowPosNative =
+    Int32 Function(
+      IntPtr hWnd,
+      IntPtr hWndInsertAfter,
+      Int32 x,
+      Int32 y,
+      Int32 cx,
+      Int32 cy,
+      Uint32 uFlags,
+    );
+typedef _SetWindowPosDart =
+    int Function(
+      int hWnd,
+      int hWndInsertAfter,
+      int x,
+      int y,
+      int cx,
+      int cy,
+      int uFlags,
+    );
+
+typedef _FindWindowWNative =
+    IntPtr Function(Pointer<Utf16> lpClassName, Pointer<Utf16> lpWindowName);
+typedef _FindWindowWDart =
+    int Function(Pointer<Utf16> lpClassName, Pointer<Utf16> lpWindowName);
+
+typedef _GetWindowRectNative =
+    Int32 Function(IntPtr hWnd, Pointer<Int32> lpRect);
+typedef _GetWindowRectDart = int Function(int hWnd, Pointer<Int32> lpRect);
+
 class _Win32Pos {
   _Win32Pos._();
   static _Win32Pos? _instance;
@@ -51,6 +81,14 @@ class _Win32Pos {
       .lookupFunction<_GetMonitorInfoWNative, _GetMonitorInfoWDart>(
         'GetMonitorInfoW',
       );
+  late final setWindowPosFunc = _u32
+      .lookupFunction<_SetWindowPosNative, _SetWindowPosDart>('SetWindowPos');
+  late final findWindowFunc = _u32
+      .lookupFunction<_FindWindowWNative, _FindWindowWDart>('FindWindowW');
+  late final getWindowRectFunc = _u32
+      .lookupFunction<_GetWindowRectNative, _GetWindowRectDart>(
+        'GetWindowRect',
+      );
 }
 
 class AppWindow {
@@ -59,6 +97,9 @@ class AppWindow {
     this.showInTaskbar = true,
     double popupWidth = 360,
     double popupHeight = 500,
+    this.rememberPositionEnabled,
+    this.savedPositionProvider,
+    this.onPositionPersist,
   }) : _popupWidth = popupWidth,
        _popupHeight = popupHeight;
 
@@ -68,6 +109,9 @@ class AppWindow {
   static const double _settingsHeight = 680;
 
   final void Function(bool visible)? onVisibilityChanged;
+  final bool Function()? rememberPositionEnabled;
+  final (double, double)? Function()? savedPositionProvider;
+  final void Function(double x, double y)? onPositionPersist;
   double _popupWidth;
   double _popupHeight;
   bool _visible = false;
@@ -270,7 +314,48 @@ class AppWindow {
     x = x.clamp(waLeft, waRight - _popupWidth);
     y = y.clamp(waTop, waBottom - _popupHeight);
 
-    await windowManager.setPosition(Offset(x, y));
+    if (Platform.isWindows) {
+      final ok = _setPositionWin32(x, y);
+      if (!ok) {
+        AppLogger.warn(
+          '_setPositionWin32 returned false, falling back to windowManager.setPosition',
+        );
+        await windowManager.setPosition(Offset(x, y));
+      }
+    } else {
+      await windowManager.setPosition(Offset(x, y));
+    }
+  }
+
+  static bool _setPositionWin32(double x, double y) {
+    try {
+      const swpNoSize = 0x0001;
+      const swpNoZOrder = 0x0004;
+      const swpNoActivate = 0x0010;
+      final w = _Win32Pos.instance;
+      final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+      final windowName = 'CopyPaste'.toNativeUtf16();
+      try {
+        final hwnd = w.findWindowFunc(className, windowName);
+        if (hwnd == 0) return false;
+        final result = w.setWindowPosFunc(
+          hwnd,
+          0,
+          x.toInt(),
+          y.toInt(),
+          0,
+          0,
+          swpNoSize | swpNoZOrder | swpNoActivate,
+        );
+        return result != 0;
+      } finally {
+        calloc.free(className);
+        calloc.free(windowName);
+      }
+    } catch (e) {
+      AppLogger.warn('_setPositionWin32 failed: $e');
+      return false;
+    }
   }
 
   static (double, double)? _getCursorPosWin32() {
@@ -332,15 +417,97 @@ class AppWindow {
     }
   }
 
+  static (double, double)? _getPositionWin32() {
+    try {
+      final w = _Win32Pos.instance;
+      final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+      final windowName = 'CopyPaste'.toNativeUtf16();
+      final rect = calloc<Int32>(4);
+      try {
+        final hwnd = w.findWindowFunc(className, windowName);
+        if (hwnd == 0) return null;
+        final result = w.getWindowRectFunc(hwnd, rect);
+        if (result == 0) return null;
+        return (rect[0].toDouble(), rect[1].toDouble());
+      } finally {
+        calloc.free(className);
+        calloc.free(windowName);
+        calloc.free(rect);
+      }
+    } catch (e) {
+      AppLogger.warn('_getPositionWin32 failed: $e');
+      return null;
+    }
+  }
+
+  static bool isPositionInSaneRange(double x, double y) {
+    if (!x.isFinite || !y.isFinite) return false;
+    if (x < -10000 || x > 50000) return false;
+    if (y < -10000 || y > 30000) return false;
+    return true;
+  }
+
+  bool _isPositionVisible(double x, double y) {
+    if (!isPositionInSaneRange(x, y)) return false;
+    if (Platform.isWindows) {
+      try {
+        const monitorDefaultToNull = 0x00000000;
+        final w = _Win32Pos.instance;
+        final centerX = (x + _popupWidth / 2).toInt();
+        final centerY = (y + _popupHeight / 2).toInt();
+        final hMonitor = w.monitorFromPointFunc(
+          centerX,
+          centerY,
+          monitorDefaultToNull,
+        );
+        return hMonitor != 0;
+      } catch (e) {
+        AppLogger.warn('_isPositionVisible failed: $e');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<bool> _tryRestoreSavedPosition() async {
+    if (rememberPositionEnabled?.call() != true) return false;
+    final saved = savedPositionProvider?.call();
+    if (saved == null) return false;
+    final (x, y) = saved;
+    if (!_isPositionVisible(x, y)) return false;
+    if (Platform.isWindows) {
+      final ok = _setPositionWin32(x, y);
+      if (!ok) {
+        await windowManager.setPosition(Offset(x, y));
+      }
+    } else {
+      await windowManager.setPosition(Offset(x, y));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      try {
+        final actual = await windowManager.getPosition();
+        if ((actual.dx - x).abs() > 100 || (actual.dy - y).abs() > 100) {
+          return false;
+        }
+      } catch (_) {}
+    }
+    return true;
+  }
+
   Future<void> show() async {
     AppLogger.info('AppWindow.show: starting');
     if (Platform.isLinux) {
       await windowManager.setSkipTaskbar(false);
       await windowManager.show();
-      await _positionNearCursor();
+      final restored = await _tryRestoreSavedPosition();
+      if (!restored) {
+        await _positionNearCursor();
+      }
       await LinuxShell.focusWindow();
     } else {
-      await _positionNearCursor();
+      final restored = await _tryRestoreSavedPosition();
+      if (!restored) {
+        await _positionNearCursor();
+      }
       if (Platform.isWindows) {
         await windowManager.setSkipTaskbar(false);
       }
@@ -355,9 +522,34 @@ class AppWindow {
     onVisibilityChanged?.call(true);
   }
 
+  Future<void> _captureCurrentPosition() async {
+    if (rememberPositionEnabled?.call() != true) return;
+    try {
+      double? x;
+      double? y;
+      if (Platform.isWindows) {
+        final pos = _getPositionWin32();
+        if (pos != null) {
+          x = pos.$1;
+          y = pos.$2;
+        }
+      } else {
+        final pos = await windowManager.getPosition();
+        x = pos.dx;
+        y = pos.dy;
+      }
+      if (x != null && y != null) {
+        onPositionPersist?.call(x, y);
+      }
+    } catch (e) {
+      AppLogger.warn('hide: failed to read window position: $e');
+    }
+  }
+
   Future<void> hide() async {
     if (!_visible) return;
     _visible = false;
+    await _captureCurrentPosition();
     if (showInTaskbar && Platform.isWindows) {
       await windowManager.minimize();
     } else {
@@ -394,6 +586,7 @@ class AppWindow {
   }
 
   Future<void> enterSettingsMode() async {
+    await _captureCurrentPosition();
     _settingsMode = true;
     await windowManager.setResizable(true);
     Future<bool>? configureFuture;
@@ -447,6 +640,7 @@ class AppWindow {
 
   Future<void> enterGateMode() async {
     AppLogger.info('AppWindow.enterGateMode: starting');
+    await _captureCurrentPosition();
     _gateMode = true;
     await windowManager.setResizable(false);
     await windowManager.setMinimumSize(const Size(_gateWidth, _gateHeight));

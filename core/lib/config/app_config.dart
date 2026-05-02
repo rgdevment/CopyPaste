@@ -47,6 +47,9 @@ class AppConfig {
     this.imagesQuotaMB = 0,
     this.linuxAppindicatorWarningDismissed = false,
     this.linuxXtestWarningDismissed = false,
+    this.rememberWindowPosition = false,
+    this.lastWindowX,
+    this.lastWindowY,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -137,6 +140,11 @@ class AppConfig {
       linuxXtestWarningDismissed:
           json['linuxXtestWarningDismissed'] as bool? ??
           defaults.linuxXtestWarningDismissed,
+      rememberWindowPosition:
+          json['rememberWindowPosition'] as bool? ??
+          defaults.rememberWindowPosition,
+      lastWindowX: (json['lastWindowX'] as num?)?.toDouble(),
+      lastWindowY: (json['lastWindowY'] as num?)?.toDouble(),
     );
   }
 
@@ -213,6 +221,10 @@ class AppConfig {
   final bool linuxAppindicatorWarningDismissed;
   final bool linuxXtestWarningDismissed;
 
+  final bool rememberWindowPosition;
+  final double? lastWindowX;
+  final double? lastWindowY;
+
   AppConfig copyWith({
     String? preferredLanguage,
     bool? runOnStartup,
@@ -254,6 +266,9 @@ class AppConfig {
     int? imagesQuotaMB,
     bool? linuxAppindicatorWarningDismissed,
     bool? linuxXtestWarningDismissed,
+    bool? rememberWindowPosition,
+    Object? lastWindowX = _sentinel,
+    Object? lastWindowY = _sentinel,
   }) => AppConfig(
     preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     runOnStartup: runOnStartup ?? this.runOnStartup,
@@ -308,6 +323,14 @@ class AppConfig {
         this.linuxAppindicatorWarningDismissed,
     linuxXtestWarningDismissed:
         linuxXtestWarningDismissed ?? this.linuxXtestWarningDismissed,
+    rememberWindowPosition:
+        rememberWindowPosition ?? this.rememberWindowPosition,
+    lastWindowX: lastWindowX == _sentinel
+        ? this.lastWindowX
+        : lastWindowX as double?,
+    lastWindowY: lastWindowY == _sentinel
+        ? this.lastWindowY
+        : lastWindowY as double?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -352,6 +375,9 @@ class AppConfig {
     'imagesQuotaMB': imagesQuotaMB,
     'linuxAppindicatorWarningDismissed': linuxAppindicatorWarningDismissed,
     'linuxXtestWarningDismissed': linuxXtestWarningDismissed,
+    'rememberWindowPosition': rememberWindowPosition,
+    if (lastWindowX != null) 'lastWindowX': lastWindowX,
+    if (lastWindowY != null) 'lastWindowY': lastWindowY,
   };
 
   static Future<AppConfig> load(String configPath) async {

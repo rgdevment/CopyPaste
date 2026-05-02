@@ -795,4 +795,134 @@ void main() {
       );
     });
   });
+
+  group('AppConfig PR #12 window position fields', () {
+    test('default values', () {
+      const c = AppConfig();
+      expect(c.rememberWindowPosition, isFalse);
+      expect(c.lastWindowX, isNull);
+      expect(c.lastWindowY, isNull);
+    });
+
+    test('toJson with defaults omits lastWindowX and lastWindowY', () {
+      const c = AppConfig();
+      final json = c.toJson();
+      expect(json.containsKey('lastWindowX'), isFalse);
+      expect(json.containsKey('lastWindowY'), isFalse);
+      expect(json.containsKey('rememberWindowPosition'), isTrue);
+    });
+
+    test('toJson with values present includes lastWindowX and lastWindowY', () {
+      const c = AppConfig(lastWindowX: 100.0, lastWindowY: 200.0);
+      final json = c.toJson();
+      expect(json['lastWindowX'], equals(100.0));
+      expect(json['lastWindowY'], equals(200.0));
+    });
+
+    test('fromJson with values present reads them correctly', () {
+      final c = AppConfig.fromJson({
+        'lastWindowX': 123.5,
+        'lastWindowY': 456.5,
+        'rememberWindowPosition': true,
+      });
+      expect(c.lastWindowX, equals(123.5));
+      expect(c.lastWindowY, equals(456.5));
+      expect(c.rememberWindowPosition, isTrue);
+    });
+
+    test(
+      'fromJson with values absent leaves lastWindowX and lastWindowY null',
+      () {
+        final c = AppConfig.fromJson({});
+        expect(c.lastWindowX, isNull);
+        expect(c.lastWindowY, isNull);
+      },
+    );
+
+    test('fromJson with lastWindowX as int converts to double', () {
+      final c = AppConfig.fromJson({'lastWindowX': 1920});
+      expect(c.lastWindowX, equals(1920.0));
+      expect(c.lastWindowX, isA<double>());
+    });
+
+    test('rememberWindowPosition is always present in toJson', () {
+      const c1 = AppConfig(rememberWindowPosition: false);
+      const c2 = AppConfig(rememberWindowPosition: true);
+      expect(c1.toJson().containsKey('rememberWindowPosition'), isTrue);
+      expect(c1.toJson()['rememberWindowPosition'], isFalse);
+      expect(c2.toJson()['rememberWindowPosition'], isTrue);
+    });
+
+    test('copyWith without lastWindowX preserves existing value', () {
+      const c = AppConfig(lastWindowX: 100.0);
+      final updated = c.copyWith(rememberWindowPosition: true);
+      expect(updated.lastWindowX, equals(100.0));
+    });
+
+    test('copyWith(lastWindowX: null) clears the value', () {
+      const c = AppConfig(lastWindowX: 100.0);
+      final updated = c.copyWith(lastWindowX: null);
+      expect(updated.lastWindowX, isNull);
+    });
+
+    test('copyWith(lastWindowX: 200.0) updates the value', () {
+      const c = AppConfig(lastWindowX: 100.0);
+      final updated = c.copyWith(lastWindowX: 200.0);
+      expect(updated.lastWindowX, equals(200.0));
+    });
+
+    test('copyWith without lastWindowY preserves existing value', () {
+      const c = AppConfig(lastWindowY: 50.0);
+      final updated = c.copyWith(rememberWindowPosition: true);
+      expect(updated.lastWindowY, equals(50.0));
+    });
+
+    test('copyWith(lastWindowY: null) clears the value', () {
+      const c = AppConfig(lastWindowY: 50.0);
+      final updated = c.copyWith(lastWindowY: null);
+      expect(updated.lastWindowY, isNull);
+    });
+
+    test('copyWith(lastWindowY: 300.0) updates the value', () {
+      const c = AppConfig(lastWindowY: 50.0);
+      final updated = c.copyWith(lastWindowY: 300.0);
+      expect(updated.lastWindowY, equals(300.0));
+    });
+
+    test('copyWith(rememberWindowPosition: true) updates correctly', () {
+      const c = AppConfig();
+      final updated = c.copyWith(rememberWindowPosition: true);
+      expect(updated.rememberWindowPosition, isTrue);
+    });
+
+    test(
+      'copyWith without rememberWindowPosition preserves existing value',
+      () {
+        const c = AppConfig(rememberWindowPosition: true);
+        final updated = c.copyWith(lastWindowX: 10.0);
+        expect(updated.rememberWindowPosition, isTrue);
+      },
+    );
+
+    test('save and load round-trip preserves window position fields', () async {
+      final dir = Directory.systemTemp.createTempSync(
+        'config_window_pos_test_',
+      );
+      final path = '${dir.path}/config.json';
+      try {
+        const original = AppConfig(
+          rememberWindowPosition: true,
+          lastWindowX: 123.5,
+          lastWindowY: 456.5,
+        );
+        await original.save(path);
+        final loaded = await AppConfig.load(path);
+        expect(loaded.rememberWindowPosition, isTrue);
+        expect(loaded.lastWindowX, equals(123.5));
+        expect(loaded.lastWindowY, equals(456.5));
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+  });
 }

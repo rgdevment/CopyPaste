@@ -139,6 +139,7 @@
   "settingLinesCollapsed": "L\u00edneas contra\u00eddas",
   "settingLinesExpanded": "L\u00edneas expandidas",
   "settingHideOnDeactivate": "Ocultar al hacer clic fuera",
+  "settingRememberWindowPosition": "Recordar posición de la ventana",
   "settingScrollToTopOnOpen": "Ir al inicio al abrir",
   "settingClearSearchOnOpen": "Limpiar b\u00fasqueda al abrir",
   "settingRetentionDaysLabel": "D\u00edas de retenci\u00f3n (0 = sin l\u00edmite)",
@@ -147,6 +148,7 @@
 
   "subtitleStartupDesc": "Se inicia en segundo plano al iniciar sesi\u00f3n",
   "subtitleHideOnDeactivate": "Cerrar la ventana al hacer clic fuera",
+  "subtitleRememberWindowPosition": "Reabrir la ventana donde la dejaste la última vez",
   "subtitleScrollToTopOnOpen": "Restablece el desplazamiento y selecciona el \u00faltimo elemento",
   "subtitleClearSearchOnOpen": "Borra el texto de b\u00fasqueda cada vez",
   "subtitlePasteSpeed": "Ajustar tiempos de restauraci\u00f3n y pegado",

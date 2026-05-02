@@ -83,6 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _themeMode;
 
   late bool _hideOnDeactivate;
+  late bool _rememberWindowPosition;
   late bool _resetScrollOnShow;
   late bool _resetSearchOnShow;
   late bool _resetFiltersOnShow;
@@ -131,6 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _cardMaxLines = widget.config.cardMaxLines;
     _themeMode = widget.config.themeMode;
     _hideOnDeactivate = widget.config.hideOnDeactivate;
+    _rememberWindowPosition = widget.config.rememberWindowPosition;
     _resetScrollOnShow = widget.config.resetScrollOnShow;
     _resetSearchOnShow = widget.config.resetSearchOnShow;
     _resetFiltersOnShow = widget.config.resetFiltersOnShow;
@@ -182,6 +184,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     cardMaxLines: _cardMaxLines,
     themeMode: _themeMode,
     hideOnDeactivate: _hideOnDeactivate,
+    rememberWindowPosition: _rememberWindowPosition,
+    lastWindowX: _rememberWindowPosition ? widget.config.lastWindowX : null,
+    lastWindowY: _rememberWindowPosition ? widget.config.lastWindowY : null,
     resetScrollOnShow: _resetScrollOnShow,
     resetSearchOnShow: _resetSearchOnShow,
     resetFiltersOnShow: _resetFiltersOnShow,
@@ -251,6 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _cardMaxLines = d.cardMaxLines;
       _themeMode = d.themeMode;
       _hideOnDeactivate = d.hideOnDeactivate;
+      _rememberWindowPosition = d.rememberWindowPosition;
       _resetScrollOnShow = d.resetScrollOnShow;
       _resetSearchOnShow = d.resetSearchOnShow;
       _resetFiltersOnShow = d.resetFiltersOnShow;
@@ -800,6 +806,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
               onChanged: (v) {
                 setState(() => _hideOnDeactivate = v);
+                _markChanged();
+              },
+            ),
+            _ToggleRow(
+              label: l.settingRememberWindowPosition,
+              subtitle: l.subtitleRememberWindowPosition,
+              value: _rememberWindowPosition,
+              colors: colors,
+              onChanged: (v) {
+                setState(() => _rememberWindowPosition = v);
                 _markChanged();
               },
             ),
