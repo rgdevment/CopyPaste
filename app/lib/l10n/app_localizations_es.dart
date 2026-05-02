@@ -378,6 +378,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingHideOnDeactivate => 'Ocultar al hacer clic fuera';
 
   @override
+  String get settingRememberWindowPosition => 'Recordar posición de la ventana';
+
+  @override
   String get settingScrollToTopOnOpen => 'Ir al inicio al abrir';
 
   @override
@@ -399,6 +402,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get subtitleHideOnDeactivate =>
       'Cerrar la ventana al hacer clic fuera';
+
+  @override
+  String get subtitleRememberWindowPosition =>
+      'Reabrir la ventana donde la dejaste la última vez';
 
   @override
   String get subtitleScrollToTopOnOpen =>

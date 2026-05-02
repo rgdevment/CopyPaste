@@ -806,6 +806,12 @@ abstract class AppLocalizations {
   /// **'Hide on deactivate'**
   String get settingHideOnDeactivate;
 
+  /// Remember window position toggle label
+  ///
+  /// In en, this message translates to:
+  /// **'Remember window position'**
+  String get settingRememberWindowPosition;
+
   /// Scroll to top on open label
   ///
   /// In en, this message translates to:
@@ -847,6 +853,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close window when clicking outside'**
   String get subtitleHideOnDeactivate;
+
+  /// Remember window position subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen the window where you left it last time'**
+  String get subtitleRememberWindowPosition;
 
   /// Scroll to top on open subtitle
   ///
