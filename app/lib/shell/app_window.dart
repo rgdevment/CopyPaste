@@ -24,9 +24,8 @@ typedef _SystemParametersInfoWDart =
 typedef _GetCursorPosNative = Int32 Function(Pointer<Int32> lpPoint);
 typedef _GetCursorPosDart = int Function(Pointer<Int32> lpPoint);
 
-typedef _MonitorFromPointNative =
-    IntPtr Function(Int32 x, Int32 y, Uint32 dwFlags);
-typedef _MonitorFromPointDart = int Function(int x, int y, int dwFlags);
+typedef _MonitorFromPointNative = IntPtr Function(Int64 pt, Uint32 dwFlags);
+typedef _MonitorFromPointDart = int Function(int pt, int dwFlags);
 
 typedef _GetMonitorInfoWNative = Int32 Function(IntPtr hMonitor, Pointer lpmi);
 typedef _GetMonitorInfoWDart = int Function(int hMonitor, Pointer lpmi);
@@ -337,6 +336,7 @@ class AppWindow {
       final windowName = 'CopyPaste'.toNativeUtf16();
       try {
         final hwnd = w.findWindowFunc(className, windowName);
+        AppLogger.info('_setPositionWin32: hwnd=$hwnd target=($x,$y)');
         if (hwnd == 0) return false;
         final result = w.setWindowPosFunc(
           hwnd,
@@ -347,6 +347,7 @@ class AppWindow {
           0,
           swpNoSize | swpNoZOrder | swpNoActivate,
         );
+        AppLogger.info('_setPositionWin32: SetWindowPos result=$result');
         return result != 0;
       } finally {
         calloc.free(className);
@@ -370,6 +371,9 @@ class AppWindow {
     }
   }
 
+  static int _packPointWin32(int x, int y) =>
+      ((y & 0xFFFFFFFF) << 32) | (x & 0xFFFFFFFF);
+
   static (double, double, double, double)? _getWorkAreaForPointWin32(
     double x,
     double y,
@@ -377,8 +381,7 @@ class AppWindow {
     const monitorDefaultToNearest = 0x00000002;
     final w = _Win32Pos.instance;
     final hMonitor = w.monitorFromPointFunc(
-      x.toInt(),
-      y.toInt(),
+      _packPointWin32(x.toInt(), y.toInt()),
       monitorDefaultToNearest,
     );
     if (hMonitor == 0) return _getWorkAreaWin32();
@@ -456,8 +459,7 @@ class AppWindow {
         final centerX = (x + _popupWidth / 2).toInt();
         final centerY = (y + _popupHeight / 2).toInt();
         final hMonitor = w.monitorFromPointFunc(
-          centerX,
-          centerY,
+          _packPointWin32(centerX, centerY),
           monitorDefaultToNull,
         );
         return hMonitor != 0;
@@ -470,13 +472,19 @@ class AppWindow {
   }
 
   Future<bool> _tryRestoreSavedPosition() async {
-    if (rememberPositionEnabled?.call() != true) return false;
+    final enabled = rememberPositionEnabled?.call() == true;
+    AppLogger.info('_tryRestoreSavedPosition: enabled=$enabled');
+    if (!enabled) return false;
     final saved = savedPositionProvider?.call();
+    AppLogger.info('_tryRestoreSavedPosition: saved=$saved');
     if (saved == null) return false;
     final (x, y) = saved;
-    if (!_isPositionVisible(x, y)) return false;
+    final visible = _isPositionVisible(x, y);
+    AppLogger.info('_tryRestoreSavedPosition: visible($x,$y)=$visible');
+    if (!visible) return false;
     if (Platform.isWindows) {
       final ok = _setPositionWin32(x, y);
+      AppLogger.info('_tryRestoreSavedPosition: _setPositionWin32 ok=$ok');
       if (!ok) {
         await windowManager.setPosition(Offset(x, y));
       }
@@ -486,6 +494,9 @@ class AppWindow {
       try {
         final actual = await windowManager.getPosition();
         if ((actual.dx - x).abs() > 100 || (actual.dy - y).abs() > 100) {
+          AppLogger.info(
+            '_tryRestoreSavedPosition: actual=$actual rejected (>100px from target)',
+          );
           return false;
         }
       } catch (_) {}
@@ -505,6 +516,7 @@ class AppWindow {
       await LinuxShell.focusWindow();
     } else {
       final restored = await _tryRestoreSavedPosition();
+      AppLogger.info('AppWindow.show: restored=$restored');
       if (!restored) {
         await _positionNearCursor();
       }
@@ -513,7 +525,12 @@ class AppWindow {
       }
       await windowManager.show();
       await windowManager.focus();
-      AppLogger.info('AppWindow.show: window shown and focused');
+      if (Platform.isWindows) {
+        final actual = _getPositionWin32();
+        AppLogger.info('AppWindow.show: window shown, actual position=$actual');
+      } else {
+        AppLogger.info('AppWindow.show: window shown and focused');
+      }
       if (Platform.isWindows) {
         await applyEffect();
       }
