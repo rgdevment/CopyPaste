@@ -646,7 +646,10 @@ class AppWindow {
       await configureFuture;
     }
     await windowManager.setResizable(false);
-    await _positionNearCursor();
+    final restored = await _tryRestoreSavedPosition();
+    if (!restored) {
+      await _positionNearCursor();
+    }
   }
 
   static const double _gateWidth = 480;
