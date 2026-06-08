@@ -56,8 +56,18 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _imagePathResolved = false;
   DateTime? _lastPrimaryDown;
   bool _isTextOverflowing = false;
+  Map<String, dynamic>? _cachedMetadata;
+  String _cachedExt = '';
+  String _displayContent = '';
+  bool _sourceAvailable = true;
 
   static const _doubleTapTimeout = Duration(milliseconds: 300);
+
+  // Clipboard items can hold multi-MB blobs (logs, base64, minified JSON).
+  // Laying out the full string blocks the UI thread, so the card measures and
+  // paints only a bounded preview; the full content stays in the model for
+  // pasting and search.
+  static const _maxDisplayChars = 2000;
 
   void _handlePointerDown(PointerDownEvent event) {
     if (event.buttons != kPrimaryButton) return;
@@ -75,7 +85,9 @@ class _ClipboardCardState extends State<ClipboardCard> {
   @override
   void initState() {
     super.initState();
+    _recomputeDerived();
     _resolveImagePath();
+    _resolveSourceAvailability();
   }
 
   @override
@@ -87,8 +99,48 @@ class _ClipboardCardState extends State<ClipboardCard> {
         oldWidget.item.metadata != widget.item.metadata) {
       _imagePathResolved = false;
       _resolvedIsThumb = false;
+      _recomputeDerived();
       _resolveImagePath();
+      _resolveSourceAvailability();
     }
+  }
+
+  void _recomputeDerived() {
+    final item = widget.item;
+    _cachedMetadata = _parseMetadata(item);
+    _cachedExt = _getExtForItem(item);
+    _displayContent = item.content.length <= _maxDisplayChars
+        ? item.content
+        : item.content.substring(0, _maxDisplayChars);
+  }
+
+  // Resolves whether the underlying source file(s) still exist off the build
+  // path: existsSync on every card build is blocking I/O that janks the list,
+  // especially for multi-path file items. The result feeds the "open" action
+  // and the "not found" badge.
+  Future<void> _resolveSourceAvailability() async {
+    final item = widget.item;
+    bool available;
+    if (item.type == ClipboardContentType.image) {
+      final path = item.content.trim();
+      available = path.isNotEmpty && await File(path).exists();
+    } else if (item.isFileBasedType) {
+      final paths = item.content
+          .split('\n')
+          .where((s) => s.isNotEmpty)
+          .toList();
+      available = paths.isNotEmpty;
+      for (final path in paths) {
+        if (!await File(path).exists() && !await Directory(path).exists()) {
+          available = false;
+          break;
+        }
+      }
+    } else {
+      available = true;
+    }
+    if (!mounted || available == _sourceAvailable) return;
+    setState(() => _sourceAvailable = available);
   }
 
   bool _needsExpandToggle(ClipboardItem item) {
@@ -105,24 +157,16 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool _needsOpenAction(ClipboardItem item) {
     return switch (item.type) {
       ClipboardContentType.image =>
-        _imagePathResolved &&
-            _resolvedImagePath != null &&
-            _imageSourceExists(item),
+        _imagePathResolved && _resolvedImagePath != null && _sourceAvailable,
       ClipboardContentType.file ||
       ClipboardContentType.folder ||
       ClipboardContentType.audio ||
-      ClipboardContentType.video => item.isFileAvailable(),
+      ClipboardContentType.video => _sourceAvailable,
       ClipboardContentType.link ||
       ClipboardContentType.email ||
       ClipboardContentType.phone => true,
       _ => false,
     };
-  }
-
-  bool _imageSourceExists(ClipboardItem item) {
-    final path = item.content.trim();
-    if (path.isEmpty) return false;
-    return File(path).existsSync();
   }
 
   void _resolveImagePath() {
@@ -627,7 +671,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final tp = TextPainter(
-          text: TextSpan(text: item.content, style: textStyle),
+          text: TextSpan(text: _displayContent, style: textStyle),
           maxLines: minLines,
           textDirection: Directionality.of(context),
         )..layout(maxWidth: constraints.maxWidth);
@@ -641,7 +685,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
         }
 
         return Text(
-          item.content,
+          _displayContent,
           style: textStyle,
           maxLines: displayMaxLines,
           overflow: TextOverflow.ellipsis,
@@ -731,7 +775,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     return Semantics(
       label: filename.isEmpty
           ? l10n.imageFile
-          : (!_imageSourceExists(item)
+          : (!_sourceAvailable
                 ? '${l10n.imageFile}: $filename, ${l10n.fileNotFound}'
                 : '${l10n.imageFile}: $filename'),
       child: Column(
@@ -757,7 +801,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ),
             ),
           ),
-          if (!_imageSourceExists(item)) ...[
+          if (!_sourceAvailable) ...[
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -777,7 +821,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     ClipboardItem item,
   ) {
     final files = item.content.split('\n').where((s) => s.isNotEmpty).toList();
-    final available = item.isFileAvailable();
+    final available = _sourceAvailable;
     final firstName = files.isEmpty
         ? ''
         : files.first.split(Platform.pathSeparator).last;
@@ -841,7 +885,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final typeColor = _typeColor(item.type, colors);
     final l10n = AppLocalizations.of(context);
     final typeName = isAudio ? l10n.audioFile : l10n.videoFile;
-    final missing = !item.isFileAvailable();
+    final missing = !_sourceAvailable;
 
     final semanticsLabel = [
       filename.isEmpty ? typeName : filename,
@@ -1020,8 +1064,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
     if (_needsExpandToggle(item)) return true;
     if (_needsOpenAction(item)) return true;
     if (item.pasteCount > 0) return true;
-    if (_getExtForItem(item).isNotEmpty) return true;
-    final meta = _parseMetadata(item);
+    if (_cachedExt.isNotEmpty) return true;
+    final meta = _cachedMetadata;
     if (meta == null) return false;
     return meta.containsKey('file_size') ||
         meta.containsKey('size') ||
@@ -1035,7 +1079,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     AppThemeColorScheme colors,
     ClipboardItem item,
   ) {
-    final meta = _parseMetadata(item);
+    final meta = _cachedMetadata;
     final footerAlpha = theme.cardStyle.footerOpacity;
     final footerColor = colors.onSurface.withValues(alpha: footerAlpha);
     final footerStyle = theme.typography.cardFooter.copyWith(
@@ -1043,7 +1087,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
     );
     final iconColor = colors.onSurface.withValues(alpha: footerAlpha - 0.1);
 
-    final ext = _getExtForItem(item);
+    final ext = _cachedExt;
     final typeColor = _typeColor(item.type, colors);
     final widgets = <Widget>[];
 
