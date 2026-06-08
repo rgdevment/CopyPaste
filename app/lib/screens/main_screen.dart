@@ -27,6 +27,7 @@ class MainScreen extends StatefulWidget {
     required this.clipboardService,
     required this.onPaste,
     required this.onPastePlain,
+    this.onCopy,
     required this.onExit,
     required this.onSettings,
     this.resetScrollOnShow = true,
@@ -48,6 +49,7 @@ class MainScreen extends StatefulWidget {
   final ClipboardService clipboardService;
   final void Function(ClipboardItem item) onPaste;
   final void Function(ClipboardItem item) onPastePlain;
+  final void Function(ClipboardItem item)? onCopy;
   final VoidCallback onExit;
   final VoidCallback onSettings;
   final bool resetScrollOnShow;
@@ -165,6 +167,7 @@ class MainScreenState extends State<MainScreen> {
         skip: _currentPage * _pageSize,
       );
 
+      if (!mounted) return;
       setState(() {
         if (_currentPage == 0) {
           _items = items;
@@ -178,6 +181,7 @@ class MainScreenState extends State<MainScreen> {
       });
     } catch (e) {
       AppLogger.error('Failed to load items: $e');
+      if (!mounted) return;
       setState(() => _loading = false);
     }
 
@@ -631,6 +635,9 @@ class MainScreenState extends State<MainScreen> {
             onLabelColor: (label, color) =>
                 _onItemLabelColor(item, label, color),
             onPastePlain: () => widget.onPastePlain(item),
+            onCopy: widget.onCopy == null
+                ? null
+                : () => widget.onCopy!(item),
             onOpen: () => _onItemOpen(item),
             onRequestThumbnailRefresh:
                 widget.clipboardService.requestThumbnailIfStale,

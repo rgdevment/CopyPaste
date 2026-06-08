@@ -180,6 +180,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuPastePlain => 'Pegar sin formato';
 
   @override
+  String get menuCopy => 'Copiar';
+
+  @override
+  String get copiedToClipboard => 'Copiado al portapapeles';
+
+  @override
   String get menuPin => 'Anclar';
 
   @override

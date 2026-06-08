@@ -126,9 +126,7 @@ class LinuxCapabilitiesService {
     }
 
     final session = sessionOverride ?? detectLinuxSession();
-    final base = LinuxCapabilities.unsupported.copyWith().copyWithSession(
-      session,
-    );
+    final base = LinuxCapabilities.unsupported.copyWithSession(session);
 
     if (!session.isX11) {
       _cache = base;

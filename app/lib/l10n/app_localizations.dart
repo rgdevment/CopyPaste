@@ -410,6 +410,18 @@ abstract class AppLocalizations {
   /// **'Paste plain'**
   String get menuPastePlain;
 
+  /// Context menu copy to clipboard without pasting
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get menuCopy;
+
+  /// Snackbar shown after the copy action
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get copiedToClipboard;
+
   /// Context menu pin
   ///
   /// In en, this message translates to:

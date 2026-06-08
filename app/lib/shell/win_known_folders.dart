@@ -38,19 +38,11 @@ class WinKnownFolders {
 
   static String? localAppData() => _resolve(_folderIdLocalAppData);
 
-  static String? roamingAppData() => _resolve(_folderIdRoamingAppData);
-
   static const _folderIdLocalAppData = (
     0xF1B32785,
     0x6FBA,
     0x4FCF,
     [0x9D, 0x55, 0x7B, 0x8E, 0x7F, 0x15, 0x70, 0x91],
-  );
-  static const _folderIdRoamingAppData = (
-    0x3EB685DB,
-    0x65F9,
-    0x4CF6,
-    [0xA0, 0x3A, 0xE3, 0xEF, 0x65, 0x72, 0x9F, 0x3D],
   );
 
   static String? _resolve((int, int, int, List<int>) guidParts) {

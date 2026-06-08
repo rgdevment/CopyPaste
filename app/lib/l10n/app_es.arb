@@ -65,6 +65,8 @@
 
   "menuPaste": "Pegar",
   "menuPastePlain": "Pegar sin formato",
+  "menuCopy": "Copiar",
+  "copiedToClipboard": "Copiado al portapapeles",
   "menuPin": "Anclar",
   "menuUnpin": "Desanclar",
   "menuEdit": "Editar tarjeta",

@@ -174,6 +174,40 @@ class ClipboardStreamHandler
   ListenerPlugin* plugin_;
 };
 
+// Builds a CF_HDROP global (DROPFILES header + double-null-terminated wide
+// paths). Caller owns the handle until it is handed to SetClipboardData.
+HGLOBAL BuildDropFilesGlobal(const std::vector<std::wstring>& wpaths) {
+  if (wpaths.empty()) return nullptr;
+
+  size_t totalChars = 0;
+  for (const auto& wp : wpaths) totalChars += wp.size() + 1;
+  totalChars += 1;  // extra terminator closes the double-null list
+
+  size_t sz = sizeof(DROPFILES) + totalChars * sizeof(wchar_t);
+  HGLOBAL hMem = GlobalAlloc(GHND, sz);
+  if (!hMem) return nullptr;
+
+  auto* df = static_cast<DROPFILES*>(GlobalLock(hMem));
+  if (!df) {
+    GlobalFree(hMem);
+    return nullptr;
+  }
+
+  df->pFiles = sizeof(DROPFILES);
+  df->fWide = TRUE;
+
+  auto* dest = reinterpret_cast<wchar_t*>(
+      reinterpret_cast<uint8_t*>(df) + sizeof(DROPFILES));
+  for (const auto& wp : wpaths) {
+    memcpy(dest, wp.c_str(), (wp.size() + 1) * sizeof(wchar_t));
+    dest += wp.size() + 1;
+  }
+  *dest = L'\0';
+
+  GlobalUnlock(hMem);
+  return hMem;
+}
+
 }  // namespace
 
 void ListenerPlugin::RegisterWithRegistrar(
@@ -955,17 +989,31 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
     return false;
   }
 
+  // Offer the on-disk PNG as CF_HDROP alongside the bitmap. Image editors take
+  // CF_DIBV5; Explorer/Desktop take CF_HDROP and reuse the file's unique name
+  // instead of inventing a generic one ("imagen.png") that collides on the
+  // second paste into the same folder.
+  HGLOBAL hDrop = nullptr;
+  if (GetFileAttributesW(wpath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+    hDrop = BuildDropFilesGlobal({wpath});
+  }
+
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
   if (!OpenClipboard(hwnd)) {
     GlobalFree(hMem);
+    if (hDrop) GlobalFree(hDrop);
     return false;
   }
 
   EmptyClipboard();
   bool ok = SetClipboardData(CF_DIBV5, hMem) != nullptr;
   if (!ok) GlobalFree(hMem);
+
+  if (hDrop) {
+    if (!SetClipboardData(CF_HDROP, hDrop)) GlobalFree(hDrop);
+  }
 
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();
@@ -978,41 +1026,17 @@ bool ListenerPlugin::SetFilesToClipboard(
 
   std::vector<std::wstring> wpaths;
   wpaths.reserve(paths.size());
-  size_t totalChars = 0;
   for (const auto& p : paths) {
     auto wp = Utf8ToWide(p);
     if (wp.empty()) continue;
-    DWORD attr = GetFileAttributesW(wp.c_str());
-    if (attr == INVALID_FILE_ATTRIBUTES) continue;
-    totalChars += wp.size() + 1;
+    if (GetFileAttributesW(wp.c_str()) == INVALID_FILE_ATTRIBUTES) continue;
     wpaths.push_back(std::move(wp));
   }
 
   if (wpaths.empty()) return false;
 
-  totalChars += 1;  // double null terminator
-  size_t sz = sizeof(DROPFILES) + totalChars * sizeof(wchar_t);
-  HGLOBAL hMem = GlobalAlloc(GHND, sz);
+  HGLOBAL hMem = BuildDropFilesGlobal(wpaths);
   if (!hMem) return false;
-
-  auto* df = static_cast<DROPFILES*>(GlobalLock(hMem));
-  if (!df) {
-    GlobalFree(hMem);
-    return false;
-  }
-
-  df->pFiles = sizeof(DROPFILES);
-  df->fWide = TRUE;
-
-  auto* dest = reinterpret_cast<wchar_t*>(
-      reinterpret_cast<uint8_t*>(df) + sizeof(DROPFILES));
-  for (const auto& wp : wpaths) {
-    memcpy(dest, wp.c_str(), (wp.size() + 1) * sizeof(wchar_t));
-    dest += wp.size() + 1;
-  }
-  *dest = L'\0';
-
-  GlobalUnlock(hMem);
 
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()

@@ -164,6 +164,12 @@
   "menuPastePlain": "Paste plain",
   "@menuPastePlain": { "description": "Context menu paste plain" },
 
+  "menuCopy": "Copy",
+  "@menuCopy": { "description": "Context menu copy to clipboard without pasting" },
+
+  "copiedToClipboard": "Copied to clipboard",
+  "@copiedToClipboard": { "description": "Snackbar shown after the copy action" },
+
   "menuPin": "Pin",
   "@menuPin": { "description": "Context menu pin" },
 

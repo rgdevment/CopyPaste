@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -43,7 +44,7 @@ class SupportService {
       try {
         final raw = await file.readAsString();
         final redacted = CrashLogger.redact(raw);
-        final bytes = redacted.codeUnits;
+        final bytes = utf8.encode(redacted);
         archive.addFile(
           ArchiveFile(p.basename(file.path), bytes.length, bytes),
         );
@@ -57,7 +58,7 @@ class SupportService {
       try {
         final raw = await crashFile.readAsString();
         final redacted = CrashLogger.redact(raw);
-        final bytes = redacted.codeUnits;
+        final bytes = utf8.encode(redacted);
         archive.addFile(ArchiveFile(CrashLogger.fileName, bytes.length, bytes));
       } catch (e) {
         AppLogger.error('exportLogs: failed to read crash.log: $e');
@@ -66,7 +67,7 @@ class SupportService {
 
     // Add device info so the report is self-contained
     final info = _buildDeviceInfo(appVersion);
-    final infoBytes = info.codeUnits;
+    final infoBytes = utf8.encode(info);
     archive.addFile(
       ArchiveFile('device_info.txt', infoBytes.length, infoBytes),
     );

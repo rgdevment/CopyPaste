@@ -179,6 +179,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuPastePlain => 'Paste plain';
 
   @override
+  String get menuCopy => 'Copy';
+
+  @override
+  String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
   String get menuPin => 'Pin';
 
   @override

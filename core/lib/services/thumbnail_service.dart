@@ -139,15 +139,22 @@ class ThumbnailService {
     if (item.type != ClipboardContentType.image) return null;
     if (stat.size > maxSourceBytes) return null;
 
-    final bytes = await sourceFile.readAsBytes();
-
-    final ok = await Isolate.run(
-      () => _encodeThumbSync(
-        bytes: bytes,
-        outPath: outPath,
-        maxDimension: maxDimension,
-      ),
-    );
+    final bool ok;
+    try {
+      final bytes = await sourceFile.readAsBytes();
+      ok = await Isolate.run(
+        () => _encodeThumbSync(
+          bytes: bytes,
+          outPath: outPath,
+          maxDimension: maxDimension,
+        ),
+      );
+    } catch (e, s) {
+      AppLogger.warn(
+        'ThumbnailService: Dart fallback failed for $sourcePath: $e\n$s',
+      );
+      return null;
+    }
     if (!ok) return null;
 
     return ThumbnailResult(

@@ -17,6 +17,7 @@ class ClipboardCard extends StatefulWidget {
     required this.onDelete,
     required this.onLabelColor,
     this.onPastePlain,
+    this.onCopy,
     this.onExpandToggle,
     this.onOpen,
     this.onSelect,
@@ -34,6 +35,7 @@ class ClipboardCard extends StatefulWidget {
   final VoidCallback onDelete;
   final void Function(String? label, CardColor color) onLabelColor;
   final VoidCallback? onPastePlain;
+  final VoidCallback? onCopy;
   final VoidCallback? onExpandToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onSelect;
@@ -194,6 +196,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
   }
 
   Future<void> _editLabelColor(BuildContext context) async {
+    if (!mounted) return;
     final result = await LabelColorDialog.show(
       context,
       currentLabel: widget.item.label,
@@ -245,6 +248,16 @@ class _ClipboardCardState extends State<ClipboardCard> {
               colors: colors,
             ),
           ),
+        if (widget.onCopy != null)
+          PopupMenuItem(
+            value: _ContextAction.copy,
+            height: 32,
+            child: _ContextMenuItem(
+              icon: Icons.copy_rounded,
+              label: l.menuCopy,
+              colors: colors,
+            ),
+          ),
         const PopupMenuDivider(height: 1),
         PopupMenuItem(
           value: _ContextAction.pin,
@@ -285,6 +298,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
         widget.onTap();
       case _ContextAction.pastePlain:
         widget.onPastePlain?.call();
+      case _ContextAction.copy:
+        widget.onCopy?.call();
       case _ContextAction.pin:
         widget.onPin();
       case _ContextAction.edit:
@@ -1601,7 +1616,7 @@ class _FooterChip extends StatelessWidget {
   }
 }
 
-enum _ContextAction { paste, pastePlain, pin, edit, delete }
+enum _ContextAction { paste, pastePlain, copy, pin, edit, delete }
 
 class _ContextMenuItem extends StatelessWidget {
   const _ContextMenuItem({

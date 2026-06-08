@@ -173,6 +173,32 @@ void main() {
     });
   });
 
+  group('ClipboardService.recordCopy', () {
+    test('bumps modifiedAt and emits onItemReactivated', () async {
+      final item = await service.processText(
+        'copy me',
+        ClipboardContentType.text,
+      );
+      expect(item, isNotNull);
+
+      ClipboardItem? reactivated;
+      service.onItemReactivated.listen((it) => reactivated = it);
+
+      final updated = await service.recordCopy(item!.id);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(updated, isNotNull);
+      expect(updated!.modifiedAt.isAfter(item.modifiedAt), isTrue);
+      expect(updated.pasteCount, equals(item.pasteCount));
+      expect(reactivated?.id, equals(item.id));
+    });
+
+    test('returns null for unknown id', () async {
+      final result = await service.recordCopy('nonexistent-id');
+      expect(result, isNull);
+    });
+  });
+
   group('ClipboardService.processFiles', () {
     test('saves file list with metadata', () async {
       ClipboardItem? emitted;

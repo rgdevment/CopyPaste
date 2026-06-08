@@ -233,7 +233,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   bool _linuxPrefersDark = false;
   String? _availableUpdateVersion;
   ManifestState? _manifestState;
-  StreamSubscription<ManifestState?>? _manifestSub;
   bool _programmaticRestore = false;
   Timer? _blurHideTimer;
 
@@ -817,6 +816,31 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
   }
 
+  Future<void> _onCopyItem(ClipboardItem item) async {
+    if (item.isFileBasedType && !item.isFileAvailable()) return;
+    // Suppress the listener so writing to the clipboard is not re-captured as
+    // a brand new item; recordCopy then bumps it to the top of the list.
+    await widget.clipboardService.notifyPasteInitiated(item.id);
+    final ok = await ClipboardWriter.setFromItem(
+      typeValue: item.type.value,
+      content: item.content,
+      metadata: item.metadata,
+    );
+    if (!ok) return;
+    await widget.clipboardService.recordCopy(item.id);
+    if (!mounted) return;
+    final ctx = _navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    ScaffoldMessenger.maybeOf(ctx)
+      ?..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(ctx).copiedToClipboard),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   Future<void> _cleanup() async {
     SingleInstance.stopListening();
     try {
@@ -1151,8 +1175,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     windowManager.removeListener(this);
-    unawaited(_manifestSub?.cancel());
-    _manifestSub = null;
     unawaited(AutoUpdateService.dispose());
     unawaited(_cleanup());
     super.dispose();
@@ -1272,6 +1294,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     onDismissHint: _dismissHint,
                     onPaste: _onPasteItem,
                     onPastePlain: (item) => _onPasteItem(item, plainText: true),
+                    onCopy: _onCopyItem,
                     onExit: () => _appWindow.hide(),
                     onSettings: () => _openSettings(ctx),
                     updateVersion: _availableUpdateVersion,

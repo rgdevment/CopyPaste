@@ -116,6 +116,12 @@ class _AppDatabase extends _$_AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_is_pinned ON clipboard_items(is_pinned)',
     );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_card_color ON clipboard_items(card_color)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_type_modified ON clipboard_items(type, modified_at DESC)',
+    );
   }
 }
 
@@ -126,7 +132,7 @@ class SqliteRepository implements IClipboardRepository {
     final db = _AppDatabase(
       LazyDatabase(() async {
         try {
-          return NativeDatabase(File(dbPath));
+          return NativeDatabase.createInBackground(File(dbPath));
         } catch (e, s) {
           AppLogger.exception(
             e,
@@ -134,7 +140,7 @@ class SqliteRepository implements IClipboardRepository {
             'SqliteRepository.fromPath — attempting recovery',
           );
           _handleCorruptDatabase(dbPath);
-          return NativeDatabase(File(dbPath));
+          return NativeDatabase.createInBackground(File(dbPath));
         }
       }),
     );
@@ -403,8 +409,13 @@ class SqliteRepository implements IClipboardRepository {
         final ftsFilterVars = [...variables];
         final likeFilterVars = [...variables];
 
-        // No inner LIMIT on like_results — the outer LIMIT/OFFSET controls
-        // pagination so scrolling past page 1 works correctly.
+        // like_results is bounded to (skip + limit) rows ordered by
+        // modified_at DESC. Because every LIKE row sorts after every FTS row
+        // (source 2 > source 1) in the outer ORDER BY, only the most recent
+        // (skip + limit) LIKE rows can ever surface within the requested page,
+        // so this bound is exact for pagination while preventing a full-table
+        // scan from materializing the entire LIKE result set on every search.
+        final likeBound = skip + limit;
         final allVariables = [
           Variable.withString(ftsQuery),
           ...ftsFilterVars,
@@ -412,6 +423,7 @@ class SqliteRepository implements IClipboardRepository {
           Variable.withString(likePattern),
           Variable.withString(likePattern),
           Variable.withString(likePattern),
+          Variable.withInt(likeBound),
           Variable.withInt(limit),
           Variable.withInt(skip),
         ];
@@ -430,6 +442,8 @@ class SqliteRepository implements IClipboardRepository {
           WHERE $filterClause
             AND (LOWER(c.content) LIKE ? OR LOWER(c.label) LIKE ? OR LOWER(c.app_source) LIKE ?)
             AND c.id NOT IN (SELECT id FROM fts_results)
+          ORDER BY c.modified_at DESC
+          LIMIT ?
         )
         SELECT * FROM (
           SELECT * FROM fts_results
