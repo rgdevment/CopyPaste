@@ -120,6 +120,23 @@ void main() {
       expect(find.byType(ClipboardCard), findsNWidgets(3));
     });
 
+    testWidgets('bounds displayed text for very large content', (tester) async {
+      final big = 'A' * 5000;
+      await repo.save(
+        ClipboardItem(content: big, type: ClipboardContentType.text),
+      );
+
+      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+      await tester.pumpAndSettle();
+
+      expect(find.text(big), findsNothing);
+      final preview = tester
+          .widgetList<Text>(find.byType(Text))
+          .firstWhere((t) => (t.data ?? '').startsWith('A'));
+      expect(preview.data!.length, lessThanOrEqualTo(2000));
+      expect(preview.data!.length, greaterThan(0));
+    });
+
     testWidgets('ArrowDown from search selects first item', (tester) async {
       await repo.save(
         ClipboardItem(content: 'Select me', type: ClipboardContentType.text),
