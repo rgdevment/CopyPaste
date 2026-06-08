@@ -5,10 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:copypaste/shell/linux_session.dart';
 import 'package:copypaste/shell/startup_helper.dart';
 
+String _xdgConfigDir() {
+  final xdg = Platform.environment['XDG_CONFIG_HOME'];
+  if (xdg != null && xdg.startsWith('/')) return xdg;
+  final home = Platform.environment['HOME'] ?? '/tmp';
+  return '$home/.config';
+}
+
 String _desktopPath() {
   const appName = 'CopyPaste';
-  final home = Platform.environment['HOME'] ?? '/tmp';
-  return '$home/.config/autostart/$appName.desktop';
+  return '${_xdgConfigDir()}/autostart/$appName.desktop';
 }
 
 void main() {
@@ -110,12 +116,11 @@ void main() {
       expect(second.isAtSameMomentAs(first) || second.isAfter(first), isTrue);
     });
 
-    test('.desktop file is placed in HOME/.config/autostart/', () async {
+    test('.desktop file is placed in the XDG autostart dir', () async {
       if (!Platform.isLinux || isWaylandSession()) return;
 
       await StartupHelper.apply(true);
-      final home = Platform.environment['HOME'] ?? '/tmp';
-      final expectedDir = '$home/.config/autostart';
+      final expectedDir = '${_xdgConfigDir()}/autostart';
       expect(File(_desktopPath()).parent.path, equals(expectedDir));
     });
   });

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../services/app_logger.dart';
+import 'app_config.dart';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -17,6 +18,8 @@ class StorageConfig {
   final String imagesPath;
   final String configPath;
   final String logsPath;
+
+  String get configFilePath => p.join(configPath, AppConfig.fileName);
 
   String get _initFlagPath => p.join(baseDir, '.initialized');
 

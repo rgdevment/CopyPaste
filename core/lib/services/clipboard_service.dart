@@ -331,11 +331,9 @@ class ClipboardService {
     return updated;
   }
 
-  /// Bumps [itemId] to the top of the history (updates modifiedAt) and emits a
-  /// reactivation event so any open list reorders it. Used by the explicit
-  /// "copy" action, which only places the item on the clipboard without
-  /// simulating a paste, so — unlike [recordPaste] — the window stays open and
-  /// the list must be told to refresh. Paste count is left untouched.
+  /// Bumps [itemId] to the top and emits a reactivation event. Unlike
+  /// [recordPaste], the copy action keeps the window open, so the list must be
+  /// told to reorder; paste count is left untouched.
   Future<ClipboardItem?> recordCopy(String itemId) async {
     final item = await _repository.getById(itemId);
     if (item == null) return null;

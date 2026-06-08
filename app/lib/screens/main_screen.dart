@@ -635,9 +635,7 @@ class MainScreenState extends State<MainScreen> {
             onLabelColor: (label, color) =>
                 _onItemLabelColor(item, label, color),
             onPastePlain: () => widget.onPastePlain(item),
-            onCopy: widget.onCopy == null
-                ? null
-                : () => widget.onCopy!(item),
+            onCopy: widget.onCopy == null ? null : () => widget.onCopy!(item),
             onOpen: () => _onItemOpen(item),
             onRequestThumbnailRefresh:
                 widget.clipboardService.requestThumbnailIfStale,

@@ -140,6 +140,34 @@ void main() {
     });
   });
 
+  group('CleanupService stale temp dirs', () {
+    test('preserves a freshly created copypaste_ temp dir', () async {
+      final tempDir = Directory.systemTemp.createTempSync('cleanup_temp_');
+      final repo = SqliteRepository.inMemory();
+      final storage = await StorageConfig.create(baseDir: tempDir.path);
+      await storage.ensureDirectories();
+
+      final fresh = Directory.systemTemp.createTempSync('copypaste_');
+      try {
+        final service = CleanupService(repo, () => 0, storage: storage);
+        service.start(tempDir.path);
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        service.dispose();
+
+        expect(
+          fresh.existsSync(),
+          isTrue,
+          reason: 'temp dirs younger than the max age must not be deleted',
+        );
+
+        await repo.close();
+      } finally {
+        if (fresh.existsSync()) fresh.deleteSync(recursive: true);
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
   group('CleanupService.isVolumePresent – macOS', () {
     test(
       'returns false for a /Volumes/ path with no such mount',

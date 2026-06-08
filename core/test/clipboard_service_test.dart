@@ -175,20 +175,23 @@ void main() {
 
   group('ClipboardService.recordCopy', () {
     test('bumps modifiedAt and emits onItemReactivated', () async {
-      final item = await service.processText(
-        'copy me',
-        ClipboardContentType.text,
+      final old = DateTime.utc(2020, 1, 1);
+      final item = ClipboardItem(
+        id: 'copy-me',
+        content: 'copy me',
+        type: ClipboardContentType.text,
+        modifiedAt: old,
       );
-      expect(item, isNotNull);
+      await repo.save(item);
 
       ClipboardItem? reactivated;
       service.onItemReactivated.listen((it) => reactivated = it);
 
-      final updated = await service.recordCopy(item!.id);
+      final updated = await service.recordCopy(item.id);
       await Future<void>.delayed(Duration.zero);
 
       expect(updated, isNotNull);
-      expect(updated!.modifiedAt.isAfter(item.modifiedAt), isTrue);
+      expect(updated!.modifiedAt.isAfter(old), isTrue);
       expect(updated.pasteCount, equals(item.pasteCount));
       expect(reactivated?.id, equals(item.id));
     });

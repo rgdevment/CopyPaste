@@ -91,7 +91,9 @@ class SupportService {
     try {
       // coverage:ignore-start
       if (Platform.isWindows) {
-        await Process.run('explorer', ['/select,', filePath]);
+        // explorer requires the flag and path as one contiguous token;
+        // splitting them makes it ignore the selection and open Documents.
+        await Process.run('explorer', ['/select,$filePath']);
       } else if (Platform.isMacOS) {
         await Process.run('open', ['-R', filePath]);
       } else // coverage:ignore-end

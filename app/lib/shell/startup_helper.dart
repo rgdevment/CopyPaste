@@ -309,10 +309,17 @@ class StartupHelper {
     }
   }
 
-  static String get _desktopAutostartPath {
+  // Honors XDG_CONFIG_HOME (must be an absolute path per the XDG spec);
+  // falls back to ~/.config when unset or relative.
+  static String get _xdgConfigDir {
+    final xdg = Platform.environment['XDG_CONFIG_HOME'];
+    if (xdg != null && xdg.startsWith('/')) return xdg;
     final home = Platform.environment['HOME'] ?? '/tmp';
-    return '$home/.config/autostart/$_appName.desktop';
+    return '$home/.config';
   }
+
+  static String get _desktopAutostartPath =>
+      '$_xdgConfigDir/autostart/$_appName.desktop';
 
   static void _installDesktopAutostart() {
     try {
@@ -326,9 +333,7 @@ class StartupHelper {
           'StartupNotify=false\n'
           'Terminal=false\n'
           'OnlyShowIn=GNOME;KDE;XFCE;Cinnamon;MATE;LXDE;LXQt;Pantheon;Unity;Budgie;Deepin;\n';
-      final autostartDir = Directory(
-        '${Platform.environment['HOME']}/.config/autostart',
-      );
+      final autostartDir = Directory('$_xdgConfigDir/autostart');
       if (!autostartDir.existsSync()) autostartDir.createSync(recursive: true);
       File(_desktopAutostartPath).writeAsStringSync(desktop);
     } catch (e) {

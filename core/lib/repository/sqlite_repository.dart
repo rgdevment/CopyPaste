@@ -409,12 +409,9 @@ class SqliteRepository implements IClipboardRepository {
         final ftsFilterVars = [...variables];
         final likeFilterVars = [...variables];
 
-        // like_results is bounded to (skip + limit) rows ordered by
-        // modified_at DESC. Because every LIKE row sorts after every FTS row
-        // (source 2 > source 1) in the outer ORDER BY, only the most recent
-        // (skip + limit) LIKE rows can ever surface within the requested page,
-        // so this bound is exact for pagination while preventing a full-table
-        // scan from materializing the entire LIKE result set on every search.
+        // LIKE rows always sort after FTS rows, so only the newest (skip+limit)
+        // of them can reach the page; bounding the CTE keeps the result exact
+        // while avoiding a full-table scan into memory on every keystroke.
         final likeBound = skip + limit;
         final allVariables = [
           Variable.withString(ftsQuery),

@@ -21,6 +21,8 @@ class CleanupService {
 
   static const Duration _checkInterval = Duration(hours: 18);
   static const String _lastCleanupFileName = 'last_cleanup.txt';
+  static const String _tempDirPrefix = 'copypaste_';
+  static const Duration _tempDirMaxAge = Duration(days: 1);
 
   final IClipboardRepository _repository;
   int Function() _getRetentionDays;
@@ -60,8 +62,30 @@ class CleanupService {
       _saveLastCleanupDate(now);
       await _cleanOrphanImages();
       await _enforceImagesQuota();
+      _cleanStaleTempDirs();
     } catch (e) {
       AppLogger.error('Cleanup failed: $e');
+    }
+  }
+
+  /// Removes leftover `copypaste_*` temp dirs created when opening an image in
+  /// an external viewer. Only dirs older than [_tempDirMaxAge] are touched, so
+  /// a viewer that still holds a freshly-copied file open is never disturbed.
+  void _cleanStaleTempDirs() {
+    try {
+      final tempRoot = Directory.systemTemp;
+      if (!tempRoot.existsSync()) return;
+      final cutoff = DateTime.now().subtract(_tempDirMaxAge);
+      for (final entity in tempRoot.listSync(followLinks: false)) {
+        if (entity is! Directory) continue;
+        if (!p.basename(entity.path).startsWith(_tempDirPrefix)) continue;
+        try {
+          if (entity.statSync().modified.isAfter(cutoff)) continue;
+          entity.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+    } catch (e) {
+      AppLogger.warn('[CleanupService] temp dir cleanup failed: $e');
     }
   }
 

@@ -111,9 +111,7 @@ Future<void> _run() async {
       return false;
     };
 
-    final config = await AppConfig.load(
-      '${storage.configPath}/${AppConfig.fileName}',
-    );
+    final config = await AppConfig.load(storage.configFilePath);
 
     final repo = SqliteRepository.fromPath(storage.databasePath);
     final NativeThumbnailProvider? nativeThumbProvider = Platform.isWindows
@@ -741,7 +739,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _persistConfig(AppConfig Function(AppConfig) update) {
     _config = update(_config);
-    final path = '${widget.storage.configPath}/${AppConfig.fileName}';
+    final path = widget.storage.configFilePath;
     final next = (_pendingConfigSave ?? Future<void>.value())
         .catchError((Object _) {})
         .then((_) => _config.save(path));
@@ -757,7 +755,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (identical(next, _config)) return;
     _config = next;
     if (mounted) setState(() {});
-    await _config.save('${widget.storage.configPath}/${AppConfig.fileName}');
+    await _config.save(widget.storage.configFilePath);
   }
 
   Future<void> _toggleWindow() async {
@@ -894,9 +892,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     SingleInstance.release();
     try {
       // Remove config so next run starts with defaults
-      final configFile = File(
-        '${widget.storage.configPath}/${AppConfig.fileName}',
-      );
+      final configFile = File(widget.storage.configFilePath);
       if (configFile.existsSync()) configFile.deleteSync();
       // Remove .initialized so first-run onboarding shows again
       widget.storage.clearInitialized();
@@ -964,7 +960,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       PageRouteBuilder<void>(
         pageBuilder: (context, animation, secondaryAnimation) => SettingsScreen(
           config: _config,
-          configPath: '${widget.storage.configPath}/${AppConfig.fileName}',
+          configPath: widget.storage.configFilePath,
           clipboardService: widget.clipboardService,
           storage: widget.storage,
           onSoftReset: _softReset,

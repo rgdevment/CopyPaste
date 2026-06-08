@@ -22,6 +22,10 @@ void main() {
       expect(config.databasePath, equals(p.join(tempDir.path, 'clipboard.db')));
       expect(config.imagesPath, equals(p.join(tempDir.path, 'images')));
       expect(config.configPath, equals(p.join(tempDir.path, 'config')));
+      expect(
+        config.configFilePath,
+        equals(p.join(tempDir.path, 'config', AppConfig.fileName)),
+      );
     });
 
     test('ensureDirectories creates all required directories', () async {
