@@ -331,8 +331,12 @@ void ListenerPlugin::OnClipboardChanged() {
   HWND hwnd = registrar_->GetView() ? registrar_->GetView()->GetNativeWindow()
                                      : nullptr;
   if (!hwnd) return;
+  // Self-write guard: only skip while WE still own the clipboard. If an external
+  // app grabbed ownership inside the window, GetClipboardOwner() != hwnd and we
+  // must process it — otherwise a copy made right after our own write is lost.
   if (last_write_tick_ > 0 &&
-      (GetTickCount64() - last_write_tick_) < kSelfWriteIgnoreMs) {
+      (GetTickCount64() - last_write_tick_) < kSelfWriteIgnoreMs &&
+      GetClipboardOwner() == hwnd) {
     return;
   }
 
@@ -989,31 +993,21 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
     return false;
   }
 
-  // Offer the on-disk PNG as CF_HDROP alongside the bitmap. Image editors take
-  // CF_DIBV5; Explorer/Desktop take CF_HDROP and reuse the file's unique name
-  // instead of inventing a generic one ("imagen.png") that collides on the
-  // second paste into the same folder.
-  HGLOBAL hDrop = nullptr;
-  if (GetFileAttributesW(wpath.c_str()) != INVALID_FILE_ATTRIBUTES) {
-    hDrop = BuildDropFilesGlobal({wpath});
-  }
-
+  // Only CF_DIBV5: offering CF_HDROP alongside makes browsers/chats paste the
+  // file (with the shell's generic "imagen" name) instead of the inline bitmap,
+  // which collides on the second image. It also kept the listener's read path
+  // (CF_HDROP first) inconsistent with the image hash on self-writes.
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
   if (!OpenClipboard(hwnd)) {
     GlobalFree(hMem);
-    if (hDrop) GlobalFree(hDrop);
     return false;
   }
 
   EmptyClipboard();
   bool ok = SetClipboardData(CF_DIBV5, hMem) != nullptr;
   if (!ok) GlobalFree(hMem);
-
-  if (hDrop) {
-    if (!SetClipboardData(CF_HDROP, hDrop)) GlobalFree(hDrop);
-  }
 
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();

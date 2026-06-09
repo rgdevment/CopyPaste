@@ -268,6 +268,9 @@ class ClipboardService {
   }) async {
     if (files.isEmpty) return null;
     if (_shouldIgnore(null)) return null;
+    // Reject self-referential captures: an HDROP whose paths all live inside our
+    // own images store is our own write echoed back, never a real user file.
+    if (files.every(_isInsideImagesDir)) return null;
 
     final content = files.join('\n');
     if (_consumeSuppression('c:$content')) return null;
@@ -360,7 +363,10 @@ class ClipboardService {
   /// This is the single entry point for file deletion in this service. Never
   /// call `File.delete*` directly on a path that comes from user input, item
   /// content, or any source outside the app's own path builder.
-  bool _deleteAppFile(String path) {
+  /// True when [path] resolves to a location inside the app's own images
+  /// directory. Used both to scope deletions and to reject self-referential
+  /// clipboard captures (e.g. an HDROP pointing back at our PNG store).
+  bool _isInsideImagesDir(String path) {
     final imagesPath = _imagesPath;
     if (imagesPath == null || imagesPath.isEmpty) return false;
     final String canonicalBase;
@@ -369,21 +375,26 @@ class ClipboardService {
       canonicalBase = p.canonicalize(imagesPath);
       canonicalTarget = p.canonicalize(path);
     } catch (e) {
-      AppLogger.warn('_deleteAppFile: canonicalize failed for "$path": $e');
+      AppLogger.warn('_isInsideImagesDir: canonicalize failed for "$path": $e');
       return false;
     }
     final baseWithSep = canonicalBase.endsWith(p.separator)
         ? canonicalBase
         : '$canonicalBase${p.separator}';
-    if (!canonicalTarget.startsWith(baseWithSep)) {
+    return canonicalTarget.startsWith(baseWithSep);
+  }
+
+  bool _deleteAppFile(String path) {
+    final imagesPath = _imagesPath;
+    if (imagesPath == null || imagesPath.isEmpty) return false;
+    if (!_isInsideImagesDir(path)) {
       AppLogger.error(
-        '_deleteAppFile: refused to delete out-of-scope path '
-        '"$canonicalTarget" (base="$canonicalBase")',
+        '_deleteAppFile: refused to delete out-of-scope path "$path"',
       );
       return false;
     }
     try {
-      final file = File(canonicalTarget);
+      final file = File(p.canonicalize(path));
       if (file.existsSync()) file.deleteSync();
       return true;
     } catch (e) {

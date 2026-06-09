@@ -593,6 +593,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
                           ),
                           const SizedBox(width: 3),
                         ],
+                        if (widget.onCopy != null) ...[
+                          _CardActionButton(
+                            icon: theme.icons.copy,
+                            tooltip: l.menuCopy,
+                            onTap: widget.onCopy!,
+                          ),
+                          const SizedBox(width: 3),
+                        ],
                         _CardActionButton(
                           icon: theme.icons.edit,
                           tooltip: l.menuEdit,

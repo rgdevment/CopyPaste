@@ -15,11 +15,13 @@ import 'package:core/core.dart';
 void main() {
   late SqliteRepository repo;
   late Directory imagesDir;
+  late Directory filesDir;
   late ClipboardService service;
 
   setUp(() {
     repo = SqliteRepository.inMemory();
     imagesDir = Directory.systemTemp.createTempSync('svc_platform_');
+    filesDir = Directory.systemTemp.createTempSync('svc_platform_files_');
     service = ClipboardService(repo, imagesPath: imagesDir.path);
   });
 
@@ -27,6 +29,7 @@ void main() {
     await service.dispose();
     await repo.close();
     if (imagesDir.existsSync()) imagesDir.deleteSync(recursive: true);
+    if (filesDir.existsSync()) filesDir.deleteSync(recursive: true);
   });
 
   group('ClipboardService – cross-platform path handling', () {
@@ -335,7 +338,7 @@ void main() {
 
   group('ClipboardService – file size metadata on all platforms', () {
     test('includes file_size for a single real file', () async {
-      final testFile = File(p.join(imagesDir.path, 'sample.txt'))
+      final testFile = File(p.join(filesDir.path, 'sample.txt'))
         ..writeAsStringSync('cross-platform content');
 
       final result = await service.processFiles([
