@@ -351,7 +351,7 @@ void main() {
     });
 
     test('does not include file_size for non-existent single file', () async {
-      final missingPath = p.join(imagesDir.path, 'missing_file.txt');
+      final missingPath = p.join(filesDir.path, 'missing_file.txt');
       final result = await service.processFiles([
         missingPath,
       ], ClipboardContentType.file);
