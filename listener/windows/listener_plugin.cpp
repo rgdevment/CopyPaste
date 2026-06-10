@@ -208,6 +208,82 @@ HGLOBAL BuildDropFilesGlobal(const std::vector<std::wstring>& wpaths) {
   return hMem;
 }
 
+std::wstring BaseNameW(const std::wstring& path) {
+  size_t pos = path.find_last_of(L"\\/");
+  return pos == std::wstring::npos ? path : path.substr(pos + 1);
+}
+
+UINT CfFileDescriptorW() {
+  static UINT cf = RegisterClipboardFormatW(CFSTR_FILEDESCRIPTORW);
+  return cf;
+}
+
+UINT CfFileContents() {
+  static UINT cf = RegisterClipboardFormatW(CFSTR_FILECONTENTS);
+  return cf;
+}
+
+// Names a single virtual file on the clipboard. A unique name stops Chromium
+// from inventing the fixed "image.png" (localized "imagen.png") that web
+// uploaders such as Gemini reject as a duplicate on the second paste.
+HGLOBAL BuildFileGroupDescriptorGlobal(const std::wstring& fileName,
+                                       uint64_t fileSize) {
+  HGLOBAL hMem = GlobalAlloc(GHND, sizeof(FILEGROUPDESCRIPTORW));
+  if (!hMem) return nullptr;
+  auto* fgd = static_cast<FILEGROUPDESCRIPTORW*>(GlobalLock(hMem));
+  if (!fgd) {
+    GlobalFree(hMem);
+    return nullptr;
+  }
+  fgd->cItems = 1;
+  auto& fd = fgd->fgd[0];
+  fd.dwFlags = static_cast<DWORD>(FD_UNICODE) | static_cast<DWORD>(FD_FILESIZE);
+  fd.nFileSizeHigh = static_cast<DWORD>(fileSize >> 32);
+  fd.nFileSizeLow = static_cast<DWORD>(fileSize & 0xFFFFFFFF);
+  wcsncpy_s(fd.cFileName, MAX_PATH, fileName.c_str(), _TRUNCATE);
+  GlobalUnlock(hMem);
+  return hMem;
+}
+
+// Reads a file fully into an HGLOBAL for CFSTR_FILECONTENTS (single file,
+// lindex 0). Returns null on any I/O error or if the size exceeds a 2 GB single
+// ReadFile; the caller then skips the virtual-file offer and keeps CF_DIBV5.
+HGLOBAL BuildFileContentsGlobal(const std::wstring& filePath,
+                                uint64_t* outSize) {
+  HANDLE hFile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                             nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                             nullptr);
+  if (hFile == INVALID_HANDLE_VALUE) return nullptr;
+  LARGE_INTEGER size;
+  if (!GetFileSizeEx(hFile, &size) || size.QuadPart <= 0 ||
+      size.QuadPart > 0x7FFFFFFF) {
+    CloseHandle(hFile);
+    return nullptr;
+  }
+  DWORD bytes = static_cast<DWORD>(size.QuadPart);
+  HGLOBAL hMem = GlobalAlloc(GHND, bytes);
+  if (!hMem) {
+    CloseHandle(hFile);
+    return nullptr;
+  }
+  void* ptr = GlobalLock(hMem);
+  if (!ptr) {
+    GlobalFree(hMem);
+    CloseHandle(hFile);
+    return nullptr;
+  }
+  DWORD read = 0;
+  BOOL ok = ReadFile(hFile, ptr, bytes, &read, nullptr);
+  GlobalUnlock(hMem);
+  CloseHandle(hFile);
+  if (!ok || read != bytes) {
+    GlobalFree(hMem);
+    return nullptr;
+  }
+  if (outSize) *outSize = bytes;
+  return hMem;
+}
+
 }  // namespace
 
 void ListenerPlugin::RegisterWithRegistrar(
@@ -993,21 +1069,46 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
     return false;
   }
 
-  // Only CF_DIBV5: offering CF_HDROP alongside makes browsers/chats paste the
-  // file (with the shell's generic "imagen" name) instead of the inline bitmap,
-  // which collides on the second image. It also kept the listener's read path
-  // (CF_HDROP first) inconsistent with the image hash on self-writes.
+  // CF_DIBV5 covers inline-paste targets (image editors, rich-text composers).
+  // The virtual-file pair below covers web uploaders; see the SetClipboardData
+  // calls. We deliberately do NOT use CF_HDROP: browsers ignore it on paste and
+  // it confused the listener's own read path (CF_HDROP first) on self-writes.
+  uint64_t pngSize = 0;
+  HGLOBAL hContents = BuildFileContentsGlobal(wpath, &pngSize);
+  HGLOBAL hDesc = hContents
+                      ? BuildFileGroupDescriptorGlobal(BaseNameW(wpath), pngSize)
+                      : nullptr;
+
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
   if (!OpenClipboard(hwnd)) {
     GlobalFree(hMem);
+    if (hContents) GlobalFree(hContents);
+    if (hDesc) GlobalFree(hDesc);
     return false;
   }
 
   EmptyClipboard();
   bool ok = SetClipboardData(CF_DIBV5, hMem) != nullptr;
   if (!ok) GlobalFree(hMem);
+
+  // Offer the PNG as a named virtual file so Chromium hands web uploaders our
+  // unique <uuid>.png instead of inventing the fixed "imagen.png" that those
+  // sites reject as a duplicate. Descriptor and contents go together or not at
+  // all. CFSTR_FILECONTENTS via the flat clipboard is read at lindex 0 by the
+  // IDataObject that OleGetClipboard synthesizes for the consumer.
+  if (hContents && hDesc) {
+    if (SetClipboardData(CfFileDescriptorW(), hDesc) == nullptr) {
+      GlobalFree(hDesc);
+      GlobalFree(hContents);
+    } else if (SetClipboardData(CfFileContents(), hContents) == nullptr) {
+      GlobalFree(hContents);
+    }
+  } else {
+    if (hContents) GlobalFree(hContents);
+    if (hDesc) GlobalFree(hDesc);
+  }
 
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();
