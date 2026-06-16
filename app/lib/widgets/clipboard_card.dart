@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:listener/listener.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme_data.dart';
 import '../theme/theme_provider.dart';
@@ -254,6 +256,54 @@ class _ClipboardCardState extends State<ClipboardCard> {
   bool get _isPlainPasteable =>
       widget.item.type == ClipboardContentType.text ||
       widget.item.type == ClipboardContentType.link;
+
+  // Real on-disk paths backing this item, for drag-out. Image content is a
+  // single file; file/folder/audio/video may carry several paths joined by
+  // newlines. Other types are not file-backed and yield no paths.
+  List<String> get _draggablePaths {
+    final item = widget.item;
+    switch (item.type) {
+      case ClipboardContentType.image:
+        final p = item.content.trim();
+        return p.isEmpty ? const [] : [p];
+      case ClipboardContentType.file:
+      case ClipboardContentType.folder:
+      case ClipboardContentType.audio:
+      case ClipboardContentType.video:
+        return item.content
+            .split('\n')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      default:
+        return const [];
+    }
+  }
+
+  // Draggable only once the backing file(s) are known to exist on disk.
+  bool get _canDrag => _sourceAvailable && _draggablePaths.isNotEmpty;
+
+  // Hands the original file(s) to a native OLE drag so a drop target (e.g. a
+  // browser upload zone) gets their unique names instead of Chromium's fixed
+  // "image.png". Fire-and-forget: the native call blocks its own thread and
+  // must run after this gesture callback returns.
+  void _startDrag() {
+    final paths = _draggablePaths;
+    if (paths.isEmpty) return;
+    unawaited(ClipboardWriter.startFileDrag(paths));
+  }
+
+  Widget _wrapDraggable(Widget child) {
+    if (!_canDrag) return child;
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanStart: (_) => _startDrag(),
+        child: child,
+      ),
+    );
+  }
 
   Future<void> _showContextMenu(BuildContext ctx, Offset position) async {
     final size = MediaQuery.of(ctx).size;
@@ -638,29 +688,26 @@ class _ClipboardCardState extends State<ClipboardCard> {
     AppThemeColorScheme colors,
     ClipboardItem item,
   ) {
-    switch (item.type) {
-      case ClipboardContentType.image:
-        return _buildImageContent(theme, colors, item);
-      case ClipboardContentType.audio:
-        return _buildMediaContent(theme, colors, item);
-      case ClipboardContentType.video:
-        return _buildMediaContent(theme, colors, item);
-      case ClipboardContentType.file:
-      case ClipboardContentType.folder:
-        return _buildFileContent(theme, colors, item);
-      case ClipboardContentType.link:
-        return _buildLinkContent(theme, colors, item);
-      case ClipboardContentType.text:
-      case ClipboardContentType.unknown:
-      case ClipboardContentType.email:
-      case ClipboardContentType.phone:
-      case ClipboardContentType.ip:
-      case ClipboardContentType.uuid:
-      case ClipboardContentType.json:
-        return _buildTextContent(theme, colors, item);
-      case ClipboardContentType.color:
-        return _buildColorContent(theme, colors, item);
-    }
+    final content = switch (item.type) {
+      ClipboardContentType.image => _buildImageContent(theme, colors, item),
+      ClipboardContentType.audio ||
+      ClipboardContentType.video => _buildMediaContent(theme, colors, item),
+      ClipboardContentType.file ||
+      ClipboardContentType.folder => _buildFileContent(theme, colors, item),
+      ClipboardContentType.link => _buildLinkContent(theme, colors, item),
+      ClipboardContentType.text ||
+      ClipboardContentType.unknown ||
+      ClipboardContentType.email ||
+      ClipboardContentType.phone ||
+      ClipboardContentType.ip ||
+      ClipboardContentType.uuid ||
+      ClipboardContentType.json => _buildTextContent(theme, colors, item),
+      ClipboardContentType.color => _buildColorContent(theme, colors, item),
+    };
+    // File-backed items (image/file/folder/audio/video) become drag sources so
+    // a drop target gets the real, unique filename; _wrapDraggable is a no-op
+    // for everything else.
+    return _wrapDraggable(content);
   }
 
   Widget _buildTextContent(

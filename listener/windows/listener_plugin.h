@@ -90,6 +90,12 @@ class ListenerPlugin : public flutter::Plugin {
   bool SetImageToClipboard(const std::string& imagePath);
   bool SetFilesToClipboard(const std::vector<std::string>& paths);
 
+  // Starts a modal OLE drag-drop offering [paths] as CF_HDROP files, so a drop
+  // target (e.g. a browser upload zone) receives them with their real, unique
+  // names instead of the fixed "image.png" Chromium synthesizes for pasted
+  // bitmaps. Blocks the platform thread until the drag ends.
+  bool StartFileDrag(const std::vector<std::string>& paths);
+
   // Native shell thumbnail extraction (PR #6b). Returns the encoded PNG
   // bytes, or an empty vector when no usable thumbnail is available.
   // Runs synchronously on the platform thread; the cache-hit fast path

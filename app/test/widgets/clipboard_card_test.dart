@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:copypaste/widgets/clipboard_card.dart';
@@ -24,6 +25,79 @@ ClipboardItem _makeTextItem({
     label: label,
   );
 }
+
+// Minimal valid 1x1 PNG.
+const _png1x1 = <int>[
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x02,
+  0x00,
+  0x00,
+  0x00,
+  0x90,
+  0x77,
+  0x53,
+  0xDE,
+  0x00,
+  0x00,
+  0x00,
+  0x0C,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x08,
+  0xD7,
+  0x63,
+  0xF8,
+  0xCF,
+  0xC0,
+  0x00,
+  0x00,
+  0x00,
+  0x02,
+  0x00,
+  0x01,
+  0xE2,
+  0x21,
+  0xBC,
+  0x33,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
+];
 
 void main() {
   group('ClipboardCard', () {
@@ -583,6 +657,82 @@ void main() {
 
       expect(find.byType(ClipboardCard), findsOneWidget);
       tmpDir.deleteSync(recursive: true);
+    });
+
+    testWidgets('image with existing file is draggable and starts native drag', (
+      tester,
+    ) async {
+      const channel = MethodChannel('copypaste/clipboard_writer');
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call);
+        return true;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      final tmpDir = Directory.systemTemp.createTempSync('card_drag_test_');
+      final imgFile = File('${tmpDir.path}/test.png')
+        ..writeAsBytesSync(_png1x1);
+      addTearDown(() => tmpDir.deleteSync(recursive: true));
+
+      final item = ClipboardItem(
+        content: imgFile.path,
+        type: ClipboardContentType.image,
+      );
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // A grab cursor is exposed only once the backing file is confirmed on disk.
+      final dragHandle = find.byWidgetPredicate(
+        (w) => w is MouseRegion && w.cursor == SystemMouseCursors.grab,
+      );
+      expect(dragHandle, findsOneWidget);
+
+      await tester.drag(dragHandle, const Offset(60, 0));
+      await tester.pumpAndSettle();
+
+      expect(calls.single.method, equals('startFileDrag'));
+      expect(calls.single.arguments['paths'], equals([imgFile.path]));
+    });
+
+    testWidgets('text card is not draggable (no grab cursor)', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: _makeTextItem(),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is MouseRegion && w.cursor == SystemMouseCursors.grab,
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets(

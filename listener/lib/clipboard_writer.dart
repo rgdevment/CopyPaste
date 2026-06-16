@@ -50,6 +50,25 @@ class ClipboardWriter {
     return result ?? false;
   }
 
+  /// Starts a native OLE drag offering [paths] as CF_HDROP items. A drop target
+  /// (e.g. a browser upload zone) receives the files with their real, unique
+  /// names, sidestepping the fixed "image.png" Chromium assigns to pasted
+  /// bitmaps. The native call blocks until the drag ends; resolves true when the
+  /// files were dropped onto a target.
+  static Future<bool> startFileDrag(List<String> paths) async {
+    if (paths.isEmpty) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'startFileDrag',
+        <String, Object?>{'paths': paths},
+      );
+      return result ?? false;
+    } catch (e) {
+      AppLogger.error('ClipboardWriter.startFileDrag failed: $e');
+      return false;
+    }
+  }
+
   static Future<bool> setFiles(String content, int typeValue) async {
     final result = await _channel.invokeMethod<bool>(
       'setClipboardContent',

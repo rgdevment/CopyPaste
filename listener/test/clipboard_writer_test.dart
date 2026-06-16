@@ -119,6 +119,55 @@ void main() {
     });
   });
 
+  group('ClipboardWriter.startFileDrag', () {
+    test('sends method name and paths, returns drop result', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            captured = call;
+            return true;
+          });
+      final result = await ClipboardWriter.startFileDrag([
+        '/img/photo.png',
+        '/docs/a.pdf',
+      ]);
+      expect(result, isTrue);
+      expect(captured!.method, equals('startFileDrag'));
+      expect(
+        captured!.arguments['paths'],
+        equals(['/img/photo.png', '/docs/a.pdf']),
+      );
+    });
+
+    test('returns false without invoking channel on empty paths', () async {
+      var invoked = false;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            invoked = true;
+            return true;
+          });
+      final result = await ClipboardWriter.startFileDrag([]);
+      expect(result, isFalse);
+      expect(invoked, isFalse);
+    });
+
+    test('returns false when channel returns null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => null);
+      final result = await ClipboardWriter.startFileDrag(['/img/photo.png']);
+      expect(result, isFalse);
+    });
+
+    test('returns false when channel throws', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            throw PlatformException(code: 'error');
+          });
+      final result = await ClipboardWriter.startFileDrag(['/img/photo.png']);
+      expect(result, isFalse);
+    });
+  });
+
   group('ClipboardWriter.setFiles', () {
     test('returns true on success', () async {
       final result = await ClipboardWriter.setFiles('/path/to/file.txt', 2);

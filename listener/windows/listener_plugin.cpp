@@ -33,6 +33,7 @@
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "propsys.lib")
+#pragma comment(lib, "ole32.lib")
 
 namespace listener {
 
@@ -836,6 +837,33 @@ void ListenerPlugin::HandleMethodCall(
     return;
   }
 
+  if (call.method_name() == "startFileDrag") {
+    const auto* args =
+        std::get_if<flutter::EncodableMap>(call.arguments());
+    if (!args) {
+      result->Success(flutter::EncodableValue(false));
+      return;
+    }
+    auto paths_it = args->find(flutter::EncodableValue("paths"));
+    if (paths_it == args->end()) {
+      result->Success(flutter::EncodableValue(false));
+      return;
+    }
+    const auto* list =
+        std::get_if<flutter::EncodableList>(&paths_it->second);
+    if (!list) {
+      result->Success(flutter::EncodableValue(false));
+      return;
+    }
+    std::vector<std::string> paths;
+    paths.reserve(list->size());
+    for (const auto& v : *list) {
+      if (const auto* s = std::get_if<std::string>(&v)) paths.push_back(*s);
+    }
+    result->Success(flutter::EncodableValue(StartFileDrag(paths)));
+    return;
+  }
+
   if (call.method_name() != "setClipboardContent") {
     result->NotImplemented();
     return;
@@ -1148,6 +1176,112 @@ bool ListenerPlugin::SetFilesToClipboard(
   CloseClipboard();
   if (ok) last_write_tick_ = GetTickCount64();
   return ok;
+}
+
+namespace {
+
+// Minimal drag source: drop on left-button release, cancel on Escape.
+class FileDropSource : public IDropSource {
+ public:
+  FileDropSource() : ref_(1) {}
+
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv) override {
+    if (riid == IID_IUnknown || riid == IID_IDropSource) {
+      *ppv = static_cast<IDropSource*>(this);
+      AddRef();
+      return S_OK;
+    }
+    *ppv = nullptr;
+    return E_NOINTERFACE;
+  }
+
+  ULONG STDMETHODCALLTYPE AddRef() override {
+    return InterlockedIncrement(&ref_);
+  }
+
+  ULONG STDMETHODCALLTYPE Release() override {
+    LONG c = InterlockedDecrement(&ref_);
+    if (c == 0) delete this;
+    return c;
+  }
+
+  HRESULT STDMETHODCALLTYPE QueryContinueDrag(BOOL fEscapePressed,
+                                              DWORD grfKeyState) override {
+    if (fEscapePressed) return DRAGDROP_S_CANCEL;
+    if (!(grfKeyState & MK_LBUTTON)) return DRAGDROP_S_DROP;
+    return S_OK;
+  }
+
+  HRESULT STDMETHODCALLTYPE GiveFeedback(DWORD /*dwEffect*/) override {
+    return DRAGDROP_S_USEDEFAULTCURSORS;
+  }
+
+ private:
+  LONG ref_;
+};
+
+// Offers [paths] as CF_HDROP files through a modal OLE drag. The blocking
+// DoDragDrop loop runs on the platform thread, so the host window cannot process
+// its focus-loss auto-hide until the drag ends. Returns true on a real drop.
+bool DoFilesDragDrop(const std::vector<std::wstring>& paths) {
+  std::vector<std::wstring> valid;
+  valid.reserve(paths.size());
+  for (const auto& p : paths) {
+    if (!p.empty() && GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES)
+      valid.push_back(p);
+  }
+  if (valid.empty()) return false;
+
+  HRESULT ole_hr = OleInitialize(nullptr);
+  bool ole_inited = SUCCEEDED(ole_hr);
+
+  bool dropped = false;
+  IDataObject* data_object = nullptr;
+  HRESULT hr = SHCreateDataObject(nullptr, 0, nullptr, nullptr,
+                                  IID_PPV_ARGS(&data_object));
+  if (SUCCEEDED(hr) && data_object) {
+    HGLOBAL drop = BuildDropFilesGlobal(valid);
+    if (drop) {
+      FORMATETC fmt = {};
+      fmt.cfFormat = CF_HDROP;
+      fmt.dwAspect = DVASPECT_CONTENT;
+      fmt.lindex = -1;
+      fmt.tymed = TYMED_HGLOBAL;
+
+      STGMEDIUM stg = {};
+      stg.tymed = TYMED_HGLOBAL;
+      stg.hGlobal = drop;
+
+      // fRelease=TRUE hands ownership of the medium to the data object.
+      if (SUCCEEDED(data_object->SetData(&fmt, &stg, TRUE))) {
+        auto* drop_source = new FileDropSource();
+        DWORD effect = 0;
+        HRESULT dd =
+            DoDragDrop(data_object, drop_source, DROPEFFECT_COPY, &effect);
+        dropped = (dd == DRAGDROP_S_DROP) && (effect != DROPEFFECT_NONE);
+        drop_source->Release();
+      } else {
+        GlobalFree(drop);
+      }
+    }
+    data_object->Release();
+  }
+
+  if (ole_inited) OleUninitialize();
+  return dropped;
+}
+
+}  // namespace
+
+bool ListenerPlugin::StartFileDrag(const std::vector<std::string>& paths) {
+  std::vector<std::wstring> wpaths;
+  wpaths.reserve(paths.size());
+  for (const auto& p : paths) {
+    if (p.empty()) continue;
+    auto wp = Utf8ToWide(p);
+    if (!wp.empty()) wpaths.push_back(std::move(wp));
+  }
+  return DoFilesDragDrop(wpaths);
 }
 
 // --- Native shell thumbnail extraction (PR #6b) ----------------------------
