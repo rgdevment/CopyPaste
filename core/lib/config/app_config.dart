@@ -11,15 +11,15 @@ class AppConfig {
     this.runOnStartup = true,
     this.hotkeyUseCtrl = true,
     this.hotkeyUseWin = false,
-    this.hotkeyUseAlt = false,
-    this.hotkeyUseShift = true,
+    this.hotkeyUseAlt = true,
+    this.hotkeyUseShift = false,
     this.hotkeyVirtualKey = 0x56,
     this.hotkeyKeyName = 'V',
     this.plainPasteHotkeyEnabled = false,
     this.plainPasteHotkeyUseCtrl = true,
     this.plainPasteHotkeyUseWin = false,
     this.plainPasteHotkeyUseAlt = true,
-    this.plainPasteHotkeyUseShift = false,
+    this.plainPasteHotkeyUseShift = true,
     this.plainPasteHotkeyVirtualKey = 0x56,
     this.plainPasteHotkeyKeyName = 'V',
     this.pageSize = 30,
@@ -61,40 +61,100 @@ class AppConfig {
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
     final defaults = defaultForCurrentPlatform();
+    final hotkeyUseCtrl =
+        json['hotkeyUseCtrl'] as bool? ?? defaults.hotkeyUseCtrl;
+    final hotkeyUseWin = json['hotkeyUseWin'] as bool? ?? defaults.hotkeyUseWin;
+    final hotkeyUseAlt = json['hotkeyUseAlt'] as bool? ?? defaults.hotkeyUseAlt;
+    final hotkeyUseShift =
+        json['hotkeyUseShift'] as bool? ?? defaults.hotkeyUseShift;
+    var hotkeyVirtualKey =
+        json['hotkeyVirtualKey'] as int? ?? defaults.hotkeyVirtualKey;
+    var hotkeyKeyName =
+        json['hotkeyKeyName'] as String? ?? defaults.hotkeyKeyName;
+    var plainPasteHotkeyEnabled =
+        // Missing means this is a pre-feature config. Do not unexpectedly
+        // claim a new global shortcut for an existing user.
+        json['plainPasteHotkeyEnabled'] as bool? ?? false;
+    var plainPasteHotkeyUseCtrl =
+        json['plainPasteHotkeyUseCtrl'] as bool? ??
+        defaults.plainPasteHotkeyUseCtrl;
+    var plainPasteHotkeyUseWin =
+        json['plainPasteHotkeyUseWin'] as bool? ??
+        defaults.plainPasteHotkeyUseWin;
+    var plainPasteHotkeyUseAlt =
+        json['plainPasteHotkeyUseAlt'] as bool? ??
+        defaults.plainPasteHotkeyUseAlt;
+    var plainPasteHotkeyUseShift =
+        json['plainPasteHotkeyUseShift'] as bool? ??
+        defaults.plainPasteHotkeyUseShift;
+    var plainPasteHotkeyVirtualKey =
+        json['plainPasteHotkeyVirtualKey'] as int? ??
+        defaults.plainPasteHotkeyVirtualKey;
+    var plainPasteHotkeyKeyName =
+        json['plainPasteHotkeyKeyName'] as String? ??
+        defaults.plainPasteHotkeyKeyName;
+
+    final shortcutDefaultsVersion =
+        json['shortcutDefaultsVersion'] as int? ?? 1;
+    if (shortcutDefaultsVersion < 2) {
+      final legacyWindowsOpen =
+          Platform.isWindows &&
+          hotkeyUseCtrl &&
+          !hotkeyUseWin &&
+          hotkeyUseAlt &&
+          !hotkeyUseShift &&
+          hotkeyVirtualKey == 0x43;
+      if (legacyWindowsOpen) {
+        hotkeyVirtualKey = defaults.hotkeyVirtualKey;
+        hotkeyKeyName = defaults.hotkeyKeyName;
+      }
+
+      final legacyPlainBinding =
+          plainPasteHotkeyEnabled &&
+          plainPasteHotkeyVirtualKey == 0x56 &&
+          ((Platform.isMacOS &&
+                  !plainPasteHotkeyUseCtrl &&
+                  plainPasteHotkeyUseWin &&
+                  plainPasteHotkeyUseAlt &&
+                  plainPasteHotkeyUseShift) ||
+              (!Platform.isMacOS &&
+                  plainPasteHotkeyUseCtrl &&
+                  !plainPasteHotkeyUseWin &&
+                  !plainPasteHotkeyUseAlt &&
+                  plainPasteHotkeyUseShift));
+      if (legacyPlainBinding) {
+        plainPasteHotkeyEnabled = false;
+        plainPasteHotkeyUseCtrl = defaults.plainPasteHotkeyUseCtrl;
+        plainPasteHotkeyUseWin = defaults.plainPasteHotkeyUseWin;
+        plainPasteHotkeyUseAlt = defaults.plainPasteHotkeyUseAlt;
+        plainPasteHotkeyUseShift = defaults.plainPasteHotkeyUseShift;
+        plainPasteHotkeyVirtualKey = defaults.plainPasteHotkeyVirtualKey;
+        plainPasteHotkeyKeyName = defaults.plainPasteHotkeyKeyName;
+      }
+      if (legacyWindowsOpen || legacyPlainBinding) {
+        AppLogger.info(
+          'Migrated legacy shortcut defaults to the revised bindings',
+        );
+      }
+    }
+
     return AppConfig(
       preferredLanguage:
           json['preferredLanguage'] as String? ?? defaults.preferredLanguage,
       runOnStartup: json['runOnStartup'] as bool? ?? defaults.runOnStartup,
-      hotkeyUseCtrl: json['hotkeyUseCtrl'] as bool? ?? defaults.hotkeyUseCtrl,
-      hotkeyUseWin: json['hotkeyUseWin'] as bool? ?? defaults.hotkeyUseWin,
-      hotkeyUseAlt: json['hotkeyUseAlt'] as bool? ?? defaults.hotkeyUseAlt,
-      hotkeyUseShift:
-          json['hotkeyUseShift'] as bool? ?? defaults.hotkeyUseShift,
-      hotkeyVirtualKey:
-          json['hotkeyVirtualKey'] as int? ?? defaults.hotkeyVirtualKey,
-      hotkeyKeyName: json['hotkeyKeyName'] as String? ?? defaults.hotkeyKeyName,
-      plainPasteHotkeyEnabled:
-          // Missing means this is a pre-feature config. Do not unexpectedly
-          // claim a new global shortcut for an existing user.
-          json['plainPasteHotkeyEnabled'] as bool? ?? false,
-      plainPasteHotkeyUseCtrl:
-          json['plainPasteHotkeyUseCtrl'] as bool? ??
-          defaults.plainPasteHotkeyUseCtrl,
-      plainPasteHotkeyUseWin:
-          json['plainPasteHotkeyUseWin'] as bool? ??
-          defaults.plainPasteHotkeyUseWin,
-      plainPasteHotkeyUseAlt:
-          json['plainPasteHotkeyUseAlt'] as bool? ??
-          defaults.plainPasteHotkeyUseAlt,
-      plainPasteHotkeyUseShift:
-          json['plainPasteHotkeyUseShift'] as bool? ??
-          defaults.plainPasteHotkeyUseShift,
-      plainPasteHotkeyVirtualKey:
-          json['plainPasteHotkeyVirtualKey'] as int? ??
-          defaults.plainPasteHotkeyVirtualKey,
-      plainPasteHotkeyKeyName:
-          json['plainPasteHotkeyKeyName'] as String? ??
-          defaults.plainPasteHotkeyKeyName,
+      hotkeyUseCtrl: hotkeyUseCtrl,
+      hotkeyUseWin: hotkeyUseWin,
+      hotkeyUseAlt: hotkeyUseAlt,
+      hotkeyUseShift: hotkeyUseShift,
+      hotkeyVirtualKey: hotkeyVirtualKey,
+      hotkeyKeyName: hotkeyKeyName,
+      plainPasteHotkeyEnabled: plainPasteHotkeyEnabled,
+      plainPasteHotkeyUseCtrl: plainPasteHotkeyUseCtrl,
+      plainPasteHotkeyUseWin: plainPasteHotkeyUseWin,
+      plainPasteHotkeyUseAlt: plainPasteHotkeyUseAlt,
+      plainPasteHotkeyUseShift: plainPasteHotkeyUseShift,
+      plainPasteHotkeyVirtualKey: plainPasteHotkeyVirtualKey,
+      plainPasteHotkeyKeyName: plainPasteHotkeyKeyName,
       pageSize: json['pageSize'] as int? ?? defaults.pageSize,
       maxItemsBeforeCleanup:
           json['maxItemsBeforeCleanup'] as int? ??
@@ -186,40 +246,43 @@ class AppConfig {
 
   // Kept for tests that pass a platform string explicitly.
   static AppConfig defaultForPlatform(String platform) => switch (platform) {
-    // Ctrl+Alt+C avoids Windows' Win+V clipboard history and keeps C as the
-    // CopyPaste mnemonic. Ctrl+Shift+V is Windows' plain-text convention.
+    // Ctrl+Alt+V keeps the familiar paste key without taking Windows' Win+V
+    // clipboard history. The optional system-wide plain-paste shortcut is
+    // disabled by default because Windows and many apps use Ctrl+Shift+V
+    // locally. Users who enable it start from the less invasive
+    // Ctrl+Alt+Shift+V binding.
     'windows' => const AppConfig(
       hotkeyUseCtrl: true,
       hotkeyUseAlt: true,
       hotkeyUseShift: false,
-      hotkeyVirtualKey: 0x43,
-      hotkeyKeyName: 'C',
-      plainPasteHotkeyEnabled: true,
+      hotkeyVirtualKey: 0x56,
+      hotkeyKeyName: 'V',
+      plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseShift: true,
-      plainPasteHotkeyUseAlt: false,
+      plainPasteHotkeyUseAlt: true,
     ),
-    // Control+Shift+V is deliberately separate from Command-based editing
-    // shortcuts. Option+Shift+Command+V matches the native macOS convention.
+    // Control+Shift+V opens the panel. The optional global plain-paste binding
+    // includes every modifier and stays disabled until explicitly enabled.
     'macos' => const AppConfig(
       hotkeyUseCtrl: true,
       hotkeyUseShift: true,
-      plainPasteHotkeyEnabled: true,
-      plainPasteHotkeyUseCtrl: false,
+      plainPasteHotkeyEnabled: false,
+      plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseWin: true,
       plainPasteHotkeyUseAlt: true,
       plainPasteHotkeyUseShift: true,
     ),
-    // Super+V is the desktop-oriented history gesture; Ctrl+Shift+V is the
-    // established paste gesture in Linux terminals.
+    // Super+V is the desktop-oriented history gesture. Ctrl+Shift+V remains
+    // available to terminals because the optional global binding is disabled.
     'linux' => const AppConfig(
       hotkeyUseCtrl: false,
       hotkeyUseWin: true,
       hotkeyUseShift: false,
-      plainPasteHotkeyEnabled: true,
+      plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseShift: true,
-      plainPasteHotkeyUseAlt: false,
+      plainPasteHotkeyUseAlt: true,
     ),
     _ => const AppConfig(),
   };
@@ -433,6 +496,7 @@ class AppConfig {
   );
 
   Map<String, dynamic> toJson() => {
+    'shortcutDefaultsVersion': 2,
     'preferredLanguage': preferredLanguage,
     'runOnStartup': runOnStartup,
     'hotkeyUseCtrl': hotkeyUseCtrl,

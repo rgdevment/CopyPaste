@@ -18,6 +18,8 @@ import 'package:copypaste/widgets/filter_bar.dart';
 Widget _buildApp({
   required ClipboardService service,
   required void Function(ClipboardItem) onPaste,
+  void Function(ClipboardItem)? onPastePlain,
+  VoidCallback? onPlainPasteUnavailable,
   VoidCallback? onExit,
   VoidCallback? onSettings,
   bool resetScrollOnShow = true,
@@ -44,7 +46,8 @@ Widget _buildApp({
           key: key,
           clipboardService: service,
           onPaste: onPaste,
-          onPastePlain: (_) {},
+          onPastePlain: onPastePlain ?? (_) {},
+          onPlainPasteUnavailable: onPlainPasteUnavailable,
           onExit: onExit ?? () {},
           onSettings: onSettings ?? () {},
           resetScrollOnShow: resetScrollOnShow,
@@ -995,6 +998,84 @@ void main() {
 
       expect(pasted, isNotNull);
       expect(pasted!.content, 'Paste me');
+    });
+
+    testWidgets(
+      'Ctrl+Shift+V pastes first visible item as plain text without selection',
+      (tester) async {
+        final now = DateTime.now().toUtc();
+        await repo.save(
+          ClipboardItem(
+            content: 'Older',
+            type: ClipboardContentType.text,
+            createdAt: now.subtract(const Duration(seconds: 1)),
+            modifiedAt: now.subtract(const Duration(seconds: 1)),
+          ),
+        );
+        await repo.save(
+          ClipboardItem(
+            content: 'Newest',
+            type: ClipboardContentType.text,
+            createdAt: now,
+            modifiedAt: now,
+          ),
+        );
+
+        ClipboardItem? pastedPlain;
+        final key = GlobalKey<MainScreenState>();
+        await tester.pumpWidget(
+          _buildApp(
+            service: service,
+            onPaste: (_) {},
+            onPastePlain: (item) => pastedPlain = item,
+            key: key,
+          ),
+        );
+        await tester.pumpAndSettle();
+        key.currentState!.onWindowShow();
+        await tester.pump();
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+
+        expect(pastedPlain, isNotNull);
+        expect(pastedPlain!.content, 'Newest');
+      },
+    );
+
+    testWidgets('Shift+Enter pastes selected item as plain text', (
+      tester,
+    ) async {
+      await repo.save(
+        ClipboardItem(content: 'Paste plain', type: ClipboardContentType.text),
+      );
+
+      ClipboardItem? pastedPlain;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onPastePlain: (item) => pastedPlain = item,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+
+      expect(pastedPlain, isNotNull);
+      expect(pastedPlain!.content, 'Paste plain');
     });
 
     testWidgets('item reactivated via stream triggers reload', (tester) async {

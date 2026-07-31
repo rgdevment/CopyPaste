@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:core/core.dart';
 import 'package:listener/listener.dart';
 
 typedef _GetForegroundWindowNative = IntPtr Function();
@@ -108,12 +109,22 @@ class WindowFocusManager {
   int _previousThreadId = 0;
   String? _previousBundleId;
 
-  Future<void> capturePreviousWindow() async {
+  bool get hasDestination =>
+      Platform.isWindows ? _previousWindow != 0 : _previousBundleId != null;
+
+  Future<bool> capturePreviousWindow() async {
     if (Platform.isWindows) {
-      _capturePreviousWindows();
+      return _capturePreviousWindows();
     } else if (Platform.isMacOS || Platform.isLinux) {
       _previousBundleId = await ClipboardWriter.captureFrontmostApp();
+      AppLogger.info(
+        'Focus session capture: platform=${Platform.operatingSystem}, '
+        'destination=${_previousBundleId ?? '-'}, '
+        'success=${_previousBundleId != null}',
+      );
+      return _previousBundleId != null;
     }
+    return false;
   }
 
   Future<PasteResponse> restoreAndPaste({
@@ -122,9 +133,11 @@ class WindowFocusManager {
     required int delayBeforePasteMs,
   }) async {
     if (Platform.isWindows && _previousWindow == 0) {
+      AppLogger.warn('Paste cancelled: no previous Windows destination');
       return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
     }
     if ((Platform.isMacOS || Platform.isLinux) && _previousBundleId == null) {
+      AppLogger.warn('Paste cancelled: no previous application destination');
       return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
     }
 
@@ -132,24 +145,39 @@ class WindowFocusManager {
       await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
       if (Platform.isMacOS || Platform.isLinux) {
-        return await ClipboardWriter.activateAndPaste(
+        final response = await ClipboardWriter.activateAndPaste(
           bundleId: _previousBundleId!,
           delayMs: delayBeforePasteMs,
         );
+        AppLogger.info(
+          'Paste destination result: platform=${Platform.operatingSystem}, '
+          'success=${response.success}, error=${response.errorCode ?? '-'}',
+        );
+        return response;
       }
 
       if (!_restorePreviousWindows()) {
+        AppLogger.warn(
+          'Paste cancelled: Windows rejected destination restore '
+          '(hwnd=$_previousWindow)',
+        );
         return const PasteResponse(success: false, errorCode: 'restoreFailed');
       }
 
       final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
       if (!focused) {
-        await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
-      } else {
-        await Future<void>.delayed(const Duration(milliseconds: 30));
+        AppLogger.warn(
+          'Paste cancelled: Windows destination focus verification timed out '
+          '(hwnd=$_previousWindow)',
+        );
+        return const PasteResponse(success: false, errorCode: 'focusTimeout');
       }
 
+      await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
       _simulatePasteWindows();
+      AppLogger.info(
+        'Paste destination result: platform=windows, success=true',
+      );
       return const PasteResponse(success: true);
     } finally {
       clear();
@@ -162,20 +190,34 @@ class WindowFocusManager {
     _previousBundleId = null;
   }
 
-  void _capturePreviousWindows() {
+  bool _capturePreviousWindows() {
     final w = _Win32.instance;
     final hwnd = w.getForegroundWindow();
     if (hwnd != 0 && w.isWindow(hwnd) != 0 && w.isWindowVisible(hwnd) != 0) {
-      _previousWindow = hwnd;
       final pidPtr = calloc<Uint32>();
       try {
-        _previousThreadId = w.getWindowThreadProcessId(hwnd, pidPtr);
+        final threadId = w.getWindowThreadProcessId(hwnd, pidPtr);
+        if (pidPtr.value == pid) {
+          clear();
+          AppLogger.warn(
+            'Focus session capture rejected CopyPaste itself (hwnd=$hwnd)',
+          );
+          return false;
+        }
+        _previousWindow = hwnd;
+        _previousThreadId = threadId;
+        AppLogger.info(
+          'Focus session capture: platform=windows, hwnd=$hwnd, '
+          'pid=${pidPtr.value}, success=true',
+        );
+        return true;
       } finally {
         calloc.free(pidPtr);
       }
     } else {
-      _previousWindow = 0;
-      _previousThreadId = 0;
+      clear();
+      AppLogger.warn('Focus session capture failed: no foreground window');
+      return false;
     }
   }
 
@@ -202,7 +244,8 @@ class WindowFocusManager {
       }
 
       w.bringWindowToTop(_previousWindow);
-      return w.setForegroundWindow(_previousWindow) != 0;
+      final accepted = w.setForegroundWindow(_previousWindow) != 0;
+      return accepted || w.getForegroundWindow() == _previousWindow;
     } finally {
       if (attached) {
         w.attachThreadInput(currentThreadId, _previousThreadId, 0);

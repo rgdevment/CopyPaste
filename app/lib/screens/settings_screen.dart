@@ -1177,7 +1177,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _SettingsRow(
               label: l.settingHotkeyShortcutLabel,
-              subtitle: l.currentShortcut(_hotkeyString(' + ')),
+              subtitle:
+                  '${l.currentShortcut(_hotkeyString(' + '))}\n'
+                  '${l.subtitleGlobalHotkeyWarning}',
               colors: colors,
             ),
             const SizedBox(height: 8),
@@ -1382,6 +1384,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _ShortcutRow(
               keys: 'Enter',
               description: l.shortcutEnter,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: Platform.isMacOS
+                  ? '⌥⇧⌘V / ⇧Enter'
+                  : 'Ctrl+Shift+V / Shift+Enter',
+              description: l.shortcutPasteSelectedPlain,
               colors: colors,
             ),
             _ShortcutRow(

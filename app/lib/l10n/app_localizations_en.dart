@@ -290,6 +290,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutEnter => 'Paste selected item';
 
   @override
+  String get shortcutPasteSelectedPlain =>
+      'Paste selected or first item as plain text';
+
+  @override
   String get shortcutDelete => 'Delete selected item';
 
   @override
@@ -404,11 +408,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingHotkeyShortcutLabel => 'Shortcut to open/close CopyPaste';
 
   @override
-  String get settingPlainPasteHotkeyLabel => 'Direct plain-text paste';
+  String get subtitleGlobalHotkeyWarning =>
+      'System-wide shortcut. It may replace the same combination in another application.';
+
+  @override
+  String get settingPlainPasteHotkeyLabel => 'Optional global plain-text paste';
 
   @override
   String get subtitlePlainPasteHotkey =>
-      'Pastes in the focused app and converts the current clipboard content to plain text.';
+      'Pastes the current clipboard as plain text without opening CopyPaste. Enabling a global shortcut can override the same shortcut in other apps.';
 
   @override
   String get shortcutDisabled => 'Disabled';
@@ -432,6 +440,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get plainPasteHotkeyRegistrationFailed =>
       'The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.';
+
+  @override
+  String get pasteDestinationUnavailable =>
+      'Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.';
+
+  @override
+  String get plainPasteItemUnavailable =>
+      'The selected or first item cannot be pasted as plain text.';
+
+  @override
+  String get plainClipboardUnavailable =>
+      'The current clipboard does not contain text that can be pasted as plain text.';
 
   @override
   String hotkeyRegistrationFailed(String shortcut) {

@@ -27,6 +27,7 @@ class MainScreen extends StatefulWidget {
     required this.clipboardService,
     required this.onPaste,
     required this.onPastePlain,
+    this.onPlainPasteUnavailable,
     this.onCopy,
     required this.onExit,
     required this.onSettings,
@@ -49,6 +50,7 @@ class MainScreen extends StatefulWidget {
   final ClipboardService clipboardService;
   final void Function(ClipboardItem item) onPaste;
   final void Function(ClipboardItem item) onPastePlain;
+  final VoidCallback? onPlainPasteUnavailable;
   final void Function(ClipboardItem item)? onCopy;
   final VoidCallback onExit;
   final VoidCallback onSettings;
@@ -256,6 +258,30 @@ class MainScreenState extends State<MainScreen> {
     widget.onPaste(item);
   }
 
+  /// Pastes the current selection as plain text. When keyboard navigation has
+  /// not selected an item yet, the first visible result is used so opening the
+  /// panel followed by the plain-paste gesture is a complete workflow.
+  bool pasteSelectedPlainOrFirst() {
+    if (_items.isEmpty) {
+      widget.onPlainPasteUnavailable?.call();
+      return false;
+    }
+    final index = _selectedIndex >= 0 && _selectedIndex < _items.length
+        ? _selectedIndex
+        : 0;
+    final item = _items[index];
+    if (item.type != ClipboardContentType.text &&
+        item.type != ClipboardContentType.link) {
+      widget.onPlainPasteUnavailable?.call();
+      return false;
+    }
+    if (_selectedIndex != index) {
+      setState(() => _selectedIndex = index);
+    }
+    widget.onPastePlain(item);
+    return true;
+  }
+
   Future<void> _onItemPin(ClipboardItem item) async {
     await widget.clipboardService.updatePin(item.id, !item.isPinned);
     _reload();
@@ -341,6 +367,10 @@ class MainScreenState extends State<MainScreen> {
   }
 
   KeyEventResult _onSearchKeyEvent(FocusNode node, KeyEvent event) {
+    if (_isPlainPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedPlainOrFirst();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -354,6 +384,10 @@ class MainScreenState extends State<MainScreen> {
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (_isPlainPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedPlainOrFirst();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -453,6 +487,26 @@ class MainScreenState extends State<MainScreen> {
     }
 
     return KeyEventResult.ignored;
+  }
+
+  bool _isPlainPasteGesture(KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    final shiftEnter =
+        event.logicalKey == LogicalKeyboardKey.enter &&
+        keyboard.isShiftPressed &&
+        !keyboard.isControlPressed &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isAltPressed;
+    if (shiftEnter) return true;
+
+    if (event.logicalKey != LogicalKeyboardKey.keyV ||
+        !keyboard.isShiftPressed) {
+      return false;
+    }
+    if (Platform.isMacOS) {
+      return keyboard.isMetaPressed && keyboard.isAltPressed;
+    }
+    return keyboard.isControlPressed && !keyboard.isAltPressed;
   }
 
   void _editSelectedItem() {

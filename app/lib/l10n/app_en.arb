@@ -221,6 +221,7 @@
   "shortcutTab2": "Switch to Pinned tab",
   "shortcutArrows": "Navigate between items",
   "shortcutEnter": "Paste selected item",
+  "shortcutPasteSelectedPlain": "Paste selected or first item as plain text",
   "shortcutDelete": "Delete selected item",
   "shortcutPin": "Pin / Unpin selected item",
   "shortcutEdit": "Edit card (label and color)",
@@ -297,8 +298,9 @@
   "@settingClearHistoryLabel": { "description": "Clear clipboard history label" },
   "settingHotkeyShortcutLabel": "Shortcut to open/close CopyPaste",
   "@settingHotkeyShortcutLabel": { "description": "Hotkey shortcut label" },
-  "settingPlainPasteHotkeyLabel": "Direct plain-text paste",
-  "subtitlePlainPasteHotkey": "Pastes in the focused app and converts the current clipboard content to plain text.",
+  "subtitleGlobalHotkeyWarning": "System-wide shortcut. It may replace the same combination in another application.",
+  "settingPlainPasteHotkeyLabel": "Optional global plain-text paste",
+  "subtitlePlainPasteHotkey": "Pastes the current clipboard as plain text without opening CopyPaste. Enabling a global shortcut can override the same shortcut in other apps.",
   "shortcutDisabled": "Disabled",
   "currentShortcut": "Current: {shortcut}",
   "@currentShortcut": {
@@ -308,6 +310,9 @@
   "hotkeyConflictWarning": "This combination is already assigned to the other CopyPaste shortcut.",
   "restoreRecommendedHotkeys": "Restore recommended shortcuts",
   "plainPasteHotkeyRegistrationFailed": "The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.",
+  "pasteDestinationUnavailable": "Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.",
+  "plainPasteItemUnavailable": "The selected or first item cannot be pasted as plain text.",
+  "plainClipboardUnavailable": "The current clipboard does not contain text that can be pasted as plain text.",
   "hotkeyRegistrationFailed": "The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.",
   "@hotkeyRegistrationFailed": {
     "placeholders": { "shortcut": { "type": "String" } }

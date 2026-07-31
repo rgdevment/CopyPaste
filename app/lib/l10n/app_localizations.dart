@@ -632,6 +632,12 @@ abstract class AppLocalizations {
   /// **'Paste selected item'**
   String get shortcutEnter;
 
+  /// No description provided for @shortcutPasteSelectedPlain.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste selected or first item as plain text'**
+  String get shortcutPasteSelectedPlain;
+
   /// No description provided for @shortcutDelete.
   ///
   /// In en, this message translates to:
@@ -860,16 +866,22 @@ abstract class AppLocalizations {
   /// **'Shortcut to open/close CopyPaste'**
   String get settingHotkeyShortcutLabel;
 
+  /// No description provided for @subtitleGlobalHotkeyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'System-wide shortcut. It may replace the same combination in another application.'**
+  String get subtitleGlobalHotkeyWarning;
+
   /// No description provided for @settingPlainPasteHotkeyLabel.
   ///
   /// In en, this message translates to:
-  /// **'Direct plain-text paste'**
+  /// **'Optional global plain-text paste'**
   String get settingPlainPasteHotkeyLabel;
 
   /// No description provided for @subtitlePlainPasteHotkey.
   ///
   /// In en, this message translates to:
-  /// **'Pastes in the focused app and converts the current clipboard content to plain text.'**
+  /// **'Pastes the current clipboard as plain text without opening CopyPaste. Enabling a global shortcut can override the same shortcut in other apps.'**
   String get subtitlePlainPasteHotkey;
 
   /// No description provided for @shortcutDisabled.
@@ -907,6 +919,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.'**
   String get plainPasteHotkeyRegistrationFailed;
+
+  /// No description provided for @pasteDestinationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.'**
+  String get pasteDestinationUnavailable;
+
+  /// No description provided for @plainPasteItemUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected or first item cannot be pasted as plain text.'**
+  String get plainPasteItemUnavailable;
+
+  /// No description provided for @plainClipboardUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The current clipboard does not contain text that can be pasted as plain text.'**
+  String get plainClipboardUnavailable;
 
   /// No description provided for @hotkeyRegistrationFailed.
   ///

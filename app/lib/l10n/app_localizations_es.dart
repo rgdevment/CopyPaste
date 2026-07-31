@@ -292,6 +292,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shortcutEnter => 'Pegar elemento seleccionado';
 
   @override
+  String get shortcutPasteSelectedPlain =>
+      'Pegar como texto plano el elemento seleccionado o el primero';
+
+  @override
   String get shortcutDelete => 'Eliminar elemento seleccionado';
 
   @override
@@ -406,11 +410,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingHotkeyShortcutLabel => 'Atajo para abrir/cerrar CopyPaste';
 
   @override
-  String get settingPlainPasteHotkeyLabel => 'Pegado directo como texto plano';
+  String get subtitleGlobalHotkeyWarning =>
+      'Atajo global del sistema. Puede reemplazar la misma combinación en otra aplicación.';
+
+  @override
+  String get settingPlainPasteHotkeyLabel =>
+      'Pegado global opcional como texto plano';
 
   @override
   String get subtitlePlainPasteHotkey =>
-      'Pega en la aplicación enfocada y convierte el contenido actual del portapapeles en texto plano.';
+      'Pega el portapapeles actual como texto plano sin abrir CopyPaste. Activar un atajo global puede reemplazar el mismo atajo en otras aplicaciones.';
 
   @override
   String get shortcutDisabled => 'Desactivado';
@@ -434,6 +443,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get plainPasteHotkeyRegistrationFailed =>
       'No se pudo registrar el atajo de pegado directo como texto plano. Es posible que el sistema u otra aplicación ya lo esté usando.';
+
+  @override
+  String get pasteDestinationUnavailable =>
+      'Se canceló el pegado porque no se pudo restaurar el destino original. Abre CopyPaste con su atajo de teclado e inténtalo nuevamente.';
+
+  @override
+  String get plainPasteItemUnavailable =>
+      'El elemento seleccionado o el primero no se puede pegar como texto plano.';
+
+  @override
+  String get plainClipboardUnavailable =>
+      'El portapapeles actual no contiene texto que se pueda pegar como texto plano.';
 
   @override
   String hotkeyRegistrationFailed(String shortcut) {

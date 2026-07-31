@@ -107,6 +107,7 @@
   "shortcutTab2": "Cambiar a pestaña Anclados",
   "shortcutArrows": "Navegar entre elementos",
   "shortcutEnter": "Pegar elemento seleccionado",
+  "shortcutPasteSelectedPlain": "Pegar como texto plano el elemento seleccionado o el primero",
   "shortcutDelete": "Eliminar elemento seleccionado",
   "shortcutPin": "Anclar / Desanclar elemento",
   "shortcutEdit": "Editar tarjeta (etiqueta y color)",
@@ -148,8 +149,9 @@
   "settingRetentionDaysLabel": "D\u00edas de retenci\u00f3n (0 = sin l\u00edmite)",
   "settingClearHistoryLabel": "Limpiar historial del portapapeles",
   "settingHotkeyShortcutLabel": "Atajo para abrir/cerrar CopyPaste",
-  "settingPlainPasteHotkeyLabel": "Pegado directo como texto plano",
-  "subtitlePlainPasteHotkey": "Pega en la aplicación enfocada y convierte el contenido actual del portapapeles en texto plano.",
+  "subtitleGlobalHotkeyWarning": "Atajo global del sistema. Puede reemplazar la misma combinación en otra aplicación.",
+  "settingPlainPasteHotkeyLabel": "Pegado global opcional como texto plano",
+  "subtitlePlainPasteHotkey": "Pega el portapapeles actual como texto plano sin abrir CopyPaste. Activar un atajo global puede reemplazar el mismo atajo en otras aplicaciones.",
   "shortcutDisabled": "Desactivado",
   "currentShortcut": "Actual: {shortcut}",
   "@currentShortcut": {
@@ -159,6 +161,9 @@
   "hotkeyConflictWarning": "Esta combinación ya está asignada al otro atajo de CopyPaste.",
   "restoreRecommendedHotkeys": "Restaurar atajos recomendados",
   "plainPasteHotkeyRegistrationFailed": "No se pudo registrar el atajo de pegado directo como texto plano. Es posible que el sistema u otra aplicación ya lo esté usando.",
+  "pasteDestinationUnavailable": "Se canceló el pegado porque no se pudo restaurar el destino original. Abre CopyPaste con su atajo de teclado e inténtalo nuevamente.",
+  "plainPasteItemUnavailable": "El elemento seleccionado o el primero no se puede pegar como texto plano.",
+  "plainClipboardUnavailable": "El portapapeles actual no contiene texto que se pueda pegar como texto plano.",
   "hotkeyRegistrationFailed": "No se pudo registrar el atajo {shortcut}. Es posible que el sistema u otra aplicación ya lo esté usando.",
   "@hotkeyRegistrationFailed": {
     "placeholders": { "shortcut": { "type": "String" } }

@@ -86,8 +86,12 @@ void main() {
       await tester.tap(find.text('Shortcuts'));
       await tester.pump();
       expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(find.text('Direct plain-text paste'), findsOneWidget);
+      expect(find.text('Optional global plain-text paste'), findsOneWidget);
       expect(find.textContaining('Disabled'), findsOneWidget);
+      expect(
+        find.text('Paste selected or first item as plain text'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('enabled plain paste hotkey shows its current binding', (
@@ -100,7 +104,10 @@ void main() {
       await tester.tap(find.text('Shortcuts'));
       await tester.pump();
 
-      expect(find.textContaining('Current: Ctrl + Alt + V'), findsOneWidget);
+      expect(
+        find.textContaining('Current: Ctrl + Alt + Shift + V'),
+        findsOneWidget,
+      );
       expect(find.text('Paste clipboard as plain text'), findsOneWidget);
     });
 
@@ -113,8 +120,8 @@ void main() {
           const AppConfig(
             plainPasteHotkeyEnabled: true,
             plainPasteHotkeyUseCtrl: true,
-            plainPasteHotkeyUseAlt: false,
-            plainPasteHotkeyUseShift: true,
+            plainPasteHotkeyUseAlt: true,
+            plainPasteHotkeyUseShift: false,
           ),
         ),
       );
