@@ -118,7 +118,7 @@ void main() {
 
     test('platform defaults follow native shortcut conventions', () {
       final windows = AppConfig.defaultForPlatform('windows');
-      expect(windows.hotkeyKeyName, 'V');
+      expect(windows.hotkeyKeyName, 'C');
       expect(windows.hotkeyUseCtrl, isTrue);
       expect(windows.hotkeyUseAlt, isTrue);
       expect(windows.plainPasteHotkeyEnabled, isFalse);
@@ -128,6 +128,7 @@ void main() {
 
       final macos = AppConfig.defaultForPlatform('macos');
       expect(macos.hotkeyUseCtrl, isTrue);
+      expect(macos.hotkeyUseAlt, isFalse);
       expect(macos.hotkeyUseShift, isTrue);
       expect(macos.plainPasteHotkeyUseWin, isTrue);
       expect(macos.plainPasteHotkeyUseAlt, isTrue);
@@ -137,6 +138,7 @@ void main() {
       final linux = AppConfig.defaultForPlatform('linux');
       expect(linux.hotkeyUseWin, isTrue);
       expect(linux.hotkeyUseCtrl, isFalse);
+      expect(linux.hotkeyUseAlt, isFalse);
       expect(linux.hotkeyUseShift, isFalse);
       expect(linux.plainPasteHotkeyUseCtrl, isTrue);
       expect(linux.plainPasteHotkeyUseShift, isTrue);
@@ -148,35 +150,48 @@ void main() {
       expect(restored.plainPasteHotkeyEnabled, isFalse);
     });
 
-    test(
-      'legacy Windows shortcut defaults migrate away from app shortcuts',
-      () {
-        if (!Platform.isWindows) return;
-        final restored = AppConfig.fromJson({
-          'hotkeyUseCtrl': true,
-          'hotkeyUseWin': false,
-          'hotkeyUseAlt': true,
-          'hotkeyUseShift': false,
-          'hotkeyVirtualKey': 0x43,
-          'hotkeyKeyName': 'C',
-          'plainPasteHotkeyEnabled': true,
-          'plainPasteHotkeyUseCtrl': true,
-          'plainPasteHotkeyUseWin': false,
-          'plainPasteHotkeyUseAlt': false,
-          'plainPasteHotkeyUseShift': true,
-          'plainPasteHotkeyVirtualKey': 0x56,
-          'plainPasteHotkeyKeyName': 'V',
-        });
+    test('legacy Windows opening shortcut remains Ctrl+Alt+C', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'hotkeyUseCtrl': true,
+        'hotkeyUseWin': false,
+        'hotkeyUseAlt': true,
+        'hotkeyUseShift': false,
+        'hotkeyVirtualKey': 0x43,
+        'hotkeyKeyName': 'C',
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': false,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
 
-        expect(restored.hotkeyKeyName, 'V');
-        expect(restored.hotkeyUseCtrl, isTrue);
-        expect(restored.hotkeyUseAlt, isTrue);
-        expect(restored.plainPasteHotkeyEnabled, isFalse);
-        expect(restored.plainPasteHotkeyUseCtrl, isTrue);
-        expect(restored.plainPasteHotkeyUseAlt, isTrue);
-        expect(restored.plainPasteHotkeyUseShift, isTrue);
-      },
-    );
+      expect(restored.hotkeyKeyName, 'C');
+      expect(restored.hotkeyUseCtrl, isTrue);
+      expect(restored.hotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyEnabled, isFalse);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isTrue);
+    });
+
+    test('version 2 Windows opening default migrates back to Ctrl+Alt+C', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 2,
+        'hotkeyUseCtrl': true,
+        'hotkeyUseWin': false,
+        'hotkeyUseAlt': true,
+        'hotkeyUseShift': false,
+        'hotkeyVirtualKey': 0x56,
+        'hotkeyKeyName': 'V',
+      });
+
+      expect(restored.hotkeyVirtualKey, 0x43);
+      expect(restored.hotkeyKeyName, 'C');
+    });
 
     test('versioned custom Ctrl+Shift+V global shortcut is preserved', () {
       final restored = AppConfig.fromJson({
@@ -678,7 +693,7 @@ void main() {
 
       expect(linux.hotkeyUseWin, isTrue);
       expect(macos.plainPasteHotkeyUseWin, isTrue);
-      expect(windows.hotkeyKeyName, equals('V'));
+      expect(windows.hotkeyKeyName, equals('C'));
     });
 
     test('defaultForPlatform unknown string returns default AppConfig', () {

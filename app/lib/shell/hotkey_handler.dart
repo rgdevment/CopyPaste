@@ -8,6 +8,7 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 
 import 'linux_hotkey_registration.dart';
 import 'linux_shell.dart';
+import 'windows_hotkey_channel.dart';
 
 class HotkeyHandler {
   HotkeyHandler({
@@ -22,6 +23,7 @@ class HotkeyHandler {
   void Function()? _onPlainPasteHotkey;
   HotKey? _hotkey;
   HotKey? _plainPasteHotkey;
+  WindowsHotkeyChannel? _windowsHotkeys;
   StreamSubscription<String>? _linuxEventsSubscription;
   bool? _plainPasteRegistrationSucceeded;
   bool? get plainPasteRegistrationSucceeded => _plainPasteRegistrationSucceeded;
@@ -83,6 +85,7 @@ class HotkeyHandler {
         : null;
     if (_hotkey != null ||
         _plainPasteHotkey != null ||
+        _windowsHotkeys != null ||
         _linuxEventsSubscription != null) {
       await unregister();
     }
@@ -113,6 +116,10 @@ class HotkeyHandler {
         _plainPasteRegistrationSucceeded = response.success;
       }
       return result;
+    }
+
+    if (Platform.isWindows) {
+      return _registerWindowsHotkeys();
     }
 
     final requestedBinding = _requestedBinding;
@@ -159,6 +166,119 @@ class HotkeyHandler {
     );
   }
 
+  Future<HotkeyRegistrationResult> _registerWindowsHotkeys() async {
+    final requestedBinding = _requestedBinding;
+    final channel = WindowsHotkeyChannel();
+    _windowsHotkeys = channel;
+
+    try {
+      await channel.start((id) {
+        if (id == 'open') _onHotkey?.call();
+        if (id == 'plainPaste') _onPlainPasteHotkey?.call();
+      });
+    } catch (e) {
+      AppLogger.error('Windows hotkey channel initialization failed: $e');
+      _plainPasteRegistrationSucceeded = config.plainPasteHotkeyEnabled
+          ? false
+          : null;
+      return HotkeyRegistrationResult(
+        status: HotkeyRegistrationStatus.failed,
+        requestedBinding: requestedBinding,
+      );
+    }
+
+    var effectiveBinding = requestedBinding;
+    var openResponse = await _registerWindowsBinding(
+      channel,
+      id: 'open',
+      binding: requestedBinding,
+    );
+    var status = HotkeyRegistrationStatus.registered;
+
+    if (!openResponse.success && config.hotkeyUseWin) {
+      final fallbackBinding = HotkeyBinding(
+        virtualKey: requestedBinding.virtualKey,
+        keyName: requestedBinding.keyName,
+        useCtrl: true,
+        useWin: false,
+        useAlt: requestedBinding.useAlt,
+        useShift: requestedBinding.useShift,
+      );
+      openResponse = await _registerWindowsBinding(
+        channel,
+        id: 'open',
+        binding: fallbackBinding,
+      );
+      if (openResponse.success) {
+        effectiveBinding = fallbackBinding;
+        status = HotkeyRegistrationStatus.fallbackRegistered;
+      }
+    }
+
+    if (config.plainPasteHotkeyEnabled) {
+      final response = await _registerWindowsBinding(
+        channel,
+        id: 'plainPaste',
+        binding: _plainPasteBinding,
+      );
+      _plainPasteRegistrationSucceeded = response.success;
+    }
+
+    if (!openResponse.success) {
+      return HotkeyRegistrationResult(
+        status: HotkeyRegistrationStatus.failed,
+        requestedBinding: requestedBinding,
+      );
+    }
+
+    AppLogger.info(
+      'Windows open hotkey registered: ${effectiveBinding.label()}',
+    );
+    return HotkeyRegistrationResult(
+      status: status,
+      requestedBinding: requestedBinding,
+      effectiveBinding: effectiveBinding,
+    );
+  }
+
+  Future<WindowsHotkeyRegistrationResponse> _registerWindowsBinding(
+    WindowsHotkeyChannel channel, {
+    required String id,
+    required HotkeyBinding binding,
+  }) async {
+    try {
+      final response = await channel.register(
+        id: id,
+        virtualKey: binding.virtualKey,
+        useCtrl: binding.useCtrl,
+        useWin: binding.useWin,
+        useAlt: binding.useAlt,
+        useShift: binding.useShift,
+      );
+      if (!response.success) {
+        AppLogger.error(
+          'Windows hotkey registration failed: id=$id, '
+          'binding=${binding.label()}, error=${response.errorCode}, '
+          'win32=${response.win32Error}',
+        );
+      } else if (id == 'plainPaste') {
+        AppLogger.info(
+          'Windows plain-paste hotkey registered: ${binding.label()}',
+        );
+      }
+      return response;
+    } catch (e) {
+      AppLogger.error(
+        'Windows hotkey registration call failed: id=$id, '
+        'binding=${binding.label()}, error=$e',
+      );
+      return const WindowsHotkeyRegistrationResponse(
+        success: false,
+        errorCode: 'platformCallFailed',
+      );
+    }
+  }
+
   Future<void> _registerPlainPasteBinding() async {
     if (!config.plainPasteHotkeyEnabled) return;
     _plainPasteHotkey = await _tryRegisterBinding(
@@ -176,6 +296,21 @@ class HotkeyHandler {
       // remain harmless and cannot retain the widget tree.
       _onHotkey = null;
       _onPlainPasteHotkey = null;
+    }
+    if (Platform.isWindows) {
+      final channel = _windowsHotkeys;
+      _windowsHotkeys = null;
+      _hotkey = null;
+      _plainPasteHotkey = null;
+      _plainPasteRegistrationSucceeded = null;
+      if (channel != null) {
+        try {
+          await channel.dispose();
+        } catch (e) {
+          AppLogger.error('Windows hotkey cleanup failed: $e');
+        }
+      }
+      return;
     }
     if (Platform.isLinux) {
       try {

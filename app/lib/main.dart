@@ -234,6 +234,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   ManifestState? _manifestState;
   bool _programmaticRestore = false;
   Timer? _blurHideTimer;
+  bool _hotkeyToggleInProgress = false;
   bool _directPlainPasteInProgress = false;
   bool _itemPasteInProgress = false;
   bool _shuttingDown = false;
@@ -754,6 +755,8 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onHotkey() async {
+    if (_shuttingDown || _hotkeyToggleInProgress) return;
+    _hotkeyToggleInProgress = true;
     _programmaticRestore = true;
     try {
       if (_appWindow.isVisible) {
@@ -764,6 +767,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       await _appWindow.show();
     } finally {
       _programmaticRestore = false;
+      _hotkeyToggleInProgress = false;
     }
   }
 

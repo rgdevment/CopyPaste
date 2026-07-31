@@ -97,18 +97,6 @@ class AppConfig {
     final shortcutDefaultsVersion =
         json['shortcutDefaultsVersion'] as int? ?? 1;
     if (shortcutDefaultsVersion < 2) {
-      final legacyWindowsOpen =
-          Platform.isWindows &&
-          hotkeyUseCtrl &&
-          !hotkeyUseWin &&
-          hotkeyUseAlt &&
-          !hotkeyUseShift &&
-          hotkeyVirtualKey == 0x43;
-      if (legacyWindowsOpen) {
-        hotkeyVirtualKey = defaults.hotkeyVirtualKey;
-        hotkeyKeyName = defaults.hotkeyKeyName;
-      }
-
       final legacyPlainBinding =
           plainPasteHotkeyEnabled &&
           plainPasteHotkeyVirtualKey == 0x56 &&
@@ -131,11 +119,26 @@ class AppConfig {
         plainPasteHotkeyVirtualKey = defaults.plainPasteHotkeyVirtualKey;
         plainPasteHotkeyKeyName = defaults.plainPasteHotkeyKeyName;
       }
-      if (legacyWindowsOpen || legacyPlainBinding) {
-        AppLogger.info(
-          'Migrated legacy shortcut defaults to the revised bindings',
-        );
+      if (legacyPlainBinding) {
+        AppLogger.info('Migrated the legacy plain-paste shortcut default');
       }
+    }
+
+    // Version 2 briefly changed the Windows opening default from Ctrl+Alt+C
+    // to Ctrl+Alt+V. Revert only that exact automatic binding; version 1
+    // custom bindings and every other versioned combination remain untouched.
+    final versionTwoWindowsOpen =
+        Platform.isWindows &&
+        shortcutDefaultsVersion == 2 &&
+        hotkeyUseCtrl &&
+        !hotkeyUseWin &&
+        hotkeyUseAlt &&
+        !hotkeyUseShift &&
+        hotkeyVirtualKey == 0x56;
+    if (versionTwoWindowsOpen) {
+      hotkeyVirtualKey = 0x43;
+      hotkeyKeyName = 'C';
+      AppLogger.info('Restored the Windows opening shortcut to Ctrl+Alt+C');
     }
 
     return AppConfig(
@@ -246,17 +249,16 @@ class AppConfig {
 
   // Kept for tests that pass a platform string explicitly.
   static AppConfig defaultForPlatform(String platform) => switch (platform) {
-    // Ctrl+Alt+V keeps the familiar paste key without taking Windows' Win+V
-    // clipboard history. The optional system-wide plain-paste shortcut is
-    // disabled by default because Windows and many apps use Ctrl+Shift+V
-    // locally. Users who enable it start from the less invasive
-    // Ctrl+Alt+Shift+V binding.
+    // Ctrl+Alt+C keeps the established CopyPaste opening gesture. The optional
+    // system-wide plain-paste shortcut is disabled by default because Windows
+    // and many apps use Ctrl+Shift+V locally. Users who enable it start from
+    // Ctrl+Alt+Shift+V, which stays mnemonic without shadowing that local key.
     'windows' => const AppConfig(
       hotkeyUseCtrl: true,
       hotkeyUseAlt: true,
       hotkeyUseShift: false,
-      hotkeyVirtualKey: 0x56,
-      hotkeyKeyName: 'V',
+      hotkeyVirtualKey: 0x43,
+      hotkeyKeyName: 'C',
       plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseShift: true,
@@ -266,6 +268,7 @@ class AppConfig {
     // includes every modifier and stays disabled until explicitly enabled.
     'macos' => const AppConfig(
       hotkeyUseCtrl: true,
+      hotkeyUseAlt: false,
       hotkeyUseShift: true,
       plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
@@ -278,6 +281,7 @@ class AppConfig {
     'linux' => const AppConfig(
       hotkeyUseCtrl: false,
       hotkeyUseWin: true,
+      hotkeyUseAlt: false,
       hotkeyUseShift: false,
       plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
@@ -496,7 +500,7 @@ class AppConfig {
   );
 
   Map<String, dynamic> toJson() => {
-    'shortcutDefaultsVersion': 2,
+    'shortcutDefaultsVersion': 3,
     'preferredLanguage': preferredLanguage,
     'runOnStartup': runOnStartup,
     'hotkeyUseCtrl': hotkeyUseCtrl,

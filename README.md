@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows, macOS and Linux"/>
 
   <h1>CopyPaste — Free Open Source Clipboard Manager</h1>
@@ -247,7 +247,11 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 
 | Shortcut                                 | Action                                              |
 | :--------------------------------------- | :-------------------------------------------------- |
-| Ctrl+Alt+V                               | Open/close CopyPaste (default hotkey, customizable) |
+| Ctrl+Alt+C (Windows)                     | Open/close CopyPaste (customizable)                  |
+| Ctrl+Shift+V (macOS) / Super+V (Linux)   | Open/close CopyPaste (customizable)                  |
+| Ctrl+Shift+V / Shift+Enter (Windows/Linux) | Paste selected/first item as plain text            |
+| Cmd+Option+Shift+V / Shift+Enter (macOS) | Paste selected/first item as plain text              |
+| Configurable global shortcut             | Paste current clipboard as plain text without opening CopyPaste (off by default) |
 | ↓ or Tab                                 | Navigate from search to clipboard items             |
 | ↑ / ↓                                    | Navigate between clipboard items                    |
 | Space                                    | Expand/collapse selected card to see more text      |
@@ -331,7 +335,7 @@ Double-click always collapses the card before pasting, so your last click state 
 
 ### Keyboard-Only Workflow
 
-1. **Press Ctrl+Alt+V** (default hotkey, customizable in Settings) → Window opens with focus on search box
+1. **Press Ctrl+Alt+C** on Windows, **Ctrl+Shift+V** on macOS, or **Super+V** on Linux (customizable in Settings) → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
 3. **Press Esc** (optional) → Clear search to see all items again
 4. **Press ↓** → Navigate to first clipboard item
@@ -363,7 +367,7 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 | **Linux**   | `apt` / `dnf` (OBS repo)          | Homebrew · self-updating AppImage · `.deb`/`.rpm`  |
 
-After installing, open CopyPaste with **Ctrl+Shift+V** (default on every platform — customizable in Settings → Shortcuts). On Linux/X11, if `Ctrl+Shift+V` is taken by another app or desktop shortcut, CopyPaste falls back to **Ctrl+Shift+Shift+V** for that session and shows a warning.
+After installing, open CopyPaste with **Ctrl+Alt+C** on Windows, **Ctrl+Shift+V** on macOS, or **Super+V** on Linux. All are customizable in Settings → Shortcuts. On Linux/X11, if the configured shortcut is unavailable, CopyPaste tries a temporary fallback for that session and shows a warning.
 
 ### Windows
 
