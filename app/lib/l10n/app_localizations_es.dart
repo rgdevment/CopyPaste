@@ -273,6 +273,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shortcutOpenClose => 'Abrir / cerrar CopyPaste';
 
   @override
+  String get shortcutPastePlainDirect =>
+      'Pegar el portapapeles como texto plano';
+
+  @override
   String get shortcutEscape => 'Limpiar búsqueda o cerrar ventana';
 
   @override
@@ -400,6 +404,46 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingHotkeyShortcutLabel => 'Atajo para abrir/cerrar CopyPaste';
+
+  @override
+  String get settingPlainPasteHotkeyLabel => 'Pegado directo como texto plano';
+
+  @override
+  String get subtitlePlainPasteHotkey =>
+      'Pega en la aplicación enfocada y convierte el contenido actual del portapapeles en texto plano.';
+
+  @override
+  String get shortcutDisabled => 'Desactivado';
+
+  @override
+  String currentShortcut(String shortcut) {
+    return 'Actual: $shortcut';
+  }
+
+  @override
+  String get hotkeyRequiresModifier =>
+      'Agrega al menos una tecla modificadora antes de guardar este atajo.';
+
+  @override
+  String get hotkeyConflictWarning =>
+      'Esta combinación ya está asignada al otro atajo de CopyPaste.';
+
+  @override
+  String get restoreRecommendedHotkeys => 'Restaurar atajos recomendados';
+
+  @override
+  String get plainPasteHotkeyRegistrationFailed =>
+      'No se pudo registrar el atajo de pegado directo como texto plano. Es posible que el sistema u otra aplicación ya lo esté usando.';
+
+  @override
+  String hotkeyRegistrationFailed(String shortcut) {
+    return 'No se pudo registrar el atajo $shortcut. Es posible que el sistema u otra aplicación ya lo esté usando.';
+  }
+
+  @override
+  String hotkeyFallbackActive(String requested, String effective) {
+    return 'El atajo $requested no estaba disponible. CopyPaste está usando temporalmente $effective.';
+  }
 
   @override
   String get subtitleStartupDesc =>

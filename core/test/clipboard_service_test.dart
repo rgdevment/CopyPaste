@@ -56,13 +56,26 @@ void main() {
 
     test('returns null when inside paste ignore window', () async {
       service.pasteIgnoreWindowMs = 60000;
-      await service.notifyPasteInitiated('any-id');
+      service.notifyDirectPasteInitiated('ignored');
 
       final result = await service.processText(
         'ignored',
         ClipboardContentType.text,
       );
       expect(result, isNull);
+    });
+
+    test('direct paste suppresses the plain-text clipboard rewrite', () async {
+      service.pasteIgnoreWindowMs = 60000;
+      service.notifyDirectPasteInitiated('fresh clipboard text');
+
+      final result = await service.processText(
+        'fresh clipboard text',
+        ClipboardContentType.text,
+      );
+
+      expect(result, isNull);
+      expect(await repo.getAll(), isEmpty);
     });
 
     test('saves item with source and rtf/html metadata', () async {

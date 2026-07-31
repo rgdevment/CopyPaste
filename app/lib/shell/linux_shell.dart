@@ -120,6 +120,7 @@ class LinuxShell {
   }
 
   static Future<HotkeyRegisterResponse> registerHotkey({
+    String id = 'openClose',
     required int virtualKey,
     required bool useCtrl,
     required bool useWin,
@@ -129,6 +130,7 @@ class LinuxShell {
     try {
       final result = await _methodChannel
           .invokeMethod<Object>('registerHotkey', {
+            'id': id,
             'virtualKey': virtualKey,
             'useCtrl': useCtrl,
             'useWin': useWin,

@@ -32,8 +32,8 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pump();
 }
 
-Widget _screen() => SettingsScreen(
-  config: const AppConfig(),
+Widget _screen([AppConfig config = const AppConfig()]) => SettingsScreen(
+  config: config,
   configPath: Directory.systemTemp.path,
   clipboardService: _service,
   storage: _storage,
@@ -86,6 +86,55 @@ void main() {
       await tester.tap(find.text('Shortcuts'));
       await tester.pump();
       expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.text('Direct plain-text paste'), findsOneWidget);
+      expect(find.textContaining('Disabled'), findsOneWidget);
+    });
+
+    testWidgets('enabled plain paste hotkey shows its current binding', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _screen(const AppConfig(plainPasteHotkeyEnabled: true)),
+      );
+      await tester.tap(find.text('Shortcuts'));
+      await tester.pump();
+
+      expect(find.textContaining('Current: Ctrl + Alt + V'), findsOneWidget);
+      expect(find.text('Paste clipboard as plain text'), findsOneWidget);
+    });
+
+    testWidgets('duplicate global hotkeys show a conflict warning', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _screen(
+          const AppConfig(
+            plainPasteHotkeyEnabled: true,
+            plainPasteHotkeyUseCtrl: true,
+            plainPasteHotkeyUseAlt: false,
+            plainPasteHotkeyUseShift: true,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Shortcuts'));
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text(
+          'This combination is already assigned to the other CopyPaste shortcut.',
+        ),
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+
+      expect(
+        find.text(
+          'This combination is already assigned to the other CopyPaste shortcut.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Restore recommended shortcuts'), findsOneWidget);
     });
 
     testWidgets('Performance tab renders without crashing', (tester) async {

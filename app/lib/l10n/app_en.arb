@@ -215,6 +215,7 @@
   "@trayExit": { "description": "Tray menu exit item" },
 
   "shortcutOpenClose": "Open / close CopyPaste",
+  "shortcutPastePlainDirect": "Paste clipboard as plain text",
   "shortcutEscape": "Clear search or close window",
   "shortcutTab1": "Switch to Recent tab",
   "shortcutTab2": "Switch to Pinned tab",
@@ -296,6 +297,28 @@
   "@settingClearHistoryLabel": { "description": "Clear clipboard history label" },
   "settingHotkeyShortcutLabel": "Shortcut to open/close CopyPaste",
   "@settingHotkeyShortcutLabel": { "description": "Hotkey shortcut label" },
+  "settingPlainPasteHotkeyLabel": "Direct plain-text paste",
+  "subtitlePlainPasteHotkey": "Pastes in the focused app and converts the current clipboard content to plain text.",
+  "shortcutDisabled": "Disabled",
+  "currentShortcut": "Current: {shortcut}",
+  "@currentShortcut": {
+    "placeholders": { "shortcut": { "type": "String" } }
+  },
+  "hotkeyRequiresModifier": "Add at least one modifier key before saving this shortcut.",
+  "hotkeyConflictWarning": "This combination is already assigned to the other CopyPaste shortcut.",
+  "restoreRecommendedHotkeys": "Restore recommended shortcuts",
+  "plainPasteHotkeyRegistrationFailed": "The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.",
+  "hotkeyRegistrationFailed": "The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.",
+  "@hotkeyRegistrationFailed": {
+    "placeholders": { "shortcut": { "type": "String" } }
+  },
+  "hotkeyFallbackActive": "The shortcut {requested} was unavailable. CopyPaste is temporarily using {effective}.",
+  "@hotkeyFallbackActive": {
+    "placeholders": {
+      "requested": { "type": "String" },
+      "effective": { "type": "String" }
+    }
+  },
 
   "subtitleStartupDesc": "Launches in background when you sign in",
   "@subtitleStartupDesc": { "description": "Startup subtitle" },

@@ -272,6 +272,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutOpenClose => 'Open / close CopyPaste';
 
   @override
+  String get shortcutPastePlainDirect => 'Paste clipboard as plain text';
+
+  @override
   String get shortcutEscape => 'Clear search or close window';
 
   @override
@@ -399,6 +402,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingHotkeyShortcutLabel => 'Shortcut to open/close CopyPaste';
+
+  @override
+  String get settingPlainPasteHotkeyLabel => 'Direct plain-text paste';
+
+  @override
+  String get subtitlePlainPasteHotkey =>
+      'Pastes in the focused app and converts the current clipboard content to plain text.';
+
+  @override
+  String get shortcutDisabled => 'Disabled';
+
+  @override
+  String currentShortcut(String shortcut) {
+    return 'Current: $shortcut';
+  }
+
+  @override
+  String get hotkeyRequiresModifier =>
+      'Add at least one modifier key before saving this shortcut.';
+
+  @override
+  String get hotkeyConflictWarning =>
+      'This combination is already assigned to the other CopyPaste shortcut.';
+
+  @override
+  String get restoreRecommendedHotkeys => 'Restore recommended shortcuts';
+
+  @override
+  String get plainPasteHotkeyRegistrationFailed =>
+      'The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.';
+
+  @override
+  String hotkeyRegistrationFailed(String shortcut) {
+    return 'The shortcut $shortcut could not be registered. It may already be in use by the system or another app.';
+  }
+
+  @override
+  String hotkeyFallbackActive(String requested, String effective) {
+    return 'The shortcut $requested was unavailable. CopyPaste is temporarily using $effective.';
+  }
 
   @override
   String get subtitleStartupDesc => 'Launches in background when you sign in';

@@ -596,6 +596,12 @@ abstract class AppLocalizations {
   /// **'Open / close CopyPaste'**
   String get shortcutOpenClose;
 
+  /// No description provided for @shortcutPastePlainDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste clipboard as plain text'**
+  String get shortcutPastePlainDirect;
+
   /// No description provided for @shortcutEscape.
   ///
   /// In en, this message translates to:
@@ -853,6 +859,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shortcut to open/close CopyPaste'**
   String get settingHotkeyShortcutLabel;
+
+  /// No description provided for @settingPlainPasteHotkeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct plain-text paste'**
+  String get settingPlainPasteHotkeyLabel;
+
+  /// No description provided for @subtitlePlainPasteHotkey.
+  ///
+  /// In en, this message translates to:
+  /// **'Pastes in the focused app and converts the current clipboard content to plain text.'**
+  String get subtitlePlainPasteHotkey;
+
+  /// No description provided for @shortcutDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get shortcutDisabled;
+
+  /// No description provided for @currentShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {shortcut}'**
+  String currentShortcut(String shortcut);
+
+  /// No description provided for @hotkeyRequiresModifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one modifier key before saving this shortcut.'**
+  String get hotkeyRequiresModifier;
+
+  /// No description provided for @hotkeyConflictWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This combination is already assigned to the other CopyPaste shortcut.'**
+  String get hotkeyConflictWarning;
+
+  /// No description provided for @restoreRecommendedHotkeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore recommended shortcuts'**
+  String get restoreRecommendedHotkeys;
+
+  /// No description provided for @plainPasteHotkeyRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.'**
+  String get plainPasteHotkeyRegistrationFailed;
+
+  /// No description provided for @hotkeyRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.'**
+  String hotkeyRegistrationFailed(String shortcut);
+
+  /// No description provided for @hotkeyFallbackActive.
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {requested} was unavailable. CopyPaste is temporarily using {effective}.'**
+  String hotkeyFallbackActive(String requested, String effective);
 
   /// Startup subtitle
   ///

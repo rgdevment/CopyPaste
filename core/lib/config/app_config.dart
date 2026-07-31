@@ -15,6 +15,13 @@ class AppConfig {
     this.hotkeyUseShift = true,
     this.hotkeyVirtualKey = 0x56,
     this.hotkeyKeyName = 'V',
+    this.plainPasteHotkeyEnabled = false,
+    this.plainPasteHotkeyUseCtrl = true,
+    this.plainPasteHotkeyUseWin = false,
+    this.plainPasteHotkeyUseAlt = true,
+    this.plainPasteHotkeyUseShift = false,
+    this.plainPasteHotkeyVirtualKey = 0x56,
+    this.plainPasteHotkeyKeyName = 'V',
     this.pageSize = 30,
     this.maxItemsBeforeCleanup = 100,
     this.scrollLoadThreshold = 400,
@@ -66,6 +73,28 @@ class AppConfig {
       hotkeyVirtualKey:
           json['hotkeyVirtualKey'] as int? ?? defaults.hotkeyVirtualKey,
       hotkeyKeyName: json['hotkeyKeyName'] as String? ?? defaults.hotkeyKeyName,
+      plainPasteHotkeyEnabled:
+          // Missing means this is a pre-feature config. Do not unexpectedly
+          // claim a new global shortcut for an existing user.
+          json['plainPasteHotkeyEnabled'] as bool? ?? false,
+      plainPasteHotkeyUseCtrl:
+          json['plainPasteHotkeyUseCtrl'] as bool? ??
+          defaults.plainPasteHotkeyUseCtrl,
+      plainPasteHotkeyUseWin:
+          json['plainPasteHotkeyUseWin'] as bool? ??
+          defaults.plainPasteHotkeyUseWin,
+      plainPasteHotkeyUseAlt:
+          json['plainPasteHotkeyUseAlt'] as bool? ??
+          defaults.plainPasteHotkeyUseAlt,
+      plainPasteHotkeyUseShift:
+          json['plainPasteHotkeyUseShift'] as bool? ??
+          defaults.plainPasteHotkeyUseShift,
+      plainPasteHotkeyVirtualKey:
+          json['plainPasteHotkeyVirtualKey'] as int? ??
+          defaults.plainPasteHotkeyVirtualKey,
+      plainPasteHotkeyKeyName:
+          json['plainPasteHotkeyKeyName'] as String? ??
+          defaults.plainPasteHotkeyKeyName,
       pageSize: json['pageSize'] as int? ?? defaults.pageSize,
       maxItemsBeforeCleanup:
           json['maxItemsBeforeCleanup'] as int? ??
@@ -148,10 +177,52 @@ class AppConfig {
     );
   }
 
-  static AppConfig defaultForCurrentPlatform() => defaultForPlatform('default');
+  static AppConfig defaultForCurrentPlatform() {
+    if (Platform.isWindows) return defaultForPlatform('windows');
+    if (Platform.isMacOS) return defaultForPlatform('macos');
+    if (Platform.isLinux) return defaultForPlatform('linux');
+    return defaultForPlatform('default');
+  }
 
   // Kept for tests that pass a platform string explicitly.
-  static AppConfig defaultForPlatform(String platform) => const AppConfig();
+  static AppConfig defaultForPlatform(String platform) => switch (platform) {
+    // Ctrl+Alt+C avoids Windows' Win+V clipboard history and keeps C as the
+    // CopyPaste mnemonic. Ctrl+Shift+V is Windows' plain-text convention.
+    'windows' => const AppConfig(
+      hotkeyUseCtrl: true,
+      hotkeyUseAlt: true,
+      hotkeyUseShift: false,
+      hotkeyVirtualKey: 0x43,
+      hotkeyKeyName: 'C',
+      plainPasteHotkeyEnabled: true,
+      plainPasteHotkeyUseCtrl: true,
+      plainPasteHotkeyUseShift: true,
+      plainPasteHotkeyUseAlt: false,
+    ),
+    // Control+Shift+V is deliberately separate from Command-based editing
+    // shortcuts. Option+Shift+Command+V matches the native macOS convention.
+    'macos' => const AppConfig(
+      hotkeyUseCtrl: true,
+      hotkeyUseShift: true,
+      plainPasteHotkeyEnabled: true,
+      plainPasteHotkeyUseCtrl: false,
+      plainPasteHotkeyUseWin: true,
+      plainPasteHotkeyUseAlt: true,
+      plainPasteHotkeyUseShift: true,
+    ),
+    // Super+V is the desktop-oriented history gesture; Ctrl+Shift+V is the
+    // established paste gesture in Linux terminals.
+    'linux' => const AppConfig(
+      hotkeyUseCtrl: false,
+      hotkeyUseWin: true,
+      hotkeyUseShift: false,
+      plainPasteHotkeyEnabled: true,
+      plainPasteHotkeyUseCtrl: true,
+      plainPasteHotkeyUseShift: true,
+      plainPasteHotkeyUseAlt: false,
+    ),
+    _ => const AppConfig(),
+  };
 
   static const String fileName = 'config.json';
   static const String appVersion = String.fromEnvironment(
@@ -170,6 +241,13 @@ class AppConfig {
   final bool hotkeyUseShift;
   final int hotkeyVirtualKey;
   final String hotkeyKeyName;
+  final bool plainPasteHotkeyEnabled;
+  final bool plainPasteHotkeyUseCtrl;
+  final bool plainPasteHotkeyUseWin;
+  final bool plainPasteHotkeyUseAlt;
+  final bool plainPasteHotkeyUseShift;
+  final int plainPasteHotkeyVirtualKey;
+  final String plainPasteHotkeyKeyName;
 
   // Performance
   final int pageSize;
@@ -234,6 +312,13 @@ class AppConfig {
     bool? hotkeyUseShift,
     int? hotkeyVirtualKey,
     String? hotkeyKeyName,
+    bool? plainPasteHotkeyEnabled,
+    bool? plainPasteHotkeyUseCtrl,
+    bool? plainPasteHotkeyUseWin,
+    bool? plainPasteHotkeyUseAlt,
+    bool? plainPasteHotkeyUseShift,
+    int? plainPasteHotkeyVirtualKey,
+    String? plainPasteHotkeyKeyName,
     int? pageSize,
     int? maxItemsBeforeCleanup,
     int? scrollLoadThreshold,
@@ -278,6 +363,20 @@ class AppConfig {
     hotkeyUseShift: hotkeyUseShift ?? this.hotkeyUseShift,
     hotkeyVirtualKey: hotkeyVirtualKey ?? this.hotkeyVirtualKey,
     hotkeyKeyName: hotkeyKeyName ?? this.hotkeyKeyName,
+    plainPasteHotkeyEnabled:
+        plainPasteHotkeyEnabled ?? this.plainPasteHotkeyEnabled,
+    plainPasteHotkeyUseCtrl:
+        plainPasteHotkeyUseCtrl ?? this.plainPasteHotkeyUseCtrl,
+    plainPasteHotkeyUseWin:
+        plainPasteHotkeyUseWin ?? this.plainPasteHotkeyUseWin,
+    plainPasteHotkeyUseAlt:
+        plainPasteHotkeyUseAlt ?? this.plainPasteHotkeyUseAlt,
+    plainPasteHotkeyUseShift:
+        plainPasteHotkeyUseShift ?? this.plainPasteHotkeyUseShift,
+    plainPasteHotkeyVirtualKey:
+        plainPasteHotkeyVirtualKey ?? this.plainPasteHotkeyVirtualKey,
+    plainPasteHotkeyKeyName:
+        plainPasteHotkeyKeyName ?? this.plainPasteHotkeyKeyName,
     pageSize: pageSize ?? this.pageSize,
     maxItemsBeforeCleanup: maxItemsBeforeCleanup ?? this.maxItemsBeforeCleanup,
     scrollLoadThreshold: scrollLoadThreshold ?? this.scrollLoadThreshold,
@@ -342,6 +441,13 @@ class AppConfig {
     'hotkeyUseShift': hotkeyUseShift,
     'hotkeyVirtualKey': hotkeyVirtualKey,
     'hotkeyKeyName': hotkeyKeyName,
+    'plainPasteHotkeyEnabled': plainPasteHotkeyEnabled,
+    'plainPasteHotkeyUseCtrl': plainPasteHotkeyUseCtrl,
+    'plainPasteHotkeyUseWin': plainPasteHotkeyUseWin,
+    'plainPasteHotkeyUseAlt': plainPasteHotkeyUseAlt,
+    'plainPasteHotkeyUseShift': plainPasteHotkeyUseShift,
+    'plainPasteHotkeyVirtualKey': plainPasteHotkeyVirtualKey,
+    'plainPasteHotkeyKeyName': plainPasteHotkeyKeyName,
     'pageSize': pageSize,
     'maxItemsBeforeCleanup': maxItemsBeforeCleanup,
     'scrollLoadThreshold': scrollLoadThreshold,

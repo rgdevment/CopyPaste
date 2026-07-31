@@ -51,6 +51,7 @@ void main() {
     test('load returns default when file does not exist', () async {
       final config = await AppConfig.load('/nonexistent/path/config.json');
       expect(config.preferredLanguage, equals('auto'));
+      expect(config.plainPasteHotkeyEnabled, isTrue);
     });
 
     test('save and load round-trip', () async {
@@ -106,17 +107,44 @@ void main() {
       expect(config.hotkeyUseShift, isTrue);
       expect(config.hotkeyVirtualKey, equals(0x56));
       expect(config.hotkeyKeyName, equals('V'));
+      expect(config.plainPasteHotkeyEnabled, isFalse);
+      expect(config.plainPasteHotkeyUseCtrl, isTrue);
+      expect(config.plainPasteHotkeyUseAlt, isTrue);
+      expect(config.plainPasteHotkeyUseWin, isFalse);
+      expect(config.plainPasteHotkeyUseShift, isFalse);
+      expect(config.plainPasteHotkeyVirtualKey, equals(0x56));
+      expect(config.plainPasteHotkeyKeyName, equals('V'));
     });
 
-    test('all platforms default to Ctrl+Shift+V', () {
-      for (final platform in ['default', 'linux', 'windows', 'macos']) {
-        final config = AppConfig.defaultForPlatform(platform);
-        expect(config.hotkeyUseCtrl, isTrue, reason: '$platform: useCtrl');
-        expect(config.hotkeyUseWin, isFalse, reason: '$platform: useWin');
-        expect(config.hotkeyUseAlt, isFalse, reason: '$platform: useAlt');
-        expect(config.hotkeyUseShift, isTrue, reason: '$platform: useShift');
-        expect(config.hotkeyKeyName, equals('V'), reason: '$platform: key');
-      }
+    test('platform defaults follow native shortcut conventions', () {
+      final windows = AppConfig.defaultForPlatform('windows');
+      expect(windows.hotkeyKeyName, 'C');
+      expect(windows.hotkeyUseCtrl, isTrue);
+      expect(windows.hotkeyUseAlt, isTrue);
+      expect(windows.plainPasteHotkeyEnabled, isTrue);
+      expect(windows.plainPasteHotkeyUseCtrl, isTrue);
+      expect(windows.plainPasteHotkeyUseShift, isTrue);
+      expect(windows.plainPasteHotkeyUseAlt, isFalse);
+
+      final macos = AppConfig.defaultForPlatform('macos');
+      expect(macos.hotkeyUseCtrl, isTrue);
+      expect(macos.hotkeyUseShift, isTrue);
+      expect(macos.plainPasteHotkeyUseWin, isTrue);
+      expect(macos.plainPasteHotkeyUseAlt, isTrue);
+      expect(macos.plainPasteHotkeyUseShift, isTrue);
+      expect(macos.plainPasteHotkeyUseCtrl, isFalse);
+
+      final linux = AppConfig.defaultForPlatform('linux');
+      expect(linux.hotkeyUseWin, isTrue);
+      expect(linux.hotkeyUseCtrl, isFalse);
+      expect(linux.hotkeyUseShift, isFalse);
+      expect(linux.plainPasteHotkeyUseCtrl, isTrue);
+      expect(linux.plainPasteHotkeyUseShift, isTrue);
+    });
+
+    test('legacy JSON does not silently enable the new global hotkey', () {
+      final restored = AppConfig.fromJson({'hotkeyKeyName': 'P'});
+      expect(restored.plainPasteHotkeyEnabled, isFalse);
     });
 
     test('copyWith all hotkey fields', () {
@@ -150,6 +178,26 @@ void main() {
       expect(restored.hotkeyUseCtrl, isTrue);
       expect(restored.hotkeyUseWin, isFalse);
       expect(restored.hotkeyKeyName, equals('C'));
+    });
+
+    test('plain paste hotkey fields copy and round-trip via JSON', () {
+      final updated = const AppConfig().copyWith(
+        plainPasteHotkeyEnabled: true,
+        plainPasteHotkeyUseCtrl: false,
+        plainPasteHotkeyUseWin: true,
+        plainPasteHotkeyUseAlt: false,
+        plainPasteHotkeyUseShift: true,
+        plainPasteHotkeyVirtualKey: 0x50,
+        plainPasteHotkeyKeyName: 'P',
+      );
+      final restored = AppConfig.fromJson(updated.toJson());
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isFalse);
+      expect(restored.plainPasteHotkeyUseWin, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isFalse);
+      expect(restored.plainPasteHotkeyUseShift, isTrue);
+      expect(restored.plainPasteHotkeyVirtualKey, equals(0x50));
+      expect(restored.plainPasteHotkeyKeyName, equals('P'));
     });
   });
 
@@ -574,18 +622,15 @@ void main() {
       expect(config, isA<AppConfig>());
     });
 
-    test(
-      'defaultForPlatform returns same hotkey defaults for all platforms',
-      () {
-        final linux = AppConfig.defaultForPlatform('linux');
-        final macos = AppConfig.defaultForPlatform('macos');
-        final windows = AppConfig.defaultForPlatform('windows');
+    test('defaultForPlatform returns platform-specific hotkeys', () {
+      final linux = AppConfig.defaultForPlatform('linux');
+      final macos = AppConfig.defaultForPlatform('macos');
+      final windows = AppConfig.defaultForPlatform('windows');
 
-        expect(linux.hotkeyKeyName, equals(macos.hotkeyKeyName));
-        expect(macos.hotkeyKeyName, equals(windows.hotkeyKeyName));
-        expect(linux.hotkeyUseCtrl, equals(macos.hotkeyUseCtrl));
-      },
-    );
+      expect(linux.hotkeyUseWin, isTrue);
+      expect(macos.plainPasteHotkeyUseWin, isTrue);
+      expect(windows.hotkeyKeyName, equals('C'));
+    });
 
     test('defaultForPlatform unknown string returns default AppConfig', () {
       final config = AppConfig.defaultForPlatform('unknown-platform');

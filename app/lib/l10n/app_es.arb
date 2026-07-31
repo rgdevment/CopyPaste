@@ -101,6 +101,7 @@
   "trayExit": "Salir",
 
   "shortcutOpenClose": "Abrir / cerrar CopyPaste",
+  "shortcutPastePlainDirect": "Pegar el portapapeles como texto plano",
   "shortcutEscape": "Limpiar búsqueda o cerrar ventana",
   "shortcutTab1": "Cambiar a pestaña Recientes",
   "shortcutTab2": "Cambiar a pestaña Anclados",
@@ -147,6 +148,28 @@
   "settingRetentionDaysLabel": "D\u00edas de retenci\u00f3n (0 = sin l\u00edmite)",
   "settingClearHistoryLabel": "Limpiar historial del portapapeles",
   "settingHotkeyShortcutLabel": "Atajo para abrir/cerrar CopyPaste",
+  "settingPlainPasteHotkeyLabel": "Pegado directo como texto plano",
+  "subtitlePlainPasteHotkey": "Pega en la aplicación enfocada y convierte el contenido actual del portapapeles en texto plano.",
+  "shortcutDisabled": "Desactivado",
+  "currentShortcut": "Actual: {shortcut}",
+  "@currentShortcut": {
+    "placeholders": { "shortcut": { "type": "String" } }
+  },
+  "hotkeyRequiresModifier": "Agrega al menos una tecla modificadora antes de guardar este atajo.",
+  "hotkeyConflictWarning": "Esta combinación ya está asignada al otro atajo de CopyPaste.",
+  "restoreRecommendedHotkeys": "Restaurar atajos recomendados",
+  "plainPasteHotkeyRegistrationFailed": "No se pudo registrar el atajo de pegado directo como texto plano. Es posible que el sistema u otra aplicación ya lo esté usando.",
+  "hotkeyRegistrationFailed": "No se pudo registrar el atajo {shortcut}. Es posible que el sistema u otra aplicación ya lo esté usando.",
+  "@hotkeyRegistrationFailed": {
+    "placeholders": { "shortcut": { "type": "String" } }
+  },
+  "hotkeyFallbackActive": "El atajo {requested} no estaba disponible. CopyPaste está usando temporalmente {effective}.",
+  "@hotkeyFallbackActive": {
+    "placeholders": {
+      "requested": { "type": "String" },
+      "effective": { "type": "String" }
+    }
+  },
 
   "subtitleStartupDesc": "Se inicia en segundo plano al iniciar sesi\u00f3n",
   "subtitleHideOnDeactivate": "Cerrar la ventana al hacer clic fuera",

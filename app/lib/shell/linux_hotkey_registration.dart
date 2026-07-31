@@ -87,18 +87,18 @@ class HotkeyBinding {
 
   String label({bool isMac = false}) {
     final parts = <String>[];
-    if (useCtrl) parts.add('Ctrl');
-    if (useWin) {
-      if (isMac || Platform.isMacOS) {
-        parts.add('Cmd');
-      } else if (Platform.isLinux) {
-        parts.add('Super');
-      } else {
-        parts.add('Win');
-      }
+    final mac = isMac || Platform.isMacOS;
+    if (mac) {
+      if (useCtrl) parts.add('Control');
+      if (useAlt) parts.add('Option');
+      if (useShift) parts.add('Shift');
+      if (useWin) parts.add('Command');
+    } else {
+      if (useCtrl) parts.add('Ctrl');
+      if (useWin) parts.add(Platform.isLinux ? 'Super' : 'Win');
+      if (useAlt) parts.add('Alt');
+      if (useShift) parts.add('Shift');
     }
-    if (useAlt) parts.add(isMac || Platform.isMacOS ? 'Option' : 'Alt');
-    if (useShift) parts.add('Shift');
     parts.add(keyName);
     return parts.join('+');
   }
@@ -123,9 +123,9 @@ class HotkeyBinding {
 const HotkeyBinding kLinuxTemporaryFallbackHotkey = HotkeyBinding(
   virtualKey: 0x56,
   keyName: 'V',
-  useCtrl: true,
-  useWin: false,
-  useAlt: true,
+  useCtrl: false,
+  useWin: true,
+  useAlt: false,
   useShift: true,
 );
 
