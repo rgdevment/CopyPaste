@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -123,8 +124,8 @@ void main() {
       expect(windows.hotkeyUseAlt, isTrue);
       expect(windows.plainPasteHotkeyEnabled, isFalse);
       expect(windows.plainPasteHotkeyUseCtrl, isTrue);
-      expect(windows.plainPasteHotkeyUseShift, isTrue);
       expect(windows.plainPasteHotkeyUseAlt, isTrue);
+      expect(windows.plainPasteHotkeyUseShift, isFalse);
 
       final macos = AppConfig.defaultForPlatform('macos');
       expect(macos.hotkeyUseCtrl, isTrue);
@@ -142,7 +143,7 @@ void main() {
       expect(linux.hotkeyUseShift, isFalse);
       expect(linux.plainPasteHotkeyUseCtrl, isTrue);
       expect(linux.plainPasteHotkeyUseShift, isTrue);
-      expect(linux.plainPasteHotkeyUseAlt, isTrue);
+      expect(linux.plainPasteHotkeyUseAlt, isFalse);
     });
 
     test('legacy JSON does not silently enable the new global hotkey', () {
@@ -174,7 +175,7 @@ void main() {
       expect(restored.plainPasteHotkeyEnabled, isFalse);
       expect(restored.plainPasteHotkeyUseCtrl, isTrue);
       expect(restored.plainPasteHotkeyUseAlt, isTrue);
-      expect(restored.plainPasteHotkeyUseShift, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isFalse);
     });
 
     test('version 2 Windows opening default migrates back to Ctrl+Alt+C', () {
@@ -209,6 +210,79 @@ void main() {
       expect(restored.plainPasteHotkeyUseCtrl, isTrue);
       expect(restored.plainPasteHotkeyUseAlt, isFalse);
       expect(restored.plainPasteHotkeyUseShift, isTrue);
+    });
+
+    test('version 3 Windows plain-paste default migrates to Ctrl+Alt+V', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 3,
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': true,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
+
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isFalse);
+    });
+
+    test('version 4 Windows plain-paste default migrates to Ctrl+Alt+V', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 4,
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': false,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
+
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isFalse);
+    });
+
+    test('load persists shortcut migrations once', () async {
+      if (!Platform.isWindows) return;
+      final dir = Directory.systemTemp.createTempSync('shortcut_migration_');
+      final path = '${dir.path}/config.json';
+      try {
+        File(path).writeAsStringSync(
+          jsonEncode({
+            'shortcutDefaultsVersion': 3,
+            'plainPasteHotkeyEnabled': true,
+            'plainPasteHotkeyUseCtrl': true,
+            'plainPasteHotkeyUseWin': false,
+            'plainPasteHotkeyUseAlt': true,
+            'plainPasteHotkeyUseShift': true,
+            'plainPasteHotkeyVirtualKey': 0x56,
+            'plainPasteHotkeyKeyName': 'V',
+          }),
+        );
+
+        final restored = await AppConfig.load(path);
+        final persisted =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+
+        expect(restored.plainPasteHotkeyUseAlt, isTrue);
+        expect(restored.plainPasteHotkeyUseShift, isFalse);
+        expect(
+          persisted['shortcutDefaultsVersion'],
+          AppConfig.shortcutDefaultsVersion,
+        );
+        expect(persisted['plainPasteHotkeyUseAlt'], isTrue);
+        expect(persisted['plainPasteHotkeyUseShift'], isFalse);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
     });
 
     test('copyWith all hotkey fields', () {

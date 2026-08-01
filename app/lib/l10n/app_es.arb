@@ -107,7 +107,7 @@
   "shortcutTab2": "Cambiar a pestaña Anclados",
   "shortcutArrows": "Navegar entre elementos",
   "shortcutEnter": "Pegar elemento seleccionado",
-  "shortcutPasteSelectedPlain": "Pegar como texto plano el elemento seleccionado o el primero",
+  "shortcutPasteSelectedPlain": "Pegar como texto plano el elemento bajo el cursor, el seleccionado o el primero",
   "shortcutDelete": "Eliminar elemento seleccionado",
   "shortcutPin": "Anclar / Desanclar elemento",
   "shortcutEdit": "Editar tarjeta (etiqueta y color)",
@@ -162,8 +162,8 @@
   "restoreRecommendedHotkeys": "Restaurar atajos recomendados",
   "plainPasteHotkeyRegistrationFailed": "No se pudo registrar el atajo de pegado directo como texto plano. Es posible que el sistema u otra aplicación ya lo esté usando.",
   "pasteDestinationUnavailable": "Se canceló el pegado porque no se pudo restaurar el destino original. Abre CopyPaste con su atajo de teclado e inténtalo nuevamente.",
-  "plainPasteItemUnavailable": "El elemento seleccionado o el primero no se puede pegar como texto plano.",
-  "plainClipboardUnavailable": "El portapapeles actual no contiene texto que se pueda pegar como texto plano.",
+  "plainPasteItemUnavailable": "El elemento bajo el cursor, el seleccionado o el primero no se puede pegar como texto plano.",
+  "plainClipboardUnavailable": "No hay texto en el portapapeles. Copia primero un texto y vuelve a usar el pegado como texto plano.",
   "hotkeyRegistrationFailed": "No se pudo registrar el atajo {shortcut}. Es posible que el sistema u otra aplicación ya lo esté usando.",
   "@hotkeyRegistrationFailed": {
     "placeholders": { "shortcut": { "type": "String" } }

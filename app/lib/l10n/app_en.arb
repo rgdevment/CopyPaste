@@ -221,7 +221,7 @@
   "shortcutTab2": "Switch to Pinned tab",
   "shortcutArrows": "Navigate between items",
   "shortcutEnter": "Paste selected item",
-  "shortcutPasteSelectedPlain": "Paste selected or first item as plain text",
+  "shortcutPasteSelectedPlain": "Paste hovered, selected, or first item as plain text",
   "shortcutDelete": "Delete selected item",
   "shortcutPin": "Pin / Unpin selected item",
   "shortcutEdit": "Edit card (label and color)",
@@ -311,8 +311,8 @@
   "restoreRecommendedHotkeys": "Restore recommended shortcuts",
   "plainPasteHotkeyRegistrationFailed": "The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.",
   "pasteDestinationUnavailable": "Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.",
-  "plainPasteItemUnavailable": "The selected or first item cannot be pasted as plain text.",
-  "plainClipboardUnavailable": "The current clipboard does not contain text that can be pasted as plain text.",
+  "plainPasteItemUnavailable": "The hovered, selected, or first item cannot be pasted as plain text.",
+  "plainClipboardUnavailable": "There is no text on the clipboard. Copy some text first, then use plain-text paste again.",
   "hotkeyRegistrationFailed": "The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.",
   "@hotkeyRegistrationFailed": {
     "placeholders": { "shortcut": { "type": "String" } }

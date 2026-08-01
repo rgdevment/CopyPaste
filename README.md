@@ -249,9 +249,9 @@ CopyPaste is designed for power users who prefer keyboard navigation:
 | :--------------------------------------- | :-------------------------------------------------- |
 | Ctrl+Alt+C (Windows)                     | Open/close CopyPaste (customizable)                  |
 | Ctrl+Shift+V (macOS) / Super+V (Linux)   | Open/close CopyPaste (customizable)                  |
-| Ctrl+Shift+V / Shift+Enter (Windows/Linux) | Paste selected/first item as plain text            |
-| Cmd+Option+Shift+V / Shift+Enter (macOS) | Paste selected/first item as plain text              |
-| Configurable global shortcut             | Paste current clipboard as plain text without opening CopyPaste (off by default) |
+| Ctrl+Shift+V / Shift+Enter (Windows/Linux) | Paste hovered/selected/first item as plain text    |
+| Cmd+Option+Shift+V / Shift+Enter (macOS) | Paste hovered/selected/first item as plain text      |
+| Ctrl+Alt+V on Windows / configurable elsewhere | Paste current clipboard as plain text without opening CopyPaste (optional global shortcut) |
 | ↓ or Tab                                 | Navigate from search to clipboard items             |
 | ↑ / ↓                                    | Navigate between clipboard items                    |
 | Space                                    | Expand/collapse selected card to see more text      |

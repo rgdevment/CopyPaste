@@ -6,6 +6,8 @@ import '../services/app_logger.dart';
 const _sentinel = Object();
 
 class AppConfig {
+  static const int shortcutDefaultsVersion = 5;
+
   const AppConfig({
     this.preferredLanguage = 'auto',
     this.runOnStartup = true,
@@ -141,6 +143,28 @@ class AppConfig {
       AppLogger.info('Restored the Windows opening shortcut to Ctrl+Alt+C');
     }
 
+    // Ctrl+Alt+Shift+V proved uncomfortable. Version 4 briefly tried the
+    // application-level Ctrl+Shift+V convention, but a global registration
+    // would shadow it in VS Code, terminals, and other apps. Migrate only
+    // those two exact automatic Windows bindings to Ctrl+Alt+V; bindings from
+    // versions where they could have been user-defined remain untouched.
+    final legacyWindowsPlainPaste =
+        Platform.isWindows &&
+        plainPasteHotkeyUseCtrl &&
+        !plainPasteHotkeyUseWin &&
+        plainPasteHotkeyVirtualKey == 0x56 &&
+        ((shortcutDefaultsVersion == 3 &&
+                plainPasteHotkeyUseAlt &&
+                plainPasteHotkeyUseShift) ||
+            (shortcutDefaultsVersion == 4 &&
+                !plainPasteHotkeyUseAlt &&
+                plainPasteHotkeyUseShift));
+    if (legacyWindowsPlainPaste) {
+      plainPasteHotkeyUseAlt = true;
+      plainPasteHotkeyUseShift = false;
+      AppLogger.info('Updated the Windows plain-paste shortcut to Ctrl+Alt+V');
+    }
+
     return AppConfig(
       preferredLanguage:
           json['preferredLanguage'] as String? ?? defaults.preferredLanguage,
@@ -250,9 +274,8 @@ class AppConfig {
   // Kept for tests that pass a platform string explicitly.
   static AppConfig defaultForPlatform(String platform) => switch (platform) {
     // Ctrl+Alt+C keeps the established CopyPaste opening gesture. The optional
-    // system-wide plain-paste shortcut is disabled by default because Windows
-    // and many apps use Ctrl+Shift+V locally. Users who enable it start from
-    // Ctrl+Alt+Shift+V, which stays mnemonic without shadowing that local key.
+    // system-wide plain-paste shortcut shares the modifiers for muscle memory
+    // without shadowing the common application-level Ctrl+Shift+V gesture.
     'windows' => const AppConfig(
       hotkeyUseCtrl: true,
       hotkeyUseAlt: true,
@@ -261,8 +284,8 @@ class AppConfig {
       hotkeyKeyName: 'C',
       plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
-      plainPasteHotkeyUseShift: true,
       plainPasteHotkeyUseAlt: true,
+      plainPasteHotkeyUseShift: false,
     ),
     // Control+Shift+V opens the panel. The optional global plain-paste binding
     // includes every modifier and stays disabled until explicitly enabled.
@@ -286,7 +309,7 @@ class AppConfig {
       plainPasteHotkeyEnabled: false,
       plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseShift: true,
-      plainPasteHotkeyUseAlt: true,
+      plainPasteHotkeyUseAlt: false,
     ),
     _ => const AppConfig(),
   };
@@ -500,7 +523,7 @@ class AppConfig {
   );
 
   Map<String, dynamic> toJson() => {
-    'shortcutDefaultsVersion': 3,
+    'shortcutDefaultsVersion': shortcutDefaultsVersion,
     'preferredLanguage': preferredLanguage,
     'runOnStartup': runOnStartup,
     'hotkeyUseCtrl': hotkeyUseCtrl,
@@ -559,7 +582,17 @@ class AppConfig {
     if (!file.existsSync()) return AppConfig.defaultForCurrentPlatform();
     try {
       final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-      return AppConfig.fromJson(json);
+      final config = AppConfig.fromJson(json);
+      final storedShortcutVersion =
+          json['shortcutDefaultsVersion'] as int? ?? 1;
+      if (storedShortcutVersion < shortcutDefaultsVersion) {
+        try {
+          await config.save(configPath);
+        } catch (e) {
+          AppLogger.warn('Failed to persist shortcut migration: $e');
+        }
+      }
+      return config;
     } catch (e) {
       AppLogger.error('Failed to load config: $e');
       return AppConfig.defaultForCurrentPlatform();

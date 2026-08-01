@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @shortcutPasteSelectedPlain.
   ///
   /// In en, this message translates to:
-  /// **'Paste selected or first item as plain text'**
+  /// **'Paste hovered, selected, or first item as plain text'**
   String get shortcutPasteSelectedPlain;
 
   /// No description provided for @shortcutDelete.
@@ -929,13 +929,13 @@ abstract class AppLocalizations {
   /// No description provided for @plainPasteItemUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'The selected or first item cannot be pasted as plain text.'**
+  /// **'The hovered, selected, or first item cannot be pasted as plain text.'**
   String get plainPasteItemUnavailable;
 
   /// No description provided for @plainClipboardUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'The current clipboard does not contain text that can be pasted as plain text.'**
+  /// **'There is no text on the clipboard. Copy some text first, then use plain-text paste again.'**
   String get plainClipboardUnavailable;
 
   /// No description provided for @hotkeyRegistrationFailed.

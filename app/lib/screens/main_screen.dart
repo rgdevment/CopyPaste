@@ -87,6 +87,7 @@ class MainScreenState extends State<MainScreen> {
   bool _pendingReload = false;
   int _selectedIndex = -1;
   int _expandedIndex = -1;
+  String? _hoveredItemId;
   Timer? _reloadDebounce;
 
   String _searchQuery = '';
@@ -258,15 +259,20 @@ class MainScreenState extends State<MainScreen> {
     widget.onPaste(item);
   }
 
-  /// Pastes the current selection as plain text. When keyboard navigation has
-  /// not selected an item yet, the first visible result is used so opening the
-  /// panel followed by the plain-paste gesture is a complete workflow.
+  /// Pastes the hovered item as plain text, then falls back to the keyboard
+  /// selection or first visible result. This keeps both mouse and keyboard
+  /// workflows complete without writing the item to the clipboard first.
   bool pasteSelectedPlainOrFirst() {
     if (_items.isEmpty) {
       widget.onPlainPasteUnavailable?.call();
       return false;
     }
-    final index = _selectedIndex >= 0 && _selectedIndex < _items.length
+    final hoveredIndex = _hoveredItemId == null
+        ? -1
+        : _items.indexWhere((item) => item.id == _hoveredItemId);
+    final index = hoveredIndex >= 0
+        ? hoveredIndex
+        : _selectedIndex >= 0 && _selectedIndex < _items.length
         ? _selectedIndex
         : 0;
     final item = _items[index];
@@ -696,6 +702,13 @@ class MainScreenState extends State<MainScreen> {
             onSelect: () {
               setState(() => _selectedIndex = index);
               _focusNode.requestFocus();
+            },
+            onHoverChanged: (hovering) {
+              if (hovering) {
+                _hoveredItemId = item.id;
+              } else if (_hoveredItemId == item.id) {
+                _hoveredItemId = null;
+              }
             },
             onExpandToggle: () {
               setState(() {

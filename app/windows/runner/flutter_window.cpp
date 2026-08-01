@@ -65,6 +65,57 @@ flutter::EncodableValue RegistrationResponse(bool success,
   return flutter::EncodableValue(response);
 }
 
+flutter::EncodableValue SendPasteInput() {
+  // WM_HOTKEY arrives on key-down, so physical shortcut modifiers may still
+  // be held. Release every contaminating modifier before Ctrl+V. SendInput
+  // inserts this array atomically; later physical key-up events are harmless.
+  INPUT inputs[9] = {};
+  inputs[0].type = INPUT_KEYBOARD;
+  inputs[0].ki.wVk = VK_MENU;
+  inputs[0].ki.dwFlags = KEYEVENTF_KEYUP;
+  inputs[1].type = INPUT_KEYBOARD;
+  inputs[1].ki.wVk = VK_SHIFT;
+  inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+  inputs[2].type = INPUT_KEYBOARD;
+  inputs[2].ki.wVk = VK_LWIN;
+  inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+  inputs[3].type = INPUT_KEYBOARD;
+  inputs[3].ki.wVk = VK_RWIN;
+  inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
+  inputs[4].type = INPUT_KEYBOARD;
+  inputs[4].ki.wVk = VK_CONTROL;
+  inputs[4].ki.dwFlags = KEYEVENTF_KEYUP;
+  inputs[5].type = INPUT_KEYBOARD;
+  inputs[5].ki.wVk = VK_CONTROL;
+  inputs[6].type = INPUT_KEYBOARD;
+  inputs[6].ki.wVk = 'V';
+  inputs[7].type = INPUT_KEYBOARD;
+  inputs[7].ki.wVk = 'V';
+  inputs[7].ki.dwFlags = KEYEVENTF_KEYUP;
+  inputs[8].type = INPUT_KEYBOARD;
+  inputs[8].ki.wVk = VK_CONTROL;
+  inputs[8].ki.dwFlags = KEYEVENTF_KEYUP;
+
+  constexpr UINT kInputCount = sizeof(inputs) / sizeof(inputs[0]);
+
+  SetLastError(ERROR_SUCCESS);
+  const UINT sent = SendInput(kInputCount, inputs, sizeof(INPUT));
+  flutter::EncodableMap response;
+  response[flutter::EncodableValue("success")] =
+      flutter::EncodableValue(sent == kInputCount);
+  response[flutter::EncodableValue("sentInputs")] =
+      flutter::EncodableValue(static_cast<int32_t>(sent));
+  response[flutter::EncodableValue("expectedInputs")] =
+      flutter::EncodableValue(static_cast<int32_t>(kInputCount));
+  if (sent != kInputCount) {
+    response[flutter::EncodableValue("errorCode")] =
+        flutter::EncodableValue("sendInputFailed");
+    response[flutter::EncodableValue("win32Error")] =
+        flutter::EncodableValue(static_cast<int64_t>(GetLastError()));
+  }
+  return flutter::EncodableValue(response);
+}
+
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -170,6 +221,10 @@ void FlutterWindow::RegisterHotkeyChannel() {
       [this](const flutter::MethodCall<flutter::EncodableValue>& call,
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
                  result) {
+        if (call.method_name() == "sendPaste") {
+          result->Success(SendPasteInput());
+          return;
+        }
         if (call.method_name() == "unregisterAll") {
           UnregisterAllHotkeys();
           result->Success();

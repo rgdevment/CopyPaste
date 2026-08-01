@@ -553,18 +553,34 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     };
   }
 
-  void _showShellNotice(String Function(AppLocalizations l) messageBuilder) {
+  void _showShellNotice(
+    String Function(AppLocalizations l) messageBuilder, {
+    bool revealWhenHidden = false,
+  }) {
+    if (revealWhenHidden && !_appWindow.isVisible) {
+      unawaited(_revealAndShowShellNotice(messageBuilder));
+      return;
+    }
+    _enqueueShellNotice(messageBuilder);
+  }
+
+  Future<void> _revealAndShowShellNotice(
+    String Function(AppLocalizations l) messageBuilder,
+  ) async {
+    await _safeShow();
+    _enqueueShellNotice(messageBuilder);
+  }
+
+  void _enqueueShellNotice(String Function(AppLocalizations l) messageBuilder) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _navigatorKey.currentContext;
       if (ctx == null || !ctx.mounted) return;
+      final message = messageBuilder(AppLocalizations.of(ctx));
       final messenger = ScaffoldMessenger.maybeOf(ctx);
       if (messenger == null) return;
 
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(messageBuilder(AppLocalizations.of(ctx))),
-          duration: const Duration(seconds: 12),
-        ),
+        SnackBar(content: Text(message), duration: const Duration(seconds: 12)),
       );
     });
   }
@@ -797,8 +813,15 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text;
       if (text == null || text.isEmpty) {
+        // The error reveals the history panel. Preserve the original target
+        // there as well so the user can immediately hover an existing item
+        // and invoke plain paste without reopening CopyPaste.
+        await _focusManager.capturePreviousWindow();
         _directPasteFocusManager.clear();
-        _showShellNotice((l) => l.plainClipboardUnavailable);
+        _showShellNotice(
+          (l) => l.plainClipboardUnavailable,
+          revealWhenHidden: true,
+        );
         return;
       }
 
@@ -809,9 +832,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         return;
       }
 
-      // Do not let held shortcut modifiers leak into the synthesized paste.
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      await _waitForShortcutModifiersReleased();
+      // Windows SendInput neutralizes still-held shortcut modifiers in the
+      // same atomic input batch. Other platforms still wait for key-up.
+      if (!Platform.isWindows && !await _waitForShortcutModifiersReleased()) {
+        _directPasteFocusManager.clear();
+        return;
+      }
       if (_shuttingDown) {
         _directPasteFocusManager.clear();
         return;
@@ -928,7 +954,16 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       );
       if (!ok) return;
       await _appWindow.hide();
-      await _waitForShortcutModifiersReleased();
+      if (!Platform.isWindows && !await _waitForShortcutModifiersReleased()) {
+        _focusManager.clear();
+        _reportPasteFailure(
+          const PasteResponse(
+            success: false,
+            errorCode: 'shortcutModifiersHeld',
+          ),
+        );
+        return;
+      }
       final response = await _focusManager.restoreAndPaste(
         delayBeforeFocusMs: _config.delayBeforeFocusMs,
         maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
@@ -957,24 +992,37 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       'Paste was not sent: error=${response.errorCode ?? 'unknown'}',
     );
     if (response.isFocusTimeout && Platform.isLinux) {
-      _showShellNotice((l) => l.linuxPasteFocusTimeoutWarning);
+      _showShellNotice(
+        (l) => l.linuxPasteFocusTimeoutWarning,
+        revealWhenHidden: true,
+      );
       return;
     }
-    _showShellNotice((l) => l.pasteDestinationUnavailable);
+    _showShellNotice(
+      (l) => l.pasteDestinationUnavailable,
+      revealWhenHidden: true,
+    );
   }
 
-  Future<void> _waitForShortcutModifiersReleased() async {
-    for (var attempt = 0; attempt < 15; attempt++) {
-      final keyboard = HardwareKeyboard.instance;
-      if (!keyboard.isControlPressed &&
-          !keyboard.isShiftPressed &&
-          !keyboard.isAltPressed &&
-          !keyboard.isMetaPressed) {
-        return;
+  Future<bool> _waitForShortcutModifiersReleased() async {
+    for (var attempt = 0; attempt < 25; attempt++) {
+      final released =
+          !HardwareKeyboard.instance.isControlPressed &&
+          !HardwareKeyboard.instance.isShiftPressed &&
+          !HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isMetaPressed;
+      if (released) {
+        if (attempt > 0) {
+          AppLogger.info(
+            'Shortcut modifiers released after ${attempt * 20} ms',
+          );
+        }
+        return true;
       }
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
-    AppLogger.warn('Paste continuing while a shortcut modifier is still held');
+    AppLogger.warn('Paste cancelled because shortcut modifiers remain held');
+    return false;
   }
 
   Future<void> _onCopyItem(ClipboardItem item) async {

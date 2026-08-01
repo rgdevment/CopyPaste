@@ -1047,6 +1047,53 @@ void main() {
       },
     );
 
+    testWidgets('plain paste prioritizes the item under the mouse', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await repo.save(
+        ClipboardItem(
+          content: 'Hovered older item',
+          type: ClipboardContentType.text,
+          createdAt: now.subtract(const Duration(seconds: 1)),
+          modifiedAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      await repo.save(
+        ClipboardItem(
+          content: 'Newest first item',
+          type: ClipboardContentType.text,
+          createdAt: now,
+          modifiedAt: now,
+        ),
+      );
+
+      ClipboardItem? pastedPlain;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onPastePlain: (item) => pastedPlain = item,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      final hoveredCard = find.ancestor(
+        of: find.text('Hovered older item'),
+        matching: find.byType(ClipboardCard),
+      );
+      await mouse.moveTo(tester.getCenter(hoveredCard));
+      await tester.pump();
+
+      expect(key.currentState!.pasteSelectedPlainOrFirst(), isTrue);
+      expect(pastedPlain?.content, 'Hovered older item');
+    });
+
     testWidgets('Shift+Enter pastes selected item as plain text', (
       tester,
     ) async {

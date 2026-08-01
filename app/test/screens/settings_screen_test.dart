@@ -89,7 +89,7 @@ void main() {
       expect(find.text('Optional global plain-text paste'), findsOneWidget);
       expect(find.textContaining('Disabled'), findsOneWidget);
       expect(
-        find.text('Paste selected or first item as plain text'),
+        find.text('Paste hovered, selected, or first item as plain text'),
         findsOneWidget,
       );
     });

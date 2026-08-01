@@ -100,4 +100,45 @@ void main() {
     expect(response.win32Error, 1409);
     await channel.dispose();
   });
+
+  test('parses verified SendInput delivery', () async {
+    messenger.setMockMethodCallHandler(methodChannel, (call) async {
+      expect(call.method, 'sendPaste');
+      return <String, Object>{
+        'success': true,
+        'sentInputs': 9,
+        'expectedInputs': 9,
+      };
+    });
+
+    final response = await WindowsHotkeyChannel.sendPaste(
+      channel: methodChannel,
+    );
+
+    expect(response.success, isTrue);
+    expect(response.sentInputs, 9);
+    expect(response.expectedInputs, 9);
+  });
+
+  test('preserves SendInput failure diagnostics', () async {
+    messenger.setMockMethodCallHandler(methodChannel, (call) async {
+      return <String, Object>{
+        'success': false,
+        'sentInputs': 0,
+        'expectedInputs': 9,
+        'errorCode': 'sendInputFailed',
+        'win32Error': 5,
+      };
+    });
+
+    final response = await WindowsHotkeyChannel.sendPaste(
+      channel: methodChannel,
+    );
+
+    expect(response.success, isFalse);
+    expect(response.sentInputs, 0);
+    expect(response.expectedInputs, 9);
+    expect(response.errorCode, 'sendInputFailed');
+    expect(response.win32Error, 5);
+  });
 }

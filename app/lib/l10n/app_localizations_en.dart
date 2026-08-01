@@ -291,7 +291,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shortcutPasteSelectedPlain =>
-      'Paste selected or first item as plain text';
+      'Paste hovered, selected, or first item as plain text';
 
   @override
   String get shortcutDelete => 'Delete selected item';
@@ -447,11 +447,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get plainPasteItemUnavailable =>
-      'The selected or first item cannot be pasted as plain text.';
+      'The hovered, selected, or first item cannot be pasted as plain text.';
 
   @override
   String get plainClipboardUnavailable =>
-      'The current clipboard does not contain text that can be pasted as plain text.';
+      'There is no text on the clipboard. Copy some text first, then use plain-text paste again.';
 
   @override
   String hotkeyRegistrationFailed(String shortcut) {

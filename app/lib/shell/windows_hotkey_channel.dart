@@ -13,6 +13,22 @@ class WindowsHotkeyRegistrationResponse {
   final int? win32Error;
 }
 
+class WindowsPasteInputResponse {
+  const WindowsPasteInputResponse({
+    required this.success,
+    this.sentInputs,
+    this.expectedInputs,
+    this.errorCode,
+    this.win32Error,
+  });
+
+  final bool success;
+  final int? sentInputs;
+  final int? expectedInputs;
+  final String? errorCode;
+  final int? win32Error;
+}
+
 /// Owns the Windows runner channel backed by RegisterHotKey/WM_HOTKEY.
 ///
 /// hotkey_manager's key-up callback is macOS-only. Keeping the Windows path
@@ -83,5 +99,24 @@ class WindowsHotkeyChannel {
     } finally {
       _channel.setMethodCallHandler(null);
     }
+  }
+
+  static Future<WindowsPasteInputResponse> sendPaste({
+    MethodChannel channel = const MethodChannel(_channelName),
+  }) async {
+    final response = await channel.invokeMethod<Object?>('sendPaste');
+    if (response is! Map) {
+      return const WindowsPasteInputResponse(
+        success: false,
+        errorCode: 'invalidNativeResponse',
+      );
+    }
+    return WindowsPasteInputResponse(
+      success: response['success'] == true,
+      sentInputs: response['sentInputs'] as int?,
+      expectedInputs: response['expectedInputs'] as int?,
+      errorCode: response['errorCode'] as String?,
+      win32Error: response['win32Error'] as int?,
+    );
   }
 }

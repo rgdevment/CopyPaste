@@ -6,6 +6,8 @@ import 'package:ffi/ffi.dart';
 import 'package:core/core.dart';
 import 'package:listener/listener.dart';
 
+import 'windows_hotkey_channel.dart';
+
 typedef _GetForegroundWindowNative = IntPtr Function();
 typedef _GetForegroundWindowDart = int Function();
 
@@ -40,11 +42,6 @@ typedef _AttachThreadInputNative =
 typedef _AttachThreadInputDart =
     int Function(int idAttach, int idAttachTo, int fAttach);
 
-typedef _KeybdEventNative =
-    Void Function(Uint8 bVk, Uint8 bScan, Uint32 dwFlags, IntPtr dwExtraInfo);
-typedef _KeybdEventDart =
-    void Function(int bVk, int bScan, int dwFlags, int dwExtraInfo);
-
 class _Win32 {
   _Win32._() {
     assert(Platform.isWindows, '_Win32 requires Windows');
@@ -55,9 +52,6 @@ class _Win32 {
   static const int swRestore = 9;
   static const int gwlStyle = -16;
   static const int wsMinimize = 0x20000000;
-  static const int keyeventfKeyup = 0x0002;
-  static const int vkControl = 0x11;
-  static const int vkV = 0x56;
 
   late final _user32 = DynamicLibrary.open('user32.dll');
   late final _kernel32 = DynamicLibrary.open('kernel32.dll');
@@ -100,8 +94,6 @@ class _Win32 {
       .lookupFunction<_AttachThreadInputNative, _AttachThreadInputDart>(
         'AttachThreadInput',
       );
-  late final keybdEvent = _user32
-      .lookupFunction<_KeybdEventNative, _KeybdEventDart>('keybd_event');
 }
 
 class WindowFocusManager {
@@ -174,7 +166,8 @@ class WindowFocusManager {
       }
 
       await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
-      _simulatePasteWindows();
+      final inputResponse = await _simulatePasteWindows();
+      if (!inputResponse.success) return inputResponse;
       AppLogger.info(
         'Paste destination result: platform=windows, success=true',
       );
@@ -262,11 +255,22 @@ class WindowFocusManager {
     return false;
   }
 
-  void _simulatePasteWindows() {
-    final w = _Win32.instance;
-    w.keybdEvent(_Win32.vkControl, 0, 0, 0);
-    w.keybdEvent(_Win32.vkV, 0, 0, 0);
-    w.keybdEvent(_Win32.vkV, 0, _Win32.keyeventfKeyup, 0);
-    w.keybdEvent(_Win32.vkControl, 0, _Win32.keyeventfKeyup, 0);
+  Future<PasteResponse> _simulatePasteWindows() async {
+    try {
+      final response = await WindowsHotkeyChannel.sendPaste();
+      if (response.success) return const PasteResponse(success: true);
+      AppLogger.error(
+        'Windows SendInput failed: sent=${response.sentInputs ?? 0}/'
+        '${response.expectedInputs ?? 0}, '
+        'error=${response.errorCode}, win32=${response.win32Error}',
+      );
+      return PasteResponse(
+        success: false,
+        errorCode: response.errorCode ?? 'sendInputFailed',
+      );
+    } catch (e) {
+      AppLogger.error('Windows SendInput platform call failed: $e');
+      return const PasteResponse(success: false, errorCode: 'sendInputFailed');
+    }
   }
 }

@@ -1,6 +1,8 @@
 param(
     [string]$ExpectedText = "CopyPaste plain-text hotkey E2E",
     [switch]$BaselineCtrlV,
+    [ValidateRange(0, 1400)]
+    [int]$HoldModifiersMs = 400,
     [string]$ConfigPath = (Join-Path $env:LOCALAPPDATA 'CopyPaste\config\config.json')
 )
 
@@ -21,11 +23,15 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
     private readonly bool useWin;
     private readonly bool useAlt;
     private readonly bool useShift;
+    private readonly int holdModifiersMs;
     private readonly TextBox input;
     private readonly Timer trigger;
+    private readonly Timer releaseModifiers;
     private readonly Timer verify;
     private string actualText = "";
     private string diagnostics = "not triggered";
+    private DateTime hotkeyTriggeredAt;
+    private int pasteElapsedMs = -1;
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr window);
@@ -66,7 +72,8 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
         bool useCtrl,
         bool useWin,
         bool useAlt,
-        bool useShift) {
+        bool useShift,
+        int holdModifiersMs) {
         if (virtualKey <= 0 || virtualKey > 0xFF) {
             throw new ArgumentOutOfRangeException("virtualKey");
         }
@@ -76,6 +83,7 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
         this.useWin = useWin;
         this.useAlt = useAlt;
         this.useShift = useShift;
+        this.holdModifiersMs = holdModifiersMs;
         Text = "CopyPaste hotkey E2E probe";
         Size = new Size(620, 180);
         StartPosition = FormStartPosition.CenterScreen;
@@ -90,6 +98,11 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
 
         trigger = new Timer { Interval = 700 };
         trigger.Tick += TriggerHotkey;
+        releaseModifiers = new Timer { Interval = Math.Max(1, holdModifiersMs) };
+        releaseModifiers.Tick += delegate {
+            releaseModifiers.Stop();
+            ReleaseShortcutModifiers();
+        };
         verify = new Timer { Interval = 3200 };
         verify.Tick += delegate {
             verify.Stop();
@@ -106,6 +119,7 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
 
     public string ActualText { get { return actualText; } }
     public string Diagnostics { get { return diagnostics; } }
+    public int PasteElapsedMs { get { return pasteElapsedMs; } }
 
     private void TriggerHotkey(object sender, EventArgs args) {
         trigger.Stop();
@@ -116,6 +130,7 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
             + ", foreground=" + GetForegroundWindow()
             + ", inputFocused=" + input.Focused
             + ", clipboard=" + Clipboard.GetText();
+        hotkeyTriggeredAt = DateTime.UtcNow;
 
         if (useCtrl) Press(0x11);
         if (useWin) Press(0x5B);
@@ -123,6 +138,15 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
         if (useShift) Press(0x10);
         Press(virtualKey);
         Release(virtualKey);
+        if (holdModifiersMs > 0) {
+            releaseModifiers.Start();
+        }
+        else {
+            ReleaseShortcutModifiers();
+        }
+    }
+
+    private void ReleaseShortcutModifiers() {
         if (useShift) Release(0x10);
         if (useAlt) Release(0x12);
         if (useWin) Release(0x5B);
@@ -157,6 +181,7 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
 
     protected override bool ProcessCmdKey(ref Message message, Keys keyData) {
         if (keyData == (Keys.Control | Keys.V)) {
+            pasteElapsedMs = (int)(DateTime.UtcNow - hotkeyTriggeredAt).TotalMilliseconds;
             input.Text = Clipboard.GetText();
             diagnostics += ", ctrlVReceived=true";
             return true;
@@ -167,6 +192,7 @@ public sealed class CopyPasteHotkeyProbeForm : Form {
     protected override void Dispose(bool disposing) {
         if (disposing) {
             trigger.Dispose();
+            releaseModifiers.Dispose();
             verify.Dispose();
             input.Dispose();
         }
@@ -181,13 +207,16 @@ public static class CopyPasteHotkeyProbe {
         bool useCtrl,
         bool useWin,
         bool useAlt,
-        bool useShift) {
+        bool useShift,
+        int holdModifiersMs) {
         using (var form = new CopyPasteHotkeyProbeForm(
-            expected, virtualKey, useCtrl, useWin, useAlt, useShift)) {
+            expected, virtualKey, useCtrl, useWin, useAlt, useShift,
+            holdModifiersMs)) {
             Application.Run(form);
             return new CopyPasteHotkeyProbeResult {
                 Actual = form.ActualText,
-                Diagnostics = form.Diagnostics
+                Diagnostics = form.Diagnostics,
+                PasteElapsedMs = form.PasteElapsedMs
             };
         }
     }
@@ -196,6 +225,7 @@ public static class CopyPasteHotkeyProbe {
 public sealed class CopyPasteHotkeyProbeResult {
     public string Actual { get; set; }
     public string Diagnostics { get; set; }
+    public int PasteElapsedMs { get; set; }
 }
 '@
 
@@ -227,7 +257,23 @@ if (-not $BaselineCtrlV) {
     $binding = $parts -join '+'
 }
 
-$originalClipboard = [System.Windows.Forms.Clipboard]::GetDataObject()
+function Copy-ClipboardDataObject {
+    $source = [System.Windows.Forms.Clipboard]::GetDataObject()
+    if ($null -eq $source) { return $null }
+    $snapshot = [System.Windows.Forms.DataObject]::new()
+    foreach ($format in $source.GetFormats($false)) {
+        try {
+            $data = $source.GetData($format, $false)
+            if ($null -ne $data) { $snapshot.SetData($format, $false, $data) }
+        }
+        catch {
+            Write-Verbose "Could not snapshot clipboard format '$format'."
+        }
+    }
+    return $snapshot
+}
+
+$originalClipboard = Copy-ClipboardDataObject
 try {
     $result = [CopyPasteHotkeyProbe]::Run(
         $ExpectedText,
@@ -235,29 +281,38 @@ try {
         $useCtrl,
         $useWin,
         $useAlt,
-        $useShift)
+        $useShift,
+        $HoldModifiersMs)
     $actual = $result.Actual
-    $success = $actual -eq $ExpectedText
+    $pasteBeforeModifierRelease = $HoldModifiersMs -eq 0 -or (
+        $result.PasteElapsedMs -ge 0 -and
+        $result.PasteElapsedMs -lt $HoldModifiersMs
+    )
+    $success = $actual -eq $ExpectedText -and $pasteBeforeModifierRelease
     [pscustomobject]@{
         success = $success
         expected = $ExpectedText
         actual = $actual
         binding = $binding
+        holdModifiersMs = $HoldModifiersMs
+        pasteElapsedMs = $result.PasteElapsedMs
+        pasteBeforeModifierRelease = $pasteBeforeModifierRelease
         diagnostics = $result.Diagnostics
     } | ConvertTo-Json -Compress
     if (-not $success) { exit 1 }
 }
 finally {
     if ($null -ne $originalClipboard) {
-        for ($attempt = 0; $attempt -lt 5; $attempt++) {
-            try {
-                [System.Windows.Forms.Clipboard]::SetDataObject($originalClipboard, $true)
-                break
-            }
-            catch {
-                if ($attempt -eq 4) { Write-Warning 'Could not restore the original clipboard.' }
-                Start-Sleep -Milliseconds 100
-            }
+        try {
+            [System.Windows.Forms.Clipboard]::SetDataObject(
+                $originalClipboard,
+                $true,
+                20,
+                150
+            )
+        }
+        catch {
+            Write-Warning 'Could not restore the original clipboard.'
         }
     }
 }

@@ -293,7 +293,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shortcutPasteSelectedPlain =>
-      'Pegar como texto plano el elemento seleccionado o el primero';
+      'Pegar como texto plano el elemento bajo el cursor, el seleccionado o el primero';
 
   @override
   String get shortcutDelete => 'Eliminar elemento seleccionado';
@@ -450,11 +450,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get plainPasteItemUnavailable =>
-      'El elemento seleccionado o el primero no se puede pegar como texto plano.';
+      'El elemento bajo el cursor, el seleccionado o el primero no se puede pegar como texto plano.';
 
   @override
   String get plainClipboardUnavailable =>
-      'El portapapeles actual no contiene texto que se pueda pegar como texto plano.';
+      'No hay texto en el portapapeles. Copia primero un texto y vuelve a usar el pegado como texto plano.';
 
   @override
   String hotkeyRegistrationFailed(String shortcut) {
