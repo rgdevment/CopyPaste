@@ -784,27 +784,33 @@ void main() {
   });
 
   group('ClipboardService.processImage BMP write failure', () {
-    test('falls back gracefully when temp BMP cannot be written', () async {
-      final dir = Directory.systemTemp.createTempSync('svc_bmp_fail_');
-      try {
-        // Make the images directory read-only so File.writeAsBytes throws.
-        await Process.run('chmod', ['444', dir.path]);
+    test(
+      'falls back gracefully when temp BMP cannot be written',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('svc_bmp_fail_');
+        try {
+          // Make the images directory read-only so File.writeAsBytes throws.
+          await Process.run('chmod', ['444', dir.path]);
 
-        final svc = ClipboardService(repo, imagesPath: dir.path);
-        // Should not throw; the catch block logs a warning and saves anyway.
-        final result = await svc.processImage(
-          'bmp-fail-hash',
-          imageBytes: [1, 2, 3, 4],
-        );
-        expect(result, isNotNull);
-        // Item is saved even though the BMP write failed; content is empty.
-        expect(result!.type, equals(ClipboardContentType.image));
+          final svc = ClipboardService(repo, imagesPath: dir.path);
+          // Should not throw; the catch block logs a warning and saves anyway.
+          final result = await svc.processImage(
+            'bmp-fail-hash',
+            imageBytes: [1, 2, 3, 4],
+          );
+          expect(result, isNotNull);
+          // Item is saved even though the BMP write failed; content is empty.
+          expect(result!.type, equals(ClipboardContentType.image));
 
-        await svc.dispose();
-      } finally {
-        await Process.run('chmod', ['755', dir.path]);
-        dir.deleteSync(recursive: true);
-      }
-    });
+          await svc.dispose();
+        } finally {
+          await Process.run('chmod', ['755', dir.path]);
+          dir.deleteSync(recursive: true);
+        }
+      },
+      skip: Platform.isWindows
+          ? 'Requires POSIX directory permissions (chmod)'
+          : false,
+    );
   });
 }

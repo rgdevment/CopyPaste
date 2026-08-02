@@ -342,48 +342,54 @@ void main() {
   });
 
   group('ThumbnailQueue._safeGenerate exception', () {
-    test('catches write failure inside Isolate and emits no update', () async {
-      final dir = Directory.systemTemp.createTempSync('tq_safegen_err_');
-      final ext = Directory(p.join(dir.path, 'ext'))..createSync();
-      final imgs = Directory(p.join(dir.path, 'imgs'))..createSync();
-      final src = File(p.join(ext.path, 'source.png'))
-        ..writeAsBytesSync(makePng(w: 64, h: 64));
+    test(
+      'catches write failure inside Isolate and emits no update',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('tq_safegen_err_');
+        final ext = Directory(p.join(dir.path, 'ext'))..createSync();
+        final imgs = Directory(p.join(dir.path, 'imgs'))..createSync();
+        final src = File(p.join(ext.path, 'source.png'))
+          ..writeAsBytesSync(makePng(w: 64, h: 64));
 
-      final localRepo = SqliteRepository.inMemory();
-      final localService = ThumbnailService(imagesPath: imgs.path);
-      final updatedLocal = <ClipboardItem>[];
-      final localQueue = ThumbnailQueue(
-        repository: localRepo,
-        service: localService,
-        onItemUpdated: updatedLocal.add,
-      );
+        final localRepo = SqliteRepository.inMemory();
+        final localService = ThumbnailService(imagesPath: imgs.path);
+        final updatedLocal = <ClipboardItem>[];
+        final localQueue = ThumbnailQueue(
+          repository: localRepo,
+          service: localService,
+          onItemUpdated: updatedLocal.add,
+        );
 
-      final item = ClipboardItem(
-        id: 'safegen-err',
-        content: src.path,
-        type: ClipboardContentType.image,
-      );
-      await localRepo.save(item);
+        final item = ClipboardItem(
+          id: 'safegen-err',
+          content: src.path,
+          type: ClipboardContentType.image,
+        );
+        await localRepo.save(item);
 
-      // Make imgs dir non-writable so the isolate's File.writeAsBytesSync
-      // throws EACCES, which propagates through Isolate.run and is caught by
-      // _safeGenerate (line 184).
-      await Process.run('chmod', ['555', imgs.path]);
+        // Make imgs dir non-writable so the isolate's File.writeAsBytesSync
+        // throws EACCES, which propagates through Isolate.run and is caught by
+        // _safeGenerate (line 184).
+        await Process.run('chmod', ['555', imgs.path]);
 
-      try {
-        localQueue.enqueue(item);
-        for (var i = 0; i < 100; i++) {
-          if (localQueue.isIdle) break;
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+        try {
+          localQueue.enqueue(item);
+          for (var i = 0; i < 100; i++) {
+            if (localQueue.isIdle) break;
+            await Future<void>.delayed(const Duration(milliseconds: 50));
+          }
+          expect(updatedLocal, isEmpty);
+        } finally {
+          await Process.run('chmod', ['755', imgs.path]);
+          await localQueue.dispose();
+          await localRepo.close();
+          dir.deleteSync(recursive: true);
         }
-        expect(updatedLocal, isEmpty);
-      } finally {
-        await Process.run('chmod', ['755', imgs.path]);
-        await localQueue.dispose();
-        await localRepo.close();
-        dir.deleteSync(recursive: true);
-      }
-    });
+      },
+      skip: Platform.isWindows
+          ? 'Requires POSIX directory permissions (chmod)'
+          : false,
+    );
   });
 
   group('ThumbnailQueue update failure', () {

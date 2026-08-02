@@ -6,8 +6,6 @@ import '../services/app_logger.dart';
 const _sentinel = Object();
 
 class AppConfig {
-  static const int shortcutDefaultsVersion = 5;
-
   const AppConfig({
     this.preferredLanguage = 'auto',
     this.runOnStartup = true,
@@ -165,6 +163,38 @@ class AppConfig {
       AppLogger.info('Updated the Windows plain-paste shortcut to Ctrl+Alt+V');
     }
 
+    var duplicateIgnoreWindowMs =
+        json['duplicateIgnoreWindowMs'] as int? ??
+        defaults.duplicateIgnoreWindowMs;
+    var delayBeforeFocusMs =
+        json['delayBeforeFocusMs'] as int? ?? defaults.delayBeforeFocusMs;
+    var delayBeforePasteMs =
+        json['delayBeforePasteMs'] as int? ?? defaults.delayBeforePasteMs;
+    var maxFocusVerifyAttempts =
+        json['maxFocusVerifyAttempts'] as int? ??
+        defaults.maxFocusVerifyAttempts;
+    final storedPasteDefaultsVersion =
+        json['pasteDefaultsVersion'] as int? ?? 1;
+
+    // The previous Windows default always waited 100 ms before restoring
+    // focus and another 180 ms before sending Ctrl+V. Native focus
+    // verification now makes that fixed delay unnecessary. Migrate only the
+    // exact former default tuple so independently tuned values are preserved.
+    final legacyWindowsSafePaste =
+        Platform.isWindows &&
+        storedPasteDefaultsVersion < pasteDefaultsVersion &&
+        duplicateIgnoreWindowMs == 450 &&
+        delayBeforeFocusMs == 100 &&
+        delayBeforePasteMs == 180 &&
+        maxFocusVerifyAttempts == 15;
+    if (legacyWindowsSafePaste) {
+      duplicateIgnoreWindowMs = 300;
+      delayBeforeFocusMs = 0;
+      delayBeforePasteMs = 20;
+      maxFocusVerifyAttempts = 15;
+      AppLogger.info('Updated Windows paste timing to the Instant preset');
+    }
+
     return AppConfig(
       preferredLanguage:
           json['preferredLanguage'] as String? ?? defaults.preferredLanguage,
@@ -196,16 +226,10 @@ class AppConfig {
             (k, v) => MapEntry(k, v as String),
           ) ??
           const {},
-      duplicateIgnoreWindowMs:
-          json['duplicateIgnoreWindowMs'] as int? ??
-          defaults.duplicateIgnoreWindowMs,
-      delayBeforeFocusMs:
-          json['delayBeforeFocusMs'] as int? ?? defaults.delayBeforeFocusMs,
-      delayBeforePasteMs:
-          json['delayBeforePasteMs'] as int? ?? defaults.delayBeforePasteMs,
-      maxFocusVerifyAttempts:
-          json['maxFocusVerifyAttempts'] as int? ??
-          defaults.maxFocusVerifyAttempts,
+      duplicateIgnoreWindowMs: duplicateIgnoreWindowMs,
+      delayBeforeFocusMs: delayBeforeFocusMs,
+      delayBeforePasteMs: delayBeforePasteMs,
+      maxFocusVerifyAttempts: maxFocusVerifyAttempts,
       lastBackupDateUtc: json['lastBackupDateUtc'] != null
           ? DateTime.tryParse(json['lastBackupDateUtc'] as String)
           : null,
@@ -264,6 +288,9 @@ class AppConfig {
     );
   }
 
+  static const int shortcutDefaultsVersion = 5;
+  static const int pasteDefaultsVersion = 2;
+
   static AppConfig defaultForCurrentPlatform() {
     if (Platform.isWindows) return defaultForPlatform('windows');
     if (Platform.isMacOS) return defaultForPlatform('macos');
@@ -286,6 +313,10 @@ class AppConfig {
       plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseAlt: true,
       plainPasteHotkeyUseShift: false,
+      duplicateIgnoreWindowMs: 300,
+      delayBeforeFocusMs: 0,
+      delayBeforePasteMs: 20,
+      maxFocusVerifyAttempts: 15,
     ),
     // Control+Shift+V opens the panel. The optional global plain-paste binding
     // includes every modifier and stays disabled until explicitly enabled.
@@ -524,6 +555,7 @@ class AppConfig {
 
   Map<String, dynamic> toJson() => {
     'shortcutDefaultsVersion': shortcutDefaultsVersion,
+    'pasteDefaultsVersion': pasteDefaultsVersion,
     'preferredLanguage': preferredLanguage,
     'runOnStartup': runOnStartup,
     'hotkeyUseCtrl': hotkeyUseCtrl,
@@ -585,11 +617,13 @@ class AppConfig {
       final config = AppConfig.fromJson(json);
       final storedShortcutVersion =
           json['shortcutDefaultsVersion'] as int? ?? 1;
-      if (storedShortcutVersion < shortcutDefaultsVersion) {
+      final storedPasteVersion = json['pasteDefaultsVersion'] as int? ?? 1;
+      if (storedShortcutVersion < shortcutDefaultsVersion ||
+          storedPasteVersion < pasteDefaultsVersion) {
         try {
           await config.save(configPath);
         } catch (e) {
-          AppLogger.warn('Failed to persist shortcut migration: $e');
+          AppLogger.warn('Failed to persist config migration: $e');
         }
       }
       return config;

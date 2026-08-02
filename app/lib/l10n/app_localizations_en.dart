@@ -269,10 +269,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trayExit => 'Exit';
 
   @override
-  String get shortcutOpenClose => 'Open / close CopyPaste';
+  String get subtitleShortcutScopes =>
+      'Ctrl+V stays with the active app. History shortcuts work while the CopyPaste panel is open.';
 
   @override
-  String get shortcutPastePlainDirect => 'Paste clipboard as plain text';
+  String get shortcutOpenClose => 'CopyPaste global: Open / close CopyPaste';
+
+  @override
+  String get shortcutPastePlainDirect =>
+      'CopyPaste global: Paste the current clipboard as plain text';
+
+  @override
+  String get shortcutSystemPaste =>
+      'Active app: Paste the current clipboard normally (CopyPaste does not intercept it)';
 
   @override
   String get shortcutEscape => 'Clear search or close window';
@@ -287,11 +296,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutArrows => 'Navigate between items';
 
   @override
-  String get shortcutEnter => 'Paste selected item';
+  String get shortcutEnter =>
+      'CopyPaste open: Paste the hovered, selected, or first history item normally';
 
   @override
   String get shortcutPasteSelectedPlain =>
-      'Paste hovered, selected, or first item as plain text';
+      'CopyPaste open: Paste the hovered, selected, or first history item as plain text';
 
   @override
   String get shortcutDelete => 'Delete selected item';
@@ -551,7 +561,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitlePastePreset =>
+      'Automatic paste speed. Instant is optimized for Windows; use Safe if a destination app misses a paste.';
+
+  @override
+  String get subtitlePastePresetStandard =>
       'Automatic paste speed. Normal/Safe recommended for most computers.';
+
+  @override
+  String get pastePresetInstant => 'Instant';
 
   @override
   String get pastePresetFast => 'Fast';
@@ -570,6 +587,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pastePresetWarning =>
+      '⚡ Instant (Windows): lowest latency with native focus verification.\n⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.';
+
+  @override
+  String get pastePresetWarningStandard =>
       '⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.';
 
   @override

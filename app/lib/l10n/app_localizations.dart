@@ -590,17 +590,29 @@ abstract class AppLocalizations {
   /// **'Exit'**
   String get trayExit;
 
+  /// No description provided for @subtitleShortcutScopes.
+  ///
+  /// In en, this message translates to:
+  /// **'Ctrl+V stays with the active app. History shortcuts work while the CopyPaste panel is open.'**
+  String get subtitleShortcutScopes;
+
   /// No description provided for @shortcutOpenClose.
   ///
   /// In en, this message translates to:
-  /// **'Open / close CopyPaste'**
+  /// **'CopyPaste global: Open / close CopyPaste'**
   String get shortcutOpenClose;
 
   /// No description provided for @shortcutPastePlainDirect.
   ///
   /// In en, this message translates to:
-  /// **'Paste clipboard as plain text'**
+  /// **'CopyPaste global: Paste the current clipboard as plain text'**
   String get shortcutPastePlainDirect;
+
+  /// No description provided for @shortcutSystemPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Active app: Paste the current clipboard normally (CopyPaste does not intercept it)'**
+  String get shortcutSystemPaste;
 
   /// No description provided for @shortcutEscape.
   ///
@@ -629,13 +641,13 @@ abstract class AppLocalizations {
   /// No description provided for @shortcutEnter.
   ///
   /// In en, this message translates to:
-  /// **'Paste selected item'**
+  /// **'CopyPaste open: Paste the hovered, selected, or first history item normally'**
   String get shortcutEnter;
 
   /// No description provided for @shortcutPasteSelectedPlain.
   ///
   /// In en, this message translates to:
-  /// **'Paste hovered, selected, or first item as plain text'**
+  /// **'CopyPaste open: Paste the hovered, selected, or first history item as plain text'**
   String get shortcutPasteSelectedPlain;
 
   /// No description provided for @shortcutDelete.
@@ -1115,8 +1127,20 @@ abstract class AppLocalizations {
   /// Paste preset subtitle
   ///
   /// In en, this message translates to:
-  /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
+  /// **'Automatic paste speed. Instant is optimized for Windows; use Safe if a destination app misses a paste.'**
   String get subtitlePastePreset;
+
+  /// Non-Windows paste preset subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
+  String get subtitlePastePresetStandard;
+
+  /// Windows instant paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Instant'**
+  String get pastePresetInstant;
 
   /// Fast paste preset label
   ///
@@ -1151,8 +1175,14 @@ abstract class AppLocalizations {
   /// Paste preset warning text
   ///
   /// In en, this message translates to:
-  /// **'⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
+  /// **'⚡ Instant (Windows): lowest latency with native focus verification.\n⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
   String get pastePresetWarning;
+
+  /// Non-Windows paste preset warning text
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
+  String get pastePresetWarningStandard;
 
   /// Reset filters on open label
   ///

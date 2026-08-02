@@ -14,6 +14,7 @@ import 'package:copypaste/theme/theme_provider.dart';
 // ---------------------------------------------------------------------------
 
 late StorageConfig _storage;
+late SqliteRepository _repo;
 late ClipboardService _service;
 
 Widget _wrap(Widget child) => MaterialApp(
@@ -52,11 +53,13 @@ void main() {
   });
 
   setUp(() {
-    _service = ClipboardService(SqliteRepository.inMemory());
+    _repo = SqliteRepository.inMemory();
+    _service = ClipboardService(_repo);
   });
 
   tearDown(() async {
     await _service.dispose();
+    await _repo.close();
   });
 
   group('SettingsScreen – smoke', () {
@@ -89,9 +92,16 @@ void main() {
       expect(find.text('Optional global plain-text paste'), findsOneWidget);
       expect(find.textContaining('Disabled'), findsOneWidget);
       expect(
-        find.text('Paste hovered, selected, or first item as plain text'),
+        find.text(
+          'CopyPaste open: Paste the hovered, selected, or first history item as plain text',
+        ),
         findsOneWidget,
       );
+      expect(
+        find.textContaining('CopyPaste does not intercept it'),
+        findsOneWidget,
+      );
+      expect(find.text('Ctrl+Shift+V'), findsNothing);
     });
 
     testWidgets('enabled plain paste hotkey shows its current binding', (
@@ -108,7 +118,12 @@ void main() {
         find.textContaining('Current: Ctrl + Alt + Shift + V'),
         findsOneWidget,
       );
-      expect(find.text('Paste clipboard as plain text'), findsOneWidget);
+      expect(
+        find.text(
+          'CopyPaste global: Paste the current clipboard as plain text',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('duplicate global hotkeys show a conflict warning', (
@@ -165,6 +180,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Localized labels should appear (not raw 'Fast'/'Slow' keys).
+      if (Platform.isWindows) expect(find.text('Instant'), findsWidgets);
       expect(find.text('Fast'), findsWidgets);
       expect(find.text('Normal'), findsWidgets);
       expect(find.text('Safe'), findsWidgets);

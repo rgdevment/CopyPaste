@@ -203,6 +203,31 @@ void main() {
       expect(result, isTrue);
     });
 
+    test('plain text mode strips rich clipboard metadata', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            captured = call;
+            return true;
+          });
+      final metadata = jsonEncode({
+        'rtf': base64Encode(utf8.encode('{\\rtf1 formatted}')),
+        'html': base64Encode(utf8.encode('<b>formatted</b>')),
+      });
+
+      final result = await ClipboardWriter.setFromItem(
+        typeValue: 0,
+        content: 'formatted',
+        metadata: metadata,
+        plainText: true,
+      );
+
+      expect(result, isTrue);
+      expect(captured!.arguments['plainText'], isTrue);
+      expect(captured!.arguments, isNot(contains('rtf')));
+      expect(captured!.arguments, isNot(contains('html')));
+    });
+
     test('type 1 (image) calls setImage', () async {
       MethodCall? captured;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

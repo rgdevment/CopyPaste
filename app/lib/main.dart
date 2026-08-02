@@ -238,6 +238,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   bool _directPlainPasteInProgress = false;
   bool _itemPasteInProgress = false;
   bool _shuttingDown = false;
+  Future<void>? _cleanupFuture;
 
   @override
   void initState() {
@@ -791,36 +792,44 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     if (_shuttingDown || _directPlainPasteInProgress || _itemPasteInProgress) {
       return;
     }
-    if (_appWindow.isVisible) {
-      _mainScreenKey.currentState?.pasteSelectedPlainOrFirst();
-      return;
-    }
     _directPlainPasteInProgress = true;
+    final panelWasVisible = _appWindow.isVisible;
+    final pasteFocusManager = panelWasVisible
+        ? _focusManager
+        : _directPasteFocusManager;
     try {
-      // Capture before touching the clipboard. CopyPaste remains hidden, so
-      // this is the text field/window that already owns keyboard focus.
-      final captured = await _directPasteFocusManager.capturePreviousWindow();
-      if (!captured) {
+      // When hidden, capture the active destination before touching the
+      // clipboard. An open panel already owns a destination captured when it
+      // was shown; re-capturing here would incorrectly capture CopyPaste.
+      if (!panelWasVisible &&
+          !await pasteFocusManager.capturePreviousWindow()) {
+        _reportPasteFailure(
+          const PasteResponse(success: false, errorCode: 'noPreviousWindow'),
+        );
+        return;
+      }
+      if (panelWasVisible && !pasteFocusManager.hasDestination) {
         _reportPasteFailure(
           const PasteResponse(success: false, errorCode: 'noPreviousWindow'),
         );
         return;
       }
       if (_shuttingDown) {
-        _directPasteFocusManager.clear();
+        pasteFocusManager.clear();
         return;
       }
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text;
       if (text == null || text.isEmpty) {
-        // The error reveals the history panel. Preserve the original target
-        // there as well so the user can immediately hover an existing item
-        // and invoke plain paste without reopening CopyPaste.
-        await _focusManager.capturePreviousWindow();
-        _directPasteFocusManager.clear();
+        if (!panelWasVisible) {
+          // The error reveals the history panel. Preserve the original target
+          // there so the user can immediately use Shift+Enter on history.
+          await _focusManager.capturePreviousWindow();
+          pasteFocusManager.clear();
+        }
         _showShellNotice(
           (l) => l.plainClipboardUnavailable,
-          revealWhenHidden: true,
+          revealWhenHidden: !panelWasVisible,
         );
         return;
       }
@@ -828,33 +837,35 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       widget.clipboardService.notifyDirectPasteInitiated(text);
       final written = await ClipboardWriter.setText(text, plainText: true);
       if (!written) {
-        _directPasteFocusManager.clear();
+        if (!panelWasVisible) pasteFocusManager.clear();
         return;
       }
+
+      if (panelWasVisible) await _appWindow.hide();
 
       // Windows SendInput neutralizes still-held shortcut modifiers in the
       // same atomic input batch. Other platforms still wait for key-up.
       if (!Platform.isWindows && !await _waitForShortcutModifiersReleased()) {
-        _directPasteFocusManager.clear();
+        pasteFocusManager.clear();
         return;
       }
       if (_shuttingDown) {
-        _directPasteFocusManager.clear();
+        pasteFocusManager.clear();
         return;
       }
-      final response = await _directPasteFocusManager.restoreAndPaste(
+      final response = await pasteFocusManager.restoreAndPaste(
         delayBeforeFocusMs: 0,
         maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
         delayBeforePasteMs: 0,
       );
       if (!response.success) _reportPasteFailure(response);
     } on PlatformException catch (e) {
-      _directPasteFocusManager.clear();
+      pasteFocusManager.clear();
       if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
         _enterPermissionGate();
       }
     } catch (e, s) {
-      _directPasteFocusManager.clear();
+      pasteFocusManager.clear();
       AppLogger.error('Direct plain-text paste failed: $e\n$s');
     } finally {
       _directPlainPasteInProgress = false;
@@ -1050,7 +1061,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       );
   }
 
-  Future<void> _cleanup() async {
+  Future<void> _cleanup() => _cleanupFuture ??= _performCleanup();
+
+  Future<void> _performCleanup() async {
     _shuttingDown = true;
     _focusManager.clear();
     _directPasteFocusManager.clear();

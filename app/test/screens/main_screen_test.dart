@@ -1000,52 +1000,150 @@ void main() {
       expect(pasted!.content, 'Paste me');
     });
 
-    testWidgets(
-      'Ctrl+Shift+V pastes first visible item as plain text without selection',
-      (tester) async {
-        final now = DateTime.now().toUtc();
-        await repo.save(
-          ClipboardItem(
-            content: 'Older',
-            type: ClipboardContentType.text,
-            createdAt: now.subtract(const Duration(seconds: 1)),
-            modifiedAt: now.subtract(const Duration(seconds: 1)),
-          ),
-        );
-        await repo.save(
-          ClipboardItem(
-            content: 'Newest',
-            type: ClipboardContentType.text,
-            createdAt: now,
-            modifiedAt: now,
-          ),
-        );
+    testWidgets('Ctrl+Shift+V never pastes a CopyPaste history item', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await repo.save(
+        ClipboardItem(
+          content: 'Older',
+          type: ClipboardContentType.text,
+          createdAt: now.subtract(const Duration(seconds: 1)),
+          modifiedAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      await repo.save(
+        ClipboardItem(
+          content: 'Newest',
+          type: ClipboardContentType.text,
+          createdAt: now,
+          modifiedAt: now,
+        ),
+      );
 
-        ClipboardItem? pastedPlain;
-        final key = GlobalKey<MainScreenState>();
-        await tester.pumpWidget(
-          _buildApp(
-            service: service,
-            onPaste: (_) {},
-            onPastePlain: (item) => pastedPlain = item,
-            key: key,
-          ),
-        );
-        await tester.pumpAndSettle();
-        key.currentState!.onWindowShow();
-        await tester.pump();
+      ClipboardItem? pastedPlain;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onPastePlain: (item) => pastedPlain = item,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+      key.currentState!.onWindowShow();
+      await tester.pump();
 
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-        await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-        await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
 
-        expect(pastedPlain, isNotNull);
-        expect(pastedPlain!.content, 'Newest');
-      },
-    );
+      expect(pastedPlain, isNull);
+    });
+
+    testWidgets('Ctrl+V never pastes a CopyPaste history item', (tester) async {
+      await repo.save(
+        ClipboardItem(content: 'History item', type: ClipboardContentType.text),
+      );
+
+      ClipboardItem? pasted;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (item) => pasted = item, key: key),
+      );
+      await tester.pumpAndSettle();
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+
+      expect(pasted, isNull);
+    });
+
+    testWidgets('Enter pastes first visible item without selection', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await repo.save(
+        ClipboardItem(
+          content: 'Older',
+          type: ClipboardContentType.text,
+          createdAt: now.subtract(const Duration(seconds: 1)),
+          modifiedAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      await repo.save(
+        ClipboardItem(
+          content: 'Newest',
+          type: ClipboardContentType.text,
+          createdAt: now,
+          modifiedAt: now,
+        ),
+      );
+
+      ClipboardItem? pasted;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (item) => pasted = item, key: key),
+      );
+      await tester.pumpAndSettle();
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+
+      expect(pasted?.content, 'Newest');
+    });
+
+    testWidgets('normal paste prioritizes the item under the mouse', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await repo.save(
+        ClipboardItem(
+          content: 'Hovered older item',
+          type: ClipboardContentType.text,
+          createdAt: now.subtract(const Duration(seconds: 1)),
+          modifiedAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      await repo.save(
+        ClipboardItem(
+          content: 'Newest first item',
+          type: ClipboardContentType.text,
+          createdAt: now,
+          modifiedAt: now,
+        ),
+      );
+
+      ClipboardItem? pasted;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (item) => pasted = item, key: key),
+      );
+      await tester.pumpAndSettle();
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      final hoveredCard = find.ancestor(
+        of: find.text('Hovered older item'),
+        matching: find.byType(ClipboardCard),
+      );
+      await mouse.moveTo(tester.getCenter(hoveredCard));
+      await tester.pump();
+
+      expect(key.currentState!.pasteSelectedOrFirst(), isTrue);
+      expect(pasted?.content, 'Hovered older item');
+    });
 
     testWidgets('plain paste prioritizes the item under the mouse', (
       tester,
@@ -1123,6 +1221,49 @@ void main() {
 
       expect(pastedPlain, isNotNull);
       expect(pastedPlain!.content, 'Paste plain');
+    });
+
+    testWidgets('Shift+Enter pastes first visible item without selection', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await repo.save(
+        ClipboardItem(
+          content: 'Older plain',
+          type: ClipboardContentType.text,
+          createdAt: now.subtract(const Duration(seconds: 1)),
+          modifiedAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      await repo.save(
+        ClipboardItem(
+          content: 'Newest plain',
+          type: ClipboardContentType.text,
+          createdAt: now,
+          modifiedAt: now,
+        ),
+      );
+
+      ClipboardItem? pastedPlain;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onPastePlain: (item) => pastedPlain = item,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+      key.currentState!.onWindowShow();
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+
+      expect(pastedPlain?.content, 'Newest plain');
     });
 
     testWidgets('item reactivated via stream triggers reload', (tester) async {

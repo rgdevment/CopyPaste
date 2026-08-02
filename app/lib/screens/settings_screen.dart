@@ -408,6 +408,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String? get _pastePresetName {
+    if (Platform.isWindows &&
+        _delayBeforeFocusMs == 0 &&
+        _delayBeforePasteMs == 20 &&
+        _maxFocusVerifyAttempts == 15 &&
+        _duplicateIgnoreWindowMs == 300) {
+      return 'Instant';
+    }
     if (_delayBeforeFocusMs == 50 &&
         _delayBeforePasteMs == 80 &&
         _maxFocusVerifyAttempts == 10 &&
@@ -438,6 +445,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _applyPastePreset(String name) {
     setState(() {
       switch (name) {
+        case 'Instant':
+          _delayBeforeFocusMs = 0;
+          _delayBeforePasteMs = 20;
+          _maxFocusVerifyAttempts = 15;
+          _duplicateIgnoreWindowMs = 300;
         case 'Fast':
           _delayBeforeFocusMs = 50;
           _delayBeforePasteMs = 80;
@@ -816,7 +828,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           colors: colors,
           icon: Icons.content_paste_go_rounded,
           title: l.sectionPaste,
-          subtitle: l.subtitlePastePreset,
+          subtitle: Platform.isWindows
+              ? l.subtitlePastePreset
+              : l.subtitlePastePresetStandard,
           children: [
             _SettingsRow(
               label: l.settingPasteSpeed,
@@ -824,8 +838,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
               trailing: _PresetDropdown(
                 value: _pastePresetName,
-                items: const ['Fast', 'Normal', 'Safe', 'Slow'],
+                items: Platform.isWindows
+                    ? const ['Instant', 'Fast', 'Normal', 'Safe', 'Slow']
+                    : const ['Fast', 'Normal', 'Safe', 'Slow'],
                 labels: {
+                  'Instant': l.pastePresetInstant,
                   'Fast': l.pastePresetFast,
                   'Normal': l.pastePresetNormal,
                   'Safe': l.pastePresetSafe,
@@ -847,7 +864,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               child: Text(
-                l.pastePresetWarning,
+                Platform.isWindows
+                    ? l.pastePresetWarning
+                    : l.pastePresetWarningStandard,
                 style: TextStyle(
                   fontSize: 10.5,
                   color: colors.onSurfaceVariant,
@@ -1364,6 +1383,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           colors: colors,
           icon: Icons.keyboard_rounded,
           title: l.sectionShortcuts,
+          subtitle: l.subtitleShortcutScopes,
           children: [
             _ShortcutRow(
               keys: _hotkeyString(),
@@ -1377,6 +1397,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 colors: colors,
               ),
             _ShortcutRow(
+              keys: Platform.isMacOS ? '⌘V' : 'Ctrl+V',
+              description: l.shortcutSystemPaste,
+              colors: colors,
+            ),
+            _ShortcutRow(
               keys: '\u2191 / \u2193',
               description: l.shortcutArrows,
               colors: colors,
@@ -1387,9 +1412,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
             ),
             _ShortcutRow(
-              keys: Platform.isMacOS
-                  ? '⌥⇧⌘V / ⇧Enter'
-                  : 'Ctrl+Shift+V / Shift+Enter',
+              keys: 'Shift+Enter',
               description: l.shortcutPasteSelectedPlain,
               colors: colors,
             ),

@@ -259,22 +259,39 @@ class MainScreenState extends State<MainScreen> {
     widget.onPaste(item);
   }
 
+  int get _preferredPasteIndex {
+    if (_items.isEmpty) return -1;
+    final hoveredIndex = _hoveredItemId == null
+        ? -1
+        : _items.indexWhere((item) => item.id == _hoveredItemId);
+    if (hoveredIndex >= 0) return hoveredIndex;
+    if (_selectedIndex >= 0 && _selectedIndex < _items.length) {
+      return _selectedIndex;
+    }
+    return 0;
+  }
+
+  /// Pastes the hovered item normally, then falls back to the keyboard
+  /// selection or first visible result.
+  bool pasteSelectedOrFirst() {
+    final index = _preferredPasteIndex;
+    if (index < 0) return false;
+    if (_selectedIndex != index) {
+      setState(() => _selectedIndex = index);
+    }
+    widget.onPaste(_items[index]);
+    return true;
+  }
+
   /// Pastes the hovered item as plain text, then falls back to the keyboard
   /// selection or first visible result. This keeps both mouse and keyboard
   /// workflows complete without writing the item to the clipboard first.
   bool pasteSelectedPlainOrFirst() {
-    if (_items.isEmpty) {
+    final index = _preferredPasteIndex;
+    if (index < 0) {
       widget.onPlainPasteUnavailable?.call();
       return false;
     }
-    final hoveredIndex = _hoveredItemId == null
-        ? -1
-        : _items.indexWhere((item) => item.id == _hoveredItemId);
-    final index = hoveredIndex >= 0
-        ? hoveredIndex
-        : _selectedIndex >= 0 && _selectedIndex < _items.length
-        ? _selectedIndex
-        : 0;
     final item = _items[index];
     if (item.type != ClipboardContentType.text &&
         item.type != ClipboardContentType.link) {
@@ -377,6 +394,10 @@ class MainScreenState extends State<MainScreen> {
       if (event is KeyUpEvent) pasteSelectedPlainOrFirst();
       return KeyEventResult.handled;
     }
+    if (_isNormalPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedOrFirst();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -392,6 +413,10 @@ class MainScreenState extends State<MainScreen> {
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (_isPlainPasteGesture(event)) {
       if (event is KeyUpEvent) pasteSelectedPlainOrFirst();
+      return KeyEventResult.handled;
+    }
+    if (_isNormalPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedOrFirst();
       return KeyEventResult.handled;
     }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
@@ -465,11 +490,6 @@ class MainScreenState extends State<MainScreen> {
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.enter && _selectedIndex >= 0) {
-      _onItemTap(_items[_selectedIndex]);
-      return KeyEventResult.handled;
-    }
-
     if (key == LogicalKeyboardKey.delete && _selectedIndex >= 0) {
       _onItemDelete(_items[_selectedIndex]);
       return KeyEventResult.handled;
@@ -497,22 +517,20 @@ class MainScreenState extends State<MainScreen> {
 
   bool _isPlainPasteGesture(KeyEvent event) {
     final keyboard = HardwareKeyboard.instance;
-    final shiftEnter =
-        event.logicalKey == LogicalKeyboardKey.enter &&
+    return event.logicalKey == LogicalKeyboardKey.enter &&
         keyboard.isShiftPressed &&
         !keyboard.isControlPressed &&
         !keyboard.isMetaPressed &&
         !keyboard.isAltPressed;
-    if (shiftEnter) return true;
+  }
 
-    if (event.logicalKey != LogicalKeyboardKey.keyV ||
-        !keyboard.isShiftPressed) {
-      return false;
-    }
-    if (Platform.isMacOS) {
-      return keyboard.isMetaPressed && keyboard.isAltPressed;
-    }
-    return keyboard.isControlPressed && !keyboard.isAltPressed;
+  bool _isNormalPasteGesture(KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    return event.logicalKey == LogicalKeyboardKey.enter &&
+        !keyboard.isShiftPressed &&
+        !keyboard.isControlPressed &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isAltPressed;
   }
 
   void _editSelectedItem() {

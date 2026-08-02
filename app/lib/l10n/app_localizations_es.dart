@@ -270,11 +270,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trayExit => 'Salir';
 
   @override
-  String get shortcutOpenClose => 'Abrir / cerrar CopyPaste';
+  String get subtitleShortcutScopes =>
+      'Ctrl+V pertenece a la aplicación activa. Los atajos del historial funcionan mientras el panel de CopyPaste está abierto.';
+
+  @override
+  String get shortcutOpenClose =>
+      'Global de CopyPaste: Abrir / cerrar CopyPaste';
 
   @override
   String get shortcutPastePlainDirect =>
-      'Pegar el portapapeles como texto plano';
+      'Global de CopyPaste: Pegar el portapapeles actual como texto plano';
+
+  @override
+  String get shortcutSystemPaste =>
+      'Aplicación activa: Pegar normalmente el portapapeles actual (CopyPaste no lo intercepta)';
 
   @override
   String get shortcutEscape => 'Limpiar búsqueda o cerrar ventana';
@@ -289,11 +298,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shortcutArrows => 'Navegar entre elementos';
 
   @override
-  String get shortcutEnter => 'Pegar elemento seleccionado';
+  String get shortcutEnter =>
+      'Con CopyPaste abierto: Pegar normalmente el elemento bajo el cursor, el seleccionado o el primero';
 
   @override
   String get shortcutPasteSelectedPlain =>
-      'Pegar como texto plano el elemento bajo el cursor, el seleccionado o el primero';
+      'Con CopyPaste abierto: Pegar como texto plano el elemento bajo el cursor, el seleccionado o el primero';
 
   @override
   String get shortcutDelete => 'Eliminar elemento seleccionado';
@@ -557,7 +567,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitlePastePreset =>
+      'Velocidad de pegado automático. Instantáneo está optimizado para Windows; usa Seguro si alguna aplicación no recibe el pegado.';
+
+  @override
+  String get subtitlePastePresetStandard =>
       'Velocidad de pegado automático. Normal/Seguro recomendado para la mayoría.';
+
+  @override
+  String get pastePresetInstant => 'Instantáneo';
 
   @override
   String get pastePresetFast => 'Rápido';
@@ -576,6 +593,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pastePresetWarning =>
+      '⚡ Instantáneo (Windows): latencia mínima con verificación nativa del foco.\n⚠️ Rápido: puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: puede sentirse pesado en equipos modernos.';
+
+  @override
+  String get pastePresetWarningStandard =>
       '⚠️ Rápido: puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: puede sentirse pesado en equipos modernos.';
 
   @override

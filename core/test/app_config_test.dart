@@ -126,6 +126,10 @@ void main() {
       expect(windows.plainPasteHotkeyUseCtrl, isTrue);
       expect(windows.plainPasteHotkeyUseAlt, isTrue);
       expect(windows.plainPasteHotkeyUseShift, isFalse);
+      expect(windows.duplicateIgnoreWindowMs, 300);
+      expect(windows.delayBeforeFocusMs, 0);
+      expect(windows.delayBeforePasteMs, 20);
+      expect(windows.maxFocusVerifyAttempts, 15);
 
       final macos = AppConfig.defaultForPlatform('macos');
       expect(macos.hotkeyUseCtrl, isTrue);
@@ -280,6 +284,71 @@ void main() {
         );
         expect(persisted['plainPasteHotkeyUseAlt'], isTrue);
         expect(persisted['plainPasteHotkeyUseShift'], isFalse);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('legacy Windows Safe timing migrates to Instant', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'pasteDefaultsVersion': 1,
+        'duplicateIgnoreWindowMs': 450,
+        'delayBeforeFocusMs': 100,
+        'delayBeforePasteMs': 180,
+        'maxFocusVerifyAttempts': 15,
+      });
+
+      expect(restored.duplicateIgnoreWindowMs, 300);
+      expect(restored.delayBeforeFocusMs, 0);
+      expect(restored.delayBeforePasteMs, 20);
+      expect(restored.maxFocusVerifyAttempts, 15);
+    });
+
+    test('legacy custom Windows timing is preserved', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'pasteDefaultsVersion': 1,
+        'duplicateIgnoreWindowMs': 451,
+        'delayBeforeFocusMs': 100,
+        'delayBeforePasteMs': 180,
+        'maxFocusVerifyAttempts': 15,
+      });
+
+      expect(restored.duplicateIgnoreWindowMs, 451);
+      expect(restored.delayBeforeFocusMs, 100);
+      expect(restored.delayBeforePasteMs, 180);
+      expect(restored.maxFocusVerifyAttempts, 15);
+    });
+
+    test('load persists the Windows paste timing migration', () async {
+      if (!Platform.isWindows) return;
+      final dir = Directory.systemTemp.createTempSync('paste_migration_');
+      final path = '${dir.path}/config.json';
+      try {
+        File(path).writeAsStringSync(
+          jsonEncode({
+            'shortcutDefaultsVersion': AppConfig.shortcutDefaultsVersion,
+            'pasteDefaultsVersion': 1,
+            'duplicateIgnoreWindowMs': 450,
+            'delayBeforeFocusMs': 100,
+            'delayBeforePasteMs': 180,
+            'maxFocusVerifyAttempts': 15,
+          }),
+        );
+
+        final restored = await AppConfig.load(path);
+        final persisted =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+
+        expect(restored.delayBeforeFocusMs, 0);
+        expect(restored.delayBeforePasteMs, 20);
+        expect(
+          persisted['pasteDefaultsVersion'],
+          AppConfig.pasteDefaultsVersion,
+        );
+        expect(persisted['delayBeforeFocusMs'], 0);
+        expect(persisted['delayBeforePasteMs'], 20);
       } finally {
         dir.deleteSync(recursive: true);
       }
