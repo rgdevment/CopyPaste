@@ -354,6 +354,37 @@ void main() {
       }
     });
 
+    test(
+      'load keeps a migrated config when persistence is unavailable',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('config_read_only_');
+        final path = '${dir.path}/config.json';
+        try {
+          File(path).writeAsStringSync(
+            jsonEncode({
+              'shortcutDefaultsVersion': 1,
+              'pasteDefaultsVersion': 1,
+            }),
+          );
+          final lockResult = Platform.isWindows
+              ? await Process.run('attrib', ['+R', path])
+              : await Process.run('chmod', ['a-w', dir.path]);
+          expect(lockResult.exitCode, 0);
+
+          final restored = await AppConfig.load(path);
+
+          expect(restored.preferredLanguage, 'auto');
+        } finally {
+          if (Platform.isWindows) {
+            await Process.run('attrib', ['-R', path]);
+          } else {
+            await Process.run('chmod', ['u+w', dir.path]);
+          }
+          dir.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('copyWith all hotkey fields', () {
       const config = AppConfig();
       final updated = config.copyWith(

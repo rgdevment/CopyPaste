@@ -102,6 +102,19 @@ void main() {
   });
 
   group('ClipboardService.processImage', () {
+    test('ignores an image callback immediately after direct paste', () async {
+      service.pasteIgnoreWindowMs = 60000;
+      service.notifyDirectPasteInitiated('plain clipboard text');
+
+      final result = await service.processImage(
+        'ignored-image-hash',
+        imagePath: '/tmp/image.png',
+      );
+
+      expect(result, isNull);
+      expect(await repo.getAll(), isEmpty);
+    });
+
     test('saves new image item by contentHash', () async {
       final result = await service.processImage(
         'hash-abc',

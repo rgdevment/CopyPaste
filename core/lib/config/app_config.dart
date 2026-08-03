@@ -291,12 +291,8 @@ class AppConfig {
   static const int shortcutDefaultsVersion = 5;
   static const int pasteDefaultsVersion = 2;
 
-  static AppConfig defaultForCurrentPlatform() {
-    if (Platform.isWindows) return defaultForPlatform('windows');
-    if (Platform.isMacOS) return defaultForPlatform('macos');
-    if (Platform.isLinux) return defaultForPlatform('linux');
-    return defaultForPlatform('default');
-  }
+  static AppConfig defaultForCurrentPlatform() =>
+      defaultForPlatform(Platform.operatingSystem);
 
   // Kept for tests that pass a platform string explicitly.
   static AppConfig defaultForPlatform(String platform) => switch (platform) {

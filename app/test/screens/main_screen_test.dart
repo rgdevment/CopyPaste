@@ -88,11 +88,24 @@ void main() {
       expect(find.byType(MainScreen), findsOneWidget);
     });
 
-    testWidgets('shows EmptyState when no items', (tester) async {
-      await tester.pumpWidget(_buildApp(service: service, onPaste: (_) {}));
+    testWidgets('shows EmptyState and reports unavailable plain paste', (
+      tester,
+    ) async {
+      var unavailableCount = 0;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onPlainPasteUnavailable: () => unavailableCount++,
+          key: key,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(EmptyState), findsOneWidget);
+      expect(key.currentState!.pasteSelectedPlainOrFirst(), isFalse);
+      expect(unavailableCount, 1);
     });
 
     testWidgets('shows ClipboardCard after items are loaded', (tester) async {
@@ -1143,6 +1156,74 @@ void main() {
 
       expect(key.currentState!.pasteSelectedOrFirst(), isTrue);
       expect(pasted?.content, 'Hovered older item');
+    });
+
+    testWidgets('normal paste falls back after the pointer leaves a card', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await repo.save(
+        ClipboardItem(
+          content: 'Hovered older item',
+          type: ClipboardContentType.text,
+          createdAt: now.subtract(const Duration(seconds: 1)),
+          modifiedAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      await repo.save(
+        ClipboardItem(
+          content: 'Newest first item',
+          type: ClipboardContentType.text,
+          createdAt: now,
+          modifiedAt: now,
+        ),
+      );
+
+      ClipboardItem? pasted;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(service: service, onPaste: (item) => pasted = item, key: key),
+      );
+      await tester.pumpAndSettle();
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      final hoveredCard = find.ancestor(
+        of: find.text('Hovered older item'),
+        matching: find.byType(ClipboardCard),
+      );
+      await mouse.moveTo(tester.getCenter(hoveredCard));
+      await tester.pump();
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+
+      expect(key.currentState!.pasteSelectedOrFirst(), isTrue);
+      expect(pasted?.content, 'Newest first item');
+    });
+
+    testWidgets('plain paste reports unsupported history item', (tester) async {
+      await repo.save(
+        ClipboardItem(
+          content: 'C:/example/image.png',
+          type: ClipboardContentType.image,
+        ),
+      );
+
+      var unavailableCount = 0;
+      final key = GlobalKey<MainScreenState>();
+      await tester.pumpWidget(
+        _buildApp(
+          service: service,
+          onPaste: (_) {},
+          onPlainPasteUnavailable: () => unavailableCount++,
+          key: key,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(key.currentState!.pasteSelectedPlainOrFirst(), isFalse);
+      expect(unavailableCount, 1);
     });
 
     testWidgets('plain paste prioritizes the item under the mouse', (
