@@ -60,6 +60,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _hotkeyShift;
   late int _hotkeyVirtualKey;
   late String _hotkeyKeyName;
+  late bool _plainPasteHotkeyEnabled;
+  late bool _plainPasteHotkeyCtrl;
+  late bool _plainPasteHotkeyWin;
+  late bool _plainPasteHotkeyAlt;
+  late bool _plainPasteHotkeyShift;
+  late int _plainPasteHotkeyVirtualKey;
+  late String _plainPasteHotkeyKeyName;
+  late String _lastSavedHotkeySignature;
 
   late Map<String, String> _colorLabels;
 
@@ -98,12 +106,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _generateAudioThumbnails;
   late int _maxImageProcessingSizeMB;
 
-  bool get _hotkeyChanged =>
-      _hotkeyCtrl != widget.config.hotkeyUseCtrl ||
-      _hotkeyWin != widget.config.hotkeyUseWin ||
-      _hotkeyAlt != widget.config.hotkeyUseAlt ||
-      _hotkeyShift != widget.config.hotkeyUseShift ||
-      _hotkeyVirtualKey != widget.config.hotkeyVirtualKey;
+  String get _hotkeySignature => [
+    _hotkeyCtrl,
+    _hotkeyWin,
+    _hotkeyAlt,
+    _hotkeyShift,
+    _hotkeyVirtualKey,
+    _plainPasteHotkeyEnabled,
+    _plainPasteHotkeyCtrl,
+    _plainPasteHotkeyWin,
+    _plainPasteHotkeyAlt,
+    _plainPasteHotkeyShift,
+    _plainPasteHotkeyVirtualKey,
+  ].join(':');
+
+  bool get _hotkeyChanged => _hotkeySignature != _lastSavedHotkeySignature;
+
+  bool get _openHotkeyHasModifier =>
+      _hotkeyCtrl || _hotkeyWin || _hotkeyAlt || _hotkeyShift;
+
+  bool get _plainPasteHotkeyHasModifier =>
+      _plainPasteHotkeyCtrl ||
+      _plainPasteHotkeyWin ||
+      _plainPasteHotkeyAlt ||
+      _plainPasteHotkeyShift;
+
+  bool get _hotkeysConflict =>
+      _plainPasteHotkeyEnabled &&
+      _hotkeyCtrl == _plainPasteHotkeyCtrl &&
+      _hotkeyWin == _plainPasteHotkeyWin &&
+      _hotkeyAlt == _plainPasteHotkeyAlt &&
+      _hotkeyShift == _plainPasteHotkeyShift &&
+      _hotkeyVirtualKey == _plainPasteHotkeyVirtualKey;
+
+  bool get _hasInvalidHotkey =>
+      !_openHotkeyHasModifier ||
+      (_plainPasteHotkeyEnabled && !_plainPasteHotkeyHasModifier) ||
+      _hotkeysConflict;
 
   @override
   void initState() {
@@ -116,6 +155,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _hotkeyShift = widget.config.hotkeyUseShift;
     _hotkeyVirtualKey = widget.config.hotkeyVirtualKey;
     _hotkeyKeyName = widget.config.hotkeyKeyName;
+    _plainPasteHotkeyEnabled = widget.config.plainPasteHotkeyEnabled;
+    _plainPasteHotkeyCtrl = widget.config.plainPasteHotkeyUseCtrl;
+    _plainPasteHotkeyWin = widget.config.plainPasteHotkeyUseWin;
+    _plainPasteHotkeyAlt = widget.config.plainPasteHotkeyUseAlt;
+    _plainPasteHotkeyShift = widget.config.plainPasteHotkeyUseShift;
+    _plainPasteHotkeyVirtualKey = widget.config.plainPasteHotkeyVirtualKey;
+    _plainPasteHotkeyKeyName = widget.config.plainPasteHotkeyKeyName;
+    _lastSavedHotkeySignature = _hotkeySignature;
     _colorLabels = Map.of(widget.config.colorLabels);
     _pageSize = widget.config.pageSize;
     _maxItemsBeforeCleanup = widget.config.maxItemsBeforeCleanup;
@@ -168,6 +215,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     hotkeyUseShift: _hotkeyShift,
     hotkeyVirtualKey: _hotkeyVirtualKey,
     hotkeyKeyName: _hotkeyKeyName,
+    plainPasteHotkeyEnabled: _plainPasteHotkeyEnabled,
+    plainPasteHotkeyUseCtrl: _plainPasteHotkeyCtrl,
+    plainPasteHotkeyUseWin: _plainPasteHotkeyWin,
+    plainPasteHotkeyUseAlt: _plainPasteHotkeyAlt,
+    plainPasteHotkeyUseShift: _plainPasteHotkeyShift,
+    plainPasteHotkeyVirtualKey: _plainPasteHotkeyVirtualKey,
+    plainPasteHotkeyKeyName: _plainPasteHotkeyKeyName,
     colorLabels: _colorLabels,
     pageSize: _pageSize,
     maxItemsBeforeCleanup: _maxItemsBeforeCleanup,
@@ -205,6 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     if (!mounted) return;
+    if (_hasInvalidHotkey) return;
     setState(() => _saving = true);
     try {
       final hotkeyChanged = _hotkeyChanged;
@@ -214,6 +269,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await widget.onSave(newConfig, hotkeyChanged);
       if (!mounted) return;
       setState(() {
+        _lastSavedHotkeySignature = _hotkeySignature;
         _saving = false;
         _savedRecently = true;
       });
@@ -241,6 +297,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _hotkeyShift = d.hotkeyUseShift;
       _hotkeyVirtualKey = d.hotkeyVirtualKey;
       _hotkeyKeyName = d.hotkeyKeyName;
+      _plainPasteHotkeyEnabled = d.plainPasteHotkeyEnabled;
+      _plainPasteHotkeyCtrl = d.plainPasteHotkeyUseCtrl;
+      _plainPasteHotkeyWin = d.plainPasteHotkeyUseWin;
+      _plainPasteHotkeyAlt = d.plainPasteHotkeyUseAlt;
+      _plainPasteHotkeyShift = d.plainPasteHotkeyUseShift;
+      _plainPasteHotkeyVirtualKey = d.plainPasteHotkeyVirtualKey;
+      _plainPasteHotkeyKeyName = d.plainPasteHotkeyKeyName;
       _colorLabels = {};
       _pageSize = d.pageSize;
       _maxItemsBeforeCleanup = d.maxItemsBeforeCleanup;
@@ -278,17 +341,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _hotkeyString([String separator = '+']) {
-    final isMac = Platform.isMacOS;
+    return _formatHotkey(
+      useCtrl: _hotkeyCtrl,
+      useMeta: _hotkeyWin,
+      useAlt: _hotkeyAlt,
+      useShift: _hotkeyShift,
+      keyName: _hotkeyKeyName,
+      separator: separator,
+    );
+  }
+
+  String _plainPasteHotkeyString([String separator = '+']) {
+    return _formatHotkey(
+      useCtrl: _plainPasteHotkeyCtrl,
+      useMeta: _plainPasteHotkeyWin,
+      useAlt: _plainPasteHotkeyAlt,
+      useShift: _plainPasteHotkeyShift,
+      keyName: _plainPasteHotkeyKeyName,
+      separator: separator,
+    );
+  }
+
+  String _formatHotkey({
+    required bool useCtrl,
+    required bool useMeta,
+    required bool useAlt,
+    required bool useShift,
+    required String keyName,
+    required String separator,
+  }) {
     final parts = <String>[];
-    if (_hotkeyCtrl) parts.add('Ctrl');
-    if (_hotkeyWin) parts.add(isMac ? 'Cmd' : 'Win');
-    if (_hotkeyAlt) parts.add(isMac ? 'Option' : 'Alt');
-    if (_hotkeyShift) parts.add('Shift');
-    parts.add(_hotkeyKeyName);
+    if (Platform.isMacOS) {
+      if (useCtrl) parts.add('⌃');
+      if (useAlt) parts.add('⌥');
+      if (useShift) parts.add('⇧');
+      if (useMeta) parts.add('⌘');
+      parts.add(keyName);
+      return parts.join();
+    }
+    if (useCtrl) parts.add('Ctrl');
+    if (useMeta) parts.add(Platform.isLinux ? 'Super' : 'Win');
+    if (useAlt) parts.add('Alt');
+    if (useShift) parts.add('Shift');
+    parts.add(keyName);
     return parts.join(separator);
   }
 
+  void _restoreRecommendedHotkeys() {
+    final defaults = AppConfig.defaultForCurrentPlatform();
+    setState(() {
+      _hotkeyCtrl = defaults.hotkeyUseCtrl;
+      _hotkeyWin = defaults.hotkeyUseWin;
+      _hotkeyAlt = defaults.hotkeyUseAlt;
+      _hotkeyShift = defaults.hotkeyUseShift;
+      _hotkeyVirtualKey = defaults.hotkeyVirtualKey;
+      _hotkeyKeyName = defaults.hotkeyKeyName;
+      _plainPasteHotkeyEnabled = defaults.plainPasteHotkeyEnabled;
+      _plainPasteHotkeyCtrl = defaults.plainPasteHotkeyUseCtrl;
+      _plainPasteHotkeyWin = defaults.plainPasteHotkeyUseWin;
+      _plainPasteHotkeyAlt = defaults.plainPasteHotkeyUseAlt;
+      _plainPasteHotkeyShift = defaults.plainPasteHotkeyUseShift;
+      _plainPasteHotkeyVirtualKey = defaults.plainPasteHotkeyVirtualKey;
+      _plainPasteHotkeyKeyName = defaults.plainPasteHotkeyKeyName;
+    });
+    _markChanged();
+  }
+
   String? get _pastePresetName {
+    if (Platform.isWindows &&
+        _delayBeforeFocusMs == 0 &&
+        _delayBeforePasteMs == 20 &&
+        _maxFocusVerifyAttempts == 15 &&
+        _duplicateIgnoreWindowMs == 300) {
+      return 'Instant';
+    }
     if (_delayBeforeFocusMs == 50 &&
         _delayBeforePasteMs == 80 &&
         _maxFocusVerifyAttempts == 10 &&
@@ -319,6 +445,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _applyPastePreset(String name) {
     setState(() {
       switch (name) {
+        case 'Instant':
+          _delayBeforeFocusMs = 0;
+          _delayBeforePasteMs = 20;
+          _maxFocusVerifyAttempts = 15;
+          _duplicateIgnoreWindowMs = 300;
         case 'Fast':
           _delayBeforeFocusMs = 50;
           _delayBeforePasteMs = 80;
@@ -697,7 +828,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           colors: colors,
           icon: Icons.content_paste_go_rounded,
           title: l.sectionPaste,
-          subtitle: l.subtitlePastePreset,
+          subtitle: Platform.isWindows
+              ? l.subtitlePastePreset
+              : l.subtitlePastePresetStandard,
           children: [
             _SettingsRow(
               label: l.settingPasteSpeed,
@@ -705,8 +838,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               colors: colors,
               trailing: _PresetDropdown(
                 value: _pastePresetName,
-                items: const ['Fast', 'Normal', 'Safe', 'Slow'],
+                items: Platform.isWindows
+                    ? const ['Instant', 'Fast', 'Normal', 'Safe', 'Slow']
+                    : const ['Fast', 'Normal', 'Safe', 'Slow'],
                 labels: {
+                  'Instant': l.pastePresetInstant,
                   'Fast': l.pastePresetFast,
                   'Normal': l.pastePresetNormal,
                   'Safe': l.pastePresetSafe,
@@ -728,7 +864,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               child: Text(
-                l.pastePresetWarning,
+                Platform.isWindows
+                    ? l.pastePresetWarning
+                    : l.pastePresetWarningStandard,
                 style: TextStyle(
                   fontSize: 10.5,
                   color: colors.onSurfaceVariant,
@@ -1058,7 +1196,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _SettingsRow(
               label: l.settingHotkeyShortcutLabel,
-              subtitle: 'Current: ${_hotkeyString(' + ')}',
+              subtitle:
+                  '${l.currentShortcut(_hotkeyString(' + '))}\n'
+                  '${l.subtitleGlobalHotkeyWarning}',
               colors: colors,
             ),
             const SizedBox(height: 8),
@@ -1067,7 +1207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               runSpacing: 8,
               children: [
                 _ModifierChip(
-                  label: 'Ctrl',
+                  label: Platform.isMacOS ? '⌃ Control' : 'Ctrl',
                   selected: _hotkeyCtrl,
                   colors: colors,
                   onTap: () {
@@ -1077,7 +1217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _ModifierChip(
                   label: Platform.isMacOS
-                      ? 'Cmd'
+                      ? '⌘ Command'
                       : Platform.isLinux
                       ? 'Super'
                       : 'Win',
@@ -1089,7 +1229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _ModifierChip(
-                  label: Platform.isMacOS ? 'Option' : 'Alt',
+                  label: Platform.isMacOS ? '⌥ Option' : 'Alt',
                   selected: _hotkeyAlt,
                   colors: colors,
                   onTap: () {
@@ -1098,7 +1238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _ModifierChip(
-                  label: 'Shift',
+                  label: Platform.isMacOS ? '⇧ Shift' : 'Shift',
                   selected: _hotkeyShift,
                   colors: colors,
                   onTap: () {
@@ -1120,16 +1260,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+            if (!_openHotkeyHasModifier)
+              _HotkeyValidationText(
+                message: l.hotkeyRequiresModifier,
+                colors: colors,
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Divider(height: 1, color: colors.divider),
+            ),
+            _SettingsRow(
+              label: l.settingPlainPasteHotkeyLabel,
+              subtitle:
+                  '${_plainPasteHotkeyEnabled ? l.currentShortcut(_plainPasteHotkeyString(' + ')) : l.shortcutDisabled}\n'
+                  '${l.subtitlePlainPasteHotkey}',
+              colors: colors,
+              trailing: Switch(
+                value: _plainPasteHotkeyEnabled,
+                activeThumbColor: colors.primary,
+                onChanged: (value) {
+                  setState(() => _plainPasteHotkeyEnabled = value);
+                  _markChanged();
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            IgnorePointer(
+              ignoring: !_plainPasteHotkeyEnabled,
+              child: Opacity(
+                opacity: _plainPasteHotkeyEnabled ? 1 : 0.45,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _ModifierChip(
+                      label: Platform.isMacOS ? '⌃ Control' : 'Ctrl',
+                      selected: _plainPasteHotkeyCtrl,
+                      colors: colors,
+                      onTap: () {
+                        setState(
+                          () => _plainPasteHotkeyCtrl = !_plainPasteHotkeyCtrl,
+                        );
+                        _markChanged();
+                      },
+                    ),
+                    _ModifierChip(
+                      label: Platform.isMacOS
+                          ? '⌘ Command'
+                          : Platform.isLinux
+                          ? 'Super'
+                          : 'Win',
+                      selected: _plainPasteHotkeyWin,
+                      colors: colors,
+                      onTap: () {
+                        setState(
+                          () => _plainPasteHotkeyWin = !_plainPasteHotkeyWin,
+                        );
+                        _markChanged();
+                      },
+                    ),
+                    _ModifierChip(
+                      label: Platform.isMacOS ? '⌥ Option' : 'Alt',
+                      selected: _plainPasteHotkeyAlt,
+                      colors: colors,
+                      onTap: () {
+                        setState(
+                          () => _plainPasteHotkeyAlt = !_plainPasteHotkeyAlt,
+                        );
+                        _markChanged();
+                      },
+                    ),
+                    _ModifierChip(
+                      label: Platform.isMacOS ? '⇧ Shift' : 'Shift',
+                      selected: _plainPasteHotkeyShift,
+                      colors: colors,
+                      onTap: () {
+                        setState(
+                          () =>
+                              _plainPasteHotkeyShift = !_plainPasteHotkeyShift,
+                        );
+                        _markChanged();
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    _KeySelector(
+                      currentKey: _plainPasteHotkeyKeyName,
+                      colors: colors,
+                      onChanged: (key, virtualKey) {
+                        setState(() {
+                          _plainPasteHotkeyKeyName = key;
+                          _plainPasteHotkeyVirtualKey = virtualKey;
+                        });
+                        _markChanged();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_plainPasteHotkeyEnabled && !_plainPasteHotkeyHasModifier)
+              _HotkeyValidationText(
+                message: l.hotkeyRequiresModifier,
+                colors: colors,
+              ),
+            if (_hotkeysConflict)
+              _HotkeyValidationText(
+                message: l.hotkeyConflictWarning,
+                colors: colors,
+              ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _restoreRecommendedHotkeys,
+                icon: const Icon(Icons.restore_rounded, size: 16),
+                label: Text(l.restoreRecommendedHotkeys),
+              ),
+            ),
           ],
         ),
         _SectionCard(
           colors: colors,
           icon: Icons.keyboard_rounded,
           title: l.sectionShortcuts,
+          subtitle: l.subtitleShortcutScopes,
           children: [
             _ShortcutRow(
               keys: _hotkeyString(),
               description: l.shortcutOpenClose,
+              colors: colors,
+            ),
+            if (_plainPasteHotkeyEnabled)
+              _ShortcutRow(
+                keys: _plainPasteHotkeyString(),
+                description: l.shortcutPastePlainDirect,
+                colors: colors,
+              ),
+            _ShortcutRow(
+              keys: Platform.isMacOS ? '⌘V' : 'Ctrl+V',
+              description: l.shortcutSystemPaste,
               colors: colors,
             ),
             _ShortcutRow(
@@ -1140,6 +1409,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _ShortcutRow(
               keys: 'Enter',
               description: l.shortcutEnter,
+              colors: colors,
+            ),
+            _ShortcutRow(
+              keys: 'Shift+Enter',
+              description: l.shortcutPasteSelectedPlain,
               colors: colors,
             ),
             _ShortcutRow(
@@ -2356,6 +2630,33 @@ class _ModifierChip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HotkeyValidationText extends StatelessWidget {
+  const _HotkeyValidationText({required this.message, required this.colors});
+
+  final String message;
+  final AppThemeColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 15, color: colors.danger),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 11, color: colors.danger),
+            ),
+          ),
+        ],
       ),
     );
   }

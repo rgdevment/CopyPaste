@@ -132,17 +132,27 @@ class ClipboardService {
     _lastPastedContent = item?.content;
   }
 
+  /// Suppresses the clipboard rewrite performed by direct plain-text paste.
+  /// This variant does not require the listener to have persisted the current
+  /// clipboard item yet (for example, when the hotkey follows Copy immediately).
+  void notifyDirectPasteInitiated(String content) {
+    _pasteStopwatch = Stopwatch()..start();
+    _lastPastedContent = content;
+  }
+
   bool _shouldIgnore(String? content) {
     final sw = _pasteStopwatch;
     if (sw == null) return false;
     final elapsed = sw.elapsedMilliseconds;
-    if (elapsed < pasteIgnoreWindowMs) return true;
-    if (content != null &&
-        content == _lastPastedContent &&
-        elapsed < pasteIgnoreWindowMs * 2) {
-      return true;
+    if (content != null) {
+      // Text/file events carry their content, so suppress only the echo we
+      // wrote. A blanket time window can silently lose a genuinely new copy
+      // made immediately after a paste.
+      return content == _lastPastedContent && elapsed < pasteIgnoreWindowMs * 2;
     }
-    return false;
+    // Image callbacks have no comparable text payload and still need the
+    // short time-based guard.
+    return elapsed < pasteIgnoreWindowMs;
   }
 
   Future<ClipboardItem?> processText(

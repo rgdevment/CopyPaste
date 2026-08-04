@@ -14,6 +14,7 @@ import 'package:copypaste/theme/theme_provider.dart';
 // ---------------------------------------------------------------------------
 
 late StorageConfig _storage;
+late SqliteRepository _repo;
 late ClipboardService _service;
 
 Widget _wrap(Widget child) => MaterialApp(
@@ -32,8 +33,8 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pump();
 }
 
-Widget _screen() => SettingsScreen(
-  config: const AppConfig(),
+Widget _screen([AppConfig config = const AppConfig()]) => SettingsScreen(
+  config: config,
   configPath: Directory.systemTemp.path,
   clipboardService: _service,
   storage: _storage,
@@ -52,11 +53,13 @@ void main() {
   });
 
   setUp(() {
-    _service = ClipboardService(SqliteRepository.inMemory());
+    _repo = SqliteRepository.inMemory();
+    _service = ClipboardService(_repo);
   });
 
   tearDown(() async {
     await _service.dispose();
+    await _repo.close();
   });
 
   group('SettingsScreen – smoke', () {
@@ -86,6 +89,74 @@ void main() {
       await tester.tap(find.text('Shortcuts'));
       await tester.pump();
       expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.text('Optional global plain-text paste'), findsOneWidget);
+      expect(find.textContaining('Disabled'), findsOneWidget);
+      expect(
+        find.text(
+          'CopyPaste open: Paste the hovered, selected, or first history item as plain text',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('CopyPaste does not intercept it'),
+        findsOneWidget,
+      );
+      expect(find.text('Ctrl+Shift+V'), findsNothing);
+    });
+
+    testWidgets('enabled plain paste hotkey shows its current binding', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _screen(const AppConfig(plainPasteHotkeyEnabled: true)),
+      );
+      await tester.tap(find.text('Shortcuts'));
+      await tester.pump();
+
+      expect(
+        find.textContaining('Current: Ctrl + Alt + Shift + V'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'CopyPaste global: Paste the current clipboard as plain text',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('duplicate global hotkeys show a conflict warning', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _screen(
+          const AppConfig(
+            plainPasteHotkeyEnabled: true,
+            plainPasteHotkeyUseCtrl: true,
+            plainPasteHotkeyUseAlt: true,
+            plainPasteHotkeyUseShift: false,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Shortcuts'));
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text(
+          'This combination is already assigned to the other CopyPaste shortcut.',
+        ),
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+
+      expect(
+        find.text(
+          'This combination is already assigned to the other CopyPaste shortcut.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Restore recommended shortcuts'), findsOneWidget);
     });
 
     testWidgets('Performance tab renders without crashing', (tester) async {
@@ -109,6 +180,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Localized labels should appear (not raw 'Fast'/'Slow' keys).
+      if (Platform.isWindows) expect(find.text('Instant'), findsWidgets);
       expect(find.text('Fast'), findsWidgets);
       expect(find.text('Normal'), findsWidgets);
       expect(find.text('Safe'), findsWidgets);

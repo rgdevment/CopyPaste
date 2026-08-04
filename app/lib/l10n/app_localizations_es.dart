@@ -270,7 +270,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trayExit => 'Salir';
 
   @override
-  String get shortcutOpenClose => 'Abrir / cerrar CopyPaste';
+  String get subtitleShortcutScopes =>
+      'Ctrl+V pertenece a la aplicación activa. Los atajos del historial funcionan mientras el panel de CopyPaste está abierto.';
+
+  @override
+  String get shortcutOpenClose =>
+      'Global de CopyPaste: Abrir / cerrar CopyPaste';
+
+  @override
+  String get shortcutPastePlainDirect =>
+      'Global de CopyPaste: Pegar el portapapeles actual como texto plano';
+
+  @override
+  String get shortcutSystemPaste =>
+      'Aplicación activa: Pegar normalmente el portapapeles actual (CopyPaste no lo intercepta)';
 
   @override
   String get shortcutEscape => 'Limpiar búsqueda o cerrar ventana';
@@ -285,7 +298,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shortcutArrows => 'Navegar entre elementos';
 
   @override
-  String get shortcutEnter => 'Pegar elemento seleccionado';
+  String get shortcutEnter =>
+      'Con CopyPaste abierto: Pegar normalmente el elemento bajo el cursor, el seleccionado o el primero';
+
+  @override
+  String get shortcutPasteSelectedPlain =>
+      'Con CopyPaste abierto: Pegar como texto plano el elemento bajo el cursor, el seleccionado o el primero';
 
   @override
   String get shortcutDelete => 'Eliminar elemento seleccionado';
@@ -402,6 +420,63 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingHotkeyShortcutLabel => 'Atajo para abrir/cerrar CopyPaste';
 
   @override
+  String get subtitleGlobalHotkeyWarning =>
+      'Atajo global del sistema. Puede reemplazar la misma combinación en otra aplicación.';
+
+  @override
+  String get settingPlainPasteHotkeyLabel =>
+      'Pegado global opcional como texto plano';
+
+  @override
+  String get subtitlePlainPasteHotkey =>
+      'Pega el portapapeles actual como texto plano sin abrir CopyPaste. Activar un atajo global puede reemplazar el mismo atajo en otras aplicaciones.';
+
+  @override
+  String get shortcutDisabled => 'Desactivado';
+
+  @override
+  String currentShortcut(String shortcut) {
+    return 'Actual: $shortcut';
+  }
+
+  @override
+  String get hotkeyRequiresModifier =>
+      'Agrega al menos una tecla modificadora antes de guardar este atajo.';
+
+  @override
+  String get hotkeyConflictWarning =>
+      'Esta combinación ya está asignada al otro atajo de CopyPaste.';
+
+  @override
+  String get restoreRecommendedHotkeys => 'Restaurar atajos recomendados';
+
+  @override
+  String get plainPasteHotkeyRegistrationFailed =>
+      'No se pudo registrar el atajo de pegado directo como texto plano. Es posible que el sistema u otra aplicación ya lo esté usando.';
+
+  @override
+  String get pasteDestinationUnavailable =>
+      'Se canceló el pegado porque no se pudo restaurar el destino original. Abre CopyPaste con su atajo de teclado e inténtalo nuevamente.';
+
+  @override
+  String get plainPasteItemUnavailable =>
+      'El elemento bajo el cursor, el seleccionado o el primero no se puede pegar como texto plano.';
+
+  @override
+  String get plainClipboardUnavailable =>
+      'No hay texto en el portapapeles. Copia primero un texto y vuelve a usar el pegado como texto plano.';
+
+  @override
+  String hotkeyRegistrationFailed(String shortcut) {
+    return 'No se pudo registrar el atajo $shortcut. Es posible que el sistema u otra aplicación ya lo esté usando.';
+  }
+
+  @override
+  String hotkeyFallbackActive(String requested, String effective) {
+    return 'El atajo $requested no estaba disponible. CopyPaste está usando temporalmente $effective.';
+  }
+
+  @override
   String get subtitleStartupDesc =>
       'Se inicia en segundo plano al iniciar sesión';
 
@@ -492,7 +567,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitlePastePreset =>
+      'Velocidad de pegado automático. Instantáneo está optimizado para Windows; usa Seguro si alguna aplicación no recibe el pegado.';
+
+  @override
+  String get subtitlePastePresetStandard =>
       'Velocidad de pegado automático. Normal/Seguro recomendado para la mayoría.';
+
+  @override
+  String get pastePresetInstant => 'Instantáneo';
 
   @override
   String get pastePresetFast => 'Rápido';
@@ -511,6 +593,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pastePresetWarning =>
+      '⚡ Instantáneo (Windows): latencia mínima con verificación nativa del foco.\n⚠️ Rápido: puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: puede sentirse pesado en equipos modernos.';
+
+  @override
+  String get pastePresetWarningStandard =>
       '⚠️ Rápido: puede causar comportamientos extraños en apps pesadas.\n⚠️ Lento: puede sentirse pesado en equipos modernos.';
 
   @override

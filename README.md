@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows, macOS and Linux"/>
 
   <h1>CopyPaste — Free Open Source Clipboard Manager</h1>
@@ -243,25 +243,28 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 ## Keyboard Shortcuts
 
-CopyPaste is designed for power users who prefer keyboard navigation:
+CopyPaste keeps `Ctrl+V` under the active application's control and uses
+dedicated shortcuts for its global actions and history panel.
 
-| Shortcut                                 | Action                                              |
-| :--------------------------------------- | :-------------------------------------------------- |
-| Ctrl+Alt+V                               | Open/close CopyPaste (default hotkey, customizable) |
-| ↓ or Tab                                 | Navigate from search to clipboard items             |
-| ↑ / ↓                                    | Navigate between clipboard items                    |
-| Space                                    | Expand/collapse selected card to see more text      |
-| Ctrl+F / Cmd+F                           | Focus search box                                    |
-| Enter                                    | Paste selected item and return to previous app      |
-| Delete                                   | Delete selected item                                |
-| P                                        | Pin/Unpin selected item                             |
-| E                                        | Edit card (add label and color)                     |
-| Ctrl+1                                   | Switch to Recent tab                                |
-| Ctrl+2                                   | Switch to Pinned tab                                |
-| Alt+C                                    | Switch to Content filter mode (text search)         |
-| Alt+G                                    | Switch to Category filter mode (by color)           |
-| Alt+T                                    | Switch to Type filter mode (by item type)           |
-| Esc                                      | Clear current filter or close window                |
+| Scope | Shortcut | Action |
+| :---- | :------- | :----- |
+| Active application | Ctrl+V (Windows/Linux) / Cmd+V (macOS) | Paste the current system clipboard normally. CopyPaste does not intercept it. |
+| CopyPaste global | Ctrl+Alt+C (Windows) / Control+Shift+V (macOS) / Super+V (Linux) | Open/close CopyPaste (customizable). |
+| CopyPaste global, optional | Ctrl+Alt+V (Windows; configurable elsewhere) | Paste the current system clipboard as plain text without opening the panel. |
+| CopyPaste panel open | Enter | Paste the hovered item, keyboard selection, or first visible history item normally, in that order. |
+| CopyPaste panel open | Shift+Enter | Paste the hovered item, keyboard selection, or first visible history item as plain text (text/link only), in that order. |
+| CopyPaste panel open | ↓ or Tab | Navigate from search to clipboard items. |
+| CopyPaste panel open | ↑ / ↓ | Navigate between clipboard items. |
+| CopyPaste panel open | → | Expand/collapse the selected card. |
+| CopyPaste panel open | Shift+Tab | Return focus to the search box. |
+| CopyPaste panel open | Delete | Delete the selected item. |
+| CopyPaste panel open | P | Pin/unpin the selected item. |
+| CopyPaste panel open | E | Edit the selected card (label and color). |
+| CopyPaste panel open | Ctrl+1 / Cmd+1 | Switch to Recent. |
+| CopyPaste panel open | Ctrl+2 / Cmd+2 | Switch to Pinned. |
+| CopyPaste panel open | Alt+C | Focus the search box. |
+| CopyPaste panel open | Alt+G / Alt+T | Open the filter menu. |
+| CopyPaste panel open | Esc | Clear the current filter or close the panel. |
 
 ### Card Customization
 
@@ -331,7 +334,7 @@ Double-click always collapses the card before pasting, so your last click state 
 
 ### Keyboard-Only Workflow
 
-1. **Press Ctrl+Alt+V** (default hotkey, customizable in Settings) → Window opens with focus on search box
+1. **Press Ctrl+Alt+C** on Windows, **Control+Shift+V** on macOS, or **Super+V** on Linux (customizable in Settings) → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
 3. **Press Esc** (optional) → Clear search to see all items again
 4. **Press ↓** → Navigate to first clipboard item
@@ -363,7 +366,7 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 | **Linux**   | `apt` / `dnf` (OBS repo)          | Homebrew · self-updating AppImage · `.deb`/`.rpm`  |
 
-After installing, open CopyPaste with **Ctrl+Shift+V** (default on every platform — customizable in Settings → Shortcuts). On Linux/X11, if `Ctrl+Shift+V` is taken by another app or desktop shortcut, CopyPaste falls back to **Ctrl+Shift+Shift+V** for that session and shows a warning.
+After installing, open CopyPaste with **Ctrl+Alt+C** on Windows, **Control+Shift+V** on macOS, or **Super+V** on Linux. All are customizable in Settings → Shortcuts. On Linux/X11, if the configured shortcut is unavailable, CopyPaste tries a temporary fallback for that session and shows a warning.
 
 ### Windows
 

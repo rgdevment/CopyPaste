@@ -118,24 +118,28 @@ void main() {
   });
 
   group('ClipboardService.notifyPasteInitiated', () {
-    test('ignores items within paste window', () async {
-      service.pasteIgnoreWindowMs = 100;
+    test(
+      'does not lose different content copied within paste window',
+      () async {
+        service.pasteIgnoreWindowMs = 100;
 
-      final item = await service.processText(
-        'first content',
-        ClipboardContentType.text,
-      );
-      expect(item, isNotNull);
+        final item = await service.processText(
+          'first content',
+          ClipboardContentType.text,
+        );
+        expect(item, isNotNull);
 
-      await service.notifyPasteInitiated(item!.id);
+        await service.notifyPasteInitiated(item!.id);
 
-      final ignored = await service.processText(
-        'second content',
-        ClipboardContentType.text,
-      );
+        final copied = await service.processText(
+          'second content',
+          ClipboardContentType.text,
+        );
 
-      expect(ignored, isNull);
-    });
+        expect(copied, isNotNull);
+        expect(copied!.content, 'second content');
+      },
+    );
 
     test('window expires allowing new items', () async {
       service.pasteIgnoreWindowMs = 50;

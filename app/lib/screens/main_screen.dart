@@ -27,6 +27,7 @@ class MainScreen extends StatefulWidget {
     required this.clipboardService,
     required this.onPaste,
     required this.onPastePlain,
+    this.onPlainPasteUnavailable,
     this.onCopy,
     required this.onExit,
     required this.onSettings,
@@ -49,6 +50,7 @@ class MainScreen extends StatefulWidget {
   final ClipboardService clipboardService;
   final void Function(ClipboardItem item) onPaste;
   final void Function(ClipboardItem item) onPastePlain;
+  final VoidCallback? onPlainPasteUnavailable;
   final void Function(ClipboardItem item)? onCopy;
   final VoidCallback onExit;
   final VoidCallback onSettings;
@@ -85,6 +87,7 @@ class MainScreenState extends State<MainScreen> {
   bool _pendingReload = false;
   int _selectedIndex = -1;
   int _expandedIndex = -1;
+  String? _hoveredItemId;
   Timer? _reloadDebounce;
 
   String _searchQuery = '';
@@ -256,6 +259,52 @@ class MainScreenState extends State<MainScreen> {
     widget.onPaste(item);
   }
 
+  int get _preferredPasteIndex {
+    if (_items.isEmpty) return -1;
+    final hoveredIndex = _hoveredItemId == null
+        ? -1
+        : _items.indexWhere((item) => item.id == _hoveredItemId);
+    if (hoveredIndex >= 0) return hoveredIndex;
+    if (_selectedIndex >= 0 && _selectedIndex < _items.length) {
+      return _selectedIndex;
+    }
+    return 0;
+  }
+
+  /// Pastes the hovered item normally, then falls back to the keyboard
+  /// selection or first visible result.
+  bool pasteSelectedOrFirst() {
+    final index = _preferredPasteIndex;
+    if (index < 0) return false;
+    if (_selectedIndex != index) {
+      setState(() => _selectedIndex = index);
+    }
+    widget.onPaste(_items[index]);
+    return true;
+  }
+
+  /// Pastes the hovered item as plain text, then falls back to the keyboard
+  /// selection or first visible result. This keeps both mouse and keyboard
+  /// workflows complete without writing the item to the clipboard first.
+  bool pasteSelectedPlainOrFirst() {
+    final index = _preferredPasteIndex;
+    if (index < 0) {
+      widget.onPlainPasteUnavailable?.call();
+      return false;
+    }
+    final item = _items[index];
+    if (item.type != ClipboardContentType.text &&
+        item.type != ClipboardContentType.link) {
+      widget.onPlainPasteUnavailable?.call();
+      return false;
+    }
+    if (_selectedIndex != index) {
+      setState(() => _selectedIndex = index);
+    }
+    widget.onPastePlain(item);
+    return true;
+  }
+
   Future<void> _onItemPin(ClipboardItem item) async {
     await widget.clipboardService.updatePin(item.id, !item.isPinned);
     _reload();
@@ -341,6 +390,14 @@ class MainScreenState extends State<MainScreen> {
   }
 
   KeyEventResult _onSearchKeyEvent(FocusNode node, KeyEvent event) {
+    if (_isPlainPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedPlainOrFirst();
+      return KeyEventResult.handled;
+    }
+    if (_isNormalPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedOrFirst();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -354,6 +411,14 @@ class MainScreenState extends State<MainScreen> {
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (_isPlainPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedPlainOrFirst();
+      return KeyEventResult.handled;
+    }
+    if (_isNormalPasteGesture(event)) {
+      if (event is KeyUpEvent) pasteSelectedOrFirst();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -425,11 +490,6 @@ class MainScreenState extends State<MainScreen> {
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.enter && _selectedIndex >= 0) {
-      _onItemTap(_items[_selectedIndex]);
-      return KeyEventResult.handled;
-    }
-
     if (key == LogicalKeyboardKey.delete && _selectedIndex >= 0) {
       _onItemDelete(_items[_selectedIndex]);
       return KeyEventResult.handled;
@@ -453,6 +513,24 @@ class MainScreenState extends State<MainScreen> {
     }
 
     return KeyEventResult.ignored;
+  }
+
+  bool _isPlainPasteGesture(KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    return event.logicalKey == LogicalKeyboardKey.enter &&
+        keyboard.isShiftPressed &&
+        !keyboard.isControlPressed &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isAltPressed;
+  }
+
+  bool _isNormalPasteGesture(KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    return event.logicalKey == LogicalKeyboardKey.enter &&
+        !keyboard.isShiftPressed &&
+        !keyboard.isControlPressed &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isAltPressed;
   }
 
   void _editSelectedItem() {
@@ -642,6 +720,13 @@ class MainScreenState extends State<MainScreen> {
             onSelect: () {
               setState(() => _selectedIndex = index);
               _focusNode.requestFocus();
+            },
+            onHoverChanged: (hovering) {
+              if (hovering) {
+                _hoveredItemId = item.id;
+              } else if (_hoveredItemId == item.id) {
+                _hoveredItemId = null;
+              }
             },
             onExpandToggle: () {
               setState(() {

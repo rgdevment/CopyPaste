@@ -220,6 +220,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   late HotkeyHandler _hotkeyHandler;
   late AppConfig _config;
   final WindowFocusManager _focusManager = WindowFocusManager();
+  final WindowFocusManager _directPasteFocusManager = WindowFocusManager();
   final _mainScreenKey = GlobalKey<MainScreenState>();
   final _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<ClipboardEvent>? _listenerSubscription;
@@ -233,6 +234,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   ManifestState? _manifestState;
   bool _programmaticRestore = false;
   Timer? _blurHideTimer;
+  bool _hotkeyToggleInProgress = false;
+  bool _directPlainPasteInProgress = false;
+  bool _itemPasteInProgress = false;
+  bool _shuttingDown = false;
+  Future<void>? _cleanupFuture;
 
   @override
   void initState() {
@@ -254,7 +260,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       onPositionPersist: _onPositionPersist,
     );
     _trayIcon = TrayIcon(onToggle: _toggleWindow, onExit: _exitApp);
-    _hotkeyHandler = HotkeyHandler(config: _config, onHotkey: _onHotkey);
+    _hotkeyHandler = HotkeyHandler(
+      config: _config,
+      onHotkey: _onHotkey,
+      onPlainPasteHotkey: _onPlainPasteHotkey,
+    );
 
     unawaited(
       _initShell().catchError(
@@ -460,12 +470,26 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _registerHotkeyWithFeedback() async {
     if (!Platform.isLinux) {
-      await _hotkeyHandler.registerWithFallback();
+      final result = await _hotkeyHandler.registerWithFallback();
+      _reportPlainPasteHotkeyFailure();
+      if (result.status == HotkeyRegistrationStatus.failed) {
+        _showShellNotice(
+          (l) => l.hotkeyRegistrationFailed(result.requestedBinding.label()),
+        );
+      } else if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
+        _showShellNotice(
+          (l) => l.hotkeyFallbackActive(
+            result.requestedBinding.label(),
+            result.effectiveBinding?.label() ?? '',
+          ),
+        );
+      }
       return;
     }
 
     // Wayland is blocked before this point in _initShell — only X11 reaches here.
     final result = await _hotkeyHandler.registerWithFallback();
+    _reportPlainPasteHotkeyFailure();
     if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
       AppLogger.info(
         'Primary Linux hotkey failed, using temporary fallback: '
@@ -473,12 +497,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         '${result.effectiveBinding?.label()}',
       );
       if (result.failureReason == HotkeyFailureReason.grabFailed) {
-        _showLinuxNotice(
+        _showShellNotice(
           (l) =>
               l.linuxHotkeyGrabFailedWarning(result.requestedBinding.label()),
         );
       } else {
-        _showLinuxNotice(
+        _showShellNotice(
           (l) => l.linuxHotkeyFallbackWarning(
             result.requestedBinding.label(),
             result.effectiveBinding?.label() ??
@@ -494,12 +518,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         'Linux hotkey registration failed for ${result.requestedBinding.label()}',
       );
       if (result.failureReason == HotkeyFailureReason.grabFailed) {
-        _showLinuxNotice(
+        _showShellNotice(
           (l) =>
               l.linuxHotkeyGrabFailedWarning(result.requestedBinding.label()),
         );
       } else {
-        _showLinuxNotice(
+        _showShellNotice(
           (l) => l.linuxHotkeyConflictWarning(
             result.requestedBinding.label(),
             kLinuxTemporaryFallbackHotkey.label(),
@@ -507,6 +531,15 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         );
       }
     }
+  }
+
+  void _reportPlainPasteHotkeyFailure() {
+    if (!_config.plainPasteHotkeyEnabled ||
+        _hotkeyHandler.plainPasteRegistrationSucceeded != false) {
+      return;
+    }
+    AppLogger.error('The direct plain-text paste hotkey is unavailable');
+    _showShellNotice((l) => l.plainPasteHotkeyRegistrationFailed);
   }
 
   ThemeMode get _effectiveThemeMode {
@@ -521,18 +554,34 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     };
   }
 
-  void _showLinuxNotice(String Function(AppLocalizations l) messageBuilder) {
+  void _showShellNotice(
+    String Function(AppLocalizations l) messageBuilder, {
+    bool revealWhenHidden = false,
+  }) {
+    if (revealWhenHidden && !_appWindow.isVisible) {
+      unawaited(_revealAndShowShellNotice(messageBuilder));
+      return;
+    }
+    _enqueueShellNotice(messageBuilder);
+  }
+
+  Future<void> _revealAndShowShellNotice(
+    String Function(AppLocalizations l) messageBuilder,
+  ) async {
+    await _safeShow();
+    _enqueueShellNotice(messageBuilder);
+  }
+
+  void _enqueueShellNotice(String Function(AppLocalizations l) messageBuilder) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _navigatorKey.currentContext;
       if (ctx == null || !ctx.mounted) return;
+      final message = messageBuilder(AppLocalizations.of(ctx));
       final messenger = ScaffoldMessenger.maybeOf(ctx);
       if (messenger == null) return;
 
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(messageBuilder(AppLocalizations.of(ctx))),
-          duration: const Duration(seconds: 12),
-        ),
+        SnackBar(content: Text(message), duration: const Duration(seconds: 12)),
       );
     });
   }
@@ -723,12 +772,104 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _onHotkey() async {
+    if (_shuttingDown || _hotkeyToggleInProgress) return;
+    _hotkeyToggleInProgress = true;
     _programmaticRestore = true;
-    if (!_appWindow.isVisible) {
+    try {
+      if (_appWindow.isVisible) {
+        await _closePanel();
+        return;
+      }
       await _focusManager.capturePreviousWindow();
+      await _appWindow.show();
+    } finally {
+      _programmaticRestore = false;
+      _hotkeyToggleInProgress = false;
     }
-    await _appWindow.toggle();
-    _programmaticRestore = false; // fallback if onWindowRestore never fires
+  }
+
+  Future<void> _onPlainPasteHotkey() async {
+    if (_shuttingDown || _directPlainPasteInProgress || _itemPasteInProgress) {
+      return;
+    }
+    _directPlainPasteInProgress = true;
+    final panelWasVisible = _appWindow.isVisible;
+    final pasteFocusManager = panelWasVisible
+        ? _focusManager
+        : _directPasteFocusManager;
+    try {
+      // When hidden, capture the active destination before touching the
+      // clipboard. An open panel already owns a destination captured when it
+      // was shown; re-capturing here would incorrectly capture CopyPaste.
+      if (!panelWasVisible &&
+          !await pasteFocusManager.capturePreviousWindow()) {
+        _reportPasteFailure(
+          const PasteResponse(success: false, errorCode: 'noPreviousWindow'),
+        );
+        return;
+      }
+      if (panelWasVisible && !pasteFocusManager.hasDestination) {
+        _reportPasteFailure(
+          const PasteResponse(success: false, errorCode: 'noPreviousWindow'),
+        );
+        return;
+      }
+      if (_shuttingDown) {
+        pasteFocusManager.clear();
+        return;
+      }
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text;
+      if (text == null || text.isEmpty) {
+        if (!panelWasVisible) {
+          // The error reveals the history panel. Preserve the original target
+          // there so the user can immediately use Shift+Enter on history.
+          await _focusManager.capturePreviousWindow();
+          pasteFocusManager.clear();
+        }
+        _showShellNotice(
+          (l) => l.plainClipboardUnavailable,
+          revealWhenHidden: !panelWasVisible,
+        );
+        return;
+      }
+
+      widget.clipboardService.notifyDirectPasteInitiated(text);
+      final written = await ClipboardWriter.setText(text, plainText: true);
+      if (!written) {
+        if (!panelWasVisible) pasteFocusManager.clear();
+        return;
+      }
+
+      if (panelWasVisible) await _appWindow.hide();
+
+      // Windows SendInput neutralizes still-held shortcut modifiers in the
+      // same atomic input batch. Other platforms still wait for key-up.
+      if (!Platform.isWindows && !await _waitForShortcutModifiersReleased()) {
+        pasteFocusManager.clear();
+        return;
+      }
+      if (_shuttingDown) {
+        pasteFocusManager.clear();
+        return;
+      }
+      final response = await pasteFocusManager.restoreAndPaste(
+        delayBeforeFocusMs: 0,
+        maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
+        delayBeforePasteMs: 0,
+      );
+      if (!response.success) _reportPasteFailure(response);
+    } on PlatformException catch (e) {
+      pasteFocusManager.clear();
+      if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
+        _enterPermissionGate();
+      }
+    } catch (e, s) {
+      pasteFocusManager.clear();
+      AppLogger.error('Direct plain-text paste failed: $e\n$s');
+    } finally {
+      _directPlainPasteInProgress = false;
+    }
   }
 
   void _dismissHint() {
@@ -760,8 +901,24 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   Future<void> _toggleWindow() async {
     _programmaticRestore = true;
-    await _appWindow.toggle();
-    _programmaticRestore = false; // fallback if onWindowRestore never fires
+    try {
+      if (_appWindow.isVisible) {
+        await _closePanel();
+        return;
+      }
+      // A tray click normally leaves the previously active application in the
+      // foreground long enough to capture it. If the shell has already taken
+      // focus, the focus manager rejects CopyPaste and paste will fail safely.
+      await _focusManager.capturePreviousWindow();
+      await _appWindow.show();
+    } finally {
+      _programmaticRestore = false;
+    }
+  }
+
+  Future<void> _closePanel() async {
+    await _appWindow.hide();
+    _focusManager.clear();
   }
 
   void _onWindowVisibilityChanged(bool visible) {
@@ -787,31 +944,96 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     ClipboardItem item, {
     bool plainText = false,
   }) async {
-    if (item.isFileBasedType && !item.isFileAvailable()) return;
-    await widget.clipboardService.notifyPasteInitiated(item.id);
-    await widget.clipboardService.recordPaste(item.id);
-    final ok = await ClipboardWriter.setFromItem(
-      typeValue: item.type.value,
-      content: item.content,
-      metadata: item.metadata,
-      plainText: plainText,
-    );
-    if (!ok) return;
-    await _appWindow.hide();
+    if (_itemPasteInProgress ||
+        (item.isFileBasedType && !item.isFileAvailable())) {
+      return;
+    }
+    if (!_focusManager.hasDestination) {
+      _reportPasteFailure(
+        const PasteResponse(success: false, errorCode: 'noPreviousWindow'),
+      );
+      return;
+    }
+    _itemPasteInProgress = true;
     try {
+      await widget.clipboardService.notifyPasteInitiated(item.id);
+      final ok = await ClipboardWriter.setFromItem(
+        typeValue: item.type.value,
+        content: item.content,
+        metadata: item.metadata,
+        plainText: plainText,
+      );
+      if (!ok) return;
+      await _appWindow.hide();
+      if (!Platform.isWindows && !await _waitForShortcutModifiersReleased()) {
+        _focusManager.clear();
+        _reportPasteFailure(
+          const PasteResponse(
+            success: false,
+            errorCode: 'shortcutModifiersHeld',
+          ),
+        );
+        return;
+      }
       final response = await _focusManager.restoreAndPaste(
         delayBeforeFocusMs: _config.delayBeforeFocusMs,
         maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
         delayBeforePasteMs: _config.delayBeforePasteMs,
       );
-      if (Platform.isLinux && response.isFocusTimeout) {
-        _showLinuxNotice((l) => l.linuxPasteFocusTimeoutWarning);
+      if (!response.success) {
+        _reportPasteFailure(response);
+        return;
       }
+      await widget.clipboardService.recordPaste(item.id);
     } on PlatformException catch (e) {
+      _focusManager.clear();
       if (e.code == 'ACCESSIBILITY_DENIED' && mounted) {
         _enterPermissionGate();
       }
+    } catch (e, s) {
+      _focusManager.clear();
+      AppLogger.error('Item paste failed: $e\n$s');
+    } finally {
+      _itemPasteInProgress = false;
     }
+  }
+
+  void _reportPasteFailure(PasteResponse response) {
+    AppLogger.warn(
+      'Paste was not sent: error=${response.errorCode ?? 'unknown'}',
+    );
+    if (response.isFocusTimeout && Platform.isLinux) {
+      _showShellNotice(
+        (l) => l.linuxPasteFocusTimeoutWarning,
+        revealWhenHidden: true,
+      );
+      return;
+    }
+    _showShellNotice(
+      (l) => l.pasteDestinationUnavailable,
+      revealWhenHidden: true,
+    );
+  }
+
+  Future<bool> _waitForShortcutModifiersReleased() async {
+    for (var attempt = 0; attempt < 25; attempt++) {
+      final released =
+          !HardwareKeyboard.instance.isControlPressed &&
+          !HardwareKeyboard.instance.isShiftPressed &&
+          !HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isMetaPressed;
+      if (released) {
+        if (attempt > 0) {
+          AppLogger.info(
+            'Shortcut modifiers released after ${attempt * 20} ms',
+          );
+        }
+        return true;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    AppLogger.warn('Paste cancelled because shortcut modifiers remain held');
+    return false;
   }
 
   Future<void> _onCopyItem(ClipboardItem item) async {
@@ -839,7 +1061,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       );
   }
 
-  Future<void> _cleanup() async {
+  Future<void> _cleanup() => _cleanupFuture ??= _performCleanup();
+
+  Future<void> _performCleanup() async {
+    _shuttingDown = true;
+    _focusManager.clear();
+    _directPasteFocusManager.clear();
     SingleInstance.stopListening();
     try {
       await _listenerSubscription?.cancel();
@@ -847,7 +1074,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       AppLogger.error('cleanup listener: $e');
     }
     try {
-      await _hotkeyHandler.unregister();
+      await _hotkeyHandler.dispose();
     } catch (e) {
       AppLogger.error('cleanup hotkey: $e');
     }
@@ -999,10 +1226,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               );
             }
             if (hotkeyChanged) {
-              await _hotkeyHandler.unregister();
+              await _hotkeyHandler.dispose();
               _hotkeyHandler = HotkeyHandler(
                 config: newConfig,
                 onHotkey: _onHotkey,
+                onPlainPasteHotkey: _onPlainPasteHotkey,
               );
               await _registerHotkeyWithFeedback();
             }
@@ -1043,7 +1271,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   @override
   void onWindowClose() {
-    _appWindow.hide();
+    unawaited(_closePanel());
   }
 
   @override
@@ -1169,6 +1397,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   @override
   void dispose() {
+    _shuttingDown = true;
+    _focusManager.clear();
+    _directPasteFocusManager.clear();
     WidgetsBinding.instance.removeObserver(this);
     windowManager.removeListener(this);
     unawaited(AutoUpdateService.dispose());
@@ -1290,8 +1521,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                     onDismissHint: _dismissHint,
                     onPaste: _onPasteItem,
                     onPastePlain: (item) => _onPasteItem(item, plainText: true),
+                    onPlainPasteUnavailable: () =>
+                        _showShellNotice((l) => l.plainPasteItemUnavailable),
                     onCopy: _onCopyItem,
-                    onExit: () => _appWindow.hide(),
+                    onExit: _closePanel,
                     onSettings: () => _openSettings(ctx),
                     updateVersion: _availableUpdateVersion,
                     updateSeverity: ReleaseManifestService.badgeSeverity(

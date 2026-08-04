@@ -23,6 +23,7 @@ class ClipboardCard extends StatefulWidget {
     this.onExpandToggle,
     this.onOpen,
     this.onSelect,
+    this.onHoverChanged,
     this.onRequestThumbnailRefresh,
     this.isSelected = false,
     this.isExpanded = false,
@@ -41,6 +42,7 @@ class ClipboardCard extends StatefulWidget {
   final VoidCallback? onExpandToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onSelect;
+  final ValueChanged<bool>? onHoverChanged;
   final void Function(ClipboardItem item)? onRequestThumbnailRefresh;
   final bool isSelected;
   final bool isExpanded;
@@ -415,8 +417,14 @@ class _ClipboardCardState extends State<ClipboardCard> {
     final hasColor = item.cardColor != CardColor.none;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
+      onEnter: (_) {
+        setState(() => _hovering = true);
+        widget.onHoverChanged?.call(true);
+      },
+      onExit: (_) {
+        setState(() => _hovering = false);
+        widget.onHoverChanged?.call(false);
+      },
       child: Listener(
         onPointerDown: _handlePointerDown,
         child: GestureDetector(

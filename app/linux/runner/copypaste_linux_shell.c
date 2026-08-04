@@ -41,6 +41,9 @@ struct _CopyPasteLinuxShell {
   Window root_window;
   guint hotkey_keycode;
   guint hotkey_modifiers;
+  gboolean plain_hotkey_registered;
+  guint plain_hotkey_keycode;
+  guint plain_hotkey_modifiers;
   guint32 last_hotkey_time;
 #endif
 };
@@ -406,12 +409,37 @@ static void unregister_hotkey(CopyPasteLinuxShell* shell) {
   shell->hotkey_modifiers = 0;
 }
 
+static void unregister_plain_hotkey(CopyPasteLinuxShell* shell) {
+  if (!shell->plain_hotkey_registered || shell->xdisplay == NULL ||
+      shell->plain_hotkey_keycode == 0) {
+    shell->plain_hotkey_registered = FALSE;
+    return;
+  }
+
+  ungrab_hotkey_variants(shell->xdisplay, shell->root_window,
+                         (KeyCode)shell->plain_hotkey_keycode,
+                         shell->plain_hotkey_modifiers);
+  shell->plain_hotkey_registered = FALSE;
+  shell->plain_hotkey_keycode = 0;
+  shell->plain_hotkey_modifiers = 0;
+}
+
 static FlValue* register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   if (!shell_is_x11() || shell->xdisplay == NULL) {
     return make_hotkey_result(FALSE, "noX11");
   }
 
-  unregister_hotkey(shell);
+  FlValue* id_value = args != NULL ? fl_value_lookup_string(args, "id") : NULL;
+  const gchar* id = id_value != NULL &&
+                            fl_value_get_type(id_value) == FL_VALUE_TYPE_STRING
+                        ? fl_value_get_string(id_value)
+                        : "openClose";
+  gboolean is_plain = g_strcmp0(id, "plainPaste") == 0;
+  if (is_plain) {
+    unregister_plain_hotkey(shell);
+  } else {
+    unregister_hotkey(shell);
+  }
 
   FlValue* key_value = args != NULL ? fl_value_lookup_string(args, "virtualKey") : NULL;
   gint64 virtual_key = (key_value != NULL && fl_value_get_type(key_value) == FL_VALUE_TYPE_INT)
@@ -432,6 +460,15 @@ static FlValue* register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   if (keycode == 0) {
     g_warning("registerHotkey: no keycode for keysym %lu", (unsigned long)keysym);
     return make_hotkey_result(FALSE, "unsupportedKey");
+  }
+
+  if ((is_plain && shell->hotkey_registered &&
+       shell->hotkey_keycode == keycode &&
+       shell->hotkey_modifiers == modifiers) ||
+      (!is_plain && shell->plain_hotkey_registered &&
+       shell->plain_hotkey_keycode == keycode &&
+       shell->plain_hotkey_modifiers == modifiers)) {
+    return make_hotkey_result(FALSE, "grabFailed");
   }
 
   for (guint i = 0; i < G_N_ELEMENTS(modifier_combinations); i++) {
@@ -455,9 +492,15 @@ static FlValue* register_hotkey(CopyPasteLinuxShell* shell, FlValue* args) {
   }
   XSync(shell->xdisplay, False);
 
-  shell->hotkey_registered = TRUE;
-  shell->hotkey_keycode = keycode;
-  shell->hotkey_modifiers = modifiers;
+  if (is_plain) {
+    shell->plain_hotkey_registered = TRUE;
+    shell->plain_hotkey_keycode = keycode;
+    shell->plain_hotkey_modifiers = modifiers;
+  } else {
+    shell->hotkey_registered = TRUE;
+    shell->hotkey_keycode = keycode;
+    shell->hotkey_modifiers = modifiers;
+  }
   return make_hotkey_result(TRUE, NULL);
 }
 
@@ -466,7 +509,7 @@ static GdkFilterReturn x11_event_filter(GdkXEvent* xevent,
                                         gpointer user_data) {
   (void)event;
   CopyPasteLinuxShell* shell = (CopyPasteLinuxShell*)user_data;
-  if (!shell->hotkey_registered) {
+  if (!shell->hotkey_registered && !shell->plain_hotkey_registered) {
     return GDK_FILTER_CONTINUE;
   }
 
@@ -478,9 +521,18 @@ static GdkFilterReturn x11_event_filter(GdkXEvent* xevent,
   guint relevant_mask = ControlMask | ShiftMask | Mod1Mask | Mod4Mask;
   guint state = (guint)x_event->xkey.state & relevant_mask;
   if ((guint)x_event->xkey.keycode == shell->hotkey_keycode &&
+      shell->hotkey_registered &&
       state == shell->hotkey_modifiers) {
     shell->last_hotkey_time = x_event->xkey.time;
     send_shell_event(shell, "hotkey");
+    return GDK_FILTER_REMOVE;
+  }
+
+  if ((guint)x_event->xkey.keycode == shell->plain_hotkey_keycode &&
+      shell->plain_hotkey_registered &&
+      state == shell->plain_hotkey_modifiers) {
+    shell->last_hotkey_time = x_event->xkey.time;
+    send_shell_event(shell, "plainPasteHotkey");
     return GDK_FILTER_REMOVE;
   }
 
@@ -758,6 +810,7 @@ static void shell_method_call_cb(FlMethodChannel* channel,
   if (strcmp(method, "unregisterHotkey") == 0) {
 #ifdef GDK_WINDOWING_X11
     unregister_hotkey(shell);
+    unregister_plain_hotkey(shell);
 #endif
     respond_method_success(method_call, fl_value_new_bool(TRUE));
     return;
@@ -838,6 +891,7 @@ void copypaste_linux_shell_dispose(CopyPasteLinuxShell* shell) {
 #ifdef GDK_WINDOWING_X11
   if (shell_is_x11()) {
     unregister_hotkey(shell);
+    unregister_plain_hotkey(shell);
     GdkWindow* gdk_root = gdk_get_default_root_window();
     gdk_window_remove_filter(gdk_root, x11_event_filter, shell);
   }

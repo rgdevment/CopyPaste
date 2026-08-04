@@ -56,13 +56,26 @@ void main() {
 
     test('returns null when inside paste ignore window', () async {
       service.pasteIgnoreWindowMs = 60000;
-      await service.notifyPasteInitiated('any-id');
+      service.notifyDirectPasteInitiated('ignored');
 
       final result = await service.processText(
         'ignored',
         ClipboardContentType.text,
       );
       expect(result, isNull);
+    });
+
+    test('direct paste suppresses the plain-text clipboard rewrite', () async {
+      service.pasteIgnoreWindowMs = 60000;
+      service.notifyDirectPasteInitiated('fresh clipboard text');
+
+      final result = await service.processText(
+        'fresh clipboard text',
+        ClipboardContentType.text,
+      );
+
+      expect(result, isNull);
+      expect(await repo.getAll(), isEmpty);
     });
 
     test('saves item with source and rtf/html metadata', () async {
@@ -89,6 +102,19 @@ void main() {
   });
 
   group('ClipboardService.processImage', () {
+    test('ignores an image callback immediately after direct paste', () async {
+      service.pasteIgnoreWindowMs = 60000;
+      service.notifyDirectPasteInitiated('plain clipboard text');
+
+      final result = await service.processImage(
+        'ignored-image-hash',
+        imagePath: '/tmp/image.png',
+      );
+
+      expect(result, isNull);
+      expect(await repo.getAll(), isEmpty);
+    });
+
     test('saves new image item by contentHash', () async {
       final result = await service.processImage(
         'hash-abc',
@@ -771,27 +797,33 @@ void main() {
   });
 
   group('ClipboardService.processImage BMP write failure', () {
-    test('falls back gracefully when temp BMP cannot be written', () async {
-      final dir = Directory.systemTemp.createTempSync('svc_bmp_fail_');
-      try {
-        // Make the images directory read-only so File.writeAsBytes throws.
-        await Process.run('chmod', ['444', dir.path]);
+    test(
+      'falls back gracefully when temp BMP cannot be written',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('svc_bmp_fail_');
+        try {
+          // Make the images directory read-only so File.writeAsBytes throws.
+          await Process.run('chmod', ['444', dir.path]);
 
-        final svc = ClipboardService(repo, imagesPath: dir.path);
-        // Should not throw; the catch block logs a warning and saves anyway.
-        final result = await svc.processImage(
-          'bmp-fail-hash',
-          imageBytes: [1, 2, 3, 4],
-        );
-        expect(result, isNotNull);
-        // Item is saved even though the BMP write failed; content is empty.
-        expect(result!.type, equals(ClipboardContentType.image));
+          final svc = ClipboardService(repo, imagesPath: dir.path);
+          // Should not throw; the catch block logs a warning and saves anyway.
+          final result = await svc.processImage(
+            'bmp-fail-hash',
+            imageBytes: [1, 2, 3, 4],
+          );
+          expect(result, isNotNull);
+          // Item is saved even though the BMP write failed; content is empty.
+          expect(result!.type, equals(ClipboardContentType.image));
 
-        await svc.dispose();
-      } finally {
-        await Process.run('chmod', ['755', dir.path]);
-        dir.deleteSync(recursive: true);
-      }
-    });
+          await svc.dispose();
+        } finally {
+          await Process.run('chmod', ['755', dir.path]);
+          dir.deleteSync(recursive: true);
+        }
+      },
+      skip: Platform.isWindows
+          ? 'Requires POSIX directory permissions (chmod)'
+          : false,
+    );
   });
 }

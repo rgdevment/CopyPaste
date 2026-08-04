@@ -106,6 +106,37 @@ void main() {
     });
   });
 
+  group('LinuxShell.registerHotkey', () {
+    const channel = MethodChannel('copypaste/linux_shell');
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('passes the hotkey id to the native shell', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            captured = call;
+            return <String, Object?>{'success': true};
+          });
+
+      final response = await LinuxShell.registerHotkey(
+        id: 'plainPaste',
+        virtualKey: 0x56,
+        useCtrl: true,
+        useWin: false,
+        useAlt: true,
+        useShift: false,
+      );
+
+      expect(response.success, isTrue);
+      expect(captured?.method, equals('registerHotkey'));
+      expect(captured?.arguments['id'], equals('plainPaste'));
+    });
+  });
+
   group('LinuxShell.getInputFocus', () {
     const channel = MethodChannel('copypaste/linux_shell');
 

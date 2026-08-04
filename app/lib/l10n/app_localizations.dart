@@ -590,11 +590,29 @@ abstract class AppLocalizations {
   /// **'Exit'**
   String get trayExit;
 
+  /// No description provided for @subtitleShortcutScopes.
+  ///
+  /// In en, this message translates to:
+  /// **'Ctrl+V stays with the active app. History shortcuts work while the CopyPaste panel is open.'**
+  String get subtitleShortcutScopes;
+
   /// No description provided for @shortcutOpenClose.
   ///
   /// In en, this message translates to:
-  /// **'Open / close CopyPaste'**
+  /// **'CopyPaste global: Open / close CopyPaste'**
   String get shortcutOpenClose;
+
+  /// No description provided for @shortcutPastePlainDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'CopyPaste global: Paste the current clipboard as plain text'**
+  String get shortcutPastePlainDirect;
+
+  /// No description provided for @shortcutSystemPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Active app: Paste the current clipboard normally (CopyPaste does not intercept it)'**
+  String get shortcutSystemPaste;
 
   /// No description provided for @shortcutEscape.
   ///
@@ -623,8 +641,14 @@ abstract class AppLocalizations {
   /// No description provided for @shortcutEnter.
   ///
   /// In en, this message translates to:
-  /// **'Paste selected item'**
+  /// **'CopyPaste open: Paste the hovered, selected, or first history item normally'**
   String get shortcutEnter;
+
+  /// No description provided for @shortcutPasteSelectedPlain.
+  ///
+  /// In en, this message translates to:
+  /// **'CopyPaste open: Paste the hovered, selected, or first history item as plain text'**
+  String get shortcutPasteSelectedPlain;
 
   /// No description provided for @shortcutDelete.
   ///
@@ -854,6 +878,90 @@ abstract class AppLocalizations {
   /// **'Shortcut to open/close CopyPaste'**
   String get settingHotkeyShortcutLabel;
 
+  /// No description provided for @subtitleGlobalHotkeyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'System-wide shortcut. It may replace the same combination in another application.'**
+  String get subtitleGlobalHotkeyWarning;
+
+  /// No description provided for @settingPlainPasteHotkeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional global plain-text paste'**
+  String get settingPlainPasteHotkeyLabel;
+
+  /// No description provided for @subtitlePlainPasteHotkey.
+  ///
+  /// In en, this message translates to:
+  /// **'Pastes the current clipboard as plain text without opening CopyPaste. Enabling a global shortcut can override the same shortcut in other apps.'**
+  String get subtitlePlainPasteHotkey;
+
+  /// No description provided for @shortcutDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get shortcutDisabled;
+
+  /// No description provided for @currentShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {shortcut}'**
+  String currentShortcut(String shortcut);
+
+  /// No description provided for @hotkeyRequiresModifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one modifier key before saving this shortcut.'**
+  String get hotkeyRequiresModifier;
+
+  /// No description provided for @hotkeyConflictWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This combination is already assigned to the other CopyPaste shortcut.'**
+  String get hotkeyConflictWarning;
+
+  /// No description provided for @restoreRecommendedHotkeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore recommended shortcuts'**
+  String get restoreRecommendedHotkeys;
+
+  /// No description provided for @plainPasteHotkeyRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.'**
+  String get plainPasteHotkeyRegistrationFailed;
+
+  /// No description provided for @pasteDestinationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.'**
+  String get pasteDestinationUnavailable;
+
+  /// No description provided for @plainPasteItemUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The hovered, selected, or first item cannot be pasted as plain text.'**
+  String get plainPasteItemUnavailable;
+
+  /// No description provided for @plainClipboardUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'There is no text on the clipboard. Copy some text first, then use plain-text paste again.'**
+  String get plainClipboardUnavailable;
+
+  /// No description provided for @hotkeyRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.'**
+  String hotkeyRegistrationFailed(String shortcut);
+
+  /// No description provided for @hotkeyFallbackActive.
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut {requested} was unavailable. CopyPaste is temporarily using {effective}.'**
+  String hotkeyFallbackActive(String requested, String effective);
+
   /// Startup subtitle
   ///
   /// In en, this message translates to:
@@ -1019,8 +1127,20 @@ abstract class AppLocalizations {
   /// Paste preset subtitle
   ///
   /// In en, this message translates to:
-  /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
+  /// **'Automatic paste speed. Instant is optimized for Windows; use Safe if a destination app misses a paste.'**
   String get subtitlePastePreset;
+
+  /// Non-Windows paste preset subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic paste speed. Normal/Safe recommended for most computers.'**
+  String get subtitlePastePresetStandard;
+
+  /// Windows instant paste preset label
+  ///
+  /// In en, this message translates to:
+  /// **'Instant'**
+  String get pastePresetInstant;
 
   /// Fast paste preset label
   ///
@@ -1055,8 +1175,14 @@ abstract class AppLocalizations {
   /// Paste preset warning text
   ///
   /// In en, this message translates to:
-  /// **'⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
+  /// **'⚡ Instant (Windows): lowest latency with native focus verification.\n⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
   String get pastePresetWarning;
+
+  /// Non-Windows paste preset warning text
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.'**
+  String get pastePresetWarningStandard;
 
   /// Reset filters on open label
   ///

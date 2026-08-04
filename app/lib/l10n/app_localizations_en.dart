@@ -269,7 +269,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trayExit => 'Exit';
 
   @override
-  String get shortcutOpenClose => 'Open / close CopyPaste';
+  String get subtitleShortcutScopes =>
+      'Ctrl+V stays with the active app. History shortcuts work while the CopyPaste panel is open.';
+
+  @override
+  String get shortcutOpenClose => 'CopyPaste global: Open / close CopyPaste';
+
+  @override
+  String get shortcutPastePlainDirect =>
+      'CopyPaste global: Paste the current clipboard as plain text';
+
+  @override
+  String get shortcutSystemPaste =>
+      'Active app: Paste the current clipboard normally (CopyPaste does not intercept it)';
 
   @override
   String get shortcutEscape => 'Clear search or close window';
@@ -284,7 +296,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutArrows => 'Navigate between items';
 
   @override
-  String get shortcutEnter => 'Paste selected item';
+  String get shortcutEnter =>
+      'CopyPaste open: Paste the hovered, selected, or first history item normally';
+
+  @override
+  String get shortcutPasteSelectedPlain =>
+      'CopyPaste open: Paste the hovered, selected, or first history item as plain text';
 
   @override
   String get shortcutDelete => 'Delete selected item';
@@ -401,6 +418,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingHotkeyShortcutLabel => 'Shortcut to open/close CopyPaste';
 
   @override
+  String get subtitleGlobalHotkeyWarning =>
+      'System-wide shortcut. It may replace the same combination in another application.';
+
+  @override
+  String get settingPlainPasteHotkeyLabel => 'Optional global plain-text paste';
+
+  @override
+  String get subtitlePlainPasteHotkey =>
+      'Pastes the current clipboard as plain text without opening CopyPaste. Enabling a global shortcut can override the same shortcut in other apps.';
+
+  @override
+  String get shortcutDisabled => 'Disabled';
+
+  @override
+  String currentShortcut(String shortcut) {
+    return 'Current: $shortcut';
+  }
+
+  @override
+  String get hotkeyRequiresModifier =>
+      'Add at least one modifier key before saving this shortcut.';
+
+  @override
+  String get hotkeyConflictWarning =>
+      'This combination is already assigned to the other CopyPaste shortcut.';
+
+  @override
+  String get restoreRecommendedHotkeys => 'Restore recommended shortcuts';
+
+  @override
+  String get plainPasteHotkeyRegistrationFailed =>
+      'The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.';
+
+  @override
+  String get pasteDestinationUnavailable =>
+      'Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.';
+
+  @override
+  String get plainPasteItemUnavailable =>
+      'The hovered, selected, or first item cannot be pasted as plain text.';
+
+  @override
+  String get plainClipboardUnavailable =>
+      'There is no text on the clipboard. Copy some text first, then use plain-text paste again.';
+
+  @override
+  String hotkeyRegistrationFailed(String shortcut) {
+    return 'The shortcut $shortcut could not be registered. It may already be in use by the system or another app.';
+  }
+
+  @override
+  String hotkeyFallbackActive(String requested, String effective) {
+    return 'The shortcut $requested was unavailable. CopyPaste is temporarily using $effective.';
+  }
+
+  @override
   String get subtitleStartupDesc => 'Launches in background when you sign in';
 
   @override
@@ -488,7 +561,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitlePastePreset =>
+      'Automatic paste speed. Instant is optimized for Windows; use Safe if a destination app misses a paste.';
+
+  @override
+  String get subtitlePastePresetStandard =>
       'Automatic paste speed. Normal/Safe recommended for most computers.';
+
+  @override
+  String get pastePresetInstant => 'Instant';
 
   @override
   String get pastePresetFast => 'Fast';
@@ -507,6 +587,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pastePresetWarning =>
+      '⚡ Instant (Windows): lowest latency with native focus verification.\n⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.';
+
+  @override
+  String get pastePresetWarningStandard =>
       '⚠️ Fast: may cause unexpected behavior in heavy apps.\n⚠️ Slow: may feel sluggish on modern computers.';
 
   @override

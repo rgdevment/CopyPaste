@@ -1102,6 +1102,7 @@ void main() {
     });
 
     testWidgets('hover enter and exit changes card appearance', (tester) async {
+      final hoverChanges = <bool>[];
       await tester.pumpWidget(
         wrapWidget(
           ClipboardCard(
@@ -1110,6 +1111,7 @@ void main() {
             onPin: () {},
             onDelete: () {},
             onLabelColor: (_, _) {},
+            onHoverChanged: hoverChanges.add,
           ),
         ),
       );
@@ -1125,12 +1127,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ClipboardCard), findsOneWidget);
+      expect(hoverChanges, [true]);
 
       // Exit hover
-      await gesture.moveTo(Offset.zero);
+      await gesture.moveTo(const Offset(-100, -100));
       await tester.pumpAndSettle();
 
       expect(find.byType(ClipboardCard), findsOneWidget);
+      expect(hoverChanges, [true, false]);
     });
 
     testWidgets('file not found shows warning badge', (tester) async {

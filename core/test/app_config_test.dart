@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -14,8 +15,8 @@ void main() {
       expect(config.pageSize, equals(30));
       expect(config.hotkeyUseCtrl, isTrue);
       expect(config.hotkeyUseWin, isFalse);
-      expect(config.hotkeyUseAlt, isFalse);
-      expect(config.hotkeyUseShift, isTrue);
+      expect(config.hotkeyUseAlt, isTrue);
+      expect(config.hotkeyUseShift, isFalse);
       expect(config.hotkeyKeyName, equals('V'));
     });
 
@@ -51,6 +52,7 @@ void main() {
     test('load returns default when file does not exist', () async {
       final config = await AppConfig.load('/nonexistent/path/config.json');
       expect(config.preferredLanguage, equals('auto'));
+      expect(config.plainPasteHotkeyEnabled, isFalse);
     });
 
     test('save and load round-trip', () async {
@@ -102,22 +104,286 @@ void main() {
       const config = AppConfig();
       expect(config.hotkeyUseCtrl, isTrue);
       expect(config.hotkeyUseWin, isFalse);
-      expect(config.hotkeyUseAlt, isFalse);
-      expect(config.hotkeyUseShift, isTrue);
+      expect(config.hotkeyUseAlt, isTrue);
+      expect(config.hotkeyUseShift, isFalse);
       expect(config.hotkeyVirtualKey, equals(0x56));
       expect(config.hotkeyKeyName, equals('V'));
+      expect(config.plainPasteHotkeyEnabled, isFalse);
+      expect(config.plainPasteHotkeyUseCtrl, isTrue);
+      expect(config.plainPasteHotkeyUseAlt, isTrue);
+      expect(config.plainPasteHotkeyUseWin, isFalse);
+      expect(config.plainPasteHotkeyUseShift, isTrue);
+      expect(config.plainPasteHotkeyVirtualKey, equals(0x56));
+      expect(config.plainPasteHotkeyKeyName, equals('V'));
     });
 
-    test('all platforms default to Ctrl+Shift+V', () {
-      for (final platform in ['default', 'linux', 'windows', 'macos']) {
-        final config = AppConfig.defaultForPlatform(platform);
-        expect(config.hotkeyUseCtrl, isTrue, reason: '$platform: useCtrl');
-        expect(config.hotkeyUseWin, isFalse, reason: '$platform: useWin');
-        expect(config.hotkeyUseAlt, isFalse, reason: '$platform: useAlt');
-        expect(config.hotkeyUseShift, isTrue, reason: '$platform: useShift');
-        expect(config.hotkeyKeyName, equals('V'), reason: '$platform: key');
+    test('platform defaults follow native shortcut conventions', () {
+      final windows = AppConfig.defaultForPlatform('windows');
+      expect(windows.hotkeyKeyName, 'C');
+      expect(windows.hotkeyUseCtrl, isTrue);
+      expect(windows.hotkeyUseAlt, isTrue);
+      expect(windows.plainPasteHotkeyEnabled, isFalse);
+      expect(windows.plainPasteHotkeyUseCtrl, isTrue);
+      expect(windows.plainPasteHotkeyUseAlt, isTrue);
+      expect(windows.plainPasteHotkeyUseShift, isFalse);
+      expect(windows.duplicateIgnoreWindowMs, 300);
+      expect(windows.delayBeforeFocusMs, 0);
+      expect(windows.delayBeforePasteMs, 20);
+      expect(windows.maxFocusVerifyAttempts, 15);
+
+      final macos = AppConfig.defaultForPlatform('macos');
+      expect(macos.hotkeyUseCtrl, isTrue);
+      expect(macos.hotkeyUseAlt, isFalse);
+      expect(macos.hotkeyUseShift, isTrue);
+      expect(macos.plainPasteHotkeyUseWin, isTrue);
+      expect(macos.plainPasteHotkeyUseAlt, isTrue);
+      expect(macos.plainPasteHotkeyUseShift, isTrue);
+      expect(macos.plainPasteHotkeyUseCtrl, isTrue);
+
+      final linux = AppConfig.defaultForPlatform('linux');
+      expect(linux.hotkeyUseWin, isTrue);
+      expect(linux.hotkeyUseCtrl, isFalse);
+      expect(linux.hotkeyUseAlt, isFalse);
+      expect(linux.hotkeyUseShift, isFalse);
+      expect(linux.plainPasteHotkeyUseCtrl, isTrue);
+      expect(linux.plainPasteHotkeyUseShift, isTrue);
+      expect(linux.plainPasteHotkeyUseAlt, isFalse);
+    });
+
+    test('legacy JSON does not silently enable the new global hotkey', () {
+      final restored = AppConfig.fromJson({'hotkeyKeyName': 'P'});
+      expect(restored.plainPasteHotkeyEnabled, isFalse);
+    });
+
+    test('legacy Windows opening shortcut remains Ctrl+Alt+C', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'hotkeyUseCtrl': true,
+        'hotkeyUseWin': false,
+        'hotkeyUseAlt': true,
+        'hotkeyUseShift': false,
+        'hotkeyVirtualKey': 0x43,
+        'hotkeyKeyName': 'C',
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': false,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
+
+      expect(restored.hotkeyKeyName, 'C');
+      expect(restored.hotkeyUseCtrl, isTrue);
+      expect(restored.hotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyEnabled, isFalse);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isFalse);
+    });
+
+    test('version 2 Windows opening default migrates back to Ctrl+Alt+C', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 2,
+        'hotkeyUseCtrl': true,
+        'hotkeyUseWin': false,
+        'hotkeyUseAlt': true,
+        'hotkeyUseShift': false,
+        'hotkeyVirtualKey': 0x56,
+        'hotkeyKeyName': 'V',
+      });
+
+      expect(restored.hotkeyVirtualKey, 0x43);
+      expect(restored.hotkeyKeyName, 'C');
+    });
+
+    test('versioned custom Ctrl+Shift+V global shortcut is preserved', () {
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 2,
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': false,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
+
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isFalse);
+      expect(restored.plainPasteHotkeyUseShift, isTrue);
+    });
+
+    test('version 3 Windows plain-paste default migrates to Ctrl+Alt+V', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 3,
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': true,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
+
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isFalse);
+    });
+
+    test('version 4 Windows plain-paste default migrates to Ctrl+Alt+V', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'shortcutDefaultsVersion': 4,
+        'plainPasteHotkeyEnabled': true,
+        'plainPasteHotkeyUseCtrl': true,
+        'plainPasteHotkeyUseWin': false,
+        'plainPasteHotkeyUseAlt': false,
+        'plainPasteHotkeyUseShift': true,
+        'plainPasteHotkeyVirtualKey': 0x56,
+        'plainPasteHotkeyKeyName': 'V',
+      });
+
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isTrue);
+      expect(restored.plainPasteHotkeyUseShift, isFalse);
+    });
+
+    test('load persists shortcut migrations once', () async {
+      if (!Platform.isWindows) return;
+      final dir = Directory.systemTemp.createTempSync('shortcut_migration_');
+      final path = '${dir.path}/config.json';
+      try {
+        File(path).writeAsStringSync(
+          jsonEncode({
+            'shortcutDefaultsVersion': 3,
+            'plainPasteHotkeyEnabled': true,
+            'plainPasteHotkeyUseCtrl': true,
+            'plainPasteHotkeyUseWin': false,
+            'plainPasteHotkeyUseAlt': true,
+            'plainPasteHotkeyUseShift': true,
+            'plainPasteHotkeyVirtualKey': 0x56,
+            'plainPasteHotkeyKeyName': 'V',
+          }),
+        );
+
+        final restored = await AppConfig.load(path);
+        final persisted =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+
+        expect(restored.plainPasteHotkeyUseAlt, isTrue);
+        expect(restored.plainPasteHotkeyUseShift, isFalse);
+        expect(
+          persisted['shortcutDefaultsVersion'],
+          AppConfig.shortcutDefaultsVersion,
+        );
+        expect(persisted['plainPasteHotkeyUseAlt'], isTrue);
+        expect(persisted['plainPasteHotkeyUseShift'], isFalse);
+      } finally {
+        dir.deleteSync(recursive: true);
       }
     });
+
+    test('legacy Windows Safe timing migrates to Instant', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'pasteDefaultsVersion': 1,
+        'duplicateIgnoreWindowMs': 450,
+        'delayBeforeFocusMs': 100,
+        'delayBeforePasteMs': 180,
+        'maxFocusVerifyAttempts': 15,
+      });
+
+      expect(restored.duplicateIgnoreWindowMs, 300);
+      expect(restored.delayBeforeFocusMs, 0);
+      expect(restored.delayBeforePasteMs, 20);
+      expect(restored.maxFocusVerifyAttempts, 15);
+    });
+
+    test('legacy custom Windows timing is preserved', () {
+      if (!Platform.isWindows) return;
+      final restored = AppConfig.fromJson({
+        'pasteDefaultsVersion': 1,
+        'duplicateIgnoreWindowMs': 451,
+        'delayBeforeFocusMs': 100,
+        'delayBeforePasteMs': 180,
+        'maxFocusVerifyAttempts': 15,
+      });
+
+      expect(restored.duplicateIgnoreWindowMs, 451);
+      expect(restored.delayBeforeFocusMs, 100);
+      expect(restored.delayBeforePasteMs, 180);
+      expect(restored.maxFocusVerifyAttempts, 15);
+    });
+
+    test('load persists the Windows paste timing migration', () async {
+      if (!Platform.isWindows) return;
+      final dir = Directory.systemTemp.createTempSync('paste_migration_');
+      final path = '${dir.path}/config.json';
+      try {
+        File(path).writeAsStringSync(
+          jsonEncode({
+            'shortcutDefaultsVersion': AppConfig.shortcutDefaultsVersion,
+            'pasteDefaultsVersion': 1,
+            'duplicateIgnoreWindowMs': 450,
+            'delayBeforeFocusMs': 100,
+            'delayBeforePasteMs': 180,
+            'maxFocusVerifyAttempts': 15,
+          }),
+        );
+
+        final restored = await AppConfig.load(path);
+        final persisted =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+
+        expect(restored.delayBeforeFocusMs, 0);
+        expect(restored.delayBeforePasteMs, 20);
+        expect(
+          persisted['pasteDefaultsVersion'],
+          AppConfig.pasteDefaultsVersion,
+        );
+        expect(persisted['delayBeforeFocusMs'], 0);
+        expect(persisted['delayBeforePasteMs'], 20);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'load keeps a migrated config when persistence is unavailable',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('config_read_only_');
+        final path = '${dir.path}/config.json';
+        try {
+          File(path).writeAsStringSync(
+            jsonEncode({
+              'shortcutDefaultsVersion': 1,
+              'pasteDefaultsVersion': 1,
+            }),
+          );
+          final lockResult = Platform.isWindows
+              ? await Process.run('attrib', ['+R', path])
+              : await Process.run('chmod', ['a-w', dir.path]);
+          expect(lockResult.exitCode, 0);
+
+          final restored = await AppConfig.load(path);
+
+          expect(restored.preferredLanguage, 'auto');
+        } finally {
+          if (Platform.isWindows) {
+            await Process.run('attrib', ['-R', path]);
+          } else {
+            await Process.run('chmod', ['u+w', dir.path]);
+          }
+          dir.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('copyWith all hotkey fields', () {
       const config = AppConfig();
@@ -150,6 +416,26 @@ void main() {
       expect(restored.hotkeyUseCtrl, isTrue);
       expect(restored.hotkeyUseWin, isFalse);
       expect(restored.hotkeyKeyName, equals('C'));
+    });
+
+    test('plain paste hotkey fields copy and round-trip via JSON', () {
+      final updated = const AppConfig().copyWith(
+        plainPasteHotkeyEnabled: true,
+        plainPasteHotkeyUseCtrl: false,
+        plainPasteHotkeyUseWin: true,
+        plainPasteHotkeyUseAlt: false,
+        plainPasteHotkeyUseShift: true,
+        plainPasteHotkeyVirtualKey: 0x50,
+        plainPasteHotkeyKeyName: 'P',
+      );
+      final restored = AppConfig.fromJson(updated.toJson());
+      expect(restored.plainPasteHotkeyEnabled, isTrue);
+      expect(restored.plainPasteHotkeyUseCtrl, isFalse);
+      expect(restored.plainPasteHotkeyUseWin, isTrue);
+      expect(restored.plainPasteHotkeyUseAlt, isFalse);
+      expect(restored.plainPasteHotkeyUseShift, isTrue);
+      expect(restored.plainPasteHotkeyVirtualKey, equals(0x50));
+      expect(restored.plainPasteHotkeyKeyName, equals('P'));
     });
   });
 
@@ -574,18 +860,15 @@ void main() {
       expect(config, isA<AppConfig>());
     });
 
-    test(
-      'defaultForPlatform returns same hotkey defaults for all platforms',
-      () {
-        final linux = AppConfig.defaultForPlatform('linux');
-        final macos = AppConfig.defaultForPlatform('macos');
-        final windows = AppConfig.defaultForPlatform('windows');
+    test('defaultForPlatform returns platform-specific hotkeys', () {
+      final linux = AppConfig.defaultForPlatform('linux');
+      final macos = AppConfig.defaultForPlatform('macos');
+      final windows = AppConfig.defaultForPlatform('windows');
 
-        expect(linux.hotkeyKeyName, equals(macos.hotkeyKeyName));
-        expect(macos.hotkeyKeyName, equals(windows.hotkeyKeyName));
-        expect(linux.hotkeyUseCtrl, equals(macos.hotkeyUseCtrl));
-      },
-    );
+      expect(linux.hotkeyUseWin, isTrue);
+      expect(macos.plainPasteHotkeyUseWin, isTrue);
+      expect(windows.hotkeyKeyName, equals('C'));
+    });
 
     test('defaultForPlatform unknown string returns default AppConfig', () {
       final config = AppConfig.defaultForPlatform('unknown-platform');

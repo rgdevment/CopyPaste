@@ -214,12 +214,16 @@
   "trayExit": "Exit",
   "@trayExit": { "description": "Tray menu exit item" },
 
-  "shortcutOpenClose": "Open / close CopyPaste",
+  "subtitleShortcutScopes": "Ctrl+V stays with the active app. History shortcuts work while the CopyPaste panel is open.",
+  "shortcutOpenClose": "CopyPaste global: Open / close CopyPaste",
+  "shortcutPastePlainDirect": "CopyPaste global: Paste the current clipboard as plain text",
+  "shortcutSystemPaste": "Active app: Paste the current clipboard normally (CopyPaste does not intercept it)",
   "shortcutEscape": "Clear search or close window",
   "shortcutTab1": "Switch to Recent tab",
   "shortcutTab2": "Switch to Pinned tab",
   "shortcutArrows": "Navigate between items",
-  "shortcutEnter": "Paste selected item",
+  "shortcutEnter": "CopyPaste open: Paste the hovered, selected, or first history item normally",
+  "shortcutPasteSelectedPlain": "CopyPaste open: Paste the hovered, selected, or first history item as plain text",
   "shortcutDelete": "Delete selected item",
   "shortcutPin": "Pin / Unpin selected item",
   "shortcutEdit": "Edit card (label and color)",
@@ -296,6 +300,32 @@
   "@settingClearHistoryLabel": { "description": "Clear clipboard history label" },
   "settingHotkeyShortcutLabel": "Shortcut to open/close CopyPaste",
   "@settingHotkeyShortcutLabel": { "description": "Hotkey shortcut label" },
+  "subtitleGlobalHotkeyWarning": "System-wide shortcut. It may replace the same combination in another application.",
+  "settingPlainPasteHotkeyLabel": "Optional global plain-text paste",
+  "subtitlePlainPasteHotkey": "Pastes the current clipboard as plain text without opening CopyPaste. Enabling a global shortcut can override the same shortcut in other apps.",
+  "shortcutDisabled": "Disabled",
+  "currentShortcut": "Current: {shortcut}",
+  "@currentShortcut": {
+    "placeholders": { "shortcut": { "type": "String" } }
+  },
+  "hotkeyRequiresModifier": "Add at least one modifier key before saving this shortcut.",
+  "hotkeyConflictWarning": "This combination is already assigned to the other CopyPaste shortcut.",
+  "restoreRecommendedHotkeys": "Restore recommended shortcuts",
+  "plainPasteHotkeyRegistrationFailed": "The direct plain-text paste shortcut could not be registered. It may already be in use by the system or another app.",
+  "pasteDestinationUnavailable": "Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.",
+  "plainPasteItemUnavailable": "The hovered, selected, or first item cannot be pasted as plain text.",
+  "plainClipboardUnavailable": "There is no text on the clipboard. Copy some text first, then use plain-text paste again.",
+  "hotkeyRegistrationFailed": "The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.",
+  "@hotkeyRegistrationFailed": {
+    "placeholders": { "shortcut": { "type": "String" } }
+  },
+  "hotkeyFallbackActive": "The shortcut {requested} was unavailable. CopyPaste is temporarily using {effective}.",
+  "@hotkeyFallbackActive": {
+    "placeholders": {
+      "requested": { "type": "String" },
+      "effective": { "type": "String" }
+    }
+  },
 
   "subtitleStartupDesc": "Launches in background when you sign in",
   "@subtitleStartupDesc": { "description": "Startup subtitle" },
@@ -375,9 +405,13 @@
   "colorNone": "None",
   "@colorNone": { "description": "No color option" },
 
-  "subtitlePastePreset": "Automatic paste speed. Normal/Safe recommended for most computers.",
+  "subtitlePastePreset": "Automatic paste speed. Instant is optimized for Windows; use Safe if a destination app misses a paste.",
   "@subtitlePastePreset": { "description": "Paste preset subtitle" },
+  "subtitlePastePresetStandard": "Automatic paste speed. Normal/Safe recommended for most computers.",
+  "@subtitlePastePresetStandard": { "description": "Non-Windows paste preset subtitle" },
 
+  "pastePresetInstant": "Instant",
+  "@pastePresetInstant": { "description": "Windows instant paste preset label" },
   "pastePresetFast": "Fast",
   "@pastePresetFast": { "description": "Fast paste preset label" },
   "pastePresetNormal": "Normal",
@@ -388,8 +422,10 @@
   "@pastePresetSlow": { "description": "Slow paste preset label" },
   "pastePresetCustom": "Custom",
   "@pastePresetCustom": { "description": "Custom paste preset placeholder" },
-  "pastePresetWarning": "\u26a0\ufe0f Fast: may cause unexpected behavior in heavy apps.\n\u26a0\ufe0f Slow: may feel sluggish on modern computers.",
+  "pastePresetWarning": "\u26a1 Instant (Windows): lowest latency with native focus verification.\n\u26a0\ufe0f Fast: may cause unexpected behavior in heavy apps.\n\u26a0\ufe0f Slow: may feel sluggish on modern computers.",
   "@pastePresetWarning": { "description": "Paste preset warning text" },
+  "pastePresetWarningStandard": "\u26a0\ufe0f Fast: may cause unexpected behavior in heavy apps.\n\u26a0\ufe0f Slow: may feel sluggish on modern computers.",
+  "@pastePresetWarningStandard": { "description": "Non-Windows paste preset warning text" },
 
   "settingResetFiltersOnOpen": "Switch to All on open",
   "@settingResetFiltersOnOpen": { "description": "Reset filters on open label" },
