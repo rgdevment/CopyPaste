@@ -288,16 +288,46 @@ void main() {
         await repoWithPassingClear.close();
       },
     );
+
+    test('orphan sweep still runs when broken-ref tracking throws', () async {
+      final storage = await StorageConfig.create(baseDir: tempDir.path);
+      await storage.ensureDirectories();
+      final orphan = File('${storage.imagesPath}/stranded.png')
+        ..writeAsBytesSync([1, 2, 3]);
+
+      final inner = SqliteRepository.inMemory();
+      final repo = _HybridRepo(
+        inner,
+        failGetImagePaths: false,
+        failGetAll: true,
+      );
+      final service = CleanupService(repo, () => 30, storage: storage);
+
+      service.start(tempDir.path);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      service.dispose();
+      await inner.close();
+
+      // Tracking blew up, but the sweep it used to abort completed anyway.
+      expect(orphan.existsSync(), isFalse);
+    });
   });
 }
 
 class _HybridRepo implements IClipboardRepository {
-  _HybridRepo(this._inner);
+  _HybridRepo(
+    this._inner, {
+    this.failGetImagePaths = true,
+    this.failGetAll = false,
+  });
   final IClipboardRepository _inner;
+  final bool failGetImagePaths;
+  final bool failGetAll;
 
   @override
-  Future<List<String>> getImagePaths() =>
-      Future.error(Exception('forced getImagePaths error'));
+  Future<List<String>> getImagePaths() => failGetImagePaths
+      ? Future.error(Exception('forced getImagePaths error'))
+      : _inner.getImagePaths();
 
   @override
   Future<List<String>> getThumbPaths() => _inner.getThumbPaths();
@@ -322,7 +352,9 @@ class _HybridRepo implements IClipboardRepository {
   Future<ClipboardItem?> findByContentHash(String hash) =>
       _inner.findByContentHash(hash);
   @override
-  Future<List<ClipboardItem>> getAll() => _inner.getAll();
+  Future<List<ClipboardItem>> getAll() => failGetAll
+      ? Future.error(Exception('forced getAll error'))
+      : _inner.getAll();
   @override
   Future<void> delete(String id) => _inner.delete(id);
   @override

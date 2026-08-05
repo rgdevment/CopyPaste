@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../models/clipboard_item.dart';
@@ -139,7 +140,7 @@ class ImageProcessingQueue {
 
       // Remove BMP fallback now that the final PNG exists.
       final bmpPath = p.join(job.imagesPath, '${job.item.id}.bmp');
-      _deleteOwned(bmpPath, job.imagesPath);
+      await deleteOwned(bmpPath, job.imagesPath);
 
       if (_disposed) return;
 
@@ -172,16 +173,36 @@ class ImageProcessingQueue {
   }
 
   /// Deletes a file only if it is canonically inside [imagesDir].
-  static void _deleteOwned(String path, String imagesDir) {
+  ///
+  /// [delete] replaces the filesystem call so the retry path can be exercised
+  /// without depending on OS-specific ways of locking a file.
+  @visibleForTesting
+  static Future<void> deleteOwned(
+    String path,
+    String imagesDir, {
+    void Function(File)? delete,
+  }) async {
     try {
       final base = p.canonicalize(imagesDir);
       final target = p.canonicalize(path);
       final sep = base.endsWith(p.separator) ? base : '$base${p.separator}';
       if (!target.startsWith(sep)) return;
       final f = File(target);
-      if (f.existsSync()) f.deleteSync();
+      final remove = delete ?? (File file) => file.deleteSync();
+      // Windows denies the delete while a scanner or the clipboard watcher
+      // still holds the handle it just opened. One-shot deletion leaked the
+      // fallback BMP permanently, so give the handle time to close.
+      for (var attempt = 0; ; attempt++) {
+        try {
+          if (f.existsSync()) remove(f);
+          return;
+        } on FileSystemException {
+          if (attempt == 2) rethrow;
+          await Future<void>.delayed(const Duration(milliseconds: 150));
+        }
+      }
     } catch (e) {
-      AppLogger.warn('[ImageQueue] _deleteOwned failed for "$path": $e');
+      AppLogger.warn('[ImageQueue] deleteOwned failed for "$path": $e');
     }
   }
 }

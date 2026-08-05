@@ -15,9 +15,11 @@ class CleanupService {
     StorageConfig? storage,
     int Function()? getKeepBrokenDays,
     int Function()? getImagesQuotaMB,
+    bool Function(String)? probePath,
   }) : _storage = storage,
        _getKeepBrokenDays = getKeepBrokenDays ?? (() => 30),
-       _getImagesQuotaMB = getImagesQuotaMB ?? (() => 0);
+       _getImagesQuotaMB = getImagesQuotaMB ?? (() => 0),
+       _probePath = probePath ?? _probePathOnDisk;
 
   static const Duration _checkInterval = Duration(hours: 18);
   static const String _lastCleanupFileName = 'last_cleanup.txt';
@@ -29,6 +31,7 @@ class CleanupService {
   int Function() _getKeepBrokenDays;
   int Function() _getImagesQuotaMB;
   final StorageConfig? _storage;
+  final bool Function(String) _probePath;
   Timer? _timer;
   bool _disposed = false;
 
@@ -129,9 +132,16 @@ class CleanupService {
   Future<void> _cleanOrphanImages() async {
     final storage = _storage;
     if (storage == null) return;
+    // Kept apart from the sweep below: tracking walks user-supplied paths that
+    // can live on flaky volumes, and its failure must not strand orphan files
+    // on disk forever.
     try {
       await _trackBrokenExternalRefs();
+    } catch (e) {
+      AppLogger.error('Broken reference tracking failed: $e');
+    }
 
+    try {
       final allImageItems = await _repository.getImagePaths();
       final allThumbPaths = await _repository.getThumbPaths();
       final canonicalImagesDir = p.canonicalize(storage.imagesPath);
@@ -189,7 +199,10 @@ class CleanupService {
         continue;
       }
 
-      final exists = File(path).existsSync() || Directory(path).existsSync();
+      final exists = _pathExists(path);
+      // Probe failed rather than reported absence: same meaning as an offline
+      // volume, so leave brokenSince untouched instead of starting the clock.
+      if (exists == null) continue;
       if (exists) {
         if (item.brokenSince != null) {
           await _repository.update(item.copyWith(brokenSince: null));
@@ -374,6 +387,23 @@ class CleanupService {
   /// present. When the volume is offline (drive not mounted, NAS down,
   /// removable disk unplugged), callers should skip purge logic so the user
   /// does not lose history entries on a temporary disconnection.
+  static bool _probePathOnDisk(String path) =>
+      File(path).existsSync() || Directory(path).existsSync();
+
+  /// Whether [path] is on disk, or null when the probe itself failed.
+  ///
+  /// An unreachable network share throws instead of reporting absence, and
+  /// [isVolumePresent] cannot tell the two apart either: its own catch assumes
+  /// the volume is present, which lands here.
+  bool? _pathExists(String path) {
+    try {
+      return _probePath(path);
+    } catch (e) {
+      AppLogger.warn('[CleanupService] path probe failed for "$path": $e');
+      return null;
+    }
+  }
+
   static bool isVolumePresent(String path) {
     try {
       if (Platform.isWindows) {

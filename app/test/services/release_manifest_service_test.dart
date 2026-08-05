@@ -446,10 +446,15 @@ void main() {
           'https://example.com/fail.sig';
 
       final emitted = <ManifestState?>[];
-      final sub = ReleaseManifestService.stream.listen(emitted.add);
+      // Waiting a fixed slice raced the failing fetch under a loaded suite.
+      final firstEmit = Completer<void>();
+      final sub = ReleaseManifestService.stream.listen((state) {
+        emitted.add(state);
+        if (!firstEmit.isCompleted) firstEmit.complete();
+      });
 
       await ReleaseManifestService.initialize(storageConfigDir: tmpDir.path);
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await firstEmit.future.timeout(const Duration(seconds: 10));
 
       unawaited(sub.cancel());
 

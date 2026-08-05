@@ -190,4 +190,61 @@ void main() {
       expect(slowRepo.updates.where((u) => u.id == 'slow'), isEmpty);
     });
   });
+
+  group('ImageProcessingQueue deleteOwned', () {
+    late Directory dir;
+
+    setUp(() => dir = Directory.systemTemp.createTempSync('img_delete_'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    test('retries a locked file and gives up without throwing', () async {
+      final target = File(p.join(dir.path, 'locked.bmp'))
+        ..writeAsBytesSync([1]);
+      var attempts = 0;
+
+      await ImageProcessingQueue.deleteOwned(
+        target.path,
+        dir.path,
+        delete: (_) {
+          attempts++;
+          throw const FileSystemException('held by another process');
+        },
+      );
+
+      expect(attempts, 3);
+      expect(target.existsSync(), isTrue);
+    });
+
+    test('succeeds when a later attempt gets the handle', () async {
+      final target = File(p.join(dir.path, 'transient.bmp'))
+        ..writeAsBytesSync([1]);
+      var attempts = 0;
+
+      await ImageProcessingQueue.deleteOwned(
+        target.path,
+        dir.path,
+        delete: (file) {
+          attempts++;
+          if (attempts == 1) {
+            throw const FileSystemException('held by another process');
+          }
+          file.deleteSync();
+        },
+      );
+
+      expect(attempts, 2);
+      expect(target.existsSync(), isFalse);
+    });
+
+    test('refuses paths outside the images directory', () async {
+      var called = false;
+      await ImageProcessingQueue.deleteOwned(
+        p.join(dir.parent.path, 'outside.bmp'),
+        dir.path,
+        delete: (_) => called = true,
+      );
+
+      expect(called, isFalse);
+    });
+  });
 }

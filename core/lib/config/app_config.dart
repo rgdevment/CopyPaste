@@ -59,8 +59,13 @@ class AppConfig {
     this.lastWindowY,
   });
 
-  factory AppConfig.fromJson(Map<String, dynamic> json) {
-    final defaults = defaultForCurrentPlatform();
+  /// [platform] overrides the host OS so migrations can be exercised off the
+  /// platform they target; coverage runs on Linux, where the Windows branches
+  /// would otherwise never execute.
+  factory AppConfig.fromJson(Map<String, dynamic> json, {String? platform}) {
+    final os = platform ?? Platform.operatingSystem;
+    final isWindows = os == 'windows';
+    final defaults = defaultForPlatform(os);
     final hotkeyUseCtrl =
         json['hotkeyUseCtrl'] as bool? ?? defaults.hotkeyUseCtrl;
     final hotkeyUseWin = json['hotkeyUseWin'] as bool? ?? defaults.hotkeyUseWin;
@@ -128,7 +133,7 @@ class AppConfig {
     // to Ctrl+Alt+V. Revert only that exact automatic binding; version 1
     // custom bindings and every other versioned combination remain untouched.
     final versionTwoWindowsOpen =
-        Platform.isWindows &&
+        isWindows &&
         shortcutDefaultsVersion == 2 &&
         hotkeyUseCtrl &&
         !hotkeyUseWin &&
@@ -147,7 +152,7 @@ class AppConfig {
     // those two exact automatic Windows bindings to Ctrl+Alt+V; bindings from
     // versions where they could have been user-defined remain untouched.
     final legacyWindowsPlainPaste =
-        Platform.isWindows &&
+        isWindows &&
         plainPasteHotkeyUseCtrl &&
         !plainPasteHotkeyUseWin &&
         plainPasteHotkeyVirtualKey == 0x56 &&
@@ -176,23 +181,24 @@ class AppConfig {
     final storedPasteDefaultsVersion =
         json['pasteDefaultsVersion'] as int? ?? 1;
 
-    // The previous Windows default always waited 100 ms before restoring
-    // focus and another 180 ms before sending Ctrl+V. Native focus
-    // verification now makes that fixed delay unnecessary. Migrate only the
-    // exact former default tuple so independently tuned values are preserved.
-    final legacyWindowsSafePaste =
-        Platform.isWindows &&
+    // v2 moved Windows onto the Instant preset, assuming native focus
+    // verification made fixed delays unnecessary. It does not: the check only
+    // proves the destination is the active top-level window, so the paste can
+    // still outrun apps that route keyboard focus internally. Undo it for
+    // anyone left on those exact values; tuned tuples are preserved.
+    final untouchedInstantPaste =
+        isWindows &&
         storedPasteDefaultsVersion < pasteDefaultsVersion &&
-        duplicateIgnoreWindowMs == 450 &&
-        delayBeforeFocusMs == 100 &&
-        delayBeforePasteMs == 180 &&
+        duplicateIgnoreWindowMs == 300 &&
+        delayBeforeFocusMs == 0 &&
+        delayBeforePasteMs == 20 &&
         maxFocusVerifyAttempts == 15;
-    if (legacyWindowsSafePaste) {
-      duplicateIgnoreWindowMs = 300;
-      delayBeforeFocusMs = 0;
-      delayBeforePasteMs = 20;
-      maxFocusVerifyAttempts = 15;
-      AppLogger.info('Updated Windows paste timing to the Instant preset');
+    if (untouchedInstantPaste) {
+      duplicateIgnoreWindowMs = 350;
+      delayBeforeFocusMs = 80;
+      delayBeforePasteMs = 120;
+      maxFocusVerifyAttempts = 12;
+      AppLogger.info('Updated Windows paste timing to the Normal preset');
     }
 
     return AppConfig(
@@ -289,7 +295,7 @@ class AppConfig {
   }
 
   static const int shortcutDefaultsVersion = 5;
-  static const int pasteDefaultsVersion = 2;
+  static const int pasteDefaultsVersion = 3;
 
   static AppConfig defaultForCurrentPlatform() =>
       defaultForPlatform(Platform.operatingSystem);
@@ -309,10 +315,10 @@ class AppConfig {
       plainPasteHotkeyUseCtrl: true,
       plainPasteHotkeyUseAlt: true,
       plainPasteHotkeyUseShift: false,
-      duplicateIgnoreWindowMs: 300,
-      delayBeforeFocusMs: 0,
-      delayBeforePasteMs: 20,
-      maxFocusVerifyAttempts: 15,
+      duplicateIgnoreWindowMs: 350,
+      delayBeforeFocusMs: 80,
+      delayBeforePasteMs: 120,
+      maxFocusVerifyAttempts: 12,
     ),
     // Control+Shift+V opens the panel. The optional global plain-paste binding
     // includes every modifier and stays disabled until explicitly enabled.

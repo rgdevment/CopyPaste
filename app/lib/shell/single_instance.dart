@@ -178,11 +178,23 @@ const int _genericWrite = 0x40000000;
 const int _openExisting = 3;
 const int _invalidHandleValue = -1;
 
-const String _pipeName = r'\\.\pipe\CopyPasteSingleInstance';
+const String _pipeNameBase = r'\\.\pipe\CopyPasteSingleInstance';
 
 class SingleInstance {
-  static const String _mutexName = r'Local\CopyPaste_SingleInstance_Mutex';
-  static const String _wakeupFileName = 'copypaste.wakeup';
+  static const String _mutexNameBase = r'Local\CopyPaste_SingleInstance_Mutex';
+  static const String _wakeupFileNameBase = 'copypaste.wakeup';
+
+  /// Suffix for every OS-global name this class owns.
+  ///
+  /// Tests must set it. The production names are shared with any CopyPaste
+  /// already running on the machine, which holds the mutex and drains the
+  /// wakeup signals the suite asserts on — so leaving it empty makes the
+  /// tests fail on exactly the developer machines that use the app.
+  static String namespace = '';
+
+  static String get _mutexName => '$_mutexNameBase$namespace';
+  static String get _wakeupFileName => '$_wakeupFileNameBase$namespace';
+  static String get _pipeName => '$_pipeNameBase$namespace';
 
   static int _mutexHandle = 0;
   static RandomAccessFile? _lockFile;
@@ -308,7 +320,7 @@ class SingleInstance {
     // Also keep file-based polling as safety net
     _listenForWakeupFile(onWakeup);
 
-    Isolate.spawn(_pipeServerLoop, _pipeReceivePort!.sendPort)
+    Isolate.spawn(_pipeServerLoop, (_pipeReceivePort!.sendPort, _pipeName))
         .then((isolate) {
           _pipeIsolate = isolate;
         })
@@ -319,7 +331,8 @@ class SingleInstance {
 
   /// Runs in a dedicated isolate. Blocks on ConnectNamedPipe waiting for
   /// second-instance clients, then reads their message and forwards it.
-  static void _pipeServerLoop(SendPort sendPort) {
+  static void _pipeServerLoop((SendPort, String) args) {
+    final (sendPort, pipeName) = args;
     final kernel32 = DynamicLibrary.open('kernel32.dll');
     final createNamedPipe = kernel32
         .lookupFunction<_CreateNamedPipeWNative, _CreateNamedPipeWDart>(
@@ -342,7 +355,9 @@ class SingleInstance {
         .lookupFunction<_GetLastErrorNative, _GetLastErrorDart>('GetLastError');
 
     while (true) {
-      final name = _pipeName.toNativeUtf16();
+      // Statics do not cross isolate boundaries, so the name travels as an
+      // argument instead of being read from `namespace` again.
+      final name = pipeName.toNativeUtf16();
       final hPipe = createNamedPipe(
         name,
         _pipeAccessInbound,

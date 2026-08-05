@@ -359,6 +359,7 @@ jobs:
                   	class ${FORMULA_CLASS} < Formula
                   	  desc "Clipboard history manager"
                   	  homepage "https://github.com/${{ github.repository }}"
+                  	  license "GPL-3.0-only"
                   	  version "${VERSION}"
 
                   	  on_linux do

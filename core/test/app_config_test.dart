@@ -126,10 +126,10 @@ void main() {
       expect(windows.plainPasteHotkeyUseCtrl, isTrue);
       expect(windows.plainPasteHotkeyUseAlt, isTrue);
       expect(windows.plainPasteHotkeyUseShift, isFalse);
-      expect(windows.duplicateIgnoreWindowMs, 300);
-      expect(windows.delayBeforeFocusMs, 0);
-      expect(windows.delayBeforePasteMs, 20);
-      expect(windows.maxFocusVerifyAttempts, 15);
+      expect(windows.duplicateIgnoreWindowMs, 350);
+      expect(windows.delayBeforeFocusMs, 80);
+      expect(windows.delayBeforePasteMs, 120);
+      expect(windows.maxFocusVerifyAttempts, 12);
 
       final macos = AppConfig.defaultForPlatform('macos');
       expect(macos.hotkeyUseCtrl, isTrue);
@@ -289,31 +289,44 @@ void main() {
       }
     });
 
-    test('legacy Windows Safe timing migrates to Instant', () {
-      if (!Platform.isWindows) return;
+    test('untouched Instant timing migrates to Normal', () {
+      final restored = AppConfig.fromJson({
+        'pasteDefaultsVersion': 2,
+        'duplicateIgnoreWindowMs': 300,
+        'delayBeforeFocusMs': 0,
+        'delayBeforePasteMs': 20,
+        'maxFocusVerifyAttempts': 15,
+      }, platform: 'windows');
+
+      expect(restored.duplicateIgnoreWindowMs, 350);
+      expect(restored.delayBeforeFocusMs, 80);
+      expect(restored.delayBeforePasteMs, 120);
+      expect(restored.maxFocusVerifyAttempts, 12);
+    });
+
+    test('legacy Safe timing is no longer forced onto Instant', () {
       final restored = AppConfig.fromJson({
         'pasteDefaultsVersion': 1,
         'duplicateIgnoreWindowMs': 450,
         'delayBeforeFocusMs': 100,
         'delayBeforePasteMs': 180,
         'maxFocusVerifyAttempts': 15,
-      });
+      }, platform: 'windows');
 
-      expect(restored.duplicateIgnoreWindowMs, 300);
-      expect(restored.delayBeforeFocusMs, 0);
-      expect(restored.delayBeforePasteMs, 20);
+      expect(restored.duplicateIgnoreWindowMs, 450);
+      expect(restored.delayBeforeFocusMs, 100);
+      expect(restored.delayBeforePasteMs, 180);
       expect(restored.maxFocusVerifyAttempts, 15);
     });
 
     test('legacy custom Windows timing is preserved', () {
-      if (!Platform.isWindows) return;
       final restored = AppConfig.fromJson({
         'pasteDefaultsVersion': 1,
         'duplicateIgnoreWindowMs': 451,
         'delayBeforeFocusMs': 100,
         'delayBeforePasteMs': 180,
         'maxFocusVerifyAttempts': 15,
-      });
+      }, platform: 'windows');
 
       expect(restored.duplicateIgnoreWindowMs, 451);
       expect(restored.delayBeforeFocusMs, 100);
@@ -329,10 +342,10 @@ void main() {
         File(path).writeAsStringSync(
           jsonEncode({
             'shortcutDefaultsVersion': AppConfig.shortcutDefaultsVersion,
-            'pasteDefaultsVersion': 1,
-            'duplicateIgnoreWindowMs': 450,
-            'delayBeforeFocusMs': 100,
-            'delayBeforePasteMs': 180,
+            'pasteDefaultsVersion': 2,
+            'duplicateIgnoreWindowMs': 300,
+            'delayBeforeFocusMs': 0,
+            'delayBeforePasteMs': 20,
             'maxFocusVerifyAttempts': 15,
           }),
         );
@@ -341,14 +354,14 @@ void main() {
         final persisted =
             jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
 
-        expect(restored.delayBeforeFocusMs, 0);
-        expect(restored.delayBeforePasteMs, 20);
+        expect(restored.delayBeforeFocusMs, 80);
+        expect(restored.delayBeforePasteMs, 120);
         expect(
           persisted['pasteDefaultsVersion'],
           AppConfig.pasteDefaultsVersion,
         );
-        expect(persisted['delayBeforeFocusMs'], 0);
-        expect(persisted['delayBeforePasteMs'], 20);
+        expect(persisted['delayBeforeFocusMs'], 80);
+        expect(persisted['delayBeforePasteMs'], 120);
       } finally {
         dir.deleteSync(recursive: true);
       }
