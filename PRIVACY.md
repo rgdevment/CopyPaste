@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** April 24, 2026
+**Last updated:** August 4, 2026
 
 ---
 
@@ -236,25 +236,55 @@ These are standard browser navigations initiated by your action — CopyPaste do
 
 CopyPaste includes built-in protections for sensitive content:
 
-### Password Manager Exclusion
+### Concealed Content Exclusion
 
-Clipboard content from recognized password managers is **automatically excluded** from history. Supported password managers include:
-
-- 1Password
-- Bitwarden
-- LastPass
-- KeePass
-- And others that use standard clipboard security flags
+When an application marks what it copies as secret, CopyPaste **skips it entirely** — the content is never hashed, never turned into an entry, never written to the database or to disk. This is how password managers keep their output out of clipboard history.
 
 ### How It Works
 
-- Password managers typically set a clipboard format flag indicating sensitive content
-- CopyPaste detects these flags and **skips storing** the content entirely
-- The sensitive data is never written to the database or disk
+Each platform has a standard marker that the copying application sets, and CopyPaste checks for it before reading anything:
+
+| Platform | Marker it honours |
+| :--- | :--- |
+| Windows | `ExcludeClipboardContentFromMonitorProcessing`, or `CanIncludeInClipboardHistory` set to 0 |
+| macOS | `org.nspasteboard.ConcealedType` and `org.nspasteboard.TransientType` |
+| Linux | The `x-kde-passwordManagerHint` clipboard target |
+
+On Linux the check asks only which targets are offered, never for their contents, so the secret's bytes are never requested in the first place.
+
+### What This Does Not Cover
+
+The limits matter more than the promise, so plainly:
+
+- **The marker is set by the other application, not by CopyPaste.** Whether a given password manager sets it depends on that application, its version and its own settings. Most major ones do. We do not publish a list of "supported" managers, because that would be a compatibility claim we cannot keep honest across every release of every one of them.
+- **Content that merely looks sensitive is not detected.** A password you type into a text file and copy carries no marker, so it is stored like any other text.
+- If you rely on this, verify it once with your own password manager: copy a credential and check that no entry appears in CopyPaste. Ten seconds, and it tells you more than any list we could publish.
 
 ### Windows Clipboard History
 
 CopyPaste operates independently from Windows' built-in clipboard history (`Win+V`). Your CopyPaste settings do not affect Windows clipboard behavior, and vice versa.
+
+---
+
+## Backup and Restore
+
+CopyPaste can export a backup and restore from one. Both are **manual actions you start yourself** — nothing is backed up automatically, and no backup ever leaves your machine on its own.
+
+### What the Backup Contains
+
+A backup is a ZIP file, and it holds **everything**:
+
+| Content | Included |
+| :--- | :--- |
+| `clipboard.db` — your entire clipboard history | Yes |
+| Stored images | Yes |
+| Settings and configuration | Yes |
+
+This is deliberate — a backup that dropped your history would not be a backup. But it means the file is as sensitive as the history itself. You choose where it is written; treat it accordingly, and think twice before putting it in cloud storage or attaching it to a bug report.
+
+### Restore Snapshots
+
+Before overwriting your data during a restore, CopyPaste copies the current database into a `.pre-restore-<timestamp>` folder inside the data directory, so a failed restore can be rolled back. It is deleted when the restore succeeds. If a restore is interrupted, the folder may remain — it contains a full copy of your history, and you can delete it safely at any time.
 
 ---
 
@@ -316,7 +346,7 @@ CopyPaste does not knowingly collect any personal information from anyone, inclu
 CopyPaste is available through the [Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856). The Store version:
 
 - **Follows the same privacy principles** as the standalone version
-- **Makes one read-only network request** — queries the GitHub Releases API every 24 hours to check if a newer version exists. If found, a non-invasive indicator appears in the footer bar. No download link is shown and nothing is installed automatically — updates are delivered through the Microsoft Store
+- **Makes one read-only network request** — downloads the same signed release manifest described above, every 24 hours, to check if a newer version exists. If found, a non-invasive indicator appears in the footer bar. No download link is shown and nothing is installed automatically — updates are delivered through the Microsoft Store
 - **Uses MSIX packaging** — installs/uninstalls cleanly with Windows standard mechanisms
 - **Microsoft Store policies** apply to distribution, but CopyPaste itself does not share any data with Microsoft beyond what the Store platform requires for installation and updates
 
