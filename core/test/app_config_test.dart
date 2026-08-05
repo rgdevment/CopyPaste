@@ -290,14 +290,13 @@ void main() {
     });
 
     test('untouched Instant timing migrates to Normal', () {
-      if (!Platform.isWindows) return;
       final restored = AppConfig.fromJson({
         'pasteDefaultsVersion': 2,
         'duplicateIgnoreWindowMs': 300,
         'delayBeforeFocusMs': 0,
         'delayBeforePasteMs': 20,
         'maxFocusVerifyAttempts': 15,
-      });
+      }, platform: 'windows');
 
       expect(restored.duplicateIgnoreWindowMs, 350);
       expect(restored.delayBeforeFocusMs, 80);
@@ -306,14 +305,13 @@ void main() {
     });
 
     test('legacy Safe timing is no longer forced onto Instant', () {
-      if (!Platform.isWindows) return;
       final restored = AppConfig.fromJson({
         'pasteDefaultsVersion': 1,
         'duplicateIgnoreWindowMs': 450,
         'delayBeforeFocusMs': 100,
         'delayBeforePasteMs': 180,
         'maxFocusVerifyAttempts': 15,
-      });
+      }, platform: 'windows');
 
       expect(restored.duplicateIgnoreWindowMs, 450);
       expect(restored.delayBeforeFocusMs, 100);
@@ -322,14 +320,13 @@ void main() {
     });
 
     test('legacy custom Windows timing is preserved', () {
-      if (!Platform.isWindows) return;
       final restored = AppConfig.fromJson({
         'pasteDefaultsVersion': 1,
         'duplicateIgnoreWindowMs': 451,
         'delayBeforeFocusMs': 100,
         'delayBeforePasteMs': 180,
         'maxFocusVerifyAttempts': 15,
-      });
+      }, platform: 'windows');
 
       expect(restored.duplicateIgnoreWindowMs, 451);
       expect(restored.delayBeforeFocusMs, 100);

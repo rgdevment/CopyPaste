@@ -116,6 +116,35 @@ void main() {
       expect(orphan.existsSync(), isFalse);
     });
 
+    test('unreachable external path never starts the purge clock', () async {
+      // An offline network share throws instead of reporting absence. Treating
+      // that as "file missing" would mark a healthy item broken, and letting
+      // the throw escape used to abort the orphan sweep entirely.
+      await repo.save(
+        ClipboardItem(
+          content: p.join(tempDir.path, 'offline_share', 'shot.png'),
+          type: ClipboardContentType.image,
+          contentHash: 'hash-external',
+        ),
+      );
+      final orphan = File(p.join(storage.imagesPath, 'orphan_probe.png'))
+        ..writeAsBytesSync([1, 2, 3]);
+
+      final service = CleanupService(
+        repo,
+        () => 30,
+        storage: storage,
+        probePath: (_) => throw const FileSystemException('Exists failed'),
+      );
+      service.start(tempDir.path);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      service.dispose();
+
+      final items = await repo.getAll();
+      expect(items.single.brokenSince, isNull);
+      expect(orphan.existsSync(), isFalse);
+    });
+
     test('does not crash when images directory is missing', () async {
       // Remove images directory to simulate missing dir
       Directory(storage.imagesPath).deleteSync(recursive: true);

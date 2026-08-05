@@ -59,8 +59,13 @@ class AppConfig {
     this.lastWindowY,
   });
 
-  factory AppConfig.fromJson(Map<String, dynamic> json) {
-    final defaults = defaultForCurrentPlatform();
+  /// [platform] overrides the host OS so migrations can be exercised off the
+  /// platform they target; coverage runs on Linux, where the Windows branches
+  /// would otherwise never execute.
+  factory AppConfig.fromJson(Map<String, dynamic> json, {String? platform}) {
+    final os = platform ?? Platform.operatingSystem;
+    final isWindows = os == 'windows';
+    final defaults = defaultForPlatform(os);
     final hotkeyUseCtrl =
         json['hotkeyUseCtrl'] as bool? ?? defaults.hotkeyUseCtrl;
     final hotkeyUseWin = json['hotkeyUseWin'] as bool? ?? defaults.hotkeyUseWin;
@@ -128,7 +133,7 @@ class AppConfig {
     // to Ctrl+Alt+V. Revert only that exact automatic binding; version 1
     // custom bindings and every other versioned combination remain untouched.
     final versionTwoWindowsOpen =
-        Platform.isWindows &&
+        isWindows &&
         shortcutDefaultsVersion == 2 &&
         hotkeyUseCtrl &&
         !hotkeyUseWin &&
@@ -147,7 +152,7 @@ class AppConfig {
     // those two exact automatic Windows bindings to Ctrl+Alt+V; bindings from
     // versions where they could have been user-defined remain untouched.
     final legacyWindowsPlainPaste =
-        Platform.isWindows &&
+        isWindows &&
         plainPasteHotkeyUseCtrl &&
         !plainPasteHotkeyUseWin &&
         plainPasteHotkeyVirtualKey == 0x56 &&
@@ -182,7 +187,7 @@ class AppConfig {
     // still outrun apps that route keyboard focus internally. Undo it for
     // anyone left on those exact values; tuned tuples are preserved.
     final untouchedInstantPaste =
-        Platform.isWindows &&
+        isWindows &&
         storedPasteDefaultsVersion < pasteDefaultsVersion &&
         duplicateIgnoreWindowMs == 300 &&
         delayBeforeFocusMs == 0 &&

@@ -15,9 +15,11 @@ class CleanupService {
     StorageConfig? storage,
     int Function()? getKeepBrokenDays,
     int Function()? getImagesQuotaMB,
+    bool Function(String)? probePath,
   }) : _storage = storage,
        _getKeepBrokenDays = getKeepBrokenDays ?? (() => 30),
-       _getImagesQuotaMB = getImagesQuotaMB ?? (() => 0);
+       _getImagesQuotaMB = getImagesQuotaMB ?? (() => 0),
+       _probePath = probePath ?? _probePathOnDisk;
 
   static const Duration _checkInterval = Duration(hours: 18);
   static const String _lastCleanupFileName = 'last_cleanup.txt';
@@ -29,6 +31,7 @@ class CleanupService {
   int Function() _getKeepBrokenDays;
   int Function() _getImagesQuotaMB;
   final StorageConfig? _storage;
+  final bool Function(String) _probePath;
   Timer? _timer;
   bool _disposed = false;
 
@@ -384,15 +387,19 @@ class CleanupService {
   /// present. When the volume is offline (drive not mounted, NAS down,
   /// removable disk unplugged), callers should skip purge logic so the user
   /// does not lose history entries on a temporary disconnection.
+  static bool _probePathOnDisk(String path) =>
+      File(path).existsSync() || Directory(path).existsSync();
+
   /// Whether [path] is on disk, or null when the probe itself failed.
   ///
   /// An unreachable network share throws instead of reporting absence, and
   /// [isVolumePresent] cannot tell the two apart either: its own catch assumes
   /// the volume is present, which lands here.
-  static bool? _pathExists(String path) {
+  bool? _pathExists(String path) {
     try {
-      return File(path).existsSync() || Directory(path).existsSync();
-    } on FileSystemException {
+      return _probePath(path);
+    } catch (e) {
+      AppLogger.warn('[CleanupService] path probe failed for "$path": $e');
       return null;
     }
   }
