@@ -181,8 +181,7 @@ const int _invalidHandleValue = -1;
 const String _pipeNameBase = r'\\.\pipe\CopyPasteSingleInstance';
 
 class SingleInstance {
-  static const String _mutexNameBase =
-      r'Local\CopyPaste_SingleInstance_Mutex';
+  static const String _mutexNameBase = r'Local\CopyPaste_SingleInstance_Mutex';
   static const String _wakeupFileNameBase = 'copypaste.wakeup';
 
   /// Suffix for every OS-global name this class owns.
