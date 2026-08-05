@@ -60,6 +60,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 
 - **100% local** — your clipboard history never leaves your computer. No cloud, no servers, no accounts.
 - **Truly free** — no premium tiers, no feature gates, no "free trial" tricks. GPL v3, forever.
+  Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
 - **Cross-platform** — same native copy-paste experience on Windows, macOS, and Linux.
 - **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
 - **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
@@ -795,7 +796,18 @@ Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
-Distributed under the **GNU General Public License v3.0**. See LICENSE for more information.
+Distributed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for more information.
+
+CopyPaste is dual licensed. The GPL-3.0 covers everyone using, deploying,
+auditing, packaging or forking it — which is almost everybody, and it costs
+nothing. Redistributing it inside a product of your own needs separate terms:
+see [COMMERCIAL.md](COMMERCIAL.md).
+
+Packaging it for a Linux distribution is ordinary GPL redistribution and needs
+no permission from anyone.
+
+Contributions require a one-time [CLA](CLA.md); you keep the copyright on your
+work.
 
 ---
 
