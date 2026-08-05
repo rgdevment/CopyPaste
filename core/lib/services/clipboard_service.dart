@@ -155,6 +155,31 @@ class ClipboardService {
     return elapsed < pasteIgnoreWindowMs;
   }
 
+  /// Rebuilds the `rtf`/`html` keys from the copy being processed.
+  ///
+  /// These keys describe the *last* copy, so re-copying the same text as plain
+  /// must drop a stale RTF: otherwise the item would keep claiming a format the
+  /// clipboard no longer carries, and pasting would restore it. Keys owned by
+  /// other flows (media metadata) are preserved.
+  String? _mergeFormatMetadata(
+    String? current,
+    List<int>? rtfBytes,
+    List<int>? htmlBytes,
+  ) {
+    final meta = <String, Object?>{};
+    if (current != null && current.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(current);
+        if (decoded is Map<String, dynamic>) meta.addAll(decoded);
+      } catch (_) {}
+    }
+    meta.remove('rtf');
+    meta.remove('html');
+    if (rtfBytes != null) meta['rtf'] = base64Encode(rtfBytes);
+    if (htmlBytes != null) meta['html'] = base64Encode(htmlBytes);
+    return meta.isEmpty ? null : jsonEncode(meta);
+  }
+
   Future<ClipboardItem?> processText(
     String content,
     ClipboardContentType type, {
@@ -174,7 +199,10 @@ class ClipboardService {
       resolvedType,
     );
     if (existing != null) {
-      final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
+      final updated = existing.copyWith(
+        modifiedAt: DateTime.now().toUtc(),
+        metadata: _mergeFormatMetadata(existing.metadata, rtfBytes, htmlBytes),
+      );
       await _repository.update(updated);
       _itemReactivated.add(updated);
       return updated;
@@ -189,6 +217,7 @@ class ClipboardService {
         final updated = legacy.copyWith(
           type: resolvedType,
           modifiedAt: DateTime.now().toUtc(),
+          metadata: _mergeFormatMetadata(legacy.metadata, rtfBytes, htmlBytes),
         );
         await _repository.update(updated);
         _itemReactivated.add(updated);
@@ -196,15 +225,11 @@ class ClipboardService {
       }
     }
 
-    final meta = <String, Object>{};
-    if (rtfBytes != null) meta['rtf'] = base64Encode(rtfBytes);
-    if (htmlBytes != null) meta['html'] = base64Encode(htmlBytes);
-
     final item = ClipboardItem(
       content: content,
       type: resolvedType,
       appSource: source,
-      metadata: meta.isNotEmpty ? jsonEncode(meta) : null,
+      metadata: _mergeFormatMetadata(null, rtfBytes, htmlBytes),
     );
     await _repository.save(item);
     _itemAdded.add(item);

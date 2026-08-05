@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:uuid/uuid.dart';
@@ -64,6 +65,30 @@ class ClipboardItem {
       type == ClipboardContentType.folder ||
       type == ClipboardContentType.audio ||
       type == ClipboardContentType.video;
+
+  /// True cuando el clip se copió con estilos. Solo se mira `rtf`: casi todo lo
+  /// copiado desde un navegador arrastra `html` aunque el texto sea plano, así
+  /// que esa clave no distingue y como señal visual sería ruido.
+  bool get hasRichText => _hasMetadataPayload('rtf');
+
+  /// True cuando pegar el clip tal cual restauraría algún formato. A diferencia
+  /// de [hasRichText] sí cuenta `html`, porque el writer también lo devuelve al
+  /// portapapeles: esto es lo que decide si "pegar sin formato" tiene efecto.
+  bool get hasFormatting =>
+      _hasMetadataPayload('rtf') || _hasMetadataPayload('html');
+
+  bool _hasMetadataPayload(String key) {
+    final raw = metadata;
+    if (raw == null || raw.isEmpty) return false;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return false;
+      final value = decoded[key];
+      return value is String && value.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
   ClipboardItem copyWith({
     String? content,

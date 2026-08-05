@@ -99,6 +99,58 @@ void main() {
       );
       expect(result!.metadata, isNull);
     });
+
+    test('re-copying with styles promotes a plain item to rich', () async {
+      final plain = await service.processText(
+        'same text',
+        ClipboardContentType.text,
+      );
+      expect(plain!.hasRichText, isFalse);
+
+      final rich = await service.processText(
+        'same text',
+        ClipboardContentType.text,
+        rtfBytes: [0x7B, 0x5C, 0x72, 0x74, 0x66],
+      );
+
+      expect(rich!.id, equals(plain.id));
+      expect(rich.hasRichText, isTrue);
+    });
+
+    test('re-copying as plain clears a stale rtf', () async {
+      final rich = await service.processText(
+        'same text',
+        ClipboardContentType.text,
+        rtfBytes: [0x7B, 0x5C, 0x72, 0x74, 0x66],
+      );
+      expect(rich!.hasRichText, isTrue);
+
+      final plain = await service.processText(
+        'same text',
+        ClipboardContentType.text,
+      );
+
+      expect(plain!.id, equals(rich.id));
+      expect(plain.hasRichText, isFalse);
+      expect(plain.metadata, isNull);
+    });
+
+    test('metadata refresh preserves keys owned by other flows', () async {
+      final first = await service.processText(
+        'media caption',
+        ClipboardContentType.text,
+      );
+      await service.updateMetadata(first!.id, '{"duration":42}');
+
+      final second = await service.processText(
+        'media caption',
+        ClipboardContentType.text,
+        rtfBytes: [0x7B, 0x5C, 0x72, 0x74, 0x66],
+      );
+
+      expect(second!.metadata, contains('duration'));
+      expect(second.hasRichText, isTrue);
+    });
   });
 
   group('ClipboardService.processImage', () {
