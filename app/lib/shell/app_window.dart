@@ -60,6 +60,28 @@ typedef _GetWindowRectNative =
     Int32 Function(IntPtr hWnd, Pointer<Int32> lpRect);
 typedef _GetWindowRectDart = int Function(int hWnd, Pointer<Int32> lpRect);
 
+typedef _GetForegroundWindowNative = IntPtr Function();
+typedef _GetForegroundWindowDart = int Function();
+
+typedef _SetForegroundWindowNative = Int32 Function(IntPtr hWnd);
+typedef _SetForegroundWindowDart = int Function(int hWnd);
+
+typedef _BringWindowToTopNative = Int32 Function(IntPtr hWnd);
+typedef _BringWindowToTopDart = int Function(int hWnd);
+
+typedef _GetWindowThreadProcessIdNative =
+    Uint32 Function(IntPtr hWnd, Pointer<Uint32> lpdwProcessId);
+typedef _GetWindowThreadProcessIdDart =
+    int Function(int hWnd, Pointer<Uint32> lpdwProcessId);
+
+typedef _GetCurrentThreadIdNative = Uint32 Function();
+typedef _GetCurrentThreadIdDart = int Function();
+
+typedef _AttachThreadInputNative =
+    Int32 Function(Uint32 idAttach, Uint32 idAttachTo, Int32 fAttach);
+typedef _AttachThreadInputDart =
+    int Function(int idAttach, int idAttachTo, int fAttach);
+
 class _Win32Pos {
   _Win32Pos._();
   static _Win32Pos? _instance;
@@ -87,6 +109,32 @@ class _Win32Pos {
   late final getWindowRectFunc = _u32
       .lookupFunction<_GetWindowRectNative, _GetWindowRectDart>(
         'GetWindowRect',
+      );
+  late final _k32 = DynamicLibrary.open('kernel32.dll');
+  late final getForegroundWindowFunc = _u32
+      .lookupFunction<_GetForegroundWindowNative, _GetForegroundWindowDart>(
+        'GetForegroundWindow',
+      );
+  late final setForegroundWindowFunc = _u32
+      .lookupFunction<_SetForegroundWindowNative, _SetForegroundWindowDart>(
+        'SetForegroundWindow',
+      );
+  late final bringWindowToTopFunc = _u32
+      .lookupFunction<_BringWindowToTopNative, _BringWindowToTopDart>(
+        'BringWindowToTop',
+      );
+  late final getWindowThreadProcessIdFunc = _u32
+      .lookupFunction<
+        _GetWindowThreadProcessIdNative,
+        _GetWindowThreadProcessIdDart
+      >('GetWindowThreadProcessId');
+  late final getCurrentThreadIdFunc = _k32
+      .lookupFunction<_GetCurrentThreadIdNative, _GetCurrentThreadIdDart>(
+        'GetCurrentThreadId',
+      );
+  late final attachThreadInputFunc = _u32
+      .lookupFunction<_AttachThreadInputNative, _AttachThreadInputDart>(
+        'AttachThreadInput',
       );
 }
 
@@ -359,6 +407,78 @@ class AppWindow {
     }
   }
 
+  /// Last-resort activation for the panel's own window on Windows.
+  ///
+  /// Windows only lets a process take the foreground while it owns the input
+  /// that caused the change. The hotkey grants that right on WM_HOTKEY, but it
+  /// is spent long before we get here: the notification crosses to Dart and
+  /// then waits on several awaited platform calls (position restore, taskbar
+  /// flag, show). By the time `windowManager.focus()` runs, the right is gone
+  /// and SetForegroundWindow reports success while merely flashing the taskbar
+  /// button — the panel is visible but inactive, so the user's first click is
+  /// spent activating it instead of landing on a card.
+  ///
+  /// Attaching our input queue to the current foreground thread makes Windows
+  /// treat both as one, restoring the right for the duration of the call. Same
+  /// technique [WindowFocusManager] already uses to restore the paste target.
+  ///
+  /// Returns true when the window really ends up in the foreground; a false
+  /// only means the panel stays unfocused, never that it failed to show.
+  static bool _forceForegroundWin32() {
+    try {
+      final w = _Win32Pos.instance;
+      final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+      final windowName = 'CopyPaste'.toNativeUtf16();
+      final int hwnd;
+      try {
+        hwnd = w.findWindowFunc(className, windowName);
+      } finally {
+        calloc.free(className);
+        calloc.free(windowName);
+      }
+      if (hwnd == 0) return false;
+
+      final foreground = w.getForegroundWindowFunc();
+      // windowManager.focus() usually wins; skip the thread juggling when it did.
+      if (foreground == hwnd) return true;
+      // Logged so a "focus is broken" report can be told apart from a machine
+      // where plain focus() already sufficed and this path never ran.
+      AppLogger.info(
+        '_forceForegroundWin32: focus() left the window inactive, forcing it',
+      );
+
+      final currentThreadId = w.getCurrentThreadIdFunc();
+      var foreignThreadId = 0;
+      if (foreground != 0) {
+        final pidPtr = calloc<Uint32>();
+        try {
+          foreignThreadId = w.getWindowThreadProcessIdFunc(foreground, pidPtr);
+        } finally {
+          calloc.free(pidPtr);
+        }
+      }
+
+      var attached = false;
+      if (foreignThreadId != 0 && foreignThreadId != currentThreadId) {
+        attached =
+            w.attachThreadInputFunc(currentThreadId, foreignThreadId, 1) != 0;
+      }
+
+      try {
+        w.bringWindowToTopFunc(hwnd);
+        w.setForegroundWindowFunc(hwnd);
+        return w.getForegroundWindowFunc() == hwnd;
+      } finally {
+        if (attached) {
+          w.attachThreadInputFunc(currentThreadId, foreignThreadId, 0);
+        }
+      }
+    } catch (e) {
+      AppLogger.warn('_forceForegroundWin32 failed: $e');
+      return false;
+    }
+  }
+
   static (double, double)? _getCursorPosWin32() {
     final w = _Win32Pos.instance;
     final pt = calloc<Int32>(2);
@@ -526,8 +646,17 @@ class AppWindow {
       await windowManager.show();
       await windowManager.focus();
       if (Platform.isWindows) {
+        final focused = _forceForegroundWin32();
+        if (!focused) {
+          AppLogger.warn(
+            'AppWindow.show: window is visible but not in the foreground',
+          );
+        }
         final actual = _getPositionWin32();
-        AppLogger.info('AppWindow.show: window shown, actual position=$actual');
+        AppLogger.info(
+          'AppWindow.show: window shown, actual position=$actual, '
+          'foreground=$focused',
+        );
       } else {
         AppLogger.info('AppWindow.show: window shown and focused');
       }
