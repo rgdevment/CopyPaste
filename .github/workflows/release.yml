@@ -317,14 +317,14 @@ jobs:
                     CASK_FILE="Casks/copypaste-beta.rb"
                     CASK_NAME="copypaste-beta"
                     CASK_DESC="Clipboard history manager for macOS (beta)"
-                    FORMULA_FILE="Formula/copypaste-beta.rb"
-                    FORMULA_CLASS="CopypasteBeta"
+                    FORMULA_FILE="Formula/copypaste-beta-linux.rb"
+                    FORMULA_CLASS="CopypasteBetaLinux"
                   else
                     CASK_FILE="Casks/copypaste.rb"
                     CASK_NAME="copypaste"
                     CASK_DESC="Clipboard history manager for macOS"
-                    FORMULA_FILE="Formula/copypaste.rb"
-                    FORMULA_CLASS="Copypaste"
+                    FORMULA_FILE="Formula/copypaste-linux.rb"
+                    FORMULA_CLASS="CopypasteLinux"
                   fi
 
                   git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/homebrew-tap.git" /tmp/homebrew-tap
@@ -345,7 +345,7 @@ jobs:
                   	  desc "${CASK_DESC}"
                   	  homepage "https://github.com/${{ github.repository }}"
 
-                  	  depends_on macos: ">= :ventura"
+                  	  depends_on macos: :ventura
 
                   	  app "CopyPaste.app"
 
@@ -365,8 +365,6 @@ jobs:
                   	    url "${DEB_URL}"
                   	    sha256 "${DEB_SHA256}"
                   	  end
-
-                  	  bottle :unneeded
 
                   	  def install
                   	    system "ar", "x", cached_download

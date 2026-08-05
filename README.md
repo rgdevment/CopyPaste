@@ -460,10 +460,10 @@ sudo zypper install copypaste
 If you already use Homebrew, or you cannot use `sudo`, this is the fastest path:
 
 ```sh
-brew tap rgdevment/tap && brew install copypaste
+brew tap rgdevment/tap && brew install copypaste-linux
 ```
 
-Updates land via `brew upgrade copypaste`.
+Updates land via `brew upgrade copypaste-linux`.
 
 #### 3. Self-updating AppImage
 
