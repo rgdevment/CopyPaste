@@ -5,7 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:copypaste/shell/single_instance.dart';
 
-String get _wakeupFilePath => '${Directory.systemTemp.path}/copypaste.wakeup';
+// Keeps the mutex, pipe and wakeup file off the names a CopyPaste running on
+// this machine already owns; without it that instance holds the mutex and
+// drains the wakeup signals these tests assert on.
+final String _namespace = '_test_$pid';
+
+String get _wakeupFilePath =>
+    '${Directory.systemTemp.path}/copypaste.wakeup$_namespace';
 
 void _cleanupWakeupFile() {
   try {
@@ -14,6 +20,8 @@ void _cleanupWakeupFile() {
 }
 
 void main() {
+  setUpAll(() => SingleInstance.namespace = _namespace);
+
   group('SingleInstance – Windows', () {
     setUp(() {
       if (!Platform.isWindows) return;

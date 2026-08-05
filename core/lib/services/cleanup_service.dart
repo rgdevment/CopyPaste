@@ -129,9 +129,16 @@ class CleanupService {
   Future<void> _cleanOrphanImages() async {
     final storage = _storage;
     if (storage == null) return;
+    // Kept apart from the sweep below: tracking walks user-supplied paths that
+    // can live on flaky volumes, and its failure must not strand orphan files
+    // on disk forever.
     try {
       await _trackBrokenExternalRefs();
+    } catch (e) {
+      AppLogger.error('Broken reference tracking failed: $e');
+    }
 
+    try {
       final allImageItems = await _repository.getImagePaths();
       final allThumbPaths = await _repository.getThumbPaths();
       final canonicalImagesDir = p.canonicalize(storage.imagesPath);
@@ -189,7 +196,10 @@ class CleanupService {
         continue;
       }
 
-      final exists = File(path).existsSync() || Directory(path).existsSync();
+      final exists = _pathExists(path);
+      // Probe failed rather than reported absence: same meaning as an offline
+      // volume, so leave brokenSince untouched instead of starting the clock.
+      if (exists == null) continue;
       if (exists) {
         if (item.brokenSince != null) {
           await _repository.update(item.copyWith(brokenSince: null));
@@ -374,6 +384,19 @@ class CleanupService {
   /// present. When the volume is offline (drive not mounted, NAS down,
   /// removable disk unplugged), callers should skip purge logic so the user
   /// does not lose history entries on a temporary disconnection.
+  /// Whether [path] is on disk, or null when the probe itself failed.
+  ///
+  /// An unreachable network share throws instead of reporting absence, and
+  /// [isVolumePresent] cannot tell the two apart either: its own catch assumes
+  /// the volume is present, which lands here.
+  static bool? _pathExists(String path) {
+    try {
+      return File(path).existsSync() || Directory(path).existsSync();
+    } on FileSystemException {
+      return null;
+    }
+  }
+
   static bool isVolumePresent(String path) {
     try {
       if (Platform.isWindows) {
