@@ -42,6 +42,14 @@ typedef _AttachThreadInputNative =
 typedef _AttachThreadInputDart =
     int Function(int idAttach, int idAttachTo, int fAttach);
 
+typedef _GetGUIThreadInfoNative =
+    Int32 Function(Uint32 idThread, Pointer<Uint8> lpgui);
+typedef _GetGUIThreadInfoDart =
+    int Function(int idThread, Pointer<Uint8> lpgui);
+
+typedef _GetAncestorNative = IntPtr Function(IntPtr hWnd, Uint32 gaFlags);
+typedef _GetAncestorDart = int Function(int hWnd, int gaFlags);
+
 class _Win32 {
   _Win32._() {
     assert(Platform.isWindows, '_Win32 requires Windows');
@@ -52,6 +60,13 @@ class _Win32 {
   static const int swRestore = 9;
   static const int gwlStyle = -16;
   static const int wsMinimize = 0x20000000;
+  static const int gaRoot = 2;
+
+  // GUITHREADINFO on 64-bit: cbSize+flags (8 bytes) then six HWNDs and a RECT.
+  // hwndFocus is the second handle. Flutter dropped 32-bit Windows, so the
+  // pointer width these offsets assume cannot change under us.
+  static const int guiThreadInfoSize = 72;
+  static const int guiThreadInfoFocusOffset = 16;
 
   late final _user32 = DynamicLibrary.open('user32.dll');
   late final _kernel32 = DynamicLibrary.open('kernel32.dll');
@@ -94,6 +109,12 @@ class _Win32 {
       .lookupFunction<_AttachThreadInputNative, _AttachThreadInputDart>(
         'AttachThreadInput',
       );
+  late final getGUIThreadInfo = _user32
+      .lookupFunction<_GetGUIThreadInfoNative, _GetGUIThreadInfoDart>(
+        'GetGUIThreadInfo',
+      );
+  late final getAncestor = _user32
+      .lookupFunction<_GetAncestorNative, _GetAncestorDart>('GetAncestor');
 }
 
 class WindowFocusManager {
@@ -166,6 +187,13 @@ class WindowFocusManager {
       }
 
       await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
+      final focusRoot = _keyboardFocusRoot();
+      if (focusRoot != _previousWindow) {
+        AppLogger.warn(
+          'Paste target is active but lacks keyboard focus: '
+          'expected=$_previousWindow, focused=$focusRoot',
+        );
+      }
       final inputResponse = await _simulatePasteWindows();
       if (!inputResponse.success) return inputResponse;
       AppLogger.info(
@@ -222,6 +250,19 @@ class WindowFocusManager {
       return false;
     }
 
+    // Hiding the panel already hands the foreground back in the common case.
+    // Attaching input queues when the destination owns it anyway is not free:
+    // detaching resets the keyboard focus Windows had just restored, so the
+    // window stays active but the synthetic Ctrl+V lands nowhere. AppWindow's
+    // own activation path skips the juggling for the same reason.
+    if (w.getForegroundWindow() == _previousWindow) {
+      AppLogger.info(
+        'Focus restore: destination already in foreground '
+        '(hwnd=$_previousWindow)',
+      );
+      return true;
+    }
+
     final currentThreadId = w.getCurrentThreadId();
     var attached = false;
 
@@ -249,10 +290,40 @@ class WindowFocusManager {
   Future<bool> _waitForFocusWindows(int maxAttempts) async {
     final w = _Win32.instance;
     for (var i = 0; i < maxAttempts; i++) {
-      if (w.getForegroundWindow() == _previousWindow) return true;
+      if (w.getForegroundWindow() == _previousWindow) {
+        if (i > 0) {
+          AppLogger.info('Focus verify: destination active after $i retries');
+        }
+        return true;
+      }
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
     return false;
+  }
+
+  /// Root window currently owning keyboard focus, or 0 when it cannot be read.
+  ///
+  /// [_waitForFocusWindows] only proves the destination is the active
+  /// top-level window. Chromium-based apps activate long before their render
+  /// process takes keyboard focus, and a stale input-queue attachment can
+  /// leave a window active with no focus at all — both swallow the Ctrl+V
+  /// while every call in the paste path still reports success.
+  int _keyboardFocusRoot() {
+    final w = _Win32.instance;
+    final info = calloc<Uint8>(_Win32.guiThreadInfoSize);
+    try {
+      info.cast<Uint32>().value = _Win32.guiThreadInfoSize;
+      if (w.getGUIThreadInfo(0, info) == 0) return 0;
+      final focused = (info + _Win32.guiThreadInfoFocusOffset)
+          .cast<IntPtr>()
+          .value;
+      return focused == 0 ? 0 : w.getAncestor(focused, _Win32.gaRoot);
+    } catch (e) {
+      AppLogger.warn('Keyboard focus probe failed: $e');
+      return 0;
+    } finally {
+      calloc.free(info);
+    }
   }
 
   Future<PasteResponse> _simulatePasteWindows() async {
