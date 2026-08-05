@@ -188,9 +188,10 @@ void main() {
   });
 
   group('ClipboardItem.hasRichText', () {
-    ClipboardItem itemWith(String? metadata) =>
-        ClipboardItem(content: 'x', type: ClipboardContentType.text)
-            .copyWith(metadata: metadata);
+    ClipboardItem itemWith(String? metadata) => ClipboardItem(
+      content: 'x',
+      type: ClipboardContentType.text,
+    ).copyWith(metadata: metadata);
 
     test('is true when metadata carries a non-empty rtf key', () {
       expect(itemWith('{"rtf":"e1xydGYx"}').hasRichText, isTrue);
@@ -222,9 +223,10 @@ void main() {
   });
 
   group('ClipboardItem.hasFormatting', () {
-    ClipboardItem itemWith(String? metadata) =>
-        ClipboardItem(content: 'x', type: ClipboardContentType.text)
-            .copyWith(metadata: metadata);
+    ClipboardItem itemWith(String? metadata) => ClipboardItem(
+      content: 'x',
+      type: ClipboardContentType.text,
+    ).copyWith(metadata: metadata);
 
     test('is true for rtf', () {
       expect(itemWith('{"rtf":"e1xydGYx"}').hasFormatting, isTrue);
