@@ -64,6 +64,8 @@ class _ClipboardCardState extends State<ClipboardCard> {
   String _cachedExt = '';
   String _displayContent = '';
   bool _sourceAvailable = true;
+  bool _isRichText = false;
+  bool _hasFormatting = false;
 
   static const _doubleTapTimeout = Duration(milliseconds: 300);
 
@@ -112,6 +114,10 @@ class _ClipboardCardState extends State<ClipboardCard> {
   void _recomputeDerived() {
     final item = widget.item;
     _cachedMetadata = _parseMetadata(item);
+    // Both parse the metadata JSON, so they are resolved here rather than on
+    // every build, alongside the other derived values.
+    _isRichText = item.hasRichText;
+    _hasFormatting = item.hasFormatting;
     _cachedExt = _getExtForItem(item);
     _displayContent = item.content.length <= _maxDisplayChars
         ? item.content
@@ -255,9 +261,13 @@ class _ClipboardCardState extends State<ClipboardCard> {
     }
   }
 
+  // Offered only when there is formatting to strip: on a clip the OS never
+  // gave styles to, "paste as plain text" is identical to a normal paste and
+  // the button is just noise.
   bool get _isPlainPasteable =>
-      widget.item.type == ClipboardContentType.text ||
-      widget.item.type == ClipboardContentType.link;
+      _hasFormatting &&
+      (widget.item.type == ClipboardContentType.text ||
+          widget.item.type == ClipboardContentType.link);
 
   // Real on-disk paths backing this item, for drag-out. Image content is a
   // single file; file/folder/audio/video may carry several paths joined by
@@ -544,7 +554,12 @@ class _ClipboardCardState extends State<ClipboardCard> {
               ),
               child: Center(
                 child: Icon(
-                  theme.icons.forContentType(item.type.value),
+                  // Rich text only swaps the glyph, never the color: the tint
+                  // stays the type's own. Restricted to plain text because for
+                  // a link or JSON the type itself is the more useful signal.
+                  _isRichText && item.type == ClipboardContentType.text
+                      ? theme.icons.textRich
+                      : theme.icons.forContentType(item.type.value),
                   size: 16,
                   color: typeColor,
                 ),

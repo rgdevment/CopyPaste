@@ -121,6 +121,117 @@ void main() {
       expect(find.byType(ClipboardCard), findsOneWidget);
     });
 
+    testWidgets('plain text uses the plain glyph', (tester) async {
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: _makeTextItem(),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.text_snippet_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.text_format_rounded), findsNothing);
+    });
+
+    testWidgets('rich text swaps the glyph but keeps the type color', (
+      tester,
+    ) async {
+      final plain = _makeTextItem();
+      final rich = plain.copyWith(metadata: '{"rtf":"e1xydGYx"}');
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: rich,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.text_format_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.text_snippet_outlined), findsNothing);
+    });
+
+    testWidgets('html-only metadata keeps the plain glyph', (tester) async {
+      final item = _makeTextItem().copyWith(metadata: '{"html":"PGh0bWw+"}');
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.text_snippet_outlined), findsOneWidget);
+    });
+
+    testWidgets('a styled link keeps its link glyph', (tester) async {
+      // The type is the stronger signal for non-plain-text kinds, so rich
+      // formatting must not override it.
+      final item = ClipboardItem(
+        content: 'https://example.com',
+        type: ClipboardContentType.link,
+      ).copyWith(metadata: '{"rtf":"e1xydGYx"}');
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.link_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.text_format_rounded), findsNothing);
+    });
+
+    testWidgets('glyph updates when metadata changes in place', (tester) async {
+      final plain = _makeTextItem();
+
+      Widget build(ClipboardItem item) => wrapWidget(
+        ClipboardCard(
+          item: item,
+          onTap: () {},
+          onPin: () {},
+          onDelete: () {},
+          onLabelColor: (_, _) {},
+        ),
+      );
+
+      await tester.pumpWidget(build(plain));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.text_snippet_outlined), findsOneWidget);
+
+      // A re-copy with styles reuses the same item, so the cached flag must be
+      // recomputed rather than kept from the first build.
+      await tester.pumpWidget(
+        build(plain.copyWith(metadata: '{"rtf":"e1xydGYx"}')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.text_format_rounded), findsOneWidget);
+    });
+
     testWidgets('double-tap triggers onTap', (tester) async {
       var tapCount = 0;
       var selectCount = 0;
@@ -420,12 +531,14 @@ void main() {
       }
     });
 
-    testWidgets('onPastePlain callback exposed for text type', (tester) async {
+    testWidgets('onPastePlain callback exposed for formatted text', (
+      tester,
+    ) async {
       var plainCount = 0;
       await tester.pumpWidget(
         wrapWidget(
           ClipboardCard(
-            item: _makeTextItem(),
+            item: _makeTextItem().copyWith(metadata: '{"rtf":"e1xydGYx"}'),
             onTap: () {},
             onPin: () {},
             onDelete: () {},
@@ -436,6 +549,52 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(ClipboardCard), findsOneWidget);
+      expect(find.byIcon(Icons.notes_rounded), findsOneWidget);
+    });
+
+    testWidgets('plain paste button is hidden when there is no formatting', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: _makeTextItem(),
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onPastePlain: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.notes_rounded), findsNothing);
+    });
+
+    testWidgets('html-only metadata still offers the plain paste button', (
+      tester,
+    ) async {
+      // The writer restores html too, so a normal paste would carry formatting
+      // even though the card shows the plain glyph.
+      final item = _makeTextItem().copyWith(metadata: '{"html":"PGh0bWw+"}');
+
+      await tester.pumpWidget(
+        wrapWidget(
+          ClipboardCard(
+            item: item,
+            onTap: () {},
+            onPin: () {},
+            onDelete: () {},
+            onLabelColor: (_, _) {},
+            onPastePlain: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.notes_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.text_snippet_outlined), findsOneWidget);
     });
 
     testWidgets('file type item renders filename', (tester) async {

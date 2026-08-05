@@ -207,6 +207,7 @@ class AppThemeSizing {
 class AppThemeIcons {
   const AppThemeIcons({
     required this.text,
+    required this.textRich,
     required this.image,
     required this.link,
     required this.file,
@@ -232,6 +233,11 @@ class AppThemeIcons {
   });
 
   final IconData text;
+
+  /// Variante para texto copiado con estilos. Mismo peso visual y mismo color
+  /// que [text]: solo cambia el glyph, para no teñir de otro color la mayoría
+  /// del historial (que es texto plano) por marcar la excepción.
+  final IconData textRich;
   final IconData image;
   final IconData link;
   final IconData file;

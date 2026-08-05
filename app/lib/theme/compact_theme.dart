@@ -95,6 +95,7 @@ class CompactTheme extends AppThemeData {
   @override
   AppThemeIcons get icons => const AppThemeIcons(
     text: Icons.text_snippet_outlined,
+    textRich: Icons.text_format_rounded,
     image: Icons.image_outlined,
     link: Icons.link_rounded,
     file: Icons.insert_drive_file_outlined,

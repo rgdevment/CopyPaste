@@ -186,4 +186,62 @@ void main() {
       },
     );
   });
+
+  group('ClipboardItem.hasRichText', () {
+    ClipboardItem itemWith(String? metadata) =>
+        ClipboardItem(content: 'x', type: ClipboardContentType.text)
+            .copyWith(metadata: metadata);
+
+    test('is true when metadata carries a non-empty rtf key', () {
+      expect(itemWith('{"rtf":"e1xydGYx"}').hasRichText, isTrue);
+    });
+
+    test('is false when rtf is present but empty', () {
+      expect(itemWith('{"rtf":""}').hasRichText, isFalse);
+    });
+
+    test('is false when only html is present', () {
+      // Copying from a browser drags text/html along even for plain text, so
+      // html alone must not promote an item to rich.
+      expect(itemWith('{"html":"PGh0bWw+"}').hasRichText, isFalse);
+    });
+
+    test('is false when there is no metadata', () {
+      expect(itemWith(null).hasRichText, isFalse);
+      expect(itemWith('').hasRichText, isFalse);
+    });
+
+    test('is false on malformed or non-map metadata', () {
+      expect(itemWith('not json').hasRichText, isFalse);
+      expect(itemWith('[1,2,3]').hasRichText, isFalse);
+    });
+
+    test('is false when rtf holds a non-string value', () {
+      expect(itemWith('{"rtf":42}').hasRichText, isFalse);
+    });
+  });
+
+  group('ClipboardItem.hasFormatting', () {
+    ClipboardItem itemWith(String? metadata) =>
+        ClipboardItem(content: 'x', type: ClipboardContentType.text)
+            .copyWith(metadata: metadata);
+
+    test('is true for rtf', () {
+      expect(itemWith('{"rtf":"e1xydGYx"}').hasFormatting, isTrue);
+    });
+
+    test('is true for html alone', () {
+      // Unlike hasRichText: the writer restores html to the clipboard, so a
+      // normal paste would carry formatting and stripping it is meaningful.
+      final item = itemWith('{"html":"PGh0bWw+"}');
+      expect(item.hasFormatting, isTrue);
+      expect(item.hasRichText, isFalse);
+    });
+
+    test('is false when no format payload is attached', () {
+      expect(itemWith(null).hasFormatting, isFalse);
+      expect(itemWith('{"duration":42}').hasFormatting, isFalse);
+      expect(itemWith('{"rtf":"","html":""}').hasFormatting, isFalse);
+    });
+  });
 }
