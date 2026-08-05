@@ -60,6 +60,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 
 - **100% local** — your clipboard history never leaves your computer. No cloud, no servers, no accounts.
 - **Truly free** — no premium tiers, no feature gates, no "free trial" tricks. GPL v3, forever.
+  Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
 - **Cross-platform** — same native copy-paste experience on Windows, macOS, and Linux.
 - **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
 - **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
@@ -123,9 +124,9 @@ Most **clipboard managers** out there are either bloated, ugly, Windows-only, or
 - Didn't require an account, subscription, or internet connection
 - Actually respected my privacy — not just claimed to
 
-After months of using it myself, I realized others might need it too. So I open sourced it — no ads, no monetization, no strings attached.
+After months of using it myself, I realized others might need it too. So I open sourced it — no ads, no tracking, no strings attached for the people who use it.
 
-Every line of code is public. You can read it, fork it, or learn from it. This is a **free, open source productivity tool** — a copy tool built from a real need, not a business plan.
+Every line of code is public. You can read it, fork it, or learn from it. This is a **free, open source productivity tool** — a copy tool built from a real need. Redistributing it inside a product of your own is the one case that needs [separate terms](COMMERCIAL.md).
 
 ---
 
@@ -525,7 +526,7 @@ Since CopyPaste is an independent open source project, the installer uses a self
 ## FAQ
 
 **Is CopyPaste free?**
-Yes. Completely free and open source. No premium tiers, no subscriptions, no paywalls — ever. A copy tool that costs nothing and respects you.
+Yes. Completely free and open source. No premium tiers, no subscriptions, no paywalls — ever. That covers using it anywhere, including across a company, and packaging it for a Linux distribution. Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
 
 **Does it upload my clipboard data?**
 No. Everything stays on your machine. There is no cloud, no server, no sync. CopyPaste is a local-first clipboard manager by design — your copy paste data never leaves your computer.
@@ -795,7 +796,18 @@ Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
-Distributed under the **GNU General Public License v3.0**. See LICENSE for more information.
+Distributed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for more information.
+
+CopyPaste is dual licensed. The GPL-3.0 covers everyone using, deploying,
+auditing, packaging or forking it — which is almost everybody, and it costs
+nothing. Redistributing it inside a product of your own needs separate terms:
+see [COMMERCIAL.md](COMMERCIAL.md).
+
+Packaging it for a Linux distribution is ordinary GPL redistribution and needs
+no permission from anyone.
+
+Contributions require a one-time [CLA](CLA.md); you keep the copyright on your
+work.
 
 ---
 

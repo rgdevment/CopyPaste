@@ -18,7 +18,9 @@ We believe in:
 - **Collaborative community** — We build together, not in silos
 - **Valuable feedback** — Your opinion matters as much as code
 
-**This is not a commercial product.** There's no premium version, no monetization, no business plans. It's free software, created by and for the community.
+**There is no premium version and no feature is ever held back** — what you install is the whole application. CopyPaste is free software, created by and for the community.
+
+It is also dual licensed: anyone who wants to redistribute it inside a product of their own needs [separate terms](COMMERCIAL.md). Using it, deploying it across a company, or packaging it for a Linux distribution never does.
 
 > **Maintainers:** the full release process (tagging, manifest, store and OBS publication) lives in [RELEASING.md](RELEASING.md).
 
@@ -92,43 +94,48 @@ We keep the code simple and consistent:
 
 ## License and Rights
 
-By contributing to **CopyPaste**, you agree that your contributions will be licensed under the **GNU General Public License v3.0 (GPLv3)**.
+CopyPaste is released under the **GNU General Public License v3.0 (GPL-3.0)**
+and offered under separate [commercial terms](COMMERCIAL.md) to organisations
+that cannot comply with it. Your contributions are licensed the same way.
 
-### Contributor License Agreement (CLA)
+### Contributor License Agreement
 
-**Let's be honest and transparent:**
+Because of that dual model, every contributor signs a one-time [CLA](CLA.md)
+before their code can be merged. Offering commercial terms requires the right
+to license the whole codebase that way, and that right has to come from each
+author explicitly.
 
-To protect the project long-term and maintain legal flexibility, by submitting a Pull Request:
+**You keep the copyright on your work.** The CLA is a licence you grant, not a
+transfer of ownership.
 
-> **You grant Mario Hidalgo G. (rgdevment) a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, modify, sublicense, and distribute your contribution.**
+The first time you open a Pull Request, a bot asks you to sign. Reply on that
+Pull Request with exactly:
 
-**Why do we ask for this?**
+```text
+I have read the CLA Document and I hereby sign the CLA
+```
 
-- **Legal defense** — To defend the project against copyright infringement
-- **Future flexibility** — Possibility to offer alternative licenses to companies that can't comply with GPLv3
-- **Sustainability** — If we ever need to generate income to maintain the project, we can do so
+That is it — every later Pull Request from the same account is covered.
 
-**What does this mean for you?**
+**In return, the project commits that:**
 
-- **You keep the copyright** of your code — you'll always be recognized as the author
-- **Your contribution stays open source** in this repository under GPLv3 forever
-- **The project remains free** — the community version will never disappear
-- **You give us permission** to use your code in potential future commercial versions
+- The community edition stays available under the GPL-3.0.
+- Your contribution is never removed from the open source project to make it
+  exclusive to a commercial edition.
+- Your authorship is preserved; history is not rewritten to erase it.
+- No release already published is ever retroactively withdrawn.
 
-**What we will NOT do:**
+Read [CLA.md](CLA.md) for the full text — it is short, and worth the two
+minutes before you sign it.
 
-- Close the current or future code of the community version
-- Remove your contributions from the open source project
-- Stop giving credit to contributors
+If you would rather not sign, you can still use CopyPaste, report bugs,
+request features, discuss design, package it for your distribution, and fork
+the project under the GPL-3.0. Only merging code into this repository requires
+the agreement.
 
-**If you don't agree with this**, we completely understand. You can still:
-
-- Use CopyPaste freely
-- Report bugs and suggest features
-- Fork under GPLv3
-- Contribute in other ways (documentation, translations, spreading the word)
-
-**We want to be 100% transparent.** We'd rather you know this before contributing, not after.
+**Packaging CopyPaste for a Linux distribution needs no agreement and no
+commercial licence** — that is ordinary GPL redistribution, and packagers are
+welcome. See [COMMERCIAL.md](COMMERCIAL.md).
 
 ---
 

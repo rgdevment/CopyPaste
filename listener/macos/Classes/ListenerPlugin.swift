@@ -95,8 +95,28 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     onClipboardChanged()
   }
 
+  /// Pasteboard types whose presence means "do not record this".
+  ///
+  /// `ConcealedType` is what password managers set to keep their output out of
+  /// clipboard history. It is the mechanism behind the exclusion CopyPaste
+  /// promises, and the macOS counterpart of Windows'
+  /// `ExcludeClipboardContentFromMonitorProcessing`. `TransientType` marks
+  /// content the source application explicitly does not want persisted.
+  private static let excludedTypes: [NSPasteboard.PasteboardType] = [
+    NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"),
+    NSPasteboard.PasteboardType("org.nspasteboard.TransientType"),
+  ]
+
+  private func shouldExclude(_ pb: NSPasteboard) -> Bool {
+    return pb.availableType(from: Self.excludedTypes) != nil
+  }
+
   private func onClipboardChanged() {
     let pb = NSPasteboard.general
+
+    // Checked before anything reads the content, so excluded data never
+    // reaches the hash, the event, or the database.
+    if shouldExclude(pb) { return }
 
     let hash = computeClipboardHash(pb)
     if !hash.isEmpty && isDuplicate(hash) { return }

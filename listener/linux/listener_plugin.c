@@ -447,6 +447,50 @@ static GtkSelectionData* get_target_contents(GtkClipboard* clipboard,
   return gtk_clipboard_wait_for_contents(clipboard, atom);
 }
 
+// Targets whose presence means the source application asked clipboard managers
+// not to record this content. `x-kde-passwordManagerHint` is what KeePassXC and
+// KDE-aware managers set on a copied secret; it is the Linux counterpart of
+// Windows' `ExcludeClipboardContentFromMonitorProcessing` and of the
+// `org.nspasteboard.ConcealedType` pasteboard type on macOS.
+//
+// Presence alone is enough. The target exists for no other purpose than
+// flagging a secret, and erring towards excluding costs the user one history
+// entry while erring the other way writes their password to disk.
+static const gchar* const kExcludedTargets[] = {
+    "x-kde-passwordManagerHint",
+    "org.nspasteboard.ConcealedType",
+    NULL,
+};
+
+// Asks only for the list of offered targets, never for their contents: a
+// `wait_for_contents` call would pull the secret's bytes into this process
+// just to decide not to keep them. One round-trip, and it runs on every
+// clipboard change.
+static gboolean should_exclude_clipboard(GtkClipboard* clipboard) {
+  GdkAtom* targets = NULL;
+  gint n_targets = 0;
+  if (!gtk_clipboard_wait_for_targets(clipboard, &targets, &n_targets)) {
+    return FALSE;
+  }
+
+  gboolean excluded = FALSE;
+  for (gint i = 0; i < n_targets && !excluded; i++) {
+    g_autofree gchar* name = gdk_atom_name(targets[i]);
+    if (name == NULL) {
+      continue;
+    }
+    for (guint j = 0; kExcludedTargets[j] != NULL; j++) {
+      if (g_ascii_strcasecmp(name, kExcludedTargets[j]) == 0) {
+        excluded = TRUE;
+        break;
+      }
+    }
+  }
+
+  g_free(targets);
+  return excluded;
+}
+
 static FlValue* get_selection_data_value(GtkClipboard* clipboard,
                                          const gchar* const* targets) {
   for (guint i = 0; targets[i] != NULL; i++) {
@@ -674,6 +718,12 @@ static void process_clipboard(ListenerPlugin* self) {
   }
 
   if (should_ignore_recent_write(self)) {
+    return;
+  }
+
+  // Checked before anything reads the content, so excluded data never reaches
+  // the signature, the event, or the database.
+  if (should_exclude_clipboard(clipboard)) {
     return;
   }
 
