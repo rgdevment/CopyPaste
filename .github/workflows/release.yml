@@ -86,6 +86,32 @@ jobs:
               with:
                   path: artifacts
 
+            # attest-build-provenance only fails when *every* pattern comes up
+            # empty, so a missing artifact would otherwise be signed away in
+            # silence. Each pattern must match on its own.
+            - name: Verify every artifact to attest is present
+              run: |
+                  set -euo pipefail
+                  shopt -s globstar nullglob
+                  status=0
+                  for pattern in \
+                    'artifacts/release-windows/**/*_Setup.exe' \
+                    'artifacts/release-windows/**/*_store.msix*' \
+                    'artifacts/release-macos/*.dmg' \
+                    'artifacts/release-linux/*.AppImage' \
+                    'artifacts/release-linux/*.deb' \
+                    'artifacts/release-linux/*.rpm' \
+                    'artifacts/release-linux/*.tar.gz'; do
+                    matches=( $pattern )
+                    if (( ${#matches[@]} == 0 )); then
+                      echo "::error::No artifact matched '${pattern}'"
+                      status=1
+                    else
+                      printf '%s -> %s\n' "$pattern" "${matches[*]}"
+                    fi
+                  done
+                  exit $status
+
             - uses: actions/attest-build-provenance@v4
               with:
                   subject-path: |
@@ -306,6 +332,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GIST_TOKEN }}
               run: |
+                  set -o pipefail
+
                   TAG="${GITHUB_REF_NAME}"
                   VERSION="${TAG#v}"
 
@@ -316,12 +344,14 @@ jobs:
                   DEB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DEB_NAME}"
 
                   echo "Downloading DMG to compute SHA256..."
-                  curl -fSL -o "/tmp/${DMG_NAME}" "${DMG_URL}"
+                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
+                    -o "/tmp/${DMG_NAME}" "${DMG_URL}"
                   DMG_SHA256=$(sha256sum "/tmp/${DMG_NAME}" | awk '{print $1}')
                   rm -f "/tmp/${DMG_NAME}"
 
                   echo "Downloading deb to compute SHA256..."
-                  curl -fSL -o "/tmp/${DEB_NAME}" "${DEB_URL}"
+                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
+                    -o "/tmp/${DEB_NAME}" "${DEB_URL}"
                   DEB_SHA256=$(sha256sum "/tmp/${DEB_NAME}" | awk '{print $1}')
                   rm -f "/tmp/${DEB_NAME}"
 
@@ -401,10 +431,13 @@ jobs:
                   FORMULA_EOF
 
                   git add "${CASK_FILE}" "${FORMULA_FILE}"
-                  git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
-                  git push origin main
-
-                  echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                  if git diff --cached --quiet; then
+                    echo "Homebrew Tap already at ${VERSION}, nothing to push"
+                  else
+                    git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
+                    git push origin main
+                    echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                  fi
 
     update-scoop-bucket:
         runs-on: ubuntu-latest
@@ -418,6 +451,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GIST_TOKEN }}
               run: |
+                  set -o pipefail
+
                   TAG="${GITHUB_REF_NAME}"
                   VERSION="${TAG#v}"
                   BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
@@ -429,8 +464,14 @@ jobs:
                     NAME="copypaste"; SUFFIX=""
                   fi
 
-                  curl -fSL -o "/tmp/${SETUP}" "${BASE}/${SETUP}"
+                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
+                    -o "/tmp/${SETUP}" "${BASE}/${SETUP}"
                   SHA=$(sha256sum "/tmp/${SETUP}" | awk '{print $1}')
+
+                  # Scoop only unpacks the installer, so the uninstaller never runs
+                  # and the Run value the app writes on first launch would outlive it.
+                  RUN_KEY='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+                  UNINSTALL="Remove-ItemProperty -Path '${RUN_KEY}' -Name 'CopyPaste' -ErrorAction SilentlyContinue"
 
                   git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/scoop-bucket.git" /tmp/bucket
                   cd /tmp/bucket
@@ -444,6 +485,8 @@ jobs:
                     --arg home "https://github.com/${{ github.repository }}" \
                     --arg url "${BASE}/${SETUP}" \
                     --arg hash "$SHA" \
+                    --arg shortcut "CopyPaste${SUFFIX}" \
+                    --arg uninstall "$UNINSTALL" \
                     '{
                       version: $version,
                       description: $desc,
@@ -452,11 +495,15 @@ jobs:
                       architecture: {"64bit": {url: $url, hash: $hash}},
                       innosetup: true,
                       extract_dir: "{app}",
-                      shortcuts: [["copypaste.exe", "CopyPaste"]]
+                      shortcuts: [["CopyPaste.exe", $shortcut]],
+                      pre_uninstall: [$uninstall]
                     }' > "bucket/${NAME}.json"
 
                   git add "bucket/${NAME}.json"
-                  git commit -m "${NAME} ${VERSION}"
-                  git push origin main
-
-                  echo "Scoop bucket updated: ${NAME} → ${VERSION}"
+                  if git diff --cached --quiet; then
+                    echo "Scoop bucket already at ${VERSION}, nothing to push"
+                  else
+                    git commit -m "${NAME} ${VERSION}"
+                    git push origin main
+                    echo "Scoop bucket updated: ${NAME} → ${VERSION}"
+                  fi

@@ -738,7 +738,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get updateActionOpenStore => 'Abrir Microsoft Store';
 
   @override
-  String get updateActionCopyBrew => 'Copiar comando brew';
+  String updateActionCopyCommand(String tool) {
+    return 'Copiar comando $tool';
+  }
 
   @override
   String get updateActionCopied => 'Copiado al portapapeles';

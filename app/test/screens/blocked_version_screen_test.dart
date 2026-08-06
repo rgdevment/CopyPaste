@@ -22,6 +22,7 @@ ReleaseManifest _manifest({
   String? homebrewCommand,
   String? msStoreUrl,
   String? snapCommand,
+  String? scoopCommand,
 }) {
   return ReleaseManifest(
     schema: 1,
@@ -36,6 +37,7 @@ ReleaseManifest _manifest({
         'homebrew': ChannelInfo(command: homebrewCommand),
       if (msStoreUrl != null) 'msstore': ChannelInfo(url: msStoreUrl),
       if (snapCommand != null) 'snap': ChannelInfo(command: snapCommand),
+      if (scoopCommand != null) 'scoop': ChannelInfo(command: scoopCommand),
       if (githubWindowsUrl != null)
         'github_linux': ChannelInfo(url: githubWindowsUrl),
       if (githubWindowsUrl != null)
@@ -112,7 +114,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       final l = await AppLocalizations.delegate.load(const Locale('en'));
-      expect(find.text(l.updateActionCopyBrew), findsOneWidget);
+      expect(find.text(l.updateActionCopyCommand('brew')), findsOneWidget);
     });
 
     testWidgets('shows Copy command button for snap channel', (tester) async {
@@ -127,7 +129,22 @@ void main() {
       );
       await tester.pumpAndSettle();
       final l = await AppLocalizations.delegate.load(const Locale('en'));
-      expect(find.text(l.updateActionCopyBrew), findsOneWidget);
+      expect(find.text(l.updateActionCopyCommand('snap')), findsOneWidget);
+    });
+
+    testWidgets('shows Copy command button for scoop channel', (tester) async {
+      InstallChannelDetector.channelOverride = InstallChannel.scoop;
+      await tester.pumpWidget(
+        _wrap(
+          BlockedVersionScreen(
+            currentVersion: '2.2.6',
+            manifest: _manifest(scoopCommand: 'scoop update copypaste'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      expect(find.text(l.updateActionCopyCommand('scoop')), findsOneWidget);
     });
 
     testWidgets('shows fallback hint when channel has no info', (tester) async {

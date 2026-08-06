@@ -732,7 +732,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateActionOpenStore => 'Open Microsoft Store';
 
   @override
-  String get updateActionCopyBrew => 'Copy brew command';
+  String updateActionCopyCommand(String tool) {
+    return 'Copy $tool command';
+  }
 
   @override
   String get updateActionCopied => 'Copied to clipboard';

@@ -533,8 +533,11 @@
   "updateActionOpenStore": "Open Microsoft Store",
   "@updateActionOpenStore": { "description": "Action button to open the MS Store update page" },
 
-  "updateActionCopyBrew": "Copy brew command",
-  "@updateActionCopyBrew": { "description": "Action button to copy the Homebrew upgrade command" },
+  "updateActionCopyCommand": "Copy {tool} command",
+  "@updateActionCopyCommand": {
+    "description": "Action button to copy the package manager upgrade command",
+    "placeholders": { "tool": { "type": "String" } }
+  },
 
   "updateActionCopied": "Copied to clipboard",
   "@updateActionCopied": { "description": "Snack/tooltip shown after copying the upgrade command" },

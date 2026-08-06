@@ -268,7 +268,7 @@
   "updateBadgeImportant": "v{version} disponible — actualizaci\u00f3n importante",
   "updateActionDownload": "Descargar instalador",
   "updateActionOpenStore": "Abrir Microsoft Store",
-  "updateActionCopyBrew": "Copiar comando brew",
+  "updateActionCopyCommand": "Copiar comando {tool}",
   "updateActionCopied": "Copiado al portapapeles",
 
   "blockedTitle": "Actualizaci\u00f3n requerida",

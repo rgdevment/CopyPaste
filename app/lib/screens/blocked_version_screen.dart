@@ -131,11 +131,12 @@ class BlockedVersionScreen extends StatelessWidget {
       );
     }
 
-    if (channel == InstallChannel.homebrew || channel == InstallChannel.snap) {
+    final tool = _packageManagerName(channel);
+    if (tool != null) {
       final cmd = info.command;
       if (cmd == null) return null;
       return _BlockAction(
-        label: l.updateActionCopyBrew,
+        label: l.updateActionCopyCommand(tool),
         onPressed: () async {
           await Clipboard.setData(ClipboardData(text: cmd));
           if (!context.mounted) return;
@@ -153,6 +154,15 @@ class BlockedVersionScreen extends StatelessWidget {
       onPressed: () => UrlHelper.open(url),
     );
   }
+
+  // Channels whose update is a command the user runs, not a download.
+  static String? _packageManagerName(InstallChannel channel) =>
+      switch (channel) {
+        InstallChannel.homebrew => 'brew',
+        InstallChannel.snap => 'snap',
+        InstallChannel.scoop => 'scoop',
+        _ => null,
+      };
 }
 
 class _BlockAction {
