@@ -87,8 +87,7 @@ jobs:
                   path: artifacts
 
             # attest-build-provenance only fails when *every* pattern comes up
-            # empty, so a missing artifact would otherwise be signed away in
-            # silence. Each pattern must match on its own.
+            # empty, so a single missing artifact would be signed away in silence.
             - name: Verify every artifact to attest is present
               run: |
                   set -euo pipefail
@@ -332,7 +331,7 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GIST_TOKEN }}
               run: |
-                  set -o pipefail
+                  set -euo pipefail
 
                   TAG="${GITHUB_REF_NAME}"
                   VERSION="${TAG#v}"
@@ -433,11 +432,25 @@ jobs:
                   git add "${CASK_FILE}" "${FORMULA_FILE}"
                   if git diff --cached --quiet; then
                     echo "Homebrew Tap already at ${VERSION}, nothing to push"
-                  else
-                    git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
-                    git push origin main
-                    echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                    exit 0
                   fi
+                  git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
+
+                  # Shared tap: a concurrent release can land between fetch and push.
+                  for attempt in 1 2 3 4 5; do
+                    if (( attempt > 1 )); then
+                      sleep $(( (attempt - 1) * 5 ))
+                      git fetch origin main
+                      git rebase origin/main
+                    fi
+                    if git push origin HEAD:main; then
+                      echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                      exit 0
+                    fi
+                    echo "Push rejected (attempt ${attempt})"
+                  done
+                  echo "::error::Could not push ${VERSION} to the Homebrew Tap"
+                  exit 1
 
     update-scoop-bucket:
         runs-on: ubuntu-latest
@@ -451,7 +464,7 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GIST_TOKEN }}
               run: |
-                  set -o pipefail
+                  set -euo pipefail
 
                   TAG="${GITHUB_REF_NAME}"
                   VERSION="${TAG#v}"
@@ -468,8 +481,8 @@ jobs:
                     -o "/tmp/${SETUP}" "${BASE}/${SETUP}"
                   SHA=$(sha256sum "/tmp/${SETUP}" | awk '{print $1}')
 
-                  # Scoop only unpacks the installer, so the uninstaller never runs
-                  # and the Run value the app writes on first launch would outlive it.
+                  # Scoop unpacks the installer without ever running its
+                  # uninstaller, so the Run value the app writes would outlive it.
                   RUN_KEY='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
                   UNINSTALL="Remove-ItemProperty -Path '${RUN_KEY}' -Name 'CopyPaste' -ErrorAction SilentlyContinue"
 
@@ -494,7 +507,6 @@ jobs:
                       license: "GPL-3.0-only",
                       architecture: {"64bit": {url: $url, hash: $hash}},
                       innosetup: true,
-                      extract_dir: "{app}",
                       shortcuts: [["CopyPaste.exe", $shortcut]],
                       pre_uninstall: [$uninstall]
                     }' > "bucket/${NAME}.json"
@@ -502,8 +514,23 @@ jobs:
                   git add "bucket/${NAME}.json"
                   if git diff --cached --quiet; then
                     echo "Scoop bucket already at ${VERSION}, nothing to push"
-                  else
-                    git commit -m "${NAME} ${VERSION}"
-                    git push origin main
-                    echo "Scoop bucket updated: ${NAME} → ${VERSION}"
+                    exit 0
                   fi
+                  git commit -m "${NAME} ${VERSION}"
+
+                  # Three repos share this bucket: a concurrent release can land
+                  # between fetch and push.
+                  for attempt in 1 2 3 4 5; do
+                    if (( attempt > 1 )); then
+                      sleep $(( (attempt - 1) * 5 ))
+                      git fetch origin main
+                      git rebase origin/main
+                    fi
+                    if git push origin HEAD:main; then
+                      echo "Scoop bucket updated: ${NAME} → ${VERSION}"
+                      exit 0
+                    fi
+                    echo "Push rejected (attempt ${attempt})"
+                  done
+                  echo "::error::Could not push ${NAME} ${VERSION} to the Scoop bucket"
+                  exit 1

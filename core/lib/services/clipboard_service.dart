@@ -155,17 +155,10 @@ class ClipboardService {
     return elapsed < pasteIgnoreWindowMs;
   }
 
-  /// Refreshes the `rtf`/`html` keys from the copy being processed.
-  ///
-  /// A plain copy of text already in the history leaves them untouched: the
-  /// styles are a layer over `content`, never a replacement for it, and "paste
-  /// as plain text" already serves the unstyled view without destroying that
-  /// layer. Dropping it would be irreversible.
-  ///
-  /// When the copy does carry styles, both keys are replaced together — a copy
-  /// bringing only HTML must not leave the previous RTF behind, or the item
-  /// would mix payloads from two different sources. Keys owned by other flows
-  /// (media metadata) are always preserved.
+  /// A plain copy leaves `rtf`/`html` untouched: styles are a layer over
+  /// `content` and "paste as plain text" already serves the unstyled view, so
+  /// dropping them would be an irreversible loss. A copy that does carry styles
+  /// replaces both keys at once, or the item would mix two sources.
   String? _mergeFormatMetadata(
     String? current,
     List<int>? rtfBytes,

@@ -97,8 +97,7 @@ class InstallChannelDetector {
         path.contains('/usr/local/Cellar/');
   }
 
-  /// Scoop keeps every app under `<root>/apps/<name>/<version|current>`, and the
-  /// root is relocatable, so the layout below the root is what identifies it.
+  // The Scoop root is relocatable, so the layout below it is the tell.
   static bool _isScoopPath(String path) {
     final lower = path.toLowerCase();
     return lower.contains('/scoop/apps/') ||

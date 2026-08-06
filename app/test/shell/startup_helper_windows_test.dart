@@ -97,6 +97,64 @@ void main() {
     });
   });
 
+  group('StartupHelper.stableExecutablePath', () {
+    late Directory root;
+
+    setUp(() {
+      root = Directory.systemTemp.createTempSync('scoop_layout_');
+    });
+
+    tearDown(() => root.deleteSync(recursive: true));
+
+    String seed(String versionDir, {bool withCurrent = true}) {
+      final versioned = Directory(
+        '${root.path}${Platform.pathSeparator}apps'
+        '${Platform.pathSeparator}copypaste'
+        '${Platform.pathSeparator}$versionDir',
+      )..createSync(recursive: true);
+      final exe = File(
+        '${versioned.path}${Platform.pathSeparator}CopyPaste.exe',
+      )..writeAsStringSync('');
+      if (withCurrent) {
+        final current = Directory(
+          '${root.path}${Platform.pathSeparator}apps'
+          '${Platform.pathSeparator}copypaste'
+          '${Platform.pathSeparator}current',
+        )..createSync(recursive: true);
+        File(
+          '${current.path}${Platform.pathSeparator}CopyPaste.exe',
+        ).writeAsStringSync('');
+      }
+      return exe.path;
+    }
+
+    test('rewrites a versioned Scoop path to current', () {
+      final resolved = StartupHelper.stableExecutablePath(seed('2.9.0'));
+      expect(resolved, contains('current'));
+      expect(resolved, isNot(contains('2.9.0')));
+    });
+
+    test('keeps the versioned path when current does not exist', () {
+      final versioned = seed('2.9.0', withCurrent: false);
+      expect(StartupHelper.stableExecutablePath(versioned), versioned);
+    });
+
+    test('leaves a path already on current untouched', () {
+      seed('2.9.0');
+      final currentExe =
+          '${root.path}${Platform.pathSeparator}apps'
+          '${Platform.pathSeparator}copypaste'
+          '${Platform.pathSeparator}current'
+          '${Platform.pathSeparator}CopyPaste.exe';
+      expect(StartupHelper.stableExecutablePath(currentExe), currentExe);
+    });
+
+    test('leaves a standalone install untouched', () {
+      const standalone = r'C:\Users\dev\AppData\Local\CopyPaste\CopyPaste.exe';
+      expect(StartupHelper.stableExecutablePath(standalone), standalone);
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // apply() on Windows — MSIX path: calls enable/disable and clears registry
   // ---------------------------------------------------------------------------

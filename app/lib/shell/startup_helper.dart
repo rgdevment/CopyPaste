@@ -104,7 +104,7 @@ class StartupHelper {
         );
       } else {
         if (runOnStartup) {
-          _setRegistryValue(Platform.resolvedExecutable);
+          _setRegistryValue(stableExecutablePath(Platform.resolvedExecutable));
         } else {
           _removeRegistryValue();
         }
@@ -157,14 +157,28 @@ class StartupHelper {
     }
   }
 
-  // Detects executables running from a Flutter build folder (dev runs).
-  // Writing those paths to HKCU\...\Run produces stale entries that Windows
-  // renders with a generic icon and only the registry path text once the
-  // build folder is cleaned.
+  // Writing a build-folder path to HKCU\...\Run leaves an entry Windows renders
+  // with a generic icon once the folder is cleaned.
   @visibleForTesting
   static bool isDevBuildPath(String exePath) {
     final normalized = exePath.replaceAll('/', r'\').toLowerCase();
     return normalized.contains(r'\build\windows\');
+  }
+
+  static final RegExp _versionedAppDir = RegExp(
+    r'^(.*[\\/]apps[\\/][^\\/]+[\\/])[^\\/]+([\\/].*)$',
+    caseSensitive: false,
+  );
+
+  /// `Platform.resolvedExecutable` reports the versioned target behind Scoop's
+  /// `current` junction, and that path dies on the next `scoop cleanup`.
+  @visibleForTesting
+  static String stableExecutablePath(String exePath) {
+    final match = _versionedAppDir.firstMatch(exePath);
+    if (match == null) return exePath;
+    final candidate = '${match.group(1)}current${match.group(2)}';
+    if (candidate == exePath || !File(candidate).existsSync()) return exePath;
+    return candidate;
   }
 
   static void _setRegistryValue(String exePath) {

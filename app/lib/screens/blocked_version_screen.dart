@@ -155,7 +155,6 @@ class BlockedVersionScreen extends StatelessWidget {
     );
   }
 
-  // Channels whose update is a command the user runs, not a download.
   static String? _packageManagerName(InstallChannel channel) =>
       switch (channel) {
         InstallChannel.homebrew => 'brew',
