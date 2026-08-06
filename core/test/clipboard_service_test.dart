@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -117,22 +118,72 @@ void main() {
       expect(rich.hasRichText, isTrue);
     });
 
-    test('re-copying as plain clears a stale rtf', () async {
+    test('re-copying as plain keeps the stored format', () async {
       final rich = await service.processText(
         'same text',
         ClipboardContentType.text,
         rtfBytes: [0x7B, 0x5C, 0x72, 0x74, 0x66],
+        htmlBytes: [0x3C, 0x62, 0x3E],
       );
-      expect(rich!.hasRichText, isTrue);
 
       final plain = await service.processText(
         'same text',
         ClipboardContentType.text,
       );
 
-      expect(plain!.id, equals(rich.id));
-      expect(plain.hasRichText, isFalse);
-      expect(plain.metadata, isNull);
+      expect(plain!.id, equals(rich!.id));
+      expect(plain.hasRichText, isTrue);
+      expect(plain.hasFormatting, isTrue);
+    });
+
+    test('an empty format payload does not clear the stored one', () async {
+      await service.processText(
+        'same text',
+        ClipboardContentType.text,
+        rtfBytes: [0x7B, 0x5C, 0x72, 0x74, 0x66],
+      );
+
+      final plain = await service.processText(
+        'same text',
+        ClipboardContentType.text,
+        rtfBytes: const [],
+        htmlBytes: const [],
+      );
+
+      expect(plain!.hasRichText, isTrue);
+    });
+
+    test('a styled copy replaces both format keys at once', () async {
+      await service.processText(
+        'same text',
+        ClipboardContentType.text,
+        rtfBytes: [0x7B, 0x5C, 0x72, 0x74, 0x66],
+      );
+
+      final htmlOnly = await service.processText(
+        'same text',
+        ClipboardContentType.text,
+        htmlBytes: [0x3C, 0x62, 0x3E],
+      );
+
+      final meta = jsonDecode(htmlOnly!.metadata!) as Map<String, dynamic>;
+      expect(meta.containsKey('rtf'), isFalse);
+      expect(meta['html'], isNotEmpty);
+    });
+
+    test('a plain re-copy preserves keys owned by other flows', () async {
+      final first = await service.processText(
+        'media caption',
+        ClipboardContentType.text,
+      );
+      await service.updateMetadata(first!.id, '{"duration":42}');
+
+      final second = await service.processText(
+        'media caption',
+        ClipboardContentType.text,
+      );
+
+      expect(second!.metadata, contains('duration'));
     });
 
     test('metadata refresh preserves keys owned by other flows', () async {
