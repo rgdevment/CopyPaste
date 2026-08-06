@@ -62,6 +62,11 @@ jobs:
         timeout-minutes: 10
         name: Create GitHub Release
 
+        permissions:
+            contents: write
+            id-token: write
+            attestations: write
+
         steps:
             - uses: actions/checkout@v6
               with:
@@ -80,6 +85,17 @@ jobs:
               uses: actions/download-artifact@v7
               with:
                   path: artifacts
+
+            - uses: actions/attest-build-provenance@v4
+              with:
+                  subject-path: |
+                      artifacts/release-windows/**/*_Setup.exe
+                      artifacts/release-windows/**/*_store.msix*
+                      artifacts/release-macos/*.dmg
+                      artifacts/release-linux/*.AppImage
+                      artifacts/release-linux/*.deb
+                      artifacts/release-linux/*.rpm
+                      artifacts/release-linux/*.tar.gz
 
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
@@ -389,3 +405,58 @@ jobs:
                   git push origin main
 
                   echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+
+    update-scoop-bucket:
+        runs-on: ubuntu-latest
+        needs: github-release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        timeout-minutes: 5
+        name: Update Scoop Bucket
+
+        steps:
+            - name: Update Scoop Bucket
+              env:
+                  GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+              run: |
+                  TAG="${GITHUB_REF_NAME}"
+                  VERSION="${TAG#v}"
+                  BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+                  SETUP="CopyPaste_${VERSION}_x64_Setup.exe"
+
+                  if [[ "$VERSION" == *-* ]]; then
+                    NAME="copypaste-beta"; SUFFIX=" (beta)"
+                  else
+                    NAME="copypaste"; SUFFIX=""
+                  fi
+
+                  curl -fSL -o "/tmp/${SETUP}" "${BASE}/${SETUP}"
+                  SHA=$(sha256sum "/tmp/${SETUP}" | awk '{print $1}')
+
+                  git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/scoop-bucket.git" /tmp/bucket
+                  cd /tmp/bucket
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  mkdir -p bucket
+
+                  jq -n \
+                    --arg version "$VERSION" \
+                    --arg desc "Clipboard history manager${SUFFIX}" \
+                    --arg home "https://github.com/${{ github.repository }}" \
+                    --arg url "${BASE}/${SETUP}" \
+                    --arg hash "$SHA" \
+                    '{
+                      version: $version,
+                      description: $desc,
+                      homepage: $home,
+                      license: "GPL-3.0-only",
+                      architecture: {"64bit": {url: $url, hash: $hash}},
+                      innosetup: true,
+                      extract_dir: "{app}",
+                      shortcuts: [["copypaste.exe", "CopyPaste"]]
+                    }' > "bucket/${NAME}.json"
+
+                  git add "bucket/${NAME}.json"
+                  git commit -m "${NAME} ${VERSION}"
+                  git push origin main
+
+                  echo "Scoop bucket updated: ${NAME} → ${VERSION}"
