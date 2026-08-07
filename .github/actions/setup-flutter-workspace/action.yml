@@ -22,7 +22,10 @@ runs:
         - name: Cache pub dependencies
           uses: actions/cache@v6
           with:
-              path: ~/.pub-cache
+              # Windows keeps the pub cache under LOCALAPPDATA, not ~/.pub-cache.
+              path: |
+                  ~/.pub-cache
+                  ~/AppData/Local/Pub/Cache
               key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
               restore-keys: ${{ runner.os }}-pub-
 
@@ -30,9 +33,11 @@ runs:
           shell: bash
           run: dart pub global activate melos
 
+        # Invoked through dart: on Windows the entry point is melos.bat, and
+        # git bash does not resolve .bat from PATH.
         - name: Bootstrap workspace
           shell: bash
-          run: melos bootstrap
+          run: dart pub global run melos:melos bootstrap
 
         # Must run after the cache step: the cache key hashes every pubspec.yaml.
         - name: Stamp version into app/pubspec.yaml
