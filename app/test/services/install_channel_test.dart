@@ -26,6 +26,31 @@ void main() {
       );
       expect(c, InstallChannel.snap);
     });
+
+    test('detects scoop installs on the default root', () {
+      final c = InstallChannelDetector.detect(
+        execPathOverride:
+            r'C:\Users\dev\scoop\apps\copypaste\current\CopyPaste.exe',
+        platformOverride: HostPlatform.windows,
+      );
+      expect(c, InstallChannel.scoop);
+    });
+
+    test('detects scoop installs on a relocated root', () {
+      final c = InstallChannelDetector.detect(
+        execPathOverride: r'D:\tools\apps\copypaste-beta\2.9.0\CopyPaste.exe',
+        platformOverride: HostPlatform.windows,
+      );
+      expect(c, InstallChannel.scoop);
+    });
+
+    test('a standalone install is still githubWindows', () {
+      final c = InstallChannelDetector.detect(
+        execPathOverride: r'C:\Users\dev\AppData\Local\CopyPaste\CopyPaste.exe',
+        platformOverride: HostPlatform.windows,
+      );
+      expect(c, InstallChannel.githubWindows);
+    });
   });
 
   group('manifestKey', () {

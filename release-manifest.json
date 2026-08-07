@@ -8,6 +8,9 @@
     "github_windows": {
       "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
     },
+    "scoop": {
+      "command": "scoop update copypaste"
+    },
     "msstore": {
       "url": "ms-windows-store://pdp/?productid=PLACEHOLDER"
     },

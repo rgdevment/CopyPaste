@@ -1412,11 +1412,11 @@ abstract class AppLocalizations {
   /// **'Open Microsoft Store'**
   String get updateActionOpenStore;
 
-  /// Action button to copy the Homebrew upgrade command
+  /// Action button to copy the package manager upgrade command
   ///
   /// In en, this message translates to:
-  /// **'Copy brew command'**
-  String get updateActionCopyBrew;
+  /// **'Copy {tool} command'**
+  String updateActionCopyCommand(String tool);
 
   /// Snack/tooltip shown after copying the upgrade command
   ///

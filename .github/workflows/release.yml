@@ -62,6 +62,11 @@ jobs:
         timeout-minutes: 10
         name: Create GitHub Release
 
+        permissions:
+            contents: write
+            id-token: write
+            attestations: write
+
         steps:
             - uses: actions/checkout@v6
               with:
@@ -80,6 +85,42 @@ jobs:
               uses: actions/download-artifact@v7
               with:
                   path: artifacts
+
+            # attest-build-provenance only fails when *every* pattern comes up
+            # empty, so a single missing artifact would be signed away in silence.
+            - name: Verify every artifact to attest is present
+              run: |
+                  set -euo pipefail
+                  shopt -s globstar nullglob
+                  status=0
+                  for pattern in \
+                    'artifacts/release-windows/**/*_Setup.exe' \
+                    'artifacts/release-windows/**/*_store.msix*' \
+                    'artifacts/release-macos/*.dmg' \
+                    'artifacts/release-linux/*.AppImage' \
+                    'artifacts/release-linux/*.deb' \
+                    'artifacts/release-linux/*.rpm' \
+                    'artifacts/release-linux/*.tar.gz'; do
+                    matches=( $pattern )
+                    if (( ${#matches[@]} == 0 )); then
+                      echo "::error::No artifact matched '${pattern}'"
+                      status=1
+                    else
+                      printf '%s -> %s\n' "$pattern" "${matches[*]}"
+                    fi
+                  done
+                  exit $status
+
+            - uses: actions/attest-build-provenance@v4
+              with:
+                  subject-path: |
+                      artifacts/release-windows/**/*_Setup.exe
+                      artifacts/release-windows/**/*_store.msix*
+                      artifacts/release-macos/*.dmg
+                      artifacts/release-linux/*.AppImage
+                      artifacts/release-linux/*.deb
+                      artifacts/release-linux/*.rpm
+                      artifacts/release-linux/*.tar.gz
 
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
@@ -290,6 +331,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GIST_TOKEN }}
               run: |
+                  set -euo pipefail
+
                   TAG="${GITHUB_REF_NAME}"
                   VERSION="${TAG#v}"
 
@@ -300,12 +343,14 @@ jobs:
                   DEB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DEB_NAME}"
 
                   echo "Downloading DMG to compute SHA256..."
-                  curl -fSL -o "/tmp/${DMG_NAME}" "${DMG_URL}"
+                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
+                    -o "/tmp/${DMG_NAME}" "${DMG_URL}"
                   DMG_SHA256=$(sha256sum "/tmp/${DMG_NAME}" | awk '{print $1}')
                   rm -f "/tmp/${DMG_NAME}"
 
                   echo "Downloading deb to compute SHA256..."
-                  curl -fSL -o "/tmp/${DEB_NAME}" "${DEB_URL}"
+                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
+                    -o "/tmp/${DEB_NAME}" "${DEB_URL}"
                   DEB_SHA256=$(sha256sum "/tmp/${DEB_NAME}" | awk '{print $1}')
                   rm -f "/tmp/${DEB_NAME}"
 
@@ -385,7 +430,107 @@ jobs:
                   FORMULA_EOF
 
                   git add "${CASK_FILE}" "${FORMULA_FILE}"
+                  if git diff --cached --quiet; then
+                    echo "Homebrew Tap already at ${VERSION}, nothing to push"
+                    exit 0
+                  fi
                   git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
-                  git push origin main
 
-                  echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                  # Shared tap: a concurrent release can land between fetch and push.
+                  for attempt in 1 2 3 4 5; do
+                    if (( attempt > 1 )); then
+                      sleep $(( (attempt - 1) * 5 ))
+                      git fetch origin main
+                      git rebase origin/main
+                    fi
+                    if git push origin HEAD:main; then
+                      echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                      exit 0
+                    fi
+                    echo "Push rejected (attempt ${attempt})"
+                  done
+                  echo "::error::Could not push ${VERSION} to the Homebrew Tap"
+                  exit 1
+
+    update-scoop-bucket:
+        runs-on: ubuntu-latest
+        needs: github-release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        timeout-minutes: 5
+        name: Update Scoop Bucket
+
+        steps:
+            - name: Update Scoop Bucket
+              env:
+                  GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+              run: |
+                  set -euo pipefail
+
+                  TAG="${GITHUB_REF_NAME}"
+                  VERSION="${TAG#v}"
+                  BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+                  SETUP="CopyPaste_${VERSION}_x64_Setup.exe"
+
+                  if [[ "$VERSION" == *-* ]]; then
+                    NAME="copypaste-beta"; SUFFIX=" (beta)"
+                  else
+                    NAME="copypaste"; SUFFIX=""
+                  fi
+
+                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
+                    -o "/tmp/${SETUP}" "${BASE}/${SETUP}"
+                  SHA=$(sha256sum "/tmp/${SETUP}" | awk '{print $1}')
+
+                  # Scoop unpacks the installer without ever running its
+                  # uninstaller, so the Run value the app writes would outlive it.
+                  RUN_KEY='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+                  UNINSTALL="Remove-ItemProperty -Path '${RUN_KEY}' -Name 'CopyPaste' -ErrorAction SilentlyContinue"
+
+                  git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/scoop-bucket.git" /tmp/bucket
+                  cd /tmp/bucket
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  mkdir -p bucket
+
+                  jq -n \
+                    --arg version "$VERSION" \
+                    --arg desc "Clipboard history manager${SUFFIX}" \
+                    --arg home "https://github.com/${{ github.repository }}" \
+                    --arg url "${BASE}/${SETUP}" \
+                    --arg hash "$SHA" \
+                    --arg shortcut "CopyPaste${SUFFIX}" \
+                    --arg uninstall "$UNINSTALL" \
+                    '{
+                      version: $version,
+                      description: $desc,
+                      homepage: $home,
+                      license: "GPL-3.0-only",
+                      architecture: {"64bit": {url: $url, hash: $hash}},
+                      innosetup: true,
+                      shortcuts: [["CopyPaste.exe", $shortcut]],
+                      pre_uninstall: [$uninstall]
+                    }' > "bucket/${NAME}.json"
+
+                  git add "bucket/${NAME}.json"
+                  if git diff --cached --quiet; then
+                    echo "Scoop bucket already at ${VERSION}, nothing to push"
+                    exit 0
+                  fi
+                  git commit -m "${NAME} ${VERSION}"
+
+                  # Three repos share this bucket: a concurrent release can land
+                  # between fetch and push.
+                  for attempt in 1 2 3 4 5; do
+                    if (( attempt > 1 )); then
+                      sleep $(( (attempt - 1) * 5 ))
+                      git fetch origin main
+                      git rebase origin/main
+                    fi
+                    if git push origin HEAD:main; then
+                      echo "Scoop bucket updated: ${NAME} → ${VERSION}"
+                      exit 0
+                    fi
+                    echo "Push rejected (attempt ${attempt})"
+                  done
+                  echo "::error::Could not push ${NAME} ${VERSION} to the Scoop bucket"
+                  exit 1

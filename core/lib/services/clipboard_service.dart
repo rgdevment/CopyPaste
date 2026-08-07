@@ -155,12 +155,10 @@ class ClipboardService {
     return elapsed < pasteIgnoreWindowMs;
   }
 
-  /// Rebuilds the `rtf`/`html` keys from the copy being processed.
-  ///
-  /// These keys describe the *last* copy, so re-copying the same text as plain
-  /// must drop a stale RTF: otherwise the item would keep claiming a format the
-  /// clipboard no longer carries, and pasting would restore it. Keys owned by
-  /// other flows (media metadata) are preserved.
+  /// A plain copy leaves `rtf`/`html` untouched: styles are a layer over
+  /// `content` and "paste as plain text" already serves the unstyled view, so
+  /// dropping them would be an irreversible loss. A copy that does carry styles
+  /// replaces both keys at once, or the item would mix two sources.
   String? _mergeFormatMetadata(
     String? current,
     List<int>? rtfBytes,
@@ -173,6 +171,10 @@ class ClipboardService {
         if (decoded is Map<String, dynamic>) meta.addAll(decoded);
       } catch (_) {}
     }
+    final carriesFormat =
+        (rtfBytes != null && rtfBytes.isNotEmpty) ||
+        (htmlBytes != null && htmlBytes.isNotEmpty);
+    if (!carriesFormat) return meta.isEmpty ? null : jsonEncode(meta);
     meta.remove('rtf');
     meta.remove('html');
     if (rtfBytes != null) meta['rtf'] = base64Encode(rtfBytes);

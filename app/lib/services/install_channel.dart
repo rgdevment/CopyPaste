@@ -10,6 +10,7 @@ const bool _isStoreBuild = bool.fromEnvironment(
 enum InstallChannel {
   msStore,
   githubWindows,
+  scoop,
   githubMacos,
   homebrew,
   githubLinux,
@@ -52,7 +53,10 @@ class InstallChannelDetector {
       return InstallChannel.githubLinux;
     }
 
-    if (host == HostPlatform.windows) return InstallChannel.githubWindows;
+    if (host == HostPlatform.windows) {
+      if (_isScoopPath(path)) return InstallChannel.scoop;
+      return InstallChannel.githubWindows;
+    }
 
     return InstallChannel.unknown;
   }
@@ -70,6 +74,8 @@ class InstallChannelDetector {
         return 'msstore';
       case InstallChannel.githubWindows:
         return 'github_windows';
+      case InstallChannel.scoop:
+        return 'scoop';
       case InstallChannel.githubMacos:
         return 'github_macos';
       case InstallChannel.homebrew:
@@ -89,5 +95,13 @@ class InstallChannelDetector {
     return path.contains('/Cellar/') ||
         path.contains('/opt/homebrew/') ||
         path.contains('/usr/local/Cellar/');
+  }
+
+  // The Scoop root is relocatable, so the layout below it is the tell.
+  static bool _isScoopPath(String path) {
+    final lower = path.toLowerCase();
+    return lower.contains('/scoop/apps/') ||
+        lower.contains('/apps/copypaste/') ||
+        lower.contains('/apps/copypaste-beta/');
   }
 }
