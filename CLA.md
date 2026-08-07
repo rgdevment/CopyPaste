@@ -86,6 +86,11 @@ litigation is filed.
 - Your Contribution does not knowingly include third-party code under terms
   incompatible with this agreement. Where it includes third-party material you
   did not write, you identify it and its licence.
+- **Using a generative tool changes none of the above.** Assistants are welcome
+  — this project is built with them — but they do not know where their output
+  came from, and you are the one representing that it can be licensed. If a
+  tool reproduced someone else's code, it is still third-party material and the
+  point above applies to it.
 
 ## 5. What You are not promising
 

@@ -4,6 +4,11 @@ name: CLA
 # contribution cannot land before its author has signed. Signatures are stored
 # in a separate repository rather than this one to keep the audit trail intact
 # even if this repo's history is ever rewritten.
+#
+# Tools are deliberately NOT on the allowlist. A co-author that cannot sign
+# blocks its own pull request, and that is the intended outcome: CONTRIBUTING
+# asks for the credit line to name people only, so a blocked PR means the guide
+# went unread. Reopening it without that trailer costs a minute.
 
 on:
   issue_comment:

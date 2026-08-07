@@ -117,6 +117,12 @@ I have read the CLA Document and I hereby sign the CLA
 
 That is it — every later Pull Request from the same account is covered.
 
+**Please leave tool co-authorship out of your commits.** Assistants are welcome
+here — this project is built with them — but the credit line is for people. If
+your editor adds a trailer naming one, drop it before you push. It changes
+nothing about what you are allowed to submit; section 4 of the CLA already puts
+the responsibility for generated code on you, whichever tool helped write it.
+
 **In return, the project commits that:**
 
 - The community edition stays available under the GPL-3.0.
