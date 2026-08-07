@@ -1,0 +1,58 @@
+name: Setup Flutter workspace
+description: Flutter toolchain, pub cache and melos bootstrap, optionally stamping the release version into app/pubspec.yaml.
+
+inputs:
+    channel:
+        description: Flutter channel passed to subosito/flutter-action.
+        required: false
+        default: stable
+    version:
+        description: When set, writes this version into app/pubspec.yaml after bootstrap.
+        required: false
+        default: ""
+
+runs:
+    using: composite
+    steps:
+        - uses: subosito/flutter-action@v2
+          with:
+              channel: ${{ inputs.channel }}
+              cache: true
+
+        - name: Cache pub dependencies
+          uses: actions/cache@v6
+          with:
+              # Windows keeps the pub cache under LOCALAPPDATA, not ~/.pub-cache.
+              path: |
+                  ~/.pub-cache
+                  ~/AppData/Local/Pub/Cache
+              key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+              restore-keys: ${{ runner.os }}-pub-
+
+        - name: Install Melos
+          shell: bash
+          run: dart pub global activate melos
+
+        # Invoked through dart: on Windows the entry point is melos.bat, and
+        # git bash does not resolve .bat from PATH.
+        - name: Bootstrap workspace
+          shell: bash
+          run: dart pub global run melos:melos bootstrap
+
+        # Must run after the cache step: the cache key hashes every pubspec.yaml.
+        - name: Stamp version into app/pubspec.yaml
+          if: inputs.version != ''
+          shell: bash
+          env:
+              VERSION: ${{ inputs.version }}
+          run: |
+              set -euo pipefail
+              tmp="$(mktemp)"
+              sed "s/^version:.*/version: ${VERSION}/" app/pubspec.yaml > "$tmp"
+              mv "$tmp" app/pubspec.yaml
+              if [[ "$(grep -m1 '^version:' app/pubspec.yaml)" != "version: ${VERSION}" ]]; then
+                echo "::error::Failed to stamp version ${VERSION} into app/pubspec.yaml"
+                grep -m1 '^version:' app/pubspec.yaml
+                exit 1
+              fi
+              echo "app/pubspec.yaml -> version: ${VERSION}"

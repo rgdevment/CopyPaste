@@ -30,54 +30,28 @@ jobs:
             APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   ref: ${{ github.ref_name }}
 
             - name: Resolve version
               id: get_version
+              env:
+                  VERSION: ${{ inputs.version }}
               run: |
-                  VERSION="${{ inputs.version }}"
-
-                  IS_PRERELEASE="false"
-                  if [[ "$VERSION" == *-* ]]; then
-                    IS_PRERELEASE="true"
-                  fi
-
+                  set -euo pipefail
                   BUILD_NAME="${VERSION%-*}"
                   BUILD_NUMBER=$(echo "$BUILD_NAME" | awk -F. '{printf "%d%03d%03d", $1, $2, $3}')
 
                   echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
                   echo "BUILD_NAME=$BUILD_NAME" >> "$GITHUB_OUTPUT"
                   echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-                  echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
-                  echo "Version: $VERSION  Build: $BUILD_NAME ($BUILD_NUMBER)  PreRelease: $IS_PRERELEASE"
+                  echo "Version: $VERSION  Build: $BUILD_NAME ($BUILD_NUMBER)"
 
-            - uses: subosito/flutter-action@v2
+            - uses: ./.github/actions/setup-flutter-workspace
               with:
-                  channel: stable
-                  cache: true
+                  version: ${{ steps.get_version.outputs.VERSION }}
 
-            - name: Cache pub dependencies
-              uses: actions/cache@v5
-              with:
-                  path: ~/.pub-cache
-                  key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-                  restore-keys: ${{ runner.os }}-pub-
-
-            - name: Install Melos
-              run: dart pub global activate melos
-
-            - name: Get dependencies
-              run: melos bootstrap
-
-            - name: Update pubspec version
-              run: |
-                  VERSION="${{ steps.get_version.outputs.VERSION }}"
-                  sed -i '' "s/^version:.*/version: $VERSION/" app/pubspec.yaml
-                  echo "Updated pubspec.yaml version to: $VERSION"
-
-            # ── Code Signing Setup ──
             - name: Import signing certificate
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
@@ -104,7 +78,6 @@ jobs:
                   echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
                   echo "Certificate imported successfully"
 
-            # ── Build (universal: arm64 + x86_64) ──
             - name: Refresh CocoaPods lock
               run: |
                   rm -f app/macos/Podfile.lock
@@ -129,7 +102,6 @@ jobs:
                   fi
                   echo "Universal binary verified (x86_64 + arm64)"
 
-            # ── Code Sign the .app ──
             - name: Sign application
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
@@ -154,7 +126,6 @@ jobs:
                   codesign --deep --force --sign - "$APP_PATH"
                   echo "Ad-hoc signed (unsigned build)"
 
-            # ── Create DMG ──
             - name: Install create-dmg
               run: brew install create-dmg
 
@@ -187,7 +158,6 @@ jobs:
 
                   echo "DMG created: $DMG_NAME ($(du -h "app/dist/$DMG_NAME" | cut -f1))"
 
-            # ── Sign & Notarize DMG ──
             - name: Sign DMG
               if: env.MACOS_CERTIFICATE_P12 != ''
               run: |
@@ -220,16 +190,13 @@ jobs:
                   spctl --assess --type open --context context:primary-signature "$DMG_PATH"
                   echo "Notarization complete"
 
-            # ── Cleanup ──
             - name: Cleanup keychain
               if: always() && env.KEYCHAIN_PATH != ''
               run: security delete-keychain "$KEYCHAIN_PATH" || true
 
-            # ── Upload ──
             - name: Upload artifact
-              uses: actions/upload-artifact@v6
+              uses: actions/upload-artifact@v7
               with:
                   name: release-macos
                   path: app/dist/*.dmg
                   retention-days: 5
-
