@@ -1,6 +1,6 @@
 # Contributor License Agreement
 
-CopyPaste Individual Contributor License Agreement, version 1.0.
+CopyPaste Individual Contributor License Agreement, version 1.1.
 
 Thank you for contributing to CopyPaste. This agreement exists for one reason:
 CopyPaste is released under the GPL-3.0 **and** offered under separate
@@ -25,8 +25,14 @@ is controlled by, or is under common control with that entity.
 modification to or addition to an existing work, that You intentionally submit
 to this project for inclusion in it. "Submit" means any form of electronic,
 verbal, or written communication sent to the project or its maintainers,
-including but not limited to Pull Requests, issues, and patches — excluding
+including but not limited to Pull Requests, issues, patches, and code
+suggestions made during review — excluding
 any communication you conspicuously mark "Not a Contribution".
+This agreement covers every Contribution You submit after signing **and every
+one You submitted before**. Code reaches a project by more routes than a Pull
+Request, and a signature that only looked forward would leave those earlier
+routes unaccounted for.
+
 
 **"Project Owner"** means Mario Hidalgo G. (rgdevment), the copyright holder
 and maintainer of CopyPaste.
@@ -42,6 +48,19 @@ Contribution and such derivative works.
 **Including under licences other than the GPL-3.0.** This is the clause that
 makes commercial licensing possible; it is stated explicitly so nobody has to
 infer it from the word "sublicense".
+It also covers **distributing signed binaries through application stores**,
+whose terms of service are not compatible with the licence this project uses.
+The source stays available either way; what needs separate terms is the
+compiled build that a store hands to its users.
+
+**Moral rights.** To the fullest extent permitted by the law that applies to
+You, You waive — and agree not to assert — any moral rights in Your
+Contribution against the Project Owner or against anyone receiving software
+from the Project Owner, insofar as those rights would prevent the uses granted
+above. Where such rights cannot be waived, You agree not to enforce them in a
+way that blocks those uses. This does not touch attribution: section 6 commits
+the Project Owner to preserving Your authorship.
+
 
 ## 3. Patent licence
 
@@ -92,6 +111,23 @@ Project Owner:
 If any representation in section 4 stops being accurate — for example, you
 discover your employer does hold rights to something you submitted — tell the
 Project Owner at <github@apirest.cl>.
+
+## 8. The rest
+
+**Governing law.** This agreement is governed by the laws of Chile, without
+regard to conflict-of-law rules. Nothing here limits any right You hold under
+mandatory law where You live.
+
+**If a clause fails.** If any provision is held unenforceable, the rest stays
+in force and that provision is read as narrowly as needed to make it valid.
+
+**This is the whole agreement** between You and the Project Owner about Your
+Contributions, and it replaces anything discussed before it. A later version
+of this document applies only to Contributions You submit after signing that
+version.
+
+**No obligation to merge.** Signing does not oblige the Project Owner to
+accept, merge, or keep any Contribution.
 
 ## How to sign
 
