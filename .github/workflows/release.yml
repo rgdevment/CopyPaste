@@ -14,25 +14,102 @@ on:
 permissions:
     contents: write
 
+# Releases publish to repositories shared with other projects; never run two at once.
+concurrency:
+    group: release
+    cancel-in-progress: false
+
 jobs:
     extract-version:
         runs-on: ubuntu-latest
         name: Extract Version
+        timeout-minutes: 5
         outputs:
             version: ${{ steps.get_version.outputs.VERSION }}
+            is_prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
+            is_tag: ${{ steps.get_version.outputs.IS_TAG }}
         steps:
             - name: Resolve version
               id: get_version
+              env:
+                  DISPATCH_VERSION: ${{ github.event.inputs.version }}
               run: |
+                  set -euo pipefail
+                  IS_TAG="false"
                   if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-                    VERSION="${{ github.event.inputs.version }}"
+                    VERSION="$DISPATCH_VERSION"
                   elif [[ "$GITHUB_REF" =~ refs/tags/v(.+) ]]; then
                     VERSION="${BASH_REMATCH[1]}"
+                    IS_TAG="true"
                   else
                     VERSION="2.0.0"
                   fi
+
+                  if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+                    echo "::error::'$VERSION' is not a valid version (expected MAJOR.MINOR.PATCH[-prerelease])"
+                    exit 1
+                  fi
+
+                  IS_PRERELEASE="false"
+                  if [[ "$VERSION" == *-* ]]; then
+                    IS_PRERELEASE="true"
+                  fi
+
                   echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-                  echo "Resolved version: $VERSION"
+                  echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+                  echo "IS_TAG=$IS_TAG" >> "$GITHUB_OUTPUT"
+                  echo "Resolved version: $VERSION (prerelease=$IS_PRERELEASE, tag=$IS_TAG)"
+
+            # Fails now instead of after 45 minutes of builds, or worse, silently unsigned.
+            - name: Check publishing credentials
+              if: steps.get_version.outputs.IS_TAG == 'true'
+              env:
+                  RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+                  GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+                  STORE_APP_ID: ${{ vars.STORE_APP_ID }}
+                  PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+                  PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+                  MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+                  MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+                  APPLE_ID: ${{ secrets.APPLE_ID }}
+                  APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+                  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+                  IS_PRERELEASE: ${{ steps.get_version.outputs.IS_PRERELEASE }}
+              run: |
+                  set -uo pipefail
+                  status=0
+
+                  require() {
+                    if [[ -z "${!1:-}" ]]; then
+                      echo "::error::$1 is not set; $2"
+                      status=1
+                    else
+                      echo "ok      $1"
+                    fi
+                  }
+                  prefer() {
+                    if [[ -z "${!1:-}" ]]; then
+                      echo "::warning::$1 is not set; $2"
+                    else
+                      echo "ok      $1"
+                    fi
+                  }
+
+                  require RELEASE_PRIVATE_KEY "release-manifest.json cannot be signed"
+                  require GIST_TOKEN "the Homebrew tap and Scoop bucket cannot be updated"
+                  if [[ "$IS_PRERELEASE" != "true" ]]; then
+                    require STORE_APP_ID "the Microsoft Store submission has no product id"
+                  fi
+
+                  prefer PFX_BASE64 "the Windows installer will ship unsigned"
+                  prefer PFX_PASSWORD "the Windows installer will ship unsigned"
+                  prefer MACOS_CERTIFICATE_P12 "the macOS build will be ad-hoc signed and not notarized"
+                  prefer MACOS_CERTIFICATE_PASSWORD "the macOS certificate cannot be imported"
+                  prefer APPLE_ID "the DMG will not be notarized"
+                  prefer APPLE_APP_PASSWORD "the DMG will not be notarized"
+                  prefer APPLE_TEAM_ID "the DMG will not be notarized"
+
+                  exit $status
 
     build-windows:
         needs: extract-version
@@ -58,7 +135,7 @@ jobs:
     github-release:
         runs-on: ubuntu-latest
         needs: [extract-version, build-windows, build-macos, build-linux]
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        if: needs.extract-version.outputs.is_tag == 'true'
         timeout-minutes: 10
         name: Create GitHub Release
 
@@ -68,7 +145,7 @@ jobs:
             attestations: write
 
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   ref: ${{ github.ref_name }}
                   fetch-depth: 0
@@ -88,19 +165,27 @@ jobs:
 
             # attest-build-provenance only fails when *every* pattern comes up
             # empty, so a single missing artifact would be signed away in silence.
-            - name: Verify every artifact to attest is present
+            - name: Verify every release artifact is present
+              env:
+                  IS_PRERELEASE: ${{ needs.extract-version.outputs.is_prerelease }}
               run: |
                   set -euo pipefail
                   shopt -s globstar nullglob
+                  patterns=(
+                    'artifacts/release-windows/**/*_Setup.exe'
+                    'artifacts/release-macos/*.dmg'
+                    'artifacts/release-linux/*.AppImage'
+                    'artifacts/release-linux/*.AppImage.zsync'
+                    'artifacts/release-linux/*.deb'
+                    'artifacts/release-linux/*.rpm'
+                    'artifacts/release-linux/*.tar.gz'
+                    'artifacts/release-linux/SHA256SUMS'
+                  )
+                  if [[ "$IS_PRERELEASE" != "true" ]]; then
+                    patterns+=( 'artifacts/release-windows/**/*_store.msix*' )
+                  fi
                   status=0
-                  for pattern in \
-                    'artifacts/release-windows/**/*_Setup.exe' \
-                    'artifacts/release-windows/**/*_store.msix*' \
-                    'artifacts/release-macos/*.dmg' \
-                    'artifacts/release-linux/*.AppImage' \
-                    'artifacts/release-linux/*.deb' \
-                    'artifacts/release-linux/*.rpm' \
-                    'artifacts/release-linux/*.tar.gz'; do
+                  for pattern in "${patterns[@]}"; do
                     matches=( $pattern )
                     if (( ${#matches[@]} == 0 )); then
                       echo "::error::No artifact matched '${pattern}'"
@@ -127,8 +212,8 @@ jobs:
               with:
                   body: ${{ steps.tag_message.outputs.TAG_BODY }}
                   generate_release_notes: true
-                  prerelease: ${{ contains(github.ref_name, '-') }}
-                  make_latest: true
+                  prerelease: ${{ needs.extract-version.outputs.is_prerelease == 'true' }}
+                  make_latest: ${{ needs.extract-version.outputs.is_prerelease != 'true' }}
                   files: |
                       artifacts/release-windows/**/*_Setup.exe
                       artifacts/release-windows/**/*_store.msix*
@@ -138,18 +223,19 @@ jobs:
                       artifacts/release-linux/*.deb
                       artifacts/release-linux/*.rpm
                       artifacts/release-linux/*.tar.gz
+                      artifacts/release-linux/SHA256SUMS
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     publish-release-manifest:
         runs-on: ubuntu-latest
-        needs: github-release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        needs: [extract-version, github-release]
+        if: needs.extract-version.outputs.is_tag == 'true'
         timeout-minutes: 5
         name: Sign and publish release-manifest.json
 
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   ref: ${{ github.ref_name }}
                   fetch-depth: 0
@@ -270,16 +356,11 @@ jobs:
     publish-to-store:
         runs-on: windows-latest
         needs: [extract-version, github-release]
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && !contains(needs.extract-version.outputs.version, '-')
+        if: needs.extract-version.outputs.is_tag == 'true' && needs.extract-version.outputs.is_prerelease != 'true'
         timeout-minutes: 15
         name: Publish to Microsoft Store
 
         steps:
-            - uses: actions/checkout@v6
-              with:
-                  ref: ${{ github.ref_name }}
-                  fetch-depth: 0
-
             - name: Install Microsoft Store Developer CLI
               uses: microsoft/microsoft-store-apppublisher@v1.3
 
@@ -321,8 +402,8 @@ jobs:
 
     update-homebrew-cask:
         runs-on: ubuntu-latest
-        needs: github-release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        needs: [extract-version, github-release]
+        if: needs.extract-version.outputs.is_tag == 'true'
         timeout-minutes: 5
         name: Update Homebrew Tap
 
@@ -454,8 +535,8 @@ jobs:
 
     update-scoop-bucket:
         runs-on: ubuntu-latest
-        needs: github-release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        needs: [extract-version, github-release]
+        if: needs.extract-version.outputs.is_tag == 'true'
         timeout-minutes: 5
         name: Update Scoop Bucket
 

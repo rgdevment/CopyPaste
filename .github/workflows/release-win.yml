@@ -27,53 +27,34 @@ jobs:
             PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
 
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   ref: ${{ github.ref_name }}
 
             - name: Resolve version
               id: get_version
-              shell: pwsh
+              shell: bash
+              env:
+                  VERSION: ${{ inputs.version }}
               run: |
-                  $version = "${{ inputs.version }}"
+                  set -euo pipefail
+                  IS_PRERELEASE="false"
+                  if [[ "$VERSION" == *-* ]]; then
+                    IS_PRERELEASE="true"
+                  fi
+                  echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+                  echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+                  echo "Version: $VERSION  PreRelease: $IS_PRERELEASE"
 
-                  $isPrerelease = if ($version -match '-') { 'true' } else { 'false' }
-                  $baseVersion = $version -replace '-.*', ''
-                  $parts = $baseVersion.Split('.')
-                  $version4 = switch ($parts.Count) {
-                    1 { "$baseVersion.0.0.0" }
-                    2 { "$baseVersion.0.0" }
-                    3 { "$baseVersion.0" }
-                    default { $baseVersion }
-                  }
-                  echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-                  echo "VERSION4=$version4" >> $env:GITHUB_OUTPUT
-                  echo "IS_PRERELEASE=$isPrerelease" >> $env:GITHUB_OUTPUT
-                  Write-Host "Version: $version  (MSIX: $version4)  (PreRelease: $isPrerelease)"
-
-            - uses: subosito/flutter-action@v2
+            - uses: ./.github/actions/setup-flutter-workspace
               with:
-                  channel: stable
+                  version: ${{ steps.get_version.outputs.VERSION }}
 
             - name: Install Fastforge
               run: dart pub global activate fastforge
 
             - name: Install Inno Setup
               run: choco install innosetup --no-progress
-
-            - name: Install Melos
-              run: dart pub global activate melos
-
-            - name: Get dependencies
-              run: melos bootstrap
-
-            - name: Update pubspec version from tag
-              shell: pwsh
-              run: |
-                  $version = "${{ steps.get_version.outputs.VERSION }}"
-                  $pubspec = "app/pubspec.yaml"
-                  (Get-Content $pubspec) -replace '^version:\s+.*', "version: $version" | Set-Content $pubspec
-                  Write-Host "Updated pubspec.yaml version to: $version"
 
             - name: Build standalone (exe installer)
               shell: pwsh
@@ -117,12 +98,14 @@ jobs:
                   $version = "${{ steps.get_version.outputs.VERSION }}"
                   $distDir = "app/dist"
                   $setup = Get-ChildItem -Path $distDir -Recurse -Filter "*-setup.exe" | Select-Object -First 1
-                  if ($setup) {
-                    $newName = "CopyPaste_${version}_x64_Setup.exe"
-                    $newPath = Join-Path $setup.DirectoryName $newName
-                    Move-Item -Path $setup.FullName -Destination $newPath
-                    Write-Host "Renamed to: $newName"
+                  if (-not $setup) {
+                    Write-Host "::error::No installer matching *-setup.exe under $distDir"
+                    Get-ChildItem -Path $distDir -Recurse -File | ForEach-Object { Write-Host $_.FullName }
+                    exit 1
                   }
+                  $newName = "CopyPaste_${version}_x64_Setup.exe"
+                  Move-Item -Path $setup.FullName -Destination (Join-Path $setup.DirectoryName $newName)
+                  Write-Host "Renamed to: $newName"
 
             - name: Build store MSIX
               if: steps.get_version.outputs.IS_PRERELEASE != 'true'
@@ -154,24 +137,22 @@ jobs:
                     if ($found) { break }
                   }
 
-                  if ($found) {
-                    $newName = "CopyPaste_${version}_x64_store$($found.Extension)"
-                    $newPath = Join-Path $distDir $newName
-                    New-Item -ItemType Directory -Path $distDir -Force | Out-Null
-                    Move-Item -Path $found.FullName -Destination $newPath
-                    Write-Host "Moved $($found.Name) to: $newPath"
-                  } else {
-                    Write-Warning "No MSIX package found"
-                    Write-Host "--- All files under app/dist and app/build ---"
+                  if (-not $found) {
+                    Write-Host "::error::No MSIX package found under app/dist or app/build"
                     @("app/dist", "app/build") | ForEach-Object {
                       if (Test-Path $_) { Get-ChildItem -Path $_ -Recurse -File | ForEach-Object { Write-Host $_.FullName } }
                     }
+                    exit 1
                   }
 
+                  $newName = "CopyPaste_${version}_x64_store$($found.Extension)"
+                  New-Item -ItemType Directory -Path $distDir -Force | Out-Null
+                  Move-Item -Path $found.FullName -Destination (Join-Path $distDir $newName)
+                  Write-Host "Moved $($found.Name) to: $newName"
+
             - name: Upload artifacts
-              uses: actions/upload-artifact@v6
+              uses: actions/upload-artifact@v7
               with:
                   name: release-windows
                   path: app/dist/
                   retention-days: 5
-

@@ -45,10 +45,6 @@ fans out to:
 | `publish-to-store`           | Submits MSIX to the Microsoft Store (stable tags only, no `-rc`).       |
 | `publish-obs`                | Commits rendered `_service`, `.spec` and `debian.tar.xz` to OBS.        |
 
-Legacy (during the OBS transition): `release-linux.yml` still publishes to
-Cloudsmith so existing users don't break. It will be removed once OBS has
-produced two green releases.
-
 ## Release manifest — what the pipeline overrides vs. what you own
 
 `release-manifest.json` is versioned in the repo but **most of it is
@@ -237,7 +233,6 @@ If a release turns out bad **after** the tag is out:
 | ----------------------- | ------------------------ | ---------------------------------------- |
 | `RELEASE_PRIVATE_KEY`   | Actions secret           | Signs `release-manifest.json`.           |
 | `STORE_APP_ID`          | Actions variable         | Microsoft Store product ID.              |
-| `CLOUDSMITH_API_KEY`    | Actions secret (legacy)  | Publishes deb/rpm to Cloudsmith.         |
 | `OBS_USERNAME`          | Actions secret           | OBS account for `osc`.                   |
 | `OBS_PASSWORD`          | Actions secret           | OBS password / token for `osc`.          |
 | `GITHUB_TOKEN`          | Built-in                 | Releases, uploads, etc.                  |
