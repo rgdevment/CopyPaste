@@ -221,7 +221,7 @@ If you care about privacy and control, this clipboard manager is made for you. R
 - **Smart Content Detection:** Automatically recognizes and categorizes content — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each type gets its own icon, badge, and filter.
 - **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the copy-paste manager stays out of the way.
 - **Drag to Other Apps (Windows):** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor. Dragged files keep their real, unique name, so web uploaders no longer reject a second image as a duplicate `image.png`. macOS and Linux support is on the way.
-- **Formatting Is Never Lost:** Copying text that is already in the history again, this time without styles, no longer discards the formatting stored for it. Rich text contains the plain text, not the other way around: *Paste as plain text* already serves the unstyled version at paste time, without touching what is saved. Stored styles are replaced only when a new copy brings its own.
+- **Formatting Is Never Lost:** Copying text that is already in the history again, this time without styles, no longer discards the formatting stored for it. Rich text contains the plain text, not the other way around: _Paste as plain text_ already serves the unstyled version at paste time, without touching what is saved. Stored styles are replaced only when a new copy brings its own.
 
 ### Workflow and Productivity
 
