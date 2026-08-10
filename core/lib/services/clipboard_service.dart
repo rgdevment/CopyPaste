@@ -248,9 +248,11 @@ class ClipboardService {
     if (existing.content.isEmpty) return true;
     try {
       return File(existing.content).existsSync();
+      // coverage:ignore-start
     } catch (e) {
       AppLogger.warn('processImage: could not stat ${existing.content}: $e');
       return true;
+      // coverage:ignore-end
     }
   }
 

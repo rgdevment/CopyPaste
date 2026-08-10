@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:core/core.dart';
 
@@ -118,6 +121,56 @@ void main() {
 
       expect(second, isNotNull);
       expect(second!.id, isNot(equals(first!.id)));
+    });
+
+    test(
+      'reactivates instead of duplicating when the file is still there',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('cp_img_');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final onDisk = File(p.join(dir.path, 'kept.png'))
+          ..writeAsBytesSync(<int>[1, 2, 3]);
+
+        const hash = 'live-file-hash';
+        final first = await service.processImage(hash, imagePath: onDisk.path);
+        final second = await service.processImage(
+          hash,
+          imagePath: onDisk.path,
+          imageBytes: <int>[9, 9],
+        );
+
+        expect(second!.id, equals(first!.id));
+      },
+    );
+
+    test('still creates the item when the BMP cannot be written', () async {
+      final missingDir = p.join(
+        Directory.systemTemp.path,
+        'cp_absent_${DateTime.now().microsecondsSinceEpoch}',
+        'nested',
+      );
+      final isolated = ClipboardService(repo, imagesPath: missingDir);
+      addTearDown(isolated.dispose);
+
+      final result = await isolated.processImage(
+        'unwritable-hash',
+        imageBytes: <int>[1, 2, 3],
+      );
+
+      expect(result, isNotNull);
+      expect(result!.content, isEmpty);
+    });
+
+    test('reactivates a pathless entry even when bytes are present', () async {
+      const hash = 'pathless-hash';
+      final first = await service.processImage(hash);
+
+      final second = await service.processImage(
+        hash,
+        imageBytes: <int>[7, 7, 7],
+      );
+
+      expect(second!.id, equals(first!.id));
     });
 
     test('stores image path in content field', () async {

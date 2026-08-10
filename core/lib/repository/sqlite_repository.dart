@@ -116,8 +116,10 @@ class _AppDatabase extends _$_AppDatabase {
       if (mode == 2) return;
       await customStatement('PRAGMA auto_vacuum = INCREMENTAL');
       if (mode == 0) await customStatement('VACUUM');
+      // coverage:ignore-start
     } catch (e) {
       AppLogger.warn('auto_vacuum setup failed: $e');
+      // coverage:ignore-end
     }
   }
 

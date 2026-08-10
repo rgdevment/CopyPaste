@@ -64,6 +64,27 @@ void main() {
       expect(config.logsPath, equals(p.join(tempDir.path, 'logs')));
     });
 
+    test('markAsInitialized swallows an unwritable flag path', () {
+      Directory(p.join(tempDir.path, '.initialized')).createSync();
+
+      expect(() => config.markAsInitialized(), returnsNormally);
+      expect(config.isFirstRun, isTrue);
+    });
+
+    test(
+      'ensureDirectories is idempotent and keeps existing content',
+      () async {
+        await config.ensureDirectories();
+        final marker = File(p.join(config.imagesPath, 'kept.png'))
+          ..writeAsBytesSync([9]);
+
+        await config.ensureDirectories();
+
+        expect(marker.existsSync(), isTrue);
+        expect(Directory(config.logsPath).existsSync(), isTrue);
+      },
+    );
+
     test('clearInitialized removes the init flag', () {
       config.markAsInitialized();
       expect(config.isFirstRun, isFalse);

@@ -67,8 +67,10 @@ class StorageConfig {
         configPath,
         logsPath,
       ], runInShell: false);
+      // coverage:ignore-start
     } catch (e) {
       AppLogger.warn('Could not restrict permissions on $baseDir: $e');
+      // coverage:ignore-end
     }
   }
 
@@ -80,9 +82,7 @@ class StorageConfig {
         ..createSync(recursive: true)
         ..writeAsStringSync(DateTime.now().toUtc().toIso8601String());
     } catch (e) {
-      AppLogger.error(
-        'Failed to mark as initialized: $e',
-      ); // coverage:ignore-line
+      AppLogger.error('Failed to mark as initialized: $e');
     }
   }
 
@@ -90,10 +90,10 @@ class StorageConfig {
     try {
       final f = File(_initFlagPath);
       if (f.existsSync()) f.deleteSync();
+      // coverage:ignore-start
     } catch (e) {
-      AppLogger.error(
-        'Failed to clear initialized flag: $e',
-      ); // coverage:ignore-line
+      AppLogger.error('Failed to clear initialized flag: $e');
+      // coverage:ignore-end
     }
   }
 
@@ -108,10 +108,10 @@ class StorageConfig {
       if (!validFiles.contains(file.path)) {
         try {
           file.deleteSync();
+          // coverage:ignore-start
         } catch (e) {
-          AppLogger.error(
-            'Failed to delete orphan file: $e',
-          ); // coverage:ignore-line
+          AppLogger.error('Failed to delete orphan file: $e');
+          // coverage:ignore-end
         }
       }
     }
