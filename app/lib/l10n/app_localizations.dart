@@ -950,6 +950,18 @@ abstract class AppLocalizations {
   /// **'There is no text on the clipboard. Copy some text first, then use plain-text paste again.'**
   String get plainClipboardUnavailable;
 
+  /// No description provided for @clipboardWriteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The item could not be placed on the clipboard because another app is holding it. Try again in a moment.'**
+  String get clipboardWriteFailed;
+
+  /// No description provided for @pasteTargetElevated.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination app runs as administrator, so Windows blocks the simulated paste. Run CopyPaste as administrator too, or press Ctrl+V yourself.'**
+  String get pasteTargetElevated;
+
   /// No description provided for @hotkeyRegistrationFailed.
   ///
   /// In en, this message translates to:

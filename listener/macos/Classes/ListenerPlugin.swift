@@ -11,12 +11,15 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
   private var lastChangeCount: Int = 0
   private var lastContentHash: String = ""
   private var lastChangeTick: UInt64 = 0
+  private var lastForeignBundleId: String?
+  private var activationObserver: NSObjectProtocol?
 
   private static let debounceMs: UInt64 = 250
   private static let pollingIntervalSec: TimeInterval = 0.25
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let instance = ListenerPlugin()
+    instance.startTrackingActivation()
 
     let eventChannel = FlutterEventChannel(
       name: "copypaste/clipboard",
@@ -31,6 +34,46 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     methodChannel.setMethodCallHandler(instance.handleMethodCall)
   }
 
+  // MARK: - Paste Destination Tracking
+
+  /// Unlike Windows, hiding the panel on macOS is `orderOut`, which leaves
+  /// CopyPaste the active application. Reading frontmostApplication at that
+  /// point captures ourselves and the paste is delivered back to the panel,
+  /// so the last application that was not us is tracked separately.
+  private func startTrackingActivation() {
+    activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.didActivateApplicationNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+        as? NSRunningApplication else { return }
+      if app.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+        return
+      }
+      if let bundleId = app.bundleIdentifier {
+        self?.lastForeignBundleId = bundleId
+      }
+    }
+  }
+
+  private func captureDestinationBundleId() -> String? {
+    let front = NSWorkspace.shared.frontmostApplication
+    let isSelf =
+      front?.processIdentifier == ProcessInfo.processInfo.processIdentifier
+    if let bundleId = front?.bundleIdentifier, !isSelf {
+      lastForeignBundleId = bundleId
+      return bundleId
+    }
+    return lastForeignBundleId
+  }
+
+  deinit {
+    if let observer = activationObserver {
+      NSWorkspace.shared.notificationCenter.removeObserver(observer)
+    }
+  }
+
   // MARK: - Method Channel Handler
 
   private func handleMethodCall(call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -42,7 +85,7 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     case "getNativeThumbnail":
       handleGetNativeThumbnail(call: call, result: result)
     case "captureFrontmostApp":
-      result(NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
+      result(captureDestinationBundleId())
     case "activateAndPaste":
       handleActivateAndPaste(call: call, result: result)
     case "getCursorAndScreenInfo":
@@ -230,9 +273,20 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
         signature += "F:" + url.path + "|"
       }
     } else if let tiffData = pb.data(forType: .tiff), !tiffData.isEmpty {
-      let sampleSize = min(tiffData.count, 256)
-      let sample = tiffData.prefix(sampleSize)
-      signature += "I:\(tiffData.count):" + sample.map { String(format: "%02x", $0) }.joined()
+      // A head-only sample makes same-sized captures collide, and a collision
+      // silently discards the new image in processImage.
+      let blocks = 16
+      let blockLen = min(tiffData.count, 64)
+      let span = tiffData.count - blockLen
+      // Offsets are relative to startIndex: a Data slice does not rebase to 0.
+      let base = tiffData.startIndex
+      var sampled = Data()
+      for b in 0..<blocks {
+        let lo = base + span * b / (blocks - 1)
+        sampled.append(tiffData[lo..<(lo + blockLen)])
+      }
+      signature += "I:\(tiffData.count):"
+        + sampled.map { String(format: "%02x", $0) }.joined()
     }
 
     if signature.isEmpty { return "" }
@@ -394,7 +448,7 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     guard let args = call.arguments as? [String: Any],
           let bundleId = args["bundleId"] as? String,
           let delayMs = args["delayMs"] as? Int else {
-      result(false)
+      result(Self.pasteFailure("invalidArguments"))
       return
     }
 
@@ -412,33 +466,60 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     guard let app = NSRunningApplication.runningApplications(
       withBundleIdentifier: bundleId
     ).first else {
-      result(false)
+      result(Self.pasteFailure("destinationGone"))
       return
     }
 
     app.activate()
 
-    let maxAttempts = max(delayMs / 10, 15)
-    waitForFocusThenPaste(bundleId: bundleId, attempt: 0, maxAttempts: maxAttempts, result: result)
+    // focusTimeoutMs bounds how long we wait for the destination to come
+    // forward; delayMs is the settle time applied once it does. Conflating
+    // them, as this used to, means a generous paste delay silently becomes a
+    // longer wait and no settle at all.
+    let focusTimeoutMs = min(max(args["focusTimeoutMs"] as? Int ?? 250, 50), 2000)
+    let maxAttempts = max(focusTimeoutMs / 10, 5)
+    waitForFocusThenPaste(
+      bundleId: bundleId,
+      attempt: 0,
+      maxAttempts: maxAttempts,
+      settleMs: max(delayMs, 0),
+      result: result
+    )
   }
 
-  private func waitForFocusThenPaste(bundleId: String, attempt: Int, maxAttempts: Int, result: @escaping FlutterResult) {
-    let focused = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundleId
-
-    if focused || attempt >= maxAttempts {
-      if !focused {
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(30)) {
-          self.simulatePaste(result: result)
-        }
-      } else {
-        simulatePaste(result: result)
+  private func waitForFocusThenPaste(
+    bundleId: String,
+    attempt: Int,
+    maxAttempts: Int,
+    settleMs: Int,
+    result: @escaping FlutterResult
+  ) {
+    if NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundleId {
+      DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(settleMs)) {
+        self.simulatePaste(result: result)
       }
       return
     }
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(10)) {
-      self.waitForFocusThenPaste(bundleId: bundleId, attempt: attempt + 1, maxAttempts: maxAttempts, result: result)
+    if attempt >= maxAttempts {
+      // Posting Cmd+V now would fire it at whatever app is frontmost instead.
+      result(Self.pasteFailure("focusTimeout"))
+      return
     }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(10)) {
+      self.waitForFocusThenPaste(
+        bundleId: bundleId,
+        attempt: attempt + 1,
+        maxAttempts: maxAttempts,
+        settleMs: settleMs,
+        result: result
+      )
+    }
+  }
+
+  private static func pasteFailure(_ code: String) -> [String: Any] {
+    return ["success": false, "errorCode": code]
   }
 
   private func simulatePaste(result: @escaping FlutterResult) {
@@ -447,7 +528,7 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
 
     guard let keyDown = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: true),
           let keyUp = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: false) else {
-      result(false)
+      result(Self.pasteFailure("eventCreationFailed"))
       return
     }
 
@@ -455,7 +536,7 @@ public class ListenerPlugin: NSObject, FlutterPlugin {
     keyUp.flags = .maskCommand
     keyDown.post(tap: .cghidEventTap)
     keyUp.post(tap: .cghidEventTap)
-    result(true)
+    result(["success": true])
   }
 
   // MARK: - Cursor & Screen Info

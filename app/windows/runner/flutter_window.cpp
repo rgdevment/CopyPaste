@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "flutter/generated_plugin_registrant.h"
 #include "startup_task_channel.h"
@@ -43,6 +44,14 @@ bool ReadInt(const flutter::EncodableMap& arguments, const char* name,
   return false;
 }
 
+int64_t ReadInt64(const flutter::EncodableMap& arguments, const char* name) {
+  const auto* value = FindArgument(arguments, name);
+  if (value == nullptr) return 0;
+  if (const auto* int32 = std::get_if<int32_t>(value)) return *int32;
+  if (const auto* int64 = std::get_if<int64_t>(value)) return *int64;
+  return 0;
+}
+
 std::string ReadString(const flutter::EncodableMap& arguments,
                        const char* name) {
   const auto* value = FindArgument(arguments, name);
@@ -65,7 +74,94 @@ flutter::EncodableValue RegistrationResponse(bool success,
   return flutter::EncodableValue(response);
 }
 
-flutter::EncodableValue SendPasteInput() {
+// Mandatory integrity level of a process, or 0 when it cannot be read.
+DWORD ProcessIntegrityLevel(DWORD pid) {
+  if (pid == 0) return 0;
+  HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+  if (process == nullptr) return 0;
+
+  DWORD level = 0;
+  HANDLE token = nullptr;
+  if (OpenProcessToken(process, TOKEN_QUERY, &token)) {
+    DWORD size = 0;
+    GetTokenInformation(token, TokenIntegrityLevel, nullptr, 0, &size);
+    if (size > 0) {
+      std::vector<uint8_t> buffer(size);
+      if (GetTokenInformation(token, TokenIntegrityLevel, buffer.data(), size,
+                              &size)) {
+        auto* label = reinterpret_cast<TOKEN_MANDATORY_LABEL*>(buffer.data());
+        const UCHAR* count = GetSidSubAuthorityCount(label->Label.Sid);
+        if (count != nullptr && *count > 0) {
+          level = *GetSidSubAuthority(label->Label.Sid, *count - 1);
+        }
+      }
+    }
+    CloseHandle(token);
+  }
+  CloseHandle(process);
+  return level;
+}
+
+// An active window is not the same as a usable focus: Chromium hosts (VS Code
+// webviews) and XAML-island hosts (Windows Terminal) restore the focus of their
+// inner child HWND asynchronously after WM_ACTIVATE, so a Ctrl+V timed on
+// activation alone lands nowhere while every call still reports success.
+// Attaching to the destination's input queue lets SetFocus target that child
+// directly; the detach must happen after SendInput, because detaching resets
+// the keyboard focus Windows had just restored.
+flutter::EncodableValue SendPasteInput(HWND target, HWND target_focus,
+                                       DWORD target_thread) {
+  flutter::EncodableMap response;
+  if (target != nullptr && GetForegroundWindow() != target) {
+    response[flutter::EncodableValue("success")] =
+        flutter::EncodableValue(false);
+    response[flutter::EncodableValue("errorCode")] =
+        flutter::EncodableValue("targetNotForeground");
+    return flutter::EncodableValue(response);
+  }
+
+  // UIPI drops injected input at a higher integrity level and reports nothing:
+  // SendInput still returns the full count. Without this check an elevated
+  // destination is a permanent, undiagnosable "paste does nothing".
+  if (target != nullptr) {
+    DWORD target_pid = 0;
+    GetWindowThreadProcessId(target, &target_pid);
+    const DWORD target_level = ProcessIntegrityLevel(target_pid);
+    const DWORD self_level = ProcessIntegrityLevel(GetCurrentProcessId());
+    if (target_level != 0 && self_level != 0 && target_level > self_level) {
+      response[flutter::EncodableValue("success")] =
+          flutter::EncodableValue(false);
+      response[flutter::EncodableValue("errorCode")] =
+          flutter::EncodableValue("targetElevated");
+      return flutter::EncodableValue(response);
+    }
+  }
+
+  const DWORD self_thread = GetCurrentThreadId();
+  const bool attached = target_thread != 0 && target_thread != self_thread &&
+                        AttachThreadInput(self_thread, target_thread, TRUE);
+
+  bool focus_repaired = false;
+  HWND focus_before = nullptr;
+  if (attached) {
+    GUITHREADINFO gui = {};
+    gui.cbSize = sizeof(gui);
+    if (GetGUIThreadInfo(target_thread, &gui)) {
+      focus_before = gui.hwndFocus;
+    }
+    if (target_focus != nullptr && focus_before != target_focus &&
+        IsWindow(target_focus)) {
+      // SetFocus on a foreign HWND is a blocking cross-thread send, so probe
+      // the destination first: a hung target would otherwise freeze our UI.
+      DWORD_PTR probe = 0;
+      if (SendMessageTimeoutW(target_focus, WM_NULL, 0, 0,
+                              SMTO_ABORTIFHUNG | SMTO_BLOCK, 200,
+                              &probe) != 0) {
+        focus_repaired = SetFocus(target_focus) != nullptr;
+      }
+    }
+  }
+
   // WM_HOTKEY arrives on key-down, so physical shortcut modifiers may still
   // be held. Release every contaminating modifier before Ctrl+V. SendInput
   // inserts this array atomically; later physical key-up events are harmless.
@@ -100,18 +196,29 @@ flutter::EncodableValue SendPasteInput() {
 
   SetLastError(ERROR_SUCCESS);
   const UINT sent = SendInput(kInputCount, inputs, sizeof(INPUT));
-  flutter::EncodableMap response;
+  const DWORD send_error = GetLastError();
+
+  if (attached) {
+    AttachThreadInput(self_thread, target_thread, FALSE);
+  }
+
   response[flutter::EncodableValue("success")] =
       flutter::EncodableValue(sent == kInputCount);
   response[flutter::EncodableValue("sentInputs")] =
       flutter::EncodableValue(static_cast<int32_t>(sent));
   response[flutter::EncodableValue("expectedInputs")] =
       flutter::EncodableValue(static_cast<int32_t>(kInputCount));
+  response[flutter::EncodableValue("attached")] =
+      flutter::EncodableValue(attached);
+  response[flutter::EncodableValue("focusRepaired")] =
+      flutter::EncodableValue(focus_repaired);
+  response[flutter::EncodableValue("focusBefore")] = flutter::EncodableValue(
+      static_cast<int64_t>(reinterpret_cast<intptr_t>(focus_before)));
   if (sent != kInputCount) {
     response[flutter::EncodableValue("errorCode")] =
         flutter::EncodableValue("sendInputFailed");
     response[flutter::EncodableValue("win32Error")] =
-        flutter::EncodableValue(static_cast<int64_t>(GetLastError()));
+        flutter::EncodableValue(static_cast<int64_t>(send_error));
   }
   return flutter::EncodableValue(response);
 }
@@ -222,7 +329,20 @@ void FlutterWindow::RegisterHotkeyChannel() {
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
                  result) {
         if (call.method_name() == "sendPaste") {
-          result->Success(SendPasteInput());
+          const auto* paste_args =
+              std::get_if<flutter::EncodableMap>(call.arguments());
+          HWND target = nullptr;
+          HWND target_focus = nullptr;
+          DWORD target_thread = 0;
+          if (paste_args != nullptr) {
+            target = reinterpret_cast<HWND>(
+                static_cast<intptr_t>(ReadInt64(*paste_args, "targetHwnd")));
+            target_focus = reinterpret_cast<HWND>(static_cast<intptr_t>(
+                ReadInt64(*paste_args, "targetFocusHwnd")));
+            target_thread = static_cast<DWORD>(
+                ReadInt64(*paste_args, "targetThreadId"));
+          }
+          result->Success(SendPasteInput(target, target_focus, target_thread));
           return;
         }
         if (call.method_name() == "unregisterAll") {

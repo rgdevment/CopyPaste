@@ -43,18 +43,35 @@ std::vector<uint8_t> ConvertDibToBmp(const std::vector<uint8_t>& dib) {
   if (dib.size() < sizeof(BITMAPINFOHEADER)) return {};
 
   const auto* bih = reinterpret_cast<const BITMAPINFOHEADER*>(dib.data());
+  if (bih->biSize < sizeof(BITMAPINFOHEADER) || bih->biSize > dib.size()) {
+    return {};
+  }
+
+  // Masks and palette stack in this order, so they accumulate rather than
+  // replace each other.
   DWORD colorTableSize = 0;
-  if (bih->biBitCount <= 8) {
-    DWORD colors = bih->biClrUsed ? bih->biClrUsed : (1u << bih->biBitCount);
-    colorTableSize = colors * sizeof(RGBQUAD);
-  } else if (bih->biCompression == BI_BITFIELDS &&
-             bih->biSize == sizeof(BITMAPINFOHEADER)) {
+  if (bih->biCompression == BI_BITFIELDS &&
+      bih->biSize == sizeof(BITMAPINFOHEADER)) {
     // BI_BITFIELDS masks only follow the header for the classic
     // BITMAPINFOHEADER (40 bytes). For BITMAPV4HEADER (108) and
     // BITMAPV5HEADER (124) — produced by the Windows Snipping Tool — the
     // masks are embedded inside the header itself, so no extra offset.
-    colorTableSize = 3 * sizeof(DWORD);
+    colorTableSize += 3 * sizeof(DWORD);
   }
+  if (bih->biBitCount <= 8) {
+    DWORD colors = bih->biClrUsed ? bih->biClrUsed : (1u << bih->biBitCount);
+    colorTableSize += colors * sizeof(RGBQUAD);
+  } else if (bih->biClrUsed != 0) {
+    // Above 8 bpp the palette is optional but still shifts the pixel offset.
+    // Producers leave biClrUsed dirty often enough that honouring it blindly
+    // misplaces bfOffBits, so only apply it when the buffer can hold it.
+    const uint64_t claimed =
+        static_cast<uint64_t>(bih->biClrUsed) * sizeof(RGBQUAD);
+    if (bih->biSize + colorTableSize + claimed <= dib.size()) {
+      colorTableSize += static_cast<DWORD>(claimed);
+    }
+  }
+  if (bih->biSize + colorTableSize > dib.size()) return {};
 
   BITMAPFILEHEADER bfh = {};
   bfh.bfType = 0x4D42;
@@ -417,18 +434,7 @@ void ListenerPlugin::OnClipboardChanged() {
     return;
   }
 
-  // Retry OpenClipboard up to kOpenClipboardRetries times with backoff.
-  // Another app may hold the clipboard lock briefly; retrying avoids silent
-  // drops. On exhaustion, log and bail — the next WM_CLIPBOARDUPDATE retries.
-  bool opened = false;
-  for (int attempt = 0; attempt < kOpenClipboardRetries; ++attempt) {
-    if (OpenClipboard(hwnd)) {
-      opened = true;
-      break;
-    }
-    Sleep(kOpenClipboardBackoffMs[attempt]);
-  }
-  if (!opened) {
+  if (!OpenClipboardWithRetry(hwnd)) {
     OutputDebugStringA("[ClipboardListener] OpenClipboard failed after retries\n");
     return;
   }
@@ -595,14 +601,31 @@ std::string ListenerPlugin::ComputeClipboardHash() const {
       SIZE_T sz = GlobalSize(hData);
       void* ptr = GlobalLock(hData);
       if (ptr) {
-        size_t sample = (std::min)(sz, static_cast<SIZE_T>(256));
-        std::ostringstream oss;
-        oss << "I:" << sz << ":";
         const uint8_t* bytes = static_cast<const uint8_t*>(ptr);
-        for (size_t i = 0; i < sample; ++i) {
-          oss << std::hex << static_cast<int>(bytes[i]);
+        std::ostringstream oss;
+        oss << "I:" << sz;
+        if (sz >= sizeof(BITMAPINFOHEADER)) {
+          const auto* bih = reinterpret_cast<const BITMAPINFOHEADER*>(ptr);
+          oss << ':' << bih->biWidth << 'x' << bih->biHeight << ':'
+              << bih->biBitCount << ':' << bih->biCompression << ':'
+              << bih->biSizeImage;
         }
         signature += oss.str();
+
+        // Sampling only the head would compare the bottom rows of a bottom-up
+        // DIB, so two screenshots sharing a taskbar collide. Raw bytes go into
+        // the signature directly: a hex dump needs zero padding to stay
+        // unambiguous, and getting that wrong silently drops captures.
+        constexpr size_t kBlocks = 16;
+        constexpr size_t kBlockBytes = 64;
+        const size_t blockLen =
+            static_cast<size_t>((std::min)(sz, static_cast<SIZE_T>(kBlockBytes)));
+        const size_t span = sz > blockLen ? sz - blockLen : 0;
+        for (size_t b = 0; b < kBlocks; ++b) {
+          const size_t offset = span * b / (kBlocks - 1);
+          signature.append(reinterpret_cast<const char*>(bytes + offset),
+                           blockLen);
+        }
         GlobalUnlock(hData);
       }
     }
@@ -755,6 +778,16 @@ std::string ListenerPlugin::WideToUtf8(const std::wstring& wide) {
                       static_cast<int>(wide.size()),
                       result.data(), sz, nullptr, nullptr);
   return result;
+}
+
+// Another app can hold the clipboard lock briefly — Chromium and Electron do
+// it on every copy — so a single attempt drops the operation silently.
+bool ListenerPlugin::OpenClipboardWithRetry(HWND hwnd) {
+  for (int attempt = 0; attempt < kOpenClipboardRetries; ++attempt) {
+    if (OpenClipboard(hwnd)) return true;
+    Sleep(kOpenClipboardBackoffMs[attempt]);
+  }
+  return false;
 }
 
 std::string ListenerPlugin::ComputeSimpleHash(const std::string& data) {
@@ -949,7 +982,7 @@ bool ListenerPlugin::SetTextToClipboard(
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
-  if (!OpenClipboard(hwnd)) return false;
+  if (!OpenClipboardWithRetry(hwnd)) return false;
 
   EmptyClipboard();
   bool ok = false;
@@ -1110,7 +1143,7 @@ bool ListenerPlugin::SetImageToClipboard(const std::string& imagePath) {
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
-  if (!OpenClipboard(hwnd)) {
+  if (!OpenClipboardWithRetry(hwnd)) {
     GlobalFree(hMem);
     if (hContents) GlobalFree(hContents);
     if (hDesc) GlobalFree(hDesc);
@@ -1164,7 +1197,7 @@ bool ListenerPlugin::SetFilesToClipboard(
   HWND hwnd = registrar_->GetView()
                   ? registrar_->GetView()->GetNativeWindow()
                   : nullptr;
-  if (!OpenClipboard(hwnd)) {
+  if (!OpenClipboardWithRetry(hwnd)) {
     GlobalFree(hMem);
     return false;
   }

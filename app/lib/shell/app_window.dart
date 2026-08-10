@@ -141,7 +141,6 @@ class _Win32Pos {
 class AppWindow {
   AppWindow({
     this.onVisibilityChanged,
-    this.showInTaskbar = true,
     double popupWidth = 360,
     double popupHeight = 500,
     this.rememberPositionEnabled,
@@ -149,8 +148,6 @@ class AppWindow {
     this.onPositionPersist,
   }) : _popupWidth = popupWidth,
        _popupHeight = popupHeight;
-
-  bool showInTaskbar;
 
   static const double _settingsWidth = 820;
   static const double _settingsHeight = 680;
@@ -177,7 +174,6 @@ class AppWindow {
   Future<void> init({bool startVisible = false}) async {
     AppLogger.info(
       'AppWindow.init: startVisible=$startVisible, '
-      'showInTaskbar=$showInTaskbar, '
       'size=${_popupWidth}x$_popupHeight',
     );
     try {
@@ -217,8 +213,15 @@ class AppWindow {
     await windowManager.setResizable(false);
     await windowManager.setMaximizable(false);
     await windowManager.setPreventClose(true);
-    final inTaskbar = showInTaskbar && Platform.isWindows;
-    await windowManager.setSkipTaskbar(!inTaskbar);
+    await windowManager.setSkipTaskbar(true);
+    if (Platform.isMacOS) {
+      // Without this, opening the panel over a full-screen app switches Space,
+      // and the animation blows past the paste focus budget.
+      await windowManager.setVisibleOnAllWorkspaces(
+        true,
+        visibleOnFullScreen: true,
+      );
+    }
     if (Platform.isWindows || Platform.isMacOS) {
       await windowManager.setBackgroundColor(const Color(0x00000000));
       AppLogger.info('_configureWindow: applying initial effect');
@@ -228,9 +231,6 @@ class AppWindow {
       AppLogger.info('_configureWindow: centering and focusing');
       await windowManager.center();
       await windowManager.focus();
-    } else if (inTaskbar) {
-      AppLogger.info('_configureWindow: minimizing to taskbar');
-      await windowManager.minimize();
     } else {
       AppLogger.info('_configureWindow: hiding window');
       await windowManager.hide();
@@ -696,23 +696,19 @@ class AppWindow {
     if (!_visible) return;
     _visible = false;
     await _captureCurrentPosition();
-    if (showInTaskbar && Platform.isWindows) {
-      await windowManager.minimize();
-    } else {
-      Future<bool>? unmappedFuture;
-      if (Platform.isLinux) {
-        unmappedFuture = LinuxShell.awaitEvent(
-          'unmapped',
-          timeout: const Duration(milliseconds: 300),
-        );
-      }
-      await windowManager.hide();
-      if (!Platform.isMacOS) {
-        await windowManager.setSkipTaskbar(true);
-      }
-      if (unmappedFuture != null) {
-        await unmappedFuture;
-      }
+    Future<bool>? unmappedFuture;
+    if (Platform.isLinux) {
+      unmappedFuture = LinuxShell.awaitEvent(
+        'unmapped',
+        timeout: const Duration(milliseconds: 300),
+      );
+    }
+    await windowManager.hide();
+    if (!Platform.isMacOS) {
+      await windowManager.setSkipTaskbar(true);
+    }
+    if (unmappedFuture != null) {
+      await unmappedFuture;
     }
     onVisibilityChanged?.call(false);
   }
@@ -807,7 +803,7 @@ class AppWindow {
   Future<void> exitGateMode() async {
     _gateMode = false;
     await windowManager.setAlwaysOnTop(true);
-    await windowManager.setSkipTaskbar(!(showInTaskbar && Platform.isWindows));
+    await windowManager.setSkipTaskbar(true);
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));

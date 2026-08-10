@@ -106,6 +106,20 @@ void main() {
       expect(reactivated?.id, equals(first!.id));
     });
 
+    test('does not swallow new bytes when the stored file is gone', () async {
+      const hash = 'stale-file-hash';
+      final first = await service.processImage(hash, imagePath: '/gone.png');
+
+      final second = await service.processImage(
+        hash,
+        imagePath: '/gone.png',
+        imageBytes: <int>[1, 2, 3, 4],
+      );
+
+      expect(second, isNotNull);
+      expect(second!.id, isNot(equals(first!.id)));
+    });
+
     test('stores image path in content field', () async {
       const imagePath = '/home/user/screenshot.png';
       final result = await service.processImage(

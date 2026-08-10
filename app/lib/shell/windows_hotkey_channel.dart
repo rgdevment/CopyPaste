@@ -20,6 +20,9 @@ class WindowsPasteInputResponse {
     this.expectedInputs,
     this.errorCode,
     this.win32Error,
+    this.attached = false,
+    this.focusRepaired = false,
+    this.focusBefore,
   });
 
   final bool success;
@@ -27,6 +30,9 @@ class WindowsPasteInputResponse {
   final int? expectedInputs;
   final String? errorCode;
   final int? win32Error;
+  final bool attached;
+  final bool focusRepaired;
+  final int? focusBefore;
 }
 
 /// Owns the Windows runner channel backed by RegisterHotKey/WM_HOTKEY.
@@ -102,9 +108,16 @@ class WindowsHotkeyChannel {
   }
 
   static Future<WindowsPasteInputResponse> sendPaste({
+    int targetHwnd = 0,
+    int targetFocusHwnd = 0,
+    int targetThreadId = 0,
     MethodChannel channel = const MethodChannel(_channelName),
   }) async {
-    final response = await channel.invokeMethod<Object?>('sendPaste');
+    final response = await channel.invokeMethod<Object?>('sendPaste', {
+      'targetHwnd': targetHwnd,
+      'targetFocusHwnd': targetFocusHwnd,
+      'targetThreadId': targetThreadId,
+    });
     if (response is! Map) {
       return const WindowsPasteInputResponse(
         success: false,
@@ -117,6 +130,9 @@ class WindowsHotkeyChannel {
       expectedInputs: response['expectedInputs'] as int?,
       errorCode: response['errorCode'] as String?,
       win32Error: response['win32Error'] as int?,
+      attached: response['attached'] == true,
+      focusRepaired: response['focusRepaired'] == true,
+      focusBefore: response['focusBefore'] as int?,
     );
   }
 }

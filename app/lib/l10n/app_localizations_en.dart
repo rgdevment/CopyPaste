@@ -464,6 +464,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'There is no text on the clipboard. Copy some text first, then use plain-text paste again.';
 
   @override
+  String get clipboardWriteFailed =>
+      'The item could not be placed on the clipboard because another app is holding it. Try again in a moment.';
+
+  @override
+  String get pasteTargetElevated =>
+      'The destination app runs as administrator, so Windows blocks the simulated paste. Run CopyPaste as administrator too, or press Ctrl+V yourself.';
+
+  @override
   String hotkeyRegistrationFailed(String shortcut) {
     return 'The shortcut $shortcut could not be registered. It may already be in use by the system or another app.';
   }
