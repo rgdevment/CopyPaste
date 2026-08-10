@@ -315,6 +315,8 @@
   "pasteDestinationUnavailable": "Paste was cancelled because the original destination could not be restored. Open CopyPaste with its keyboard shortcut and try again.",
   "plainPasteItemUnavailable": "The hovered, selected, or first item cannot be pasted as plain text.",
   "plainClipboardUnavailable": "There is no text on the clipboard. Copy some text first, then use plain-text paste again.",
+  "clipboardWriteFailed": "The item could not be placed on the clipboard because another app is holding it. Try again in a moment.",
+  "pasteTargetElevated": "The destination app runs as administrator, so Windows blocks the simulated paste. Run CopyPaste as administrator too, or press Ctrl+V yourself.",
   "hotkeyRegistrationFailed": "The shortcut {shortcut} could not be registered. It may already be in use by the system or another app.",
   "@hotkeyRegistrationFailed": {
     "placeholders": { "shortcut": { "type": "String" } }

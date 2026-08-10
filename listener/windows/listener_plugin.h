@@ -76,6 +76,8 @@ class ListenerPlugin : public flutter::Plugin {
   std::string ComputeClipboardHash() const;
   std::string GetClipboardSource() const;
 
+  static bool OpenClipboardWithRetry(HWND hwnd);
+
   static std::wstring ExtractText();
   static std::vector<uint8_t> ExtractBytes(UINT format);
   static std::vector<std::wstring> ExtractFilePaths();

@@ -49,6 +49,29 @@ class StorageConfig {
     for (final dir in [baseDir, imagesPath, configPath, logsPath]) {
       await Directory(dir).create(recursive: true);
     }
+    await _restrictToOwner();
+  }
+
+  /// The history is stored in the clear, and on Linux `~/.local/share` inherits
+  /// the umask (0755), so other local accounts can read whatever was copied.
+  /// Closing the directories is enough and stays O(1): POSIX resolves a path
+  /// through every parent, so 0700 here puts the files out of reach whatever
+  /// mode SQLite gave them. Windows and macOS already confine the container.
+  Future<void> _restrictToOwner() async {
+    if (!Platform.isLinux) return;
+    try {
+      await Process.run('chmod', [
+        '700',
+        baseDir,
+        imagesPath,
+        configPath,
+        logsPath,
+      ], runInShell: false);
+      // coverage:ignore-start
+    } catch (e) {
+      AppLogger.warn('Could not restrict permissions on $baseDir: $e');
+      // coverage:ignore-end
+    }
   }
 
   bool get isFirstRun => !File(_initFlagPath).existsSync();
@@ -59,9 +82,7 @@ class StorageConfig {
         ..createSync(recursive: true)
         ..writeAsStringSync(DateTime.now().toUtc().toIso8601String());
     } catch (e) {
-      AppLogger.error(
-        'Failed to mark as initialized: $e',
-      ); // coverage:ignore-line
+      AppLogger.error('Failed to mark as initialized: $e');
     }
   }
 
@@ -69,10 +90,10 @@ class StorageConfig {
     try {
       final f = File(_initFlagPath);
       if (f.existsSync()) f.deleteSync();
+      // coverage:ignore-start
     } catch (e) {
-      AppLogger.error(
-        'Failed to clear initialized flag: $e',
-      ); // coverage:ignore-line
+      AppLogger.error('Failed to clear initialized flag: $e');
+      // coverage:ignore-end
     }
   }
 
@@ -87,10 +108,10 @@ class StorageConfig {
       if (!validFiles.contains(file.path)) {
         try {
           file.deleteSync();
+          // coverage:ignore-start
         } catch (e) {
-          AppLogger.error(
-            'Failed to delete orphan file: $e',
-          ); // coverage:ignore-line
+          AppLogger.error('Failed to delete orphan file: $e');
+          // coverage:ignore-end
         }
       }
     }

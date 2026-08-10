@@ -1,6 +1,7 @@
 // coverage:ignore-file
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:ffi/ffi.dart';
 import 'package:core/core.dart';
@@ -120,7 +121,19 @@ class _Win32 {
 class WindowFocusManager {
   int _previousWindow = 0;
   int _previousThreadId = 0;
+  int _previousFocusWindow = 0;
   String? _previousBundleId;
+
+  /// Failures that leave the captured destination usable for a retry. Clearing
+  /// it would make every following attempt report `noPreviousWindow`, because
+  /// re-capturing is impossible once CopyPaste itself owns the foreground.
+  static const _recoverableErrors = {
+    'restoreFailed',
+    'focusTimeout',
+    'noKeyboardFocus',
+    'targetNotForeground',
+    'sendInputFailed',
+  };
 
   bool get hasDestination =>
       Platform.isWindows ? _previousWindow != 0 : _previousBundleId != null;
@@ -154,6 +167,7 @@ class WindowFocusManager {
       return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
     }
 
+    PasteResponse? outcome;
     try {
       await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
@@ -161,12 +175,13 @@ class WindowFocusManager {
         final response = await ClipboardWriter.activateAndPaste(
           bundleId: _previousBundleId!,
           delayMs: delayBeforePasteMs,
+          focusTimeoutMs: math.max(maxFocusVerifyAttempts * 10, 250),
         );
         AppLogger.info(
           'Paste destination result: platform=${Platform.operatingSystem}, '
           'success=${response.success}, error=${response.errorCode ?? '-'}',
         );
-        return response;
+        return outcome = response;
       }
 
       if (!_restorePreviousWindows()) {
@@ -174,7 +189,10 @@ class WindowFocusManager {
           'Paste cancelled: Windows rejected destination restore '
           '(hwnd=$_previousWindow)',
         );
-        return const PasteResponse(success: false, errorCode: 'restoreFailed');
+        return outcome = const PasteResponse(
+          success: false,
+          errorCode: 'restoreFailed',
+        );
       }
 
       final focused = await _waitForFocusWindows(maxFocusVerifyAttempts);
@@ -183,11 +201,24 @@ class WindowFocusManager {
           'Paste cancelled: Windows destination focus verification timed out '
           '(hwnd=$_previousWindow)',
         );
-        return const PasteResponse(success: false, errorCode: 'focusTimeout');
+        return outcome = const PasteResponse(
+          success: false,
+          errorCode: 'focusTimeout',
+        );
       }
 
       await Future<void>.delayed(Duration(milliseconds: delayBeforePasteMs));
-      final focusRoot = _keyboardFocusRoot();
+      final focusRoot = await _waitForKeyboardFocusWindows();
+      if (focusRoot == 0) {
+        AppLogger.warn(
+          'Paste cancelled: destination is active but nothing owns keyboard '
+          'focus (hwnd=$_previousWindow)',
+        );
+        return outcome = const PasteResponse(
+          success: false,
+          errorCode: 'noKeyboardFocus',
+        );
+      }
       if (focusRoot != _previousWindow) {
         AppLogger.warn(
           'Paste target is active but lacks keyboard focus: '
@@ -195,19 +226,20 @@ class WindowFocusManager {
         );
       }
       final inputResponse = await _simulatePasteWindows();
-      if (!inputResponse.success) return inputResponse;
+      if (!inputResponse.success) return outcome = inputResponse;
       AppLogger.info(
         'Paste destination result: platform=windows, success=true',
       );
-      return const PasteResponse(success: true);
+      return outcome = const PasteResponse(success: true);
     } finally {
-      clear();
+      if (!_recoverableErrors.contains(outcome?.errorCode)) clear();
     }
   }
 
   void clear() {
     _previousWindow = 0;
     _previousThreadId = 0;
+    _previousFocusWindow = 0;
     _previousBundleId = null;
   }
 
@@ -227,9 +259,12 @@ class WindowFocusManager {
         }
         _previousWindow = hwnd;
         _previousThreadId = threadId;
+        // Captured while the destination still owns the input queue: this is
+        // the only moment its inner focus target can be read reliably.
+        _previousFocusWindow = _focusWindowForThread(threadId);
         AppLogger.info(
           'Focus session capture: platform=windows, hwnd=$hwnd, '
-          'pid=${pidPtr.value}, success=true',
+          'pid=${pidPtr.value}, focus=$_previousFocusWindow, success=true',
         );
         return true;
       } finally {
@@ -309,15 +344,25 @@ class WindowFocusManager {
   /// leave a window active with no focus at all — both swallow the Ctrl+V
   /// while every call in the paste path still reports success.
   int _keyboardFocusRoot() {
+    final focused = _focusWindowForThread(0);
+    if (focused == 0) return 0;
+    try {
+      return _Win32.instance.getAncestor(focused, _Win32.gaRoot);
+    } catch (e) {
+      AppLogger.warn('Keyboard focus probe failed: $e');
+      return 0;
+    }
+  }
+
+  /// Window owning keyboard focus inside [threadId], or 0 when unreadable.
+  /// A `threadId` of 0 means whichever thread currently owns the foreground.
+  int _focusWindowForThread(int threadId) {
     final w = _Win32.instance;
     final info = calloc<Uint8>(_Win32.guiThreadInfoSize);
     try {
       info.cast<Uint32>().value = _Win32.guiThreadInfoSize;
-      if (w.getGUIThreadInfo(0, info) == 0) return 0;
-      final focused = (info + _Win32.guiThreadInfoFocusOffset)
-          .cast<IntPtr>()
-          .value;
-      return focused == 0 ? 0 : w.getAncestor(focused, _Win32.gaRoot);
+      if (w.getGUIThreadInfo(threadId, info) == 0) return 0;
+      return (info + _Win32.guiThreadInfoFocusOffset).cast<IntPtr>().value;
     } catch (e) {
       AppLogger.warn('Keyboard focus probe failed: $e');
       return 0;
@@ -326,13 +371,37 @@ class WindowFocusManager {
     }
   }
 
+  /// Chromium and XAML-island hosts install their inner focus a few frames
+  /// after they become active, so a single probe right after the fixed delay
+  /// samples a window that is still settling.
+  Future<int> _waitForKeyboardFocusWindows() async {
+    var focusRoot = _keyboardFocusRoot();
+    for (var i = 0; i < 5 && focusRoot != _previousWindow; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      focusRoot = _keyboardFocusRoot();
+    }
+    return focusRoot;
+  }
+
   Future<PasteResponse> _simulatePasteWindows() async {
     try {
-      final response = await WindowsHotkeyChannel.sendPaste();
-      if (response.success) return const PasteResponse(success: true);
+      final response = await WindowsHotkeyChannel.sendPaste(
+        targetHwnd: _previousWindow,
+        targetFocusHwnd: _previousFocusWindow,
+        targetThreadId: _previousThreadId,
+      );
+      if (response.success) {
+        if (response.focusRepaired) {
+          AppLogger.info(
+            'Paste input: restored destination keyboard focus to '
+            '$_previousFocusWindow (was ${response.focusBefore})',
+          );
+        }
+        return const PasteResponse(success: true);
+      }
       AppLogger.error(
-        'Windows SendInput failed: sent=${response.sentInputs ?? 0}/'
-        '${response.expectedInputs ?? 0}, '
+        'Windows paste input rejected: sent=${response.sentInputs ?? 0}/'
+        '${response.expectedInputs ?? 0}, attached=${response.attached}, '
         'error=${response.errorCode}, win32=${response.win32Error}',
       );
       return PasteResponse(

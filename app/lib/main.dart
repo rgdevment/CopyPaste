@@ -247,7 +247,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     _config = widget.config;
     _appWindow = AppWindow(
       onVisibilityChanged: _onWindowVisibilityChanged,
-      showInTaskbar: false,
       popupWidth: _config.popupWidth.toDouble(),
       popupHeight: _config.popupHeight.toDouble(),
       rememberPositionEnabled: () => _config.rememberWindowPosition,
@@ -837,7 +836,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       widget.clipboardService.notifyDirectPasteInitiated(text);
       final written = await ClipboardWriter.setText(text, plainText: true);
       if (!written) {
+        AppLogger.warn('Plain-text paste aborted: clipboard write failed');
         if (!panelWasVisible) pasteFocusManager.clear();
+        _showShellNotice(
+          (l) => l.clipboardWriteFailed,
+          revealWhenHidden: !panelWasVisible,
+        );
         return;
       }
 
@@ -853,10 +857,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         pasteFocusManager.clear();
         return;
       }
+      // With the panel open the destination lost activation and has to settle
+      // exactly like the item paste does; only the hidden path can skip it.
       final response = await pasteFocusManager.restoreAndPaste(
-        delayBeforeFocusMs: 0,
+        delayBeforeFocusMs: panelWasVisible ? _config.delayBeforeFocusMs : 0,
         maxFocusVerifyAttempts: _config.maxFocusVerifyAttempts,
-        delayBeforePasteMs: 0,
+        delayBeforePasteMs: panelWasVisible ? _config.delayBeforePasteMs : 0,
       );
       if (!response.success) _reportPasteFailure(response);
     } on PlatformException catch (e) {
@@ -945,6 +951,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     bool plainText = false,
   }) async {
     if (_itemPasteInProgress ||
+        _directPlainPasteInProgress ||
         (item.isFileBasedType && !item.isFileAvailable())) {
       return;
     }
@@ -963,7 +970,12 @@ class _CopyPasteAppState extends State<CopyPasteApp>
         metadata: item.metadata,
         plainText: plainText,
       );
-      if (!ok) return;
+      if (!ok) {
+        AppLogger.warn('Item paste aborted: clipboard write failed');
+        // The destination is intentionally kept so the user can retry.
+        _showShellNotice((l) => l.clipboardWriteFailed);
+        return;
+      }
       await _appWindow.hide();
       if (!Platform.isWindows && !await _waitForShortcutModifiersReleased()) {
         _focusManager.clear();
@@ -1009,6 +1021,10 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       );
       return;
     }
+    if (response.errorCode == 'targetElevated') {
+      _showShellNotice((l) => l.pasteTargetElevated, revealWhenHidden: true);
+      return;
+    }
     _showShellNotice(
       (l) => l.pasteDestinationUnavailable,
       revealWhenHidden: true,
@@ -1046,7 +1062,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       content: item.content,
       metadata: item.metadata,
     );
-    if (!ok) return;
+    if (!ok) {
+      AppLogger.warn('Copy aborted: clipboard write failed');
+      _showShellNotice((l) => l.clipboardWriteFailed);
+      return;
+    }
     await widget.clipboardService.recordCopy(item.id);
     if (!mounted) return;
     final ctx = _navigatorKey.currentContext;

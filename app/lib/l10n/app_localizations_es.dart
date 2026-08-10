@@ -467,6 +467,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No hay texto en el portapapeles. Copia primero un texto y vuelve a usar el pegado como texto plano.';
 
   @override
+  String get clipboardWriteFailed =>
+      'No se pudo copiar el elemento al portapapeles porque otra aplicación lo tiene retenido. Vuelve a intentarlo en un momento.';
+
+  @override
+  String get pasteTargetElevated =>
+      'La aplicación de destino se ejecuta como administrador, así que Windows bloquea el pegado simulado. Ejecuta CopyPaste también como administrador o pulsa Ctrl+V tú mismo.';
+
+  @override
   String hotkeyRegistrationFailed(String shortcut) {
     return 'No se pudo registrar el atajo $shortcut. Es posible que el sistema u otra aplicación ya lo esté usando.';
   }

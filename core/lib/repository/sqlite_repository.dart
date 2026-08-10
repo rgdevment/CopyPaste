@@ -63,7 +63,10 @@ class _AppDatabase extends _$_AppDatabase {
       await customStatement('PRAGMA journal_mode = WAL');
       await customStatement('PRAGMA synchronous = NORMAL');
       await customStatement('PRAGMA cache_size = -2000');
-      await customStatement('PRAGMA auto_vacuum = INCREMENTAL');
+      // Overwrite freed pages instead of leaving copied passwords readable in
+      // the file after a delete. Unlike auto_vacuum this applies at any time.
+      await customStatement('PRAGMA secure_delete = ON');
+      await _ensureIncrementalVacuum();
 
       await customStatement('''
             CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardItems_fts USING fts5(
@@ -99,6 +102,26 @@ class _AppDatabase extends _$_AppDatabase {
           ''');
     },
   );
+
+  /// SQLite silently ignores `auto_vacuum` on a database that already has
+  /// tables, and beforeOpen runs after onCreate — so the pragma never took and
+  /// every `incremental_vacuum` below was a no-op. Switching it needs a full
+  /// VACUUM, which is why this only runs when the mode is still NONE.
+  Future<void> _ensureIncrementalVacuum() async {
+    try {
+      final rows = await customSelect('PRAGMA auto_vacuum').get();
+      final mode = rows.isEmpty
+          ? null
+          : rows.first.data.values.first as int? ?? 0;
+      if (mode == 2) return;
+      await customStatement('PRAGMA auto_vacuum = INCREMENTAL');
+      if (mode == 0) await customStatement('VACUUM');
+      // coverage:ignore-start
+    } catch (e) {
+      AppLogger.warn('auto_vacuum setup failed: $e');
+      // coverage:ignore-end
+    }
+  }
 
   Future<void> _createIndexes() async {
     await customStatement(
@@ -310,6 +333,8 @@ class SqliteRepository implements IClipboardRepository {
       } catch (e) {
         AppLogger.error('incremental_vacuum failed: $e');
       }
+      // The deleted rows survive in the -wal until it is truncated.
+      await walCheckpoint();
     }
 
     return deleted;
@@ -326,6 +351,8 @@ class SqliteRepository implements IClipboardRepository {
       } catch (e) {
         AppLogger.error('incremental_vacuum failed: $e');
       }
+      // The deleted rows survive in the -wal until it is truncated.
+      await walCheckpoint();
     }
     return deleted;
   }

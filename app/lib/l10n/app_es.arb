@@ -166,6 +166,8 @@
   "pasteDestinationUnavailable": "Se canceló el pegado porque no se pudo restaurar el destino original. Abre CopyPaste con su atajo de teclado e inténtalo nuevamente.",
   "plainPasteItemUnavailable": "El elemento bajo el cursor, el seleccionado o el primero no se puede pegar como texto plano.",
   "plainClipboardUnavailable": "No hay texto en el portapapeles. Copia primero un texto y vuelve a usar el pegado como texto plano.",
+  "clipboardWriteFailed": "No se pudo copiar el elemento al portapapeles porque otra aplicación lo tiene retenido. Vuelve a intentarlo en un momento.",
+  "pasteTargetElevated": "La aplicación de destino se ejecuta como administrador, así que Windows bloquea el pegado simulado. Ejecuta CopyPaste también como administrador o pulsa Ctrl+V tú mismo.",
   "hotkeyRegistrationFailed": "No se pudo registrar el atajo {shortcut}. Es posible que el sistema u otra aplicación ya lo esté usando.",
   "@hotkeyRegistrationFailed": {
     "placeholders": { "shortcut": { "type": "String" } }

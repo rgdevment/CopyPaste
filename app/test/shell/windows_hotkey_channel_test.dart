@@ -141,4 +141,68 @@ void main() {
     expect(response.errorCode, 'sendInputFailed');
     expect(response.win32Error, 5);
   });
+
+  test(
+    'forwards the destination window, focus and thread to the runner',
+    () async {
+      MethodCall? captured;
+      messenger.setMockMethodCallHandler(methodChannel, (call) async {
+        captured = call;
+        return <String, Object>{'success': true};
+      });
+
+      await WindowsHotkeyChannel.sendPaste(
+        targetHwnd: 460450,
+        targetFocusHwnd: 461184,
+        targetThreadId: 20832,
+        channel: methodChannel,
+      );
+
+      expect(captured!.method, 'sendPaste');
+      expect(captured!.arguments['targetHwnd'], 460450);
+      expect(captured!.arguments['targetFocusHwnd'], 461184);
+      expect(captured!.arguments['targetThreadId'], 20832);
+    },
+  );
+
+  test('parses the focus repair diagnostics', () async {
+    messenger.setMockMethodCallHandler(methodChannel, (call) async {
+      return <String, Object>{
+        'success': true,
+        'sentInputs': 9,
+        'expectedInputs': 9,
+        'attached': true,
+        'focusRepaired': true,
+        'focusBefore': 0,
+      };
+    });
+
+    final response = await WindowsHotkeyChannel.sendPaste(
+      channel: methodChannel,
+    );
+
+    expect(response.attached, isTrue);
+    expect(response.focusRepaired, isTrue);
+    expect(response.focusBefore, 0);
+  });
+
+  test(
+    'surfaces a destination that lost the foreground before injection',
+    () async {
+      messenger.setMockMethodCallHandler(methodChannel, (call) async {
+        return <String, Object>{
+          'success': false,
+          'errorCode': 'targetNotForeground',
+        };
+      });
+
+      final response = await WindowsHotkeyChannel.sendPaste(
+        channel: methodChannel,
+      );
+
+      expect(response.success, isFalse);
+      expect(response.errorCode, 'targetNotForeground');
+      expect(response.focusRepaired, isFalse);
+    },
+  );
 }

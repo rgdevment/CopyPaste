@@ -33,7 +33,6 @@ one You submitted before**. Code reaches a project by more routes than a Pull
 Request, and a signature that only looked forward would leave those earlier
 routes unaccounted for.
 
-
 **"Project Owner"** means Mario Hidalgo G. (rgdevment), the copyright holder
 and maintainer of CopyPaste.
 
@@ -60,7 +59,6 @@ from the Project Owner, insofar as those rights would prevent the uses granted
 above. Where such rights cannot be waived, You agree not to enforce them in a
 way that blocks those uses. This does not touch attribution: section 6 commits
 the Project Owner to preserving Your authorship.
-
 
 ## 3. Patent licence
 

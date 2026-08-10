@@ -238,6 +238,24 @@ class ClipboardService {
     return item;
   }
 
+  /// Reactivating an entry whose file is gone would swallow the incoming
+  /// capture: the payload is dropped and the user keeps a broken item. Only
+  /// rejects the match when there are bytes to lose — without them, keeping
+  /// the existing entry preserves history. Size cannot be compared: the
+  /// processing queue rewrites `content` to a PNG.
+  bool _matchesStoredImage(ClipboardItem existing, List<int>? imageBytes) {
+    if (imageBytes == null || imageBytes.isEmpty) return true;
+    if (existing.content.isEmpty) return true;
+    try {
+      return File(existing.content).existsSync();
+      // coverage:ignore-start
+    } catch (e) {
+      AppLogger.warn('processImage: could not stat ${existing.content}: $e');
+      return true;
+      // coverage:ignore-end
+    }
+  }
+
   Future<ClipboardItem?> processImage(
     String contentHash, {
     String? source,
@@ -248,7 +266,7 @@ class ClipboardService {
     if (_consumeSuppression('i:$contentHash')) return null;
 
     final existing = await _repository.findByContentHash(contentHash);
-    if (existing != null) {
+    if (existing != null && _matchesStoredImage(existing, imageBytes)) {
       final updated = existing.copyWith(modifiedAt: DateTime.now().toUtc());
       await _repository.update(updated);
       _itemReactivated.add(updated);
