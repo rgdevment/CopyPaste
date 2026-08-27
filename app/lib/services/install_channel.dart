@@ -13,13 +13,10 @@ enum InstallChannel {
   scoop,
   githubMacos,
   homebrew,
-  githubLinux,
-  appImage,
-  snap,
   unknown,
 }
 
-enum HostPlatform { macos, linux, windows, other }
+enum HostPlatform { macos, windows, other }
 
 class InstallChannelDetector {
   static HostPlatform? platformOverride;
@@ -47,12 +44,6 @@ class InstallChannelDetector {
       return InstallChannel.githubMacos;
     }
 
-    if (host == HostPlatform.linux) {
-      if (path.contains('.AppImage')) return InstallChannel.appImage;
-      if (path.startsWith('/snap/')) return InstallChannel.snap;
-      return InstallChannel.githubLinux;
-    }
-
     if (host == HostPlatform.windows) {
       if (_isScoopPath(path)) return InstallChannel.scoop;
       return InstallChannel.githubWindows;
@@ -63,7 +54,6 @@ class InstallChannelDetector {
 
   static HostPlatform _currentPlatform() {
     if (Platform.isMacOS) return HostPlatform.macos;
-    if (Platform.isLinux) return HostPlatform.linux;
     if (Platform.isWindows) return HostPlatform.windows;
     return HostPlatform.other;
   }
@@ -80,14 +70,10 @@ class InstallChannelDetector {
         return 'github_macos';
       case InstallChannel.homebrew:
         return 'homebrew';
-      case InstallChannel.githubLinux:
-        return 'github_linux';
-      case InstallChannel.appImage:
-        return 'github_linux';
-      case InstallChannel.snap:
-        return 'snap';
+      // Deliberately absent from the manifest: an unidentified host has no
+      // install channel, so the blocked-version screen falls back to the hint.
       case InstallChannel.unknown:
-        return 'github_linux';
+        return 'unknown';
     }
   }
 

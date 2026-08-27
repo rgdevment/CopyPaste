@@ -139,15 +139,6 @@ void main() {
       expect(macos.plainPasteHotkeyUseAlt, isTrue);
       expect(macos.plainPasteHotkeyUseShift, isTrue);
       expect(macos.plainPasteHotkeyUseCtrl, isTrue);
-
-      final linux = AppConfig.defaultForPlatform('linux');
-      expect(linux.hotkeyUseWin, isTrue);
-      expect(linux.hotkeyUseCtrl, isFalse);
-      expect(linux.hotkeyUseAlt, isFalse);
-      expect(linux.hotkeyUseShift, isFalse);
-      expect(linux.plainPasteHotkeyUseCtrl, isTrue);
-      expect(linux.plainPasteHotkeyUseShift, isTrue);
-      expect(linux.plainPasteHotkeyUseAlt, isFalse);
     });
 
     test('legacy JSON does not silently enable the new global hotkey', () {
@@ -517,38 +508,6 @@ void main() {
       );
     });
 
-    test('linux capability dismiss flags default to false', () {
-      const config = AppConfig();
-      expect(config.linuxAppindicatorWarningDismissed, isFalse);
-      expect(config.linuxXtestWarningDismissed, isFalse);
-    });
-
-    test('linux capability dismiss flags round-trip via JSON', () {
-      const config = AppConfig(
-        linuxAppindicatorWarningDismissed: true,
-        linuxXtestWarningDismissed: true,
-      );
-      final restored = AppConfig.fromJson(config.toJson());
-      expect(restored.linuxAppindicatorWarningDismissed, isTrue);
-      expect(restored.linuxXtestWarningDismissed, isTrue);
-    });
-
-    test('copyWith updates linux capability dismiss flags individually', () {
-      const config = AppConfig();
-      expect(
-        config
-            .copyWith(linuxAppindicatorWarningDismissed: true)
-            .linuxAppindicatorWarningDismissed,
-        isTrue,
-      );
-      expect(
-        config
-            .copyWith(linuxXtestWarningDismissed: true)
-            .linuxXtestWarningDismissed,
-        isTrue,
-      );
-    });
-
     test('toJson omits lastBackupDateUtc when null', () {
       const config = AppConfig();
       expect(config.toJson().containsKey('lastBackupDateUtc'), isFalse);
@@ -874,11 +833,9 @@ void main() {
     });
 
     test('defaultForPlatform returns platform-specific hotkeys', () {
-      final linux = AppConfig.defaultForPlatform('linux');
       final macos = AppConfig.defaultForPlatform('macos');
       final windows = AppConfig.defaultForPlatform('windows');
 
-      expect(linux.hotkeyUseWin, isTrue);
       expect(macos.plainPasteHotkeyUseWin, isTrue);
       expect(windows.hotkeyKeyName, equals('C'));
     });
@@ -928,7 +885,6 @@ void main() {
   group('AppConfig PR #10 fields (thumbnails / onboarding / image cap)', () {
     test('default values', () {
       const c = AppConfig();
-      expect(c.hasCompletedOnboarding, isFalse);
       expect(c.generateImageThumbnails, isTrue);
       expect(c.generateVideoThumbnails, isTrue);
       expect(c.generateAudioThumbnails, isTrue);
@@ -937,14 +893,12 @@ void main() {
 
     test('JSON round-trip preserves new fields', () {
       const c = AppConfig(
-        hasCompletedOnboarding: true,
         generateImageThumbnails: false,
         generateVideoThumbnails: false,
         generateAudioThumbnails: false,
         maxImageProcessingSizeMB: 5,
       );
       final restored = AppConfig.fromJson(c.toJson());
-      expect(restored.hasCompletedOnboarding, isTrue);
       expect(restored.generateImageThumbnails, isFalse);
       expect(restored.generateVideoThumbnails, isFalse);
       expect(restored.generateAudioThumbnails, isFalse);
@@ -954,23 +908,13 @@ void main() {
     test('copyWith updates each new field independently', () {
       const c = AppConfig();
       final u = c.copyWith(
-        hasCompletedOnboarding: true,
         generateImageThumbnails: false,
         maxImageProcessingSizeMB: 10,
       );
-      expect(u.hasCompletedOnboarding, isTrue);
       expect(u.generateImageThumbnails, isFalse);
       expect(u.generateVideoThumbnails, isTrue); // unchanged
       expect(u.maxImageProcessingSizeMB, equals(10));
     });
-
-    test(
-      'hasCompletedOnboarding migrates from legacy hasSeenWindowsOnboarding',
-      () {
-        final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
-        expect(c.hasCompletedOnboarding, isTrue);
-      },
-    );
 
     test('hasSeenOnboarding migrates from legacy hasSeenWindowsOnboarding', () {
       final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
@@ -986,29 +930,12 @@ void main() {
     });
 
     test(
-      'both hasSeenOnboarding and hasCompletedOnboarding populated from legacy',
-      () {
-        final c = AppConfig.fromJson({'hasSeenWindowsOnboarding': true});
-        expect(c.hasSeenOnboarding, isTrue);
-        expect(c.hasCompletedOnboarding, isTrue);
-      },
-    );
-
-    test(
-      'hasCompletedOnboarding stays false when neither legacy nor new is set',
+      'hasSeenOnboarding stays false when neither legacy nor new is set',
       () {
         final c = AppConfig.fromJson({});
-        expect(c.hasCompletedOnboarding, isFalse);
+        expect(c.hasSeenOnboarding, isFalse);
       },
     );
-
-    test('explicit hasCompletedOnboarding overrides legacy', () {
-      final c = AppConfig.fromJson({
-        'hasSeenWindowsOnboarding': true,
-        'hasCompletedOnboarding': false,
-      });
-      expect(c.hasCompletedOnboarding, isFalse);
-    });
   });
 
   group('AppConfig PR #9 field (keepBrokenItemsDays)', () {

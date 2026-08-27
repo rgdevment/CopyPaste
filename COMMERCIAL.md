@@ -27,13 +27,13 @@ matter how many people use it or for how long.
 If you are a company wondering whether rolling this out to your staff needs a
 licence: it does not. Internal use is not distribution.
 
-### Packaging it for a Linux distribution
+### Packaging it for a distribution or package manager
 
 **You do not need a commercial licence, and you never will.** Building
-CopyPaste for Debian, Fedora, Arch, openSUSE, Flathub, the AUR, or anywhere
-else is exactly the redistribution the GPL is designed to permit. Ship the
-`.deb`, the `.rpm`, the AppImage or your own build, keep the licence notices
-and make the source available as the GPL requires, and you are done.
+CopyPaste for any distribution channel — a package manager, a software
+repository, or your own build pipeline — is exactly the redistribution the GPL
+is designed to permit. Ship the package, keep the licence notices and make the
+source available as the GPL requires, and you are done.
 
 Packagers are welcome here. If something about the build makes your life
 harder, open an issue — that is a bug worth fixing.
@@ -71,8 +71,8 @@ being the well-known case. That conflict binds **licensees**, not the
 copyright holder: a third party cannot publish CopyPaste there, and the
 project itself can, under separate terms it grants to itself.
 
-Linux repositories and the Microsoft Store are unaffected: both defer to the
-software's own licence.
+Third-party package repositories and the Microsoft Store are unaffected: both
+defer to the software's own licence.
 
 ## Why the project is set up this way
 

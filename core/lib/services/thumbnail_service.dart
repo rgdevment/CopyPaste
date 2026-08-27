@@ -31,8 +31,8 @@ class ThumbnailResult {
 /// Two paths:
 ///   1. **Native** (preferred when `nativeProvider` is set): asks the OS
 ///      shell for a cached thumbnail (Win `IShellItemImageFactory`,
-///      macOS `QLThumbnailGenerator`, Linux `Tumbler`). Covers
-///      [ClipboardContentType.image], [video] and [audio] (cover art).
+///      macOS `QLThumbnailGenerator`). Covers [ClipboardContentType.image],
+///      [video] and [audio] (cover art).
 ///   2. **Dart fallback** (always available for images): decodes the file
 ///      with `package:image` in a one-shot isolate. Only handles
 ///      [ClipboardContentType.image].

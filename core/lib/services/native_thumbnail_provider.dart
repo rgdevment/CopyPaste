@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 /// Contract for OS-backed thumbnail providers. Implementations request a
 /// thumbnail bitmap from the native shell (Windows `IShellItemImageFactory`,
-/// macOS `QLThumbnailGenerator`, Linux `Tumbler`) and return the encoded
-/// PNG bytes ready to be written to disk.
+/// macOS `QLThumbnailGenerator`) and return the encoded PNG bytes ready to
+/// be written to disk.
 ///
 /// Implementations are expected to:
 ///   - Return `null` when the OS has no usable thumbnail (no error).

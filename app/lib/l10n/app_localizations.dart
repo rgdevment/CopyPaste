@@ -1217,7 +1217,7 @@ abstract class AppLocalizations {
   /// About section description
   ///
   /// In en, this message translates to:
-  /// **'A modern clipboard manager built to feel native on Windows, macOS, and Linux.\nLocal-first — your history, always at hand. No accounts, no telemetry, no subscriptions.'**
+  /// **'A modern clipboard manager built to feel native on Windows and macOS.\nLocal-first — your history, always at hand. No accounts, no telemetry, no subscriptions.'**
   String get aboutDescription;
 
   /// Privacy section title in About tab
@@ -1364,12 +1364,6 @@ abstract class AppLocalizations {
   /// **'Version {version} is available.\n\nUpdate via Homebrew:\nbrew upgrade copypaste\n\nOr download the latest release from GitHub.'**
   String updateAvailableMac(String version);
 
-  /// Update dialog message for Linux
-  ///
-  /// In en, this message translates to:
-  /// **'Version {version} is available.\n\nDownload the latest release from GitHub.'**
-  String updateAvailableLinux(String version);
-
   /// Update dialog message for MS Store builds
   ///
   /// In en, this message translates to:
@@ -1465,90 +1459,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.'**
   String get blockedFallbackHint;
-
-  /// Title for the Wayland-unsupported gate screen
-  ///
-  /// In en, this message translates to:
-  /// **'Wayland is not supported'**
-  String get waylandUnsupportedTitle;
-
-  /// Badge chip on the Wayland-unsupported gate screen
-  ///
-  /// In en, this message translates to:
-  /// **'Open source · X11 only'**
-  String get waylandUnsupportedBadge;
-
-  /// Body text on the Wayland-unsupported gate screen
-  ///
-  /// In en, this message translates to:
-  /// **'Linux support is still a work in progress. This project is maintained by a single person and we need more testers to move forward.\n\nCopyPaste works fully on X11 — to use it, log in with an X11 session. Sorry for the inconvenience.'**
-  String get waylandUnsupportedBody;
-
-  /// Button to open the repo from the Wayland gate
-  ///
-  /// In en, this message translates to:
-  /// **'View on GitHub'**
-  String get waylandUnsupportedGitHub;
-
-  /// Button to exit the app from the Wayland gate
-  ///
-  /// In en, this message translates to:
-  /// **'Close'**
-  String get waylandUnsupportedClose;
-
-  /// Shown when the preferred Linux hotkey is unavailable and a temporary fallback is active
-  ///
-  /// In en, this message translates to:
-  /// **'The shortcut {requested} is unavailable on this X11 desktop. CopyPaste is temporarily using {fallback}. You can change it in Settings.'**
-  String linuxHotkeyFallbackWarning(String requested, String fallback);
-
-  /// Shown when both the requested Linux hotkey and the temporary fallback fail
-  ///
-  /// In en, this message translates to:
-  /// **'The shortcut {requested} is unavailable on this X11 desktop, and the temporary fallback {fallback} also failed. Open Settings to choose another shortcut.'**
-  String linuxHotkeyConflictWarning(String requested, String fallback);
-
-  /// Shown when XGrabKey fails because another app already owns the shortcut
-  ///
-  /// In en, this message translates to:
-  /// **'The shortcut {hotkey} is being used by another application. Change it in Settings → Shortcuts.'**
-  String linuxHotkeyGrabFailedWarning(String hotkey);
-
-  /// Shown when the X11 paste flow could not regain focus on the previous window in time
-  ///
-  /// In en, this message translates to:
-  /// **'The clipboard has your content. Paste manually with Ctrl+V.'**
-  String get linuxPasteFocusTimeoutWarning;
-
-  /// Title of the AppIndicator missing banner
-  ///
-  /// In en, this message translates to:
-  /// **'System tray icon unavailable'**
-  String get linuxAppindicatorBannerTitle;
-
-  /// Body of the AppIndicator missing banner
-  ///
-  /// In en, this message translates to:
-  /// **'Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.'**
-  String get linuxAppindicatorBannerBody;
-
-  /// Title of the missing XTest banner
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic paste-back disabled'**
-  String get linuxXtestBannerTitle;
-
-  /// Body of the missing XTest banner
-  ///
-  /// In en, this message translates to:
-  /// **'The X11 XTest extension is not available, so CopyPaste cannot inject Ctrl+V automatically. Items are still copied to the clipboard — paste manually with Ctrl+V.'**
-  String get linuxXtestBannerBody;
-
-  /// Action to dismiss a Linux capability banner
-  ///
-  /// In en, this message translates to:
-  /// **'Dismiss'**
-  String get linuxBannerDismiss;
 
   /// In-app snackbar shown inside the window when it is raised by a second launch attempt
   ///

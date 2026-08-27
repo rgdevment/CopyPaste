@@ -172,31 +172,31 @@ void main() {
     });
   });
 
-  group('SingleInstance – Unix (macOS / Linux)', () {
+  group('SingleInstance – Unix (macOS)', () {
     setUp(() {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       SingleInstance.release();
     });
 
     tearDown(() {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       SingleInstance.release();
     });
 
     test('acquire() returns true on first call', () {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       expect(SingleInstance.acquire(), isTrue);
     });
 
     test('acquire() creates the lock file', () {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       SingleInstance.acquire();
       final lockPath = '${Directory.systemTemp.path}/copypaste.lock';
       expect(File(lockPath).existsSync(), isTrue);
     });
 
     test('release() deletes the lock file', () {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       SingleInstance.acquire();
       SingleInstance.release();
       final lockPath = '${Directory.systemTemp.path}/copypaste.lock';
@@ -204,14 +204,14 @@ void main() {
     });
 
     test('can re-acquire after release', () {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       expect(SingleInstance.acquire(), isTrue);
       SingleInstance.release();
       expect(SingleInstance.acquire(), isTrue);
     });
 
     test('release() is idempotent — safe to call without prior acquire', () {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       SingleInstance.release();
       SingleInstance.release();
       // After double release, re-acquire must still work
@@ -219,7 +219,7 @@ void main() {
     });
 
     test('lock file contains the process pid', () {
-      if (!Platform.isMacOS && !Platform.isLinux) return;
+      if (Platform.isWindows) return;
       SingleInstance.acquire();
       final lockPath = '${Directory.systemTemp.path}/copypaste.lock';
       final content = File(lockPath).readAsStringSync().trim();

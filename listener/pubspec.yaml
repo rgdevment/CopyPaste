@@ -23,8 +23,6 @@ dev_dependencies:
 flutter:
   plugin:
     platforms:
-      linux:
-        pluginClass: ListenerPlugin
       macos:
         pluginClass: ListenerPlugin
       windows:

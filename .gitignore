@@ -37,10 +37,6 @@ coverage/
 # ── Build outputs ──
 dist/
 
-# ── OBS (osc local checkouts) ──
-.osc/
-/home:rgdevment/
-
 # ── Environment ──
 .env
 .venv/

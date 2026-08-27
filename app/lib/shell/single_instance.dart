@@ -214,14 +214,7 @@ class SingleInstance {
   }
 
   static bool acquire() {
-    bool acquired;
-    if (Platform.isWindows) {
-      acquired = _acquireWindows();
-    } else if (Platform.isMacOS || Platform.isLinux) {
-      acquired = _acquireUnix();
-    } else {
-      return true;
-    }
+    final acquired = Platform.isWindows ? _acquireWindows() : _acquireUnix();
     if (!acquired) signalWakeup();
     return acquired;
   }

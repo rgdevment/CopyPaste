@@ -6,7 +6,6 @@ import 'package:core/core.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 
-import 'linux_session.dart';
 import 'msix_startup_task.dart';
 import 'win_package_context.dart';
 
@@ -114,19 +113,6 @@ class StartupHelper {
         _installLaunchAgent();
       } else {
         _removeLaunchAgent();
-      }
-    } else if (Platform.isLinux) {
-      // Never install autostart on Wayland — the app would launch and immediately
-      // show the unsupported screen, which is a poor experience.
-      if (isWaylandSession()) {
-        _removeDesktopAutostart();
-        AppLogger.info('Wayland session: autostart entry removed/skipped.');
-        return;
-      }
-      if (runOnStartup) {
-        _installDesktopAutostart();
-      } else {
-        _removeDesktopAutostart();
       }
     }
   }
@@ -320,47 +306,6 @@ class StartupHelper {
       if (file.existsSync()) file.deleteSync();
     } catch (e) {
       AppLogger.error('Failed to remove LaunchAgent: $e');
-    }
-  }
-
-  // Honors XDG_CONFIG_HOME (must be an absolute path per the XDG spec);
-  // falls back to ~/.config when unset or relative.
-  static String get _xdgConfigDir {
-    final xdg = Platform.environment['XDG_CONFIG_HOME'];
-    if (xdg != null && xdg.startsWith('/')) return xdg;
-    final home = Platform.environment['HOME'] ?? '/tmp';
-    return '$home/.config';
-  }
-
-  static String get _desktopAutostartPath =>
-      '$_xdgConfigDir/autostart/$_appName.desktop';
-
-  static void _installDesktopAutostart() {
-    try {
-      final exePath = Platform.resolvedExecutable;
-      final desktop =
-          '[Desktop Entry]\n'
-          'Type=Application\n'
-          'Name=$_appName\n'
-          'Exec=$exePath\n'
-          'X-GNOME-Autostart-enabled=true\n'
-          'StartupNotify=false\n'
-          'Terminal=false\n'
-          'OnlyShowIn=GNOME;KDE;XFCE;Cinnamon;MATE;LXDE;LXQt;Pantheon;Unity;Budgie;Deepin;\n';
-      final autostartDir = Directory('$_xdgConfigDir/autostart');
-      if (!autostartDir.existsSync()) autostartDir.createSync(recursive: true);
-      File(_desktopAutostartPath).writeAsStringSync(desktop);
-    } catch (e) {
-      AppLogger.error('Failed to install autostart desktop entry: $e');
-    }
-  }
-
-  static void _removeDesktopAutostart() {
-    try {
-      final file = File(_desktopAutostartPath);
-      if (file.existsSync()) file.deleteSync();
-    } catch (e) {
-      AppLogger.error('Failed to remove autostart desktop entry: $e');
     }
   }
 }

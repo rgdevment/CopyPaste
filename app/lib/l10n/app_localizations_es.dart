@@ -620,7 +620,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'Un gestor de portapapeles moderno, nativo en Windows, macOS y Linux.\nTodo local — tu historial, siempre a mano. Sin cuentas, sin telemetría, sin suscripciones.';
+      'Un gestor de portapapeles moderno, nativo en Windows y macOS.\nTodo local — tu historial, siempre a mano. Sin cuentas, sin telemetría, sin suscripciones.';
 
   @override
   String get sectionPrivacy => 'PRIVACIDAD';
@@ -706,11 +706,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String updateAvailableLinux(String version) {
-    return 'La versión $version está disponible.\n\nDescarga la última versión desde GitHub.';
-  }
-
-  @override
   String updateAvailableStore(String version) {
     return 'La versión $version está disponible.\n\nLa Microsoft Store entrega las actualizaciones automáticamente. Las nuevas versiones pueden tardar unos días en aparecer tras su publicación.';
   }
@@ -771,58 +766,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get blockedFallbackHint =>
       'Visita https://github.com/rgdevment/CopyPaste/releases para descargar el instalador más reciente.';
-
-  @override
-  String get waylandUnsupportedTitle => 'Wayland no está soportado';
-
-  @override
-  String get waylandUnsupportedBadge => 'Open source · Solo X11';
-
-  @override
-  String get waylandUnsupportedBody =>
-      'El soporte en Linux está en progreso. Este proyecto lo mantiene una sola persona y necesitamos más testers para avanzar.\n\nCopyPaste funciona completamente en X11 — para usarlo, inicia sesión con X11. Lamentamos las molestias.';
-
-  @override
-  String get waylandUnsupportedGitHub => 'Ver en GitHub';
-
-  @override
-  String get waylandUnsupportedClose => 'Cerrar';
-
-  @override
-  String linuxHotkeyFallbackWarning(String requested, String fallback) {
-    return 'El atajo $requested no está disponible en este escritorio X11. CopyPaste está usando temporalmente $fallback. Puedes cambiarlo en Configuración.';
-  }
-
-  @override
-  String linuxHotkeyConflictWarning(String requested, String fallback) {
-    return 'El atajo $requested no está disponible en este escritorio X11 y el fallback temporal $fallback también falló. Abre Configuración para elegir otro atajo.';
-  }
-
-  @override
-  String linuxHotkeyGrabFailedWarning(String hotkey) {
-    return 'El atajo $hotkey está siendo usado por otra aplicación. Cámbialo en Configuración → Atajos.';
-  }
-
-  @override
-  String get linuxPasteFocusTimeoutWarning =>
-      'El portapapeles tiene tu contenido. Pégalo manualmente con Ctrl+V.';
-
-  @override
-  String get linuxAppindicatorBannerTitle => 'Ícono de bandeja no disponible';
-
-  @override
-  String get linuxAppindicatorBannerBody =>
-      'Tu escritorio no expone un host de AppIndicator, por lo que el ícono de CopyPaste no aparecerá en la bandeja. Instala una extensión de bandeja para tu distribución y reinicia CopyPaste.';
-
-  @override
-  String get linuxXtestBannerTitle => 'Pegado automático deshabilitado';
-
-  @override
-  String get linuxXtestBannerBody =>
-      'La extensión XTest de X11 no está disponible, por lo que CopyPaste no puede inyectar Ctrl+V automáticamente. Los elementos siguen copiándose al portapapeles — pégalos manualmente con Ctrl+V.';
-
-  @override
-  String get linuxBannerDismiss => 'Descartar';
 
   @override
   String wakeupHint(String hotkey) {

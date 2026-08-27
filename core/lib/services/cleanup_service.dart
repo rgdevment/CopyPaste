@@ -430,7 +430,7 @@ class CleanupService {
         }
         return true;
       }
-      // Linux / others: best-effort; mount discovery is out of scope. Treat
+      // Other platforms: best-effort; mount discovery is out of scope. Treat
       // as present so purge proceeds when the file is genuinely missing.
       return true;
     } catch (_) {

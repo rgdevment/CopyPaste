@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows, macOS and Linux"/>
+  <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows and macOS"/>
 
   <h1>CopyPaste — Free Open Source Clipboard Manager</h1>
-  <p><strong>A local-first clipboard history and copy paste tool for Windows, macOS and Linux.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
+  <p><strong>A local-first clipboard history and copy paste tool for Windows and macOS.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
 
   <p>
     <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci.yml">
@@ -17,7 +17,7 @@
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
-    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4?style=flat-square" alt="Platform: Windows, macOS, Linux"/>
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-0078D4?style=flat-square" alt="Platform: Windows, macOS"/>
     <a href="#license-and-spirit">
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License GPL-3.0"/>
     </a>
@@ -33,14 +33,10 @@
     <a href="#getting-started">
       <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install CopyPaste clipboard manager via Homebrew on macOS"/>
     </a>
-    &nbsp;
-    <a href="#getting-started">
-      <img src="https://img.shields.io/badge/Linux-apt_%2F_dnf_%2F_Homebrew-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="CopyPaste clipboard manager for Linux — apt, dnf or Homebrew"/>
-    </a>
   </p>
 
   <p align="center">
-    <sub>Prefer a direct download? <a href="https://github.com/rgdevment/CopyPaste/releases/latest">GitHub Releases</a> has standalone installers — Windows (.exe) · macOS (.dmg) · Linux (.AppImage · .deb · .rpm)</sub>
+    <sub>Prefer a direct download? <a href="https://github.com/rgdevment/CopyPaste/releases/latest">GitHub Releases</a> has standalone installers — Windows (.exe) · macOS (.dmg)</sub>
   </p>
 
   <p>
@@ -61,13 +57,13 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - **100% local** — your clipboard history never leaves your computer. No cloud, no servers, no accounts.
 - **Truly free** — no premium tiers, no feature gates, no "free trial" tricks. GPL v3, forever.
   Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
-- **Cross-platform** — same native copy-paste experience on Windows, macOS, and Linux.
+- **Cross-platform** — same native copy-paste experience on Windows and macOS.
 - **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
 - **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
 
 > I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
 >
-> **Linux:** standalone builds for **X11 sessions** (Ubuntu / Fedora / RHEL-compatible). Wayland is not supported yet — global hotkey and auto-paste rely on X11 APIs.
+> **Linux support has been discontinued.** See [Linux support (discontinued)](#linux-support-discontinued).
 
 ---
 
@@ -120,7 +116,7 @@ Most **clipboard managers** out there are either bloated, ugly, Windows-only, or
 
 - Didn't hog system resources
 - Looked and felt like part of my OS, not a widget dropped on top
-- Worked on both Windows and macOS (and eventually Linux)
+- Worked on both Windows and macOS
 - Didn't require an account, subscription, or internet connection
 - Actually respected my privacy — not just claimed to
 
@@ -134,7 +130,7 @@ Every line of code is public. You can read it, fork it, or learn from it. This i
 
 **CopyPaste is:**
 
-- A **local-first clipboard manager** and **clipboard history** app for Windows, macOS, and Linux
+- A **local-first clipboard manager** and **clipboard history** app for Windows and macOS
 - A fast, keyboard-driven **copy-paste utility** for daily productivity and workflow efficiency
 - A **copy tool** you can trust — **open source** (GPL v3), inspect every line, fork it, contribute to it
 
@@ -190,12 +186,6 @@ CopyPaste stores all data locally under your user profile:
 - **Images:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images`
 - **Config:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config`
 
-**Linux:**
-
-- **Database:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/clipboard.db`
-- **Images:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/images`
-- **Config:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/config`
-
 </details>
 
 If you care about privacy and control, this clipboard manager is made for you. Read the full [Privacy Policy](PRIVACY.md) for complete details.
@@ -213,14 +203,14 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 - **Adapts to Your System:** Follows your OS light or dark theme automatically — Mica on Windows, Sidebar material on macOS.
 - **Fast and Lightweight:** Starts quickly and doesn't hog resources. Lightweight enough to forget it's running.
-- **Multiplatform:** The same native look, feel, and functionality across Windows, macOS, and Linux.
+- **Multiplatform:** The same native look, feel, and functionality across Windows and macOS.
 
 ### Smart Clipboard Management
 
 - **Handles Everything:** Text, images, files, folders, links, audio, and video — with content-aware previews. A copy tool that actually understands what you copy.
 - **Smart Content Detection:** Automatically recognizes and categorizes content — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each type gets its own icon, badge, and filter.
 - **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the copy-paste manager stays out of the way.
-- **Drag to Other Apps (Windows):** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor. Dragged files keep their real, unique name, so web uploaders no longer reject a second image as a duplicate `image.png`. macOS and Linux support is on the way.
+- **Drag to Other Apps (Windows):** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor. Dragged files keep their real, unique name, so web uploaders no longer reject a second image as a duplicate `image.png`. macOS support is on the way.
 - **Formatting Is Never Lost:** Copying text that is already in the history again, this time without styles, no longer discards the formatting stored for it. Rich text contains the plain text, not the other way around: _Paste as plain text_ already serves the unstyled version at paste time, without touching what is saved. Stored styles are replaced only when a new copy brings its own.
 
 ### Workflow and Productivity
@@ -232,14 +222,14 @@ If you care about privacy and control, this clipboard manager is made for you. R
 - **Pin Important Items:** Keep your most-used copy-paste fragments always accessible at the top.
 - **Backup and Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
 - **Start with Windows:** Optionally launch at login — works natively on both the Microsoft Store (MSIX) and standalone installer versions, no admin rights required.
-- **Guided Onboarding (Windows):** First-launch walkthrough on Windows — pick your preferences for thumbnails, broken-item retention and image quota before you start using the app. macOS and Linux open straight to the main panel.
+- **Guided Onboarding (Windows):** First-launch walkthrough on Windows — pick your preferences for thumbnails, broken-item retention and image quota before you start using the app. macOS opens straight to the main panel.
 - **Live Settings (autosave):** The Settings panel is organized in 6 tabs (General · Shortcuts · Performance · Cleanup & Privacy · Backup & Support · About) and saves automatically as you tweak — no Save / Cancel buttons.
 
 ### Storage Control
 
 - **Image Quota (MB):** Cap how much disk space copied images can use. When the cap is reached, oldest non-pinned images are evicted (LRU). Pinned items and external file references are never touched. Set to `0` (default) for unlimited.
 - **Broken-Item Retention:** When a copied file or image disappears from disk (moved, deleted, external drive disconnected) the entry is kept for `keepBrokenItemsDays` (default 30) before being purged — so reconnecting an external drive restores the previews instead of losing them.
-- **Native Thumbnails:** Image, video and audio previews are generated through the OS shell (QuickLook on macOS, `IShellItemImageFactory` on Windows). Linux uses a Dart fallback for images; video/audio show a generic icon.
+- **Native Thumbnails:** Image, video and audio previews are generated through the OS shell (QuickLook on macOS, `IShellItemImageFactory` on Windows).
 
 ---
 
@@ -250,9 +240,9 @@ dedicated shortcuts for its global actions and history panel.
 
 | Scope | Shortcut | Action |
 | :---- | :------- | :----- |
-| Active application | Ctrl+V (Windows/Linux) / Cmd+V (macOS) | Paste the current system clipboard normally. CopyPaste does not intercept it. |
-| CopyPaste global | Ctrl+Alt+C (Windows) / Control+Shift+V (macOS) / Super+V (Linux) | Open/close CopyPaste (customizable). |
-| CopyPaste global, optional | Ctrl+Alt+V (Windows; configurable elsewhere) | Paste the current system clipboard as plain text without opening the panel. |
+| Active application | Ctrl+V (Windows) / Cmd+V (macOS) | Paste the current system clipboard normally. CopyPaste does not intercept it. |
+| CopyPaste global | Ctrl+Alt+C (Windows) / Control+Shift+V (macOS) | Open/close CopyPaste (customizable). |
+| CopyPaste global, optional | Ctrl+Alt+V (Windows; configurable on macOS) | Paste the current system clipboard as plain text without opening the panel. |
 | CopyPaste panel open | Enter | Paste the hovered item, keyboard selection, or first visible history item normally, in that order. |
 | CopyPaste panel open | Shift+Enter | Paste the hovered item, keyboard selection, or first visible history item as plain text (text/link only), in that order. |
 | CopyPaste panel open | ↓ or Tab | Navigate from search to clipboard items. |
@@ -336,7 +326,7 @@ Double-click always collapses the card before pasting, so your last click state 
 
 ### Keyboard-Only Workflow
 
-1. **Press Ctrl+Alt+C** on Windows, **Control+Shift+V** on macOS, or **Super+V** on Linux (customizable in Settings) → Window opens with focus on search box
+1. **Press Ctrl+Alt+C** on Windows or **Control+Shift+V** on macOS (customizable in Settings) → Window opens with focus on search box
 2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
 3. **Press Esc** (optional) → Clear search to see all items again
 4. **Press ↓** → Navigate to first clipboard item
@@ -364,17 +354,23 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 
 | OS          | Recommended                       | Alternatives                                       |
 | :---------- | :-------------------------------- | :------------------------------------------------- |
-| **Windows** | Microsoft Store                   | Standalone `.exe`                                  |
+| **Windows** | Microsoft Store                   | Scoop · standalone `.exe`                          |
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
-| **Linux**   | `apt` / `dnf` (OBS repo)          | Homebrew · self-updating AppImage · `.deb`/`.rpm`  |
 
-After installing, open CopyPaste with **Ctrl+Alt+C** on Windows, **Control+Shift+V** on macOS, or **Super+V** on Linux. All are customizable in Settings → Shortcuts. On Linux/X11, if the configured shortcut is unavailable, CopyPaste tries a temporary fallback for that session and shows a warning.
+After installing, open CopyPaste with **Ctrl+Alt+C** on Windows or **Control+Shift+V** on macOS. Both are customizable in Settings → Shortcuts.
 
 ### Windows
 
 **Microsoft Store** (recommended) — one click, automatic updates, no security warnings.
 
 > [Install from the Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856)
+
+**Scoop** — for command-line installs, tracked with `scoop update`:
+
+```sh
+scoop bucket add rgdevment https://github.com/rgdevment/scoop-bucket
+scoop install copypaste
+```
 
 **Standalone `.exe`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). The installer is self-signed; see the [security note](#standalone-downloads) below.
 
@@ -392,104 +388,27 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 ---
 
-### Linux
+### Linux support (discontinued)
 
-> **Linux requires an X11 session** (Xorg or XWayland). On a pure Wayland session, the global hotkey and auto-paste are unavailable and a warning is shown at startup. CopyPaste is distributed as **standalone, unsandboxed builds** (OBS apt/dnf, Homebrew, AppImage). There is **no Snap, Flatpak or Flathub package**, because the sandbox would prevent the global hotkey, full clipboard polling, and opening of arbitrary file paths from the history.
+> **Linux was maintained through v2.11.0 and is discontinued from there on.** Keeping the X11 shell
+> (global hotkey, XTest paste-back, AppIndicator tray) and the AppImage / `.deb` / `.rpm` pipeline
+> alive was beyond the resources of a single-maintainer project, so the platform was retired rather
+> than left to rot half-working.
 
-#### 1. Native packages via the openSUSE Build Service (recommended)
-
-Native `.deb` and `.rpm` packages are built and hosted on the [openSUSE Build Service](https://build.opensuse.org/package/show/home:rgdevment/copypaste) (project `home:rgdevment`). Add the repo once, then get updates through your system package manager just like any other system package.
-
-<details open>
-<summary><strong>Debian 12 / 13</strong></summary>
-
-```sh
-DIST=Debian_13   # or: Debian_12
-echo "deb http://download.opensuse.org/repositories/home:/rgdevment/${DIST}/ /" \
-  | sudo tee /etc/apt/sources.list.d/home_rgdevment.list
-curl -fsSL "https://download.opensuse.org/repositories/home:rgdevment/${DIST}/Release.key" \
-  | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_rgdevment.gpg > /dev/null
-sudo apt update
-sudo apt install copypaste
-```
-
-</details>
-
-<details>
-<summary><strong>Ubuntu 22.04 / 24.04</strong></summary>
-
-```sh
-DIST=xUbuntu_24.04   # or: xUbuntu_22.04
-echo "deb http://download.opensuse.org/repositories/home:/rgdevment/${DIST}/ /" \
-  | sudo tee /etc/apt/sources.list.d/home_rgdevment.list
-curl -fsSL "https://download.opensuse.org/repositories/home:rgdevment/${DIST}/Release.key" \
-  | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_rgdevment.gpg > /dev/null
-sudo apt update
-sudo apt install copypaste
-```
-
-</details>
-
-<details>
-<summary><strong>Fedora 40 / 41</strong></summary>
-
-```sh
-DIST=Fedora_41   # or: Fedora_40
-sudo dnf config-manager --add-repo \
-  "https://download.opensuse.org/repositories/home:rgdevment/${DIST}/home:rgdevment.repo"
-sudo dnf install copypaste
-```
-
-</details>
-
-<details>
-<summary><strong>openSUSE Tumbleweed</strong></summary>
-
-```sh
-sudo zypper addrepo \
-  https://download.opensuse.org/repositories/home:/rgdevment/openSUSE_Tumbleweed/home:rgdevment.repo
-sudo zypper refresh
-sudo zypper install copypaste
-```
-
-</details>
-
-> Repository signing is handled by the OBS project key; `apt`/`dnf`/`zypper` verify every package automatically. Installation requires `sudo` because system paths are written. If you cannot use `sudo`, use Homebrew or the AppImage below.
-
-#### 2. Homebrew
-
-If you already use Homebrew, or you cannot use `sudo`, this is the fastest path:
-
-```sh
-brew tap rgdevment/tap && brew install copypaste-linux
-```
-
-Updates land via `brew upgrade copypaste-linux`.
-
-#### 3. Self-updating AppImage
-
-A single portable file — no install, runs from your home directory. Once launched, the AppImage **updates itself** through [AppImageUpdate](https://github.com/AppImage/AppImageUpdate): each release embeds a `.zsync` URL pointing to the latest GitHub Release, so the binary delta-updates in place.
-
-```sh
-wget https://github.com/rgdevment/CopyPaste/releases/latest/download/CopyPaste_<version>_x86_64.AppImage
-chmod +x CopyPaste_<version>_x86_64.AppImage
-./CopyPaste_<version>_x86_64.AppImage
-```
-
-To refresh without redownloading the whole file, install AppImageUpdate from your distro and run:
-
-```sh
-appimageupdate ./CopyPaste_<version>_x86_64.AppImage
-```
-
-#### 4. Standalone `.deb` / `.rpm` (manual)
-
-If you don't want a repo and don't want the AppImage, grab the standalone packages directly from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest):
-
-- `CopyPaste_<version>_amd64.deb` for Debian / Ubuntu and derivatives
-- `CopyPaste_<version>_x86_64.rpm` for Fedora / RHEL and derivatives
-
-These are the same artifacts the OBS repo ships, but installed with `dpkg -i` / `rpm -i` they don't get system-managed updates — you'd need to redownload manually for each release. For day-to-day use, prefer the OBS repo above.
+- **v2.11.0 is the last release with Linux builds, and it stays available.** Its artifacts remain on
+  [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/tag/v2.11.0) and keep working;
+  installed copies point there instead of at a version they cannot install. They receive no fixes,
+  no security updates and no new features.
+- **No new Linux packages are published.** The openSUSE Build Service repositories, the Homebrew
+  `copypaste-linux` formula and the self-updating AppImage are frozen at v2.11.0 so reinstalling
+  still works, but nothing new lands there.
+- **Your data is untouched.** History, images and settings stay in
+  `~/.local/share/com.rgdevment.copypaste/CopyPaste/` — back that folder up before uninstalling if
+  you want to keep it.
+- **Bug reports for Linux are not accepted.** The last state with full Linux support is archived on
+  the [`v2-linux-archive`](https://github.com/rgdevment/CopyPaste/tree/v2-linux-archive) branch —
+  code, packaging and CI included — for anyone who wants to fork and continue it. The GPL v3
+  licence covers exactly that.
 
 ### Compatibility
 
@@ -497,7 +416,6 @@ These are the same artifacts the OBS repo ships, but installed with `dpkg -i` / 
 | :---------- | :------------------------------------------- | :-------------------------------- |
 | **Windows** | Windows 10 (1809+), Windows 11               | x64                               |
 | **macOS**   | Ventura (13.0+)                              | Universal (Apple Silicon + Intel) |
-| **Linux**   | Ubuntu 22.04+ · Fedora 40+ · openSUSE Tumbleweed · RHEL-compatible | x86_64               |
 
 ### Standalone Downloads
 
@@ -507,9 +425,6 @@ Direct packages live on [GitHub Releases](https://github.com/rgdevment/CopyPaste
 | :---------- | :------------------------- | :-------------------------------------------------------------------------- |
 | **Windows** | `*_Setup.exe`              | Self-signed installer — see security note below                             |
 | **macOS**   | `*.dmg`                    | Universal binary (Apple Silicon + Intel)                                    |
-| **Linux**   | `*.AppImage` + `.zsync`    | Self-updating via AppImageUpdate                                            |
-| **Linux**   | `*.deb`                    | Debian/Ubuntu — manual updates                                              |
-| **Linux**   | `*.rpm`                    | Fedora/RHEL — manual updates                                                |
 
 <details>
 <summary><strong>Windows standalone: security warnings</strong></summary>
@@ -527,7 +442,7 @@ Since CopyPaste is an independent open source project, the installer uses a self
 ## FAQ
 
 **Is CopyPaste free?**
-Yes. Completely free and open source. No premium tiers, no subscriptions, no paywalls — ever. That covers using it anywhere, including across a company, and packaging it for a Linux distribution. Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
+Yes. Completely free and open source. No premium tiers, no subscriptions, no paywalls — ever. That covers using it anywhere, including across a company, and packaging it for a distribution or package manager. Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
 
 **Does it upload my clipboard data?**
 No. Everything stays on your machine. There is no cloud, no server, no sync. CopyPaste is a local-first clipboard manager by design — your copy paste data never leaves your computer.
@@ -541,14 +456,11 @@ No. CopyPaste works fully offline. The standalone version makes a lightweight ch
 **Does it sync clipboard history between devices?**
 No. There's intentionally no cloud sync. Your copy history stays on the device where you copied it. This is a local-first copy tool, not a cloud service.
 
-**Do I need sudo to install on Linux?**
-For apt/dnf, yes — they install to system paths. If you cannot use sudo, use Homebrew (if available) or the .AppImage.
-
 **Where is my clipboard history stored?**
-Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` — Linux: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
+Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
 **What platforms does this copy-paste tool support?**
-Windows 10/11, macOS (Ventura+), and Linux on **X11 sessions** (Ubuntu 22.04+ · Fedora 40+ via OBS apt/dnf · openSUSE Tumbleweed · any distro via Homebrew or the self-updating .AppImage). Wayland-only sessions are not supported yet — see the [Getting Started](#getting-started) section for details.
+Windows 10/11 and macOS (Ventura+). Linux support was discontinued — see [Linux support (discontinued)](#linux-support-discontinued).
 
 **Does it start automatically with Windows?**
 Optionally, yes. Enable it in Settings → General → Start with Windows. On the Microsoft Store version it uses the Windows StartupTask system; on the standalone installer it registers through the standard Windows startup mechanism. No administrator rights are required for either.
@@ -750,11 +662,11 @@ If you're curious about what's under the hood of this open source clipboard mana
 
 | Technology                                            | Why                                                                                   |
 | :---------------------------------------------------- | :------------------------------------------------------------------------------------ |
-| **Flutter**                                           | Cross-platform UI toolkit — native on Windows, macOS, and Linux.                      |
+| **Flutter**                                           | Cross-platform UI toolkit — native on Windows and macOS.                              |
 | **Dart**                                              | Clean, performant language for core logic, services, and domain models.               |
 | **Platform Channels + FFI**                           | Native integration with each OS for clipboard hooks and system APIs.                  |
 | **Windows Mica / macOS Sidebar**                      | Native translucent effects that match each platform's design language.                |
-| **C++ Plugin (Win) / Swift (Mac) / C Plugin (Linux)** | Low-level clipboard listener to capture every content type before the OS discards it. |
+| **C++ Plugin (Win) / Swift (Mac)**                    | Low-level clipboard listener to capture every content type before the OS discards it. |
 | **Native C++ Launcher (Win)**                         | Lightweight splash process that appears instantly while Flutter warms up.             |
 | **SQLite (Drift) + FTS5**                             | Local database with full-text search across content and labels.                       |
 | **Auto-update (Standalone)**                          | Ed25519-signed release manifest hosted on GitHub Releases; in-app badge notifies users of new versions and enforces blocks on versions with critical issues. |
@@ -792,7 +704,7 @@ No ads. No telemetry. No accounts. Everything local.
 
 ## License and Spirit
 
-**CopyPaste** — A modern, open source clipboard manager and copy-paste tool for Windows, macOS, and Linux.
+**CopyPaste** — A modern, open source clipboard manager and copy-paste tool for Windows and macOS.
 Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
 This program comes with ABSOLUTELY NO WARRANTY.
@@ -804,8 +716,8 @@ auditing, packaging or forking it — which is almost everybody, and it costs
 nothing. Redistributing it inside a product of your own needs separate terms:
 see [COMMERCIAL.md](COMMERCIAL.md).
 
-Packaging it for a Linux distribution is ordinary GPL redistribution and needs
-no permission from anyone.
+Packaging it for a distribution or package manager is ordinary GPL
+redistribution and needs no permission from anyone.
 
 Contributions require a one-time [CLA](CLA.md); you keep the copyright on your
 work.

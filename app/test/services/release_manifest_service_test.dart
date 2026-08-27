@@ -52,14 +52,14 @@ void main() {
           "latest": "1.0.0",
           "minimumSupported": "1.0.0",
           "channels": {
-            "github_linux": { "url": "http://insecure.example/x" },
-            "snap": { "command": "sudo snap refresh copypaste" }
+            "github_windows": { "url": "http://insecure.example/x" },
+            "scoop": { "command": "scoop update copypaste" }
           }
         }
       ''');
       expect(m, isNotNull);
-      expect(m!.channels.containsKey('github_linux'), isFalse);
-      expect(m.channels['snap']?.command, 'sudo snap refresh copypaste');
+      expect(m!.channels.containsKey('github_windows'), isFalse);
+      expect(m.channels['scoop']?.command, 'scoop update copypaste');
     });
   });
 

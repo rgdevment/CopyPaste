@@ -11,22 +11,6 @@ void main() {
       expect(c, InstallChannel.homebrew);
     });
 
-    test('detects appImage paths', () {
-      final c = InstallChannelDetector.detect(
-        execPathOverride: '/home/user/Apps/CopyPaste-2.3.0.AppImage',
-        platformOverride: HostPlatform.linux,
-      );
-      expect(c, InstallChannel.appImage);
-    });
-
-    test('detects snap paths', () {
-      final c = InstallChannelDetector.detect(
-        execPathOverride: '/snap/copypaste/x1/copypaste',
-        platformOverride: HostPlatform.linux,
-      );
-      expect(c, InstallChannel.snap);
-    });
-
     test('detects scoop installs on the default root', () {
       final c = InstallChannelDetector.detect(
         execPathOverride:
@@ -58,13 +42,6 @@ void main() {
       for (final c in InstallChannel.values) {
         expect(InstallChannelDetector.manifestKey(c), isNotEmpty);
       }
-    });
-
-    test('appImage falls back to github_linux bucket', () {
-      expect(
-        InstallChannelDetector.manifestKey(InstallChannel.appImage),
-        'github_linux',
-      );
     });
   });
 }

@@ -1,6 +1,17 @@
 coverage:
     precision: 2
     round: down
+    status:
+        project:
+            default:
+                target: auto
+                threshold: 0%
+                # Los archivos borrados salen también de la base, así que retirar
+                # código cubierto no cuenta como caída de cobertura.
+                removed_code_behavior: adjust_base
+        patch:
+            default:
+                target: auto
     ignore:
         - "core/lib/repository/sqlite_repository.g.dart"
         - "app/lib/l10n/app_localizations_en.dart"
@@ -11,8 +22,12 @@ coverage:
         - "app/lib/main.dart"
         - "app/lib/helpers/url_helper.dart"
 
+codecov:
+    notify:
+        after_n_builds: 3
+
 comment:
     layout: "reach,diff,flags,files"
     behavior: default
     require_changes: true
-
+    after_n_builds: 3

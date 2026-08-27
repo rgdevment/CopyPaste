@@ -20,9 +20,9 @@ We believe in:
 
 **There is no premium version and no feature is ever held back** — what you install is the whole application. CopyPaste is free software, created by and for the community.
 
-It is also dual licensed: anyone who wants to redistribute it inside a product of their own needs [separate terms](COMMERCIAL.md). Using it, deploying it across a company, or packaging it for a Linux distribution never does.
+It is also dual licensed: anyone who wants to redistribute it inside a product of their own needs [separate terms](COMMERCIAL.md). Using it, deploying it across a company, or packaging it for a distribution never does.
 
-> **Maintainers:** the full release process (tagging, manifest, store and OBS publication) lives in [RELEASING.md](RELEASING.md).
+> **Maintainers:** the full release process (tagging, manifest and store publication) lives in [RELEASING.md](RELEASING.md).
 
 ---
 
@@ -59,7 +59,7 @@ In many ways! Code is just one of them:
 
 ### Translate
 
-Do you speak another language? Help us bring CopyPaste to more people. Check the [localization guide](README.md#-localization-help-us-go-global) in the README.
+Do you speak another language? Help us bring CopyPaste to more people. Check the [localization guide](README.md#localization-help-translate-copypaste) in the README.
 
 ### Improve Documentation
 
@@ -85,7 +85,7 @@ We keep the code simple and consistent:
 
 **UI/UX:**
 
-- Native look and feel on each platform (Windows, macOS, Linux)
+- Native look and feel on each platform (Windows, macOS)
 - Functional minimalism
 - Smooth and fluid transitions
 - Respect for system Light/Dark themes
@@ -139,9 +139,9 @@ request features, discuss design, package it for your distribution, and fork
 the project under the GPL-3.0. Only merging code into this repository requires
 the agreement.
 
-**Packaging CopyPaste for a Linux distribution needs no agreement and no
-commercial licence** — that is ordinary GPL redistribution, and packagers are
-welcome. See [COMMERCIAL.md](COMMERCIAL.md).
+**Packaging CopyPaste for a distribution or package manager needs no agreement
+and no commercial licence** — that is ordinary GPL redistribution, and
+packagers are welcome. See [COMMERCIAL.md](COMMERCIAL.md).
 
 ---
 

@@ -380,7 +380,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return parts.join();
     }
     if (useCtrl) parts.add('Ctrl');
-    if (useMeta) parts.add(Platform.isLinux ? 'Super' : 'Win');
+    if (useMeta) parts.add('Win');
     if (useAlt) parts.add('Alt');
     if (useShift) parts.add('Shift');
     parts.add(keyName);
@@ -1216,11 +1216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _ModifierChip(
-                  label: Platform.isMacOS
-                      ? '⌘ Command'
-                      : Platform.isLinux
-                      ? 'Super'
-                      : 'Win',
+                  label: Platform.isMacOS ? '⌘ Command' : 'Win',
                   selected: _hotkeyWin,
                   colors: colors,
                   onTap: () {
@@ -1305,11 +1301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     _ModifierChip(
-                      label: Platform.isMacOS
-                          ? '⌘ Command'
-                          : Platform.isLinux
-                          ? 'Super'
-                          : 'Win',
+                      label: Platform.isMacOS ? '⌘ Command' : 'Win',
                       selected: _plainPasteHotkeyWin,
                       colors: colors,
                       onTap: () {

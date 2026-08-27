@@ -242,5 +242,5 @@ void main() {
         );
       },
     );
-  });
+  }, skip: !Platform.isMacOS ? 'macOS-only' : null);
 }

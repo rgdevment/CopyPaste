@@ -1,4 +1,0 @@
-packaging/obs/** text eol=lf
-packaging/obs/debian/rules text eol=lf
-*.spec text eol=lf
-*.dsc text eol=lf

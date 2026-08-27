@@ -46,22 +46,19 @@ class AppConfig {
     this.accessibilityWasGranted = false,
     this.lastRunVersion = '',
     this.hasSeenOnboarding = false,
-    this.hasCompletedOnboarding = false,
     this.generateImageThumbnails = true,
     this.generateVideoThumbnails = true,
     this.generateAudioThumbnails = true,
     this.maxImageProcessingSizeMB = 25,
     this.imagesQuotaMB = 0,
-    this.linuxAppindicatorWarningDismissed = false,
-    this.linuxXtestWarningDismissed = false,
     this.rememberWindowPosition = false,
     this.lastWindowX,
     this.lastWindowY,
   });
 
   /// [platform] overrides the host OS so migrations can be exercised off the
-  /// platform they target; coverage runs on Linux, where the Windows branches
-  /// would otherwise never execute.
+  /// platform they target; coverage runs on the Linux CI runner, where the
+  /// Windows branches would otherwise never execute.
   factory AppConfig.fromJson(Map<String, dynamic> json, {String? platform}) {
     final os = platform ?? Platform.operatingSystem;
     final isWindows = os == 'windows';
@@ -262,11 +259,6 @@ class AppConfig {
           json['hasSeenOnboarding'] as bool? ??
           json['hasSeenWindowsOnboarding'] as bool? ??
           defaults.hasSeenOnboarding,
-      hasCompletedOnboarding:
-          json['hasCompletedOnboarding'] as bool? ??
-          (json['hasSeenOnboarding'] as bool? ??
-              json['hasSeenWindowsOnboarding'] as bool? ??
-              defaults.hasCompletedOnboarding),
       generateImageThumbnails:
           json['generateImageThumbnails'] as bool? ??
           defaults.generateImageThumbnails,
@@ -280,12 +272,6 @@ class AppConfig {
           json['maxImageProcessingSizeMB'] as int? ??
           defaults.maxImageProcessingSizeMB,
       imagesQuotaMB: json['imagesQuotaMB'] as int? ?? defaults.imagesQuotaMB,
-      linuxAppindicatorWarningDismissed:
-          json['linuxAppindicatorWarningDismissed'] as bool? ??
-          defaults.linuxAppindicatorWarningDismissed,
-      linuxXtestWarningDismissed:
-          json['linuxXtestWarningDismissed'] as bool? ??
-          defaults.linuxXtestWarningDismissed,
       rememberWindowPosition:
           json['rememberWindowPosition'] as bool? ??
           defaults.rememberWindowPosition,
@@ -331,18 +317,6 @@ class AppConfig {
       plainPasteHotkeyUseWin: true,
       plainPasteHotkeyUseAlt: true,
       plainPasteHotkeyUseShift: true,
-    ),
-    // Super+V is the desktop-oriented history gesture. Ctrl+Shift+V remains
-    // available to terminals because the optional global binding is disabled.
-    'linux' => const AppConfig(
-      hotkeyUseCtrl: false,
-      hotkeyUseWin: true,
-      hotkeyUseAlt: false,
-      hotkeyUseShift: false,
-      plainPasteHotkeyEnabled: false,
-      plainPasteHotkeyUseCtrl: true,
-      plainPasteHotkeyUseShift: true,
-      plainPasteHotkeyUseAlt: false,
     ),
     _ => const AppConfig(),
   };
@@ -405,7 +379,6 @@ class AppConfig {
   final bool accessibilityWasGranted;
   final String lastRunVersion;
   final bool hasSeenOnboarding;
-  final bool hasCompletedOnboarding;
 
   // Multimedia & thumbnails
   final bool generateImageThumbnails;
@@ -417,10 +390,6 @@ class AppConfig {
   // anything > 0 triggers an LRU purge during the periodic cleanup until the
   // owned bytes drop back below the limit. Pinned items are never purged.
   final int imagesQuotaMB;
-
-  // Linux capability warning banners (dismissible).
-  final bool linuxAppindicatorWarningDismissed;
-  final bool linuxXtestWarningDismissed;
 
   final bool rememberWindowPosition;
   final double? lastWindowX;
@@ -466,14 +435,11 @@ class AppConfig {
     bool? accessibilityWasGranted,
     String? lastRunVersion,
     bool? hasSeenOnboarding,
-    bool? hasCompletedOnboarding,
     bool? generateImageThumbnails,
     bool? generateVideoThumbnails,
     bool? generateAudioThumbnails,
     int? maxImageProcessingSizeMB,
     int? imagesQuotaMB,
-    bool? linuxAppindicatorWarningDismissed,
-    bool? linuxXtestWarningDismissed,
     bool? rememberWindowPosition,
     Object? lastWindowX = _sentinel,
     Object? lastWindowY = _sentinel,
@@ -529,8 +495,6 @@ class AppConfig {
         accessibilityWasGranted ?? this.accessibilityWasGranted,
     lastRunVersion: lastRunVersion ?? this.lastRunVersion,
     hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
-    hasCompletedOnboarding:
-        hasCompletedOnboarding ?? this.hasCompletedOnboarding,
     generateImageThumbnails:
         generateImageThumbnails ?? this.generateImageThumbnails,
     generateVideoThumbnails:
@@ -540,11 +504,6 @@ class AppConfig {
     maxImageProcessingSizeMB:
         maxImageProcessingSizeMB ?? this.maxImageProcessingSizeMB,
     imagesQuotaMB: imagesQuotaMB ?? this.imagesQuotaMB,
-    linuxAppindicatorWarningDismissed:
-        linuxAppindicatorWarningDismissed ??
-        this.linuxAppindicatorWarningDismissed,
-    linuxXtestWarningDismissed:
-        linuxXtestWarningDismissed ?? this.linuxXtestWarningDismissed,
     rememberWindowPosition:
         rememberWindowPosition ?? this.rememberWindowPosition,
     lastWindowX: lastWindowX == _sentinel
@@ -598,14 +557,11 @@ class AppConfig {
     'accessibilityWasGranted': accessibilityWasGranted,
     'lastRunVersion': lastRunVersion,
     'hasSeenOnboarding': hasSeenOnboarding,
-    'hasCompletedOnboarding': hasCompletedOnboarding,
     'generateImageThumbnails': generateImageThumbnails,
     'generateVideoThumbnails': generateVideoThumbnails,
     'generateAudioThumbnails': generateAudioThumbnails,
     'maxImageProcessingSizeMB': maxImageProcessingSizeMB,
     'imagesQuotaMB': imagesQuotaMB,
-    'linuxAppindicatorWarningDismissed': linuxAppindicatorWarningDismissed,
-    'linuxXtestWarningDismissed': linuxXtestWarningDismissed,
     'rememberWindowPosition': rememberWindowPosition,
     if (lastWindowX != null) 'lastWindowX': lastWindowX,
     if (lastWindowY != null) 'lastWindowY': lastWindowY,

@@ -26,13 +26,6 @@ void main() {
       } catch (_) {}
     });
 
-    test('takes linux branch when platformOverride=linux', () async {
-      UrlHelper.platformOverride = 'linux';
-      try {
-        await UrlHelper.open('about:blank');
-      } catch (_) {}
-    });
-
     test('takes no-op branch when platformOverride=other', () async {
       UrlHelper.platformOverride = 'other';
       await UrlHelper.open('about:blank');

@@ -6,11 +6,14 @@ to do by hand.
 
 ## TL;DR — cutting a normal release
 
-1. Bump the version in `app/pubspec.yaml` on `main` and merge.
-2. Create and push an **annotated, signed** tag. The tag message body
+1. Create and push an **annotated, signed** tag. The tag message body
    carries the release metadata through `Key: value` trailers.
-3. Wait for GitHub Actions to finish — artifacts, manifest, stores and OBS
-   are all updated automatically.
+2. Wait for GitHub Actions to finish — artifacts, manifest and stores are
+   all updated automatically.
+
+`app/pubspec.yaml` stays pinned at `0.0.0-dev`: the version travels from the
+tag to the binaries through the `APP_VERSION` dart-define, so there is nothing
+to bump by hand.
 
 **You do not need to edit `release-manifest.json` for a normal release.**
 The tag message is the single source of truth per release; the pipeline
@@ -39,11 +42,11 @@ fans out to:
 | ---------------------------- | ----------------------------------------------------------------------- |
 | `build-windows`              | Signed `*_Setup.exe` + MSIX store bundle.                               |
 | `build-macos`                | Universal `*.dmg`.                                                      |
-| `build-linux`                | `*.AppImage` + `.zsync`, `*.deb`, `*.rpm`, `SHA256SUMS`, portable tarball.|
 | `github-release`             | Publishes all artifacts to a GitHub Release on the tag.                 |
 | `publish-release-manifest`   | Patches, signs (Ed25519) and uploads `release-manifest.json(.sig)`.     |
 | `publish-to-store`           | Submits MSIX to the Microsoft Store (stable tags only, no `-rc`).       |
-| `publish-obs`                | Commits rendered `_service`, `.spec` and `debian.tar.xz` to OBS.        |
+| `update-homebrew-cask`       | Rewrites the macOS cask in `rgdevment/homebrew-tap`.                    |
+| `update-scoop-bucket`        | Rewrites the manifest in `rgdevment/scoop-bucket`.                      |
 
 ## Release manifest — what the pipeline overrides vs. what you own
 
@@ -115,6 +118,24 @@ Both default to "do not change the manifest" when the trailer is absent,
 so for a normal release you typically set only `Severity:` and
 `Min-Supported:` (or nothing at all, and let the defaults ride).
 
+#### Discontinued Linux clients and the blocking floor
+
+`Min-Supported:` defaults to the version being tagged, which is harmless at
+`recommended` — only `critical` actually blocks. But Linux installs are frozen
+at v2.11.0 and have nowhere to upgrade to, so a `critical` tag that lets the
+default ride would strand every one of them on the block screen.
+
+The pipeline therefore **fails the release** if `Severity: critical` arrives
+without an explicit `Min-Supported:`. Choose deliberately:
+
+- To revoke specific broken builds, use `Blocked:` — an explicit list never
+  catches a Linux version by accident.
+- To raise the floor while keeping Linux usable, set `Min-Supported: 2.11.0`
+  or lower.
+- Above 2.11.0 you are consciously blocking Linux. Those clients still get a
+  working action button: `channels.github_linux` in `release-manifest.json`
+  points at the v2.11.0 release, which is the last version they can install.
+
 ## Examples
 
 ### Normal recommended release
@@ -122,7 +143,7 @@ so for a normal release you typically set only `Severity:` and
 ```text
 v2.4.0
 
-Adds OBS repos and AppImage auto-update. Full notes: …
+Adds drag-and-drop and faster search. Full notes: …
 
 Severity: recommended
 Min-Supported: 2.3.0
@@ -130,16 +151,16 @@ Min-Supported: 2.3.0
 
 ### Release that only improves one platform
 
-When the new version mostly affects Linux (or any single platform), you
-still tag `recommended` — the badge encourages the update without being
-alarming, and users who don't care about the platform-specific changes
-can ignore it. There is no `optional` severity.
+When the new version mostly affects a single platform, you still tag
+`recommended` — the badge encourages the update without being alarming, and
+users who don't care about the platform-specific changes can ignore it.
+There is no `optional` severity.
 
 ```text
 v2.4.0
 
-Linux-only: new OBS apt/dnf repos and self-updating AppImage.
-Windows and macOS unchanged.
+Windows-only: MSIX startup task and taskbar integration fixes.
+macOS unchanged.
 
 Severity: recommended
 Min-Supported: 2.3.0
@@ -150,7 +171,7 @@ If you truly don't want to surface the update at all, use `patch`:
 ```text
 v2.4.1
 
-Linux packaging polish. No user-facing changes on Windows/macOS.
+Installer packaging polish. No user-facing changes.
 
 Severity: patch
 ```
@@ -192,13 +213,10 @@ checks for a dash in the version).
 
 ## Post-release checklist
 
-- [ ] GitHub Release has all six Linux artifacts, both Windows installers
-      (setup + MSIX), `.dmg`, plus `release-manifest.json(.sig)`.
+- [ ] GitHub Release has both Windows installers (setup + MSIX), `.dmg`,
+      plus `release-manifest.json(.sig)`.
 - [ ] Microsoft Store submission is in "certification" within 15 min of
       the tag (stable only).
-- [ ] OBS build results are green at
-      `https://build.opensuse.org/package/show/home:rgdevment/copypaste`.
-      First build of a new tag may take 10–20 min per target.
 - [ ] Homebrew tap (`rgdevment/homebrew-tap`) updated — currently manual;
       see the tap repo for instructions.
 - [ ] App started on your machine shows the right "Update available"
@@ -208,9 +226,10 @@ checks for a dash in the version).
 
 - **Homebrew tap** — requires a push to a separate repo. Can be automated
   later with `brew bump-formula-pr`.
-- **OBS first-time project setup** — the project, package and enabled
-  targets were created by hand once; see [packaging/obs/README.md](packaging/obs/README.md).
-  After bootstrap, every tag flows automatically.
+- **Linux formulae in the tap** — `Formula/copypaste-linux.rb` and
+  `copypaste-beta-linux.rb` are no longer written by the pipeline. Mark them
+  `deprecate!` (frozen at v2.11.0) rather than deleting them, so anyone who
+  already installed them keeps a reinstall path.
 - **Microsoft Store first-time submission per SKU** — the Store requires
   a human to accept the submission the first time. Subsequent tags go
   through automatically.
@@ -233,8 +252,7 @@ If a release turns out bad **after** the tag is out:
 | ----------------------- | ------------------------ | ---------------------------------------- |
 | `RELEASE_PRIVATE_KEY`   | Actions secret           | Signs `release-manifest.json`.           |
 | `STORE_APP_ID`          | Actions variable         | Microsoft Store product ID.              |
-| `OBS_USERNAME`          | Actions secret           | OBS account for `osc`.                   |
-| `OBS_PASSWORD`          | Actions secret           | OBS password / token for `osc`.          |
+| `GIST_TOKEN`            | Actions secret           | Pushes to the Homebrew tap and Scoop bucket. |
 | `GITHUB_TOKEN`          | Built-in                 | Releases, uploads, etc.                  |
 
 Rotating any of these does not require code changes.

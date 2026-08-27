@@ -21,7 +21,6 @@ ReleaseManifest _manifest({
   String? githubWindowsUrl,
   String? homebrewCommand,
   String? msStoreUrl,
-  String? snapCommand,
   String? scoopCommand,
 }) {
   return ReleaseManifest(
@@ -36,10 +35,7 @@ ReleaseManifest _manifest({
       if (homebrewCommand != null)
         'homebrew': ChannelInfo(command: homebrewCommand),
       if (msStoreUrl != null) 'msstore': ChannelInfo(url: msStoreUrl),
-      if (snapCommand != null) 'snap': ChannelInfo(command: snapCommand),
       if (scoopCommand != null) 'scoop': ChannelInfo(command: scoopCommand),
-      if (githubWindowsUrl != null)
-        'github_linux': ChannelInfo(url: githubWindowsUrl),
       if (githubWindowsUrl != null)
         'github_macos': ChannelInfo(url: githubWindowsUrl),
     },
@@ -115,21 +111,6 @@ void main() {
       await tester.pumpAndSettle();
       final l = await AppLocalizations.delegate.load(const Locale('en'));
       expect(find.text(l.updateActionCopyCommand('brew')), findsOneWidget);
-    });
-
-    testWidgets('shows Copy command button for snap channel', (tester) async {
-      InstallChannelDetector.channelOverride = InstallChannel.snap;
-      await tester.pumpWidget(
-        _wrap(
-          BlockedVersionScreen(
-            currentVersion: '2.2.6',
-            manifest: _manifest(snapCommand: 'sudo snap refresh copypaste'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final l = await AppLocalizations.delegate.load(const Locale('en'));
-      expect(find.text(l.updateActionCopyCommand('snap')), findsOneWidget);
     });
 
     testWidgets('shows Copy command button for scoop channel', (tester) async {

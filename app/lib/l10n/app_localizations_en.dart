@@ -614,7 +614,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'A modern clipboard manager built to feel native on Windows, macOS, and Linux.\nLocal-first — your history, always at hand. No accounts, no telemetry, no subscriptions.';
+      'A modern clipboard manager built to feel native on Windows and macOS.\nLocal-first — your history, always at hand. No accounts, no telemetry, no subscriptions.';
 
   @override
   String get sectionPrivacy => 'PRIVACY';
@@ -700,11 +700,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String updateAvailableLinux(String version) {
-    return 'Version $version is available.\n\nDownload the latest release from GitHub.';
-  }
-
-  @override
   String updateAvailableStore(String version) {
     return 'Version $version is available.\n\nMicrosoft Store delivers updates automatically. New versions may take a few days to appear after release.';
   }
@@ -765,58 +760,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get blockedFallbackHint =>
       'Visit https://github.com/rgdevment/CopyPaste/releases to download the latest installer.';
-
-  @override
-  String get waylandUnsupportedTitle => 'Wayland is not supported';
-
-  @override
-  String get waylandUnsupportedBadge => 'Open source · X11 only';
-
-  @override
-  String get waylandUnsupportedBody =>
-      'Linux support is still a work in progress. This project is maintained by a single person and we need more testers to move forward.\n\nCopyPaste works fully on X11 — to use it, log in with an X11 session. Sorry for the inconvenience.';
-
-  @override
-  String get waylandUnsupportedGitHub => 'View on GitHub';
-
-  @override
-  String get waylandUnsupportedClose => 'Close';
-
-  @override
-  String linuxHotkeyFallbackWarning(String requested, String fallback) {
-    return 'The shortcut $requested is unavailable on this X11 desktop. CopyPaste is temporarily using $fallback. You can change it in Settings.';
-  }
-
-  @override
-  String linuxHotkeyConflictWarning(String requested, String fallback) {
-    return 'The shortcut $requested is unavailable on this X11 desktop, and the temporary fallback $fallback also failed. Open Settings to choose another shortcut.';
-  }
-
-  @override
-  String linuxHotkeyGrabFailedWarning(String hotkey) {
-    return 'The shortcut $hotkey is being used by another application. Change it in Settings → Shortcuts.';
-  }
-
-  @override
-  String get linuxPasteFocusTimeoutWarning =>
-      'The clipboard has your content. Paste manually with Ctrl+V.';
-
-  @override
-  String get linuxAppindicatorBannerTitle => 'System tray icon unavailable';
-
-  @override
-  String get linuxAppindicatorBannerBody =>
-      'Your desktop does not expose an AppIndicator host, so the CopyPaste tray icon will not appear. Install a tray extension for your distribution and restart CopyPaste.';
-
-  @override
-  String get linuxXtestBannerTitle => 'Automatic paste-back disabled';
-
-  @override
-  String get linuxXtestBannerBody =>
-      'The X11 XTest extension is not available, so CopyPaste cannot inject Ctrl+V automatically. Items are still copied to the clipboard — paste manually with Ctrl+V.';
-
-  @override
-  String get linuxBannerDismiss => 'Dismiss';
 
   @override
   String wakeupHint(String hotkey) {

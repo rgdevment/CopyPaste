@@ -93,7 +93,6 @@ Application logs are stored locally for troubleshooting:
 
 - **Windows:** `%LOCALAPPDATA%\CopyPaste\logs\`
 - **macOS:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/`
-- **Linux:** `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/`
 - **Content:** Application events, errors, and diagnostic information only
 - **No personal data:** Logs do **not** contain clipboard content — your copied text, images, or file paths are never written to log files
 
@@ -104,7 +103,7 @@ If the app fails to start or crashes during initialization, a single `crash.log`
 - Lives at `<data folder>/crash.log` on every platform (e.g. `%LOCALAPPDATA%\CopyPaste\crash.log` on Windows)
 - Is **capped at 512 KB** — older content is overwritten automatically
 - Contains: timestamp (UTC), OS name and version, Dart runtime version, the failing operation, and the stack trace
-- Has **automatic redaction applied at write time**: your Windows/macOS/Linux user name, full home folder path, and any email addresses found in stack traces are replaced with `<USER>`, `<HOME>`, and `<EMAIL>` placeholders before being written to disk
+- Has **automatic redaction applied at write time**: your Windows/macOS user name, full home folder path, and any email addresses found in stack traces are replaced with `<USER>`, `<HOME>`, and `<EMAIL>` placeholders before being written to disk
 - **Never contains clipboard content** — clipboard data does not flow through error paths
 - **Is never sent anywhere automatically** — same rule as the regular logs
 
@@ -165,16 +164,6 @@ All data is stored locally under your user profile:
 | **Logs** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/logs/` |
 | **Crash log** | `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/crash.log` |
 
-**Linux:**
-
-| Data | Location |
-| :--- | :--- |
-| **Database** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/clipboard.db` |
-| **Images** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/images/` |
-| **Configuration** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/config/` |
-| **Logs** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/logs/` |
-| **Crash log** | `~/.local/share/com.rgdevment.copypaste/CopyPaste/crash.log` |
-
 These folders are protected by your operating system's user account permissions. Other users on the same computer cannot access them under normal conditions.
 
 ---
@@ -217,7 +206,7 @@ CopyPaste makes **one type of network request** for update checking:
 - **No clipboard content, no usage data, no personal information** is ever sent
 - The manifest is **cryptographically signed** with an Ed25519 key. If the signature does not verify, the manifest is discarded and no update indicator is shown
 - **All platforms:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details
-- **Standalone builds (Windows / macOS / Linux):** Clicking the indicator opens the GitHub release page (or shows the Homebrew / apt / dnf upgrade command). Nothing is downloaded or installed automatically
+- **Standalone builds (Windows / macOS):** Clicking the indicator opens the GitHub release page (or shows the Homebrew / Scoop upgrade command). Nothing is downloaded or installed automatically
 - **Microsoft Store version:** Clicking the indicator opens a dialog explaining that Microsoft Store delivers updates on its own schedule. The app is never blocked on Store builds, since update delivery is outside our control
 - **Blocked versions:** If the manifest flags the installed version as having a critical issue (for example, a severe security bug or data-corruption fix), standalone builds show a full-screen prompt with direct install/download instructions. This mechanism is disabled on Microsoft Store builds
 
@@ -248,9 +237,8 @@ Each platform has a standard marker that the copying application sets, and CopyP
 | :--- | :--- |
 | Windows | `ExcludeClipboardContentFromMonitorProcessing`, or `CanIncludeInClipboardHistory` set to 0 |
 | macOS | `org.nspasteboard.ConcealedType` and `org.nspasteboard.TransientType` |
-| Linux | The `x-kde-passwordManagerHint` clipboard target |
 
-On Linux the check asks only which targets are offered, never for their contents, so the secret's bytes are never requested in the first place.
+The check asks only whether the marker is present, never for the secret's contents, so its bytes are never requested in the first place.
 
 ### What This Does Not Cover
 
@@ -325,11 +313,6 @@ To completely remove all CopyPaste data when uninstalling:
 
 1. Move CopyPaste to Trash from Applications
 2. Delete the data folder: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/`
-
-**Linux:**
-
-1. Uninstall CopyPaste (via your package manager or remove the binary)
-2. Delete the data folder: `~/.local/share/com.rgdevment.copypaste/CopyPaste/`
 
 After these steps, no CopyPaste data remains on your system.
 

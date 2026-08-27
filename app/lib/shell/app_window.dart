@@ -9,8 +9,6 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:listener/listener.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'linux_shell.dart';
-
 typedef _SystemParametersInfoWNative =
     Int32 Function(
       Uint32 uiAction,
@@ -263,32 +261,10 @@ class AppWindow {
   Future<void> _positionNearCursor() async {
     if (Platform.isWindows) {
       await _positionNearCursorWindows();
-    } else if (Platform.isLinux) {
-      await _positionNearCursorLinux();
     } else if (Platform.isMacOS) {
       await _positionNearCursorNative();
     } else {
       await windowManager.center();
-    }
-  }
-
-  Future<void> _positionNearCursorLinux() async {
-    try {
-      final info = await LinuxShell.getCursorMonitor();
-      if (info == null) {
-        await _positionNearCursorNative();
-        return;
-      }
-      final workArea = (
-        info.x,
-        info.y,
-        info.x + info.width,
-        info.y + info.height,
-      );
-      await _applyPosition(info.cursorX, info.cursorY, workArea);
-    } catch (e) {
-      AppLogger.warn('_positionNearCursorLinux: fallback to native: $e');
-      await _positionNearCursorNative();
     }
   }
 
@@ -626,43 +602,31 @@ class AppWindow {
 
   Future<void> show() async {
     AppLogger.info('AppWindow.show: starting');
-    if (Platform.isLinux) {
+    final restored = await _tryRestoreSavedPosition();
+    AppLogger.info('AppWindow.show: restored=$restored');
+    if (!restored) {
+      await _positionNearCursor();
+    }
+    if (Platform.isWindows) {
       await windowManager.setSkipTaskbar(false);
-      await windowManager.show();
-      final restored = await _tryRestoreSavedPosition();
-      if (!restored) {
-        await _positionNearCursor();
-      }
-      await LinuxShell.focusWindow();
-    } else {
-      final restored = await _tryRestoreSavedPosition();
-      AppLogger.info('AppWindow.show: restored=$restored');
-      if (!restored) {
-        await _positionNearCursor();
-      }
-      if (Platform.isWindows) {
-        await windowManager.setSkipTaskbar(false);
-      }
-      await windowManager.show();
-      await windowManager.focus();
-      if (Platform.isWindows) {
-        final focused = _forceForegroundWin32();
-        if (!focused) {
-          AppLogger.warn(
-            'AppWindow.show: window is visible but not in the foreground',
-          );
-        }
-        final actual = _getPositionWin32();
-        AppLogger.info(
-          'AppWindow.show: window shown, actual position=$actual, '
-          'foreground=$focused',
+    }
+    await windowManager.show();
+    await windowManager.focus();
+    if (Platform.isWindows) {
+      final focused = _forceForegroundWin32();
+      if (!focused) {
+        AppLogger.warn(
+          'AppWindow.show: window is visible but not in the foreground',
         );
-      } else {
-        AppLogger.info('AppWindow.show: window shown and focused');
       }
-      if (Platform.isWindows) {
-        await applyEffect();
-      }
+      final actual = _getPositionWin32();
+      AppLogger.info(
+        'AppWindow.show: window shown, actual position=$actual, '
+        'foreground=$focused',
+      );
+      await applyEffect();
+    } else {
+      AppLogger.info('AppWindow.show: window shown and focused');
     }
     _visible = true;
     onVisibilityChanged?.call(true);
@@ -696,19 +660,9 @@ class AppWindow {
     if (!_visible) return;
     _visible = false;
     await _captureCurrentPosition();
-    Future<bool>? unmappedFuture;
-    if (Platform.isLinux) {
-      unmappedFuture = LinuxShell.awaitEvent(
-        'unmapped',
-        timeout: const Duration(milliseconds: 300),
-      );
-    }
     await windowManager.hide();
     if (!Platform.isMacOS) {
       await windowManager.setSkipTaskbar(true);
-    }
-    if (unmappedFuture != null) {
-      await unmappedFuture;
     }
     onVisibilityChanged?.call(false);
   }
@@ -731,21 +685,11 @@ class AppWindow {
     await _captureCurrentPosition();
     _settingsMode = true;
     await windowManager.setResizable(true);
-    Future<bool>? configureFuture;
-    if (Platform.isLinux) {
-      configureFuture = LinuxShell.awaitEvent(
-        'configureNotify',
-        timeout: const Duration(milliseconds: 250),
-      );
-    }
     await windowManager.setMinimumSize(
       const Size(_settingsWidth, _settingsHeight),
     );
     await windowManager.setMaximumSize(const Size(1200, 900));
     await windowManager.setSize(const Size(_settingsWidth, _settingsHeight));
-    if (configureFuture != null) {
-      await configureFuture;
-    }
     await windowManager.center();
     if (!await windowManager.isVisible()) {
       await windowManager.show();
@@ -756,20 +700,9 @@ class AppWindow {
 
   Future<void> exitSettingsMode() async {
     _settingsMode = false;
-    Future<bool>? configureFuture;
-    if (Platform.isLinux) {
-      await windowManager.setResizable(true);
-      configureFuture = LinuxShell.awaitEvent(
-        'configureNotify',
-        timeout: const Duration(milliseconds: 250),
-      );
-    }
     await windowManager.setMinimumSize(Size(_popupWidth, 400));
     await windowManager.setMaximumSize(Size(_popupWidth, 900));
     await windowManager.setSize(Size(_popupWidth, _popupHeight));
-    if (configureFuture != null) {
-      await configureFuture;
-    }
     await windowManager.setResizable(false);
     final restored = await _tryRestoreSavedPosition();
     if (!restored) {

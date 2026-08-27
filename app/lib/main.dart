@@ -14,15 +14,12 @@ import 'package:window_manager/window_manager.dart';
 
 import 'services/auto_update_service.dart';
 import 'services/install_channel.dart';
-import 'services/linux_capabilities.dart';
 import 'services/release_manifest_service.dart';
 
 import 'shell/app_window.dart';
 import 'shell/focus_manager.dart';
+import 'shell/hotkey_binding.dart';
 import 'shell/hotkey_handler.dart';
-import 'shell/linux_hotkey_registration.dart';
-import 'shell/linux_session.dart';
-import 'shell/linux_shell.dart';
 import 'shell/single_instance.dart';
 import 'shell/startup_helper.dart';
 import 'shell/tray_icon.dart';
@@ -31,16 +28,12 @@ import 'shell/win_package_context.dart';
 import 'shell/desktop_notifier.dart';
 import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/wayland_unsupported_screen.dart';
 import 'theme/compact_theme.dart';
 import 'theme/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/permission_gate_screen.dart';
 import 'screens/desktop_onboarding_screen.dart';
 import 'screens/blocked_version_screen.dart';
-
-// Re-exported so existing tests can import isWaylandSession from main.dart.
-export 'shell/linux_session.dart' show isWaylandSession;
 
 bool _isMicaDark(String themeMode) => switch (themeMode) {
   'dark' => true,
@@ -118,8 +111,6 @@ Future<void> _run() async {
         ? WindowsNativeThumbnailProvider()
         : Platform.isMacOS
         ? MacOSNativeThumbnailProvider()
-        : Platform.isLinux
-        ? LinuxNativeThumbnailProvider()
         : null;
     final clipboardService = ClipboardService(
       repo,
@@ -164,15 +155,6 @@ Future<void> _run() async {
       }
     } catch (e) {
       AppLogger.warn('main: Window.setEffect failed (non-fatal): $e');
-    }
-
-    if (Platform.isLinux) {
-      try {
-        final caps = await LinuxCapabilitiesService.detect();
-        AppLogger.info('main: linux capabilities $caps');
-      } catch (e) {
-        AppLogger.warn('main: LinuxCapabilities.detect failed (non-fatal): $e');
-      }
     }
 
     runApp(
@@ -228,12 +210,9 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   Future<void>? _pendingConfigSave;
   bool _showPermissionGate = false;
   bool _showOnboarding = false;
-  bool _showWaylandUnsupported = false;
-  bool _linuxPrefersDark = false;
   String? _availableUpdateVersion;
   ManifestState? _manifestState;
   bool _programmaticRestore = false;
-  Timer? _blurHideTimer;
   bool _hotkeyToggleInProgress = false;
   bool _directPlainPasteInProgress = false;
   bool _itemPasteInProgress = false;
@@ -324,19 +303,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   Future<void> _initShellBody() async {
     windowManager.addListener(this);
     final isFirstRun = widget.storage.isFirstRun;
-    final wayland = Platform.isLinux && isWaylandSession();
-
-    if (wayland) {
-      await _appWindow.init(startVisible: true);
-      await _appWindow.enterGateMode();
-      if (mounted) setState(() => _showWaylandUnsupported = true);
-      return;
-    }
-
-    if (Platform.isLinux) {
-      final isDark = await linuxPrefersDarkMode();
-      if (mounted) setState(() => _linuxPrefersDark = isDark);
-    }
     _startListening();
 
     bool macosGranted = true;
@@ -345,20 +311,14 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     }
 
     final isUpdate = _config.lastRunVersion != AppConfig.appVersion;
-    final windowsNeedsOnboarding =
-        Platform.isWindows && !_config.hasSeenOnboarding;
-    final linuxNeedsOnboarding =
-        Platform.isLinux && !_config.hasCompletedOnboarding;
     final desktopNeedsOnboarding =
-        windowsNeedsOnboarding || linuxNeedsOnboarding;
+        Platform.isWindows && !_config.hasSeenOnboarding;
     final showOnStart =
         isFirstRun &&
-            (Platform.isLinux ||
-                (Platform.isMacOS && macosGranted) ||
-                Platform.isWindows) ||
+            ((Platform.isMacOS && macosGranted) || Platform.isWindows) ||
         desktopNeedsOnboarding;
     await _appWindow.init(startVisible: showOnStart);
-    if (showOnStart && (Platform.isWindows || linuxNeedsOnboarding)) {
+    if (showOnStart && Platform.isWindows) {
       try {
         await _appWindow.enterGateMode();
       } catch (e) {
@@ -468,67 +428,19 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   Future<void> _registerHotkeyWithFeedback() async {
-    if (!Platform.isLinux) {
-      final result = await _hotkeyHandler.registerWithFallback();
-      _reportPlainPasteHotkeyFailure();
-      if (result.status == HotkeyRegistrationStatus.failed) {
-        _showShellNotice(
-          (l) => l.hotkeyRegistrationFailed(result.requestedBinding.label()),
-        );
-      } else if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
-        _showShellNotice(
-          (l) => l.hotkeyFallbackActive(
-            result.requestedBinding.label(),
-            result.effectiveBinding?.label() ?? '',
-          ),
-        );
-      }
-      return;
-    }
-
-    // Wayland is blocked before this point in _initShell — only X11 reaches here.
     final result = await _hotkeyHandler.registerWithFallback();
     _reportPlainPasteHotkeyFailure();
-    if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
-      AppLogger.info(
-        'Primary Linux hotkey failed, using temporary fallback: '
-        '${result.requestedBinding.label()} -> '
-        '${result.effectiveBinding?.label()}',
-      );
-      if (result.failureReason == HotkeyFailureReason.grabFailed) {
-        _showShellNotice(
-          (l) =>
-              l.linuxHotkeyGrabFailedWarning(result.requestedBinding.label()),
-        );
-      } else {
-        _showShellNotice(
-          (l) => l.linuxHotkeyFallbackWarning(
-            result.requestedBinding.label(),
-            result.effectiveBinding?.label() ??
-                kLinuxTemporaryFallbackHotkey.label(),
-          ),
-        );
-      }
-      return;
-    }
-
     if (result.status == HotkeyRegistrationStatus.failed) {
-      AppLogger.error(
-        'Linux hotkey registration failed for ${result.requestedBinding.label()}',
+      _showShellNotice(
+        (l) => l.hotkeyRegistrationFailed(result.requestedBinding.label()),
       );
-      if (result.failureReason == HotkeyFailureReason.grabFailed) {
-        _showShellNotice(
-          (l) =>
-              l.linuxHotkeyGrabFailedWarning(result.requestedBinding.label()),
-        );
-      } else {
-        _showShellNotice(
-          (l) => l.linuxHotkeyConflictWarning(
-            result.requestedBinding.label(),
-            kLinuxTemporaryFallbackHotkey.label(),
-          ),
-        );
-      }
+    } else if (result.status == HotkeyRegistrationStatus.fallbackRegistered) {
+      _showShellNotice(
+        (l) => l.hotkeyFallbackActive(
+          result.requestedBinding.label(),
+          result.effectiveBinding?.label() ?? '',
+        ),
+      );
     }
   }
 
@@ -543,9 +455,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
 
   ThemeMode get _effectiveThemeMode {
     final mode = _config.themeMode;
-    if (Platform.isLinux && (mode == 'auto' || mode == 'system')) {
-      return _linuxPrefersDark ? ThemeMode.dark : ThemeMode.light;
-    }
     return switch (mode) {
       'dark' => ThemeMode.dark,
       'auto' || 'system' => ThemeMode.system,
@@ -586,7 +495,7 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   void _startListening() {
-    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
+    if (!Platform.isWindows && !Platform.isMacOS) return;
     AppLogger.info('_startListening: subscribing to clipboard event stream');
     _listenerSubscription = widget.listener.onEvent.listen(
       _onClipboardEvent,
@@ -897,14 +806,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     return next;
   }
 
-  Future<void> _updateLinuxConfig(AppConfig Function(AppConfig) update) async {
-    final next = update(_config);
-    if (identical(next, _config)) return;
-    _config = next;
-    if (mounted) setState(() {});
-    await _config.save(widget.storage.configFilePath);
-  }
-
   Future<void> _toggleWindow() async {
     _programmaticRestore = true;
     try {
@@ -1014,13 +915,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
     AppLogger.warn(
       'Paste was not sent: error=${response.errorCode ?? 'unknown'}',
     );
-    if (response.isFocusTimeout && Platform.isLinux) {
-      _showShellNotice(
-        (l) => l.linuxPasteFocusTimeoutWarning,
-        revealWhenHidden: true,
-      );
-      return;
-    }
     if (response.errorCode == 'targetElevated') {
       _showShellNotice((l) => l.pasteTargetElevated, revealWhenHidden: true);
       return;
@@ -1102,13 +996,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       await _trayIcon.dispose();
     } catch (e) {
       AppLogger.error('cleanup tray: $e');
-    }
-    if (Platform.isLinux) {
-      try {
-        await LinuxShell.dispose();
-      } catch (e) {
-        AppLogger.error('cleanup linux shell: $e');
-      }
     }
     try {
       await widget.clipboardService.dispose();
@@ -1266,27 +1153,11 @@ class _CopyPasteAppState extends State<CopyPasteApp>
   }
 
   @override
-  void onWindowFocus() {
-    _blurHideTimer?.cancel();
-    _blurHideTimer = null;
-  }
-
-  @override
   void onWindowBlur() {
     if (!_appWindow.isReady || !_appWindow.isVisible) return;
     if (_appWindow.isGateMode) return;
     if (!_config.hideOnDeactivate) return;
-    if (Platform.isLinux) {
-      _blurHideTimer?.cancel();
-      _blurHideTimer = Timer(const Duration(milliseconds: 500), () async {
-        _blurHideTimer = null;
-        final focus = await LinuxShell.getInputFocus();
-        if (focus != null && focus.ownsFocus) return;
-        unawaited(_appWindow.hideIfNotPinned());
-      });
-    } else {
-      unawaited(_appWindow.hideIfNotPinned());
-    }
+    unawaited(_appWindow.hideIfNotPinned());
   }
 
   @override
@@ -1350,7 +1221,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       _persistConfig(
         (_) => fromOnboarding.copyWith(
           hasSeenOnboarding: true,
-          hasCompletedOnboarding: true,
           lastRunVersion: AppConfig.appVersion,
         ),
       ),
@@ -1369,7 +1239,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
       _persistConfig(
         (_) => fromOnboarding.copyWith(
           hasSeenOnboarding: true,
-          hasCompletedOnboarding: true,
           lastRunVersion: AppConfig.appVersion,
         ),
       ),
@@ -1471,12 +1340,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
               );
             }
 
-            if (_showWaylandUnsupported) {
-              return WaylandUnsupportedScreen(
-                onClose: () => unawaited(_exitApp()),
-              );
-            }
-
             if (_showOnboarding) {
               final binding = HotkeyBinding(
                 virtualKey: _config.hotkeyVirtualKey,
@@ -1551,13 +1414,6 @@ class _CopyPasteAppState extends State<CopyPasteApp>
                       current: AppConfig.appVersion,
                       state: _manifestState,
                     ),
-                    appConfig: Platform.isLinux ? _config : null,
-                    linuxCapabilities: Platform.isLinux
-                        ? LinuxCapabilitiesService.current
-                        : null,
-                    onLinuxConfigUpdate: Platform.isLinux
-                        ? _updateLinuxConfig
-                        : null,
                   );
                 },
               ),
