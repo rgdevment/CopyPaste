@@ -354,7 +354,7 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 
 | OS          | Recommended                       | Alternatives                                       |
 | :---------- | :-------------------------------- | :------------------------------------------------- |
-| **Windows** | Microsoft Store                   | Standalone `.exe`                                  |
+| **Windows** | Microsoft Store                   | Scoop · standalone `.exe`                          |
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 
 After installing, open CopyPaste with **Ctrl+Alt+C** on Windows or **Control+Shift+V** on macOS. Both are customizable in Settings → Shortcuts.
@@ -364,6 +364,13 @@ After installing, open CopyPaste with **Ctrl+Alt+C** on Windows or **Control+Shi
 **Microsoft Store** (recommended) — one click, automatic updates, no security warnings.
 
 > [Install from the Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856)
+
+**Scoop** — for command-line installs, tracked with `scoop update`:
+
+```sh
+scoop bucket add rgdevment https://github.com/rgdevment/scoop-bucket
+scoop install copypaste
+```
 
 **Standalone `.exe`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). The installer is self-signed; see the [security note](#standalone-downloads) below.
 
