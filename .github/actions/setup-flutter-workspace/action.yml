@@ -6,6 +6,14 @@ inputs:
         description: Flutter channel passed to subosito/flutter-action.
         required: false
         default: stable
+    flutter-version:
+        description: >-
+            Pinned Flutter release. `channel: stable` alone floats, so a new
+            stable silently changes dart format output and reddens CI on
+            untouched files. Bump deliberately: upgrade locally, run
+            `dart format .`, commit the reformat and this value together.
+        required: false
+        default: 3.44.1
     version:
         description: When set, writes this version into app/pubspec.yaml after bootstrap.
         required: false
@@ -17,6 +25,7 @@ runs:
         - uses: subosito/flutter-action@v2
           with:
               channel: ${{ inputs.channel }}
+              flutter-version: ${{ inputs.flutter-version }}
               cache: true
 
         - name: Cache pub dependencies
