@@ -405,10 +405,10 @@ brew tap rgdevment/tap && brew install --cask copypaste
 - **Your data is untouched.** History, images and settings stay in
   `~/.local/share/com.rgdevment.copypaste/CopyPaste/` — back that folder up before uninstalling if
   you want to keep it.
-- **Bug reports for Linux are not accepted.** The last state with full Linux support is kept on the
-  [`v2-linux-stable`](https://github.com/rgdevment/CopyPaste/tree/v2-linux-stable) branch — code,
-  packaging and CI included — for anyone who wants to fork and continue it. The GPL v3 licence
-  covers exactly that.
+- **Bug reports for Linux are not accepted.** The last state with full Linux support is archived on
+  the [`v2-linux-archive`](https://github.com/rgdevment/CopyPaste/tree/v2-linux-archive) branch —
+  code, packaging and CI included — for anyone who wants to fork and continue it. The GPL v3
+  licence covers exactly that.
 
 ### Compatibility
 
