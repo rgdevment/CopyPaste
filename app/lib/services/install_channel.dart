@@ -70,8 +70,6 @@ class InstallChannelDetector {
         return 'github_macos';
       case InstallChannel.homebrew:
         return 'homebrew';
-      // Deliberately absent from the manifest: an unidentified host has no
-      // install channel, so the blocked-version screen falls back to the hint.
       case InstallChannel.unknown:
         return 'unknown';
     }

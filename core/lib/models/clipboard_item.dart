@@ -45,19 +45,10 @@ class ClipboardItem {
   final int pasteCount;
   final String? contentHash;
 
-  /// Path absoluto al thumbnail propio dentro de `images/<id>_thumb.png`.
-  /// Null cuando el item no tiene thumb propio (caso normal: usar el del SO).
   final String? thumbPath;
 
-  /// `mtime` UTC del archivo externo en el momento de generar el thumb.
-  /// Solo aplica a items con `isFileBasedType == true` y referencia externa.
-  /// Si difiere del `mtime` actual, el thumb cacheado está obsoleto.
   final DateTime? sourceModifiedAt;
 
-  /// Primera vez (UTC) que el cleanup periódico detectó que la referencia
-  /// externa ya no existe (con el volumen presente). Null mientras el
-  /// archivo siga disponible o el volumen esté ausente. Se usa para purgar
-  /// el item cuando supera `keepBrokenItemsDays`.
   final DateTime? brokenSince;
 
   bool get isFileBasedType =>
@@ -66,14 +57,8 @@ class ClipboardItem {
       type == ClipboardContentType.audio ||
       type == ClipboardContentType.video;
 
-  /// True cuando el clip se copió con estilos. Solo se mira `rtf`: casi todo lo
-  /// copiado desde un navegador arrastra `html` aunque el texto sea plano, así
-  /// que esa clave no distingue y como señal visual sería ruido.
   bool get hasRichText => _hasMetadataPayload('rtf');
 
-  /// True cuando pegar el clip tal cual restauraría algún formato. A diferencia
-  /// de [hasRichText] sí cuenta `html`, porque el writer también lo devuelve al
-  /// portapapeles: esto es lo que decide si "pegar sin formato" tiene efecto.
   bool get hasFormatting =>
       _hasMetadataPayload('rtf') || _hasMetadataPayload('html');
 

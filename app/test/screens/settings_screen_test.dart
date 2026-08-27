@@ -114,7 +114,6 @@ void main() {
       await tester.tap(find.text('Shortcuts'));
       await tester.pump();
 
-      // macOS renders modifiers as SF symbols with no separator.
       final binding = Platform.isMacOS ? '⌃⌥⇧V' : 'Ctrl + Alt + Shift + V';
       expect(find.textContaining('Current: $binding'), findsOneWidget);
       expect(

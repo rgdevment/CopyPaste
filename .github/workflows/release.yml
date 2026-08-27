@@ -269,9 +269,6 @@ jobs:
                   esac
                   echo "Severity: $SEVERITY (override=${SEVERITY_OVERRIDE:-<none>}, previous=${SEVERITY_CURRENT})"
 
-                  # El default sube minimumSupported a la versión publicada. Con
-                  # severity critical eso bloquea a todo Linux instalado (<= 2.11.0),
-                  # que ya no tiene ruta de actualización: exige la decisión explícita.
                   if [[ "$SEVERITY" == "critical" && -z "$MIN_SUPPORTED_OVERRIDE" ]]; then
                     echo "::error::A critical release must carry an explicit Min-Supported trailer; the default ($VERSION) locks out every Linux install (<= 2.11.0)."
                     exit 1
@@ -348,6 +345,8 @@ jobs:
         steps:
             - name: Install Microsoft Store Developer CLI
               uses: microsoft/microsoft-store-apppublisher@v1.3
+              with:
+                  version: v0.3.9
 
             - name: Download Windows artifacts
               uses: actions/download-artifact@v7

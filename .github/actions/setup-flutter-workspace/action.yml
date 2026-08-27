@@ -7,11 +7,7 @@ inputs:
         required: false
         default: stable
     flutter-version:
-        description: >-
-            Pinned Flutter release. `channel: stable` alone floats, so a new
-            stable silently changes dart format output and reddens CI on
-            untouched files. Bump deliberately: upgrade locally, run
-            `dart format .`, commit the reformat and this value together.
+        description: Pinned Flutter release; `channel` alone floats between runs.
         required: false
         default: 3.44.1
     version:

@@ -6,8 +6,6 @@ coverage:
             default:
                 target: auto
                 threshold: 0%
-                # Los archivos borrados salen también de la base, así que retirar
-                # código cubierto no cuenta como caída de cobertura.
                 removed_code_behavior: adjust_base
         patch:
             default:

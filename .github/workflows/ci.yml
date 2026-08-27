@@ -188,8 +188,6 @@ jobs:
 
       - uses: ./.github/actions/setup-flutter-workspace
 
-      # Las ramas Windows sólo se ejecutan aquí: en ubuntu quedan saltadas.
-      # Invocado vía dart por la misma razón que en setup-flutter-workspace.
       - name: Run tests
         shell: bash
         run: dart pub global run melos:melos run test:coverage
@@ -216,7 +214,6 @@ jobs:
 
       - uses: ./.github/actions/setup-flutter-workspace
 
-      # Las ramas macOS sólo se ejecutan aquí: en ubuntu quedan saltadas.
       - name: Run tests
         shell: bash
         run: dart pub global run melos:melos run test:coverage
