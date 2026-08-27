@@ -1,5 +1,5 @@
 /// Integration tests that verify ClipboardService behaviour is identical
-/// across Windows, macOS, and Linux — no platform-specific branching exists
+/// across Windows and macOS — no platform-specific branching exists
 /// in the Dart service layer, so these tests run unconditionally on all
 /// platforms (CI runs for each OS via the flutter test matrix).
 library;

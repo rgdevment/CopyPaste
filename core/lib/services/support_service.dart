@@ -96,10 +96,8 @@ class SupportService {
         await Process.run('explorer', ['/select,$filePath']);
       } else if (Platform.isMacOS) {
         await Process.run('open', ['-R', filePath]);
-      } else // coverage:ignore-end
-      if (Platform.isLinux) {
-        await Process.run('xdg-open', [File(filePath).parent.path]);
       }
+      // coverage:ignore-end
     } catch (e, s) {
       AppLogger.exception(e, s, 'revealFile');
     }
@@ -124,10 +122,8 @@ class SupportService {
         await Process.run('cmd', ['/c', 'start', '', logsDir.path]);
       } else if (Platform.isMacOS) {
         await Process.run('open', [logsDir.path]);
-      } else // coverage:ignore-end
-      if (Platform.isLinux) {
-        await Process.run('xdg-open', [logsDir.path]);
       }
+      // coverage:ignore-end
     } catch (e, s) {
       AppLogger.exception(e, s, 'openLogsFolder');
       rethrow;

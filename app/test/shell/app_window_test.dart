@@ -84,7 +84,7 @@ void _teardownWindowManagerMock() {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('AppWindow.show() on Linux', () {
+  group('AppWindow.show()', () {
     late List<MethodCall> calls;
 
     setUp(() {
@@ -94,33 +94,8 @@ void main() {
 
     tearDown(_teardownWindowManagerMock);
 
-    test('calls show() and focus() on Linux without setOpacity', () async {
-      if (!Platform.isLinux) return;
-
-      bool visibilityChanged = false;
-      final window = AppWindow(
-        onVisibilityChanged: (_) => visibilityChanged = true,
-        popupWidth: 368,
-        popupHeight: 500,
-      );
-
-      await window.show();
-
-      expect(
-        calls.any((c) => c.method == 'show'),
-        isTrue,
-        reason: 'show() should be called',
-      );
-      expect(
-        calls.any((c) => c.method == 'setOpacity'),
-        isFalse,
-        reason: 'setOpacity should not be called — opacity trick was removed',
-      );
-      expect(visibilityChanged, isTrue);
-    });
-
     test('isVisible becomes true after show()', () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (Platform.isWindows) return;
 
       final window = AppWindow(popupWidth: 368, popupHeight: 500);
       expect(window.isVisible, isFalse);
@@ -129,7 +104,7 @@ void main() {
     });
 
     test('isVisible becomes false after hide()', () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (Platform.isWindows) return;
 
       final window = AppWindow(popupWidth: 368, popupHeight: 500);
       await window.show();
@@ -139,7 +114,7 @@ void main() {
     });
 
     test('hide() is no-op when already hidden', () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (Platform.isWindows) return;
 
       final window = AppWindow(popupWidth: 368, popupHeight: 500);
       // Not yet shown — hiding should do nothing.
@@ -153,7 +128,7 @@ void main() {
     });
 
     test('toggle() shows when hidden and hides when visible', () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (Platform.isWindows) return;
 
       final window = AppWindow(popupWidth: 368, popupHeight: 500);
       expect(window.isVisible, isFalse);
@@ -166,7 +141,7 @@ void main() {
     });
 
     test('onVisibilityChanged callback fires on show and hide', () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (Platform.isWindows) return;
 
       final events = <bool>[];
       final window = AppWindow(

@@ -20,24 +20,3 @@ releases:
           build_args:
             dart-define:
               STORE_BUILD: "true"
-
-  - name: linux-appimage
-    jobs:
-      - name: build-appimage
-        package:
-          platform: linux
-          target: appimage
-
-  - name: linux-deb
-    jobs:
-      - name: build-deb
-        package:
-          platform: linux
-          target: deb
-
-  - name: linux-rpm
-    jobs:
-      - name: build-rpm
-        package:
-          platform: linux
-          target: rpm

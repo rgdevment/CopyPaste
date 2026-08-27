@@ -1,6 +1,6 @@
 /// Platform-agnostic tests that verify ClipboardEvent parsing is robust
-/// across all content types and unusual native payloads (Windows, macOS, Linux
-/// all send `Map<dynamic, dynamic>` via BasicMessageChannel).
+/// across all content types and unusual native payloads (Windows and macOS
+/// both send `Map<dynamic, dynamic>` via BasicMessageChannel).
 library;
 
 import 'dart:typed_data';

@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import '../helpers/url_helper.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auto_update_service.dart';
-import '../services/linux_capabilities.dart';
 import '../services/release_manifest_service.dart';
 import '../theme/app_theme_data.dart';
 import '../theme/theme_provider.dart';
@@ -18,7 +17,6 @@ import '../widgets/filter_bar.dart';
 import '../widgets/filter_tab_bar.dart';
 import '../widgets/label_color_dialog.dart';
 import '../widgets/title_bar.dart';
-import 'linux_capabilities_banner.dart';
 
 enum ClipboardTab { recent, pinned }
 
@@ -41,9 +39,6 @@ class MainScreen extends StatefulWidget {
     this.onDismissHint,
     this.updateVersion,
     this.updateSeverity,
-    this.appConfig,
-    this.linuxCapabilities,
-    this.onLinuxConfigUpdate,
     super.key,
   });
 
@@ -64,10 +59,6 @@ class MainScreen extends StatefulWidget {
   final VoidCallback? onDismissHint;
   final String? updateVersion;
   final ManifestSeverity? updateSeverity;
-  final AppConfig? appConfig;
-  final LinuxCapabilities? linuxCapabilities;
-  final Future<void> Function(AppConfig Function(AppConfig))?
-  onLinuxConfigUpdate;
 
   @override
   State<MainScreen> createState() => MainScreenState();
@@ -603,14 +594,6 @@ class MainScreenState extends State<MainScreen> {
             },
           ),
           if (widget.showHint) _buildHintBanner(colors),
-          if (widget.appConfig != null &&
-              widget.linuxCapabilities != null &&
-              widget.onLinuxConfigUpdate != null)
-            LinuxCapabilitiesBanner(
-              config: widget.appConfig!,
-              capabilities: widget.linuxCapabilities!,
-              onDismiss: widget.onLinuxConfigUpdate!,
-            ),
           Expanded(
             child: _isEmpty
                 ? const EmptyState()
@@ -844,8 +827,6 @@ class MainScreenState extends State<MainScreen> {
                 ? l.updateAvailableStore(version)
                 : Platform.isMacOS
                 ? l.updateAvailableMac(version)
-                : Platform.isLinux
-                ? l.updateAvailableLinux(version)
                 : l.updateAvailableWindows(version),
           ),
         ),

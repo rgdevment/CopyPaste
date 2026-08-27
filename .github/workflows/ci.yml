@@ -121,7 +121,7 @@ jobs:
       - name: Validate release workflow references
         run: |
           errors=0
-          for wf in release-win.yml release-mac.yml release-linux.yml; do
+          for wf in release-win.yml release-mac.yml; do
             if [ ! -f ".github/workflows/$wf" ]; then
               echo "::error::Missing .github/workflows/$wf (referenced by release.yml)"
               errors=$((errors + 1))
@@ -129,7 +129,7 @@ jobs:
               echo "OK .github/workflows/$wf"
             fi
           done
-          for act in setup-flutter-workspace setup-linux-build-deps; do
+          for act in setup-flutter-workspace; do
             if [ ! -f ".github/actions/$act/action.yml" ]; then
               echo "::error::Missing .github/actions/$act/action.yml (referenced by the build jobs)"
               errors=$((errors + 1))
@@ -142,7 +142,7 @@ jobs:
       - name: Validate project structure
         run: |
           errors=0
-          for dir in app/lib app/windows app/macos app/linux app/assets; do
+          for dir in app/lib app/windows app/macos app/assets listener/windows listener/macos; do
             if [ ! -d "$dir" ]; then
               echo "::error::Missing required directory: $dir"
               errors=$((errors + 1))
@@ -181,40 +181,51 @@ jobs:
   build:
     needs: quality
     runs-on: windows-latest
-    name: Build Verification (Windows)
+    name: Test & Build (Windows)
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-flutter-workspace
+
+      # Las ramas Windows sólo se ejecutan aquí: en ubuntu quedan saltadas.
+      - name: Run tests
+        run: melos run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: core/coverage/lcov.info,listener/coverage/lcov.info,app/coverage/lcov.info
+          flags: windows
+          fail_ci_if_error: false
 
       - name: Build Windows release
         run: cd app; flutter build windows --release
 
-  build-linux:
-    needs: quality
-    runs-on: ubuntu-22.04
-    name: Build Verification (Linux)
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: ./.github/actions/setup-linux-build-deps
-
-      - uses: ./.github/actions/setup-flutter-workspace
-
-      - name: Build Linux release
-        run: cd app && flutter build linux --release
-
   build-macos:
     needs: quality
     runs-on: macos-latest
-    name: Build Verification (macOS)
+    name: Test & Build (macOS)
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-flutter-workspace
+
+      # Las ramas macOS sólo se ejecutan aquí: en ubuntu quedan saltadas.
+      - name: Run tests
+        run: melos run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: core/coverage/lcov.info,listener/coverage/lcov.info,app/coverage/lcov.info
+          flags: macos
+          fail_ci_if_error: false
 
       - name: Build macOS release
         run: cd app && flutter build macos --release

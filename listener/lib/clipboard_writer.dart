@@ -203,6 +203,4 @@ class PasteResponse {
 
   final bool success;
   final String? errorCode;
-
-  bool get isFocusTimeout => errorCode == 'focusTimeout';
 }

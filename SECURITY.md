@@ -24,9 +24,7 @@ I'm not protecting a brand or business. I'm protecting _you_ and everyone using 
 - **Configurable Retention** — Automatically delete old clipboard items based on your retention settings.
 - **Open Source** — Every line of code is public. You can inspect, audit, and verify what we're doing.
 - **Signed Release Manifest** — The update notifier fetches a small JSON file signed with an Ed25519 key. The signature is verified locally before the file is trusted, so a compromised mirror cannot inject a fake "latest version" or a malicious install URL. If the signature fails, the manifest is discarded.
-- **Minimum Supported Version Enforcement** — When a release contains a critical fix (e.g. a data-corruption or security issue), the signed manifest can mark older versions as blocked. Standalone builds (Windows / macOS / Linux) then show a full-screen prompt with direct install instructions. **Microsoft Store builds are never blocked** — updates on that platform are delivered on Microsoft's review schedule, which is outside our control, so blocking would leave users without a path forward.
-- **Signed Linux Repositories** — Native `.deb` and `.rpm` packages are built and signed by the [openSUSE Build Service](https://build.opensuse.org/project/show/home:rgdevment) project key. `apt`, `dnf` and `zypper` verify every package against the OBS GPG key before installation, the same trust chain used by upstream openSUSE and Fedora repositories.
-- **Delta-Updated AppImage** — The Linux AppImage embeds an [AppImageUpdate](https://github.com/AppImage/AppImageUpdate) `.zsync` URL pointing back to GitHub Releases. Updates are fetched as binary deltas over HTTPS and verified against the published `SHA256SUMS` file shipped with each release.
+- **Minimum Supported Version Enforcement** — When a release contains a critical fix (e.g. a data-corruption or security issue), the signed manifest can mark older versions as blocked. Standalone builds (Windows / macOS) then show a full-screen prompt with direct install instructions. **Microsoft Store builds are never blocked** — updates on that platform are delivered on Microsoft's review schedule, which is outside our control, so blocking would leave users without a path forward.
 
 ### Development Practices
 
@@ -99,7 +97,7 @@ This is the fastest way to reach us. We check email daily and will respond withi
 - **Impact** — What could an attacker do? Who is affected?
 - **Steps to Reproduce** — How can we reproduce the issue?
 - **CopyPaste Version** — Which version is affected?
-- **OS and version** — e.g., Windows 11 23H2, macOS Sequoia 15.1, Ubuntu 24.04
+- **OS and version** — e.g., Windows 11 23H2, macOS Sequoia 15.1
 - **Proof of Concept** (optional) — Code or screenshots demonstrating the issue
 - **Suggested Fix** (optional) — If you have ideas on how to fix it
 
@@ -202,7 +200,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 **CopyPaste does not currently use cryptographic functions for data storage.**
 
 - Clipboard history is stored in **plaintext** in a local SQLite database
-- Database files are protected by **OS-level file system permissions** (Windows, macOS, and Linux)
+- Database files are protected by **OS-level file system permissions** (Windows and macOS)
 - No encryption is applied to stored clipboard data
 
 **Why?**

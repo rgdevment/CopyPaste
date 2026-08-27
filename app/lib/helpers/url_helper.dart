@@ -14,15 +14,12 @@ class UrlHelper {
       await Process.start('cmd', ['/c', 'start', '', url], runInShell: true);
     } else if (platform == 'macos') {
       await Process.start('open', [url]);
-    } else if (platform == 'linux') {
-      await Process.start('xdg-open', [url]);
     }
   }
 
   static String _currentPlatform() {
     if (Platform.isWindows) return 'windows';
     if (Platform.isMacOS) return 'macos';
-    if (Platform.isLinux) return 'linux';
     return 'other';
   }
 }

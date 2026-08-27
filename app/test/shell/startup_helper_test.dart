@@ -100,5 +100,5 @@ void main() {
         isTrue,
       );
     });
-  });
+  }, skip: !Platform.isMacOS ? 'macOS-only' : null);
 }

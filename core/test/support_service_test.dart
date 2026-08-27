@@ -229,14 +229,6 @@ void main() {
   });
 
   group('SupportService.revealFile', () {
-    test('completes without throwing on Linux', () async {
-      if (!Platform.isLinux) return;
-      final file = File(p.join(tempDir.path, 'reveal_test.log'))
-        ..writeAsStringSync('data');
-      // xdg-open is called internally; exceptions are caught, so always completes
-      await expectLater(SupportService.revealFile(file.path), completes);
-    });
-
     test('completes without throwing when path is empty string', () async {
       // Platform checks guard the Process.run call; no spawn attempted for empty
       await expectLater(SupportService.revealFile(''), completes);
@@ -249,19 +241,9 @@ void main() {
       try {
         await SupportService.openLogsFolder(storage);
       } catch (_) {
-        // xdg-open may not be available in headless CI; that's acceptable
+        // The shell opener may not be available in headless CI; that's acceptable
       }
       expect(Directory(storage.logsPath).existsSync(), isTrue);
-    });
-
-    test('opens existing logs folder on Linux', () async {
-      if (!Platform.isLinux) return;
-      // xdg-open may fail in headless CI, but the function body is covered
-      try {
-        await SupportService.openLogsFolder(storage);
-      } catch (_) {
-        // ProcessException acceptable when no display server available
-      }
     });
   });
 }

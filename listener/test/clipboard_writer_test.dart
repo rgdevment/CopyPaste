@@ -366,12 +366,11 @@ void main() {
             };
           });
       final result = await ClipboardWriter.activateAndPaste(
-        bundleId: 'x11:0xabc',
+        bundleId: 'com.example.editor',
         delayMs: 0,
       );
       expect(result.success, isFalse);
       expect(result.errorCode, equals('focusTimeout'));
-      expect(result.isFocusTimeout, isTrue);
     });
 
     test('sends bundleId, delayMs and focusTimeoutMs as arguments', () async {

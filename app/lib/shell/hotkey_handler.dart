@@ -1,13 +1,11 @@
 // coverage:ignore-file
-import 'dart:async';
 import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
-import 'linux_hotkey_registration.dart';
-import 'linux_shell.dart';
+import 'hotkey_binding.dart';
 import 'windows_hotkey_channel.dart';
 
 class HotkeyHandler {
@@ -24,7 +22,6 @@ class HotkeyHandler {
   HotKey? _hotkey;
   HotKey? _plainPasteHotkey;
   WindowsHotkeyChannel? _windowsHotkeys;
-  StreamSubscription<String>? _linuxEventsSubscription;
   bool? _plainPasteRegistrationSucceeded;
   bool? get plainPasteRegistrationSucceeded => _plainPasteRegistrationSucceeded;
 
@@ -85,37 +82,8 @@ class HotkeyHandler {
         : null;
     if (_hotkey != null ||
         _plainPasteHotkey != null ||
-        _windowsHotkeys != null ||
-        _linuxEventsSubscription != null) {
+        _windowsHotkeys != null) {
       await unregister();
-    }
-
-    if (Platform.isLinux) {
-      _linuxEventsSubscription ??= LinuxShell.events.listen((event) {
-        if (event == 'hotkey') _onHotkey?.call();
-        if (event == 'plainPasteHotkey') _onPlainPasteHotkey?.call();
-      });
-      final result = await registerLinuxHotkeyWithFallback(
-        api: const LinuxShellHotkeyBindingApi(),
-        requestedBinding: _requestedBinding,
-      );
-      if (config.plainPasteHotkeyEnabled) {
-        final response = await LinuxShell.registerHotkey(
-          id: 'plainPaste',
-          virtualKey: _plainPasteBinding.virtualKey,
-          useCtrl: _plainPasteBinding.useCtrl,
-          useWin: _plainPasteBinding.useWin,
-          useAlt: _plainPasteBinding.useAlt,
-          useShift: _plainPasteBinding.useShift,
-        );
-        if (!response.success) {
-          AppLogger.error(
-            'Plain paste hotkey registration failed: ${response.errorCode}',
-          );
-        }
-        _plainPasteRegistrationSucceeded = response.success;
-      }
-      return result;
     }
 
     if (Platform.isWindows) {
@@ -312,25 +280,6 @@ class HotkeyHandler {
       }
       return;
     }
-    if (Platform.isLinux) {
-      try {
-        await _linuxEventsSubscription?.cancel();
-      } catch (e) {
-        AppLogger.error('Linux hotkey event cancellation failed: $e');
-      } finally {
-        _linuxEventsSubscription = null;
-      }
-      try {
-        await LinuxShell.unregisterHotkey();
-      } catch (e) {
-        AppLogger.error('Linux hotkey unregistration failed: $e');
-      }
-      _hotkey = null;
-      _plainPasteHotkey = null;
-      _plainPasteRegistrationSucceeded = null;
-      return;
-    }
-
     final registered = <HotKey>[];
     if (_hotkey != null) registered.add(_hotkey!);
     if (_plainPasteHotkey != null) registered.add(_plainPasteHotkey!);

@@ -21,10 +21,7 @@
       "command": "brew upgrade copypaste"
     },
     "github_linux": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
-    },
-    "appimage": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+      "url": "https://github.com/rgdevment/CopyPaste/releases/tag/v2.11.0"
     }
   },
   "releaseNotes": {

@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:copypaste/helpers/url_helper.dart';
 import 'package:copypaste/l10n/app_localizations.dart';
 import 'package:copypaste/screens/main_screen.dart';
-import 'package:copypaste/services/linux_capabilities.dart';
 import 'package:copypaste/services/release_manifest_service.dart';
 import 'package:copypaste/theme/compact_theme.dart';
 import 'package:copypaste/theme/theme_provider.dart';
@@ -29,9 +28,6 @@ Widget _buildApp({
   VoidCallback? onDismissHint,
   String? updateVersion,
   ManifestSeverity? updateSeverity,
-  AppConfig? appConfig,
-  LinuxCapabilities? linuxCapabilities,
-  Future<void> Function(AppConfig Function(AppConfig))? onLinuxConfigUpdate,
   Key? key,
 }) {
   return MaterialApp(
@@ -57,9 +53,6 @@ Widget _buildApp({
           onDismissHint: onDismissHint,
           updateVersion: updateVersion,
           updateSeverity: updateSeverity,
-          appConfig: appConfig,
-          linuxCapabilities: linuxCapabilities,
-          onLinuxConfigUpdate: onLinuxConfigUpdate,
         ),
       ),
     ),
@@ -1639,31 +1632,6 @@ void main() {
       // Screen still renders correctly.
       expect(find.byType(MainScreen), findsOneWidget);
     });
-
-    testWidgets(
-      'LinuxCapabilitiesBanner renders when all linux params provided',
-      (tester) async {
-        const capabilities = LinuxCapabilities.unsupported;
-        const config = AppConfig();
-        bool callbackCalled = false;
-
-        await tester.pumpWidget(
-          _buildApp(
-            service: service,
-            onPaste: (_) {},
-            appConfig: config,
-            linuxCapabilities: capabilities,
-            onLinuxConfigUpdate: (fn) async {
-              callbackCalled = true;
-            },
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.byType(MainScreen), findsOneWidget);
-        expect(callbackCalled, isFalse);
-      },
-    );
 
     testWidgets('Alt+T shortcut opens filter bar', (tester) async {
       final key = GlobalKey<MainScreenState>();

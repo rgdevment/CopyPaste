@@ -141,7 +141,7 @@ class WindowFocusManager {
   Future<bool> capturePreviousWindow() async {
     if (Platform.isWindows) {
       return _capturePreviousWindows();
-    } else if (Platform.isMacOS || Platform.isLinux) {
+    } else if (Platform.isMacOS) {
       _previousBundleId = await ClipboardWriter.captureFrontmostApp();
       AppLogger.info(
         'Focus session capture: platform=${Platform.operatingSystem}, '
@@ -162,7 +162,7 @@ class WindowFocusManager {
       AppLogger.warn('Paste cancelled: no previous Windows destination');
       return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
     }
-    if ((Platform.isMacOS || Platform.isLinux) && _previousBundleId == null) {
+    if (Platform.isMacOS && _previousBundleId == null) {
       AppLogger.warn('Paste cancelled: no previous application destination');
       return const PasteResponse(success: false, errorCode: 'noPreviousWindow');
     }
@@ -171,7 +171,7 @@ class WindowFocusManager {
     try {
       await Future<void>.delayed(Duration(milliseconds: delayBeforeFocusMs));
 
-      if (Platform.isMacOS || Platform.isLinux) {
+      if (Platform.isMacOS) {
         final response = await ClipboardWriter.activateAndPaste(
           bundleId: _previousBundleId!,
           delayMs: delayBeforePasteMs,

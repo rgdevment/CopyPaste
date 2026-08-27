@@ -158,7 +158,6 @@ class BlockedVersionScreen extends StatelessWidget {
   static String? _packageManagerName(InstallChannel channel) =>
       switch (channel) {
         InstallChannel.homebrew => 'brew',
-        InstallChannel.snap => 'snap',
         InstallChannel.scoop => 'scoop',
         _ => null,
       };

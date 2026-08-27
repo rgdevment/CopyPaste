@@ -114,7 +114,7 @@ void main() {
     // encode. `pendingCount` alone is not enough — it drops to zero as soon
     // as a job is taken off the queue, while the isolate may still be
     // encoding the PNG. Poll up to ~5 s, which is generous enough for
-    // slow Linux CI runners.
+    // slow CI runners.
     for (var i = 0; i < 100; i++) {
       if (queue.isIdle) {
         // One more pump so the `whenComplete` chain in `_scheduleNext`

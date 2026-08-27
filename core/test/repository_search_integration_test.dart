@@ -1,6 +1,6 @@
 /// Cross-platform repository search integration tests.
 /// Verifies that FTS5, LIKE fallback, and Unicode normalization work correctly
-/// across Windows, macOS, and Linux — all using the in-memory SQLite instance.
+/// across Windows and macOS — all using the in-memory SQLite instance.
 library;
 
 import 'package:flutter_test/flutter_test.dart';

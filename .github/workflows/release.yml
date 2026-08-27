@@ -125,16 +125,9 @@ jobs:
             version: ${{ needs.extract-version.outputs.version }}
         secrets: inherit
 
-    build-linux:
-        needs: extract-version
-        uses: ./.github/workflows/release-linux.yml
-        with:
-            version: ${{ needs.extract-version.outputs.version }}
-        secrets: inherit
-
     github-release:
         runs-on: ubuntu-latest
-        needs: [extract-version, build-windows, build-macos, build-linux]
+        needs: [extract-version, build-windows, build-macos]
         if: needs.extract-version.outputs.is_tag == 'true'
         timeout-minutes: 10
         name: Create GitHub Release
@@ -174,12 +167,6 @@ jobs:
                   patterns=(
                     'artifacts/release-windows/**/*_Setup.exe'
                     'artifacts/release-macos/*.dmg'
-                    'artifacts/release-linux/*.AppImage'
-                    'artifacts/release-linux/*.AppImage.zsync'
-                    'artifacts/release-linux/*.deb'
-                    'artifacts/release-linux/*.rpm'
-                    'artifacts/release-linux/*.tar.gz'
-                    'artifacts/release-linux/SHA256SUMS'
                   )
                   if [[ "$IS_PRERELEASE" != "true" ]]; then
                     patterns+=( 'artifacts/release-windows/**/*_store.msix*' )
@@ -202,10 +189,6 @@ jobs:
                       artifacts/release-windows/**/*_Setup.exe
                       artifacts/release-windows/**/*_store.msix*
                       artifacts/release-macos/*.dmg
-                      artifacts/release-linux/*.AppImage
-                      artifacts/release-linux/*.deb
-                      artifacts/release-linux/*.rpm
-                      artifacts/release-linux/*.tar.gz
 
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
@@ -218,12 +201,6 @@ jobs:
                       artifacts/release-windows/**/*_Setup.exe
                       artifacts/release-windows/**/*_store.msix*
                       artifacts/release-macos/*.dmg
-                      artifacts/release-linux/*.AppImage
-                      artifacts/release-linux/*.AppImage.zsync
-                      artifacts/release-linux/*.deb
-                      artifacts/release-linux/*.rpm
-                      artifacts/release-linux/*.tar.gz
-                      artifacts/release-linux/SHA256SUMS
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -291,6 +268,14 @@ jobs:
                       ;;
                   esac
                   echo "Severity: $SEVERITY (override=${SEVERITY_OVERRIDE:-<none>}, previous=${SEVERITY_CURRENT})"
+
+                  # El default sube minimumSupported a la versión publicada. Con
+                  # severity critical eso bloquea a todo Linux instalado (<= 2.11.0),
+                  # que ya no tiene ruta de actualización: exige la decisión explícita.
+                  if [[ "$SEVERITY" == "critical" && -z "$MIN_SUPPORTED_OVERRIDE" ]]; then
+                    echo "::error::A critical release must carry an explicit Min-Supported trailer; the default ($VERSION) locks out every Linux install (<= 2.11.0)."
+                    exit 1
+                  fi
 
                   MIN_SUPPORTED="${MIN_SUPPORTED_OVERRIDE:-$VERSION}"
                   echo "minimumSupported: $MIN_SUPPORTED (override=${MIN_SUPPORTED_OVERRIDE:-<none>})"
@@ -420,37 +405,23 @@ jobs:
                   DMG_NAME="CopyPaste_${VERSION}_universal.dmg"
                   DMG_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DMG_NAME}"
 
-                  DEB_NAME="CopyPaste_${VERSION}_amd64.deb"
-                  DEB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${DEB_NAME}"
-
                   echo "Downloading DMG to compute SHA256..."
                   curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
                     -o "/tmp/${DMG_NAME}" "${DMG_URL}"
                   DMG_SHA256=$(sha256sum "/tmp/${DMG_NAME}" | awk '{print $1}')
                   rm -f "/tmp/${DMG_NAME}"
 
-                  echo "Downloading deb to compute SHA256..."
-                  curl -fSL --retry 5 --retry-delay 10 --retry-all-errors \
-                    -o "/tmp/${DEB_NAME}" "${DEB_URL}"
-                  DEB_SHA256=$(sha256sum "/tmp/${DEB_NAME}" | awk '{print $1}')
-                  rm -f "/tmp/${DEB_NAME}"
-
                   echo "Version: ${VERSION}"
                   echo "DMG SHA256: ${DMG_SHA256}"
-                  echo "DEB SHA256: ${DEB_SHA256}"
 
                   if [[ "$VERSION" == *-* ]]; then
                     CASK_FILE="Casks/copypaste-beta.rb"
                     CASK_NAME="copypaste-beta"
                     CASK_DESC="Clipboard history manager for macOS (beta)"
-                    FORMULA_FILE="Formula/copypaste-beta-linux.rb"
-                    FORMULA_CLASS="CopypasteBetaLinux"
                   else
                     CASK_FILE="Casks/copypaste.rb"
                     CASK_NAME="copypaste"
                     CASK_DESC="Clipboard history manager for macOS"
-                    FORMULA_FILE="Formula/copypaste-linux.rb"
-                    FORMULA_CLASS="CopypasteLinux"
                   fi
 
                   git clone "https://x-access-token:${GH_TOKEN}@github.com/rgdevment/homebrew-tap.git" /tmp/homebrew-tap
@@ -459,7 +430,7 @@ jobs:
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
 
-                  mkdir -p Casks Formula
+                  mkdir -p Casks
 
                   cat > "${CASK_FILE}" <<- CASK_EOF
                   	cask "${CASK_NAME}" do
@@ -481,41 +452,12 @@ jobs:
                   	end
                   CASK_EOF
 
-                  cat > "${FORMULA_FILE}" <<- FORMULA_EOF
-                  	class ${FORMULA_CLASS} < Formula
-                  	  desc "Clipboard history manager"
-                  	  homepage "https://github.com/${{ github.repository }}"
-                  	  license "GPL-3.0-only"
-                  	  version "${VERSION}"
-
-                  	  on_linux do
-                  	    url "${DEB_URL}"
-                  	    sha256 "${DEB_SHA256}"
-                  	  end
-
-                  	  def install
-                  	    system "ar", "x", cached_download
-                  	    system "tar", "xf", Dir["data.tar.*"].first
-                  	    libexec.install Dir["opt/copypaste/*"]
-                  	    bin.write_exec_script libexec/"copypaste"
-                  	  end
-
-                  	  def caveats
-                  	    "Requires an X11 session. On Wayland, global hotkey and auto-paste are unavailable."
-                  	  end
-
-                  	  test do
-                  	    assert_predicate bin/"copypaste", :exist?
-                  	  end
-                  	end
-                  FORMULA_EOF
-
-                  git add "${CASK_FILE}" "${FORMULA_FILE}"
+                  git add "${CASK_FILE}"
                   if git diff --cached --quiet; then
                     echo "Homebrew Tap already at ${VERSION}, nothing to push"
                     exit 0
                   fi
-                  git commit -m "Update ${CASK_NAME} and Linux formula to ${VERSION}"
+                  git commit -m "Update ${CASK_NAME} to ${VERSION}"
 
                   # Shared tap: a concurrent release can land between fetch and push.
                   for attempt in 1 2 3 4 5; do
@@ -525,7 +467,7 @@ jobs:
                       git rebase origin/main
                     fi
                     if git push origin HEAD:main; then
-                      echo "Homebrew Tap updated: cask ${CASK_NAME} and formula ${FORMULA_FILE} → ${VERSION}"
+                      echo "Homebrew Tap updated: cask ${CASK_NAME} → ${VERSION}"
                       exit 0
                     fi
                     echo "Push rejected (attempt ${attempt})"

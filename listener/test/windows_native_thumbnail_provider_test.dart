@@ -17,7 +17,7 @@ void main() {
       // The test runner here is Windows in CI/local; this test still
       // covers the early-return branch because we mock the channel to
       // throw, which would surface as null only via the platform guard.
-      // On Linux/macOS hosts the early `Platform.isWindows` guard takes
+      // On non-Windows hosts the early `Platform.isWindows` guard takes
       // over before any channel call happens.
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async => null);
