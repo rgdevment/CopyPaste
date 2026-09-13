@@ -1,0 +1,72 @@
+name: Rules
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  conventions:
+    name: Project conventions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unsafe lives only in the -sys crates
+        run: |
+          expected="crates/cp-mac-sys crates/cp-win-sys"
+          found=$(grep -rl 'unsafe_code = "allow"' crates/*/Cargo.toml | xargs -n1 dirname | sort | tr '\n' ' ')
+          for dir in $found; do
+            case " $expected " in
+              *" $dir "*) ;;
+              *) echo "unsafe declarado fuera de los crates -sys: $dir"; exit 1 ;;
+            esac
+          done
+
+      - name: The core produces no terminal output
+        run: |
+          if grep -rn 'println!\|eprintln!\|print!' crates/cp-core/src --include='*.rs'; then
+            echo "cp-core no imprime: usa tracing"; exit 1
+          fi
+
+      - name: The core touches neither platform nor interface
+        run: |
+          if grep -rn 'use tauri\|use windows\|use objc2' crates/cp-core/src --include='*.rs'; then
+            echo "cp-core no depende de plataforma ni de interfaz"; exit 1
+          fi
+
+      - name: No Spanish identifiers
+        run: |
+          if grep -rnE '\b(fecha|limite|prioridad|filtro|tarea|titulo|etiqueta|imagen|archivo) *:' \
+               crates/*/src --include='*.rs' | grep -v '"'; then
+            echo "los identificadores van en ingles"; exit 1
+          fi
+
+      - name: No voseo in the Spanish anywhere
+        run: |
+          if grep -rniE '\b(vos|tenes|queres|podes|anda|mira|hace|che)\b' \
+               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
+            echo "espanol neutro, sin voseo"; exit 1
+          fi
+
+      - name: No peninsular Spanish in what a person reads
+        run: |
+          if grep -rniE '\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b' \
+               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
+            echo "espanol neutro: archivo, computador, presiona"; exit 1
+          fi
+
+      - name: No prose blocks in the code
+        run: |
+          if awk '/^\s*\/\/[^\/]/{n++; if (n>3) {print FILENAME": bloque de prosa"; exit 1}} !/^\s*\/\//{n=0}' \
+               $(find crates -name '*.rs'); then :; else exit 1; fi
+
+  deterministic:
+    name: Tests are deterministic
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Twenty consecutive runs of the core
+        run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done

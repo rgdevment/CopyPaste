@@ -1,0 +1,44 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "3.0.0"
+edition = "2024"
+rust-version = "1.98"
+license = "GPL-3.0-only"
+repository = "https://github.com/rgdevment/CopyPaste"
+publish = false
+
+[workspace.dependencies]
+cp-core = { path = "crates/cp-core" }
+cp-store = { path = "crates/cp-store" }
+cp-mac-sys = { path = "crates/cp-mac-sys" }
+cp-mac = { path = "crates/cp-mac" }
+
+thiserror = "2"
+tracing = "0.1"
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+rusqlite = { version = "0.37", features = ["bundled"] }
+blake3 = "1"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+unicode-normalization = "0.1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-app-kit = "0.3"
+objc2-core-graphics = "0.3"
+objc2-application-services = "0.3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

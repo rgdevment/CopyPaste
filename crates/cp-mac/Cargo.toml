@@ -1,0 +1,16 @@
+[package]
+name = "cp-mac"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cp-core.workspace = true
+cp-mac-sys.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

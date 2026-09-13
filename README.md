@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="app/assets/icons/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows and macOS"/>
+  <img src="resources/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows and macOS"/>
 
   <h1>CopyPaste — Free Open Source Clipboard Manager</h1>
   <p><strong>A local-first clipboard history and copy paste tool for Windows and macOS.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
@@ -22,6 +22,9 @@
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License GPL-3.0"/>
     </a>
   </p>
+
+  <p><strong>CopyPaste 3.0 is on the way</strong> — a rewrite of the core in Rust, starting with macOS.<br/>
+  What you see below is 2.x, which stays supported on the <a href="https://github.com/rgdevment/CopyPaste/tree/v2-stable"><code>v2-stable</code></a> branch.</p>
 
   <h4>Download CopyPaste</h4>
 
