@@ -108,7 +108,7 @@ impl Store {
         created_at: i64,
     ) -> Result<i64> {
         let hash = cp_core::hash::content_hash(preview.as_bytes()) as i64;
-        let kind = item.kind.map(|k| format!("{k:?}").to_lowercase());
+        let kind = item.kind.map(|k| k.as_str());
         self.db.execute(
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text)
@@ -318,7 +318,7 @@ mod tests {
 
     fn sample_item() -> Item {
         Item {
-            kind: Some(cp_core::formats::Kind::Text),
+            kind: Some(cp_core::kind::Kind::Text),
             formats: vec![
                 Format {
                     id: "public.utf8-plain-text".into(),

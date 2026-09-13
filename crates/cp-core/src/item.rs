@@ -69,7 +69,7 @@ pub struct Format {
 /// descarte el resto.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
-    pub kind: Option<crate::formats::Kind>,
+    pub kind: Option<crate::kind::Kind>,
     pub formats: Vec<Format>,
 }
 

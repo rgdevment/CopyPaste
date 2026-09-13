@@ -9,8 +9,11 @@ pub enum Take {
     Never,
 }
 
+/// La categoría que se deduce **del formato**. La clasificación fina —si ese
+/// texto es un correo, un color o código— la hace `crate::kind`, que mira el
+/// contenido.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Kind {
+pub enum Family {
     Text,
     Image,
     Files,
@@ -73,19 +76,19 @@ impl Catalog {
 
     /// El tipo mostrado es una clasificación sobre el conjunto, nunca una
     /// elección que descarte lo demás.
-    pub fn classify(&self, offered: &[&str]) -> Option<Kind> {
+    pub fn classify(&self, offered: &[&str]) -> Option<Family> {
         let known: Vec<&str> = offered.iter().map(|id| self.canonical(id)).collect();
         if known.iter().any(|id| self.files.contains(id)) {
-            return Some(Kind::Files);
+            return Some(Family::Files);
         }
         if known
             .iter()
             .any(|id| self.images_by_preference.contains(id))
         {
-            return Some(Kind::Image);
+            return Some(Family::Image);
         }
         if known.iter().any(|id| self.text.contains(id)) {
-            return Some(Kind::Text);
+            return Some(Family::Text);
         }
         None
     }
@@ -217,7 +220,7 @@ mod tests {
     #[test]
     fn classifying_never_discards_the_rest() {
         let mixed = ["plain/text", "cheap/image", "one/file"];
-        assert_eq!(PROBE.classify(&mixed), Some(Kind::Files));
+        assert_eq!(PROBE.classify(&mixed), Some(Family::Files));
         let kept: Vec<&str> = mixed
             .iter()
             .filter(|id| PROBE.decide(id) == Take::Payload)
@@ -234,7 +237,7 @@ mod tests {
     fn an_image_offered_with_its_text_is_still_an_image() {
         assert_eq!(
             PROBE.classify(&["plain/text", "cheap/image"]),
-            Some(Kind::Image)
+            Some(Family::Image)
         );
     }
 }
@@ -300,15 +303,15 @@ mod properties {
             let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
             let canonical: Vec<&str> = refs.iter().map(|id| PROBE.canonical(id)).collect();
             match PROBE.classify(&refs) {
-                Some(Kind::Files) => {
+                Some(Family::Files) => {
                     prop_assert!(canonical.iter().any(|id| PROBE.files.contains(id)))
                 }
-                Some(Kind::Image) => prop_assert!(
+                Some(Family::Image) => prop_assert!(
                     canonical
                         .iter()
                         .any(|id| PROBE.images_by_preference.contains(id))
                 ),
-                Some(Kind::Text) => {
+                Some(Family::Text) => {
                     prop_assert!(canonical.iter().any(|id| PROBE.text.contains(id)))
                 }
                 None => {}

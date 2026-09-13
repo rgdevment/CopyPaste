@@ -5,8 +5,8 @@
 //! Se ejecuta con `cargo run -p cp-mac --example probe`.
 
 use cp_core::destination::Tracker;
-use cp_core::formats::Kind;
 use cp_core::item::Payload;
+use cp_core::kind::Kind;
 use cp_core::watch::{Seen, Watcher};
 use cp_mac::capture::capture;
 use cp_mac::paste::Paster;
@@ -143,6 +143,33 @@ fn main() -> std::process::ExitCode {
             other => Err(format!("llegó {other:?}")),
         }
     });
+
+    b.group("G · Clasificación");
+
+    for (id, text, expected) in [
+        ("G1", "alguien@ejemplo.test", Kind::Email),
+        ("G2", "https://ejemplo.test/ruta", Kind::Link),
+        ("G3", "#FF8800", Kind::Color),
+        ("G4", "192.168.1.1", Kind::Ip),
+        ("G5", "7ab3f6de-1c4b-4f5e-8a2d-9f0e1b2c3d4e", Kind::Uuid),
+        ("G6", "+34 600 123 456", Kind::Phone),
+        ("G7", "{\"clave\": [1, 2]}", Kind::Json),
+        ("G8", "fn main() {\n    println!(\"hola\");\n}", Kind::Code),
+        ("G9", "una frase corriente y nada más", Kind::Text),
+    ] {
+        b.case(
+            id,
+            &format!("se clasifica como {}", expected.as_str()),
+            || {
+                pb.write_text(text);
+                let item = capture(&pb).ok_or("no se capturó")?;
+                if item.kind != Some(expected) {
+                    return Err(format!("salió {:?}", item.kind));
+                }
+                Ok(())
+            },
+        );
+    }
 
     b.group("B · Privacidad");
 

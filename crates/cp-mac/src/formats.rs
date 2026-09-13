@@ -56,7 +56,7 @@ pub const CATALOG: Catalog = Catalog {
 #[cfg(test)]
 mod tests {
     use super::CATALOG;
-    use cp_core::formats::{Kind, Take};
+    use cp_core::formats::{Family, Take};
 
     /// Los tres casos se midieron el 12/09/2026 sobre macOS 26.6.2, leyendo
     /// todos los tipos que cada aplicación ofrecía de verdad.
@@ -102,7 +102,7 @@ mod tests {
             .iter()
             .filter(|id| CATALOG.decide(id) == Take::Payload)
             .collect();
-        assert_eq!(CATALOG.classify(SAFARI), Some(Kind::Text));
+        assert_eq!(CATALOG.classify(SAFARI), Some(Family::Text));
         // Cinco tipos distintos más sus gemelos legados: 14.636 bytes de los
         // que la 2.x guarda 53.
         assert!(kept.len() >= 5, "se guardaron {} tipos", kept.len());
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn one_copied_file_does_not_cost_ten_megabytes() {
-        assert_eq!(CATALOG.classify(FINDER), Some(Kind::Files));
+        assert_eq!(CATALOG.classify(FINDER), Some(Family::Files));
         assert_eq!(CATALOG.decide("com.apple.icns"), Take::Presence);
         for opaque in [
             "CorePasteboardFlavorType 0x6675726C",
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn preview_gives_up_the_cheap_representation() {
         assert_eq!(CATALOG.preferred_image(PREVIEW), Some("public.png"));
-        assert_eq!(CATALOG.classify(PREVIEW), Some(Kind::Image));
+        assert_eq!(CATALOG.classify(PREVIEW), Some(Family::Image));
         assert_eq!(CATALOG.decide("PVPboardInfoPboardType"), Take::Presence);
     }
 
