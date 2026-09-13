@@ -5,6 +5,12 @@ const WHOLE_UP_TO: usize = 256 * 1024;
 const BLOCKS: usize = 16;
 const BLOCK: usize = 4 * 1024;
 
+/// Por debajo del umbral se mira todo, así que el muestreo no puede abarcar
+/// más bytes de los que el umbral deja pasar enteros.
+const _: () = assert!(WHOLE_UP_TO >= BLOCKS * BLOCK);
+/// Ambos se alinean a página.
+const _: () = assert!(BLOCK.is_power_of_two() && WHOLE_UP_TO.is_power_of_two());
+
 /// Identidad del contenido. El tamaño entra siempre en la mezcla, así que dos
 /// payloads de distinta longitud nunca colisionan aunque se muestree lo mismo.
 pub fn content_hash(bytes: &[u8]) -> u64 {
@@ -58,6 +64,69 @@ mod tests {
     fn the_same_content_always_hashes_the_same() {
         let big = screenshot(512 * 1024, 0x07);
         assert_eq!(content_hash(&big), content_hash(&big.clone()));
+    }
+
+    #[test]
+    fn the_sampling_reaches_the_end_of_the_buffer() {
+        let big = vec![0x11; 4 * 1024 * 1024];
+        let mut tail_changed = big.clone();
+        *tail_changed.last_mut().unwrap() = 0x22;
+        assert_ne!(
+            content_hash(&big),
+            content_hash(&tail_changed),
+            "si los bloques cayeran todos al principio, esto no se vería"
+        );
+    }
+
+    /// El límite conocido, escrito a propósito: dieciséis bloques de 4 KB
+    /// cubren 64 KB, así que en un buffer de 4 MB se mira el 1,5 %. Un byte
+    /// que cambie en un hueco entre bloques no se ve. Es aceptable para lo
+    /// que este hash hace —decir «esto es lo mismo que se acaba de copiar»—
+    /// y es exactamente la razón por la que los blobs se direccionan con
+    /// blake3 sobre el contenido completo y no con esto.
+    #[test]
+    fn a_change_between_blocks_is_invisible_and_that_is_the_deal() {
+        let big = vec![0x11; 4 * 1024 * 1024];
+        let mut hole = big.clone();
+        hole[2 * 1024 * 1024] = 0x22;
+        assert_eq!(
+            content_hash(&big),
+            content_hash(&hole),
+            "si esto cambiara, el muestreo dejó de ser un muestreo"
+        );
+    }
+
+    #[test]
+    fn the_two_paths_meet_at_the_threshold() {
+        let under = vec![0x33; WHOLE_UP_TO];
+        let over = vec![0x33; WHOLE_UP_TO + 1];
+        assert_eq!(
+            content_hash(&under),
+            xxh3_64(&under),
+            "hasta el umbral se mira el contenido entero"
+        );
+        assert_ne!(
+            content_hash(&over),
+            xxh3_64(&over),
+            "por encima se muestrea, así que no coincide con el hash directo"
+        );
+    }
+
+    #[test]
+    fn each_of_the_sixteen_blocks_is_looked_at() {
+        let size = 4 * 1024 * 1024;
+        let base = vec![0x44; size];
+        let reference = content_hash(&base);
+        for block in 0..BLOCKS {
+            let mut poked = base.clone();
+            let at = (size - BLOCK) * block / (BLOCKS - 1);
+            poked[at] = 0x55;
+            assert_ne!(
+                content_hash(&poked),
+                reference,
+                "el bloque {block}, que empieza en {at}, no entra en la mezcla"
+            );
+        }
     }
 
     #[test]

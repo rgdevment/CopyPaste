@@ -71,3 +71,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Twenty consecutive runs of the core
         run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done
+
+  mutants:
+    name: The suite kills every mutant
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-mutants
+      # Una prueba que pasa contra un núcleo mutado no está probando nada. El
+      # criterio de aceptación de la Etapa 0 es exactamente este: la batería
+      # tiene que fallar contra una implementación que no sepa lo que sabemos.
+      - run: cargo mutants -p cp-core --no-times

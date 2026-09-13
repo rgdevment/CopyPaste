@@ -134,6 +134,27 @@ mod tests {
     }
 
     #[test]
+    fn wasteful_beats_wanted_when_a_type_is_in_both() {
+        const GREEDY: Catalog = Catalog {
+            hangs: &[],
+            wasteful: &["costly/image"],
+            wanted: &["costly/image", "plain/text"],
+            aliases: &[],
+            concealed: &[],
+            opaque_prefixes: &[],
+            text: &["plain/text"],
+            files: &[],
+            images_by_preference: &["costly/image"],
+        };
+        assert_eq!(
+            GREEDY.decide("costly/image"),
+            Take::Presence,
+            "estar en la lista de deseados no salva a un tipo que derrocha"
+        );
+        assert_eq!(GREEDY.decide("plain/text"), Take::Payload);
+    }
+
+    #[test]
     fn a_legacy_name_is_the_modern_one() {
         assert_eq!(PROBE.canonical("old/text"), "plain/text");
         assert_eq!(PROBE.decide("old/text"), Take::Payload);

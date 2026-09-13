@@ -25,6 +25,7 @@ blake3 = "1"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 unicode-normalization = "0.1"
 image = { version = "0.25", default-features = false, features = ["png"] }
+proptest = "1"
 
 objc2 = "0.6"
 objc2-foundation = "0.3"
