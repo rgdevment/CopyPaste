@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 thiserror.workspace = true
 unicode-normalization.workspace = true
+xxhash-rust.workspace = true
 
 [lints]
 workspace = true

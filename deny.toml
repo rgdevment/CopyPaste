@@ -3,7 +3,7 @@ yanked = "deny"
 
 [licenses]
 allow = [
-  "GPL-3.0",
+  "GPL-3.0-only",
   "Apache-2.0",
   "MIT",
   "BSD-2-Clause",
@@ -17,6 +17,7 @@ confidence-threshold = 0.9
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"

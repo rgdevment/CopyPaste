@@ -44,7 +44,7 @@ jobs:
 
       - name: No voseo in the Spanish anywhere
         run: |
-          if grep -rniE '\b(vos|tenes|queres|podes|anda|mira|hace|che)\b' \
+          if grep -rniE '\b(vos|tenés|querés|podés|andá|mirá|hacé|che)\b' \
                crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
             echo "espanol neutro, sin voseo"; exit 1
           fi
@@ -58,8 +58,9 @@ jobs:
 
       - name: No prose blocks in the code
         run: |
-          if awk '/^\s*\/\/[^\/]/{n++; if (n>3) {print FILENAME": bloque de prosa"; exit 1}} !/^\s*\/\//{n=0}' \
-               $(find crates -name '*.rs'); then :; else exit 1; fi
+          awk '/^[ \t]*\/\/[^\/]/ { n++; if (n > 3) { print FILENAME":"NR": bloque de prosa"; bad = 1 }; next }
+               { n = 0 }
+               END { exit bad }' $(find crates -name '*.rs')
 
   deterministic:
     name: Tests are deterministic
