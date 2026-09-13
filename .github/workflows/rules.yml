@@ -100,3 +100,16 @@ jobs:
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
       - run: cargo llvm-cov report --fail-under-lines 90 --summary-only
+
+  budget:
+    name: Latency stays within budget
+    runs-on: macos-15
+    env:
+      CP_BUDGET_SLACK: "4"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Busca regresiones de orden de magnitud —una consulta que deja de usar
+      # el índice—, no microsegundos. Por eso corre en release y con holgura.
+      - run: cargo run -p cp-store --release --example budget

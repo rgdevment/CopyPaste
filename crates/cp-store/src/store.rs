@@ -21,6 +21,11 @@ pub struct Store {
 }
 
 impl Store {
+    /// Solo para diagnóstico: mirar planes de consulta desde un ejemplo.
+    pub fn raw(&self) -> &Connection {
+        &self.db
+    }
+
     pub fn in_memory() -> Result<Self> {
         let db = Connection::open_in_memory()?;
         crate::schema::create(&db)?;
@@ -34,11 +39,62 @@ impl Store {
     pub fn insert_text(&self, uuid: &str, text: &str, created_at: i64) -> Result<i64> {
         let hash = cp_core::hash::content_hash(text.as_bytes()) as i64;
         self.db.execute(
-            "INSERT INTO items (uuid, kind, preview_text, created_at, content_hash, search_text)
-             VALUES (?1, 'text', ?2, ?3, ?4, ?5)",
+            "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
+                                content_hash, search_text)
+             VALUES (?1, 'text', ?2, ?3, ?3, ?3, ?4, ?5)",
             params![uuid, text, created_at, hash, fold(text)],
         )?;
         Ok(self.db.last_insert_rowid())
+    }
+
+    /// Volver a copiar algo que ya estaba lo sube en la lista, no lo duplica.
+    /// La 2.x ordena por `modified_at` justamente por esto.
+    pub fn touch(&self, id: i64, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items
+             SET modified_at = ?2, last_used_at = ?2, updated_at = ?2,
+                 paste_count = paste_count + 1
+             WHERE id = ?1",
+            params![id, at],
+        )?;
+        Ok(())
+    }
+
+    /// La etiqueta entra en el índice, así que se busca por ella.
+    pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET label = ?2, search_label = ?3, updated_at = ?4 WHERE id = ?1",
+            params![id, label, label.map(fold).unwrap_or_default(), at],
+        )?;
+        Ok(())
+    }
+
+    pub fn set_source(&self, id: i64, app: &str, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET app_source = ?2, search_app = ?3, updated_at = ?4 WHERE id = ?1",
+            params![id, app, fold(app), at],
+        )?;
+        Ok(())
+    }
+
+    /// Una tumba, no un borrado: la nube que vendrá necesita saber que algo
+    /// dejó de existir, y sin esto una sincronización lo resucitaría.
+    pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1",
+            params![id, at],
+        )?;
+        Ok(())
+    }
+
+    /// Lo que cambió después de un punto, que es lo que una sincronización
+    /// necesita preguntar.
+    pub fn changed_since(&self, version: i64) -> Result<Vec<String>> {
+        let mut stmt = self
+            .db
+            .prepare("SELECT uuid FROM items WHERE updated_at > ?1 ORDER BY updated_at")?;
+        let rows = stmt.query_map([version], |row| row.get::<_, String>(0))?;
+        rows.collect()
     }
 
     /// Guarda el ítem con **todas** sus filas de formato. El `content_hash`
@@ -54,8 +110,9 @@ impl Store {
         let hash = cp_core::hash::content_hash(preview.as_bytes()) as i64;
         let kind = item.kind.map(|k| format!("{k:?}").to_lowercase());
         self.db.execute(
-            "INSERT INTO items (uuid, kind, preview_text, created_at, content_hash, search_text)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
+                                content_hash, search_text)
+             VALUES (?1, ?2, ?3, ?4, ?4, ?4, ?5, ?6)",
             params![uuid, kind, preview, created_at, hash, fold(preview)],
         )?;
         let id = self.db.last_insert_rowid();
@@ -127,7 +184,45 @@ impl Store {
             .query_row("SELECT COUNT(*) FROM items", [], |row| row.get(0))
     }
 
+    /// Cuántas filas pide una lista antes de que el usuario haga scroll. Sin
+    /// tope, una consulta que casa con todo materializa el historial entero
+    /// en cada pulsación.
+    pub const PAGE: usize = 100;
+
     pub fn search(&self, query: &str) -> Result<Vec<String>> {
+        self.search_page(query, Self::PAGE, 0)
+    }
+
+    /// Página siguiente a partir del último visto, en vez de `OFFSET`.
+    ///
+    /// Con `OFFSET`, SQLite ordena el resultado entero y descarta lo saltado,
+    /// así que la página diez cuesta diez veces la primera. Con el corte por
+    /// `modified_at` puede recorrer el índice de recencia y parar al llenar
+    /// la página: cada página cuesta lo mismo que la primera.
+    pub fn search_after(
+        &self,
+        query: &str,
+        limit: usize,
+        after: Option<i64>,
+    ) -> Result<Vec<(i64, String)>> {
+        let Some(expression) = fts_expression(&fold(query)) else {
+            return Ok(Vec::new());
+        };
+        let mut stmt = self.db.prepare(
+            "SELECT items.modified_at, items.preview_text
+             FROM items_fts
+             JOIN items ON items.id = items_fts.rowid
+             WHERE items_fts MATCH ?1 AND (?2 IS NULL OR items.modified_at < ?2)
+             ORDER BY items.modified_at DESC
+             LIMIT ?3",
+        )?;
+        let rows = stmt.query_map(rusqlite::params![expression, after, limit as i64], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?;
+        rows.collect()
+    }
+
+    pub fn search_page(&self, query: &str, limit: usize, offset: usize) -> Result<Vec<String>> {
         let Some(expression) = fts_expression(&fold(query)) else {
             return Ok(Vec::new());
         };
@@ -136,9 +231,13 @@ impl Store {
              FROM items_fts
              JOIN items ON items.id = items_fts.rowid
              WHERE items_fts MATCH ?1
-             ORDER BY items.created_at DESC",
+             ORDER BY items.modified_at DESC
+             LIMIT ?2 OFFSET ?3",
         )?;
-        let rows = stmt.query_map([expression], |row| row.get::<_, String>(0))?;
+        let rows = stmt.query_map(
+            rusqlite::params![expression, limit as i64, offset as i64],
+            |row| row.get::<_, String>(0),
+        )?;
         rows.collect()
     }
 }
@@ -459,6 +558,209 @@ mod tests {
             .expect("insert");
         assert_eq!(store.formats_of(id).expect("formatos").len(), 0);
         assert_eq!(store.count().expect("cuenta"), 1);
+    }
+
+    #[test]
+    fn a_search_that_matches_everything_still_returns_one_page() {
+        let store = Store::in_memory().expect("esquema");
+        for at in 0..250 {
+            store
+                .insert_text(&format!("uuid-{at}"), &format!("comun {at}"), at)
+                .expect("insert");
+        }
+        assert_eq!(store.search("comun").expect("consulta").len(), Store::PAGE);
+        assert_eq!(
+            store.search_page("comun", 10, 0).expect("consulta").len(),
+            10
+        );
+    }
+
+    #[test]
+    fn paging_walks_the_whole_result_without_repeating() {
+        let store = Store::in_memory().expect("esquema");
+        for at in 0..25 {
+            store
+                .insert_text(&format!("uuid-{at}"), &format!("pagina {at}"), at)
+                .expect("insert");
+        }
+        let first = store.search_page("pagina", 10, 0).expect("consulta");
+        let second = store.search_page("pagina", 10, 10).expect("consulta");
+        let last = store.search_page("pagina", 10, 20).expect("consulta");
+        assert_eq!((first.len(), second.len(), last.len()), (10, 10, 5));
+        assert!(
+            first.iter().all(|one| !second.contains(one)),
+            "las páginas no pueden solaparse"
+        );
+    }
+
+    #[test]
+    fn the_cursor_walks_the_result_without_repeating_or_skipping() {
+        let store = Store::in_memory().expect("esquema");
+        for at in 0..25 {
+            store
+                .insert_text(&format!("uuid-{at}"), &format!("cursor {at}"), at)
+                .expect("insert");
+        }
+        let mut seen = Vec::new();
+        let mut after = None;
+        loop {
+            let page = store.search_after("cursor", 10, after).expect("consulta");
+            if page.is_empty() {
+                break;
+            }
+            after = page.last().map(|(at, _)| *at);
+            seen.extend(page.into_iter().map(|(_, text)| text));
+        }
+        assert_eq!(seen.len(), 25, "recorrió todo");
+        let mut unique = seen.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), 25, "sin repetir");
+    }
+
+    #[test]
+    fn a_cursor_past_the_oldest_item_is_empty() {
+        let store = seeded();
+        assert!(
+            store
+                .search_after("café", 10, Some(-1))
+                .expect("consulta")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn an_offset_past_the_end_is_empty_not_an_error() {
+        let store = seeded();
+        assert!(
+            store
+                .search_page("café", 10, 9999)
+                .expect("consulta")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn copying_something_again_lifts_it_instead_of_duplicating_it() {
+        let store = Store::in_memory().expect("esquema");
+        let first = store.insert_text("uuid-a", "lo viejo", 10).expect("insert");
+        store.insert_text("uuid-b", "lo nuevo", 20).expect("insert");
+
+        let before = store.search("lo").expect("consulta");
+        assert_eq!(before.first().map(String::as_str), Some("lo nuevo"));
+
+        store.touch(first, 30).expect("recopiado");
+        let after = store.search("lo").expect("consulta");
+        assert_eq!(
+            after.first().map(String::as_str),
+            Some("lo viejo"),
+            "recopiar algo lo sube al principio"
+        );
+    }
+
+    #[test]
+    fn a_label_can_be_searched_for() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-etq", "un texto cualquiera", 1)
+            .expect("insert");
+        assert!(store.search("factura").expect("consulta").is_empty());
+        store
+            .set_label(id, Some("Factura Mayo"), 2)
+            .expect("etiqueta");
+        let hits = store.search("factura").expect("consulta");
+        assert_eq!(hits.len(), 1, "la etiqueta entra en el índice");
+    }
+
+    #[test]
+    fn the_source_application_can_be_searched_for() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-app", "algo copiado", 1)
+            .expect("insert");
+        store.set_source(id, "Safari", 2).expect("origen");
+        assert_eq!(store.search("safari").expect("consulta").len(), 1);
+    }
+
+    #[test]
+    fn a_label_with_accents_is_found_without_them() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-tilde", "contenido", 1)
+            .expect("insert");
+        store
+            .set_label(id, Some("Reunión Diseño"), 2)
+            .expect("etiqueta");
+        assert_eq!(store.search("reunion").expect("consulta").len(), 1);
+        assert_eq!(store.search("diseño").expect("consulta").len(), 1);
+    }
+
+    #[test]
+    fn removing_a_label_takes_it_out_of_the_index() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-quita", "contenido", 1)
+            .expect("insert");
+        store.set_label(id, Some("temporal"), 2).expect("pone");
+        assert_eq!(store.search("temporal").expect("consulta").len(), 1);
+        store.set_label(id, None, 3).expect("quita");
+        assert!(store.search("temporal").expect("consulta").is_empty());
+    }
+
+    #[test]
+    fn a_deletion_leaves_a_tombstone_for_the_sync_that_will_come() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store.insert_text("uuid-tumba", "se va", 1).expect("insert");
+        store.mark_deleted(id, 50).expect("tumba");
+        assert_eq!(
+            store.count().expect("cuenta"),
+            1,
+            "la fila sigue, marcada: sin esto una sincronización la resucita"
+        );
+        assert!(
+            store
+                .changed_since(40)
+                .expect("cambios")
+                .contains(&"uuid-tumba".to_string())
+        );
+    }
+
+    #[test]
+    fn only_what_changed_after_the_mark_is_reported() {
+        let store = Store::in_memory().expect("esquema");
+        let old = store
+            .insert_text("uuid-viejo", "antiguo", 10)
+            .expect("insert");
+        store
+            .insert_text("uuid-nuevo", "reciente", 100)
+            .expect("insert");
+        let changed = store.changed_since(50).expect("cambios");
+        assert_eq!(changed, vec!["uuid-nuevo".to_string()]);
+
+        store.touch(old, 200).expect("recopiado");
+        let after = store.changed_since(50).expect("cambios");
+        assert_eq!(
+            after,
+            vec!["uuid-nuevo".to_string(), "uuid-viejo".to_string()],
+            "ordenados por versión, y el recopiado ahora cuenta"
+        );
+    }
+
+    #[test]
+    fn touching_an_item_counts_the_paste() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-cuenta", "pegado", 1)
+            .expect("insert");
+        store.touch(id, 2).expect("uno");
+        store.touch(id, 3).expect("dos");
+        let count: i64 = store
+            .db
+            .query_row("SELECT paste_count FROM items WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })
+            .expect("consulta");
+        assert_eq!(count, 2);
     }
 
     #[test]
