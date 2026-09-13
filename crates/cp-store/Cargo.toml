@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 cp-core.workspace = true
 rusqlite.workspace = true
+xxhash-rust.workspace = true
 blake3.workspace = true
 thiserror.workspace = true
 

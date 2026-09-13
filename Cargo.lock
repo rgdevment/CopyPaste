@@ -117,6 +117,7 @@ dependencies = [
  "cp-core",
  "rusqlite",
  "thiserror",
+ "xxhash-rust",
 ]
 
 [[package]]

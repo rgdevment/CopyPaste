@@ -83,4 +83,4 @@ jobs:
       # Una prueba que pasa contra un núcleo mutado no está probando nada. El
       # criterio de aceptación de la Etapa 0 es exactamente este: la batería
       # tiene que fallar contra una implementación que no sepa lo que sabemos.
-      - run: cargo mutants -p cp-core --no-times
+      - run: cargo mutants -p cp-core -p cp-store --no-times
