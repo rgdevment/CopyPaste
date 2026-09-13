@@ -61,6 +61,13 @@ mod tests {
     }
 
     #[test]
+    fn nothing_at_all_still_has_an_identity() {
+        assert_eq!(content_hash(&[]), content_hash(&[]));
+        assert_ne!(content_hash(&[]), content_hash(&[0]));
+        assert_ne!(content_hash(&[0]), content_hash(&[1]));
+    }
+
+    #[test]
     fn the_same_content_always_hashes_the_same() {
         let big = screenshot(512 * 1024, 0x07);
         assert_eq!(content_hash(&big), content_hash(&big.clone()));

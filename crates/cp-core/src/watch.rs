@@ -48,8 +48,8 @@ impl Watcher {
         }
         // El contador retrocede al reiniciarse la sesión de ventanas, y eso
         // no es una ráfaga de copias perdidas: el `max` deja ese caso en cero.
-        let skipped = (count - last - 1).max(0) as u64;
-        self.missed += skipped;
+        let skipped = count.saturating_sub(last).saturating_sub(1).max(0) as u64;
+        self.missed = self.missed.saturating_add(skipped);
         Seen::Fresh { skipped }
     }
 
@@ -62,6 +62,38 @@ impl Watcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_counter_at_its_limits_does_not_overflow() {
+        let mut watcher = Watcher::default();
+        watcher.tick(i64::MIN);
+        // La resta de los dos extremos no cabe en i64.
+        let seen = watcher.tick(i64::MAX);
+        assert!(matches!(seen, Seen::Fresh { .. }));
+
+        let mut other = Watcher::default();
+        other.tick(i64::MAX);
+        assert_eq!(other.tick(i64::MAX), Seen::Nothing);
+        assert!(matches!(other.tick(i64::MIN), Seen::Fresh { skipped: 0 }));
+    }
+
+    #[test]
+    fn repeated_giant_jumps_do_not_wrap_the_counter_of_losses() {
+        let mut watcher = Watcher::default();
+        watcher.tick(0);
+        for step in 1..=4 {
+            watcher.tick(i64::MAX / 4 * step);
+        }
+        assert!(watcher.missed() > 0, "algo se perdió, y se sabe");
+    }
+
+    #[test]
+    fn a_negative_counter_is_handled_like_any_other() {
+        let mut watcher = Watcher::default();
+        watcher.tick(-100);
+        assert_eq!(watcher.tick(-99), Seen::Fresh { skipped: 0 });
+        assert_eq!(watcher.tick(-95), Seen::Fresh { skipped: 3 });
+    }
 
     #[test]
     fn the_first_look_only_sets_the_mark() {

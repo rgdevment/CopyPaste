@@ -1,13 +1,14 @@
 # Contributor License Agreement
 
-CopyPaste Individual Contributor License Agreement, version 1.1.
+CopyPaste Individual Contributor License Agreement, version 1.2.
 
 Thank you for contributing to CopyPaste. This agreement exists for one reason:
 CopyPaste is released under the GPL-3.0 **and** offered under separate
-commercial terms to organisations that cannot comply with the GPL. Offering
-those commercial terms requires the right to license the whole codebase that
-way — including your contribution. Without this agreement from every
-contributor, that right does not exist and the dual model collapses.
+[commercial terms](COMMERCIAL.md) to organisations that cannot comply
+with the GPL. Offering those commercial terms requires the right to license
+the whole codebase that way — including your contribution. Without this
+agreement from every contributor, that right does not exist and the dual model
+collapses.
 
 You keep the copyright on everything you write. This is a licence you grant,
 not a transfer of ownership.
@@ -26,15 +27,19 @@ modification to or addition to an existing work, that You intentionally submit
 to this project for inclusion in it. "Submit" means any form of electronic,
 verbal, or written communication sent to the project or its maintainers,
 including but not limited to Pull Requests, issues, patches, and code
-suggestions made during review — excluding
-any communication you conspicuously mark "Not a Contribution".
+suggestions made during review — excluding any communication you
+conspicuously mark "Not a Contribution".
+
 This agreement covers every Contribution You submit after signing **and every
 one You submitted before**. Code reaches a project by more routes than a Pull
 Request, and a signature that only looked forward would leave those earlier
 routes unaccounted for.
 
 **"Project Owner"** means Mario Hidalgo G. (rgdevment), the copyright holder
-and maintainer of CopyPaste.
+and maintainer of CopyPaste, and whoever holds those rights after him — a
+successor, or anyone the project is assigned or transferred to, in whole or in
+part. The licences You grant below run to them on the same terms, and to no
+wider ones.
 
 ## 2. Copyright licence
 
@@ -47,9 +52,10 @@ Contribution and such derivative works.
 **Including under licences other than the GPL-3.0.** This is the clause that
 makes commercial licensing possible; it is stated explicitly so nobody has to
 infer it from the word "sublicense".
+
 It also covers **distributing signed binaries through application stores**,
-whose terms of service are not compatible with the licence this project uses.
-The source stays available either way; what needs separate terms is the
+whose terms of service are not compatible with the GPL-3.0. The source stays
+available under the GPL-3.0 either way; what needs separate terms is the
 compiled build that a store hands to its users.
 
 **Moral rights.** To the fullest extent permitted by the law that applies to
@@ -124,6 +130,12 @@ mandatory law where You live.
 **If a clause fails.** If any provision is held unenforceable, the rest stays
 in force and that provision is read as narrowly as needed to make it valid.
 
+**This agreement travels with the project.** The Project Owner may assign it,
+together with the rights it grants, to whoever the project passes to. You need
+not be asked, and nothing about what You granted changes: what a successor
+receives is what You gave, neither more nor less. You keep the copyright on
+everything You wrote, and section 6 binds them as it binds him.
+
 **This is the whole agreement** between You and the Project Owner about Your
 Contributions, and it replaces anything discussed before it. A later version
 of this document applies only to Contributions You submit after signing that
@@ -144,13 +156,13 @@ I have read the CLA Document and I hereby sign the CLA
 You sign once. Every later Pull Request from the same GitHub account is
 covered automatically.
 
-This signature covers CopyPaste only. Other projects by the same owner have
-their own agreement and their own signature record.
+This signature covers CopyPaste only. Other projects by the same owner have their
+own agreement and their own signature record.
 
 ## If you would rather not sign
 
 That is a legitimate choice, and it costs you nothing else in this project.
-You can still use CopyPaste, report bugs, request features, help with
-translations feedback, discuss design, package it for your distribution, and
-fork the project under the GPL-3.0. Only merging code into this repository
-requires the agreement.
+You can still use CopyPaste, report bugs, request features, discuss design,
+package it for your distribution, help with translations, and fork the project
+under the GPL-3.0. Only merging code into this repository requires the
+agreement.

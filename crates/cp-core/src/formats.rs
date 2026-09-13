@@ -121,6 +121,41 @@ mod tests {
         images_by_preference: &["cheap/image", "costly/image"],
     };
 
+    const NOTHING: Catalog = Catalog {
+        hangs: &[],
+        wasteful: &[],
+        wanted: &[],
+        aliases: &[],
+        concealed: &[],
+        opaque_prefixes: &[],
+        text: &[],
+        files: &[],
+        images_by_preference: &[],
+    };
+
+    #[test]
+    fn an_empty_catalogue_notes_everything_and_promises_nothing() {
+        assert_eq!(NOTHING.decide("cualquier/cosa"), Take::Presence);
+        assert_eq!(NOTHING.decide(""), Take::Presence);
+        assert_eq!(NOTHING.classify(&["cualquier/cosa"]), None);
+        assert_eq!(NOTHING.preferred_image(&["cualquier/cosa"]), None);
+        assert!(!NOTHING.is_concealed(&["cualquier/cosa"]));
+        assert_eq!(NOTHING.canonical("x"), "x");
+    }
+
+    #[test]
+    fn nothing_offered_at_all_is_not_an_item() {
+        assert_eq!(PROBE.classify(&[]), None);
+        assert_eq!(PROBE.preferred_image(&[]), None);
+        assert!(!PROBE.is_concealed(&[]));
+    }
+
+    #[test]
+    fn an_empty_type_name_is_just_unknown() {
+        assert_eq!(PROBE.decide(""), Take::Presence);
+        assert_eq!(PROBE.canonical(""), "");
+    }
+
     #[test]
     fn what_hangs_is_never_asked_for() {
         assert_eq!(PROBE.decide("hangs/forever"), Take::Never);

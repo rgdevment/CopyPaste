@@ -20,14 +20,31 @@ pub const INLINE_UP_TO: usize = 64 * 1024;
 pub const BLOB_UP_TO: usize = 64 * 1024 * 1024;
 
 const _: () = assert!(INLINE_UP_TO < BLOB_UP_TO);
+const _: () = assert!(INLINE_UP_TO.is_power_of_two() && BLOB_UP_TO.is_power_of_two());
+
+/// Dónde acaba un payload, decidido solo por su tamaño.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Placement {
+    Row,
+    Blob,
+    Refused,
+}
+
+pub fn placement(size: usize) -> Placement {
+    match size {
+        0..=INLINE_UP_TO => Placement::Row,
+        size if size <= BLOB_UP_TO => Placement::Blob,
+        _ => Placement::Refused,
+    }
+}
 
 impl Payload {
     /// Decide dónde va lo que ya se leyó.
     pub fn stored(bytes: Vec<u8>) -> Self {
-        match bytes.len() {
-            0..=INLINE_UP_TO => Payload::Inline(bytes),
-            len if len <= BLOB_UP_TO => Payload::Blob(bytes),
-            len => Payload::TooBig { size: len },
+        match placement(bytes.len()) {
+            Placement::Row => Payload::Inline(bytes),
+            Placement::Blob => Payload::Blob(bytes),
+            Placement::Refused => Payload::TooBig { size: bytes.len() },
         }
     }
 
@@ -93,6 +110,16 @@ mod tests {
             Payload::stored(vec![0u8; INLINE_UP_TO + 1]),
             Payload::Blob(_)
         ));
+    }
+
+    #[test]
+    fn the_three_placements_have_exact_boundaries() {
+        assert_eq!(placement(0), Placement::Row);
+        assert_eq!(placement(INLINE_UP_TO), Placement::Row);
+        assert_eq!(placement(INLINE_UP_TO + 1), Placement::Blob);
+        assert_eq!(placement(BLOB_UP_TO), Placement::Blob);
+        assert_eq!(placement(BLOB_UP_TO + 1), Placement::Refused);
+        assert_eq!(placement(usize::MAX), Placement::Refused);
     }
 
     #[test]

@@ -58,7 +58,7 @@ jobs:
 
       - name: No prose blocks in the code
         run: |
-          awk '/^[ \t]*\/\/[^\/]/ { n++; if (n > 3) { print FILENAME":"NR": bloque de prosa"; bad = 1 }; next }
+          awk '/^[ \t]*\/\/[^\/!]/ { n++; if (n > 3) { print FILENAME":"NR": bloque de prosa"; bad = 1 }; next }
                { n = 0 }
                END { exit bad }' $(find crates -name '*.rs')
 
