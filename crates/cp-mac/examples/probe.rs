@@ -205,6 +205,28 @@ fn main() -> std::process::ExitCode {
         Ok(())
     });
 
+    failed += check("el destino sobrevive a que el panel tome el frente", || {
+        use cp_core::destination::Tracker;
+
+        let mut tracker = Tracker::new(cp_mac_sys::frontmost::our_pid());
+        let (pid, bundle) = cp_mac_sys::frontmost::frontmost().ok_or("nadie al frente")?;
+        tracker.saw(pid, bundle.as_deref());
+        let target = tracker
+            .destination()
+            .ok_or("no se registró destino")?
+            .clone();
+
+        // Lo que ocurre al mostrar el panel: pasamos a ser nosotros.
+        tracker.saw(
+            cp_mac_sys::frontmost::our_pid(),
+            Some("dev.rgdevment.copypaste"),
+        );
+        match tracker.destination() {
+            Some(still) if *still == target => Ok(()),
+            other => Err(format!("el destino cambió a {other:?}")),
+        }
+    });
+
     let ready = Readiness::probe();
     println!();
     println!("  permisos:");

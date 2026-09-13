@@ -40,10 +40,26 @@ fn main() -> std::process::ExitCode {
     // corpus artificial, cualquier búsqueda casa con todo y se mide un caso
     // que no le ocurre a nadie.
     let vocabulary = [
-        "informe", "factura", "reunión", "contraseña", "dirección", "teléfono",
-        "proyecto", "cliente", "presupuesto", "contrato", "pedido", "entrega",
-        "https://ejemplo.test/ruta", "SELECT * FROM tabla", "def función():",
-        "Straße", "encyclopædia", "日本語", "correo@ejemplo.test", "#FF8800",
+        "informe",
+        "factura",
+        "reunión",
+        "contraseña",
+        "dirección",
+        "teléfono",
+        "proyecto",
+        "cliente",
+        "presupuesto",
+        "contrato",
+        "pedido",
+        "entrega",
+        "https://ejemplo.test/ruta",
+        "SELECT * FROM tabla",
+        "def función():",
+        "Straße",
+        "encyclopædia",
+        "日本語",
+        "correo@ejemplo.test",
+        "#FF8800",
     ];
     let filling = Instant::now();
     for at in 0..ITEMS {

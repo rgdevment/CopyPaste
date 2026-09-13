@@ -1,3 +1,4 @@
+pub mod destination;
 pub mod formats;
 pub mod hash;
 pub mod item;
