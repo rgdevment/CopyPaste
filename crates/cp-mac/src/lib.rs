@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 
+pub mod capture;
 pub mod formats;
 
 /// El pegado nunca se intenta sin el destino en primer plano: medido el
