@@ -15,22 +15,23 @@ pub enum Outcome {
 
 pub struct Paster {
     keys: Keystroke,
-    keycode: u16,
 }
 
 impl Paster {
     pub fn new() -> Option<Self> {
         Some(Self {
             keys: Keystroke::new()?,
-            // Se resuelve una vez y se guarda: recorrer el layout entero en
-            // cada pegado sería trabajo repetido para un dato que solo cambia
-            // al cambiar de teclado.
-            keycode: keyboard::keycode_with_command('v').unwrap_or(QWERTY_V),
         })
     }
 
+    /// Se resuelve en **cada** pegado, no al arrancar.
+    ///
+    /// Guardarlo parecía la optimización obvia y era un fallo: cambiar de
+    /// distribución con la aplicación abierta dejaba el keycode viejo, y en
+    /// Dvorak eso escribe otra letra. Medido, resolverlo cuesta 458 ns, así
+    /// que la caché solo aportaba el fallo.
     pub fn keycode(&self) -> u16 {
-        self.keycode
+        keyboard::keycode_with_command('v').unwrap_or(QWERTY_V)
     }
 
     /// La secuencia completa, en el orden que fija `cp_core::paste::ORDER`.
@@ -59,7 +60,7 @@ impl Paster {
         }
 
         attempt.sending();
-        if self.keys.command(self.keycode) {
+        if self.keys.command(self.keycode()) {
             Outcome::Sent {
                 took: started.elapsed(),
             }

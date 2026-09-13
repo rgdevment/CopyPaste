@@ -291,6 +291,22 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    b.case(
+        "D5",
+        "el keycode se resuelve al pegar, no al arrancar",
+        || {
+            let paster = Paster::new().ok_or("sin fuente de eventos")?;
+            let now = keyboard::keycode_with_command('v').unwrap_or(QWERTY_V);
+            if paster.keycode() != now {
+                return Err(format!(
+                    "el pegador dice 0x{:02X} y el sistema 0x{now:02X}",
+                    paster.keycode()
+                ));
+            }
+            Ok(())
+        },
+    );
+
     b.group("E · Permisos");
 
     b.case("E1", "pegar depende solo de poder postear eventos", || {
@@ -339,16 +355,12 @@ fn main() -> std::process::ExitCode {
 
     match Paster::new() {
         Some(paster) => {
-            b.case(
-                "F3",
-                "el pegador resuelve su keycode al construirse",
-                || {
-                    if paster.keycode() == 0 {
-                        return Err("keycode inválido".into());
-                    }
-                    Ok(())
-                },
-            );
+            b.case("F3", "el pegador entrega un keycode utilizable", || {
+                if paster.keycode() == 0 {
+                    return Err("keycode inválido".into());
+                }
+                Ok(())
+            });
             if ready.can_post {
                 match paste_round_trip(&pb, &paster) {
                     Ok(()) => {
