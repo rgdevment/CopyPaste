@@ -28,6 +28,8 @@ pub enum Focus {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Failure {
+    /// El destino no está al frente, y sin eso no hay pegado posible.
+    NotForeground,
     ForegroundTimeout,
     NoKeyboardFocus,
     TargetGone,
@@ -64,7 +66,7 @@ impl Attempt {
         }
         let retriable = matches!(
             failure,
-            Failure::ForegroundTimeout | Failure::NoKeyboardFocus
+            Failure::ForegroundTimeout | Failure::NoKeyboardFocus | Failure::NotForeground
         );
         if !retriable || self.tries >= RACE_RETRIES {
             return Next::Degrade;
@@ -168,6 +170,7 @@ mod properties {
     fn any_failure() -> impl Strategy<Value = Failure> {
         prop_oneof![
             Just(Failure::ForegroundTimeout),
+            Just(Failure::NotForeground),
             Just(Failure::NoKeyboardFocus),
             Just(Failure::TargetGone),
             Just(Failure::SendDenied),
