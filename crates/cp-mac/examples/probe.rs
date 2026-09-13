@@ -61,6 +61,150 @@ fn main() -> std::process::ExitCode {
         Ok(())
     });
 
+    failed += check("el vigilante no pierde nada desde su propio hilo", || {
+        use cp_core::watch::{Seen, Watcher};
+        use std::sync::mpsc;
+
+        let (tell, hear) = mpsc::channel();
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let watching = {
+            let stop = stop.clone();
+            std::thread::spawn(move || {
+                let mut watcher = Watcher::default();
+                let mut fresh = 0;
+                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    if let Seen::Fresh { .. } =
+                        watcher.tick(cp_mac_sys::pasteboard::change_count_from_any_thread())
+                    {
+                        fresh += 1;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(2));
+                }
+                let _ = tell.send((fresh, watcher.missed()));
+            })
+        };
+
+        std::thread::sleep(std::time::Duration::from_millis(40));
+        let writes = 25;
+        for round in 0..writes {
+            pb.write_text(&format!("cp-race-{round}"));
+            std::thread::sleep(std::time::Duration::from_millis(12));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(80));
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        watching.join().map_err(|_| "el hilo vigilante murió")?;
+        let (fresh, missed) = hear.recv().map_err(|why| why.to_string())?;
+
+        if fresh + missed as i32 != writes {
+            return Err(format!(
+                "{writes} escrituras, {fresh} vistas y {missed} contadas como perdidas"
+            ));
+        }
+        if missed > 0 {
+            println!("        ({missed} de {writes} se perdieron, y se supo)");
+        }
+        Ok(())
+    });
+
+    failed += check("cien copias seguidas, ninguna perdida en silencio", || {
+        use cp_core::watch::{Seen, Watcher};
+
+        let mut watcher = Watcher::default();
+        watcher.tick(pb.change_count());
+        let mut seen = 0;
+        for round in 0..100 {
+            pb.write_text(&format!("cp-burst-{round}"));
+            if let Seen::Fresh { .. } = watcher.tick(pb.change_count()) {
+                seen += 1;
+            }
+        }
+        if seen + watcher.missed() as i32 != 100 {
+            return Err(format!(
+                "100 escrituras, {seen} vistas y {} contadas",
+                watcher.missed()
+            ));
+        }
+        if watcher.missed() > 0 {
+            println!("        ({} perdidas, y contadas)", watcher.missed());
+        }
+        Ok(())
+    });
+
+    failed += check("un texto de diez megabytes va y vuelve entero", || {
+        let big = "a".repeat(10 * 1024 * 1024);
+        pb.write_text(&big);
+        let item = capture(&pb).ok_or("no se capturó")?;
+        let text = item
+            .format("public.utf8-plain-text")
+            .ok_or("falta el texto")?;
+        match &text.payload {
+            Payload::Blob(bytes) if bytes.len() == big.len() => Ok(()),
+            other => Err(format!(
+                "llegó {other:?} en vez de un blob de {}",
+                big.len()
+            )),
+        }
+    });
+
+    failed += check("un texto vacío sigue siendo un ítem", || {
+        pb.write_text("");
+        match capture(&pb) {
+            Some(item) => {
+                if item.formats.is_empty() {
+                    return Err("no se registró ningún formato".into());
+                }
+                Ok(())
+            }
+            None => Err("se tomó por contenido secreto".into()),
+        }
+    });
+
+    failed += check("una copia marcada como secreta no se registra", || {
+        // Lo que hace un gestor de contraseñas: pone el secreto y lo marca.
+        pb.write_types(&[
+            ("public.utf8-plain-text", "contraseña-que-no-debe-guardarse"),
+            ("org.nspasteboard.ConcealedType", "1"),
+        ]);
+        match capture(&pb) {
+            None => Ok(()),
+            Some(item) => Err(format!(
+                "se capturaron {} formatos de algo marcado como oculto",
+                item.formats.len()
+            )),
+        }
+    });
+
+    failed += check("el marcador transitorio también se respeta", || {
+        pb.write_types(&[
+            ("public.utf8-plain-text", "algo efímero"),
+            ("org.nspasteboard.TransientType", "1"),
+        ]);
+        if capture(&pb).is_some() {
+            return Err("lo transitorio no debería registrarse".into());
+        }
+        Ok(())
+    });
+
+    failed += check("un gestor legado también queda cubierto", || {
+        for marker in [
+            "com.agilebits.onepassword",
+            "net.antelle.keeweb",
+            "PasswordPboardType",
+        ] {
+            pb.write_types(&[("public.utf8-plain-text", "secreto"), (marker, "1")]);
+            if capture(&pb).is_some() {
+                return Err(format!("«{marker}» no excluyó el ítem"));
+            }
+        }
+        Ok(())
+    });
+
+    failed += check("quitar el marcador vuelve a permitir la captura", || {
+        pb.write_text("esto sí se guarda");
+        capture(&pb).ok_or("un texto normal debería capturarse")?;
+        Ok(())
+    });
+
     let ready = Readiness::probe();
     println!();
     println!("  permisos:");
@@ -98,6 +242,10 @@ fn main() -> std::process::ExitCode {
     }
 
     println!();
+    println!(
+        "  layouts instalados: {}",
+        keyboard::installed_layouts().len()
+    );
     println!("  el mismo cálculo en otros layouts, sin activarlos:");
     for (name, id) in [
         ("ABC", keyboard::ABC),

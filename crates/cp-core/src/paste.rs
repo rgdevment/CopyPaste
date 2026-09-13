@@ -159,3 +159,64 @@ mod tests {
         assert!(!aborts_on(Warning::SecureInputActive));
     }
 }
+
+#[cfg(test)]
+mod properties {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn any_failure() -> impl Strategy<Value = Failure> {
+        prop_oneof![
+            Just(Failure::ForegroundTimeout),
+            Just(Failure::NoKeyboardFocus),
+            Just(Failure::TargetGone),
+            Just(Failure::SendDenied),
+        ]
+    }
+
+    proptest! {
+        /// Por muchos fallos que lleguen, el número de reintentos tiene techo.
+        #[test]
+        fn the_retries_are_bounded(failures in prop::collection::vec(any_failure(), 1..40)) {
+            let mut attempt = Attempt::default();
+            let retried = failures
+                .iter()
+                .filter(|failure| attempt.on_failure(**failure) == Next::Retry)
+                .count();
+            prop_assert!(retried <= RACE_RETRIES as usize, "reintentó {retried} veces");
+        }
+
+        /// Después de un envío con éxito no hay nada que reintentar, venga el
+        /// fallo que venga: un pegado doble es peor que ninguno.
+        #[test]
+        fn nothing_is_retried_after_a_send(failures in prop::collection::vec(any_failure(), 1..10)) {
+            let mut attempt = Attempt::default();
+            attempt.sending();
+            for failure in failures {
+                prop_assert_eq!(attempt.on_failure(failure), Next::Degrade);
+            }
+        }
+
+        /// Un envío denegado es UIPI o TCC: reintentar no cambia nada.
+        #[test]
+        fn a_denial_never_becomes_a_retry(before in prop::collection::vec(any_failure(), 0..3)) {
+            let mut attempt = Attempt::default();
+            for failure in before {
+                attempt.on_failure(failure);
+            }
+            prop_assert_eq!(attempt.on_failure(Failure::SendDenied), Next::Degrade);
+        }
+
+        /// El portapapeles se escribe antes que cualquier fase que toque el
+        /// foco, y enviar es siempre lo último.
+        #[test]
+        fn the_order_never_puts_the_send_before_a_check(index in 0usize..ORDER.len()) {
+            if ORDER[index] == Phase::Send {
+                prop_assert_eq!(index, ORDER.len() - 1);
+            }
+            if index > 0 {
+                prop_assert_ne!(ORDER[index], Phase::WriteClipboard);
+            }
+        }
+    }
+}

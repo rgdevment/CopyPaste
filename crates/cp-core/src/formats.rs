@@ -103,7 +103,7 @@ impl Catalog {
 mod tests {
     use super::*;
 
-    const PROBE: Catalog = Catalog {
+    pub(super) const PROBE: Catalog = Catalog {
         hangs: &["hangs/forever"],
         wasteful: &["huge/icon"],
         wanted: &[
@@ -236,5 +236,83 @@ mod tests {
             PROBE.classify(&["plain/text", "cheap/image"]),
             Some(Kind::Image)
         );
+    }
+}
+
+#[cfg(test)]
+mod properties {
+    use super::tests::PROBE;
+    use super::*;
+    use proptest::prelude::*;
+
+    fn any_id() -> impl Strategy<Value = String> {
+        prop_oneof![
+            Just("plain/text".to_string()),
+            Just("old/text".to_string()),
+            Just("hangs/forever".to_string()),
+            Just("huge/icon".to_string()),
+            Just("cheap/image".to_string()),
+            Just("costly/image".to_string()),
+            Just("one/file".to_string()),
+            "[a-z]{0,12}/[a-z]{0,12}",
+            "dyn\\.[a-z0-9]{0,20}",
+            Just(String::new()),
+        ]
+    }
+
+    proptest! {
+        /// Un alias no puede apuntar a otro alias: si el nombre moderno
+        /// volviera a traducirse, el ítem se guardaría bajo un tercer nombre
+        /// y la deduplicación dejaría de reconocerlo.
+        #[test]
+        fn canonical_is_idempotent(id in any_id()) {
+            let once = PROBE.canonical(&id).to_string();
+            prop_assert_eq!(PROBE.canonical(&once), once.as_str());
+        }
+
+        /// Lo que cuelga no se pide jamás, se llame como se llame.
+        #[test]
+        fn what_hangs_is_never_payload(id in any_id()) {
+            if PROBE.hangs.contains(&PROBE.canonical(&id)) {
+                prop_assert_eq!(PROBE.decide(&id), Take::Never);
+            }
+        }
+
+        /// Decidir dos veces sobre lo mismo da lo mismo.
+        #[test]
+        fn deciding_is_deterministic(id in any_id()) {
+            prop_assert_eq!(PROBE.decide(&id), PROBE.decide(&id));
+        }
+
+        /// La imagen elegida siempre es una de las que se ofrecieron.
+        #[test]
+        fn the_chosen_image_was_on_offer(ids in prop::collection::vec(any_id(), 0..8)) {
+            let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+            if let Some(chosen) = PROBE.preferred_image(&refs) {
+                let canonical: Vec<&str> = refs.iter().map(|id| PROBE.canonical(id)).collect();
+                prop_assert!(canonical.contains(&chosen));
+            }
+        }
+
+        /// Clasificar no inventa: si dice que son archivos, había un archivo.
+        #[test]
+        fn a_classification_is_backed_by_a_type(ids in prop::collection::vec(any_id(), 0..8)) {
+            let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+            let canonical: Vec<&str> = refs.iter().map(|id| PROBE.canonical(id)).collect();
+            match PROBE.classify(&refs) {
+                Some(Kind::Files) => {
+                    prop_assert!(canonical.iter().any(|id| PROBE.files.contains(id)))
+                }
+                Some(Kind::Image) => prop_assert!(
+                    canonical
+                        .iter()
+                        .any(|id| PROBE.images_by_preference.contains(id))
+                ),
+                Some(Kind::Text) => {
+                    prop_assert!(canonical.iter().any(|id| PROBE.text.contains(id)))
+                }
+                None => {}
+            }
+        }
     }
 }

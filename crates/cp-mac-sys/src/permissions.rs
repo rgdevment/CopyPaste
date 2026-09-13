@@ -77,3 +77,41 @@ impl Readiness {
         self.accessibility
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Readiness;
+
+    fn with(can_post: bool, accessibility: bool, secure_input: bool) -> Readiness {
+        Readiness {
+            can_post,
+            accessibility,
+            secure_input,
+        }
+    }
+
+    #[test]
+    fn pasting_depends_on_posting_events_and_nothing_else() {
+        assert!(with(true, false, false).can_paste());
+        assert!(
+            with(true, false, true).can_paste(),
+            "el input seguro no manda"
+        );
+        assert!(with(true, true, true).can_paste());
+        assert!(!with(false, true, false).can_paste());
+    }
+
+    #[test]
+    fn the_menu_fallback_needs_its_own_permission() {
+        assert!(!with(true, false, false).can_use_menu_fallback());
+        assert!(with(true, true, false).can_use_menu_fallback());
+    }
+
+    #[test]
+    fn the_two_permissions_are_independent() {
+        assert!(with(true, false, false).can_paste());
+        assert!(!with(true, false, false).can_use_menu_fallback());
+        assert!(!with(false, true, false).can_paste());
+        assert!(with(false, true, false).can_use_menu_fallback());
+    }
+}
