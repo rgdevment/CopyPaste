@@ -20,5 +20,5 @@ jobs:
             if ! printf '%s' "$subject" | grep -qE "$pattern"; then
               echo "no sigue la convencion: $subject"; fail=1
             fi
-          done < <(git rev-list origin/${{ github.base_ref }}..HEAD)
+          done < <(git rev-list --no-merges origin/${{ github.base_ref }}..HEAD)
           exit $fail

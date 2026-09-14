@@ -44,7 +44,7 @@ jobs:
 
       - name: No voseo in the Spanish anywhere
         run: |
-          if grep -rniE '\b(vos|tenes|queres|podes|anda|mira|hace|che)\b' \
+          if grep -rniE '\b(vos|tenés|querés|podés|andá|mirá|hacé|che)\b' \
                crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
             echo "espanol neutro, sin voseo"; exit 1
           fi
@@ -58,8 +58,9 @@ jobs:
 
       - name: No prose blocks in the code
         run: |
-          if awk '/^\s*\/\/[^\/]/{n++; if (n>3) {print FILENAME": bloque de prosa"; exit 1}} !/^\s*\/\//{n=0}' \
-               $(find crates -name '*.rs'); then :; else exit 1; fi
+          awk '/^[ \t]*\/\/[^\/!]/ { n++; if (n > 3) { print FILENAME":"NR": bloque de prosa"; bad = 1 }; next }
+               { n = 0 }
+               END { exit bad }' $(find crates -name '*.rs')
 
   deterministic:
     name: Tests are deterministic
@@ -70,3 +71,45 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Twenty consecutive runs of the core
         run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done
+
+  mutants:
+    name: The suite kills every mutant
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-mutants
+      # Una prueba que pasa contra un núcleo mutado no está probando nada. El
+      # criterio de aceptación de la Etapa 0 es exactamente este: la batería
+      # tiene que fallar contra una implementación que no sepa lo que sabemos.
+      - run: cargo mutants -p cp-core -p cp-store --no-times
+
+  coverage:
+    name: Coverage does not slip
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      # El arnés entra en la medición: sin él, todo el código de plataforma
+      # aparece a cero y el número miente en las dos direcciones.
+      - run: cargo llvm-cov --no-report --workspace
+      - run: cargo llvm-cov --no-report run -p cp-mac --example probe
+      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only
+
+  budget:
+    name: Latency stays within budget
+    runs-on: macos-15
+    env:
+      CP_BUDGET_SLACK: "4"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Busca regresiones de orden de magnitud —una consulta que deja de usar
+      # el índice—, no microsegundos. Por eso corre en release y con holgura.
+      - run: cargo run -p cp-store --release --example budget

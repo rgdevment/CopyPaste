@@ -32,6 +32,53 @@ mod tests {
     use super::fold;
 
     #[test]
+    fn every_ligature_in_the_table_is_expanded() {
+        for (given, expected) in [
+            ("ß", "ss"),
+            ("æ", "ae"),
+            ("Æ", "ae"),
+            ("œ", "oe"),
+            ("Œ", "oe"),
+            ("ø", "o"),
+            ("Ø", "o"),
+            ("ł", "l"),
+            ("Ł", "l"),
+            ("đ", "d"),
+            ("Đ", "d"),
+            ("þ", "th"),
+            ("Þ", "th"),
+        ] {
+            assert_eq!(fold(given), expected, "«{given}» no se expandió bien");
+        }
+    }
+
+    #[test]
+    fn combining_marks_disappear_whatever_the_script() {
+        assert_eq!(fold("ñ"), "n");
+        assert_eq!(fold("ç"), "c");
+        assert_eq!(fold("ü"), "u");
+        assert_eq!(fold("å"), "a");
+        assert_eq!(fold("ĉ"), "c");
+        assert_eq!(fold("ṩ"), "s");
+    }
+
+    #[test]
+    fn what_has_nothing_to_fold_comes_out_as_it_went_in() {
+        assert_eq!(fold(""), "");
+        assert_eq!(fold("plain ascii"), "plain ascii");
+        assert_eq!(fold("日本語"), "日本語");
+        assert_eq!(fold("123 !?"), "123 !?");
+    }
+
+    #[test]
+    fn folding_twice_changes_nothing() {
+        for text in ["Straße", "encyclopædia", "Łódź", "café", "ÞÓRR"] {
+            let once = fold(text);
+            assert_eq!(fold(&once), once, "«{text}» no era estable");
+        }
+    }
+
+    #[test]
     fn folds_both_sides_of_the_index() {
         assert_eq!(fold("Straße"), "strasse");
         assert_eq!(fold("encyclopædia"), "encyclopaedia");

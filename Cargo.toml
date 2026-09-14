@@ -24,13 +24,17 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 blake3 = "1"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 unicode-normalization = "0.1"
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
+proptest = "1"
+tempfile = "3"
 
 objc2 = "0.6"
 objc2-foundation = "0.3"
 objc2-app-kit = "0.3"
 objc2-core-graphics = "0.3"
 objc2-application-services = "0.3"
+objc2-vision = "0.3"
+objc2-av-foundation = { version = "0.3", features = ["objc2-core-media", "AVAssetTrack"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

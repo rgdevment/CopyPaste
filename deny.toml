@@ -3,20 +3,25 @@ yanked = "deny"
 
 [licenses]
 allow = [
-  "GPL-3.0",
+  "GPL-3.0-only",
   "Apache-2.0",
   "MIT",
   "BSD-2-Clause",
   "BSD-3-Clause",
   "ISC",
   "Unicode-3.0",
+  "BSL-1.0",
   "Zlib",
 ]
 confidence-threshold = 0.9
+# La lista cubre lo que se admite, no solo lo que hoy se usa: una dependencia
+# nueva con una de estas no debería obligar a tocar este archivo.
+unused-allowed-license = "allow"
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"
