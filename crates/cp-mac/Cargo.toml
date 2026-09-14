@@ -14,6 +14,7 @@ thiserror.workspace = true
 objc2-foundation.workspace = true
 
 [dev-dependencies]
+cp-store.workspace = true
 cp-core.workspace = true
 cp-mac-sys.workspace = true
 objc2-foundation.workspace = true

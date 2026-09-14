@@ -48,6 +48,7 @@ pub fn create(db: &Connection) -> Result<()> {
             search_text        TEXT    NOT NULL DEFAULT '',
             search_label       TEXT    NOT NULL DEFAULT '',
             search_app         TEXT    NOT NULL DEFAULT '',
+            search_ocr         TEXT    NOT NULL DEFAULT '',
             updated_at         INTEGER NOT NULL,
             deleted_at         INTEGER
         );
@@ -77,24 +78,25 @@ pub fn create(db: &Connection) -> Result<()> {
             search_text,
             search_label,
             search_app,
+            search_ocr,
             content = 'items',
             content_rowid = 'id',
             tokenize = 'unicode61 remove_diacritics 2'
         );
 
         CREATE TRIGGER IF NOT EXISTS items_ai AFTER INSERT ON items BEGIN
-            INSERT INTO items_fts(rowid, search_text, search_label, search_app)
-                VALUES (new.id, new.search_text, new.search_label, new.search_app);
+            INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
+                VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
         END;
         CREATE TRIGGER IF NOT EXISTS items_ad AFTER DELETE ON items BEGIN
-            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app)
-                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app);
+            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
+                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
         END;
         CREATE TRIGGER IF NOT EXISTS items_au AFTER UPDATE ON items BEGIN
-            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app)
-                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app);
-            INSERT INTO items_fts(rowid, search_text, search_label, search_app)
-                VALUES (new.id, new.search_text, new.search_label, new.search_app);
+            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
+                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
+            INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
+                VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
         END;
         "#,
     )

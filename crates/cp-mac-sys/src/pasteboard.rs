@@ -88,6 +88,14 @@ impl Pasteboard {
         self.inner.writeObjects(&array)
     }
 
+    /// Escribe datos binarios, que es como llega una imagen de verdad.
+    pub fn write_data(&self, uti: &str, bytes: &[u8]) -> bool {
+        self.inner.clearContents();
+        let name = NSString::from_str(uti);
+        let data = objc2_foundation::NSData::with_bytes(bytes);
+        self.inner.setData_forType(Some(&data), &name)
+    }
+
     pub fn write_text(&self, text: &str) -> bool {
         self.inner.clearContents();
         let name = NSString::from_str("public.utf8-plain-text");

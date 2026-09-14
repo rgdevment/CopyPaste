@@ -61,6 +61,33 @@ impl Store {
         Ok(())
     }
 
+    /// El texto que Vision leyó dentro de una imagen.
+    ///
+    /// Va en su propia columna del índice y no en `search_text` para que se
+    /// pueda distinguir «lo que el usuario copió» de «lo que había escrito en
+    /// la imagen», y para poder rehacerlo sin tocar lo demás. Se escribe
+    /// después de capturar, nunca durante: reconocer texto cuesta unos 180 ms
+    /// y el camino de captura no puede pagarlos.
+    pub fn set_ocr_text(&self, id: i64, text: &str, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET search_ocr = ?2, updated_at = ?3 WHERE id = ?1",
+            params![id, fold(text), at],
+        )?;
+        Ok(())
+    }
+
+    /// Los ítems de imagen a los que todavía no se les ha pasado el OCR.
+    pub fn pending_ocr(&self, limit: usize) -> Result<Vec<i64>> {
+        let mut stmt = self.db.prepare(
+            "SELECT id FROM items
+             WHERE kind = 'image' AND search_ocr = '' AND deleted_at IS NULL
+             ORDER BY modified_at DESC
+             LIMIT ?1",
+        )?;
+        let rows = stmt.query_map([limit as i64], |row| row.get(0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// La etiqueta entra en el índice, así que se busca por ella.
     pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<()> {
         self.db.execute(
@@ -89,7 +116,7 @@ impl Store {
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
                  preview_text = '', search_text = '', search_label = '',
-                 search_app = '', label = NULL, app_source = NULL,
+                 search_app = '', search_ocr = '', label = NULL, app_source = NULL,
                  thumb_path = NULL, content_hash = 0
              WHERE id = ?1",
             params![id, at],
@@ -885,6 +912,83 @@ mod tests {
             })
             .expect("consulta");
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn an_image_becomes_findable_by_what_is_written_inside_it() {
+        let store = Store::in_memory().expect("esquema");
+        let image = Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![137, 80, 78, 71]),
+            }],
+        };
+        let id = store
+            .insert_item("uuid-captura", &image, "", 1)
+            .expect("insert");
+
+        assert!(
+            store.search("pedido").expect("consulta").is_empty(),
+            "todavía no se le ha pasado el OCR"
+        );
+        assert_eq!(store.pending_ocr(10).expect("pendientes"), vec![id]);
+
+        store
+            .set_ocr_text(id, "Pedido AB-4417 entrega 12 marzo", 2)
+            .expect("ocr");
+
+        assert_eq!(
+            store.search("pedido").expect("consulta").len(),
+            1,
+            "una captura de pantalla se encuentra por lo que pone dentro"
+        );
+        assert_eq!(store.search("AB-4417").expect("consulta").len(), 1);
+        assert!(
+            store.pending_ocr(10).expect("pendientes").is_empty(),
+            "ya no está pendiente"
+        );
+    }
+
+    #[test]
+    fn the_ocr_text_is_folded_like_everything_else() {
+        let store = Store::in_memory().expect("esquema");
+        let image = Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1]),
+            }],
+        };
+        let id = store
+            .insert_item("uuid-tilde", &image, "", 1)
+            .expect("insert");
+        store.set_ocr_text(id, "Reunión en Múnich", 2).expect("ocr");
+        assert_eq!(store.search("reunion").expect("consulta").len(), 1);
+        assert_eq!(store.search("munich").expect("consulta").len(), 1);
+    }
+
+    #[test]
+    fn deleting_takes_the_recognised_text_with_it() {
+        let store = Store::in_memory().expect("esquema");
+        let image = Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1]),
+            }],
+        };
+        let id = store
+            .insert_item("uuid-secreta", &image, "", 1)
+            .expect("insert");
+        store
+            .set_ocr_text(id, "clave de recuperación 8842", 2)
+            .expect("ocr");
+        store.mark_deleted(id, 3).expect("borra");
+        assert!(
+            store.search("recuperacion").expect("consulta").is_empty(),
+            "lo leído dentro de la imagen también es contenido del usuario"
+        );
     }
 
     #[test]

@@ -32,6 +32,7 @@ objc2-foundation = "0.3"
 objc2-app-kit = "0.3"
 objc2-core-graphics = "0.3"
 objc2-application-services = "0.3"
+objc2-vision = "0.3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -203,6 +203,64 @@ fn main() -> std::process::ExitCode {
         );
     }
 
+    b.group("H · Búsqueda inteligente");
+
+    b.case("H1", "el texto dentro de una imagen se reconoce", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("falta el fixture: {why}"))?;
+        let text = cp_mac_sys::ocr::searchable_text(&png).ok_or("Vision no pudo con la imagen")?;
+        if !text.contains("AB-4417") {
+            return Err(format!("leyó «{text}»"));
+        }
+        Ok(())
+    });
+
+    b.case(
+        "H2",
+        "una captura copiada se encuentra por lo que pone dentro",
+        || {
+            let png = std::fs::read("fixtures/texto-en-imagen.png")
+                .map_err(|why| format!("falta el fixture: {why}"))?;
+            pb.write_data("public.png", &png);
+
+            let item = capture(&pb).ok_or("no se capturó")?;
+            if item.kind != Some(Kind::Image) {
+                return Err(format!("se clasificó como {:?}", item.kind));
+            }
+            let bytes = match &item.format("public.png").ok_or("falta el png")?.payload {
+                Payload::Inline(bytes) | Payload::Blob(bytes) => bytes.clone(),
+                other => return Err(format!("llegó {other:?}")),
+            };
+
+            let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
+            // El ítem entero no cabe en la fila, así que se guarda la referencia y
+            // el texto reconocido, que es lo que hace buscable la captura.
+            let light = cp_core::item::Item {
+                kind: item.kind,
+                formats: vec![cp_core::item::Format {
+                    id: "public.png".into(),
+                    payload: cp_core::item::Payload::Announced {
+                        size: Some(bytes.len()),
+                    },
+                }],
+            };
+            let id = store
+                .insert_item("uuid-captura", &light, "", 1)
+                .map_err(|why| why.to_string())?;
+            let recognised = cp_mac_sys::ocr::searchable_text(&bytes)
+                .ok_or("Vision no pudo con lo capturado")?;
+            store
+                .set_ocr_text(id, &recognised, 2)
+                .map_err(|why| why.to_string())?;
+
+            let hits = store.search("pedido").map_err(|why| why.to_string())?;
+            if hits.len() != 1 {
+                return Err(format!("buscando «pedido» salieron {} ítems", hits.len()));
+            }
+            Ok(())
+        },
+    );
+
     b.group("B · Privacidad");
 
     for (id, marker) in [
