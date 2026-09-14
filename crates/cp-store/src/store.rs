@@ -111,16 +111,45 @@ impl Store {
     }
 
     /// Volver a copiar algo que ya estaba lo sube en la lista, no lo duplica.
-    /// La 2.x ordena por `modified_at` justamente por esto.
-    pub fn touch(&self, id: i64, at: i64) -> Result<()> {
+    ///
+    /// **No toca el contador de pegados**, que es lo que la tarjeta enseña
+    /// como «×4». Volver a copiar es la operación más frecuente del sistema:
+    /// si sumara ahí, el número dejaría de significar lo que dice. La 2.x
+    /// separa las dos cosas a propósito.
+    pub fn reactivate(&self, id: i64, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET modified_at = ?2, updated_at = ?2 WHERE id = ?1",
+            params![id, at],
+        )?;
+        Ok(())
+    }
+
+    /// Se pegó desde el historial: eso sí cuenta.
+    pub fn record_paste(&self, id: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items
-             SET modified_at = ?2, last_used_at = ?2, updated_at = ?2,
-                 paste_count = paste_count + 1
+             SET last_used_at = ?2, updated_at = ?2, paste_count = paste_count + 1
              WHERE id = ?1",
             params![id, at],
         )?;
         Ok(())
+    }
+
+    /// El color de la tarjeta, que es una de las vistas del panel.
+    pub fn set_color(&self, id: i64, color: i64, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET card_color = ?2, updated_at = ?3 WHERE id = ?1",
+            params![id, color, at],
+        )?;
+        Ok(())
+    }
+
+    pub fn paste_count(&self, id: i64) -> Result<i64> {
+        Ok(self
+            .db
+            .query_row("SELECT paste_count FROM items WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })?)
     }
 
     /// El texto que Vision leyó dentro de una imagen.
@@ -1086,7 +1115,7 @@ mod tests {
         let before = store.search("lo").expect("consulta");
         assert_eq!(before.first().map(String::as_str), Some("lo nuevo"));
 
-        store.touch(first, 30).expect("recopiado");
+        store.reactivate(first, 30).expect("recopiado");
         let after = store.search("lo").expect("consulta");
         assert_eq!(
             after.first().map(String::as_str),
@@ -1222,7 +1251,7 @@ mod tests {
         let changed = store.changed_since(50).expect("cambios");
         assert_eq!(changed, vec!["uuid-nuevo".to_string()]);
 
-        store.touch(old, 200).expect("recopiado");
+        store.reactivate(old, 200).expect("recopiado");
         let after = store.changed_since(50).expect("cambios");
         assert_eq!(
             after,
@@ -1232,20 +1261,56 @@ mod tests {
     }
 
     #[test]
-    fn touching_an_item_counts_the_paste() {
+    fn copying_something_again_does_not_inflate_the_paste_counter() {
         let store = Store::in_memory().expect("esquema");
         let id = store
-            .insert_text("uuid-cuenta", "pegado", 1)
+            .insert_text("uuid-recopiado", "algo", 1)
             .expect("insert");
-        store.touch(id, 2).expect("uno");
-        store.touch(id, 3).expect("dos");
-        let count: i64 = store
-            .db
-            .query_row("SELECT paste_count FROM items WHERE id = ?1", [id], |row| {
-                row.get(0)
-            })
-            .expect("consulta");
-        assert_eq!(count, 2);
+        for at in 2..10 {
+            store.reactivate(id, at).expect("recopiado");
+        }
+        assert_eq!(
+            store.paste_count(id).expect("cuenta"),
+            0,
+            "volver a copiar no es pegar, y el ×N de la tarjeta lo enseña"
+        );
+    }
+
+    #[test]
+    fn pasting_from_the_history_is_what_counts() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store.insert_text("uuid-pegado", "algo", 1).expect("insert");
+        store.record_paste(id, 2).expect("pega");
+        store.record_paste(id, 3).expect("pega");
+        assert_eq!(store.paste_count(id).expect("cuenta"), 2);
+    }
+
+    #[test]
+    fn pasting_does_not_move_the_item_up_the_list() {
+        let store = a_little_history();
+        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let oldest = listed.last().expect("hay").id;
+        store.record_paste(oldest, 999).expect("pega");
+        let after = store.list(&Filter::default(), 10, None).expect("listado");
+        assert_eq!(
+            after.last().map(|one| one.id),
+            Some(oldest),
+            "pegar cuenta, pero no reordena el historial"
+        );
+    }
+
+    #[test]
+    fn the_colour_can_be_set_and_filtered_by() {
+        let store = a_little_history();
+        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        store.set_color(listed[0].id, 3, 100).expect("color");
+        let filter = Filter {
+            colors: vec![3],
+            ..Default::default()
+        };
+        let coloured = store.list(&filter, 10, None).expect("listado");
+        assert_eq!(coloured.len(), 1);
+        assert_eq!(coloured[0].id, listed[0].id);
     }
 
     #[test]

@@ -460,6 +460,58 @@ fn main() -> std::process::ExitCode {
         Ok(())
     });
 
+    b.case("I5", "pegar en plano no mutila el ítem guardado", || {
+        pb.write_types(&[
+            ("public.utf8-plain-text", "con estilos"),
+            ("public.html", "<b>con estilos</b>"),
+            ("public.rtf", "{\\rtf1 con estilos}"),
+        ]);
+        let item = capture(&pb).ok_or("no se capturó")?;
+        let had = item.formats.len();
+
+        // Se pega en plano: el portapapeles queda solo con el texto.
+        match cp_mac::restore::to_pasteboard_as_plain_text(&pb, &item) {
+            cp_mac::restore::Restored::Written { formats: 1, .. } => {}
+            other => return Err(format!("devolvió {other:?}")),
+        }
+        if pb.data("public.html").is_some() {
+            return Err("quedó el HTML: no se pegó en plano".into());
+        }
+
+        // Y el ítem guardado sigue teniendo todo, así que la próxima vez se
+        // puede pegar con estilos.
+        if item.formats.len() != had {
+            return Err("el ítem perdió formatos".into());
+        }
+        match cp_mac::restore::to_pasteboard(&pb, &item) {
+            cp_mac::restore::Restored::Written { .. } => {}
+            other => return Err(format!("no se pudo restaurar con estilos: {other:?}")),
+        }
+        if pb.data("public.html").is_none() {
+            return Err("el HTML no volvió: el ítem había quedado mutilado".into());
+        }
+        Ok(())
+    });
+
+    b.case(
+        "I6",
+        "un ítem sin texto plano no se puede pegar en plano",
+        || {
+            let only_image = cp_core::item::Item {
+                kind: Some(Kind::Image),
+                formats: vec![cp_core::item::Format {
+                    id: "public.png".into(),
+                    payload: cp_core::item::Payload::Inline(vec![1, 2, 3]),
+                }],
+            };
+            pb.write_text("lo que había");
+            match cp_mac::restore::to_pasteboard_as_plain_text(&pb, &only_image) {
+                cp_mac::restore::Restored::NothingToWrite => Ok(()),
+                other => Err(format!("devolvió {other:?}")),
+            }
+        },
+    );
+
     b.group("G · Clasificación");
 
     for (id, text, expected) in [

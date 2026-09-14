@@ -40,6 +40,42 @@ pub fn to_pasteboard(pb: &Pasteboard, item: &Item) -> Restored {
     }
 }
 
+/// Deja en el portapapeles **solo** el texto plano del ítem.
+///
+/// Pegar sin formato es una opción de **esta** vez, no un cambio en lo
+/// guardado: el ítem conserva su RTF, su HTML y su RTFD intactos, y la
+/// siguiente vez se puede pegar con estilos. La 2.x tiene aquí un fallo
+/// —escribe el texto plano y no restaura lo enriquecido, así que el ítem
+/// queda mutilado a partir de entonces—, y es el hallazgo 27 del mapa.
+///
+/// Tampoco duplica: no crea un ítem nuevo «en versión plana».
+pub fn to_pasteboard_as_plain_text(pb: &Pasteboard, item: &Item) -> Restored {
+    let Some(text) = item
+        .formats
+        .iter()
+        .find_map(|format| match &format.payload {
+            Payload::Inline(bytes) | Payload::Blob(bytes) if format.id == PLAIN_TEXT => {
+                Some(bytes.as_slice())
+            }
+            _ => None,
+        })
+    else {
+        return Restored::NothingToWrite;
+    };
+
+    if pb.write_all(&[(PLAIN_TEXT, text)]) {
+        Restored::Written {
+            formats: 1,
+            // Es intencionado: se pidió solo el texto. No es un ítem a medias.
+            incomplete: false,
+        }
+    } else {
+        Restored::Failed
+    }
+}
+
+const PLAIN_TEXT: &str = "public.utf8-plain-text";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
     /// Se escribieron `formats` formatos. `incomplete` avisa de que el ítem
