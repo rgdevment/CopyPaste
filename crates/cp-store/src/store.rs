@@ -3,11 +3,6 @@ use cp_core::item::{Item, Payload};
 use cp_core::search::fold;
 use rusqlite::{Connection, OptionalExtension, params};
 
-/// Lo que el usuario escribe no es sintaxis FTS5, y tratarlo como si lo fuera
-/// rompe la búsqueda con una comilla, un asterisco o un guion delante —y con
-/// el buscador vacío, que ocurre cada vez que se borra lo escrito—. Cada
-/// palabra se envuelve entre comillas para que FTS la lea como texto literal,
-/// y el prefijo se pide fuera de ellas.
 fn fts_expression(folded: &str) -> Option<String> {
     let terms: Vec<String> = folded
         .split_whitespace()
@@ -17,7 +12,6 @@ fn fts_expression(folded: &str) -> Option<String> {
     (!terms.is_empty()).then(|| terms.join(" "))
 }
 
-/// Lo que el panel enseña de cada ítem en la lista.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Listed {
     pub id: i64,
@@ -27,7 +21,6 @@ pub struct Listed {
     pub pinned: bool,
 }
 
-/// Lo que el usuario tiene puesto en el panel.
 #[derive(Debug, Clone, Default)]
 pub struct Filter {
     pub query: Option<String>,
@@ -43,7 +36,6 @@ pub struct Store {
 }
 
 impl Store {
-    /// Solo para diagnóstico: mirar planes de consulta desde un ejemplo.
     pub fn raw(&self) -> &Connection {
         &self.db
     }
@@ -58,12 +50,6 @@ impl Store {
         })
     }
 
-    /// Abre —o crea— la base en disco.
-    ///
-    /// El archivo se crea con permisos `0600` y su carpeta con `0700`: un
-    /// historial de portapapeles es de los archivos más sensibles de una
-    /// cuenta, y en un equipo compartido el resto de usuarios no tiene por
-    /// qué poder leerlo.
     pub fn open(path: &std::path::Path) -> Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(Error::Io)?;
@@ -73,9 +59,11 @@ impl Store {
         crate::schema::create(&db)?;
         crate::schema::migrate(&db)?;
         let exposure = restrict(path, 0o600)?;
-        // Las imágenes que CopyPaste captura viven junto a la base, en su
-        // propia carpeta. Lo que el usuario copió del disco se queda donde
-        // estaba: solo se guarda la ruta.
+        for side in sidecars(path) {
+            if side.exists() {
+                restrict(&side, 0o600)?;
+            }
+        }
         let blobs = path
             .parent()
             .map(|parent| crate::Blobs::at(&parent.join("blobs")))
@@ -87,33 +75,21 @@ impl Store {
         })
     }
 
-    /// Hasta dónde se pudo proteger el archivo, para que el panel lo diga en
-    /// vez de que nadie se entere.
     pub fn exposure(&self) -> Restricted {
         self.exposure
     }
 
-    /// Vuelca el WAL al archivo principal.
-    ///
-    /// Sin esto, lo recién escrito vive en el `-wal` y una copia del archivo
-    /// principal sale incompleta: es la trampa que la 2.x documenta en su
-    /// servicio de copia de seguridad.
     pub fn checkpoint(&self) -> Result<()> {
         self.db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
         Ok(())
     }
 
-    /// Recupera espacio de las páginas liberadas, poco a poco.
     pub fn vacuum_step(&self, pages: u32) -> Result<()> {
         self.db
             .execute_batch(&format!("PRAGMA incremental_vacuum({pages});"))?;
         Ok(())
     }
 
-    /// El texto se normaliza **al escribir**, con la misma función que
-    /// normaliza el término al buscar. Ese es el invariante que hoy falta: la
-    /// 2.x normaliza solo el término, así que `Straße` no se encuentra ni
-    /// escribiendo `strasse` ni escribiendo `Straße`.
     pub fn insert_text(&self, uuid: &str, text: &str, created_at: i64) -> Result<i64> {
         let hash = Item::plain(text).fingerprint() as i64;
         self.db.execute(
@@ -125,12 +101,6 @@ impl Store {
         Ok(self.db.last_insert_rowid())
     }
 
-    /// Volver a copiar algo que ya estaba lo sube en la lista, no lo duplica.
-    ///
-    /// **No toca el contador de pegados**, que es lo que la tarjeta enseña
-    /// como «×4». Volver a copiar es la operación más frecuente del sistema:
-    /// si sumara ahí, el número dejaría de significar lo que dice. La 2.x
-    /// separa las dos cosas a propósito.
     pub fn reactivate(&self, id: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET modified_at = ?2, updated_at = ?2 WHERE id = ?1",
@@ -139,7 +109,6 @@ impl Store {
         Ok(())
     }
 
-    /// Se pegó desde el historial: eso sí cuenta.
     pub fn record_paste(&self, id: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items
@@ -150,7 +119,6 @@ impl Store {
         Ok(())
     }
 
-    /// El color de la tarjeta, que es una de las vistas del panel.
     pub fn set_color(&self, id: i64, color: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET card_color = ?2, updated_at = ?3 WHERE id = ?1",
@@ -167,13 +135,6 @@ impl Store {
             })?)
     }
 
-    /// El texto que Vision leyó dentro de una imagen.
-    ///
-    /// Va en su propia columna del índice y no en `search_text` para que se
-    /// pueda distinguir «lo que el usuario copió» de «lo que había escrito en
-    /// la imagen», y para poder rehacerlo sin tocar lo demás. Se escribe
-    /// después de capturar, nunca durante: reconocer texto cuesta unos 180 ms
-    /// y el camino de captura no puede pagarlos.
     pub fn set_ocr_text(&self, id: i64, text: &str, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET search_ocr = ?2, updated_at = ?3 WHERE id = ?1",
@@ -182,7 +143,6 @@ impl Store {
         Ok(())
     }
 
-    /// Los ítems de imagen a los que todavía no se les ha pasado el OCR.
     pub fn pending_ocr(&self, limit: usize) -> Result<Vec<i64>> {
         let mut stmt = self.db.prepare(
             "SELECT id FROM items
@@ -194,7 +154,6 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    /// Guarda un dato derivado del ítem.
     pub fn set_meta(&self, id: i64, key: &str, value: &str) -> Result<()> {
         self.db.execute(
             "INSERT INTO item_meta (item_id, key, value) VALUES (?1, ?2, ?3)
@@ -223,7 +182,6 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    /// Apunta un trabajo de enriquecimiento pendiente.
     pub fn enqueue(&self, id: i64, job: &str) -> Result<()> {
         self.db.execute(
             "INSERT OR IGNORE INTO pending_work (item_id, job) VALUES (?1, ?2)",
@@ -232,7 +190,6 @@ impl Store {
         Ok(())
     }
 
-    /// Los siguientes trabajos de ese tipo que ya se pueden intentar.
     pub fn take_pending(&self, job: &str, now: i64, limit: usize) -> Result<Vec<i64>> {
         let mut stmt = self.db.prepare(
             "SELECT w.item_id
@@ -254,9 +211,6 @@ impl Store {
         Ok(())
     }
 
-    /// Un intento fallido. A partir del tercero el trabajo se abandona: hay
-    /// imágenes que Vision no sabe leer y reintentarlas para siempre es
-    /// gastar batería en un resultado que no va a cambiar.
     pub const MAX_ATTEMPTS: i64 = 3;
 
     pub fn work_failed(&self, id: i64, job: &str, why: &str, retry_at: i64) -> Result<bool> {
@@ -282,7 +236,6 @@ impl Store {
         Ok(true)
     }
 
-    /// La etiqueta entra en el índice, así que se busca por ella.
     pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET label = ?2, search_label = ?3, updated_at = ?4 WHERE id = ?1",
@@ -299,12 +252,7 @@ impl Store {
         Ok(())
     }
 
-    /// Una tumba, no un borrado: la nube que vendrá necesita saber que algo
-    /// dejó de existir, y sin esto una sincronización lo resucitaría.
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
-        // La lápida guarda identidad y fechas para que la sincronización sepa
-        // que esto dejó de existir. El contenido, su copia en el índice y las
-        // filas de formato se van: dejarlos incumple lo que PRIVACY.md promete.
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
@@ -314,9 +262,6 @@ impl Store {
              WHERE id = ?1",
             params![id, at],
         )?;
-        // Los blobs de este ítem se sobrescriben antes de desaparecer, y
-        // solo si ningún otro ítem los comparte: el nombre es el contenido,
-        // así que dos copias iguales apuntan al mismo archivo.
         if let Some(blobs) = &self.blobs {
             for digest in self.blobs_of(id)? {
                 if self.blob_is_shared(&digest, id)? {
@@ -327,8 +272,6 @@ impl Store {
         }
         self.db
             .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
-        // Lo derivado también es del usuario: dimensiones, duración, artista,
-        // y el trabajo pendiente que ya no hay que hacer.
         self.db
             .execute("DELETE FROM item_meta WHERE item_id = ?1", [id])?;
         self.db
@@ -353,7 +296,6 @@ impl Store {
         Ok(count > 0)
     }
 
-    /// Los bytes de un formato, vengan de la fila o del disco.
     pub fn payload_of(&self, id: i64, format: &str) -> Result<Option<Vec<u8>>> {
         let found: Option<(Option<Vec<u8>>, Option<String>)> = self
             .db
@@ -374,8 +316,6 @@ impl Store {
         }
     }
 
-    /// Lo que cambió después de un punto, que es lo que una sincronización
-    /// necesita preguntar.
     pub fn changed_since(&self, version: i64) -> Result<Vec<String>> {
         let mut stmt = self
             .db
@@ -384,9 +324,6 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    /// Guarda el ítem con **todas** sus filas de formato. El `content_hash`
-    /// es del contenido completo, así que dos copias iguales no crean dos
-    /// ítems y una copia distinta nunca se toma por repetida.
     pub fn insert_item(
         &self,
         uuid: &str,
@@ -394,9 +331,6 @@ impl Store {
         preview: &str,
         created_at: i64,
     ) -> Result<i64> {
-        // Sin almacén de blobs —una base en memoria— aceptar un `Blob` sería
-        // guardar la fila con su tamaño y tirar los bytes. Es preferible
-        // negarse a guardar un ítem vacío del que nadie sospecharía.
         if self.blobs.is_none()
             && let Some(oversized) = item.oversized_format()
         {
@@ -437,9 +371,6 @@ impl Store {
         Ok(id)
     }
 
-    /// Busca por la **identidad del ítem**, que es la que `insert_item`
-    /// guarda. Recibía un `&str` y calculaba el hash del texto desnudo, que no
-    /// es lo que hay en la columna: así nunca encontraba nada capturado.
     pub fn find_by_hash(&self, item: &Item) -> Result<Option<i64>> {
         let hash = item.fingerprint() as i64;
         Ok(self
@@ -460,9 +391,6 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    /// Un ítem cuyo archivo ya no existe **no se borra**: se marca. La
-    /// diferencia entre «se me borró el historial» y «esto ya no está en el
-    /// disco» la nota el usuario de inmediato.
     pub fn mark_broken(&self, id: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET broken_since = ?2 WHERE id = ?1 AND broken_since IS NULL",
@@ -471,8 +399,6 @@ impl Store {
         Ok(())
     }
 
-    /// Los rotos se van cuando cumplen su plazo, nunca antes. Un ítem fijado
-    /// es una decisión del usuario y la limpieza no la revoca.
     pub fn purge_broken_before(&self, cutoff: i64) -> Result<usize> {
         Ok(self.db.execute(
             "DELETE FROM items
@@ -487,8 +413,6 @@ impl Store {
         Ok(())
     }
 
-    /// Cuántos ítems tiene el usuario. Las lápidas no se cuentan: para él
-    /// están borradas.
     pub fn count(&self) -> Result<i64> {
         Ok(self.db.query_row(
             "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL",
@@ -497,18 +421,11 @@ impl Store {
         )?)
     }
 
-    /// Lo que el panel pide: una ventana del historial, con o sin término de
-    /// búsqueda y con los filtros que el usuario tenga puestos.
-    ///
-    /// Una sola consulta para las dos cosas. Tener una para «buscar» y otra
-    /// para «listar» es el camino corto a que los filtros funcionen en una y
-    /// no en la otra.
     pub fn list(&self, filter: &Filter, limit: usize, after: Option<i64>) -> Result<Vec<Listed>> {
         let expression = filter
             .query
             .as_deref()
             .map(|text| fts_expression(&fold(text)));
-        // Se pidió buscar algo que no deja ningún término utilizable.
         if matches!(expression, Some(None)) {
             return Ok(Vec::new());
         }
@@ -552,8 +469,6 @@ impl Store {
         );
 
         let mut stmt = self.db.prepare(&sql)?;
-        // Solo se pasan los parámetros que la consulta construida usa: SQLite
-        // rechaza un nombre que no aparezca en ella.
         let limit = limit as i64;
         let mut bound: Vec<(&str, &dyn rusqlite::ToSql)> =
             vec![(":after", &after), (":limit", &limit)];
@@ -572,10 +487,6 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    /// Retención: lo viejo se va, lo fijado se queda.
-    ///
-    /// Fijar un ítem es una decisión del usuario y la limpieza no la revoca,
-    /// que es exactamente lo que hace `clearOldItems` en la 2.x.
     pub fn clear_older_than(&self, cutoff: i64) -> Result<usize> {
         let doomed: Vec<i64> = {
             let mut stmt = self.db.prepare(
@@ -591,7 +502,6 @@ impl Store {
         Ok(doomed.len())
     }
 
-    /// Vaciar el historial dejando lo fijado.
     pub fn clear_all_unpinned(&self, at: i64) -> Result<usize> {
         self.clear_older_than_matching(at, "pinned = 0")
     }
@@ -610,21 +520,12 @@ impl Store {
         Ok(doomed.len())
     }
 
-    /// Cuántas filas pide una lista antes de que el usuario haga scroll. Sin
-    /// tope, una consulta que casa con todo materializa el historial entero
-    /// en cada pulsación.
     pub const PAGE: usize = 100;
 
     pub fn search(&self, query: &str) -> Result<Vec<String>> {
         self.search_page(query, Self::PAGE, 0)
     }
 
-    /// Página siguiente a partir del último visto, en vez de `OFFSET`.
-    ///
-    /// Con `OFFSET`, SQLite ordena el resultado entero y descarta lo saltado,
-    /// así que la página diez cuesta diez veces la primera. Con el corte por
-    /// `modified_at` puede recorrer el índice de recencia y parar al llenar
-    /// la página: cada página cuesta lo mismo que la primera.
     pub fn search_after(
         &self,
         query: &str,
@@ -670,23 +571,21 @@ impl Store {
     }
 }
 
-/// Hasta dónde llegó la protección de una ruta, que no es la misma en cada
-/// sistema. Se devuelve en vez de suponerse: un historial de portapapeles
-/// legible por el resto de la máquina es un fallo que tiene que poder decirse.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restricted {
-    /// Los bits de modo quedaron fijados. Nadie salvo el dueño lo abre.
     Mode(u32),
-    /// Windows no tiene bits de modo. La ruta cae bajo el perfil del usuario,
-    /// cuya lista de control heredada ya excluye a las demás cuentas; apretarla
-    /// más exige la capa de plataforma, que es la que tiene el `unsafe`.
     InheritedFromProfile,
-    /// La ruta quedó fuera del perfil —una unidad compartida, una carpeta
-    /// elegida a mano—, donde nada garantiza quién puede leerla.
     Unprotected,
 }
 
-/// Ajusta los permisos de un archivo o carpeta a lo que se le pide.
+fn sidecars(path: &std::path::Path) -> [std::path::PathBuf; 2] {
+    ["-wal", "-shm"].map(|suffix| {
+        let mut name = path.as_os_str().to_os_string();
+        name.push(suffix);
+        std::path::PathBuf::from(name)
+    })
+}
+
 pub(crate) fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> {
     #[cfg(unix)]
     {
@@ -699,26 +598,22 @@ pub(crate) fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> 
     {
         let _ = mode;
         let profile = std::env::var_os("USERPROFILE").map(std::path::PathBuf::from);
-        Ok(match profile {
-            Some(profile) if under(path, &profile) => Restricted::InheritedFromProfile,
-            _ => Restricted::Unprotected,
-        })
+        Ok(exposure_of(path, profile.as_deref()))
     }
 }
 
-/// Si `path` cuelga de `root`, con las dos rutas resueltas antes de comparar:
-/// en Windows la misma carpeta se nombra de más de una forma —el nombre corto
-/// 8.3 y el largo— y comparar el texto tal cual daría por desprotegido lo que
-/// sí lo está.
+#[cfg_attr(unix, allow(dead_code))]
+fn exposure_of(path: &std::path::Path, profile: Option<&std::path::Path>) -> Restricted {
+    match profile {
+        Some(profile) if under(path, profile) => Restricted::InheritedFromProfile,
+        _ => Restricted::Unprotected,
+    }
+}
+
 #[cfg_attr(unix, allow(dead_code))]
 fn under(path: &std::path::Path, root: &std::path::Path) -> bool {
-    let resolved = |one: &std::path::Path| {
-        one.canonicalize()
-            .or_else(|_| std::path::absolute(one))
-            .ok()
-    };
-    match (resolved(path), resolved(root)) {
-        (Some(path), Some(root)) => path.starts_with(&root),
+    match (path.canonicalize(), root.canonicalize()) {
+        (Ok(path), Ok(root)) => path.starts_with(root),
         _ => false,
     }
 }
@@ -748,8 +643,6 @@ mod tests {
         store
     }
 
-    /// Los cuatro casos del fallo verificado con SQLite en la 2.x, donde solo
-    /// el primero funcionaba —y por suerte, gracias al tokenizer—.
     #[test]
     fn the_four_cases_that_2x_gets_wrong() {
         let store = seeded();
@@ -767,8 +660,6 @@ mod tests {
         }
     }
 
-    /// Y en la otra dirección, que es la mitad que nadie prueba: escribir la
-    /// palabra con el carácter especial también tiene que encontrarla.
     #[test]
     fn it_works_in_both_directions() {
         let store = seeded();
@@ -950,8 +841,6 @@ mod tests {
         assert_eq!(store.count().expect("cuenta"), 1);
     }
 
-    /// Lo que un usuario puede escribir en el buscador sin querer decir nada
-    /// especial. Ninguna de estas puede devolver un error de SQL.
     #[test]
     fn no_query_a_person_can_type_breaks_the_search() {
         let store = seeded();
@@ -1142,9 +1031,6 @@ mod tests {
         }
         let mut seen = Vec::new();
         let mut after = None;
-        // Tope en vez de `loop`: con 25 ítems y páginas de 10 sobran tres
-        // vueltas, así que un cursor que nunca vuelva vacío falla la
-        // aserción de abajo en vez de colgar la prueba para siempre.
         for _ in 0..10 {
             let page = store.search_after("cursor", 10, after).expect("consulta");
             if page.is_empty() {
@@ -1490,6 +1376,35 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn the_write_ahead_log_is_as_private_as_the_database() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("history.db");
+        let store = Store::open(&path).expect("abre");
+        store
+            .insert_text("uuid-privado", "contraseña", 1)
+            .expect("insert");
+
+        let wal = sidecars(&path)
+            .into_iter()
+            .find(|side| side.exists())
+            .expect("el WAL existe mientras la base está abierta");
+        let mode = std::fs::metadata(&wal).expect("wal").permissions().mode() & 0o777;
+        assert_eq!(
+            mode, 0o600,
+            "lo recién copiado vive aquí antes que en la base"
+        );
+    }
+
+    #[test]
+    fn the_sidecars_are_named_after_the_database() {
+        let [wal, shm] = sidecars(std::path::Path::new("/datos/history.db"));
+        assert!(wal.to_string_lossy().ends_with("history.db-wal"));
+        assert!(shm.to_string_lossy().ends_with("history.db-shm"));
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn the_history_is_not_readable_by_other_users() {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().expect("carpeta");
@@ -1515,10 +1430,6 @@ mod tests {
         assert_eq!(folder, 0o700, "y la carpeta igual");
     }
 
-    /// En Windows no hay bits de modo que comprobar, así que lo que protege el
-    /// historial es dónde vive. La prueba no puede afirmar que otras cuentas no
-    /// lo abren —eso lo decide la lista de control heredada— pero sí que el
-    /// almacén sabe en cuál de los dos casos está y lo dice.
     #[cfg(windows)]
     #[test]
     fn on_windows_what_protects_the_history_is_living_under_the_profile() {
@@ -1537,42 +1448,72 @@ mod tests {
         assert_eq!(store.exposure(), Restricted::InheritedFromProfile);
     }
 
+    fn a_profile_with(entry: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+        let profile = tempfile::tempdir().expect("perfil");
+        let path = profile.path().join(entry);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("carpeta");
+        }
+        std::fs::write(&path, b"x").expect("archivo");
+        (profile, path)
+    }
+
     #[test]
-    fn a_path_outside_the_profile_is_not_under_it() {
-        let profile = std::path::Path::new(if cfg!(windows) {
-            r"C:\Users\alguien"
-        } else {
-            "/home/alguien"
-        });
-        let inside = profile.join("AppData").join("history.db");
-        let outside = std::path::Path::new(if cfg!(windows) {
-            r"Z:\compartido\history.db"
-        } else {
-            "/srv/compartido/history.db"
-        });
-        assert!(under(&inside, profile), "lo que cuelga del perfil");
-        assert!(!under(outside, profile), "una unidad compartida no");
-        assert!(
-            !under(profile, &inside),
-            "estar por encima no es estar dentro"
+    fn a_history_under_the_profile_is_covered_by_its_permissions() {
+        let (profile, history) = a_profile_with("AppData/Local/history.db");
+        assert_eq!(
+            exposure_of(&history, Some(profile.path())),
+            Restricted::InheritedFromProfile
         );
     }
 
-    /// Un prefijo de texto no es un prefijo de ruta: sin comparar componentes,
-    /// la carpeta de otra cuenta con el mismo comienzo pasaría por propia.
+    #[test]
+    fn a_history_outside_the_profile_is_unprotected() {
+        let (profile, _) = a_profile_with("AppData/history.db");
+        let (_shared, elsewhere) = a_profile_with("compartido/history.db");
+        assert_eq!(
+            exposure_of(&elsewhere, Some(profile.path())),
+            Restricted::Unprotected
+        );
+    }
+
+    #[test]
+    fn without_a_profile_nothing_is_promised() {
+        let (_profile, history) = a_profile_with("history.db");
+        assert_eq!(exposure_of(&history, None), Restricted::Unprotected);
+    }
+
+    #[test]
+    fn a_path_that_does_not_exist_is_never_taken_for_protected() {
+        let profile = tempfile::tempdir().expect("perfil");
+        let ghost = profile.path().join("todavia-no").join("history.db");
+        assert!(!under(&ghost, profile.path()));
+        assert_eq!(
+            exposure_of(&ghost, Some(profile.path())),
+            Restricted::Unprotected
+        );
+    }
+
+    #[test]
+    fn being_above_is_not_being_inside() {
+        let (profile, history) = a_profile_with("AppData/history.db");
+        assert!(under(&history, profile.path()));
+        assert!(!under(profile.path(), &history));
+    }
+
     #[test]
     fn a_sibling_that_merely_starts_alike_is_outside() {
-        let profile = std::path::Path::new(if cfg!(windows) {
-            r"C:\Users\ana"
-        } else {
-            "/home/ana"
-        });
-        let sibling = std::path::Path::new(if cfg!(windows) {
-            r"C:\Users\anabel\history.db"
-        } else {
-            "/home/anabel/history.db"
-        });
-        assert!(!under(sibling, profile));
+        let root = tempfile::tempdir().expect("raiz");
+        let ana = root.path().join("ana");
+        let anabel = root.path().join("anabel");
+        std::fs::create_dir_all(&ana).expect("ana");
+        std::fs::create_dir_all(&anabel).expect("anabel");
+        let history = anabel.join("history.db");
+        std::fs::write(&history, b"x").expect("archivo");
+        assert!(
+            !under(&history, &ana),
+            "un prefijo de texto no es un prefijo de ruta"
+        );
     }
 
     #[test]
@@ -2112,9 +2053,6 @@ mod identity {
         }
     }
 
-    /// La regresión: `find_by_hash` calculaba el hash del texto desnudo y
-    /// `insert_item` guardaba `fingerprint()`. Nunca coincidían, así que la
-    /// ruta de captura real no deduplicaba nada.
     #[test]
     fn what_was_captured_is_found_again() {
         let store = Store::in_memory().expect("abre");
@@ -2129,8 +2067,6 @@ mod identity {
         );
     }
 
-    /// Pegar el mismo texto «como Markdown» o «en plano» produce un contenido
-    /// distinto, y eso es un ítem distinto: la identidad mira los bytes.
     #[test]
     fn a_different_rendering_is_a_different_item() {
         let store = Store::in_memory().expect("abre");
@@ -2146,8 +2082,6 @@ mod identity {
         );
     }
 
-    /// Un texto guardado sin pasar por el portapapeles no lleva los formatos
-    /// que trae una copia real, así que no puede compartir identidad con ella.
     #[test]
     fn a_synthetic_text_is_not_a_captured_one() {
         assert_ne!(

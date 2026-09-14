@@ -1,5 +1,5 @@
 [package]
-name = "cp-win"
+name = "cp-win-sys"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,9 +8,12 @@ repository.workspace = true
 publish = false
 
 [target.'cfg(target_os = "windows")'.dependencies]
-cp-core.workspace = true
-cp-win-sys.workspace = true
 windows.workspace = true
 
-[lints]
-workspace = true
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"

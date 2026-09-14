@@ -16,6 +16,7 @@ cp-store = { path = "crates/cp-store" }
 cp-mac-sys = { path = "crates/cp-mac-sys" }
 cp-mac = { path = "crates/cp-mac" }
 cp-win = { path = "crates/cp-win" }
+cp-win-sys = { path = "crates/cp-win-sys" }
 
 thiserror = "2"
 tracing = "0.1"
@@ -28,6 +29,18 @@ unicode-normalization = "0.1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
 proptest = "1"
 tempfile = "3"
+
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Security",
+] }
 
 objc2 = "0.6"
 objc2-foundation = "0.3"

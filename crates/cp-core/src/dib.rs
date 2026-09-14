@@ -1,19 +1,12 @@
-//! El mapa de bits del portapapeles de Windows, convertido a algo que se pueda
-//! guardar.
-//!
-//! `CF_DIB` y `CF_DIBV5` llegan sin comprimir y sin la cabecera de archivo que
-//! los haría un `.bmp`. Medido el 14/09/2026 en Windows 11 26200, la misma
-//! imagen ocupa **480.052 bytes en DIB y 1.964 en PNG**: guardar el DIB tal
-//! cual es pagar 244 veces el precio por cada captura.
-//!
-//! Todo lo de aquí es de bytes a bytes, así que se prueba sin Windows delante.
-
 const FILE_HEADER: usize = 14;
 const INFO_HEADER: usize = 40;
 const BI_BITFIELDS: u32 = 3;
 const RGBQUAD: usize = 4;
 
-/// Lo que dice la cabecera de un DIB.
+pub const LARGEST_BITMAP: usize = 256 * 1024 * 1024;
+
+const _: () = assert!(7680 * 4320 * 4 < LARGEST_BITMAP);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Header {
     pub size: u32,
@@ -32,8 +25,6 @@ fn u32_at(bytes: &[u8], at: usize) -> Option<u32> {
 
 pub fn header(dib: &[u8]) -> Option<Header> {
     let size = u32_at(dib, 0)?;
-    // Una cabecera que dice medir menos que la mínima, o más que el buffer
-    // entero, no es una cabecera: es basura con forma de imagen.
     if (size as usize) < INFO_HEADER || size as usize > dib.len() {
         return None;
     }
@@ -47,17 +38,10 @@ pub fn header(dib: &[u8]) -> Option<Header> {
     })
 }
 
-/// Dónde empiezan los píxeles, contando desde el principio del DIB.
-///
-/// Es el número que decide si la imagen sale bien o sale desplazada, y tiene
-/// dos trampas que la 2.x documentó tras encontrarlas en campo.
 pub fn pixel_offset(dib: &[u8]) -> Option<usize> {
     let head = header(dib)?;
     let mut table = 0usize;
 
-    // Las máscaras de `BI_BITFIELDS` solo siguen a la cabecera clásica de 40
-    // bytes; en `BITMAPV4HEADER` y `BITMAPV5HEADER` van dentro, y sumarlas otra
-    // vez desplaza la imagen 12 bytes.
     if head.compression == BI_BITFIELDS && head.size as usize == INFO_HEADER {
         table += 3 * 4;
     }
@@ -70,9 +54,6 @@ pub fn pixel_offset(dib: &[u8]) -> Option<usize> {
         };
         table += colors as usize * RGBQUAD;
     } else if head.clr_used != 0 {
-        // Por encima de 8 bits la paleta es opcional, y los productores dejan
-        // `biClrUsed` sucio a menudo: honrarlo a ciegas manda los píxeles fuera
-        // del buffer. Solo se aplica si lo que dice cabe de verdad.
         let claimed = head.clr_used as usize * RGBQUAD;
         if head.size as usize + table + claimed <= dib.len() {
             table += claimed;
@@ -83,7 +64,6 @@ pub fn pixel_offset(dib: &[u8]) -> Option<usize> {
     (offset <= dib.len()).then_some(offset)
 }
 
-/// Un `.bmp` completo: el DIB con su cabecera de archivo delante.
 pub fn as_bmp(dib: &[u8]) -> Option<Vec<u8>> {
     let pixels = pixel_offset(dib)?;
     let mut bmp = Vec::with_capacity(FILE_HEADER + dib.len());
@@ -96,39 +76,40 @@ pub fn as_bmp(dib: &[u8]) -> Option<Vec<u8>> {
     Some(bmp)
 }
 
-/// Qué hay de verdad en el cuarto byte de cada píxel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Alpha {
-    /// No hay cuarto byte: la imagen no es de 32 bits.
     Absent,
-    /// Lo hay y no dice nada: o está todo a cero porque nadie lo escribió, o
-    /// está todo opaco. En los dos casos la imagen es opaca.
     Opaque,
-    /// Hay transparencia de verdad y hay que respetarla.
     Real,
 }
 
-/// La máscara de alfa que la cabecera declara, cuando la lleva dentro.
-///
-/// Solo `BITMAPV4HEADER` y `BITMAPV5HEADER` la tienen, en el mismo sitio. Con
-/// la cabecera clásica de 40 bytes y `BI_BITFIELDS` las máscaras van detrás,
-/// pero son tres y ninguna es la del alfa.
+fn pixel_len(head: Header) -> Option<usize> {
+    let width = usize::try_from(head.width.unsigned_abs()).ok()?;
+    let height = usize::try_from(head.height.unsigned_abs()).ok()?;
+    let stride = width
+        .checked_mul(usize::from(head.bit_count))?
+        .checked_add(31)?
+        / 32
+        * 4;
+    stride.checked_mul(height)
+}
+
+fn pixels_of(dib: &[u8]) -> Option<&[u8]> {
+    let head = header(dib)?;
+    let start = pixel_offset(dib)?;
+    let pixels = dib.get(start..)?;
+    Some(match pixel_len(head) {
+        Some(len) if len <= pixels.len() => &pixels[..len],
+        _ => pixels,
+    })
+}
+
 fn declared_alpha_mask(dib: &[u8], head: Header) -> Option<u32> {
     (head.size as usize >= 56)
         .then(|| u32_at(dib, 52))
         .flatten()
 }
 
-/// Por especificación, el cuarto byte de un `BI_RGB` de 32 bits es
-/// **indefinido**; en la práctica los productores modernos escriben el alfa
-/// ahí. Honrar un canal entero a cero daría una imagen invisible, así que se
-/// mira antes de creérselo.
-///
-/// Pero la cabecera manda sobre la heurística. Medido el 14/09/2026: al poner
-/// solo un `CF_DIB`, Windows sintetiza un `CF_DIBV5` con `biSize` 124,
-/// `BI_RGB` y **`bV5AlphaMask` a cero** —dice que no hay canal alfa— sobre los
-/// mismos píxeles. Mirar únicamente el cuarto byte de un sintetizado así es
-/// inventarse una transparencia y grabarla en el PNG para siempre.
 pub fn alpha(dib: &[u8]) -> Alpha {
     let Some(head) = header(dib) else {
         return Alpha::Absent;
@@ -139,12 +120,9 @@ pub fn alpha(dib: &[u8]) -> Alpha {
     if declared_alpha_mask(dib, head) == Some(0) {
         return Alpha::Absent;
     }
-    let Some(start) = pixel_offset(dib) else {
+    let Some(pixels) = pixels_of(dib) else {
         return Alpha::Absent;
     };
-    // `pixel_offset` ya garantiza que el corte cae dentro; el `unwrap` evita
-    // una rama que ninguna entrada puede alcanzar.
-    let pixels = dib.get(start..).unwrap_or_default();
     let mut seen_zero = false;
     let mut seen_full = false;
     let mut seen_between = false;
@@ -162,24 +140,24 @@ pub fn alpha(dib: &[u8]) -> Alpha {
     }
 }
 
-/// El DIB como PNG, que es como se guarda.
-///
-/// Devuelve `None` si los bytes no son un mapa de bits que se pueda leer.
+fn too_large(len: usize) -> bool {
+    len > LARGEST_BITMAP
+}
+
 pub fn to_png(dib: &[u8]) -> Option<Vec<u8>> {
-    let mut owned;
-    // Todo lo que no sea transparencia declarada se escribe opaco: un cuarto
-    // byte que nadie llenó, leído como alfa, da una imagen invisible.
-    let source = if alpha(dib) != Alpha::Real && header(dib)?.bit_count == 32 {
-        owned = dib.to_vec();
-        let start = pixel_offset(&owned)?;
-        for chunk in owned.get_mut(start..)?.as_chunks_mut::<4>().0 {
+    if too_large(dib.len()) {
+        return None;
+    }
+    let head = header(dib)?;
+    let mut bmp = as_bmp(dib)?;
+    if head.bit_count == 32 && alpha(dib) != Alpha::Real {
+        let from = FILE_HEADER + pixel_offset(dib)?;
+        let pixels = bmp.get_mut(from..)?;
+        let to = pixel_len(head).unwrap_or(pixels.len()).min(pixels.len());
+        for chunk in pixels.get_mut(..to)?.as_chunks_mut::<4>().0 {
             chunk[3] = 0xFF;
         }
-        &owned
-    } else {
-        dib
-    };
-    let bmp = as_bmp(source)?;
+    }
     let decoded = image::load_from_memory_with_format(&bmp, image::ImageFormat::Bmp).ok()?;
     let mut out = std::io::Cursor::new(Vec::new());
     decoded
@@ -188,11 +166,21 @@ pub fn to_png(dib: &[u8]) -> Option<Vec<u8>> {
         .map(|()| out.into_inner())
 }
 
+pub fn from_png(png: &[u8]) -> Option<Vec<u8>> {
+    if too_large(png.len()) {
+        return None;
+    }
+    let decoded = image::load_from_memory_with_format(png, image::ImageFormat::Png).ok()?;
+    let mut bmp = std::io::Cursor::new(Vec::new());
+    decoded.write_to(&mut bmp, image::ImageFormat::Bmp).ok()?;
+    let bmp = bmp.into_inner();
+    (bmp.len() > FILE_HEADER).then(|| bmp[FILE_HEADER..].to_vec())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Un DIB armado a mano, para poder mover una pieza cada vez.
     struct Dib {
         header_size: u32,
         width: i32,
@@ -244,7 +232,6 @@ mod tests {
         assert_eq!(pixel_offset(&dib), Some(INFO_HEADER));
     }
 
-    /// La primera trampa: con la cabecera clásica, las máscaras van detrás.
     #[test]
     fn bitfield_masks_follow_the_classic_header() {
         let mut dib = Dib::rgb32(2, 2);
@@ -253,8 +240,6 @@ mod tests {
         assert_eq!(pixel_offset(&dib.build()), Some(INFO_HEADER + 12));
     }
 
-    /// Y la otra mitad de la trampa: con `BITMAPV4HEADER` y `BITMAPV5HEADER`
-    /// las máscaras están dentro, y sumarlas otra vez corre la imagen 12 bytes.
     #[test]
     fn bitfield_masks_live_inside_the_newer_headers() {
         for size in [108u32, 124] {
@@ -292,8 +277,6 @@ mod tests {
         assert_eq!(pixel_offset(&dib.build()), Some(INFO_HEADER + 16 * RGBQUAD));
     }
 
-    /// La segunda trampa: por encima de 8 bits los productores dejan
-    /// `biClrUsed` sucio, y creérselo manda los píxeles fuera del buffer.
     #[test]
     fn a_dirty_palette_count_above_eight_bits_is_ignored() {
         let mut dib = Dib::rgb32(2, 2);
@@ -313,8 +296,6 @@ mod tests {
         assert_eq!(pixel_offset(&dib.build()), Some(INFO_HEADER + 2 * RGBQUAD));
     }
 
-    /// Una cabecera que ocupa el buffer entero sigue siendo legible: dice lo
-    /// que dice, y que detrás no venga un solo píxel es otro asunto.
     #[test]
     fn a_header_that_fills_the_whole_buffer_is_still_a_header() {
         let mut dib = Dib::rgb32(1, 1);
@@ -329,9 +310,6 @@ mod tests {
         assert_eq!(pixel_offset(&raw), Some(INFO_HEADER));
     }
 
-    /// La comprobación de que la paleta cabe suma los tres tramos: cabecera,
-    /// máscaras y paleta. Con la paleta justo fuera del buffer, la cuenta tiene
-    /// que dar que no cabe y quedarse con lo anterior.
     #[test]
     fn a_palette_one_byte_too_long_is_left_out() {
         let mut dib = Dib::rgb32(2, 2);
@@ -346,8 +324,6 @@ mod tests {
         );
     }
 
-    /// Y lo mismo con las máscaras por delante: los tres tramos se suman, no
-    /// se restan ni se multiplican entre sí.
     #[test]
     fn the_masks_count_towards_whether_the_palette_fits() {
         let mut dib = Dib::rgb32(2, 2);
@@ -429,8 +405,6 @@ mod tests {
         assert_eq!(alpha(&dib.build()), Alpha::Real);
     }
 
-    /// Una cabecera que promete máscaras que el buffer no tiene: no hay
-    /// píxeles donde mirar, así que no hay alfa que leer.
     #[test]
     fn a_header_promising_more_than_the_buffer_holds_has_no_alpha() {
         let mut dib = Dib::rgb32(1, 1);
@@ -443,9 +417,6 @@ mod tests {
         assert_eq!(to_png(&raw), None);
     }
 
-    /// El caso medido el 14/09/2026: al poner solo un `CF_DIB`, Windows
-    /// sintetiza un `CF_DIBV5` de 124 bytes de cabecera, `BI_RGB`, con la
-    /// máscara de alfa a cero. La cabecera manda: no hay canal que leer.
     #[test]
     fn a_synthesised_v5_declaring_no_alpha_mask_has_no_alpha() {
         let mut dib = Dib::rgb32(2, 2);
@@ -460,8 +431,6 @@ mod tests {
         );
     }
 
-    /// Y sin esa corrección la imagen saldría medio transparente: el PNG tiene
-    /// que quedar opaco.
     #[test]
     fn a_synthesised_v5_does_not_become_half_transparent() {
         let mut dib = Dib::rgb32(4, 4);
@@ -475,9 +444,6 @@ mod tests {
         );
     }
 
-    /// La cabecera más corta que llega a declarar el alfa mide 56 bytes: es la
-    /// `BITMAPV3INFOHEADER` que escriben Photoshop y GIMP, cuatro más que la de
-    /// tres máscaras. Pedir 57 la dejaría fuera y su transparencia se perdería.
     #[test]
     fn the_shortest_header_that_declares_alpha_is_fifty_six_bytes() {
         let mut dib = Dib::rgb32(2, 2);
@@ -497,8 +463,6 @@ mod tests {
         );
     }
 
-    /// Y la misma cabecera de 56 con la máscara a cero no tiene alfa, igual
-    /// que la de 124: lo que decide es que el campo esté, no cuánto mide.
     #[test]
     fn a_fifty_six_byte_header_with_no_mask_has_no_alpha() {
         let mut dib = Dib::rgb32(2, 2);
@@ -507,8 +471,31 @@ mod tests {
         assert_eq!(alpha(&dib.build()), Alpha::Absent);
     }
 
-    /// La máscara declarada distingue el sintetizado del real: con una máscara
-    /// de verdad, los mismos píxeles sí llevan alfa.
+    #[test]
+    fn bytes_past_the_pixel_array_do_not_vote_on_the_alpha() {
+        let mut dib = Dib::rgb32(4, 4);
+        dib.header_size = 124;
+        dib.compression = BI_BITFIELDS;
+        dib.pixels = [0x20, 0x60, 0xA0, 0x00].repeat(16);
+        let mut raw = dib.build();
+        raw[40..44].copy_from_slice(&0x00FF_0000u32.to_le_bytes());
+        raw[44..48].copy_from_slice(&0x0000_FF00u32.to_le_bytes());
+        raw[48..52].copy_from_slice(&0x0000_00FFu32.to_le_bytes());
+        raw[52..56].copy_from_slice(&0xFF00_0000u32.to_le_bytes());
+        assert_eq!(alpha(&raw), Alpha::Opaque);
+
+        raw.extend_from_slice(&[0x00, 0x00, 0x00, 0xFF]);
+        assert_eq!(
+            alpha(&raw),
+            Alpha::Opaque,
+            "cuatro bytes de cola daban la captura por transparente"
+        );
+        let back = image::load_from_memory(&to_png(&raw).expect("png"))
+            .expect("se relee")
+            .to_rgba8();
+        assert!(back.pixels().all(|pixel| pixel[3] == 0xFF));
+    }
+
     #[test]
     fn a_declared_mask_turns_the_same_pixels_into_real_alpha() {
         let mut dib = Dib::rgb32(2, 2);
@@ -519,8 +506,6 @@ mod tests {
         assert_eq!(alpha(&raw), Alpha::Real);
     }
 
-    /// La cabecera clásica no lleva máscara de alfa ni cuando usa
-    /// `BI_BITFIELDS`: allí solo hay tres, y la heurística sigue mandando.
     #[test]
     fn the_classic_header_has_no_alpha_mask_to_declare() {
         let mut dib = Dib::rgb32(2, 2);
@@ -538,7 +523,6 @@ mod tests {
         assert_eq!(alpha(&dib.build()), Alpha::Absent);
     }
 
-    /// El número que justifica todo este módulo.
     #[test]
     fn a_bitmap_becomes_a_fraction_of_its_size_as_png() {
         let mut dib = Dib::rgb32(200, 200);
@@ -554,6 +538,59 @@ mod tests {
     }
 
     #[test]
+    fn the_size_limit_falls_between_the_last_accepted_byte_and_the_first_refused() {
+        assert!(!too_large(LARGEST_BITMAP - 1));
+        assert!(!too_large(LARGEST_BITMAP));
+        assert!(too_large(LARGEST_BITMAP + 1));
+        assert!(too_large(usize::MAX));
+        assert!(!too_large(0));
+    }
+
+    #[test]
+    fn a_bitmap_too_large_to_be_a_screen_is_refused_before_it_is_copied() {
+        let mut dib = Dib::rgb32(1, 1);
+        dib.pixels = vec![0; LARGEST_BITMAP + 1 - INFO_HEADER];
+        let raw = dib.build();
+        assert!(too_large(raw.len()));
+        assert_eq!(to_png(&raw), None);
+    }
+
+    #[test]
+    fn a_png_becomes_a_bitmap_the_clipboard_understands() {
+        let dib = Dib::rgb32(4, 4).build();
+        let png = to_png(&dib).expect("png");
+        let back = from_png(&png).expect("dib");
+        let head = header(&back).expect("cabecera");
+        assert_eq!((head.width, head.height.abs()), (4, 4));
+        assert!(pixel_offset(&back).is_some());
+    }
+
+    #[test]
+    fn the_round_trip_keeps_the_colours_where_they_were() {
+        let mut dib = Dib::rgb32(2, 2);
+        dib.pixels = vec![
+            0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF,
+        ];
+        let once = image::load_from_memory(&to_png(&dib.build()).expect("png"))
+            .expect("relee")
+            .to_rgba8();
+        let twice = image::load_from_memory(
+            &to_png(&from_png(&to_png(&dib.build()).expect("png")).expect("dib")).expect("png"),
+        )
+        .expect("relee")
+        .to_rgba8();
+        assert_eq!(once.as_raw(), twice.as_raw());
+    }
+
+    #[test]
+    fn what_is_not_a_png_is_not_a_bitmap_either() {
+        assert_eq!(from_png(&[]), None);
+        assert_eq!(from_png(b"esto no es un png"), None);
+        assert_eq!(from_png(&vec![0u8; LARGEST_BITMAP + 1]), None);
+    }
+
+    #[test]
     fn a_png_from_a_dib_is_a_png() {
         let dib = Dib::rgb32(4, 4).build();
         let png = to_png(&dib).expect("png");
@@ -562,8 +599,6 @@ mod tests {
         assert_eq!((back.width(), back.height()), (4, 4));
     }
 
-    /// Un canal alfa a cero se corrige **antes** de decodificar: si no, el PNG
-    /// sale entero transparente y la captura se pierde sin que nadie lo vea.
     #[test]
     fn a_capture_with_an_unwritten_alpha_does_not_become_invisible() {
         let mut dib = Dib::rgb32(4, 4);
@@ -576,10 +611,6 @@ mod tests {
         );
     }
 
-    /// El caso que de verdad salva la imagen: la cabecera **declara** la
-    /// máscara de alfa, así que el decodificador va a leer ese canal, y la
-    /// fuente lo dejó entero a cero. Sin corregirlo, la captura se guarda
-    /// completamente transparente y el usuario ve una tarjeta vacía.
     #[test]
     fn a_declared_alpha_channel_left_at_zero_is_not_an_invisible_capture() {
         let mut dib = Dib::rgb32(4, 4);
@@ -604,8 +635,6 @@ mod tests {
         );
     }
 
-    /// Y la transparencia de verdad sobrevive al viaje, que es la otra mitad:
-    /// forzar el alfa siempre es el fallo que la 2.x tiene al escribir.
     #[test]
     fn real_transparency_survives_the_trip() {
         let mut dib = Dib::rgb32(2, 2);
@@ -618,7 +647,6 @@ mod tests {
             0x20, 0x60, 0xA0, 0xFF,
         ];
         let mut raw = dib.build();
-        // Las máscaras de un BITMAPV5HEADER, en su sitio dentro de la cabecera.
         raw[40..44].copy_from_slice(&0x00FF_0000u32.to_le_bytes());
         raw[44..48].copy_from_slice(&0x0000_FF00u32.to_le_bytes());
         raw[48..52].copy_from_slice(&0x0000_00FFu32.to_le_bytes());
@@ -633,8 +661,6 @@ mod tests {
         );
     }
 
-    /// Un DIB cuyos píxeles no llegan hasta donde la cabecera promete no puede
-    /// tumbar el proceso: se dice que no en vez de indexar fuera.
     #[test]
     fn a_truncated_bitmap_is_refused_not_panicked_on() {
         let dib = Dib::rgb32(100, 100).build();
@@ -655,8 +681,6 @@ mod properties {
     use proptest::prelude::*;
 
     proptest! {
-        /// Ningún montón de bytes puede tumbar el proceso. El portapapeles lo
-        /// llena cualquiera, así que esto no es una precaución teórica.
         #[test]
         fn no_pile_of_bytes_can_bring_the_process_down(
             bytes in prop::collection::vec(any::<u8>(), 0..600),
@@ -668,8 +692,6 @@ mod properties {
             let _ = to_png(&bytes);
         }
 
-        /// Donde empiezan los píxeles cae siempre dentro del buffer: es el
-        /// número con el que después se indexa.
         #[test]
         fn the_pixels_always_start_inside_the_buffer(
             bytes in prop::collection::vec(any::<u8>(), 0..600),
@@ -680,7 +702,6 @@ mod properties {
             }
         }
 
-        /// El `.bmp` es el DIB con catorce bytes delante, ni uno más.
         #[test]
         fn the_bmp_is_the_dib_with_a_header_in_front(
             bytes in prop::collection::vec(any::<u8>(), 0..600),

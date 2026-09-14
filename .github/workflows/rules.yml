@@ -25,8 +25,6 @@ jobs:
 
       - name: The core produces no terminal output
         run: |
-          # Al principio de línea o tras un operador: un `println!` dentro de
-          # una cadena de prueba es el texto que se clasifica, no una impresión.
           if grep -rnE '^[^"]*(^|[ \t{;(=>|&])(e?print(ln)?!)' crates/cp-core/src --include='*.rs'; then
             echo "cp-core no imprime: usa tracing"; exit 1
           fi
@@ -39,8 +37,6 @@ jobs:
 
       - name: No Spanish identifiers
         run: |
-          # Un identificador no vive ni dentro de una cadena ni dentro de un
-          # comentario, y aqui los comentarios van en espanol a proposito.
           if grep -rnE '\b(fecha|limite|prioridad|filtro|tarea|titulo|etiqueta|imagen|archivo) *:' \
                crates/*/src --include='*.rs' | grep -v '"' | grep -vE ':[0-9]+: *///?!?'; then
             echo "los identificadores van en ingles"; exit 1
@@ -60,10 +56,20 @@ jobs:
             echo "espanol neutro: archivo, computador, presiona"; exit 1
           fi
 
-      - name: No prose blocks in the code
+      - name: The code carries no comments but SAFETY
         run: |
-          awk '/^[ \t]*\/\/[^\/!]/ { n++; if (n > 3) { print FILENAME":"FNR": bloque de prosa"; bad = 1 }; next }
-               { n = 0 }
+          if grep -rnE '^[ 	]*//' crates --include='*.rs' | grep -v 'SAFETY:'; then
+            echo "el codigo va sin comentarios; lo que haya que explicar va al expediente"; exit 1
+          fi
+
+      - name: Every SAFETY note is one line of English
+        run: |
+          if ! grep -rh 'SAFETY:' crates --include='*.rs' | iconv -f utf-8 -t ascii >/dev/null; then
+            echo "las notas SAFETY van en ingles"; exit 1
+          fi
+          awk '/SAFETY:/ { safety = 1; next }
+               /^[ 	]*\/\// { if (safety) { print FILENAME":"FNR": la nota SAFETY sigue en otra linea"; bad = 1 } }
+               { safety = 0 }
                END { exit bad }' $(find crates -name '*.rs')
 
   deterministic:
@@ -84,7 +90,7 @@ jobs:
         run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done
 
   mutants:
-    name: The suite kills every mutant (${{ matrix.os }})
+    name: Every mutant dies in the crates without a system call (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -99,9 +105,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-mutants
-      # Una prueba que pasa contra un núcleo mutado no está probando nada. El
-      # criterio de aceptación de la Etapa 0 es exactamente este: la batería
-      # tiene que fallar contra una implementación que no sepa lo que sabemos.
       - run: cargo mutants ${{ matrix.crates }} --no-times
 
   coverage:
@@ -114,8 +117,6 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
-      # El arnés entra en la medición: sin él, todo el código de plataforma
-      # aparece a cero y el número miente en las dos direcciones.
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
       - run: cargo llvm-cov report --fail-under-lines 90 --summary-only
@@ -130,9 +131,9 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
-      # Sin el arnés de macOS el umbral sería otro, así que se mide solo lo que
-      # Windows ejecuta de verdad: el núcleo y el almacén.
-      - run: cargo llvm-cov -p cp-core -p cp-store -p cp-win --fail-under-lines 95 --summary-only
+      - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys
+      - run: cargo llvm-cov --no-report run -p cp-win --example probe
+      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only
 
   budget:
     name: Latency stays within budget
@@ -143,6 +144,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # Busca regresiones de orden de magnitud —una consulta que deja de usar
-      # el índice—, no microsegundos. Por eso corre en release y con holgura.
       - run: cargo run -p cp-store --release --example budget

@@ -2,42 +2,21 @@ use rusqlite::{Connection, Result};
 
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// Lleva la base a la versión que esta copia entiende.
-///
-/// `user_version` es un entero que SQLite guarda en la cabecera del archivo y
-/// que no cuesta nada leer. La 2.x llegó a la versión 4 de su esquema con
-/// cuatro migraciones, así que esto va a hacer falta: montarlo ahora, cuando
-/// no hay nada que migrar, es gratis.
-///
-/// Devuelve si tuvo que migrar algo, para quien quiera distinguir una base
-/// que ya estaba al día de una recién puesta al día.
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if found > SCHEMA_VERSION {
-        // Una base escrita por una versión más nueva no se toca: abrirla y
-        // «arreglarla» es la forma más rápida de destrozar el historial de
-        // alguien que alterna dos instalaciones.
         return Err(crate::Error::FromTheFuture {
             found,
             supported: SCHEMA_VERSION,
         });
     }
     if found < SCHEMA_VERSION {
-        // Aquí irán los pasos, uno por versión. Hoy no hay ninguno: la
-        // primera versión la crea `create`.
         db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))?;
         return Ok(true);
     }
     Ok(false)
 }
 
-/// Ajustes de la conexión, en el orden en que hay que darlos.
-///
-/// `auto_vacuum` es el que tiene trampa: **SQLite lo ignora en silencio si la
-/// base ya tiene tablas**, y cambiarlo después exige un `VACUUM` completo. La
-/// 2.x lo aprendió en producción, donde el pragma nunca llegó a aplicarse y
-/// todos sus `incremental_vacuum` fueron una operación vacía durante meses.
-/// Por eso va antes que nada.
 pub fn configure(db: &Connection) -> Result<()> {
     db.execute_batch(
         r#"
@@ -51,8 +30,6 @@ pub fn configure(db: &Connection) -> Result<()> {
     )
 }
 
-/// El almacén guarda **el conjunto** de formatos que la fuente ofreció, no
-/// uno elegido. `kind` es una clasificación sobre ese conjunto.
 pub fn create(db: &Connection) -> Result<()> {
     configure(db)?;
     db.execute_batch(

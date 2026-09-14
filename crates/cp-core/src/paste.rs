@@ -8,8 +8,6 @@ pub enum Phase {
     Send,
 }
 
-/// El portapapeles se escribe antes que nada que toque el foco: así el peor
-/// resultado posible sigue siendo «está en tu portapapeles, pégalo tú».
 pub const ORDER: &[Phase] = &[
     Phase::WriteClipboard,
     Phase::HidePanel,
@@ -28,12 +26,12 @@ pub enum Focus {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Failure {
-    /// El destino no está al frente, y sin eso no hay pegado posible.
     NotForeground,
     ForegroundTimeout,
     NoKeyboardFocus,
     TargetGone,
     SendDenied,
+    TargetElevated,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,26 +74,53 @@ impl Attempt {
     }
 }
 
-/// Regla ganada en campo: lo desconocido pega. Solo una respuesta positiva de
-/// que el foco está en otro sitio justifica abortar.
 pub fn aborts(focus: Focus) -> bool {
     focus == Focus::Elsewhere
 }
 
-/// Secure Input no se traga los eventos sintéticos: lo que rompe es la
-/// activación. Abortar dejaría sin pegar justo a quien tiene el flag pegado
-/// por una aplicación ajena, que es a quien la comprobación pretendía ayudar.
 pub fn aborts_on(_warning: Warning) -> bool {
     false
 }
 
-/// Medido el 12/09/2026 en macOS 26.6.2: ni `CGEventPostToPid` ni `AXPress`
-/// entregan a una aplicación que no está al frente.
 pub const REQUIRES_FOREGROUND: bool = true;
+
+impl Failure {
+    pub fn is_permanent(self) -> bool {
+        matches!(self, Failure::TargetElevated)
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_elevated_target_is_never_retried() {
+        let mut attempt = Attempt::default();
+        assert_eq!(attempt.on_failure(Failure::TargetElevated), Next::Degrade);
+        assert_eq!(attempt.on_failure(Failure::TargetElevated), Next::Degrade);
+        assert!(Failure::TargetElevated.is_permanent());
+    }
+
+    #[test]
+    fn what_a_second_try_could_fix_is_not_permanent() {
+        for failure in [
+            Failure::NotForeground,
+            Failure::ForegroundTimeout,
+            Failure::NoKeyboardFocus,
+        ] {
+            assert!(!failure.is_permanent(), "{failure:?}");
+            assert_eq!(Attempt::default().on_failure(failure), Next::Retry);
+        }
+    }
+
+    #[test]
+    fn a_target_that_is_gone_is_not_worth_retrying_either() {
+        assert_eq!(
+            Attempt::default().on_failure(Failure::TargetGone),
+            Next::Degrade
+        );
+    }
 
     #[test]
     fn the_clipboard_is_written_before_anything_touches_focus() {
@@ -178,7 +203,6 @@ mod properties {
     }
 
     proptest! {
-        /// Por muchos fallos que lleguen, el número de reintentos tiene techo.
         #[test]
         fn the_retries_are_bounded(failures in prop::collection::vec(any_failure(), 1..40)) {
             let mut attempt = Attempt::default();
@@ -189,8 +213,6 @@ mod properties {
             prop_assert!(retried <= RACE_RETRIES as usize, "reintentó {retried} veces");
         }
 
-        /// Después de un envío con éxito no hay nada que reintentar, venga el
-        /// fallo que venga: un pegado doble es peor que ninguno.
         #[test]
         fn nothing_is_retried_after_a_send(failures in prop::collection::vec(any_failure(), 1..10)) {
             let mut attempt = Attempt::default();
@@ -200,7 +222,6 @@ mod properties {
             }
         }
 
-        /// Un envío denegado es UIPI o TCC: reintentar no cambia nada.
         #[test]
         fn a_denial_never_becomes_a_retry(before in prop::collection::vec(any_failure(), 0..3)) {
             let mut attempt = Attempt::default();
@@ -210,8 +231,6 @@ mod properties {
             prop_assert_eq!(attempt.on_failure(Failure::SendDenied), Next::Degrade);
         }
 
-        /// El portapapeles se escribe antes que cualquier fase que toque el
-        /// foco, y enviar es siempre lo último.
         #[test]
         fn the_order_never_puts_the_send_before_a_check(index in 0usize..ORDER.len()) {
             if ORDER[index] == Phase::Send {

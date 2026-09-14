@@ -1,5 +1,3 @@
-/// El lado mayor de una miniatura. La tarjeta del panel no necesita más, y
-/// cada píxel de sobra se paga en disco y en tiempo de scroll.
 pub const MAX_SIDE: u32 = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -8,11 +6,6 @@ pub struct Size {
     pub height: u32,
 }
 
-/// Las dimensiones de una imagen **sin decodificarla entera**.
-///
-/// Leer la cabecera cuesta microsegundos; decodificar una captura de pantalla
-/// de 5K cuesta bastante más, y para pintar «2880×1800» en la tarjeta no hace
-/// falta ningún píxel.
 pub fn size_of(bytes: &[u8]) -> Option<Size> {
     let reader = image::ImageReader::new(std::io::Cursor::new(bytes))
         .with_guessed_format()
@@ -21,15 +14,8 @@ pub fn size_of(bytes: &[u8]) -> Option<Size> {
     Some(Size { width, height })
 }
 
-/// Una miniatura en PNG, con la proporción intacta.
-///
-/// Devuelve `None` si el formato no se reconoce. Una imagen ya pequeña se
-/// devuelve reescalada igualmente, para que todas las miniaturas pesen y se
-/// dibujen de forma parecida.
 pub fn of_image(bytes: &[u8], max_side: u32) -> Option<Vec<u8>> {
     let decoded = image::load_from_memory(bytes).ok()?;
-    // `thumbnail` **amplía** si la imagen es menor que el destino, y una
-    // miniatura mayor que su original ocuparía más y se vería peor.
     let longest_side = decoded.width().max(decoded.height());
     let scaled = if longest_side > max_side {
         decoded.thumbnail(max_side, max_side)
@@ -152,11 +138,6 @@ mod tests {
         );
     }
 
-    /// Centinela de la exclusión declarada en `mutants.toml`: cambiar `>` por
-    /// `>=` en `of_image` no se puede distinguir porque, con un lado igual al
-    /// máximo, el ratio interno de `thumbnail` es exactamente 1. Si una versión
-    /// futura de `image` dejara de cumplirlo, esta prueba cae y la exclusión deja
-    /// de estar justificada.
     #[test]
     fn scaling_to_the_size_it_already_has_changes_nothing() {
         use image::{DynamicImage, RgbaImage};

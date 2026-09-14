@@ -1,25 +1,11 @@
-//! Leer el texto que hay dentro de una imagen.
-//!
-//! Es lo que convierte una captura de pantalla en algo que se puede
-//! encontrar. La 2.x guarda las imágenes como un bloque opaco: si copiaste
-//! una captura con un número de pedido, la única forma de recuperarla es
-//! recordar cuándo fue y bajar por la lista.
-
 use objc2::AllocAnyThread;
 use objc2_foundation::{NSArray, NSData, NSDictionary};
 use objc2_vision::{
     VNImageRequestHandler, VNRecognizeTextRequest, VNRequest, VNRequestTextRecognitionLevel,
 };
 
-/// Rápido frente a preciso. Para buscar en el historial interesa lo primero:
-/// el usuario escribe un trozo de palabra, no espera una transcripción.
 const LEVEL: VNRequestTextRecognitionLevel = VNRequestTextRecognitionLevel::Fast;
 
-/// El texto reconocido en la imagen, línea a línea.
-///
-/// Devuelve `None` si Vision no puede con el formato, y una lista vacía si
-/// la imagen simplemente no tiene texto. Son cosas distintas y quien llame
-/// puede querer distinguirlas.
 pub fn text_in_image(bytes: &[u8]) -> Option<Vec<String>> {
     let data = NSData::with_bytes(bytes);
     let options = NSDictionary::new();
@@ -31,9 +17,6 @@ pub fn text_in_image(bytes: &[u8]) -> Option<Vec<String>> {
 
     let request = VNRecognizeTextRequest::new();
     request.setRecognitionLevel(LEVEL);
-    // La corrección lingüística estorba aquí: convierte identificadores,
-    // rutas y códigos en palabras del diccionario, que es justo lo que el
-    // usuario quiere encontrar tal cual lo copió.
     request.setUsesLanguageCorrection(false);
 
     let requests: Vec<&VNRequest> = vec![&request];
@@ -57,7 +40,6 @@ pub fn text_in_image(bytes: &[u8]) -> Option<Vec<String>> {
     Some(lines)
 }
 
-/// Todo el texto de la imagen en una sola cadena, listo para el índice.
 pub fn searchable_text(bytes: &[u8]) -> Option<String> {
     let lines = text_in_image(bytes)?;
     (!lines.is_empty()).then(|| lines.join(" "))

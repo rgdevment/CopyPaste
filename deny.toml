@@ -14,8 +14,6 @@ allow = [
   "Zlib",
 ]
 confidence-threshold = 0.9
-# La lista cubre lo que se admite, no solo lo que hoy se usa: una dependencia
-# nueva con una de estas no debería obligar a tocar este archivo.
 unused-allowed-license = "allow"
 
 [bans]

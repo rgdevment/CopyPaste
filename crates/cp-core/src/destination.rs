@@ -1,20 +1,9 @@
-/// Quién recibirá el pegado.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Destination {
     pub pid: i32,
     pub bundle_id: Option<String>,
 }
 
-/// Recuerda la última aplicación al frente **que no éramos nosotros**.
-///
-/// Ocultar el panel en macOS deja a la aplicación activa, así que preguntar
-/// quién está al frente en ese momento se lee a uno mismo y el pegado vuelve
-/// al panel. La 2.x lo resuelve observando las activaciones; aquí basta con
-/// recordar, porque el vigilante ya está mirando.
-///
-/// Guarda el **pid** además del bundle: identificar el destino solo por bundle
-/// elige arbitrariamente entre dos ventanas de la misma aplicación, que es el
-/// hallazgo 24 del mapa.
 #[derive(Debug, Default)]
 pub struct Tracker {
     ours: i32,
@@ -29,7 +18,6 @@ impl Tracker {
         }
     }
 
-    /// Se llama con quien esté al frente, tantas veces como se quiera.
     pub fn saw(&mut self, pid: i32, bundle_id: Option<&str>) {
         if pid == self.ours {
             return;
@@ -40,14 +28,10 @@ impl Tracker {
         });
     }
 
-    /// El destino del pegado: el último que no fuimos nosotros.
     pub fn destination(&self) -> Option<&Destination> {
         self.last_foreign.as_ref()
     }
 
-    /// Cuando el destino se cierra, deja de ser un destino. Recapturar no es
-    /// posible una vez que el panel tiene el foco, así que esto se sabe por
-    /// el pid y no por la ventana.
     pub fn gone(&mut self, pid: i32) {
         if self.last_foreign.as_ref().is_some_and(|one| one.pid == pid) {
             self.last_foreign = None;
@@ -70,7 +54,6 @@ mod tests {
     fn hiding_the_panel_does_not_lose_the_target() {
         let mut tracker = Tracker::new(100);
         tracker.saw(200, Some("com.apple.TextEdit"));
-        // El panel se muestra y nos volvemos nosotros el frente.
         tracker.saw(100, Some("dev.rgdevment.copypaste"));
         assert_eq!(
             tracker.destination().map(|one| one.pid),

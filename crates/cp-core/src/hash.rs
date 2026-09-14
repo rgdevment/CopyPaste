@@ -1,27 +1,18 @@
 use xxhash_rust::xxh3::xxh3_64;
 
-/// Por debajo de esto se mira el contenido entero; por encima, un muestreo.
 const WHOLE_UP_TO: usize = 256 * 1024;
 const BLOCKS: usize = 16;
 const BLOCK: usize = 4 * 1024;
 
-/// Por debajo del umbral se mira todo, así que el muestreo no puede abarcar
-/// más bytes de los que el umbral deja pasar enteros.
 const _: () = assert!(WHOLE_UP_TO >= BLOCKS * BLOCK);
-/// Ambos se alinean a página.
 const _: () = assert!(BLOCK.is_power_of_two() && WHOLE_UP_TO.is_power_of_two());
 
-/// Identidad del contenido. El tamaño entra siempre en la mezcla, así que dos
-/// payloads de distinta longitud nunca colisionan aunque se muestree lo mismo.
 pub fn content_hash(bytes: &[u8]) -> u64 {
     if bytes.len() <= WHOLE_UP_TO {
         return xxh3_64(bytes);
     }
     let mut mixed = Vec::with_capacity(BLOCKS * BLOCK + 8);
     mixed.extend_from_slice(&(bytes.len() as u64).to_le_bytes());
-    // Repartidos por todo el buffer, no al principio: dos capturas de pantalla
-    // del mismo tamaño comparten cabecera y barra de menús, y un muestreo de
-    // los primeros bytes las da por idénticas.
     for block in 0..BLOCKS {
         let start = bytes.len().saturating_sub(BLOCK) * block / (BLOCKS - 1);
         let end = (start + BLOCK).min(bytes.len());
@@ -85,12 +76,6 @@ mod tests {
         );
     }
 
-    /// El límite conocido, escrito a propósito: dieciséis bloques de 4 KB
-    /// cubren 64 KB, así que en un buffer de 4 MB se mira el 1,5 %. Un byte
-    /// que cambie en un hueco entre bloques no se ve. Es aceptable para lo
-    /// que este hash hace —decir «esto es lo mismo que se acaba de copiar»—
-    /// y es exactamente la razón por la que los blobs se direccionan con
-    /// blake3 sobre el contenido completo y no con esto.
     #[test]
     fn a_change_between_blocks_is_invisible_and_that_is_the_deal() {
         let big = vec![0x11; 4 * 1024 * 1024];

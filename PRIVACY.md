@@ -50,6 +50,7 @@ For each clipboard item, CopyPaste also stores:
 - **Timestamp** — When the item was copied
 - **Content type** — Text, Image, File, Folder, Link, Audio, or Video
 - **Source application** — The name of the app where you copied from (_window title_)
+- **Source URL** — For content copied from a browser, the address of the page it came from, when the browser offers it. Rich text (HTML) can also carry that address embedded in the content itself. **This includes the full query string**, so a page reached through a password-reset link, a signed URL or a session token keeps that token in your history until the entry is deleted or expires under your retention setting.
 - **User labels** — Custom labels you assign to items (optional)
 - **Color tags** — Color categories you assign (optional)
 - **Pin status** — Whether you pinned the item

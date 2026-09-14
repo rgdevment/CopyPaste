@@ -4,10 +4,6 @@ use cp_core::item::{Format, Item, Payload};
 use cp_core::kind::{self, Kind};
 use cp_mac_sys::pasteboard::Pasteboard;
 
-/// Lee todo lo que la fuente ofreció y construye el ítem.
-///
-/// Devuelve `None` cuando el contenido está marcado como secreto, y esa
-/// decisión se toma **antes** de pedir un solo byte.
 pub fn capture(pb: &Pasteboard) -> Option<Item> {
     let offered = pb.types();
     let ids: Vec<&str> = offered.iter().map(String::as_str).collect();
@@ -21,8 +17,6 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
     for id in &ids {
         let canonical = CATALOG.canonical(id);
         if formats.iter().any(|kept| kept.id == canonical) {
-            // Los gemelos legados llevan los mismos bytes: guardar los dos
-            // duplica el ítem entero.
             continue;
         }
         let payload = match CATALOG.decide(canonical) {
@@ -30,12 +24,8 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
             Take::Presence => Payload::Announced { size: None },
             Take::Payload => {
                 if CATALOG.costlier_twin(canonical, &ids) {
-                    // Misma imagen, representación cara: se anota y no se
-                    // pide. Medido: 52 veces más grande en el mismo copiado.
                     Payload::Announced { size: None }
                 } else if canonical == "public.file-url" {
-                    // Copiar tres archivos en Finder son tres ítems en el
-                    // portapapeles, y `dataForType:` solo ve el primero.
                     match gather_file_urls(pb) {
                         Some(bytes) => Payload::stored(bytes),
                         None => Payload::Absent,
@@ -54,14 +44,10 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
         });
     }
 
-    // La familia sale del formato; la clase fina, del contenido. Un texto que
-    // resulta ser un correo o un color se guarda como tal, que es de lo que
-    // vive el filtro por pestañas de la interfaz.
     let kind = refine(family, &formats);
     Some(Item { kind, formats })
 }
 
-/// Todas las rutas, una por línea, como las guarda la 2.x.
 fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
     let each = pb.data_per_item("public.file-url");
     if each.is_empty() {
@@ -103,7 +89,6 @@ fn refine(family: Option<Family>, formats: &[Format]) -> Option<Kind> {
                 Some(url) => {
                     let path = url.trim_end_matches('/');
                     let name = path.rsplit('/').next().unwrap_or(path);
-                    // Una URL de archivo que termina en barra es una carpeta.
                     kind::classify_file(name, url.ends_with('/'))
                 }
                 None => Kind::File,

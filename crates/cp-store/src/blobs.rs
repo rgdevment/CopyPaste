@@ -1,16 +1,6 @@
 use crate::{Error, Result};
 use std::path::{Path, PathBuf};
 
-/// Los bytes que no caben en la fila, guardados por su contenido.
-///
-/// El nombre del archivo **es** el hash de lo que contiene, así que dos
-/// copias del mismo contenido ocupan un archivo, y comprobar que un blob no
-/// se ha corrompido es recalcular su nombre.
-///
-/// Aquí solo viven las cosas que CopyPaste crea: imágenes copiadas y sus
-/// miniaturas. **Un archivo que el usuario copió desde el disco se queda
-/// donde está** y solo se guarda su ruta: duplicar un vídeo de 4 GB porque
-/// alguien lo copió sería inaceptable, y moverlo, peor.
 pub struct Blobs {
     root: PathBuf,
 }
@@ -25,15 +15,12 @@ impl Blobs {
     }
 
     fn path_for(&self, digest: &str) -> PathBuf {
-        // Dos niveles de subcarpeta: un directorio con cien mil entradas es
-        // lento de listar en cualquier sistema de archivos.
         self.root
             .join(&digest[0..2])
             .join(&digest[2..4])
             .join(digest)
     }
 
-    /// Guarda los bytes y devuelve su nombre. Si ya estaban, no escribe nada.
     pub fn put(&self, bytes: &[u8]) -> Result<String> {
         let digest = blake3::hash(bytes).to_hex().to_string();
         let path = self.path_for(&digest);
@@ -44,9 +31,6 @@ impl Blobs {
             std::fs::create_dir_all(parent).map_err(Error::Io)?;
             crate::store::restrict(parent, 0o700)?;
         }
-        // Se escribe a un temporal y se renombra: un corte a mitad deja un
-        // archivo suelto, nunca un blob con el nombre de un contenido que no
-        // tiene.
         let temporary = path.with_extension("partial");
         std::fs::write(&temporary, bytes).map_err(Error::Io)?;
         crate::store::restrict(&temporary, 0o600)?;
@@ -63,12 +47,6 @@ impl Blobs {
         }
     }
 
-    /// Borra un blob **sobrescribiéndolo antes**.
-    ///
-    /// `secure_delete` de SQLite cubre las páginas de la base y no los
-    /// archivos de al lado. Si el historial promete que una contraseña
-    /// borrada deja de ser legible, el blob que la contenía tiene que
-    /// desaparecer de verdad.
     pub fn remove(&self, digest: &str) -> Result<()> {
         let path = self.path_for(digest);
         let Ok(metadata) = std::fs::metadata(&path) else {
@@ -126,9 +104,6 @@ mod tests {
     fn an_io_error_that_is_not_a_missing_file_is_not_swallowed() {
         let (_dir, blobs) = temporary();
         let digest = "a".repeat(64);
-        // Un directorio en la ruta exacta del blob: leerlo falla con un error
-        // que no es `NotFound`, y ese error no puede confundirse con «no hay
-        // nada que leer».
         std::fs::create_dir_all(blobs.path_for(&digest)).expect("crea carpeta");
         assert!(
             blobs.get(&digest).is_err(),

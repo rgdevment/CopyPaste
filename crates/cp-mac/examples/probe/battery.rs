@@ -180,7 +180,6 @@ fn main() -> std::process::ExitCode {
         let captured = capture(&pb).ok_or("no se capturó")?;
         let had = captured.formats.len();
 
-        // Se ensucia el portapapeles con otra cosa, como haría el usuario.
         pb.write_text("algo distinto");
 
         match cp_mac::restore::to_pasteboard(&pb, &captured) {
@@ -382,9 +381,6 @@ fn main() -> std::process::ExitCode {
             let png = std::fs::read("fixtures/texto-en-imagen.png")
                 .map_err(|why| format!("falta el fixture: {why}"))?;
             let size = cp_core::thumbnail::size_of(&png).ok_or("no se leyó el tamaño")?;
-            // El fixture se dibujó a 720×160 puntos en una pantalla Retina,
-            // así que el archivo tiene el doble de píxeles. Lo que se guarda
-            // y lo que se enseña son cosas distintas; esto es lo que se guarda.
             if size.width != 1440 || size.height != 320 {
                 return Err(format!("dijo {}×{}", size.width, size.height));
             }
@@ -463,7 +459,6 @@ fn main() -> std::process::ExitCode {
         let item = capture(&pb).ok_or("no se capturó")?;
         let had = item.formats.len();
 
-        // Se pega en plano: el portapapeles queda solo con el texto.
         match cp_mac::restore::to_pasteboard_as_plain_text(&pb, &item) {
             cp_mac::restore::Restored::Written { formats: 1, .. } => {}
             other => return Err(format!("devolvió {other:?}")),
@@ -472,8 +467,6 @@ fn main() -> std::process::ExitCode {
             return Err("quedó el HTML: no se pegó en plano".into());
         }
 
-        // Y el ítem guardado sigue teniendo todo, así que la próxima vez se
-        // puede pegar con estilos.
         if item.formats.len() != had {
             return Err("el ítem perdió formatos".into());
         }
@@ -563,8 +556,6 @@ fn main() -> std::process::ExitCode {
             };
 
             let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
-            // El ítem entero no cabe en la fila, así que se guarda la referencia y
-            // el texto reconocido, que es lo que hace buscable la captura.
             let light = cp_core::item::Item {
                 kind: item.kind,
                 formats: vec![cp_core::item::Format {
@@ -815,9 +806,6 @@ fn main() -> std::process::ExitCode {
                         b.passed += 1;
                         println!("    ok    F4    pegado real en TextEdit, ida y vuelta");
                     }
-                    // Que otra aplicación retenga el primer plano no es un
-                    // fallo del núcleo: es la activación cooperativa que este
-                    // proyecto ya midió. Se omite en vez de dar un rojo falso.
                     Err(why) if why.starts_with("TextEdit no llegó") => {
                         b.skip("F4", "pegado real en TextEdit", &why);
                     }
@@ -850,16 +838,10 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-/// Pega en TextEdit y comprueba el resultado sin accesibilidad: tras pegar,
-/// selecciona todo y copia, así que lo pegado vuelve por el mismo camino.
 fn paste_round_trip(pb: &Pasteboard, paster: &Paster) -> Result<(), String> {
     let path = "/tmp/cp-probe-target.txt";
     std::fs::write(path, "").map_err(|why| why.to_string())?;
-    // Arrancar en frío tarda, y otra aplicación puede tener el foco. Se
-    // insiste con techo en vez de dormir una cantidad fija y confiar.
     run_open(&["-a", "TextEdit", path]);
-    // Se usa la activación del propio núcleo, que es lo que hará el producto,
-    // en vez de confiar en que `open` gane el primer plano.
     let mut front = None;
     for _ in 0..25 {
         std::thread::sleep(Duration::from_millis(300));
@@ -902,7 +884,6 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster) -> Result<(), String> {
     }
     std::thread::sleep(Duration::from_millis(400));
 
-    // Seleccionar todo y copiar: lo que vuelva es lo que se pegó.
     let keys = cp_mac_sys::keystroke::Keystroke::new().ok_or("sin fuente")?;
     keys.command(0x00);
     std::thread::sleep(Duration::from_millis(200));

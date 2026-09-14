@@ -1,7 +1,5 @@
 use cp_core::formats::Catalog;
 
-/// Los tipos de macOS. Las reglas que se les aplican viven en `cp-core`; esto
-/// son solo los datos, y su gemelo de Windows tendrá la misma forma.
 pub const CATALOG: Catalog = Catalog {
     hangs: &["com.apple.pasteboard.promised-suggested-file-name"],
     wasteful: &[
@@ -41,8 +39,6 @@ pub const CATALOG: Catalog = Catalog {
         "net.antelle.keeweb",
         "PasswordPboardType",
     ],
-    // macOS no tiene marcadores que se lean: la convención de
-    // `org.nspasteboard` es por presencia y nada más.
     denied_when_zero: &[],
     opaque_prefixes: &["dyn.", "CorePasteboardFlavorType"],
     text: &[
@@ -54,12 +50,7 @@ pub const CATALOG: Catalog = Catalog {
     ],
     files: &["public.file-url"],
     images_by_preference: &["public.png", "public.tiff"],
-    // El RTFD y el RTF no son el mismo contenido en dos envoltorios: el
-    // primero lleva las imágenes incrustadas que el segundo no tiene —993.342
-    // frente a 395 bytes en el mismo documento—, así que se guardan los dos.
     equivalents: &[],
-    // Medido el 12/09/2026: ninguna de las tres fuentes adjunta una imagen de
-    // cortesía a un documento de texto, así que aquí no hay nada que desempatar.
     embeddable: &[],
 };
 
@@ -68,8 +59,6 @@ mod tests {
     use super::CATALOG;
     use cp_core::formats::{Family, Take};
 
-    /// Los tres casos se midieron el 12/09/2026 sobre macOS 26.6.2, leyendo
-    /// todos los tipos que cada aplicación ofrecía de verdad.
     const SAFARI: &[&str] = &[
         "com.apple.webarchive",
         "Apple Web Archive pasteboard type",
@@ -113,8 +102,6 @@ mod tests {
             .filter(|id| CATALOG.decide(id) == Take::Payload)
             .collect();
         assert_eq!(CATALOG.classify(SAFARI), Some(Family::Text));
-        // Cinco tipos distintos más sus gemelos legados: 14.636 bytes de los
-        // que la 2.x guarda 53.
         assert!(kept.len() >= 5, "se guardaron {} tipos", kept.len());
         assert!(kept.iter().any(|id| **id == "com.apple.flat-rtfd"));
         assert!(kept.iter().any(|id| **id == "com.apple.webarchive"));
