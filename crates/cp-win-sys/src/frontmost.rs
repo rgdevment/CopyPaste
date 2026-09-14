@@ -5,7 +5,7 @@ use windows::Win32::Security::{
 use windows::Win32::System::Threading::{
     AttachThreadInput, OpenProcess, OpenProcessToken, PROCESS_QUERY_LIMITED_INFORMATION,
 };
-use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetFocus, SetFocus};
 use windows::Win32::UI::WindowsAndMessaging::{
     GUITHREADINFO, GetForegroundWindow, GetGUIThreadInfo, IsWindow, SMTO_ABORTIFHUNG, SMTO_BLOCK,
     SendMessageTimeoutW, SetForegroundWindow, WM_NULL,
@@ -109,7 +109,14 @@ impl Attached {
 
     pub fn focus_on(&self, window: HWND) -> bool {
         // SAFETY: the queues are attached, so focus can cross.
-        unsafe { SetFocus(Some(window)) }.is_ok()
+        let _ = unsafe { SetFocus(Some(window)) };
+        self.focused() == Some(window)
+    }
+
+    pub fn focused(&self) -> Option<HWND> {
+        // SAFETY: reads the focus of the attached queue, which this value keeps alive.
+        let window = unsafe { GetFocus() };
+        (!window.is_invalid()).then_some(window)
     }
 }
 

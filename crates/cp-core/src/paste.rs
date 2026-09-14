@@ -45,7 +45,12 @@ pub enum Warning {
     SecureInputActive,
 }
 
-const RACE_RETRIES: u8 = 2;
+pub const RACE_RETRIES: u8 = 11;
+pub const SETTLE: std::time::Duration = std::time::Duration::from_millis(60);
+const _: () = assert!(
+    (RACE_RETRIES as u128 + 1) * SETTLE.as_millis() < 1_000,
+    "a paste that takes a second is a paste the user already gave up on"
+);
 
 #[derive(Debug, Default)]
 pub struct Attempt {
@@ -93,6 +98,16 @@ impl Failure {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_slow_app_gets_the_dozen_tries_the_2x_needed() {
+        let mut attempt = Attempt::default();
+        let mut tries = 1;
+        while attempt.on_failure(Failure::NotForeground) == Next::Retry {
+            tries += 1;
+        }
+        assert_eq!(tries, 12, "Office y Electron tardan cientos de ms en venir");
+    }
 
     #[test]
     fn an_elevated_target_is_never_retried() {
@@ -161,13 +176,15 @@ mod tests {
     }
 
     #[test]
-    fn races_are_retried_twice_and_then_given_up() {
+    fn races_are_retried_and_then_given_up() {
         let mut attempt = Attempt::default();
-        assert_eq!(attempt.on_failure(Failure::ForegroundTimeout), Next::Retry);
-        assert_eq!(attempt.on_failure(Failure::NoKeyboardFocus), Next::Retry);
+        for _ in 0..RACE_RETRIES {
+            assert_eq!(attempt.on_failure(Failure::ForegroundTimeout), Next::Retry);
+        }
         assert_eq!(
-            attempt.on_failure(Failure::ForegroundTimeout),
-            Next::Degrade
+            attempt.on_failure(Failure::NoKeyboardFocus),
+            Next::Degrade,
+            "el presupuesto se comparte entre las dos carreras"
         );
     }
 

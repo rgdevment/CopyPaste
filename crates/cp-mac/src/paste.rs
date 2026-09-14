@@ -1,8 +1,9 @@
 use cp_core::destination::Destination;
-use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase};
+use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase, SETTLE};
 use cp_mac_sys::frontmost;
 use cp_mac_sys::keyboard::{self, QWERTY_V};
 use cp_mac_sys::keystroke::{self, Keystroke};
+use cp_mac_sys::permissions;
 use cp_mac_sys::runloop;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,6 +31,11 @@ impl Paster {
         let started = std::time::Instant::now();
         let mut attempt = Attempt::default();
 
+        // CGEventPost drops the event silently without the permission, reporting success.
+        if !permissions::can_post_events() {
+            return Outcome::Degraded(Failure::SendDenied);
+        }
+
         hide_panel();
 
         if !frontmost::is_alive(target.pid) {
@@ -48,7 +54,7 @@ impl Paster {
                 return Outcome::Degraded(Failure::NotForeground);
             }
             frontmost::bring_to_front(target.pid);
-            self.wait(0.060);
+            self.wait(SETTLE.as_secs_f64());
         }
 
         let waiting = std::time::Instant::now();

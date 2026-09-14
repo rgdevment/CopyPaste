@@ -13,11 +13,16 @@ pub enum Restored {
 
 pub fn to_clipboard(clipboard: &Clipboard, item: &Item) -> Restored {
     let mut owned: Vec<(u32, Vec<u8>)> = Vec::new();
+    let mut returned = 0;
     for format in &item.formats {
         let Some(bytes) = payload_of(format) else {
             continue;
         };
-        for (id, bytes) in writable(&format.id, bytes) {
+        let ids = writable(&format.id, bytes);
+        if !ids.is_empty() {
+            returned += 1;
+        }
+        for (id, bytes) in ids {
             if !owned.iter().any(|(kept, _)| *kept == id) {
                 owned.push((id, bytes));
             }
@@ -33,7 +38,7 @@ pub fn to_clipboard(clipboard: &Clipboard, item: &Item) -> Restored {
     match clipboard.replace(&entries) {
         Written::Placed { formats } => Restored::Written {
             formats,
-            incomplete: formats != item.formats.len(),
+            incomplete: returned != item.formats.len(),
         },
         Written::Refused => Restored::Failed,
     }
@@ -129,6 +134,21 @@ mod tests {
         let written = writable("Rich Text Format", b"{\\rtf1}");
         assert_eq!(written.len(), 1);
         assert!(written[0].0 >= 0xC000);
+    }
+
+    #[test]
+    fn an_image_that_needs_two_ids_is_not_an_incomplete_restore() {
+        let png = image_bytes();
+        let ids = writable(SYNTHETIC_IMAGE, &png);
+        assert_eq!(ids.len(), 2, "un formato guardado sale por dos vias");
+        let item = Item {
+            kind: None,
+            formats: vec![Format {
+                id: SYNTHETIC_IMAGE.into(),
+                payload: Payload::Inline(png),
+            }],
+        };
+        assert_eq!(item.formats.len(), 1, "y sigue siendo un solo formato");
     }
 
     #[test]

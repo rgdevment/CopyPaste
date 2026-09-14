@@ -253,6 +253,12 @@ impl Store {
     }
 
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
+        self.erase(id, at)?;
+        // secure_delete does not reach the WAL: what was erased stays readable until this.
+        self.checkpoint()
+    }
+
+    fn erase(&self, id: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
@@ -497,8 +503,9 @@ impl Store {
             rows.collect::<rusqlite::Result<_>>()?
         };
         for id in &doomed {
-            self.mark_deleted(*id, cutoff)?;
+            self.erase(*id, cutoff)?;
         }
+        self.checkpoint()?;
         Ok(doomed.len())
     }
 
@@ -515,8 +522,9 @@ impl Store {
             rows.collect::<rusqlite::Result<_>>()?
         };
         for id in &doomed {
-            self.mark_deleted(*id, at)?;
+            self.erase(*id, at)?;
         }
+        self.checkpoint()?;
         Ok(doomed.len())
     }
 
@@ -1350,6 +1358,29 @@ mod tests {
             store.search("recuperacion").expect("consulta").is_empty(),
             "lo leído dentro de la imagen también es contenido del usuario"
         );
+    }
+
+    #[test]
+    fn a_deleted_secret_is_not_left_lying_in_the_write_ahead_log() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("history.db");
+        let secret = "hunter2-correo-del-banco";
+        let store = Store::open(&path).expect("abre");
+        let id = store
+            .insert_text("uuid-secreto", secret, 1)
+            .expect("insert");
+
+        store.mark_deleted(id, 2).expect("borra");
+
+        for file in ["history.db", "history.db-wal"] {
+            let bytes = std::fs::read(dir.path().join(file)).unwrap_or_default();
+            assert!(
+                !bytes
+                    .windows(secret.len())
+                    .any(|window| window == secret.as_bytes()),
+                "«{secret}» sigue legible en {file}"
+            );
+        }
     }
 
     #[test]

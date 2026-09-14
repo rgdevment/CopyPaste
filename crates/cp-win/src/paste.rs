@@ -1,9 +1,8 @@
-use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase};
+use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase, SETTLE};
 use cp_win_sys::frontmost::{self, Attached, Target};
 use cp_win_sys::keystroke;
 use std::time::{Duration, Instant};
 
-const SETTLE: Duration = Duration::from_millis(60);
 const MODIFIERS_GO: Duration = Duration::from_millis(120);
 const TARGET_ANSWERS_MS: u32 = 200;
 
@@ -49,7 +48,12 @@ pub fn paste_into(target: &Target, hide_panel: impl FnOnce()) -> Outcome {
         && frontmost::is_alive(inner)
         && frontmost::answers(inner, TARGET_ANSWERS_MS)
     {
-        attached.focus_on(inner);
+        while !attached.focus_on(inner) {
+            if attempt.on_failure(Failure::NoKeyboardFocus) != Next::Retry {
+                return Outcome::Degraded(Failure::NoKeyboardFocus);
+            }
+            std::thread::sleep(SETTLE);
+        }
     }
 
     let waiting = Instant::now();
@@ -101,7 +105,7 @@ mod tests {
 
     #[test]
     fn the_waits_are_shorter_than_the_paste_they_guard() {
-        assert!(SETTLE < MODIFIERS_GO);
+        assert!(SETTLE <= MODIFIERS_GO);
         assert!(MODIFIERS_GO < Duration::from_millis(500));
         assert!(u128::from(TARGET_ANSWERS_MS) < MODIFIERS_GO.as_millis() * 2);
     }

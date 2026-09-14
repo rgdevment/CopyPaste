@@ -2,7 +2,7 @@
 
 use cp_core::formats::{Family, Take};
 use cp_core::watch::{Cadence, Seen, Watcher};
-use cp_win::capture::{Captured, capture};
+use cp_win::capture::{self, Captured, capture};
 use cp_win::formats::CATALOG;
 use cp_win::paste::{Outcome, paste_into};
 use cp_win::restore::{Restored, to_clipboard, to_clipboard_as_plain_text};
@@ -17,10 +17,13 @@ use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{media, ocr, thumbnail};
 
+const CASES: u32 = 38;
+const MAY_SKIP: &[&str] = &["B4", "E1", "L1"];
+
 struct Battery {
     passed: u32,
     failed: u32,
-    skipped: u32,
+    skipped: Vec<&'static str>,
 }
 
 impl Battery {
@@ -41,9 +44,14 @@ impl Battery {
         }
     }
 
-    fn skip(&mut self, id: &str, what: &str, why: &str) {
-        self.skipped += 1;
-        println!("    salta {id:<5} {what}\n            {why}");
+    fn skip(&mut self, id: &'static str, what: &str, why: &str) {
+        if MAY_SKIP.contains(&id) {
+            self.skipped.push(id);
+            println!("    salta {id:<5} {what}\n            {why}");
+        } else {
+            self.failed += 1;
+            println!("    FALLA {id:<5} {what}: este caso no puede saltarse");
+        }
     }
 }
 
@@ -58,7 +66,7 @@ fn main() -> std::process::ExitCode {
     let mut b = Battery {
         passed: 0,
         failed: 0,
-        skipped: 0,
+        skipped: Vec::new(),
     };
 
     b.group("A · El portapapeles responde");
@@ -290,6 +298,27 @@ fn main() -> std::process::ExitCode {
     });
 
     b.group("H · La captura, de punta a punta");
+
+    b.case("G3", "la captura entera tiene su propio techo", || {
+        let started = std::time::Instant::now();
+        let seen = capture::capture_within(std::time::Duration::from_nanos(1));
+        let took = started.elapsed();
+        if seen != Captured::TooSlow {
+            return Err(format!("con un techo imposible dio {seen:?}"));
+        }
+        if took > std::time::Duration::from_millis(500) {
+            return Err(format!("tardo {took:?} en rendirse"));
+        }
+        let after = capture::capture_within(capture::PATIENCE);
+        if after == Captured::TooSlow {
+            return Err("y el techo normal ya no alcanza para nada".into());
+        }
+        println!(
+            "            abandonado en {took:?}; con {:?} si captura",
+            capture::PATIENCE
+        );
+        Ok(())
+    });
 
     b.case("H1", "un texto copiado se convierte en un ítem", || {
         {
@@ -810,9 +839,16 @@ fn main() -> std::process::ExitCode {
         ),
     }
 
+    let ran = b.passed + b.failed + u32::try_from(b.skipped.len()).unwrap_or(u32::MAX);
+    if ran != CASES {
+        b.failed += 1;
+        println!("    FALLA       corrieron {ran} casos de {CASES}: la bateria se desactivo sola");
+    }
     println!(
         "\n  {} ok, {} fallan, {} saltadas\n",
-        b.passed, b.failed, b.skipped
+        b.passed,
+        b.failed,
+        format_args!("{} ({})", b.skipped.len(), b.skipped.join(", "))
     );
     if b.failed > 0 {
         std::process::ExitCode::FAILURE
