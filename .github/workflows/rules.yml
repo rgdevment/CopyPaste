@@ -25,7 +25,9 @@ jobs:
 
       - name: The core produces no terminal output
         run: |
-          if grep -rn 'println!\|eprintln!\|print!' crates/cp-core/src --include='*.rs'; then
+          # Al principio de línea o tras un operador: un `println!` dentro de
+          # una cadena de prueba es el texto que se clasifica, no una impresión.
+          if grep -rnE '^[^"]*(^|[ \t{;(=>|&])(e?print(ln)?!)' crates/cp-core/src --include='*.rs'; then
             echo "cp-core no imprime: usa tracing"; exit 1
           fi
 

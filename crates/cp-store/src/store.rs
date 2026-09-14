@@ -825,8 +825,18 @@ mod tests {
     fn the_same_content_is_found_by_its_hash() {
         let store = Store::in_memory().expect("esquema");
         store.insert_text("uuid-a", "repetido", 1).expect("insert");
-        assert!(store.find_by_hash(&Item::plain("repetido")).expect("busca").is_some());
-        assert!(store.find_by_hash(&Item::plain("distinto")).expect("busca").is_none());
+        assert!(
+            store
+                .find_by_hash(&Item::plain("repetido"))
+                .expect("busca")
+                .is_some()
+        );
+        assert!(
+            store
+                .find_by_hash(&Item::plain("distinto"))
+                .expect("busca")
+                .is_none()
+        );
     }
 
     #[test]
@@ -1892,7 +1902,9 @@ mod identity {
     fn what_was_captured_is_found_again() {
         let store = Store::in_memory().expect("abre");
         let item = captured("hola");
-        store.insert_item("uuid-1", &item, "hola", 1).expect("inserta");
+        store
+            .insert_item("uuid-1", &item, "hola", 1)
+            .expect("inserta");
         assert_eq!(
             store.find_by_hash(&item).expect("busca"),
             Some(1),
@@ -1906,7 +1918,9 @@ mod identity {
     fn a_different_rendering_is_a_different_item() {
         let store = Store::in_memory().expect("abre");
         let plain = captured("hola");
-        store.insert_item("uuid-1", &plain, "hola", 1).expect("inserta");
+        store
+            .insert_item("uuid-1", &plain, "hola", 1)
+            .expect("inserta");
         assert!(
             store
                 .find_by_hash(&Item::plain("**hola**"))
@@ -1919,6 +1933,9 @@ mod identity {
     /// que trae una copia real, así que no puede compartir identidad con ella.
     #[test]
     fn a_synthetic_text_is_not_a_captured_one() {
-        assert_ne!(Item::plain("hola").fingerprint(), captured("hola").fingerprint());
+        assert_ne!(
+            Item::plain("hola").fingerprint(),
+            captured("hola").fingerprint()
+        );
     }
 }
