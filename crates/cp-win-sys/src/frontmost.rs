@@ -38,6 +38,17 @@ pub fn capture_target() -> Option<Target> {
     })
 }
 
+pub fn target_for(window: HWND) -> Target {
+    // SAFETY: the window came from the caller and is only read.
+    let thread =
+        unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(window, None) };
+    Target {
+        window,
+        focus: inner_focus(thread),
+        thread,
+    }
+}
+
 fn inner_focus(thread: u32) -> Option<HWND> {
     let mut info = GUITHREADINFO {
         cbSize: u32::try_from(std::mem::size_of::<GUITHREADINFO>()).ok()?,

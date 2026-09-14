@@ -4,11 +4,17 @@ use cp_core::formats::{Family, Take};
 use cp_core::watch::{Cadence, Seen, Watcher};
 use cp_win::capture::{Captured, capture};
 use cp_win::formats::CATALOG;
+use cp_win::paste::{Outcome, paste_into};
 use cp_win::restore::{Restored, to_clipboard, to_clipboard_as_plain_text};
 use cp_win::transfer::{self, Transfer};
+use cp_win::watching::Watching;
 use cp_win_sys::clipboard::{self, Clipboard};
 use cp_win_sys::formats::{CF_UNICODETEXT, name_of};
+use cp_win_sys::frontmost::{self, Target};
+use cp_win_sys::ocr;
+use cp_win_sys::permissions::Readiness;
 use cp_win_sys::reading::{self, PATIENCE, Reading};
+use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 
 struct Battery {
@@ -496,6 +502,190 @@ fn main() -> std::process::ExitCode {
             return Err("el ítem se mutiló al pegarlo en plano".into());
         }
         Ok(())
+    });
+
+    b.group("J · El vigilante en marcha");
+
+    b.case("J1", "una copia despierta al vigilante", || {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let seen = Arc::new(AtomicUsize::new(0));
+        let counter = seen.clone();
+        let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+            counter.fetch_add(1, Ordering::Relaxed);
+        });
+        std::thread::sleep(std::time::Duration::from_millis(60));
+        {
+            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j1"))]);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        drop(watching);
+        match seen.load(Ordering::Relaxed) {
+            0 => Err("la copia no se vio".into()),
+            n => {
+                println!("            {n} aviso(s) por una copia");
+                Ok(())
+            }
+        }
+    });
+
+    b.case("J2", "un portapapeles quieto no despierta a nadie", || {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        {
+            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j2-quieto"))]);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(60));
+        let seen = Arc::new(AtomicUsize::new(0));
+        let counter = seen.clone();
+        let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+            counter.fetch_add(1, Ordering::Relaxed);
+        });
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        drop(watching);
+        match seen.load(Ordering::Relaxed) {
+            0 => Ok(()),
+            n => Err(format!("{n} avisos sin que nadie copiara")),
+        }
+    });
+
+    b.case("J3", "sondear el contador es casi gratis", || {
+        let rounds = 10_000;
+        let started = std::time::Instant::now();
+        for _ in 0..rounds {
+            let _ = clipboard::sequence();
+        }
+        let each = started.elapsed() / rounds;
+        println!("            {each:?} por sondeo");
+        if each > std::time::Duration::from_micros(50) {
+            return Err(format!("{each:?} es demasiado para sondear seguido"));
+        }
+        Ok(())
+    });
+
+    b.group("K · Permisos");
+
+    b.case("K1", "se sabe qué se puede hacer y qué no", || {
+        let ready = Readiness::probe();
+        println!(
+            "            estación: {}  nivel: {:?}  elevado: {}",
+            ready.can_watch(),
+            ready.integrity,
+            ready.is_elevated()
+        );
+        if !ready.can_watch() {
+            return Err("no se alcanza la estación de ventanas".into());
+        }
+        let ours = ready.integrity.ok_or("sin nivel propio")?;
+        if !ready.can_paste_into(ours) {
+            return Err("no se puede pegar en nuestro propio nivel".into());
+        }
+        Ok(())
+    });
+
+    b.group("L · Pegar de verdad");
+
+    let stage = EditWindow::open("destino de la bateria").and_then(|target| {
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while frontmost::foreground() != Some(target.window()) {
+            if std::time::Instant::now() > until {
+                return None;
+            }
+            frontmost::bring_forward(target.window());
+            target.pump(std::time::Duration::from_millis(50));
+        }
+        Some(target)
+    });
+
+    match stage {
+        Some(target) => b.case("L1", "el texto llega a una ventana de destino", || {
+            let written = "cp-l1-pegado-real";
+            {
+                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]);
+            }
+            let seen = frontmost::target_for(target.window());
+            match paste_into(&seen, || {}) {
+                Outcome::Sent { took } => println!("            enviado en {took:?}"),
+                Outcome::Degraded(why) => return Err(format!("degradó a {why:?}")),
+            }
+            target.pump(std::time::Duration::from_millis(400));
+            let arrived = target.text();
+            if arrived.contains(written) {
+                Ok(())
+            } else {
+                Err(format!("llegó «{arrived}» en vez de «{written}»"))
+            }
+        }),
+        None => b.skip(
+            "L1",
+            "el texto llega a una ventana de destino",
+            "Windows solo deja cambiar el primer plano a quien ya lo tiene: ejecuta la bateria desde una consola con el foco",
+        ),
+    }
+
+    b.case(
+        "L2",
+        "el peor resultado sigue siendo pegarlo a mano",
+        || {
+            let written = "cp-l2-degradado";
+            {
+                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]);
+            }
+            let gone = Target {
+                window: windows::Win32::Foundation::HWND(std::ptr::dangling_mut()),
+                focus: None,
+                thread: 0,
+            };
+            match paste_into(&gone, || {}) {
+                Outcome::Degraded(cp_core::paste::Failure::TargetGone) => {}
+                other => return Err(format!("con un destino muerto dio {other:?}")),
+            }
+            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("sin texto")?;
+            match text_of(&bytes).as_deref() {
+                Some(back) if back == written => Ok(()),
+                other => Err(format!("el portapapeles quedó con «{other:?}»")),
+            }
+        },
+    );
+
+    b.group("M · Texto dentro de una imagen");
+
+    b.case("M1", "el sistema ofrece un motor de lectura", || {
+        if ocr::is_available() {
+            Ok(())
+        } else {
+            Err("no hay motor para los idiomas del perfil".into())
+        }
+    });
+
+    b.case("M2", "se lee el texto de una imagen real", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("no se pudo leer el fixture: {why}"))?;
+        let started = std::time::Instant::now();
+        let text = ocr::text_in(&png).ok_or("no se reconoció nada")?;
+        println!(
+            "            {:?} para leer «{}»",
+            started.elapsed(),
+            text.lines().next().unwrap_or("").trim()
+        );
+        Ok(())
+    });
+
+    b.case("M3", "una imagen en blanco no inventa texto", || {
+        let blank = image::RgbaImage::from_pixel(120, 60, image::Rgba([255, 255, 255, 255]));
+        let mut png = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(blank)
+            .write_to(&mut png, image::ImageFormat::Png)
+            .map_err(|why| why.to_string())?;
+        match ocr::text_in(&png.into_inner()) {
+            None => Ok(()),
+            Some(invented) => Err(format!("se inventó «{invented}»")),
+        }
     });
 
     b.group("C · Los formatos que cuelgan no se piden");

@@ -155,6 +155,7 @@ version = "3.0.0"
 dependencies = [
  "cp-core",
  "cp-win-sys",
+ "image",
  "windows",
 ]
 
@@ -162,7 +163,9 @@ dependencies = [
 name = "cp-win-sys"
 version = "3.0.0"
 dependencies = [
+ "image",
  "windows",
+ "windows-future",
 ]
 
 [[package]]

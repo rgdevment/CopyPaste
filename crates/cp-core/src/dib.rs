@@ -174,7 +174,9 @@ pub fn from_png(png: &[u8]) -> Option<Vec<u8>> {
     let mut bmp = std::io::Cursor::new(Vec::new());
     decoded.write_to(&mut bmp, image::ImageFormat::Bmp).ok()?;
     let bmp = bmp.into_inner();
-    (bmp.len() > FILE_HEADER).then(|| bmp[FILE_HEADER..].to_vec())
+    bmp.get(FILE_HEADER..)
+        .filter(|pixels| !pixels.is_empty())
+        .map(<[u8]>::to_vec)
 }
 
 #[cfg(test)]

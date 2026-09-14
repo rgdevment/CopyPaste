@@ -9,6 +9,10 @@ publish = false
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows.workspace = true
+windows-future.workspace = true
+
+[target.'cfg(target_os = "windows")'.dev-dependencies]
+image.workspace = true
 
 [lints.rust]
 unsafe_code = "allow"
