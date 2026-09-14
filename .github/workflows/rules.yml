@@ -125,6 +125,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys
+      - name: The probe reads a real clipboard, so leave something on it
+        shell: pwsh
+        run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example probe
       - run: cargo llvm-cov report --fail-under-lines 95 --summary-only
 

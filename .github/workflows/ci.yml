@@ -24,12 +24,16 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
-      - name: The probe body is formatted too
-        run: rustfmt --check --edition 2024 crates/cp-mac/examples/probe/battery.rs
+      - name: The probe bodies are formatted too
+        run: rustfmt --check --edition 2024 crates/cp-mac/examples/probe/battery.rs crates/cp-win/examples/probe/battery.rs
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo run -p cp-mac --example probe
         if: runner.os == 'macOS'
+      - name: The probe reads a real clipboard, so leave something on it
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Set-Clipboard -Value "cp-probe"
       - run: cargo run -p cp-win --example probe
         if: runner.os == 'Windows'
 

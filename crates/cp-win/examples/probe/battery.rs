@@ -605,7 +605,9 @@ fn main() -> std::process::ExitCode {
         drop(watching);
 
         if after_ours != 0 {
-            return Err(format!("lo nuestro desperto al vigilante {after_ours} vez(ces)"));
+            return Err(format!(
+                "lo nuestro desperto al vigilante {after_ours} vez(ces)"
+            ));
         }
         if after_theirs == 0 {
             return Err("y entonces tampoco ve lo ajeno: la prueba no probaria nada".into());
