@@ -1,18 +1,9 @@
-/// Qué se guardó de un formato concreto.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Payload {
-    /// Cabe en la fila.
     Inline(Vec<u8>),
-    /// Va a disco, direccionado por contenido.
     Blob(Vec<u8>),
-    /// Existía y era demasiado grande. Se anota el tamaño y se dice en la
-    /// tarjeta: nunca un descarte silencioso.
     TooBig { size: usize },
-    /// La fuente lo ofrecía y no se le pidió, porque cuelga o porque
-    /// derrocha. El tamaño solo se conoce donde la plataforma lo regala.
     Announced { size: Option<usize> },
-    /// Se pidió y no entregó nada. Ocurre de verdad: medido el 12/09/2026,
-    /// `com.apple.linkpresentation.metadata` y `fndf` hacen exactamente esto.
     Absent,
 }
 
@@ -22,7 +13,6 @@ pub const BLOB_UP_TO: usize = 64 * 1024 * 1024;
 const _: () = assert!(INLINE_UP_TO < BLOB_UP_TO);
 const _: () = assert!(INLINE_UP_TO.is_power_of_two() && BLOB_UP_TO.is_power_of_two());
 
-/// Dónde acaba un payload, decidido solo por su tamaño.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Placement {
     Row,
@@ -39,7 +29,6 @@ pub fn placement(size: usize) -> Placement {
 }
 
 impl Payload {
-    /// Decide dónde va lo que ya se leyó.
     pub fn stored(bytes: Vec<u8>) -> Self {
         match placement(bytes.len()) {
             Placement::Row => Payload::Inline(bytes),
@@ -64,25 +53,17 @@ pub struct Format {
     pub payload: Payload,
 }
 
-/// Un ítem guarda **el conjunto** de formatos que la fuente ofreció. El tipo
-/// mostrado es una clasificación sobre ese conjunto, nunca una elección que
-/// descarte el resto.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
     pub kind: Option<crate::kind::Kind>,
     pub formats: Vec<Format>,
 }
 
-/// Identificador del único formato de un ítem que nadie capturó del sistema.
-/// No es un UTI ni un `CF_*`: nombrarlo con el de una plataforma haría que la
-/// identidad de un texto sintético dependiera de dónde se ejecuta.
 pub const SYNTHETIC_TEXT: &str = "text/plain";
 
+pub const SYNTHETIC_IMAGE: &str = "image/png";
+
 impl Item {
-    /// Un ítem de texto que no viene del portapapeles: el que se guarda desde
-    /// una prueba, un ejemplo o una importación. Su identidad **no** coincide
-    /// con la del mismo texto capturado de verdad, que llega acompañado de sus
-    /// otros formatos y con el identificador de la plataforma.
     pub fn plain(text: &str) -> Self {
         Self {
             kind: None,
@@ -93,12 +74,6 @@ impl Item {
         }
     }
 
-    /// Identidad del ítem por lo que **contiene**, no por cómo se muestra.
-    ///
-    /// Hashear el texto de vista previa parece equivalente y no lo es: el de
-    /// una imagen o un archivo es vacío o un nombre corto, así que dos
-    /// capturas de pantalla distintas darían la misma identidad y la
-    /// deduplicación tomaría la segunda por repetida.
     pub fn fingerprint(&self) -> u64 {
         let mut mixed: Vec<u8> = Vec::new();
         let mut ordered: Vec<&Format> = self.formats.iter().collect();
@@ -117,13 +92,10 @@ impl Item {
         crate::hash::content_hash(&mixed)
     }
 
-    /// Si alguno de sus formatos necesita el almacén de blobs, que todavía no
-    /// existe.
     pub fn needs_blob_store(&self) -> bool {
         self.oversized_format().is_some()
     }
 
-    /// El primer formato que no cabe en la fila, con su tamaño.
     pub fn oversized_format(&self) -> Option<(String, usize)> {
         self.formats.iter().find_map(|one| match &one.payload {
             Payload::Blob(bytes) => Some((one.id.clone(), bytes.len())),
@@ -135,7 +107,6 @@ impl Item {
         self.formats.iter().find(|one| one.id == id)
     }
 
-    /// Lo que de verdad ocupa, sin contar lo que no se guardó.
     pub fn stored_bytes(&self) -> usize {
         self.formats
             .iter()
@@ -331,21 +302,18 @@ mod properties {
     }
 
     proptest! {
-        /// Cuanto más grande, más lejos se guarda. Nunca al revés.
         #[test]
         fn bigger_never_lands_closer(a in 0usize..usize::MAX, b in 0usize..usize::MAX) {
             let (small, big) = if a <= b { (a, b) } else { (b, a) };
             prop_assert!(rank(placement(small)) <= rank(placement(big)));
         }
 
-        /// Lo que se guarda conserva su tamaño, esté donde esté.
         #[test]
         fn the_size_survives_the_decision(len in 0usize..200_000) {
             let payload = Payload::stored(vec![0u8; len]);
             prop_assert_eq!(payload.size(), Some(len));
         }
 
-        /// Solo lo que de verdad se guardó cuenta para el peso del ítem.
         #[test]
         fn only_real_bytes_are_counted(lens in prop::collection::vec(0usize..2000, 0..12)) {
             let expected: usize = lens.iter().sum();

@@ -1,0 +1,16 @@
+#![cfg(target_os = "windows")]
+
+pub mod clipboard;
+pub mod com;
+pub mod formats;
+pub mod frontmost;
+pub mod keystroke;
+pub mod media;
+pub mod ocr;
+pub mod paths;
+pub mod permissions;
+pub mod reading;
+pub mod source;
+pub mod thumbnail;
+pub mod window;
+pub mod writing;

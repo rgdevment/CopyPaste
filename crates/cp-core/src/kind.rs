@@ -1,9 +1,3 @@
-/// Lo que un ítem es, a ojos del producto.
-///
-/// La 2.x distingue trece tipos y de ellos vive el filtro por pestañas, así
-/// que la clasificación fina no es un adorno: perderla sería perder una vista
-/// entera de la interfaz. Se hereda la lista y se le añade el código, que la
-/// 2.x no reconoce.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Text,
@@ -43,8 +37,6 @@ impl Kind {
     }
 }
 
-/// Afina un texto plano. El orden importa: lo más específico primero, y las
-/// formas de una sola línea antes que las que admiten varias.
 pub fn classify_text(content: &str) -> Kind {
     let text = content.trim();
     if text.is_empty() {
@@ -81,7 +73,6 @@ pub fn classify_text(content: &str) -> Kind {
     Kind::Text
 }
 
-/// Un archivo, por su extensión. Una carpeta lo dice quien la lee.
 pub fn classify_file(name: &str, is_directory: bool) -> Kind {
     if is_directory {
         return Kind::Folder;
@@ -94,10 +85,11 @@ pub fn classify_file(name: &str, is_directory: bool) -> Kind {
         "mp3", "m4a", "aac", "wav", "aiff", "aif", "flac", "ogg", "opus", "wma",
     ];
     const VIDEO: &[&str] = &[
-        "mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "mpg", "mpeg",
+        "mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "mpg", "mpeg", "flv",
     ];
     const IMAGE: &[&str] = &[
         "png", "jpg", "jpeg", "gif", "webp", "heic", "heif", "tiff", "tif", "bmp", "svg", "avif",
+        "ico",
     ];
     if AUDIO.contains(&extension.as_str()) {
         return Kind::Audio;
@@ -115,9 +107,6 @@ fn is_email(text: &str) -> bool {
     let Some((user, host)) = text.split_once('@') else {
         return false;
     };
-    // Sin esta guarda `@ejemplo.test` pasaría: `all` sobre un usuario vacío
-    // devuelve cierto. Las otras dos que hubo aquí —dominio corto y segunda
-    // arroba— las cubren `host_ok` y `tld_ok`; `the_guards_that_were_here_were_redundant` lo prueba.
     if user.is_empty() {
         return false;
     }
@@ -137,7 +126,7 @@ fn is_email(text: &str) -> bool {
 
 fn is_url(text: &str) -> bool {
     const SCHEMES: &[&str] = &[
-        "http://", "https://", "ftp://", "ftps://", "file://", "ssh://",
+        "http://", "https://", "ftp://", "ftps://", "file://", "ssh://", "mailto:",
     ];
     if text.contains(char::is_whitespace) {
         return false;
@@ -217,9 +206,6 @@ fn is_json(text: &str) -> bool {
     balanced(text)
 }
 
-/// Sin traer un analizador entero: se comprueba que los delimitadores cierran
-/// y que las comillas están emparejadas, que es lo que separa un objeto real
-/// de un texto que empieza por llave.
 fn balanced(text: &str) -> bool {
     let mut stack = Vec::new();
     let mut in_string = false;
@@ -245,8 +231,6 @@ fn balanced(text: &str) -> bool {
     stack.is_empty() && !in_string
 }
 
-/// Heurística deliberadamente conservadora: es mejor llamar texto a un
-/// fragmento de código que llamar código a una frase.
 fn looks_like_code(text: &str) -> bool {
     const MARKERS: &[&str] = &[
         "fn ",
@@ -409,9 +393,6 @@ mod tests {
     }
 }
 
-/// Cada aserción de aquí abajo mató un mutante que sobrevivía a la batería
-/// anterior: la clase se reconocía, pero ninguna prueba distinguía el borde de
-/// la condición que la reconoce.
 #[cfg(test)]
 mod borders {
     use super::*;
@@ -495,6 +476,12 @@ mod borders {
     }
 
     #[test]
+    fn nothing_at_all_is_not_an_object() {
+        assert!(!is_json(""), "sin un primer carácter no hay delimitador");
+        assert!(is_json("{}"));
+    }
+
+    #[test]
     fn a_quote_inside_a_string_does_not_close_it() {
         assert!(balanced(r#"{"\""}"#), "la comilla escapada sigue dentro");
         assert!(!balanced(r#"{"a": {}"#), "queda una llave sin cerrar");
@@ -536,10 +523,6 @@ mod redundancy {
     }
 
     proptest! {
-        /// Dos mutantes sobrevivían a toda la batería porque las guardas que
-        /// mataban eran inalcanzables: un dominio de menos de tres caracteres
-        /// no puede tener a la vez nombre y extensión válidos, y una segunda
-        /// arroba cae siempre en la parte que `host_ok` o `tld_ok` rechazan.
         #[test]
         fn the_guards_that_were_here_were_redundant(text in ".{0,40}") {
             prop_assert_eq!(is_email(&text), with_the_old_guards(&text));
@@ -553,5 +536,73 @@ mod redundancy {
             let text = format!("{user}@{host}");
             prop_assert_eq!(is_email(&text), with_the_old_guards(&text));
         }
+    }
+}
+
+#[cfg(test)]
+mod inherited_from_2x {
+    use super::*;
+
+    #[test]
+    fn the_three_the_rewrite_had_dropped() {
+        assert_eq!(classify_file("video.flv", false), Kind::Video);
+        assert_eq!(classify_file("favicon.ico", false), Kind::Image);
+        assert_eq!(classify_text("mailto:alguien@ejemplo.test"), Kind::Link);
+    }
+
+    #[test]
+    fn what_the_rewrite_added_survives() {
+        for (name, kind) in [
+            ("captura.heic", Kind::Image),
+            ("captura.avif", Kind::Image),
+            ("pelicula.m4v", Kind::Video),
+            ("pelicula.mpeg", Kind::Video),
+            ("audio.opus", Kind::Audio),
+            ("audio.aiff", Kind::Audio),
+        ] {
+            assert_eq!(classify_file(name, false), kind, "«{name}»");
+        }
+    }
+
+    #[test]
+    fn a_bare_mail_scheme_is_not_a_link() {
+        assert_eq!(classify_text("mailto:"), Kind::Text);
+        assert_eq!(classify_text("MAILTO:alguien@ejemplo.test"), Kind::Link);
+    }
+
+    #[test]
+    fn an_address_without_the_scheme_is_still_an_address() {
+        assert_eq!(classify_text("alguien@ejemplo.test"), Kind::Email);
+    }
+
+    #[test]
+    fn a_windows_path_is_classified_by_its_last_segment() {
+        for (path, kind) in [
+            (r"C:\Users\ana\Imagenes\foto.PNG", Kind::Image),
+            (r"C:\fotos.2024\captura.jpg", Kind::Image),
+            (r"C:\version.1.2\programa", Kind::File),
+            (r"\servidor\compartido\clip.MKV", Kind::Video),
+            (r"C:\sin_extension", Kind::File),
+        ] {
+            assert_eq!(classify_file(path, false), kind, "«{path}»");
+        }
+    }
+
+    #[test]
+    fn a_folder_named_like_a_file_is_still_a_folder() {
+        assert_eq!(classify_file(r"C:\copias\respaldo.zip", true), Kind::Folder);
+        assert_eq!(classify_file("fotos.png", true), Kind::Folder);
+    }
+
+    #[test]
+    fn a_name_that_is_only_a_dot_has_no_extension() {
+        assert_eq!(classify_file(".png", false), Kind::Image);
+        assert_eq!(classify_file(".", false), Kind::File);
+        assert_eq!(classify_file("", false), Kind::File);
+    }
+
+    #[test]
+    fn a_local_windows_path_is_not_a_link() {
+        assert_eq!(classify_text(r"C:\Users\ana\documento.txt"), Kind::Text);
     }
 }
