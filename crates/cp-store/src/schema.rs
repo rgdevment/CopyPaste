@@ -99,6 +99,33 @@ pub fn create(db: &Connection) -> Result<()> {
             PRIMARY KEY (item_id, format)
         );
 
+        -- Lo que se deriva de un ítem y no es su contenido: dimensiones,
+        -- duración, tamaño, artista. Tabla y no columna JSON porque así se
+        -- puede filtrar e indexar por clave sin traer el módulo JSON.
+        CREATE TABLE IF NOT EXISTS item_meta (
+            item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+            key     TEXT    NOT NULL,
+            value   TEXT    NOT NULL,
+            PRIMARY KEY (item_id, key)
+        );
+
+        CREATE INDEX IF NOT EXISTS meta_by_key ON item_meta(key, value);
+
+        -- El enriquecimiento va en cola: reconocer texto, generar una
+        -- miniatura o leer la duración de un vídeo cuestan demasiado para el
+        -- camino de captura. Con su estado, para no reintentar en bucle lo
+        -- que siempre falla.
+        CREATE TABLE IF NOT EXISTS pending_work (
+            item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+            job         TEXT    NOT NULL,
+            attempts    INTEGER NOT NULL DEFAULT 0,
+            last_error  TEXT,
+            not_before  INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (item_id, job)
+        );
+
+        CREATE INDEX IF NOT EXISTS work_ready ON pending_work(job, not_before);
+
         CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
             search_text,
             search_label,
