@@ -176,6 +176,290 @@ fn main() -> std::process::ExitCode {
         }
     });
 
+    b.group("I · Volver al portapapeles");
+
+    b.case("I1", "un ítem vuelve con todos sus formatos", || {
+        pb.write_types(&[
+            ("public.utf8-plain-text", "texto plano"),
+            ("public.html", "<b>texto plano</b>"),
+        ]);
+        let captured = capture(&pb).ok_or("no se capturó")?;
+        let had = captured.formats.len();
+
+        // Se ensucia el portapapeles con otra cosa, como haría el usuario.
+        pb.write_text("algo distinto");
+
+        match cp_mac::restore::to_pasteboard(&pb, &captured) {
+            cp_mac::restore::Restored::Written { formats, .. } if formats >= 2 => {}
+            other => return Err(format!("restauró {other:?} de {had} formatos")),
+        }
+
+        let back = capture(&pb).ok_or("no se capturó lo restaurado")?;
+        let text = back
+            .format("public.utf8-plain-text")
+            .ok_or("falta el texto")?;
+        if text.payload != Payload::Inline(b"texto plano".to_vec()) {
+            return Err(format!("el texto volvió como {:?}", text.payload));
+        }
+        if back.format("public.html").is_none() {
+            return Err("el HTML no volvió: pegarlo perdería los estilos".into());
+        }
+        Ok(())
+    });
+
+    b.case("I2", "una imagen vuelve entera", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("falta el fixture: {why}"))?;
+        let item = cp_core::item::Item {
+            kind: Some(Kind::Image),
+            formats: vec![cp_core::item::Format {
+                id: "public.png".into(),
+                payload: cp_core::item::Payload::Blob(png.clone()),
+            }],
+        };
+        pb.write_text("otra cosa");
+        match cp_mac::restore::to_pasteboard(&pb, &item) {
+            cp_mac::restore::Restored::Written { .. } => {}
+            other => return Err(format!("no se restauró: {other:?}")),
+        }
+        let back = pb.data("public.png").ok_or("no volvió el png")?;
+        if back.len() != png.len() {
+            return Err(format!("volvieron {} bytes de {}", back.len(), png.len()));
+        }
+        Ok(())
+    });
+
+    b.case(
+        "I3",
+        "un ítem sin bytes lo dice en vez de vaciar el portapapeles",
+        || {
+            let hollow = cp_core::item::Item {
+                kind: None,
+                formats: vec![cp_core::item::Format {
+                    id: "com.apple.icns".into(),
+                    payload: cp_core::item::Payload::Announced { size: Some(10) },
+                }],
+            };
+            pb.write_text("lo que había antes");
+            match cp_mac::restore::to_pasteboard(&pb, &hollow) {
+                cp_mac::restore::Restored::NothingToWrite => {}
+                other => return Err(format!("devolvió {other:?}")),
+            }
+            let kept = pb
+                .data("public.utf8-plain-text")
+                .and_then(|bytes| String::from_utf8(bytes).ok())
+                .unwrap_or_default();
+            if kept != "lo que había antes" {
+                return Err("se perdió lo que el usuario tenía copiado".into());
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
+        "I4",
+        "restaurar avisa si el ítem estaba incompleto",
+        || {
+            let partial = cp_core::item::Item {
+                kind: Some(Kind::Text),
+                formats: vec![
+                    cp_core::item::Format {
+                        id: "public.utf8-plain-text".into(),
+                        payload: cp_core::item::Payload::Inline(b"algo".to_vec()),
+                    },
+                    cp_core::item::Format {
+                        id: "public.tiff".into(),
+                        payload: cp_core::item::Payload::Announced { size: Some(999) },
+                    },
+                ],
+            };
+            match cp_mac::restore::to_pasteboard(&pb, &partial) {
+                cp_mac::restore::Restored::Written {
+                    formats: 1,
+                    incomplete: true,
+                } => Ok(()),
+                other => Err(format!("devolvió {other:?}")),
+            }
+        },
+    );
+
+    b.group("J · Archivos que ya no están");
+
+    b.case("J1", "una ruta que existe no se marca como rota", || {
+        let path = std::env::temp_dir().join("cp-probe-existe.txt");
+        std::fs::write(&path, b"aqui estoy").map_err(|why| why.to_string())?;
+        let url = format!("file://{}", path.display());
+        let missing = frontmost::missing_paths(&url);
+        std::fs::remove_file(&path).ok();
+        if !missing.is_empty() {
+            return Err(format!("dijo que faltaba: {missing:?}"));
+        }
+        Ok(())
+    });
+
+    b.case("J2", "una ruta borrada se detecta", || {
+        let path = std::env::temp_dir().join("cp-probe-borrado.txt");
+        std::fs::write(&path, "efimero".as_bytes()).map_err(|why| why.to_string())?;
+        let url = format!("file://{}", path.display());
+        std::fs::remove_file(&path).map_err(|why| why.to_string())?;
+        let missing = frontmost::missing_paths(&url);
+        if missing.len() != 1 {
+            return Err("no se enteró de que el archivo ya no está".into());
+        }
+        Ok(())
+    });
+
+    b.case("J3", "de tres archivos se dice cuál falta", || {
+        let dir = std::env::temp_dir();
+        let uno = dir.join("cp-probe-uno.txt");
+        let dos = dir.join("cp-probe-dos.txt");
+        std::fs::write(&uno, b"a").map_err(|why| why.to_string())?;
+        std::fs::write(&dos, b"b").map_err(|why| why.to_string())?;
+        let urls = format!(
+            "file://{}\nfile://{}\nfile://{}",
+            uno.display(),
+            dos.display(),
+            dir.join("cp-probe-fantasma.txt").display()
+        );
+        let missing = frontmost::missing_paths(&urls);
+        std::fs::remove_file(&uno).ok();
+        std::fs::remove_file(&dos).ok();
+        if missing.len() != 1 || !missing[0].contains("fantasma") {
+            return Err(format!("dijo que faltaban: {missing:?}"));
+        }
+        Ok(())
+    });
+
+    b.case("J4", "una ruta con espacios y acentos se entiende", || {
+        let path = std::env::temp_dir().join("cp probe ñandú.txt");
+        std::fs::write(&path, b"con acentos").map_err(|why| why.to_string())?;
+        let encoded = format!(
+            "file://{}",
+            path.display()
+                .to_string()
+                .replace(' ', "%20")
+                .replace('ñ', "%C3%B1")
+                .replace('ú', "%C3%BA")
+        );
+        let missing = frontmost::missing_paths(&encoded);
+        std::fs::remove_file(&path).ok();
+        if !missing.is_empty() {
+            return Err("una ruta escapada se tomó por inexistente".into());
+        }
+        Ok(())
+    });
+
+    b.group("K · Origen");
+
+    b.case(
+        "K1",
+        "la aplicación de origen se guarda con su nombre visible",
+        || {
+            let (pid, bundle) = frontmost::frontmost().ok_or("nadie al frente")?;
+            let name = frontmost::app_name(pid).ok_or("sin nombre visible")?;
+            if name.is_empty() {
+                return Err("el nombre llegó vacío".into());
+            }
+            if Some(name.as_str()) == bundle.as_deref() {
+                return Err(format!("«{name}» es el identificador, no el nombre"));
+            }
+
+            let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
+            let id = store
+                .insert_text("uuid-origen", "algo copiado", 1)
+                .map_err(|why| why.to_string())?;
+            store
+                .set_source(id, &name, 2)
+                .map_err(|why| why.to_string())?;
+            let found = store.search(&name).map_err(|why| why.to_string())?;
+            if found.len() != 1 {
+                return Err(format!("buscando «{name}» salieron {} ítems", found.len()));
+            }
+            Ok(())
+        },
+    );
+
+    b.group("L · Miniaturas y medios");
+
+    b.case(
+        "L1",
+        "una captura da sus dimensiones sin decodificarse",
+        || {
+            let png = std::fs::read("fixtures/texto-en-imagen.png")
+                .map_err(|why| format!("falta el fixture: {why}"))?;
+            let size = cp_core::thumbnail::size_of(&png).ok_or("no se leyó el tamaño")?;
+            // El fixture se dibujó a 720×160 puntos en una pantalla Retina,
+            // así que el archivo tiene el doble de píxeles. Lo que se guarda
+            // y lo que se enseña son cosas distintas; esto es lo que se guarda.
+            if size.width != 1440 || size.height != 320 {
+                return Err(format!("dijo {}×{}", size.width, size.height));
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
+        "L2",
+        "la miniatura pesa mucho menos y guarda la proporción",
+        || {
+            let png = std::fs::read("fixtures/texto-en-imagen.png")
+                .map_err(|why| format!("falta el fixture: {why}"))?;
+            let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
+                .ok_or("no se generó")?;
+            let size = cp_core::thumbnail::size_of(&thumb).ok_or("sin tamaño")?;
+            if size.width != cp_core::thumbnail::MAX_SIDE {
+                return Err(format!("el lado mayor quedó en {}", size.width));
+            }
+            if thumb.len() >= png.len() {
+                return Err(format!("pesa {} frente a {}", thumb.len(), png.len()));
+            }
+            Ok(())
+        },
+    );
+
+    b.case("L3", "la miniatura va al almacén y vuelve", || {
+        let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", pb.change_count()));
+        let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("falta el fixture: {why}"))?;
+        let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
+            .ok_or("no se generó")?;
+        let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
+        let back = blobs
+            .get(&digest)
+            .map_err(|why| why.to_string())?
+            .ok_or("no volvió")?;
+        std::fs::remove_dir_all(&dir).ok();
+        if back != thumb {
+            return Err("la miniatura volvió distinta".into());
+        }
+        Ok(())
+    });
+
+    b.case(
+        "L4",
+        "un archivo que no es medio no inventa metadatos",
+        || {
+            let path = std::env::temp_dir().join("cp-probe-no-media.txt");
+            std::fs::write(&path, b"solo texto").map_err(|why| why.to_string())?;
+            let info = cp_mac_sys::media::info_for(&path);
+            std::fs::remove_file(&path).ok();
+            match info {
+                None => Ok(()),
+                Some(found) if found.duration.is_none() => Ok(()),
+                Some(found) => Err(format!("se inventó {found:?}")),
+            }
+        },
+    );
+
+    b.case("L5", "una ruta inexistente no es un medio", || {
+        let ghost = std::env::temp_dir().join("cp-probe-no-existe.mp4");
+        if cp_mac_sys::media::info_for(&ghost).is_some() {
+            return Err("devolvió datos de algo que no está".into());
+        }
+        Ok(())
+    });
+
     b.group("G · Clasificación");
 
     for (id, text, expected) in [

@@ -13,6 +13,54 @@ pub fn frontmost() -> Option<(i32, Option<String>)> {
     Some((pid, bundle))
 }
 
+/// El nombre que el usuario ve, no el identificador.
+///
+/// Es «Safari», no «com.apple.Safari». Guardar el bundle y enseñárselo a
+/// alguien que escribe «safari» en el buscador sería no encontrarlo.
+pub fn app_name(pid: i32) -> Option<String> {
+    let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid)?;
+    app.localizedName().map(|name| name.to_string())
+}
+
+/// Si las rutas de un ítem de archivos siguen existiendo.
+///
+/// Copiar la ruta de algo que después se mueve o se borra es corriente, y la
+/// diferencia entre un historial útil y uno que miente es avisar de ello.
+pub fn missing_paths(file_urls: &str) -> Vec<String> {
+    file_urls
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .filter(|url| {
+            let path = url
+                .strip_prefix("file://")
+                .map(percent_decoded)
+                .unwrap_or_else(|| (*url).to_string());
+            !std::path::Path::new(&path).exists()
+        })
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Las rutas llegan con los espacios y los acentos escapados.
+fn percent_decoded(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut at = 0;
+    while at < bytes.len() {
+        if bytes[at] == b'%' && at + 2 < bytes.len() {
+            let pair = std::str::from_utf8(&bytes[at + 1..at + 3]).ok();
+            if let Some(byte) = pair.and_then(|hex| u8::from_str_radix(hex, 16).ok()) {
+                out.push(byte);
+                at += 3;
+                continue;
+            }
+        }
+        out.push(bytes[at]);
+        at += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 /// El pid de este proceso, para que el seguidor sepa a quién ignorar.
 pub fn our_pid() -> i32 {
     std::process::id() as i32

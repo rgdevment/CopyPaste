@@ -96,6 +96,19 @@ impl Pasteboard {
         self.inner.setData_forType(Some(&data), &name)
     }
 
+    /// Escribe varios formatos del **mismo** ítem, en una sola operación.
+    ///
+    /// Uno por uno no vale: cada `clearContents` empieza de cero y dejaría el
+    /// portapapeles con el último formato escrito en lugar de con el conjunto.
+    pub fn write_all(&self, entries: &[(&str, &[u8])]) -> bool {
+        self.inner.clearContents();
+        entries.iter().all(|(uti, bytes)| {
+            let name = NSString::from_str(uti);
+            let data = objc2_foundation::NSData::with_bytes(bytes);
+            self.inner.setData_forType(Some(&data), &name)
+        })
+    }
+
     pub fn write_text(&self, text: &str) -> bool {
         self.inner.clearContents();
         let name = NSString::from_str("public.utf8-plain-text");

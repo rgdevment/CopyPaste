@@ -11,6 +11,7 @@ publish = false
 thiserror.workspace = true
 unicode-normalization.workspace = true
 xxhash-rust.workspace = true
+image.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
