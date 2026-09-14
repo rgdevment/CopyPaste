@@ -13,6 +13,10 @@ pub enum Error {
     /// todavía no existe. Se rechaza en vez de guardar la fila sin sus bytes.
     #[error("«{format}» ocupa {size} bytes y el almacén de blobs no existe todavía")]
     NeedsBlobStore { format: String, size: usize },
+    #[error("el archivo: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("la base es de la versión {found} y esta copia entiende hasta la {supported}")]
+    FromTheFuture { found: u32, supported: u32 },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -33,6 +33,41 @@ impl Store {
         Ok(Self { db })
     }
 
+    /// Abre —o crea— la base en disco.
+    ///
+    /// El archivo se crea con permisos `0600` y su carpeta con `0700`: un
+    /// historial de portapapeles es de los archivos más sensibles de una
+    /// cuenta, y en un equipo compartido el resto de usuarios no tiene por
+    /// qué poder leerlo.
+    pub fn open(path: &std::path::Path) -> Result<Self> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(Error::Io)?;
+            restrict(parent, 0o700)?;
+        }
+        let db = Connection::open(path)?;
+        crate::schema::create(&db)?;
+        crate::schema::migrate(&db)?;
+        restrict(path, 0o600)?;
+        Ok(Self { db })
+    }
+
+    /// Vuelca el WAL al archivo principal.
+    ///
+    /// Sin esto, lo recién escrito vive en el `-wal` y una copia del archivo
+    /// principal sale incompleta: es la trampa que la 2.x documenta en su
+    /// servicio de copia de seguridad.
+    pub fn checkpoint(&self) -> Result<()> {
+        self.db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
+        Ok(())
+    }
+
+    /// Recupera espacio de las páginas liberadas, poco a poco.
+    pub fn vacuum_step(&self, pages: u32) -> Result<()> {
+        self.db
+            .execute_batch(&format!("PRAGMA incremental_vacuum({pages});"))?;
+        Ok(())
+    }
+
     /// El texto se normaliza **al escribir**, con la misma función que
     /// normaliza el término al buscar. Ese es el invariante que hoy falta: la
     /// 2.x normaliza solo el término, así que `Straße` no se encuentra ni
@@ -296,6 +331,13 @@ impl Store {
         )?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
+}
+
+/// Ajusta los permisos de un archivo o carpeta a lo que se le pide.
+fn restrict(path: &std::path::Path, mode: u32) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let permissions = std::fs::Permissions::from_mode(mode);
+    std::fs::set_permissions(path, permissions).map_err(Error::Io)
 }
 
 #[cfg(test)]
@@ -988,6 +1030,88 @@ mod tests {
         assert!(
             store.search("recuperacion").expect("consulta").is_empty(),
             "lo leído dentro de la imagen también es contenido del usuario"
+        );
+    }
+
+    #[test]
+    fn what_is_written_survives_closing_the_application() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("sub").join("history.db");
+
+        {
+            let store = Store::open(&path).expect("abre");
+            store
+                .insert_text("uuid-persiste", "sobrevive", 1)
+                .expect("insert");
+            store.checkpoint().expect("checkpoint");
+        }
+
+        let reopened = Store::open(&path).expect("reabre");
+        assert_eq!(reopened.count().expect("cuenta"), 1);
+        assert_eq!(
+            reopened.search("sobrevive").expect("consulta").len(),
+            1,
+            "y el índice también sobrevive"
+        );
+    }
+
+    #[test]
+    fn the_history_is_not_readable_by_other_users() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("datos").join("history.db");
+        let store = Store::open(&path).expect("abre");
+        store
+            .insert_text("uuid-privado", "contraseña", 1)
+            .expect("insert");
+        drop(store);
+
+        let file = std::fs::metadata(&path)
+            .expect("archivo")
+            .permissions()
+            .mode()
+            & 0o777;
+        let folder = std::fs::metadata(path.parent().expect("padre"))
+            .expect("carpeta")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(file, 0o600, "solo su dueño");
+        assert_eq!(folder, 0o700, "y la carpeta igual");
+    }
+
+    #[test]
+    fn a_checkpoint_leaves_the_data_in_the_main_file() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("history.db");
+        let store = Store::open(&path).expect("abre");
+        for at in 0..50 {
+            store
+                .insert_text(&format!("uuid-{at}"), &format!("linea {at}"), at)
+                .expect("insert");
+        }
+        store.checkpoint().expect("checkpoint");
+        let wal = path.with_extension("db-wal");
+        let wal_size = std::fs::metadata(&wal).map(|m| m.len()).unwrap_or(0);
+        assert!(
+            wal_size == 0 || !wal.exists(),
+            "tras el checkpoint el WAL queda vacío, no con {wal_size} bytes"
+        );
+    }
+
+    #[test]
+    fn reopening_keeps_the_pragmas_that_protect_the_data() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("history.db");
+        drop(Store::open(&path).expect("abre"));
+        let store = Store::open(&path).expect("reabre");
+        let vacuum: i64 = store
+            .db
+            .query_row("PRAGMA auto_vacuum", [], |row| row.get(0))
+            .expect("consulta");
+        assert_eq!(
+            vacuum, 2,
+            "el modo se guarda en el archivo y debe seguir ahí"
         );
     }
 

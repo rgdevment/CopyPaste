@@ -2,6 +2,31 @@ use rusqlite::{Connection, Result};
 
 pub const SCHEMA_VERSION: u32 = 1;
 
+/// Lleva la base a la versión que esta copia entiende.
+///
+/// `user_version` es un entero que SQLite guarda en la cabecera del archivo y
+/// que no cuesta nada leer. La 2.x llegó a la versión 4 de su esquema con
+/// cuatro migraciones, así que esto va a hacer falta: montarlo ahora, cuando
+/// no hay nada que migrar, es gratis.
+pub fn migrate(db: &Connection) -> crate::Result<()> {
+    let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if found > SCHEMA_VERSION {
+        // Una base escrita por una versión más nueva no se toca: abrirla y
+        // «arreglarla» es la forma más rápida de destrozar el historial de
+        // alguien que alterna dos instalaciones.
+        return Err(crate::Error::FromTheFuture {
+            found,
+            supported: SCHEMA_VERSION,
+        });
+    }
+    if found < SCHEMA_VERSION {
+        // Aquí irán los pasos, uno por versión. Hoy no hay ninguno: la
+        // primera versión la crea `create`.
+        db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))?;
+    }
+    Ok(())
+}
+
 /// Ajustes de la conexión, en el orden en que hay que darlos.
 ///
 /// `auto_vacuum` es el que tiene trampa: **SQLite lo ignora en silencio si la
@@ -131,6 +156,38 @@ mod tests {
             .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
             .expect("consulta");
         assert_eq!(foreign, 1, "sin esto la cascada de formatos no ocurre");
+    }
+
+    #[test]
+    fn a_fresh_database_is_stamped_with_its_version() {
+        let db = Connection::open_in_memory().expect("abre");
+        create(&db).expect("esquema");
+        migrate(&db).expect("migra");
+        let version: u32 = db
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("consulta");
+        assert_eq!(version, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn a_database_from_the_future_is_refused_not_repaired() {
+        let db = Connection::open_in_memory().expect("abre");
+        create(&db).expect("esquema");
+        db.execute_batch("PRAGMA user_version = 99;")
+            .expect("sella");
+        let refused = migrate(&db);
+        assert!(
+            matches!(refused, Err(crate::Error::FromTheFuture { found: 99, .. })),
+            "abrir y «arreglar» una base más nueva destroza el historial"
+        );
+    }
+
+    #[test]
+    fn migrating_twice_changes_nothing() {
+        let db = Connection::open_in_memory().expect("abre");
+        create(&db).expect("esquema");
+        migrate(&db).expect("primera");
+        migrate(&db).expect("segunda");
     }
 
     #[test]

@@ -5,5 +5,6 @@ pub mod keyboard;
 pub mod keystroke;
 pub mod ocr;
 pub mod pasteboard;
+pub mod paths;
 pub mod permissions;
 pub mod runloop;
