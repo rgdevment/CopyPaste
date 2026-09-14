@@ -11,11 +11,11 @@ use cp_win::watching::Watching;
 use cp_win_sys::clipboard::{self, Clipboard};
 use cp_win_sys::formats::{CF_UNICODETEXT, name_of};
 use cp_win_sys::frontmost::{self, Target};
-use cp_win_sys::ocr;
 use cp_win_sys::permissions::Readiness;
 use cp_win_sys::reading::{self, PATIENCE, Reading};
 use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
+use cp_win_sys::{media, ocr, thumbnail};
 
 struct Battery {
     passed: u32,
@@ -687,6 +687,56 @@ fn main() -> std::process::ExitCode {
             Some(invented) => Err(format!("se inventó «{invented}»")),
         }
     });
+
+    b.group("N · Miniaturas y medios por el shell");
+
+    b.case(
+        "N1",
+        "el shell da miniatura de una imagen del disco",
+        || {
+            let png = std::path::Path::new("fixtures/texto-en-imagen.png");
+            let started = std::time::Instant::now();
+            let dib = thumbnail::dib_of_file(png, thumbnail::SIDE)
+                .ok_or("el shell no devolvió miniatura")?;
+            let took = started.elapsed();
+            let small = cp_core::dib::to_png(&dib).ok_or("el DIB no se pudo convertir")?;
+            let original = std::fs::metadata(png).map_err(|why| why.to_string())?.len();
+            println!(
+                "            {took:?}, {} B de miniatura contra {original} del original",
+                small.len()
+            );
+            if small.len() as u64 >= original {
+                return Err("la miniatura no es más pequeña que el original".into());
+            }
+            Ok(())
+        },
+    );
+
+    b.case("N2", "lo que no tiene miniatura no inventa uno", || {
+        let dir = std::env::temp_dir().join("cp-sin-miniatura");
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        let path = dir.join("vacio.bin");
+        std::fs::write(&path, b"   ").map_err(|why| why.to_string())?;
+        match thumbnail::dib_of_file(&path, thumbnail::SIDE) {
+            None => Ok(()),
+            Some(_) => Err("devolvió algo para un archivo sin vista previa".into()),
+        }
+    });
+
+    b.case(
+        "N3",
+        "un archivo sin metadatos de medios no los inventa",
+        || {
+            let dir = std::env::temp_dir().join("cp-sin-medios");
+            std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+            let path = dir.join("nota.txt");
+            std::fs::write(&path, b"solo texto").map_err(|why| why.to_string())?;
+            match media::info_for(&path) {
+                None => Ok(()),
+                Some(info) => Err(format!("se inventó {info:?}")),
+            }
+        },
+    );
 
     b.group("C · Los formatos que cuelgan no se piden");
 
