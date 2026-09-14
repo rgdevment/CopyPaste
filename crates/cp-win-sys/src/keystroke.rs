@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(
             control,
             [true, false, true],
-            "suelta, pulsa y vuelve a soltar"
+            "suelta, presiona y vuelve a soltar"
         );
     }
 

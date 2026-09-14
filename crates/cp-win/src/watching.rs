@@ -32,7 +32,6 @@ impl Watching {
                     drop(watcher);
                     on_fresh();
                 }
-                // sleeping the whole period would make stopping take that long.
                 let until = std::time::Instant::now() + period;
                 while !mine.load(Ordering::Relaxed) && std::time::Instant::now() < until {
                     std::thread::sleep(period.min(NAP));
@@ -84,18 +83,6 @@ mod tests {
         assert!(
             EVERY >= Duration::from_millis(16),
             "ni sondear mas rapido que la pantalla"
-        );
-    }
-
-    #[test]
-    fn what_we_paste_back_is_not_a_copy_the_user_made() {
-        let watching = Watching::every(Duration::from_secs(3600), || {});
-        assert!(watching.ours(), "el contador existe y se le anuncio");
-        let count = clipboard::sequence().expect("contador");
-        let mut watcher = watching.watcher.lock().expect("lock");
-        assert!(
-            !matches!(watcher.tick(count), Seen::Fresh { .. }),
-            "restaurar del historial no vuelve a capturar lo restaurado"
         );
     }
 

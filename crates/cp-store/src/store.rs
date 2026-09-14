@@ -254,7 +254,6 @@ impl Store {
 
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
         self.erase(id, at)?;
-        // secure_delete does not reach the WAL: what was erased stays readable until this.
         self.checkpoint()
     }
 

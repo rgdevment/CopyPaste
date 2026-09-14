@@ -31,7 +31,6 @@ impl Paster {
         let started = std::time::Instant::now();
         let mut attempt = Attempt::default();
 
-        // CGEventPost drops the event silently without the permission, reporting success.
         if !permissions::can_post_events() {
             return Outcome::Degraded(Failure::SendDenied);
         }

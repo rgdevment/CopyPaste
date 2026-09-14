@@ -45,14 +45,14 @@ jobs:
       - name: No voseo in the Spanish anywhere
         run: |
           if grep -rniE '\b(vos|tenés|querés|podés|andá|mirá|hacé|che)\b' \
-               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
+               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
             echo "espanol neutro, sin voseo"; exit 1
           fi
 
       - name: No peninsular Spanish in what a person reads
         run: |
           if grep -rniE '\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b' \
-               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
+               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
             echo "espanol neutro: archivo, computador, presiona"; exit 1
           fi
 
