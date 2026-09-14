@@ -24,20 +24,19 @@ pub fn dib_of_file(path: &std::path::Path, side: i32) -> Option<Vec<u8>> {
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();
-    // SAFETY: the string is null terminated and outlives the call.
+
     let factory: IShellItemImageFactory =
         unsafe { SHCreateItemFromParsingName(PCWSTR(wide.as_ptr()), None) }.ok()?;
     let wanted = windows::Win32::Foundation::SIZE { cx: side, cy: side };
 
-    // SAFETY: the factory is alive and the bitmap is released below.
     let cached = unsafe { factory.GetImage(wanted, SIIGBF_THUMBNAILONLY | SIIGBF_INCACHEONLY) };
     let bitmap = match cached {
         Ok(bitmap) => bitmap,
-        // SAFETY: same factory, asking the shell to build the entry this time.
+
         Err(_) => unsafe { factory.GetImage(wanted, SIIGBF_THUMBNAILONLY) }.ok()?,
     };
     let dib = as_dib(bitmap, side);
-    // SAFETY: the bitmap came from GetImage and is released once.
+
     let _ = unsafe { DeleteObject(bitmap.into()) };
     dib
 }
@@ -45,7 +44,7 @@ pub fn dib_of_file(path: &std::path::Path, side: i32) -> Option<Vec<u8>> {
 fn as_dib(bitmap: HBITMAP, side: i32) -> Option<Vec<u8>> {
     let mut shape = BITMAP::default();
     let wrote = i32::try_from(std::mem::size_of::<BITMAP>()).ok()?;
-    // SAFETY: the struct is the size declared and the bitmap is alive.
+
     let read = unsafe { GetObjectW(bitmap.into(), wrote, Some((&raw mut shape).cast())) };
     if read == 0 || is_an_icon(shape.bmWidth, shape.bmHeight, side) {
         return None;
@@ -69,9 +68,9 @@ fn as_dib(bitmap: HBITMAP, side: i32) -> Option<Vec<u8>> {
     };
 
     let mut dib = vec![0u8; std::mem::size_of::<BITMAPINFOHEADER>() + pixels];
-    // SAFETY: a screen device context, released below.
+
     let screen = unsafe { GetDC(None) };
-    // SAFETY: the buffer holds the size the header declares.
+
     let lines = unsafe {
         GetDIBits(
             screen,
@@ -87,12 +86,12 @@ fn as_dib(bitmap: HBITMAP, side: i32) -> Option<Vec<u8>> {
             DIB_RGB_COLORS,
         )
     };
-    // SAFETY: pairs with the GetDC above.
+
     unsafe { ReleaseDC(None, screen) };
     if lines == 0 {
         return None;
     }
-    // SAFETY: the header is a plain struct of the size declared.
+
     let header = unsafe {
         std::slice::from_raw_parts(
             (&raw const info.bmiHeader).cast::<u8>(),

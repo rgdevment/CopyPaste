@@ -68,7 +68,7 @@ pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();
-    // SAFETY: the string is null terminated and outlives the call.
+
     let store: IPropertyStore =
         unsafe { SHGetPropertyStoreFromParsingName(PCWSTR(wide.as_ptr()), None, GPS_DEFAULT) }
             .ok()?;
@@ -86,7 +86,6 @@ pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
 }
 
 fn value_of(store: &IPropertyStore, key: PROPERTYKEY) -> Option<PROPVARIANT> {
-    // SAFETY: the key is a constant and the value is cleared by its own Drop.
     unsafe { store.GetValue(&key) }.ok()
 }
 
@@ -110,14 +109,14 @@ fn number(store: &IPropertyStore, key: PROPERTYKEY) -> Option<u32> {
 
 fn text(store: &IPropertyStore, key: PROPERTYKEY) -> Option<String> {
     let value = value_of(store, key)?;
-    // SAFETY: the allocation is handed back to the system below.
+
     let raw = unsafe { PropVariantToStringAlloc(&value) }.ok()?;
     if raw.is_null() {
         return None;
     }
-    // SAFETY: the system returned a null terminated string.
+
     let text = unsafe { raw.to_string() }.ok();
-    // SAFETY: pairs with the allocation above.
+
     unsafe { CoTaskMemFree(Some(raw.as_ptr().cast())) };
     text.filter(|text| !text.trim().is_empty())
 }

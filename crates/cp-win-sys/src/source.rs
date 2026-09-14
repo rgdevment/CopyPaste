@@ -6,17 +6,16 @@ use windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId;
 
 pub fn process_of(window: HWND) -> Option<u32> {
     let mut pid = 0u32;
-    // SAFETY: the out parameter points at a live local.
+
     let thread = unsafe { GetWindowThreadProcessId(window, Some(&mut pid)) };
     (thread != 0 && pid != 0).then_some(pid)
 }
 
 pub fn name_of(pid: u32) -> Option<String> {
-    // SAFETY: the handle is closed below on every path.
     let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) }.ok()?;
     let mut buffer = [0u16; MAX_PATH as usize];
     let mut written = buffer.len() as u32;
-    // SAFETY: the buffer is live and its length is passed by reference as declared.
+
     let queried = unsafe {
         QueryFullProcessImageNameW(
             process,
@@ -25,7 +24,7 @@ pub fn name_of(pid: u32) -> Option<String> {
             &mut written,
         )
     };
-    // SAFETY: pairs with the OpenProcess above.
+
     let _ = unsafe { CloseHandle(process) };
     queried.ok()?;
     let path = String::from_utf16_lossy(&buffer[..written as usize]);

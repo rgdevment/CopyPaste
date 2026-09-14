@@ -13,7 +13,7 @@ pub struct EditWindow {
 impl EditWindow {
     pub fn open(title: &str) -> Option<Self> {
         let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
-        // SAFETY: the class is a system one and both strings outlive the call.
+
         let window = unsafe {
             CreateWindowExW(
                 WINDOW_EX_STYLE(0),
@@ -33,9 +33,9 @@ impl EditWindow {
             )
         }
         .ok()?;
-        // SAFETY: the window was just created and is still ours.
+
         let _ = unsafe { ShowWindow(window, SW_SHOW) };
-        // SAFETY: the value is not to be trusted; callers check who is in front.
+
         let _ = unsafe { SetForegroundWindow(window) };
         Some(Self { window })
     }
@@ -48,11 +48,10 @@ impl EditWindow {
         let until = std::time::Instant::now() + how_long;
         while std::time::Instant::now() < until {
             let mut message = MSG::default();
-            // SAFETY: the out parameter points at a live local.
+
             while unsafe { PeekMessageW(&mut message, None, 0, 0, PM_REMOVE) }.as_bool() {
-                // SAFETY: the message was just filled by PeekMessage.
                 let _ = unsafe { TranslateMessage(&message) };
-                // SAFETY: same message, still live.
+
                 unsafe { DispatchMessageW(&message) };
             }
             std::thread::sleep(std::time::Duration::from_millis(4));
@@ -60,7 +59,6 @@ impl EditWindow {
     }
 
     pub fn text(&self) -> String {
-        // SAFETY: the window is alive for as long as this value is.
         let length = unsafe { SendMessageW(self.window, WM_GETTEXTLENGTH, None, None) }.0;
         let Ok(length) = usize::try_from(length) else {
             return String::new();
@@ -69,7 +67,7 @@ impl EditWindow {
             return String::new();
         }
         let mut buffer = vec![0u16; length + 1];
-        // SAFETY: the buffer holds the length just reported plus the terminator.
+
         let read = unsafe {
             SendMessageW(
                 self.window,
@@ -86,7 +84,6 @@ impl EditWindow {
 
 impl Drop for EditWindow {
     fn drop(&mut self) {
-        // SAFETY: the window was created here and is destroyed once.
         let _ = unsafe { DestroyWindow(self.window) };
     }
 }

@@ -1,22 +1,7 @@
-# Un mutante equivalente no es un hueco de cobertura: es código que se puede
-# escribir de dos formas con el mismo comportamiento. Excluirlo es honesto solo
-# si está demostrado y si algo avisa cuando deje de serlo.
-#
-# `of_image` decide escalar con `longest_side > max_side`. El único caso donde
-# `>` y `>=` discrepan es cuando el lado mayor vale exactamente `max_side`, y
-# ahí el ratio interno de `image::thumbnail` es 1: devuelve la imagen sin tocar
-# un solo píxel. Lo prueba `scaling_to_the_size_it_already_has_changes_nothing`,
-# que falla si una versión futura de `image` cambia ese comportamiento.
+
+
 exclude_re = ["replace > with >= in of_image"]
 
-# Los cuatro modulos de cp-win que hablan con el portapapeles quedan fuera. No
-# es cobertura que falte: el portapapeles es un recurso global unico, y una
-# prueba que lo toque compite con las demas bajo el paralelismo de cargo. Su
-# comportamiento se verifica en la bateria (`cargo run -p cp-win --example
-# probe`), que corre en serie, y por eso ninguna prueba unitaria puede
-# distinguir estos mutantes. Medido el 14/09/2026: 455 muertos, 37 vivos, y los
-# 37 estaban aqui. Si alguno de estos archivos gana logica pura, sacala a un
-# modulo propio antes que ampliar esta lista.
 exclude_globs = [
     "crates/cp-win/src/capture.rs",
     "crates/cp-win/src/paste.rs",

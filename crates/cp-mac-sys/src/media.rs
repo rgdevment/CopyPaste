@@ -32,12 +32,11 @@ pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
     }
     let text = NSString::from_str(path.to_str()?);
     let url = NSURL::fileURLWithPath(&text);
-    // SAFETY: the URL is valid and omitting options uses the defaults.
+
     let asset = unsafe { AVURLAsset::URLAssetWithURL_options(&url, None) };
 
     let mut info = MediaInfo::default();
 
-    // SAFETY: the asset is alive; returns a struct by value.
     let duration = unsafe { asset.duration() };
     if duration.timescale != 0 {
         let seconds = duration.value as f64 / duration.timescale as f64;
@@ -46,10 +45,8 @@ pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
         }
     }
 
-    // SAFETY: the asset is alive while its tracks are walked.
     let tracks = unsafe { asset.tracks() };
     for track in tracks.iter() {
-        // SAFETY: the track belongs to the array, still alive.
         let size = unsafe { track.naturalSize() };
         if size.width >= 1.0 && size.height >= 1.0 {
             info.width = Some(size.width as u32);

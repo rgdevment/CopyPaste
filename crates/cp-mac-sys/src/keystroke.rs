@@ -3,7 +3,6 @@ use std::ffi::c_void;
 type CGEventSourceRef = *const c_void;
 type CGEventRef = *const c_void;
 
-// SAFETY: CoreGraphics signatures as declared in its header.
 unsafe extern "C" {
     fn CGEventSourceCreate(state_id: i32) -> CGEventSourceRef;
     fn CGEventSourceFlagsState(state_id: i32) -> u64;
@@ -30,7 +29,6 @@ const PERMIT_ALL: u32 = 3;
 const SUPPRESSION_INTERVAL: i32 = 0;
 
 pub fn physical_modifiers() -> u64 {
-    // SAFETY: the function only reads the global modifier state.
     unsafe { CGEventSourceFlagsState(COMBINED_SESSION) }
 }
 
@@ -45,12 +43,11 @@ pub struct Keystroke {
 
 impl Keystroke {
     pub fn new() -> Option<Self> {
-        // SAFETY: returns +1 and this type releases it on drop.
         let source = unsafe { CGEventSourceCreate(COMBINED_SESSION) };
         if source.is_null() {
             return None;
         }
-        // SAFETY: `source` was just checked non-null.
+
         unsafe {
             CGEventSourceSetLocalEventsFilterDuringSuppressionState(
                 source,
@@ -70,27 +67,24 @@ impl Keystroke {
             return false;
         };
 
-        // SAFETY: `down` is a valid, freshly created event.
         unsafe { CGEventPost(HID_TAP, down) };
-        // SAFETY: already posted, so it is released.
+
         unsafe { CFRelease(down) };
 
         std::thread::sleep(std::time::Duration::from_millis(9));
 
-        // SAFETY: `up` is a valid, freshly created event.
         unsafe { CGEventPost(HID_TAP, up) };
-        // SAFETY: already posted, so it is released.
+
         unsafe { CFRelease(up) };
         true
     }
 
     fn event(&self, keycode: u16, down: bool, flags: u64) -> Option<CGEventRef> {
-        // SAFETY: `self.source` lives as long as this type does.
         let event = unsafe { CGEventCreateKeyboardEvent(self.source, keycode, down) };
         if event.is_null() {
             return None;
         }
-        // SAFETY: `event` was just checked non-null.
+
         unsafe { CGEventSetFlags(event, flags) };
         Some(event)
     }
@@ -98,7 +92,6 @@ impl Keystroke {
 
 impl Drop for Keystroke {
     fn drop(&mut self) {
-        // SAFETY: `source` came from a Create function and has not been released.
         unsafe { CFRelease(self.source) };
     }
 }

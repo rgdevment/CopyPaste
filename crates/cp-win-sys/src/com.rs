@@ -10,7 +10,6 @@ pub struct Apartment {
 
 impl Apartment {
     pub fn enter() -> Self {
-        // SAFETY: idempotent when the apartment matches; released in Drop when ours.
         let entered =
             unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) };
         Self {
@@ -22,7 +21,6 @@ impl Apartment {
 impl Drop for Apartment {
     fn drop(&mut self) {
         if self.ours {
-            // SAFETY: pairs with the initialisation that this value owns.
             unsafe { CoUninitialize() };
         }
     }

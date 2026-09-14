@@ -18,17 +18,16 @@ impl Clipboard {
         let Some(ready) = reserved(entries) else {
             return Written::Refused;
         };
-        // SAFETY: the clipboard is open and owned by this task for as long as `self` lives.
+
         if unsafe { EmptyClipboard() }.is_err() {
             release(&ready);
             return Written::Refused;
         }
         let mut placed = 0;
         for (id, block) in ready {
-            // SAFETY: on success the system takes ownership of the block.
             match unsafe { SetClipboardData(id, Some(HANDLE(block.0))) } {
                 Ok(_) => placed += 1,
-                // SAFETY: ownership stayed here because the call failed.
+
                 Err(_) => unsafe {
                     let _ = GlobalFree(Some(block));
                 },
@@ -58,24 +57,21 @@ fn reserved(entries: &[(u32, &[u8])]) -> Option<Vec<(u32, HGLOBAL)>> {
 
 fn release(blocks: &[(u32, HGLOBAL)]) {
     for (_, block) in blocks {
-        // SAFETY: nothing else owns these blocks: they were never handed over.
         let _ = unsafe { GlobalFree(Some(*block)) };
     }
 }
 
 fn block_of(bytes: &[u8]) -> Option<HGLOBAL> {
-    // SAFETY: a moveable block of the requested size, released below on failure.
     let block = unsafe { GlobalAlloc(GMEM_MOVEABLE, bytes.len()) }.ok()?;
-    // SAFETY: the block was just allocated and is unlocked.
+
     let address = unsafe { GlobalLock(block) };
     if address.is_null() {
-        // SAFETY: nothing else holds the block.
         let _ = unsafe { GlobalFree(Some(block)) };
         return None;
     }
-    // SAFETY: the block holds exactly `bytes.len()` writable bytes.
+
     unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), address.cast::<u8>(), bytes.len()) };
-    // SAFETY: matches the lock above.
+
     let _ = unsafe { GlobalUnlock(block) };
     Some(block)
 }

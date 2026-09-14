@@ -24,7 +24,7 @@ fn key(code: VIRTUAL_KEY, up: bool) -> INPUT {
     if up {
         flags |= KEYEVENTF_KEYUP;
     }
-    // SAFETY: the union holds a keyboard event because the type says so.
+
     let scan = unsafe { MapVirtualKeyW(u32::from(code.0), MAP_VIRTUAL_KEY_TYPE(0)) } as u16;
     INPUT {
         r#type: INPUT_KEYBOARD,
@@ -41,7 +41,6 @@ fn key(code: VIRTUAL_KEY, up: bool) -> INPUT {
 }
 
 pub fn send(batch: &[INPUT]) -> bool {
-    // SAFETY: every entry is a keyboard event of the declared size.
     let sent = unsafe { SendInput(batch, std::mem::size_of::<INPUT>() as i32) };
     sent as usize == batch.len()
 }
@@ -53,7 +52,6 @@ pub fn modifiers_still_held() -> bool {
 }
 
 fn pressed(code: VIRTUAL_KEY) -> bool {
-    // SAFETY: the call only reads the asynchronous state of one key.
     let state =
         unsafe { windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(i32::from(code.0)) };
     state as u16 & 0x8000 != 0
@@ -70,7 +68,6 @@ mod tests {
         assert_eq!(batch.len(), 9);
         let ups: Vec<bool> = batch
             .iter()
-            // SAFETY: every entry was built as a keyboard event.
             .map(|one| unsafe { one.Anonymous.ki.dwFlags }.contains(KEYEVENTF_KEYUP))
             .collect();
         assert_eq!(ups[..5], [true; 5], "los cinco modificadores se sueltan");
@@ -80,7 +77,7 @@ mod tests {
     #[test]
     fn both_windows_keys_are_released_because_there_is_no_generic_one() {
         let batch = paste_batch();
-        // SAFETY: every entry was built as a keyboard event.
+
         let codes: Vec<u16> = batch
             .iter()
             .map(|one| unsafe { one.Anonymous.ki.wVk }.0)
@@ -92,7 +89,7 @@ mod tests {
     #[test]
     fn the_windows_key_is_released_before_the_v_is_pressed() {
         let batch = paste_batch();
-        // SAFETY: every entry was built as a keyboard event.
+
         let codes: Vec<u16> = batch
             .iter()
             .map(|one| unsafe { one.Anonymous.ki.wVk }.0)
@@ -111,7 +108,6 @@ mod tests {
     #[test]
     fn every_event_carries_a_scan_code() {
         for one in paste_batch() {
-            // SAFETY: the entry was built as a keyboard event.
             let scan = unsafe { one.Anonymous.ki.wScan };
             assert_ne!(scan, 0, "hay destinos que leen el scancode y no el virtual");
         }
@@ -120,7 +116,6 @@ mod tests {
     #[test]
     fn every_event_is_marked_as_ours() {
         for one in paste_batch() {
-            // SAFETY: the entry was built as a keyboard event.
             assert_eq!(unsafe { one.Anonymous.ki.dwExtraInfo }, OURS);
         }
     }
@@ -128,7 +123,7 @@ mod tests {
     #[test]
     fn the_control_that_presses_is_not_the_one_that_releases() {
         let batch = paste_batch();
-        // SAFETY: every entry was built as a keyboard event.
+
         let control: Vec<bool> = batch
             .iter()
             .filter(|one| unsafe { one.Anonymous.ki.wVk } == VK_CONTROL)
@@ -153,7 +148,6 @@ mod tests {
     #[test]
     fn nothing_is_flagged_as_a_bare_scan_code() {
         for one in paste_batch() {
-            // SAFETY: the entry was built as a keyboard event.
             let flags = unsafe { one.Anonymous.ki.dwFlags };
             assert!(
                 !flags.contains(KEYEVENTF_SCANCODE),

@@ -5,7 +5,6 @@ type CFDataRef = *const c_void;
 type CFArrayRef = *const c_void;
 type TISInputSourceRef = *const c_void;
 
-// SAFETY: Carbon and CoreFoundation signatures as declared in their headers; `kTISPropertyUnicodeKeyLayoutData` is a global constant.
 unsafe extern "C" {
     static kTISPropertyUnicodeKeyLayoutData: CFStringRef;
     fn TISCopyCurrentKeyboardLayoutInputSource() -> TISInputSourceRef;
@@ -55,13 +54,12 @@ pub const ABC: &str = "com.apple.keylayout.ABC";
 const UTF8: u32 = 0x0800_0100;
 
 fn source_id(source: TISInputSourceRef) -> Option<String> {
-    // SAFETY: `source` comes from the system list and the key is a constant.
     let value = unsafe { TISGetInputSourceProperty(source, kTISPropertyInputSourceID) };
     if value.is_null() {
         return None;
     }
     let mut buffer = [0u8; 256];
-    // SAFETY: the buffer exists and its real size is declared.
+
     let ok = unsafe { CFStringGetCString(value, buffer.as_mut_ptr(), buffer.len() as isize, UTF8) };
     if !ok {
         return None;
@@ -71,38 +69,34 @@ fn source_id(source: TISInputSourceRef) -> Option<String> {
 }
 
 pub fn installed_layouts() -> Vec<String> {
-    // SAFETY: null asks for the whole list; returns +1, released below.
     let list = unsafe { TISCreateInputSourceList(std::ptr::null(), true) };
     if list.is_null() {
         return Vec::new();
     }
-    // SAFETY: `list` is non-null.
+
     let count = unsafe { CFArrayGetCount(list) };
     let mut found = Vec::new();
     for index in 0..count {
-        // SAFETY: the index is within the range just returned.
         let source = unsafe { CFArrayGetValueAtIndex(list, index) };
         if let Some(id) = source_id(source) {
             found.push(id);
         }
     }
-    // SAFETY: `list` came from a Create function, so it must be released.
+
     unsafe { CFRelease(list) };
     found
 }
 
 impl Layout {
     fn named(wanted: &str) -> Option<Self> {
-        // SAFETY: null asks for the whole list; returns +1.
         let list = unsafe { TISCreateInputSourceList(std::ptr::null(), true) };
         if list.is_null() {
             return None;
         }
-        // SAFETY: `list` is non-null.
+
         let count = unsafe { CFArrayGetCount(list) };
         let mut chosen = None;
         for index in 0..count {
-            // SAFETY: the index is within the returned range.
             let source = unsafe { CFArrayGetValueAtIndex(list, index) };
             if source_id(source).as_deref() == Some(wanted) {
                 chosen = Some(source);
@@ -110,26 +104,23 @@ impl Layout {
             }
         }
         let result = chosen.and_then(|source| {
-            // SAFETY: `source` belongs to the array, still alive here.
             let data =
                 unsafe { TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) };
             if data.is_null() {
                 return None;
             }
-            // SAFETY: `data` is non-null while the array lives.
+
             let bytes = unsafe { CFDataGetBytePtr(data) };
             (!bytes.is_null()).then_some((source, bytes))
         });
         match result {
             Some((source, bytes)) => {
-                // SAFETY: the source is retained so it outlives the array.
                 unsafe { CFRetain(source) };
-                // SAFETY: the array is no longer needed.
+
                 unsafe { CFRelease(list) };
                 Some(Self { source, bytes })
             }
             None => {
-                // SAFETY: the array came from a Create function.
                 unsafe { CFRelease(list) };
                 None
             }
@@ -137,22 +128,19 @@ impl Layout {
     }
 
     fn current() -> Option<Self> {
-        // SAFETY: returns a +1 reference that this type releases on drop.
         let source = unsafe { TISCopyCurrentKeyboardLayoutInputSource() };
         if source.is_null() {
             return None;
         }
-        // SAFETY: `source` is non-null and the key is the system constant.
+
         let data = unsafe { TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) };
         if data.is_null() {
-            // SAFETY: `source` came from a Copy function, so it must be released.
             unsafe { CFRelease(source) };
             return None;
         }
-        // SAFETY: `data` is non-null and belongs to the input source, still alive.
+
         let bytes = unsafe { CFDataGetBytePtr(data) };
         if bytes.is_null() {
-            // SAFETY: same reason as above.
             unsafe { CFRelease(source) };
             return None;
         }
@@ -163,7 +151,7 @@ impl Layout {
         let mut dead_keys: u32 = 0;
         let mut produced: usize = 0;
         let mut buffer = [0u16; 4];
-        // SAFETY: the layout is alive, the buffer has the declared size, and both out pointers target valid locals.
+
         let status = unsafe {
             UCKeyTranslate(
                 self.bytes,
@@ -189,13 +177,11 @@ impl Layout {
 
 impl Drop for Layout {
     fn drop(&mut self) {
-        // SAFETY: `source` came from `TISCopyCurrentKeyboardLayoutInputSource` at +1 and has not been released.
         unsafe { CFRelease(self.source) };
     }
 }
 
 fn keyboard_type() -> u8 {
-    // SAFETY: the function takes no arguments and returns an integer.
     unsafe { LMGetKbdType() }
 }
 

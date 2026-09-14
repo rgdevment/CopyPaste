@@ -1,4 +1,3 @@
-// SAFETY: C function declarations from the system frameworks; signatures match CoreGraphics and HIToolbox.
 unsafe extern "C" {
     fn CGPreflightPostEventAccess() -> bool;
     fn CGRequestPostEventAccess() -> bool;
@@ -7,22 +6,18 @@ unsafe extern "C" {
 }
 
 pub fn can_post_events() -> bool {
-    // SAFETY: the function takes no arguments and returns no pointers.
     unsafe { CGPreflightPostEventAccess() }
 }
 
 pub fn request_post_events() -> bool {
-    // SAFETY: the function takes no arguments and returns no pointers.
     unsafe { CGRequestPostEventAccess() }
 }
 
 pub fn is_accessibility_trusted() -> bool {
-    // SAFETY: the function takes no arguments and returns no pointers.
     unsafe { AXIsProcessTrusted() }
 }
 
 pub fn is_secure_input_enabled() -> bool {
-    // SAFETY: the function takes no arguments and returns no pointers.
     unsafe { IsSecureEventInputEnabled() }
 }
 
