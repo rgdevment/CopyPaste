@@ -1,4 +1,4 @@
-//! Qué tecla física hay que pulsar para que salga una letra concreta.
+//! Qué tecla física hay que presionar para que salga una letra concreta.
 //!
 //! El keycode `0x09` es la posición de la V en QWERTY. Medido y corregido en
 //! el expediente: AZERTY, Colemak y los layouts no latinos funcionan igual

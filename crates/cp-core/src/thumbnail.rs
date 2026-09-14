@@ -28,10 +28,8 @@ pub fn size_of(bytes: &[u8]) -> Option<Size> {
 /// dibujen de forma parecida.
 pub fn of_image(bytes: &[u8], max_side: u32) -> Option<Vec<u8>> {
     let decoded = image::load_from_memory(bytes).ok()?;
-    // `thumbnail` **amplía** si la imagen es más pequeña que el destino, y
-    // una miniatura mayor que su original no tiene sentido: ocuparía más y
-    // se vería peor. Se compara contra el lado mayor en una sola expresión
-    // para que la condición no dependa de dos comparaciones equivalentes.
+    // `thumbnail` **amplía** si la imagen es menor que el destino, y una
+    // miniatura mayor que su original ocuparía más y se vería peor.
     let longest_side = decoded.width().max(decoded.height());
     let scaled = if longest_side > max_side {
         decoded.thumbnail(max_side, max_side)

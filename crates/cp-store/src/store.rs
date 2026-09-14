@@ -288,9 +288,8 @@ impl Store {
     /// dejó de existir, y sin esto una sincronización lo resucitaría.
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
         // La lápida guarda identidad y fechas para que la sincronización sepa
-        // que esto dejó de existir. Todo lo demás se va: el contenido en claro,
-        // su copia plegada en el índice, y las filas de formato con sus bytes.
-        // Dejarlo era incumplir lo que PRIVACY.md promete al usuario.
+        // que esto dejó de existir. El contenido, su copia en el índice y las
+        // filas de formato se van: dejarlos incumple lo que PRIVACY.md promete.
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,

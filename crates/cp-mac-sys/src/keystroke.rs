@@ -73,14 +73,13 @@ impl Keystroke {
         Some(Self { source })
     }
 
-    /// Manda la tecla con Command. Entre pulsar y soltar van 9 ms: con
+    /// Manda la tecla con Command. Entre presionar y soltar van 9 ms: con
     /// separación cero, Chromium deduplica y el pegado «a veces no funciona».
     pub fn command(&self, keycode: u16) -> bool {
         let flags = MASK_COMMAND | LEFT_COMMAND;
-        // Los dos eventos se crean **antes** de postear ninguno. Crear el de
-        // pulsar, postearlo y fallar luego al crear el de soltar dejaría la
-        // tecla pulsada a nivel de sistema, con Command encima: el usuario se
-        // queda con la máquina inutilizable hasta que toque esa tecla.
+        // Los dos eventos se crean **antes** de postear ninguno: postear el de
+        // presionar y fallar luego al soltar deja la tecla hundida con
+        // Command encima, y la máquina inutilizable hasta que alguien la toque.
         let (Some(down), Some(up)) = (
             self.event(keycode, true, flags),
             self.event(keycode, false, flags),
