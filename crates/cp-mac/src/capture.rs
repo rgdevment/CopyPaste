@@ -34,6 +34,13 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
                     // Misma imagen, representación cara: se anota y no se
                     // pide. Medido: 52 veces más grande en el mismo copiado.
                     Payload::Announced { size: None }
+                } else if canonical == "public.file-url" {
+                    // Copiar tres archivos en Finder son tres ítems en el
+                    // portapapeles, y `dataForType:` solo ve el primero.
+                    match gather_file_urls(pb) {
+                        Some(bytes) => Payload::stored(bytes),
+                        None => Payload::Absent,
+                    }
                 } else {
                     match pb.data(canonical) {
                         Some(bytes) => Payload::stored(bytes),
@@ -53,6 +60,19 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
     // vive el filtro por pestañas de la interfaz.
     let kind = refine(family, &formats);
     Some(Item { kind, formats })
+}
+
+/// Todas las rutas, una por línea, como las guarda la 2.x.
+fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
+    let each = pb.data_per_item("public.file-url");
+    if each.is_empty() {
+        return pb.data("public.file-url");
+    }
+    let joined: Vec<String> = each
+        .iter()
+        .filter_map(|bytes| String::from_utf8(bytes.clone()).ok())
+        .collect();
+    (!joined.is_empty()).then(|| joined.join("\n").into_bytes())
 }
 
 fn is_costlier_twin(id: &str, cheapest: Option<&str>) -> bool {
@@ -87,7 +107,7 @@ fn refine(family: Option<Family>, formats: &[Format]) -> Option<Kind> {
                     }
                     _ => None,
                 });
-            Some(match first {
+            Some(match first.and_then(|urls| urls.lines().next()) {
                 Some(url) => {
                     let path = url.trim_end_matches('/');
                     let name = path.rsplit('/').next().unwrap_or(path);

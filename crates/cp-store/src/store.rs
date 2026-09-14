@@ -1,6 +1,7 @@
+use crate::{Error, Result};
 use cp_core::item::{Item, Payload};
 use cp_core::search::fold;
-use rusqlite::{Connection, OptionalExtension, Result, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 /// Lo que el usuario escribe no es sintaxis FTS5, y tratarlo como si lo fuera
 /// rompe la búsqueda con una comilla, un asterisco o un guion delante —y con
@@ -80,10 +81,21 @@ impl Store {
     /// Una tumba, no un borrado: la nube que vendrá necesita saber que algo
     /// dejó de existir, y sin esto una sincronización lo resucitaría.
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
+        // La lápida guarda identidad y fechas para que la sincronización sepa
+        // que esto dejó de existir. Todo lo demás se va: el contenido en claro,
+        // su copia plegada en el índice, y las filas de formato con sus bytes.
+        // Dejarlo era incumplir lo que PRIVACY.md promete al usuario.
         self.db.execute(
-            "UPDATE items SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1",
+            "UPDATE items
+             SET deleted_at = ?2, updated_at = ?2,
+                 preview_text = '', search_text = '', search_label = '',
+                 search_app = '', label = NULL, app_source = NULL,
+                 thumb_path = NULL, content_hash = 0
+             WHERE id = ?1",
             params![id, at],
         )?;
+        self.db
+            .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
         Ok(())
     }
 
@@ -94,7 +106,7 @@ impl Store {
             .db
             .prepare("SELECT uuid FROM items WHERE updated_at > ?1 ORDER BY updated_at")?;
         let rows = stmt.query_map([version], |row| row.get::<_, String>(0))?;
-        rows.collect()
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     /// Guarda el ítem con **todas** sus filas de formato. El `content_hash`
@@ -107,7 +119,16 @@ impl Store {
         preview: &str,
         created_at: i64,
     ) -> Result<i64> {
-        let hash = cp_core::hash::content_hash(preview.as_bytes()) as i64;
+        // Mientras el almacén de blobs no exista, aceptar un `Blob` sería
+        // guardar la fila con su tamaño y tirar los bytes: el ítem quedaría
+        // vacío y nadie se enteraría. Es preferible negarse.
+        if let Some(oversized) = item.oversized_format() {
+            return Err(Error::NeedsBlobStore {
+                format: oversized.0,
+                size: oversized.1,
+            });
+        }
+        let hash = item.fingerprint() as i64;
         let kind = item.kind.map(|k| k.as_str());
         self.db.execute(
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
@@ -135,13 +156,14 @@ impl Store {
 
     pub fn find_by_hash(&self, content: &str) -> Result<Option<i64>> {
         let hash = cp_core::hash::content_hash(content.as_bytes()) as i64;
-        self.db
+        Ok(self
+            .db
             .query_row(
-                "SELECT id FROM items WHERE content_hash = ?1 LIMIT 1",
+                "SELECT id FROM items WHERE content_hash = ?1 AND deleted_at IS NULL LIMIT 1",
                 [hash],
                 |row| row.get(0),
             )
-            .optional()
+            .optional()?)
     }
 
     pub fn formats_of(&self, id: i64) -> Result<Vec<String>> {
@@ -149,7 +171,7 @@ impl Store {
             .db
             .prepare("SELECT format FROM item_formats WHERE item_id = ?1 ORDER BY format")?;
         let rows = stmt.query_map([id], |row| row.get::<_, String>(0))?;
-        rows.collect()
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     /// Un ítem cuyo archivo ya no existe **no se borra**: se marca. La
@@ -166,11 +188,11 @@ impl Store {
     /// Los rotos se van cuando cumplen su plazo, nunca antes. Un ítem fijado
     /// es una decisión del usuario y la limpieza no la revoca.
     pub fn purge_broken_before(&self, cutoff: i64) -> Result<usize> {
-        self.db.execute(
+        Ok(self.db.execute(
             "DELETE FROM items
              WHERE broken_since IS NOT NULL AND broken_since < ?1 AND pinned = 0",
             [cutoff],
-        )
+        )?)
     }
 
     pub fn pin(&self, id: i64) -> Result<()> {
@@ -179,9 +201,14 @@ impl Store {
         Ok(())
     }
 
+    /// Cuántos ítems tiene el usuario. Las lápidas no se cuentan: para él
+    /// están borradas.
     pub fn count(&self) -> Result<i64> {
-        self.db
-            .query_row("SELECT COUNT(*) FROM items", [], |row| row.get(0))
+        Ok(self.db.query_row(
+            "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL",
+            [],
+            |row| row.get(0),
+        )?)
     }
 
     /// Cuántas filas pide una lista antes de que el usuario haga scroll. Sin
@@ -212,14 +239,16 @@ impl Store {
             "SELECT items.modified_at, items.preview_text
              FROM items_fts
              JOIN items ON items.id = items_fts.rowid
-             WHERE items_fts MATCH ?1 AND (?2 IS NULL OR items.modified_at < ?2)
+             WHERE items_fts MATCH ?1
+               AND items.deleted_at IS NULL
+               AND (?2 IS NULL OR items.modified_at < ?2)
              ORDER BY items.modified_at DESC
              LIMIT ?3",
         )?;
         let rows = stmt.query_map(rusqlite::params![expression, after, limit as i64], |row| {
             Ok((row.get(0)?, row.get(1)?))
         })?;
-        rows.collect()
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn search_page(&self, query: &str, limit: usize, offset: usize) -> Result<Vec<String>> {
@@ -230,7 +259,7 @@ impl Store {
             "SELECT items.preview_text
              FROM items_fts
              JOIN items ON items.id = items_fts.rowid
-             WHERE items_fts MATCH ?1
+             WHERE items_fts MATCH ?1 AND items.deleted_at IS NULL
              ORDER BY items.modified_at DESC
              LIMIT ?2 OFFSET ?3",
         )?;
@@ -238,7 +267,7 @@ impl Store {
             rusqlite::params![expression, limit as i64, offset as i64],
             |row| row.get::<_, String>(0),
         )?;
-        rows.collect()
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 }
 
@@ -338,6 +367,53 @@ mod tests {
                 },
             ],
         }
+    }
+
+    #[test]
+    fn an_item_too_big_for_the_row_is_refused_not_emptied() {
+        let store = Store::in_memory().expect("esquema");
+        let big = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Blob(vec![0u8; 100_000]),
+            }],
+        };
+        assert!(
+            store.insert_item("uuid-grande", &big, "", 1).is_err(),
+            "mejor negarse que guardar un ítem sin sus bytes"
+        );
+        assert_eq!(store.count().expect("cuenta"), 0);
+    }
+
+    #[test]
+    fn two_images_with_no_preview_are_two_items() {
+        let store = Store::in_memory().expect("esquema");
+        let image = |byte: u8| Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![byte; 512]),
+            }],
+        };
+        store
+            .insert_item("uuid-a", &image(1), "", 1)
+            .expect("insert");
+        store
+            .insert_item("uuid-b", &image(2), "", 2)
+            .expect("insert");
+        let hashes: Vec<i64> = store
+            .db
+            .prepare("SELECT content_hash FROM items ORDER BY id")
+            .expect("prepara")
+            .query_map([], |row| row.get(0))
+            .expect("consulta")
+            .map(|row| row.expect("fila"))
+            .collect();
+        assert_ne!(
+            hashes[0], hashes[1],
+            "hashear el preview vacío las haría la misma"
+        );
     }
 
     #[test]
@@ -708,20 +784,68 @@ mod tests {
     }
 
     #[test]
-    fn a_deletion_leaves_a_tombstone_for_the_sync_that_will_come() {
+    fn deleting_hides_the_item_from_everything_the_user_can_see() {
+        let store = seeded();
+        let id = store
+            .insert_text("uuid-secreto", "contraseña del banco", 500)
+            .expect("insert");
+        let before = store.count().expect("cuenta");
+
+        store.mark_deleted(id, 600).expect("borra");
+
+        assert_eq!(store.count().expect("cuenta"), before - 1, "deja de contar");
+        assert!(
+            store.search("contraseña").expect("consulta").is_empty(),
+            "no puede seguir encontrándose"
+        );
+        assert!(
+            store
+                .find_by_hash("contraseña del banco")
+                .expect("hash")
+                .is_none(),
+            "volver a copiarlo debe crear un ítem nuevo, no resucitar la lápida"
+        );
+    }
+
+    #[test]
+    fn a_deleted_item_leaves_no_content_behind() {
+        let store = Store::in_memory().expect("esquema");
+        let item = sample_item();
+        let id = store
+            .insert_item("uuid-borrado", &item, "texto en claro", 1)
+            .expect("insert");
+        store.set_label(id, Some("etiqueta"), 2).expect("etiqueta");
+        store.mark_deleted(id, 3).expect("borra");
+
+        let (preview, search, label): (String, String, Option<String>) = store
+            .db
+            .query_row(
+                "SELECT preview_text, search_text, label FROM items WHERE id = ?1",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("consulta");
+        assert_eq!(preview, "", "el contenido en claro se va");
+        assert_eq!(search, "", "y su copia en el índice también");
+        assert_eq!(label, None);
+        assert_eq!(
+            store.formats_of(id).expect("formatos").len(),
+            0,
+            "los bytes de los formatos se van con el ítem"
+        );
+    }
+
+    #[test]
+    fn the_tombstone_still_tells_the_sync_what_happened() {
         let store = Store::in_memory().expect("esquema");
         let id = store.insert_text("uuid-tumba", "se va", 1).expect("insert");
-        store.mark_deleted(id, 50).expect("tumba");
-        assert_eq!(
-            store.count().expect("cuenta"),
-            1,
-            "la fila sigue, marcada: sin esto una sincronización la resucita"
-        );
+        store.mark_deleted(id, 50).expect("borra");
         assert!(
             store
                 .changed_since(40)
                 .expect("cambios")
-                .contains(&"uuid-tumba".to_string())
+                .contains(&"uuid-tumba".to_string()),
+            "sin esto, otra máquina lo resucita"
         );
     }
 

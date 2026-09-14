@@ -3,6 +3,7 @@ use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase};
 use cp_mac_sys::frontmost;
 use cp_mac_sys::keyboard::{self, QWERTY_V};
 use cp_mac_sys::keystroke::{self, Keystroke};
+use cp_mac_sys::runloop;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
@@ -45,18 +46,35 @@ impl Paster {
 
         hide_panel();
 
-        while self.focus_of(target) == Focus::Elsewhere {
+        // Un destino que ya no existe no es un problema de foco, y decir que
+        // lo es deja al usuario sin saber qué pasó.
+        if !frontmost::is_alive(target.pid) {
+            return Outcome::Degraded(Failure::TargetGone);
+        }
+
+        // Traerlo al frente. Con el panel no-activador esto suele ser
+        // innecesario porque el destino nunca se desactivó, pero si algo se
+        // interpuso hay que recuperarlo: no existe pegado sin activación.
+        if self.focus_of(target) != Focus::OnTarget {
+            frontmost::bring_to_front(target.pid);
+        }
+
+        while self.focus_of(target) != Focus::OnTarget {
+            if !frontmost::is_alive(target.pid) {
+                return Outcome::Degraded(Failure::TargetGone);
+            }
             if attempt.on_failure(Failure::NotForeground) != Next::Retry {
                 return Outcome::Degraded(Failure::NotForeground);
             }
-            std::thread::sleep(std::time::Duration::from_millis(60));
+            frontmost::bring_to_front(target.pid);
+            self.wait(0.060);
         }
 
         // Los modificadores del atajo pueden seguir pulsados: el hotkey llega
         // en key-down. Se espera a que se suelten, con techo.
         let waiting = std::time::Instant::now();
         while keystroke::modifiers_still_held() && waiting.elapsed().as_millis() < 120 {
-            std::thread::sleep(std::time::Duration::from_millis(4));
+            self.wait(0.004);
         }
 
         attempt.sending();
@@ -67,6 +85,15 @@ impl Paster {
         } else {
             Outcome::Degraded(Failure::SendDenied)
         }
+    }
+
+    /// Esperar **girando el run loop**, no durmiendo.
+    ///
+    /// Esto corre en el hilo principal, que es el mismo que tiene que
+    /// procesar el `orderOut` del panel y la desactivación que este bucle
+    /// está esperando. Dormirlo es esperar un trabajo que nadie hará.
+    fn wait(&self, seconds: f64) {
+        runloop::pump(seconds);
     }
 
     /// Medido: no existe pegado sin activación, así que lo único que importa

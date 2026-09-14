@@ -1,4 +1,4 @@
-use objc2_app_kit::NSPasteboard;
+use objc2_app_kit::{NSPasteboard, NSPasteboardItem, NSPasteboardWriting};
 use objc2_foundation::{MainThreadMarker, NSString};
 
 /// El pasteboard del sistema.
@@ -40,6 +40,52 @@ impl Pasteboard {
         let name = NSString::from_str(uti);
         let data = self.inner.dataForType(&name)?;
         Some(data.to_vec())
+    }
+
+    /// Los datos de un tipo, **de cada ítem** del portapapeles.
+    ///
+    /// `dataForType:` sobre el pasteboard plano devuelve solo el primer ítem,
+    /// así que copiar tres archivos en Finder daba una sola ruta. La API por
+    /// ítems es la que ve el conjunto: es lo que hace la 2.x con
+    /// `readObjects(forClasses:)`.
+    pub fn data_per_item(&self, uti: &str) -> Vec<Vec<u8>> {
+        let Some(items) = self.inner.pasteboardItems() else {
+            return Vec::new();
+        };
+        let name = NSString::from_str(uti);
+        items
+            .iter()
+            .filter_map(|item| item.dataForType(&name).map(|data| data.to_vec()))
+            .collect()
+    }
+
+    /// Cuántos ítems distintos hay en el portapapeles.
+    pub fn item_count(&self) -> usize {
+        self.inner.pasteboardItems().map_or(0, |items| items.len())
+    }
+
+    /// Escribe varios ítems, que es como el sistema representa «tres
+    /// archivos» y no «un archivo con tres rutas dentro».
+    pub fn write_items(&self, items: &[Vec<(&str, &str)>]) -> bool {
+        self.inner.clearContents();
+        let written: Vec<objc2::rc::Retained<NSPasteboardItem>> = items
+            .iter()
+            .map(|entries| {
+                let item = NSPasteboardItem::new();
+                for (uti, value) in entries {
+                    let name = NSString::from_str(uti);
+                    let text = NSString::from_str(value);
+                    item.setString_forType(&text, &name);
+                }
+                item
+            })
+            .collect();
+        let refs: Vec<&objc2::runtime::ProtocolObject<dyn NSPasteboardWriting>> = written
+            .iter()
+            .map(|item| objc2::runtime::ProtocolObject::from_ref(&**item))
+            .collect();
+        let array = objc2_foundation::NSArray::from_slice(&refs);
+        self.inner.writeObjects(&array)
     }
 
     pub fn write_text(&self, text: &str) -> bool {

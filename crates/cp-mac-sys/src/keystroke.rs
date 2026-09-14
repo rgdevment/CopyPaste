@@ -77,9 +77,17 @@ impl Keystroke {
     /// separación cero, Chromium deduplica y el pegado «a veces no funciona».
     pub fn command(&self, keycode: u16) -> bool {
         let flags = MASK_COMMAND | LEFT_COMMAND;
-        let Some(down) = self.event(keycode, true, flags) else {
+        // Los dos eventos se crean **antes** de postear ninguno. Crear el de
+        // pulsar, postearlo y fallar luego al crear el de soltar dejaría la
+        // tecla pulsada a nivel de sistema, con Command encima: el usuario se
+        // queda con la máquina inutilizable hasta que toque esa tecla.
+        let (Some(down), Some(up)) = (
+            self.event(keycode, true, flags),
+            self.event(keycode, false, flags),
+        ) else {
             return false;
         };
+
         // SAFETY: `down` es un evento válido recién creado.
         unsafe { CGEventPost(HID_TAP, down) };
         // SAFETY: ya se posteó, se suelta.
@@ -87,9 +95,6 @@ impl Keystroke {
 
         std::thread::sleep(std::time::Duration::from_millis(9));
 
-        let Some(up) = self.event(keycode, false, flags) else {
-            return false;
-        };
         // SAFETY: `up` es un evento válido recién creado.
         unsafe { CGEventPost(HID_TAP, up) };
         // SAFETY: ya se posteó, se suelta.

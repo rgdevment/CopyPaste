@@ -17,3 +17,25 @@ pub fn frontmost() -> Option<(i32, Option<String>)> {
 pub fn our_pid() -> i32 {
     std::process::id() as i32
 }
+use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication};
+
+/// Trae al frente la aplicación con ese pid.
+///
+/// El valor que devuelve la API **no es de fiar**: medido el 12/09/2026, con
+/// Secure Input activo devuelve `true` y la aplicación no pasa al frente. Se
+/// devuelve igualmente por si sirve de pista, pero quien llama tiene que
+/// comprobar el resultado mirando quién está al frente de verdad.
+pub fn bring_to_front(pid: i32) -> bool {
+    let Some(app) = NSRunningApplication::runningApplicationWithProcessIdentifier(pid) else {
+        return false;
+    };
+    // `ActivateAllWindows` es lo que hace `open -a` y lo que la 2.x pedía:
+    // traer la aplicación entera, no solo su ventana principal.
+    app.activateWithOptions(NSApplicationActivationOptions::ActivateAllWindows)
+}
+
+/// Si el proceso sigue vivo. Un destino que se cerró entre la captura y el
+/// pegado no es un fallo de foco, y confundirlos da un diagnóstico inútil.
+pub fn is_alive(pid: i32) -> bool {
+    NSRunningApplication::runningApplicationWithProcessIdentifier(pid).is_some()
+}

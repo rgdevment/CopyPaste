@@ -74,6 +74,44 @@ pub struct Item {
 }
 
 impl Item {
+    /// Identidad del ítem por lo que **contiene**, no por cómo se muestra.
+    ///
+    /// Hashear el texto de vista previa parece equivalente y no lo es: el de
+    /// una imagen o un archivo es vacío o un nombre corto, así que dos
+    /// capturas de pantalla distintas darían la misma identidad y la
+    /// deduplicación tomaría la segunda por repetida.
+    pub fn fingerprint(&self) -> u64 {
+        let mut mixed: Vec<u8> = Vec::new();
+        let mut ordered: Vec<&Format> = self.formats.iter().collect();
+        ordered.sort_by(|a, b| a.id.cmp(&b.id));
+        for format in ordered {
+            match &format.payload {
+                Payload::Inline(bytes) | Payload::Blob(bytes) => {
+                    mixed.extend_from_slice(format.id.as_bytes());
+                    mixed.push(0);
+                    mixed.extend_from_slice(bytes);
+                    mixed.push(0);
+                }
+                _ => {}
+            }
+        }
+        crate::hash::content_hash(&mixed)
+    }
+
+    /// Si alguno de sus formatos necesita el almacén de blobs, que todavía no
+    /// existe.
+    pub fn needs_blob_store(&self) -> bool {
+        self.oversized_format().is_some()
+    }
+
+    /// El primer formato que no cabe en la fila, con su tamaño.
+    pub fn oversized_format(&self) -> Option<(String, usize)> {
+        self.formats.iter().find_map(|one| match &one.payload {
+            Payload::Blob(bytes) => Some((one.id.clone(), bytes.len())),
+            _ => None,
+        })
+    }
+
     pub fn format(&self, id: &str) -> Option<&Format> {
         self.formats.iter().find(|one| one.id == id)
     }
@@ -142,6 +180,95 @@ mod tests {
         };
         assert!(item.format("com.apple.icns").is_some());
         assert_eq!(item.stored_bytes(), 0, "anotado no es guardado");
+    }
+
+    #[test]
+    fn two_items_that_look_alike_but_differ_have_different_identities() {
+        let one = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1, 2, 3]),
+            }],
+        };
+        let other = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1, 2, 4]),
+            }],
+        };
+        assert_ne!(
+            one.fingerprint(),
+            other.fingerprint(),
+            "dos capturas distintas con el mismo preview vacío"
+        );
+    }
+
+    #[test]
+    fn the_identity_does_not_depend_on_the_order_of_the_formats() {
+        let a = Format {
+            id: "public.rtf".into(),
+            payload: Payload::Inline(vec![9]),
+        };
+        let b = Format {
+            id: "public.utf8-plain-text".into(),
+            payload: Payload::Inline(vec![8]),
+        };
+        let one = Item {
+            kind: None,
+            formats: vec![a.clone(), b.clone()],
+        };
+        let other = Item {
+            kind: None,
+            formats: vec![b, a],
+        };
+        assert_eq!(one.fingerprint(), other.fingerprint());
+    }
+
+    #[test]
+    fn what_was_only_announced_does_not_change_the_identity() {
+        let with_note = Item {
+            kind: None,
+            formats: vec![
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Inline(b"hola".to_vec()),
+                },
+                Format {
+                    id: "com.apple.icns".into(),
+                    payload: Payload::Announced { size: Some(999) },
+                },
+            ],
+        };
+        let without = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "public.utf8-plain-text".into(),
+                payload: Payload::Inline(b"hola".to_vec()),
+            }],
+        };
+        assert_eq!(with_note.fingerprint(), without.fingerprint());
+    }
+
+    #[test]
+    fn an_item_says_when_it_needs_a_blob_store() {
+        let small = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "t".into(),
+                payload: Payload::Inline(vec![0; 10]),
+            }],
+        };
+        let big = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "t".into(),
+                payload: Payload::Blob(vec![0; 10]),
+            }],
+        };
+        assert!(!small.needs_blob_store());
+        assert!(big.needs_blob_store());
     }
 
     #[test]

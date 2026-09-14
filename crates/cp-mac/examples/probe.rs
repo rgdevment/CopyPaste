@@ -144,6 +144,38 @@ fn main() -> std::process::ExitCode {
         }
     });
 
+    b.case("A7", "tres archivos copiados son tres rutas", || {
+        pb.write_items(&[
+            vec![("public.file-url", "file:///tmp/uno.txt")],
+            vec![("public.file-url", "file:///tmp/dos.txt")],
+            vec![("public.file-url", "file:///tmp/tres.txt")],
+        ]);
+        if pb.item_count() != 3 {
+            return Err(format!("el portapapeles tiene {} ítems", pb.item_count()));
+        }
+        let item = capture(&pb).ok_or("no se capturó")?;
+        let urls = item.format("public.file-url").ok_or("falta la ruta")?;
+        let text = match &urls.payload {
+            Payload::Inline(bytes) => String::from_utf8_lossy(bytes).to_string(),
+            other => return Err(format!("llegó {other:?}")),
+        };
+        let lines: Vec<&str> = text.lines().collect();
+        if lines.len() != 3 {
+            return Err(format!("se guardaron {} rutas: {lines:?}", lines.len()));
+        }
+        Ok(())
+    });
+
+    b.case("A8", "un solo archivo sigue siendo una ruta", || {
+        pb.write_items(&[vec![("public.file-url", "file:///tmp/solo.txt")]]);
+        let item = capture(&pb).ok_or("no se capturó")?;
+        let urls = item.format("public.file-url").ok_or("falta la ruta")?;
+        match &urls.payload {
+            Payload::Inline(bytes) if !String::from_utf8_lossy(bytes).contains('\n') => Ok(()),
+            other => Err(format!("llegó {other:?}")),
+        }
+    });
+
     b.group("G · Clasificación");
 
     for (id, text, expected) in [
@@ -436,17 +468,27 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster) -> Result<(), String> {
     std::fs::write(path, "").map_err(|why| why.to_string())?;
     // Arrancar en frío tarda, y otra aplicación puede tener el foco. Se
     // insiste con techo en vez de dormir una cantidad fija y confiar.
+    run_open(&["-a", "TextEdit", path]);
+    // Se usa la activación del propio núcleo, que es lo que hará el producto,
+    // en vez de confiar en que `open` gane el primer plano.
     let mut front = None;
-    for round in 0..20 {
-        if round % 5 == 0 {
-            run_open(&["-a", "TextEdit", path]);
-        }
-        std::thread::sleep(Duration::from_millis(400));
-        if let Some((pid, bundle)) = frontmost::frontmost()
-            && bundle.as_deref() == Some("com.apple.TextEdit")
-        {
-            front = Some((pid, bundle));
-            break;
+    for _ in 0..25 {
+        std::thread::sleep(Duration::from_millis(300));
+        let textedit = std::process::Command::new("/usr/bin/pgrep")
+            .args(["-x", "TextEdit"])
+            .output()
+            .ok()
+            .and_then(|out| String::from_utf8(out.stdout).ok())
+            .and_then(|pids| pids.split_whitespace().next()?.parse::<i32>().ok());
+        if let Some(pid) = textedit {
+            frontmost::bring_to_front(pid);
+            std::thread::sleep(Duration::from_millis(250));
+            if let Some((front_pid, bundle)) = frontmost::frontmost()
+                && front_pid == pid
+            {
+                front = Some((front_pid, bundle));
+                break;
+            }
         }
     }
     let (pid, bundle) = front.ok_or_else(|| {
