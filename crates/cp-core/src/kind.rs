@@ -94,10 +94,11 @@ pub fn classify_file(name: &str, is_directory: bool) -> Kind {
         "mp3", "m4a", "aac", "wav", "aiff", "aif", "flac", "ogg", "opus", "wma",
     ];
     const VIDEO: &[&str] = &[
-        "mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "mpg", "mpeg",
+        "mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "mpg", "mpeg", "flv",
     ];
     const IMAGE: &[&str] = &[
         "png", "jpg", "jpeg", "gif", "webp", "heic", "heif", "tiff", "tif", "bmp", "svg", "avif",
+        "ico",
     ];
     if AUDIO.contains(&extension.as_str()) {
         return Kind::Audio;
@@ -137,7 +138,7 @@ fn is_email(text: &str) -> bool {
 
 fn is_url(text: &str) -> bool {
     const SCHEMES: &[&str] = &[
-        "http://", "https://", "ftp://", "ftps://", "file://", "ssh://",
+        "http://", "https://", "ftp://", "ftps://", "file://", "ssh://", "mailto:",
     ];
     if text.contains(char::is_whitespace) {
         return false;
@@ -495,6 +496,12 @@ mod borders {
     }
 
     #[test]
+    fn nothing_at_all_is_not_an_object() {
+        assert!(!is_json(""), "sin un primer carácter no hay delimitador");
+        assert!(is_json("{}"));
+    }
+
+    #[test]
     fn a_quote_inside_a_string_does_not_close_it() {
         assert!(balanced(r#"{"\""}"#), "la comilla escapada sigue dentro");
         assert!(!balanced(r#"{"a": {}"#), "queda una llave sin cerrar");
@@ -553,5 +560,87 @@ mod redundancy {
             let text = format!("{user}@{host}");
             prop_assert_eq!(is_email(&text), with_the_old_guards(&text));
         }
+    }
+}
+
+/// Lo que la 2.x reconocía en Windows y la 3.0 había dejado fuera, más los
+/// bordes que solo aparecen con rutas de Windows delante.
+#[cfg(test)]
+mod inherited_from_2x {
+    use super::*;
+
+    /// Las tres clases que la tabla de la 2.x tenía y esta no: dos extensiones
+    /// y un esquema. Perderlas era degradar a un usuario que actualiza.
+    #[test]
+    fn the_three_the_rewrite_had_dropped() {
+        assert_eq!(classify_file("video.flv", false), Kind::Video);
+        assert_eq!(classify_file("favicon.ico", false), Kind::Image);
+        assert_eq!(classify_text("mailto:alguien@ejemplo.test"), Kind::Link);
+    }
+
+    /// Y las que la 3.0 añadió sobre la tabla de la 2.x no se pierden al
+    /// traerlas de vuelta.
+    #[test]
+    fn what_the_rewrite_added_survives() {
+        for (name, kind) in [
+            ("captura.heic", Kind::Image),
+            ("captura.avif", Kind::Image),
+            ("pelicula.m4v", Kind::Video),
+            ("pelicula.mpeg", Kind::Video),
+            ("audio.opus", Kind::Audio),
+            ("audio.aiff", Kind::Audio),
+        ] {
+            assert_eq!(classify_file(name, false), kind, "«{name}»");
+        }
+    }
+
+    /// Un esquema sin nada detras no es una direccion, tampoco el de correo.
+    #[test]
+    fn a_bare_mail_scheme_is_not_a_link() {
+        assert_eq!(classify_text("mailto:"), Kind::Text);
+        assert_eq!(classify_text("MAILTO:alguien@ejemplo.test"), Kind::Link);
+    }
+
+    /// Una direccion de correo suelta sigue siendo un correo y no un enlace:
+    /// son dos clases distintas y el filtro por pestañas las separa.
+    #[test]
+    fn an_address_without_the_scheme_is_still_an_address() {
+        assert_eq!(classify_text("alguien@ejemplo.test"), Kind::Email);
+    }
+
+    /// Las rutas de Windows llevan otro separador y otra forma. La extension
+    /// es siempre la del ultimo tramo, aunque la carpeta tenga un punto.
+    #[test]
+    fn a_windows_path_is_classified_by_its_last_segment() {
+        for (path, kind) in [
+            (r"C:\Users\ana\Imagenes\foto.PNG", Kind::Image),
+            (r"C:\fotos.2024\captura.jpg", Kind::Image),
+            (r"C:\version.1.2\programa", Kind::File),
+            (r"\servidor\compartido\clip.MKV", Kind::Video),
+            (r"C:\sin_extension", Kind::File),
+        ] {
+            assert_eq!(classify_file(path, false), kind, "«{path}»");
+        }
+    }
+
+    /// Una carpeta lo es aunque su nombre termine en algo que parece extension.
+    #[test]
+    fn a_folder_named_like_a_file_is_still_a_folder() {
+        assert_eq!(classify_file(r"C:\copias\respaldo.zip", true), Kind::Folder);
+        assert_eq!(classify_file("fotos.png", true), Kind::Folder);
+    }
+
+    /// Un archivo que es solo extension no tiene extension.
+    #[test]
+    fn a_name_that_is_only_a_dot_has_no_extension() {
+        assert_eq!(classify_file(".png", false), Kind::Image);
+        assert_eq!(classify_file(".", false), Kind::File);
+        assert_eq!(classify_file("", false), Kind::File);
+    }
+
+    /// La ruta local que Windows entrega en CF_HDROP no es una direccion web.
+    #[test]
+    fn a_local_windows_path_is_not_a_link() {
+        assert_eq!(classify_text(r"C:\Users\ana\documento.txt"), Kind::Text);
     }
 }

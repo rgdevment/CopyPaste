@@ -4,7 +4,7 @@ pub mod store;
 
 pub use blobs::Blobs;
 pub use schema::SCHEMA_VERSION;
-pub use store::Store;
+pub use store::{Restricted, Store};
 
 /// Lo que puede salir mal en el almacén.
 #[derive(Debug, thiserror::Error)]

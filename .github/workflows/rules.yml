@@ -39,8 +39,10 @@ jobs:
 
       - name: No Spanish identifiers
         run: |
+          # Un identificador no vive ni dentro de una cadena ni dentro de un
+          # comentario, y aqui los comentarios van en espanol a proposito.
           if grep -rnE '\b(fecha|limite|prioridad|filtro|tarea|titulo|etiqueta|imagen|archivo) *:' \
-               crates/*/src --include='*.rs' | grep -v '"'; then
+               crates/*/src --include='*.rs' | grep -v '"' | grep -vE ':[0-9]+: *///?!?'; then
             echo "los identificadores van en ingles"; exit 1
           fi
 
@@ -65,8 +67,15 @@ jobs:
                END { exit bad }' $(find crates -name '*.rs')
 
   deterministic:
-    name: Tests are deterministic
-    runs-on: macos-15
+    name: Tests are deterministic (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-2025]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -75,8 +84,16 @@ jobs:
         run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done
 
   mutants:
-    name: The suite kills every mutant
-    runs-on: macos-15
+    name: The suite kills every mutant (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            crates: -p cp-core -p cp-store
+          - os: windows-2025
+            crates: -p cp-core -p cp-store -p cp-win
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -85,7 +102,7 @@ jobs:
       # Una prueba que pasa contra un núcleo mutado no está probando nada. El
       # criterio de aceptación de la Etapa 0 es exactamente este: la batería
       # tiene que fallar contra una implementación que no sepa lo que sabemos.
-      - run: cargo mutants -p cp-core -p cp-store --no-times
+      - run: cargo mutants ${{ matrix.crates }} --no-times
 
   coverage:
     name: Coverage does not slip
@@ -102,6 +119,20 @@ jobs:
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
       - run: cargo llvm-cov report --fail-under-lines 90 --summary-only
+
+  coverage-windows:
+    name: Coverage does not slip on Windows
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      # Sin el arnés de macOS el umbral sería otro, así que se mide solo lo que
+      # Windows ejecuta de verdad: el núcleo y el almacén.
+      - run: cargo llvm-cov -p cp-core -p cp-store -p cp-win --fail-under-lines 95 --summary-only
 
   budget:
     name: Latency stays within budget

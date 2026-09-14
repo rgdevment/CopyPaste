@@ -13,7 +13,7 @@ cp-mac-sys.workspace = true
 thiserror.workspace = true
 objc2-foundation.workspace = true
 
-[dev-dependencies]
+[target.'cfg(target_os = "macos")'.dev-dependencies]
 cp-store.workspace = true
 cp-core.workspace = true
 cp-mac-sys.workspace = true

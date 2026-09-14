@@ -39,6 +39,7 @@ pub struct Filter {
 pub struct Store {
     db: Connection,
     blobs: Option<crate::Blobs>,
+    exposure: Restricted,
 }
 
 impl Store {
@@ -50,7 +51,11 @@ impl Store {
     pub fn in_memory() -> Result<Self> {
         let db = Connection::open_in_memory()?;
         crate::schema::create(&db)?;
-        Ok(Self { db, blobs: None })
+        Ok(Self {
+            db,
+            blobs: None,
+            exposure: Restricted::Mode(0o600),
+        })
     }
 
     /// Abre —o crea— la base en disco.
@@ -67,7 +72,7 @@ impl Store {
         let db = Connection::open(path)?;
         crate::schema::create(&db)?;
         crate::schema::migrate(&db)?;
-        restrict(path, 0o600)?;
+        let exposure = restrict(path, 0o600)?;
         // Las imágenes que CopyPaste captura viven junto a la base, en su
         // propia carpeta. Lo que el usuario copió del disco se queda donde
         // estaba: solo se guarda la ruta.
@@ -75,7 +80,17 @@ impl Store {
             .parent()
             .map(|parent| crate::Blobs::at(&parent.join("blobs")))
             .transpose()?;
-        Ok(Self { db, blobs })
+        Ok(Self {
+            db,
+            blobs,
+            exposure,
+        })
+    }
+
+    /// Hasta dónde se pudo proteger el archivo, para que el panel lo diga en
+    /// vez de que nadie se entere.
+    pub fn exposure(&self) -> Restricted {
+        self.exposure
     }
 
     /// Vuelca el WAL al archivo principal.
@@ -655,11 +670,57 @@ impl Store {
     }
 }
 
+/// Hasta dónde llegó la protección de una ruta, que no es la misma en cada
+/// sistema. Se devuelve en vez de suponerse: un historial de portapapeles
+/// legible por el resto de la máquina es un fallo que tiene que poder decirse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Restricted {
+    /// Los bits de modo quedaron fijados. Nadie salvo el dueño lo abre.
+    Mode(u32),
+    /// Windows no tiene bits de modo. La ruta cae bajo el perfil del usuario,
+    /// cuya lista de control heredada ya excluye a las demás cuentas; apretarla
+    /// más exige la capa de plataforma, que es la que tiene el `unsafe`.
+    InheritedFromProfile,
+    /// La ruta quedó fuera del perfil —una unidad compartida, una carpeta
+    /// elegida a mano—, donde nada garantiza quién puede leerla.
+    Unprotected,
+}
+
 /// Ajusta los permisos de un archivo o carpeta a lo que se le pide.
-pub(crate) fn restrict(path: &std::path::Path, mode: u32) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-    let permissions = std::fs::Permissions::from_mode(mode);
-    std::fs::set_permissions(path, permissions).map_err(Error::Io)
+pub(crate) fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let permissions = std::fs::Permissions::from_mode(mode);
+        std::fs::set_permissions(path, permissions).map_err(Error::Io)?;
+        Ok(Restricted::Mode(mode))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = mode;
+        let profile = std::env::var_os("USERPROFILE").map(std::path::PathBuf::from);
+        Ok(match profile {
+            Some(profile) if under(path, &profile) => Restricted::InheritedFromProfile,
+            _ => Restricted::Unprotected,
+        })
+    }
+}
+
+/// Si `path` cuelga de `root`, con las dos rutas resueltas antes de comparar:
+/// en Windows la misma carpeta se nombra de más de una forma —el nombre corto
+/// 8.3 y el largo— y comparar el texto tal cual daría por desprotegido lo que
+/// sí lo está.
+#[cfg_attr(unix, allow(dead_code))]
+fn under(path: &std::path::Path, root: &std::path::Path) -> bool {
+    let resolved = |one: &std::path::Path| {
+        one.canonicalize()
+            .or_else(|_| std::path::absolute(one))
+            .ok()
+    };
+    match (resolved(path), resolved(root)) {
+        (Some(path), Some(root)) => path.starts_with(&root),
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -1427,6 +1488,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn the_history_is_not_readable_by_other_users() {
         use std::os::unix::fs::PermissionsExt;
@@ -1436,6 +1498,7 @@ mod tests {
         store
             .insert_text("uuid-privado", "contraseña", 1)
             .expect("insert");
+        assert_eq!(store.exposure(), Restricted::Mode(0o600));
         drop(store);
 
         let file = std::fs::metadata(&path)
@@ -1450,6 +1513,66 @@ mod tests {
             & 0o777;
         assert_eq!(file, 0o600, "solo su dueño");
         assert_eq!(folder, 0o700, "y la carpeta igual");
+    }
+
+    /// En Windows no hay bits de modo que comprobar, así que lo que protege el
+    /// historial es dónde vive. La prueba no puede afirmar que otras cuentas no
+    /// lo abren —eso lo decide la lista de control heredada— pero sí que el
+    /// almacén sabe en cuál de los dos casos está y lo dice.
+    #[cfg(windows)]
+    #[test]
+    fn on_windows_what_protects_the_history_is_living_under_the_profile() {
+        let Some(profile) = std::env::var_os("USERPROFILE") else {
+            return;
+        };
+        let dir = tempfile::Builder::new()
+            .prefix("copypaste-")
+            .tempdir_in(profile)
+            .expect("carpeta");
+        let path = dir.path().join("datos").join("history.db");
+        let store = Store::open(&path).expect("abre");
+        store
+            .insert_text("uuid-privado", "contraseña", 1)
+            .expect("insert");
+        assert_eq!(store.exposure(), Restricted::InheritedFromProfile);
+    }
+
+    #[test]
+    fn a_path_outside_the_profile_is_not_under_it() {
+        let profile = std::path::Path::new(if cfg!(windows) {
+            r"C:\Users\alguien"
+        } else {
+            "/home/alguien"
+        });
+        let inside = profile.join("AppData").join("history.db");
+        let outside = std::path::Path::new(if cfg!(windows) {
+            r"Z:\compartido\history.db"
+        } else {
+            "/srv/compartido/history.db"
+        });
+        assert!(under(&inside, profile), "lo que cuelga del perfil");
+        assert!(!under(outside, profile), "una unidad compartida no");
+        assert!(
+            !under(profile, &inside),
+            "estar por encima no es estar dentro"
+        );
+    }
+
+    /// Un prefijo de texto no es un prefijo de ruta: sin comparar componentes,
+    /// la carpeta de otra cuenta con el mismo comienzo pasaría por propia.
+    #[test]
+    fn a_sibling_that_merely_starts_alike_is_outside() {
+        let profile = std::path::Path::new(if cfg!(windows) {
+            r"C:\Users\ana"
+        } else {
+            "/home/ana"
+        });
+        let sibling = std::path::Path::new(if cfg!(windows) {
+            r"C:\Users\anabel\history.db"
+        } else {
+            "/home/anabel/history.db"
+        });
+        assert!(!under(sibling, profile));
     }
 
     #[test]

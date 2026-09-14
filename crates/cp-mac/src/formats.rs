@@ -41,6 +41,9 @@ pub const CATALOG: Catalog = Catalog {
         "net.antelle.keeweb",
         "PasswordPboardType",
     ],
+    // macOS no tiene marcadores que se lean: la convención de
+    // `org.nspasteboard` es por presencia y nada más.
+    denied_when_zero: &[],
     opaque_prefixes: &["dyn.", "CorePasteboardFlavorType"],
     text: &[
         "public.utf8-plain-text",
@@ -51,6 +54,13 @@ pub const CATALOG: Catalog = Catalog {
     ],
     files: &["public.file-url"],
     images_by_preference: &["public.png", "public.tiff"],
+    // El RTFD y el RTF no son el mismo contenido en dos envoltorios: el
+    // primero lleva las imágenes incrustadas que el segundo no tiene —993.342
+    // frente a 395 bytes en el mismo documento—, así que se guardan los dos.
+    equivalents: &[],
+    // Medido el 12/09/2026: ninguna de las tres fuentes adjunta una imagen de
+    // cortesía a un documento de texto, así que aquí no hay nada que desempatar.
+    embeddable: &[],
 };
 
 #[cfg(test)]
@@ -159,7 +169,9 @@ mod tests {
             "PasswordPboardType",
         ] {
             assert!(
-                CATALOG.is_concealed(&["public.utf8-plain-text", marker]),
+                CATALOG
+                    .refusal(&["public.utf8-plain-text", marker])
+                    .is_some(),
                 "{marker} debe excluir el ítem"
             );
         }

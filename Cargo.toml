@@ -15,6 +15,7 @@ cp-core = { path = "crates/cp-core" }
 cp-store = { path = "crates/cp-store" }
 cp-mac-sys = { path = "crates/cp-mac-sys" }
 cp-mac = { path = "crates/cp-mac" }
+cp-win = { path = "crates/cp-win" }
 
 thiserror = "2"
 tracing = "0.1"

@@ -11,8 +11,12 @@ concurrency:
 
 jobs:
   check:
-    name: Format, lints and tests
-    runs-on: macos-15
+    name: Format, lints and tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-2025]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -26,6 +30,20 @@ jobs:
       # test porque NSPasteboard exige el hilo principal y el runner no lo
       # garantiza.
       - run: cargo run -p cp-mac --example probe
+        if: runner.os == 'macOS'
+
+  cross:
+    name: The macOS crates still build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      # Da la señal de que un cambio en el núcleo rompió macOS sin esperar al
+      # runner de macOS, que es el más lento y el más escaso.
+      - run: cargo check --target aarch64-apple-darwin -p cp-mac -p cp-mac-sys
 
   deny:
     name: Dependency audit

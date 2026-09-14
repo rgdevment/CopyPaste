@@ -11,12 +11,11 @@ use cp_mac_sys::pasteboard::Pasteboard;
 pub fn capture(pb: &Pasteboard) -> Option<Item> {
     let offered = pb.types();
     let ids: Vec<&str> = offered.iter().map(String::as_str).collect();
-    if CATALOG.is_concealed(&ids) {
+    if CATALOG.refusal(&ids).is_some() {
         return None;
     }
 
     let family = CATALOG.classify(&ids);
-    let cheapest_image = CATALOG.preferred_image(&ids);
     let mut formats: Vec<Format> = Vec::new();
 
     for id in &ids {
@@ -30,7 +29,7 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
             Take::Never => Payload::Announced { size: None },
             Take::Presence => Payload::Announced { size: None },
             Take::Payload => {
-                if is_costlier_twin(canonical, cheapest_image) {
+                if CATALOG.costlier_twin(canonical, &ids) {
                     // Misma imagen, representación cara: se anota y no se
                     // pide. Medido: 52 veces más grande en el mismo copiado.
                     Payload::Announced { size: None }
@@ -73,13 +72,6 @@ fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
         .filter_map(|bytes| String::from_utf8(bytes.clone()).ok())
         .collect();
     (!joined.is_empty()).then(|| joined.join("\n").into_bytes())
-}
-
-fn is_costlier_twin(id: &str, cheapest: Option<&str>) -> bool {
-    let Some(cheapest) = cheapest else {
-        return false;
-    };
-    CATALOG.images_by_preference.contains(&id) && id != cheapest
 }
 
 fn refine(family: Option<Family>, formats: &[Format]) -> Option<Kind> {
