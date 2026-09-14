@@ -1082,7 +1082,10 @@ mod tests {
         }
         let mut seen = Vec::new();
         let mut after = None;
-        loop {
+        // Tope en vez de `loop`: con 25 ítems y páginas de 10 sobran tres
+        // vueltas, así que un cursor que nunca vuelva vacío falla la
+        // aserción de abajo en vez de colgar la prueba para siempre.
+        for _ in 0..10 {
             let page = store.search_after("cursor", 10, after).expect("consulta");
             if page.is_empty() {
                 break;
@@ -1090,7 +1093,7 @@ mod tests {
             after = page.last().map(|(at, _)| *at);
             seen.extend(page.into_iter().map(|(_, text)| text));
         }
-        assert_eq!(seen.len(), 25, "recorrió todo");
+        assert_eq!(seen.len(), 25, "recorrió todo sin quedarse atascado");
         let mut unique = seen.clone();
         unique.sort();
         unique.dedup();
@@ -1470,6 +1473,40 @@ mod tests {
     }
 
     #[test]
+    fn an_incremental_vacuum_actually_frees_pages() {
+        let store = Store::in_memory().expect("esquema");
+        for at in 0..2000 {
+            let id = store
+                .insert_text(&format!("uuid-{at}"), &"x".repeat(200), at)
+                .expect("insert");
+            store.mark_broken(id, at).expect("marca");
+        }
+        store.purge_broken_before(i64::MAX).expect("purga");
+
+        let before: i64 = store
+            .db
+            .query_row("PRAGMA freelist_count", [], |row| row.get(0))
+            .expect("consulta");
+        assert!(
+            before > 0,
+            "borrar tantas filas tiene que dejar páginas libres, no {before}"
+        );
+
+        store
+            .vacuum_step(before as u32)
+            .expect("vacía las páginas libres");
+
+        let after: i64 = store
+            .db
+            .query_row("PRAGMA freelist_count", [], |row| row.get(0))
+            .expect("consulta");
+        assert!(
+            after < before,
+            "incremental_vacuum tiene que reducir el freelist: antes {before}, después {after}"
+        );
+    }
+
+    #[test]
     fn reopening_keeps_the_pragmas_that_protect_the_data() {
         let dir = tempfile::tempdir().expect("carpeta");
         let path = dir.path().join("history.db");
@@ -1531,6 +1568,64 @@ mod tests {
             files, 1,
             "el nombre es el contenido, así que es el mismo archivo"
         );
+    }
+
+    #[test]
+    fn blobs_of_reports_the_digests_the_item_has() {
+        let (_dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-blobs", &big_image(4), "", 1)
+            .expect("insert");
+        assert_eq!(store.blobs_of(id).expect("blobs").len(), 1);
+    }
+
+    #[test]
+    fn blobs_of_an_item_with_no_blobs_is_empty() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-sin-blobs", "solo texto", 1)
+            .expect("insert");
+        assert!(store.blobs_of(id).expect("blobs").is_empty());
+    }
+
+    #[test]
+    fn a_blob_used_by_only_one_item_is_not_shared() {
+        let (_dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-solo", &big_image(11), "", 1)
+            .expect("insert");
+        let digest = store.blobs_of(id).expect("blobs").pop().expect("hay uno");
+        assert!(!store.blob_is_shared(&digest, id).expect("consulta"));
+    }
+
+    #[test]
+    fn a_blob_used_by_two_items_is_shared() {
+        let (_dir, store) = on_disk();
+        let first = store
+            .insert_item("uuid-1", &big_image(12), "", 1)
+            .expect("a");
+        store
+            .insert_item("uuid-2", &big_image(12), "", 2)
+            .expect("b");
+        let digest = store
+            .blobs_of(first)
+            .expect("blobs")
+            .pop()
+            .expect("hay uno");
+        assert!(store.blob_is_shared(&digest, first).expect("consulta"));
+    }
+
+    #[test]
+    fn an_inline_payload_comes_back_as_is() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_item("uuid-inline", &sample_item(), "hola", 1)
+            .expect("insert");
+        let bytes = store
+            .payload_of(id, "public.utf8-plain-text")
+            .expect("lee")
+            .expect("está");
+        assert_eq!(bytes, b"hola");
     }
 
     #[test]

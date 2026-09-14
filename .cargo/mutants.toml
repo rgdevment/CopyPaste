@@ -1,0 +1,10 @@
+# Un mutante equivalente no es un hueco de cobertura: es código que se puede
+# escribir de dos formas con el mismo comportamiento. Excluirlo es honesto solo
+# si está demostrado y si algo avisa cuando deje de serlo.
+#
+# `of_image` decide escalar con `longest_side > max_side`. El único caso donde
+# `>` y `>=` discrepan es cuando el lado mayor vale exactamente `max_side`, y
+# ahí el ratio interno de `image::thumbnail` es 1: devuelve la imagen sin tocar
+# un solo píxel. Lo prueba `scaling_to_the_size_it_already_has_changes_nothing`,
+# que falla si una versión futura de `image` cambia ese comportamiento.
+exclude_re = ["replace > with >= in of_image"]

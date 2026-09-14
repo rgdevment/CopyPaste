@@ -123,6 +123,20 @@ mod tests {
     }
 
     #[test]
+    fn an_io_error_that_is_not_a_missing_file_is_not_swallowed() {
+        let (_dir, blobs) = temporary();
+        let digest = "a".repeat(64);
+        // Un directorio en la ruta exacta del blob: leerlo falla con un error
+        // que no es `NotFound`, y ese error no puede confundirse con «no hay
+        // nada que leer».
+        std::fs::create_dir_all(blobs.path_for(&digest)).expect("crea carpeta");
+        assert!(
+            blobs.get(&digest).is_err(),
+            "un error de E/S real no puede devolver Ok(None)"
+        );
+    }
+
+    #[test]
     fn asking_for_something_that_is_not_there_is_not_an_error() {
         let (_dir, blobs) = temporary();
         let missing = "0".repeat(64);

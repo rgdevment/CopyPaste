@@ -115,7 +115,10 @@ fn is_email(text: &str) -> bool {
     let Some((user, host)) = text.split_once('@') else {
         return false;
     };
-    if user.is_empty() || host.len() < 3 || host.contains('@') {
+    // Sin esta guarda `@ejemplo.test` pasaría: `all` sobre un usuario vacío
+    // devuelve cierto. Las otras dos que hubo aquí —dominio corto y segunda
+    // arroba— las cubren `host_ok` y `tld_ok`; `the_guards_that_were_here_were_redundant` lo prueba.
+    if user.is_empty() {
         return false;
     }
     let Some((label, tld)) = host.rsplit_once('.') else {
@@ -402,6 +405,153 @@ mod tests {
         ] {
             assert!(!kind.as_str().is_empty());
             assert_eq!(kind.as_str(), kind.as_str().to_lowercase());
+        }
+    }
+}
+
+/// Cada aserción de aquí abajo mató un mutante que sobrevivía a la batería
+/// anterior: la clase se reconocía, pero ninguna prueba distinguía el borde de
+/// la condición que la reconoce.
+#[cfg(test)]
+mod borders {
+    use super::*;
+
+    #[test]
+    fn every_class_keeps_the_name_the_database_stores() {
+        for (kind, name) in [
+            (Kind::Text, "text"),
+            (Kind::Code, "code"),
+            (Kind::Json, "json"),
+            (Kind::Link, "link"),
+            (Kind::Email, "email"),
+            (Kind::Phone, "phone"),
+            (Kind::Color, "color"),
+            (Kind::Ip, "ip"),
+            (Kind::Uuid, "uuid"),
+            (Kind::Image, "image"),
+            (Kind::File, "file"),
+            (Kind::Folder, "folder"),
+            (Kind::Audio, "audio"),
+            (Kind::Video, "video"),
+        ] {
+            assert_eq!(kind.as_str(), name, "el nombre viaja a la columna kind");
+        }
+    }
+
+    #[test]
+    fn an_address_needs_every_piece_at_once() {
+        assert!(is_email("a@b.co"));
+        assert!(!is_email("@ejemplo.test"), "sin usuario");
+        assert!(!is_email("a@b@c.co"), "dos arrobas");
+        assert!(!is_email("a@.co"), "sin nombre de dominio");
+        assert!(!is_email("a@b.c"), "dominio de primer nivel de una letra");
+        assert!(!is_email("a@b.c1"), "dominio de primer nivel con cifra");
+        assert!(!is_email("a b@c.co"), "espacio en el usuario");
+        assert!(!is_email("a@b c.co"), "espacio en el dominio");
+        assert!(!is_email("a@bc"), "sin punto");
+    }
+
+    #[test]
+    fn a_scheme_on_its_own_is_not_an_address() {
+        assert!(is_url("http://a"));
+        assert!(!is_url("http://"), "el esquema entero y nada más");
+        assert!(!is_url("https://"));
+    }
+
+    #[test]
+    fn a_colour_needs_length_and_digits_at_once() {
+        assert!(is_color("#FF8800"));
+        assert!(
+            !is_color("#GGG"),
+            "tres caracteres que no son hexadecimales"
+        );
+        assert!(!is_color("rgb(1, 2)"), "le falta una componente");
+        assert!(
+            !is_color("rgb(a, b, c)"),
+            "tres componentes que no son números"
+        );
+    }
+
+    #[test]
+    fn a_uuid_needs_shape_and_digits_at_once() {
+        assert!(is_uuid("6ba7b810-9dad-11d1-80b4-00c04fd430c8"));
+        assert!(!is_uuid("1-2-3-4-5"), "cinco grupos de largo equivocado");
+        assert!(
+            !is_uuid("zzzzzzzz-9dad-11d1-80b4-00c04fd430c8"),
+            "el largo correcto con caracteres que no son hexadecimales"
+        );
+    }
+
+    #[test]
+    fn a_number_needs_shape_and_a_reason_to_be_a_phone() {
+        assert!(is_phone("+1234567"), "el prefijo internacional basta");
+        assert!(is_phone("(123) 4567"), "el paréntesis de área basta");
+        assert!(is_phone("123456789"), "nueve cifras bastan por sí solas");
+        assert!(
+            !is_phone("1234567"),
+            "siete cifras sueltas no son un teléfono"
+        );
+        assert!(!is_phone("(123) 456-7890 ñ"), "una letra rompe la forma");
+    }
+
+    #[test]
+    fn a_quote_inside_a_string_does_not_close_it() {
+        assert!(balanced(r#"{"\""}"#), "la comilla escapada sigue dentro");
+        assert!(!balanced(r#"{"a": {}"#), "queda una llave sin cerrar");
+        assert!(!balanced(r#"{"a"#), "la cadena se quedó abierta");
+    }
+
+    #[test]
+    fn one_marker_alone_is_not_code() {
+        assert!(looks_like_code("const a = 1;\n  return a;"), "dos marcas");
+        assert!(!looks_like_code("const"), "ni una marca completa");
+        assert!(
+            !looks_like_code("const x"),
+            "una marca, una línea, sin sangrar"
+        );
+        assert!(
+            !looks_like_code("  const x"),
+            "una marca sangrada, pero de una sola línea"
+        );
+        assert!(
+            !looks_like_code("const x\nmás texto"),
+            "una marca en dos líneas, ninguna sangrada"
+        );
+    }
+}
+
+#[cfg(test)]
+mod redundancy {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn with_the_old_guards(text: &str) -> bool {
+        let Some((user, host)) = text.split_once('@') else {
+            return false;
+        };
+        if user.is_empty() || host.len() < 3 || host.contains('@') {
+            return false;
+        }
+        is_email(text)
+    }
+
+    proptest! {
+        /// Dos mutantes sobrevivían a toda la batería porque las guardas que
+        /// mataban eran inalcanzables: un dominio de menos de tres caracteres
+        /// no puede tener a la vez nombre y extensión válidos, y una segunda
+        /// arroba cae siempre en la parte que `host_ok` o `tld_ok` rechazan.
+        #[test]
+        fn the_guards_that_were_here_were_redundant(text in ".{0,40}") {
+            prop_assert_eq!(is_email(&text), with_the_old_guards(&text));
+        }
+
+        #[test]
+        fn the_guards_were_redundant_for_addresses_too(
+            user in "[a-z@._%+-]{0,8}",
+            host in "[a-z@.-]{0,8}",
+        ) {
+            let text = format!("{user}@{host}");
+            prop_assert_eq!(is_email(&text), with_the_old_guards(&text));
         }
     }
 }

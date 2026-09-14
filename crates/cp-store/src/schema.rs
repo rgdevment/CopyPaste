@@ -8,7 +8,10 @@ pub const SCHEMA_VERSION: u32 = 1;
 /// que no cuesta nada leer. La 2.x llegó a la versión 4 de su esquema con
 /// cuatro migraciones, así que esto va a hacer falta: montarlo ahora, cuando
 /// no hay nada que migrar, es gratis.
-pub fn migrate(db: &Connection) -> crate::Result<()> {
+///
+/// Devuelve si tuvo que migrar algo, para quien quiera distinguir una base
+/// que ya estaba al día de una recién puesta al día.
+pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if found > SCHEMA_VERSION {
         // Una base escrita por una versión más nueva no se toca: abrirla y
@@ -23,8 +26,9 @@ pub fn migrate(db: &Connection) -> crate::Result<()> {
         // Aquí irán los pasos, uno por versión. Hoy no hay ninguno: la
         // primera versión la crea `create`.
         db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))?;
+        return Ok(true);
     }
-    Ok(())
+    Ok(false)
 }
 
 /// Ajustes de la conexión, en el orden en que hay que darlos.
@@ -189,7 +193,7 @@ mod tests {
     fn a_fresh_database_is_stamped_with_its_version() {
         let db = Connection::open_in_memory().expect("abre");
         create(&db).expect("esquema");
-        migrate(&db).expect("migra");
+        assert!(migrate(&db).expect("migra"), "no había versión: sí migra");
         let version: u32 = db
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("consulta");
@@ -213,8 +217,11 @@ mod tests {
     fn migrating_twice_changes_nothing() {
         let db = Connection::open_in_memory().expect("abre");
         create(&db).expect("esquema");
-        migrate(&db).expect("primera");
-        migrate(&db).expect("segunda");
+        assert!(migrate(&db).expect("primera"), "la primera vez sí migra");
+        assert!(
+            !migrate(&db).expect("segunda"),
+            "ya estaba al día: no hay nada que hacer"
+        );
     }
 
     #[test]

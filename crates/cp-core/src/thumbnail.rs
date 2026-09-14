@@ -30,8 +30,10 @@ pub fn of_image(bytes: &[u8], max_side: u32) -> Option<Vec<u8>> {
     let decoded = image::load_from_memory(bytes).ok()?;
     // `thumbnail` **amplía** si la imagen es más pequeña que el destino, y
     // una miniatura mayor que su original no tiene sentido: ocuparía más y
-    // se vería peor.
-    let scaled = if decoded.width() > max_side || decoded.height() > max_side {
+    // se vería peor. Se compara contra el lado mayor en una sola expresión
+    // para que la condición no dependa de dos comparaciones equivalentes.
+    let longest_side = decoded.width().max(decoded.height());
+    let scaled = if longest_side > max_side {
         decoded.thumbnail(max_side, max_side)
     } else {
         decoded
@@ -124,5 +126,53 @@ mod tests {
         let bytes = png(500, 500);
         let half = &bytes[..bytes.len() / 2];
         assert!(of_image(half, MAX_SIDE).is_none());
+    }
+
+    #[test]
+    fn a_wide_image_that_exceeds_only_the_width_is_still_scaled_down() {
+        let bytes = png(100, 10);
+        let size = size_of(&of_image(&bytes, 50).expect("miniatura")).expect("tamaño");
+        assert_eq!(
+            size,
+            Size {
+                width: 50,
+                height: 5
+            }
+        );
+    }
+
+    #[test]
+    fn a_tall_image_that_exceeds_only_the_height_is_still_scaled_down() {
+        let bytes = png(10, 100);
+        let size = size_of(&of_image(&bytes, 50).expect("miniatura")).expect("tamaño");
+        assert_eq!(
+            size,
+            Size {
+                width: 5,
+                height: 50
+            }
+        );
+    }
+
+    /// Centinela de la exclusión declarada en `mutants.toml`: cambiar `>` por
+    /// `>=` en `of_image` no se puede distinguir porque, con un lado igual al
+    /// máximo, el ratio interno de `thumbnail` es exactamente 1. Si una versión
+    /// futura de `image` dejara de cumplirlo, esta prueba cae y la exclusión deja
+    /// de estar justificada.
+    #[test]
+    fn scaling_to_the_size_it_already_has_changes_nothing() {
+        use image::{DynamicImage, RgbaImage};
+        let mut img = RgbaImage::new(64, 40);
+        for (x, y, p) in img.enumerate_pixels_mut() {
+            *p = image::Rgba([(x * 3) as u8, (y * 7) as u8, 90, 255]);
+        }
+        let decoded = DynamicImage::ImageRgba8(img);
+        let untouched = decoded.clone();
+        let through_thumbnail = decoded.thumbnail(64, 64);
+        assert_eq!(
+            untouched.to_rgba8().into_raw(),
+            through_thumbnail.to_rgba8().into_raw(),
+            "con un lado igual al maximo, thumbnail no altera un solo pixel"
+        );
     }
 }
