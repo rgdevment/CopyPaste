@@ -100,7 +100,7 @@ impl Store {
     /// 2.x normaliza solo el término, así que `Straße` no se encuentra ni
     /// escribiendo `strasse` ni escribiendo `Straße`.
     pub fn insert_text(&self, uuid: &str, text: &str, created_at: i64) -> Result<i64> {
-        let hash = cp_core::hash::content_hash(text.as_bytes()) as i64;
+        let hash = Item::plain(text).fingerprint() as i64;
         self.db.execute(
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text)
@@ -423,8 +423,11 @@ impl Store {
         Ok(id)
     }
 
-    pub fn find_by_hash(&self, content: &str) -> Result<Option<i64>> {
-        let hash = cp_core::hash::content_hash(content.as_bytes()) as i64;
+    /// Busca por la **identidad del ítem**, que es la que `insert_item`
+    /// guarda. Recibía un `&str` y calculaba el hash del texto desnudo, que no
+    /// es lo que hay en la columna: así nunca encontraba nada capturado.
+    pub fn find_by_hash(&self, item: &Item) -> Result<Option<i64>> {
+        let hash = item.fingerprint() as i64;
         Ok(self
             .db
             .query_row(
@@ -822,8 +825,8 @@ mod tests {
     fn the_same_content_is_found_by_its_hash() {
         let store = Store::in_memory().expect("esquema");
         store.insert_text("uuid-a", "repetido", 1).expect("insert");
-        assert!(store.find_by_hash("repetido").expect("busca").is_some());
-        assert!(store.find_by_hash("distinto").expect("busca").is_none());
+        assert!(store.find_by_hash(&Item::plain("repetido")).expect("busca").is_some());
+        assert!(store.find_by_hash(&Item::plain("distinto")).expect("busca").is_none());
     }
 
     #[test]
@@ -1190,7 +1193,7 @@ mod tests {
         );
         assert!(
             store
-                .find_by_hash("contraseña del banco")
+                .find_by_hash(&Item::plain("contraseña del banco"))
                 .expect("hash")
                 .is_none(),
             "volver a copiarlo debe crear un ítem nuevo, no resucitar la lápida"
@@ -1858,5 +1861,64 @@ mod tests {
     fn a_word_that_is_not_there_finds_nothing() {
         let store = seeded();
         assert!(store.search("berlin").expect("consulta").is_empty());
+    }
+}
+
+#[cfg(test)]
+mod identity {
+    use super::*;
+    use cp_core::item::Format;
+
+    fn captured(text: &str) -> Item {
+        Item {
+            kind: None,
+            formats: vec![
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Inline(text.as_bytes().to_vec()),
+                },
+                Format {
+                    id: "public.rtf".into(),
+                    payload: Payload::Inline(format!("{{\\rtf1 {text}}}").into_bytes()),
+                },
+            ],
+        }
+    }
+
+    /// La regresión: `find_by_hash` calculaba el hash del texto desnudo y
+    /// `insert_item` guardaba `fingerprint()`. Nunca coincidían, así que la
+    /// ruta de captura real no deduplicaba nada.
+    #[test]
+    fn what_was_captured_is_found_again() {
+        let store = Store::in_memory().expect("abre");
+        let item = captured("hola");
+        store.insert_item("uuid-1", &item, "hola", 1).expect("inserta");
+        assert_eq!(
+            store.find_by_hash(&item).expect("busca"),
+            Some(1),
+            "lo que guarda insert_item tiene que reconocerlo find_by_hash"
+        );
+    }
+
+    /// Pegar el mismo texto «como Markdown» o «en plano» produce un contenido
+    /// distinto, y eso es un ítem distinto: la identidad mira los bytes.
+    #[test]
+    fn a_different_rendering_is_a_different_item() {
+        let store = Store::in_memory().expect("abre");
+        let plain = captured("hola");
+        store.insert_item("uuid-1", &plain, "hola", 1).expect("inserta");
+        assert!(
+            store
+                .find_by_hash(&Item::plain("**hola**"))
+                .expect("busca")
+                .is_none()
+        );
+    }
+
+    /// Un texto guardado sin pasar por el portapapeles no lleva los formatos
+    /// que trae una copia real, así que no puede compartir identidad con ella.
+    #[test]
+    fn a_synthetic_text_is_not_a_captured_one() {
+        assert_ne!(Item::plain("hola").fingerprint(), captured("hola").fingerprint());
     }
 }

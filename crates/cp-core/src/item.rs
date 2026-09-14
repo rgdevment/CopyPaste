@@ -73,7 +73,26 @@ pub struct Item {
     pub formats: Vec<Format>,
 }
 
+/// Identificador del único formato de un ítem que nadie capturó del sistema.
+/// No es un UTI ni un `CF_*`: nombrarlo con el de una plataforma haría que la
+/// identidad de un texto sintético dependiera de dónde se ejecuta.
+pub const SYNTHETIC_TEXT: &str = "text/plain";
+
 impl Item {
+    /// Un ítem de texto que no viene del portapapeles: el que se guarda desde
+    /// una prueba, un ejemplo o una importación. Su identidad **no** coincide
+    /// con la del mismo texto capturado de verdad, que llega acompañado de sus
+    /// otros formatos y con el identificador de la plataforma.
+    pub fn plain(text: &str) -> Self {
+        Self {
+            kind: None,
+            formats: vec![Format {
+                id: SYNTHETIC_TEXT.into(),
+                payload: Payload::Inline(text.as_bytes().to_vec()),
+            }],
+        }
+    }
+
     /// Identidad del ítem por lo que **contiene**, no por cómo se muestra.
     ///
     /// Hashear el texto de vista previa parece equivalente y no lo es: el de

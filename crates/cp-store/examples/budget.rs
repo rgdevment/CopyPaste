@@ -9,6 +9,7 @@
 //! exige que los tests lo sean. Se ejecuta con
 //! `cargo run -p cp-store --release --example budget`.
 
+use cp_core::item::Item;
 use cp_store::Store;
 use std::time::{Duration, Instant};
 
@@ -155,7 +156,9 @@ fn main() -> std::process::ExitCode {
         },
         || {
             store
-                .find_by_hash("elemento número 5000 con algo de texto alrededor para que pese")
+                .find_by_hash(&Item::plain(
+                    "elemento número 5000 con algo de texto alrededor para que pese",
+                ))
                 .expect("busca");
         },
     );
