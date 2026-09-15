@@ -4,7 +4,7 @@ use cp_core::item::{Format, Item, Payload, SYNTHETIC_IMAGE};
 use cp_core::kind::{self, Kind};
 use cp_win_sys::clipboard::Clipboard;
 use cp_win_sys::formats::name_of;
-use cp_win_sys::reading::{self, PATIENCE, Reading};
+use cp_win_sys::reading;
 use cp_win_sys::writing::text_of;
 
 use crate::formats::CATALOG;
@@ -14,6 +14,20 @@ pub enum Captured {
     Kept(Item),
     Refused(Refusal),
     Nothing,
+    TooSlow,
+}
+
+pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
+
+const _: () = assert!(PATIENCE.as_millis() > cp_win_sys::reading::PATIENCE.as_millis());
+const _: () = assert!(PATIENCE.as_millis() < 30_000);
+
+pub fn capture_within(patience: std::time::Duration) -> Captured {
+    reading::anything_within(patience, || match Clipboard::open() {
+        Some(clipboard) => capture(&clipboard),
+        None => Captured::Nothing,
+    })
+    .unwrap_or(Captured::TooSlow)
 }
 
 pub fn capture(clipboard: &Clipboard) -> Captured {
@@ -58,26 +72,28 @@ fn asked_not_to_be_kept(clipboard: &Clipboard, ids: &[u32], names: &[String]) ->
         if !CATALOG.denied_when_zero.contains(&name.as_str()) {
             return None;
         }
-        let value = read(clipboard, *id).bytes().unwrap_or_default();
+        let value = read(clipboard, *id).unwrap_or_default();
         CATALOG.declines(name, &value)
     })
 }
 
 fn payload_for(clipboard: &Clipboard, id: u32, name: &str, offered: &[&str]) -> Payload {
-    if CATALOG.decide(name) != Take::Payload || CATALOG.costlier_twin(name, offered) {
+    if CATALOG.decide(name) != Take::Payload {
+        return Payload::Announced { size: None };
+    }
+    if CATALOG.costlier_twin(name, offered) {
         return Payload::Announced {
             size: clipboard.size_of(id),
         };
     }
     match read(clipboard, id) {
-        Reading::Delivered(bytes) => Payload::stored(bytes),
-        Reading::Empty | Reading::TooSlow => Payload::Absent,
+        Some(bytes) => Payload::stored(bytes),
+        None => Payload::Absent,
     }
 }
 
-fn read(clipboard: &Clipboard, id: u32) -> Reading {
-    let bytes = clipboard.bytes(id);
-    reading::within(PATIENCE, move || bytes)
+fn read(clipboard: &Clipboard, id: u32) -> Option<Vec<u8>> {
+    clipboard.bytes(id)
 }
 
 fn transcoded_image(
@@ -95,7 +111,7 @@ fn transcoded_image(
         .zip(names)
         .find(|(_, name)| name.as_str() == chosen)
         .map(|(id, _)| *id)?;
-    let raw = read(clipboard, id).bytes()?;
+    let raw = read(clipboard, id)?;
     let png = dib::to_png(&raw)?;
     Some(Format {
         id: SYNTHETIC_IMAGE.into(),
@@ -194,6 +210,21 @@ mod tests {
             out.push(0);
         }
         out
+    }
+
+    #[test]
+    fn the_whole_capture_has_a_ceiling_well_under_the_thirty_seconds() {
+        assert!(PATIENCE < std::time::Duration::from_secs(1));
+        assert!(PATIENCE > cp_win_sys::reading::PATIENCE);
+    }
+
+    #[test]
+    fn a_capture_that_does_not_finish_in_time_is_abandoned() {
+        let seen = reading::anything_within(std::time::Duration::from_millis(20), || {
+            std::thread::sleep(std::time::Duration::from_secs(30));
+            Captured::Nothing
+        });
+        assert_eq!(seen, None, "el hilo se abandona y no se espera");
     }
 
     #[test]

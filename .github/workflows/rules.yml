@@ -45,32 +45,25 @@ jobs:
       - name: No voseo in the Spanish anywhere
         run: |
           if grep -rniE '\b(vos|tenés|querés|podés|andá|mirá|hacé|che)\b' \
-               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
+               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
             echo "espanol neutro, sin voseo"; exit 1
           fi
 
       - name: No peninsular Spanish in what a person reads
         run: |
           if grep -rniE '\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b' \
-               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null; then
+               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
             echo "espanol neutro: archivo, computador, presiona"; exit 1
           fi
 
-      - name: The code carries no comments but SAFETY
+      - name: The code carries no comments
         run: |
-          if grep -rnE '^[ 	]*//' crates --include='*.rs' | grep -v 'SAFETY:'; then
+          if grep -rnE '[/]{2}' crates --include='*.rs' | grep -vE '[a-z]+:[/][/]' | grep -q .; then
             echo "el codigo va sin comentarios; lo que haya que explicar va al expediente"; exit 1
           fi
-
-      - name: Every SAFETY note is one line of English
-        run: |
-          if ! grep -rh 'SAFETY:' crates --include='*.rs' | iconv -f utf-8 -t ascii >/dev/null; then
-            echo "las notas SAFETY van en ingles"; exit 1
+          if grep -rnE '[/][*]' crates --include='*.rs' | grep -q .; then
+            echo "tampoco comentarios de bloque"; exit 1
           fi
-          awk '/SAFETY:/ { safety = 1; next }
-               /^[ 	]*\/\// { if (safety) { print FILENAME":"FNR": la nota SAFETY sigue en otra linea"; bad = 1 } }
-               { safety = 0 }
-               END { exit bad }' $(find crates -name '*.rs')
 
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
@@ -88,24 +81,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Twenty consecutive runs of the core
         run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done
-
-  mutants:
-    name: Every mutant dies in the crates without a system call (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-15
-            crates: -p cp-core -p cp-store
-          - os: windows-2025
-            crates: -p cp-core -p cp-store -p cp-win
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@cargo-mutants
-      - run: cargo mutants ${{ matrix.crates }} --no-times
 
   coverage:
     name: Coverage does not slip
@@ -132,6 +107,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys
+      - name: The probe reads a real clipboard, so leave something on it
+        shell: pwsh
+        run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example probe
       - run: cargo llvm-cov report --fail-under-lines 95 --summary-only
 

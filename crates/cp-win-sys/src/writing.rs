@@ -15,14 +15,22 @@ impl Clipboard {
         if entries.is_empty() {
             return Written::Refused;
         }
-        // SAFETY: the clipboard is open and owned by this task for as long as `self` lives.
+        let Some(ready) = reserved(entries) else {
+            return Written::Refused;
+        };
+
         if unsafe { EmptyClipboard() }.is_err() {
+            release(&ready);
             return Written::Refused;
         }
         let mut placed = 0;
-        for (id, bytes) in entries {
-            if handed_over(*id, bytes) {
-                placed += 1;
+        for (id, block) in ready {
+            match unsafe { SetClipboardData(id, Some(HANDLE(block.0))) } {
+                Ok(_) => placed += 1,
+
+                Err(_) => unsafe {
+                    let _ = GlobalFree(Some(block));
+                },
             }
         }
         if placed == 0 {
@@ -33,34 +41,37 @@ impl Clipboard {
     }
 }
 
-fn handed_over(id: u32, bytes: &[u8]) -> bool {
-    let Some(block) = block_of(bytes) else {
-        return false;
-    };
-    // SAFETY: on success the system takes ownership of the block.
-    match unsafe { SetClipboardData(id, Some(HANDLE(block.0))) } {
-        Ok(_) => true,
-        Err(_) => {
-            // SAFETY: ownership stayed here because the call failed.
-            let _ = unsafe { GlobalFree(Some(block)) };
-            false
+fn reserved(entries: &[(u32, &[u8])]) -> Option<Vec<(u32, HGLOBAL)>> {
+    let mut ready = Vec::with_capacity(entries.len());
+    for (id, bytes) in entries {
+        match block_of(bytes) {
+            Some(block) => ready.push((*id, block)),
+            None => {
+                release(&ready);
+                return None;
+            }
         }
+    }
+    Some(ready)
+}
+
+fn release(blocks: &[(u32, HGLOBAL)]) {
+    for (_, block) in blocks {
+        let _ = unsafe { GlobalFree(Some(*block)) };
     }
 }
 
 fn block_of(bytes: &[u8]) -> Option<HGLOBAL> {
-    // SAFETY: a moveable block of the requested size, released below on failure.
     let block = unsafe { GlobalAlloc(GMEM_MOVEABLE, bytes.len()) }.ok()?;
-    // SAFETY: the block was just allocated and is unlocked.
+
     let address = unsafe { GlobalLock(block) };
     if address.is_null() {
-        // SAFETY: nothing else holds the block.
         let _ = unsafe { GlobalFree(Some(block)) };
         return None;
     }
-    // SAFETY: the block holds exactly `bytes.len()` writable bytes.
+
     unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), address.cast::<u8>(), bytes.len()) };
-    // SAFETY: matches the lock above.
+
     let _ = unsafe { GlobalUnlock(block) };
     Some(block)
 }
@@ -85,6 +96,21 @@ pub fn text_of(bytes: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_block_is_reserved_before_the_clipboard_is_emptied() {
+        let entries: Vec<(u32, &[u8])> = vec![(1, b"uno".as_slice()), (2, b"dos".as_slice())];
+        let ready = reserved(&entries).expect("la memoria se consigue");
+        assert_eq!(ready.len(), 2, "lo que se pidio, reservado y sin entregar");
+        release(&ready);
+    }
+
+    #[test]
+    fn nothing_to_write_reserves_nothing() {
+        let ready = reserved(&[]).expect("vacio no es fallo");
+        assert!(ready.is_empty());
+        release(&ready);
+    }
 
     #[test]
     fn text_survives_the_round_trip() {

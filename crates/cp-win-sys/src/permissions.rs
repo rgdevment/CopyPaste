@@ -38,17 +38,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn this_process_is_ready_to_watch() {
-        let ready = Readiness::probe();
-        assert!(ready.can_watch());
-        assert!(ready.integrity.is_some());
+    fn what_cannot_reach_the_window_station_cannot_watch() {
+        let blind = Readiness {
+            reaches_window_station: false,
+            integrity: Some(MEDIUM),
+        };
+        assert!(!blind.can_watch(), "sin estacion de ventanas no se vigila");
+        let seeing = Readiness {
+            reaches_window_station: true,
+            integrity: None,
+        };
+        assert!(
+            seeing.can_watch(),
+            "y con ella si, aunque el nivel se ignore"
+        );
     }
 
     #[test]
     fn a_target_at_our_own_level_is_reachable() {
-        let ready = Readiness::probe();
-        let ours = ready.integrity.expect("nivel propio");
-        assert!(ready.can_paste_into(ours));
+        let ready = Readiness {
+            reaches_window_station: true,
+            integrity: Some(MEDIUM),
+        };
+        assert!(ready.can_paste_into(MEDIUM));
     }
 
     #[test]

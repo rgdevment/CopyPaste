@@ -1,0 +1,75 @@
+name: Mutants
+
+on:
+  pull_request:
+    paths:
+      - crates/**
+      - .cargo/mutants.toml
+      - .github/workflows/mutants.yml
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  on-the-branch:
+    name: ${{ matrix.name }} / the lines this branch changed
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            name: windows
+            crates: -p cp-core -p cp-store -p cp-win
+          - os: macos-15
+            name: macos
+            crates: -p cp-core -p cp-store
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: What the branch changed in the crates
+        id: touched
+        shell: bash
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          from=$(git merge-base "$BASE" HEAD)
+          git diff "$from" -- crates > branch.diff
+          if [ -s branch.diff ]; then echo "any=yes" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.touched.outputs.any == 'yes'
+      - uses: Swatinem/rust-cache@v2
+        if: steps.touched.outputs.any == 'yes'
+      - uses: taiki-e/install-action@cargo-mutants
+        if: steps.touched.outputs.any == 'yes'
+
+      - name: A mutant that lives on a line this branch wrote
+        id: run
+        if: steps.touched.outputs.any == 'yes'
+        shell: bash
+        run: |
+          set +e
+          cargo mutants ${{ matrix.crates }} --in-diff branch.diff --no-times -j 2
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: What survived
+        if: always() && steps.touched.outputs.any == 'yes'
+        shell: bash
+        env:
+          CODE: ${{ steps.run.outputs.code }}
+          TITLE: ${{ matrix.name }}, the lines this branch changed
+        run: bash scripts/mutants-report.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.touched.outputs.any == 'yes'
+        with:
+          name: mutants-branch-${{ matrix.name }}
+          path: mutants.out/
+          retention-days: 7

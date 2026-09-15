@@ -323,7 +323,7 @@ mod tests {
             "Esto es una frase normal y corriente.",
             "Nos vemos mañana si puedes",
             "La reunión es a las cinco, en la sala grande",
-            "return", // una palabra suelta no basta
+            "return",
         ] {
             assert_eq!(classify_text(prose), Kind::Text, "«{prose}»");
         }

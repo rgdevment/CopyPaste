@@ -29,15 +29,22 @@ pub fn within(
     patience: Duration,
     read: impl FnOnce() -> Option<Vec<u8>> + Send + 'static,
 ) -> Reading {
+    match anything_within(patience, read) {
+        Some(Some(bytes)) => Reading::Delivered(bytes),
+        Some(None) => Reading::Empty,
+        None => Reading::TooSlow,
+    }
+}
+
+pub fn anything_within<T: Send + 'static>(
+    patience: Duration,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Option<T> {
     let (tell, hear) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let _ = tell.send(read());
+        let _ = tell.send(work());
     });
-    match hear.recv_timeout(patience) {
-        Ok(Some(bytes)) => Reading::Delivered(bytes),
-        Ok(None) => Reading::Empty,
-        Err(_) => Reading::TooSlow,
-    }
+    hear.recv_timeout(patience).ok()
 }
 
 #[cfg(test)]

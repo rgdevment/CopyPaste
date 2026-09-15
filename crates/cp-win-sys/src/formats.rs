@@ -55,7 +55,7 @@ pub fn name_of(id: u32) -> String {
         return known.to_owned();
     }
     let mut buffer = [0u16; 256];
-    // SAFETY: the buffer is live and its length is passed as declared.
+
     let written = unsafe { GetClipboardFormatNameW(id, &mut buffer) };
     if written > 0 {
         String::from_utf16_lossy(&buffer[..written as usize])

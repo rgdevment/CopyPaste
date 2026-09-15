@@ -14,6 +14,9 @@
     <a href="https://codecov.io/gh/rgdevment/CopyPaste">
       <img src="https://codecov.io/gh/rgdevment/CopyPaste/branch/main/graph/badge.svg?style=flat-square" alt="Coverage"/>
     </a>
+    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/mutants-sweep.yml">
+      <img src="https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fraw.githubusercontent.com%2Frgdevment%2FCopyPaste%2Fscore%2Fmutants.json" alt="Mutation score"/>
+    </a>
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
