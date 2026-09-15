@@ -3,3 +3,6 @@
 .DS_Store
 /mutants.out
 /mutants.out.old
+/dist
+/msix
+/priconfig.xml

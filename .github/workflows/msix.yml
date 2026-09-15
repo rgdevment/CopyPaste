@@ -1,0 +1,112 @@
+name: MSIX
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - packaging/msix/**
+      - crates/cp-app/**
+      - .github/workflows/msix.yml
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to stamp, three numbers
+        required: false
+        default: 3.0.0
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  TARGET: x86_64-pc-windows-msvc
+
+jobs:
+  pack:
+    name: copypaste-windows-msix
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The version this package carries
+        id: version
+        shell: bash
+        run: |
+          raw="${{ github.event.inputs.version }}"
+          if [ -z "$raw" ]; then
+            tag="${GITHUB_REF#refs/tags/v}"
+            raw="${tag#refs/*}"
+          fi
+          case "$raw" in
+            refs/*) raw=3.0.0 ;;
+          esac
+          echo "three=$raw" >> "$GITHUB_OUTPUT"
+          echo "quad=${raw%%-*}.0" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ env.TARGET }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        shell: bash
+        run: cargo build --release -p cp-app --target "$TARGET"
+
+      - name: Lay the package out
+        shell: bash
+        run: |
+          mkdir -p msix/Assets
+          cp "target/$TARGET/release/CopyPaste.exe" msix/CopyPaste.exe
+          cp packaging/msix/Assets/*.png msix/Assets/
+
+          sed -e "s|@VERSION@|${{ steps.version.outputs.quad }}|" \
+              packaging/msix/AppxManifest.xml.in > msix/AppxManifest.xml
+
+          if grep -q "@[A-Z_]*@" msix/AppxManifest.xml; then
+            echo "::error::a placeholder survived the manifest"
+            exit 1
+          fi
+          cat msix/AppxManifest.xml
+
+      - name: The identity is the product, so it is checked
+        shell: bash
+        run: |
+          grep -q 'Name="rgdevment.CopyPaste-ClipboardManager"' msix/AppxManifest.xml || {
+            echo "::error::the package name moved: every 2.x install would be stranded"; exit 1; }
+          grep -q 'Publisher="CN=AC154EDC-DBFC-482B-AF3B-A1A6FF12DA84"' msix/AppxManifest.xml || {
+            echo "::error::the publisher moved: the Store listing would start from zero"; exit 1; }
+          grep -q 'TaskId="CopyPasteStartup"' msix/AppxManifest.xml || {
+            echo "::error::the startup task id moved: the user's choice would be forgotten"; exit 1; }
+          grep -q 'MinVersion="10.0.17763.0"' msix/AppxManifest.xml || {
+            echo "::error::the minimum Windows moved away from what the README promises"; exit 1; }
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          $sdk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory |
+            Where-Object {
+              (Test-Path "$($_.FullName)\x64\makeappx.exe") -and (Test-Path "$($_.FullName)\x64\makepri.exe")
+            } |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) { Write-Host "::error::no Windows SDK with makeappx and makepri"; exit 1 }
+
+          $v = "${{ steps.version.outputs.three }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          & "$($sdk.FullName)\x64\makepri.exe" createconfig /cf priconfig.xml /dq en-US_es-ES /o
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$($sdk.FullName)\x64\makepri.exe" new /pr msix /cf priconfig.xml /of msix/resources.pri /o
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          & "$($sdk.FullName)\x64\makeappx.exe" pack /d msix /p "dist/copypaste-$v-windows-x86_64.msix" /o
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msix
+          path: dist/*
+          if-no-files-found: error
