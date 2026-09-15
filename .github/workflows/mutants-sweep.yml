@@ -1,0 +1,128 @@
+name: Mutants sweep
+
+on:
+  schedule:
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  core:
+    name: cp-core and cp-store / shard ${{ matrix.shard }} of 2
+    runs-on: macos-15
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-mutants
+
+      - name: Half of every mutant the pure crates carry
+        id: run
+        run: |
+          set +e
+          cargo mutants -p cp-core -p cp-store --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: What survived
+        if: always()
+        env:
+          CODE: ${{ steps.run.outputs.code }}
+          TITLE: cp-core and cp-store, shard ${{ matrix.shard }} of 2
+        run: bash scripts/mutants-report.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-core-${{ matrix.shard }}
+          path: mutants.out/
+          retention-days: 14
+
+  windows:
+    name: cp-win / shard ${{ matrix.shard }} of 2
+    runs-on: windows-2025
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-mutants
+
+      - name: Half of every mutant the Windows crate carries
+        id: run
+        shell: bash
+        run: |
+          set +e
+          cargo mutants -p cp-win --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: What survived
+        if: always()
+        shell: bash
+        env:
+          CODE: ${{ steps.run.outputs.code }}
+          TITLE: cp-win, shard ${{ matrix.shard }} of 2
+        run: bash scripts/mutants-report.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-windows-${{ matrix.shard }}
+          path: mutants.out/
+          retention-days: 14
+
+  score:
+    name: what the whole sweep came to
+    if: always() && !cancelled()
+    needs: [core, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mutants-*
+          path: outcomes
+
+      - name: Every shard told as one number
+        env:
+          WANT: 4
+        run: python3 scripts/mutants_score.py
+
+      - name: The number, on the branch that holds nothing else
+        run: |
+          mv mutants.json "$RUNNER_TEMP/mutants.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git fetch origin score --depth 1 2>/dev/null; then
+            git switch -C score FETCH_HEAD
+          else
+            git switch --orphan score
+          fi
+          git rm -rq --cached . 2>/dev/null || true
+
+          cp "$RUNNER_TEMP/mutants.json" mutants.json
+          git add -- mutants.json
+          if git diff --cached --quiet; then
+            echo "the score has not moved"
+            exit 0
+          fi
+          git commit -m "chore: what the sweep of $(date -u +%Y-%m-%d) came to"
+          git push origin score
