@@ -1,3 +1,6 @@
+use objc2_application_services::{AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt};
+use objc2_core_foundation::{CFBoolean, CFDictionary};
+
 unsafe extern "C" {
     fn CGPreflightPostEventAccess() -> bool;
     fn CGRequestPostEventAccess() -> bool;
@@ -15,6 +18,12 @@ pub fn request_post_events() -> bool {
 
 pub fn is_accessibility_trusted() -> bool {
     unsafe { AXIsProcessTrusted() }
+}
+
+pub fn request_accessibility() -> bool {
+    let prompt = unsafe { kAXTrustedCheckOptionPrompt };
+    let options = CFDictionary::from_slices(&[prompt], &[CFBoolean::new(true)]);
+    unsafe { AXIsProcessTrustedWithOptions(Some(options.as_opaque())) }
 }
 
 pub fn is_secure_input_enabled() -> bool {
@@ -38,7 +47,7 @@ impl Readiness {
     }
 
     pub fn can_paste(&self) -> bool {
-        self.can_post
+        self.can_post || self.accessibility
     }
 
     pub fn can_use_menu_fallback(&self) -> bool {
@@ -59,27 +68,20 @@ mod tests {
     }
 
     #[test]
-    fn pasting_depends_on_posting_events_and_nothing_else() {
+    fn pasting_needs_one_of_the_two_permissions() {
         assert!(with(true, false, false).can_paste());
         assert!(
             with(true, false, true).can_paste(),
             "el input seguro no manda"
         );
-        assert!(with(true, true, true).can_paste());
-        assert!(!with(false, true, false).can_paste());
+        assert!(with(false, true, false).can_paste());
+        assert!(!with(false, false, false).can_paste());
     }
 
     #[test]
     fn the_menu_fallback_needs_its_own_permission() {
         assert!(!with(true, false, false).can_use_menu_fallback());
         assert!(with(true, true, false).can_use_menu_fallback());
-    }
-
-    #[test]
-    fn the_two_permissions_are_independent() {
-        assert!(with(true, false, false).can_paste());
-        assert!(!with(true, false, false).can_use_menu_fallback());
-        assert!(!with(false, true, false).can_paste());
         assert!(with(false, true, false).can_use_menu_fallback());
     }
 }

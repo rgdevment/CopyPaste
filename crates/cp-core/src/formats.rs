@@ -63,6 +63,14 @@ impl Catalog {
         Take::Presence
     }
 
+    pub fn decide_in(&self, family: Option<Family>, id: &str) -> Take {
+        let id = self.canonical(id);
+        if family == Some(Family::Files) && self.images_by_preference.contains(&id) {
+            return Take::Presence;
+        }
+        self.decide(id)
+    }
+
     pub fn refusal(&self, offered: &[&str]) -> Option<Refusal> {
         offered.iter().find_map(|id| {
             self.concealed
@@ -267,6 +275,52 @@ mod tests {
         assert_eq!(
             PROBE.classify(&["plain/text", "cheap/image"]),
             Some(Family::Image)
+        );
+    }
+
+    #[test]
+    fn a_copied_file_keeps_its_path_and_notes_its_icon() {
+        let files = Some(Family::Files);
+        assert_eq!(PROBE.decide_in(files, "cheap/image"), Take::Presence);
+        assert_eq!(PROBE.decide_in(files, "costly/image"), Take::Presence);
+        assert_eq!(PROBE.decide_in(files, "one/file"), Take::Payload);
+        assert_eq!(PROBE.decide_in(files, "old/text"), Take::Payload);
+        assert_eq!(PROBE.decide_in(files, "hangs/forever"), Take::Never);
+    }
+
+    #[test]
+    fn outside_a_file_copy_the_family_changes_nothing() {
+        for family in [None, Some(Family::Text), Some(Family::Image)] {
+            for id in [
+                "cheap/image",
+                "costly/image",
+                "old/text",
+                "hangs/forever",
+                "huge/icon",
+                "who/knows",
+            ] {
+                assert_eq!(
+                    PROBE.decide_in(family, id),
+                    PROBE.decide(id),
+                    "{family:?} {id}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_file_copy_notes_the_icon_under_its_legacy_name_too() {
+        const ICONIC: Catalog = Catalog {
+            aliases: &[("legacy/picture", "cheap/image")],
+            ..PROBE
+        };
+        assert_eq!(
+            ICONIC.decide_in(Some(Family::Files), "legacy/picture"),
+            Take::Presence
+        );
+        assert_eq!(
+            ICONIC.decide_in(Some(Family::Text), "legacy/picture"),
+            Take::Payload
         );
     }
 }

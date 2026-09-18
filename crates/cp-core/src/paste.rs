@@ -41,6 +41,19 @@ pub enum Next {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Route {
+    Keystroke,
+    Menu,
+}
+
+pub fn route_for(can_post_events: bool, can_drive_menus: bool) -> Option<Route> {
+    if can_post_events {
+        return Some(Route::Keystroke);
+    }
+    can_drive_menus.then_some(Route::Menu)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Warning {
     SecureInputActive,
 }
@@ -98,6 +111,18 @@ impl Failure {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_keystroke_is_the_route_whenever_it_is_allowed() {
+        assert_eq!(route_for(true, false), Some(Route::Keystroke));
+        assert_eq!(route_for(true, true), Some(Route::Keystroke));
+    }
+
+    #[test]
+    fn the_menu_is_the_route_only_when_the_keystroke_is_denied() {
+        assert_eq!(route_for(false, true), Some(Route::Menu));
+        assert_eq!(route_for(false, false), None);
+    }
 
     #[test]
     fn a_slow_app_gets_the_dozen_tries_the_2x_needed() {
