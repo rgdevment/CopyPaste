@@ -1,14 +1,15 @@
 use cp_core::destination::Tracker;
 use cp_core::item::Payload;
 use cp_core::kind::Kind;
+use cp_core::paste::Route;
 use cp_core::watch::{Cadence, Seen, Watcher};
-use cp_mac::capture::capture;
+use cp_mac::capture::{Captured, PATIENCE, capture, capture_within};
 use cp_mac::paste::Paster;
 use cp_mac_sys::keyboard::{self, QWERTY_V};
 use cp_mac_sys::pasteboard::{self, Pasteboard};
 use cp_mac_sys::permissions::Readiness;
 use cp_mac_sys::{frontmost, keystroke};
-use objc2_foundation::MainThreadMarker;
+use objc2_foundation::{MainThreadMarker, NSString, NSURL};
 use std::time::{Duration, Instant};
 
 struct Battery {
@@ -169,6 +170,109 @@ fn main() -> std::process::ExitCode {
             other => Err(format!("llegó {other:?}")),
         }
     });
+
+    b.case("A9", "una referencia de Finder se guarda como ruta", || {
+        let dir = std::env::temp_dir().join(format!("cp-a9-{}", pb.change_count()));
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        let file = dir.join("cp a9.png");
+        std::fs::write(&file, b"png").map_err(|why| why.to_string())?;
+        let reference = NSURL::fileURLWithPath(&NSString::from_str(&file.display().to_string()))
+            .fileReferenceURL()
+            .and_then(|url| url.absoluteString())
+            .map(|url| url.to_string())
+            .ok_or("el archivo no tiene referencia")?;
+        if !reference.starts_with("file:///.file/id=") {
+            return Err(format!(
+                "la referencia no tiene la forma de Finder: {reference}"
+            ));
+        }
+        pb.write_items(&[vec![("public.file-url", reference.as_str())]]);
+        let item = capture(&pb).ok_or("no se capturó")?;
+        let stored = match &item
+            .format("public.file-url")
+            .ok_or("falta la ruta")?
+            .payload
+        {
+            Payload::Inline(bytes) => String::from_utf8_lossy(bytes).to_string(),
+            other => return Err(format!("llegó {other:?}")),
+        };
+        let missing = frontmost::missing_paths(&stored);
+        std::fs::remove_dir_all(&dir).ok();
+        if stored.contains(".file/id=") || !stored.ends_with("/cp%20a9.png") {
+            return Err(format!("se guardó «{stored}»"));
+        }
+        if item.kind != Some(Kind::Image) {
+            return Err(format!("se clasificó como {:?}", item.kind));
+        }
+        if !missing.is_empty() {
+            return Err(format!("se dio por borrado: {missing:?}"));
+        }
+        Ok(())
+    });
+
+    b.case("A10", "un archivo copiado no cuesta megabytes", || {
+        let icon = vec![0u8; 4 * 1024 * 1024];
+        pb.write_all(&[
+            ("public.file-url", b"file:///tmp/cp-a10.txt"),
+            ("public.tiff", &icon),
+        ]);
+        let item = capture(&pb).ok_or("no se capturó")?;
+        match &item
+            .format("public.tiff")
+            .ok_or("el icono ni se anotó")?
+            .payload
+        {
+            Payload::Announced { size: None } => {}
+            other => return Err(format!("el icono se guardó: {other:?}")),
+        }
+        if item.oversized_format().is_some() || item.stored_bytes() > 1024 {
+            return Err(format!("se guardaron {} bytes", item.stored_bytes()));
+        }
+        Ok(())
+    });
+
+    b.case("A11", "una hoja de cálculo no se guarda como foto", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("falta el fixture: {why}"))?;
+        pb.write_all(&[
+            ("com.microsoft.Embed-Source", b"\x01"),
+            ("public.utf8-plain-text", b"A\tB\nC\tD"),
+            ("public.png", &png),
+        ]);
+        let item = capture(&pb).ok_or("no se capturó")?;
+        if item.kind == Some(Kind::Image) {
+            return Err("el rango se clasificó como imagen".into());
+        }
+        match &item
+            .format("public.utf8-plain-text")
+            .ok_or("falta el texto")?
+            .payload
+        {
+            Payload::Inline(bytes) if bytes == b"A\tB\nC\tD" => Ok(()),
+            other => Err(format!("llegó {other:?}")),
+        }
+    });
+
+    b.case(
+        "A12",
+        "una imagen anunciada sin bytes no hace al ítem imagen",
+        || {
+            pb.write_all(&[("public.utf8-plain-text", b"celda"), ("public.png", b"")]);
+            let item = capture(&pb).ok_or("no se capturó")?;
+            match &item
+                .format("public.png")
+                .ok_or("la imagen ni se anotó")?
+                .payload
+            {
+                Payload::Absent => {}
+                other => return Err(format!("una imagen vacía se guardó: {other:?}")),
+            }
+            if item.kind != Some(Kind::Text) {
+                return Err(format!("se clasificó como {:?}", item.kind));
+            }
+            Ok(())
+        },
+    );
 
     b.group("I · Volver al portapapeles");
 
@@ -685,6 +789,19 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    b.case(
+        "C5",
+        "la captura acotada devuelve lo mismo que la directa",
+        || {
+            pb.write_text("cp-c5");
+            let direct = capture(&pb).ok_or("no se capturó")?;
+            match capture_within(PATIENCE) {
+                Captured::Kept(item) if item == direct => Ok(()),
+                other => Err(format!("llegó {other:?}")),
+            }
+        },
+    );
+
     b.group("D · Teclado");
 
     b.case("D1", "el layout activo resuelve la «v»", || {
@@ -800,27 +917,39 @@ fn main() -> std::process::ExitCode {
                 }
                 Ok(())
             });
-            if ready.can_post {
-                match paste_round_trip(&pb, &paster) {
+            for (id, route, what, allowed, permission) in [
+                (
+                    "F4",
+                    Route::Keystroke,
+                    "pegado real en TextEdit",
+                    ready.can_post,
+                    "sin permiso para postear eventos",
+                ),
+                (
+                    "F5",
+                    Route::Menu,
+                    "pegado por el menú Edición cuando ⌘V no entra",
+                    ready.accessibility,
+                    "sin permiso de Accesibilidad",
+                ),
+            ] {
+                if !allowed {
+                    b.skip(id, what, permission);
+                    continue;
+                }
+                match paste_round_trip(&pb, &paster, route) {
                     Ok(()) => {
                         b.passed += 1;
-                        println!("    ok    F4    pegado real en TextEdit, ida y vuelta");
+                        println!("    ok    {id:<5} {what}, ida y vuelta");
                     }
                     Err(why) if why.starts_with("TextEdit no llegó") => {
-                        b.skip("F4", "pegado real en TextEdit", &why);
+                        b.skip(id, what, &why);
                     }
                     Err(why) => {
                         b.failed += 1;
-                        println!("    FALLA F4    pegado real en TextEdit");
-                        println!("            {why}");
+                        println!("    FALLA {id:<5} {what}\n            {why}");
                     }
                 }
-            } else {
-                b.skip(
-                    "F4",
-                    "pegado real en TextEdit",
-                    "sin permiso para postear eventos",
-                );
             }
         }
         None => b.skip("F3", "el pegador se construye", "no hay fuente de eventos"),
@@ -838,7 +967,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn paste_round_trip(pb: &Pasteboard, paster: &Paster) -> Result<(), String> {
+fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<(), String> {
     let path = "/tmp/cp-probe-target.txt";
     std::fs::write(path, "").map_err(|why| why.to_string())?;
     run_open(&["-a", "TextEdit", path]);
@@ -854,6 +983,7 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster) -> Result<(), String> {
         if let Some(pid) = textedit {
             frontmost::bring_to_front(pid);
             std::thread::sleep(Duration::from_millis(250));
+            cp_mac_sys::runloop::pump(0.0);
             if let Some((front_pid, bundle)) = frontmost::frontmost()
                 && front_pid == pid
             {
@@ -878,8 +1008,11 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster) -> Result<(), String> {
     std::thread::sleep(Duration::from_millis(120));
 
     let started = Instant::now();
-    match paster.paste_into(&target, || {}) {
+    match paster.paste_via(Some(route), &target, || {}) {
         cp_mac::paste::Outcome::Degraded(why) => return Err(format!("degradó: {why:?}")),
+        cp_mac::paste::Outcome::Sent { via, .. } if via != route => {
+            return Err(format!("fue por {via:?}"));
+        }
         cp_mac::paste::Outcome::Sent { .. } => {}
     }
     std::thread::sleep(Duration::from_millis(400));

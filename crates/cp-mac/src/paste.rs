@@ -1,15 +1,22 @@
 use cp_core::destination::Destination;
-use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase, SETTLE};
+use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase, Route, SETTLE, route_for};
 use cp_mac_sys::frontmost;
 use cp_mac_sys::keyboard::{self, QWERTY_V};
 use cp_mac_sys::keystroke::{self, Keystroke};
-use cp_mac_sys::permissions;
-use cp_mac_sys::runloop;
+use cp_mac_sys::permissions::Readiness;
+use cp_mac_sys::{menu, runloop};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
-    Sent { took: std::time::Duration },
+    Sent {
+        took: std::time::Duration,
+        via: Route,
+    },
     Degraded(Failure),
+}
+
+pub fn route_of(ready: &Readiness) -> Option<Route> {
+    route_for(ready.can_post, ready.accessibility)
 }
 
 pub struct Paster {
@@ -28,12 +35,21 @@ impl Paster {
     }
 
     pub fn paste_into(&self, target: &Destination, hide_panel: impl FnOnce()) -> Outcome {
+        self.paste_via(route_of(&Readiness::probe()), target, hide_panel)
+    }
+
+    pub fn paste_via(
+        &self,
+        route: Option<Route>,
+        target: &Destination,
+        hide_panel: impl FnOnce(),
+    ) -> Outcome {
         let started = std::time::Instant::now();
         let mut attempt = Attempt::default();
 
-        if !permissions::can_post_events() {
+        let Some(route) = route else {
             return Outcome::Degraded(Failure::SendDenied);
-        }
+        };
 
         hide_panel();
 
@@ -62,9 +78,14 @@ impl Paster {
         }
 
         attempt.sending();
-        if self.keys.command(self.keycode()) {
+        let sent = match route {
+            Route::Keystroke => self.keys.command(self.keycode()),
+            Route::Menu => menu::press_paste(target.pid).is_ok(),
+        };
+        if sent {
             Outcome::Sent {
                 took: started.elapsed(),
+                via: route,
             }
         } else {
             Outcome::Degraded(Failure::SendDenied)

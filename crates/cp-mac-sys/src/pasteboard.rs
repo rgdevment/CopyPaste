@@ -1,5 +1,5 @@
 use objc2_app_kit::{NSPasteboard, NSPasteboardItem, NSPasteboardWriting};
-use objc2_foundation::{MainThreadMarker, NSString};
+use objc2_foundation::{MainThreadMarker, NSString, NSURL};
 
 pub struct Pasteboard {
     inner: objc2::rc::Retained<NSPasteboard>,
@@ -7,6 +7,12 @@ pub struct Pasteboard {
 
 impl Pasteboard {
     pub fn general(_mtm: MainThreadMarker) -> Self {
+        Self {
+            inner: NSPasteboard::generalPasteboard(),
+        }
+    }
+
+    pub fn general_from_any_thread() -> Self {
         Self {
             inner: NSPasteboard::generalPasteboard(),
         }
@@ -101,4 +107,69 @@ impl Pasteboard {
 
 pub fn change_count_from_any_thread() -> i64 {
     objc2_app_kit::NSPasteboard::generalPasteboard().changeCount() as i64
+}
+
+pub fn file_path_of(url: &str) -> Option<String> {
+    let parsed = NSURL::URLWithString(&NSString::from_str(url))?;
+    if !parsed.isFileURL() {
+        return None;
+    }
+    let path = parsed.filePathURL()?.absoluteString()?;
+    Some(path.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn reference_of(path: &std::path::Path) -> String {
+        NSURL::fileURLWithPath(&NSString::from_str(&path.display().to_string()))
+            .fileReferenceURL()
+            .and_then(|url| url.absoluteString())
+            .map(|url| url.to_string())
+            .expect("un archivo que existe tiene referencia")
+    }
+
+    #[test]
+    fn a_finder_reference_becomes_the_path_it_points_at() {
+        let dir = std::env::temp_dir().join(format!("cp-ref-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("foto de perfil.png");
+        std::fs::write(&file, b"png").unwrap();
+        let reference = reference_of(&file);
+        assert!(reference.starts_with("file:///.file/id="), "{reference}");
+        let resolved = file_path_of(&reference).unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+        assert!(resolved.starts_with("file:///"), "{resolved}");
+        assert!(resolved.ends_with("/foto%20de%20perfil.png"), "{resolved}");
+        assert!(!resolved.contains(".file/id="));
+    }
+
+    #[test]
+    fn a_path_url_comes_back_as_it_was() {
+        assert_eq!(
+            file_path_of("file:///tmp/uno.txt").as_deref(),
+            Some("file:///tmp/uno.txt")
+        );
+        assert_eq!(
+            file_path_of("file:///tmp/con%20espacio.txt").as_deref(),
+            Some("file:///tmp/con%20espacio.txt")
+        );
+    }
+
+    #[test]
+    fn what_is_not_a_file_has_no_path() {
+        assert_eq!(file_path_of("https://example.com/x.png"), None);
+        assert_eq!(file_path_of("no es una url"), None);
+        assert_eq!(file_path_of(""), None);
+    }
+
+    #[test]
+    fn a_dead_reference_has_no_path_either() {
+        let file = std::env::temp_dir().join(format!("cp-dead-{}.txt", std::process::id()));
+        std::fs::write(&file, b"efimero").unwrap();
+        let reference = reference_of(&file);
+        std::fs::remove_file(&file).unwrap();
+        assert_eq!(file_path_of(&reference), None);
+    }
 }

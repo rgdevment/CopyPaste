@@ -27,6 +27,7 @@ pub const CATALOG: Catalog = Catalog {
         ("NeXT Rich Text Format v1.0 pasteboard type", "public.rtf"),
         ("NeXT RTFD pasteboard type", "com.apple.flat-rtfd"),
         ("Apple HTML pasteboard type", "public.html"),
+        ("Apple Web Archive pasteboard type", "com.apple.webarchive"),
     ],
     concealed: &[
         "org.nspasteboard.ConcealedType",
@@ -51,7 +52,15 @@ pub const CATALOG: Catalog = Catalog {
     files: &["public.file-url"],
     images_by_preference: &["public.png", "public.tiff"],
     equivalents: &[],
-    embeddable: &[],
+    embeddable: &[
+        "com.apple.iWork.TSPNativeData",
+        "com.apple.iWork.TSPNativeMetadata",
+        "com.apple.iWork.TSPDescription",
+        "com.microsoft.Embed-Source",
+        "com.microsoft.Object-Descriptor",
+        "com.microsoft.Link-Source-Descriptor",
+        "com.microsoft.ObjectLink",
+    ],
 };
 
 #[cfg(test)]
@@ -95,6 +104,107 @@ mod tests {
         "NeXT TIFF v4.0 pasteboard type",
     ];
 
+    const NUMBERS: &[&str] = &[
+        "com.apple.iWork.TSPNativeData",
+        "com.apple.iWork.TSPNativeMetadata",
+        "com.apple.iWork.TSPDescription",
+        "com.apple.iWork.pasteboardState.numberOfTables-1",
+        "com.apple.iWork.pasteboardState.applicationName-Numbers",
+        "com.apple.iWork.pasteboardState.hasTables",
+        "com.apple.flat-rtfd",
+        "NeXT RTFD pasteboard type",
+        "com.apple.webarchive",
+        "Apple Web Archive pasteboard type",
+        "public.rtf",
+        "NeXT Rich Text Format v1.0 pasteboard type",
+        "public.utf16-external-plain-text",
+        "CorePasteboardFlavorType 0x75743136",
+        "public.utf8-plain-text",
+        "NSStringPboardType",
+        "public.html",
+        "Apple HTML pasteboard type",
+        "public.png",
+        "Apple PNG pasteboard type",
+        "com.adobe.pdf",
+        "Apple PDF pasteboard type",
+        "public.tiff",
+        "NeXT TIFF v4.0 pasteboard type",
+    ];
+
+    const EXCEL: &[&str] = &[
+        "public.html",
+        "Apple HTML pasteboard type",
+        "public.utf16-plain-text",
+        "CorePasteboardFlavorType 0x75747874",
+        "public.utf8-plain-text",
+        "NSStringPboardType",
+        "com.adobe.pdf",
+        "Apple PDF pasteboard type",
+        "public.png",
+        "Apple PNG pasteboard type",
+        "public.tiff",
+        "NeXT TIFF v4.0 pasteboard type",
+        "public.rtf",
+        "NeXT Rich Text Format v1.0 pasteboard type",
+        "public.utf16-external-plain-text",
+        "CorePasteboardFlavorType 0x75743136",
+        "com.microsoft.Embed-Source",
+        "com.microsoft.Object-Descriptor",
+        "com.microsoft.Link-Source",
+        "com.microsoft.Link-Source-Descriptor",
+        "com.microsoft.Link",
+        "com.microsoft.DSP-Text",
+        "com.apple.webarchive",
+        "Apple Web Archive pasteboard type",
+        "com.microsoft.ole.source.46867.0x76580810e0",
+        "com.microsoft.DataObject",
+        "com.microsoft.appbundleid",
+    ];
+
+    const WORD: &[&str] = &[
+        "com.microsoft.Object-Descriptor",
+        "public.rtf",
+        "NeXT Rich Text Format v1.0 pasteboard type",
+        "public.utf16-external-plain-text",
+        "CorePasteboardFlavorType 0x75743136",
+        "public.utf8-plain-text",
+        "NSStringPboardType",
+        "public.html",
+        "Apple HTML pasteboard type",
+        "public.utf16-plain-text",
+        "CorePasteboardFlavorType 0x75747874",
+        "com.adobe.pdf",
+        "Apple PDF pasteboard type",
+        "com.microsoft.Embed-Source",
+        "com.microsoft.Link-Source",
+        "com.microsoft.Link-Source-Descriptor",
+        "com.microsoft.ObjectLink",
+        "com.apple.webarchive",
+        "Apple Web Archive pasteboard type",
+        "com.apple.flat-rtfd",
+        "NeXT RTFD pasteboard type",
+        "com.microsoft.ole.source.68486.0x1053dc3c8",
+        "com.microsoft.DataObject",
+        "com.microsoft.appbundleid",
+    ];
+
+    const PAGES: &[&str] = &[
+        "com.apple.iWork.TSPNativeData",
+        "com.apple.iWork.TSPNativeMetadata",
+        "com.apple.iWork.TSPDescription",
+        "com.apple.iWork.pasteboardState.applicationName-Pages",
+        "com.apple.flat-rtfd",
+        "NeXT RTFD pasteboard type",
+        "public.rtf",
+        "NeXT Rich Text Format v1.0 pasteboard type",
+        "public.utf16-external-plain-text",
+        "CorePasteboardFlavorType 0x75743136",
+        "public.utf8-plain-text",
+        "NSStringPboardType",
+        "dyn.ah62d4rv4gu8y63n2nuuhg5pbsm4ca6dbsr4gnkduqf31k3pcr7u1e3basv61a3k",
+        "NeXT smart paste pasteboard type",
+    ];
+
     #[test]
     fn safari_keeps_the_context_that_2x_threw_away() {
         let kept: Vec<&&str> = SAFARI
@@ -118,6 +228,15 @@ mod tests {
             assert_eq!(CATALOG.decide(opaque), Take::Presence);
         }
         assert_eq!(CATALOG.decide("public.file-url"), Take::Payload);
+        let files = CATALOG.classify(FINDER);
+        for icon in ["public.tiff", "NeXT TIFF v4.0 pasteboard type"] {
+            assert_eq!(CATALOG.decide_in(files, icon), Take::Presence, "{icon}");
+        }
+        assert_eq!(CATALOG.decide_in(files, "public.file-url"), Take::Payload);
+        assert_eq!(
+            CATALOG.decide_in(CATALOG.classify(PREVIEW), "public.tiff"),
+            Take::Payload
+        );
     }
 
     #[test]
@@ -134,9 +253,42 @@ mod tests {
             ("NeXT TIFF v4.0 pasteboard type", "public.tiff"),
             ("Apple PNG pasteboard type", "public.png"),
             ("NeXT RTFD pasteboard type", "com.apple.flat-rtfd"),
+            ("Apple Web Archive pasteboard type", "com.apple.webarchive"),
         ] {
             assert_eq!(CATALOG.canonical(legacy), modern);
         }
+    }
+
+    #[test]
+    fn a_spreadsheet_is_text_even_when_it_offers_a_picture_of_itself() {
+        assert_eq!(CATALOG.classify(NUMBERS), Some(Family::Text));
+        assert_eq!(CATALOG.classify(EXCEL), Some(Family::Text));
+        assert_eq!(CATALOG.preferred_image(NUMBERS), Some("public.png"));
+    }
+
+    #[test]
+    fn a_document_from_word_or_pages_is_text() {
+        assert_eq!(CATALOG.classify(WORD), Some(Family::Text));
+        assert_eq!(CATALOG.classify(PAGES), Some(Family::Text));
+    }
+
+    #[test]
+    fn the_document_markers_are_noted_never_read() {
+        for marker in CATALOG.embeddable {
+            assert_eq!(CATALOG.decide(marker), Take::Presence, "{marker}");
+        }
+        assert!(
+            !CATALOG
+                .embeddable
+                .iter()
+                .any(|marker| CATALOG.images_by_preference.contains(marker))
+        );
+    }
+
+    #[test]
+    fn a_marker_without_text_does_not_hide_an_image() {
+        let picture_only = ["com.microsoft.Embed-Source", "public.png"];
+        assert_eq!(CATALOG.classify(&picture_only), Some(Family::Image));
     }
 
     #[test]
