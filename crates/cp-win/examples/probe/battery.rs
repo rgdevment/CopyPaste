@@ -1,22 +1,41 @@
 use cp_core::formats::{Family, Take};
+use cp_core::paste_as::{Form, forms_for, render};
 use cp_core::watch::{Cadence, Seen, Watcher};
 use cp_win::capture::{self, Captured, capture};
+use cp_win::content::content_of;
 use cp_win::formats::CATALOG;
 use cp_win::paste::{Outcome, paste_into};
-use cp_win::restore::{Restored, to_clipboard, to_clipboard_as_plain_text};
+use cp_win::restore::{Restored, to_clipboard};
 use cp_win::transfer::{self, Transfer};
+use cp_win::virtual_files::{self, DESCRIPTOR};
 use cp_win::watching::Watching;
 use cp_win_sys::clipboard::{self, Clipboard};
-use cp_win_sys::formats::{CF_UNICODETEXT, name_of};
+use cp_win_sys::formats::{CF_HDROP, CF_UNICODETEXT, id_of, name_of};
 use cp_win_sys::frontmost::{self, Target};
 use cp_win_sys::permissions::Readiness;
 use cp_win_sys::reading::{self, PATIENCE, Reading};
 use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
-use cp_win_sys::{media, ocr, thumbnail};
+use cp_win_sys::{files, media, ocr, source, thumbnail};
 
-const CASES: u32 = 39;
-const MAY_SKIP: &[&str] = &["B4", "E1", "L1"];
+const CASES: u32 = 46;
+const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "L1", "P1", "P2"];
+const SKIPPED: &str = "omitido: ";
+
+const VIRTUAL_FILE_NAME: &str = "adjunto virtual.txt";
+const VIRTUAL_FILE_BYTES: &[u8] = b"cp-e2 contenido";
+const VIRTUAL_FILE_SCRIPT: &str = "Add-Type -AssemblyName System.Windows.Forms; \
+$bytes = [System.Text.Encoding]::UTF8.GetBytes('cp-e2 contenido'); \
+$fgd = New-Object byte[] 596; \
+[BitConverter]::GetBytes([uint32]1).CopyTo($fgd, 0); \
+[BitConverter]::GetBytes([uint32]0x40).CopyTo($fgd, 4); \
+[BitConverter]::GetBytes([uint32]$bytes.Length).CopyTo($fgd, 72); \
+[System.Text.Encoding]::Unicode.GetBytes('adjunto virtual.txt').CopyTo($fgd, 76); \
+$d = New-Object System.Windows.Forms.DataObject; \
+$d.SetData('FileGroupDescriptorW', (New-Object System.IO.MemoryStream(,$fgd))); \
+$d.SetData('FileContents', (New-Object System.IO.MemoryStream(,$bytes))); \
+[System.Windows.Forms.Clipboard]::SetDataObject($d, $true); \
+'placed'";
 
 struct Battery {
     passed: u32,
@@ -42,6 +61,20 @@ impl Battery {
         }
     }
 
+    fn case_or_skip(
+        &mut self,
+        id: &'static str,
+        what: &str,
+        run: impl FnOnce() -> Result<(), String>,
+    ) {
+        match run() {
+            Err(why) if why.starts_with(SKIPPED) => {
+                self.skip(id, what, why.trim_start_matches(SKIPPED));
+            }
+            other => self.case(id, what, || other),
+        }
+    }
+
     fn skip(&mut self, id: &'static str, what: &str, why: &str) {
         if MAY_SKIP.contains(&id) {
             self.skipped.push(id);
@@ -51,6 +84,76 @@ impl Battery {
             println!("    FALLA {id:<5} {what}: este caso no puede saltarse");
         }
     }
+}
+
+struct Scratch {
+    dir: std::path::PathBuf,
+}
+
+impl Scratch {
+    fn new(prefix: &str) -> Result<Self, String> {
+        let dir = std::env::temp_dir().join(format!("{prefix}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        Ok(Self { dir })
+    }
+
+    fn file(&self, name: &str, bytes: &[u8]) -> Result<std::path::PathBuf, String> {
+        let path = self.dir.join(name);
+        std::fs::write(&path, bytes).map_err(|why| why.to_string())?;
+        Ok(path)
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        std::fs::remove_dir_all(&self.dir).ok();
+    }
+}
+
+fn shell_is_running() -> Result<(), String> {
+    match powershell_within("(Get-Process -Name explorer -ErrorAction SilentlyContinue).Count") {
+        Some(count) if !count.is_empty() && count != "0" => Ok(()),
+        Some(_) => Err(format!(
+            "{SKIPPED}no hay Explorador en esta sesión: no hay escritorio al que abrir o revelar"
+        )),
+        None => Err(format!("{SKIPPED}PowerShell no contesta")),
+    }
+}
+
+fn powershell_within(script: &str) -> Option<String> {
+    let mut child = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", script])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .stdin(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+    let started = std::time::Instant::now();
+    while started.elapsed() < std::time::Duration::from_secs(10) {
+        if child.try_wait().ok()?.is_some() {
+            let out = child.wait_with_output().ok()?;
+            if !out.status.success() {
+                return None;
+            }
+            return Some(String::from_utf8_lossy(&out.stdout).trim().to_owned());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    child.kill().ok();
+    child.wait().ok();
+    None
+}
+
+fn wait_until(what: &str, mut observed: impl FnMut() -> Option<bool>) -> Result<(), String> {
+    for _ in 0..8 {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        match observed() {
+            Some(true) => return Ok(()),
+            Some(false) => {}
+            None => return Err("PowerShell no contesta o falló al preguntar".into()),
+        }
+    }
+    Err(format!("{what}: no pasó a tiempo"))
 }
 
 fn offered_names() -> Result<Vec<String>, String> {
@@ -96,8 +199,10 @@ fn main() -> std::process::ExitCode {
         if names.is_empty() {
             return Err("el portapapeles está vacío: copia algo y repite".into());
         }
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        let family = CATALOG.classify(&refs);
         for name in &names {
-            let take = CATALOG.decide(name);
+            let take = CATALOG.decide_in(family, name);
             let mark = match take {
                 Take::Payload => "copia",
                 Take::Presence => "anota",
@@ -108,18 +213,23 @@ fn main() -> std::process::ExitCode {
         Ok(())
     });
 
-    b.case("B2", "lo que se copia se puede leer de verdad", || {
+    b.case_or_skip("B2", "lo que se copia se puede leer de verdad", || {
         let clipboard = Clipboard::open().ok_or("no abrió")?;
         let ids = clipboard.offered();
         let names: Vec<String> = ids.iter().map(|id| name_of(*id)).collect();
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-        if CATALOG.refusal(&refs).is_some() {
-            return Err("la fuente pidió no registrar esto".into());
+        if let Some(refusal) = CATALOG.refusal(&refs) {
+            return Err(format!(
+                "{SKIPPED}la fuente pidió no registrar esto ({refusal:?}): no hay nada que leer"
+            ));
         }
+        let family = CATALOG.classify(&refs);
         let mut read = 0usize;
         let mut bytes = 0usize;
         for (id, name) in ids.iter().zip(&names) {
-            if CATALOG.decide(name) != Take::Payload || CATALOG.costlier_twin(name, &refs) {
+            if CATALOG.decide_in(family, name) != Take::Payload
+                || CATALOG.costlier_twin(name, &refs)
+            {
                 continue;
             }
             match clipboard.size_of(*id) {
@@ -318,6 +428,34 @@ fn main() -> std::process::ExitCode {
         Ok(())
     });
 
+    b.case(
+        "G4",
+        "insistir ante una fuente que responde no cuesta un segundo intento",
+        || {
+            {
+                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g4"))]);
+            }
+            let direct = {
+                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                capture(&clipboard).kept().ok_or("no se capturó")?
+            };
+            let started = std::time::Instant::now();
+            let got = capture::capture_insisting(capture::PATIENCE, cp_core::watch::RETRY);
+            let took = started.elapsed();
+            match got {
+                Captured::Kept(item) if item == direct => {
+                    if took < capture::PATIENCE {
+                        Ok(())
+                    } else {
+                        Err(format!("tardó {took:?}: hubo pausa sin motivo"))
+                    }
+                }
+                other => Err(format!("llegó {other:?}")),
+            }
+        },
+    );
+
     b.case("H1", "un texto copiado se convierte en un ítem", || {
         {
             let clipboard = Clipboard::open().ok_or("no abrió")?;
@@ -499,37 +637,78 @@ fn main() -> std::process::ExitCode {
         }
     });
 
-    b.case("I3", "pegar en plano no muda lo guardado", || {
+    b.case("I3", "pegar en plano no mutila el ítem guardado", || {
+        let html = id_of("HTML Format").ok_or("no se registró HTML Format")?;
         {
             let clipboard = Clipboard::open().ok_or("no abrió")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i3-con-estilos"))]);
+            clipboard.replace(&[
+                (CF_UNICODETEXT, &utf16_of("con estilos")),
+                (html, b"<b>con estilos</b>"),
+            ]);
         }
         let item = {
             let clipboard = Clipboard::open().ok_or("no abrió")?;
-            match capture(&clipboard) {
-                Captured::Kept(item) => item,
-                other => return Err(format!("no se capturó: {other:?}")),
-            }
+            capture(&clipboard).kept().ok_or("no se capturó")?
         };
-        let before = item.clone();
+        let had = item.formats.len();
+
+        let plain = render(Form::PlainText, &content_of(&item, None))
+            .ok_or("no se ofreció la forma plana")?
+            .into_item();
         let written = {
             let clipboard = Clipboard::open().ok_or("no abrió")?;
-            to_clipboard_as_plain_text(&clipboard, &item)
+            to_clipboard(&clipboard, &plain)
         };
-        if !matches!(
-            written,
-            Restored::Written {
-                incomplete: false,
-                ..
-            }
-        ) {
-            return Err(format!("la escritura plana dio {written:?}"));
+        match written {
+            Restored::Written { formats: 1, .. } => {}
+            other => return Err(format!("devolvió {other:?}")),
         }
-        if item != before {
-            return Err("el ítem se mutiló al pegarlo en plano".into());
+        {
+            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            if clipboard.offered().contains(&html) {
+                return Err("quedó el HTML: no se pegó en plano".into());
+            }
+        }
+
+        if item.formats.len() != had {
+            return Err("el ítem perdió formatos".into());
+        }
+        let restored = {
+            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            to_clipboard(&clipboard, &item)
+        };
+        match restored {
+            Restored::Written { .. } => {}
+            other => return Err(format!("no se pudo restaurar con estilos: {other:?}")),
+        }
+        let clipboard = Clipboard::open().ok_or("no abrió")?;
+        if !clipboard.offered().contains(&html) {
+            return Err("el HTML no volvió: el ítem había quedado mutilado".into());
         }
         Ok(())
     });
+
+    b.case(
+        "I4",
+        "un ítem sin texto plano no se puede pegar en plano",
+        || {
+            let only_image = cp_core::item::Item {
+                kind: Some(cp_core::kind::Kind::Image),
+                formats: vec![cp_core::item::Format {
+                    id: "PNG".into(),
+                    payload: cp_core::item::Payload::Inline(vec![1, 2, 3]),
+                }],
+            };
+            let content = content_of(&only_image, None);
+            if forms_for(&content).contains(&Form::PlainText) {
+                return Err("se ofreció pegar en plano sin texto".into());
+            }
+            match render(Form::PlainText, &content) {
+                None => Ok(()),
+                Some(other) => Err(format!("devolvió {other:?}")),
+            }
+        },
+    );
 
     b.group("J · El vigilante en marcha");
 
@@ -803,6 +982,112 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    b.case("N4", "la miniatura va al almacén y vuelve", || {
+        let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", std::process::id()));
+        let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("falta el fixture: {why}"))?;
+        let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
+            .ok_or("no se generó")?;
+        let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
+        let back = blobs
+            .get(&digest)
+            .map_err(|why| why.to_string())?
+            .ok_or("no volvió")?;
+        std::fs::remove_dir_all(&dir).ok();
+        if back != thumb {
+            return Err("la miniatura volvió distinta".into());
+        }
+        Ok(())
+    });
+
+    b.group("O · Origen");
+
+    b.case(
+        "O1",
+        "la aplicación de origen se guarda con su nombre visible",
+        || {
+            let pid = frontmost::foreground()
+                .and_then(source::process_of)
+                .unwrap_or_else(std::process::id);
+            let name = source::name_of(pid).ok_or("sin nombre visible")?;
+            if name.is_empty() {
+                return Err("el nombre llegó vacío".into());
+            }
+            if name.contains('\\') || name.to_ascii_lowercase().ends_with(".exe") {
+                return Err(format!("«{name}» es la ruta, no el nombre"));
+            }
+
+            let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
+            let id = store
+                .insert_text("uuid-origen", "algo copiado", 1)
+                .map_err(|why| why.to_string())?;
+            store
+                .set_source(id, &name, 2)
+                .map_err(|why| why.to_string())?;
+            let found = store
+                .list(
+                    &cp_store::Filter {
+                        query: Some(name.clone()),
+                        ..Default::default()
+                    },
+                    10,
+                    None,
+                )
+                .map_err(|why| why.to_string())?
+                .rows;
+            if found.len() != 1 {
+                return Err(format!("buscando «{name}» salieron {} ítems", found.len()));
+            }
+            println!("            origen «{name}», guardado y encontrado");
+            Ok(())
+        },
+    );
+
+    b.group("P · Abrir y revelar");
+
+    b.case_or_skip(
+        "P1",
+        "revelar un archivo lo deja seleccionado en el Explorador",
+        || {
+            shell_is_running()?;
+            let scratch = Scratch::new("cp-p1")?;
+            let file = scratch.file("revelado.txt", b"cp-p1")?;
+            if !files::reveal(&file) {
+                return Err("reveal dijo que no".into());
+            }
+            let shown = wait_until("el Explorador deja el archivo seleccionado", || {
+                powershell_within(
+                    "(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { $_.Document.SelectedItems() | ForEach-Object { $_.Path } }",
+                )
+                .map(|selected| selected.contains("revelado.txt"))
+            });
+            powershell_within(
+                "(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationURL -like '*cp-p1*' } | ForEach-Object { $_.Quit() }",
+            );
+            shown
+        },
+    );
+
+    b.case_or_skip("P2", "abrir un archivo lo entrega a su aplicación", || {
+        shell_is_running()?;
+        let scratch = Scratch::new("cp-p2")?;
+        let file = scratch.file("abierto.txt", b"cp-p2")?;
+        if !files::open(&file) {
+            return Err("open dijo que no".into());
+        }
+        let opened = wait_until("la aplicación tiene el documento abierto", || {
+            powershell_within(
+                "Get-Process | Where-Object { $_.MainWindowTitle -like '*abierto.txt*' } | ForEach-Object { $_.ProcessName }",
+            )
+            .map(|names| !names.is_empty())
+        });
+        powershell_within(
+            "Get-Process | Where-Object { $_.MainWindowTitle -like '*abierto.txt*' } | ForEach-Object { $_.CloseMainWindow() | Out-Null }",
+        );
+        opened
+    });
+
     b.group("C · Los formatos que cuelgan no se piden");
 
     b.case("C1", "nada marcado como presencia se llega a pedir", || {
@@ -874,6 +1159,75 @@ fn main() -> std::process::ExitCode {
             "no hay archivos copiados: hazlo en el explorador y repite",
         ),
     }
+
+    b.case(
+        "E2",
+        "un archivo virtual se captura con sus bytes y se pega como archivo",
+        || {
+            match powershell_within(VIRTUAL_FILE_SCRIPT).as_deref() {
+                Some("placed") => {}
+                other => return Err(format!("PowerShell no montó el DataObject: {other:?}")),
+            }
+            let item = capture::capture_now().kept().ok_or("no se capturó")?;
+            if item.kind != Some(cp_core::kind::Kind::File) {
+                return Err(format!("la clase salió {:?}", item.kind));
+            }
+            let described = item
+                .format(DESCRIPTOR)
+                .and_then(|one| match &one.payload {
+                    cp_core::item::Payload::Inline(bytes) => Some(bytes.as_slice()),
+                    _ => None,
+                })
+                .map(virtual_files::described_in)
+                .ok_or("el descriptor no se guardó")?;
+            if described.len() != 1 || described[0].name != VIRTUAL_FILE_NAME {
+                return Err(format!("el descriptor dice {described:?}"));
+            }
+            match item
+                .format(&virtual_files::contents_id(0))
+                .map(|one| &one.payload)
+            {
+                Some(cp_core::item::Payload::Inline(bytes)) if bytes == VIRTUAL_FILE_BYTES => {}
+                other => return Err(format!("el contenido llegó como {other:?}")),
+            }
+            println!(
+                "            {} formatos, {} bytes, clase {:?}",
+                item.formats.len(),
+                item.stored_bytes(),
+                item.kind
+            );
+
+            let written = {
+                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                to_clipboard(&clipboard, &item)
+            };
+            match written {
+                Restored::Written { formats: 2, .. } => {}
+                other => {
+                    return Err(format!(
+                        "al pegar dio {other:?}, y no CF_HDROP más el efecto"
+                    ));
+                }
+            }
+            let paths = {
+                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                cp_win::drop::paths_in(&clipboard.bytes(CF_HDROP).ok_or("sin CF_HDROP")?)
+            };
+            let pasted = match paths.as_slice() {
+                [one] if one.ends_with(VIRTUAL_FILE_NAME) => std::path::PathBuf::from(one),
+                other => return Err(format!("el drop trae {other:?}")),
+            };
+            let on_disk = std::fs::read(&pasted).map_err(|why| why.to_string())?;
+            if let Some(folder) = pasted.parent() {
+                std::fs::remove_dir_all(folder).ok();
+            }
+            if on_disk != VIRTUAL_FILE_BYTES {
+                return Err("lo que llegó al disco no es lo que se copió".into());
+            }
+            println!("            pegado en {}", pasted.display());
+            Ok(())
+        },
+    );
 
     let ran = b.passed + b.failed + u32::try_from(b.skipped.len()).unwrap_or(u32::MAX);
     if ran != CASES {

@@ -13,6 +13,7 @@ cp-win-sys.workspace = true
 windows.workspace = true
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
+cp-store.workspace = true
 image.workspace = true
 
 [lints]

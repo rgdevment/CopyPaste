@@ -1,4 +1,4 @@
-const COPY: u32 = 1;
+pub(crate) const COPY: u32 = 1;
 const MOVE: u32 = 2;
 const LINK: u32 = 4;
 

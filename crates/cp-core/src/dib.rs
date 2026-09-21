@@ -167,10 +167,25 @@ pub fn to_png(dib: &[u8]) -> Option<Vec<u8>> {
 }
 
 pub fn from_png(png: &[u8]) -> Option<Vec<u8>> {
-    if too_large(png.len()) {
+    from_encoded(png, image::ImageFormat::Png)
+}
+
+pub fn from_jpeg(jpeg: &[u8]) -> Option<Vec<u8>> {
+    from_encoded(jpeg, image::ImageFormat::Jpeg)
+}
+
+fn from_encoded(encoded: &[u8], format: image::ImageFormat) -> Option<Vec<u8>> {
+    if too_large(encoded.len()) {
         return None;
     }
-    let decoded = image::load_from_memory_with_format(png, image::ImageFormat::Png).ok()?;
+    let decoded = image::load_from_memory_with_format(encoded, format).ok()?;
+    from_image(&decoded)
+}
+
+pub fn from_image(decoded: &image::DynamicImage) -> Option<Vec<u8>> {
+    if decoded.width() == 0 || decoded.height() == 0 {
+        return None;
+    }
     let mut bmp = std::io::Cursor::new(Vec::new());
     decoded.write_to(&mut bmp, image::ImageFormat::Bmp).ok()?;
     let bmp = bmp.into_inner();
@@ -588,6 +603,42 @@ mod tests {
         assert_eq!(from_png(&[]), None);
         assert_eq!(from_png(b"esto no es un png"), None);
         assert_eq!(from_png(&vec![0u8; LARGEST_BITMAP + 1]), None);
+    }
+
+    #[test]
+    fn a_jpeg_becomes_a_bitmap_too_and_a_png_is_not_a_jpeg() {
+        let dib = Dib::rgb32(4, 4).build();
+        let png = to_png(&dib).expect("png");
+        let mut jpeg = Vec::new();
+        image::load_from_memory(&png)
+            .expect("relee")
+            .to_rgb8()
+            .write_to(
+                &mut std::io::Cursor::new(&mut jpeg),
+                image::ImageFormat::Jpeg,
+            )
+            .expect("jpeg");
+        let back = from_jpeg(&jpeg).expect("dib");
+        let head = header(&back).expect("cabecera");
+        assert_eq!((head.width, head.height.abs()), (4, 4));
+        assert_eq!(head.bit_count, 24, "un JPEG no trae alfa y el DIB tampoco");
+        assert_eq!(
+            from_jpeg(&png),
+            None,
+            "un PNG no se cuela por la puerta del JPEG"
+        );
+        assert_eq!(from_jpeg(&[]), None);
+        assert_eq!(from_jpeg(&vec![0u8; LARGEST_BITMAP + 1]), None);
+    }
+
+    #[test]
+    fn a_decoded_image_with_no_pixels_is_no_bitmap() {
+        assert_eq!(from_image(&image::DynamicImage::new_rgb8(0, 0)), None);
+        assert_eq!(from_image(&image::DynamicImage::new_rgba8(3, 0)), None);
+        let opaque = from_image(&image::DynamicImage::new_rgb8(1, 1)).expect("dib");
+        assert_eq!(header(&opaque).expect("cabecera").bit_count, 24);
+        let translucent = from_image(&image::DynamicImage::new_rgba8(1, 1)).expect("dib");
+        assert_eq!(header(&translucent).expect("cabecera").bit_count, 32);
     }
 
     #[test]

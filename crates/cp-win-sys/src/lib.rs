@@ -2,11 +2,13 @@
 
 pub mod clipboard;
 pub mod com;
+pub mod files;
 pub mod formats;
 pub mod frontmost;
 pub mod keystroke;
 pub mod media;
 pub mod ocr;
+pub mod ole;
 pub mod paths;
 pub mod permissions;
 pub mod reading;

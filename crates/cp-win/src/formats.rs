@@ -294,10 +294,15 @@ mod tests {
     }
 
     #[test]
-    fn virtual_files_are_noted_and_never_asked_for() {
+    fn virtual_files_are_noted_and_never_asked_for_through_the_catalog() {
         for virtualised in ["FileGroupDescriptorW", "FileContents"] {
             assert_eq!(CATALOG.decide(virtualised), Take::Presence);
         }
+        assert_eq!(
+            CATALOG.classify(&["FileGroupDescriptorW", "FileContents"]),
+            None,
+            "sin CF_HDROP el catálogo no ve archivos: la captura los pide por OLE cuando no hay drop"
+        );
     }
 
     #[test]

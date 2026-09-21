@@ -1,14 +1,17 @@
 pub use cp_core::capture::Captured;
+use cp_core::capture::insisting;
 use cp_core::dib;
 use cp_core::formats::{Family, Refusal, Take};
-use cp_core::item::{Format, Item, Payload, SYNTHETIC_IMAGE};
+use cp_core::item::{BLOB_UP_TO, Format, Item, Payload, SYNTHETIC_IMAGE};
 use cp_core::kind::{self, Kind};
-use cp_win_sys::clipboard::Clipboard;
+use cp_win_sys::clipboard::{self, Clipboard};
 use cp_win_sys::formats::name_of;
 use cp_win_sys::reading;
 use cp_win_sys::writing::text_of;
 
+pub use crate::drop::paths_in;
 use crate::formats::CATALOG;
+use crate::virtual_files::{self, CONTENTS, DESCRIPTOR};
 
 pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 
@@ -16,11 +19,42 @@ const _: () = assert!(PATIENCE.as_millis() > cp_win_sys::reading::PATIENCE.as_mi
 const _: () = assert!(PATIENCE.as_millis() < 30_000);
 
 pub fn capture_within(patience: std::time::Duration) -> Captured {
-    reading::anything_within(patience, || match Clipboard::open() {
+    reading::anything_within(patience, capture_now).unwrap_or(Captured::TooSlow)
+}
+
+pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
+    let started = sequence_now();
+    let pending = reading::begin(capture_now);
+    let got = insisting(retry, sequence_now, || {
+        pending.wait(patience).unwrap_or(Captured::TooSlow)
+    });
+    match got {
+        Captured::Nothing if sequence_now() != started => Captured::Superseded,
+        other => other,
+    }
+}
+
+pub fn capture_now() -> Captured {
+    let captured = match Clipboard::open() {
         Some(clipboard) => capture(&clipboard),
         None => Captured::Nothing,
-    })
-    .unwrap_or(Captured::TooSlow)
+    };
+    let Captured::Kept(item) = captured else {
+        return captured;
+    };
+    if !awaits_virtual_contents(&item) {
+        return Captured::Kept(item);
+    }
+    let started = sequence_now();
+    let item = with_virtual_contents(item);
+    if sequence_now() != started {
+        return Captured::Superseded;
+    }
+    Captured::Kept(item)
+}
+
+fn sequence_now() -> i64 {
+    clipboard::sequence().unwrap_or(i64::MIN)
 }
 
 pub fn capture(clipboard: &Clipboard) -> Captured {
@@ -38,13 +72,16 @@ pub fn capture(clipboard: &Clipboard) -> Captured {
         return Captured::Refused(refusal);
     }
 
-    let family = CATALOG.classify(&offered);
+    let virtual_only = virtual_files::offered_without_a_drop(&offered);
+    let family = CATALOG
+        .classify(&offered)
+        .or_else(|| virtual_only.then_some(Family::Files));
     let mut formats: Vec<Format> = Vec::new();
     for (id, name) in ids.iter().zip(&names) {
         if formats.iter().any(|kept| kept.id == *name) {
             continue;
         }
-        let payload = payload_for(clipboard, *id, name, &offered);
+        let payload = payload_for(clipboard, family, *id, name, &offered);
         formats.push(Format {
             id: name.clone(),
             payload,
@@ -52,6 +89,9 @@ pub fn capture(clipboard: &Clipboard) -> Captured {
     }
     if let Some(png) = transcoded_image(clipboard, &ids, &names, &offered) {
         formats.push(png);
+    }
+    if virtual_only {
+        announce_virtual_files(clipboard, &ids, &names, &mut formats);
     }
 
     Captured::Kept(Item {
@@ -70,8 +110,14 @@ fn asked_not_to_be_kept(clipboard: &Clipboard, ids: &[u32], names: &[String]) ->
     })
 }
 
-fn payload_for(clipboard: &Clipboard, id: u32, name: &str, offered: &[&str]) -> Payload {
-    if CATALOG.decide(name) != Take::Payload {
+fn payload_for(
+    clipboard: &Clipboard,
+    family: Option<Family>,
+    id: u32,
+    name: &str,
+    offered: &[&str],
+) -> Payload {
+    if CATALOG.decide_in(family, name) != Take::Payload {
         return Payload::Announced { size: None };
     }
     if CATALOG.costlier_twin(name, offered) {
@@ -112,6 +158,73 @@ fn transcoded_image(
     })
 }
 
+fn announce_virtual_files(
+    clipboard: &Clipboard,
+    ids: &[u32],
+    names: &[String],
+    formats: &mut Vec<Format>,
+) {
+    let descriptor_id = ids
+        .iter()
+        .zip(names)
+        .find(|(_, name)| name.as_str() == DESCRIPTOR)
+        .map(|(id, _)| *id);
+    let Some(descriptor) = descriptor_id.and_then(|id| read(clipboard, id)) else {
+        return;
+    };
+    let described = virtual_files::described_in(&descriptor);
+    if described.is_empty() {
+        return;
+    }
+    if let Some(slot) = formats.iter_mut().find(|one| one.id == DESCRIPTOR) {
+        slot.payload = Payload::stored(descriptor);
+    }
+    for (index, one) in described.iter().enumerate() {
+        if one.is_dir {
+            continue;
+        }
+        formats.push(Format {
+            id: virtual_files::contents_id(index),
+            payload: match one.size {
+                Some(size) if size > BLOB_UP_TO as u64 => Payload::TooBig {
+                    size: usize::try_from(size).unwrap_or(usize::MAX),
+                },
+                _ => Payload::Absent,
+            },
+        });
+    }
+}
+
+fn awaits_virtual_contents(item: &Item) -> bool {
+    item.formats.iter().any(|one| {
+        matches!(one.payload, Payload::Absent) && virtual_files::index_of(&one.id).is_some()
+    })
+}
+
+fn with_virtual_contents(mut item: Item) -> Item {
+    let Some(count) = bytes_of(&item.formats, DESCRIPTOR)
+        .map(|descriptor| virtual_files::described_in(descriptor).len())
+    else {
+        return item;
+    };
+    let Some(contents_id) = cp_win_sys::formats::id_of(CONTENTS) else {
+        return item;
+    };
+    let delivered = cp_win_sys::ole::indexed_contents(contents_id, count, BLOB_UP_TO);
+    for format in &mut item.formats {
+        if !matches!(format.payload, Payload::Absent) {
+            continue;
+        }
+        if let Some(bytes) = virtual_files::index_of(&format.id)
+            .and_then(|index| delivered.get(index))
+            .and_then(Clone::clone)
+        {
+            format.payload = Payload::stored(bytes);
+        }
+    }
+    item
+}
+
 fn refine(family: Option<Family>, formats: &[Format]) -> Option<Kind> {
     match family? {
         Family::Image => Some(Kind::Image),
@@ -124,9 +237,15 @@ fn refine(family: Option<Family>, formats: &[Format]) -> Option<Kind> {
                 let name = path.rsplit(['\\', '/']).next().unwrap_or(&path).to_owned();
                 kind::classify_file(&name, path.ends_with('\\'))
             }
-            None => Kind::File,
+            None => first_described(formats)
+                .map_or(Kind::File, |one| kind::classify_file(&one.name, one.is_dir)),
         }),
     }
+}
+
+fn first_described(formats: &[Format]) -> Option<virtual_files::Described> {
+    let descriptor = bytes_of(formats, DESCRIPTOR)?;
+    virtual_files::described_in(descriptor).into_iter().next()
 }
 
 fn bytes_of<'a>(formats: &'a [Format], id: &str) -> Option<&'a [u8]> {
@@ -144,66 +263,11 @@ fn first_path(formats: &[Format]) -> Option<String> {
     paths_in(drop).into_iter().next()
 }
 
-pub fn paths_in(drop: &[u8]) -> Vec<String> {
-    let Some(offset) = drop
-        .get(..4)
-        .map(|four| u32::from_le_bytes([four[0], four[1], four[2], four[3]]) as usize)
-    else {
-        return Vec::new();
-    };
-    let wide = drop.get(16..20).is_some_and(|flag| flag[0] != 0);
-    let Some(names) = drop.get(offset..) else {
-        return Vec::new();
-    };
-    if !wide {
-        return names
-            .split(|byte| *byte == 0)
-            .take_while(|part| !part.is_empty())
-            .map(|part| String::from_utf8_lossy(part).into_owned())
-            .collect();
-    }
-    let units: Vec<u16> = names
-        .as_chunks::<2>()
-        .0
-        .iter()
-        .map(|pair| u16::from_le_bytes(*pair))
-        .collect();
-    units
-        .split(|unit| *unit == 0)
-        .take_while(|part| !part.is_empty())
-        .map(String::from_utf16_lossy)
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn drop_files(paths: &[&str], wide: bool) -> Vec<u8> {
-        let mut out = Vec::new();
-        out.extend_from_slice(&20u32.to_le_bytes());
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.extend_from_slice(&u32::from(wide).to_le_bytes());
-        for path in paths {
-            if wide {
-                for unit in path.encode_utf16() {
-                    out.extend_from_slice(&unit.to_le_bytes());
-                }
-                out.extend_from_slice(&0u16.to_le_bytes());
-            } else {
-                out.extend_from_slice(path.as_bytes());
-                out.push(0);
-            }
-        }
-        if wide {
-            out.extend_from_slice(&0u16.to_le_bytes());
-        } else {
-            out.push(0);
-        }
-        out
-    }
+    use crate::drop::drop_of;
+    use crate::virtual_files::descriptor_of;
 
     #[test]
     fn the_whole_capture_has_a_ceiling_well_under_the_thirty_seconds() {
@@ -221,45 +285,10 @@ mod tests {
     }
 
     #[test]
-    fn every_copied_path_is_read_not_just_the_first() {
-        let paths = [r"C:\uno.txt", r"C:\dos.txt", r"C:\una carpeta"];
-        let seen = paths_in(&drop_files(&paths, true));
-        assert_eq!(seen, paths);
-    }
-
-    #[test]
-    fn a_legacy_ansi_drop_is_read_too() {
-        let paths = [r"C:\uno.txt", r"C:\dos.txt"];
-        let seen = paths_in(&drop_files(&paths, false));
-        assert_eq!(seen, paths);
-    }
-
-    #[test]
-    fn a_single_path_comes_back_alone() {
-        assert_eq!(
-            paths_in(&drop_files(&[r"C:\solo.png"], true)),
-            [r"C:\solo.png"]
-        );
-    }
-
-    #[test]
-    fn nonsense_is_not_a_drop() {
-        assert!(paths_in(&[]).is_empty());
-        assert!(paths_in(&[0, 0, 0]).is_empty());
-        assert!(paths_in(&u32::MAX.to_le_bytes()).is_empty());
-    }
-
-    #[test]
-    fn a_path_with_accents_and_spaces_survives() {
-        let paths = [r"C:\Mis Documentos\informe ñ.pdf"];
-        assert_eq!(paths_in(&drop_files(&paths, true)), paths);
-    }
-
-    #[test]
     fn the_class_of_a_drop_comes_from_its_first_path() {
         let formats = vec![Format {
             id: "CF_HDROP".into(),
-            payload: Payload::Inline(drop_files(&[r"C:\video.mkv"], true)),
+            payload: Payload::Inline(drop_of(&[r"C:\video.mkv"])),
         }];
         assert_eq!(refine(Some(Family::Files), &formats), Some(Kind::Video));
     }
@@ -268,7 +297,7 @@ mod tests {
     fn a_folder_is_told_apart_by_its_trailing_separator() {
         let formats = vec![Format {
             id: "CF_HDROP".into(),
-            payload: Payload::Inline(drop_files(&[r"C:\Documentos\\"], true)),
+            payload: Payload::Inline(drop_of(&[r"C:\Documentos\\"])),
         }];
         assert_eq!(refine(Some(Family::Files), &formats), Some(Kind::Folder));
     }
@@ -299,6 +328,69 @@ mod tests {
     #[test]
     fn nothing_offered_has_no_class() {
         assert_eq!(refine(None, &[]), None);
+    }
+
+    #[test]
+    fn a_virtual_file_is_classed_by_the_name_its_descriptor_gives() {
+        let formats = vec![Format {
+            id: DESCRIPTOR.into(),
+            payload: Payload::Inline(descriptor_of(&[("captura.png", Some(9), false)])),
+        }];
+        assert_eq!(refine(Some(Family::Files), &formats), Some(Kind::Image));
+        let folder = vec![Format {
+            id: DESCRIPTOR.into(),
+            payload: Payload::Inline(descriptor_of(&[("adjuntos", None, true)])),
+        }];
+        assert_eq!(refine(Some(Family::Files), &folder), Some(Kind::Folder));
+        let real_drop_wins = vec![
+            Format {
+                id: "CF_HDROP".into(),
+                payload: Payload::Inline(drop_of(&[r"C:\video.mkv"])),
+            },
+            folder[0].clone(),
+        ];
+        assert_eq!(
+            refine(Some(Family::Files), &real_drop_wins),
+            Some(Kind::Video)
+        );
+    }
+
+    #[test]
+    fn only_a_virtual_item_with_something_absent_waits_for_the_ole_read() {
+        let waiting = Item {
+            kind: Some(Kind::File),
+            formats: vec![
+                Format {
+                    id: DESCRIPTOR.into(),
+                    payload: Payload::Inline(descriptor_of(&[("a.txt", Some(1), false)])),
+                },
+                Format {
+                    id: virtual_files::contents_id(0),
+                    payload: Payload::Absent,
+                },
+            ],
+        };
+        assert!(awaits_virtual_contents(&waiting));
+        let too_big = Item {
+            kind: Some(Kind::File),
+            formats: vec![Format {
+                id: virtual_files::contents_id(0),
+                payload: Payload::TooBig { size: 1 << 40 },
+            }],
+        };
+        assert!(
+            !awaits_virtual_contents(&too_big),
+            "lo que no cabe no se pide"
+        );
+        let plain_absent = Item {
+            kind: Some(Kind::Text),
+            formats: vec![Format {
+                id: "CF_UNICODETEXT".into(),
+                payload: Payload::Absent,
+            }],
+        };
+        assert!(!awaits_virtual_contents(&plain_absent));
+        assert!(!awaits_virtual_contents(&Item::plain("hola")));
     }
 
     #[test]
