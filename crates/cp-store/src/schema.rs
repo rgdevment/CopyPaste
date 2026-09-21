@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -24,6 +24,9 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
     if found < 3 {
         db.execute_batch("INSERT INTO items_fts(items_fts) VALUES ('optimize');")?;
     }
+    if ocr_text_is_missing(db)? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
+    }
     db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION}; COMMIT;"))?;
     Ok(true)
 }
@@ -40,6 +43,17 @@ fn ordering_indexes_are_stale(db: &Connection) -> Result<bool> {
         }
     }
     Ok(false)
+}
+
+fn ocr_text_is_missing(db: &Connection) -> Result<bool> {
+    let mut stmt = db.prepare("SELECT name FROM pragma_table_info('items')")?;
+    let columns = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    for column in columns {
+        if column? == "ocr_text" {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 const ORDERING_INDEXES: &str = "
@@ -89,6 +103,7 @@ const TABLES: &str = r#"
             search_label       TEXT    NOT NULL DEFAULT '',
             search_app         TEXT    NOT NULL DEFAULT '',
             search_ocr         TEXT    NOT NULL DEFAULT '',
+            ocr_text           TEXT,
             updated_at         INTEGER NOT NULL,
             deleted_at         INTEGER
         );
@@ -328,6 +343,32 @@ mod tests {
         assert!(
             !bytes.windows(secret.len()).any(|w| w == secret.as_bytes()),
             "la migración a la versión 3 funde los segmentos y lo borrado desaparece"
+        );
+    }
+
+    #[test]
+    fn a_version_three_database_gains_the_column_for_the_text_as_read() {
+        let db = Connection::open_in_memory().expect("abre");
+        create(&db).expect("esquema");
+        db.execute_batch(
+            "ALTER TABLE items DROP COLUMN ocr_text;
+             PRAGMA user_version = 3;",
+        )
+        .expect("una base como la dejó la versión 3");
+        create(&db).expect("abrir no añade columnas a una tabla que existe");
+        assert!(ocr_text_is_missing(&db).expect("mira"));
+
+        assert!(migrate(&db).expect("migra"));
+        assert!(!ocr_text_is_missing(&db).expect("mira"));
+        db.execute(
+            "INSERT INTO items (uuid, created_at, modified_at, updated_at, content_hash, ocr_text)
+             VALUES ('u', 1, 1, 1, 0, 'Crudo')",
+            [],
+        )
+        .expect("la columna nueva acepta texto");
+        assert!(
+            !migrate(&db).expect("migra"),
+            "y la segunda vez no hay nada que hacer"
         );
     }
 

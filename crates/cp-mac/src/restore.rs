@@ -40,27 +40,6 @@ pub fn to_pasteboard(pb: &Pasteboard, item: &Item) -> Restored {
     }
 }
 
-fn plain_text_of(item: &Item) -> Option<&[u8]> {
-    writable_of(item)
-        .into_iter()
-        .find_map(|(kind, bytes)| (kind == PLAIN_TEXT).then_some(bytes))
-}
-
-pub fn to_pasteboard_as_plain_text(pb: &Pasteboard, item: &Item) -> Restored {
-    let Some(text) = plain_text_of(item) else {
-        return Restored::NothingToWrite;
-    };
-
-    if pb.write_all(&[(PLAIN_TEXT, text)]) {
-        Restored::Written {
-            formats: 1,
-            incomplete: false,
-        }
-    } else {
-        Restored::Failed
-    }
-}
-
 const PLAIN_TEXT: &str = "public.utf8-plain-text";
 const PNG: &str = "public.png";
 const JPEG: &str = "public.jpeg";
@@ -91,7 +70,6 @@ mod tests {
             formats: vec![inline(SYNTHETIC_TEXT, b"hola")],
         };
         assert_eq!(writable_of(&item), vec![(PLAIN_TEXT, &b"hola"[..])]);
-        assert_eq!(plain_text_of(&item), Some(&b"hola"[..]));
     }
 
     #[test]
@@ -125,7 +103,7 @@ mod tests {
         let written = writable_of(&item);
         assert_eq!(written.len(), 2, "lo anunciado sin bytes no se escribe");
         assert_eq!(written[0].0, "public.rtf");
-        assert_eq!(plain_text_of(&item), Some(&b"hola"[..]));
+        assert_eq!(written[1].0, PLAIN_TEXT);
     }
 
     #[test]
@@ -138,6 +116,35 @@ mod tests {
             }],
         };
         assert!(writable_of(&item).is_empty());
-        assert_eq!(plain_text_of(&item), None);
+    }
+
+    #[test]
+    fn pasting_as_plain_text_is_a_rendered_form_written_like_any_item() {
+        use cp_core::paste_as::{Form, render};
+        let item = Item {
+            kind: Some(cp_core::kind::Kind::Text),
+            formats: vec![
+                inline("public.html", b"<b>hola</b>"),
+                inline(PLAIN_TEXT, b"hola"),
+            ],
+        };
+        let content = crate::content::content_of(&item, None);
+        let plain = render(Form::PlainText, &content)
+            .expect("hay texto")
+            .into_item();
+        assert_eq!(writable_of(&plain), vec![(PLAIN_TEXT, &b"hola"[..])]);
+        assert_eq!(item.formats.len(), 2, "el ítem guardado no cambia");
+        let only_image = Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![inline(PNG, &[1, 2, 3])],
+        };
+        assert_eq!(
+            render(
+                Form::PlainText,
+                &crate::content::content_of(&only_image, None)
+            ),
+            None,
+            "sin texto plano no hay forma plana que ofrecer"
+        );
     }
 }

@@ -77,19 +77,29 @@ impl Item {
     }
 
     pub fn fingerprint(&self) -> u64 {
-        let mut mixed: Vec<u8> = Vec::new();
-        let mut ordered: Vec<&Format> = self.formats.iter().collect();
-        ordered.sort_by(|a, b| a.id.cmp(&b.id));
-        for format in ordered {
-            match &format.payload {
+        let mut with_bytes: Vec<(&str, &[u8])> = self
+            .formats
+            .iter()
+            .filter_map(|format| match &format.payload {
                 Payload::Inline(bytes) | Payload::Blob(bytes) => {
-                    mixed.extend_from_slice(format.id.as_bytes());
-                    mixed.push(0);
-                    mixed.extend_from_slice(bytes);
-                    mixed.push(0);
+                    Some((format.id.as_str(), bytes.as_slice()))
                 }
-                _ => {}
-            }
+                _ => None,
+            })
+            .collect();
+        if with_bytes
+            .iter()
+            .any(|(id, _)| crate::identity::bears_identity(id))
+        {
+            with_bytes.retain(|(id, _)| crate::identity::bears_identity(id));
+        }
+        with_bytes.sort_by(|a, b| a.0.cmp(b.0));
+        let mut mixed: Vec<u8> = Vec::new();
+        for (id, bytes) in with_bytes {
+            mixed.extend_from_slice(id.as_bytes());
+            mixed.push(0);
+            mixed.extend_from_slice(&crate::identity::stable(id, bytes));
+            mixed.push(0);
         }
         crate::hash::content_hash(&mixed)
     }
@@ -216,6 +226,111 @@ mod tests {
             formats: vec![b, a],
         };
         assert_eq!(one.fingerprint(), other.fingerprint());
+    }
+
+    #[test]
+    fn two_copies_of_the_same_google_document_are_one_item() {
+        let docs = |guid: &str| {
+            Item {
+            kind: Some(crate::kind::Kind::Text),
+            formats: vec![
+                Format {
+                    id: "public.html".into(),
+                    payload: Payload::Inline(
+                        format!("<b style=\"font-weight:normal;\" id=\"docs-internal-guid-{guid}\"><span>hola</span></b>")
+                            .into_bytes(),
+                    ),
+                },
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Inline(b"hola".to_vec()),
+                },
+            ],
+        }
+        };
+        let first = docs("4a1e6b2f-7fff-1d3e-8c5a-2b3c4d5e6f70");
+        let second = docs("0c9d8e7f-7fff-aaaa-bbbb-000000000001");
+        assert_ne!(first, second, "los bytes sí difieren");
+        assert_eq!(first.fingerprint(), second.fingerprint());
+        assert_ne!(
+            first.fingerprint(),
+            Item::plain("hola").fingerprint(),
+            "el texto plano copiado de donde se pegó sigue siendo otro ítem"
+        );
+        let other_words = docs("4a1e6b2f-7fff-1d3e-8c5a-2b3c4d5e6f70");
+        let mut changed = other_words.clone();
+        changed.formats[1].payload = Payload::Inline(b"adios".to_vec());
+        assert_ne!(other_words.fingerprint(), changed.fingerprint());
+    }
+
+    #[test]
+    fn two_copies_of_the_same_word_paragraph_are_one_item() {
+        let word = |rsid: &str, base: &str, stamp: u8| Item {
+            kind: Some(crate::kind::Kind::Text),
+            formats: vec![
+                Format {
+                    id: "public.rtf".into(),
+                    payload: Payload::Inline(
+                        format!("{{\\rtf1{{\\*\\rsidtbl \\rsid{rsid}}}\\insrsid{rsid} hola}}")
+                            .into_bytes(),
+                    ),
+                },
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Inline(b"hola".to_vec()),
+                },
+                Format {
+                    id: "public.html".into(),
+                    payload: Payload::Inline(b"<p class=MsoNormal>hola</p>".to_vec()),
+                },
+                Format {
+                    id: "com.apple.webarchive".into(),
+                    payload: Payload::Inline(format!("applewebdata://{base}<html>").into_bytes()),
+                },
+                Format {
+                    id: "com.apple.flat-rtfd".into(),
+                    payload: Payload::Inline(vec![b'r', b't', b'f', b'd', stamp]),
+                },
+            ],
+        };
+        let first = word("11014195", "BD20AAE0-5062", 1);
+        let second = word("15277860", "85F1BD98-1A2D", 2);
+        assert_ne!(first, second);
+        assert_eq!(
+            first.fingerprint(),
+            second.fingerprint(),
+            "los rsid, el UUID del webarchive y la fecha del RTFD no son contenido"
+        );
+        let mut other_words = second.clone();
+        other_words.formats[2].payload = Payload::Inline(b"<p class=MsoNormal>adios</p>".to_vec());
+        assert_ne!(first.fingerprint(), other_words.fingerprint());
+    }
+
+    #[test]
+    fn a_copy_that_is_only_a_rendering_still_has_an_identity_of_its_own() {
+        let rtf = |body: &str| Item {
+            kind: Some(crate::kind::Kind::Text),
+            formats: vec![Format {
+                id: "public.rtf".into(),
+                payload: Payload::Inline(body.as_bytes().to_vec()),
+            }],
+        };
+        assert_eq!(
+            rtf("{\\rtf1 a}").fingerprint(),
+            rtf("{\\rtf1 a}").fingerprint()
+        );
+        assert_ne!(
+            rtf("{\\rtf1 a}").fingerprint(),
+            rtf("{\\rtf1 b}").fingerprint()
+        );
+        assert_ne!(
+            rtf("{\\rtf1 a}").fingerprint(),
+            Item {
+                kind: None,
+                formats: vec![]
+            }
+            .fingerprint()
+        );
     }
 
     #[test]

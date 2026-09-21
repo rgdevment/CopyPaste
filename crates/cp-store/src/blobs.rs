@@ -224,6 +224,16 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    fn symlink_file(target: &Path, link: &Path) {
+        std::os::unix::fs::symlink(target, link).expect("enlace");
+    }
+
+    #[cfg(windows)]
+    fn symlink_file(target: &Path, link: &Path) {
+        std::os::windows::fs::symlink_file(target, link).expect("enlace");
+    }
+
     #[test]
     fn a_symlink_named_like_a_digest_is_unlinked_never_followed() {
         let (dir, blobs) = temporary();
@@ -232,7 +242,7 @@ mod tests {
         let digest = "c".repeat(64);
         let link = blobs.path_for(&digest);
         std::fs::create_dir_all(link.parent().expect("padre")).expect("carpeta");
-        std::os::unix::fs::symlink(&victim, &link).expect("enlace");
+        symlink_file(&victim, &link);
         aged(&victim);
         assert_eq!(blobs.sweep(&|_| false).expect("barre"), 1);
         assert!(!link.exists() && std::fs::symlink_metadata(&link).is_err());

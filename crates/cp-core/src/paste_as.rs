@@ -25,6 +25,7 @@ pub enum Form {
     ColorHex,
     ColorRgb,
     ColorHsl,
+    ColorName,
     LinkMarkdown,
     LinkDomain,
     LinkTitled,
@@ -40,7 +41,7 @@ pub enum Form {
 }
 
 impl Form {
-    pub const ALL: [Form; 21] = [
+    pub const ALL: [Form; 22] = [
         Form::PlainText,
         Form::Markdown,
         Form::JsonPretty,
@@ -50,6 +51,7 @@ impl Form {
         Form::ColorHex,
         Form::ColorRgb,
         Form::ColorHsl,
+        Form::ColorName,
         Form::LinkMarkdown,
         Form::LinkDomain,
         Form::LinkTitled,
@@ -75,6 +77,7 @@ impl Form {
             Form::ColorHex => "color-hex",
             Form::ColorRgb => "color-rgb",
             Form::ColorHsl => "color-hsl",
+            Form::ColorName => "color-name",
             Form::LinkMarkdown => "link-markdown",
             Form::LinkDomain => "link-domain",
             Form::LinkTitled => "link-titled",
@@ -141,8 +144,11 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
             }
         }
         Some(Kind::Color) => {
-            if parse_color(text).is_some() {
+            if let Some(color) = parse_color(text) {
                 forms.extend([Form::ColorHex, Form::ColorRgb, Form::ColorHsl]);
+                if named_color(color).is_some() {
+                    forms.push(Form::ColorName);
+                }
             }
         }
         Some(Kind::Link) => {
@@ -189,6 +195,7 @@ pub fn render(form: Form, content: &Content) -> Option<Rendered> {
         Form::ColorHex => hex_of(parse_color(text)?),
         Form::ColorRgb => rgb_of(parse_color(text)?),
         Form::ColorHsl => hsl_of(parse_color(text)?),
+        Form::ColorName => named_color(parse_color(text)?)?.to_owned(),
         Form::LinkMarkdown => markdown_link(title_of(content).unwrap_or(text), text),
         Form::LinkDomain => lowercase_domain(text)?,
         Form::LinkTitled => format!("{} — {text}", title_of(content)?),
@@ -399,6 +406,170 @@ fn rgb_of_hsl(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
     };
     (hue(h + 1.0 / 3.0), hue(h), hue(h - 1.0 / 3.0))
 }
+
+pub const NAME_WITHIN: u32 = 30;
+
+pub fn named_color(color: Rgba) -> Option<&'static str> {
+    if color.a < 1.0 {
+        return None;
+    }
+    let (name, apart) = NAMED
+        .iter()
+        .map(|(name, rgb)| (*name, redmean_squared([color.r, color.g, color.b], *rgb)))
+        .min_by_key(|(_, apart)| *apart)?;
+    (apart <= 512 * NAME_WITHIN * NAME_WITHIN).then_some(name)
+}
+
+fn redmean_squared(a: [u8; 3], b: [u8; 3]) -> u32 {
+    let reds = u32::from(a[0]) + u32::from(b[0]);
+    let delta = |i: usize| {
+        let d = i32::from(a[i]) - i32::from(b[i]);
+        (d * d) as u32
+    };
+    (1024 + reds) * delta(0) + 2048 * delta(1) + (1024 + 510 - reds) * delta(2)
+}
+
+const NAMED: [(&str, [u8; 3]); 139] = [
+    ("aliceblue", [0xF0, 0xF8, 0xFF]),
+    ("antiquewhite", [0xFA, 0xEB, 0xD7]),
+    ("aquamarine", [0x7F, 0xFF, 0xD4]),
+    ("azure", [0xF0, 0xFF, 0xFF]),
+    ("beige", [0xF5, 0xF5, 0xDC]),
+    ("bisque", [0xFF, 0xE4, 0xC4]),
+    ("black", [0x00, 0x00, 0x00]),
+    ("blanchedalmond", [0xFF, 0xEB, 0xCD]),
+    ("blue", [0x00, 0x00, 0xFF]),
+    ("blueviolet", [0x8A, 0x2B, 0xE2]),
+    ("brown", [0xA5, 0x2A, 0x2A]),
+    ("burlywood", [0xDE, 0xB8, 0x87]),
+    ("cadetblue", [0x5F, 0x9E, 0xA0]),
+    ("chartreuse", [0x7F, 0xFF, 0x00]),
+    ("chocolate", [0xD2, 0x69, 0x1E]),
+    ("coral", [0xFF, 0x7F, 0x50]),
+    ("cornflowerblue", [0x64, 0x95, 0xED]),
+    ("cornsilk", [0xFF, 0xF8, 0xDC]),
+    ("crimson", [0xDC, 0x14, 0x3C]),
+    ("cyan", [0x00, 0xFF, 0xFF]),
+    ("darkblue", [0x00, 0x00, 0x8B]),
+    ("darkcyan", [0x00, 0x8B, 0x8B]),
+    ("darkgoldenrod", [0xB8, 0x86, 0x0B]),
+    ("darkgray", [0xA9, 0xA9, 0xA9]),
+    ("darkgreen", [0x00, 0x64, 0x00]),
+    ("darkkhaki", [0xBD, 0xB7, 0x6B]),
+    ("darkmagenta", [0x8B, 0x00, 0x8B]),
+    ("darkolivegreen", [0x55, 0x6B, 0x2F]),
+    ("darkorange", [0xFF, 0x8C, 0x00]),
+    ("darkorchid", [0x99, 0x32, 0xCC]),
+    ("darkred", [0x8B, 0x00, 0x00]),
+    ("darksalmon", [0xE9, 0x96, 0x7A]),
+    ("darkseagreen", [0x8F, 0xBC, 0x8F]),
+    ("darkslateblue", [0x48, 0x3D, 0x8B]),
+    ("darkslategray", [0x2F, 0x4F, 0x4F]),
+    ("darkturquoise", [0x00, 0xCE, 0xD1]),
+    ("darkviolet", [0x94, 0x00, 0xD3]),
+    ("deeppink", [0xFF, 0x14, 0x93]),
+    ("deepskyblue", [0x00, 0xBF, 0xFF]),
+    ("dimgray", [0x69, 0x69, 0x69]),
+    ("dodgerblue", [0x1E, 0x90, 0xFF]),
+    ("firebrick", [0xB2, 0x22, 0x22]),
+    ("floralwhite", [0xFF, 0xFA, 0xF0]),
+    ("forestgreen", [0x22, 0x8B, 0x22]),
+    ("gainsboro", [0xDC, 0xDC, 0xDC]),
+    ("ghostwhite", [0xF8, 0xF8, 0xFF]),
+    ("gold", [0xFF, 0xD7, 0x00]),
+    ("goldenrod", [0xDA, 0xA5, 0x20]),
+    ("gray", [0x80, 0x80, 0x80]),
+    ("green", [0x00, 0x80, 0x00]),
+    ("greenyellow", [0xAD, 0xFF, 0x2F]),
+    ("honeydew", [0xF0, 0xFF, 0xF0]),
+    ("hotpink", [0xFF, 0x69, 0xB4]),
+    ("indianred", [0xCD, 0x5C, 0x5C]),
+    ("indigo", [0x4B, 0x00, 0x82]),
+    ("ivory", [0xFF, 0xFF, 0xF0]),
+    ("khaki", [0xF0, 0xE6, 0x8C]),
+    ("lavender", [0xE6, 0xE6, 0xFA]),
+    ("lavenderblush", [0xFF, 0xF0, 0xF5]),
+    ("lawngreen", [0x7C, 0xFC, 0x00]),
+    ("lemonchiffon", [0xFF, 0xFA, 0xCD]),
+    ("lightblue", [0xAD, 0xD8, 0xE6]),
+    ("lightcoral", [0xF0, 0x80, 0x80]),
+    ("lightcyan", [0xE0, 0xFF, 0xFF]),
+    ("lightgoldenrodyellow", [0xFA, 0xFA, 0xD2]),
+    ("lightgray", [0xD3, 0xD3, 0xD3]),
+    ("lightgreen", [0x90, 0xEE, 0x90]),
+    ("lightpink", [0xFF, 0xB6, 0xC1]),
+    ("lightsalmon", [0xFF, 0xA0, 0x7A]),
+    ("lightseagreen", [0x20, 0xB2, 0xAA]),
+    ("lightskyblue", [0x87, 0xCE, 0xFA]),
+    ("lightslategray", [0x77, 0x88, 0x99]),
+    ("lightsteelblue", [0xB0, 0xC4, 0xDE]),
+    ("lightyellow", [0xFF, 0xFF, 0xE0]),
+    ("lime", [0x00, 0xFF, 0x00]),
+    ("limegreen", [0x32, 0xCD, 0x32]),
+    ("linen", [0xFA, 0xF0, 0xE6]),
+    ("magenta", [0xFF, 0x00, 0xFF]),
+    ("maroon", [0x80, 0x00, 0x00]),
+    ("mediumaquamarine", [0x66, 0xCD, 0xAA]),
+    ("mediumblue", [0x00, 0x00, 0xCD]),
+    ("mediumorchid", [0xBA, 0x55, 0xD3]),
+    ("mediumpurple", [0x93, 0x70, 0xDB]),
+    ("mediumseagreen", [0x3C, 0xB3, 0x71]),
+    ("mediumslateblue", [0x7B, 0x68, 0xEE]),
+    ("mediumspringgreen", [0x00, 0xFA, 0x9A]),
+    ("mediumturquoise", [0x48, 0xD1, 0xCC]),
+    ("mediumvioletred", [0xC7, 0x15, 0x85]),
+    ("midnightblue", [0x19, 0x19, 0x70]),
+    ("mintcream", [0xF5, 0xFF, 0xFA]),
+    ("mistyrose", [0xFF, 0xE4, 0xE1]),
+    ("moccasin", [0xFF, 0xE4, 0xB5]),
+    ("navajowhite", [0xFF, 0xDE, 0xAD]),
+    ("navy", [0x00, 0x00, 0x80]),
+    ("oldlace", [0xFD, 0xF5, 0xE6]),
+    ("olive", [0x80, 0x80, 0x00]),
+    ("olivedrab", [0x6B, 0x8E, 0x23]),
+    ("orange", [0xFF, 0xA5, 0x00]),
+    ("orangered", [0xFF, 0x45, 0x00]),
+    ("orchid", [0xDA, 0x70, 0xD6]),
+    ("palegoldenrod", [0xEE, 0xE8, 0xAA]),
+    ("palegreen", [0x98, 0xFB, 0x98]),
+    ("paleturquoise", [0xAF, 0xEE, 0xEE]),
+    ("palevioletred", [0xDB, 0x70, 0x93]),
+    ("papayawhip", [0xFF, 0xEF, 0xD5]),
+    ("peachpuff", [0xFF, 0xDA, 0xB9]),
+    ("peru", [0xCD, 0x85, 0x3F]),
+    ("pink", [0xFF, 0xC0, 0xCB]),
+    ("plum", [0xDD, 0xA0, 0xDD]),
+    ("powderblue", [0xB0, 0xE0, 0xE6]),
+    ("purple", [0x80, 0x00, 0x80]),
+    ("rebeccapurple", [0x66, 0x33, 0x99]),
+    ("red", [0xFF, 0x00, 0x00]),
+    ("rosybrown", [0xBC, 0x8F, 0x8F]),
+    ("royalblue", [0x41, 0x69, 0xE1]),
+    ("saddlebrown", [0x8B, 0x45, 0x13]),
+    ("salmon", [0xFA, 0x80, 0x72]),
+    ("sandybrown", [0xF4, 0xA4, 0x60]),
+    ("seagreen", [0x2E, 0x8B, 0x57]),
+    ("seashell", [0xFF, 0xF5, 0xEE]),
+    ("sienna", [0xA0, 0x52, 0x2D]),
+    ("silver", [0xC0, 0xC0, 0xC0]),
+    ("skyblue", [0x87, 0xCE, 0xEB]),
+    ("slateblue", [0x6A, 0x5A, 0xCD]),
+    ("slategray", [0x70, 0x80, 0x90]),
+    ("snow", [0xFF, 0xFA, 0xFA]),
+    ("springgreen", [0x00, 0xFF, 0x7F]),
+    ("steelblue", [0x46, 0x82, 0xB4]),
+    ("tan", [0xD2, 0xB4, 0x8C]),
+    ("teal", [0x00, 0x80, 0x80]),
+    ("thistle", [0xD8, 0xBF, 0xD8]),
+    ("tomato", [0xFF, 0x63, 0x47]),
+    ("turquoise", [0x40, 0xE0, 0xD0]),
+    ("violet", [0xEE, 0x82, 0xEE]),
+    ("wheat", [0xF5, 0xDE, 0xB3]),
+    ("white", [0xFF, 0xFF, 0xFF]),
+    ("whitesmoke", [0xF5, 0xF5, 0xF5]),
+    ("yellow", [0xFF, 0xFF, 0x00]),
+    ("yellowgreen", [0x9A, 0xCD, 0x32]),
+];
 
 fn hex_of(color: Rgba) -> String {
     if color.a < 1.0 {
@@ -1220,6 +1391,7 @@ mod tests {
             text_of(Kind::Json, r#"[{"a": 1}, {"b": 2}]"#),
             text_of(Kind::Json, "[1, 2]"),
             text_of(Kind::Color, "hsla(10, 20%, 30%, 40%)"),
+            text_of(Kind::Color, "#FFA500"),
             Content {
                 title: Some("Ejemplo".into()),
                 ..text_of(Kind::Link, "https://ejemplo.test/a b")
@@ -1338,7 +1510,12 @@ mod tests {
         let content = text_of(Kind::Color, "#FF8800");
         assert_eq!(
             forms_for(&content),
-            vec![Form::ColorHex, Form::ColorRgb, Form::ColorHsl]
+            vec![
+                Form::ColorHex,
+                Form::ColorRgb,
+                Form::ColorHsl,
+                Form::ColorName
+            ]
         );
         assert_eq!(rendered(Form::ColorHex, &content), "#FF8800");
         assert_eq!(rendered(Form::ColorRgb, &content), "rgb(255, 136, 0)");
@@ -1355,6 +1532,116 @@ mod tests {
             rendered(Form::ColorHex, &text_of(Kind::Color, "#f80")),
             "#FF8800"
         );
+    }
+
+    #[test]
+    fn a_colour_that_has_a_css_name_is_called_by_it() {
+        for (text, name) in [
+            ("#FFA500", "orange"),
+            ("#ffa500", "orange"),
+            ("rgb(255, 0, 0)", "red"),
+            ("hsl(0, 0%, 50%)", "gray"),
+            ("#000", "black"),
+            ("#fff", "white"),
+            ("#663399", "rebeccapurple"),
+            ("rgba(255, 165, 0, 1)", "orange"),
+        ] {
+            assert_eq!(rendered(Form::ColorName, &text_of(Kind::Color, text)), name);
+        }
+    }
+
+    #[test]
+    fn a_colour_close_to_a_name_borrows_it() {
+        for (text, name) in [
+            ("#FF8800", "darkorange"),
+            ("#FF9500", "darkorange"),
+            ("#FFCC00", "gold"),
+            ("#050505", "black"),
+            ("#FEFEFE", "white"),
+            ("#F0F0F0", "whitesmoke"),
+            ("#0000CC", "mediumblue"),
+        ] {
+            assert_eq!(rendered(Form::ColorName, &text_of(Kind::Color, text)), name);
+        }
+    }
+
+    #[test]
+    fn a_colour_far_from_every_name_is_not_offered_one() {
+        for text in [
+            "#123456", "#3B82F6", "#1DB954", "#222222", "#00CC00", "#CC0000",
+        ] {
+            let content = text_of(Kind::Color, text);
+            assert!(!forms_for(&content).contains(&Form::ColorName), "{text}");
+            assert_eq!(render(Form::ColorName, &content), None, "{text}");
+        }
+    }
+
+    #[test]
+    fn a_translucent_colour_has_no_name() {
+        for text in [
+            "#FF880080",
+            "rgba(255, 165, 0, 0.5)",
+            "hsla(39, 100%, 50%, 99%)",
+        ] {
+            let content = text_of(Kind::Color, text);
+            assert!(!forms_for(&content).contains(&Form::ColorName), "{text}");
+            assert_eq!(render(Form::ColorName, &content), None, "{text}");
+        }
+    }
+
+    #[test]
+    fn the_spelling_that_wins_is_the_common_one() {
+        for (text, name) in [
+            ("#00FFFF", "cyan"),
+            ("#FF00FF", "magenta"),
+            ("#808080", "gray"),
+            ("#2F4F4F", "darkslategray"),
+            ("#A9A9A9", "darkgray"),
+        ] {
+            assert_eq!(rendered(Form::ColorName, &text_of(Kind::Color, text)), name);
+        }
+    }
+
+    #[test]
+    fn the_named_table_has_no_two_names_for_one_colour() {
+        let mut values: Vec<[u8; 3]> = NAMED.iter().map(|(_, rgb)| *rgb).collect();
+        values.sort_unstable();
+        values.dedup();
+        assert_eq!(values.len(), NAMED.len());
+        for (name, _) in NAMED {
+            assert!(name.bytes().all(|b| b.is_ascii_lowercase()), "{name}");
+        }
+    }
+
+    #[test]
+    fn the_distance_is_a_metric_that_weighs_green_most() {
+        assert_eq!(redmean_squared([0, 0, 0], [0, 0, 0]), 0);
+        assert_eq!(
+            redmean_squared([10, 20, 30], [40, 50, 60]),
+            redmean_squared([40, 50, 60], [10, 20, 30])
+        );
+        let red = redmean_squared([128, 0, 0], [128 + 15, 0, 0]);
+        let green = redmean_squared([0, 128, 0], [0, 128 + 15, 0]);
+        let blue = redmean_squared([0, 0, 128], [0, 0, 128 + 15]);
+        assert!(green > red && green > blue);
+        assert!(
+            redmean_squared([250, 0, 0], [235, 0, 0]) > redmean_squared([10, 0, 0], [25, 0, 0]),
+            "una diferencia de rojo pesa más donde hay mucho rojo"
+        );
+        assert!(
+            redmean_squared([250, 0, 0], [250, 0, 15]) < redmean_squared([10, 0, 0], [10, 0, 15]),
+            "y una de azul pesa más donde hay poco rojo"
+        );
+        assert_eq!(
+            redmean_squared([255, 0, 0], [240, 0, 0]),
+            (1024 + 495) * 225
+        );
+        assert_eq!(
+            redmean_squared([0, 0, 255], [0, 0, 240]),
+            (1024 + 510) * 225
+        );
+        assert!(named_color(parse_color("#FF9500").unwrap()).is_some());
+        assert_eq!(NAME_WITHIN, 30);
     }
 
     #[test]

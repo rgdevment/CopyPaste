@@ -1,34 +1,24 @@
 use crate::formats::CATALOG;
+pub use cp_core::capture::Captured;
+use cp_core::capture::insisting;
 use cp_core::formats::{Family, Take};
 use cp_core::item::{Format, Item, Payload};
 use cp_core::kind::{self, Kind};
 use cp_mac_sys::pasteboard::{self, Pasteboard};
 use cp_mac_sys::reading;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Captured {
-    Kept(Item),
-    Nothing,
-    TooSlow,
-    Superseded,
-}
-
 pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 
 const _: () = assert!(PATIENCE.as_millis() < 60_000);
 
 pub fn capture_within(patience: std::time::Duration) -> Captured {
-    reading::anything_within(patience, || {
-        capture(&Pasteboard::general_from_any_thread()).map_or(Captured::Nothing, Captured::Kept)
-    })
-    .unwrap_or(Captured::TooSlow)
+    reading::anything_within(patience, || capture(&Pasteboard::general_from_any_thread()))
+        .unwrap_or(Captured::TooSlow)
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
     let started = pasteboard::change_count_from_any_thread();
-    let pending = reading::begin(|| {
-        capture(&Pasteboard::general_from_any_thread()).map_or(Captured::Nothing, Captured::Kept)
-    });
+    let pending = reading::begin(|| capture(&Pasteboard::general_from_any_thread()));
     let got = insisting(retry, pasteboard::change_count_from_any_thread, || {
         pending.wait(patience).unwrap_or(Captured::TooSlow)
     });
@@ -40,28 +30,14 @@ pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::R
     }
 }
 
-fn insisting(
-    retry: cp_core::watch::Retry,
-    count: impl Fn() -> i64,
-    mut once: impl FnMut() -> Captured,
-) -> Captured {
-    use cp_core::watch::{Retried, insist};
-    let attempt = || match once() {
-        Captured::TooSlow => None,
-        other => Some(other),
-    };
-    match insist(retry, count, attempt, std::thread::sleep) {
-        Retried::Done(captured) => captured,
-        Retried::Superseded => Captured::Superseded,
-        Retried::Exhausted => Captured::TooSlow,
-    }
-}
-
-pub fn capture(pb: &Pasteboard) -> Option<Item> {
+pub fn capture(pb: &Pasteboard) -> Captured {
     let offered = pb.types();
     let ids: Vec<&str> = offered.iter().map(String::as_str).collect();
-    if CATALOG.refusal(&ids).is_some() {
-        return None;
+    if ids.is_empty() {
+        return Captured::Nothing;
+    }
+    if let Some(refusal) = CATALOG.refusal(&ids) {
+        return Captured::Refused(refusal);
     }
 
     let family = CATALOG.classify(&ids);
@@ -70,7 +46,7 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
 
     for id in &ids {
         if pb.change_count() != started {
-            return None;
+            return Captured::Superseded;
         }
         let canonical = CATALOG.canonical(id);
         if formats.iter().any(|kept| kept.id == canonical) {
@@ -103,7 +79,7 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
     }
 
     let kind = refine(family, &formats);
-    Some(Item { kind, formats })
+    Captured::Kept(Item { kind, formats })
 }
 
 fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
@@ -177,75 +153,6 @@ fn refine(family: Option<Family>, formats: &[Format]) -> Option<Kind> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn quick() -> cp_core::watch::Retry {
-        cp_core::watch::Retry {
-            attempts: 3,
-            pause: std::time::Duration::from_millis(1),
-        }
-    }
-
-    #[test]
-    fn a_slow_source_that_answers_on_the_second_try_is_kept() {
-        let mut tries = 0;
-        let got = insisting(
-            quick(),
-            || 7,
-            || {
-                tries += 1;
-                if tries < 2 {
-                    Captured::TooSlow
-                } else {
-                    Captured::Kept(Item::plain("tarde pero llega"))
-                }
-            },
-        );
-        assert_eq!(got, Captured::Kept(Item::plain("tarde pero llega")));
-    }
-
-    #[test]
-    fn a_source_that_stays_slow_is_too_slow_in_the_end() {
-        let mut tries = 0;
-        let got = insisting(
-            quick(),
-            || 7,
-            || {
-                tries += 1;
-                Captured::TooSlow
-            },
-        );
-        assert_eq!(got, Captured::TooSlow);
-        assert_eq!(tries, 3);
-    }
-
-    #[test]
-    fn an_empty_pasteboard_is_an_answer_not_a_delay() {
-        let mut tries = 0;
-        let got = insisting(
-            quick(),
-            || 7,
-            || {
-                tries += 1;
-                Captured::Nothing
-            },
-        );
-        assert_eq!(got, Captured::Nothing);
-        assert_eq!(tries, 1);
-    }
-
-    #[test]
-    fn a_copy_made_while_insisting_supersedes_the_slow_one() {
-        let count = std::cell::Cell::new(7);
-        let got = insisting(
-            quick(),
-            || count.get(),
-            || {
-                count.set(8);
-                Captured::TooSlow
-            },
-        );
-        assert_eq!(got, Captured::Superseded);
-    }
 
     #[test]
     fn the_patience_sits_between_the_two_measured_worlds() {

@@ -381,10 +381,24 @@ impl Store {
 
     pub fn set_ocr_text(&self, id: i64, text: &str, at: i64) -> Result<()> {
         self.db.execute(
-            "UPDATE items SET search_ocr = ?2, updated_at = ?3 WHERE id = ?1",
-            params![id, fold(text), at],
+            "UPDATE items SET ocr_text = ?2, search_ocr = ?3, updated_at = ?4
+             WHERE id = ?1 AND deleted_at IS NULL",
+            params![id, text, fold(text), at],
         )?;
         Ok(())
+    }
+
+    pub fn ocr_text(&self, id: i64) -> Result<Option<String>> {
+        Ok(self
+            .db
+            .query_row(
+                "SELECT COALESCE(ocr_text, search_ocr) FROM items
+                 WHERE id = ?1 AND deleted_at IS NULL",
+                [id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?
+            .filter(|text| !text.is_empty()))
     }
 
     pub fn pending_ocr(&self, limit: usize) -> Result<Vec<i64>> {
@@ -507,8 +521,8 @@ impl Store {
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
                  preview_text = '', search_text = '', search_label = '',
-                 search_app = '', search_ocr = '', label = NULL, app_source = NULL,
-                 thumb_path = NULL, content_hash = 0
+                 search_app = '', search_ocr = '', ocr_text = NULL, label = NULL,
+                 app_source = NULL, thumb_path = NULL, content_hash = 0
              WHERE id = ?1",
             params![id, at],
         )?;
@@ -691,7 +705,8 @@ impl Store {
         let changed = self.db.execute(
             "UPDATE items
              SET kind = ?2, preview_text = ?3, search_text = ?4, search_ocr = '',
-                 content_hash = ?5, thumb_path = NULL, broken_since = NULL, updated_at = ?6
+                 ocr_text = NULL, content_hash = ?5, thumb_path = NULL, broken_since = NULL,
+                 updated_at = ?6
              WHERE id = ?1 AND deleted_at IS NULL",
             params![
                 id,
@@ -1150,7 +1165,11 @@ fn page_sql(clauses: &Clauses, key: &str, with_query: bool) -> String {
          ORDER BY page.key DESC, page.id DESC",
         clauses.source(),
         preview = PREVIEW_CHARS,
-        ocr = if with_query { "items.search_ocr" } else { "''" },
+        ocr = if with_query {
+            "COALESCE(items.ocr_text, items.search_ocr)"
+        } else {
+            "''"
+        },
         whole = if with_query {
             "items.preview_text"
         } else {
@@ -1946,6 +1965,57 @@ mod tests {
         store.set_ocr_text(id, "Reunión en Múnich", 2).expect("ocr");
         assert_eq!(search(&store, "reunion").len(), 1);
         assert_eq!(search(&store, "munich").len(), 1);
+        assert_eq!(
+            store.ocr_text(id).expect("lee").as_deref(),
+            Some("Reunión en Múnich"),
+            "lo que se pega o se enseña conserva mayúsculas y tildes"
+        );
+    }
+
+    #[test]
+    fn the_recognised_text_is_gone_with_the_item_and_with_an_edit() {
+        let store = Store::in_memory().expect("esquema");
+        let image = Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1]),
+            }],
+        };
+        let id = store
+            .insert_item("uuid-crudo", &image, "", 1)
+            .expect("insert");
+        assert_eq!(store.ocr_text(id).expect("lee"), None);
+        store.set_ocr_text(id, "Factura 77", 2).expect("ocr");
+        store.update_text(id, "ya es texto", 3).expect("edita");
+        assert_eq!(
+            store.ocr_text(id).expect("lee"),
+            None,
+            "el texto editado sustituye a la imagen y a lo que se leyó en ella"
+        );
+        store.set_ocr_text(id, "Factura 78", 4).expect("ocr");
+        assert_eq!(
+            store.ocr_text(id).expect("lee").as_deref(),
+            Some("Factura 78")
+        );
+        store.mark_deleted(id, 5).expect("borra");
+        assert_eq!(store.ocr_text(id).expect("lee"), None);
+        assert!(
+            store
+                .raw()
+                .query_row(
+                    "SELECT ocr_text IS NULL AND search_ocr = '' FROM items WHERE id = ?1",
+                    [id],
+                    |row| row.get::<_, bool>(0),
+                )
+                .expect("consulta"),
+            "borrar limpia las dos columnas, no solo la que se busca"
+        );
+        assert!(
+            store.set_ocr_text(id, "tarde", 6).is_ok(),
+            "un OCR que llega después del borrado no resucita nada"
+        );
+        assert_eq!(store.ocr_text(id).expect("lee"), None);
     }
 
     #[test]
@@ -2795,6 +2865,43 @@ mod identity {
             captured("hola").fingerprint()
         );
     }
+
+    #[test]
+    fn copying_the_same_thing_twice_from_google_reactivates_instead_of_duplicating() {
+        use cp_core::item::Format;
+        let store = Store::in_memory().expect("esquema");
+        let docs = |guid: &str| Item {
+            kind: Some(Kind::Text),
+            formats: vec![
+                Format {
+                    id: "public.html".into(),
+                    payload: Payload::Inline(
+                        format!("<b id=\"docs-internal-guid-{guid}\"><span>hola</span></b>")
+                            .into_bytes(),
+                    ),
+                },
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Inline(b"hola".to_vec()),
+                },
+            ],
+        };
+        let id = store
+            .insert_item("uuid-docs", &docs("4a1e6b2f-7fff-1d3e"), "hola", 1)
+            .expect("inserta");
+        assert_eq!(
+            store
+                .find_by_hash(&docs("0c9d8e7f-7fff-aaaa"))
+                .expect("busca"),
+            Some(id),
+            "otro GUID, el mismo ítem"
+        );
+        assert_eq!(
+            store.find_by_hash(&Item::plain("hola")).expect("busca"),
+            None,
+            "el texto plano copiado de donde se pegó es otro ítem"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -2929,7 +3036,47 @@ mod listing {
         assert_eq!(rows.len(), 1);
         let snippet = rows[0].snippet.as_ref().expect("fragmento");
         assert_eq!(snippet.found_in, FoundIn::Ocr);
-        assert!(snippet.excerpt.plain().contains("ab-4417"));
+        assert_eq!(
+            snippet.excerpt.plain(),
+            "Pedido AB-4417 entrega",
+            "el fragmento enseña lo leído tal cual, no plegado"
+        );
+    }
+
+    #[test]
+    fn an_old_folded_ocr_is_still_shown_until_it_is_read_again() {
+        let store = Store::in_memory().expect("esquema");
+        let image = Item {
+            kind: Some(cp_core::kind::Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1]),
+            }],
+        };
+        let id = store
+            .insert_item("uuid-viejo", &image, "", 1)
+            .expect("insert");
+        store
+            .raw()
+            .execute(
+                "UPDATE items SET search_ocr = 'pedido plegado' WHERE id = ?1",
+                [id],
+            )
+            .expect("como lo dejó la versión 3");
+        assert_eq!(
+            store.ocr_text(id).expect("lee").as_deref(),
+            Some("pedido plegado")
+        );
+        let rows = all(
+            &store,
+            &Filter {
+                query: Some("plegado".into()),
+                ..Default::default()
+            },
+        );
+        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        assert_eq!(snippet.found_in, FoundIn::Ocr);
+        assert_eq!(snippet.excerpt.plain(), "pedido plegado");
     }
 
     #[test]
