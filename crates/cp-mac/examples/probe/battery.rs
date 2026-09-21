@@ -802,6 +802,28 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    b.case(
+        "C6",
+        "insistir ante una fuente que responde no cuesta un segundo intento",
+        || {
+            pb.write_text("cp-c6");
+            let direct = capture(&pb).ok_or("no se capturó")?;
+            let started = std::time::Instant::now();
+            let got = cp_mac::capture::capture_insisting(PATIENCE, cp_core::watch::RETRY);
+            let took = started.elapsed();
+            match got {
+                Captured::Kept(item) if item == direct => {
+                    if took < cp_core::watch::RETRY.pause {
+                        Ok(())
+                    } else {
+                        Err(format!("tardó {took:?}: hubo pausa sin motivo"))
+                    }
+                }
+                other => Err(format!("llegó {other:?}")),
+            }
+        },
+    );
+
     b.group("D · Teclado");
 
     b.case("D1", "el layout activo resuelve la «v»", || {

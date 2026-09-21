@@ -16,15 +16,16 @@ pub fn missing_paths(file_urls: &str) -> Vec<String> {
     file_urls
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .filter(|url| {
-            let path = url
-                .strip_prefix("file://")
-                .map(percent_decoded)
-                .unwrap_or_else(|| (*url).to_string());
-            !std::path::Path::new(&path).exists()
-        })
+        .filter(|url| !std::path::Path::new(&path_of(url)).exists())
         .map(str::to_owned)
         .collect()
+}
+
+pub fn path_of(file_url: &str) -> String {
+    file_url
+        .strip_prefix("file://")
+        .map(percent_decoded)
+        .unwrap_or_else(|| file_url.to_owned())
 }
 
 fn percent_decoded(text: &str) -> String {

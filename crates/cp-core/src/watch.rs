@@ -11,6 +11,47 @@ pub enum Cadence {
     Opaque,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Retry {
+    pub attempts: u8,
+    pub pause: std::time::Duration,
+}
+
+pub const RETRY: Retry = Retry {
+    attempts: 5,
+    pause: std::time::Duration::from_millis(150),
+};
+
+const _: () = assert!(RETRY.attempts >= 2);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Retried<T> {
+    Done(T),
+    Superseded,
+    Exhausted,
+}
+
+pub fn insist<T>(
+    retry: Retry,
+    count: impl Fn() -> i64,
+    mut attempt: impl FnMut() -> Option<T>,
+    pause: impl Fn(std::time::Duration),
+) -> Retried<T> {
+    let started_at = count();
+    for done in 0..retry.attempts.max(1) {
+        if done > 0 {
+            pause(retry.pause);
+            if count() != started_at {
+                return Retried::Superseded;
+            }
+        }
+        if let Some(got) = attempt() {
+            return Retried::Done(got);
+        }
+    }
+    Retried::Exhausted
+}
+
 #[derive(Debug)]
 pub struct Watcher {
     last: Option<i64>,
@@ -66,6 +107,125 @@ impl Watcher {
 
     pub fn cadence(&self) -> Cadence {
         self.cadence
+    }
+}
+
+#[cfg(test)]
+mod insisting {
+    use super::*;
+    use std::cell::Cell;
+    use std::time::Duration;
+
+    fn quick() -> Retry {
+        Retry {
+            attempts: 4,
+            pause: Duration::from_millis(7),
+        }
+    }
+
+    #[test]
+    fn a_source_that_answers_the_first_time_is_not_asked_twice() {
+        let asked = Cell::new(0);
+        let paused = Cell::new(0);
+        let got = insist(
+            quick(),
+            || 1,
+            || {
+                asked.set(asked.get() + 1);
+                Some("hola")
+            },
+            |_| paused.set(paused.get() + 1),
+        );
+        assert_eq!(got, Retried::Done("hola"));
+        assert_eq!((asked.get(), paused.get()), (1, 0));
+    }
+
+    #[test]
+    fn a_source_that_takes_a_while_is_asked_again_after_a_pause() {
+        let asked = Cell::new(0);
+        let pauses = std::cell::RefCell::new(Vec::new());
+        let got = insist(
+            quick(),
+            || 1,
+            || {
+                asked.set(asked.get() + 1);
+                (asked.get() == 3).then_some("al fin")
+            },
+            |how_long| pauses.borrow_mut().push(how_long),
+        );
+        assert_eq!(got, Retried::Done("al fin"));
+        assert_eq!(asked.get(), 3);
+        assert_eq!(
+            *pauses.borrow(),
+            vec![Duration::from_millis(7); 2],
+            "una pausa entre cada dos intentos, ninguna antes del primero"
+        );
+    }
+
+    #[test]
+    fn a_source_that_never_answers_is_given_up_on_after_the_attempts() {
+        let asked = Cell::new(0);
+        let got: Retried<()> = insist(
+            quick(),
+            || 1,
+            || {
+                asked.set(asked.get() + 1);
+                None
+            },
+            |_| {},
+        );
+        assert_eq!(got, Retried::Exhausted);
+        assert_eq!(asked.get(), 4, "exactamente los intentos de la política");
+    }
+
+    #[test]
+    fn a_newer_copy_while_waiting_wins_and_the_old_one_is_dropped() {
+        let asked = Cell::new(0);
+        let counter = Cell::new(10);
+        let got: Retried<()> = insist(
+            quick(),
+            || counter.get(),
+            || {
+                asked.set(asked.get() + 1);
+                None
+            },
+            |_| counter.set(11),
+        );
+        assert_eq!(got, Retried::Superseded);
+        assert_eq!(
+            asked.get(),
+            1,
+            "lo copiado después lo verá el vigilante; no se lee dos veces"
+        );
+    }
+
+    #[test]
+    fn zero_attempts_still_asks_once() {
+        let asked = Cell::new(0);
+        let policy = Retry {
+            attempts: 0,
+            pause: Duration::ZERO,
+        };
+        let got = insist(
+            policy,
+            || 1,
+            || {
+                asked.set(asked.get() + 1);
+                Some(())
+            },
+            |_| {},
+        );
+        assert_eq!(got, Retried::Done(()));
+        assert_eq!(asked.get(), 1);
+    }
+
+    #[test]
+    fn the_shipped_policy_waits_less_than_a_person_notices() {
+        let worst = RETRY.pause.as_millis() * u128::from(RETRY.attempts - 1);
+        assert!(
+            worst <= 1_000,
+            "{worst} ms de pausas acumuladas es demasiado"
+        );
     }
 }
 

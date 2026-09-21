@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -10,12 +10,24 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
             supported: SCHEMA_VERSION,
         });
     }
+    if found == 1 {
+        db.execute_batch(&format!(
+            "DROP INDEX IF EXISTS items_by_recency;
+             DROP INDEX IF EXISTS items_by_kind;
+             {ORDERING_INDEXES}"
+        ))?;
+    }
     if found < SCHEMA_VERSION {
         db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))?;
         return Ok(true);
     }
     Ok(false)
 }
+
+const ORDERING_INDEXES: &str = "
+        CREATE INDEX IF NOT EXISTS items_by_recency ON items(modified_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS items_by_kind ON items(kind, modified_at DESC, id DESC);
+";
 
 pub fn configure(db: &Connection) -> Result<()> {
     db.execute_batch(
@@ -32,8 +44,12 @@ pub fn configure(db: &Connection) -> Result<()> {
 
 pub fn create(db: &Connection) -> Result<()> {
     configure(db)?;
-    db.execute_batch(
-        r#"
+    db.execute_batch(TABLES)?;
+    db.execute_batch(ORDERING_INDEXES)?;
+    Ok(())
+}
+
+const TABLES: &str = r#"
         CREATE TABLE IF NOT EXISTS items (
             id                 INTEGER PRIMARY KEY,
             uuid               TEXT    NOT NULL UNIQUE,
@@ -59,10 +75,8 @@ pub fn create(db: &Connection) -> Result<()> {
             deleted_at         INTEGER
         );
 
-        CREATE INDEX IF NOT EXISTS items_by_recency ON items(modified_at DESC);
         CREATE INDEX IF NOT EXISTS items_by_creation ON items(created_at);
         CREATE INDEX IF NOT EXISTS items_by_hash ON items(content_hash);
-        CREATE INDEX IF NOT EXISTS items_by_kind ON items(kind, modified_at DESC);
         CREATE INDEX IF NOT EXISTS items_by_color ON items(card_color);
         CREATE INDEX IF NOT EXISTS items_pinned ON items(pinned) WHERE pinned = 1;
         CREATE INDEX IF NOT EXISTS items_broken ON items(broken_since)
@@ -70,6 +84,10 @@ pub fn create(db: &Connection) -> Result<()> {
         CREATE INDEX IF NOT EXISTS items_by_version ON items(updated_at);
         CREATE INDEX IF NOT EXISTS items_deleted ON items(deleted_at)
             WHERE deleted_at IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS items_by_app ON items(search_app);
+        CREATE INDEX IF NOT EXISTS items_by_pastes ON items(paste_count DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS items_by_use
+            ON items(COALESCE(last_used_at, -1) DESC, id DESC);
 
         CREATE TABLE IF NOT EXISTS item_formats (
             item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
@@ -131,9 +149,7 @@ pub fn create(db: &Connection) -> Result<()> {
             INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
                 VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
         END;
-        "#,
-    )
-}
+        "#;
 
 #[cfg(test)]
 mod tests {
@@ -206,5 +222,41 @@ mod tests {
         let db = Connection::open_in_memory().expect("abre");
         create(&db).expect("primera");
         create(&db).expect("segunda");
+    }
+
+    fn index_sql(db: &Connection, name: &str) -> String {
+        db.query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?1",
+            [name],
+            |row| row.get(0),
+        )
+        .expect("el índice existe")
+    }
+
+    #[test]
+    fn a_version_one_database_gets_its_ordering_indexes_rebuilt() {
+        let db = Connection::open_in_memory().expect("abre");
+        create(&db).expect("esquema");
+        db.execute_batch(
+            "DROP INDEX items_by_recency;
+             DROP INDEX items_by_kind;
+             CREATE INDEX items_by_recency ON items(modified_at DESC);
+             CREATE INDEX items_by_kind ON items(kind, modified_at DESC);
+             PRAGMA user_version = 1;",
+        )
+        .expect("una base como la dejó la versión 1");
+        create(&db).expect("abrir la vuelve a crear sin tocar lo que existe");
+        assert!(
+            !index_sql(&db, "items_by_recency").contains("id DESC"),
+            "IF NOT EXISTS no rehace un índice viejo: por eso hace falta migrar"
+        );
+
+        assert!(migrate(&db).expect("migra"));
+        assert!(index_sql(&db, "items_by_recency").contains("modified_at DESC, id DESC"));
+        assert!(index_sql(&db, "items_by_kind").contains("kind, modified_at DESC, id DESC"));
+        let version: u32 = db
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("consulta");
+        assert_eq!(version, SCHEMA_VERSION);
     }
 }

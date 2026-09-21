@@ -1,32 +1,210 @@
 use crate::{Error, Result};
 use cp_core::item::{Item, Payload};
-use cp_core::search::fold;
-use rusqlite::{Connection, OptionalExtension, params};
+use cp_core::kind::Kind;
+use cp_core::search::{EXCERPT_CHARS, Excerpt, excerpt, fold, terms_of};
+use rusqlite::types::ToSql;
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 
-fn fts_expression(folded: &str) -> Option<String> {
-    let terms: Vec<String> = folded
-        .split_whitespace()
-        .filter(|word| word.chars().any(char::is_alphanumeric))
+fn fts_expression(query: &str) -> Option<String> {
+    let terms: Vec<String> = terms_of(query)
+        .iter()
         .map(|word| format!("\"{}\"*", word.replace('"', "\"\"")))
         .collect();
     (!terms.is_empty()).then(|| terms.join(" "))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Where {
+    Text,
+    Label,
+    App,
+    Ocr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Snippet {
+    pub found_in: Where,
+    pub excerpt: Excerpt,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Listed {
     pub id: i64,
     pub modified_at: i64,
-    pub kind: Option<String>,
+    pub created_at: i64,
+    pub kind: Option<Kind>,
     pub preview: String,
+    pub app: Option<String>,
+    pub label: Option<String>,
+    pub color: i64,
+    pub thumb_path: Option<String>,
+    pub paste_count: i64,
+    pub last_used_at: Option<i64>,
+    pub broken_since: Option<i64>,
     pub pinned: bool,
+    pub snippet: Option<Snippet>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Cursor {
+    key: i64,
+    id: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Page {
+    pub rows: Vec<Listed>,
+    pub next: Option<Cursor>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Order {
+    #[default]
+    Recent,
+    MostPasted,
+    LastUsed,
+}
+
+impl Order {
+    fn key(self) -> &'static str {
+        match self {
+            Order::Recent => "items.modified_at",
+            Order::MostPasted => "items.paste_count",
+            Order::LastUsed => "COALESCE(items.last_used_at, -1)",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Broken {
+    #[default]
+    Hidden,
+    Shown,
+    Only,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Filter {
     pub query: Option<String>,
-    pub kinds: Vec<cp_core::kind::Kind>,
+    pub label: Option<String>,
+    pub kinds: Vec<Kind>,
+    pub exclude_kinds: Vec<Kind>,
+    pub apps: Vec<String>,
+    pub exclude_apps: Vec<String>,
     pub colors: Vec<i64>,
     pub pinned_only: bool,
+    pub since: Option<i64>,
+    pub broken: Broken,
+    pub order: Order,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Facet {
+    pub kind: Kind,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppCount {
+    pub app: String,
+    pub count: i64,
+}
+
+struct Clauses {
+    joins_index: bool,
+    conditions: Vec<String>,
+    bound: Vec<Box<dyn ToSql>>,
+}
+
+impl Clauses {
+    fn of(filter: &Filter, with_kinds: bool) -> Option<Self> {
+        let mut clauses = Self {
+            joins_index: false,
+            conditions: vec!["items.deleted_at IS NULL".into()],
+            bound: Vec::new(),
+        };
+        let mut index = Vec::new();
+        if let Some(text) = &filter.query {
+            index.push(fts_expression(text)?);
+        }
+        if let Some(label) = &filter.label {
+            index.push(format!("search_label : ({})", fts_expression(label)?));
+        }
+        if !index.is_empty() {
+            clauses.joins_index = true;
+            clauses.conditions.push("items_fts MATCH ?".into());
+            clauses.bound.push(Box::new(index.join(" AND ")));
+        }
+        if with_kinds {
+            clauses.kinds(&filter.kinds, false);
+        }
+        clauses.kinds(&filter.exclude_kinds, true);
+        clauses.apps("IN", &filter.apps);
+        clauses.apps("NOT IN", &filter.exclude_apps);
+        if !filter.colors.is_empty() {
+            let list = filter
+                .colors
+                .iter()
+                .map(i64::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            clauses
+                .conditions
+                .push(format!("items.card_color IN ({list})"));
+        }
+        if filter.pinned_only {
+            clauses.conditions.push("items.pinned = 1".into());
+        }
+        if let Some(since) = filter.since {
+            clauses.conditions.push("items.modified_at >= ?".into());
+            clauses.bound.push(Box::new(since));
+        }
+        match filter.broken {
+            Broken::Hidden => clauses.conditions.push("items.broken_since IS NULL".into()),
+            Broken::Only => clauses
+                .conditions
+                .push("items.broken_since IS NOT NULL".into()),
+            Broken::Shown => {}
+        }
+        Some(clauses)
+    }
+
+    fn kinds(&mut self, kinds: &[Kind], excluded: bool) {
+        if kinds.is_empty() {
+            return;
+        }
+        let list = kinds
+            .iter()
+            .map(|kind| format!("'{}'", kind.as_str()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        self.conditions.push(if excluded {
+            format!("(items.kind IS NULL OR items.kind NOT IN ({list}))")
+        } else {
+            format!("items.kind IN ({list})")
+        });
+    }
+
+    fn apps(&mut self, verb: &str, apps: &[String]) {
+        if apps.is_empty() {
+            return;
+        }
+        let marks = vec!["?"; apps.len()].join(", ");
+        self.conditions
+            .push(format!("items.search_app {verb} ({marks})"));
+        for app in apps {
+            self.bound.push(Box::new(fold(app)));
+        }
+    }
+
+    fn source(&self) -> String {
+        let join = if self.joins_index {
+            "JOIN items_fts ON items.id = items_fts.rowid "
+        } else {
+            ""
+        };
+        format!("FROM items {join}WHERE {}", self.conditions.join(" AND "))
+    }
 }
 
 pub struct Store {
@@ -267,6 +445,10 @@ impl Store {
              WHERE id = ?1",
             params![id, at],
         )?;
+        self.release(id)
+    }
+
+    fn release(&self, id: i64) -> Result<()> {
         if let Some(blobs) = &self.blobs {
             for digest in self.blobs_of(id)? {
                 if self.blob_is_shared(&digest, id)? {
@@ -282,6 +464,21 @@ impl Store {
         self.db
             .execute("DELETE FROM pending_work WHERE item_id = ?1", [id])?;
         Ok(())
+    }
+
+    fn ids_where(&self, condition: &str, bound: &[&dyn ToSql]) -> Result<Vec<i64>> {
+        let mut stmt = self
+            .db
+            .prepare(&format!("SELECT id FROM items WHERE {condition}"))?;
+        let rows = stmt.query_map(bound, |row| row.get(0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    fn erase_all(&self, ids: &[i64], at: i64) -> Result<usize> {
+        for id in ids {
+            self.erase(*id, at)?;
+        }
+        Ok(ids.len())
     }
 
     fn blobs_of(&self, id: i64) -> Result<Vec<String>> {
@@ -353,6 +550,11 @@ impl Store {
             params![uuid, kind, preview, created_at, hash, fold(preview)],
         )?;
         let id = self.db.last_insert_rowid();
+        self.write_formats(id, item)?;
+        Ok(id)
+    }
+
+    fn write_formats(&self, id: i64, item: &Item) -> Result<()> {
         for format in &item.formats {
             let (inline, blob, size) = match &format.payload {
                 Payload::Inline(bytes) => (Some(bytes.clone()), None, Some(bytes.len() as i64)),
@@ -373,7 +575,45 @@ impl Store {
                 params![id, format.id, size, inline, blob],
             )?;
         }
-        Ok(id)
+        Ok(())
+    }
+
+    pub fn update_text(&self, id: i64, text: &str, at: i64) -> Result<()> {
+        let payload = Payload::stored(text.as_bytes().to_vec());
+        if let Payload::TooBig { size } = payload {
+            return Err(Error::TooBig { size });
+        }
+        let edited = Item {
+            kind: Some(cp_core::kind::classify_text(text)),
+            formats: vec![cp_core::item::Format {
+                id: cp_core::item::SYNTHETIC_TEXT.into(),
+                payload,
+            }],
+        };
+        if self.blobs.is_none() && edited.needs_blob_store() {
+            let (format, size) = edited.oversized_format().expect("lo acaba de decir");
+            return Err(Error::NeedsBlobStore { format, size });
+        }
+        let changed = self.db.execute(
+            "UPDATE items
+             SET kind = ?2, preview_text = ?3, search_text = ?4, search_ocr = '',
+                 content_hash = ?5, thumb_path = NULL, broken_since = NULL, updated_at = ?6
+             WHERE id = ?1 AND deleted_at IS NULL",
+            params![
+                id,
+                edited.kind.map(|kind| kind.as_str()),
+                text,
+                fold(text),
+                edited.fingerprint() as i64,
+                at
+            ],
+        )?;
+        if changed == 0 {
+            return Err(Error::NoSuchItem { id });
+        }
+        self.release(id)?;
+        self.write_formats(id, &edited)?;
+        self.checkpoint()
     }
 
     pub fn find_by_hash(&self, item: &Item) -> Result<Option<i64>> {
@@ -405,11 +645,22 @@ impl Store {
     }
 
     pub fn purge_broken_before(&self, cutoff: i64) -> Result<usize> {
-        Ok(self.db.execute(
-            "DELETE FROM items
-             WHERE broken_since IS NOT NULL AND broken_since < ?1 AND pinned = 0",
-            [cutoff],
-        )?)
+        let doomed = self.ids_where(
+            "broken_since IS NOT NULL AND broken_since < ?1 AND pinned = 0",
+            &[&cutoff],
+        )?;
+        for id in &doomed {
+            self.release(*id)?;
+            self.db.execute("DELETE FROM items WHERE id = ?1", [id])?;
+        }
+        self.checkpoint()?;
+        Ok(doomed.len())
+    }
+
+    pub fn mark_present(&self, id: i64) -> Result<()> {
+        self.db
+            .execute("UPDATE items SET broken_since = NULL WHERE id = ?1", [id])?;
+        Ok(())
     }
 
     pub fn pin(&self, id: i64) -> Result<()> {
@@ -426,105 +677,220 @@ impl Store {
         )?)
     }
 
-    pub fn list(&self, filter: &Filter, limit: usize, after: Option<i64>) -> Result<Vec<Listed>> {
-        let expression = filter
-            .query
-            .as_deref()
-            .map(|text| fts_expression(&fold(text)));
-        if matches!(expression, Some(None)) {
-            return Ok(Vec::new());
+    pub fn list(&self, filter: &Filter, limit: usize, after: Option<Cursor>) -> Result<Page> {
+        let Some(mut clauses) = Clauses::of(filter, true) else {
+            return Ok(Page::default());
+        };
+        let key = filter.order.key();
+        if let Some(cursor) = after {
+            clauses
+                .conditions
+                .push(format!("({key} < ? OR ({key} = ? AND items.id < ?))"));
+            clauses.bound.push(Box::new(cursor.key));
+            clauses.bound.push(Box::new(cursor.key));
+            clauses.bound.push(Box::new(cursor.id));
         }
-        let expression = expression.flatten();
-
-        let mut sql = String::from(
-            "SELECT items.id, items.modified_at, items.kind, items.preview_text, items.pinned
-             FROM items ",
+        let sql = format!(
+            "SELECT items.id, items.modified_at, items.created_at, items.kind,
+                    items.preview_text, items.app_source, items.label, items.card_color,
+                    items.thumb_path, items.paste_count, items.last_used_at,
+                    items.broken_since, items.pinned, items.search_ocr, {key}
+             {} ORDER BY {key} DESC, items.id DESC LIMIT ?",
+            clauses.source()
         );
-        if expression.is_some() {
-            sql.push_str("JOIN items_fts ON items.id = items_fts.rowid ");
-        }
-        sql.push_str("WHERE items.deleted_at IS NULL ");
-        if expression.is_some() {
-            sql.push_str("AND items_fts MATCH :match ");
-        }
-        if !filter.kinds.is_empty() {
-            let list = filter
-                .kinds
-                .iter()
-                .map(|kind| format!("'{}'", kind.as_str()))
-                .collect::<Vec<_>>()
-                .join(", ");
-            sql.push_str(&format!("AND items.kind IN ({list}) "));
-        }
-        if !filter.colors.is_empty() {
-            let list = filter
-                .colors
-                .iter()
-                .map(i64::to_string)
-                .collect::<Vec<_>>()
-                .join(", ");
-            sql.push_str(&format!("AND items.card_color IN ({list}) "));
-        }
-        if filter.pinned_only {
-            sql.push_str("AND items.pinned = 1 ");
-        }
-        sql.push_str(
-            "AND (:after IS NULL OR items.modified_at < :after)
-             ORDER BY items.modified_at DESC LIMIT :limit",
-        );
+        let fetch = i64::try_from(limit).map_or(i64::MAX, |limit| limit.saturating_add(1));
+        clauses.bound.push(Box::new(fetch));
 
+        let terms = filter.query.as_deref().map(terms_of).unwrap_or_default();
         let mut stmt = self.db.prepare(&sql)?;
-        let limit = limit as i64;
-        let mut bound: Vec<(&str, &dyn rusqlite::ToSql)> =
-            vec![(":after", &after), (":limit", &limit)];
-        if let Some(text) = &expression {
-            bound.push((":match", text));
-        }
-        let rows = stmt.query_map(bound.as_slice(), |row| {
-            Ok(Listed {
+        let rows = stmt.query_map(params_from_iter(clauses.bound.iter()), |row| {
+            let ocr: String = row.get(13)?;
+            let mut listed = Listed {
                 id: row.get(0)?,
                 modified_at: row.get(1)?,
-                kind: row.get(2)?,
-                preview: row.get(3)?,
-                pinned: row.get::<_, i64>(4)? == 1,
+                created_at: row.get(2)?,
+                kind: row
+                    .get::<_, Option<String>>(3)?
+                    .and_then(|name| Kind::from_name(&name)),
+                preview: row.get(4)?,
+                app: row.get(5)?,
+                label: row.get(6)?,
+                color: row.get(7)?,
+                thumb_path: row.get(8)?,
+                paste_count: row.get(9)?,
+                last_used_at: row.get(10)?,
+                broken_since: row.get(11)?,
+                pinned: row.get::<_, i64>(12)? == 1,
+                snippet: None,
+            };
+            listed.snippet = snippet_of(&listed, &ocr, &terms);
+            Ok((listed, row.get::<_, i64>(14)?))
+        })?;
+        let mut keyed: Vec<(Listed, i64)> = rows.collect::<rusqlite::Result<_>>()?;
+        let more = keyed.len() > limit;
+        keyed.truncate(limit);
+        let next = match keyed.last() {
+            Some((last, key)) if more => Some(Cursor {
+                key: *key,
+                id: last.id,
+            }),
+            _ => None,
+        };
+        Ok(Page {
+            rows: keyed.into_iter().map(|(listed, _)| listed).collect(),
+            next,
+        })
+    }
+
+    pub fn facets(&self, filter: &Filter) -> Result<Vec<Facet>> {
+        let Some(mut clauses) = Clauses::of(filter, false) else {
+            return Ok(Vec::new());
+        };
+        clauses.conditions.push("items.kind IS NOT NULL".into());
+        let sql = format!(
+            "SELECT items.kind, COUNT(*) {} GROUP BY items.kind
+             ORDER BY COUNT(*) DESC, items.kind",
+            clauses.source()
+        );
+        let mut stmt = self.db.prepare(&sql)?;
+        let rows = stmt.query_map(params_from_iter(clauses.bound.iter()), |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })?;
+        let mut facets = Vec::new();
+        for row in rows {
+            let (name, count) = row?;
+            if let Some(kind) = Kind::from_name(&name) {
+                facets.push(Facet { kind, count });
+            }
+        }
+        Ok(facets)
+    }
+
+    pub fn distinct_apps(&self) -> Result<Vec<AppCount>> {
+        let mut stmt = self.db.prepare(
+            "SELECT MIN(app_source), COUNT(*) FROM items
+             WHERE deleted_at IS NULL AND app_source IS NOT NULL
+             GROUP BY search_app
+             ORDER BY COUNT(*) DESC, MIN(app_source)",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(AppCount {
+                app: row.get(0)?,
+                count: row.get(1)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn clear_older_than(&self, cutoff: i64) -> Result<usize> {
-        let doomed: Vec<i64> = {
-            let mut stmt = self.db.prepare(
-                "SELECT id FROM items
-                 WHERE modified_at < ?1 AND pinned = 0 AND deleted_at IS NULL",
-            )?;
-            let rows = stmt.query_map([cutoff], |row| row.get(0))?;
-            rows.collect::<rusqlite::Result<_>>()?
-        };
-        for id in &doomed {
-            self.erase(*id, cutoff)?;
-        }
+        let doomed = self.ids_where(
+            "modified_at < ?1 AND pinned = 0 AND deleted_at IS NULL",
+            &[&cutoff],
+        )?;
+        let removed = self.erase_all(&doomed, cutoff)?;
         self.checkpoint()?;
-        Ok(doomed.len())
+        Ok(removed)
     }
 
     pub fn clear_all_unpinned(&self, at: i64) -> Result<usize> {
-        self.clear_older_than_matching(at, "pinned = 0")
+        let doomed = self.ids_where("pinned = 0 AND deleted_at IS NULL", &[])?;
+        let removed = self.erase_all(&doomed, at)?;
+        self.checkpoint()?;
+        Ok(removed)
     }
 
-    fn clear_older_than_matching(&self, at: i64, condition: &str) -> Result<usize> {
-        let doomed: Vec<i64> = {
-            let mut stmt = self.db.prepare(&format!(
-                "SELECT id FROM items WHERE {condition} AND deleted_at IS NULL"
-            ))?;
-            let rows = stmt.query_map([], |row| row.get(0))?;
-            rows.collect::<rusqlite::Result<_>>()?
-        };
-        for id in &doomed {
-            self.erase(*id, at)?;
+    pub fn usage(&self) -> Result<Usage> {
+        let items = self.count()?;
+        let inline: i64 = self.db.query_row(
+            "SELECT COALESCE(SUM(LENGTH(inline_data)), 0) FROM item_formats",
+            [],
+            |row| row.get(0),
+        )?;
+        let blobs: i64 = self.db.query_row(
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM (
+                 SELECT DISTINCT blob_path, size_bytes FROM item_formats
+                 WHERE blob_path IS NOT NULL)",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(Usage {
+            items,
+            bytes: inline + blobs,
+        })
+    }
+
+    pub fn sweep(&self, policy: &Policy, now: i64) -> Result<Swept> {
+        let mut swept = Swept::default();
+        if let Some(grace) = policy.broken_for {
+            swept.broken = self.purge_broken_before(now - grace)?;
+        }
+        if let Some(age) = policy.keep_for {
+            let doomed = self.ids_where(
+                "modified_at < ?1 AND pinned = 0 AND deleted_at IS NULL",
+                &[&(now - age)],
+            )?;
+            swept.expired = self.erase_all(&doomed, now)?;
+        }
+        if let Some(keep) = policy.keep_at_most {
+            let excess = (self.count()? - keep).max(0);
+            let doomed = self.ids_where(
+                "pinned = 0 AND deleted_at IS NULL ORDER BY modified_at, id LIMIT ?1",
+                &[&excess],
+            )?;
+            swept.over_count = self.erase_all(&doomed, now)?;
+        }
+        if let Some(limit) = policy.bytes_at_most {
+            swept.over_bytes = self.evict_until_under(limit, now)?;
+        }
+        if let Some(blobs) = &self.blobs {
+            let referenced = self.referenced_blobs()?;
+            swept.orphans = blobs.sweep(&|digest| referenced.contains(digest))?;
         }
         self.checkpoint()?;
-        Ok(doomed.len())
+        Ok(swept)
+    }
+
+    fn evict_until_under(&self, limit: i64, at: i64) -> Result<usize> {
+        let mut evicted = 0;
+        let mut left = usize::MAX;
+        loop {
+            let usage = self.usage()?.bytes;
+            let candidates = self.eviction_candidates()?;
+            if usage <= limit || candidates.len() >= left {
+                return Ok(evicted);
+            }
+            left = candidates.len();
+            let mut freed = 0;
+            for (id, bytes) in candidates {
+                self.erase(id, at)?;
+                evicted += 1;
+                freed += bytes;
+                if freed >= usage - limit {
+                    break;
+                }
+            }
+        }
+    }
+
+    fn eviction_candidates(&self) -> Result<Vec<(i64, i64)>> {
+        let mut stmt = self.db.prepare(
+            "SELECT items.id, COALESCE(SUM(COALESCE(LENGTH(f.inline_data), f.size_bytes, 0)), 0)
+             FROM items LEFT JOIN item_formats f
+               ON f.item_id = items.id AND (f.inline_data IS NOT NULL OR f.blob_path IS NOT NULL)
+             WHERE items.pinned = 0 AND items.deleted_at IS NULL
+             GROUP BY items.id
+             ORDER BY items.modified_at, items.id",
+        )?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    fn referenced_blobs(&self) -> Result<std::collections::HashSet<String>> {
+        let mut stmt = self
+            .db
+            .prepare("SELECT DISTINCT blob_path FROM item_formats WHERE blob_path IS NOT NULL")?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     pub const PAGE: usize = 100;
@@ -539,7 +905,7 @@ impl Store {
         limit: usize,
         after: Option<i64>,
     ) -> Result<Vec<(i64, String)>> {
-        let Some(expression) = fts_expression(&fold(query)) else {
+        let Some(expression) = fts_expression(query) else {
             return Ok(Vec::new());
         };
         let mut stmt = self.db.prepare(
@@ -559,7 +925,7 @@ impl Store {
     }
 
     pub fn search_page(&self, query: &str, limit: usize, offset: usize) -> Result<Vec<String>> {
-        let Some(expression) = fts_expression(&fold(query)) else {
+        let Some(expression) = fts_expression(query) else {
             return Ok(Vec::new());
         };
         let mut stmt = self.db.prepare(
@@ -576,6 +942,45 @@ impl Store {
         )?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Policy {
+    pub keep_for: Option<i64>,
+    pub keep_at_most: Option<i64>,
+    pub bytes_at_most: Option<i64>,
+    pub broken_for: Option<i64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Swept {
+    pub broken: usize,
+    pub expired: usize,
+    pub over_count: usize,
+    pub over_bytes: usize,
+    pub orphans: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Usage {
+    pub items: i64,
+    pub bytes: i64,
+}
+
+fn snippet_of(listed: &Listed, ocr: &str, terms: &[String]) -> Option<Snippet> {
+    if terms.is_empty() {
+        return None;
+    }
+    let sources = [
+        (Where::Text, Some(listed.preview.as_str())),
+        (Where::Label, listed.label.as_deref()),
+        (Where::App, listed.app.as_deref()),
+        (Where::Ocr, Some(ocr)),
+    ];
+    sources.into_iter().find_map(|(found_in, text)| {
+        let excerpt = excerpt(text?, terms, EXCERPT_CHARS)?;
+        Some(Snippet { found_in, excerpt })
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1257,10 +1662,16 @@ mod tests {
     #[test]
     fn pasting_does_not_move_the_item_up_the_list() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         let oldest = listed.last().expect("hay").id;
         store.record_paste(oldest, 999).expect("pega");
-        let after = store.list(&Filter::default(), 10, None).expect("listado");
+        let after = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         assert_eq!(
             after.last().map(|one| one.id),
             Some(oldest),
@@ -1271,13 +1682,16 @@ mod tests {
     #[test]
     fn the_colour_can_be_set_and_filtered_by() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         store.set_color(listed[0].id, 3, 100).expect("color");
         let filter = Filter {
             colors: vec![3],
             ..Default::default()
         };
-        let coloured = store.list(&filter, 10, None).expect("listado");
+        let coloured = store.list(&filter, 10, None).expect("listado").rows;
         assert_eq!(coloured.len(), 1);
         assert_eq!(coloured[0].id, listed[0].id);
     }
@@ -1908,7 +2322,10 @@ mod tests {
     #[test]
     fn the_panel_can_ask_for_the_latest_without_searching_anything() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         assert_eq!(listed.len(), 4, "sin término se devuelve el historial");
         assert_eq!(
             listed.first().map(|one| one.preview.as_str()),
@@ -1924,9 +2341,9 @@ mod tests {
             kinds: vec![Kind::Text],
             ..Default::default()
         };
-        let listed = store.list(&filter, 10, None).expect("listado");
+        let listed = store.list(&filter, 10, None).expect("listado").rows;
         assert_eq!(listed.len(), 2);
-        assert!(listed.iter().all(|one| one.kind.as_deref() == Some("text")));
+        assert!(listed.iter().all(|one| one.kind == Some(Kind::Text)));
     }
 
     #[test]
@@ -1936,7 +2353,10 @@ mod tests {
             kinds: vec![Kind::Email, Kind::Color],
             ..Default::default()
         };
-        assert_eq!(store.list(&filter, 10, None).expect("listado").len(), 2);
+        assert_eq!(
+            store.list(&filter, 10, None).expect("listado").rows.len(),
+            2
+        );
     }
 
     #[test]
@@ -1947,7 +2367,10 @@ mod tests {
             kinds: vec![Kind::Text],
             ..Default::default()
         };
-        assert_eq!(store.list(&filter, 10, None).expect("listado").len(), 2);
+        assert_eq!(
+            store.list(&filter, 10, None).expect("listado").rows.len(),
+            2
+        );
 
         let narrower = Filter {
             query: Some("nota".into()),
@@ -1955,7 +2378,11 @@ mod tests {
             ..Default::default()
         };
         assert!(
-            store.list(&narrower, 10, None).expect("listado").is_empty(),
+            store
+                .list(&narrower, 10, None)
+                .expect("listado")
+                .rows
+                .is_empty(),
             "el filtro y el término se aplican los dos"
         );
     }
@@ -1963,32 +2390,41 @@ mod tests {
     #[test]
     fn only_pinned_can_be_asked_for() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         let id = listed.first().expect("hay").id;
         store.pin(id).expect("fija");
         let filter = Filter {
             pinned_only: true,
             ..Default::default()
         };
-        let pinned = store.list(&filter, 10, None).expect("listado");
+        let pinned = store.list(&filter, 10, None).expect("listado").rows;
         assert_eq!(pinned.len(), 1);
         assert!(pinned[0].pinned);
     }
 
     #[test]
-    fn the_list_pages_with_the_same_cursor_as_the_search() {
+    fn the_list_hands_out_a_cursor_only_while_there_is_more() {
         let store = a_little_history();
         let first = store.list(&Filter::default(), 2, None).expect("página");
-        assert_eq!(first.len(), 2);
-        let next = store
-            .list(
-                &Filter::default(),
-                2,
-                first.last().map(|one| one.modified_at),
-            )
+        assert_eq!(first.rows.len(), 2);
+        let cursor = first.next.expect("quedan dos más");
+        let second = store
+            .list(&Filter::default(), 2, Some(cursor))
             .expect("siguiente");
-        assert_eq!(next.len(), 2);
-        assert!(next.iter().all(|one| !first.contains(one)));
+        assert_eq!(second.rows.len(), 2);
+        assert!(second.rows.iter().all(|one| !first.rows.contains(one)));
+        assert_eq!(second.next, None, "la última página no promete otra");
+    }
+
+    #[test]
+    fn a_page_that_ends_exactly_at_the_last_row_promises_nothing_more() {
+        let store = a_little_history();
+        let whole = store.list(&Filter::default(), 4, None).expect("página");
+        assert_eq!(whole.rows.len(), 4);
+        assert_eq!(whole.next, None);
     }
 
     #[test]
@@ -1999,7 +2435,11 @@ mod tests {
             ..Default::default()
         };
         assert!(
-            store.list(&filter, 10, None).expect("listado").is_empty(),
+            store
+                .list(&filter, 10, None)
+                .expect("listado")
+                .rows
+                .is_empty(),
             "pedir buscar algo imposible no puede devolver el historial entero"
         );
     }
@@ -2007,12 +2447,16 @@ mod tests {
     #[test]
     fn deleted_items_never_show_up_in_the_list() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         store.mark_deleted(listed[0].id, 99).expect("borra");
         assert_eq!(
             store
                 .list(&Filter::default(), 10, None)
                 .expect("listado")
+                .rows
                 .len(),
             3
         );
@@ -2021,7 +2465,10 @@ mod tests {
     #[test]
     fn retention_takes_the_old_and_leaves_what_was_pinned() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         let oldest = listed.last().expect("hay").id;
         store.pin(oldest).expect("fija el más viejo");
 
@@ -2030,7 +2477,10 @@ mod tests {
             removed, 2,
             "se van los de antes del corte que no estén fijados"
         );
-        let left = store.list(&Filter::default(), 10, None).expect("listado");
+        let left = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         assert_eq!(left.len(), 2);
         assert!(
             left.iter().any(|one| one.id == oldest),
@@ -2041,7 +2491,10 @@ mod tests {
     #[test]
     fn clearing_everything_still_respects_what_was_pinned() {
         let store = a_little_history();
-        let listed = store.list(&Filter::default(), 10, None).expect("listado");
+        let listed = store
+            .list(&Filter::default(), 10, None)
+            .expect("listado")
+            .rows;
         store.pin(listed[0].id).expect("fija");
         let removed = store.clear_all_unpinned(100).expect("vacía");
         assert_eq!(removed, 3);
@@ -2117,6 +2570,1113 @@ mod identity {
         assert_ne!(
             Item::plain("hola").fingerprint(),
             captured("hola").fingerprint()
+        );
+    }
+}
+
+#[cfg(test)]
+mod listing {
+    use super::*;
+    use cp_core::item::Format;
+
+    fn text_item(text: &str, kind: Kind) -> Item {
+        Item {
+            kind: Some(kind),
+            formats: vec![Format {
+                id: "public.utf8-plain-text".into(),
+                payload: Payload::Inline(text.as_bytes().to_vec()),
+            }],
+        }
+    }
+
+    fn history() -> Store {
+        let store = Store::in_memory().expect("esquema");
+        let rows = [
+            ("uuid-1", "primera nota", Kind::Text, 10, "Safari"),
+            ("uuid-2", "alguien@ejemplo.test", Kind::Email, 20, "Slack"),
+            ("uuid-3", "#FF8800", Kind::Color, 30, "Slack"),
+            ("uuid-4", "segunda nota", Kind::Text, 40, "Code"),
+            ("uuid-5", "fn main() {}", Kind::Code, 50, "Code"),
+        ];
+        for (uuid, text, kind, at, app) in rows {
+            let id = store
+                .insert_item(uuid, &text_item(text, kind), text, at)
+                .expect("insert");
+            store.set_source(id, app, at).expect("origen");
+        }
+        store
+    }
+
+    fn all(store: &Store, filter: &Filter) -> Vec<Listed> {
+        store.list(filter, 100, None).expect("listado").rows
+    }
+
+    fn previews(rows: &[Listed]) -> Vec<&str> {
+        rows.iter().map(|one| one.preview.as_str()).collect()
+    }
+
+    #[test]
+    fn the_card_gets_everything_the_row_knows() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.set_label(id, Some("Arranque"), 60).expect("etiqueta");
+        store.set_color(id, 5, 61).expect("color");
+        store.record_paste(id, 62).expect("pega");
+        store.pin(id).expect("fija");
+        let card = all(&store, &Filter::default())
+            .into_iter()
+            .find(|one| one.id == id)
+            .expect("está");
+        assert_eq!(card.preview, "fn main() {}");
+        assert_eq!(card.kind, Some(Kind::Code));
+        assert_eq!(card.app.as_deref(), Some("Code"));
+        assert_eq!(card.label.as_deref(), Some("Arranque"));
+        assert_eq!(card.color, 5);
+        assert_eq!(card.paste_count, 1);
+        assert_eq!(card.last_used_at, Some(62));
+        assert_eq!(card.created_at, 50);
+        assert_eq!(card.modified_at, 50, "pegar no lo mueve");
+        assert!(card.pinned);
+        assert_eq!(card.broken_since, None);
+        assert_eq!(card.thumb_path, None);
+        assert_eq!(card.snippet, None, "sin término no hay fragmento");
+    }
+
+    #[test]
+    fn searching_marks_the_fragment_that_matched() {
+        let store = history();
+        let filter = Filter {
+            query: Some("segun".into()),
+            ..Default::default()
+        };
+        let rows = all(&store, &filter);
+        assert_eq!(rows.len(), 1);
+        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        assert_eq!(snippet.found_in, Where::Text);
+        let marked: Vec<&str> = snippet
+            .excerpt
+            .segments
+            .iter()
+            .filter(|one| one.matched)
+            .map(|one| one.text.as_str())
+            .collect();
+        assert_eq!(marked, vec!["segun"]);
+        assert_eq!(snippet.excerpt.plain(), "segunda nota");
+    }
+
+    #[test]
+    fn a_hit_on_the_label_says_so() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store
+            .set_label(id, Some("Factura mayo"), 60)
+            .expect("etiqueta");
+        let filter = Filter {
+            query: Some("factura".into()),
+            ..Default::default()
+        };
+        let rows = all(&store, &filter);
+        assert_eq!(rows.len(), 1);
+        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        assert_eq!(snippet.found_in, Where::Label);
+        assert_eq!(snippet.excerpt.plain(), "Factura mayo");
+    }
+
+    #[test]
+    fn a_hit_on_what_was_read_inside_an_image_says_so() {
+        let store = Store::in_memory().expect("esquema");
+        let image = Item {
+            kind: Some(Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::Inline(vec![1]),
+            }],
+        };
+        let id = store
+            .insert_item("uuid-img", &image, "", 1)
+            .expect("insert");
+        store
+            .set_ocr_text(id, "Pedido AB-4417 entrega", 2)
+            .expect("ocr");
+        let filter = Filter {
+            query: Some("ab-4417".into()),
+            ..Default::default()
+        };
+        let rows = all(&store, &filter);
+        assert_eq!(rows.len(), 1);
+        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        assert_eq!(snippet.found_in, Where::Ocr);
+        assert!(snippet.excerpt.plain().contains("ab-4417"));
+    }
+
+    #[test]
+    fn a_hit_on_the_source_application_says_so() {
+        let store = history();
+        let filter = Filter {
+            query: Some("slack".into()),
+            ..Default::default()
+        };
+        let rows = all(&store, &filter);
+        assert_eq!(rows.len(), 2);
+        assert!(
+            rows.iter()
+                .all(|one| one.snippet.as_ref().map(|s| s.found_in) == Some(Where::App))
+        );
+    }
+
+    #[test]
+    fn a_class_can_be_left_out() {
+        let store = history();
+        let filter = Filter {
+            exclude_kinds: vec![Kind::Text, Kind::Code],
+            ..Default::default()
+        };
+        assert_eq!(
+            previews(&all(&store, &filter)),
+            vec!["#FF8800", "alguien@ejemplo.test"]
+        );
+    }
+
+    #[test]
+    fn the_source_application_filters_by_equality_not_by_search() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store
+            .set_label(id, Some("pegar en slack"), 60)
+            .expect("etiqueta");
+        let filter = Filter {
+            apps: vec!["slack".into()],
+            ..Default::default()
+        };
+        let rows = all(&store, &filter);
+        assert_eq!(rows.len(), 2, "solo lo copiado desde Slack, sin mayúsculas");
+        assert!(rows.iter().all(|one| one.app.as_deref() == Some("Slack")));
+    }
+
+    #[test]
+    fn several_applications_and_a_negated_one() {
+        let store = history();
+        let either = Filter {
+            apps: vec!["Safari".into(), "Code".into()],
+            ..Default::default()
+        };
+        assert_eq!(all(&store, &either).len(), 3);
+        let not_code = Filter {
+            exclude_apps: vec!["code".into()],
+            ..Default::default()
+        };
+        assert_eq!(all(&store, &not_code).len(), 3);
+    }
+
+    #[test]
+    fn since_keeps_what_was_copied_from_that_moment_on() {
+        let store = history();
+        let filter = Filter {
+            since: Some(30),
+            ..Default::default()
+        };
+        assert_eq!(all(&store, &filter).len(), 3, "el 30 incluido");
+    }
+
+    #[test]
+    fn since_counts_a_recopy_as_copied_again() {
+        let store = history();
+        let oldest = all(&store, &Filter::default()).last().expect("hay").id;
+        store.reactivate(oldest, 100).expect("recopiado");
+        let filter = Filter {
+            since: Some(100),
+            ..Default::default()
+        };
+        assert_eq!(
+            previews(&all(&store, &filter)),
+            vec!["primera nota"],
+            "lo que se vuelve a copiar hoy es de hoy"
+        );
+    }
+
+    #[test]
+    fn broken_items_are_hidden_unless_asked_for() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.mark_broken(id, 99).expect("roto");
+        assert_eq!(all(&store, &Filter::default()).len(), 4);
+        let shown = Filter {
+            broken: Broken::Shown,
+            ..Default::default()
+        };
+        assert_eq!(all(&store, &shown).len(), 5);
+        let only = Filter {
+            broken: Broken::Only,
+            ..Default::default()
+        };
+        let rows = all(&store, &only);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].broken_since, Some(99));
+    }
+
+    #[test]
+    fn a_scoped_label_query_does_not_match_the_content() {
+        let store = history();
+        let rows = all(&store, &Filter::default());
+        store
+            .set_label(rows[1].id, Some("nota"), 60)
+            .expect("etiqueta");
+        let by_label = Filter {
+            label: Some("nota".into()),
+            ..Default::default()
+        };
+        let found = all(&store, &by_label);
+        assert_eq!(
+            found.len(),
+            1,
+            "«nota» está en dos contenidos y una etiqueta"
+        );
+        assert_eq!(found[0].id, rows[1].id);
+    }
+
+    #[test]
+    fn a_label_query_and_a_text_query_both_apply() {
+        let store = history();
+        let rows = all(&store, &Filter::default());
+        store
+            .set_label(rows[0].id, Some("arranque"), 60)
+            .expect("etiqueta");
+        store
+            .set_label(rows[1].id, Some("arranque"), 61)
+            .expect("etiqueta");
+        let filter = Filter {
+            query: Some("main".into()),
+            label: Some("arranque".into()),
+            ..Default::default()
+        };
+        assert_eq!(previews(&all(&store, &filter)), vec!["fn main() {}"]);
+    }
+
+    #[test]
+    fn a_label_query_with_nothing_usable_finds_nothing() {
+        let store = history();
+        let filter = Filter {
+            label: Some("!!!".into()),
+            ..Default::default()
+        };
+        assert!(all(&store, &filter).is_empty());
+    }
+
+    #[test]
+    fn most_pasted_comes_first_and_ties_break_the_same_way_every_time() {
+        let store = history();
+        let rows = all(&store, &Filter::default());
+        for _ in 0..3 {
+            store.record_paste(rows[4].id, 70).expect("pega");
+        }
+        store.record_paste(rows[2].id, 71).expect("pega");
+        let filter = Filter {
+            order: Order::MostPasted,
+            ..Default::default()
+        };
+        let ordered = all(&store, &filter);
+        assert_eq!(ordered[0].id, rows[4].id);
+        assert_eq!(ordered[1].id, rows[2].id);
+        assert_eq!(
+            ordered[2..].iter().map(|one| one.id).collect::<Vec<_>>(),
+            vec![rows[0].id, rows[1].id, rows[3].id],
+            "a igual cuenta, el más nuevo primero"
+        );
+    }
+
+    #[test]
+    fn last_used_puts_what_was_never_pasted_at_the_end() {
+        let store = history();
+        let rows = all(&store, &Filter::default());
+        store.record_paste(rows[3].id, 80).expect("pega");
+        store.record_paste(rows[1].id, 90).expect("pega");
+        let filter = Filter {
+            order: Order::LastUsed,
+            ..Default::default()
+        };
+        let ordered = all(&store, &filter);
+        assert_eq!(ordered[0].id, rows[1].id);
+        assert_eq!(ordered[1].id, rows[3].id);
+        assert!(ordered[2..].iter().all(|one| one.last_used_at.is_none()));
+    }
+
+    fn walk(store: &Store, filter: &Filter, page: usize) -> Vec<i64> {
+        let mut seen = Vec::new();
+        let mut after = None;
+        loop {
+            let got = store.list(filter, page, after).expect("página");
+            seen.extend(got.rows.iter().map(|one| one.id));
+            match got.next {
+                Some(cursor) => after = Some(cursor),
+                None => return seen,
+            }
+        }
+    }
+
+    #[test]
+    fn every_order_pages_without_repeating_or_skipping_even_with_ties() {
+        let store = Store::in_memory().expect("esquema");
+        for at in 0..23 {
+            let id = store
+                .insert_item(
+                    &format!("uuid-{at}"),
+                    &text_item(&format!("nota {at}"), Kind::Text),
+                    &format!("nota {at}"),
+                    at % 4,
+                )
+                .expect("insert");
+            for _ in 0..(at % 3) {
+                store.record_paste(id, at % 5).expect("pega");
+            }
+        }
+        for order in [Order::Recent, Order::MostPasted, Order::LastUsed] {
+            let filter = Filter {
+                order,
+                ..Default::default()
+            };
+            let mut ids = walk(&store, &filter, 4);
+            assert_eq!(ids.len(), 23, "{order:?} se saltó filas");
+            ids.sort_unstable();
+            ids.dedup();
+            assert_eq!(ids.len(), 23, "{order:?} repitió filas");
+        }
+    }
+
+    #[test]
+    fn the_tabs_count_only_the_classes_that_exist_within_the_search() {
+        let store = history();
+        let facets = store.facets(&Filter::default()).expect("facetas");
+        assert_eq!(
+            facets,
+            vec![
+                Facet {
+                    kind: Kind::Text,
+                    count: 2
+                },
+                Facet {
+                    kind: Kind::Code,
+                    count: 1
+                },
+                Facet {
+                    kind: Kind::Color,
+                    count: 1
+                },
+                Facet {
+                    kind: Kind::Email,
+                    count: 1
+                },
+            ],
+            "por cantidad, y a igual cantidad por nombre"
+        );
+        let within = Filter {
+            apps: vec!["Slack".into()],
+            kinds: vec![Kind::Text],
+            ..Default::default()
+        };
+        let facets = store.facets(&within).expect("facetas");
+        assert_eq!(
+            facets.iter().map(|one| one.kind).collect::<Vec<_>>(),
+            vec![Kind::Color, Kind::Email],
+            "la pestaña elegida no recorta las demás; la app y el término sí"
+        );
+    }
+
+    #[test]
+    fn an_item_without_a_class_has_no_tab() {
+        let store = Store::in_memory().expect("esquema");
+        store
+            .insert_item(
+                "uuid-none",
+                &Item {
+                    kind: None,
+                    formats: vec![],
+                },
+                "",
+                1,
+            )
+            .expect("insert");
+        assert!(
+            store
+                .facets(&Filter::default())
+                .expect("facetas")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn an_impossible_search_has_no_tabs_either() {
+        let store = history();
+        let filter = Filter {
+            query: Some("!!!".into()),
+            ..Default::default()
+        };
+        assert!(store.facets(&filter).expect("facetas").is_empty());
+    }
+
+    #[test]
+    fn the_applications_come_with_their_counts_most_used_first() {
+        let store = history();
+        let apps = store.distinct_apps().expect("apps");
+        assert_eq!(
+            apps,
+            vec![
+                AppCount {
+                    app: "Code".into(),
+                    count: 2
+                },
+                AppCount {
+                    app: "Slack".into(),
+                    count: 2
+                },
+                AppCount {
+                    app: "Safari".into(),
+                    count: 1
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn two_spellings_of_one_application_are_one_entry() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.set_source(id, "slack", 60).expect("origen");
+        let apps = store.distinct_apps().expect("apps");
+        let slack = apps.iter().find(|one| one.app == "Slack").expect("está");
+        assert_eq!(slack.count, 3);
+        assert!(apps.iter().all(|one| one.app != "slack"));
+    }
+
+    #[test]
+    fn deleted_items_count_for_nothing() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.mark_deleted(id, 99).expect("borra");
+        let facets = store.facets(&Filter::default()).expect("facetas");
+        assert!(facets.iter().all(|one| one.kind != Kind::Code));
+        let apps = store.distinct_apps().expect("apps");
+        assert_eq!(
+            apps.iter()
+                .find(|one| one.app == "Code")
+                .map(|one| one.count),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn no_order_sorts_the_history_in_memory() {
+        let store = history();
+        for order in [Order::Recent, Order::MostPasted, Order::LastUsed] {
+            let key = order.key();
+            let plan: Vec<String> = store
+                .db
+                .prepare(&format!(
+                    "EXPLAIN QUERY PLAN SELECT items.id FROM items
+                     WHERE items.deleted_at IS NULL AND items.broken_since IS NULL
+                     ORDER BY {key} DESC, items.id DESC LIMIT 50"
+                ))
+                .expect("prepara")
+                .query_map([], |row| row.get::<_, String>(3))
+                .expect("plan")
+                .map(|row| row.expect("fila"))
+                .collect();
+            assert!(
+                !plan.iter().any(|step| step.contains("TEMP B-TREE")),
+                "{order:?} ordena en memoria: {plan:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn leaving_a_class_out_keeps_what_has_no_class() {
+        let store = history();
+        store
+            .insert_item(
+                "uuid-none",
+                &Item {
+                    kind: None,
+                    formats: vec![],
+                },
+                "sin clase",
+                60,
+            )
+            .expect("insert");
+        let filter = Filter {
+            exclude_kinds: vec![Kind::Image],
+            ..Default::default()
+        };
+        assert_eq!(
+            all(&store, &filter).len(),
+            6,
+            "excluir imágenes no puede esconder lo que no es nada"
+        );
+    }
+
+    #[test]
+    fn an_excluded_class_has_no_tab() {
+        let store = history();
+        let filter = Filter {
+            exclude_kinds: vec![Kind::Text],
+            ..Default::default()
+        };
+        let facets = store.facets(&filter).expect("facetas");
+        assert!(facets.iter().all(|one| one.kind != Kind::Text));
+        assert_eq!(facets.len(), 3);
+    }
+
+    #[test]
+    fn asking_for_no_rows_is_an_empty_page_not_a_panic() {
+        let store = history();
+        let page = store.list(&Filter::default(), 0, None).expect("página");
+        assert!(page.rows.is_empty());
+        assert_eq!(page.next, None);
+        let huge = store
+            .list(&Filter::default(), usize::MAX, None)
+            .expect("página");
+        assert_eq!(huge.rows.len(), 5);
+        assert_eq!(huge.next, None);
+    }
+
+    #[test]
+    fn a_broken_item_can_be_found_again() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.mark_broken(id, 99).expect("roto");
+        assert_eq!(all(&store, &Filter::default()).len(), 4);
+        store.mark_present(id).expect("vuelve");
+        let rows = all(&store, &Filter::default());
+        assert_eq!(rows.len(), 5, "el volumen se volvió a montar");
+        assert_eq!(rows[0].broken_since, None);
+        assert_eq!(
+            store.purge_broken_before(i64::MAX).expect("purga"),
+            0,
+            "y ya no está en el plazo de nadie"
+        );
+    }
+
+    #[test]
+    fn nothing_a_person_can_type_as_an_application_breaks_the_query() {
+        let store = history();
+        for app in ["'; DROP TABLE items; --", "\"", "%", "Straße"] {
+            let filter = Filter {
+                apps: vec![app.into()],
+                ..Default::default()
+            };
+            store
+                .list(&filter, 10, None)
+                .unwrap_or_else(|why| panic!("«{app}» rompió el listado: {why}"));
+        }
+        assert_eq!(store.count().expect("cuenta"), 5, "la tabla sigue ahí");
+    }
+}
+
+#[cfg(test)]
+mod housekeeping {
+    use super::*;
+    use cp_core::item::Format;
+
+    fn on_disk() -> (tempfile::TempDir, Store) {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let store = Store::open(&dir.path().join("history.db")).expect("abre");
+        (dir, store)
+    }
+
+    fn image(byte: u8, size: usize) -> Item {
+        Item {
+            kind: Some(Kind::Image),
+            formats: vec![Format {
+                id: "public.png".into(),
+                payload: Payload::stored(vec![byte; size]),
+            }],
+        }
+    }
+
+    fn fill(store: &Store, count: i64) -> Vec<i64> {
+        (1..=count)
+            .map(|at| {
+                store
+                    .insert_text(&format!("uuid-{at}"), &format!("nota {at}"), at)
+                    .expect("insert")
+            })
+            .collect()
+    }
+
+    fn alive(store: &Store) -> Vec<i64> {
+        store
+            .list(&Filter::default(), 100, None)
+            .expect("listado")
+            .rows
+            .iter()
+            .map(|one| one.id)
+            .collect()
+    }
+
+    #[test]
+    fn a_policy_with_nothing_set_sweeps_nothing() {
+        let store = Store::in_memory().expect("esquema");
+        fill(&store, 5);
+        let swept = store.sweep(&Policy::default(), 100).expect("barre");
+        assert_eq!(swept, Swept::default());
+        assert_eq!(store.count().expect("cuenta"), 5);
+    }
+
+    #[test]
+    fn age_takes_the_old_and_leaves_what_was_pinned() {
+        let store = Store::in_memory().expect("esquema");
+        let ids = fill(&store, 5);
+        store.pin(ids[0]).expect("fija");
+        let policy = Policy {
+            keep_for: Some(3),
+            ..Default::default()
+        };
+        let swept = store.sweep(&policy, 6).expect("barre");
+        assert_eq!(swept.expired, 1, "el de antes del 3 que no está fijado");
+        assert_eq!(alive(&store), vec![ids[4], ids[3], ids[2], ids[0]]);
+    }
+
+    #[test]
+    fn a_count_limit_evicts_the_oldest_unpinned_beyond_it() {
+        let store = Store::in_memory().expect("esquema");
+        let ids = fill(&store, 6);
+        store.pin(ids[0]).expect("fija el más viejo");
+        let policy = Policy {
+            keep_at_most: Some(4),
+            ..Default::default()
+        };
+        let swept = store.sweep(&policy, 10).expect("barre");
+        assert_eq!(swept.over_count, 2);
+        assert_eq!(
+            alive(&store),
+            vec![ids[5], ids[4], ids[3], ids[0]],
+            "el fijado cuenta para el límite pero no se va"
+        );
+        assert_eq!(store.sweep(&policy, 11).expect("otra vez").over_count, 0);
+    }
+
+    #[test]
+    fn a_count_limit_already_met_touches_nothing() {
+        let store = Store::in_memory().expect("esquema");
+        fill(&store, 3);
+        for keep in [3, 5] {
+            let policy = Policy {
+                keep_at_most: Some(keep),
+                ..Default::default()
+            };
+            assert_eq!(store.sweep(&policy, 10).expect("barre").over_count, 0);
+            assert_eq!(store.count().expect("cuenta"), 3, "con {keep} de límite");
+        }
+    }
+
+    #[test]
+    fn usage_counts_what_is_actually_kept_and_shared_bytes_once() {
+        let (_dir, store) = on_disk();
+        let empty = store.usage().expect("uso");
+        assert_eq!((empty.items, empty.bytes), (0, 0));
+        store.insert_text("uuid-t", "hola", 1).expect("insert");
+        store
+            .insert_item("uuid-a", &image(1, 200_000), "", 2)
+            .expect("a");
+        store
+            .insert_item("uuid-b", &image(1, 200_000), "", 3)
+            .expect("b");
+        let announced = Item {
+            kind: Some(Kind::Image),
+            formats: vec![Format {
+                id: "public.tiff".into(),
+                payload: Payload::Announced {
+                    size: Some(4_000_000),
+                },
+            }],
+        };
+        store.insert_item("uuid-c", &announced, "", 4).expect("c");
+        let usage = store.usage().expect("uso");
+        assert_eq!(usage.items, 4);
+        assert_eq!(
+            usage.bytes, 200_000,
+            "el texto no tiene formatos guardados, la imagen compartida cuenta una vez, lo anunciado nada"
+        );
+    }
+
+    #[test]
+    fn a_byte_quota_evicts_the_oldest_until_it_fits() {
+        let (dir, store) = on_disk();
+        for at in 1..=4 {
+            store
+                .insert_item(
+                    &format!("uuid-{at}"),
+                    &image(at as u8, 100_000),
+                    "",
+                    at as i64,
+                )
+                .expect("insert");
+        }
+        let policy = Policy {
+            bytes_at_most: Some(200_000),
+            ..Default::default()
+        };
+        let swept = store.sweep(&policy, 10).expect("barre");
+        assert_eq!(swept.over_bytes, 2, "quedar justo en la cuota es caber");
+        assert_eq!(store.usage().expect("uso").bytes, 200_000);
+        assert_eq!(alive(&store).len(), 2);
+        let files = crate::blobs::files_under(&dir.path().join("blobs")).len();
+        assert_eq!(files, 2, "los bytes desalojados se fueron del disco");
+    }
+
+    #[test]
+    fn a_quota_never_evicts_what_is_pinned_even_if_it_stays_over() {
+        let (_dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-1", &image(1, 200_000), "", 1)
+            .expect("insert");
+        store.pin(id).expect("fija");
+        let policy = Policy {
+            bytes_at_most: Some(1_000),
+            ..Default::default()
+        };
+        let swept = store.sweep(&policy, 10).expect("barre");
+        assert_eq!(swept.over_bytes, 0);
+        assert_eq!(store.count().expect("cuenta"), 1);
+    }
+
+    #[test]
+    fn a_shared_blob_is_freed_only_when_its_last_owner_goes() {
+        let (_dir, store) = on_disk();
+        store
+            .insert_item("uuid-1", &image(7, 100_000), "", 1)
+            .expect("a");
+        store
+            .insert_item("uuid-2", &image(7, 100_000), "", 2)
+            .expect("b");
+        let policy = Policy {
+            bytes_at_most: Some(50_000),
+            ..Default::default()
+        };
+        let swept = store.sweep(&policy, 10).expect("barre");
+        assert_eq!(
+            swept.over_bytes, 2,
+            "borrar el primero no libera nada, así que sigue con el segundo"
+        );
+        assert_eq!(store.usage().expect("uso").bytes, 0);
+    }
+
+    #[test]
+    fn purging_on_its_own_leaves_nothing_in_the_log_either() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let store = Store::open(&dir.path().join("history.db")).expect("abre");
+        let secret = "ruta-secreta-del-archivo";
+        let id = store.insert_text("uuid-r", secret, 1).expect("insert");
+        store.mark_broken(id, 2).expect("roto");
+        store.purge_broken_before(10).expect("purga");
+        let wal = std::fs::read(dir.path().join("history.db-wal")).unwrap_or_default();
+        assert!(
+            !wal.windows(secret.len())
+                .any(|window| window == secret.as_bytes()),
+            "la purga también es un borrado"
+        );
+    }
+
+    #[test]
+    fn broken_items_go_after_their_grace_and_take_their_bytes_along() {
+        let (dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-roto", &image(3, 100_000), "", 1)
+            .expect("insert");
+        store.mark_broken(id, 5).expect("roto");
+        let policy = Policy {
+            broken_for: Some(10),
+            ..Default::default()
+        };
+        assert_eq!(store.sweep(&policy, 14).expect("aún no").broken, 0);
+        assert_eq!(store.sweep(&policy, 16).expect("ya").broken, 1);
+        let files = crate::blobs::files_under(&dir.path().join("blobs")).len();
+        assert_eq!(files, 0, "purgar un roto no puede dejar su imagen en disco");
+    }
+
+    #[test]
+    fn a_blob_nobody_points_at_is_swept_once_it_has_settled() {
+        let (dir, store) = on_disk();
+        let blobs = crate::Blobs::at(&dir.path().join("blobs")).expect("blobs");
+        let digest = blobs.put(b"de una escritura interrumpida").expect("guarda");
+        let path = dir
+            .path()
+            .join("blobs")
+            .join(&digest[0..2])
+            .join(&digest[2..4])
+            .join(&digest);
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .expect("abre")
+            .set_modified(std::time::UNIX_EPOCH)
+            .expect("envejece");
+        let swept = store.sweep(&Policy::default(), 10).expect("barre");
+        assert_eq!(swept.orphans, 1);
+        assert!(!blobs.exists(&digest));
+    }
+
+    #[test]
+    fn a_blob_with_an_owner_is_never_an_orphan() {
+        let (dir, store) = on_disk();
+        store
+            .insert_item("uuid-1", &image(9, 100_000), "", 1)
+            .expect("insert");
+        for path in crate::blobs::files_under(&dir.path().join("blobs")) {
+            std::fs::File::options()
+                .write(true)
+                .open(&path)
+                .expect("abre")
+                .set_modified(std::time::UNIX_EPOCH)
+                .expect("envejece");
+        }
+        assert_eq!(
+            store.sweep(&Policy::default(), 10).expect("barre").orphans,
+            0
+        );
+        assert!(store.payload_of(1, "public.png").expect("lee").is_some());
+    }
+
+    #[test]
+    fn everything_at_once_reports_each_count() {
+        let (_dir, store) = on_disk();
+        let ids = fill(&store, 6);
+        store.mark_broken(ids[0], 1).expect("roto");
+        let policy = Policy {
+            keep_for: Some(6),
+            keep_at_most: Some(2),
+            bytes_at_most: Some(i64::MAX),
+            broken_for: Some(1),
+        };
+        let swept = store.sweep(&policy, 10).expect("barre");
+        assert_eq!(
+            swept,
+            Swept {
+                broken: 1,
+                expired: 2,
+                over_count: 1,
+                over_bytes: 0,
+                orphans: 0,
+            },
+            "cada regla cuenta lo suyo, en orden, sin contar dos veces"
+        );
+        assert_eq!(alive(&store), vec![ids[5], ids[4]]);
+    }
+
+    #[test]
+    fn a_sweep_leaves_nothing_in_the_write_ahead_log() {
+        let (dir, store) = on_disk();
+        let secret = "clave-que-se-va";
+        store.insert_text("uuid-s", secret, 1).expect("insert");
+        let policy = Policy {
+            keep_for: Some(1),
+            ..Default::default()
+        };
+        store.sweep(&policy, 10).expect("barre");
+        for file in ["history.db", "history.db-wal"] {
+            let bytes = std::fs::read(dir.path().join(file)).unwrap_or_default();
+            assert!(
+                !bytes
+                    .windows(secret.len())
+                    .any(|window| window == secret.as_bytes()),
+                "«{secret}» sigue legible en {file}"
+            );
+        }
+    }
+
+    fn captured(text: &str) -> Item {
+        Item {
+            kind: Some(Kind::Text),
+            formats: vec![
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Inline(text.as_bytes().to_vec()),
+                },
+                Format {
+                    id: "public.rtf".into(),
+                    payload: Payload::Inline(format!("{{\\rtf1 {text}}}").into_bytes()),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn editing_replaces_the_content_and_drops_the_renderings_that_no_longer_match() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_item("uuid-e", &captured("hola mundo"), "hola mundo", 1)
+            .expect("insert");
+        store.update_text(id, "adiós mundo", 2).expect("edita");
+
+        let card = &store
+            .list(&Filter::default(), 10, None)
+            .expect("lista")
+            .rows[0];
+        assert_eq!(card.preview, "adiós mundo");
+        assert_eq!(
+            card.modified_at, 1,
+            "editar no lo sube: el usuario ya lo tiene delante"
+        );
+        assert_eq!(
+            store.formats_of(id).expect("formatos"),
+            vec![cp_core::item::SYNTHETIC_TEXT.to_string()],
+            "el RTF decía «hola» y pegarlo sería pegar lo viejo"
+        );
+        assert_eq!(
+            store
+                .payload_of(id, cp_core::item::SYNTHETIC_TEXT)
+                .expect("lee")
+                .as_deref(),
+            Some("adiós mundo".as_bytes())
+        );
+    }
+
+    #[test]
+    fn the_edited_text_is_what_gets_found_and_classified() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_item("uuid-e", &captured("hola mundo"), "hola mundo", 1)
+            .expect("insert");
+        store.update_text(id, "#FF8800", 2).expect("edita");
+        assert!(store.search("hola").expect("busca").is_empty());
+        assert_eq!(store.search("ff8800").expect("busca").len(), 1);
+        let card = &store
+            .list(&Filter::default(), 10, None)
+            .expect("lista")
+            .rows[0];
+        assert_eq!(card.kind, Some(Kind::Color));
+        assert_eq!(
+            store.find_by_hash(&Item::plain("#FF8800")).expect("hash"),
+            Some(id),
+            "la identidad es la del texto nuevo"
+        );
+        assert!(
+            store
+                .changed_since(1)
+                .expect("cambios")
+                .contains(&"uuid-e".to_string()),
+            "la versión avanza"
+        );
+    }
+
+    #[test]
+    fn editing_an_image_into_text_takes_its_bytes_off_the_disk() {
+        let (dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-img", &image(2, 100_000), "", 1)
+            .expect("insert");
+        store.set_ocr_text(id, "texto leído", 2).expect("ocr");
+        store.set_meta(id, "width", "800").expect("meta");
+        store.update_text(id, "texto leído", 3).expect("edita");
+        assert_eq!(
+            crate::blobs::files_under(&dir.path().join("blobs")).len(),
+            0
+        );
+        assert!(store.all_meta(id).expect("meta").is_empty());
+        assert_eq!(
+            store.search("leido").expect("busca").len(),
+            1,
+            "ahora es contenido"
+        );
+        assert!(store.pending_ocr(10).expect("ocr").is_empty());
+    }
+
+    #[test]
+    fn what_was_edited_away_is_not_left_lying_in_the_database_or_its_log() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let store = Store::open(&dir.path().join("history.db")).expect("abre");
+        let secret = "hunter2-la-de-antes";
+        let id = store.insert_text("uuid-s", secret, 1).expect("insert");
+        store.checkpoint().expect("ya está en la base principal");
+        store.update_text(id, "texto inocente", 2).expect("edita");
+        for file in ["history.db", "history.db-wal"] {
+            let bytes = std::fs::read(dir.path().join(file)).unwrap_or_default();
+            assert!(
+                !bytes
+                    .windows(secret.len())
+                    .any(|window| window == secret.as_bytes()),
+                "«{secret}» sigue legible en {file}"
+            );
+        }
+    }
+
+    #[test]
+    fn editing_a_broken_file_makes_it_a_whole_text_again() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store
+            .insert_text("uuid-roto", "/tmp/se-fue.txt", 1)
+            .expect("insert");
+        store.mark_broken(id, 5).expect("roto");
+        store.update_text(id, "lo que decía", 6).expect("edita");
+        let rows = store
+            .list(&Filter::default(), 10, None)
+            .expect("lista")
+            .rows;
+        assert_eq!(rows.len(), 1, "un texto no puede estar roto");
+        assert_eq!(rows[0].broken_since, None);
+    }
+
+    #[test]
+    fn editing_what_does_not_exist_or_was_deleted_is_refused() {
+        let store = Store::in_memory().expect("esquema");
+        assert!(matches!(
+            store.update_text(404, "nada", 1),
+            Err(Error::NoSuchItem { id: 404 })
+        ));
+        let id = store.insert_text("uuid-d", "algo", 1).expect("insert");
+        store.mark_deleted(id, 2).expect("borra");
+        assert!(store.update_text(id, "resucita", 3).is_err());
+        assert_eq!(store.count().expect("cuenta"), 0);
+    }
+
+    #[test]
+    fn a_long_edit_goes_to_disk_and_an_absurd_one_is_refused() {
+        let (_dir, store) = on_disk();
+        let id = store.insert_text("uuid-l", "corto", 1).expect("insert");
+        let long = "x".repeat(cp_core::item::INLINE_UP_TO + 1);
+        store.update_text(id, &long, 2).expect("edita");
+        assert_eq!(store.usage().expect("uso").bytes as usize, long.len());
+
+        let memory = Store::in_memory().expect("esquema");
+        let id = memory.insert_text("uuid-m", "corto", 1).expect("insert");
+        assert!(
+            matches!(
+                memory.update_text(id, &long, 2),
+                Err(Error::NeedsBlobStore { .. })
+            ),
+            "sin carpeta no hay dónde dejarlo"
+        );
+        assert_eq!(
+            memory.search("corto").expect("busca").len(),
+            1,
+            "y lo de antes sigue intacto"
+        );
+    }
+
+    #[test]
+    fn the_parser_and_the_list_speak_the_same_filter() {
+        let store = Store::in_memory().expect("esquema");
+        let rows = [
+            ("uuid-1", "reunión lunes", "Slack", 10),
+            ("uuid-2", "reunión martes", "Code", 20),
+            ("uuid-3", "otra cosa", "Slack", 30),
+        ];
+        for (uuid, text, app, at) in rows {
+            let id = store.insert_text(uuid, text, at).expect("insert");
+            store.set_source(id, app, at).expect("origen");
+        }
+        let clock = crate::query::Clock {
+            now: 40,
+            day_start: 0,
+        };
+        let filter = crate::query::parse("reunion @slack", &clock);
+        let found = store.list(&filter, 10, None).expect("lista").rows;
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].preview, "reunión lunes");
+        assert_eq!(
+            found[0]
+                .snippet
+                .as_ref()
+                .map(|snippet| snippet.excerpt.plain()),
+            Some("reunión lunes".into())
         );
     }
 }

@@ -14,9 +14,32 @@ pub enum Kind {
     Folder,
     Audio,
     Video,
+    Token,
 }
 
 impl Kind {
+    pub const ALL: [Kind; 15] = [
+        Kind::Text,
+        Kind::Code,
+        Kind::Json,
+        Kind::Link,
+        Kind::Email,
+        Kind::Phone,
+        Kind::Color,
+        Kind::Ip,
+        Kind::Uuid,
+        Kind::Image,
+        Kind::File,
+        Kind::Folder,
+        Kind::Audio,
+        Kind::Video,
+        Kind::Token,
+    ];
+
+    pub fn from_name(name: &str) -> Option<Kind> {
+        Kind::ALL.into_iter().find(|kind| kind.as_str() == name)
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Kind::Text => "text",
@@ -33,6 +56,7 @@ impl Kind {
             Kind::Folder => "folder",
             Kind::Audio => "audio",
             Kind::Video => "video",
+            Kind::Token => "token",
         }
     }
 }
@@ -44,6 +68,9 @@ pub fn classify_text(content: &str) -> Kind {
     }
 
     if !text.contains('\n') {
+        if crate::token::looks_like(text) {
+            return Kind::Token;
+        }
         if is_email(text) {
             return Kind::Email;
         }
@@ -277,6 +304,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn every_class_goes_to_its_name_and_back() {
+        for kind in Kind::ALL {
+            assert_eq!(Kind::from_name(kind.as_str()), Some(kind));
+        }
+        let mut names: Vec<&str> = Kind::ALL.iter().map(|kind| kind.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), 15, "quince clases, quince nombres distintos");
+    }
+
+    #[test]
+    fn a_name_that_is_not_a_class_is_nobody() {
+        assert_eq!(Kind::from_name("Text"), None, "el nombre es exacto");
+        assert_eq!(Kind::from_name("imagen"), None);
+        assert_eq!(Kind::from_name(""), None);
+    }
+
+    #[test]
     fn the_classes_2x_already_recognised() {
         assert_eq!(classify_text("alguien@ejemplo.test"), Kind::Email);
         assert_eq!(classify_text("#FF8800"), Kind::Color);
@@ -289,6 +334,20 @@ mod tests {
         );
         assert_eq!(classify_text("+34 600 123 456"), Kind::Phone);
         assert_eq!(classify_text(r#"{"a": 1}"#), Kind::Json);
+    }
+
+    #[test]
+    fn a_token_is_its_own_class_and_wins_over_the_rest() {
+        assert_eq!(
+            classify_text("ghp_not_a_real_token_for_tests_0000000000"),
+            Kind::Token
+        );
+        assert_eq!(
+            classify_text("  sk-not-a-real-key-for-tests-0123456789\n"),
+            Kind::Token,
+            "recortado, como todo lo demás"
+        );
+        assert_eq!(classify_text("sk-corto"), Kind::Text);
     }
 
     #[test]

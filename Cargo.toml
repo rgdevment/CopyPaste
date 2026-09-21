@@ -26,6 +26,7 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 blake3 = "1"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 unicode-normalization = "0.1"
+serde_json = { version = "1", features = ["preserve_order"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
 proptest = "1"
 tempfile = "3"
