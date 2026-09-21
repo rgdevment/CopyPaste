@@ -977,6 +977,34 @@ fn main() -> std::process::ExitCode {
         None => b.skip("F3", "el pegador se construye", "no hay fuente de eventos"),
     }
 
+    b.group("M · Abrir y revelar");
+
+    b.case("M1", "revelar un archivo trae el Finder al frente", || {
+        let dir = std::env::temp_dir().join(format!("cp-m1-{}", pb.change_count()));
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        let file = dir.join("revelado.txt");
+        std::fs::write(&file, b"cp-m1").map_err(|why| why.to_string())?;
+        if !cp_mac_sys::files::reveal(&file) {
+            return Err("reveal dijo que no".into());
+        }
+        let front = wait_for_front("com.apple.finder");
+        std::fs::remove_dir_all(&dir).ok();
+        front
+    });
+
+    b.case("M2", "abrir un archivo lo entrega a su aplicación", || {
+        let dir = std::env::temp_dir().join(format!("cp-m2-{}", pb.change_count()));
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        let file = dir.join("abierto.txt");
+        std::fs::write(&file, b"cp-m2").map_err(|why| why.to_string())?;
+        if !cp_mac_sys::files::open(&file) {
+            return Err("open dijo que no".into());
+        }
+        let front = wait_for_front("com.apple.TextEdit");
+        std::fs::remove_dir_all(&dir).ok();
+        front
+    });
+
     println!();
     println!(
         "  {} pasan · {} fallan · {} omitidas",
@@ -987,6 +1015,33 @@ fn main() -> std::process::ExitCode {
     } else {
         std::process::ExitCode::FAILURE
     }
+}
+
+fn front_by_system_events() -> Option<String> {
+    let out = std::process::Command::new("/usr/bin/osascript")
+        .args([
+            "-e",
+            "tell application \"System Events\" to get bundle identifier of first application process whose frontmost is true",
+        ])
+        .output()
+        .ok()?;
+    String::from_utf8(out.stdout)
+        .ok()
+        .map(|id| id.trim().to_owned())
+        .filter(|id| !id.is_empty())
+}
+
+fn wait_for_front(bundle: &str) -> Result<(), String> {
+    for _ in 0..25 {
+        std::thread::sleep(Duration::from_millis(300));
+        if front_by_system_events().as_deref() == Some(bundle) {
+            return Ok(());
+        }
+    }
+    Err(format!(
+        "{bundle} no llegó al frente en 8 s; al frente está {:?}",
+        front_by_system_events()
+    ))
 }
 
 fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<(), String> {

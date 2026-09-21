@@ -550,6 +550,10 @@ struct MarkdownWriter {
     quoting: Option<usize>,
     opening: String,
     fresh: bool,
+    inline: Vec<&'static str>,
+    row: Option<Vec<String>>,
+    cell: Option<usize>,
+    rows: usize,
 }
 
 impl Default for MarkdownWriter {
@@ -563,6 +567,10 @@ impl Default for MarkdownWriter {
             quoting: None,
             opening: String::new(),
             fresh: true,
+            inline: Vec::new(),
+            row: None,
+            cell: None,
+            rows: 0,
         }
     }
 }
@@ -596,7 +604,19 @@ impl MarkdownWriter {
                     self.fresh = true;
                 }
             }
-            ("p" | "div" | "tr" | "table" | "section" | "article", _) => self.blank_line(),
+            ("p" | "div" | "section" | "article", _) => self.blank_line(),
+            ("table", false) => {
+                self.blank_line();
+                self.rows = 0;
+            }
+            ("table", true) => {
+                self.row = None;
+                self.blank_line();
+            }
+            ("tr", false) => self.row = Some(Vec::new()),
+            ("tr", true) => self.end_row(),
+            ("td" | "th", false) => self.cell = Some(self.out.len()),
+            ("td" | "th", true) => self.end_cell(),
             ("h1" | "h2" | "h3" | "h4" | "h5" | "h6", false) => {
                 self.blank_line();
                 let level = name[1..].parse::<usize>().unwrap_or(1);
@@ -604,12 +624,21 @@ impl MarkdownWriter {
                 self.out.push(' ');
             }
             ("h1" | "h2" | "h3" | "h4" | "h5" | "h6", true) => self.blank_line(),
-            ("b" | "strong", false) => self.open("**"),
-            ("i" | "em", false) => self.open("*"),
-            ("code", false) if !self.preformatted => self.open("`"),
-            ("b" | "strong", true) => self.close("**"),
-            ("i" | "em", true) => self.close("*"),
-            ("code", true) if !self.preformatted => self.close("`"),
+            ("b" | "strong" | "i" | "em" | "code" | "span", false) => {
+                let marker = inline_marker(&name, attribute(body, "style").as_deref());
+                let marker = if self.preformatted && marker == "`" {
+                    ""
+                } else {
+                    marker
+                };
+                self.inline.push(marker);
+                self.open(marker);
+            }
+            ("b" | "strong" | "i" | "em" | "code" | "span", true) => {
+                if let Some(marker) = self.inline.pop() {
+                    self.close(marker);
+                }
+            }
             ("pre", false) => {
                 self.blank_line();
                 self.out.push_str("```\n");
@@ -694,7 +723,6 @@ impl MarkdownWriter {
                 self.out.push_str(&format!("![{alt}]({src})"));
                 self.fresh = false;
             }
-            ("td" | "th", true) => self.out.push('\t'),
             ("hr", _) => {
                 self.blank_line();
                 self.out.push_str("---");
@@ -705,11 +733,48 @@ impl MarkdownWriter {
         }
     }
 
+    fn end_cell(&mut self) {
+        let Some(from) = self.cell.take() else {
+            return;
+        };
+        let from = from.min(self.out.len());
+        let text = self.out[from..]
+            .trim()
+            .replace('\n', " ")
+            .replace('|', "\\|");
+        self.out.truncate(from);
+        if let Some(row) = &mut self.row {
+            row.push(text);
+        }
+    }
+
+    fn end_row(&mut self) {
+        self.end_cell();
+        let Some(row) = self.row.take() else {
+            return;
+        };
+        if row.is_empty() {
+            return;
+        }
+        self.newline();
+        self.out.push_str(&format!("| {} |", row.join(" | ")));
+        if self.rows == 0 {
+            self.out
+                .push_str(&format!("\n|{}", " --- |".repeat(row.len())));
+        }
+        self.rows += 1;
+        self.fresh = false;
+        self.newline();
+    }
+
     fn open(&mut self, marker: &str) {
         self.opening.push_str(marker);
     }
 
     fn close(&mut self, marker: &str) {
+        if marker.is_empty() {
+            return;
+        }
         if let Some(unopened) = self.opening.strip_suffix(marker) {
             self.opening = unopened.to_owned();
             return;
@@ -787,6 +852,29 @@ impl MarkdownWriter {
         let mut lines: Vec<&str> = self.out.lines().map(str::trim_end).collect();
         lines.dedup_by(|a, b| a.is_empty() && b.is_empty());
         lines.join("\n").trim_end().to_owned()
+    }
+}
+
+fn inline_marker(name: &str, style: Option<&str>) -> &'static str {
+    let style = style.unwrap_or_default().to_ascii_lowercase();
+    let weight = style
+        .split(';')
+        .filter_map(|rule| rule.split_once(':'))
+        .find(|(key, _)| key.trim() == "font-weight")
+        .map(|(_, value)| value.trim().to_owned());
+    let bold = match (name, weight.as_deref()) {
+        ("b" | "strong", Some("normal" | "400" | "300" | "200" | "100")) => false,
+        ("b" | "strong", _) => true,
+        (_, Some("bold" | "bolder" | "600" | "700" | "800" | "900")) => true,
+        _ => false,
+    };
+    let italic = matches!(name, "i" | "em") || style.contains("font-style:italic");
+    match (name, bold, italic) {
+        ("code", _, _) => "`",
+        (_, true, true) => "***",
+        (_, true, false) => "**",
+        (_, false, true) => "*",
+        _ => "",
     }
 }
 
@@ -1471,7 +1559,7 @@ mod tests {
         assert_eq!(markdown_of_html("<h1>t</h1>x"), "# t\n\nx");
         assert_eq!(
             markdown_of_html("<table><tr><td>a</td><th>b</th></tr></table>"),
-            "a\tb"
+            "| a | b |\n| --- | --- |"
         );
         assert_eq!(markdown_of_html("a<ul><li>b</li></ul>"), "a\n\n- b");
         assert_eq!(markdown_of_html("<pre><code>x</code></pre>"), "```\nx\n```");
@@ -1521,14 +1609,51 @@ mod tests {
     fn a_stray_close_inside_a_preformatted_link_does_not_panic() {
         assert_eq!(
             markdown_of_html("<pre>a    <a href=\"x\"></b></a></pre>"),
-            "```\na    [**](x)\n```",
-            "dentro de un preformateado los espacios no se recortan y el ancla vacía no rompe"
+            "```\na    [](x)\n```",
+            "dentro de un preformateado los espacios no se recortan, un cierre suelto se ignora y el ancla vacía no rompe"
         );
         assert_eq!(
             markdown_of_html("<pre><b>x </b>y</pre>"),
             "```\n**x **y\n```"
         );
         assert_eq!(markdown_of_html("<a href=\"x\"> </a>"), "[](x)");
+    }
+
+    #[test]
+    fn a_sheets_range_becomes_a_markdown_table() {
+        let html = "<meta charset='utf-8'><google-sheets-html-origin><style>td{}</style>\
+            <table><colgroup><col/></colgroup><tbody>\
+            <tr><td>a</td><td>b|c</td></tr><tr><td>1</td><td><br>2</td></tr>\
+            </tbody></table></google-sheets-html-origin>";
+        assert_eq!(
+            markdown_of_html(html),
+            "| a | b\\|c |\n| --- | --- |\n| 1 | 2 |"
+        );
+        assert_eq!(
+            markdown_of_html("x<table><tr><td>a</td></tr></table>y"),
+            "x\n\n| a |\n| --- |\n\ny"
+        );
+        assert_eq!(markdown_of_html("<table><tr></tr></table>"), "");
+    }
+
+    #[test]
+    fn google_wraps_everything_in_a_bold_tag_that_is_not_bold() {
+        let docs = "<b style=\"font-weight:normal;\" id=\"docs-internal-guid-1\">\
+            <span style=\"font-size:11pt;font-weight:400;\">dasas</span></b>";
+        assert_eq!(markdown_of_html(docs), "dasas");
+        assert_eq!(
+            markdown_of_html(
+                "<b style=\"font-weight:normal\"><span style=\"font-weight:700\">n</span> \
+                <span style=\"font-style:italic\">c</span> \
+                <span style=\"font-weight:bold;font-style:italic\">nc</span></b>"
+            ),
+            "**n** *c* ***nc***"
+        );
+        assert_eq!(markdown_of_html("<b>de verdad</b>"), "**de verdad**");
+        assert_eq!(
+            markdown_of_html("<strong style=\"color:red\">x</strong>"),
+            "**x**"
+        );
     }
 
     #[test]

@@ -3,6 +3,9 @@ use objc2_app_kit::NSWorkspace;
 pub fn frontmost() -> Option<(i32, Option<String>)> {
     let app = NSWorkspace::sharedWorkspace().frontmostApplication()?;
     let pid = app.processIdentifier();
+    if pid <= 0 {
+        return None;
+    }
     let bundle = app.bundleIdentifier().map(|id| id.to_string());
     Some((pid, bundle))
 }
