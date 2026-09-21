@@ -25,8 +25,11 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
+    let pending = reading::begin(|| {
+        capture(&Pasteboard::general_from_any_thread()).map_or(Captured::Nothing, Captured::Kept)
+    });
     insisting(retry, pasteboard::change_count_from_any_thread, || {
-        capture_within(patience)
+        pending.wait(patience).unwrap_or(Captured::TooSlow)
     })
 }
 

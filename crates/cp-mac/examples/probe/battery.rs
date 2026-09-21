@@ -813,7 +813,7 @@ fn main() -> std::process::ExitCode {
             let took = started.elapsed();
             match got {
                 Captured::Kept(item) if item == direct => {
-                    if took < cp_core::watch::RETRY.pause {
+                    if took < PATIENCE {
                         Ok(())
                     } else {
                         Err(format!("tardó {took:?}: hubo pausa sin motivo"))

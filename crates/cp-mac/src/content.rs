@@ -64,10 +64,7 @@ mod tests {
         assert_eq!(content.html, Some("<p><b>hola</b></p>"));
         assert!(content.rich);
         assert_eq!(content.png, None);
-        assert_eq!(
-            forms_for(&content),
-            vec![Form::AsIs, Form::PlainText, Form::Markdown]
-        );
+        assert_eq!(forms_for(&content), vec![Form::PlainText, Form::Markdown]);
     }
 
     #[test]
@@ -96,7 +93,7 @@ mod tests {
         let content = content_of(&item, None);
         assert!(content.rich);
         assert_eq!(content.html, None);
-        assert_eq!(forms_for(&content), vec![Form::AsIs, Form::PlainText]);
+        assert_eq!(forms_for(&content), vec![Form::PlainText]);
     }
 
     #[test]
@@ -135,10 +132,7 @@ mod tests {
         assert_eq!(content.png, Some(&[137u8, 80, 78, 71][..]));
         assert_eq!(content.ocr, Some("Pedido 4417"));
         assert!(!content.rich);
-        assert_eq!(
-            forms_for(&content),
-            vec![Form::AsIs, Form::ImageJpeg, Form::ImageOcr]
-        );
+        assert_eq!(forms_for(&content), vec![Form::ImageJpeg, Form::ImageOcr]);
     }
 
     #[test]

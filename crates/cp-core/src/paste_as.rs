@@ -15,7 +15,6 @@ pub struct Content<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Form {
-    AsIs,
     PlainText,
     Markdown,
     JsonPretty,
@@ -49,7 +48,7 @@ pub enum Rendered {
 pub const JPEG_QUALITY: u8 = 85;
 
 pub fn forms_for(content: &Content) -> Vec<Form> {
-    let mut forms = vec![Form::AsIs];
+    let mut forms = Vec::new();
     if content.rich && content.text.is_some() {
         forms.push(Form::PlainText);
     }
@@ -75,8 +74,11 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
             }
         }
         Some(Kind::Link) => {
-            forms.extend([Form::LinkMarkdown, Form::LinkDomain]);
-            if content.title.is_some_and(|title| !title.trim().is_empty()) {
+            forms.push(Form::LinkMarkdown);
+            if domain_of(text).is_some() {
+                forms.push(Form::LinkDomain);
+            }
+            if title_of(content).is_some() {
                 forms.push(Form::LinkTitled);
             }
         }
@@ -106,13 +108,6 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
 pub fn render(form: Form, content: &Content) -> Option<Rendered> {
     let text = content.text.map(str::trim).unwrap_or_default();
     let rendered = match form {
-        Form::AsIs => {
-            return match (content.text, content.png) {
-                (Some(text), _) => Some(Rendered::Text(text.to_owned())),
-                (None, Some(png)) => Some(Rendered::Png(png.to_vec())),
-                (None, None) => None,
-            };
-        }
         Form::PlainText => content.text?.to_owned(),
         Form::Markdown => markdown_of_html(content.html?),
         Form::JsonPretty => serde_json::to_string_pretty(&json_of(text)?).ok()?,
@@ -122,23 +117,48 @@ pub fn render(form: Form, content: &Content) -> Option<Rendered> {
         Form::ColorHex => hex_of(parse_color(text)?),
         Form::ColorRgb => rgb_of(parse_color(text)?),
         Form::ColorHsl => hsl_of(parse_color(text)?),
-        Form::LinkMarkdown => format!("[{}]({text})", content.title.map(str::trim).unwrap_or(text)),
+        Form::LinkMarkdown => markdown_link(title_of(content).unwrap_or(text), text),
         Form::LinkDomain => domain_of(text)?.to_owned(),
-        Form::LinkTitled => format!("{} — {text}", content.title?.trim()),
+        Form::LinkTitled => format!("{} — {text}", title_of(content)?),
         Form::CodeOneLine => one_line(text),
-        Form::CodeBlock => format!("```\n{text}\n```"),
+        Form::CodeBlock => fenced(text),
         Form::CodeDedented => dedent(content.text?),
         Form::TokenHeader => format!("Authorization: Bearer {text}"),
         Form::TokenClaims => {
             let claims = crate::token::claims_of(text)?;
             serde_json::to_string_pretty(&Value::Object(claims.payload)).ok()?
         }
-        Form::TokenCurl => format!("curl -H 'Authorization: Bearer {text}' \"$URL\""),
+        Form::TokenCurl => format!(
+            "curl -H 'Authorization: Bearer {}' \"$URL\"",
+            text.replace('\'', "'\\''")
+        ),
         Form::ImageJpeg => return jpeg_of(content.png?).map(Rendered::Jpeg),
         Form::ImageOcr => content.ocr?.trim().to_owned(),
         Form::Path => content.paths.join("\n"),
     };
     Some(Rendered::Text(rendered))
+}
+
+fn title_of<'a>(content: &Content<'a>) -> Option<&'a str> {
+    content
+        .title
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+}
+
+fn markdown_link(label: &str, url: &str) -> String {
+    let label = label.replace(['[', ']'], " ");
+    if url.contains([' ', '(', ')', '<', '>']) {
+        format!("[{}](<{}>)", label.trim(), url.replace(['<', '>'], ""))
+    } else {
+        format!("[{}]({url})", label.trim())
+    }
+}
+
+fn fenced(text: &str) -> String {
+    let longest = text.split(|c| c != '`').map(str::len).max().unwrap_or(0);
+    let fence = "`".repeat(longest.max(2) + 1);
+    format!("{fence}\n{text}\n{fence}")
 }
 
 fn json_of(text: &str) -> Option<Value> {
@@ -235,19 +255,37 @@ pub fn parse_color(text: &str) -> Option<Rgba> {
     let (kind, inner) = lower
         .split_once('(')
         .and_then(|(kind, rest)| Some((kind, rest.strip_suffix(')')?)))?;
-    let parts: Vec<f64> = inner
+    let parts: Vec<(f64, bool)> = inner
         .split(',')
-        .map(|part| part.trim().trim_end_matches('%').parse::<f64>().ok())
+        .map(|part| {
+            let part = part.trim();
+            let percent = part.ends_with('%');
+            part.trim_end_matches('%')
+                .parse::<f64>()
+                .ok()
+                .map(|value| (value, percent))
+        })
         .collect::<Option<_>>()?;
-    let alpha = |value: Option<&f64>| value.copied().unwrap_or(1.0).clamp(0.0, 1.0);
+    let alpha = |value: Option<&(f64, bool)>| match value {
+        Some((value, true)) => (value / 100.0).clamp(0.0, 1.0),
+        Some((value, false)) => value.clamp(0.0, 1.0),
+        None => 1.0,
+    };
+    let byte = |(value, percent): (f64, bool)| {
+        channel(if percent {
+            value * 255.0 / 100.0
+        } else {
+            value
+        })
+    };
     match (kind, parts.as_slice()) {
         ("rgb", [r, g, b]) | ("rgba", [r, g, b, _]) => Some(Rgba {
-            r: channel(*r),
-            g: channel(*g),
-            b: channel(*b),
+            r: byte(*r),
+            g: byte(*g),
+            b: byte(*b),
             a: alpha(parts.get(3)),
         }),
-        ("hsl", [h, s, l]) | ("hsla", [h, s, l, _]) => {
+        ("hsl", [(h, _), (s, _), (l, _)]) | ("hsla", [(h, _), (s, _), (l, _), _]) => {
             let (r, g, b) = rgb_of_hsl(*h, s / 100.0, l / 100.0);
             Some(Rgba {
                 r,
@@ -391,20 +429,25 @@ fn one_line(text: &str) -> String {
 }
 
 fn dedent(text: &str) -> String {
-    let indent = text
+    let common = text
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .map(|line| line.len() - line.trim_start().len())
-        .min()
-        .unwrap_or(0);
+        .map(|line| &line[..line.len() - line.trim_start().len()])
+        .reduce(|shared, next| {
+            let kept = shared
+                .chars()
+                .zip(next.chars())
+                .take_while(|(a, b)| a == b)
+                .map(|(a, _)| a.len_utf8())
+                .sum();
+            &shared[..kept]
+        })
+        .unwrap_or("");
     let mut out = text
         .lines()
         .map(|line| {
-            if line.len() >= indent {
-                &line[indent..]
-            } else {
-                line.trim_start()
-            }
+            line.strip_prefix(common)
+                .unwrap_or_else(|| line.trim_start())
         })
         .collect::<Vec<_>>()
         .join("\n");
@@ -447,17 +490,41 @@ pub fn markdown_of_html(html: &str) -> String {
                 .chars()
                 .next()
                 .is_some_and(|c| c.is_ascii_alphabetic() || "/!?".contains(c))
-            && let Some(end) = after.find('>')
         {
-            writer.tag(&after[..end]);
-            rest = &after[end + 1..];
-            continue;
+            match tag_end(after) {
+                Some(end) => {
+                    writer.tag(&after[..end]);
+                    rest = &after[end + 1..];
+                    continue;
+                }
+                None => {
+                    writer.text(&decode_entities(rest));
+                    break;
+                }
+            }
         }
-        let next = rest[1..].find('<').map_or(rest.len(), |at| at + 1);
+        let first = rest.chars().next().map_or(1, char::len_utf8);
+        let next = rest[first..].find('<').map_or(rest.len(), |at| at + first);
         writer.text(&decode_entities(&rest[..next]));
         rest = &rest[next..];
     }
     writer.finish()
+}
+
+fn tag_end(after: &str) -> Option<usize> {
+    if after.starts_with("!--") {
+        return after.find("-->").map(|at| at + 2);
+    }
+    let mut quote: Option<char> = None;
+    for (at, c) in after.char_indices() {
+        match (quote, c) {
+            (Some(open), c) if c == open => quote = None,
+            (None, '"' | '\'') => quote = Some(c),
+            (None, '>') => return Some(at),
+            _ => {}
+        }
+    }
+    None
 }
 
 fn fragment_of(html: &str) -> &str {
@@ -480,7 +547,7 @@ struct MarkdownWriter {
     link: Option<(String, usize)>,
     skipping: Option<&'static str>,
     preformatted: bool,
-    quoting: bool,
+    quoting: Option<usize>,
     opening: String,
     fresh: bool,
 }
@@ -493,7 +560,7 @@ impl Default for MarkdownWriter {
             link: None,
             skipping: None,
             preformatted: false,
-            quoting: false,
+            quoting: None,
             opening: String::new(),
             fresh: true,
         }
@@ -582,11 +649,27 @@ impl MarkdownWriter {
             }
             ("blockquote", false) => {
                 self.blank_line();
-                self.quoting = true;
-                self.out.push_str("> ");
+                self.quoting = Some(self.out.len());
             }
             ("blockquote", true) => {
-                self.quoting = false;
+                if let Some(from) = self.quoting.take() {
+                    self.newline();
+                    let quoted = self.out[from..]
+                        .trim_end()
+                        .lines()
+                        .map(|line| {
+                            if line.is_empty() {
+                                ">".to_owned()
+                            } else {
+                                format!("> {line}")
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    self.out.truncate(from);
+                    self.out.push_str(&quoted);
+                    self.fresh = false;
+                }
                 self.blank_line();
             }
             ("a", false) => {
@@ -595,6 +678,7 @@ impl MarkdownWriter {
             }
             ("a", true) => {
                 if let Some((href, from)) = self.link.take() {
+                    let from = from.min(self.out.len());
                     let label = self.out[from..].trim().to_owned();
                     self.out.truncate(from);
                     if href.is_empty() {
@@ -628,6 +712,10 @@ impl MarkdownWriter {
     fn close(&mut self, marker: &str) {
         if let Some(unopened) = self.opening.strip_suffix(marker) {
             self.opening = unopened.to_owned();
+            return;
+        }
+        if self.preformatted {
+            self.out.push_str(marker);
             return;
         }
         let kept = self.out.trim_end_matches(' ').len();
@@ -777,11 +865,52 @@ mod tests {
     }
 
     #[test]
-    fn every_item_can_at_least_be_pasted_as_it_is() {
-        let content = text_of(Kind::Text, "hola");
-        assert_eq!(forms_for(&content), vec![Form::AsIs]);
-        assert_eq!(rendered(Form::AsIs, &content), "hola");
-        assert_eq!(render(Form::AsIs, &Content::default()), None);
+    fn plain_text_has_no_forms_of_its_own() {
+        assert!(forms_for(&text_of(Kind::Text, "hola")).is_empty());
+        assert!(forms_for(&Content::default()).is_empty());
+    }
+
+    #[test]
+    fn every_form_that_is_offered_can_be_rendered() {
+        let png = tiny_png();
+        let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjcC0zIn0.firma";
+        let contents = [
+            Content {
+                kind: Some(Kind::Text),
+                text: Some("hola"),
+                html: Some("<b>hola</b>"),
+                rich: true,
+                ..Default::default()
+            },
+            text_of(Kind::Json, r#"[{"a": 1}, {"b": 2}]"#),
+            text_of(Kind::Json, "[1, 2]"),
+            text_of(Kind::Color, "hsla(10, 20%, 30%, 40%)"),
+            Content {
+                title: Some("Ejemplo"),
+                ..text_of(Kind::Link, "https://ejemplo.test/a b")
+            },
+            text_of(Kind::Link, "https://localhost/"),
+            text_of(Kind::Code, "  x\n  y"),
+            text_of(Kind::Token, jwt),
+            text_of(Kind::Token, "ghp_not_a_real_token_for_tests_0000000000"),
+            Content {
+                kind: Some(Kind::Image),
+                png: Some(&png),
+                ocr: Some("leído"),
+                paths: vec!["/tmp/a.png".into()],
+                ..Default::default()
+            },
+        ];
+        for content in &contents {
+            let forms = forms_for(content);
+            assert!(!forms.is_empty(), "{content:?}");
+            for form in forms {
+                assert!(
+                    render(form, content).is_some(),
+                    "{form:?} sobre {content:?}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -793,16 +922,13 @@ mod tests {
             rich: true,
             ..Default::default()
         };
-        assert_eq!(
-            forms_for(&with_html),
-            vec![Form::AsIs, Form::PlainText, Form::Markdown]
-        );
+        assert_eq!(forms_for(&with_html), vec![Form::PlainText, Form::Markdown]);
         assert_eq!(rendered(Form::Markdown, &with_html), "**hola**");
         let rtf_only = Content {
             rich: true,
             ..text_of(Kind::Text, "hola")
         };
-        assert_eq!(forms_for(&rtf_only), vec![Form::AsIs, Form::PlainText]);
+        assert_eq!(forms_for(&rtf_only), vec![Form::PlainText]);
     }
 
     #[test]
@@ -814,7 +940,6 @@ mod tests {
         assert_eq!(
             forms_for(&content),
             vec![
-                Form::AsIs,
                 Form::JsonPretty,
                 Form::JsonMinified,
                 Form::JsonKeys,
@@ -857,11 +982,11 @@ mod tests {
         let content = text_of(Kind::Json, "[1, 2, 3]");
         assert_eq!(
             forms_for(&content),
-            vec![Form::AsIs, Form::JsonPretty, Form::JsonMinified]
+            vec![Form::JsonPretty, Form::JsonMinified]
         );
         assert_eq!(render(Form::JsonKeys, &content), None);
         let broken = text_of(Kind::Json, "{no es json}");
-        assert_eq!(forms_for(&broken), vec![Form::AsIs]);
+        assert!(forms_for(&broken).is_empty());
     }
 
     #[test]
@@ -869,7 +994,7 @@ mod tests {
         let content = text_of(Kind::Color, "#FF8800");
         assert_eq!(
             forms_for(&content),
-            vec![Form::AsIs, Form::ColorHex, Form::ColorRgb, Form::ColorHsl]
+            vec![Form::ColorHex, Form::ColorRgb, Form::ColorHsl]
         );
         assert_eq!(rendered(Form::ColorHex, &content), "#FF8800");
         assert_eq!(rendered(Form::ColorRgb, &content), "rgb(255, 136, 0)");
@@ -1003,10 +1128,7 @@ mod tests {
 
     #[test]
     fn a_colour_that_does_not_parse_offers_nothing_extra() {
-        assert_eq!(
-            forms_for(&text_of(Kind::Color, "#GGGGGG")),
-            vec![Form::AsIs]
-        );
+        assert!(forms_for(&text_of(Kind::Color, "#GGGGGG")).is_empty());
         assert_eq!(parse_color("rgb(1, 2)"), None);
         assert_eq!(parse_color("hsl(1, 2, 3, 4, 5)"), None);
         assert_eq!(parse_color("#12345"), None);
@@ -1015,10 +1137,7 @@ mod tests {
     #[test]
     fn a_link_is_offered_as_markdown_domain_and_with_its_title() {
         let bare = text_of(Kind::Link, "https://www.ejemplo.test/ruta?x=1#f");
-        assert_eq!(
-            forms_for(&bare),
-            vec![Form::AsIs, Form::LinkMarkdown, Form::LinkDomain]
-        );
+        assert_eq!(forms_for(&bare), vec![Form::LinkMarkdown, Form::LinkDomain]);
         assert_eq!(
             rendered(Form::LinkMarkdown, &bare),
             "[https://www.ejemplo.test/ruta?x=1#f](https://www.ejemplo.test/ruta?x=1#f)"
@@ -1084,12 +1203,7 @@ mod tests {
         let content = text_of(Kind::Code, source);
         assert_eq!(
             forms_for(&content),
-            vec![
-                Form::AsIs,
-                Form::CodeOneLine,
-                Form::CodeBlock,
-                Form::CodeDedented
-            ]
+            vec![Form::CodeOneLine, Form::CodeBlock, Form::CodeDedented]
         );
         assert_eq!(
             rendered(Form::CodeOneLine, &content),
@@ -1114,10 +1228,7 @@ mod tests {
     #[test]
     fn a_token_becomes_a_header_or_a_curl_and_a_jwt_shows_its_claims() {
         let opaque = text_of(Kind::Token, "ghp_not_a_real_token_for_tests_0000000000");
-        assert_eq!(
-            forms_for(&opaque),
-            vec![Form::AsIs, Form::TokenHeader, Form::TokenCurl]
-        );
+        assert_eq!(forms_for(&opaque), vec![Form::TokenHeader, Form::TokenCurl]);
         assert_eq!(
             rendered(Form::TokenHeader, &opaque),
             "Authorization: Bearer ghp_not_a_real_token_for_tests_0000000000"
@@ -1173,25 +1284,18 @@ mod tests {
             png: Some(&png),
             ..Default::default()
         };
-        assert_eq!(forms_for(&silent), vec![Form::AsIs, Form::ImageJpeg]);
-        assert_eq!(
-            render(Form::AsIs, &silent),
-            Some(Rendered::Png(png.clone()))
-        );
+        assert_eq!(forms_for(&silent), vec![Form::ImageJpeg]);
         let read = Content {
             ocr: Some(" Pedido 4417 "),
             ..silent.clone()
         };
-        assert_eq!(
-            forms_for(&read),
-            vec![Form::AsIs, Form::ImageJpeg, Form::ImageOcr]
-        );
+        assert_eq!(forms_for(&read), vec![Form::ImageJpeg, Form::ImageOcr]);
         assert_eq!(rendered(Form::ImageOcr, &read), "Pedido 4417");
         let blank = Content {
             ocr: Some("   "),
             ..silent.clone()
         };
-        assert_eq!(forms_for(&blank), vec![Form::AsIs, Form::ImageJpeg]);
+        assert_eq!(forms_for(&blank), vec![Form::ImageJpeg]);
     }
 
     #[test]
@@ -1250,7 +1354,7 @@ mod tests {
             paths: vec!["/tmp/uno.txt".into(), "/tmp/dos.txt".into()],
             ..Default::default()
         };
-        assert_eq!(forms_for(&content), vec![Form::AsIs, Form::Path]);
+        assert_eq!(forms_for(&content), vec![Form::Path]);
         assert_eq!(rendered(Form::Path, &content), "/tmp/uno.txt\n/tmp/dos.txt");
     }
 
@@ -1385,6 +1489,146 @@ mod tests {
         assert_eq!(markdown_of_html("uno<br><br>dos"), "uno\ndos");
         assert_eq!(markdown_of_html("<img src=\"a.png\"> x"), "![](a.png) x");
         assert_eq!(markdown_of_html("<pre>a\n</pre> b"), "```\na\n```\n\nb");
+    }
+
+    #[test]
+    fn a_multibyte_character_right_after_a_tag_does_not_panic() {
+        assert_eq!(markdown_of_html("<p>ñandú</p>"), "ñandú");
+        assert_eq!(markdown_of_html("<b>—</b>€"), "**—**€");
+        assert_eq!(markdown_of_html("ñ<ñ"), "ñ<ñ");
+    }
+
+    #[test]
+    fn an_angle_bracket_that_never_closes_is_text_and_costs_one_pass() {
+        let hostile = "<a".repeat(200_000);
+        let started = std::time::Instant::now();
+        let out = markdown_of_html(&hostile);
+        assert!(started.elapsed().as_secs() < 2, "{:?}", started.elapsed());
+        assert_eq!(out.len(), hostile.len());
+    }
+
+    #[test]
+    fn comments_and_quoted_attributes_may_contain_a_closing_bracket() {
+        assert_eq!(markdown_of_html("<!-- a > b -->x"), "x");
+        assert_eq!(
+            markdown_of_html("<a href=\"x\" title=\"a>b\">t</a>"),
+            "[t](x)"
+        );
+        assert_eq!(markdown_of_html("<!-- sin cierre"), "<!-- sin cierre");
+    }
+
+    #[test]
+    fn a_stray_close_inside_a_preformatted_link_does_not_panic() {
+        assert_eq!(
+            markdown_of_html("<pre>a    <a href=\"x\"></b></a></pre>"),
+            "```\na    [**](x)\n```",
+            "dentro de un preformateado los espacios no se recortan y el ancla vacía no rompe"
+        );
+        assert_eq!(
+            markdown_of_html("<pre><b>x </b>y</pre>"),
+            "```\n**x **y\n```"
+        );
+        assert_eq!(markdown_of_html("<a href=\"x\"> </a>"), "[](x)");
+    }
+
+    #[test]
+    fn a_quote_keeps_every_paragraph_inside_it() {
+        assert_eq!(
+            markdown_of_html("<blockquote><p>a</p><p>b</p></blockquote>c"),
+            "> a\n>\n> b\n\nc"
+        );
+        assert_eq!(markdown_of_html("<blockquote></blockquote>x"), "x");
+    }
+
+    #[test]
+    fn percentages_in_rgb_channels_and_in_alpha_are_scaled() {
+        assert_eq!(
+            rendered(Form::ColorHex, &text_of(Kind::Color, "rgb(100%, 0%, 50%)")),
+            "#FF0080"
+        );
+        assert_eq!(
+            rendered(Form::ColorRgb, &text_of(Kind::Color, "rgba(0, 0, 0, 50%)")),
+            "rgba(0, 0, 0, 0.5)"
+        );
+        assert_eq!(
+            rendered(
+                Form::ColorHsl,
+                &text_of(Kind::Color, "hsla(0, 100%, 50%, 25%)")
+            ),
+            "hsla(0, 100%, 50%, 0.25)"
+        );
+    }
+
+    #[test]
+    fn dedent_counts_characters_not_bytes_and_only_strips_what_every_line_shares() {
+        assert_eq!(
+            dedent("\u{a0}\u{a0}x\n   y"),
+            "\u{a0}\u{a0}x\n   y",
+            "nada en común"
+        );
+        assert_eq!(dedent("\u{a0}\u{a0}x\n\u{a0}\u{a0}\u{a0}y"), "x\n\u{a0}y");
+        assert_eq!(dedent("\tx\n\t\ty"), "x\n\ty");
+        assert_eq!(
+            dedent("\tx\n  y"),
+            "\tx\n  y",
+            "tabulador y espacios no son lo mismo"
+        );
+        assert_eq!(
+            dedent("  x\n \n  y"),
+            "x\n\ny",
+            "una línea en blanco corta no estorba"
+        );
+    }
+
+    #[test]
+    fn a_curl_form_cannot_break_out_of_its_quotes() {
+        let odd = Content {
+            kind: Some(Kind::Token),
+            text: Some("abc'; rm -rf / #"),
+            ..Default::default()
+        };
+        assert_eq!(
+            rendered(Form::TokenCurl, &odd),
+            "curl -H 'Authorization: Bearer abc'\\''; rm -rf / #' \"$URL\""
+        );
+    }
+
+    #[test]
+    fn a_markdown_link_survives_odd_urls_and_titles() {
+        let spaced = Content {
+            title: Some(" [Sección] "),
+            ..text_of(Kind::Link, "https://ejemplo.test/a b(c)")
+        };
+        assert_eq!(
+            rendered(Form::LinkMarkdown, &spaced),
+            "[Sección](<https://ejemplo.test/a b(c)>)"
+        );
+        let blank_title = Content {
+            title: Some("   "),
+            ..text_of(Kind::Link, "https://ejemplo.test")
+        };
+        assert_eq!(
+            rendered(Form::LinkMarkdown, &blank_title),
+            "[https://ejemplo.test](https://ejemplo.test)"
+        );
+        assert!(!forms_for(&blank_title).contains(&Form::LinkTitled));
+        assert!(!forms_for(&text_of(Kind::Link, "https://localhost/")).contains(&Form::LinkDomain));
+    }
+
+    #[test]
+    fn a_code_fence_is_always_longer_than_any_backticks_inside() {
+        assert_eq!(
+            rendered(Form::CodeBlock, &text_of(Kind::Code, "x")),
+            "```\nx\n```"
+        );
+        assert_eq!(
+            rendered(Form::CodeBlock, &text_of(Kind::Code, "a ``` b")),
+            "````\na ``` b\n````"
+        );
+        assert_eq!(
+            rendered(Form::CodeBlock, &text_of(Kind::Code, "`````")),
+            "``````\n`````\n``````"
+        );
     }
 
     #[test]
