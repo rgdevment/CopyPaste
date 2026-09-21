@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 
+pub mod files;
 pub mod frontmost;
 pub mod keyboard;
 pub mod keystroke;

@@ -1,3 +1,4 @@
+pub use cp_core::capture::Captured;
 use cp_core::dib;
 use cp_core::formats::{Family, Refusal, Take};
 use cp_core::item::{Format, Item, Payload, SYNTHETIC_IMAGE};
@@ -8,14 +9,6 @@ use cp_win_sys::reading;
 use cp_win_sys::writing::text_of;
 
 use crate::formats::CATALOG;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Captured {
-    Kept(Item),
-    Refused(Refusal),
-    Nothing,
-    TooSlow,
-}
 
 pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 

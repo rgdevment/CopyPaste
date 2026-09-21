@@ -1,10 +1,15 @@
 pub mod blobs;
+pub mod query;
 pub mod schema;
 pub mod store;
 
 pub use blobs::Blobs;
+pub use query::{Clock, parse};
 pub use schema::SCHEMA_VERSION;
-pub use store::{Restricted, Store};
+pub use store::{
+    AppCount, Broken, Cursor, Facet, Filter, FoundIn, Listed, Order, PREVIEW_CHARS, PREVIEW_UP_TO,
+    Page, Policy, Restricted, Snippet, Store, Swept, Usage,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -16,6 +21,15 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("la base es de la versión {found} y esta copia entiende hasta la {supported}")]
     FromTheFuture { found: u32, supported: u32 },
+    #[error("{size} bytes es más de lo que un ítem puede guardar")]
+    TooBig { size: usize },
+    #[error("no hay ningún ítem {id}")]
+    NoSuchItem { id: i64 },
+    #[error("el cursor es de un orden ({cursor}) y la lista de otro ({order})")]
+    WrongCursor {
+        cursor: &'static str,
+        order: &'static str,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

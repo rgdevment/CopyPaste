@@ -12,6 +12,8 @@ use cp_mac_sys::{frontmost, keystroke};
 use objc2_foundation::{MainThreadMarker, NSString, NSURL};
 use std::time::{Duration, Instant};
 
+const SKIPPED: &str = "omitido: ";
+
 struct Battery {
     passed: u32,
     failed: u32,
@@ -33,6 +35,15 @@ impl Battery {
                 self.failed += 1;
                 println!("    FALLA {id:<5} {what}\n            {why}");
             }
+        }
+    }
+
+    fn case_or_skip(&mut self, id: &str, what: &str, run: impl FnOnce() -> Result<(), String>) {
+        match run() {
+            Err(why) if why.starts_with(SKIPPED) => {
+                self.skip(id, what, why.trim_start_matches(SKIPPED));
+            }
+            other => self.case(id, what, || other),
         }
     }
 
@@ -59,7 +70,7 @@ fn main() -> std::process::ExitCode {
 
     b.case("A1", "el texto plano va y vuelve", || {
         pb.write_text("cp-a1");
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         if item.kind != Some(Kind::Text) {
             return Err(format!("se clasificó como {:?}", item.kind));
         }
@@ -75,7 +86,7 @@ fn main() -> std::process::ExitCode {
 
     b.case("A2", "los gemelos legados no se guardan dos veces", || {
         pb.write_text("cp-a2");
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         let ids: Vec<&str> = item.formats.iter().map(|f| f.id.as_str()).collect();
         let mut unique = ids.clone();
         unique.sort_unstable();
@@ -91,7 +102,7 @@ fn main() -> std::process::ExitCode {
 
     b.case("A3", "un texto vacío sigue siendo un ítem", || {
         pb.write_text("");
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         if item.formats.is_empty() {
             return Err("sin formatos".into());
         }
@@ -101,7 +112,7 @@ fn main() -> std::process::ExitCode {
     b.case("A4", "diez megabytes van y vuelven enteros", || {
         let big = "a".repeat(10 * 1024 * 1024);
         pb.write_text(&big);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         match &item
             .format("public.utf8-plain-text")
             .ok_or("falta el texto")?
@@ -114,7 +125,7 @@ fn main() -> std::process::ExitCode {
 
     b.case("A5", "un solo carácter multibyte", || {
         pb.write_text("🎯");
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         match &item
             .format("public.utf8-plain-text")
             .ok_or("falta el texto")?
@@ -128,7 +139,7 @@ fn main() -> std::process::ExitCode {
     b.case("A6", "saltos de línea de los tres tipos", || {
         let mixed = "uno\r\ndos\rtres\ncuatro";
         pb.write_text(mixed);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         match &item
             .format("public.utf8-plain-text")
             .ok_or("falta el texto")?
@@ -148,7 +159,7 @@ fn main() -> std::process::ExitCode {
         if pb.item_count() != 3 {
             return Err(format!("el portapapeles tiene {} ítems", pb.item_count()));
         }
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         let urls = item.format("public.file-url").ok_or("falta la ruta")?;
         let text = match &urls.payload {
             Payload::Inline(bytes) => String::from_utf8_lossy(bytes).to_string(),
@@ -163,7 +174,7 @@ fn main() -> std::process::ExitCode {
 
     b.case("A8", "un solo archivo sigue siendo una ruta", || {
         pb.write_items(&[vec![("public.file-url", "file:///tmp/solo.txt")]]);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         let urls = item.format("public.file-url").ok_or("falta la ruta")?;
         match &urls.payload {
             Payload::Inline(bytes) if !String::from_utf8_lossy(bytes).contains('\n') => Ok(()),
@@ -187,7 +198,7 @@ fn main() -> std::process::ExitCode {
             ));
         }
         pb.write_items(&[vec![("public.file-url", reference.as_str())]]);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         let stored = match &item
             .format("public.file-url")
             .ok_or("falta la ruta")?
@@ -216,7 +227,7 @@ fn main() -> std::process::ExitCode {
             ("public.file-url", b"file:///tmp/cp-a10.txt"),
             ("public.tiff", &icon),
         ]);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         match &item
             .format("public.tiff")
             .ok_or("el icono ni se anotó")?
@@ -239,7 +250,7 @@ fn main() -> std::process::ExitCode {
             ("public.utf8-plain-text", b"A\tB\nC\tD"),
             ("public.png", &png),
         ]);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         if item.kind == Some(Kind::Image) {
             return Err("el rango se clasificó como imagen".into());
         }
@@ -258,7 +269,7 @@ fn main() -> std::process::ExitCode {
         "una imagen anunciada sin bytes no hace al ítem imagen",
         || {
             pb.write_all(&[("public.utf8-plain-text", b"celda"), ("public.png", b"")]);
-            let item = capture(&pb).ok_or("no se capturó")?;
+            let item = capture(&pb).kept().ok_or("no se capturó")?;
             match &item
                 .format("public.png")
                 .ok_or("la imagen ni se anotó")?
@@ -281,7 +292,7 @@ fn main() -> std::process::ExitCode {
             ("public.utf8-plain-text", "texto plano"),
             ("public.html", "<b>texto plano</b>"),
         ]);
-        let captured = capture(&pb).ok_or("no se capturó")?;
+        let captured = capture(&pb).kept().ok_or("no se capturó")?;
         let had = captured.formats.len();
 
         pb.write_text("algo distinto");
@@ -291,7 +302,7 @@ fn main() -> std::process::ExitCode {
             other => return Err(format!("restauró {other:?} de {had} formatos")),
         }
 
-        let back = capture(&pb).ok_or("no se capturó lo restaurado")?;
+        let back = capture(&pb).kept().ok_or("no se capturó lo restaurado")?;
         let text = back
             .format("public.utf8-plain-text")
             .ok_or("falta el texto")?;
@@ -468,7 +479,17 @@ fn main() -> std::process::ExitCode {
             store
                 .set_source(id, &name, 2)
                 .map_err(|why| why.to_string())?;
-            let found = store.search(&name).map_err(|why| why.to_string())?;
+            let found = store
+                .list(
+                    &cp_store::Filter {
+                        query: Some(name.clone()),
+                        ..Default::default()
+                    },
+                    10,
+                    None,
+                )
+                .map_err(|why| why.to_string())?
+                .rows;
             if found.len() != 1 {
                 return Err(format!("buscando «{name}» salieron {} ítems", found.len()));
             }
@@ -560,10 +581,16 @@ fn main() -> std::process::ExitCode {
             ("public.html", "<b>con estilos</b>"),
             ("public.rtf", "{\\rtf1 con estilos}"),
         ]);
-        let item = capture(&pb).ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("no se capturó")?;
         let had = item.formats.len();
 
-        match cp_mac::restore::to_pasteboard_as_plain_text(&pb, &item) {
+        let plain = cp_core::paste_as::render(
+            cp_core::paste_as::Form::PlainText,
+            &cp_mac::content::content_of(&item, None),
+        )
+        .ok_or("no se ofreció la forma plana")?
+        .into_item();
+        match cp_mac::restore::to_pasteboard(&pb, &plain) {
             cp_mac::restore::Restored::Written { formats: 1, .. } => {}
             other => return Err(format!("devolvió {other:?}")),
         }
@@ -596,9 +623,14 @@ fn main() -> std::process::ExitCode {
                 }],
             };
             pb.write_text("lo que había");
-            match cp_mac::restore::to_pasteboard_as_plain_text(&pb, &only_image) {
-                cp_mac::restore::Restored::NothingToWrite => Ok(()),
-                other => Err(format!("devolvió {other:?}")),
+            let content = cp_mac::content::content_of(&only_image, None);
+            let forms = cp_core::paste_as::forms_for(&content);
+            if forms.contains(&cp_core::paste_as::Form::PlainText) {
+                return Err("se ofreció pegar en plano sin texto".into());
+            }
+            match cp_core::paste_as::render(cp_core::paste_as::Form::PlainText, &content) {
+                None => Ok(()),
+                Some(other) => Err(format!("devolvió {other:?}")),
             }
         },
     );
@@ -621,7 +653,7 @@ fn main() -> std::process::ExitCode {
             &format!("se clasifica como {}", expected.as_str()),
             || {
                 pb.write_text(text);
-                let item = capture(&pb).ok_or("no se capturó")?;
+                let item = capture(&pb).kept().ok_or("no se capturó")?;
                 if item.kind != Some(expected) {
                     return Err(format!("salió {:?}", item.kind));
                 }
@@ -650,7 +682,7 @@ fn main() -> std::process::ExitCode {
                 .map_err(|why| format!("falta el fixture: {why}"))?;
             pb.write_data("public.png", &png);
 
-            let item = capture(&pb).ok_or("no se capturó")?;
+            let item = capture(&pb).kept().ok_or("no se capturó")?;
             if item.kind != Some(Kind::Image) {
                 return Err(format!("se clasificó como {:?}", item.kind));
             }
@@ -678,7 +710,17 @@ fn main() -> std::process::ExitCode {
                 .set_ocr_text(id, &recognised, 2)
                 .map_err(|why| why.to_string())?;
 
-            let hits = store.search("pedido").map_err(|why| why.to_string())?;
+            let hits = store
+                .list(
+                    &cp_store::Filter {
+                        query: Some("pedido".into()),
+                        ..Default::default()
+                    },
+                    10,
+                    None,
+                )
+                .map_err(|why| why.to_string())?
+                .rows;
             if hits.len() != 1 {
                 return Err(format!("buscando «pedido» salieron {} ítems", hits.len()));
             }
@@ -697,7 +739,7 @@ fn main() -> std::process::ExitCode {
     ] {
         b.case(id, &format!("«{marker}» excluye el ítem"), || {
             pb.write_types(&[("public.utf8-plain-text", "secreto"), (marker, "1")]);
-            if capture(&pb).is_some() {
+            if capture(&pb).kept().is_some() {
                 return Err("se capturó contenido marcado".into());
             }
             Ok(())
@@ -706,7 +748,9 @@ fn main() -> std::process::ExitCode {
 
     b.case("B6", "sin marcador se vuelve a capturar", || {
         pb.write_text("esto sí");
-        capture(&pb).ok_or("un texto normal debe capturarse")?;
+        capture(&pb)
+            .kept()
+            .ok_or("un texto normal debe capturarse")?;
         Ok(())
     });
 
@@ -794,9 +838,31 @@ fn main() -> std::process::ExitCode {
         "la captura acotada devuelve lo mismo que la directa",
         || {
             pb.write_text("cp-c5");
-            let direct = capture(&pb).ok_or("no se capturó")?;
+            let direct = capture(&pb).kept().ok_or("no se capturó")?;
             match capture_within(PATIENCE) {
                 Captured::Kept(item) if item == direct => Ok(()),
+                other => Err(format!("llegó {other:?}")),
+            }
+        },
+    );
+
+    b.case(
+        "C6",
+        "insistir ante una fuente que responde no cuesta un segundo intento",
+        || {
+            pb.write_text("cp-c6");
+            let direct = capture(&pb).kept().ok_or("no se capturó")?;
+            let started = std::time::Instant::now();
+            let got = cp_mac::capture::capture_insisting(PATIENCE, cp_core::watch::RETRY);
+            let took = started.elapsed();
+            match got {
+                Captured::Kept(item) if item == direct => {
+                    if took < PATIENCE {
+                        Ok(())
+                    } else {
+                        Err(format!("tardó {took:?}: hubo pausa sin motivo"))
+                    }
+                }
                 other => Err(format!("llegó {other:?}")),
             }
         },
@@ -955,6 +1021,40 @@ fn main() -> std::process::ExitCode {
         None => b.skip("F3", "el pegador se construye", "no hay fuente de eventos"),
     }
 
+    b.group("M · Abrir y revelar");
+
+    b.case_or_skip(
+        "M1",
+        "revelar un archivo lo deja seleccionado en el Finder",
+        || {
+            let scratch = Scratch::new("cp-m1")?;
+            let file = scratch.file("revelado.txt", b"cp-m1")?;
+            if !cp_mac_sys::files::reveal(&file) {
+                return Err("reveal dijo que no".into());
+            }
+            wait_until("el Finder deja el archivo seleccionado", || {
+                osascript_within("tell application \"Finder\" to get selection as text")
+                    .map(|selected| selected.contains("revelado.txt"))
+            })
+        },
+    );
+
+    b.case_or_skip("M2", "abrir un archivo lo entrega a su aplicación", || {
+        let scratch = Scratch::new("cp-m2")?;
+        let file = scratch.file("abierto.txt", b"cp-m2")?;
+        if !cp_mac_sys::files::open(&file) {
+            return Err("open dijo que no".into());
+        }
+        let opened = wait_until("TextEdit tiene el documento abierto", || {
+            osascript_within("tell application \"TextEdit\" to get name of every document")
+                .map(|names| names.contains("abierto.txt"))
+        });
+        osascript_within(
+            "tell application \"TextEdit\" to close (every document whose name is \"abierto.txt\") saving no",
+        );
+        opened
+    });
+
     println!();
     println!(
         "  {} pasan · {} fallan · {} omitidas",
@@ -965,6 +1065,71 @@ fn main() -> std::process::ExitCode {
     } else {
         std::process::ExitCode::FAILURE
     }
+}
+
+struct Scratch {
+    dir: std::path::PathBuf,
+}
+
+impl Scratch {
+    fn new(prefix: &str) -> Result<Self, String> {
+        let dir = std::env::temp_dir().join(format!("{prefix}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        Ok(Self { dir })
+    }
+
+    fn file(&self, name: &str, bytes: &[u8]) -> Result<std::path::PathBuf, String> {
+        let path = self.dir.join(name);
+        std::fs::write(&path, bytes).map_err(|why| why.to_string())?;
+        Ok(path)
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        std::fs::remove_dir_all(&self.dir).ok();
+    }
+}
+
+fn osascript_within(script: &str) -> Option<String> {
+    let mut child = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", script])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_secs(3) {
+        if child.try_wait().ok()?.is_some() {
+            let out = child.wait_with_output().ok()?;
+            if !out.status.success() {
+                return None;
+            }
+            return String::from_utf8(out.stdout)
+                .ok()
+                .map(|text| text.trim().to_owned());
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    child.kill().ok();
+    child.wait().ok();
+    None
+}
+
+fn wait_until(what: &str, mut observed: impl FnMut() -> Option<bool>) -> Result<(), String> {
+    for _ in 0..25 {
+        std::thread::sleep(Duration::from_millis(300));
+        match observed() {
+            Some(true) => return Ok(()),
+            Some(false) => {}
+            None => {
+                return Err(format!(
+                    "{SKIPPED}la app no responde a AppleScript: sin permiso de Automatización o un diálogo pendiente"
+                ));
+            }
+        }
+    }
+    Err(format!("{what}: no pasó en 7,5 s"))
 }
 
 fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<(), String> {

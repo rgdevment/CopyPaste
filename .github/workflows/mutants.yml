@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mutants-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -23,11 +27,17 @@ jobs:
       matrix:
         include:
           - os: windows-2025
-            name: windows
+            name: windows 1 of 2
             crates: -p cp-core -p cp-store -p cp-win
+            shard: --shard 0/2
+          - os: windows-2025
+            name: windows 2 of 2
+            crates: -p cp-core -p cp-store -p cp-win
+            shard: --shard 1/2
           - os: macos-15
             name: macos
             crates: -p cp-core -p cp-store
+            shard: ""
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,7 +66,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          cargo mutants ${{ matrix.crates }} --in-diff branch.diff --no-times -j 2
+          cargo mutants ${{ matrix.crates }} ${{ matrix.shard }} --in-diff branch.diff --no-times -j 2
           echo "code=$?" >> "$GITHUB_OUTPUT"
 
       - name: What survived
@@ -70,6 +80,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always() && steps.touched.outputs.any == 'yes'
         with:
-          name: mutants-branch-${{ matrix.name }}
+          name: mutants-branch-${{ matrix.os }}-${{ strategy.job-index }}
           path: mutants.out/
           retention-days: 7

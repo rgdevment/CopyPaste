@@ -1,39 +1,53 @@
 use crate::formats::CATALOG;
+pub use cp_core::capture::Captured;
+use cp_core::capture::insisting;
 use cp_core::formats::{Family, Take};
 use cp_core::item::{Format, Item, Payload};
 use cp_core::kind::{self, Kind};
 use cp_mac_sys::pasteboard::{self, Pasteboard};
 use cp_mac_sys::reading;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Captured {
-    Kept(Item),
-    Nothing,
-    TooSlow,
-}
-
 pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 
 const _: () = assert!(PATIENCE.as_millis() < 60_000);
 
 pub fn capture_within(patience: std::time::Duration) -> Captured {
-    reading::anything_within(patience, || {
-        capture(&Pasteboard::general_from_any_thread()).map_or(Captured::Nothing, Captured::Kept)
-    })
-    .unwrap_or(Captured::TooSlow)
+    reading::anything_within(patience, || capture(&Pasteboard::general_from_any_thread()))
+        .unwrap_or(Captured::TooSlow)
 }
 
-pub fn capture(pb: &Pasteboard) -> Option<Item> {
+pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
+    let started = pasteboard::change_count_from_any_thread();
+    let pending = reading::begin(|| capture(&Pasteboard::general_from_any_thread()));
+    let got = insisting(retry, pasteboard::change_count_from_any_thread, || {
+        pending.wait(patience).unwrap_or(Captured::TooSlow)
+    });
+    match got {
+        Captured::Nothing if pasteboard::change_count_from_any_thread() != started => {
+            Captured::Superseded
+        }
+        other => other,
+    }
+}
+
+pub fn capture(pb: &Pasteboard) -> Captured {
     let offered = pb.types();
     let ids: Vec<&str> = offered.iter().map(String::as_str).collect();
-    if CATALOG.refusal(&ids).is_some() {
-        return None;
+    if ids.is_empty() {
+        return Captured::Nothing;
+    }
+    if let Some(refusal) = CATALOG.refusal(&ids) {
+        return Captured::Refused(refusal);
     }
 
     let family = CATALOG.classify(&ids);
+    let started = pb.change_count();
     let mut formats: Vec<Format> = Vec::new();
 
     for id in &ids {
+        if pb.change_count() != started {
+            return Captured::Superseded;
+        }
         let canonical = CATALOG.canonical(id);
         if formats.iter().any(|kept| kept.id == canonical) {
             continue;
@@ -65,7 +79,7 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
     }
 
     let kind = refine(family, &formats);
-    Some(Item { kind, formats })
+    Captured::Kept(Item { kind, formats })
 }
 
 fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
@@ -76,7 +90,7 @@ fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
     let resolved: Vec<String> = each
         .into_iter()
         .filter_map(|bytes| String::from_utf8(bytes).ok())
-        .map(|url| pasteboard::file_path_of(&url).unwrap_or(url))
+        .map(|url| pasteboard::resolved_file_url(&url).unwrap_or(url))
         .collect();
     (!resolved.is_empty()).then(|| resolved.join("\n").into_bytes())
 }

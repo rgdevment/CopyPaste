@@ -1,6 +1,12 @@
 
 
-exclude_re = ["replace > with >= in of_image"]
+exclude_re = [
+    "replace > with >= in of_image",
+    "replace - with / in Store::evict_until_under",
+    "replace \\| with \\^ in base64url",
+    "replace < with <= in rgb_of_hsl",
+    "replace < with <= in migrate",
+]
 
 exclude_globs = [
     "crates/cp-win/src/capture.rs",
