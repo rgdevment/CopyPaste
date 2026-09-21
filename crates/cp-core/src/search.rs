@@ -6,12 +6,12 @@ pub fn fold(input: &str) -> String {
     out
 }
 
-pub struct Folded {
+pub(crate) struct Folded {
     pub chars: Vec<char>,
     pub origin: Vec<usize>,
 }
 
-pub fn fold_mapped(input: &str) -> Folded {
+pub(crate) fn fold_mapped(input: &str) -> Folded {
     let mut chars = Vec::with_capacity(input.len());
     let mut origin = Vec::with_capacity(input.len());
     fold_each(input, |c, at| {
@@ -74,7 +74,10 @@ pub fn excerpt(text: &str, terms: &[String], width: usize) -> Option<Excerpt> {
         .flat_map(|term| matches_of(&folded.chars, &tokens, term))
         .map(|(from, to)| {
             let last = folded.origin[to - 1];
-            (folded.origin[from], last + char_at(text, last).len_utf8())
+            (
+                folded.origin[from],
+                after_marks(text, last + char_at(text, last).len_utf8()),
+            )
         })
         .collect();
     hits.sort_unstable();
@@ -85,11 +88,11 @@ pub fn excerpt(text: &str, terms: &[String], width: usize) -> Option<Excerpt> {
         .char_indices()
         .rev()
         .nth(width / 3)
-        .map_or(0, |(at, c)| at + c.len_utf8());
+        .map_or(0, |(at, c)| after_marks(text, at + c.len_utf8()));
     let end = text[start..]
         .char_indices()
         .nth(width.max(1))
-        .map_or(text.len(), |(at, _)| start + at);
+        .map_or(text.len(), |(at, _)| after_marks(text, start + at));
 
     let mut segments = Vec::new();
     if start > 0 {
@@ -110,6 +113,21 @@ pub fn excerpt(text: &str, terms: &[String], width: usize) -> Option<Excerpt> {
         segments.push(ellipsis());
     }
     Some(Excerpt { segments })
+}
+
+fn after_marks(text: &str, mut at: usize) -> usize {
+    for c in text[at..].chars() {
+        if is_combining_mark(c) || clings_to_previous(c) {
+            at += c.len_utf8();
+        } else {
+            break;
+        }
+    }
+    at
+}
+
+fn clings_to_previous(c: char) -> bool {
+    matches!(c as u32, 0xFE0E | 0xFE0F | 0x200D | 0x1F3FB..=0x1F3FF)
 }
 
 fn char_at(text: &str, at: usize) -> char {
@@ -337,6 +355,24 @@ mod tests {
             "…ññ aguja",
             "y el corte cae en un límite de carácter aunque el anterior ocupe dos bytes"
         );
+    }
+
+    #[test]
+    fn a_combining_mark_travels_with_the_word_it_marks() {
+        let found = excerpt("cafe\u{301} rico", &terms(&["cafe"]), 100).expect("hay");
+        assert_eq!(found.segments, vec![hit("cafe\u{301}"), plain(" rico")]);
+    }
+
+    #[test]
+    fn the_window_never_cuts_a_mark_or_a_skin_tone_from_its_base() {
+        let text = format!("{} aguja x", "e\u{301}".repeat(30));
+        let found = excerpt(&text, &terms(&["aguja"]), 9).expect("hay");
+        let shown = found.plain();
+        assert!(!shown.starts_with("…\u{301}"), "{shown:?}");
+        let text = format!("{}aguja", "👍🏽".repeat(30));
+        let found = excerpt(&text, &terms(&["aguja"]), 9).expect("hay");
+        let shown = found.plain();
+        assert!(!shown.starts_with("…🏽"), "{shown:?}");
     }
 
     #[test]

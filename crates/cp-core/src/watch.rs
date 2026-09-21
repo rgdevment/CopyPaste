@@ -200,6 +200,27 @@ mod insisting {
     }
 
     #[test]
+    fn one_attempt_is_one_ask_and_no_pause() {
+        let asked = Cell::new(0);
+        let paused = Cell::new(0);
+        let policy = Retry {
+            attempts: 1,
+            pause: Duration::from_millis(7),
+        };
+        let got: Retried<()> = insist(
+            policy,
+            || 1,
+            || {
+                asked.set(asked.get() + 1);
+                None
+            },
+            |_| paused.set(paused.get() + 1),
+        );
+        assert_eq!(got, Retried::Exhausted);
+        assert_eq!((asked.get(), paused.get()), (1, 0));
+    }
+
+    #[test]
     fn zero_attempts_still_asks_once() {
         let asked = Cell::new(0);
         let policy = Retry {

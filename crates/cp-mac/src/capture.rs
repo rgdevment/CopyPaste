@@ -25,12 +25,19 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
+    let started = pasteboard::change_count_from_any_thread();
     let pending = reading::begin(|| {
         capture(&Pasteboard::general_from_any_thread()).map_or(Captured::Nothing, Captured::Kept)
     });
-    insisting(retry, pasteboard::change_count_from_any_thread, || {
+    let got = insisting(retry, pasteboard::change_count_from_any_thread, || {
         pending.wait(patience).unwrap_or(Captured::TooSlow)
-    })
+    });
+    match got {
+        Captured::Nothing if pasteboard::change_count_from_any_thread() != started => {
+            Captured::Superseded
+        }
+        other => other,
+    }
 }
 
 fn insisting(
@@ -58,9 +65,13 @@ pub fn capture(pb: &Pasteboard) -> Option<Item> {
     }
 
     let family = CATALOG.classify(&ids);
+    let started = pb.change_count();
     let mut formats: Vec<Format> = Vec::new();
 
     for id in &ids {
+        if pb.change_count() != started {
+            return None;
+        }
         let canonical = CATALOG.canonical(id);
         if formats.iter().any(|kept| kept.id == canonical) {
             continue;
@@ -103,7 +114,7 @@ fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {
     let resolved: Vec<String> = each
         .into_iter()
         .filter_map(|bytes| String::from_utf8(bytes).ok())
-        .map(|url| pasteboard::file_path_of(&url).unwrap_or(url))
+        .map(|url| pasteboard::resolved_file_url(&url).unwrap_or(url))
         .collect();
     (!resolved.is_empty()).then(|| resolved.join("\n").into_bytes())
 }

@@ -39,11 +39,12 @@ pub fn parse(input: &str, clock: &Clock) -> Filter {
             Some(Op::OnlyBroken) => filter.broken = Broken::Only,
             Some(Op::Label(text)) => label.push(text),
             Some(Op::Order(order)) => filter.order = order,
-            None => words.push(token),
+            None if token.chars().any(char::is_alphanumeric) => words.push(token),
+            None => {}
         }
     }
     filter.query = (!words.is_empty()).then(|| words.join(" "));
-    filter.label = (!label.is_empty()).then(|| label.join(" "));
+    filter.label_query = (!label.is_empty()).then(|| label.join(" "));
     filter
 }
 
@@ -63,10 +64,12 @@ fn operator(token: &str, clock: &Clock) -> Option<Op> {
         Some(rest) => (true, rest),
         None => (false, token),
     };
-    let (key, value) = split(body)?;
+    let (key, value, symbol) = split(body)?;
     if value.is_empty() {
         return None;
     }
+    let key = key.to_ascii_lowercase();
+    let key = key.as_str();
     let values: Vec<&str> = value.split(',').filter(|one| !one.is_empty()).collect();
     if values.is_empty() {
         return None;
@@ -83,17 +86,17 @@ fn operator(token: &str, clock: &Clock) -> Option<Op> {
         )),
         "c" | "color" if !negated => values
             .iter()
-            .map(|one| color(one))
+            .map(|one| color(one, !symbol))
             .collect::<Option<Vec<i64>>>()
             .map(Op::Colors),
         "d" | "date" | "since" if !negated => since(value, clock).map(Op::Since),
-        "is" if !negated => match value {
+        "is" if !negated => match value.to_ascii_lowercase().as_str() {
             "pinned" => Some(Op::Pinned),
             "broken" => Some(Op::OnlyBroken),
             _ => None,
         },
         "l" | "label" if !negated => Some(Op::Label(value.to_owned())),
-        "sort" | "order" if !negated => match value {
+        "sort" | "order" if !negated => match value.to_ascii_lowercase().as_str() {
             "recent" => Some(Op::Order(Order::Recent)),
             "pasted" => Some(Op::Order(Order::MostPasted)),
             "used" => Some(Op::Order(Order::LastUsed)),
@@ -103,7 +106,7 @@ fn operator(token: &str, clock: &Clock) -> Option<Op> {
     }
 }
 
-fn split(body: &str) -> Option<(&str, &str)> {
+fn split(body: &str) -> Option<(&str, &str, bool)> {
     let symbol = match body.chars().next()? {
         '/' => Some("k"),
         '@' => Some("a"),
@@ -112,20 +115,17 @@ fn split(body: &str) -> Option<(&str, &str)> {
         _ => None,
     };
     if let Some(key) = symbol {
-        return Some((key, &body[1..]));
+        return Some((key, &body[1..], true));
     }
     let (key, value) = body.split_once(':')?;
     let known = key.chars().all(|c| c.is_ascii_alphabetic());
-    known.then_some((key, value))
+    known.then_some((key, value, false))
 }
 
-fn color(name: &str) -> Option<i64> {
+fn color(name: &str, by_index: bool) -> Option<i64> {
     let lower = name.to_ascii_lowercase();
     if let Ok(index) = lower.parse::<i64>() {
-        return COLORS
-            .iter()
-            .any(|(_, value)| *value == index)
-            .then_some(index);
+        return (by_index && COLORS.iter().any(|(_, value)| *value == index)).then_some(index);
     }
     COLORS
         .iter()
@@ -260,6 +260,49 @@ mod tests {
     }
 
     #[test]
+    fn keys_states_classes_colours_and_dates_ignore_case() {
+        assert_eq!(parsed("K:image").kinds, vec![Kind::Image]);
+        assert_eq!(parsed("Kind:LINK").kinds, vec![Kind::Link]);
+        assert!(parsed("IS:pinned").pinned_only);
+        assert!(parsed("is:Pinned").pinned_only);
+        assert_eq!(parsed("SORT:Used").order, Order::LastUsed);
+        assert_eq!(parsed("D:TODAY").since, Some(CLOCK.day_start));
+        assert_eq!(parsed("#RED").colors, vec![1]);
+        assert_eq!(
+            parsed("A:Slack").apps,
+            vec!["Slack"],
+            "el nombre de la app se conserva"
+        );
+    }
+
+    #[test]
+    fn a_repeated_order_keeps_the_last_and_a_repeated_class_repeats() {
+        assert_eq!(parsed("sort:pasted sort:used").order, Order::LastUsed);
+        assert_eq!(parsed("k:json k:json").kinds, vec![Kind::Json, Kind::Json]);
+        assert_eq!(
+            parsed("k:ímage").query.as_deref(),
+            Some("k:ímage"),
+            "con acento no es una clase"
+        );
+    }
+
+    #[test]
+    fn a_hash_followed_by_a_number_is_text_not_a_colour() {
+        let filter = parsed("PR #3");
+        assert_eq!(filter.query.as_deref(), Some("PR #3"));
+        assert!(
+            filter.colors.is_empty(),
+            "«#3» es un número de PR, no el morado"
+        );
+        assert_eq!(parsed("#3,red").query.as_deref(), Some("#3,red"));
+        assert_eq!(
+            parsed("c:3").colors,
+            vec![3],
+            "por clave, el índice sí vale"
+        );
+    }
+
+    #[test]
     fn a_relative_date_counts_back_from_now() {
         assert_eq!(parsed("d:today").since, Some(CLOCK.day_start));
         assert_eq!(parsed("~1h").since, Some(CLOCK.now - HOUR));
@@ -302,7 +345,7 @@ mod tests {
     #[test]
     fn the_label_is_searched_on_its_own_column() {
         let filter = parsed("label:factura l:mayo");
-        assert_eq!(filter.label.as_deref(), Some("factura mayo"));
+        assert_eq!(filter.label_query.as_deref(), Some("factura mayo"));
         assert_eq!(filter.query, None);
     }
 
@@ -322,7 +365,7 @@ mod tests {
         assert_eq!(parsed("-c:red").query.as_deref(), Some("-c:red"));
         assert_eq!(parsed("-l:factura").query.as_deref(), Some("-l:factura"));
         assert_eq!(parsed("-sort:used").query.as_deref(), Some("-sort:used"));
-        assert_eq!(parsed("-l:factura").label, None);
+        assert_eq!(parsed("-l:factura").label_query, None);
         assert_eq!(parsed("-sort:used").order, Order::Recent);
     }
 
@@ -338,8 +381,19 @@ mod tests {
     #[test]
     fn an_empty_value_is_text() {
         assert_eq!(parsed("k:").query.as_deref(), Some("k:"));
-        assert_eq!(parsed("@").query.as_deref(), Some("@"));
         assert_eq!(parsed("a:,").query.as_deref(), Some("a:,"));
+    }
+
+    #[test]
+    fn a_word_with_nothing_to_search_for_does_not_blank_the_list() {
+        for typed in ["@", "#", "~", "/", "!!!", "...", "- -"] {
+            assert_eq!(
+                parsed(typed),
+                Filter::default(),
+                "«{typed}» es el historial entero"
+            );
+        }
+        assert_eq!(parsed("hola ...").query.as_deref(), Some("hola"));
     }
 
     #[test]
@@ -376,7 +430,7 @@ mod tests {
         assert_eq!(filter.colors, vec![1]);
         assert_eq!(filter.since, Some(CLOCK.now - WEEK));
         assert!(filter.pinned_only);
-        assert_eq!(filter.label.as_deref(), Some("mayo"));
+        assert_eq!(filter.label_query.as_deref(), Some("mayo"));
         assert_eq!(filter.order, Order::LastUsed);
     }
 

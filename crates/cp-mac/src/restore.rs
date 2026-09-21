@@ -1,10 +1,11 @@
-use cp_core::item::{Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
+use cp_core::item::{Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_JPEG, SYNTHETIC_TEXT};
 use cp_mac_sys::pasteboard::Pasteboard;
 
 fn type_of(id: &str) -> &str {
     match id {
         SYNTHETIC_TEXT => PLAIN_TEXT,
         SYNTHETIC_IMAGE => PNG,
+        SYNTHETIC_JPEG => JPEG,
         other => other,
     }
 }
@@ -62,6 +63,7 @@ pub fn to_pasteboard_as_plain_text(pb: &Pasteboard, item: &Item) -> Restored {
 
 const PLAIN_TEXT: &str = "public.utf8-plain-text";
 const PNG: &str = "public.png";
+const JPEG: &str = "public.jpeg";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
@@ -99,6 +101,12 @@ mod tests {
             formats: vec![inline(SYNTHETIC_IMAGE, &[137, 80, 78, 71])],
         };
         assert_eq!(writable_of(&item), vec![(PNG, &[137u8, 80, 78, 71][..])]);
+    }
+
+    #[test]
+    fn a_rendered_jpeg_goes_back_as_the_type_the_system_reads() {
+        let item = cp_core::paste_as::Rendered::Jpeg(vec![0xFF, 0xD8]).into_item();
+        assert_eq!(writable_of(&item), vec![(JPEG, &[0xFFu8, 0xD8][..])]);
     }
 
     #[test]

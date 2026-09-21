@@ -1,15 +1,16 @@
 use crate::kind::Kind;
 use serde_json::Value;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Content<'a> {
     pub kind: Option<Kind>,
-    pub text: Option<&'a str>,
-    pub html: Option<&'a str>,
+    pub text: Option<Cow<'a, str>>,
+    pub html: Option<Cow<'a, str>>,
     pub rich: bool,
-    pub png: Option<&'a [u8]>,
+    pub image: Option<&'a [u8]>,
     pub paths: Vec<String>,
-    pub title: Option<&'a str>,
+    pub title: Option<Cow<'a, str>>,
     pub ocr: Option<&'a str>,
 }
 
@@ -38,11 +39,82 @@ pub enum Form {
     Path,
 }
 
+impl Form {
+    pub const ALL: [Form; 21] = [
+        Form::PlainText,
+        Form::Markdown,
+        Form::JsonPretty,
+        Form::JsonMinified,
+        Form::JsonKeys,
+        Form::JsonTable,
+        Form::ColorHex,
+        Form::ColorRgb,
+        Form::ColorHsl,
+        Form::LinkMarkdown,
+        Form::LinkDomain,
+        Form::LinkTitled,
+        Form::CodeOneLine,
+        Form::CodeBlock,
+        Form::CodeDedented,
+        Form::TokenHeader,
+        Form::TokenClaims,
+        Form::TokenCurl,
+        Form::ImageJpeg,
+        Form::ImageOcr,
+        Form::Path,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Form::PlainText => "plain-text",
+            Form::Markdown => "markdown",
+            Form::JsonPretty => "json-pretty",
+            Form::JsonMinified => "json-minified",
+            Form::JsonKeys => "json-keys",
+            Form::JsonTable => "json-table",
+            Form::ColorHex => "color-hex",
+            Form::ColorRgb => "color-rgb",
+            Form::ColorHsl => "color-hsl",
+            Form::LinkMarkdown => "link-markdown",
+            Form::LinkDomain => "link-domain",
+            Form::LinkTitled => "link-titled",
+            Form::CodeOneLine => "code-one-line",
+            Form::CodeBlock => "code-block",
+            Form::CodeDedented => "code-dedented",
+            Form::TokenHeader => "token-header",
+            Form::TokenClaims => "token-claims",
+            Form::TokenCurl => "token-curl",
+            Form::ImageJpeg => "image-jpeg",
+            Form::ImageOcr => "image-ocr",
+            Form::Path => "path",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Form> {
+        Form::ALL.into_iter().find(|form| form.as_str() == name)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Rendered {
     Text(String),
-    Png(Vec<u8>),
     Jpeg(Vec<u8>),
+}
+
+impl Rendered {
+    pub fn into_item(self) -> crate::item::Item {
+        use crate::item::{Format, Item, Payload, SYNTHETIC_JPEG};
+        match self {
+            Rendered::Text(text) => Item::plain(&text),
+            Rendered::Jpeg(bytes) => Item {
+                kind: Some(Kind::Image),
+                formats: vec![Format {
+                    id: SYNTHETIC_JPEG.into(),
+                    payload: Payload::stored(bytes),
+                }],
+            },
+        }
+    }
 }
 
 pub const JPEG_QUALITY: u8 = 85;
@@ -55,7 +127,7 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
     if content.html.is_some() {
         forms.push(Form::Markdown);
     }
-    let text = content.text.map(str::trim).unwrap_or_default();
+    let text = content.text.as_deref().map(str::trim).unwrap_or_default();
     match content.kind {
         Some(Kind::Json) => {
             if let Ok(value) = serde_json::from_str::<Value>(text) {
@@ -93,7 +165,7 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
         }
         _ => {}
     }
-    if content.png.is_some() {
+    if content.image.is_some() {
         forms.push(Form::ImageJpeg);
         if content.ocr.is_some_and(|ocr| !ocr.trim().is_empty()) {
             forms.push(Form::ImageOcr);
@@ -106,10 +178,10 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
 }
 
 pub fn render(form: Form, content: &Content) -> Option<Rendered> {
-    let text = content.text.map(str::trim).unwrap_or_default();
+    let text = content.text.as_deref().map(str::trim).unwrap_or_default();
     let rendered = match form {
-        Form::PlainText => content.text?.to_owned(),
-        Form::Markdown => markdown_of_html(content.html?),
+        Form::PlainText => content.text.as_deref()?.to_owned(),
+        Form::Markdown => markdown_of_html(content.html.as_deref()?),
         Form::JsonPretty => serde_json::to_string_pretty(&json_of(text)?).ok()?,
         Form::JsonMinified => serde_json::to_string(&json_of(text)?).ok()?,
         Form::JsonKeys => json_keys(&json_of(text)?)?,
@@ -118,11 +190,11 @@ pub fn render(form: Form, content: &Content) -> Option<Rendered> {
         Form::ColorRgb => rgb_of(parse_color(text)?),
         Form::ColorHsl => hsl_of(parse_color(text)?),
         Form::LinkMarkdown => markdown_link(title_of(content).unwrap_or(text), text),
-        Form::LinkDomain => domain_of(text)?.to_owned(),
+        Form::LinkDomain => lowercase_domain(text)?,
         Form::LinkTitled => format!("{} — {text}", title_of(content)?),
         Form::CodeOneLine => one_line(text),
         Form::CodeBlock => fenced(text),
-        Form::CodeDedented => dedent(content.text?),
+        Form::CodeDedented => dedent(content.text.as_deref()?),
         Form::TokenHeader => format!("Authorization: Bearer {text}"),
         Form::TokenClaims => {
             let claims = crate::token::claims_of(text)?;
@@ -132,16 +204,17 @@ pub fn render(form: Form, content: &Content) -> Option<Rendered> {
             "curl -H 'Authorization: Bearer {}' \"$URL\"",
             text.replace('\'', "'\\''")
         ),
-        Form::ImageJpeg => return jpeg_of(content.png?).map(Rendered::Jpeg),
+        Form::ImageJpeg => return jpeg_of(content.image?).map(Rendered::Jpeg),
         Form::ImageOcr => content.ocr?.trim().to_owned(),
         Form::Path => content.paths.join("\n"),
     };
     Some(Rendered::Text(rendered))
 }
 
-fn title_of<'a>(content: &Content<'a>) -> Option<&'a str> {
+fn title_of<'a>(content: &'a Content<'_>) -> Option<&'a str> {
     content
         .title
+        .as_deref()
         .map(str::trim)
         .filter(|title| !title.is_empty())
 }
@@ -420,6 +493,10 @@ pub fn domain_of(url: &str) -> Option<&str> {
     (!host.is_empty() && host.contains('.')).then_some(host)
 }
 
+fn lowercase_domain(url: &str) -> Option<String> {
+    domain_of(url).map(str::to_ascii_lowercase)
+}
+
 fn one_line(text: &str) -> String {
     text.lines()
         .map(str::trim)
@@ -547,10 +624,11 @@ struct MarkdownWriter {
     link: Option<(String, usize)>,
     skipping: Option<&'static str>,
     preformatted: bool,
-    quoting: Option<usize>,
+    quoting: Vec<usize>,
     opening: String,
     fresh: bool,
     inline: Vec<&'static str>,
+    last_closed: Option<(&'static str, usize)>,
     row: Option<Vec<String>>,
     cell: Option<usize>,
     rows: usize,
@@ -564,10 +642,11 @@ impl Default for MarkdownWriter {
             link: None,
             skipping: None,
             preformatted: false,
-            quoting: None,
+            quoting: Vec::new(),
             opening: String::new(),
             fresh: true,
             inline: Vec::new(),
+            last_closed: None,
             row: None,
             cell: None,
             rows: 0,
@@ -626,11 +705,7 @@ impl MarkdownWriter {
             ("h1" | "h2" | "h3" | "h4" | "h5" | "h6", true) => self.blank_line(),
             ("b" | "strong" | "i" | "em" | "code" | "span", false) => {
                 let marker = inline_marker(&name, attribute(body, "style").as_deref());
-                let marker = if self.preformatted && marker == "`" {
-                    ""
-                } else {
-                    marker
-                };
+                let marker = if self.preformatted { "" } else { marker };
                 self.inline.push(marker);
                 self.open(marker);
             }
@@ -678,10 +753,10 @@ impl MarkdownWriter {
             }
             ("blockquote", false) => {
                 self.blank_line();
-                self.quoting = Some(self.out.len());
+                self.quoting.push(self.out.len());
             }
             ("blockquote", true) => {
-                if let Some(from) = self.quoting.take() {
+                if let Some(from) = self.quoting.pop() {
                     self.newline();
                     let quoted = self.out[from..]
                         .trim_end()
@@ -695,7 +770,7 @@ impl MarkdownWriter {
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
-                    self.out.truncate(from);
+                    self.truncate_to(from);
                     self.out.push_str(&quoted);
                     self.fresh = false;
                 }
@@ -707,9 +782,8 @@ impl MarkdownWriter {
             }
             ("a", true) => {
                 if let Some((href, from)) = self.link.take() {
-                    let from = from.min(self.out.len());
                     let label = self.out[from..].trim().to_owned();
-                    self.out.truncate(from);
+                    self.truncate_to(from);
                     if href.is_empty() {
                         self.out.push_str(&label);
                     } else {
@@ -737,12 +811,14 @@ impl MarkdownWriter {
         let Some(from) = self.cell.take() else {
             return;
         };
-        let from = from.min(self.out.len());
+        if self.row.is_none() {
+            return;
+        }
         let text = self.out[from..]
             .trim()
             .replace('\n', " ")
             .replace('|', "\\|");
-        self.out.truncate(from);
+        self.truncate_to(from);
         if let Some(row) = &mut self.row {
             row.push(text);
         }
@@ -767,11 +843,18 @@ impl MarkdownWriter {
         self.newline();
     }
 
-    fn open(&mut self, marker: &str) {
+    fn open(&mut self, marker: &'static str) {
+        if let Some((closed, at)) = self.last_closed.take()
+            && closed == marker
+            && at == self.out.len()
+        {
+            self.truncate_to(at - marker.len());
+            return;
+        }
         self.opening.push_str(marker);
     }
 
-    fn close(&mut self, marker: &str) {
+    fn close(&mut self, marker: &'static str) {
         if marker.is_empty() {
             return;
         }
@@ -785,8 +868,9 @@ impl MarkdownWriter {
         }
         let kept = self.out.trim_end_matches(' ').len();
         let had_space = kept < self.out.len();
-        self.out.truncate(kept);
+        self.truncate_to(kept);
         self.out.push_str(marker);
+        self.last_closed = Some((marker, self.out.len()));
         if had_space {
             self.out.push(' ');
         }
@@ -825,9 +909,22 @@ impl MarkdownWriter {
         self.fresh
     }
 
+    fn truncate_to(&mut self, len: usize) {
+        self.out.truncate(len);
+        if let Some((_, from)) = &mut self.link {
+            *from = (*from).min(len);
+        }
+        if let Some(from) = &mut self.cell {
+            *from = (*from).min(len);
+        }
+        for from in &mut self.quoting {
+            *from = (*from).min(len);
+        }
+    }
+
     fn newline(&mut self) {
         let trimmed = self.out.trim_end_matches(' ').len();
-        self.out.truncate(trimmed);
+        self.truncate_to(trimmed);
         if !self.out.is_empty() && !self.out.ends_with('\n') {
             self.out.push('\n');
         }
@@ -855,20 +952,30 @@ impl MarkdownWriter {
     }
 }
 
-fn inline_marker(name: &str, style: Option<&str>) -> &'static str {
-    let style = style.unwrap_or_default().to_ascii_lowercase();
-    let weight = style
+fn rule_of(style: &str, property: &str) -> Option<String> {
+    style
         .split(';')
         .filter_map(|rule| rule.split_once(':'))
-        .find(|(key, _)| key.trim() == "font-weight")
-        .map(|(_, value)| value.trim().to_owned());
+        .find(|(key, _)| key.trim() == property)
+        .map(|(_, value)| value.trim().to_owned())
+}
+
+fn inline_marker(name: &str, style: Option<&str>) -> &'static str {
+    let style = style.unwrap_or_default().to_ascii_lowercase();
+    let weight = rule_of(&style, "font-weight");
     let bold = match (name, weight.as_deref()) {
         ("b" | "strong", Some("normal" | "400" | "300" | "200" | "100")) => false,
         ("b" | "strong", _) => true,
         (_, Some("bold" | "bolder" | "600" | "700" | "800" | "900")) => true,
         _ => false,
     };
-    let italic = matches!(name, "i" | "em") || style.contains("font-style:italic");
+    let slant = rule_of(&style, "font-style");
+    let italic = match (name, slant.as_deref()) {
+        ("i" | "em", Some("normal")) => false,
+        ("i" | "em", _) => true,
+        (_, Some("italic" | "oblique")) => true,
+        _ => false,
+    };
     match (name, bold, italic) {
         ("code", _, _) => "`",
         (_, true, true) => "***",
@@ -880,15 +987,112 @@ fn inline_marker(name: &str, style: Option<&str>) -> &'static str {
 
 fn attribute(tag: &str, name: &str) -> Option<String> {
     let lower = tag.to_ascii_lowercase();
+    let wanted = format!("{name}=");
     let at = lower
-        .find(&format!("{name}="))
-        .map(|at| at + name.len() + 1)?;
+        .match_indices(&wanted)
+        .map(|(at, _)| at)
+        .find(|at| lower[..*at].ends_with(char::is_whitespace))
+        .map(|at| at + wanted.len())?;
     let rest = &tag[at..];
     let value = match rest.chars().next()? {
         quote @ ('"' | '\'') => rest[1..].split(quote).next()?,
         _ => rest.split(char::is_whitespace).next()?,
     };
     Some(decode_entities(value))
+}
+
+const NAMED_ENTITIES: [(&str, char); 84] = [
+    ("iexcl", '¡'),
+    ("cent", '¢'),
+    ("pound", '£'),
+    ("euro", '€'),
+    ("yen", '¥'),
+    ("sect", '§'),
+    ("copy", '©'),
+    ("laquo", '«'),
+    ("reg", '®'),
+    ("deg", '°'),
+    ("plusmn", '±'),
+    ("micro", 'µ'),
+    ("para", '¶'),
+    ("middot", '·'),
+    ("raquo", '»'),
+    ("frac12", '½'),
+    ("iquest", '¿'),
+    ("times", '×'),
+    ("divide", '÷'),
+    ("ndash", '–'),
+    ("mdash", '—'),
+    ("lsquo", '‘'),
+    ("rsquo", '’'),
+    ("ldquo", '“'),
+    ("rdquo", '”'),
+    ("hellip", '…'),
+    ("trade", '™'),
+    ("bull", '•'),
+    ("Agrave", 'À'),
+    ("Aacute", 'Á'),
+    ("Acirc", 'Â'),
+    ("Atilde", 'Ã'),
+    ("Auml", 'Ä'),
+    ("Aring", 'Å'),
+    ("AElig", 'Æ'),
+    ("Ccedil", 'Ç'),
+    ("Egrave", 'È'),
+    ("Eacute", 'É'),
+    ("Ecirc", 'Ê'),
+    ("Euml", 'Ë'),
+    ("Igrave", 'Ì'),
+    ("Iacute", 'Í'),
+    ("Icirc", 'Î'),
+    ("Iuml", 'Ï'),
+    ("Ntilde", 'Ñ'),
+    ("Ograve", 'Ò'),
+    ("Oacute", 'Ó'),
+    ("Ocirc", 'Ô'),
+    ("Otilde", 'Õ'),
+    ("Ouml", 'Ö'),
+    ("Oslash", 'Ø'),
+    ("Ugrave", 'Ù'),
+    ("Uacute", 'Ú'),
+    ("Ucirc", 'Û'),
+    ("Uuml", 'Ü'),
+    ("szlig", 'ß'),
+    ("agrave", 'à'),
+    ("aacute", 'á'),
+    ("acirc", 'â'),
+    ("atilde", 'ã'),
+    ("auml", 'ä'),
+    ("aring", 'å'),
+    ("aelig", 'æ'),
+    ("ccedil", 'ç'),
+    ("egrave", 'è'),
+    ("eacute", 'é'),
+    ("ecirc", 'ê'),
+    ("euml", 'ë'),
+    ("igrave", 'ì'),
+    ("iacute", 'í'),
+    ("icirc", 'î'),
+    ("iuml", 'ï'),
+    ("ntilde", 'ñ'),
+    ("ograve", 'ò'),
+    ("oacute", 'ó'),
+    ("ocirc", 'ô'),
+    ("otilde", 'õ'),
+    ("ouml", 'ö'),
+    ("oslash", 'ø'),
+    ("ugrave", 'ù'),
+    ("uacute", 'ú'),
+    ("ucirc", 'û'),
+    ("uuml", 'ü'),
+    ("yacute", 'ý'),
+];
+
+fn named_entity(name: &str) -> Option<char> {
+    NAMED_ENTITIES
+        .iter()
+        .find(|(known, _)| *known == name)
+        .map(|(_, c)| *c)
 }
 
 fn decode_entities(text: &str) -> String {
@@ -910,6 +1114,7 @@ fn decode_entities(text: &str) -> String {
             "quot" => Some('"'),
             "apos" => Some('\''),
             "nbsp" => Some(' '),
+            named if named.chars().all(|c| c.is_ascii_alphabetic()) => named_entity(named),
             _ => entity
                 .strip_prefix('#')
                 .and_then(|number| match number.strip_prefix(['x', 'X']) {
@@ -940,7 +1145,7 @@ mod tests {
     fn text_of(kind: Kind, text: &str) -> Content<'_> {
         Content {
             kind: Some(kind),
-            text: Some(text),
+            text: Some(text.into()),
             ..Default::default()
         }
     }
@@ -950,6 +1155,48 @@ mod tests {
             Rendered::Text(text) => text,
             other => panic!("no era texto: {other:?}"),
         }
+    }
+
+    #[test]
+    fn every_form_has_a_stable_name_that_comes_back() {
+        for form in Form::ALL {
+            assert_eq!(Form::from_name(form.as_str()), Some(form));
+        }
+        let mut names: Vec<&str> = Form::ALL.iter().map(|form| form.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), Form::ALL.len());
+        assert_eq!(Form::from_name("Markdown"), None, "el nombre es exacto");
+    }
+
+    #[test]
+    fn what_was_rendered_can_be_written_back_as_an_item() {
+        let text = Rendered::Text("hola".into()).into_item();
+        assert_eq!(text.formats[0].id, crate::item::SYNTHETIC_TEXT);
+        assert_eq!(
+            text.fingerprint(),
+            crate::item::Item::plain("hola").fingerprint()
+        );
+        let jpeg = Rendered::Jpeg(vec![0xFF, 0xD8, 0xFF]).into_item();
+        assert_eq!(jpeg.kind, Some(Kind::Image));
+        assert_eq!(jpeg.formats[0].id, crate::item::SYNTHETIC_JPEG);
+        assert!(matches!(
+            jpeg.formats[0].payload,
+            crate::item::Payload::Inline(ref bytes) if bytes == &[0xFF, 0xD8, 0xFF]
+        ));
+        let content = Content {
+            text: Some("x".into()),
+            ..Default::default()
+        };
+        let owned = Content {
+            text: Some(String::from("propio").into()),
+            ..content.clone()
+        };
+        assert_eq!(
+            owned.text.as_deref(),
+            Some("propio"),
+            "el texto puede ser prestado o propio"
+        );
     }
 
     #[test]
@@ -965,8 +1212,8 @@ mod tests {
         let contents = [
             Content {
                 kind: Some(Kind::Text),
-                text: Some("hola"),
-                html: Some("<b>hola</b>"),
+                text: Some("hola".into()),
+                html: Some("<b>hola</b>".into()),
                 rich: true,
                 ..Default::default()
             },
@@ -974,7 +1221,7 @@ mod tests {
             text_of(Kind::Json, "[1, 2]"),
             text_of(Kind::Color, "hsla(10, 20%, 30%, 40%)"),
             Content {
-                title: Some("Ejemplo"),
+                title: Some("Ejemplo".into()),
                 ..text_of(Kind::Link, "https://ejemplo.test/a b")
             },
             text_of(Kind::Link, "https://localhost/"),
@@ -983,7 +1230,7 @@ mod tests {
             text_of(Kind::Token, "ghp_not_a_real_token_for_tests_0000000000"),
             Content {
                 kind: Some(Kind::Image),
-                png: Some(&png),
+                image: Some(&png),
                 ocr: Some("leído"),
                 paths: vec!["/tmp/a.png".into()],
                 ..Default::default()
@@ -1005,13 +1252,22 @@ mod tests {
     fn a_rich_text_offers_plain_and_markdown_only_with_html() {
         let with_html = Content {
             kind: Some(Kind::Text),
-            text: Some("hola"),
-            html: Some("<b>hola</b>"),
+            text: Some("hola".into()),
+            html: Some("<b>hola</b>".into()),
             rich: true,
             ..Default::default()
         };
         assert_eq!(forms_for(&with_html), vec![Form::PlainText, Form::Markdown]);
         assert_eq!(rendered(Form::Markdown, &with_html), "**hola**");
+        let spaced = Content {
+            text: Some("  hola \n".into()),
+            ..with_html.clone()
+        };
+        assert_eq!(
+            rendered(Form::PlainText, &spaced),
+            "  hola \n",
+            "el texto plano se entrega como se copió, sin recortar"
+        );
         let rtf_only = Content {
             rich: true,
             ..text_of(Kind::Text, "hola")
@@ -1231,8 +1487,16 @@ mod tests {
             "[https://www.ejemplo.test/ruta?x=1#f](https://www.ejemplo.test/ruta?x=1#f)"
         );
         assert_eq!(rendered(Form::LinkDomain, &bare), "ejemplo.test");
+        assert_eq!(
+            rendered(
+                Form::LinkDomain,
+                &text_of(Kind::Link, "https://EJEMPLO.TEST/X")
+            ),
+            "ejemplo.test",
+            "un dominio no distingue mayúsculas"
+        );
         let titled = Content {
-            title: Some(" Ejemplo, la página "),
+            title: Some(" Ejemplo, la página ".into()),
             ..bare.clone()
         };
         assert_eq!(forms_for(&titled).last(), Some(&Form::LinkTitled));
@@ -1369,7 +1633,7 @@ mod tests {
         let png = tiny_png();
         let silent = Content {
             kind: Some(Kind::Image),
-            png: Some(&png),
+            image: Some(&png),
             ..Default::default()
         };
         assert_eq!(forms_for(&silent), vec![Form::ImageJpeg]);
@@ -1396,7 +1660,7 @@ mod tests {
         let jpeg_of_solid = |pixel: [u8; 4]| {
             let png = solid_png(pixel);
             let content = Content {
-                png: Some(&png),
+                image: Some(&png),
                 ..Default::default()
             };
             match render(Form::ImageJpeg, &content) {
@@ -1429,10 +1693,46 @@ mod tests {
             None
         );
         let broken = Content {
-            png: Some(b"no es png"),
+            image: Some(b"no es png"),
             ..Default::default()
         };
         assert_eq!(render(Form::ImageJpeg, &broken), None);
+    }
+
+    #[test]
+    fn a_tiff_from_safari_becomes_a_jpeg_too() {
+        let mut tiff = Vec::new();
+        let image = image::RgbaImage::from_pixel(16, 16, image::Rgba([10, 200, 30, 255]));
+        image
+            .write_with_encoder(image::codecs::tiff::TiffEncoder::new(std::io::Cursor::new(
+                &mut tiff,
+            )))
+            .expect("tiff");
+        let content = Content {
+            kind: Some(Kind::Image),
+            image: Some(&tiff),
+            ..Default::default()
+        };
+        let Some(Rendered::Jpeg(bytes)) = render(Form::ImageJpeg, &content) else {
+            panic!("un TIFF también se vuelve JPEG");
+        };
+        let middle = middle_of_jpeg(&bytes);
+        assert!(
+            middle[0].abs_diff(10) <= 6
+                && middle[1].abs_diff(200) <= 6
+                && middle[2].abs_diff(30) <= 6,
+            "{middle:?}"
+        );
+    }
+
+    #[test]
+    fn a_null_cell_is_empty_in_the_table() {
+        let content = text_of(Kind::Json, r#"[{"a": null, "b": true}]"#);
+        assert_eq!(rendered(Form::JsonTable, &content), "a\tb\n\ttrue");
+        assert_eq!(
+            rendered(Form::JsonTable, &text_of(Kind::Json, r#"{"k": null}"#)),
+            "k\t"
+        );
     }
 
     #[test]
@@ -1475,7 +1775,7 @@ mod tests {
         assert_eq!(
             markdown_of_html(html),
             "## Informe\n\n\
-             Un p&aacute;rrafo con **negrita**, *cursiva* y un [enlace](https://ejemplo.test).\n\n\
+             Un párrafo con **negrita**, *cursiva* y un [enlace](https://ejemplo.test).\n\n\
              - uno\n- dos **fuerte**\n\n\
              1. primero\n2. segundo\n\n\
              Fin & código `x < y`"
@@ -1537,10 +1837,12 @@ mod tests {
             "&#99999999;",
             "fuera de Unicode"
         );
+        assert_eq!(decode_entities("&aacute;&Ntilde;&euro;&hellip;"), "áÑ€…");
+        assert_eq!(decode_entities("&yacute;&uuml;"), "ýü");
         assert_eq!(
-            decode_entities("&aacute;"),
-            "&aacute;",
-            "las nombradas raras se dejan"
+            decode_entities("&rarr;"),
+            "&rarr;",
+            "las nombradas que no se conocen se dejan"
         );
     }
 
@@ -1614,7 +1916,8 @@ mod tests {
         );
         assert_eq!(
             markdown_of_html("<pre><b>x </b>y</pre>"),
-            "```\n**x **y\n```"
+            "```\nx y\n```",
+            "dentro de un cerco de código los asteriscos serían literales"
         );
         assert_eq!(markdown_of_html("<a href=\"x\"> </a>"), "[](x)");
     }
@@ -1654,6 +1957,87 @@ mod tests {
             markdown_of_html("<strong style=\"color:red\">x</strong>"),
             "**x**"
         );
+    }
+
+    #[test]
+    fn a_quote_closed_after_a_cell_does_not_panic_and_quotes_nest() {
+        assert_eq!(
+            markdown_of_html("a<td><blockquote>x</td></blockquote>"),
+            "a\n\n> x",
+            "una celda fuera de una fila no se traga el texto"
+        );
+        assert_eq!(
+            markdown_of_html("<table><tr><td>ab<blockquote>x</td></blockquote></tr></table>"),
+            "| ab  x |\n| --- |",
+            "la celda recorta la salida por debajo del inicio de la cita, y la cita no se cae"
+        );
+        assert_eq!(
+            markdown_of_html("<blockquote><blockquote>x</blockquote>y</blockquote>"),
+            "> > x\n>\n> y"
+        );
+    }
+
+    #[test]
+    fn the_browser_writes_styles_with_a_space_after_the_colon() {
+        assert_eq!(
+            markdown_of_html(
+                "<span style=\"font-weight: 700;\">n</span> <span style=\"font-style: italic;\">c</span>"
+            ),
+            "**n** *c*"
+        );
+        assert_eq!(
+            markdown_of_html("<i style=\"font-style: normal\">x</i>"),
+            "x"
+        );
+        assert_eq!(
+            markdown_of_html("<span style=\"font-style: oblique\">x</span>"),
+            "*x*"
+        );
+    }
+
+    #[test]
+    fn an_attribute_is_only_the_one_that_starts_after_whitespace() {
+        assert_eq!(
+            markdown_of_html("<img data-src=\"lazy.jpg\" src=\"real.jpg\">"),
+            "![](real.jpg)"
+        );
+        assert_eq!(
+            markdown_of_html("<a data-href=\"x\" href=\"y\">l</a>"),
+            "[l](y)"
+        );
+        assert_eq!(
+            markdown_of_html("<a title=\"href=no\" href=\"y\">l</a>"),
+            "[l](y)"
+        );
+        assert_eq!(markdown_of_html("<a HREF=\"y\">l</a>"), "[l](y)");
+    }
+
+    #[test]
+    fn adjacent_runs_of_the_same_style_merge_into_one() {
+        assert_eq!(markdown_of_html("<b>a</b><b>b</b>"), "**ab**");
+        assert_eq!(markdown_of_html("<b>a </b><b>b</b>"), "**a** **b**");
+        assert_eq!(markdown_of_html("<code>a</code><code>b</code>"), "`ab`");
+        assert_eq!(
+            markdown_of_html("<b>a</b> <b>b</b>"),
+            "**a** **b**",
+            "con texto en medio no se funden"
+        );
+        assert_eq!(markdown_of_html("<b>a</b><i>b</i>"), "**a***b*");
+    }
+
+    #[test]
+    fn a_start_saved_before_a_truncation_never_lands_inside_a_character() {
+        for hostile in [
+            "<a>ab <td></a>é</td>",
+            "<table><tr><td>ab<a href=\"x\"></td>aé</a></tr></table>",
+            "<td>ab <blockquote></td></blockquote>",
+            "<a>ab <blockquote></a></blockquote>",
+            "<b>ab </b><a>é</a><td>ñ</td>",
+            "<blockquote>ab <b>x </b>ñ</blockquote>",
+        ] {
+            let out = markdown_of_html(hostile);
+            assert!(!out.is_empty() || hostile.is_empty(), "{hostile}");
+        }
     }
 
     #[test]
@@ -1709,7 +2093,7 @@ mod tests {
     fn a_curl_form_cannot_break_out_of_its_quotes() {
         let odd = Content {
             kind: Some(Kind::Token),
-            text: Some("abc'; rm -rf / #"),
+            text: Some("abc'; rm -rf / #".into()),
             ..Default::default()
         };
         assert_eq!(
@@ -1721,7 +2105,7 @@ mod tests {
     #[test]
     fn a_markdown_link_survives_odd_urls_and_titles() {
         let spaced = Content {
-            title: Some(" [Sección] "),
+            title: Some(" [Sección] ".into()),
             ..text_of(Kind::Link, "https://ejemplo.test/a b(c)")
         };
         assert_eq!(
@@ -1729,7 +2113,7 @@ mod tests {
             "[Sección](<https://ejemplo.test/a b(c)>)"
         );
         let blank_title = Content {
-            title: Some("   "),
+            title: Some("   ".into()),
             ..text_of(Kind::Link, "https://ejemplo.test")
         };
         assert_eq!(

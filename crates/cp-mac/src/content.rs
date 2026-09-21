@@ -1,5 +1,6 @@
 use cp_core::item::{Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
 use cp_core::paste_as::Content;
+use std::borrow::Cow;
 
 pub fn content_of<'a>(item: &'a Item, ocr: Option<&'a str>) -> Content<'a> {
     let bytes = |id: &str| {
@@ -12,21 +13,25 @@ pub fn content_of<'a>(item: &'a Item, ocr: Option<&'a str>) -> Content<'a> {
     let html = text("public.html");
     Content {
         kind: item.kind,
-        text: text("public.utf8-plain-text").or_else(|| text(SYNTHETIC_TEXT)),
-        html,
+        text: text("public.utf8-plain-text")
+            .or_else(|| text(SYNTHETIC_TEXT))
+            .map(Cow::Borrowed),
+        html: html.map(Cow::Borrowed),
         rich: html.is_some()
             || bytes("public.rtf").is_some()
             || bytes("com.apple.flat-rtfd").is_some(),
-        png: bytes("public.png").or_else(|| bytes(SYNTHETIC_IMAGE)),
+        image: bytes("public.png")
+            .or_else(|| bytes("public.tiff"))
+            .or_else(|| bytes(SYNTHETIC_IMAGE)),
         paths: text("public.file-url")
             .map(|urls| {
                 urls.lines()
                     .filter(|line| !line.trim().is_empty())
-                    .map(cp_mac_sys::frontmost::path_of)
+                    .map(cp_mac_sys::files::path_of)
                     .collect()
             })
             .unwrap_or_default(),
-        title: text("public.url-name"),
+        title: text("public.url-name").map(Cow::Borrowed),
         ocr,
     }
 }
@@ -60,10 +65,10 @@ mod tests {
             ],
         };
         let content = content_of(&item, None);
-        assert_eq!(content.text, Some("hola"));
-        assert_eq!(content.html, Some("<p><b>hola</b></p>"));
+        assert_eq!(content.text.as_deref(), Some("hola"));
+        assert_eq!(content.html.as_deref(), Some("<p><b>hola</b></p>"));
         assert!(content.rich);
-        assert_eq!(content.png, None);
+        assert_eq!(content.image, None);
         assert_eq!(forms_for(&content), vec![Form::PlainText, Form::Markdown]);
     }
 
@@ -78,7 +83,45 @@ mod tests {
         };
         let content = content_of(&item, None);
         assert!(content.rich);
-        assert_eq!(content.html, Some("<i>hola</i>"));
+        assert_eq!(content.html.as_deref(), Some("<i>hola</i>"));
+    }
+
+    #[test]
+    fn plain_rtf_alone_is_rich_and_a_blob_reads_like_an_inline_payload() {
+        let item = Item {
+            kind: Some(Kind::Text),
+            formats: vec![
+                inline("public.rtf", b"{\\rtf1 hola}"),
+                Format {
+                    id: "public.utf8-plain-text".into(),
+                    payload: Payload::Blob(b"hola".to_vec()),
+                },
+            ],
+        };
+        let content = content_of(&item, None);
+        assert!(content.rich, "el RTF a solas ya es enriquecido");
+        assert_eq!(
+            content.text.as_deref(),
+            Some("hola"),
+            "un blob se lee igual que un inline"
+        );
+    }
+
+    #[test]
+    fn a_rich_text_with_an_image_offers_both_families() {
+        let item = Item {
+            kind: Some(Kind::Text),
+            formats: vec![
+                inline("public.rtf", b"{\\rtf1 hola}"),
+                inline("public.utf8-plain-text", b"hola"),
+                inline("public.png", &[137, 80, 78, 71]),
+            ],
+        };
+        assert_eq!(
+            forms_for(&content_of(&item, None)),
+            vec![Form::PlainText, Form::ImageJpeg],
+            "un documento con una imagen incrustada se puede pegar como texto o como su imagen"
+        );
     }
 
     #[test]
@@ -118,7 +161,7 @@ mod tests {
             ],
         };
         let content = content_of(&link, None);
-        assert_eq!(content.title, Some("Ejemplo — inicio"));
+        assert_eq!(content.title.as_deref(), Some("Ejemplo — inicio"));
         assert!(forms_for(&content).contains(&Form::LinkTitled));
     }
 
@@ -129,21 +172,51 @@ mod tests {
             formats: vec![inline("public.png", &[137, 80, 78, 71])],
         };
         let content = content_of(&item, Some("Pedido 4417"));
-        assert_eq!(content.png, Some(&[137u8, 80, 78, 71][..]));
+        assert_eq!(content.image, Some(&[137u8, 80, 78, 71][..]));
         assert_eq!(content.ocr, Some("Pedido 4417"));
         assert!(!content.rich);
         assert_eq!(forms_for(&content), vec![Form::ImageJpeg, Form::ImageOcr]);
     }
 
     #[test]
+    fn an_image_that_only_comes_as_tiff_is_still_an_image() {
+        let safari = Item {
+            kind: Some(Kind::Image),
+            formats: vec![
+                inline("public.tiff", &[77, 77, 0, 42]),
+                inline("public.html", b"<img src=\"a.png\">"),
+                Format {
+                    id: "com.apple.webarchive".into(),
+                    payload: Payload::Announced { size: None },
+                },
+            ],
+        };
+        let content = content_of(&safari, None);
+        assert_eq!(content.image, Some(&[77u8, 77, 0, 42][..]));
+        assert!(forms_for(&content).contains(&Form::ImageJpeg));
+        let both = Item {
+            kind: Some(Kind::Image),
+            formats: vec![inline("public.tiff", &[1]), inline("public.png", &[2])],
+        };
+        assert_eq!(
+            content_of(&both, None).image,
+            Some(&[2u8][..]),
+            "el PNG manda si lo hay"
+        );
+    }
+
+    #[test]
     fn what_the_store_wrote_itself_is_read_back_the_same_way() {
         let edited = Item::plain("editado a mano");
-        assert_eq!(content_of(&edited, None).text, Some("editado a mano"));
+        assert_eq!(
+            content_of(&edited, None).text.as_deref(),
+            Some("editado a mano")
+        );
         let synthetic = Item {
             kind: Some(Kind::Image),
             formats: vec![inline(SYNTHETIC_IMAGE, &[1, 2, 3])],
         };
-        assert_eq!(content_of(&synthetic, None).png, Some(&[1u8, 2, 3][..]));
+        assert_eq!(content_of(&synthetic, None).image, Some(&[1u8, 2, 3][..]));
     }
 
     #[test]

@@ -39,6 +39,7 @@ pub struct Catalog {
     pub images_by_preference: &'static [&'static str],
     pub equivalents: &'static [&'static [&'static str]],
     pub embeddable: &'static [&'static str],
+    pub page_archives: &'static [&'static str],
 }
 
 impl Catalog {
@@ -66,6 +67,9 @@ impl Catalog {
     pub fn decide_in(&self, family: Option<Family>, id: &str) -> Take {
         let id = self.canonical(id);
         if family == Some(Family::Files) && self.images_by_preference.contains(&id) {
+            return Take::Presence;
+        }
+        if family == Some(Family::Image) && self.page_archives.contains(&id) {
             return Take::Presence;
         }
         self.decide(id)
@@ -148,6 +152,7 @@ mod tests {
         images_by_preference: &["cheap/image", "costly/image"],
         equivalents: &[&["cheap/markup", "costly/markup"]],
         embeddable: &["embedded/document"],
+        page_archives: &["whole/page"],
     };
 
     const NOTHING: Catalog = Catalog {
@@ -163,6 +168,7 @@ mod tests {
         images_by_preference: &[],
         equivalents: &[],
         embeddable: &[],
+        page_archives: &[],
     };
 
     #[test]
@@ -217,6 +223,7 @@ mod tests {
             images_by_preference: &["costly/image"],
             equivalents: &[],
             embeddable: &[],
+            page_archives: &[],
         };
         assert_eq!(
             GREEDY.decide("costly/image"),
@@ -306,6 +313,29 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_copied_image_notes_the_page_archive_and_a_text_keeps_it() {
+        const ARCHIVING: Catalog = Catalog {
+            wanted: &["plain/text", "cheap/image", "whole/page"],
+            ..PROBE
+        };
+        assert_eq!(
+            ARCHIVING.decide_in(Some(Family::Image), "whole/page"),
+            Take::Presence,
+            "un logo de 43 KB no puede costar la página entera"
+        );
+        assert_eq!(
+            ARCHIVING.decide_in(Some(Family::Text), "whole/page"),
+            Take::Payload,
+            "para un texto con estilos el archivo es el contenido"
+        );
+        assert_eq!(ARCHIVING.decide_in(None, "whole/page"), Take::Payload);
+        assert_eq!(
+            ARCHIVING.decide_in(Some(Family::Image), "cheap/image"),
+            Take::Payload
+        );
     }
 
     #[test]

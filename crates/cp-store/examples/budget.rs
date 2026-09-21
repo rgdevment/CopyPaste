@@ -1,5 +1,5 @@
 use cp_core::item::Item;
-use cp_store::Store;
+use cp_store::{Cursor, Filter, Store};
 use std::time::{Duration, Instant};
 
 const ITEMS: usize = 50_000;
@@ -71,7 +71,16 @@ fn main() -> std::process::ExitCode {
             ceiling: Duration::from_millis(20),
         },
         || {
-            store.search("factur").expect("consulta");
+            store
+                .list(
+                    &Filter {
+                        query: Some("factur".into()),
+                        ..Default::default()
+                    },
+                    100,
+                    None,
+                )
+                .expect("consulta");
         },
     );
     over += measure(
@@ -80,7 +89,16 @@ fn main() -> std::process::ExitCode {
             ceiling: Duration::from_millis(20),
         },
         || {
-            store.search("inexistente").expect("consulta");
+            store
+                .list(
+                    &Filter {
+                        query: Some("inexistente".into()),
+                        ..Default::default()
+                    },
+                    100,
+                    None,
+                )
+                .expect("consulta");
         },
     );
     over += measure(
@@ -89,7 +107,16 @@ fn main() -> std::process::ExitCode {
             ceiling: Duration::from_millis(20),
         },
         || {
-            store.search("straße").expect("consulta");
+            store
+                .list(
+                    &Filter {
+                        query: Some("straße".into()),
+                        ..Default::default()
+                    },
+                    100,
+                    None,
+                )
+                .expect("consulta");
         },
     );
     over += measure(
@@ -98,38 +125,58 @@ fn main() -> std::process::ExitCode {
             ceiling: Duration::from_millis(60),
         },
         || {
-            store.search("con").expect("consulta");
+            store
+                .list(
+                    &Filter {
+                        query: Some("con".into()),
+                        ..Default::default()
+                    },
+                    100,
+                    None,
+                )
+                .expect("consulta");
         },
     );
-    over += measure(
-        Budget {
-            what: "página diez por OFFSET (lo que no se usa)",
-            ceiling: Duration::from_millis(40),
-        },
-        || {
-            store.search_page("con", 100, 1000).expect("consulta");
-        },
-    );
+    let deep = {
+        let filter = Filter {
+            query: Some("con".into()),
+            ..Default::default()
+        };
+        let mut after: Option<Cursor> = None;
+        for _ in 0..10 {
+            after = store.list(&filter, 100, after).expect("consulta").next;
+        }
+        after
+    };
     over += measure(
         Budget {
             what: "página diez por cursor",
             ceiling: Duration::from_millis(20),
         },
         || {
-            store
-                .search_after("factura", 100, Some(48_000))
-                .expect("consulta");
+            let filter = Filter {
+                query: Some("con".into()),
+                ..Default::default()
+            };
+            store.list(&filter, 100, deep).expect("consulta");
         },
     );
     over += measure(
         Budget {
-            what: "página muy profunda por cursor",
+            what: "el historial sin término, primera página",
             ceiling: Duration::from_millis(20),
         },
         || {
-            store
-                .search_after("elemento", 100, Some(200))
-                .expect("consulta");
+            store.list(&Filter::default(), 100, None).expect("consulta");
+        },
+    );
+    over += measure(
+        Budget {
+            what: "las pestañas con conteo",
+            ceiling: Duration::from_millis(40),
+        },
+        || {
+            store.facets(&Filter::default()).expect("facetas");
         },
     );
     over += measure(

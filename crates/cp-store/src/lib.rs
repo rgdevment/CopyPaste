@@ -7,8 +7,8 @@ pub use blobs::Blobs;
 pub use query::{Clock, parse};
 pub use schema::SCHEMA_VERSION;
 pub use store::{
-    AppCount, Broken, Cursor, Facet, Filter, Listed, Order, Page, Policy, Restricted, Snippet,
-    Store, Swept, Usage, Where,
+    AppCount, Broken, Cursor, Facet, Filter, FoundIn, Listed, Order, PREVIEW_CHARS, PREVIEW_UP_TO,
+    Page, Policy, Restricted, Snippet, Store, Swept, Usage,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +25,11 @@ pub enum Error {
     TooBig { size: usize },
     #[error("no hay ningún ítem {id}")]
     NoSuchItem { id: i64 },
+    #[error("el cursor es de un orden ({cursor}) y la lista de otro ({order})")]
+    WrongCursor {
+        cursor: &'static str,
+        order: &'static str,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

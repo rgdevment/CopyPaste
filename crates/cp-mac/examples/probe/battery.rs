@@ -12,6 +12,8 @@ use cp_mac_sys::{frontmost, keystroke};
 use objc2_foundation::{MainThreadMarker, NSString, NSURL};
 use std::time::{Duration, Instant};
 
+const SKIPPED: &str = "omitido: ";
+
 struct Battery {
     passed: u32,
     failed: u32,
@@ -33,6 +35,15 @@ impl Battery {
                 self.failed += 1;
                 println!("    FALLA {id:<5} {what}\n            {why}");
             }
+        }
+    }
+
+    fn case_or_skip(&mut self, id: &str, what: &str, run: impl FnOnce() -> Result<(), String>) {
+        match run() {
+            Err(why) if why.starts_with(SKIPPED) => {
+                self.skip(id, what, why.trim_start_matches(SKIPPED));
+            }
+            other => self.case(id, what, || other),
         }
     }
 
@@ -468,7 +479,17 @@ fn main() -> std::process::ExitCode {
             store
                 .set_source(id, &name, 2)
                 .map_err(|why| why.to_string())?;
-            let found = store.search(&name).map_err(|why| why.to_string())?;
+            let found = store
+                .list(
+                    &cp_store::Filter {
+                        query: Some(name.clone()),
+                        ..Default::default()
+                    },
+                    10,
+                    None,
+                )
+                .map_err(|why| why.to_string())?
+                .rows;
             if found.len() != 1 {
                 return Err(format!("buscando «{name}» salieron {} ítems", found.len()));
             }
@@ -678,7 +699,17 @@ fn main() -> std::process::ExitCode {
                 .set_ocr_text(id, &recognised, 2)
                 .map_err(|why| why.to_string())?;
 
-            let hits = store.search("pedido").map_err(|why| why.to_string())?;
+            let hits = store
+                .list(
+                    &cp_store::Filter {
+                        query: Some("pedido".into()),
+                        ..Default::default()
+                    },
+                    10,
+                    None,
+                )
+                .map_err(|why| why.to_string())?
+                .rows;
             if hits.len() != 1 {
                 return Err(format!("buscando «pedido» salieron {} ítems", hits.len()));
             }
@@ -979,30 +1010,32 @@ fn main() -> std::process::ExitCode {
 
     b.group("M · Abrir y revelar");
 
-    b.case("M1", "revelar un archivo trae el Finder al frente", || {
-        let dir = std::env::temp_dir().join(format!("cp-m1-{}", pb.change_count()));
-        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
-        let file = dir.join("revelado.txt");
-        std::fs::write(&file, b"cp-m1").map_err(|why| why.to_string())?;
+    b.case_or_skip("M1", "revelar un archivo lo deja seleccionado en el Finder", || {
+        let scratch = Scratch::new("cp-m1")?;
+        let file = scratch.file("revelado.txt", b"cp-m1")?;
         if !cp_mac_sys::files::reveal(&file) {
             return Err("reveal dijo que no".into());
         }
-        let front = wait_for_front("com.apple.finder");
-        std::fs::remove_dir_all(&dir).ok();
-        front
+        wait_until("el Finder deja el archivo seleccionado", || {
+            osascript_within("tell application \"Finder\" to get selection as text")
+                .map(|selected| selected.contains("revelado.txt"))
+        })
     });
 
-    b.case("M2", "abrir un archivo lo entrega a su aplicación", || {
-        let dir = std::env::temp_dir().join(format!("cp-m2-{}", pb.change_count()));
-        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
-        let file = dir.join("abierto.txt");
-        std::fs::write(&file, b"cp-m2").map_err(|why| why.to_string())?;
+    b.case_or_skip("M2", "abrir un archivo lo entrega a su aplicación", || {
+        let scratch = Scratch::new("cp-m2")?;
+        let file = scratch.file("abierto.txt", b"cp-m2")?;
         if !cp_mac_sys::files::open(&file) {
             return Err("open dijo que no".into());
         }
-        let front = wait_for_front("com.apple.TextEdit");
-        std::fs::remove_dir_all(&dir).ok();
-        front
+        let opened = wait_until("TextEdit tiene el documento abierto", || {
+            osascript_within("tell application \"TextEdit\" to get name of every document")
+                .map(|names| names.contains("abierto.txt"))
+        });
+        osascript_within(
+            "tell application \"TextEdit\" to close (every document whose name is \"abierto.txt\") saving no",
+        );
+        opened
     });
 
     println!();
@@ -1017,31 +1050,69 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn front_by_system_events() -> Option<String> {
-    let out = std::process::Command::new("/usr/bin/osascript")
-        .args([
-            "-e",
-            "tell application \"System Events\" to get bundle identifier of first application process whose frontmost is true",
-        ])
-        .output()
-        .ok()?;
-    String::from_utf8(out.stdout)
-        .ok()
-        .map(|id| id.trim().to_owned())
-        .filter(|id| !id.is_empty())
+struct Scratch {
+    dir: std::path::PathBuf,
 }
 
-fn wait_for_front(bundle: &str) -> Result<(), String> {
+impl Scratch {
+    fn new(prefix: &str) -> Result<Self, String> {
+        let dir = std::env::temp_dir().join(format!("{prefix}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+        Ok(Self { dir })
+    }
+
+    fn file(&self, name: &str, bytes: &[u8]) -> Result<std::path::PathBuf, String> {
+        let path = self.dir.join(name);
+        std::fs::write(&path, bytes).map_err(|why| why.to_string())?;
+        Ok(path)
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        std::fs::remove_dir_all(&self.dir).ok();
+    }
+}
+
+fn osascript_within(script: &str) -> Option<String> {
+    let mut child = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", script])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_secs(3) {
+        if child.try_wait().ok()?.is_some() {
+            let out = child.wait_with_output().ok()?;
+            if !out.status.success() {
+                return None;
+            }
+            return String::from_utf8(out.stdout)
+                .ok()
+                .map(|text| text.trim().to_owned());
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    child.kill().ok();
+    child.wait().ok();
+    None
+}
+
+fn wait_until(what: &str, mut observed: impl FnMut() -> Option<bool>) -> Result<(), String> {
     for _ in 0..25 {
         std::thread::sleep(Duration::from_millis(300));
-        if front_by_system_events().as_deref() == Some(bundle) {
-            return Ok(());
+        match observed() {
+            Some(true) => return Ok(()),
+            Some(false) => {}
+            None => {
+                return Err(format!(
+                    "{SKIPPED}la app no responde a AppleScript: sin permiso de Automatización o un diálogo pendiente"
+                ));
+            }
         }
     }
-    Err(format!(
-        "{bundle} no llegó al frente en 8 s; al frente está {:?}",
-        front_by_system_events()
-    ))
+    Err(format!("{what}: no pasó en 7,5 s"))
 }
 
 fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<(), String> {

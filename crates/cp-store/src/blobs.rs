@@ -5,6 +5,8 @@ pub struct Blobs {
     root: PathBuf,
 }
 
+static WRITES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 impl Blobs {
     pub fn at(root: &Path) -> Result<Self> {
         std::fs::create_dir_all(root).map_err(Error::Io)?;
@@ -33,7 +35,11 @@ impl Blobs {
             std::fs::create_dir_all(parent).map_err(Error::Io)?;
             crate::store::restrict(parent, 0o700)?;
         }
-        let temporary = path.with_extension("partial");
+        let temporary = path.with_extension(format!(
+            "{}-{}.partial",
+            std::process::id(),
+            WRITES.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
         std::fs::write(&temporary, bytes).map_err(Error::Io)?;
         crate::store::restrict(&temporary, 0o600)?;
         std::fs::rename(&temporary, &path).map_err(Error::Io)?;
@@ -53,6 +59,14 @@ impl Blobs {
         remove_at(&self.path_for(digest))
     }
 
+    pub fn remove_if_settled(&self, digest: &str) -> Result<bool> {
+        let path = self.path_for(digest);
+        if !path.exists() || is_fresh(&path) {
+            return Ok(false);
+        }
+        remove_at(&path).map(|()| true)
+    }
+
     pub fn exists(&self, digest: &str) -> bool {
         self.path_for(digest).exists()
     }
@@ -60,7 +74,6 @@ impl Blobs {
     pub const GRACE: std::time::Duration = std::time::Duration::from_secs(60);
 
     pub fn sweep(&self, referenced: &dyn Fn(&str) -> bool) -> Result<usize> {
-        let settled = std::time::SystemTime::now() - Self::GRACE;
         let mut removed = 0;
         for path in files_under(&self.root) {
             let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
@@ -69,10 +82,7 @@ impl Blobs {
             let Some((digest, partial)) = digest_of(name) else {
                 continue;
             };
-            let fresh = std::fs::metadata(&path)
-                .and_then(|meta| meta.modified())
-                .is_ok_and(|modified| modified >= settled);
-            if fresh || (!partial && referenced(digest)) {
+            if is_fresh(&path) || (!partial && referenced(digest)) {
                 continue;
             }
             remove_at(&path)?;
@@ -82,9 +92,16 @@ impl Blobs {
     }
 }
 
+fn is_fresh(path: &Path) -> bool {
+    let settled = std::time::SystemTime::now() - Blobs::GRACE;
+    std::fs::metadata(path)
+        .and_then(|meta| meta.modified())
+        .is_ok_and(|modified| modified >= settled)
+}
+
 fn digest_of(name: &str) -> Option<(&str, bool)> {
     let (digest, partial) = match name.strip_suffix(".partial") {
-        Some(digest) => (digest, true),
+        Some(rest) => (rest.split('.').next().unwrap_or(rest), true),
         None => (name, false),
     };
     let shaped = digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_hexdigit());
@@ -92,11 +109,25 @@ fn digest_of(name: &str) -> Option<(&str, bool)> {
 }
 
 fn remove_at(path: &Path) -> Result<()> {
-    let Ok(metadata) = std::fs::metadata(path) else {
+    use std::io::Write;
+    let Ok(metadata) = std::fs::symlink_metadata(path) else {
         return Ok(());
     };
+    if metadata.file_type().is_symlink() {
+        std::fs::remove_file(path).map_err(Error::Io)?;
+        return Ok(());
+    }
+    if !metadata.is_file() {
+        return Ok(());
+    }
+    let mut file = std::fs::File::options()
+        .write(true)
+        .open(path)
+        .map_err(Error::Io)?;
     let zeros = vec![0u8; metadata.len() as usize];
-    std::fs::write(path, &zeros).map_err(Error::Io)?;
+    file.write_all(&zeros).map_err(Error::Io)?;
+    file.sync_all().map_err(Error::Io)?;
+    drop(file);
     std::fs::remove_file(path).map_err(Error::Io)?;
     Ok(())
 }
@@ -108,7 +139,7 @@ pub(crate) fn files_under(root: &Path) -> Vec<PathBuf> {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_dir() {
+        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
             found.extend(files_under(&path));
         } else {
             found.push(path);
@@ -178,12 +209,52 @@ mod tests {
 
     #[test]
     fn deleting_overwrites_before_unlinking() {
-        let (_dir, blobs) = temporary();
+        let (dir, blobs) = temporary();
         let digest = blobs.put(b"contrasena del banco").expect("guarda");
-        assert!(blobs.exists(&digest));
+        let twin = dir.path().join("gemelo");
+        std::fs::hard_link(blobs.path_for(&digest), &twin).expect("enlace duro");
         blobs.remove(&digest).expect("borra");
         assert!(!blobs.exists(&digest));
         assert!(blobs.get(&digest).expect("lee").is_none());
+        let bytes = std::fs::read(&twin).expect("el otro nombre sigue");
+        assert_eq!(bytes.len(), b"contrasena del banco".len());
+        assert!(
+            bytes.iter().all(|b| *b == 0),
+            "los bloques se pisaron con ceros antes de soltar el nombre"
+        );
+    }
+
+    #[test]
+    fn a_symlink_named_like_a_digest_is_unlinked_never_followed() {
+        let (dir, blobs) = temporary();
+        let victim = dir.path().join("ajeno.txt");
+        std::fs::write(&victim, b"no me toques").expect("archivo");
+        let digest = "c".repeat(64);
+        let link = blobs.path_for(&digest);
+        std::fs::create_dir_all(link.parent().expect("padre")).expect("carpeta");
+        std::os::unix::fs::symlink(&victim, &link).expect("enlace");
+        aged(&victim);
+        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 1);
+        assert!(!link.exists() && std::fs::symlink_metadata(&link).is_err());
+        assert_eq!(
+            std::fs::read(&victim).expect("sigue"),
+            b"no me toques",
+            "se borra el enlace, nunca lo que hay detrás"
+        );
+    }
+
+    #[test]
+    fn a_directory_named_like_a_digest_is_left_alone() {
+        let (_dir, blobs) = temporary();
+        let digest = "d".repeat(64);
+        let folder = blobs.path_for(&digest);
+        std::fs::create_dir_all(&folder).expect("carpeta");
+        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 0);
+        assert!(folder.is_dir());
+        blobs
+            .remove(&digest)
+            .expect("borrar una carpeta no es borrar un blob");
+        assert!(folder.is_dir());
     }
 
     #[test]
@@ -249,6 +320,37 @@ mod tests {
     }
 
     #[test]
+    fn a_fresh_blob_is_not_removed_by_a_release_only_by_the_sweep_later() {
+        let (_dir, blobs) = temporary();
+        let digest = blobs.put(b"recien escrito").expect("guarda");
+        assert!(
+            !blobs.remove_if_settled(&digest).expect("no toca"),
+            "otra conexión puede estar a punto de referenciarlo"
+        );
+        assert!(blobs.exists(&digest));
+        aged(&blobs.path_for(&digest));
+        assert!(blobs.remove_if_settled(&digest).expect("ahora sí"));
+        assert!(!blobs.exists(&digest));
+        assert!(
+            !blobs.remove_if_settled(&digest).expect("ya no está"),
+            "borrar dos veces no es error"
+        );
+    }
+
+    #[test]
+    fn two_writers_never_share_a_temporary_file() {
+        let (dir, blobs) = temporary();
+        let a = blobs.put(b"uno").expect("a");
+        let b = blobs.put(b"dos").expect("b");
+        assert_ne!(a, b);
+        let leftovers = files_under(&dir.path().join("blobs"))
+            .into_iter()
+            .filter(|p| p.to_string_lossy().contains(".partial"))
+            .count();
+        assert_eq!(leftovers, 0);
+    }
+
+    #[test]
     fn sweeping_an_empty_store_is_nothing() {
         let (_dir, blobs) = temporary();
         assert_eq!(blobs.sweep(&|_| false).expect("barre"), 0);
@@ -281,6 +383,8 @@ mod tests {
         assert_eq!(digest_of(&digest), Some((digest.as_str(), false)));
         let partial = format!("{digest}.partial");
         assert_eq!(digest_of(&partial), Some((digest.as_str(), true)));
+        let private = format!("{digest}.4242-7.partial");
+        assert_eq!(digest_of(&private), Some((digest.as_str(), true)));
         assert_eq!(digest_of(".DS_Store"), None);
         assert_eq!(digest_of(&"g".repeat(64)), None, "no es hexadecimal");
         assert_eq!(digest_of(&"a".repeat(63)), None, "le falta uno");

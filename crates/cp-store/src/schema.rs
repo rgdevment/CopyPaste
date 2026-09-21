@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -10,16 +10,34 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
             supported: SCHEMA_VERSION,
         });
     }
-    if found == 1 {
+    if found == SCHEMA_VERSION {
+        return Ok(false);
+    }
+    db.execute_batch("BEGIN IMMEDIATE;")?;
+    if ordering_indexes_are_stale(db)? {
         db.execute_batch(&format!(
             "DROP INDEX IF EXISTS items_by_recency;
              DROP INDEX IF EXISTS items_by_kind;
              {ORDERING_INDEXES}"
         ))?;
     }
-    if found < SCHEMA_VERSION {
-        db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))?;
-        return Ok(true);
+    if found < 3 {
+        db.execute_batch("INSERT INTO items_fts(items_fts) VALUES ('optimize');")?;
+    }
+    db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION}; COMMIT;"))?;
+    Ok(true)
+}
+
+fn ordering_indexes_are_stale(db: &Connection) -> Result<bool> {
+    let mut stmt = db.prepare(
+        "SELECT sql FROM sqlite_master
+         WHERE type = 'index' AND name IN ('items_by_recency', 'items_by_kind')",
+    )?;
+    let definitions = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    for definition in definitions {
+        if !definition?.contains("id DESC") {
+            return Ok(true);
+        }
     }
     Ok(false)
 }
@@ -85,6 +103,10 @@ const TABLES: &str = r#"
         CREATE INDEX IF NOT EXISTS items_deleted ON items(deleted_at)
             WHERE deleted_at IS NOT NULL;
         CREATE INDEX IF NOT EXISTS items_by_app ON items(search_app);
+        CREATE INDEX IF NOT EXISTS items_live_by_kind ON items(kind)
+            WHERE deleted_at IS NULL AND broken_since IS NULL;
+        CREATE INDEX IF NOT EXISTS items_live_by_app ON items(search_app, app_source)
+            WHERE deleted_at IS NULL AND app_source IS NOT NULL;
         CREATE INDEX IF NOT EXISTS items_by_pastes ON items(paste_count DESC, id DESC);
         CREATE INDEX IF NOT EXISTS items_by_use
             ON items(COALESCE(last_used_at, -1) DESC, id DESC);
@@ -101,6 +123,11 @@ const TABLES: &str = r#"
         -- Lo que se deriva de un ítem y no es su contenido: dimensiones,
         -- duración, tamaño, artista. Tabla y no columna JSON porque así se
         -- puede filtrar e indexar por clave sin traer el módulo JSON.
+        CREATE INDEX IF NOT EXISTS formats_by_blob ON item_formats(blob_path)
+            WHERE blob_path IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS formats_inline_size ON item_formats(size_bytes)
+            WHERE inline_data IS NOT NULL;
+
         CREATE TABLE IF NOT EXISTS item_meta (
             item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
             key     TEXT    NOT NULL,
@@ -134,6 +161,8 @@ const TABLES: &str = r#"
             content_rowid = 'id',
             tokenize = 'unicode61 remove_diacritics 2'
         );
+
+        INSERT INTO items_fts(items_fts, rank) VALUES ('secure-delete', 1);
 
         CREATE TRIGGER IF NOT EXISTS items_ai AFTER INSERT ON items BEGIN
             INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
@@ -234,6 +263,75 @@ mod tests {
     }
 
     #[test]
+    fn the_index_forgets_what_was_deleted_and_the_setting_survives_reopening() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("history.db");
+        {
+            let db = Connection::open(&path).expect("abre");
+            create(&db).expect("esquema");
+        }
+        let db = Connection::open(&path).expect("reabre");
+        configure(&db).expect("pragmas");
+        let secure: i64 = db
+            .query_row(
+                "SELECT v FROM items_fts_config WHERE k = 'secure-delete'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("la opción vive en la tabla de configuración del índice");
+        assert_eq!(
+            secure, 1,
+            "un token borrado no puede quedar en un segmento viejo"
+        );
+    }
+
+    #[test]
+    fn a_version_two_database_forgets_what_its_index_still_remembered() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let path = dir.path().join("history.db");
+        let secret = "qzvrxtoken7secreto";
+        {
+            let db = Connection::open(&path).expect("abre");
+            create(&db).expect("esquema");
+            db.execute_batch(
+                "INSERT INTO items_fts(items_fts, rank) VALUES ('secure-delete', 0);
+                 PRAGMA user_version = 2;",
+            )
+            .expect("una base como la dejó la versión 2");
+            db.execute(
+                "INSERT INTO items (uuid, preview_text, created_at, modified_at, updated_at,
+                                    content_hash, search_text)
+                 VALUES ('u', ?1, 1, 1, 1, 0, ?1)",
+                [secret],
+            )
+            .expect("inserta");
+            db.execute(
+                "UPDATE items SET preview_text = '', search_text = '', deleted_at = 2 WHERE uuid = 'u'",
+                [],
+            )
+            .expect("borra como borraba la versión 2");
+            db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+                .expect("checkpoint");
+        }
+        let bytes = std::fs::read(&path).expect("lee");
+        assert!(
+            bytes.windows(secret.len()).any(|w| w == secret.as_bytes()),
+            "sin secure-delete el índice conserva el token borrado"
+        );
+        let db = Connection::open(&path).expect("reabre");
+        create(&db).expect("crea");
+        assert!(migrate(&db).expect("migra"));
+        db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .expect("checkpoint");
+        drop(db);
+        let bytes = std::fs::read(&path).expect("lee");
+        assert!(
+            !bytes.windows(secret.len()).any(|w| w == secret.as_bytes()),
+            "la migración a la versión 3 funde los segmentos y lo borrado desaparece"
+        );
+    }
+
+    #[test]
     fn a_version_one_database_gets_its_ordering_indexes_rebuilt() {
         let db = Connection::open_in_memory().expect("abre");
         create(&db).expect("esquema");
@@ -250,8 +348,10 @@ mod tests {
             !index_sql(&db, "items_by_recency").contains("id DESC"),
             "IF NOT EXISTS no rehace un índice viejo: por eso hace falta migrar"
         );
+        assert!(ordering_indexes_are_stale(&db).expect("mira"));
 
         assert!(migrate(&db).expect("migra"));
+        assert!(!ordering_indexes_are_stale(&db).expect("mira"));
         assert!(index_sql(&db, "items_by_recency").contains("modified_at DESC, id DESC"));
         assert!(index_sql(&db, "items_by_kind").contains("kind, modified_at DESC, id DESC"));
         let version: u32 = db

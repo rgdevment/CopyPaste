@@ -73,6 +73,7 @@ pub const CATALOG: Catalog = Catalog {
         "XML Spreadsheet",
         "Csv",
     ],
+    page_archives: &[],
 };
 
 #[cfg(test)]

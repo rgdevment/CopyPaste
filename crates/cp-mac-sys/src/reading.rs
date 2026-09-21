@@ -58,13 +58,15 @@ mod tests {
 
     #[test]
     fn a_late_answer_is_picked_up_by_a_later_wait_on_the_same_read() {
-        let pending = begin(|| {
-            std::thread::sleep(Duration::from_millis(120));
+        let (release, gate) = std::sync::mpsc::channel::<()>();
+        let pending = begin(move || {
+            let _ = gate.recv();
             42
         });
         assert_eq!(pending.wait(Duration::from_millis(20)), None, "aún no");
+        release.send(()).expect("la fuente contesta");
         assert_eq!(
-            pending.wait(Duration::from_millis(400)),
+            pending.wait(Duration::from_secs(5)),
             Some(42),
             "sin leer dos veces"
         );

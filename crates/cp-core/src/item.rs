@@ -63,6 +63,8 @@ pub const SYNTHETIC_TEXT: &str = "text/plain";
 
 pub const SYNTHETIC_IMAGE: &str = "image/png";
 
+pub const SYNTHETIC_JPEG: &str = "image/jpeg";
+
 impl Item {
     pub fn plain(text: &str) -> Self {
         Self {

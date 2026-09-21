@@ -89,7 +89,7 @@ fn object_of(segment: &str) -> Option<serde_json::Map<String, serde_json::Value>
     }
 }
 
-pub fn base64url(segment: &str) -> Option<Vec<u8>> {
+fn base64url(segment: &str) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(segment.len() * 3 / 4);
     let mut buffer: u32 = 0;
     let mut bits = 0;
@@ -152,6 +152,12 @@ mod tests {
         assert_eq!(claims.issuer(), Some("cp"));
         assert_eq!(claims.expires_at(), Some(1_700_000_000));
         assert_eq!(claims.expired_by(1_700_000_001), Some(true));
+        assert_eq!(
+            claims.expired_by(1_700_000_000),
+            Some(true),
+            "en el segundo exacto ya no vale"
+        );
+        assert_eq!(claims.expired_by(1_699_999_999), Some(false));
         assert_eq!(claims.expired_by(1_600_000_000), Some(false));
         assert_eq!(
             claims.payload.get("env").and_then(|v| v.as_str()),
@@ -199,7 +205,7 @@ mod tests {
             "github_pat_not_a_real_token_for_tests_0000000000",
             "xoxb-not-a-real-slack-token-for-tests",
             "AKIAIOSFODNN7EXAMPLE",
-            "AIzaNotARealGoogleKeyForTests00000000000000",
+            "AIza.not.a.real.google.key.for.tests.0000000",
             "glpat-not-a-real-token-for-tests",
         ] {
             assert!(looks_like(token), "{token}");

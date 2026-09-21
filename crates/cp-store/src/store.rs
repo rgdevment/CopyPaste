@@ -14,7 +14,7 @@ fn fts_expression(query: &str) -> Option<String> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Where {
+pub enum FoundIn {
     Text,
     Label,
     App,
@@ -23,7 +23,7 @@ pub enum Where {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Snippet {
-    pub found_in: Where,
+    pub found_in: FoundIn,
     pub excerpt: Excerpt,
 }
 
@@ -47,8 +47,23 @@ pub struct Listed {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cursor {
+    order: Order,
     key: i64,
     id: i64,
+}
+
+impl Cursor {
+    pub fn encode(self) -> String {
+        format!("{}:{}:{}", self.order.as_str(), self.key, self.id)
+    }
+
+    pub fn decode(text: &str) -> Option<Cursor> {
+        let mut parts = text.split(':');
+        let order = Order::from_name(parts.next()?)?;
+        let key = parts.next()?.parse().ok()?;
+        let id = parts.next()?.parse().ok()?;
+        parts.next().is_none().then_some(Cursor { order, key, id })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -66,6 +81,20 @@ pub enum Order {
 }
 
 impl Order {
+    pub const ALL: [Order; 3] = [Order::Recent, Order::MostPasted, Order::LastUsed];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Order::Recent => "recent",
+            Order::MostPasted => "most-pasted",
+            Order::LastUsed => "last-used",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Order> {
+        Order::ALL.into_iter().find(|order| order.as_str() == name)
+    }
+
     fn key(self) -> &'static str {
         match self {
             Order::Recent => "items.modified_at",
@@ -86,7 +115,7 @@ pub enum Broken {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Filter {
     pub query: Option<String>,
-    pub label: Option<String>,
+    pub label_query: Option<String>,
     pub kinds: Vec<Kind>,
     pub exclude_kinds: Vec<Kind>,
     pub apps: Vec<String>,
@@ -117,7 +146,7 @@ struct Clauses {
 }
 
 impl Clauses {
-    fn of(filter: &Filter, with_kinds: bool) -> Option<Self> {
+    fn of(filter: &Filter, with_kinds: bool, with_apps: bool) -> Option<Self> {
         let mut clauses = Self {
             joins_index: false,
             conditions: vec!["items.deleted_at IS NULL".into()],
@@ -127,7 +156,7 @@ impl Clauses {
         if let Some(text) = &filter.query {
             index.push(fts_expression(text)?);
         }
-        if let Some(label) = &filter.label {
+        if let Some(label) = &filter.label_query {
             index.push(format!("search_label : ({})", fts_expression(label)?));
         }
         if !index.is_empty() {
@@ -139,7 +168,9 @@ impl Clauses {
             clauses.kinds(&filter.kinds, false);
         }
         clauses.kinds(&filter.exclude_kinds, true);
-        clauses.apps("IN", &filter.apps);
+        if with_apps {
+            clauses.apps("IN", &filter.apps);
+        }
         clauses.apps("NOT IN", &filter.exclude_apps);
         if !filter.colors.is_empty() {
             let list = filter
@@ -257,8 +288,39 @@ impl Store {
         self.exposure
     }
 
-    pub fn checkpoint(&self) -> Result<()> {
-        self.db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
+    pub fn checkpoint(&self) -> Result<bool> {
+        let busy: i64 = self
+            .db
+            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| row.get(0))?;
+        Ok(busy == 0)
+    }
+
+    pub const INTERACTIVE_WAIT: std::time::Duration = std::time::Duration::from_millis(50);
+
+    fn checkpoint_briefly(&self) -> Result<bool> {
+        self.db.busy_timeout(Self::INTERACTIVE_WAIT)?;
+        let done = self.checkpoint();
+        self.db.busy_timeout(std::time::Duration::from_secs(5))?;
+        done
+    }
+
+    pub fn checkpoint_passive(&self) -> Result<i64> {
+        let (_, _, written): (i64, i64, i64) =
+            self.db
+                .query_row("PRAGMA wal_checkpoint(PASSIVE)", [], |row| {
+                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+                })?;
+        Ok(written)
+    }
+
+    pub fn autocheckpoint(&self) -> Result<i64> {
+        Ok(self
+            .db
+            .query_row("PRAGMA wal_autocheckpoint", [], |row| row.get(0))?)
+    }
+
+    pub fn without_autocheckpoint(&self) -> Result<()> {
+        self.db.execute_batch("PRAGMA wal_autocheckpoint = 0;")?;
         Ok(())
     }
 
@@ -269,12 +331,16 @@ impl Store {
     }
 
     pub fn insert_text(&self, uuid: &str, text: &str, created_at: i64) -> Result<i64> {
+        if cp_core::item::placement(text.len()) == cp_core::item::Placement::Refused {
+            return Err(Error::TooBig { size: text.len() });
+        }
         let hash = Item::plain(text).fingerprint() as i64;
+        let kind = cp_core::kind::classify_text(text).as_str();
         self.db.execute(
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text)
-             VALUES (?1, 'text', ?2, ?3, ?3, ?3, ?4, ?5)",
-            params![uuid, text, created_at, hash, fold(text)],
+             VALUES (?1, ?6, ?2, ?3, ?3, ?3, ?4, ?5)",
+            params![uuid, head_of(text), created_at, hash, fold(text), kind],
         )?;
         Ok(self.db.last_insert_rowid())
     }
@@ -432,7 +498,8 @@ impl Store {
 
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
         self.erase(id, at)?;
-        self.checkpoint()
+        self.checkpoint_briefly()?;
+        Ok(())
     }
 
     fn erase(&self, id: i64, at: i64) -> Result<()> {
@@ -454,7 +521,7 @@ impl Store {
                 if self.blob_is_shared(&digest, id)? {
                     continue;
                 }
-                blobs.remove(&digest)?;
+                blobs.remove_if_settled(&digest)?;
             }
         }
         self.db
@@ -475,9 +542,11 @@ impl Store {
     }
 
     fn erase_all(&self, ids: &[i64], at: i64) -> Result<usize> {
+        let transaction = self.db.unchecked_transaction()?;
         for id in ids {
             self.erase(*id, at)?;
         }
+        transaction.commit()?;
         Ok(ids.len())
     }
 
@@ -543,18 +612,29 @@ impl Store {
         }
         let hash = item.fingerprint() as i64;
         let kind = item.kind.map(|k| k.as_str());
+        let rows = self.rows_of(item)?;
+        let transaction = self.db.unchecked_transaction()?;
         self.db.execute(
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text)
              VALUES (?1, ?2, ?3, ?4, ?4, ?4, ?5, ?6)",
-            params![uuid, kind, preview, created_at, hash, fold(preview)],
+            params![
+                uuid,
+                kind,
+                head_of(preview),
+                created_at,
+                hash,
+                fold(preview)
+            ],
         )?;
         let id = self.db.last_insert_rowid();
-        self.write_formats(id, item)?;
+        self.write_rows(id, &rows)?;
+        transaction.commit()?;
         Ok(id)
     }
 
-    fn write_formats(&self, id: i64, item: &Item) -> Result<()> {
+    fn rows_of(&self, item: &Item) -> Result<Vec<FormatRow>> {
+        let mut rows = Vec::with_capacity(item.formats.len());
         for format in &item.formats {
             let (inline, blob, size) = match &format.payload {
                 Payload::Inline(bytes) => (Some(bytes.clone()), None, Some(bytes.len() as i64)),
@@ -569,10 +649,22 @@ impl Store {
                 Payload::Announced { size } => (None, None, size.map(|s| s as i64)),
                 Payload::Absent => (None, None, None),
             };
+            rows.push(FormatRow {
+                id: format.id.clone(),
+                size,
+                inline,
+                blob,
+            });
+        }
+        Ok(rows)
+    }
+
+    fn write_rows(&self, id: i64, rows: &[FormatRow]) -> Result<()> {
+        for row in rows {
             self.db.execute(
                 "INSERT INTO item_formats (item_id, format, size_bytes, inline_data, blob_path)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![id, format.id, size, inline, blob],
+                params![id, row.id, row.size, row.inline, row.blob],
             )?;
         }
         Ok(())
@@ -594,6 +686,8 @@ impl Store {
             let (format, size) = edited.oversized_format().expect("lo acaba de decir");
             return Err(Error::NeedsBlobStore { format, size });
         }
+        let rows = self.rows_of(&edited)?;
+        let transaction = self.db.unchecked_transaction()?;
         let changed = self.db.execute(
             "UPDATE items
              SET kind = ?2, preview_text = ?3, search_text = ?4, search_ocr = '',
@@ -602,7 +696,7 @@ impl Store {
             params![
                 id,
                 edited.kind.map(|kind| kind.as_str()),
-                text,
+                head_of(text),
                 fold(text),
                 edited.fingerprint() as i64,
                 at
@@ -611,9 +705,24 @@ impl Store {
         if changed == 0 {
             return Err(Error::NoSuchItem { id });
         }
-        self.release(id)?;
-        self.write_formats(id, &edited)?;
-        self.checkpoint()
+        let previous = self.blobs_of(id)?;
+        self.db
+            .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
+        self.db
+            .execute("DELETE FROM item_meta WHERE item_id = ?1", [id])?;
+        self.db
+            .execute("DELETE FROM pending_work WHERE item_id = ?1", [id])?;
+        self.write_rows(id, &rows)?;
+        transaction.commit()?;
+        if let Some(blobs) = &self.blobs {
+            for digest in previous {
+                if !self.blob_is_shared(&digest, id)? {
+                    blobs.remove_if_settled(&digest)?;
+                }
+            }
+        }
+        self.checkpoint_briefly()?;
+        Ok(())
     }
 
     pub fn find_by_hash(&self, item: &Item) -> Result<Option<i64>> {
@@ -626,6 +735,61 @@ impl Store {
                 |row| row.get(0),
             )
             .optional()?)
+    }
+
+    pub fn item(&self, id: i64) -> Result<Option<Item>> {
+        let kind: Option<Option<String>> = self
+            .db
+            .query_row(
+                "SELECT kind FROM items WHERE id = ?1 AND deleted_at IS NULL",
+                [id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        let Some(kind) = kind else {
+            return Ok(None);
+        };
+        let mut stmt = self.db.prepare(
+            "SELECT format, size_bytes, inline_data, blob_path FROM item_formats
+             WHERE item_id = ?1 ORDER BY format",
+        )?;
+        let rows = stmt.query_map([id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<i64>>(1)?,
+                row.get::<_, Option<Vec<u8>>>(2)?,
+                row.get::<_, Option<String>>(3)?,
+            ))
+        })?;
+        let mut formats = Vec::new();
+        for row in rows {
+            let (format, size, inline, blob) = row?;
+            let payload = match (inline, blob, size) {
+                (Some(bytes), _, _) => Payload::Inline(bytes),
+                (None, Some(digest), _) => match self
+                    .blobs
+                    .as_ref()
+                    .and_then(|blobs| blobs.get(&digest).ok().flatten())
+                {
+                    Some(bytes) => Payload::Blob(bytes),
+                    None => Payload::Announced {
+                        size: size.map(|s| s as usize),
+                    },
+                },
+                (None, None, Some(size)) => Payload::Announced {
+                    size: Some(size as usize),
+                },
+                (None, None, None) => Payload::Absent,
+            };
+            formats.push(cp_core::item::Format {
+                id: format,
+                payload,
+            });
+        }
+        Ok(Some(Item {
+            kind: kind.and_then(|name| Kind::from_name(&name)),
+            formats,
+        }))
     }
 
     pub fn formats_of(&self, id: i64) -> Result<Vec<String>> {
@@ -653,7 +817,7 @@ impl Store {
             self.release(*id)?;
             self.db.execute("DELETE FROM items WHERE id = ?1", [id])?;
         }
-        self.checkpoint()?;
+        self.checkpoint_briefly()?;
         Ok(doomed.len())
     }
 
@@ -663,26 +827,56 @@ impl Store {
         Ok(())
     }
 
-    pub fn pin(&self, id: i64) -> Result<()> {
-        self.db
-            .execute("UPDATE items SET pinned = 1 WHERE id = ?1", [id])?;
+    pub fn set_pinned(&self, id: i64, pinned: bool, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET pinned = ?2, updated_at = ?3 WHERE id = ?1",
+            params![id, i64::from(pinned), at],
+        )?;
+        Ok(())
+    }
+
+    pub fn set_thumb(&self, id: i64, path: Option<&str>, at: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE items SET thumb_path = ?2, updated_at = ?3 WHERE id = ?1",
+            params![id, path, at],
+        )?;
         Ok(())
     }
 
     pub fn count(&self) -> Result<i64> {
         Ok(self.db.query_row(
-            "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL",
+            "SELECT (SELECT COUNT(*) FROM items)
+                  - (SELECT COUNT(*) FROM items WHERE deleted_at IS NOT NULL)",
             [],
             |row| row.get(0),
         )?)
     }
 
+    pub fn count_matching(&self, filter: &Filter) -> Result<i64> {
+        let Some(clauses) = Clauses::of(filter, true, true) else {
+            return Ok(0);
+        };
+        let sql = format!("SELECT COUNT(*) {}", clauses.source());
+        Ok(self
+            .db
+            .query_row(&sql, params_from_iter(clauses.bound.iter()), |row| {
+                row.get(0)
+            })?)
+    }
+
     pub fn list(&self, filter: &Filter, limit: usize, after: Option<Cursor>) -> Result<Page> {
-        let Some(mut clauses) = Clauses::of(filter, true) else {
+        let Some(mut clauses) = Clauses::of(filter, true, true) else {
             return Ok(Page::default());
         };
         let key = filter.order.key();
+        let terms = filter.query.as_deref().map(terms_of).unwrap_or_default();
         if let Some(cursor) = after {
+            if cursor.order != filter.order {
+                return Err(Error::WrongCursor {
+                    cursor: cursor.order.as_str(),
+                    order: filter.order.as_str(),
+                });
+            }
             clauses
                 .conditions
                 .push(format!("({key} < ? OR ({key} = ? AND items.id < ?))"));
@@ -690,21 +884,14 @@ impl Store {
             clauses.bound.push(Box::new(cursor.key));
             clauses.bound.push(Box::new(cursor.id));
         }
-        let sql = format!(
-            "SELECT items.id, items.modified_at, items.created_at, items.kind,
-                    items.preview_text, items.app_source, items.label, items.card_color,
-                    items.thumb_path, items.paste_count, items.last_used_at,
-                    items.broken_since, items.pinned, items.search_ocr, {key}
-             {} ORDER BY {key} DESC, items.id DESC LIMIT ?",
-            clauses.source()
-        );
+        let sql = page_sql(&clauses, key, !terms.is_empty());
         let fetch = i64::try_from(limit).map_or(i64::MAX, |limit| limit.saturating_add(1));
         clauses.bound.push(Box::new(fetch));
 
-        let terms = filter.query.as_deref().map(terms_of).unwrap_or_default();
         let mut stmt = self.db.prepare(&sql)?;
         let rows = stmt.query_map(params_from_iter(clauses.bound.iter()), |row| {
             let ocr: String = row.get(13)?;
+            let whole: String = row.get(15)?;
             let mut listed = Listed {
                 id: row.get(0)?,
                 modified_at: row.get(1)?,
@@ -723,7 +910,7 @@ impl Store {
                 pinned: row.get::<_, i64>(12)? == 1,
                 snippet: None,
             };
-            listed.snippet = snippet_of(&listed, &ocr, &terms);
+            listed.snippet = snippet_of(&listed, &whole, &ocr, &terms);
             Ok((listed, row.get::<_, i64>(14)?))
         })?;
         let mut keyed: Vec<(Listed, i64)> = rows.collect::<rusqlite::Result<_>>()?;
@@ -731,6 +918,7 @@ impl Store {
         keyed.truncate(limit);
         let next = match keyed.last() {
             Some((last, key)) if more => Some(Cursor {
+                order: filter.order,
                 key: *key,
                 id: last.id,
             }),
@@ -743,7 +931,7 @@ impl Store {
     }
 
     pub fn facets(&self, filter: &Filter) -> Result<Vec<Facet>> {
-        let Some(mut clauses) = Clauses::of(filter, false) else {
+        let Some(mut clauses) = Clauses::of(filter, false, true) else {
             return Ok(Vec::new());
         };
         clauses.conditions.push("items.kind IS NOT NULL".into());
@@ -766,14 +954,20 @@ impl Store {
         Ok(facets)
     }
 
-    pub fn distinct_apps(&self) -> Result<Vec<AppCount>> {
-        let mut stmt = self.db.prepare(
-            "SELECT MIN(app_source), COUNT(*) FROM items
-             WHERE deleted_at IS NULL AND app_source IS NOT NULL
-             GROUP BY search_app
-             ORDER BY COUNT(*) DESC, MIN(app_source)",
-        )?;
-        let rows = stmt.query_map([], |row| {
+    pub fn distinct_apps(&self, filter: &Filter) -> Result<Vec<AppCount>> {
+        let Some(mut clauses) = Clauses::of(filter, true, false) else {
+            return Ok(Vec::new());
+        };
+        clauses
+            .conditions
+            .push("items.app_source IS NOT NULL".into());
+        let sql = format!(
+            "SELECT MIN(items.app_source), COUNT(*) {} GROUP BY items.search_app
+             ORDER BY COUNT(*) DESC, MIN(items.app_source)",
+            clauses.source()
+        );
+        let mut stmt = self.db.prepare(&sql)?;
+        let rows = stmt.query_map(params_from_iter(clauses.bound.iter()), |row| {
             Ok(AppCount {
                 app: row.get(0)?,
                 count: row.get(1)?,
@@ -783,26 +977,30 @@ impl Store {
     }
 
     pub fn clear_older_than(&self, cutoff: i64) -> Result<usize> {
+        let removed = self.expire(cutoff, cutoff)?;
+        self.checkpoint_briefly()?;
+        Ok(removed)
+    }
+
+    fn expire(&self, cutoff: i64, at: i64) -> Result<usize> {
         let doomed = self.ids_where(
             "modified_at < ?1 AND pinned = 0 AND deleted_at IS NULL",
             &[&cutoff],
         )?;
-        let removed = self.erase_all(&doomed, cutoff)?;
-        self.checkpoint()?;
-        Ok(removed)
+        self.erase_all(&doomed, at)
     }
 
     pub fn clear_all_unpinned(&self, at: i64) -> Result<usize> {
         let doomed = self.ids_where("pinned = 0 AND deleted_at IS NULL", &[])?;
         let removed = self.erase_all(&doomed, at)?;
-        self.checkpoint()?;
+        self.checkpoint_briefly()?;
         Ok(removed)
     }
 
     pub fn usage(&self) -> Result<Usage> {
         let items = self.count()?;
         let inline: i64 = self.db.query_row(
-            "SELECT COALESCE(SUM(LENGTH(inline_data)), 0) FROM item_formats",
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM item_formats WHERE inline_data IS NOT NULL",
             [],
             |row| row.get(0),
         )?;
@@ -825,11 +1023,7 @@ impl Store {
             swept.broken = self.purge_broken_before(now - grace)?;
         }
         if let Some(age) = policy.keep_for {
-            let doomed = self.ids_where(
-                "modified_at < ?1 AND pinned = 0 AND deleted_at IS NULL",
-                &[&(now - age)],
-            )?;
-            swept.expired = self.erase_all(&doomed, now)?;
+            swept.expired = self.expire(now - age, now)?;
         }
         if let Some(keep) = policy.keep_at_most {
             let excess = (self.count()? - keep).max(0);
@@ -846,7 +1040,7 @@ impl Store {
             let referenced = self.referenced_blobs()?;
             swept.orphans = blobs.sweep(&|digest| referenced.contains(digest))?;
         }
-        self.checkpoint()?;
+        swept.truncated = self.checkpoint()?;
         Ok(swept)
     }
 
@@ -855,12 +1049,16 @@ impl Store {
         let mut left = usize::MAX;
         loop {
             let usage = self.usage()?.bytes;
+            if usage <= limit {
+                return Ok(evicted);
+            }
             let candidates = self.eviction_candidates()?;
-            if usage <= limit || candidates.len() >= left {
+            if candidates.len() >= left {
                 return Ok(evicted);
             }
             left = candidates.len();
             let mut freed = 0;
+            let transaction = self.db.unchecked_transaction()?;
             for (id, bytes) in candidates {
                 self.erase(id, at)?;
                 evicted += 1;
@@ -869,6 +1067,7 @@ impl Store {
                     break;
                 }
             }
+            transaction.commit()?;
         }
     }
 
@@ -894,54 +1093,6 @@ impl Store {
     }
 
     pub const PAGE: usize = 100;
-
-    pub fn search(&self, query: &str) -> Result<Vec<String>> {
-        self.search_page(query, Self::PAGE, 0)
-    }
-
-    pub fn search_after(
-        &self,
-        query: &str,
-        limit: usize,
-        after: Option<i64>,
-    ) -> Result<Vec<(i64, String)>> {
-        let Some(expression) = fts_expression(query) else {
-            return Ok(Vec::new());
-        };
-        let mut stmt = self.db.prepare(
-            "SELECT items.modified_at, items.preview_text
-             FROM items_fts
-             JOIN items ON items.id = items_fts.rowid
-             WHERE items_fts MATCH ?1
-               AND items.deleted_at IS NULL
-               AND (?2 IS NULL OR items.modified_at < ?2)
-             ORDER BY items.modified_at DESC
-             LIMIT ?3",
-        )?;
-        let rows = stmt.query_map(rusqlite::params![expression, after, limit as i64], |row| {
-            Ok((row.get(0)?, row.get(1)?))
-        })?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
-    pub fn search_page(&self, query: &str, limit: usize, offset: usize) -> Result<Vec<String>> {
-        let Some(expression) = fts_expression(query) else {
-            return Ok(Vec::new());
-        };
-        let mut stmt = self.db.prepare(
-            "SELECT items.preview_text
-             FROM items_fts
-             JOIN items ON items.id = items_fts.rowid
-             WHERE items_fts MATCH ?1 AND items.deleted_at IS NULL
-             ORDER BY items.modified_at DESC
-             LIMIT ?2 OFFSET ?3",
-        )?;
-        let rows = stmt.query_map(
-            rusqlite::params![expression, limit as i64, offset as i64],
-            |row| row.get::<_, String>(0),
-        )?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -959,6 +1110,24 @@ pub struct Swept {
     pub over_count: usize,
     pub over_bytes: usize,
     pub orphans: usize,
+    pub truncated: bool,
+}
+
+pub const PREVIEW_UP_TO: usize = 64 * 1024;
+
+fn head_of(text: &str) -> &str {
+    let mut end = text.len().min(PREVIEW_UP_TO);
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    &text[..end]
+}
+
+struct FormatRow {
+    id: String,
+    size: Option<i64>,
+    inline: Option<Vec<u8>>,
+    blob: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -967,15 +1136,38 @@ pub struct Usage {
     pub bytes: i64,
 }
 
-fn snippet_of(listed: &Listed, ocr: &str, terms: &[String]) -> Option<Snippet> {
+pub const PREVIEW_CHARS: usize = 2_000;
+
+fn page_sql(clauses: &Clauses, key: &str, with_query: bool) -> String {
+    format!(
+        "SELECT items.id, items.modified_at, items.created_at, items.kind,
+                SUBSTR(items.preview_text, 1, {preview}), items.app_source, items.label,
+                items.card_color, items.thumb_path, items.paste_count, items.last_used_at,
+                items.broken_since, items.pinned, {ocr}, page.key, {whole}
+         FROM (SELECT items.id AS id, {key} AS key {}
+               ORDER BY {key} DESC, items.id DESC LIMIT ?) AS page
+         JOIN items ON items.id = page.id
+         ORDER BY page.key DESC, page.id DESC",
+        clauses.source(),
+        preview = PREVIEW_CHARS,
+        ocr = if with_query { "items.search_ocr" } else { "''" },
+        whole = if with_query {
+            "items.preview_text"
+        } else {
+            "''"
+        }
+    )
+}
+
+fn snippet_of(listed: &Listed, whole: &str, ocr: &str, terms: &[String]) -> Option<Snippet> {
     if terms.is_empty() {
         return None;
     }
     let sources = [
-        (Where::Text, Some(listed.preview.as_str())),
-        (Where::Label, listed.label.as_deref()),
-        (Where::App, listed.app.as_deref()),
-        (Where::Ocr, Some(ocr)),
+        (FoundIn::Text, Some(whole)),
+        (FoundIn::Label, listed.label.as_deref()),
+        (FoundIn::App, listed.app.as_deref()),
+        (FoundIn::Ocr, Some(ocr)),
     ];
     sources.into_iter().find_map(|(found_in, text)| {
         let excerpt = excerpt(text?, terms, EXCERPT_CHARS)?;
@@ -1031,10 +1223,48 @@ fn under(path: &std::path::Path, root: &std::path::Path) -> bool {
 }
 
 #[cfg(test)]
+fn on_disk() -> (tempfile::TempDir, Store) {
+    let dir = tempfile::tempdir().expect("carpeta");
+    let store = Store::open(&dir.path().join("history.db")).expect("abre");
+    (dir, store)
+}
+
+#[cfg(test)]
+fn captured(text: &str) -> Item {
+    Item {
+        kind: Some(Kind::Text),
+        formats: vec![
+            cp_core::item::Format {
+                id: "public.utf8-plain-text".into(),
+                payload: Payload::Inline(text.as_bytes().to_vec()),
+            },
+            cp_core::item::Format {
+                id: "public.rtf".into(),
+                payload: Payload::Inline(format!("{{\\rtf1 {text}}}").into_bytes()),
+            },
+        ],
+    }
+}
+
+#[cfg(test)]
+fn search(store: &Store, query: &str) -> Vec<String> {
+    let filter = Filter {
+        query: Some(query.into()),
+        ..Default::default()
+    };
+    store
+        .list(&filter, Store::PAGE, None)
+        .expect("consulta")
+        .rows
+        .into_iter()
+        .map(|one| one.preview)
+        .collect()
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use cp_core::item::Format;
-    use cp_core::kind::Kind;
 
     fn seeded() -> Store {
         let store = Store::in_memory().expect("esquema");
@@ -1064,7 +1294,7 @@ mod tests {
             ("encyclopaedia", "encyclopædia britannica"),
             ("lodz", "Łódź centrum"),
         ] {
-            let hits = store.search(query).expect("consulta");
+            let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit == expected),
                 "buscando «{query}» no apareció «{expected}»: {hits:?}"
@@ -1082,7 +1312,7 @@ mod tests {
             ("Łódź", "Łódź centrum"),
             ("Gonçalves", "Peçanha e Gonçalves"),
         ] {
-            let hits = store.search(query).expect("consulta");
+            let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit == expected),
                 "buscando «{query}» no apareció «{expected}»: {hits:?}"
@@ -1093,7 +1323,7 @@ mod tests {
     #[test]
     fn the_stored_text_keeps_its_accents() {
         let store = seeded();
-        let hits = store.search("cafe").expect("consulta");
+        let hits = search(&store, "cafe");
         assert_eq!(
             hits.first().map(String::as_str),
             Some("el café de la esquina"),
@@ -1247,7 +1477,7 @@ mod tests {
         let id = store
             .insert_text("uuid-fijado", "importante", 1)
             .expect("insert");
-        store.pin(id).expect("fija");
+        store.set_pinned(id, true, 0).expect("fija");
         store.mark_broken(id, 100).expect("marca");
         assert_eq!(store.purge_broken_before(9999).expect("purga"), 0);
         assert_eq!(store.count().expect("cuenta"), 1);
@@ -1286,7 +1516,14 @@ mod tests {
             "'; DROP TABLE items; --",
         ] {
             store
-                .search(query)
+                .list(
+                    &Filter {
+                        query: Some(query.into()),
+                        ..Default::default()
+                    },
+                    10,
+                    None,
+                )
                 .unwrap_or_else(|why| panic!("«{query}» rompió la búsqueda: {why}"));
         }
     }
@@ -1296,7 +1533,7 @@ mod tests {
         let store = seeded();
         for empty in ["", "   ", "\t", "-", "!!", "***"] {
             assert!(
-                store.search(empty).expect("consulta").is_empty(),
+                search(&store, empty).is_empty(),
                 "«{empty}» debería no devolver nada"
             );
         }
@@ -1306,7 +1543,7 @@ mod tests {
     fn the_punctuation_around_a_word_does_not_hide_it() {
         let store = seeded();
         for query in ["-café", "^café", "(café)", "«café»", "café!"] {
-            let hits = store.search(query).expect("consulta");
+            let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit.contains("café")),
                 "«{query}» no encontró el café"
@@ -1337,7 +1574,7 @@ mod tests {
             ("fiesta", "🎉 fiesta 🎊"),
             ("한국어", "한국어 텍스트"),
         ] {
-            let hits = store.search(query).expect("consulta");
+            let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit == expected),
                 "buscando «{query}» faltó «{expected}»: {hits:?}"
@@ -1354,7 +1591,7 @@ mod tests {
             "paja ".repeat(50_000)
         );
         store.insert_text("uuid-largo", &long, 1).expect("insert");
-        assert_eq!(store.search("aguja").expect("consulta").len(), 1);
+        assert_eq!(search(&store, "aguja").len(), 1);
     }
 
     #[test]
@@ -1408,48 +1645,31 @@ mod tests {
                 .insert_text(&format!("uuid-{at}"), &format!("comun {at}"), at)
                 .expect("insert");
         }
-        assert_eq!(store.search("comun").expect("consulta").len(), Store::PAGE);
-        assert_eq!(
-            store.search_page("comun", 10, 0).expect("consulta").len(),
-            10
-        );
+        let page = search(&store, "comun");
+        assert_eq!(page.len(), Store::PAGE);
     }
 
     #[test]
-    fn paging_walks_the_whole_result_without_repeating() {
-        let store = Store::in_memory().expect("esquema");
-        for at in 0..25 {
-            store
-                .insert_text(&format!("uuid-{at}"), &format!("pagina {at}"), at)
-                .expect("insert");
-        }
-        let first = store.search_page("pagina", 10, 0).expect("consulta");
-        let second = store.search_page("pagina", 10, 10).expect("consulta");
-        let last = store.search_page("pagina", 10, 20).expect("consulta");
-        assert_eq!((first.len(), second.len(), last.len()), (10, 10, 5));
-        assert!(
-            first.iter().all(|one| !second.contains(one)),
-            "las páginas no pueden solaparse"
-        );
-    }
-
-    #[test]
-    fn the_cursor_walks_the_result_without_repeating_or_skipping() {
+    fn the_cursor_walks_a_search_without_repeating_or_skipping() {
         let store = Store::in_memory().expect("esquema");
         for at in 0..25 {
             store
                 .insert_text(&format!("uuid-{at}"), &format!("cursor {at}"), at)
                 .expect("insert");
         }
+        let filter = Filter {
+            query: Some("cursor".into()),
+            ..Default::default()
+        };
         let mut seen = Vec::new();
         let mut after = None;
-        for _ in 0..10 {
-            let page = store.search_after("cursor", 10, after).expect("consulta");
-            if page.is_empty() {
-                break;
+        loop {
+            let page = store.list(&filter, 10, after).expect("consulta");
+            seen.extend(page.rows.into_iter().map(|one| one.preview));
+            match page.next {
+                Some(cursor) => after = Some(cursor),
+                None => break,
             }
-            after = page.last().map(|(at, _)| *at);
-            seen.extend(page.into_iter().map(|(_, text)| text));
         }
         assert_eq!(seen.len(), 25, "recorrió todo sin quedarse atascado");
         let mut unique = seen.clone();
@@ -1459,38 +1679,16 @@ mod tests {
     }
 
     #[test]
-    fn a_cursor_past_the_oldest_item_is_empty() {
-        let store = seeded();
-        assert!(
-            store
-                .search_after("café", 10, Some(-1))
-                .expect("consulta")
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn an_offset_past_the_end_is_empty_not_an_error() {
-        let store = seeded();
-        assert!(
-            store
-                .search_page("café", 10, 9999)
-                .expect("consulta")
-                .is_empty()
-        );
-    }
-
-    #[test]
     fn copying_something_again_lifts_it_instead_of_duplicating_it() {
         let store = Store::in_memory().expect("esquema");
         let first = store.insert_text("uuid-a", "lo viejo", 10).expect("insert");
         store.insert_text("uuid-b", "lo nuevo", 20).expect("insert");
 
-        let before = store.search("lo").expect("consulta");
+        let before = search(&store, "lo");
         assert_eq!(before.first().map(String::as_str), Some("lo nuevo"));
 
         store.reactivate(first, 30).expect("recopiado");
-        let after = store.search("lo").expect("consulta");
+        let after = search(&store, "lo");
         assert_eq!(
             after.first().map(String::as_str),
             Some("lo viejo"),
@@ -1504,11 +1702,11 @@ mod tests {
         let id = store
             .insert_text("uuid-etq", "un texto cualquiera", 1)
             .expect("insert");
-        assert!(store.search("factura").expect("consulta").is_empty());
+        assert!(search(&store, "factura").is_empty());
         store
             .set_label(id, Some("Factura Mayo"), 2)
             .expect("etiqueta");
-        let hits = store.search("factura").expect("consulta");
+        let hits = search(&store, "factura");
         assert_eq!(hits.len(), 1, "la etiqueta entra en el índice");
     }
 
@@ -1519,7 +1717,7 @@ mod tests {
             .insert_text("uuid-app", "algo copiado", 1)
             .expect("insert");
         store.set_source(id, "Safari", 2).expect("origen");
-        assert_eq!(store.search("safari").expect("consulta").len(), 1);
+        assert_eq!(search(&store, "safari").len(), 1);
     }
 
     #[test]
@@ -1531,8 +1729,8 @@ mod tests {
         store
             .set_label(id, Some("Reunión Diseño"), 2)
             .expect("etiqueta");
-        assert_eq!(store.search("reunion").expect("consulta").len(), 1);
-        assert_eq!(store.search("diseño").expect("consulta").len(), 1);
+        assert_eq!(search(&store, "reunion").len(), 1);
+        assert_eq!(search(&store, "diseño").len(), 1);
     }
 
     #[test]
@@ -1542,9 +1740,9 @@ mod tests {
             .insert_text("uuid-quita", "contenido", 1)
             .expect("insert");
         store.set_label(id, Some("temporal"), 2).expect("pone");
-        assert_eq!(store.search("temporal").expect("consulta").len(), 1);
+        assert_eq!(search(&store, "temporal").len(), 1);
         store.set_label(id, None, 3).expect("quita");
-        assert!(store.search("temporal").expect("consulta").is_empty());
+        assert!(search(&store, "temporal").is_empty());
     }
 
     #[test]
@@ -1559,7 +1757,7 @@ mod tests {
 
         assert_eq!(store.count().expect("cuenta"), before - 1, "deja de contar");
         assert!(
-            store.search("contraseña").expect("consulta").is_empty(),
+            search(&store, "contraseña").is_empty(),
             "no puede seguir encontrándose"
         );
         assert!(
@@ -1711,7 +1909,7 @@ mod tests {
             .expect("insert");
 
         assert!(
-            store.search("pedido").expect("consulta").is_empty(),
+            search(&store, "pedido").is_empty(),
             "todavía no se le ha pasado el OCR"
         );
         assert_eq!(store.pending_ocr(10).expect("pendientes"), vec![id]);
@@ -1721,11 +1919,11 @@ mod tests {
             .expect("ocr");
 
         assert_eq!(
-            store.search("pedido").expect("consulta").len(),
+            search(&store, "pedido").len(),
             1,
             "una captura de pantalla se encuentra por lo que pone dentro"
         );
-        assert_eq!(store.search("AB-4417").expect("consulta").len(), 1);
+        assert_eq!(search(&store, "AB-4417").len(), 1);
         assert!(
             store.pending_ocr(10).expect("pendientes").is_empty(),
             "ya no está pendiente"
@@ -1746,8 +1944,8 @@ mod tests {
             .insert_item("uuid-tilde", &image, "", 1)
             .expect("insert");
         store.set_ocr_text(id, "Reunión en Múnich", 2).expect("ocr");
-        assert_eq!(store.search("reunion").expect("consulta").len(), 1);
-        assert_eq!(store.search("munich").expect("consulta").len(), 1);
+        assert_eq!(search(&store, "reunion").len(), 1);
+        assert_eq!(search(&store, "munich").len(), 1);
     }
 
     #[test]
@@ -1768,16 +1966,30 @@ mod tests {
             .expect("ocr");
         store.mark_deleted(id, 3).expect("borra");
         assert!(
-            store.search("recuperacion").expect("consulta").is_empty(),
+            search(&store, "recuperacion").is_empty(),
             "lo leído dentro de la imagen también es contenido del usuario"
         );
+    }
+
+    fn nowhere_on_disk(dir: &std::path::Path, words: &[&str]) {
+        for file in ["history.db", "history.db-wal"] {
+            let bytes = std::fs::read(dir.join(file)).expect("se puede leer");
+            for word in words {
+                assert!(
+                    !bytes
+                        .windows(word.len())
+                        .any(|window| window == word.as_bytes()),
+                    "«{word}» sigue legible en {file}"
+                );
+            }
+        }
     }
 
     #[test]
     fn a_deleted_secret_is_not_left_lying_in_the_write_ahead_log() {
         let dir = tempfile::tempdir().expect("carpeta");
         let path = dir.path().join("history.db");
-        let secret = "hunter2-correo-del-banco";
+        let secret = "zqxjkvbnm7hunter2 correo del banco";
         let store = Store::open(&path).expect("abre");
         let id = store
             .insert_text("uuid-secreto", secret, 1)
@@ -1785,15 +1997,47 @@ mod tests {
 
         store.mark_deleted(id, 2).expect("borra");
 
-        for file in ["history.db", "history.db-wal"] {
-            let bytes = std::fs::read(dir.path().join(file)).unwrap_or_default();
-            assert!(
-                !bytes
-                    .windows(secret.len())
-                    .any(|window| window == secret.as_bytes()),
-                "«{secret}» sigue legible en {file}"
-            );
+        nowhere_on_disk(dir.path(), &["zqxjkvbnm7hunter2", "correo", "banco"]);
+    }
+
+    #[test]
+    fn the_search_index_forgets_every_token_of_what_was_removed() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let store = Store::open(&dir.path().join("history.db")).expect("abre");
+        type Removal = dyn Fn(&Store, i64);
+        let cases: [(&str, &Removal); 4] = [
+            ("qwzplk1secreto", &|store, id| {
+                store.mark_deleted(id, 9).expect("borra")
+            }),
+            ("qwzplk2secreto", &|store, id| {
+                store.update_text(id, "inocente", 9).expect("edita")
+            }),
+            ("qwzplk3secreto", &|store, id| {
+                store
+                    .set_label(id, Some("qwzplk3etiqueta"), 8)
+                    .expect("pone");
+                store.set_label(id, None, 9).expect("quita");
+            }),
+            ("qwzplk4secreto", &|store, id| {
+                store.mark_broken(id, 8).expect("roto");
+                store.purge_broken_before(10).expect("purga");
+            }),
+        ];
+        for (at, (word, remove)) in cases.into_iter().enumerate() {
+            let id = store
+                .insert_text(&format!("uuid-{at}"), word, 1)
+                .expect("insert");
+            remove(&store, id);
         }
+        nowhere_on_disk(
+            dir.path(),
+            &[
+                "qwzplk1secreto",
+                "qwzplk2secreto",
+                "qwzplk3etiqueta",
+                "qwzplk4secreto",
+            ],
+        );
     }
 
     #[test]
@@ -1812,7 +2056,7 @@ mod tests {
         let reopened = Store::open(&path).expect("reabre");
         assert_eq!(reopened.count().expect("cuenta"), 1);
         assert_eq!(
-            reopened.search("sobrevive").expect("consulta").len(),
+            search(&reopened, "sobrevive").len(),
             1,
             "y el índice también sobrevive"
         );
@@ -2027,12 +2271,6 @@ mod tests {
             vacuum, 2,
             "el modo se guarda en el archivo y debe seguir ahí"
         );
-    }
-
-    fn on_disk() -> (tempfile::TempDir, Store) {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let store = Store::open(&dir.path().join("history.db")).expect("abre");
-        (dir, store)
     }
 
     fn big_image(byte: u8) -> Item {
@@ -2395,7 +2633,7 @@ mod tests {
             .expect("listado")
             .rows;
         let id = listed.first().expect("hay").id;
-        store.pin(id).expect("fija");
+        store.set_pinned(id, true, 0).expect("fija");
         let filter = Filter {
             pinned_only: true,
             ..Default::default()
@@ -2470,7 +2708,9 @@ mod tests {
             .expect("listado")
             .rows;
         let oldest = listed.last().expect("hay").id;
-        store.pin(oldest).expect("fija el más viejo");
+        store
+            .set_pinned(oldest, true, 0)
+            .expect("fija el más viejo");
 
         let removed = store.clear_older_than(35).expect("retención");
         assert_eq!(
@@ -2495,7 +2735,7 @@ mod tests {
             .list(&Filter::default(), 10, None)
             .expect("listado")
             .rows;
-        store.pin(listed[0].id).expect("fija");
+        store.set_pinned(listed[0].id, true, 0).expect("fija");
         let removed = store.clear_all_unpinned(100).expect("vacía");
         assert_eq!(removed, 3);
         assert_eq!(store.count().expect("cuenta"), 1);
@@ -2511,30 +2751,13 @@ mod tests {
     #[test]
     fn a_word_that_is_not_there_finds_nothing() {
         let store = seeded();
-        assert!(store.search("berlin").expect("consulta").is_empty());
+        assert!(search(&store, "berlin").is_empty());
     }
 }
 
 #[cfg(test)]
 mod identity {
     use super::*;
-    use cp_core::item::Format;
-
-    fn captured(text: &str) -> Item {
-        Item {
-            kind: None,
-            formats: vec![
-                Format {
-                    id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(text.as_bytes().to_vec()),
-                },
-                Format {
-                    id: "public.rtf".into(),
-                    payload: Payload::Inline(format!("{{\\rtf1 {text}}}").into_bytes()),
-                },
-            ],
-        }
-    }
 
     #[test]
     fn what_was_captured_is_found_again() {
@@ -2622,7 +2845,7 @@ mod listing {
         store.set_label(id, Some("Arranque"), 60).expect("etiqueta");
         store.set_color(id, 5, 61).expect("color");
         store.record_paste(id, 62).expect("pega");
-        store.pin(id).expect("fija");
+        store.set_pinned(id, true, 0).expect("fija");
         let card = all(&store, &Filter::default())
             .into_iter()
             .find(|one| one.id == id)
@@ -2652,7 +2875,7 @@ mod listing {
         let rows = all(&store, &filter);
         assert_eq!(rows.len(), 1);
         let snippet = rows[0].snippet.as_ref().expect("fragmento");
-        assert_eq!(snippet.found_in, Where::Text);
+        assert_eq!(snippet.found_in, FoundIn::Text);
         let marked: Vec<&str> = snippet
             .excerpt
             .segments
@@ -2678,7 +2901,7 @@ mod listing {
         let rows = all(&store, &filter);
         assert_eq!(rows.len(), 1);
         let snippet = rows[0].snippet.as_ref().expect("fragmento");
-        assert_eq!(snippet.found_in, Where::Label);
+        assert_eq!(snippet.found_in, FoundIn::Label);
         assert_eq!(snippet.excerpt.plain(), "Factura mayo");
     }
 
@@ -2705,7 +2928,7 @@ mod listing {
         let rows = all(&store, &filter);
         assert_eq!(rows.len(), 1);
         let snippet = rows[0].snippet.as_ref().expect("fragmento");
-        assert_eq!(snippet.found_in, Where::Ocr);
+        assert_eq!(snippet.found_in, FoundIn::Ocr);
         assert!(snippet.excerpt.plain().contains("ab-4417"));
     }
 
@@ -2720,7 +2943,7 @@ mod listing {
         assert_eq!(rows.len(), 2);
         assert!(
             rows.iter()
-                .all(|one| one.snippet.as_ref().map(|s| s.found_in) == Some(Where::App))
+                .all(|one| one.snippet.as_ref().map(|s| s.found_in) == Some(FoundIn::App))
         );
     }
 
@@ -2822,7 +3045,7 @@ mod listing {
             .set_label(rows[1].id, Some("nota"), 60)
             .expect("etiqueta");
         let by_label = Filter {
-            label: Some("nota".into()),
+            label_query: Some("nota".into()),
             ..Default::default()
         };
         let found = all(&store, &by_label);
@@ -2846,7 +3069,7 @@ mod listing {
             .expect("etiqueta");
         let filter = Filter {
             query: Some("main".into()),
-            label: Some("arranque".into()),
+            label_query: Some("arranque".into()),
             ..Default::default()
         };
         assert_eq!(previews(&all(&store, &filter)), vec!["fn main() {}"]);
@@ -2856,7 +3079,7 @@ mod listing {
     fn a_label_query_with_nothing_usable_finds_nothing() {
         let store = history();
         let filter = Filter {
-            label: Some("!!!".into()),
+            label_query: Some("!!!".into()),
             ..Default::default()
         };
         assert!(all(&store, &filter).is_empty());
@@ -3016,7 +3239,7 @@ mod listing {
     #[test]
     fn the_applications_come_with_their_counts_most_used_first() {
         let store = history();
-        let apps = store.distinct_apps().expect("apps");
+        let apps = store.distinct_apps(&Filter::default()).expect("apps");
         assert_eq!(
             apps,
             vec![
@@ -3041,7 +3264,7 @@ mod listing {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
         store.set_source(id, "slack", 60).expect("origen");
-        let apps = store.distinct_apps().expect("apps");
+        let apps = store.distinct_apps(&Filter::default()).expect("apps");
         let slack = apps.iter().find(|one| one.app == "Slack").expect("está");
         assert_eq!(slack.count, 3);
         assert!(apps.iter().all(|one| one.app != "slack"));
@@ -3054,7 +3277,7 @@ mod listing {
         store.mark_deleted(id, 99).expect("borra");
         let facets = store.facets(&Filter::default()).expect("facetas");
         assert!(facets.iter().all(|one| one.kind != Kind::Code));
-        let apps = store.distinct_apps().expect("apps");
+        let apps = store.distinct_apps(&Filter::default()).expect("apps");
         assert_eq!(
             apps.iter()
                 .find(|one| one.app == "Code")
@@ -3066,17 +3289,18 @@ mod listing {
     #[test]
     fn no_order_sorts_the_history_in_memory() {
         let store = history();
-        for order in [Order::Recent, Order::MostPasted, Order::LastUsed] {
-            let key = order.key();
+        for order in Order::ALL {
+            let filter = Filter {
+                order,
+                ..Default::default()
+            };
+            let clauses = Clauses::of(&filter, true, true).expect("sin término hay cláusulas");
+            let sql = page_sql(&clauses, order.key(), false);
             let plan: Vec<String> = store
                 .db
-                .prepare(&format!(
-                    "EXPLAIN QUERY PLAN SELECT items.id FROM items
-                     WHERE items.deleted_at IS NULL AND items.broken_since IS NULL
-                     ORDER BY {key} DESC, items.id DESC LIMIT 50"
-                ))
+                .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
                 .expect("prepara")
-                .query_map([], |row| row.get::<_, String>(3))
+                .query_map([50i64], |row| row.get::<_, String>(3))
                 .expect("plan")
                 .map(|row| row.expect("fila"))
                 .collect();
@@ -3155,6 +3379,317 @@ mod listing {
     }
 
     #[test]
+    fn the_footer_count_matches_what_the_list_shows() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.mark_broken(id, 99).expect("roto");
+        assert_eq!(
+            store.count().expect("total"),
+            5,
+            "el total sigue contando rotos"
+        );
+        assert_eq!(
+            store.count_matching(&Filter::default()).expect("cuenta"),
+            4,
+            "lo que el pie enseña es lo que la lista enseña"
+        );
+        let filter = Filter {
+            query: Some("nota".into()),
+            apps: vec!["safari".into()],
+            ..Default::default()
+        };
+        assert_eq!(store.count_matching(&filter).expect("cuenta"), 1);
+        let impossible = Filter {
+            query: Some("!!!".into()),
+            ..Default::default()
+        };
+        assert_eq!(store.count_matching(&impossible).expect("cuenta"), 0);
+        let facets: i64 = store
+            .facets(&Filter::default())
+            .expect("facetas")
+            .iter()
+            .map(|one| one.count)
+            .sum();
+        assert_eq!(facets, 4, "y las pestañas suman lo mismo");
+        assert_eq!(
+            store
+                .distinct_apps(&Filter::default())
+                .expect("apps")
+                .iter()
+                .map(|one| one.count)
+                .sum::<i64>(),
+            4,
+            "las apps tampoco cuentan rotos"
+        );
+    }
+
+    #[test]
+    fn every_order_has_a_stable_name_that_comes_back() {
+        for order in Order::ALL {
+            assert_eq!(Order::from_name(order.as_str()), Some(order));
+        }
+        let mut names: Vec<&str> = Order::ALL.iter().map(|order| order.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), 3);
+        assert_eq!(Order::from_name("Recent"), None, "el nombre es exacto");
+    }
+
+    #[test]
+    fn a_cursor_from_another_order_is_refused_not_misread() {
+        let store = history();
+        let recent = store.list(&Filter::default(), 2, None).expect("página");
+        let cursor = recent.next.expect("hay más");
+        let pasted = Filter {
+            order: Order::MostPasted,
+            ..Default::default()
+        };
+        assert!(matches!(
+            store.list(&pasted, 2, Some(cursor)),
+            Err(Error::WrongCursor { .. })
+        ));
+        let text = cursor.encode();
+        assert_eq!(
+            Cursor::decode(&text),
+            Some(cursor),
+            "va y vuelve como texto"
+        );
+        assert_eq!(Cursor::decode("recent:1"), None);
+        assert_eq!(Cursor::decode("sideways:1:2"), None);
+        assert_eq!(Cursor::decode("recent:1:2:3"), None);
+        assert_eq!(Cursor::decode("recent:x:2"), None);
+    }
+
+    #[test]
+    fn the_preview_is_capped_but_the_excerpt_still_sees_the_whole_text() {
+        let store = Store::in_memory().expect("esquema");
+        let text = format!("{}aguja", "paja ".repeat(1_000));
+        store.insert_text("uuid-largo", &text, 1).expect("insert");
+        let rows = store
+            .list(&Filter::default(), 10, None)
+            .expect("lista")
+            .rows;
+        assert_eq!(rows[0].preview.chars().count(), PREVIEW_CHARS);
+        let filter = Filter {
+            query: Some("aguja".into()),
+            ..Default::default()
+        };
+        let rows = store.list(&filter, 10, None).expect("lista").rows;
+        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        assert!(
+            snippet
+                .excerpt
+                .segments
+                .iter()
+                .any(|one| one.matched && one.text == "aguja"),
+            "la aguja está más allá del tope de la vista previa"
+        );
+    }
+
+    #[test]
+    fn the_applications_follow_the_search_but_not_their_own_filter() {
+        let store = history();
+        let within = Filter {
+            query: Some("nota".into()),
+            apps: vec!["Safari".into()],
+            ..Default::default()
+        };
+        let apps = store.distinct_apps(&within).expect("apps");
+        assert_eq!(
+            apps.iter().map(|one| one.app.as_str()).collect::<Vec<_>>(),
+            vec!["Code", "Safari"],
+            "las dos apps con una nota, aunque el filtro pida solo Safari"
+        );
+        let impossible = Filter {
+            query: Some("!!!".into()),
+            ..Default::default()
+        };
+        assert!(store.distinct_apps(&impossible).expect("apps").is_empty());
+    }
+
+    #[test]
+    fn pinning_can_be_undone_and_moves_the_version() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.set_pinned(id, true, 70).expect("fija");
+        assert!(all(&store, &Filter::default())[0].pinned);
+        assert!(
+            store
+                .changed_since(60)
+                .expect("cambios")
+                .contains(&"uuid-5".to_string())
+        );
+        store.set_pinned(id, false, 71).expect("suelta");
+        assert!(!all(&store, &Filter::default())[0].pinned);
+    }
+
+    #[test]
+    fn a_thumbnail_path_can_be_set_and_shows_on_the_card() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store
+            .set_thumb(id, Some("thumbs/5.png"), 70)
+            .expect("miniatura");
+        assert_eq!(
+            all(&store, &Filter::default())[0].thumb_path.as_deref(),
+            Some("thumbs/5.png")
+        );
+        store.set_thumb(id, None, 71).expect("sin miniatura");
+        assert_eq!(all(&store, &Filter::default())[0].thumb_path, None);
+    }
+
+    #[test]
+    fn an_item_comes_back_with_the_formats_it_was_stored_with() {
+        let (_dir, store) = on_disk();
+        let big = Item {
+            kind: Some(Kind::Image),
+            formats: vec![
+                Format {
+                    id: "public.png".into(),
+                    payload: Payload::Blob(vec![7; 200_000]),
+                },
+                Format {
+                    id: "public.tiff".into(),
+                    payload: Payload::Announced { size: Some(4_000) },
+                },
+                Format {
+                    id: "com.apple.icns".into(),
+                    payload: Payload::Absent,
+                },
+            ],
+        };
+        let id = store.insert_item("uuid-item", &big, "", 1).expect("insert");
+        let back = store.item(id).expect("lee").expect("está");
+        assert_eq!(back.kind, Some(Kind::Image));
+        assert_eq!(back.formats.len(), 3);
+        assert!(
+            matches!(back.format("public.png").expect("png").payload, Payload::Blob(ref b) if b.len() == 200_000)
+        );
+        assert_eq!(
+            back.format("public.tiff").expect("tiff").payload,
+            Payload::Announced { size: Some(4_000) }
+        );
+        assert_eq!(
+            back.format("com.apple.icns").expect("icns").payload,
+            Payload::Absent
+        );
+        assert_eq!(store.item(404).expect("lee"), None);
+        store.mark_deleted(id, 2).expect("borra");
+        assert_eq!(store.item(id).expect("lee"), None, "lo borrado no vuelve");
+    }
+
+    #[test]
+    fn a_text_inserted_directly_is_classified_like_a_capture() {
+        let store = Store::in_memory().expect("esquema");
+        store.insert_text("uuid-c", "#FF8800", 1).expect("insert");
+        store.insert_text("uuid-t", "una nota", 2).expect("insert");
+        let rows = store
+            .list(&Filter::default(), 10, None)
+            .expect("lista")
+            .rows;
+        assert_eq!(rows[0].kind, Some(Kind::Text));
+        assert_eq!(rows[1].kind, Some(Kind::Color));
+    }
+
+    #[test]
+    fn every_filter_at_once_narrows_to_the_one_row() {
+        let store = history();
+        let rows = all(&store, &Filter::default());
+        let target = rows
+            .iter()
+            .find(|one| one.preview == "segunda nota")
+            .expect("está");
+        store
+            .set_label(target.id, Some("clave"), 60)
+            .expect("etiqueta");
+        store.set_color(target.id, 2, 61).expect("color");
+        store.set_pinned(target.id, true, 62).expect("fija");
+        let filter = Filter {
+            query: Some("nota".into()),
+            label_query: Some("clave".into()),
+            kinds: vec![Kind::Text, Kind::Code],
+            exclude_kinds: vec![Kind::Email],
+            apps: vec!["Code".into(), "Safari".into()],
+            exclude_apps: vec!["Slack".into()],
+            colors: vec![2],
+            pinned_only: true,
+            since: Some(20),
+            broken: Broken::Shown,
+            order: Order::MostPasted,
+        };
+        let found = all(&store, &filter);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].id, target.id);
+        assert_eq!(store.count_matching(&filter).expect("cuenta"), 1);
+        assert_eq!(
+            store.facets(&filter).expect("facetas"),
+            vec![Facet {
+                kind: Kind::Text,
+                count: 1
+            }]
+        );
+    }
+
+    #[test]
+    fn editing_a_pinned_item_keeps_its_pin_label_colour_and_app() {
+        let store = history();
+        let id = all(&store, &Filter::default())[0].id;
+        store.set_label(id, Some("fijo"), 60).expect("etiqueta");
+        store.set_color(id, 3, 61).expect("color");
+        store.set_pinned(id, true, 62).expect("fija");
+        store.update_text(id, "otro contenido", 63).expect("edita");
+        let card = all(&store, &Filter::default())
+            .into_iter()
+            .find(|one| one.id == id)
+            .expect("está");
+        assert!(card.pinned);
+        assert_eq!(card.label.as_deref(), Some("fijo"));
+        assert_eq!(card.color, 3);
+        assert_eq!(card.app.as_deref(), Some("Code"));
+    }
+
+    #[test]
+    fn a_row_with_a_class_nobody_knows_lists_as_no_class() {
+        let store = history();
+        store
+            .db
+            .execute(
+                "UPDATE items SET kind = 'hologram' WHERE uuid = 'uuid-5'",
+                [],
+            )
+            .expect("una base más nueva");
+        let rows = all(&store, &Filter::default());
+        assert_eq!(rows[0].kind, None);
+        assert!(store.facets(&Filter::default()).expect("facetas").len() == 3);
+    }
+
+    #[test]
+    fn walking_the_pages_reads_the_same_order_as_one_big_page() {
+        let store = Store::in_memory().expect("esquema");
+        for at in 0..23 {
+            let id = store
+                .insert_item(
+                    &format!("uuid-{at}"),
+                    &text_item(&format!("nota {at}"), Kind::Text),
+                    &format!("nota {at}"),
+                    at % 4,
+                )
+                .expect("insert");
+            for _ in 0..(at % 3) {
+                store.record_paste(id, at % 5).expect("pega");
+            }
+        }
+        for order in Order::ALL {
+            let filter = Filter {
+                order,
+                ..Default::default()
+            };
+            let whole: Vec<i64> = all(&store, &filter).iter().map(|one| one.id).collect();
+            assert_eq!(walk(&store, &filter, 4), whole, "{order:?}");
+        }
+    }
+
+    #[test]
     fn nothing_a_person_can_type_as_an_application_breaks_the_query() {
         let store = history();
         for app in ["'; DROP TABLE items; --", "\"", "%", "Straße"] {
@@ -3174,12 +3709,6 @@ mod listing {
 mod housekeeping {
     use super::*;
     use cp_core::item::Format;
-
-    fn on_disk() -> (tempfile::TempDir, Store) {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let store = Store::open(&dir.path().join("history.db")).expect("abre");
-        (dir, store)
-    }
 
     fn image(byte: u8, size: usize) -> Item {
         Item {
@@ -3201,6 +3730,17 @@ mod housekeeping {
             .collect()
     }
 
+    fn settle_blobs(dir: &std::path::Path) {
+        for path in crate::blobs::files_under(&dir.join("blobs")) {
+            std::fs::File::options()
+                .write(true)
+                .open(&path)
+                .expect("abre")
+                .set_modified(std::time::UNIX_EPOCH)
+                .expect("envejece");
+        }
+    }
+
     fn alive(store: &Store) -> Vec<i64> {
         store
             .list(&Filter::default(), 100, None)
@@ -3216,7 +3756,13 @@ mod housekeeping {
         let store = Store::in_memory().expect("esquema");
         fill(&store, 5);
         let swept = store.sweep(&Policy::default(), 100).expect("barre");
-        assert_eq!(swept, Swept::default());
+        assert_eq!(
+            swept,
+            Swept {
+                truncated: true,
+                ..Swept::default()
+            }
+        );
         assert_eq!(store.count().expect("cuenta"), 5);
     }
 
@@ -3224,7 +3770,7 @@ mod housekeeping {
     fn age_takes_the_old_and_leaves_what_was_pinned() {
         let store = Store::in_memory().expect("esquema");
         let ids = fill(&store, 5);
-        store.pin(ids[0]).expect("fija");
+        store.set_pinned(ids[0], true, 0).expect("fija");
         let policy = Policy {
             keep_for: Some(3),
             ..Default::default()
@@ -3238,7 +3784,9 @@ mod housekeeping {
     fn a_count_limit_evicts_the_oldest_unpinned_beyond_it() {
         let store = Store::in_memory().expect("esquema");
         let ids = fill(&store, 6);
-        store.pin(ids[0]).expect("fija el más viejo");
+        store
+            .set_pinned(ids[0], true, 0)
+            .expect("fija el más viejo");
         let policy = Policy {
             keep_at_most: Some(4),
             ..Default::default()
@@ -3310,6 +3858,7 @@ mod housekeeping {
                 )
                 .expect("insert");
         }
+        settle_blobs(dir.path());
         let policy = Policy {
             bytes_at_most: Some(200_000),
             ..Default::default()
@@ -3328,7 +3877,7 @@ mod housekeeping {
         let id = store
             .insert_item("uuid-1", &image(1, 200_000), "", 1)
             .expect("insert");
-        store.pin(id).expect("fija");
+        store.set_pinned(id, true, 0).expect("fija");
         let policy = Policy {
             bytes_at_most: Some(1_000),
             ..Default::default()
@@ -3367,7 +3916,7 @@ mod housekeeping {
         let id = store.insert_text("uuid-r", secret, 1).expect("insert");
         store.mark_broken(id, 2).expect("roto");
         store.purge_broken_before(10).expect("purga");
-        let wal = std::fs::read(dir.path().join("history.db-wal")).unwrap_or_default();
+        let wal = std::fs::read(dir.path().join("history.db-wal")).expect("se puede leer");
         assert!(
             !wal.windows(secret.len())
                 .any(|window| window == secret.as_bytes()),
@@ -3382,6 +3931,7 @@ mod housekeeping {
             .insert_item("uuid-roto", &image(3, 100_000), "", 1)
             .expect("insert");
         store.mark_broken(id, 5).expect("roto");
+        settle_blobs(dir.path());
         let policy = Policy {
             broken_for: Some(10),
             ..Default::default()
@@ -3390,6 +3940,31 @@ mod housekeeping {
         assert_eq!(store.sweep(&policy, 16).expect("ya").broken, 1);
         let files = crate::blobs::files_under(&dir.path().join("blobs")).len();
         assert_eq!(files, 0, "purgar un roto no puede dejar su imagen en disco");
+    }
+
+    #[test]
+    fn deleting_an_item_whose_blob_was_just_written_leaves_the_file_to_the_sweep() {
+        let (dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-fresco", &image(6, 100_000), "", 1)
+            .expect("insert");
+        store.mark_deleted(id, 2).expect("borra");
+        assert_eq!(
+            crate::blobs::files_under(&dir.path().join("blobs")).len(),
+            1,
+            "otra conexión puede estar a punto de referenciar el mismo contenido"
+        );
+        assert_eq!(
+            store.sweep(&Policy::default(), 3).expect("barre").orphans,
+            0,
+            "aún fresco"
+        );
+        settle_blobs(dir.path());
+        assert_eq!(
+            store.sweep(&Policy::default(), 4).expect("barre").orphans,
+            1
+        );
+        assert!(crate::blobs::files_under(&dir.path().join("blobs")).is_empty());
     }
 
     #[test]
@@ -3455,10 +4030,53 @@ mod housekeeping {
                 over_count: 1,
                 over_bytes: 0,
                 orphans: 0,
+                truncated: true,
             },
             "cada regla cuenta lo suyo, en orden, sin contar dos veces"
         );
         assert_eq!(alive(&store), vec![ids[5], ids[4]]);
+    }
+
+    #[test]
+    fn the_preview_is_cut_before_a_character_that_straddles_the_limit() {
+        let text = format!("{}ñ{}", "a".repeat(PREVIEW_UP_TO - 1), "b".repeat(10));
+        let head = head_of(&text);
+        assert_eq!(
+            head.len(),
+            PREVIEW_UP_TO - 1,
+            "la ñ no cabe entera y se queda fuera"
+        );
+        assert!(head.bytes().all(|b| b == b'a'));
+        assert_eq!(head_of("corto"), "corto");
+        let exact = "x".repeat(PREVIEW_UP_TO);
+        assert_eq!(head_of(&exact).len(), PREVIEW_UP_TO);
+    }
+
+    #[test]
+    fn a_capture_connection_can_leave_checkpoints_to_maintenance() {
+        let (_dir, store) = on_disk();
+        assert_eq!(
+            store.autocheckpoint().expect("lee"),
+            1_000,
+            "el valor de fábrica de SQLite"
+        );
+        store.without_autocheckpoint().expect("apaga");
+        assert_eq!(store.autocheckpoint().expect("lee"), 0);
+        for at in 0..200 {
+            store
+                .insert_text(&format!("uuid-{at}"), &"x".repeat(2_000), at)
+                .expect("insert");
+        }
+        assert!(
+            store.checkpoint_passive().expect("pasivo") > 0,
+            "hay páginas del WAL que pasar a la base sin esperar a nadie"
+        );
+        assert!(store.checkpoint().expect("trunca"));
+        assert_eq!(
+            store.checkpoint_passive().expect("otra vez"),
+            0,
+            "tras truncar no queda nada que pasar"
+        );
     }
 
     #[test]
@@ -3472,29 +4090,13 @@ mod housekeeping {
         };
         store.sweep(&policy, 10).expect("barre");
         for file in ["history.db", "history.db-wal"] {
-            let bytes = std::fs::read(dir.path().join(file)).unwrap_or_default();
+            let bytes = std::fs::read(dir.path().join(file)).expect("se puede leer");
             assert!(
                 !bytes
                     .windows(secret.len())
                     .any(|window| window == secret.as_bytes()),
                 "«{secret}» sigue legible en {file}"
             );
-        }
-    }
-
-    fn captured(text: &str) -> Item {
-        Item {
-            kind: Some(Kind::Text),
-            formats: vec![
-                Format {
-                    id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(text.as_bytes().to_vec()),
-                },
-                Format {
-                    id: "public.rtf".into(),
-                    payload: Payload::Inline(format!("{{\\rtf1 {text}}}").into_bytes()),
-                },
-            ],
         }
     }
 
@@ -3536,8 +4138,8 @@ mod housekeeping {
             .insert_item("uuid-e", &captured("hola mundo"), "hola mundo", 1)
             .expect("insert");
         store.update_text(id, "#FF8800", 2).expect("edita");
-        assert!(store.search("hola").expect("busca").is_empty());
-        assert_eq!(store.search("ff8800").expect("busca").len(), 1);
+        assert!(search(&store, "hola").is_empty());
+        assert_eq!(search(&store, "ff8800").len(), 1);
         let card = &store
             .list(&Filter::default(), 10, None)
             .expect("lista")
@@ -3565,17 +4167,14 @@ mod housekeeping {
             .expect("insert");
         store.set_ocr_text(id, "texto leído", 2).expect("ocr");
         store.set_meta(id, "width", "800").expect("meta");
+        settle_blobs(dir.path());
         store.update_text(id, "texto leído", 3).expect("edita");
         assert_eq!(
             crate::blobs::files_under(&dir.path().join("blobs")).len(),
             0
         );
         assert!(store.all_meta(id).expect("meta").is_empty());
-        assert_eq!(
-            store.search("leido").expect("busca").len(),
-            1,
-            "ahora es contenido"
-        );
+        assert_eq!(search(&store, "leido").len(), 1, "ahora es contenido");
         assert!(store.pending_ocr(10).expect("ocr").is_empty());
     }
 
@@ -3588,7 +4187,7 @@ mod housekeeping {
         store.checkpoint().expect("ya está en la base principal");
         store.update_text(id, "texto inocente", 2).expect("edita");
         for file in ["history.db", "history.db-wal"] {
-            let bytes = std::fs::read(dir.path().join(file)).unwrap_or_default();
+            let bytes = std::fs::read(dir.path().join(file)).expect("se puede leer");
             assert!(
                 !bytes
                     .windows(secret.len())
@@ -3612,6 +4211,133 @@ mod housekeeping {
             .rows;
         assert_eq!(rows.len(), 1, "un texto no puede estar roto");
         assert_eq!(rows[0].broken_since, None);
+    }
+
+    #[test]
+    fn an_edit_that_cannot_be_written_leaves_the_item_as_it_was() {
+        let (dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-e", &captured("intacto"), "intacto", 1)
+            .expect("insert");
+        let blobs = dir.path().join("blobs");
+        let long = "x".repeat(cp_core::item::INLINE_UP_TO + 1);
+        std::fs::remove_dir_all(&blobs).expect("sin carpeta de blobs");
+        std::fs::write(&blobs, b"no soy una carpeta").expect("estorbo");
+        assert!(
+            store.update_text(id, &long, 2).is_err(),
+            "no hay dónde dejar el blob"
+        );
+        let card = &store
+            .list(&Filter::default(), 10, None)
+            .expect("lista")
+            .rows[0];
+        assert_eq!(card.preview, "intacto", "la fila no cambió");
+        assert_eq!(
+            store.formats_of(id).expect("formatos").len(),
+            2,
+            "y los formatos de antes siguen ahí"
+        );
+        assert_eq!(
+            store
+                .payload_of(id, "public.utf8-plain-text")
+                .expect("lee")
+                .as_deref(),
+            Some("intacto".as_bytes())
+        );
+    }
+
+    #[test]
+    fn an_edit_bigger_than_a_blob_is_refused_before_touching_the_row() {
+        let (_dir, store) = on_disk();
+        let id = store.insert_text("uuid-x", "corto", 1).expect("insert");
+        let absurd = "x".repeat(cp_core::item::BLOB_UP_TO + 1);
+        assert!(matches!(
+            store.update_text(id, &absurd, 2),
+            Err(Error::TooBig { .. })
+        ));
+        assert_eq!(
+            store
+                .list(&Filter::default(), 10, None)
+                .expect("lista")
+                .rows[0]
+                .preview,
+            "corto"
+        );
+        assert!(matches!(
+            store.insert_text("uuid-y", &absurd, 3),
+            Err(Error::TooBig { .. })
+        ));
+    }
+
+    #[test]
+    fn editing_an_image_forgets_what_was_read_in_it() {
+        let (dir, store) = on_disk();
+        let id = store
+            .insert_item("uuid-img", &image(2, 100_000), "", 1)
+            .expect("insert");
+        store.set_ocr_text(id, "qzzsecreto leído", 2).expect("ocr");
+        assert_eq!(search(&store, "qzzsecreto").len(), 1);
+        settle_blobs(dir.path());
+        store.update_text(id, "otra cosa", 3).expect("edita");
+        assert!(
+            search(&store, "qzzsecreto").is_empty(),
+            "lo leído era de la imagen que ya no está"
+        );
+    }
+
+    #[test]
+    fn marking_present_what_was_already_purged_is_a_quiet_no_op() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store.insert_text("uuid-r", "/tmp/ido", 1).expect("insert");
+        store.mark_broken(id, 5).expect("roto");
+        store.purge_broken_before(10).expect("purga");
+        store.mark_present(id).expect("ya no existe, no pasa nada");
+        assert_eq!(store.count().expect("cuenta"), 0);
+    }
+
+    #[test]
+    fn a_broken_item_exactly_at_the_cutoff_is_not_purged_yet() {
+        let store = Store::in_memory().expect("esquema");
+        let id = store.insert_text("uuid-r", "/tmp/ido", 1).expect("insert");
+        store.mark_broken(id, 5).expect("roto");
+        let policy = Policy {
+            broken_for: Some(10),
+            ..Default::default()
+        };
+        assert_eq!(
+            store.sweep(&policy, 15).expect("justo").broken,
+            0,
+            "5 no es menor que 15 - 10"
+        );
+        assert_eq!(store.sweep(&policy, 16).expect("ya").broken, 1);
+    }
+
+    #[test]
+    fn the_count_limit_runs_before_the_byte_quota() {
+        let (dir, store) = on_disk();
+        for at in 1..=4 {
+            store
+                .insert_item(
+                    &format!("uuid-{at}"),
+                    &image(at as u8, 100_000),
+                    "",
+                    at as i64,
+                )
+                .expect("insert");
+        }
+        settle_blobs(dir.path());
+        let policy = Policy {
+            keep_at_most: Some(2),
+            bytes_at_most: Some(150_000),
+            ..Default::default()
+        };
+        let swept = store.sweep(&policy, 10).expect("barre");
+        assert_eq!(
+            (swept.over_count, swept.over_bytes),
+            (2, 1),
+            "la cuota ve lo que dejó el límite"
+        );
+        assert_eq!(store.count().expect("cuenta"), 1);
     }
 
     #[test]
@@ -3645,7 +4371,7 @@ mod housekeeping {
             "sin carpeta no hay dónde dejarlo"
         );
         assert_eq!(
-            memory.search("corto").expect("busca").len(),
+            search(&memory, "corto").len(),
             1,
             "y lo de antes sigue intacto"
         );

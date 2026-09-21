@@ -19,35 +19,9 @@ pub fn missing_paths(file_urls: &str) -> Vec<String> {
     file_urls
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .filter(|url| !std::path::Path::new(&path_of(url)).exists())
+        .filter(|url| !std::path::Path::new(&crate::files::path_of(url)).exists())
         .map(str::to_owned)
         .collect()
-}
-
-pub fn path_of(file_url: &str) -> String {
-    file_url
-        .strip_prefix("file://")
-        .map(percent_decoded)
-        .unwrap_or_else(|| file_url.to_owned())
-}
-
-fn percent_decoded(text: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
-    let mut at = 0;
-    while at < bytes.len() {
-        if bytes[at] == b'%' && at + 2 < bytes.len() {
-            let pair = std::str::from_utf8(&bytes[at + 1..at + 3]).ok();
-            if let Some(byte) = pair.and_then(|hex| u8::from_str_radix(hex, 16).ok()) {
-                out.push(byte);
-                at += 3;
-                continue;
-            }
-        }
-        out.push(bytes[at]);
-        at += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 pub fn our_pid() -> i32 {
@@ -64,4 +38,27 @@ pub fn bring_to_front(pid: i32) -> bool {
 
 pub fn is_alive(pid: i32) -> bool {
     NSRunningApplication::runningApplicationWithProcessIdentifier(pid).is_some()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_paths_reports_what_is_gone_and_only_that() {
+        let dir = std::env::temp_dir().join(format!("cp-missing-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("carpeta");
+        let present = dir.join("está aquí.txt");
+        std::fs::write(&present, b"x").expect("archivo");
+        let urls = format!(
+            "file://{}\nfile://{}/no-existe.txt\n\n",
+            present.display().to_string().replace(' ', "%20"),
+            dir.display()
+        );
+        let missing = missing_paths(&urls);
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(missing.len(), 1);
+        assert!(missing[0].ends_with("/no-existe.txt"));
+        assert!(missing_paths("").is_empty());
+    }
 }

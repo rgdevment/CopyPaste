@@ -61,6 +61,7 @@ pub const CATALOG: Catalog = Catalog {
         "com.microsoft.Link-Source-Descriptor",
         "com.microsoft.ObjectLink",
     ],
+    page_archives: &["com.apple.webarchive"],
 };
 
 #[cfg(test)]
@@ -236,6 +237,46 @@ mod tests {
         assert_eq!(
             CATALOG.decide_in(CATALOG.classify(PREVIEW), "public.tiff"),
             Take::Payload
+        );
+    }
+
+    const SAFARI_IMAGE: &[&str] = &[
+        "public.tiff",
+        "NeXT TIFF v4.0 pasteboard type",
+        "com.apple.flat-rtfd",
+        "NeXT RTFD pasteboard type",
+        "com.apple.webarchive",
+        "Apple Web Archive pasteboard type",
+        "public.html",
+        "Apple HTML pasteboard type",
+    ];
+
+    #[test]
+    fn an_image_copied_from_safari_does_not_cost_the_whole_page() {
+        let image = CATALOG.classify(SAFARI_IMAGE);
+        assert_eq!(image, Some(Family::Image));
+        assert_eq!(
+            CATALOG.preferred_image(SAFARI_IMAGE),
+            Some("public.tiff"),
+            "Safari no ofrece PNG"
+        );
+        for archive in ["com.apple.webarchive", "Apple Web Archive pasteboard type"] {
+            assert_eq!(
+                CATALOG.decide_in(image, archive),
+                Take::Presence,
+                "{archive}"
+            );
+        }
+        assert_eq!(CATALOG.decide_in(image, "public.tiff"), Take::Payload);
+        assert_eq!(CATALOG.decide_in(image, "public.html"), Take::Payload);
+        assert_eq!(
+            CATALOG.decide_in(image, "com.apple.flat-rtfd"),
+            Take::Payload
+        );
+        assert_eq!(
+            CATALOG.decide_in(Some(Family::Text), "com.apple.webarchive"),
+            Take::Payload,
+            "Word sigue guardando el suyo"
         );
     }
 
