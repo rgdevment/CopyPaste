@@ -2,6 +2,7 @@ mod age;
 mod app;
 mod measure;
 mod model;
+mod note;
 mod view;
 
 slint::include_modules!();
@@ -10,6 +11,12 @@ use std::path::PathBuf;
 
 fn main() {
     let options = Options::from_args();
+    note::catch_panics();
+    note::note(&format!("arranca sobre {}", options.db.display()));
+    eprintln!(
+        "las incidencias se anotan en {}",
+        note::where_to().display()
+    );
     if std::env::var_os("SLINT_BACKEND").is_none() {
         let _ = slint::BackendSelector::new()
             .backend_name("winit".into())
@@ -19,6 +26,7 @@ fn main() {
     let store = match cp_store::Store::open(&options.db) {
         Ok(store) => store,
         Err(why) => {
+            note::note(&format!("no se pudo abrir {}: {why}", options.db.display()));
             eprintln!("no se pudo abrir {}: {why}", options.db.display());
             std::process::exit(1);
         }
@@ -26,6 +34,7 @@ fn main() {
     let (panel, app) = match app::App::start(store, options.clone()) {
         Ok(started) => started,
         Err(why) => {
+            note::note(&format!("el panel no arrancó: {why}"));
             eprintln!("el panel no arrancó: {why}");
             std::process::exit(1);
         }

@@ -23,6 +23,7 @@ export component Action inherits Rectangle {
     animate background { duration: 100ms; }
     Icon { source: root.icon; width: 14px; height: 14px; tint: touch.has-hover ? root.hot : Theme.muted; }
     touch := TouchArea {
+        enabled: root.awake;
         clicked => { root.pressed(); }
     }
 }

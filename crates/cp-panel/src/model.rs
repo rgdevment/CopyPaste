@@ -42,6 +42,7 @@ pub struct Rows {
     cards: RefCell<Vec<Option<Card>>>,
     tops: RefCell<Vec<f32>>,
     open: Cell<Option<usize>>,
+    thumbless: RefCell<std::collections::HashSet<usize>>,
     next: Cell<Option<Cursor>>,
     exhausted: Cell<bool>,
     loading: Cell<bool>,
@@ -60,6 +61,7 @@ impl Rows {
             cards: RefCell::new(Vec::new()),
             tops: RefCell::new(vec![0.0]),
             open: Cell::new(None),
+            thumbless: RefCell::new(std::collections::HashSet::new()),
             next: Cell::new(None),
             exhausted: Cell::new(false),
             loading: Cell::new(false),
@@ -105,17 +107,18 @@ impl Rows {
     }
 
     fn tall_at(&self, index: usize) -> bool {
-        self.rows
-            .borrow()
-            .get(index)
-            .is_some_and(|row| row.thumb_path.is_some())
+        !self.thumbless.borrow().contains(&index)
+            && self
+                .rows
+                .borrow()
+                .get(index)
+                .is_some_and(|row| row.thumb_path.is_some())
     }
 
     fn base_of(&self, index: usize) -> f32 {
-        self.rows
-            .borrow()
-            .get(index)
-            .map_or(self.metrics.plain, |row| self.height_of(row))
+        let rows = self.rows.borrow();
+        rows.get(index)
+            .map_or(self.metrics.plain, |row| self.height_at(index, row))
     }
 
     pub fn span_of(&self, index: usize) -> Option<(f32, f32)> {
@@ -123,6 +126,17 @@ impl Rows {
         let top = *tops.get(index)?;
         let next = *tops.get(index + 1)?;
         Some((top, next - top))
+    }
+
+    fn height_at(&self, index: usize, row: &Listed) -> f32 {
+        if self.thumbless.borrow().contains(&index) {
+            return if was_found(row) {
+                self.metrics.found
+            } else {
+                self.metrics.plain
+            };
+        }
+        self.height_of(row)
     }
 
     fn height_of(&self, row: &Listed) -> f32 {
@@ -156,7 +170,7 @@ impl Rows {
         let page = match self.store.list(&self.filter, PAGE, self.next.get()) {
             Ok(page) => page,
             Err(why) => {
-                eprintln!("la lista no se pudo leer: {why}");
+                crate::note::note(&format!("la lista no se pudo leer: {why}"));
                 self.exhausted.set(true);
                 return 0;
             }
@@ -203,6 +217,7 @@ impl Rows {
         }
         let rows = self.rows.borrow();
         let row = rows.get(index)?;
+        let row_wanted_a_thumb = row.thumb_path.is_some();
         let without_thumb = if self.open.get() == Some(index) {
             self.open_of_row(row)
         } else if was_found(row) {
@@ -220,6 +235,9 @@ impl Rows {
         }
         drop(rows);
         if !card.has_thumb {
+            if row_wanted_a_thumb {
+                self.thumbless.borrow_mut().insert(index);
+            }
             self.resize(index, without_thumb);
         }
         if let Some(slot) = self.cards.borrow_mut().get_mut(index) {
@@ -419,6 +437,24 @@ mod tests {
         );
 
         rows.open_at(None);
+        assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
+    }
+
+    #[test]
+    fn a_thumbnail_that_failed_does_not_get_its_height_back() {
+        let store = store_with(3);
+        store.set_thumb(3, Some("no-existe.png"), 2).expect("thumb");
+        let rows = open(store, 0);
+        assert!(rows.row_data(0).is_some_and(|card| !card.has_thumb));
+        assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
+
+        rows.open_at(Some(0));
+        rows.open_at(None);
+        assert_eq!(
+            rows.span_of(0),
+            Some((0.0, SIZES.plain)),
+            "cerrarla no le devuelve el alto de una miniatura que no está"
+        );
         assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
     }
 

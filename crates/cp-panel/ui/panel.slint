@@ -18,8 +18,8 @@ export component Panel inherits Window {
     in property <[Chip]> tags;
     in property <[FormRow]> sheet-rows;
     in property <string> sheet-title;
-    in property <length> sheet-anchor;
-    in property <length> sheet-span;
+    in-out property <length> sheet-anchor;
+    in-out property <length> sheet-span;
     in property <string> sheet-subject;
     in property <string> sheet-kind;
     in property <string> count-text;
@@ -40,6 +40,8 @@ export component Panel inherits Window {
     in-out property <float> fade: 1.0;
     in-out property <length> scroll-y <=> list.content-y;
     in-out property <length> chips-scroll <=> strip.content-x;
+    in-out property <length> sheet-at;
+    in-out property <bool> sheet-armed: false;
     out property <length> viewport-height: list.visible-height;
     out property <length> list-top: list.absolute-position.y - panel.absolute-position.y;
 
@@ -67,6 +69,12 @@ export component Panel inherits Window {
     forward-focus: input;
 
     focus-search => { input.focus(); }
+
+    changed scroll-y => {
+        if (root.sheet-open && root.sheet-armed && abs(root.scroll-y - root.sheet-at) > 12px) {
+            root.sheet-open = false;
+        }
+    }
 
     panel := Rectangle {
         property <length> sheet-top: root.list-top + root.sheet-anchor + root.sheet-span + list.content-y + 4px;
@@ -170,7 +178,7 @@ export component Panel inherits Window {
                                         root.drop-tag("");
                                         return accept;
                                     }
-                                    if event.text == Key.Delete && root.current >= 0 {
+                                    if event.text == Key.Delete && root.query == "" && root.current >= 0 {
                                         root.remove(root.cards[root.current].id);
                                         return accept;
                                     }
@@ -313,6 +321,7 @@ export component Panel inherits Window {
                         strip := Flickable {
                             width: parent.width;
                             height: 24px;
+                            interactive: true;
                             content-width: row.preferred-width;
                             content-height: 24px;
                             row := HorizontalLayout {
@@ -322,6 +331,16 @@ export component Panel inherits Window {
                                     chip: chip;
                                     chosen(key) => { root.chip-chosen(key); }
                                 }
+                            }
+                        }
+                        TouchArea {
+                            scroll-event(event) => {
+                                strip.content-x = clamp(
+                                    strip.content-x + (event.delta-y + event.delta-x) * 1.4,
+                                    min(0px, parent.width - strip.content-width),
+                                    0px
+                                );
+                                return accept;
                             }
                         }
                         Rectangle {
@@ -387,6 +406,12 @@ export component Panel inherits Window {
                     animate content-y { duration: root.gliding ? 110ms : 0ms; easing: ease-out; }
                     for card[index] in root.cards : Rectangle {
                         property <bool> mine: index == root.current;
+                        init => {
+                            if (self.mine) {
+                                root.sheet-anchor = self.y;
+                                root.sheet-span = self.height;
+                            }
+                        }
                         changed mine => {
                             if (self.mine) {
                                 if (self.y < -list.content-y) {
@@ -394,6 +419,13 @@ export component Panel inherits Window {
                                 } else if (self.y + self.height > -list.content-y + list.visible-height) {
                                     list.content-y = list.visible-height - self.y - self.height - 8px;
                                 }
+                                root.sheet-anchor = self.y;
+                                root.sheet-span = self.height;
+                            }
+                        }
+                        changed height => {
+                            if (self.mine) {
+                                root.sheet-span = self.height;
                             }
                         }
                         height: card.has-thumb

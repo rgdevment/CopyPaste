@@ -1,4 +1,5 @@
 use crate::model::{Metrics, Rows, reveal};
+use crate::note::note;
 use crate::view::{
     AS_IS, as_is_label, chips_of, compact, count_text, empty_of, form_of, harvest, label_of,
     label_of_form, shorthand_of, sweeten,
@@ -19,6 +20,7 @@ const OUT: Duration = Duration::from_millis(130);
 const NEXT_FRAME: Duration = Duration::from_millis(16);
 const SETTLES: Duration = Duration::from_millis(70);
 const HOVERS: Duration = Duration::from_millis(55);
+const SETTLES_SHEET: Duration = Duration::from_millis(260);
 const AFTER_ROLLING: Duration = Duration::from_millis(220);
 const JUST_ROLLED: Duration = Duration::from_millis(260);
 
@@ -39,6 +41,7 @@ struct State {
     asking: Asking,
     typing: slint::Timer,
     pointing: slint::Timer,
+    arming: slint::Timer,
     rolled: Instant,
     last_refresh: Duration,
     generation: Arc<AtomicU64>,
@@ -83,6 +86,7 @@ impl App {
             asking: Asking::Kinds,
             typing: slint::Timer::default(),
             pointing: slint::Timer::default(),
+            arming: slint::Timer::default(),
             rolled: Instant::now() - JUST_ROLLED,
             last_refresh: Duration::ZERO,
             generation,
@@ -249,7 +253,9 @@ impl App {
         let state = self.state.clone();
         panel.on_pin(move |id, on| {
             let now = now_ms();
-            let _ = state.borrow().store.set_pinned(i64::from(id), on, now);
+            if let Err(why) = state.borrow().store.set_pinned(i64::from(id), on, now) {
+                note(&format!("no se pudo anclar {id}: {why}"));
+            }
             if let Some(ui) = ui.upgrade() {
                 keeping_place(&ui, &state);
             }
@@ -257,7 +263,9 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_remove(move |id| {
-            let _ = state.borrow().store.mark_deleted(i64::from(id), now_ms());
+            if let Err(why) = state.borrow().store.mark_deleted(i64::from(id), now_ms()) {
+                note(&format!("no se pudo borrar {id}: {why}"));
+            }
             if let Some(ui) = ui.upgrade() {
                 keeping_place(&ui, &state);
             }
@@ -311,19 +319,12 @@ impl App {
             }
             state.borrow_mut().asking = Asking::Forms(i64::from(id));
             let at = ui.get_current();
-            let seat = (at >= 0)
-                .then(|| {
-                    let state = state.borrow();
-                    let rows = state.rows.as_ref()?;
-                    rows.open_at(ui.get_opened().then_some(at as usize));
-                    rows.span_of(at as usize)
-                })
-                .flatten()
-                .unwrap_or((0.0, 0.0));
-            ui.set_scroll_y(-seat.0);
+            if at >= 0
+                && let Some(rows) = state.borrow().rows.as_ref()
+            {
+                rows.open_at(ui.get_opened().then_some(at as usize));
+            }
             ui.set_hovered(-1);
-            ui.set_sheet_anchor(seat.0);
-            ui.set_sheet_span(seat.1);
             if let Some(card) = (at >= 0)
                 .then(|| ui.get_cards().row_data(at as usize))
                 .flatten()
@@ -332,6 +333,7 @@ impl App {
                 ui.set_sheet_kind(card.kind.clone());
             }
             open_sheet(&ui, "PEGAR COMO", rows);
+            arm_sheet(&state, &ui);
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
@@ -356,6 +358,7 @@ impl App {
             ui.set_sheet_span(0.0);
             ui.set_sheet_subject(Default::default());
             open_sheet(&ui, "FILTRAR POR TIPO", rows);
+            arm_sheet(&state, &ui);
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
@@ -402,6 +405,7 @@ impl App {
             ui.set_sheet_span(0.0);
             ui.set_sheet_subject(Default::default());
             open_sheet(&ui, "ATAJOS", keys_sheet());
+            arm_sheet(&state, &ui);
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
@@ -437,6 +441,8 @@ impl App {
                 ui.set_sheet_open(false);
                 if done {
                     vanish(&ui);
+                } else {
+                    complain(&ui);
                 }
             }
         });
@@ -488,6 +494,8 @@ fn keeping_place(ui: &Panel, state: &Rc<RefCell<State>>) {
 
 fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     let started = Instant::now();
+    ui.set_sheet_open(false);
+    ui.set_chips_scroll(0.0);
     let now = now_ms();
     let (store, filter, base, metrics) = {
         let state = state.borrow();
@@ -546,8 +554,12 @@ fn spawn_counter(
 ) -> mpsc::Sender<Request> {
     let (tx, rx) = mpsc::channel::<Request>();
     std::thread::spawn(move || {
-        let Ok(store) = Store::open(&db) else {
-            return;
+        let store = match Store::open(&db) {
+            Ok(store) => store,
+            Err(why) => {
+                note(&format!("el contador no pudo abrir el almacén: {why}"));
+                return;
+            }
         };
         while let Ok(mut request) = rx.recv() {
             while let Ok(newer) = rx.try_recv() {
@@ -593,7 +605,11 @@ fn written_filter(state: &State) -> Filter {
         now,
         day_start: now - now.rem_euclid(cp_store::query::DAY),
     };
-    cp_store::parse(&sweeten(&state.query), &clock)
+    let mut written = cp_store::parse(&sweeten(&state.query), &clock);
+    if written.broken == cp_store::Broken::Hidden {
+        written.broken = cp_store::Broken::Shown;
+    }
+    written
 }
 
 fn base_filter_of(state: &State) -> Filter {
@@ -648,20 +664,31 @@ fn keys_of(filter: &Filter) -> Vec<String> {
 }
 
 fn hand_over(store: &Store, id: i64) -> bool {
-    let Ok(Some(item)) = store.item(id) else {
-        return false;
+    let item = match store.item(id) {
+        Ok(Some(item)) => item,
+        Ok(None) => {
+            note(&format!("pegar {id}: ya no está en el almacén"));
+            return false;
+        }
+        Err(why) => {
+            note(&format!("pegar {id}: {why}"));
+            return false;
+        }
     };
     #[cfg(target_os = "windows")]
     {
         let Some(clipboard) = cp_win_sys::clipboard::Clipboard::open() else {
+            note(&format!("pegar {id}: el portapapeles no se dejó abrir"));
             return false;
         };
-        let written = matches!(
-            cp_win::restore::to_clipboard(&clipboard, &item),
-            cp_win::restore::Restored::Written { .. }
-        );
+        let how = cp_win::restore::to_clipboard(&clipboard, &item);
+        let written = matches!(how, cp_win::restore::Restored::Written { .. });
         if written {
-            let _ = store.record_paste(id, now_ms());
+            if let Err(why) = store.record_paste(id, now_ms()) {
+                note(&format!("pegado {id} sin anotar: {why}"));
+            }
+        } else {
+            note(&format!("pegar {id}: la escritura salió {how:?}"));
         }
         written
     }
@@ -718,10 +745,25 @@ fn keys_sheet() -> Vec<FormRow> {
 }
 
 fn open_sheet(ui: &Panel, title: &str, rows: Vec<FormRow>) {
+    ui.set_sheet_at(ui.get_scroll_y());
+    ui.set_sheet_armed(false);
     ui.set_sheet_title(title.into());
     ui.set_sheet_rows(ModelRc::from(Rc::new(slint::VecModel::from(rows))));
     ui.set_sheet_current(0);
     ui.set_sheet_open(true);
+}
+
+fn arm_sheet(state: &Rc<RefCell<State>>, ui: &Panel) {
+    let later = ui.as_weak();
+    state
+        .borrow()
+        .arming
+        .start(slint::TimerMode::SingleShot, SETTLES_SHEET, move || {
+            if let Some(ui) = later.upgrade() {
+                ui.set_sheet_at(ui.get_scroll_y());
+                ui.set_sheet_armed(true);
+            }
+        });
 }
 
 thread_local! {
@@ -826,6 +868,7 @@ fn paste_as(store: &Store, id: i64, key: &str) -> bool {
         return hand_over(store, id);
     }
     let Some(form) = form_of(key) else {
+        note(&format!("forma desconocida: {key}"));
         return false;
     };
     let Ok(Some(item)) = store.item(id) else {
@@ -834,6 +877,9 @@ fn paste_as(store: &Store, id: i64, key: &str) -> bool {
     let ocr = store.ocr_text(id).ok().flatten();
     let content = cp_win::content::content_of(&item, ocr.as_deref());
     let Some(rendered) = cp_core::paste_as::render(form, &content) else {
+        note(&format!(
+            "pegar como {key} sobre {id}: la forma no dio nada"
+        ));
         return false;
     };
     let made = rendered.into_item();

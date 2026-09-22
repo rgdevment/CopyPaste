@@ -35,7 +35,7 @@ const SENTENCES: [&str; 12] = [
     "Nada de lo que se copia desde Excel se guarda: la fuente pide no registrarse.",
 ];
 
-const SPECIAL: [&str; 8] = [
+const SPECIAL: [&str; 10] = [
     "{\"id\":\"zk5whptc-0033\",\"items\":412,\"ocr\":true,\"since\":\"2026-09-11\"}",
     "fn main() {\n    println!(\"hola\");\n}",
     "https://ejemplo.test/ruta/larga?con=parametros&y=mas",
@@ -44,6 +44,8 @@ const SPECIAL: [&str; 8] = [
     "192.168.10.1",
     "7ab3f6de-1c4b-4f5e-8a2d-9f0e1b2c3d4e",
     "+34 600 123 456",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjcC0zIiwiZW52IjoicHJvZCIsImV4cCI6MTc1NzAwMDAwMH0.9mT-z0PfakeSignatureForSeed",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjcC0zIiwiZW52Ijoic3RhZ2luZyIsImV4cCI6MTg5MzQ1NjAwMH0.k2RrV1fakeSignatureForSeed",
 ];
 
 fn main() {
@@ -129,6 +131,9 @@ fn main() {
             .expect("origen");
         if at.is_multiple_of(97) {
             store.set_pinned(id, true, created).expect("fijado");
+        }
+        if at.is_multiple_of(53) {
+            store.mark_broken(id, created).expect("roto");
         }
         for _ in 0..((seed >> 50) % 4) {
             store.record_paste(id, created + 60_000).expect("pegado");
