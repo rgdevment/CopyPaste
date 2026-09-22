@@ -1056,15 +1056,23 @@ fn main() -> std::process::ExitCode {
             if !files::reveal(&file) {
                 return Err("reveal dijo que no".into());
             }
+            let mut window_seen = false;
             let shown = wait_until("el Explorador deja el archivo seleccionado", || {
-                powershell_within(
-                    "(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { $_.Document.SelectedItems() | ForEach-Object { $_.Path } }",
-                )
-                .map(|selected| selected.contains("revelado.txt"))
+                let listing = powershell_within(
+                    "(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { $_.LocationURL + ' | ' + (($_.Document.SelectedItems() | ForEach-Object { $_.Path }) -join ',') }",
+                )?;
+                let ours = listing.lines().find(|line| line.contains("cp-p1"));
+                window_seen |= ours.is_some();
+                Some(ours.is_some_and(|line| line.contains("revelado.txt")))
             });
             powershell_within(
                 "(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationURL -like '*cp-p1*' } | ForEach-Object { $_.Quit() }",
             );
+            if shown.is_err() && !window_seen {
+                return Err(format!(
+                    "{SKIPPED}el Explorador no abrió ninguna ventana en esta sesión: sin escritorio interactivo"
+                ));
+            }
             shown
         },
     );
