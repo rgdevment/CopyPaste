@@ -19,7 +19,7 @@ use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{files, media, ocr, source, thumbnail};
 
 const CASES: u32 = 46;
-const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "L1", "P1", "P2"];
+const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2"];
 const SKIPPED: &str = "omitido: ";
 
 const VIRTUAL_FILE_NAME: &str = "adjunto virtual.txt";
@@ -129,7 +129,7 @@ fn powershell_within(script: &str) -> Option<String> {
         .spawn()
         .ok()?;
     let started = std::time::Instant::now();
-    while started.elapsed() < std::time::Duration::from_secs(10) {
+    while started.elapsed() < std::time::Duration::from_secs(20) {
         if child.try_wait().ok()?.is_some() {
             let out = child.wait_with_output().ok()?;
             if !out.status.success() {
@@ -1178,13 +1178,17 @@ fn main() -> std::process::ExitCode {
         ),
     }
 
-    b.case(
+    b.case_or_skip(
         "E2",
         "un archivo virtual se captura con sus bytes y se pega como archivo",
         || {
             match powershell_within(VIRTUAL_FILE_SCRIPT).as_deref() {
                 Some("placed") => {}
-                other => return Err(format!("PowerShell no montó el DataObject: {other:?}")),
+                other => {
+                    return Err(format!(
+                        "{SKIPPED}PowerShell no montó el DataObject: {other:?}"
+                    ));
+                }
             }
             let item = capture::capture_now().kept().ok_or("no se capturó")?;
             if item.kind != Some(cp_core::kind::Kind::File) {

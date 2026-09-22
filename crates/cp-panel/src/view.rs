@@ -55,26 +55,24 @@ pub fn label_of(kind: Option<Kind>) -> &'static str {
     }
 }
 
-pub fn chips_of(total: i64, pinned: i64, facets: &[Facet], selected: &str) -> Vec<Chip> {
-    let mut chips = vec![
-        chip(ALL, "Todo", total, selected),
-        chip(PINNED, "Anclados", pinned, selected),
-    ];
-    let mut sorted: Vec<&Facet> = facets.iter().filter(|f| f.count > 0).collect();
-    sorted.sort_by(|a, b| {
+pub fn chips_of(facets: &[Facet], selected: &str) -> Vec<Chip> {
+    let mut kinds: Vec<&Facet> = facets.iter().filter(|facet| facet.count > 0).collect();
+    kinds.sort_by(|a, b| {
         b.count
             .cmp(&a.count)
             .then(a.kind.as_str().cmp(b.kind.as_str()))
     });
-    for facet in sorted {
-        chips.push(chip(
-            facet.kind.as_str(),
-            label_of(Some(facet.kind)),
-            facet.count,
-            selected,
-        ));
-    }
-    chips
+    kinds
+        .into_iter()
+        .map(|facet| {
+            chip(
+                facet.kind.as_str(),
+                label_of(Some(facet.kind)),
+                facet.count,
+                selected,
+            )
+        })
+        .collect()
 }
 
 fn chip(key: &str, label: &str, count: i64, selected: &str) -> Chip {
@@ -94,6 +92,48 @@ pub fn compact(count: i64) -> String {
     } else {
         count.to_string()
     }
+}
+
+const SHOWN_QUERY: usize = 24;
+
+pub fn empty_of(query: &str, chip: &str) -> (String, String) {
+    let query = query.trim();
+    if query.is_empty() {
+        return match chip {
+            PINNED => (
+                "No hay nada anclado".into(),
+                "Ancla lo que uses seguido y se queda a mano".into(),
+            ),
+            ALL => (
+                "Todavía no hay nada".into(),
+                "Lo que copies aparece aquí".into(),
+            ),
+            _ => (
+                "No hay nada de este tipo".into(),
+                "Toca el filtro otra vez para ver todo".into(),
+            ),
+        };
+    }
+    let asked = format!("Nada coincide con «{}»", shorten(query));
+    if !query.chars().any(char::is_alphanumeric) {
+        return (
+            asked,
+            "La búsqueda va por palabras: los signos solos no se buscan".into(),
+        );
+    }
+    if chip == ALL {
+        (asked, "Prueba con menos letras".into())
+    } else {
+        (asked, "Prueba con menos letras o quita el filtro".into())
+    }
+}
+
+fn shorten(query: &str) -> String {
+    if query.chars().count() <= SHOWN_QUERY {
+        return query.to_owned();
+    }
+    let kept: String = query.chars().take(SHOWN_QUERY).collect();
+    format!("{}…", kept.trim_end())
 }
 
 pub fn count_text(count: i64) -> String {
@@ -184,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn chips_lead_with_all_and_pinned_then_the_kinds_by_count() {
+    fn every_chip_sits_where_its_count_puts_it() {
         let facets = [
             Facet {
                 kind: Kind::Image,
@@ -203,12 +243,51 @@ mod tests {
                 count: 2,
             },
         ];
-        let chips = chips_of(14, 1, &facets, "text");
+        let chips = chips_of(&facets, "text");
         let keys: Vec<&str> = chips.iter().map(|c| c.key.as_str()).collect();
-        assert_eq!(keys, ["all", "pinned", "text", "file", "image"]);
-        assert!(chips[2].selected);
-        assert!(!chips[0].selected);
-        assert_eq!(chips[0].count.as_str(), "14");
+        assert_eq!(
+            keys,
+            ["text", "file", "image"],
+            "solo tipos, del que más tiene al que menos"
+        );
+        assert!(chips[0].selected, "el elegido se marca donde caiga");
+        assert!(!chips[1].selected);
+        assert_eq!(chips[0].count.as_str(), "3");
+        assert!(
+            chips
+                .iter()
+                .all(|one| one.key != "all" && one.key != "pinned"),
+            "todo y anclados no son tipos y no viven aquí"
+        );
+
+        assert!(chips_of(&[], "all").is_empty(), "sin facetas no hay fila");
+    }
+
+    #[test]
+    fn an_empty_list_says_why_it_is_empty() {
+        assert_eq!(
+            empty_of("", ALL),
+            (
+                "Todavía no hay nada".into(),
+                "Lo que copies aparece aquí".into()
+            )
+        );
+        assert_eq!(empty_of("  ", PINNED).0, "No hay nada anclado");
+        assert_eq!(empty_of("", "image").0, "No hay nada de este tipo");
+
+        let (title, hint) = empty_of(",", ALL);
+        assert_eq!(title, "Nada coincide con «,»");
+        assert!(hint.contains("por palabras"), "la coma no es una palabra");
+
+        let (title, hint) = empty_of("reunion", "image");
+        assert_eq!(title, "Nada coincide con «reunion»");
+        assert!(hint.contains("quita el filtro"));
+
+        assert_eq!(empty_of("reunion", ALL).1, "Prueba con menos letras");
+        assert_eq!(
+            empty_of("una consulta larguísima que no cabe en la tarjeta", ALL).0,
+            "Nada coincide con «una consulta larguísima…»"
+        );
     }
 
     #[test]

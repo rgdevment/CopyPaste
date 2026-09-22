@@ -16,13 +16,22 @@ export component Panel inherits Window {
     in property <[Card]> cards;
     in property <[Chip]> chips;
     in property <string> count-text;
+    in property <string> pinned-count;
+    in property <string> empty-title;
+    in property <string> empty-hint;
+    in property <bool> pinned-on;
     in-out property <string> query;
     in-out property <int> current: -1;
+    in-out property <float> shown: 1.0;
+    in-out property <float> fade: 1.0;
     in-out property <length> scroll-y <=> list.content-y;
+    in-out property <length> chips-scroll <=> strip.content-x;
     out property <length> viewport-height: list.visible-height;
 
     callback search(string);
     callback chip-chosen(string);
+    callback pin-filter();
+    callback cycle(int);
     callback paste(int);
     callback edit(int);
     callback pin(int, bool);
@@ -37,28 +46,31 @@ export component Panel inherits Window {
 
     panel := Rectangle {
         x: Theme.margin;
-        y: Theme.margin;
+        y: Theme.margin + (1.0 - root.shown) * 8px;
         width: Theme.width;
         height: Theme.height;
         border-radius: Theme.radius;
         border-width: 1px;
         border-color: Theme.panel-border;
         background: Theme.panel;
+        opacity: root.shown;
         drop-shadow-blur: Theme.shadow-blur;
         drop-shadow-color: Theme.shadow;
         drop-shadow-offset-y: 10px;
         clip: true;
+        animate opacity { duration: Theme.appear; easing: ease-out; }
+        animate y { duration: Theme.appear; easing: ease-out; }
 
         VerticalLayout {
             padding: 0px;
             spacing: 0px;
 
             VerticalLayout {
-                padding: 12px;
+                padding: 10px;
                 padding-bottom: 8px;
-                spacing: 10px;
+                spacing: 9px;
                 search-box := Rectangle {
-                    height: 36px;
+                    height: 34px;
                     border-radius: 10px;
                     background: Theme.field;
                     border-width: 1px;
@@ -73,8 +85,9 @@ export component Panel inherits Window {
                         Rectangle {
                             horizontal-stretch: 1;
                             input := TextInput {
-                                y: (parent.height - self.height) / 2;
+                                height: parent.height;
                                 width: parent.width;
+                                vertical-alignment: center;
                                 text <=> root.query;
                                 color: Theme.body;
                                 font-size: 13px;
@@ -87,6 +100,10 @@ export component Panel inherits Window {
                                     }
                                     if event.text == Key.Return && root.current >= 0 {
                                         root.paste(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if event.text == Key.Tab {
+                                        root.cycle(event.modifiers.shift ? -1 : 1);
                                         return accept;
                                     }
                                     if event.text == Key.DownArrow {
@@ -102,20 +119,84 @@ export component Panel inherits Window {
                                     reject
                                 }
                             }
-                            if root.query == "" : Text { x: 0; y: (parent.height - self.height) / 2; text: "Buscar en portapapeles…"; color: Theme.placeholder; font-size: 13px; }
+                            if root.query == "" : Text {
+                                x: 0;
+                                height: parent.height;
+                                vertical-alignment: center;
+                                text: "Buscar en portapapeles…";
+                                color: Theme.placeholder;
+                                font-size: 13px;
+                            }
                         }
                         Icon { source: @image-url("../assets/icons/sliders-horizontal.svg"); tint: Theme.placeholder; y: (parent.height - 15px) / 2; }
                     }
                 }
-                Rectangle {
-                    height: 26px;
-                    clip: true;
-                    HorizontalLayout {
-                        spacing: 7px;
-                        alignment: start;
-                        for chip in root.chips : Pill {
-                            chip: chip;
-                            chosen(key) => { root.chip-chosen(key); }
+                HorizontalLayout {
+                    height: 24px;
+                    spacing: 8px;
+                    alignment: stretch;
+                    pin := Rectangle {
+                        width: pin-row.preferred-width;
+                        height: 24px;
+                        border-radius: 12px;
+                        background: root.pinned-on ? Theme.selected : pin-touch.has-hover ? #242840 : Theme.field;
+                        border-width: 1px;
+                        border-color: root.pinned-on ? Theme.selected-edge : Theme.field-border;
+                        animate background { duration: 120ms; easing: ease-out; }
+                        animate border-color { duration: 120ms; easing: ease-out; }
+                        pin-row := HorizontalLayout {
+                            padding-left: 9px;
+                            padding-right: 9px;
+                            spacing: 5px;
+                            alignment: center;
+                            Icon {
+                                source: @image-url("../assets/icons/pin.svg");
+                                width: 12px;
+                                height: 12px;
+                                tint: root.pinned-on ? Theme.accent : Theme.muted;
+                                y: (parent.height - 12px) / 2;
+                            }
+                            Text {
+                                text: root.pinned-count;
+                                color: root.pinned-on ? Theme.accent-dim : Theme.muted;
+                                font-size: 10px;
+                                vertical-alignment: center;
+                            }
+                        }
+                        pin-touch := TouchArea {
+                            clicked => { root.pin-filter(); }
+                        }
+                    }
+                    Rectangle {
+                        width: 1px;
+                        Rectangle {
+                            y: 5px;
+                            width: 1px;
+                            height: 14px;
+                            background: Theme.field-border;
+                        }
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        clip: true;
+                        strip := Flickable {
+                            width: parent.width;
+                            height: 24px;
+                            content-width: row.preferred-width;
+                            content-height: 24px;
+                            row := HorizontalLayout {
+                                spacing: 6px;
+                                alignment: start;
+                                for chip in root.chips : Pill {
+                                    chip: chip;
+                                    chosen(key) => { root.chip-chosen(key); }
+                                }
+                            }
+                        }
+                        Rectangle {
+                            x: parent.width - 20px;
+                            width: 20px;
+                            background: @linear-gradient(90deg, Theme.panel.transparentize(1.0) 0%, Theme.panel 100%);
                         }
                     }
                 }
@@ -124,15 +205,45 @@ export component Panel inherits Window {
             Rectangle {
                 vertical-stretch: 1;
                 clip: true;
+                opacity: root.fade;
+                animate opacity { duration: Theme.settle; easing: ease-out; }
+                if root.cards.length == 0 : VerticalLayout {
+                    alignment: center;
+                    spacing: 6px;
+                    HorizontalLayout {
+                        alignment: center;
+                        Image {
+                            source: @image-url("../assets/icons/search.svg");
+                            colorize: Theme.field-border;
+                            width: 30px;
+                            height: 30px;
+                        }
+                    }
+                    Text {
+                        text: root.empty-title;
+                        color: Theme.title;
+                        font-size: 13px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                    Text {
+                        text: root.empty-hint;
+                        color: Theme.placeholder;
+                        font-size: 11.5px;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                }
                 list := ListView {
                     for card[index] in root.cards : Rectangle {
                         height: card.has-thumb ? Theme.row-thumb : Theme.row-plain;
                         CardView {
                             card: card;
                             current: index == root.current;
-                            x: 12px;
-                            width: parent.width - 24px;
-                            height: parent.height - 8px;
+                            x: 10px;
+                            width: parent.width - 20px;
+                            height: parent.height - 6px;
                             chosen(id) => { root.current = index; }
                             paste(id) => { root.paste(id); }
                             edit(id) => { root.edit(id); }
@@ -144,16 +255,24 @@ export component Panel inherits Window {
             }
 
             Rectangle {
-                height: 34px;
+                height: 32px;
                 background: Theme.footer;
                 HorizontalLayout {
-                    padding-left: 12px;
-                    padding-right: 10px;
+                    padding-left: 10px;
+                    padding-right: 8px;
                     spacing: 8px;
                     alignment: stretch;
                     Icon { source: @image-url("../assets/icons/clipboard.svg"); tint: Theme.muted; y: (parent.height - 15px) / 2; }
-                    Text { text: root.count-text; color: Theme.muted; font-size: 12px; vertical-alignment: center; }
+                    Text { text: root.count-text; color: Theme.muted; font-size: 11.5px; vertical-alignment: center; }
                     Rectangle { horizontal-stretch: 1; }
+                    HorizontalLayout {
+                        spacing: 4px;
+                        alignment: center;
+                        Icon { source: @image-url("../assets/icons/corner-down-left.svg"); tint: Theme.placeholder; width: 12px; height: 12px; y: (parent.height - 12px) / 2; }
+                        Text { text: "pegar · ↑↓ mover ·"; color: Theme.placeholder; font-size: 10px; vertical-alignment: center; }
+                        Icon { source: @image-url("../assets/icons/arrow-right-to-line.svg"); tint: Theme.placeholder; width: 12px; height: 12px; y: (parent.height - 12px) / 2; }
+                        Text { text: "filtro"; color: Theme.placeholder; font-size: 10px; vertical-alignment: center; }
+                    }
                     Action { icon: @image-url("../assets/icons/sun.svg"); y: (parent.height - 22px) / 2; }
                     Action { icon: @image-url("../assets/icons/sliders-horizontal.svg"); y: (parent.height - 22px) / 2; }
                 }

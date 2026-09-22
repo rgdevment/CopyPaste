@@ -50,7 +50,7 @@ impl Options {
         let mut db = None;
         let mut measure = false;
         let mut flat = false;
-        let mut backdrop = "mica".to_owned();
+        let mut backdrop = "none".to_owned();
         let mut args = std::env::args().skip(1);
         while let Some(arg) = args.next() {
             match arg.as_str() {

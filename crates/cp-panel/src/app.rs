@@ -1,14 +1,19 @@
 use crate::model::{Metrics, Rows, reveal};
-use crate::view::{ALL, PINNED, chips_of, count_text};
+use crate::view::{ALL, PINNED, chips_of, compact, count_text, empty_of};
 use crate::{Options, Panel};
 use cp_core::kind::Kind;
 use cp_store::{Filter, Store};
-use slint::{ComponentHandle, ModelRc};
+use slint::{ComponentHandle, Model, ModelRc};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
+
+const CHIP_STEP: f32 = 78.0;
+const KEPT_IN_VIEW: usize = 2;
+const OUT: Duration = Duration::from_millis(130);
+const NEXT_FRAME: Duration = Duration::from_millis(16);
 
 #[derive(Clone)]
 pub struct App {
@@ -70,6 +75,7 @@ impl App {
     pub fn run(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
         panel.show()?;
         self.dress(panel);
+        appear(panel);
         panel.invoke_focus_search();
         if let Some(dir) = self.state.borrow().options.signals.clone() {
             watch_signals(panel.as_weak(), dir);
@@ -110,10 +116,55 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_chip_chosen(move |key| {
-            state.borrow_mut().chip = key.to_string();
+            {
+                let mut state = state.borrow_mut();
+                let same = state.chip == key.as_str();
+                state.chip = if same { ALL.into() } else { key.to_string() };
+            }
             if let Some(ui) = ui.upgrade() {
+                blink(&ui);
                 refresh(&ui, &state);
             }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_pin_filter(move || {
+            {
+                let mut state = state.borrow_mut();
+                state.chip = if state.chip == PINNED {
+                    ALL.into()
+                } else {
+                    PINNED.into()
+                };
+            }
+            if let Some(ui) = ui.upgrade() {
+                blink(&ui);
+                refresh(&ui, &state);
+            }
+        });
+
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_cycle(move |delta| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            let chips = ui.get_chips();
+            let mut keys: Vec<String> = vec![ALL.into(), PINNED.into()];
+            keys.extend(
+                (0..chips.row_count())
+                    .filter_map(|index| chips.row_data(index).map(|chip| chip.key.to_string())),
+            );
+            let here = keys
+                .iter()
+                .position(|key| key.as_str() == state.borrow().chip)
+                .unwrap_or(0);
+            let next = (here as i32 + delta).rem_euclid(keys.len() as i32) as usize;
+            let among_kinds = next.saturating_sub(2);
+            ui.set_chips_scroll(-(among_kinds.saturating_sub(KEPT_IN_VIEW) as f32) * CHIP_STEP);
+            state.borrow_mut().chip = keys[next].clone();
+            blink(&ui);
+            refresh(&ui, &state);
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
@@ -211,6 +262,14 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
         )
     };
     let rows = Rows::open(store, filter, now, metrics);
+    if rows.loaded() == 0 {
+        let (title, hint) = {
+            let state = state.borrow();
+            empty_of(&state.query, &state.chip)
+        };
+        ui.set_empty_title(title.into());
+        ui.set_empty_hint(hint.into());
+    }
     ui.set_current(if rows.loaded() > 0 { 0 } else { -1 });
     ui.set_scroll_y(0.0);
     ui.set_cards(ModelRc::from(rows.clone()));
@@ -268,11 +327,15 @@ fn spawn_counter(
                     .find(|facet| facet.kind.as_str() == kind)
                     .map_or(0, |facet| facet.count),
             };
-            let chips = chips_of(total, pinned, &facets, &request.chip);
+            let chips = chips_of(&facets, &request.chip);
             let footer = count_text(shown);
+            let anchored = compact(pinned);
+            let only_anchored = request.chip == PINNED;
             let _ = ui.upgrade_in_event_loop(move |panel| {
                 panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
                 panel.set_count_text(footer.into());
+                panel.set_pinned_count(anchored.into());
+                panel.set_pinned_on(only_anchored);
             });
         }
     });
@@ -326,6 +389,36 @@ fn hand_over(store: &Store, id: i64) -> bool {
     }
 }
 
+fn appear(ui: &Panel) {
+    ui.set_shown(0.0);
+    let weak = ui.as_weak();
+    slint::Timer::single_shot(NEXT_FRAME, move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_shown(1.0);
+        }
+    });
+}
+
+fn vanish(ui: &Panel) {
+    ui.set_shown(0.0);
+    let weak = ui.as_weak();
+    slint::Timer::single_shot(OUT, move || {
+        if let Some(ui) = weak.upgrade() {
+            let _ = ui.hide();
+        }
+    });
+}
+
+fn blink(ui: &Panel) {
+    ui.set_fade(0.35);
+    let weak = ui.as_weak();
+    slint::Timer::single_shot(NEXT_FRAME, move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_fade(1.0);
+        }
+    });
+}
+
 pub fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -344,9 +437,10 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
                             let _ = ui.show();
+                            appear(&ui);
                             ui.invoke_focus_search();
                         } else {
-                            let _ = ui.hide();
+                            vanish(&ui);
                         }
                     });
                 }
