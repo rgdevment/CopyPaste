@@ -29,6 +29,7 @@ export component Panel inherits Window {
     callback remove(int);
     callback dismiss();
     callback focus-search();
+    callback moved(int);
 
     forward-focus: input;
 
@@ -90,10 +91,12 @@ export component Panel inherits Window {
                                     }
                                     if event.text == Key.DownArrow {
                                         root.current = min(root.current + 1, root.cards.length - 1);
+                                        root.moved(root.current);
                                         return accept;
                                     }
                                     if event.text == Key.UpArrow {
                                         root.current = max(root.current - 1, 0);
+                                        root.moved(root.current);
                                         return accept;
                                     }
                                     reject
@@ -123,7 +126,7 @@ export component Panel inherits Window {
                 clip: true;
                 list := ListView {
                     for card[index] in root.cards : Rectangle {
-                        height: (card.has-thumb ? 174px : 116px) + 8px;
+                        height: card.has-thumb ? Theme.row-thumb : Theme.row-plain;
                         CardView {
                             card: card;
                             current: index == root.current;

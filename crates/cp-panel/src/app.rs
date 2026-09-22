@@ -1,4 +1,4 @@
-use crate::model::Rows;
+use crate::model::{Metrics, Rows, reveal};
 use crate::view::{ALL, PINNED, chips_of, count_text};
 use crate::{Options, Panel};
 use cp_core::kind::Kind;
@@ -22,6 +22,7 @@ struct State {
     chip: String,
     rows: Option<Rc<Rows>>,
     options: Options,
+    metrics: Metrics,
     last_refresh: Duration,
     generation: Arc<AtomicU64>,
     counter: mpsc::Sender<Request>,
@@ -36,6 +37,11 @@ struct Request {
 impl App {
     pub fn start(store: Store, options: Options) -> Result<(Panel, Self), slint::PlatformError> {
         let panel = Panel::new()?;
+        let theme = panel.global::<crate::Theme>();
+        let metrics = Metrics {
+            tall: theme.get_row_thumb(),
+            plain: theme.get_row_plain(),
+        };
         let generation = Arc::new(AtomicU64::new(0));
         let counter = spawn_counter(options.db.clone(), panel.as_weak(), generation.clone());
         let state = Rc::new(RefCell::new(State {
@@ -44,6 +50,7 @@ impl App {
             chip: ALL.into(),
             rows: None,
             options,
+            metrics,
             last_refresh: Duration::ZERO,
             generation,
             counter,
@@ -134,6 +141,29 @@ impl App {
             }
         });
         let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_moved(move |index| {
+            if index < 0 {
+                return;
+            }
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            let state = state.borrow();
+            let Some(rows) = state.rows.as_ref() else {
+                return;
+            };
+            let Some((top, span)) = rows.span_of(index as usize) else {
+                return;
+            };
+            ui.set_scroll_y(reveal(
+                top,
+                span,
+                ui.get_scroll_y(),
+                ui.get_viewport_height(),
+            ));
+        });
+        let ui = self.ui.clone();
         panel.on_dismiss(move || {
             if let Some(ui) = ui.upgrade() {
                 let _ = ui.hide();
@@ -170,16 +200,17 @@ impl App {
 fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     let started = Instant::now();
     let now = now_ms();
-    let (store, filter, base, chip) = {
+    let (store, filter, base, chip, metrics) = {
         let state = state.borrow();
         (
             state.store.clone(),
             filter_of(&state),
             base_filter_of(&state),
             state.chip.clone(),
+            state.metrics,
         )
     };
-    let rows = Rows::open(store, filter, now);
+    let rows = Rows::open(store, filter, now, metrics);
     ui.set_current(if rows.loaded() > 0 { 0 } else { -1 });
     ui.set_scroll_y(0.0);
     ui.set_cards(ModelRc::from(rows.clone()));
@@ -274,21 +305,24 @@ fn hand_over(store: &Store, id: i64) -> bool {
     let Ok(Some(item)) = store.item(id) else {
         return false;
     };
-    let _ = store.record_paste(id, now_ms());
     #[cfg(target_os = "windows")]
     {
         let Some(clipboard) = cp_win_sys::clipboard::Clipboard::open() else {
             return false;
         };
-        matches!(
+        let written = matches!(
             cp_win::restore::to_clipboard(&clipboard, &item),
             cp_win::restore::Restored::Written { .. }
-        )
+        );
+        if written {
+            let _ = store.record_paste(id, now_ms());
+        }
+        written
     }
     #[cfg(not(target_os = "windows"))]
     {
         let _ = item;
-        true
+        false
     }
 }
 

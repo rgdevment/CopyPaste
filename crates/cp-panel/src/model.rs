@@ -8,12 +8,34 @@ use std::rc::{Rc, Weak};
 pub const PAGE: usize = 120;
 const AHEAD: usize = 40;
 
+#[derive(Debug, Clone, Copy)]
+pub struct Metrics {
+    pub tall: f32,
+    pub plain: f32,
+}
+
+pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
+    if viewport <= 0.0 {
+        return scroll;
+    }
+    let seen = -scroll;
+    if top < seen {
+        -top
+    } else if top + span > seen + viewport {
+        viewport - top - span
+    } else {
+        scroll
+    }
+}
+
 pub struct Rows {
     store: Rc<Store>,
     filter: Filter,
     now: i64,
+    metrics: Metrics,
     rows: RefCell<Vec<Listed>>,
     cards: RefCell<Vec<Option<Card>>>,
+    tops: RefCell<Vec<f32>>,
     next: Cell<Option<Cursor>>,
     exhausted: Cell<bool>,
     loading: Cell<bool>,
@@ -22,13 +44,15 @@ pub struct Rows {
 }
 
 impl Rows {
-    pub fn open(store: Rc<Store>, filter: Filter, now: i64) -> Rc<Self> {
+    pub fn open(store: Rc<Store>, filter: Filter, now: i64, metrics: Metrics) -> Rc<Self> {
         let rows = Rc::new(Self {
             store,
             filter,
             now,
+            metrics,
             rows: RefCell::new(Vec::new()),
             cards: RefCell::new(Vec::new()),
+            tops: RefCell::new(vec![0.0]),
             next: Cell::new(None),
             exhausted: Cell::new(false),
             loading: Cell::new(false),
@@ -42,6 +66,35 @@ impl Rows {
 
     pub fn loaded(&self) -> usize {
         self.rows.borrow().len()
+    }
+
+    pub fn span_of(&self, index: usize) -> Option<(f32, f32)> {
+        let tops = self.tops.borrow();
+        let top = *tops.get(index)?;
+        let next = *tops.get(index + 1)?;
+        Some((top, next - top))
+    }
+
+    fn height_of(&self, row: &Listed) -> f32 {
+        if row.thumb_path.is_some() {
+            self.metrics.tall
+        } else {
+            self.metrics.plain
+        }
+    }
+
+    fn resize(&self, index: usize, height: f32) {
+        let mut tops = self.tops.borrow_mut();
+        let (Some(&top), Some(&next)) = (tops.get(index), tops.get(index + 1)) else {
+            return;
+        };
+        let delta = height - (next - top);
+        if delta == 0.0 {
+            return;
+        }
+        for top in tops.iter_mut().skip(index + 1) {
+            *top += delta;
+        }
     }
 
     fn load_page(&self) -> usize {
@@ -59,6 +112,14 @@ impl Rows {
         }
         let start = self.rows.borrow().len();
         self.cards.borrow_mut().extend((0..added).map(|_| None));
+        {
+            let mut tops = self.tops.borrow_mut();
+            let mut at = tops.last().copied().unwrap_or(0.0);
+            for row in &page.rows {
+                at += self.height_of(row);
+                tops.push(at);
+            }
+        }
         self.rows.borrow_mut().extend(page.rows);
         self.notify.row_added(start, added);
         added
@@ -95,6 +156,9 @@ impl Rows {
             card.has_thumb = false;
         }
         drop(rows);
+        if !card.has_thumb {
+            self.resize(index, self.metrics.plain);
+        }
         if let Some(slot) = self.cards.borrow_mut().get_mut(index) {
             *slot = Some(card.clone());
         }
@@ -136,6 +200,11 @@ impl Model for Rows {
 mod tests {
     use super::*;
 
+    const SIZES: Metrics = Metrics {
+        tall: 182.0,
+        plain: 124.0,
+    };
+
     fn store_with(count: usize) -> Rc<Store> {
         let store = Store::in_memory().expect("esquema");
         for at in 0..count {
@@ -146,9 +215,13 @@ mod tests {
         Rc::new(store)
     }
 
+    fn open(store: Rc<Store>, now: i64) -> Rc<Rows> {
+        Rows::open(store, Filter::default(), now, SIZES)
+    }
+
     #[test]
     fn the_first_page_comes_with_the_model_and_the_rest_waits_for_the_view() {
-        let rows = Rows::open(store_with(300), Filter::default(), 1_000);
+        let rows = open(store_with(300), 1_000);
         assert_eq!(rows.row_count(), PAGE);
         assert_eq!(rows.loaded(), PAGE);
         assert_eq!(rows.row_data(0).map(|card| card.id), Some(300));
@@ -162,7 +235,7 @@ mod tests {
 
     #[test]
     fn a_row_is_built_once_and_read_back_from_the_cache() {
-        let rows = Rows::open(store_with(3), Filter::default(), 5_000);
+        let rows = open(store_with(3), 5_000);
         let first = rows.row_data(0).expect("fila");
         assert_eq!(first.body.as_str(), "elemento 2");
         assert_eq!(first.age.as_str(), "ahora");
@@ -174,7 +247,7 @@ mod tests {
 
     #[test]
     fn the_next_page_is_wanted_only_near_the_end_and_only_once() {
-        let rows = Rows::open(store_with(300), Filter::default(), 0);
+        let rows = open(store_with(300), 0);
         assert!(!rows.needs_more(0));
         assert!(!rows.needs_more(PAGE - AHEAD - 1));
         assert!(rows.needs_more(PAGE - AHEAD));
@@ -188,7 +261,7 @@ mod tests {
 
     #[test]
     fn a_row_written_from_the_view_is_what_comes_back() {
-        let rows = Rows::open(store_with(2), Filter::default(), 0);
+        let rows = open(store_with(2), 0);
         let mut card = rows.row_data(1).expect("fila");
         card.body = "editado".into();
         rows.set_row_data(1, card);
@@ -206,8 +279,56 @@ mod tests {
             query: Some("nada-de-esto".into()),
             ..Default::default()
         };
-        let rows = Rows::open(store_with(10), filter, 0);
+        let rows = Rows::open(store_with(10), filter, 0, SIZES);
         assert_eq!(rows.row_count(), 0);
         assert!(rows.exhausted.get());
+    }
+
+    #[test]
+    fn every_row_knows_where_it_starts_and_a_thumbnail_makes_it_taller() {
+        let store = store_with(3);
+        store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
+        let rows = open(store, 0);
+        assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
+        assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.tall)));
+        assert_eq!(
+            rows.span_of(2),
+            Some((SIZES.plain + SIZES.tall, SIZES.plain))
+        );
+        assert_eq!(rows.span_of(3), None, "no hay cuarta fila");
+    }
+
+    #[test]
+    fn a_thumbnail_that_does_not_load_gives_its_height_back_to_the_rows_below() {
+        let store = store_with(3);
+        store.set_thumb(3, Some("no-existe.png"), 2).expect("thumb");
+        let rows = open(store, 0);
+        assert_eq!(rows.span_of(0), Some((0.0, SIZES.tall)));
+        let card = rows.row_data(0).expect("fila");
+        assert!(!card.has_thumb, "la miniatura no está en disco");
+        assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
+        assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
+    }
+
+    #[test]
+    fn revealing_a_row_only_scrolls_when_the_row_is_out_of_sight() {
+        let viewport = 400.0;
+        assert_eq!(reveal(0.0, 124.0, 0.0, viewport), 0.0, "ya se ve");
+        assert_eq!(
+            reveal(124.0, 124.0, -124.0, viewport),
+            -124.0,
+            "arriba del todo"
+        );
+        assert_eq!(
+            reveal(124.0, 124.0, -300.0, viewport),
+            -124.0,
+            "queda encima"
+        );
+        assert_eq!(
+            reveal(500.0, 124.0, 0.0, viewport),
+            -224.0,
+            "queda debajo: sube lo justo"
+        );
+        assert_eq!(reveal(500.0, 124.0, 0.0, 0.0), 0.0, "sin alto no se decide");
     }
 }
