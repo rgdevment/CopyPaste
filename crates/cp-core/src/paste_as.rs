@@ -1496,6 +1496,16 @@ otro.txt"
             !forms_for(&nameless).contains(&Form::FileName),
             "una ruta sin nombre no se ofrece"
         );
+        let padded = Content {
+            kind: Some(Kind::File),
+            paths: vec!["/tmp/  con espacios.txt  ".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            rendered(Form::FileName, &padded),
+            "con espacios.txt",
+            "el nombre llega limpio de espacios"
+        );
     }
 
     #[test]

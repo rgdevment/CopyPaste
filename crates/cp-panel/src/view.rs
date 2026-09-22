@@ -3,6 +3,7 @@ use crate::{Card, Chip};
 use cp_core::kind::Kind;
 use cp_core::paste_as::Form;
 use cp_core::search::Excerpt;
+use cp_core::token::Claims;
 use cp_store::{Facet, Listed};
 
 const LEAD: usize = 30;
@@ -16,6 +17,12 @@ pub fn lines_of(text: &str) -> i32 {
         .map(|line| line.chars().count().div_ceil(PER_LINE).max(1) as i32)
         .sum::<i32>();
     wanted.clamp(SHUT, OPEN_AT_MOST)
+}
+
+pub fn was_found(row: &Listed) -> bool {
+    row.snippet
+        .as_ref()
+        .is_some_and(|snippet| snippet.excerpt.segments.iter().any(|one| one.matched))
 }
 
 pub fn parts_of(excerpt: &Excerpt) -> (String, String, String) {
@@ -43,8 +50,30 @@ fn trim_left(lead: &str) -> String {
     format!("…{}", kept.trim_start())
 }
 
+pub fn badge_of(claims: Option<&Claims>) -> &'static str {
+    if claims.is_some() { "JWT" } else { "" }
+}
+
+pub fn alert_of(row: &Listed, claims: Option<&Claims>, now: i64) -> &'static str {
+    if row.broken_since.is_some() {
+        return "No encontrado";
+    }
+    let stale = claims
+        .and_then(|claims| claims.expired_by(now / 1_000))
+        .unwrap_or(false);
+    if stale { "CADUCADO" } else { "" }
+}
+
+fn claims_in(row: &Listed) -> Option<Claims> {
+    (row.kind == Some(Kind::Token))
+        .then(|| cp_core::token::claims_of(&row.preview))
+        .flatten()
+}
+
 pub fn card_of(row: &Listed, now: i64) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
+    let claims = claims_in(row);
+    let body = body_of(row);
     let (lead, hit, tail) = match &row.snippet {
         Some(snippet) => parts_of(&snippet.excerpt),
         None => (String::new(), String::new(), String::new()),
@@ -60,9 +89,11 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
             "".into()
         },
         age: age_text(now, row.modified_at).into(),
-        body: body_of(row).into(),
+        lines: lines_of(&body),
+        body: body.into(),
         found: !hit.is_empty(),
-        lines: lines_of(&body_of(row)),
+        badge: badge_of(claims.as_ref()).into(),
+        alert: alert_of(row, claims.as_ref(), now).into(),
         lead: lead.into(),
         hit: hit.into(),
         tail: tail.into(),
@@ -199,6 +230,16 @@ pub fn label_of_form(form: Form) -> &'static str {
 }
 
 pub const AS_IS: &str = "as-is";
+
+pub fn shorthand_of(form: Form) -> Option<&'static str> {
+    match form {
+        Form::ColorHex => Some("hex"),
+        Form::ColorRgb => Some("rgb"),
+        Form::ColorHsl => Some("hsl"),
+        Form::ColorName => Some("nombre"),
+        _ => None,
+    }
+}
 
 pub fn as_is_label(kind: Option<Kind>) -> &'static str {
     match kind {
@@ -485,6 +526,47 @@ mod tests {
         assert_eq!(card.lead.as_str(), "antes de ");
         assert_eq!(card.hit.as_str(), "esto");
         assert_eq!(card.tail.as_str(), " y después");
+    }
+
+    const EXPIRED: &str =
+        "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJleHAiOjE3MDAwMDAwMDAsInN1YiI6ImNwLTMifQ.sig";
+
+    #[test]
+    fn a_card_wears_what_is_wrong_with_it() {
+        let mut broken = row(Some(Kind::File));
+        broken.broken_since = Some(10);
+        assert_eq!(alert_of(&broken, None, 1_000), "No encontrado");
+        assert_eq!(badge_of(None), "");
+
+        let plain = row(Some(Kind::Text));
+        assert_eq!(alert_of(&plain, None, 1_000), "");
+
+        let mut token = row(Some(Kind::Token));
+        token.preview = EXPIRED.into();
+        let claims = claims_in(&token);
+        assert_eq!(
+            badge_of(claims.as_ref()),
+            "JWT",
+            "un token legible se marca"
+        );
+        assert_eq!(
+            alert_of(&token, claims.as_ref(), 1_700_000_001_000),
+            "CADUCADO",
+            "pasado el exp, se dice"
+        );
+        assert_eq!(
+            alert_of(&token, claims.as_ref(), 1_600_000_000_000),
+            "",
+            "antes del exp, no"
+        );
+
+        let mut fake = row(Some(Kind::Token));
+        fake.preview = "no-es-un-token".into();
+        assert_eq!(
+            badge_of(claims_in(&fake).as_ref()),
+            "",
+            "lo que no se lee no lleva insignia"
+        );
     }
 
     #[test]

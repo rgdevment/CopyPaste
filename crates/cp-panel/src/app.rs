@@ -1,7 +1,7 @@
 use crate::model::{Metrics, Rows, reveal};
 use crate::view::{
     AS_IS, as_is_label, chips_of, compact, count_text, empty_of, form_of, harvest, label_of,
-    label_of_form, sweeten,
+    label_of_form, shorthand_of, sweeten,
 };
 use crate::{Chip, FormRow, Options, Panel};
 use cp_core::kind::Kind;
@@ -17,6 +17,10 @@ const CHIP_STEP: f32 = 78.0;
 const KEPT_IN_VIEW: usize = 2;
 const OUT: Duration = Duration::from_millis(130);
 const NEXT_FRAME: Duration = Duration::from_millis(16);
+const SETTLES: Duration = Duration::from_millis(70);
+const HOVERS: Duration = Duration::from_millis(55);
+const AFTER_ROLLING: Duration = Duration::from_millis(220);
+const JUST_ROLLED: Duration = Duration::from_millis(260);
 
 #[derive(Clone)]
 pub struct App {
@@ -33,6 +37,9 @@ struct State {
     options: Options,
     metrics: Metrics,
     asking: Asking,
+    typing: slint::Timer,
+    pointing: slint::Timer,
+    rolled: Instant,
     last_refresh: Duration,
     generation: Arc<AtomicU64>,
     counter: mpsc::Sender<Request>,
@@ -74,6 +81,9 @@ impl App {
             options,
             metrics,
             asking: Asking::Kinds,
+            typing: slint::Timer::default(),
+            pointing: slint::Timer::default(),
+            rolled: Instant::now() - JUST_ROLLED,
             last_refresh: Duration::ZERO,
             generation,
             counter,
@@ -140,7 +150,17 @@ impl App {
                 if rest != query.as_str() {
                     ui.set_query(rest.into());
                 }
-                refresh(&ui, &state);
+                let later = ui.as_weak();
+                let state = state.clone();
+                state.clone().borrow().typing.start(
+                    slint::TimerMode::SingleShot,
+                    SETTLES,
+                    move || {
+                        if let Some(ui) = later.upgrade() {
+                            refresh(&ui, &state);
+                        }
+                    },
+                );
             }
         });
         let ui = self.ui.clone();
@@ -191,6 +211,7 @@ impl App {
                 state.pinned = !state.pinned;
             }
             if let Some(ui) = ui.upgrade() {
+                ui.set_pinned_on(state.borrow().pinned);
                 blink(&ui);
                 refresh(&ui, &state);
             }
@@ -230,7 +251,7 @@ impl App {
             let now = now_ms();
             let _ = state.borrow().store.set_pinned(i64::from(id), on, now);
             if let Some(ui) = ui.upgrade() {
-                refresh(&ui, &state);
+                keeping_place(&ui, &state);
             }
         });
         let ui = self.ui.clone();
@@ -238,15 +259,20 @@ impl App {
         panel.on_remove(move |id| {
             let _ = state.borrow().store.mark_deleted(i64::from(id), now_ms());
             if let Some(ui) = ui.upgrade() {
-                refresh(&ui, &state);
+                keeping_place(&ui, &state);
             }
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste(move |id| {
-            let handed = hand_over(&state.borrow().store, i64::from(id));
-            if handed && let Some(ui) = ui.upgrade() {
-                let _ = ui.hide();
+            let store = state.borrow().store.clone();
+            let handed = hand_over(&store, i64::from(id));
+            if let Some(ui) = ui.upgrade() {
+                if handed {
+                    vanish(&ui);
+                } else {
+                    complain(&ui);
+                }
             }
         });
         let ui = self.ui.clone();
@@ -285,17 +311,26 @@ impl App {
             }
             state.borrow_mut().asking = Asking::Forms(i64::from(id));
             let at = ui.get_current();
-            let top = (at >= 0)
+            let seat = (at >= 0)
                 .then(|| {
-                    state
-                        .borrow()
-                        .rows
-                        .as_ref()
-                        .and_then(|rows| rows.span_of(at as usize))
+                    let state = state.borrow();
+                    let rows = state.rows.as_ref()?;
+                    rows.open_at(ui.get_opened().then_some(at as usize));
+                    rows.span_of(at as usize)
                 })
                 .flatten()
-                .map_or(0.0, |(top, _)| top + ui.get_scroll_y() + ui.get_list_top());
-            ui.set_sheet_y(top);
+                .unwrap_or((0.0, 0.0));
+            ui.set_scroll_y(-seat.0);
+            ui.set_hovered(-1);
+            ui.set_sheet_anchor(seat.0);
+            ui.set_sheet_span(seat.1);
+            if let Some(card) = (at >= 0)
+                .then(|| ui.get_cards().row_data(at as usize))
+                .flatten()
+            {
+                ui.set_sheet_subject(slint::format!("{} · {}", card.title, card.source));
+                ui.set_sheet_kind(card.kind.clone());
+            }
             open_sheet(&ui, "PEGAR COMO", rows);
         });
         let ui = self.ui.clone();
@@ -317,8 +352,44 @@ impl App {
                 return;
             }
             state.borrow_mut().asking = Asking::Kinds;
-            ui.set_sheet_y(0.0);
+            ui.set_sheet_anchor(0.0);
+            ui.set_sheet_span(0.0);
+            ui.set_sheet_subject(Default::default());
             open_sheet(&ui, "FILTRAR POR TIPO", rows);
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_stirred(move |index| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            if index < 0 {
+                state.borrow().pointing.stop();
+                state.borrow_mut().rolled = Instant::now();
+                ui.set_hovered(-1);
+                return;
+            }
+            let waits = if state.borrow().rolled.elapsed() < JUST_ROLLED {
+                AFTER_ROLLING
+            } else {
+                HOVERS
+            };
+            let later = ui.as_weak();
+            state
+                .borrow()
+                .pointing
+                .start(slint::TimerMode::SingleShot, waits, move || {
+                    if let Some(ui) = later.upgrade() {
+                        ui.set_hovered(index);
+                    }
+                });
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_reopened(move || {
+            if let Some(ui) = ui.upgrade() {
+                refresh(&ui, &state);
+            }
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
@@ -327,7 +398,9 @@ impl App {
                 return;
             };
             state.borrow_mut().asking = Asking::Keys;
-            ui.set_sheet_y(0.0);
+            ui.set_sheet_anchor(0.0);
+            ui.set_sheet_span(0.0);
+            ui.set_sheet_subject(Default::default());
             open_sheet(&ui, "ATAJOS", keys_sheet());
         });
         let ui = self.ui.clone();
@@ -340,8 +413,11 @@ impl App {
             let asking = state.borrow().asking;
             match asking {
                 Asking::Forms(id) => {
-                    if paste_as(&state.borrow().store, id, key.as_str()) {
+                    let store = state.borrow().store.clone();
+                    if paste_as(&store, id, key.as_str()) {
                         vanish(&ui);
+                    } else {
+                        complain(&ui);
                     }
                 }
                 Asking::Kinds => {
@@ -355,7 +431,8 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste_as(move |id, key| {
-            let done = paste_as(&state.borrow().store, i64::from(id), key.as_str());
+            let store = state.borrow().store.clone();
+            let done = paste_as(&store, i64::from(id), key.as_str());
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
                 if done {
@@ -395,6 +472,18 @@ impl App {
         #[cfg(not(target_os = "windows"))]
         let _ = panel;
     }
+}
+
+fn keeping_place(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let was = ui.get_current();
+    refresh(ui, state);
+    let rows = state.borrow().rows.as_ref().map_or(0, |rows| rows.loaded());
+    if rows == 0 || was <= 0 {
+        return;
+    }
+    let back = was.min(rows as i32 - 1);
+    ui.set_current(back);
+    ui.invoke_moved(back);
 }
 
 fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
@@ -482,7 +571,12 @@ fn spawn_counter(
             let footer = count_text(shown);
             let anchored = compact(pinned);
             let only_anchored = request.full.pinned_only;
+            let mine = request.generation;
+            let clock = generation.clone();
             let _ = ui.upgrade_in_event_loop(move |panel| {
+                if mine != clock.load(Ordering::SeqCst) {
+                    return;
+                }
                 panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
                 panel.set_count_text(footer.into());
                 panel.set_pinned_count(anchored.into());
@@ -600,7 +694,7 @@ fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
 }
 
 fn keys_sheet() -> Vec<FormRow> {
-    const KEYS: [(&str, &str); 10] = [
+    const KEYS: [(&str, &str); 12] = [
         ("Enter", "pegar lo seleccionado"),
         ("Shift + Enter", "pegar en plano"),
         ("Alt + Enter  ·  Ctrl + Enter", "pegar como…"),
@@ -610,6 +704,8 @@ fn keys_sheet() -> Vec<FormRow> {
         ("Tab  ·  Shift + Tab", "recorrer los filtros"),
         ("#imagen  ·  #carpeta", "filtrar por tipo desde el buscador"),
         ("Retroceso", "quitar la última etiqueta"),
+        ("Supr", "borrar la seleccionada"),
+        ("Ctrl + P", "anclar o desanclar"),
         ("Esc", "cerrar el panel"),
     ];
     KEYS.iter()
@@ -628,22 +724,43 @@ fn open_sheet(ui: &Panel, title: &str, rows: Vec<FormRow>) {
     ui.set_sheet_open(true);
 }
 
+thread_local! {
+    static CURTAIN: slint::Timer = slint::Timer::default();
+}
+
 fn appear(ui: &Panel) {
     ui.set_shown(0.0);
     let weak = ui.as_weak();
-    slint::Timer::single_shot(NEXT_FRAME, move || {
-        if let Some(ui) = weak.upgrade() {
-            ui.set_shown(1.0);
-        }
+    CURTAIN.with(|timer| {
+        timer.stop();
+        timer.start(slint::TimerMode::SingleShot, NEXT_FRAME, move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_shown(1.0);
+            }
+        });
     });
 }
 
 fn vanish(ui: &Panel) {
+    ui.set_sheet_open(false);
     ui.set_shown(0.0);
     let weak = ui.as_weak();
-    slint::Timer::single_shot(OUT, move || {
+    CURTAIN.with(|timer| {
+        timer.stop();
+        timer.start(slint::TimerMode::SingleShot, OUT, move || {
+            if let Some(ui) = weak.upgrade() {
+                let _ = ui.hide();
+            }
+        });
+    });
+}
+
+fn complain(ui: &Panel) {
+    ui.set_count_text("no se pudo pegar: el portapapeles está ocupado".into());
+    let weak = ui.as_weak();
+    slint::Timer::single_shot(Duration::from_millis(2_200), move || {
         if let Some(ui) = weak.upgrade() {
-            let _ = ui.hide();
+            ui.invoke_reopened();
         }
     });
 }
@@ -679,10 +796,20 @@ fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
     rows.extend(
         cp_core::paste_as::forms_for(&content)
             .into_iter()
-            .map(|form| FormRow {
-                key: form.as_str().into(),
-                label: label_of_form(form).into(),
-                preview: glimpse(cp_core::paste_as::render(form, &content)).into(),
+            .map(|form| {
+                let shown = glimpse(cp_core::paste_as::render(form, &content));
+                match shorthand_of(form) {
+                    Some(short) => FormRow {
+                        key: form.as_str().into(),
+                        label: shown.into(),
+                        preview: short.into(),
+                    },
+                    None => FormRow {
+                        key: form.as_str().into(),
+                        label: label_of_form(form).into(),
+                        preview: shown.into(),
+                    },
+                }
             }),
     );
     rows
@@ -739,7 +866,7 @@ pub fn now_ms() -> i64 {
 fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
     std::thread::spawn(move || {
         loop {
-            std::thread::sleep(Duration::from_millis(5));
+            std::thread::sleep(Duration::from_millis(40));
             for (name, show) in [("show", true), ("hide", false)] {
                 let flag = dir.join(name);
                 if flag.exists() {
@@ -747,6 +874,7 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
                             let _ = ui.show();
+                            ui.invoke_reopened();
                             appear(&ui);
                             ui.invoke_focus_search();
                         } else {

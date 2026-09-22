@@ -9,6 +9,9 @@ export component Icon inherits Image {
 }
 
 export component Action inherits Rectangle {
+    in property <string> says;
+    accessible-role: AccessibleRole.button;
+    accessible-label: says;
     in property <image> icon;
     in property <color> hot: Theme.body;
     in property <bool> awake: true;
@@ -79,6 +82,8 @@ export global Hue {
 
 export component Pill inherits Rectangle {
     in property <Chip> chip;
+    accessible-role: AccessibleRole.button;
+    accessible-label: chip.label;
     callback chosen(string);
     height: 24px;
     width: content.preferred-width;
@@ -153,12 +158,17 @@ export component CardView inherits Rectangle {
     in property <Card> card;
     in property <bool> current;
     in property <bool> open;
+    in property <bool> shown-here;
     callback paste(int);
+    callback forms(int);
     callback edit(int);
     callback pin(int, bool);
     callback remove(int);
     callback chosen(int);
-    property <bool> lit: current || touch.has-hover;
+    callback stirred();
+    property <bool> lit: shown-here;
+    accessible-role: AccessibleRole.list-item;
+    accessible-label: card.title + ", " + card.body;
     border-radius: 12px;
     background: lit ? Theme.card-hover : Theme.card;
     border-width: current ? 1px : 0px;
@@ -167,6 +177,11 @@ export component CardView inherits Rectangle {
     touch := TouchArea {
         clicked => { root.chosen(card.id); }
         double-clicked => { root.paste(card.id); }
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.move) {
+                root.stirred();
+            }
+        }
     }
 
     VerticalLayout {
@@ -204,6 +219,30 @@ export component CardView inherits Rectangle {
             height: 16px;
             spacing: 6px;
             alignment: stretch;
+            if card.badge != "" : Rectangle {
+                width: badge-row.preferred-width;
+                height: 15px;
+                border-radius: 4px;
+                background: Theme.tile;
+                y: (parent.height - 15px) / 2;
+                badge-row := HorizontalLayout {
+                    padding-left: 5px;
+                    padding-right: 5px;
+                    Text { text: card.badge; color: Theme.muted; font-size: 9.5px; font-weight: 600; vertical-alignment: center; }
+                }
+            }
+            if card.alert != "" : Rectangle {
+                width: alert-row.preferred-width;
+                height: 15px;
+                border-radius: 4px;
+                background: #46351C;
+                y: (parent.height - 15px) / 2;
+                alert-row := HorizontalLayout {
+                    padding-left: 5px;
+                    padding-right: 5px;
+                    Text { text: card.alert; color: #FCD34D; font-size: 9.5px; font-weight: 600; vertical-alignment: center; }
+                }
+            }
             Rectangle {
                 width: 7px;
                 height: 7px;
@@ -221,10 +260,9 @@ export component CardView inherits Rectangle {
                 alignment: center;
                 opacity: lit ? 1.0 : 0.0;
                 animate opacity { duration: 120ms; easing: ease-out; }
-                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); awake: lit; pressed => { root.paste(card.id); } }
-                Action { icon: @image-url("../assets/icons/pencil.svg"); awake: lit; pressed => { root.edit(card.id); } }
-                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
-                Action { icon: @image-url("../assets/icons/trash-2.svg"); hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
+                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: "pegar como"; awake: lit; pressed => { root.forms(card.id); } }
+                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? "desanclar" : "anclar"; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
+                Action { icon: @image-url("../assets/icons/trash-2.svg"); says: "borrar"; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
             }
             Text { text: card.age; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
         }

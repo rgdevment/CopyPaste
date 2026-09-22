@@ -1,7 +1,7 @@
 import { ListView } from "std-widgets.slint";
 import { Card, Chip, FormRow } from "types.slint";
 import { Theme } from "theme.slint";
-import { Icon, Action, Pill, Tag, CardView } from "cards.slint";
+import { Icon, Action, Pill, Tag, CardView, Hue } from "cards.slint";
 
 export { Card, Chip, FormRow, Theme }
 
@@ -18,7 +18,10 @@ export component Panel inherits Window {
     in property <[Chip]> tags;
     in property <[FormRow]> sheet-rows;
     in property <string> sheet-title;
-    in property <length> sheet-y;
+    in property <length> sheet-anchor;
+    in property <length> sheet-span;
+    in property <string> sheet-subject;
+    in property <string> sheet-kind;
     in property <string> count-text;
     in property <string> pinned-count;
     in property <string> empty-title;
@@ -28,6 +31,9 @@ export component Panel inherits Window {
     in-out property <string> query;
     in-out property <int> current: -1;
     in-out property <bool> opened: false;
+    in-out property <int> hovered: -1;
+    in-out property <bool> pointer-hidden: false;
+    in-out property <bool> gliding: true;
     in-out property <bool> sheet-open: false;
     in-out property <int> sheet-current: 0;
     in-out property <float> shown: 1.0;
@@ -35,7 +41,7 @@ export component Panel inherits Window {
     in-out property <length> scroll-y <=> list.content-y;
     in-out property <length> chips-scroll <=> strip.content-x;
     out property <length> viewport-height: list.visible-height;
-    out property <length> list-top: list.absolute-position.y - root.absolute-position.y;
+    out property <length> list-top: list.absolute-position.y - panel.absolute-position.y;
 
     callback search(string);
     callback chip-chosen(string);
@@ -45,6 +51,7 @@ export component Panel inherits Window {
     callback ask-forms(int);
     callback ask-kinds();
     callback ask-keys();
+    callback reopened();
     callback sheet-chosen(string);
     callback paste-as(int, string);
     callback cycle(int);
@@ -55,12 +62,14 @@ export component Panel inherits Window {
     callback dismiss();
     callback focus-search();
     callback moved(int);
+    callback stirred(int);
 
     forward-focus: input;
 
     focus-search => { input.focus(); }
 
     panel := Rectangle {
+        property <length> sheet-top: root.list-top + root.sheet-anchor + root.sheet-span + list.content-y + 4px;
         x: Theme.margin;
         y: Theme.margin + (1.0 - root.shown) * 8px;
         width: Theme.width;
@@ -118,14 +127,30 @@ export component Panel inherits Window {
                                     if root.sheet-open {
                                         if event.text == Key.Escape {
                                             root.sheet-open = false;
-                                        } else if event.text == Key.DownArrow {
-                                            root.sheet-current = min(root.sheet-current + 1, root.sheet-rows.length - 1);
-                                        } else if event.text == Key.UpArrow {
-                                            root.sheet-current = max(root.sheet-current - 1, 0);
-                                        } else if event.text == Key.Return && root.sheet-rows.length > 0 {
-                                            root.sheet-chosen(root.sheet-rows[root.sheet-current].key);
+                                            return accept;
                                         }
-                                        return accept;
+                                        if event.text == Key.DownArrow {
+                                            root.sheet-current = min(root.sheet-current + 1, root.sheet-rows.length - 1);
+                                            return accept;
+                                        }
+                                        if event.text == Key.UpArrow {
+                                            root.sheet-current = max(root.sheet-current - 1, 0);
+                                            return accept;
+                                        }
+                                        if event.text == Key.Return {
+                                            if (event.modifiers.alt || event.modifiers.control) {
+                                                root.sheet-open = false;
+                                            } else if (root.sheet-rows.length > 0) {
+                                                root.sheet-chosen(root.sheet-rows[root.sheet-current].key);
+                                            }
+                                            return accept;
+                                        }
+                                        if event.text == Key.Tab {
+                                            root.sheet-open = false;
+                                            return accept;
+                                        }
+                                        root.sheet-open = false;
+                                        return reject;
                                     }
                                     if event.text == Key.F1 {
                                         root.ask-keys();
@@ -145,6 +170,14 @@ export component Panel inherits Window {
                                         root.drop-tag("");
                                         return accept;
                                     }
+                                    if event.text == Key.Delete && root.current >= 0 {
+                                        root.remove(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if event.text == "p" && event.modifiers.control && root.current >= 0 {
+                                        root.pin(root.cards[root.current].id, !root.cards[root.current].pinned);
+                                        return accept;
+                                    }
                                     if event.text == Key.Escape {
                                         root.dismiss();
                                         return accept;
@@ -154,16 +187,33 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.Tab {
+                                        root.hovered = -1;
                                         root.cycle(event.modifiers.shift ? -1 : 1);
                                         return accept;
                                     }
                                     if event.text == Key.DownArrow {
+                                        if (root.hovered >= 0) {
+                                            root.current = root.hovered;
+                                        }
+                                        root.hovered = -1;
+                                        root.pointer-hidden = true;
+                                        root.gliding = false;
+                                        root.opened = false;
+                                        root.sheet-open = false;
                                         root.current = min(root.current + 1, root.cards.length - 1);
                                         root.moved(root.current);
                                         return accept;
                                     }
                                     if event.text == Key.UpArrow {
-                                        root.current = max(root.current - 1, 0);
+                                        if (root.hovered >= 0) {
+                                            root.current = root.hovered;
+                                        }
+                                        root.hovered = -1;
+                                        root.pointer-hidden = true;
+                                        root.gliding = false;
+                                        root.opened = false;
+                                        root.sheet-open = false;
+                                        root.current = root.cards.length == 0 ? -1 : max(root.current - 1, 0);
                                         root.moved(root.current);
                                         return accept;
                                     }
@@ -317,7 +367,13 @@ export component Panel inherits Window {
                     }
                 }
                 wheel := TouchArea {
+                    mouse-cursor: root.pointer-hidden ? MouseCursor.none : MouseCursor.default;
                     scroll-event(event) => {
+                        root.pointer-hidden = false;
+                        root.gliding = true;
+                        root.sheet-open = false;
+                        root.hovered = -1;
+                        root.stirred(-1);
                         list.content-y = clamp(
                             list.content-y + event.delta-y * 1.6,
                             min(0px, list.visible-height - list.content-height),
@@ -326,24 +382,44 @@ export component Panel inherits Window {
                         return accept;
                     }
                 list := ListView {
+                    accessible-role: AccessibleRole.list;
                     vertical-scrollbar-policy: ScrollBarPolicy.always-off;
-                    animate content-y { duration: 110ms; easing: ease-out; }
+                    animate content-y { duration: root.gliding ? 110ms : 0ms; easing: ease-out; }
                     for card[index] in root.cards : Rectangle {
+                        property <bool> mine: index == root.current;
+                        changed mine => {
+                            if (self.mine) {
+                                if (self.y < -list.content-y) {
+                                    list.content-y = min(0px, 8px - self.y);
+                                } else if (self.y + self.height > -list.content-y + list.visible-height) {
+                                    list.content-y = list.visible-height - self.y - self.height - 8px;
+                                }
+                            }
+                        }
                         height: card.has-thumb
                             ? Theme.row-thumb
                             : index == root.current && root.opened
                                 ? Theme.row-frame + card.lines * Theme.line
                                 : card.found ? Theme.row-found : Theme.row-plain;
-                        animate height { duration: Theme.settle; easing: ease-out; }
+                        animate height { duration: root.gliding ? Theme.settle : 0ms; easing: ease-out; }
                         CardView {
                             card: card;
                             current: index == root.current;
                             open: index == root.current && root.opened;
+                            shown-here: root.hovered >= 0 ? index == root.hovered : index == root.current;
+                            stirred => {
+                                root.pointer-hidden = false;
+                                if (!root.sheet-open) {
+                                    root.stirred(index);
+                                }
+                            }
                             x: 10px;
                             width: parent.width - 20px;
                             height: parent.height - 6px;
                             chosen(id) => {
-                                if (index == root.current) {
+                                if (root.sheet-open) {
+                                    root.sheet-open = false;
+                                } else if (index == root.current) {
                                     root.opened = !root.opened;
                                 } else {
                                     root.current = index;
@@ -352,6 +428,12 @@ export component Panel inherits Window {
                                 root.moved(index);
                             }
                             paste(id) => { root.paste(id); }
+                            forms(id) => {
+                                root.current = index;
+                                root.opened = false;
+                                root.moved(index);
+                                root.ask-forms(id);
+                            }
                             edit(id) => { root.edit(id); }
                             pin(id, on) => { root.pin(id, on); }
                             remove(id) => { root.remove(id); }
@@ -389,6 +471,8 @@ export component Panel inherits Window {
                         enabled: rail.needed;
                         pointer-event(event) => {
                             if (event.kind == PointerEventKind.down) {
+                                root.sheet-open = false;
+                                root.gliding = false;
                                 if (self.mouse-y < rail.knob-y || self.mouse-y > rail.knob-y + rail.knob-height) {
                                     list.content-y = clamp(
                                         -(self.mouse-y - rail.knob-height / 2) * list.content-height / list.visible-height,
@@ -427,7 +511,7 @@ export component Panel inherits Window {
                     Rectangle {
                         clip: true;
                         horizontal-stretch: 0;
-                        width: min(hints.preferred-width, 170px);
+                        width: min(hints.preferred-width, 230px);
                         hints := HorizontalLayout {
                             spacing: 4px;
                             alignment: end;
@@ -435,7 +519,6 @@ export component Panel inherits Window {
                             Text { text: "pegar · alt+enter: más formas"; color: Theme.placeholder; font-size: 10px; vertical-alignment: center; }
                         }
                     }
-                    Action { icon: @image-url("../assets/icons/sun.svg"); y: (parent.height - 22px) / 2; }
                     Action {
                         icon: @image-url("../assets/icons/sliders-horizontal.svg");
                         y: (parent.height - 22px) / 2;
@@ -446,40 +529,65 @@ export component Panel inherits Window {
         }
 
         if root.sheet-open : Rectangle {
-            background: #0B0D14D9;
-            TouchArea {
-                clicked => { root.sheet-open = false; }
-            }
-            Rectangle {
-                x: min(24px, parent.width - self.width - 14px);
-                y: min(max(14px, root.sheet-y), parent.height - self.height - 14px);
-                width: min(max(280px, sheet.preferred-width), parent.width - 28px);
-                height: min(sheet.preferred-height, parent.height - 28px);
-                background: Theme.field;
+            x: 10px;
+            y: clamp(
+                panel.sheet-top,
+                10px,
+                max(10px, parent.height - self.height - 10px)
+            );
+            width: parent.width - 20px;
+            height: min(sheet.preferred-height, parent.height - 20px);
+            background: Theme.field;
                 border-radius: 12px;
                 border-width: 1px;
                 border-color: Theme.selected-edge;
-                drop-shadow-blur: 18px;
-                drop-shadow-color: #00000080;
-                drop-shadow-offset-y: 6px;
-                clip: true;
-                sheet := VerticalLayout {
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #000000A6;
+            drop-shadow-offset-y: 8px;
+            clip: true;
+            TouchArea {
+                scroll-event(event) => {
+                    root.sheet-open = false;
+                    return accept;
+                }
+            }
+            sheet := VerticalLayout {
                     padding: 6px;
                     spacing: 1px;
-                    Text {
-                        text: root.sheet-title;
-                        color: Theme.muted;
-                        font-size: 9.5px;
-                        letter-spacing: 0.8px;
+                    HorizontalLayout {
                         height: 22px;
-                        vertical-alignment: center;
-                        horizontal-alignment: left;
-                        x: 10px;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 6px;
+                        alignment: stretch;
+                        Text {
+                            text: root.sheet-title;
+                            color: Theme.muted;
+                            font-size: 9.5px;
+                            letter-spacing: 0.8px;
+                            vertical-alignment: center;
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        if root.sheet-subject != "" : Rectangle {
+                            width: 6px;
+                            height: 6px;
+                            border-radius: 2px;
+                            background: Hue.of(root.sheet-kind);
+                            y: (parent.height - 6px) / 2;
+                        }
+                        if root.sheet-subject != "" : Text {
+                            text: root.sheet-subject;
+                            color: Theme.placeholder;
+                            font-size: 9.5px;
+                            vertical-alignment: center;
+                            overflow: elide;
+                            max-width: 170px;
+                        }
                     }
                     for form[at] in root.sheet-rows : Rectangle {
                         height: 28px;
                         border-radius: 7px;
-                        background: at == root.sheet-current ? Theme.selected : row-touch.has-hover ? Theme.card-hover : transparent;
+                        background: at == root.sheet-current ? Theme.selected : transparent;
                         HorizontalLayout {
                             padding-left: 10px;
                             padding-right: 10px;
@@ -503,9 +611,13 @@ export component Panel inherits Window {
                         }
                         row-touch := TouchArea {
                             clicked => { root.sheet-chosen(form.key); }
+                            pointer-event(event) => {
+                                if (event.kind == PointerEventKind.move) {
+                                    root.sheet-current = at;
+                                }
+                            }
                         }
                     }
-                }
             }
         }
     }

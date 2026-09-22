@@ -1,5 +1,5 @@
 use crate::Card;
-use crate::view::{body_of, card_of, lines_of};
+use crate::view::{body_of, card_of, lines_of, was_found};
 use cp_store::{Cursor, Filter, Listed, Store};
 use slint::{Model, ModelNotify, ModelTracker};
 use std::cell::{Cell, RefCell};
@@ -17,15 +17,17 @@ pub struct Metrics {
     pub line: f32,
 }
 
+const EDGE: f32 = 8.0;
+
 pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
     if viewport <= 0.0 {
         return scroll;
     }
     let seen = -scroll;
     if top < seen {
-        -top
+        (EDGE - top).min(0.0)
     } else if top + span > seen + viewport {
-        viewport - top - span
+        viewport - top - span - EDGE
     } else {
         scroll
     }
@@ -95,6 +97,10 @@ impl Rows {
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
+        self.open_of_row(row)
+    }
+
+    fn open_of_row(&self, row: &Listed) -> f32 {
         self.metrics.frame + lines_of(&body_of(row)) as f32 * self.metrics.line
     }
 
@@ -122,7 +128,7 @@ impl Rows {
     fn height_of(&self, row: &Listed) -> f32 {
         if row.thumb_path.is_some() {
             self.metrics.tall
-        } else if row.snippet.is_some() {
+        } else if was_found(row) {
             self.metrics.found
         } else {
             self.metrics.plain
@@ -197,7 +203,9 @@ impl Rows {
         }
         let rows = self.rows.borrow();
         let row = rows.get(index)?;
-        let without_thumb = if row.snippet.is_some() {
+        let without_thumb = if self.open.get() == Some(index) {
+            self.open_of_row(row)
+        } else if was_found(row) {
             self.metrics.found
         } else {
             self.metrics.plain
@@ -438,12 +446,17 @@ mod tests {
         );
         assert_eq!(
             reveal(124.0, 124.0, -300.0, viewport),
-            -124.0,
-            "queda encima"
+            -116.0,
+            "queda encima: baja con un respiro"
+        );
+        assert_eq!(
+            reveal(4.0, 124.0, -20.0, viewport),
+            0.0,
+            "arriba del todo no se pasa de largo"
         );
         assert_eq!(
             reveal(500.0, 124.0, 0.0, viewport),
-            -224.0,
+            -232.0,
             "queda debajo: sube lo justo"
         );
         assert_eq!(reveal(500.0, 124.0, 0.0, 0.0), 0.0, "sin alto no se decide");
