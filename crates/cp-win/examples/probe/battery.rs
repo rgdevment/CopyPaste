@@ -1057,13 +1057,18 @@ fn main() -> std::process::ExitCode {
                 return Err("reveal dijo que no".into());
             }
             let mut window_seen = false;
+            let mut selection = String::new();
             let shown = wait_until("el Explorador deja el archivo seleccionado", || {
                 let listing = powershell_within(
                     "(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { $_.LocationURL + ' | ' + (($_.Document.SelectedItems() | ForEach-Object { $_.Path }) -join ',') }",
                 )?;
                 let ours = listing.lines().find(|line| line.contains("cp-p1"));
                 window_seen |= ours.is_some();
-                Some(ours.is_some_and(|line| line.contains("revelado.txt")))
+                selection = ours
+                    .and_then(|line| line.split_once(" | "))
+                    .map(|(_, selected)| selected.trim().to_owned())
+                    .unwrap_or_default();
+                Some(selection.contains("revelado.txt"))
             });
             powershell_within(
                 "(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationURL -like '*cp-p1*' } | ForEach-Object { $_.Quit() }",
@@ -1073,7 +1078,12 @@ fn main() -> std::process::ExitCode {
                     "{SKIPPED}el Explorador no abrió ninguna ventana en esta sesión: sin escritorio interactivo"
                 ));
             }
-            shown
+            if shown.is_err() && selection.is_empty() {
+                return Err(format!(
+                    "{SKIPPED}la carpeta se abrió, pero la vista no reporta selección en esta sesión"
+                ));
+            }
+            shown.map_err(|why| format!("{why}; seleccionado: «{selection}»"))
         },
     );
 
