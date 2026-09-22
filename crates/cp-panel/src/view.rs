@@ -198,6 +198,7 @@ pub fn sweeten(query: &str) -> String {
         .join(" ")
 }
 
+#[cfg(any(target_os = "windows", test))]
 pub fn label_of_form(form: Form) -> &'static str {
     match form {
         Form::PlainText => "En texto plano",
@@ -229,8 +230,10 @@ pub fn label_of_form(form: Form) -> &'static str {
     }
 }
 
+#[cfg(any(target_os = "windows", test))]
 pub const AS_IS: &str = "as-is";
 
+#[cfg(any(target_os = "windows", test))]
 pub fn shorthand_of(form: Form) -> Option<&'static str> {
     match form {
         Form::ColorHex => Some("hex"),
@@ -241,6 +244,7 @@ pub fn shorthand_of(form: Form) -> Option<&'static str> {
     }
 }
 
+#[cfg(any(target_os = "windows", test))]
 pub fn as_is_label(kind: Option<Kind>) -> &'static str {
     match kind {
         Some(Kind::Token) => "El token",

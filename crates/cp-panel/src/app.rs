@@ -1,9 +1,8 @@
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
-use crate::view::{
-    AS_IS, as_is_label, chips_of, compact, count_text, empty_of, form_of, harvest, label_of,
-    label_of_form, shorthand_of, sweeten,
-};
+#[cfg(target_os = "windows")]
+use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
+use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
 use cp_core::kind::Kind;
 use cp_store::{Clock, Filter, Store};
@@ -699,6 +698,7 @@ fn hand_over(store: &Store, id: i64) -> bool {
     }
 }
 
+#[cfg(target_os = "windows")]
 fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
     const SHOWN: usize = 22;
     let text = match rendered {
