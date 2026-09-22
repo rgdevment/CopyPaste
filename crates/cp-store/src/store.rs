@@ -229,12 +229,14 @@ impl Clauses {
     }
 
     fn source(&self) -> String {
-        let join = if self.joins_index {
-            "JOIN items_fts ON items.id = items_fts.rowid "
+        let conditions = self.conditions.join(" AND ");
+        if self.joins_index {
+            format!(
+                "FROM items_fts CROSS JOIN items ON items.id = items_fts.rowid WHERE {conditions}"
+            )
         } else {
-            ""
-        };
-        format!("FROM items {join}WHERE {}", self.conditions.join(" AND "))
+            format!("FROM items WHERE {conditions}")
+        }
     }
 }
 
@@ -1284,6 +1286,44 @@ fn search(store: &Store, query: &str) -> Vec<String> {
 mod tests {
     use super::*;
     use cp_core::item::Format;
+
+    #[test]
+    fn a_pinned_search_lets_the_index_drive_and_never_scans_the_fts_per_row() {
+        let store = seeded();
+        for filter in [
+            Filter {
+                query: Some("r".into()),
+                pinned_only: true,
+                ..Default::default()
+            },
+            Filter {
+                query: Some("r".into()),
+                kinds: vec![Kind::Text],
+                ..Default::default()
+            },
+        ] {
+            let clauses = Clauses::of(&filter, true, true).expect("cláusulas");
+            let sql = format!("EXPLAIN QUERY PLAN SELECT COUNT(*) {}", clauses.source());
+            let mut stmt = store.db.prepare(&sql).expect("plan");
+            let steps: Vec<String> = stmt
+                .query_map(params_from_iter(clauses.bound.iter()), |row| {
+                    row.get::<_, String>(3)
+                })
+                .expect("plan")
+                .map(|step| step.expect("paso"))
+                .collect();
+            assert!(
+                steps
+                    .first()
+                    .is_some_and(|first| first.contains("items_fts")),
+                "el FTS tiene que ser el bucle exterior: {steps:?}"
+            );
+            assert!(
+                !steps.iter().any(|step| step.contains("items_pinned")),
+                "el índice parcial de anclados hacía barrer el FTS por cada fila: {steps:?}"
+            );
+        }
+    }
 
     fn seeded() -> Store {
         let store = Store::in_memory().expect("esquema");

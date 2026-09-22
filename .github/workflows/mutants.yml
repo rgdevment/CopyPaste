@@ -28,11 +28,11 @@ jobs:
         include:
           - os: windows-2025
             name: windows 1 of 2
-            crates: -p cp-core -p cp-store -p cp-win
+            crates: -p cp-core -p cp-store -p cp-win -p cp-panel
             shard: --shard 0/2
           - os: windows-2025
             name: windows 2 of 2
-            crates: -p cp-core -p cp-store -p cp-win
+            crates: -p cp-core -p cp-store -p cp-win -p cp-panel
             shard: --shard 1/2
           - os: macos-15
             name: macos

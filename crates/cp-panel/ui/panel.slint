@@ -1,0 +1,656 @@
+import { ListView } from "std-widgets.slint";
+import { Card, Chip, FormRow } from "types.slint";
+import { Theme } from "theme.slint";
+import { Icon, Action, Pill, Tag, CardView, Hue } from "cards.slint";
+
+export { Card, Chip, FormRow, Theme }
+
+export component Panel inherits Window {
+    width: Theme.width + Theme.margin * 2;
+    height: Theme.height + Theme.margin * 2;
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    title: "CopyPaste";
+
+    in property <[Card]> cards;
+    in property <[Chip]> chips;
+    in property <[Chip]> tags;
+    in property <[FormRow]> sheet-rows;
+    in property <string> sheet-title;
+    in-out property <length> sheet-anchor;
+    in-out property <length> sheet-span;
+    in property <string> sheet-subject;
+    in property <string> sheet-kind;
+    in property <string> count-text;
+    in property <string> pinned-count;
+    in property <string> empty-title;
+    in property <string> empty-hint;
+    in property <bool> pinned-on;
+    in property <bool> filtered;
+    in-out property <string> query;
+    in-out property <int> current: -1;
+    in-out property <bool> opened: false;
+    in-out property <int> hovered: -1;
+    in-out property <bool> pointer-hidden: false;
+    in-out property <bool> gliding: true;
+    in-out property <bool> sheet-open: false;
+    in-out property <int> sheet-current: 0;
+    in-out property <float> shown: 1.0;
+    in-out property <float> fade: 1.0;
+    in-out property <length> scroll-y <=> list.content-y;
+    in-out property <length> chips-scroll <=> strip.content-x;
+    in-out property <length> sheet-at;
+    in-out property <bool> sheet-armed: false;
+    out property <length> viewport-height: list.visible-height;
+    out property <length> list-top: list.absolute-position.y - panel.absolute-position.y;
+
+    callback search(string);
+    callback chip-chosen(string);
+    callback pin-filter();
+    callback drop-tag(string);
+    callback clear-filters();
+    callback ask-forms(int);
+    callback ask-kinds();
+    callback ask-keys();
+    callback reopened();
+    callback sheet-chosen(string);
+    callback paste-as(int, string);
+    callback cycle(int);
+    callback paste(int);
+    callback edit(int);
+    callback pin(int, bool);
+    callback remove(int);
+    callback dismiss();
+    callback focus-search();
+    callback moved(int);
+    callback stirred(int);
+
+    forward-focus: input;
+
+    focus-search => { input.focus(); }
+
+    changed scroll-y => {
+        if (root.sheet-open && root.sheet-armed && abs(root.scroll-y - root.sheet-at) > 12px) {
+            root.sheet-open = false;
+        }
+    }
+
+    panel := Rectangle {
+        property <length> sheet-top: root.list-top + root.sheet-anchor + root.sheet-span + list.content-y + 4px;
+        x: Theme.margin;
+        y: Theme.margin + (1.0 - root.shown) * 8px;
+        width: Theme.width;
+        height: Theme.height;
+        border-radius: Theme.radius;
+        border-width: 1px;
+        border-color: Theme.panel-border;
+        background: Theme.panel;
+        opacity: root.shown;
+        drop-shadow-blur: Theme.shadow-blur;
+        drop-shadow-color: Theme.shadow;
+        drop-shadow-offset-y: 10px;
+        clip: true;
+        animate opacity { duration: Theme.appear; easing: ease-out; }
+        animate y { duration: Theme.appear; easing: ease-out; }
+
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            VerticalLayout {
+                padding: 10px;
+                padding-bottom: 8px;
+                spacing: 9px;
+                search-box := Rectangle {
+                    height: 34px;
+                    border-radius: 10px;
+                    background: Theme.field;
+                    border-width: 1px;
+                    border-color: input.has-focus ? Theme.selected-edge : Theme.field-border;
+                    animate border-color { duration: 100ms; }
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 9px;
+                        alignment: stretch;
+                        Icon { source: @image-url("../assets/icons/search.svg"); tint: Theme.placeholder; y: (parent.height - 15px) / 2; }
+                        for tag in root.tags : Tag {
+                            tag: tag;
+                            y: (parent.height - 20px) / 2;
+                            dropped(key) => { root.drop-tag(key); }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            input := TextInput {
+                                height: parent.height;
+                                width: parent.width;
+                                vertical-alignment: center;
+                                text <=> root.query;
+                                color: Theme.body;
+                                font-size: 13px;
+                                single-line: true;
+                                edited => { root.search(self.text); }
+                                key-pressed(event) => {
+                                    if root.sheet-open {
+                                        if event.text == Key.Escape {
+                                            root.sheet-open = false;
+                                            return accept;
+                                        }
+                                        if event.text == Key.DownArrow {
+                                            root.sheet-current = min(root.sheet-current + 1, root.sheet-rows.length - 1);
+                                            return accept;
+                                        }
+                                        if event.text == Key.UpArrow {
+                                            root.sheet-current = max(root.sheet-current - 1, 0);
+                                            return accept;
+                                        }
+                                        if event.text == Key.Return {
+                                            if (event.modifiers.alt || event.modifiers.control) {
+                                                root.sheet-open = false;
+                                            } else if (root.sheet-rows.length > 0) {
+                                                root.sheet-chosen(root.sheet-rows[root.sheet-current].key);
+                                            }
+                                            return accept;
+                                        }
+                                        if event.text == Key.Tab {
+                                            root.sheet-open = false;
+                                            return accept;
+                                        }
+                                        root.sheet-open = false;
+                                        return reject;
+                                    }
+                                    if event.text == Key.F1 {
+                                        root.ask-keys();
+                                        return accept;
+                                    }
+                                    if event.text == Key.Return
+                                        && root.current >= 0
+                                        && (event.modifiers.alt || event.modifiers.control) {
+                                        root.ask-forms(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if event.text == Key.Return && root.current >= 0 && event.modifiers.shift {
+                                        root.paste-as(root.cards[root.current].id, "plain-text");
+                                        return accept;
+                                    }
+                                    if event.text == Key.Backspace && root.query == "" && root.tags.length > 0 {
+                                        root.drop-tag("");
+                                        return accept;
+                                    }
+                                    if event.text == Key.Delete && root.query == "" && root.current >= 0 {
+                                        root.remove(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if event.text == "p" && event.modifiers.control && root.current >= 0 {
+                                        root.pin(root.cards[root.current].id, !root.cards[root.current].pinned);
+                                        return accept;
+                                    }
+                                    if event.text == Key.Escape {
+                                        root.dismiss();
+                                        return accept;
+                                    }
+                                    if event.text == Key.Return && root.current >= 0 {
+                                        root.paste(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if event.text == Key.Tab {
+                                        root.hovered = -1;
+                                        root.cycle(event.modifiers.shift ? -1 : 1);
+                                        return accept;
+                                    }
+                                    if event.text == Key.DownArrow {
+                                        if (root.hovered >= 0) {
+                                            root.current = root.hovered;
+                                        }
+                                        root.hovered = -1;
+                                        root.pointer-hidden = true;
+                                        root.gliding = false;
+                                        root.opened = false;
+                                        root.sheet-open = false;
+                                        root.current = min(root.current + 1, root.cards.length - 1);
+                                        root.moved(root.current);
+                                        return accept;
+                                    }
+                                    if event.text == Key.UpArrow {
+                                        if (root.hovered >= 0) {
+                                            root.current = root.hovered;
+                                        }
+                                        root.hovered = -1;
+                                        root.pointer-hidden = true;
+                                        root.gliding = false;
+                                        root.opened = false;
+                                        root.sheet-open = false;
+                                        root.current = root.cards.length == 0 ? -1 : max(root.current - 1, 0);
+                                        root.moved(root.current);
+                                        return accept;
+                                    }
+                                    reject
+                                }
+                            }
+                            if root.query == "" : Text {
+                                x: 0;
+                                height: parent.height;
+                                vertical-alignment: center;
+                                text: "Busca o filtra con # en el portapapeles";
+                                color: Theme.placeholder;
+                                font-size: 13px;
+                            }
+                        }
+                        Rectangle {
+                            width: 22px;
+                            height: 22px;
+                            border-radius: 6px;
+                            background: kinds-touch.has-hover ? #333853 : transparent;
+                            y: (parent.height - 22px) / 2;
+                            Icon {
+                                source: @image-url("../assets/icons/sliders-horizontal.svg");
+                                tint: kinds-touch.has-hover ? Theme.body : Theme.placeholder;
+                            }
+                            kinds-touch := TouchArea {
+                                clicked => { root.ask-kinds(); }
+                            }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    height: 24px;
+                    spacing: 8px;
+                    alignment: stretch;
+                    pin := Rectangle {
+                        width: pin-row.preferred-width;
+                        height: 24px;
+                        border-radius: 12px;
+                        background: root.pinned-on ? Theme.selected : pin-touch.has-hover ? #242840 : Theme.field;
+                        border-width: 1px;
+                        border-color: root.pinned-on ? Theme.selected-edge : Theme.field-border;
+                        animate background { duration: 120ms; easing: ease-out; }
+                        animate border-color { duration: 120ms; easing: ease-out; }
+                        pin-row := HorizontalLayout {
+                            padding-left: 9px;
+                            padding-right: 9px;
+                            spacing: 5px;
+                            alignment: center;
+                            Icon {
+                                source: @image-url("../assets/icons/pin.svg");
+                                width: 12px;
+                                height: 12px;
+                                tint: root.pinned-on ? Theme.accent : Theme.muted;
+                                y: (parent.height - 12px) / 2;
+                            }
+                            Text {
+                                text: root.pinned-count;
+                                color: root.pinned-on ? Theme.accent-dim : Theme.muted;
+                                font-size: 10px;
+                                vertical-alignment: center;
+                            }
+                        }
+                        pin-touch := TouchArea {
+                            clicked => { root.pin-filter(); }
+                        }
+                    }
+                    if root.filtered : Rectangle {
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 12px;
+                        background: broom-touch.has-hover ? #242840 : Theme.field;
+                        border-width: 1px;
+                        border-color: Theme.field-border;
+                        Icon {
+                            source: @image-url("../assets/icons/x.svg");
+                            width: 12px;
+                            height: 12px;
+                            tint: broom-touch.has-hover ? Theme.body : Theme.muted;
+                        }
+                        broom-touch := TouchArea {
+                            clicked => { root.clear-filters(); }
+                        }
+                    }
+                    Rectangle {
+                        width: 1px;
+                        Rectangle {
+                            y: 5px;
+                            width: 1px;
+                            height: 14px;
+                            background: Theme.field-border;
+                        }
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        clip: true;
+                        strip := Flickable {
+                            width: parent.width;
+                            height: 24px;
+                            interactive: true;
+                            content-width: row.preferred-width;
+                            content-height: 24px;
+                            row := HorizontalLayout {
+                                spacing: 6px;
+                                alignment: start;
+                                for chip in root.chips : Pill {
+                                    chip: chip;
+                                    chosen(key) => { root.chip-chosen(key); }
+                                }
+                            }
+                        }
+                        TouchArea {
+                            scroll-event(event) => {
+                                strip.content-x = clamp(
+                                    strip.content-x + (event.delta-y + event.delta-x) * 1.4,
+                                    min(0px, parent.width - strip.content-width),
+                                    0px
+                                );
+                                return accept;
+                            }
+                        }
+                        Rectangle {
+                            x: parent.width - 20px;
+                            width: 20px;
+                            background: @linear-gradient(90deg, Theme.panel.transparentize(1.0) 0%, Theme.panel 100%);
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                clip: true;
+                opacity: root.fade;
+                animate opacity { duration: Theme.settle; easing: ease-out; }
+                if root.cards.length == 0 : VerticalLayout {
+                    alignment: center;
+                    spacing: 6px;
+                    HorizontalLayout {
+                        alignment: center;
+                        Image {
+                            source: @image-url("../assets/icons/search.svg");
+                            colorize: Theme.field-border;
+                            width: 30px;
+                            height: 30px;
+                        }
+                    }
+                    Text {
+                        text: root.empty-title;
+                        color: Theme.title;
+                        font-size: 13px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                    Text {
+                        text: root.empty-hint;
+                        color: Theme.placeholder;
+                        font-size: 11.5px;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                }
+                wheel := TouchArea {
+                    mouse-cursor: root.pointer-hidden ? MouseCursor.none : MouseCursor.default;
+                    scroll-event(event) => {
+                        root.pointer-hidden = false;
+                        root.gliding = true;
+                        root.sheet-open = false;
+                        root.hovered = -1;
+                        root.stirred(-1);
+                        list.content-y = clamp(
+                            list.content-y + event.delta-y * 1.6,
+                            min(0px, list.visible-height - list.content-height),
+                            0px
+                        );
+                        return accept;
+                    }
+                list := ListView {
+                    accessible-role: AccessibleRole.list;
+                    vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+                    animate content-y { duration: root.gliding ? 110ms : 0ms; easing: ease-out; }
+                    for card[index] in root.cards : Rectangle {
+                        property <bool> mine: index == root.current;
+                        init => {
+                            if (self.mine) {
+                                root.sheet-anchor = self.y;
+                                root.sheet-span = self.height;
+                            }
+                        }
+                        changed mine => {
+                            if (self.mine) {
+                                if (self.y < -list.content-y) {
+                                    list.content-y = min(0px, 8px - self.y);
+                                } else if (self.y + self.height > -list.content-y + list.visible-height) {
+                                    list.content-y = list.visible-height - self.y - self.height - 8px;
+                                }
+                                root.sheet-anchor = self.y;
+                                root.sheet-span = self.height;
+                            }
+                        }
+                        changed height => {
+                            if (self.mine) {
+                                root.sheet-span = self.height;
+                            }
+                        }
+                        height: card.has-thumb
+                            ? Theme.row-thumb
+                            : index == root.current && root.opened
+                                ? Theme.row-frame + card.lines * Theme.line
+                                : card.found ? Theme.row-found : Theme.row-plain;
+                        animate height { duration: root.gliding ? Theme.settle : 0ms; easing: ease-out; }
+                        CardView {
+                            card: card;
+                            current: index == root.current;
+                            open: index == root.current && root.opened;
+                            shown-here: root.hovered >= 0 ? index == root.hovered : index == root.current;
+                            stirred => {
+                                root.pointer-hidden = false;
+                                if (!root.sheet-open) {
+                                    root.stirred(index);
+                                }
+                            }
+                            x: 10px;
+                            width: parent.width - 20px;
+                            height: parent.height - 6px;
+                            chosen(id) => {
+                                if (root.sheet-open) {
+                                    root.sheet-open = false;
+                                } else if (index == root.current) {
+                                    root.opened = !root.opened;
+                                } else {
+                                    root.current = index;
+                                    root.opened = true;
+                                }
+                                root.moved(index);
+                            }
+                            paste(id) => { root.paste(id); }
+                            forms(id) => {
+                                root.current = index;
+                                root.opened = false;
+                                root.moved(index);
+                                root.ask-forms(id);
+                            }
+                            edit(id) => { root.edit(id); }
+                            pin(id, on) => { root.pin(id, on); }
+                            remove(id) => { root.remove(id); }
+                        }
+                    }
+                }
+                }
+                rail := Rectangle {
+                    property <length> anchor;
+                    property <length> from;
+                    property <length> hidden: min(0px, list.visible-height - list.content-height);
+                    property <bool> needed: list.content-height > list.visible-height;
+                    property <length> knob-height: needed
+                        ? max(30px, list.visible-height * list.visible-height / list.content-height)
+                        : 0px;
+                    property <length> knob-y: needed
+                        ? -list.content-y / list.content-height * list.visible-height
+                        : 0px;
+                    x: parent.width - 13px;
+                    width: 13px;
+                    height: parent.height;
+                    Rectangle {
+                        x: 4px;
+                        width: grip.pressed ? 7px : grip.has-hover ? 6px : 5px;
+                        y: rail.knob-y;
+                        height: rail.knob-height;
+                        border-radius: 3px;
+                        background: grip.pressed
+                            ? Theme.accent-dim
+                            : grip.has-hover ? #4A5078 : Theme.selected-edge;
+                        opacity: rail.needed ? (grip.pressed ? 1.0 : 0.7) : 0.0;
+                        animate background, width, opacity { duration: 120ms; easing: ease-out; }
+                    }
+                    grip := TouchArea {
+                        enabled: rail.needed;
+                        pointer-event(event) => {
+                            if (event.kind == PointerEventKind.down) {
+                                root.sheet-open = false;
+                                root.gliding = false;
+                                if (self.mouse-y < rail.knob-y || self.mouse-y > rail.knob-y + rail.knob-height) {
+                                    list.content-y = clamp(
+                                        -(self.mouse-y - rail.knob-height / 2) * list.content-height / list.visible-height,
+                                        rail.hidden,
+                                        0px
+                                    );
+                                }
+                                rail.anchor = self.mouse-y;
+                                rail.from = list.content-y;
+                            }
+                        }
+                        moved => {
+                            if (self.pressed) {
+                                list.content-y = clamp(
+                                    rail.from - (self.mouse-y - rail.anchor) * list.content-height / list.visible-height,
+                                    rail.hidden,
+                                    0px
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 32px;
+                background: Theme.footer;
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 8px;
+                    spacing: 8px;
+                    alignment: stretch;
+                    Icon { source: @image-url("../assets/icons/clipboard.svg"); tint: Theme.muted; y: (parent.height - 15px) / 2; }
+                    Text { text: root.count-text; color: Theme.muted; font-size: 11.5px; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    Rectangle {
+                        clip: true;
+                        horizontal-stretch: 0;
+                        width: min(hints.preferred-width, 230px);
+                        hints := HorizontalLayout {
+                            spacing: 4px;
+                            alignment: end;
+                            Icon { source: @image-url("../assets/icons/corner-down-left.svg"); tint: Theme.placeholder; width: 12px; height: 12px; y: (parent.height - 12px) / 2; }
+                            Text { text: "pegar · alt+enter: más formas"; color: Theme.placeholder; font-size: 10px; vertical-alignment: center; }
+                        }
+                    }
+                    Action {
+                        icon: @image-url("../assets/icons/sliders-horizontal.svg");
+                        y: (parent.height - 22px) / 2;
+                        pressed => { root.ask-keys(); }
+                    }
+                }
+            }
+        }
+
+        if root.sheet-open : Rectangle {
+            x: 10px;
+            y: clamp(
+                panel.sheet-top,
+                10px,
+                max(10px, parent.height - self.height - 10px)
+            );
+            width: parent.width - 20px;
+            height: min(sheet.preferred-height, parent.height - 20px);
+            background: Theme.field;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: Theme.selected-edge;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #000000A6;
+            drop-shadow-offset-y: 8px;
+            clip: true;
+            TouchArea {
+                scroll-event(event) => {
+                    root.sheet-open = false;
+                    return accept;
+                }
+            }
+            sheet := VerticalLayout {
+                    padding: 6px;
+                    spacing: 1px;
+                    HorizontalLayout {
+                        height: 22px;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 6px;
+                        alignment: stretch;
+                        Text {
+                            text: root.sheet-title;
+                            color: Theme.muted;
+                            font-size: 9.5px;
+                            letter-spacing: 0.8px;
+                            vertical-alignment: center;
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        if root.sheet-subject != "" : Rectangle {
+                            width: 6px;
+                            height: 6px;
+                            border-radius: 2px;
+                            background: Hue.of(root.sheet-kind);
+                            y: (parent.height - 6px) / 2;
+                        }
+                        if root.sheet-subject != "" : Text {
+                            text: root.sheet-subject;
+                            color: Theme.placeholder;
+                            font-size: 9.5px;
+                            vertical-alignment: center;
+                            overflow: elide;
+                            max-width: 170px;
+                        }
+                    }
+                    for form[at] in root.sheet-rows : Rectangle {
+                        height: 28px;
+                        border-radius: 7px;
+                        background: at == root.sheet-current ? Theme.selected : transparent;
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            spacing: 12px;
+                            alignment: stretch;
+                            Text {
+                                text: form.label;
+                                color: at == root.sheet-current ? Theme.accent : Theme.body;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                            Rectangle { horizontal-stretch: 1; }
+                            if form.preview != "" : Text {
+                                text: form.preview;
+                                color: Theme.placeholder;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                                overflow: elide;
+                                max-width: 120px;
+                            }
+                        }
+                        row-touch := TouchArea {
+                            clicked => { root.sheet-chosen(form.key); }
+                            pointer-event(event) => {
+                                if (event.kind == PointerEventKind.move) {
+                                    root.sheet-current = at;
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+    }
+}

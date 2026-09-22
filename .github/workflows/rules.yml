@@ -98,7 +98,7 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
-      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only
+      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs'
 
   coverage-windows:
     name: Coverage does not slip on Windows
@@ -110,12 +110,12 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys
+      - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys -p cp-panel
       - name: The probe reads a real clipboard, so leave something on it
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example probe
-      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only
+      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs'
 
   budget:
     name: Latency stays within budget

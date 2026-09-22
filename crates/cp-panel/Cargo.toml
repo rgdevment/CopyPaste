@@ -1,0 +1,27 @@
+[package]
+name = "cp-panel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+cp-core.workspace = true
+cp-store.workspace = true
+slint.workspace = true
+raw-window-handle.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+cp-win-sys.workspace = true
+cp-win.workspace = true
+
+[build-dependencies]
+slint-build.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }

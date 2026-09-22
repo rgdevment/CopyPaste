@@ -69,7 +69,16 @@ mod tests {
         assert_eq!(content.html.as_deref(), Some("<p><b>hola</b></p>"));
         assert!(content.rich);
         assert_eq!(content.image, None);
-        assert_eq!(forms_for(&content), vec![Form::PlainText, Form::Markdown]);
+        assert_eq!(
+            forms_for(&content),
+            vec![
+                Form::PlainText,
+                Form::Markdown,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ]
+        );
     }
 
     #[test]
@@ -119,7 +128,13 @@ mod tests {
         };
         assert_eq!(
             forms_for(&content_of(&item, None)),
-            vec![Form::PlainText, Form::ImageJpeg],
+            vec![
+                Form::PlainText,
+                Form::ImageJpeg,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ],
             "un documento con una imagen incrustada se puede pegar como texto o como su imagen"
         );
     }
@@ -136,7 +151,15 @@ mod tests {
         let content = content_of(&item, None);
         assert!(content.rich);
         assert_eq!(content.html, None);
-        assert_eq!(forms_for(&content), vec![Form::PlainText]);
+        assert_eq!(
+            forms_for(&content),
+            vec![
+                Form::PlainText,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ]
+        );
     }
 
     #[test]
