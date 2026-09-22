@@ -198,7 +198,7 @@ pub fn sweeten(query: &str) -> String {
         .join(" ")
 }
 
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 pub fn label_of_form(form: Form) -> &'static str {
     match form {
         Form::PlainText => "En texto plano",
@@ -230,10 +230,10 @@ pub fn label_of_form(form: Form) -> &'static str {
     }
 }
 
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 pub const AS_IS: &str = "as-is";
 
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 pub fn shorthand_of(form: Form) -> Option<&'static str> {
     match form {
         Form::ColorHex => Some("hex"),
@@ -244,7 +244,7 @@ pub fn shorthand_of(form: Form) -> Option<&'static str> {
     }
 }
 
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 pub fn as_is_label(kind: Option<Kind>) -> &'static str {
     match kind {
         Some(Kind::Token) => "El token",
@@ -623,13 +623,19 @@ cuatro"
     }
 
     #[test]
-    fn every_form_has_a_name_and_answers_to_its_key() {
+    fn every_form_answers_to_its_key() {
         for form in Form::ALL {
-            let label = label_of_form(form);
-            assert!(!label.is_empty(), "{form:?} sin nombre");
             assert_eq!(form_of(form.as_str()), Some(form));
         }
         assert_eq!(form_of("no-existe"), None);
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn every_form_has_a_name_for_the_sheet() {
+        for form in Form::ALL {
+            assert!(!label_of_form(form).is_empty(), "{form:?} sin nombre");
+        }
     }
 
     #[test]
