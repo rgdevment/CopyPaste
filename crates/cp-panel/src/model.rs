@@ -1,5 +1,5 @@
 use crate::Card;
-use crate::view::card_of;
+use crate::view::{body_of, card_of, lines_of};
 use cp_store::{Cursor, Filter, Listed, Store};
 use slint::{Model, ModelNotify, ModelTracker};
 use std::cell::{Cell, RefCell};
@@ -12,6 +12,9 @@ const AHEAD: usize = 40;
 pub struct Metrics {
     pub tall: f32,
     pub plain: f32,
+    pub found: f32,
+    pub frame: f32,
+    pub line: f32,
 }
 
 pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
@@ -36,6 +39,7 @@ pub struct Rows {
     rows: RefCell<Vec<Listed>>,
     cards: RefCell<Vec<Option<Card>>>,
     tops: RefCell<Vec<f32>>,
+    open: Cell<Option<usize>>,
     next: Cell<Option<Cursor>>,
     exhausted: Cell<bool>,
     loading: Cell<bool>,
@@ -53,6 +57,7 @@ impl Rows {
             rows: RefCell::new(Vec::new()),
             cards: RefCell::new(Vec::new()),
             tops: RefCell::new(vec![0.0]),
+            open: Cell::new(None),
             next: Cell::new(None),
             exhausted: Cell::new(false),
             loading: Cell::new(false),
@@ -68,6 +73,45 @@ impl Rows {
         self.rows.borrow().len()
     }
 
+    pub fn open_at(&self, index: Option<usize>) {
+        if self.open.get() == index {
+            return;
+        }
+        if let Some(was) = self.open.get() {
+            let back = self.base_of(was);
+            self.resize(was, back);
+        }
+        self.open.set(index);
+        if let Some(now) = index
+            && !self.tall_at(now)
+        {
+            let open = self.open_of(now);
+            self.resize(now, open);
+        }
+    }
+
+    fn open_of(&self, index: usize) -> f32 {
+        let rows = self.rows.borrow();
+        let Some(row) = rows.get(index) else {
+            return self.metrics.plain;
+        };
+        self.metrics.frame + lines_of(&body_of(row)) as f32 * self.metrics.line
+    }
+
+    fn tall_at(&self, index: usize) -> bool {
+        self.rows
+            .borrow()
+            .get(index)
+            .is_some_and(|row| row.thumb_path.is_some())
+    }
+
+    fn base_of(&self, index: usize) -> f32 {
+        self.rows
+            .borrow()
+            .get(index)
+            .map_or(self.metrics.plain, |row| self.height_of(row))
+    }
+
     pub fn span_of(&self, index: usize) -> Option<(f32, f32)> {
         let tops = self.tops.borrow();
         let top = *tops.get(index)?;
@@ -78,6 +122,8 @@ impl Rows {
     fn height_of(&self, row: &Listed) -> f32 {
         if row.thumb_path.is_some() {
             self.metrics.tall
+        } else if row.snippet.is_some() {
+            self.metrics.found
         } else {
             self.metrics.plain
         }
@@ -101,9 +147,13 @@ impl Rows {
         if self.exhausted.get() {
             return 0;
         }
-        let Ok(page) = self.store.list(&self.filter, PAGE, self.next.get()) else {
-            self.exhausted.set(true);
-            return 0;
+        let page = match self.store.list(&self.filter, PAGE, self.next.get()) {
+            Ok(page) => page,
+            Err(why) => {
+                eprintln!("la lista no se pudo leer: {why}");
+                self.exhausted.set(true);
+                return 0;
+            }
         };
         let added = page.rows.len();
         self.next.set(page.next);
@@ -147,6 +197,11 @@ impl Rows {
         }
         let rows = self.rows.borrow();
         let row = rows.get(index)?;
+        let without_thumb = if row.snippet.is_some() {
+            self.metrics.found
+        } else {
+            self.metrics.plain
+        };
         let mut card = card_of(row, self.now);
         if let Some(path) = &row.thumb_path
             && let Ok(image) = slint::Image::load_from_path(std::path::Path::new(path))
@@ -157,7 +212,7 @@ impl Rows {
         }
         drop(rows);
         if !card.has_thumb {
-            self.resize(index, self.metrics.plain);
+            self.resize(index, without_thumb);
         }
         if let Some(slot) = self.cards.borrow_mut().get_mut(index) {
             *slot = Some(card.clone());
@@ -201,8 +256,11 @@ mod tests {
     use super::*;
 
     const SIZES: Metrics = Metrics {
-        tall: 182.0,
-        plain: 124.0,
+        tall: 146.0,
+        plain: 86.0,
+        found: 68.0,
+        frame: 50.0,
+        line: 18.0,
     };
 
     fn store_with(count: usize) -> Rc<Store> {
@@ -308,6 +366,65 @@ mod tests {
         assert!(!card.has_thumb, "la miniatura no está en disco");
         assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
         assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
+    }
+
+    #[test]
+    fn the_open_row_grows_what_its_text_asks_and_nobody_else_pays() {
+        let store = Store::in_memory().expect("esquema");
+        store.insert_text("u0", "corto", 0).expect("insert");
+        store
+            .insert_text("u1", &"palabra ".repeat(40), 1)
+            .expect("insert");
+        store.insert_text("u2", "otro corto", 2).expect("insert");
+        let rows = open(Rc::new(store), 0);
+        let long = SIZES.frame + 6.0 * SIZES.line;
+
+        assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
+
+        rows.open_at(Some(1));
+        assert_eq!(
+            rows.span_of(0),
+            Some((0.0, SIZES.plain)),
+            "la de arriba no se mueve"
+        );
+        assert_eq!(
+            rows.span_of(1),
+            Some((SIZES.plain, long)),
+            "crece lo que pide su texto"
+        );
+        assert_eq!(
+            rows.span_of(2),
+            Some((SIZES.plain + long, SIZES.plain)),
+            "la de abajo baja lo que creció la abierta"
+        );
+
+        rows.open_at(Some(2));
+        assert_eq!(
+            rows.span_of(1),
+            Some((SIZES.plain, SIZES.plain)),
+            "la anterior vuelve"
+        );
+        assert_eq!(
+            rows.span_of(2),
+            Some((2.0 * SIZES.plain, SIZES.plain)),
+            "un texto corto no gana nada al abrirse"
+        );
+
+        rows.open_at(None);
+        assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
+    }
+
+    #[test]
+    fn a_row_with_a_thumbnail_does_not_open() {
+        let store = store_with(2);
+        store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
+        let rows = open(store, 0);
+        rows.open_at(Some(0));
+        assert_eq!(
+            rows.span_of(0),
+            Some((0.0, SIZES.tall)),
+            "la miniatura ya ocupa lo suyo"
+        );
     }
 
     #[test]

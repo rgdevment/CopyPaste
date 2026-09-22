@@ -70,7 +70,16 @@ mod tests {
         assert_eq!(content.html.as_deref(), Some(WORD_HTML));
         assert!(content.rich);
         assert_eq!(content.image, None);
-        assert_eq!(forms_for(&content), vec![Form::PlainText, Form::Markdown]);
+        assert_eq!(
+            forms_for(&content),
+            vec![
+                Form::PlainText,
+                Form::Markdown,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ]
+        );
     }
 
     #[test]
@@ -127,7 +136,13 @@ mod tests {
         };
         assert_eq!(
             forms_for(&content_of(&item, None)),
-            vec![Form::PlainText, Form::ImageJpeg],
+            vec![
+                Form::PlainText,
+                Form::ImageJpeg,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ],
             "un documento con una imagen incrustada se puede pegar como texto o como su imagen"
         );
     }
@@ -144,7 +159,15 @@ mod tests {
         let content = content_of(&item, None);
         assert!(content.rich);
         assert_eq!(content.html, None);
-        assert_eq!(forms_for(&content), vec![Form::PlainText]);
+        assert_eq!(
+            forms_for(&content),
+            vec![
+                Form::PlainText,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ]
+        );
     }
 
     #[test]
@@ -162,7 +185,7 @@ mod tests {
             vec![r"C:\Mis Documentos\cp a9.png", r"C:\dos.txt"]
         );
         assert_eq!(content.text, None);
-        assert_eq!(forms_for(&content), vec![Form::Path]);
+        assert_eq!(forms_for(&content), vec![Form::Path, Form::FileName]);
 
         let link = Item {
             kind: Some(Kind::Link),

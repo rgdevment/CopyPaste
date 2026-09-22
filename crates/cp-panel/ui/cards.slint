@@ -11,6 +11,7 @@ export component Icon inherits Image {
 export component Action inherits Rectangle {
     in property <image> icon;
     in property <color> hot: Theme.body;
+    in property <bool> awake: true;
     callback pressed();
     width: 22px;
     height: 22px;
@@ -20,6 +21,59 @@ export component Action inherits Rectangle {
     Icon { source: root.icon; width: 14px; height: 14px; tint: touch.has-hover ? root.hot : Theme.muted; }
     touch := TouchArea {
         clicked => { root.pressed(); }
+    }
+}
+
+export component KindIcon inherits Icon {
+    in property <string> kind;
+    width: 13px;
+    height: 13px;
+    source: kind == "image" ? @image-url("../assets/icons/image.svg")
+        : kind == "json" ? @image-url("../assets/icons/braces.svg")
+        : kind == "code" ? @image-url("../assets/icons/code.svg")
+        : kind == "link" ? @image-url("../assets/icons/link.svg")
+        : kind == "email" ? @image-url("../assets/icons/mail.svg")
+        : kind == "phone" ? @image-url("../assets/icons/phone.svg")
+        : kind == "color" ? @image-url("../assets/icons/palette.svg")
+        : kind == "ip" || kind == "uuid" ? @image-url("../assets/icons/hash.svg")
+        : kind == "token" ? @image-url("../assets/icons/key-round.svg")
+        : kind == "folder" ? @image-url("../assets/icons/folder.svg")
+        : kind == "audio" ? @image-url("../assets/icons/music.svg")
+        : kind == "video" ? @image-url("../assets/icons/video.svg")
+        : kind == "file" ? @image-url("../assets/icons/file.svg")
+        : @image-url("../assets/icons/file-text.svg");
+}
+
+export global Hue {
+    out property <color> text: #A5B4FC;
+    out property <color> code: #7DD3FC;
+    out property <color> json: #C4B5FD;
+    out property <color> link: #93C5FD;
+    out property <color> email: #FCA5A5;
+    out property <color> phone: #FCD34D;
+    out property <color> paint: #F0ABFC;
+    out property <color> plain: #94A3B8;
+    out property <color> token: #FDBA74;
+    out property <color> image: #86EFAC;
+    out property <color> file: #A3A3A3;
+    out property <color> folder: #FBBF24;
+    out property <color> audio: #F9A8D4;
+    out property <color> video: #67E8F9;
+    pure public function of(kind: string) -> color {
+        return kind == "code" ? self.code
+            : kind == "json" ? self.json
+            : kind == "link" ? self.link
+            : kind == "email" ? self.email
+            : kind == "phone" ? self.phone
+            : kind == "color" ? self.paint
+            : kind == "ip" || kind == "uuid" ? self.plain
+            : kind == "token" ? self.token
+            : kind == "image" ? self.image
+            : kind == "file" ? self.file
+            : kind == "folder" ? self.folder
+            : kind == "audio" ? self.audio
+            : kind == "video" ? self.video
+            : self.text;
     }
 }
 
@@ -39,6 +93,13 @@ export component Pill inherits Rectangle {
         padding-right: 9px;
         spacing: 5px;
         alignment: center;
+        Rectangle {
+            width: 7px;
+            height: 7px;
+            border-radius: 2px;
+            background: Hue.of(chip.key);
+            y: (parent.height - 7px) / 2;
+        }
         Text { text: chip.label; color: chip.selected ? Theme.accent : Theme.title; font-size: 11.5px; font-weight: 600; vertical-alignment: center; }
         if chip.count != "" : Text { text: chip.count; color: chip.selected ? Theme.accent-dim : Theme.muted; font-size: 10px; vertical-alignment: center; }
     }
@@ -47,30 +108,51 @@ export component Pill inherits Rectangle {
     }
 }
 
-export component KindIcon inherits Icon {
-    in property <string> kind;
-    tint: Theme.accent;
-    width: 16px;
-    height: 16px;
-    source: kind == "image" ? @image-url("../assets/icons/image.svg")
-        : kind == "json" ? @image-url("../assets/icons/braces.svg")
-        : kind == "code" ? @image-url("../assets/icons/code.svg")
-        : kind == "link" ? @image-url("../assets/icons/link.svg")
-        : kind == "email" ? @image-url("../assets/icons/mail.svg")
-        : kind == "phone" ? @image-url("../assets/icons/phone.svg")
-        : kind == "color" ? @image-url("../assets/icons/palette.svg")
-        : kind == "ip" || kind == "uuid" ? @image-url("../assets/icons/hash.svg")
-        : kind == "token" ? @image-url("../assets/icons/key-round.svg")
-        : kind == "folder" ? @image-url("../assets/icons/folder.svg")
-        : kind == "audio" ? @image-url("../assets/icons/music.svg")
-        : kind == "video" ? @image-url("../assets/icons/video.svg")
-        : kind == "file" ? @image-url("../assets/icons/file.svg")
-        : @image-url("../assets/icons/file-text.svg");
+export component Tag inherits Rectangle {
+    in property <Chip> tag;
+    callback dropped(string);
+    height: 20px;
+    width: row.preferred-width;
+    border-radius: 6px;
+    background: Theme.selected;
+    border-width: 1px;
+    border-color: Theme.selected-edge;
+    row := HorizontalLayout {
+        padding-left: 7px;
+        padding-right: 4px;
+        spacing: 4px;
+        alignment: center;
+        Rectangle {
+            width: 6px;
+            height: 6px;
+            border-radius: 2px;
+            background: Hue.of(tag.key);
+            y: (parent.height - 6px) / 2;
+        }
+        Text { text: tag.label; color: Theme.accent; font-size: 11px; font-weight: 600; vertical-alignment: center; }
+        Rectangle {
+            width: 14px;
+            height: 14px;
+            border-radius: 7px;
+            y: (parent.height - 14px) / 2;
+            background: close.has-hover ? #3A3F66 : transparent;
+            Image {
+                source: @image-url("../assets/icons/x.svg");
+                width: 9px;
+                height: 9px;
+                colorize: close.has-hover ? Theme.body : Theme.accent-dim;
+            }
+            close := TouchArea {
+                clicked => { root.dropped(tag.key); }
+            }
+        }
+    }
 }
 
 export component CardView inherits Rectangle {
     in property <Card> card;
     in property <bool> current;
+    in property <bool> open;
     callback paste(int);
     callback edit(int);
     callback pin(int, bool);
@@ -89,41 +171,7 @@ export component CardView inherits Rectangle {
 
     VerticalLayout {
         padding: 10px;
-        padding-bottom: 6px;
-        spacing: 6px;
-
-        HorizontalLayout {
-            height: 30px;
-            spacing: 10px;
-            alignment: stretch;
-            Rectangle {
-                width: 30px;
-                height: 30px;
-                border-radius: 8px;
-                background: Theme.tile;
-                KindIcon { kind: card.kind; }
-            }
-            VerticalLayout {
-                spacing: 1px;
-                alignment: center;
-                HorizontalLayout {
-                    spacing: 5px;
-                    Text { text: card.title; color: card.broken ? Theme.danger : Theme.title; font-size: 12.5px; font-weight: 600; vertical-alignment: center; }
-                    if card.pinned : Icon { source: @image-url("../assets/icons/pin.svg"); width: 11px; height: 11px; tint: Theme.accent-dim; y: (parent.height - 11px) / 2; }
-                }
-                Text { text: "· " + card.source + (card.times != "" ? "   ×" + card.times : ""); color: Theme.muted; font-size: 11px; }
-            }
-            Rectangle { horizontal-stretch: 1; }
-            if lit : HorizontalLayout {
-                spacing: 2px;
-                alignment: center;
-                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); pressed => { root.paste(card.id); } }
-                Action { icon: @image-url("../assets/icons/pencil.svg"); pressed => { root.edit(card.id); } }
-                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); pressed => { root.pin(card.id, !card.pinned); } }
-                Action { icon: @image-url("../assets/icons/trash-2.svg"); hot: Theme.danger; pressed => { root.remove(card.id); } }
-            }
-            Text { text: card.age; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
-        }
+        spacing: 8px;
 
         if card.has-thumb : Rectangle {
             height: 96px;
@@ -133,19 +181,52 @@ export component CardView inherits Rectangle {
             Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: contain; }
         }
 
-        if !card.has-thumb : Text {
+        if !card.has-thumb && card.found && !open : HorizontalLayout {
+            height: 18px;
+            spacing: 0px;
+            alignment: start;
+            Text { text: card.lead; color: Theme.muted; font-size: 12.5px; vertical-alignment: center; }
+            Text { text: card.hit; color: Theme.accent; font-size: 12.5px; font-weight: 700; vertical-alignment: center; }
+            Text { text: card.tail; color: Theme.body; font-size: 12.5px; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
+        }
+
+        if !card.has-thumb && (!card.found || open) : Text {
             text: card.body;
             color: card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? 12px : 13px;
             font-family: card.mono ? "Cascadia Mono" : "Segoe UI";
             wrap: card.mono ? char-wrap : word-wrap;
             overflow: elide;
-            height: 36px;
+            height: open ? card.lines * Theme.line : 36px;
         }
 
-        Rectangle {
-            height: 12px;
-            Icon { source: @image-url("../assets/icons/chevron-down.svg"); width: 12px; height: 12px; tint: Theme.muted; }
+        HorizontalLayout {
+            height: 16px;
+            spacing: 6px;
+            alignment: stretch;
+            Rectangle {
+                width: 7px;
+                height: 7px;
+                border-radius: 2px;
+                background: Hue.of(card.kind);
+                y: (parent.height - 7px) / 2;
+            }
+            Text { text: card.title; color: card.broken ? Theme.danger : Theme.title; font-size: 11px; font-weight: 600; vertical-alignment: center; }
+            Text { text: "· " + card.source; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+            if card.times != "" : Text { text: "×" + card.times; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+            if card.pinned : Icon { source: @image-url("../assets/icons/pin.svg"); width: 10px; height: 10px; tint: Theme.accent-dim; y: (parent.height - 10px) / 2; }
+            Rectangle { horizontal-stretch: 1; }
+            HorizontalLayout {
+                spacing: 2px;
+                alignment: center;
+                opacity: lit ? 1.0 : 0.0;
+                animate opacity { duration: 120ms; easing: ease-out; }
+                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); awake: lit; pressed => { root.paste(card.id); } }
+                Action { icon: @image-url("../assets/icons/pencil.svg"); awake: lit; pressed => { root.edit(card.id); } }
+                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
+                Action { icon: @image-url("../assets/icons/trash-2.svg"); hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
+            }
+            Text { text: card.age; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
         }
     }
 }

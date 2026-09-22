@@ -107,9 +107,14 @@ fn main() {
             id
         } else {
             files += 1;
-            let path = file_path_at(at, seed);
+            let directory = at.is_multiple_of(9);
+            let path = if directory {
+                folder_path_at(at, seed)
+            } else {
+                file_path_at(at, seed)
+            };
             let item = Item {
-                kind: Some(kind::classify_file(&path, at.is_multiple_of(9))),
+                kind: Some(kind::classify_file(&path, directory)),
                 formats: vec![Format {
                     id: "public.file-url".into(),
                     payload: Payload::stored(format!("file://{path}").into_bytes()),
@@ -167,6 +172,23 @@ fn text_item(text: &str) -> Item {
             id: SYNTHETIC_TEXT.into(),
             payload: Payload::stored(text.as_bytes().to_vec()),
         }],
+    }
+}
+
+fn folder_path_at(at: usize, seed: u64) -> String {
+    const FOLDERS: [&str; 6] = [
+        "Proyectos",
+        "Facturas 2026",
+        "Capturas",
+        "Documentos de trabajo",
+        "Música",
+        "Respaldos",
+    ];
+    let name = FOLDERS[(seed >> 44) as usize % FOLDERS.len()];
+    if cfg!(windows) {
+        format!("C:\\Users\\Mario\\Documentos\\{at}\\{name}")
+    } else {
+        format!("/Users/mario/Documentos/{at}/{name}")
     }
 }
 

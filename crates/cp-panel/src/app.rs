@@ -1,8 +1,11 @@
 use crate::model::{Metrics, Rows, reveal};
-use crate::view::{ALL, PINNED, chips_of, compact, count_text, empty_of};
-use crate::{Options, Panel};
+use crate::view::{
+    AS_IS, as_is_label, chips_of, compact, count_text, empty_of, form_of, harvest, label_of,
+    label_of_form, sweeten,
+};
+use crate::{Chip, FormRow, Options, Panel};
 use cp_core::kind::Kind;
-use cp_store::{Filter, Store};
+use cp_store::{Clock, Filter, Store};
 use slint::{ComponentHandle, Model, ModelRc};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -24,19 +27,29 @@ pub struct App {
 struct State {
     store: Rc<Store>,
     query: String,
-    chip: String,
+    tags: Vec<String>,
+    pinned: bool,
     rows: Option<Rc<Rows>>,
     options: Options,
     metrics: Metrics,
+    asking: Asking,
     last_refresh: Duration,
     generation: Arc<AtomicU64>,
     counter: mpsc::Sender<Request>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Asking {
+    Forms(i64),
+    Kinds,
+    Keys,
+}
+
 struct Request {
     generation: u64,
     base: Filter,
-    chip: String,
+    full: Filter,
+    keys: Vec<String>,
 }
 
 impl App {
@@ -46,16 +59,21 @@ impl App {
         let metrics = Metrics {
             tall: theme.get_row_thumb(),
             plain: theme.get_row_plain(),
+            found: theme.get_row_found(),
+            frame: theme.get_row_frame(),
+            line: theme.get_line(),
         };
         let generation = Arc::new(AtomicU64::new(0));
         let counter = spawn_counter(options.db.clone(), panel.as_weak(), generation.clone());
         let state = Rc::new(RefCell::new(State {
             store: Rc::new(store),
             query: String::new(),
-            chip: ALL.into(),
+            tags: Vec::new(),
+            pinned: false,
             rows: None,
             options,
             metrics,
+            asking: Asking::Kinds,
             last_refresh: Duration::ZERO,
             generation,
             counter,
@@ -100,7 +118,7 @@ impl App {
     }
 
     pub fn choose_chip(&self, key: &str) {
-        self.state.borrow_mut().chip = key.to_owned();
+        toggle_tag(&self.state, key);
         self.refresh();
     }
 
@@ -108,18 +126,57 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_search(move |query| {
-            state.borrow_mut().query = query.to_string();
+            let (taken, rest) = harvest(query.as_str());
+            {
+                let mut state = state.borrow_mut();
+                for tag in taken {
+                    if !state.tags.contains(&tag) {
+                        state.tags.push(tag);
+                    }
+                }
+                state.query = rest.clone();
+            }
             if let Some(ui) = ui.upgrade() {
+                if rest != query.as_str() {
+                    ui.set_query(rest.into());
+                }
                 refresh(&ui, &state);
             }
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_chip_chosen(move |key| {
+            toggle_tag(&state, key.as_str());
+            if let Some(ui) = ui.upgrade() {
+                blink(&ui);
+                refresh(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_clear_filters(move || {
             {
                 let mut state = state.borrow_mut();
-                let same = state.chip == key.as_str();
-                state.chip = if same { ALL.into() } else { key.to_string() };
+                state.query.clear();
+                state.tags.clear();
+                state.pinned = false;
+            }
+            if let Some(ui) = ui.upgrade() {
+                ui.set_query(Default::default());
+                blink(&ui);
+                refresh(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_drop_tag(move |key| {
+            {
+                let mut state = state.borrow_mut();
+                if key.is_empty() {
+                    state.tags.pop();
+                } else if let Some(at) = state.tags.iter().position(|one| one == key.as_str()) {
+                    state.tags.remove(at);
+                }
             }
             if let Some(ui) = ui.upgrade() {
                 blink(&ui);
@@ -131,11 +188,7 @@ impl App {
         panel.on_pin_filter(move || {
             {
                 let mut state = state.borrow_mut();
-                state.chip = if state.chip == PINNED {
-                    ALL.into()
-                } else {
-                    PINNED.into()
-                };
+                state.pinned = !state.pinned;
             }
             if let Some(ui) = ui.upgrade() {
                 blink(&ui);
@@ -150,19 +203,24 @@ impl App {
                 return;
             };
             let chips = ui.get_chips();
-            let mut keys: Vec<String> = vec![ALL.into(), PINNED.into()];
+            let mut keys: Vec<String> = vec![String::new()];
             keys.extend(
                 (0..chips.row_count())
                     .filter_map(|index| chips.row_data(index).map(|chip| chip.key.to_string())),
             );
             let here = keys
                 .iter()
-                .position(|key| key.as_str() == state.borrow().chip)
+                .position(|key| state.borrow().tags.first() == Some(key))
                 .unwrap_or(0);
             let next = (here as i32 + delta).rem_euclid(keys.len() as i32) as usize;
-            let among_kinds = next.saturating_sub(2);
-            ui.set_chips_scroll(-(among_kinds.saturating_sub(KEPT_IN_VIEW) as f32) * CHIP_STEP);
-            state.borrow_mut().chip = keys[next].clone();
+            ui.set_chips_scroll(-(next.saturating_sub(KEPT_IN_VIEW + 1) as f32) * CHIP_STEP);
+            {
+                let mut state = state.borrow_mut();
+                state.tags.clear();
+                if !keys[next].is_empty() {
+                    state.tags.push(keys[next].clone());
+                }
+            }
             blink(&ui);
             refresh(&ui, &state);
         });
@@ -204,6 +262,7 @@ impl App {
             let Some(rows) = state.rows.as_ref() else {
                 return;
             };
+            rows.open_at(ui.get_opened().then_some(index as usize));
             let Some((top, span)) = rows.span_of(index as usize) else {
                 return;
             };
@@ -213,6 +272,96 @@ impl App {
                 ui.get_scroll_y(),
                 ui.get_viewport_height(),
             ));
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_ask_forms(move |id| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            let rows = forms_of(&state.borrow().store, i64::from(id));
+            if rows.is_empty() {
+                return;
+            }
+            state.borrow_mut().asking = Asking::Forms(i64::from(id));
+            let at = ui.get_current();
+            let top = (at >= 0)
+                .then(|| {
+                    state
+                        .borrow()
+                        .rows
+                        .as_ref()
+                        .and_then(|rows| rows.span_of(at as usize))
+                })
+                .flatten()
+                .map_or(0.0, |(top, _)| top + ui.get_scroll_y() + ui.get_list_top());
+            ui.set_sheet_y(top);
+            open_sheet(&ui, "PEGAR COMO", rows);
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_ask_kinds(move || {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            let chips = ui.get_chips();
+            let rows: Vec<FormRow> = (0..chips.row_count())
+                .filter_map(|at| chips.row_data(at))
+                .map(|chip| FormRow {
+                    key: chip.key.clone(),
+                    label: chip.label.clone(),
+                    preview: chip.count.clone(),
+                })
+                .collect();
+            if rows.is_empty() {
+                return;
+            }
+            state.borrow_mut().asking = Asking::Kinds;
+            ui.set_sheet_y(0.0);
+            open_sheet(&ui, "FILTRAR POR TIPO", rows);
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_ask_keys(move || {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            state.borrow_mut().asking = Asking::Keys;
+            ui.set_sheet_y(0.0);
+            open_sheet(&ui, "ATAJOS", keys_sheet());
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_sheet_chosen(move |key| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            ui.set_sheet_open(false);
+            let asking = state.borrow().asking;
+            match asking {
+                Asking::Forms(id) => {
+                    if paste_as(&state.borrow().store, id, key.as_str()) {
+                        vanish(&ui);
+                    }
+                }
+                Asking::Kinds => {
+                    toggle_tag(&state, key.as_str());
+                    blink(&ui);
+                    refresh(&ui, &state);
+                }
+                Asking::Keys => {}
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_paste_as(move |id, key| {
+            let done = paste_as(&state.borrow().store, i64::from(id), key.as_str());
+            if let Some(ui) = ui.upgrade() {
+                ui.set_sheet_open(false);
+                if done {
+                    vanish(&ui);
+                }
+            }
         });
         let ui = self.ui.clone();
         panel.on_dismiss(move || {
@@ -251,21 +400,30 @@ impl App {
 fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     let started = Instant::now();
     let now = now_ms();
-    let (store, filter, base, chip, metrics) = {
+    let (store, filter, base, metrics) = {
         let state = state.borrow();
         (
             state.store.clone(),
             filter_of(&state),
             base_filter_of(&state),
-            state.chip.clone(),
             state.metrics,
         )
     };
+    let keys = keys_of(&filter);
+    let full = filter.clone();
     let rows = Rows::open(store, filter, now, metrics);
+    ui.set_opened(false);
+    {
+        let state = state.borrow();
+        ui.set_filtered(!state.query.trim().is_empty() || !state.tags.is_empty() || state.pinned);
+        ui.set_tags(ModelRc::from(Rc::new(slint::VecModel::from(tags_of(
+            &state,
+        )))));
+    }
     if rows.loaded() == 0 {
         let (title, hint) = {
             let state = state.borrow();
-            empty_of(&state.query, &state.chip)
+            empty_of(&state.query, state.pinned, !state.tags.is_empty())
         };
         ui.set_empty_title(title.into());
         ui.set_empty_hint(hint.into());
@@ -280,7 +438,8 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     let _ = state.counter.send(Request {
         generation,
         base,
-        chip,
+        full,
+        keys,
     });
     if state.options.measure {
         eprintln!(
@@ -308,7 +467,6 @@ fn spawn_counter(
             if request.generation != generation.load(Ordering::SeqCst) {
                 continue;
             }
-            let total = store.count_matching(&request.base).unwrap_or(0);
             let pinned = store
                 .count_matching(&Filter {
                     pinned_only: true,
@@ -316,21 +474,14 @@ fn spawn_counter(
                 })
                 .unwrap_or(0);
             let facets = store.facets(&request.base).unwrap_or_default();
+            let shown = store.count_matching(&request.full).unwrap_or(0);
             if request.generation != generation.load(Ordering::SeqCst) {
                 continue;
             }
-            let shown = match request.chip.as_str() {
-                ALL => total,
-                PINNED => pinned,
-                kind => facets
-                    .iter()
-                    .find(|facet| facet.kind.as_str() == kind)
-                    .map_or(0, |facet| facet.count),
-            };
-            let chips = chips_of(&facets, &request.chip);
+            let chips = chips_of(&facets, &request.keys);
             let footer = count_text(shown);
             let anchored = compact(pinned);
-            let only_anchored = request.chip == PINNED;
+            let only_anchored = request.full.pinned_only;
             let _ = ui.upgrade_in_event_loop(move |panel| {
                 panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
                 panel.set_count_text(footer.into());
@@ -342,26 +493,64 @@ fn spawn_counter(
     tx
 }
 
+fn written_filter(state: &State) -> Filter {
+    let now = now_ms();
+    let clock = Clock {
+        now,
+        day_start: now - now.rem_euclid(cp_store::query::DAY),
+    };
+    cp_store::parse(&sweeten(&state.query), &clock)
+}
+
 fn base_filter_of(state: &State) -> Filter {
-    let query = state.query.trim();
-    Filter {
-        query: (!query.is_empty()).then(|| query.to_owned()),
-        ..Default::default()
-    }
+    let mut filter = written_filter(state);
+    filter.kinds.clear();
+    filter
 }
 
 fn filter_of(state: &State) -> Filter {
-    let mut filter = base_filter_of(state);
-    match state.chip.as_str() {
-        ALL => {}
-        PINNED => filter.pinned_only = true,
-        kind => {
-            if let Some(kind) = Kind::from_name(kind) {
-                filter.kinds = vec![kind];
-            }
+    let mut filter = written_filter(state);
+    for tag in &state.tags {
+        if let Some(kind) = Kind::from_name(tag) {
+            filter.kinds.push(kind);
         }
     }
+    if state.pinned {
+        filter.pinned_only = true;
+    }
     filter
+}
+
+fn toggle_tag(state: &Rc<RefCell<State>>, key: &str) {
+    let mut state = state.borrow_mut();
+    match state.tags.iter().position(|one| one == key) {
+        Some(at) => {
+            state.tags.remove(at);
+        }
+        None => state.tags.push(key.to_owned()),
+    }
+}
+
+fn tags_of(state: &State) -> Vec<Chip> {
+    state
+        .tags
+        .iter()
+        .filter_map(|tag| Kind::from_name(tag).map(|kind| (tag, kind)))
+        .map(|(tag, kind)| Chip {
+            key: tag.as_str().into(),
+            label: label_of(Some(kind)).into(),
+            count: Default::default(),
+            selected: true,
+        })
+        .collect()
+}
+
+fn keys_of(filter: &Filter) -> Vec<String> {
+    filter
+        .kinds
+        .iter()
+        .map(|kind| kind.as_str().to_owned())
+        .collect()
 }
 
 fn hand_over(store: &Store, id: i64) -> bool {
@@ -387,6 +576,56 @@ fn hand_over(store: &Store, id: i64) -> bool {
         let _ = item;
         false
     }
+}
+
+fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
+    const SHOWN: usize = 22;
+    let text = match rendered {
+        Some(cp_core::paste_as::Rendered::Text(text)) => text,
+        Some(cp_core::paste_as::Rendered::Jpeg(bytes)) => {
+            return format!("{} KB", bytes.len() / 1024);
+        }
+        None => return String::new(),
+    };
+    let flat: String = text
+        .chars()
+        .map(|one| if one.is_control() { ' ' } else { one })
+        .collect();
+    let trimmed = flat.split_whitespace().collect::<Vec<_>>().join(" ");
+    if trimmed.chars().count() <= SHOWN {
+        return trimmed;
+    }
+    let kept: String = trimmed.chars().take(SHOWN).collect();
+    format!("{}…", kept.trim_end())
+}
+
+fn keys_sheet() -> Vec<FormRow> {
+    const KEYS: [(&str, &str); 10] = [
+        ("Enter", "pegar lo seleccionado"),
+        ("Shift + Enter", "pegar en plano"),
+        ("Alt + Enter  ·  Ctrl + Enter", "pegar como…"),
+        ("Flechas", "moverse por la lista"),
+        ("Clic", "abrir la tarjeta; otro clic la cierra"),
+        ("Doble clic", "pegar esa tarjeta"),
+        ("Tab  ·  Shift + Tab", "recorrer los filtros"),
+        ("#imagen  ·  #carpeta", "filtrar por tipo desde el buscador"),
+        ("Retroceso", "quitar la última etiqueta"),
+        ("Esc", "cerrar el panel"),
+    ];
+    KEYS.iter()
+        .map(|(keys, what)| FormRow {
+            key: Default::default(),
+            label: (*what).into(),
+            preview: (*keys).into(),
+        })
+        .collect()
+}
+
+fn open_sheet(ui: &Panel, title: &str, rows: Vec<FormRow>) {
+    ui.set_sheet_title(title.into());
+    ui.set_sheet_rows(ModelRc::from(Rc::new(slint::VecModel::from(rows))));
+    ui.set_sheet_current(0);
+    ui.set_sheet_open(true);
 }
 
 fn appear(ui: &Panel) {
@@ -417,6 +656,77 @@ fn blink(ui: &Panel) {
             ui.set_fade(1.0);
         }
     });
+}
+
+#[cfg(target_os = "windows")]
+fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
+    let Ok(Some(item)) = store.item(id) else {
+        return Vec::new();
+    };
+    let ocr = store.ocr_text(id).ok().flatten();
+    let content = cp_win::content::content_of(&item, ocr.as_deref());
+    let mut rows = vec![FormRow {
+        key: AS_IS.into(),
+        label: as_is_label(item.kind).into(),
+        preview: glimpse(
+            content
+                .text
+                .as_deref()
+                .map(|text| cp_core::paste_as::Rendered::Text(text.to_owned())),
+        )
+        .into(),
+    }];
+    rows.extend(
+        cp_core::paste_as::forms_for(&content)
+            .into_iter()
+            .map(|form| FormRow {
+                key: form.as_str().into(),
+                label: label_of_form(form).into(),
+                preview: glimpse(cp_core::paste_as::render(form, &content)).into(),
+            }),
+    );
+    rows
+}
+
+#[cfg(not(target_os = "windows"))]
+fn forms_of(_store: &Store, _id: i64) -> Vec<FormRow> {
+    Vec::new()
+}
+
+#[cfg(target_os = "windows")]
+fn paste_as(store: &Store, id: i64, key: &str) -> bool {
+    if key == AS_IS {
+        return hand_over(store, id);
+    }
+    let Some(form) = form_of(key) else {
+        return false;
+    };
+    let Ok(Some(item)) = store.item(id) else {
+        return false;
+    };
+    let ocr = store.ocr_text(id).ok().flatten();
+    let content = cp_win::content::content_of(&item, ocr.as_deref());
+    let Some(rendered) = cp_core::paste_as::render(form, &content) else {
+        return false;
+    };
+    let made = rendered.into_item();
+    let Some(clipboard) = cp_win_sys::clipboard::Clipboard::open() else {
+        return false;
+    };
+    let written = matches!(
+        cp_win::restore::to_clipboard(&clipboard, &made),
+        cp_win::restore::Restored::Written { .. }
+    );
+    if written {
+        let _ = store.record_paste(id, now_ms());
+    }
+    written
+}
+
+#[cfg(not(target_os = "windows"))]
+fn paste_as(_store: &Store, _id: i64, key: &str) -> bool {
+    let _ = form_of(key);
+    false
 }
 
 pub fn now_ms() -> i64 {

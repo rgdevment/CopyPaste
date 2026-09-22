@@ -1,13 +1,54 @@
 use crate::age::age_text;
 use crate::{Card, Chip};
 use cp_core::kind::Kind;
+use cp_core::paste_as::Form;
+use cp_core::search::Excerpt;
 use cp_store::{Facet, Listed};
 
-pub const ALL: &str = "all";
-pub const PINNED: &str = "pinned";
+const LEAD: usize = 30;
+const PER_LINE: usize = 57;
+const SHUT: i32 = 2;
+const OPEN_AT_MOST: i32 = 7;
+
+pub fn lines_of(text: &str) -> i32 {
+    let wanted = text
+        .lines()
+        .map(|line| line.chars().count().div_ceil(PER_LINE).max(1) as i32)
+        .sum::<i32>();
+    wanted.clamp(SHUT, OPEN_AT_MOST)
+}
+
+pub fn parts_of(excerpt: &Excerpt) -> (String, String, String) {
+    let at = excerpt.segments.iter().position(|one| one.matched);
+    let Some(at) = at else {
+        return (excerpt.plain(), String::new(), String::new());
+    };
+    let lead: String = excerpt.segments[..at]
+        .iter()
+        .map(|one| one.text.as_str())
+        .collect();
+    let tail: String = excerpt.segments[at + 1..]
+        .iter()
+        .map(|one| one.text.as_str())
+        .collect();
+    (trim_left(&lead), excerpt.segments[at].text.clone(), tail)
+}
+
+fn trim_left(lead: &str) -> String {
+    let count = lead.chars().count();
+    if count <= LEAD {
+        return lead.to_owned();
+    }
+    let kept: String = lead.chars().skip(count - LEAD).collect();
+    format!("…{}", kept.trim_start())
+}
 
 pub fn card_of(row: &Listed, now: i64) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
+    let (lead, hit, tail) = match &row.snippet {
+        Some(snippet) => parts_of(&snippet.excerpt),
+        None => (String::new(), String::new(), String::new()),
+    };
     Card {
         id: row.id as i32,
         kind: kind.into(),
@@ -20,6 +61,11 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         },
         age: age_text(now, row.modified_at).into(),
         body: body_of(row).into(),
+        found: !hit.is_empty(),
+        lines: lines_of(&body_of(row)),
+        lead: lead.into(),
+        hit: hit.into(),
+        tail: tail.into(),
         mono: matches!(row.kind, Some(Kind::Json | Kind::Code | Kind::Token)),
         thumb: slint::Image::default(),
         has_thumb: row.thumb_path.is_some(),
@@ -28,7 +74,7 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
     }
 }
 
-fn body_of(row: &Listed) -> String {
+pub fn body_of(row: &Listed) -> String {
     match &row.snippet {
         Some(snippet) => snippet.excerpt.plain(),
         None => row.preview.clone(),
@@ -55,32 +101,148 @@ pub fn label_of(kind: Option<Kind>) -> &'static str {
     }
 }
 
-pub fn chips_of(facets: &[Facet], selected: &str) -> Vec<Chip> {
+pub fn kind_from_word(word: &str) -> Option<Kind> {
+    let folded: String = word
+        .to_lowercase()
+        .chars()
+        .map(|one| match one {
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' => 'o',
+            'ú' => 'u',
+            other => other,
+        })
+        .collect();
+    let name = match folded.as_str() {
+        "texto" => "text",
+        "codigo" => "code",
+        "enlace" | "link" => "link",
+        "correo" => "email",
+        "telefono" => "phone",
+        "imagen" => "image",
+        "archivo" => "file",
+        "carpeta" => "folder",
+        "video" => "video",
+        "audio" => "audio",
+        "color" => "color",
+        other => other,
+    };
+    Kind::from_name(name)
+}
+
+pub fn harvest(query: &str) -> (Vec<String>, String) {
+    let still_typing = !query.ends_with(char::is_whitespace);
+    let tokens: Vec<&str> = query.split_whitespace().collect();
+    let mut taken = Vec::new();
+    let mut kept = Vec::new();
+    for (at, token) in tokens.iter().enumerate() {
+        let last = at + 1 == tokens.len();
+        match token.strip_prefix('#').and_then(kind_from_word) {
+            Some(kind) if !(last && still_typing) => taken.push(kind.as_str().to_owned()),
+            _ => kept.push(*token),
+        }
+    }
+    let mut rest = kept.join(" ");
+    if !rest.is_empty() && !still_typing {
+        rest.push(' ');
+    }
+    (taken, rest)
+}
+
+pub fn sweeten(query: &str) -> String {
+    query
+        .split_whitespace()
+        .map(|token| {
+            let (sign, rest) = match token.strip_prefix('-') {
+                Some(rest) => ("-", rest),
+                None => ("", token),
+            };
+            match rest.strip_prefix('#').and_then(kind_from_word) {
+                Some(kind) => format!("{sign}k:{}", kind.as_str()),
+                None => token.to_owned(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn label_of_form(form: Form) -> &'static str {
+    match form {
+        Form::PlainText => "En texto plano",
+        Form::Markdown => "Como Markdown",
+        Form::JsonPretty => "Formateado",
+        Form::JsonMinified => "Minificado",
+        Form::JsonKeys => "Solo las claves",
+        Form::JsonTable => "Como tabla",
+        Form::ColorHex => "En hex",
+        Form::ColorRgb => "En rgb()",
+        Form::ColorHsl => "En hsl()",
+        Form::ColorName => "Por su nombre",
+        Form::LinkMarkdown => "En Markdown",
+        Form::LinkDomain => "Solo el dominio",
+        Form::LinkTitled => "Con su título",
+        Form::CodeOneLine => "Sin saltos de línea",
+        Form::CodeBlock => "Bloque Markdown",
+        Form::CodeDedented => "Sin indentación",
+        Form::TokenHeader => "Como cabecera",
+        Form::TokenClaims => "Su contenido",
+        Form::TokenCurl => "Como curl",
+        Form::ImageJpeg => "Como JPEG",
+        Form::ImageOcr => "El texto que leyó",
+        Form::Path => "Su ruta",
+        Form::FileName => "Su nombre",
+        Form::TextQuote => "Como cita",
+        Form::TextUpper => "TODO EN MAYÚSCULAS",
+        Form::TextLower => "todo en minúsculas",
+    }
+}
+
+pub const AS_IS: &str = "as-is";
+
+pub fn as_is_label(kind: Option<Kind>) -> &'static str {
+    match kind {
+        Some(Kind::Token) => "El token",
+        Some(Kind::File) | Some(Kind::Folder) => "El archivo",
+        Some(Kind::Image) => "La imagen",
+        Some(Kind::Link) => "El enlace",
+        _ => "Tal cual",
+    }
+}
+
+pub fn form_of(key: &str) -> Option<Form> {
+    Form::ALL.into_iter().find(|form| form.as_str() == key)
+}
+
+pub fn chips_of(facets: &[Facet], selected: &[String]) -> Vec<Chip> {
+    let chosen = |facet: &Facet| selected.iter().any(|one| one == facet.kind.as_str());
     let mut kinds: Vec<&Facet> = facets.iter().filter(|facet| facet.count > 0).collect();
     kinds.sort_by(|a, b| {
-        b.count
-            .cmp(&a.count)
+        chosen(b)
+            .cmp(&chosen(a))
+            .then(b.count.cmp(&a.count))
             .then(a.kind.as_str().cmp(b.kind.as_str()))
     });
     kinds
         .into_iter()
         .map(|facet| {
+            let key = facet.kind.as_str();
             chip(
-                facet.kind.as_str(),
+                key,
                 label_of(Some(facet.kind)),
                 facet.count,
-                selected,
+                selected.iter().any(|one| one == key),
             )
         })
         .collect()
 }
 
-fn chip(key: &str, label: &str, count: i64, selected: &str) -> Chip {
+fn chip(key: &str, label: &str, count: i64, selected: bool) -> Chip {
     Chip {
         key: key.into(),
         label: label.into(),
         count: compact(count).into(),
-        selected: key == selected,
+        selected,
     }
 }
 
@@ -96,21 +258,21 @@ pub fn compact(count: i64) -> String {
 
 const SHOWN_QUERY: usize = 24;
 
-pub fn empty_of(query: &str, chip: &str) -> (String, String) {
+pub fn empty_of(query: &str, pinned: bool, kinds: bool) -> (String, String) {
     let query = query.trim();
     if query.is_empty() {
-        return match chip {
-            PINNED => (
+        return match (pinned, kinds) {
+            (true, _) => (
                 "No hay nada anclado".into(),
                 "Ancla lo que uses seguido y se queda a mano".into(),
             ),
-            ALL => (
+            (false, true) => (
+                "No hay nada de este tipo".into(),
+                "Quita el filtro para ver todo".into(),
+            ),
+            (false, false) => (
                 "Todavía no hay nada".into(),
                 "Lo que copies aparece aquí".into(),
-            ),
-            _ => (
-                "No hay nada de este tipo".into(),
-                "Toca el filtro otra vez para ver todo".into(),
             ),
         };
     }
@@ -121,10 +283,10 @@ pub fn empty_of(query: &str, chip: &str) -> (String, String) {
             "La búsqueda va por palabras: los signos solos no se buscan".into(),
         );
     }
-    if chip == ALL {
-        (asked, "Prueba con menos letras".into())
-    } else {
+    if pinned || kinds {
         (asked, "Prueba con menos letras o quita el filtro".into())
+    } else {
+        (asked, "Prueba con menos letras".into())
     }
 }
 
@@ -243,7 +405,8 @@ mod tests {
                 count: 2,
             },
         ];
-        let chips = chips_of(&facets, "text");
+        let chosen = ["text".to_owned()];
+        let chips = chips_of(&facets, &chosen);
         let keys: Vec<&str> = chips.iter().map(|c| c.key.as_str()).collect();
         assert_eq!(
             keys,
@@ -260,32 +423,160 @@ mod tests {
             "todo y anclados no son tipos y no viven aquí"
         );
 
-        assert!(chips_of(&[], "all").is_empty(), "sin facetas no hay fila");
+        assert!(chips_of(&[], &[]).is_empty(), "sin facetas no hay fila");
+    }
+
+    fn excerpt_of(parts: &[(&str, bool)]) -> Excerpt {
+        Excerpt {
+            segments: parts
+                .iter()
+                .map(|(text, matched)| Segment {
+                    text: (*text).into(),
+                    matched: *matched,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn the_excerpt_breaks_into_what_goes_before_the_hit_and_what_follows() {
+        let excerpt = excerpt_of(&[
+            ("confirmamos la ", false),
+            ("reunión", true),
+            (" del jueves a las 16:30", false),
+        ]);
+        assert_eq!(
+            parts_of(&excerpt),
+            (
+                "confirmamos la ".into(),
+                "reunión".into(),
+                " del jueves a las 16:30".into()
+            )
+        );
+    }
+
+    #[test]
+    fn an_excerpt_with_nothing_matched_is_all_text_and_no_hit() {
+        let (lead, hit, tail) = parts_of(&excerpt_of(&[("sin coincidencias", false)]));
+        assert_eq!(lead, "sin coincidencias");
+        assert!(hit.is_empty(), "sin hit no hay nada que resaltar");
+        assert!(tail.is_empty());
+    }
+
+    #[test]
+    fn a_long_lead_is_cut_from_the_left_so_the_hit_does_not_fall_off() {
+        let long = "una entrada muy larga que empuja el término lejos del principio ";
+        let (lead, hit, _) = parts_of(&excerpt_of(&[(long, false), ("término", true)]));
+        assert!(lead.starts_with('…'), "se corta por la izquierda: {lead}");
+        assert!(lead.chars().count() <= LEAD + 1);
+        assert!(lead.ends_with("lejos del principio "));
+        assert_eq!(hit, "término");
+    }
+
+    #[test]
+    fn a_row_that_matched_carries_its_three_parts() {
+        let mut row = row(Some(Kind::Text));
+        row.snippet = Some(Snippet {
+            found_in: FoundIn::Text,
+            excerpt: excerpt_of(&[("antes de ", false), ("esto", true), (" y después", false)]),
+        });
+        let card = card_of(&row, 1_000_000);
+        assert!(card.found);
+        assert_eq!(card.lead.as_str(), "antes de ");
+        assert_eq!(card.hit.as_str(), "esto");
+        assert_eq!(card.tail.as_str(), " y después");
+    }
+
+    #[test]
+    fn a_card_asks_for_as_many_lines_as_its_text_needs() {
+        assert_eq!(lines_of("#FF8800"), 2, "lo corto no crece al abrirse");
+        assert_eq!(lines_of(""), 2);
+        assert_eq!(lines_of(&"a".repeat(57)), 2);
+        assert_eq!(
+            lines_of(&"a".repeat(58)),
+            2,
+            "dos líneas siguen siendo el mínimo"
+        );
+        assert_eq!(lines_of(&"a".repeat(57 * 3)), 3);
+        assert_eq!(lines_of(&"a".repeat(57 * 20)), 7, "y hay un techo");
+        assert_eq!(
+            lines_of(
+                "uno
+dos
+tres
+cuatro"
+            ),
+            4,
+            "los saltos cuentan"
+        );
+    }
+
+    #[test]
+    fn a_hash_in_the_search_box_becomes_a_kind_filter() {
+        assert_eq!(sweeten("#ip"), "k:ip");
+        assert_eq!(sweeten("#imagen playa"), "k:image playa");
+        assert_eq!(sweeten("#Código git"), "k:code git");
+        assert_eq!(sweeten("#vídeo"), "k:video");
+        assert_eq!(sweeten("reunión jueves"), "reunión jueves");
+        assert_eq!(
+            sweeten("#loquesea"),
+            "#loquesea",
+            "lo que no es una clase se busca"
+        );
+        assert_eq!(sweeten("#carpeta #texto"), "k:folder k:text");
+        assert_eq!(
+            sweeten("-#imagen playa"),
+            "-k:image playa",
+            "y se puede excluir"
+        );
+        assert_eq!(
+            sweeten("-reunión"),
+            "-reunión",
+            "el menos suelto no se toca"
+        );
+    }
+
+    #[test]
+    fn every_form_has_a_name_and_answers_to_its_key() {
+        for form in Form::ALL {
+            let label = label_of_form(form);
+            assert!(!label.is_empty(), "{form:?} sin nombre");
+            assert_eq!(form_of(form.as_str()), Some(form));
+        }
+        assert_eq!(form_of("no-existe"), None);
     }
 
     #[test]
     fn an_empty_list_says_why_it_is_empty() {
         assert_eq!(
-            empty_of("", ALL),
+            empty_of("", false, false),
             (
                 "Todavía no hay nada".into(),
                 "Lo que copies aparece aquí".into()
             )
         );
-        assert_eq!(empty_of("  ", PINNED).0, "No hay nada anclado");
-        assert_eq!(empty_of("", "image").0, "No hay nada de este tipo");
+        assert_eq!(empty_of("  ", true, false).0, "No hay nada anclado");
+        assert_eq!(empty_of("", false, true).0, "No hay nada de este tipo");
 
-        let (title, hint) = empty_of(",", ALL);
+        let (title, hint) = empty_of(",", false, false);
         assert_eq!(title, "Nada coincide con «,»");
         assert!(hint.contains("por palabras"), "la coma no es una palabra");
 
-        let (title, hint) = empty_of("reunion", "image");
+        let (title, hint) = empty_of("reunion", false, true);
         assert_eq!(title, "Nada coincide con «reunion»");
         assert!(hint.contains("quita el filtro"));
 
-        assert_eq!(empty_of("reunion", ALL).1, "Prueba con menos letras");
         assert_eq!(
-            empty_of("una consulta larguísima que no cabe en la tarjeta", ALL).0,
+            empty_of("reunion", false, false).1,
+            "Prueba con menos letras"
+        );
+        assert_eq!(
+            empty_of(
+                "una consulta larguísima que no cabe en la tarjeta",
+                false,
+                false
+            )
+            .0,
             "Nada coincide con «una consulta larguísima…»"
         );
     }

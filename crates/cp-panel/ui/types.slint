@@ -6,6 +6,11 @@ export struct Card {
     times: string,
     age: string,
     body: string,
+    lead: string,
+    hit: string,
+    tail: string,
+    found: bool,
+    lines: int,
     mono: bool,
     thumb: image,
     has-thumb: bool,
@@ -18,4 +23,10 @@ export struct Chip {
     label: string,
     count: string,
     selected: bool,
+}
+
+export struct FormRow {
+    key: string,
+    label: string,
+    preview: string,
 }

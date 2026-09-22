@@ -38,10 +38,14 @@ pub enum Form {
     ImageJpeg,
     ImageOcr,
     Path,
+    FileName,
+    TextQuote,
+    TextUpper,
+    TextLower,
 }
 
 impl Form {
-    pub const ALL: [Form; 22] = [
+    pub const ALL: [Form; 26] = [
         Form::PlainText,
         Form::Markdown,
         Form::JsonPretty,
@@ -64,6 +68,10 @@ impl Form {
         Form::ImageJpeg,
         Form::ImageOcr,
         Form::Path,
+        Form::FileName,
+        Form::TextQuote,
+        Form::TextUpper,
+        Form::TextLower,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -90,6 +98,10 @@ impl Form {
             Form::ImageJpeg => "image-jpeg",
             Form::ImageOcr => "image-ocr",
             Form::Path => "path",
+            Form::FileName => "file-name",
+            Form::TextQuote => "text-quote",
+            Form::TextUpper => "text-upper",
+            Form::TextLower => "text-lower",
         }
     }
 
@@ -179,6 +191,15 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
     }
     if !content.paths.is_empty() {
         forms.push(Form::Path);
+        if names_of(&content.paths).is_some() {
+            forms.push(Form::FileName);
+        }
+    }
+    if matches!(content.kind, Some(Kind::Text) | None) && !text.is_empty() {
+        if text.lines().count() > 1 {
+            forms.push(Form::CodeOneLine);
+        }
+        forms.extend([Form::TextQuote, Form::TextUpper, Form::TextLower]);
     }
     forms
 }
@@ -214,8 +235,39 @@ pub fn render(form: Form, content: &Content) -> Option<Rendered> {
         Form::ImageJpeg => return jpeg_of(content.image?).map(Rendered::Jpeg),
         Form::ImageOcr => content.ocr?.trim().to_owned(),
         Form::Path => content.paths.join("\n"),
+        Form::FileName => names_of(&content.paths)?,
+        Form::TextQuote => quoted(content.text.as_deref()?),
+        Form::TextUpper => content.text.as_deref()?.to_uppercase(),
+        Form::TextLower => content.text.as_deref()?.to_lowercase(),
     };
     Some(Rendered::Text(rendered))
+}
+
+fn names_of(paths: &[String]) -> Option<String> {
+    let names: Vec<&str> = paths
+        .iter()
+        .map(|path| {
+            path.rsplit(['/', '\\'])
+                .next()
+                .unwrap_or(path.as_str())
+                .trim()
+        })
+        .filter(|name| !name.is_empty())
+        .collect();
+    (!names.is_empty()).then(|| names.join("\n"))
+}
+
+fn quoted(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            if line.trim().is_empty() {
+                ">".to_owned()
+            } else {
+                format!("> {line}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn title_of<'a>(content: &'a Content<'_>) -> Option<&'a str> {
@@ -1371,9 +1423,79 @@ mod tests {
     }
 
     #[test]
-    fn plain_text_has_no_forms_of_its_own() {
-        assert!(forms_for(&text_of(Kind::Text, "hola")).is_empty());
-        assert!(forms_for(&Content::default()).is_empty());
+    fn plain_text_is_offered_as_quote_and_case() {
+        assert_eq!(
+            forms_for(&text_of(Kind::Text, "hola")),
+            vec![Form::TextQuote, Form::TextUpper, Form::TextLower]
+        );
+        assert!(
+            forms_for(&Content::default()).is_empty(),
+            "sin texto no hay nada que ofrecer"
+        );
+        let two_lines = text_of(
+            Kind::Text,
+            "una
+otra",
+        );
+        assert_eq!(
+            forms_for(&two_lines),
+            vec![
+                Form::CodeOneLine,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ],
+            "juntar las líneas solo se ofrece cuando hay más de una"
+        );
+    }
+
+    #[test]
+    fn a_quote_marks_every_line_and_keeps_the_empty_ones() {
+        let content = text_of(
+            Kind::Text,
+            "una
+
+otra",
+        );
+        assert_eq!(
+            rendered(Form::TextQuote, &content),
+            "> una
+>
+> otra"
+        );
+    }
+
+    #[test]
+    fn case_forms_change_the_letters_and_nothing_else() {
+        let content = text_of(Kind::Text, "Hola Ñandú");
+        assert_eq!(rendered(Form::TextUpper, &content), "HOLA ÑANDÚ");
+        assert_eq!(rendered(Form::TextLower, &content), "hola ñandú");
+    }
+
+    #[test]
+    fn a_file_is_also_offered_by_its_name_alone() {
+        let content = Content {
+            kind: Some(Kind::File),
+            paths: vec![
+                "C:\\Users\\Mario\\Documentos\\informe.pdf".into(),
+                "/tmp/otro.txt".into(),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            rendered(Form::FileName, &content),
+            "informe.pdf
+otro.txt"
+        );
+        let nameless = Content {
+            kind: Some(Kind::Folder),
+            paths: vec!["/".into()],
+            ..Default::default()
+        };
+        assert!(
+            !forms_for(&nameless).contains(&Form::FileName),
+            "una ruta sin nombre no se ofrece"
+        );
     }
 
     #[test]
@@ -1429,7 +1551,16 @@ mod tests {
             rich: true,
             ..Default::default()
         };
-        assert_eq!(forms_for(&with_html), vec![Form::PlainText, Form::Markdown]);
+        assert_eq!(
+            forms_for(&with_html),
+            vec![
+                Form::PlainText,
+                Form::Markdown,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ]
+        );
         assert_eq!(rendered(Form::Markdown, &with_html), "**hola**");
         let spaced = Content {
             text: Some("  hola \n".into()),
@@ -1444,7 +1575,15 @@ mod tests {
             rich: true,
             ..text_of(Kind::Text, "hola")
         };
-        assert_eq!(forms_for(&rtf_only), vec![Form::PlainText]);
+        assert_eq!(
+            forms_for(&rtf_only),
+            vec![
+                Form::PlainText,
+                Form::TextQuote,
+                Form::TextUpper,
+                Form::TextLower
+            ]
+        );
     }
 
     #[test]
@@ -2029,7 +2168,7 @@ mod tests {
             paths: vec!["/tmp/uno.txt".into(), "/tmp/dos.txt".into()],
             ..Default::default()
         };
-        assert_eq!(forms_for(&content), vec![Form::Path]);
+        assert_eq!(forms_for(&content), vec![Form::Path, Form::FileName]);
         assert_eq!(rendered(Form::Path, &content), "/tmp/uno.txt\n/tmp/dos.txt");
     }
 
