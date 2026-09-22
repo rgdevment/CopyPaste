@@ -157,6 +157,7 @@ name = "cp-win"
 version = "3.0.0"
 dependencies = [
  "cp-core",
+ "cp-store",
  "cp-win-sys",
  "image",
  "windows",

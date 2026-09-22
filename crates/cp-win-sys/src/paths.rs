@@ -17,6 +17,10 @@ pub fn blobs_dir() -> Option<PathBuf> {
     Some(data_dir()?.join("blobs"))
 }
 
+pub fn pastes_dir() -> PathBuf {
+    std::env::temp_dir().join("CopyPaste")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,6 +58,19 @@ mod tests {
         assert_eq!(
             legacy_database().and_then(|p| p.file_name().map(std::ffi::OsString::from)),
             Some("clipboard.db".into())
+        );
+    }
+
+    #[test]
+    fn what_is_pasted_out_of_the_history_lands_in_temp_not_in_the_data_folder() {
+        let pastes = pastes_dir();
+        assert!(pastes.starts_with(std::env::temp_dir()), "{pastes:?}");
+        if let Some(root) = data_dir() {
+            assert!(!pastes.starts_with(&root), "{pastes:?} no es historial");
+        }
+        assert_eq!(
+            pastes.file_name().and_then(|n| n.to_str()),
+            Some("CopyPaste")
         );
     }
 

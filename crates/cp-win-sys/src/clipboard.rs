@@ -45,22 +45,7 @@ impl Clipboard {
         if handle.is_invalid() {
             return None;
         }
-        let global = HGLOBAL(handle.0);
-
-        let size = unsafe { GlobalSize(global) };
-        if size == 0 {
-            return None;
-        }
-
-        let address = unsafe { GlobalLock(global) };
-        if address.is_null() {
-            return None;
-        }
-
-        let bytes = unsafe { std::slice::from_raw_parts(address.cast::<u8>(), size) }.to_vec();
-
-        let _ = unsafe { GlobalUnlock(global) };
-        Some(bytes)
+        global_bytes(HGLOBAL(handle.0), usize::MAX)
     }
 
     pub fn size_of(&self, id: u32) -> Option<usize> {
@@ -78,6 +63,23 @@ impl Drop for Clipboard {
     fn drop(&mut self) {
         let _ = unsafe { CloseClipboard() };
     }
+}
+
+pub(crate) fn global_bytes(global: HGLOBAL, up_to: usize) -> Option<Vec<u8>> {
+    let size = unsafe { GlobalSize(global) };
+    if size == 0 || size > up_to {
+        return None;
+    }
+
+    let address = unsafe { GlobalLock(global) };
+    if address.is_null() {
+        return None;
+    }
+
+    let bytes = unsafe { std::slice::from_raw_parts(address.cast::<u8>(), size) }.to_vec();
+
+    let _ = unsafe { GlobalUnlock(global) };
+    Some(bytes)
 }
 
 pub fn sequence() -> Option<i64> {

@@ -36,15 +36,29 @@ pub fn within(
     }
 }
 
-pub fn anything_within<T: Send + 'static>(
-    patience: Duration,
-    work: impl FnOnce() -> T + Send + 'static,
-) -> Option<T> {
+pub struct Pending<T> {
+    hear: std::sync::mpsc::Receiver<T>,
+}
+
+impl<T> Pending<T> {
+    pub fn wait(&self, patience: Duration) -> Option<T> {
+        self.hear.recv_timeout(patience).ok()
+    }
+}
+
+pub fn begin<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Pending<T> {
     let (tell, hear) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let _ = tell.send(work());
     });
-    hear.recv_timeout(patience).ok()
+    Pending { hear }
+}
+
+pub fn anything_within<T: Send + 'static>(
+    patience: Duration,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Option<T> {
+    begin(work).wait(patience)
 }
 
 #[cfg(test)]
@@ -87,6 +101,27 @@ mod tests {
         assert_eq!(
             within(PATIENCE, || Some(vec![7])),
             Reading::Delivered(vec![7])
+        );
+    }
+
+    #[test]
+    fn a_late_answer_is_picked_up_by_a_later_wait_on_the_same_read() {
+        let (release, gate) = std::sync::mpsc::channel::<()>();
+        let pending = begin(move || {
+            let _ = gate.recv();
+            42
+        });
+        assert_eq!(pending.wait(Duration::from_millis(20)), None, "aún no");
+        release.send(()).expect("la fuente contesta");
+        assert_eq!(
+            pending.wait(Duration::from_secs(5)),
+            Some(42),
+            "sin leer dos veces"
+        );
+        assert_eq!(
+            pending.wait(Duration::from_millis(20)),
+            None,
+            "y una vez entregada, no hay más"
         );
     }
 
