@@ -1,0 +1,150 @@
+import { Card, Chip } from "types.slint";
+import { Theme } from "theme.slint";
+
+export component Icon inherits Image {
+    in property <color> tint: Theme.muted;
+    width: 15px;
+    height: 15px;
+    colorize: tint;
+}
+
+export component Action inherits Rectangle {
+    in property <image> icon;
+    in property <color> hot: Theme.body;
+    callback pressed();
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: touch.has-hover ? #333853 : transparent;
+    animate background { duration: 100ms; }
+    Icon { source: root.icon; width: 14px; height: 14px; tint: touch.has-hover ? root.hot : Theme.muted; }
+    touch := TouchArea {
+        clicked => { root.pressed(); }
+    }
+}
+
+export component Pill inherits Rectangle {
+    in property <Chip> chip;
+    callback chosen(string);
+    height: 26px;
+    width: content.preferred-width;
+    border-radius: 13px;
+    background: chip.selected ? Theme.selected : touch.has-hover ? #242840 : Theme.field;
+    border-width: 1px;
+    border-color: chip.selected ? Theme.selected-edge : Theme.field-border;
+    animate background { duration: 100ms; }
+    content := HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 11px;
+        spacing: 5px;
+        alignment: center;
+        Text { text: chip.label; color: chip.selected ? Theme.accent : Theme.title; font-size: 12px; font-weight: 600; vertical-alignment: center; }
+        if chip.count != "" : Text { text: chip.count; color: chip.selected ? Theme.accent-dim : Theme.muted; font-size: 10.5px; vertical-alignment: center; }
+    }
+    touch := TouchArea {
+        clicked => { root.chosen(chip.key); }
+    }
+}
+
+export component KindIcon inherits Icon {
+    in property <string> kind;
+    tint: Theme.accent;
+    width: 16px;
+    height: 16px;
+    source: kind == "image" ? @image-url("../assets/icons/image.svg")
+        : kind == "json" ? @image-url("../assets/icons/braces.svg")
+        : kind == "code" ? @image-url("../assets/icons/code.svg")
+        : kind == "link" ? @image-url("../assets/icons/link.svg")
+        : kind == "email" ? @image-url("../assets/icons/mail.svg")
+        : kind == "phone" ? @image-url("../assets/icons/phone.svg")
+        : kind == "color" ? @image-url("../assets/icons/palette.svg")
+        : kind == "ip" || kind == "uuid" ? @image-url("../assets/icons/hash.svg")
+        : kind == "token" ? @image-url("../assets/icons/key-round.svg")
+        : kind == "folder" ? @image-url("../assets/icons/folder.svg")
+        : kind == "audio" ? @image-url("../assets/icons/music.svg")
+        : kind == "video" ? @image-url("../assets/icons/video.svg")
+        : kind == "file" ? @image-url("../assets/icons/file.svg")
+        : @image-url("../assets/icons/file-text.svg");
+}
+
+export component CardView inherits Rectangle {
+    in property <Card> card;
+    in property <bool> current;
+    callback paste(int);
+    callback edit(int);
+    callback pin(int, bool);
+    callback remove(int);
+    callback chosen(int);
+    property <bool> lit: current || touch.has-hover;
+    border-radius: 12px;
+    background: lit ? Theme.card-hover : Theme.card;
+    border-width: current ? 1px : 0px;
+    border-color: Theme.selected-edge;
+    animate background { duration: 140ms; easing: ease-out; }
+    touch := TouchArea {
+        clicked => { root.chosen(card.id); }
+        double-clicked => { root.paste(card.id); }
+    }
+
+    VerticalLayout {
+        padding: 12px;
+        padding-bottom: 8px;
+        spacing: 8px;
+
+        HorizontalLayout {
+            height: 30px;
+            spacing: 10px;
+            alignment: stretch;
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                border-radius: 8px;
+                background: Theme.tile;
+                KindIcon { kind: card.kind; }
+            }
+            VerticalLayout {
+                spacing: 1px;
+                alignment: center;
+                HorizontalLayout {
+                    spacing: 5px;
+                    Text { text: card.title; color: card.broken ? Theme.danger : Theme.title; font-size: 12.5px; font-weight: 600; vertical-alignment: center; }
+                    if card.pinned : Icon { source: @image-url("../assets/icons/pin.svg"); width: 11px; height: 11px; tint: Theme.accent-dim; y: (parent.height - 11px) / 2; }
+                }
+                Text { text: "· " + card.source + (card.times != "" ? "   ×" + card.times : ""); color: Theme.muted; font-size: 11px; }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            if lit : HorizontalLayout {
+                spacing: 2px;
+                alignment: center;
+                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); pressed => { root.paste(card.id); } }
+                Action { icon: @image-url("../assets/icons/pencil.svg"); pressed => { root.edit(card.id); } }
+                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); pressed => { root.pin(card.id, !card.pinned); } }
+                Action { icon: @image-url("../assets/icons/trash-2.svg"); hot: Theme.danger; pressed => { root.remove(card.id); } }
+            }
+            Text { text: card.age; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+        }
+
+        if card.has-thumb : Rectangle {
+            height: 96px;
+            border-radius: 8px;
+            clip: true;
+            background: #12141c;
+            Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: contain; }
+        }
+
+        if !card.has-thumb : Text {
+            text: card.body;
+            color: card.mono ? Theme.mono : Theme.body;
+            font-size: card.mono ? 12px : 13px;
+            font-family: card.mono ? "Cascadia Mono" : "Segoe UI";
+            wrap: card.mono ? char-wrap : word-wrap;
+            overflow: elide;
+            height: 36px;
+        }
+
+        Rectangle {
+            height: 14px;
+            Icon { source: @image-url("../assets/icons/chevron-down.svg"); width: 12px; height: 12px; tint: Theme.muted; }
+        }
+    }
+}

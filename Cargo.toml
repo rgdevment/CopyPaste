@@ -39,6 +39,7 @@ windows = { version = "0.62", features = [
     "Win32_System_Threading",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",
+    "Win32_Graphics_Dwm",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_Security",
     "Media_Ocr",
@@ -54,6 +55,10 @@ windows = { version = "0.62", features = [
 ] }
 
 windows-future = "0.3"
+
+slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-skia", "renderer-skia-opengl", "raw-window-handle-06"] }
+slint-build = "1.18"
+raw-window-handle = "0.6"
 
 objc2 = "0.6"
 objc2-foundation = "0.3"

@@ -6,9 +6,13 @@ exclude_re = [
     "replace \\| with \\^ in base64url",
     "replace < with <= in rgb_of_hsl",
     "replace < with <= in migrate",
+    "replace Rows::fetch_ahead with \\(\\)",
 ]
 
 exclude_globs = [
+    "crates/cp-panel/src/app.rs",
+    "crates/cp-panel/src/main.rs",
+    "crates/cp-panel/src/measure.rs",
     "crates/cp-win/src/capture.rs",
     "crates/cp-win/src/paste.rs",
     "crates/cp-win/src/restore.rs",

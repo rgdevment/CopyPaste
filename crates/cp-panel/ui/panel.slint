@@ -1,0 +1,160 @@
+import { ListView } from "std-widgets.slint";
+import { Card, Chip } from "types.slint";
+import { Theme } from "theme.slint";
+import { Icon, Action, Pill, CardView } from "cards.slint";
+
+export { Card, Chip, Theme }
+
+export component Panel inherits Window {
+    width: Theme.width + Theme.margin * 2;
+    height: Theme.height + Theme.margin * 2;
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    title: "CopyPaste";
+
+    in property <[Card]> cards;
+    in property <[Chip]> chips;
+    in property <string> count-text;
+    in-out property <string> query;
+    in-out property <int> current: -1;
+    in-out property <length> scroll-y <=> list.content-y;
+    out property <length> viewport-height: list.visible-height;
+
+    callback search(string);
+    callback chip-chosen(string);
+    callback paste(int);
+    callback edit(int);
+    callback pin(int, bool);
+    callback remove(int);
+    callback dismiss();
+    callback focus-search();
+
+    forward-focus: input;
+
+    focus-search => { input.focus(); }
+
+    panel := Rectangle {
+        x: Theme.margin;
+        y: Theme.margin;
+        width: Theme.width;
+        height: Theme.height;
+        border-radius: Theme.radius;
+        border-width: 1px;
+        border-color: Theme.panel-border;
+        background: Theme.panel;
+        drop-shadow-blur: Theme.shadow-blur;
+        drop-shadow-color: Theme.shadow;
+        drop-shadow-offset-y: 10px;
+        clip: true;
+
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            VerticalLayout {
+                padding: 12px;
+                padding-bottom: 8px;
+                spacing: 10px;
+                search-box := Rectangle {
+                    height: 36px;
+                    border-radius: 10px;
+                    background: Theme.field;
+                    border-width: 1px;
+                    border-color: input.has-focus ? Theme.selected-edge : Theme.field-border;
+                    animate border-color { duration: 100ms; }
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 9px;
+                        alignment: stretch;
+                        Icon { source: @image-url("../assets/icons/search.svg"); tint: Theme.placeholder; y: (parent.height - 15px) / 2; }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            input := TextInput {
+                                y: (parent.height - self.height) / 2;
+                                width: parent.width;
+                                text <=> root.query;
+                                color: Theme.body;
+                                font-size: 13px;
+                                single-line: true;
+                                edited => { root.search(self.text); }
+                                key-pressed(event) => {
+                                    if event.text == Key.Escape {
+                                        root.dismiss();
+                                        return accept;
+                                    }
+                                    if event.text == Key.Return && root.current >= 0 {
+                                        root.paste(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if event.text == Key.DownArrow {
+                                        root.current = min(root.current + 1, root.cards.length - 1);
+                                        return accept;
+                                    }
+                                    if event.text == Key.UpArrow {
+                                        root.current = max(root.current - 1, 0);
+                                        return accept;
+                                    }
+                                    reject
+                                }
+                            }
+                            if root.query == "" : Text { x: 0; y: (parent.height - self.height) / 2; text: "Buscar en portapapeles…"; color: Theme.placeholder; font-size: 13px; }
+                        }
+                        Icon { source: @image-url("../assets/icons/sliders-horizontal.svg"); tint: Theme.placeholder; y: (parent.height - 15px) / 2; }
+                    }
+                }
+                Rectangle {
+                    height: 26px;
+                    clip: true;
+                    HorizontalLayout {
+                        spacing: 7px;
+                        alignment: start;
+                        for chip in root.chips : Pill {
+                            chip: chip;
+                            chosen(key) => { root.chip-chosen(key); }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                clip: true;
+                list := ListView {
+                    for card[index] in root.cards : Rectangle {
+                        height: (card.has-thumb ? 174px : 116px) + 8px;
+                        CardView {
+                            card: card;
+                            current: index == root.current;
+                            x: 12px;
+                            width: parent.width - 24px;
+                            height: parent.height - 8px;
+                            chosen(id) => { root.current = index; }
+                            paste(id) => { root.paste(id); }
+                            edit(id) => { root.edit(id); }
+                            pin(id, on) => { root.pin(id, on); }
+                            remove(id) => { root.remove(id); }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 34px;
+                background: Theme.footer;
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 10px;
+                    spacing: 8px;
+                    alignment: stretch;
+                    Icon { source: @image-url("../assets/icons/clipboard.svg"); tint: Theme.muted; y: (parent.height - 15px) / 2; }
+                    Text { text: root.count-text; color: Theme.muted; font-size: 12px; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    Action { icon: @image-url("../assets/icons/sun.svg"); y: (parent.height - 22px) / 2; }
+                    Action { icon: @image-url("../assets/icons/sliders-horizontal.svg"); y: (parent.height - 22px) / 2; }
+                }
+            }
+        }
+    }
+}

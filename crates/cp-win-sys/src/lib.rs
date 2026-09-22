@@ -1,5 +1,6 @@
 #![cfg(target_os = "windows")]
 
+pub mod backdrop;
 pub mod clipboard;
 pub mod com;
 pub mod files;
