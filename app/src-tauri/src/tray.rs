@@ -140,8 +140,9 @@ mod tests {
     }
 
     #[test]
-    fn the_windows_icon_carries_its_own_colour() {
-        let (_, seen) = ink(WINDOWS);
+    fn the_windows_icon_is_dark_enough_for_a_light_bar() {
+        let (grey, seen) = ink(WINDOWS);
         assert!(seen > 64, "el icono de Windows apenas tiene tinta: {seen}");
+        assert!(grey < 200, "en una barra clara no se vería: {grey}");
     }
 }

@@ -628,10 +628,9 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
     }
     ```
 
+5. **Test your translation** by changing your system language or using the manual override in Settings.
 
-6. **Test your translation** by changing your system language or using the manual override in Settings.
-
-7. **Submit a Pull Request** with your ARB file.
+6. **Submit a Pull Request** with your ARB file.
 
 #### Translation Guidelines
 

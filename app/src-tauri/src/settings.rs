@@ -47,11 +47,14 @@ pub struct Former {
 }
 
 #[tauri::command]
-pub fn former() -> Option<Former> {
-    let db = folder()?.join("clipboard.db");
-    let weighed = std::fs::metadata(&db).ok()?.len();
-    Some(Former {
-        path: db.to_string_lossy().into_owned(),
-        bytes: weighed,
-    })
+pub fn former() -> Result<Option<Former>, String> {
+    let db = folder().ok_or_else(nowhere)?.join("clipboard.db");
+    match std::fs::metadata(&db) {
+        Ok(weighed) => Ok(Some(Former {
+            path: db.to_string_lossy().into_owned(),
+            bytes: weighed.len(),
+        })),
+        Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(why) => Err(why.to_string()),
+    }
 }

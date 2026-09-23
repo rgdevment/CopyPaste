@@ -1,6 +1,7 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useState } from "react";
-import { t } from "../locales";
+import { useEffect, useState } from "react";
+import { fill, t } from "../locales";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
@@ -8,6 +9,9 @@ const SPONSOR = "https://github.com/sponsors/rgdevment";
 const COFFEE = "https://buymeacoffee.com/rgdevment";
 const ALTERNATIVE = "https://alternativeto.net/software/copypaste/about/";
 const RATING = "ms-windows-store://review/?ProductId=9NBJRZF3K856";
+const PRIVACY = "https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md";
+const NOTICES = "https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md";
+const onMac = navigator.userAgent.includes("Macintosh");
 
 const TOOLS = [
   {
@@ -25,22 +29,32 @@ const TOOLS = [
 ];
 
 export default function About() {
-  const [beta, setBeta] = useState(false);
+  const [trouble, setTrouble] = useState<string | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    getVersion()
+      .then(setVersion)
+      .catch(() => setVersion(null));
+  }, []);
 
   const go = (where: string) => {
-    openUrl(where).catch(() => {});
+    setTrouble(null);
+    openUrl(where).catch(() => setTrouble(fill("linkRefused", where)));
   };
 
   return (
     <>
+      {trouble && <p className="alarm">{trouble}</p>}
+
       <div className="brow">
         <span className="mark" aria-hidden="true">
           C
         </span>
         <span>
-          <h2>CopyPaste</h2>
+          <h1>CopyPaste</h1>
           <span className="line2">
-            <span>3.0.0</span>
+            <span>{version ?? "—"}</span>
             <i />
             <span>GPL-3.0</span>
           </span>
@@ -50,7 +64,7 @@ export default function About() {
       <div className="what-is">
         <p className="eyebrow">
           <Info />
-          CopyPaste
+          {t("aboutIs")}
         </p>
         <p>{t("aboutWhat")}</p>
         <p>{t("aboutPrivacy")}</p>
@@ -75,23 +89,16 @@ export default function About() {
       </div>
 
       <div className="newer">
-        <span className="pip ok" />
+        <span className="pip" />
         <span className="grow">
           <b>{t("updateNone")}</b>
           <span>{t("updateWhen")}</span>
         </span>
-        <button type="button" className="mild">
+        <button type="button" className="mild" disabled>
           {t("updateLook")}
+          <span className="soon">{t("soon")}</span>
         </button>
       </div>
-
-      <label className="beta" htmlFor="beta">
-        <input id="beta" type="checkbox" checked={beta} onChange={() => setBeta(!beta)} />
-        <span>
-          <b>{t("betaTake")}</b>
-          <span>{t("betaWarns")}</span>
-        </span>
-      </label>
 
       <div className="rule">{t("supportTitle")}</div>
       <p className="quiet">{t("supportWhy")}</p>
@@ -108,18 +115,20 @@ export default function About() {
             <span>github.com/rgdevment/CopyPaste</span>
           </span>
         </button>
-        <button type="button" className="give" onClick={() => go(RATING)}>
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path
-              fill="#0078d4"
-              d="M2 3h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6l-4 3V4a1 1 0 0 1 1-1Z"
-            />
-          </svg>
-          <span>
-            <b>{t("supportRate")}</b>
-            <span>Microsoft Store</span>
-          </span>
-        </button>
+        {!onMac && (
+          <button type="button" className="give" onClick={() => go(RATING)}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                fill="#0078d4"
+                d="M2 3h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6l-4 3V4a1 1 0 0 1 1-1Z"
+              />
+            </svg>
+            <span>
+              <b>{t("supportRate")}</b>
+              <span>Microsoft Store</span>
+            </span>
+          </button>
+        )}
         <button type="button" className="give" onClick={() => go(SPONSOR)}>
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <path
@@ -168,11 +177,13 @@ export default function About() {
           {t("troubleYours")}
         </p>
         <div className="feet">
-          <button type="button" className="mild">
+          <button type="button" className="mild" disabled>
             {t("troubleReport")}
+            <span className="soon">{t("soon")}</span>
           </button>
-          <button type="button" className="mild">
+          <button type="button" className="mild" disabled>
             {t("troubleLog")}
+            <span className="soon">{t("soon")}</span>
           </button>
         </div>
       </div>
@@ -184,7 +195,12 @@ export default function About() {
         <button type="button" onClick={() => go(ALTERNATIVE)}>
           AlternativeTo
         </button>
-        <button type="button">{t("aboutNotices")}</button>
+        <button type="button" onClick={() => go(PRIVACY)}>
+          {t("aboutPrivacyLink")}
+        </button>
+        <button type="button" onClick={() => go(NOTICES)}>
+          {t("aboutNotices")}
+        </button>
       </div>
     </>
   );

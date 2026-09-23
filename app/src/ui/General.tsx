@@ -9,13 +9,13 @@ export default function General({
   kept: Kept;
   change: (what: Partial<Kept>) => void;
 }) {
-  const { waking, ask } = useWaking();
+  const { waking, trouble, ask } = useWaking();
 
   return (
     <>
       <h1>{t("railGeneral")}</h1>
 
-      <Band says={t("bandWindow")} />
+      <Band says={t("bandLook")} />
 
       <Line says={t("tongue")} why={t("tongueWhy")}>
         <select
@@ -41,14 +41,29 @@ export default function General({
         </select>
       </Line>
 
-      {waking?.offered && (
+      <Band says={t("bandDoes")} />
+
+      {waking?.offered ? (
         <Line
           says={t("wake")}
           why={t("wakeWhy")}
-          more={waking.theirs ? <div className="said">{t("wakeTheirs")}</div> : null}
+          more={
+            waking.theirs ? (
+              <div className="said">{t("wakeTheirs")}</div>
+            ) : trouble ? (
+              <div className="alarm">{trouble}</div>
+            ) : null
+          }
         >
-          <Knob on={waking.wakes} says={t("wake")} onPress={() => ask(!waking.wakes)} />
+          <Knob
+            on={waking.wakes}
+            says={t("wake")}
+            asleep={waking.theirs}
+            onPress={() => ask(!waking.wakes)}
+          />
         </Line>
+      ) : (
+        <Line says={t("wake")} why={t("wakeMac")} />
       )}
 
       <Line says={t("keys")} why={t("keysWhy")}>

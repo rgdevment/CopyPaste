@@ -4,6 +4,8 @@ import { type Kept, whereItLives } from "../core";
 import { fill, t } from "../locales";
 import { Band, Line } from "./Bits";
 
+const KEPT = [7, 30, 90];
+
 export default function History({
   kept,
   change,
@@ -12,6 +14,8 @@ export default function History({
   change: (what: Partial<Kept>) => void;
 }) {
   const [where, setWhere] = useState<string | null>(null);
+  const days = kept["keeps-days"];
+  const DAYS = KEPT.includes(days) || days === 0 ? KEPT : [...KEPT, days].sort((a, b) => a - b);
 
   useEffect(() => {
     whereItLives()
@@ -28,12 +32,14 @@ export default function History({
       <Line says={t("keeps")} why={t("keepsWhy")}>
         <select
           aria-label={t("keeps")}
-          value={String(kept["keeps-days"] ?? 0)}
-          onChange={(event) => change({ "keeps-days": Number(event.target.value) || null })}
+          value={String(kept["keeps-days"])}
+          onChange={(event) => change({ "keeps-days": Number(event.target.value) })}
         >
-          <option value="7">{fill("keepsDays", "7")}</option>
-          <option value="30">{fill("keepsDays", "30")}</option>
-          <option value="90">{fill("keepsDays", "90")}</option>
+          {DAYS.map((days) => (
+            <option key={days} value={String(days)}>
+              {fill("keepsDays", String(days))}
+            </option>
+          ))}
           <option value="0">{t("keepsForever")}</option>
         </select>
       </Line>
@@ -41,8 +47,8 @@ export default function History({
       <Line says={t("quota")} why={t("quotaWhy")}>
         <select
           aria-label={t("quota")}
-          value={String(kept["images-quota-mb"] ?? 0)}
-          onChange={(event) => change({ "images-quota-mb": Number(event.target.value) || null })}
+          value={String(kept["images-quota-mb"])}
+          onChange={(event) => change({ "images-quota-mb": Number(event.target.value) })}
         >
           <option value="0">{t("quotaNone")}</option>
           <option value="256">256 MB</option>

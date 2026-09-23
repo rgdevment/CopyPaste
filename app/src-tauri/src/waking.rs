@@ -42,14 +42,21 @@ mod there {
             return Waking::none();
         };
         let ours = written().is_some_and(|said| ours(&said, &exe));
+        let approved = approved();
         Waking {
             offered: true,
-            wakes: ours && approved(),
-            theirs: ours && !approved(),
+            wakes: ours && approved,
+            theirs: ours && !approved,
         }
     }
 
     pub fn wake(wanted: bool) -> std::io::Result<()> {
+        let exe = std::env::current_exe()?;
+        if written().is_some_and(|said| !ours(&said, &exe)) {
+            return Err(std::io::Error::other(
+                "otro programa ocupa el arranque con el nombre de CopyPaste",
+            ));
+        }
         let key =
             winreg::RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(RUN, KEY_WRITE)?;
         if !wanted {
@@ -58,8 +65,20 @@ mod there {
                 other => other,
             };
         }
-        let exe = std::env::current_exe()?;
-        key.set_value(NAME, &format!("\"{}\"", exe.display()))
+        key.set_value(NAME, &format!("\"{}\"", exe.display()))?;
+        approve()
+    }
+
+    fn approve() -> std::io::Result<()> {
+        let held =
+            winreg::RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(APPROVED, KEY_WRITE);
+        let Ok(key) = held else {
+            return Ok(());
+        };
+        match key.delete_value(NAME) {
+            Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            other => other,
+        }
     }
 
     fn written() -> Option<String> {
@@ -85,11 +104,13 @@ mod there {
     pub fn ours(said: &str, exe: &Path) -> bool {
         let said = said.trim();
         let named = exe.display().to_string();
-        if let Some(rest) = said.strip_prefix('"') {
-            let quoted = rest.split('"').next().unwrap_or_default();
-            return !quoted.is_empty() && quoted.eq_ignore_ascii_case(&named);
-        }
-        said.eq_ignore_ascii_case(&named)
+        let Some(rest) = said.strip_prefix('"') else {
+            return said.eq_ignore_ascii_case(&named);
+        };
+        let Some((quoted, after)) = rest.split_once('"') else {
+            return false;
+        };
+        !quoted.is_empty() && after.trim().is_empty() && quoted.eq_ignore_ascii_case(&named)
     }
 }
 
@@ -136,5 +157,10 @@ mod tests {
     fn an_entry_with_arguments_is_not_taken_for_the_bare_path() {
         let exe = Path::new(r"C:\Programas\CopyPaste\cp-gui.exe");
         assert!(!ours(r"C:\Programas\CopyPaste\cp-gui.exe --hushed", exe));
+        assert!(!ours(
+            r#""C:\Programas\CopyPaste\cp-gui.exe" --hushed"#,
+            exe
+        ));
+        assert!(!ours(r#""C:\Programas\CopyPaste\cp-gui.exe"#, exe));
     }
 }

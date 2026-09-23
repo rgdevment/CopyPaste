@@ -20,7 +20,9 @@ pub fn run() {
         .setup(|app| {
             let kept = settings::settings().ok();
             let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));
-            tray::raise(app.handle(), spanish);
+            if tray::raise(app.handle(), spanish).is_none() {
+                tray::surface(app.handle());
+            }
             Ok(())
         })
         .build(tauri::generate_context!())

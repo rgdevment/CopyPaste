@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { adopt } from "../locales";
 
@@ -28,7 +28,7 @@ describe("la ventana", () => {
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Historial" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Historial");
-    expect(await screen.findByLabelText("Guardar durante")).toHaveValue("30");
+    expect(await screen.findByLabelText("Conservar")).toHaveValue("30");
   });
 
   it("el tema elegido se escribe en la raíz, que es lo que lo pinta", async () => {
@@ -50,10 +50,26 @@ describe("la ventana", () => {
     });
   });
 
-  it("la barra propia ofrece minimizar y cerrar, que es lo que la nativa daba", () => {
+  it("la barra propia minimiza y cierra de verdad, no solo lo dibuja", async () => {
+    const who = userEvent.setup();
+    const { theWindow } = await import("./setup");
     render(<App />);
-    expect(screen.getByRole("button", { name: "Minimizar" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Cerrar" })).toBeDefined();
+    await who.click(screen.getByRole("button", { name: "Minimizar" }));
+    expect(theWindow.minimize).toHaveBeenCalled();
+    await who.click(screen.getByRole("button", { name: "Cerrar" }));
+    expect(theWindow.close).toHaveBeenCalled();
+  });
+
+  it("elegir «Siempre» se guarda como cero, que es lo que el archivo entiende", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Historial" }));
+    await who.selectOptions(await screen.findByLabelText("Conservar"), "0");
+    expect(invoke).toHaveBeenCalledWith("keep", {
+      config: expect.objectContaining({ "keeps-days": 0 }),
+    });
+    expect(screen.queryByText(/invalid type/)).toBeNull();
   });
 
   it("el arranque con la sesión lo decide el sistema, no el archivo", async () => {
@@ -61,13 +77,39 @@ describe("la ventana", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
     const knob = await screen.findByLabelText("Arranca con la sesión");
-    expect(knob).toHaveAttribute("aria-pressed", "false");
+    expect(knob).toHaveAttribute("aria-checked", "false");
     await who.click(knob);
     expect(invoke).toHaveBeenCalledWith("wake", { wanted: true });
     expect(await screen.findByLabelText("Arranca con la sesión")).toHaveAttribute(
-      "aria-pressed",
+      "aria-checked",
       "true",
     );
+  });
+
+  it("no afirma que está actualizada cuando nadie lo ha comprobado", async () => {
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Acerca de" }));
+    expect(await screen.findByText(/Todavía no busca actualizaciones/)).toBeDefined();
+    expect(screen.getByRole("button", { name: /Buscar ahora/ })).toBeDisabled();
+    expect(screen.queryByText("Recibir versiones de prueba")).toBeNull();
+  });
+
+  it("la versión sale del propio programa, no de un texto escrito a mano", async () => {
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Acerca de" }));
+    expect(await screen.findByText("3.0.0")).toBeDefined();
+  });
+
+  it("un enlace que no se puede abrir se dice, no se traga", async () => {
+    const who = userEvent.setup();
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    vi.mocked(openUrl).mockRejectedValueOnce(new Error("forbidden"));
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Acerca de" }));
+    await who.click(await screen.findByRole("button", { name: /Dale una estrella/ }));
+    expect(await screen.findByText(/No se pudo abrir/)).toBeDefined();
   });
 
   it("la copia de seguridad avisa de la 2 y de lo que se pierde al traerla", async () => {

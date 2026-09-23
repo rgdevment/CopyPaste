@@ -10,7 +10,23 @@
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",
     "core:window:allow-close",
-    "opener:allow-open-url",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://github.com/*"
+        },
+        {
+          "url": "https://buymeacoffee.com/*"
+        },
+        {
+          "url": "https://alternativeto.net/*"
+        },
+        {
+          "url": "ms-windows-store://*"
+        }
+      ]
+    },
     "opener:allow-reveal-item-in-dir"
   ]
 }

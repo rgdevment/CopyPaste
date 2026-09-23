@@ -63,7 +63,7 @@ mod count {
         D: Deserializer<'de>,
         T: Deserialize<'de> + Default + PartialEq,
     {
-        let one = T::deserialize(reader)?;
+        let one = Option::<T>::deserialize(reader)?.unwrap_or_default();
         Ok((one != T::default()).then_some(one))
     }
 }
@@ -94,13 +94,11 @@ impl Config {
         if self.images_quota_mb == Some(0) {
             self.images_quota_mb = None;
         }
-        if self
+        self.locale = self
             .locale
-            .as_deref()
-            .is_some_and(|one| one.trim().is_empty())
-        {
-            self.locale = None;
-        }
+            .take()
+            .map(|one| one.trim().to_owned())
+            .filter(|one| !one.is_empty());
         self
     }
 }
@@ -154,7 +152,7 @@ fn renamed(meanwhile: &Path, path: &Path) -> std::io::Result<()> {
 }
 
 fn for_a_moment(why: &std::io::Error) -> bool {
-    cfg!(windows) && matches!(why.raw_os_error(), Some(5) | Some(32))
+    cfg!(windows) && matches!(why.raw_os_error(), Some(32) | Some(33))
 }
 
 #[cfg(test)]
@@ -319,6 +317,16 @@ mod tests {
         let said = std::fs::read_to_string(&path).expect("reads");
         assert!(said.contains("theme = \"system\""), "{said}");
         assert!(said.contains("keeps-days = 30"), "{said}");
+    }
+
+    #[test]
+    fn nothing_written_as_null_is_taken_for_nothing_at_all() {
+        let asked: Config = serde_json::from_str(
+            r#"{"locale":null,"theme":"system","shortcut":"Ctrl+Alt+V","hides-when-left":true,"keeps-days":null,"images-quota-mb":null}"#,
+        )
+        .expect("lo que manda la ventana entra");
+        assert_eq!(asked.keeps_days, None);
+        assert_eq!(asked.images_quota_mb, None);
     }
 
     #[test]

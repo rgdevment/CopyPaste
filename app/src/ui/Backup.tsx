@@ -13,10 +13,12 @@ function weighed(bytes: number) {
 export default function Backup() {
   const [former, setFormer] = useState<Former | null>(null);
 
+  const [trouble, setTrouble] = useState<string | null>(null);
+
   useEffect(() => {
     invoke<Former | null>("former")
       .then(setFormer)
-      .catch(() => setFormer(null));
+      .catch((why) => setTrouble(String(why)));
   }, []);
 
   return (
@@ -53,7 +55,7 @@ export default function Backup() {
           </button>
         </Line>
       ) : (
-        <Line says={t("former")} why={t("formerNone")} />
+        <Line says={t("former")} why={trouble ?? t("formerNone")} />
       )}
     </>
   );

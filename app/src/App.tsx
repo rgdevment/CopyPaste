@@ -18,7 +18,7 @@ type Where = (typeof WHERE)[number]["key"] | "about";
 
 export default function App() {
   const [where, setWhere] = useState<Where>("general");
-  const { kept, trouble, change } = useKept();
+  const { kept, trouble, change, look } = useKept();
 
   return (
     <>
@@ -47,7 +47,14 @@ export default function App() {
         </nav>
 
         <main className="pane">
-          {trouble && <p className="alarm">{trouble}</p>}
+          {trouble && (
+            <p className="alarm">
+              {trouble}
+              <button type="button" className="mild" onClick={look}>
+                {t("tryAgain")}
+              </button>
+            </p>
+          )}
           {kept && where === "general" && <General kept={kept} change={change} />}
           {kept && where === "history" && <History kept={kept} change={change} />}
           {where === "backup" && <Backup />}

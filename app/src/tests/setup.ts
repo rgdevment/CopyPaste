@@ -16,10 +16,18 @@ vi.mock("@tauri-apps/api/core", () => ({
         shortcut: "Ctrl+Alt+V",
         "hides-when-left": true,
         "keeps-days": 30,
-        "images-quota-mb": null,
+        "images-quota-mb": 0,
       });
     }
-    if (what === "keep") return Promise.resolve(args?.config);
+    if (what === "keep") {
+      const config = args?.config as Record<string, unknown>;
+      for (const key of ["keeps-days", "images-quota-mb"]) {
+        if (typeof config?.[key] !== "number") {
+          return Promise.reject(new Error(`invalid type for ${key}: expected a number`));
+        }
+      }
+      return Promise.resolve(config);
+    }
     if (what === "relabel") return Promise.resolve(null);
     if (what === "waking") {
       return Promise.resolve({ offered: true, wakes: false, theirs: false });
@@ -38,11 +46,17 @@ vi.mock("@tauri-apps/api/core", () => ({
   }),
 }));
 
+vi.mock("@tauri-apps/api/app", () => ({
+  getVersion: vi.fn(() => Promise.resolve("3.0.0")),
+}));
+
+export const theWindow = {
+  minimize: vi.fn(() => Promise.resolve()),
+  close: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: () => ({
-    minimize: vi.fn(() => Promise.resolve()),
-    close: vi.fn(() => Promise.resolve()),
-  }),
+  getCurrentWindow: () => theWindow,
 }));
 
 afterEach(cleanup);

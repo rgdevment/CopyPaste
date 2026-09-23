@@ -957,6 +957,7 @@ name = "cp-config"
 version = "3.0.0"
 dependencies = [
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.20",
  "toml 0.9.12+spec-1.1.0",
