@@ -1,5 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
+import { t } from "../locales";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
@@ -12,13 +13,13 @@ const TOOLS = [
   {
     name: "Tisty",
     hue: "#7c6cf0",
-    says: "Notas, documentos y tareas, todo local y en archivos que puedes leer sin él",
+    says: "toolTisty",
     at: "https://github.com/rgdevment/Tisty",
   },
   {
     name: "LinkUnbound",
     hue: "#3fbfa6",
-    says: "Elige con qué navegador se abre cada enlace, en el momento de abrirlo",
+    says: "toolLinkUnbound",
     at: "https://github.com/rgdevment/LinkUnbound",
   },
 ];
@@ -51,26 +52,24 @@ export default function About() {
           <Info />
           CopyPaste
         </p>
-        <p>Un gestor de portapapeles moderno, nativo en Windows y macOS.</p>
-        <p>
-          Todo local — tu historial, siempre a mano. Sin cuentas, sin telemetría, sin suscripciones.
-        </p>
+        <p>{t("aboutWhat")}</p>
+        <p>{t("aboutPrivacy")}</p>
         <div className="badges">
           <span className="badge">
             <Key />
-            Todo local
+            {t("badgeLocal")}
           </span>
           <span className="badge">
             <Code />
-            Código abierto
+            {t("badgeOpen")}
           </span>
           <span className="badge">
             <Gift />
-            Gratis
+            {t("badgeFree")}
           </span>
           <span className="badge">
             <CloudOff />
-            Sin nube
+            {t("badgeQuiet")}
           </span>
         </div>
       </div>
@@ -78,26 +77,24 @@ export default function About() {
       <div className="newer">
         <span className="pip ok" />
         <span className="grow">
-          <b>Estás en la última versión</b>
-          <span>Se comprobó al abrir CopyPaste</span>
+          <b>{t("updateNone")}</b>
+          <span>{t("updateWhen")}</span>
         </span>
         <button type="button" className="mild">
-          Buscar ahora
+          {t("updateLook")}
         </button>
       </div>
 
       <label className="beta" htmlFor="beta">
         <input id="beta" type="checkbox" checked={beta} onChange={() => setBeta(!beta)} />
         <span>
-          <b>Recibir versiones de prueba</b>
-          <span>Llegan antes que a nadie y pueden fallar. Puedes salir cuando quieras.</span>
+          <b>{t("betaTake")}</b>
+          <span>{t("betaWarns")}</span>
         </span>
       </label>
 
-      <div className="rule">Apoyar</div>
-      <p className="quiet">
-        CopyPaste es gratis y lo seguirá siendo. Si te sirve, esto ayuda a que siga creciendo.
-      </p>
+      <div className="rule">{t("supportTitle")}</div>
+      <p className="quiet">{t("supportWhy")}</p>
       <div className="gives" style={{ marginTop: 10 }}>
         <button type="button" className="give" onClick={() => go(STARS)}>
           <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -107,7 +104,7 @@ export default function About() {
             />
           </svg>
           <span>
-            <b>Dale una estrella</b>
+            <b>{t("supportStar")}</b>
             <span>github.com/rgdevment/CopyPaste</span>
           </span>
         </button>
@@ -119,7 +116,7 @@ export default function About() {
             />
           </svg>
           <span>
-            <b>Valórala en la Store</b>
+            <b>{t("supportRate")}</b>
             <span>Microsoft Store</span>
           </span>
         </button>
@@ -131,7 +128,7 @@ export default function About() {
             />
           </svg>
           <span>
-            <b>Patrocina el proyecto</b>
+            <b>{t("supportSponsor")}</b>
             <span>github.com/sponsors</span>
           </span>
         </button>
@@ -143,13 +140,13 @@ export default function About() {
             />
           </svg>
           <span>
-            <b>Invítame un café</b>
+            <b>{t("supportCoffee")}</b>
             <span>buymeacoffee.com</span>
           </span>
         </button>
       </div>
 
-      <div className="rule">Otras herramientas</div>
+      <div className="rule">{t("otherTools")}</div>
       {TOOLS.map((tool) => (
         <button key={tool.name} type="button" className="tool" onClick={() => go(tool.at)}>
           <span className="ico" style={{ background: tool.hue }}>
@@ -157,37 +154,37 @@ export default function About() {
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <b>{tool.name}</b>
-            <span>{tool.says}</span>
+            <span>{t(tool.says as "toolTisty")}</span>
           </span>
         </button>
       ))}
 
       <div className="trouble">
         <div className="rule" style={{ marginTop: 0 }}>
-          Si algo va mal
+          {t("troubleTitle")}
         </div>
         <p className="quiet">
-          El informe reúne el registro, la versión y los datos de tu equipo en un archivo.{" "}
-          <em>No se envía a ninguna parte</em>: se guarda donde tú digas y lo adjuntas si quieres.
+          {t("troubleWhat")} <em>{t("troubleNeverSent")}</em>
+          {t("troubleYours")}
         </p>
         <div className="feet">
           <button type="button" className="mild">
-            Guardar informe…
+            {t("troubleReport")}
           </button>
           <button type="button" className="mild">
-            Abrir el registro
+            {t("troubleLog")}
           </button>
         </div>
       </div>
 
       <div className="links">
         <button type="button" onClick={() => go(STARS)}>
-          Repositorio
+          {t("aboutRepo")}
         </button>
         <button type="button" onClick={() => go(ALTERNATIVE)}>
           AlternativeTo
         </button>
-        <button type="button">Avisos de terceros</button>
+        <button type="button">{t("aboutNotices")}</button>
       </div>
     </>
   );

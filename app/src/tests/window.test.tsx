@@ -2,9 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import App from "../App";
+import { adopt } from "../locales";
 
 describe("la ventana", () => {
   beforeEach(() => {
+    adopt("es");
     document.documentElement.removeAttribute("data-theme");
   });
 
@@ -54,12 +56,38 @@ describe("la ventana", () => {
     expect(screen.getByRole("button", { name: "Cerrar" })).toBeDefined();
   });
 
+  it("el arranque con la sesión lo decide el sistema, no el archivo", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    const knob = await screen.findByLabelText("Arranca con la sesión");
+    expect(knob).toHaveAttribute("aria-pressed", "false");
+    await who.click(knob);
+    expect(invoke).toHaveBeenCalledWith("wake", { wanted: true });
+    expect(await screen.findByLabelText("Arranca con la sesión")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("la copia de seguridad avisa de la 2 y de lo que se pierde al traerla", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Copia de seguridad" }));
     expect(await screen.findByText(/214\.0 MB/)).toBeDefined();
     expect(screen.getByText(/empezar de cero es lo recomendado/i)).toBeDefined();
+  });
+
+  it("elegir English cambia la ventana entera, no solo la fila del idioma", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    await who.selectOptions(await screen.findByLabelText("Idioma"), "en");
+    expect(await screen.findByRole("button", { name: "History" })).toBeDefined();
+    expect(screen.getByLabelText("Theme")).toBeDefined();
+    await who.click(screen.getByRole("button", { name: "About" }));
+    expect(screen.getByText("All local")).toBeDefined();
+    expect(invoke).toHaveBeenCalledWith("relabel", { locale: "en" });
   });
 
   it("el acerca de dice qué es y que no sale de aquí", async () => {

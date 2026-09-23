@@ -36,7 +36,6 @@ pub enum Theme {
 pub struct Config {
     pub locale: Option<String>,
     pub theme: Theme,
-    pub wakes_with_session: bool,
     pub shortcut: String,
     pub hides_when_left: bool,
     #[serde(with = "count")]
@@ -74,7 +73,6 @@ impl Default for Config {
         Self {
             locale: None,
             theme: Theme::default(),
-            wakes_with_session: true,
             shortcut: SHORTCUT.to_owned(),
             hides_when_left: true,
             keeps_days: Some(KEEPS_DAYS),
@@ -172,7 +170,6 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.keeps_days, Some(30));
         assert_eq!(config.images_quota_mb, None);
-        assert!(config.wakes_with_session);
         assert!(config.hides_when_left);
         assert_eq!(config.theme, Theme::System);
         assert_eq!(config.locale, None);
@@ -192,7 +189,6 @@ mod tests {
         let mine = Config {
             locale: Some("es".into()),
             theme: Theme::Dark,
-            wakes_with_session: false,
             shortcut: "Ctrl+Shift+V".into(),
             hides_when_left: false,
             keeps_days: None,
@@ -322,7 +318,6 @@ mod tests {
         write(&path, &Config::default()).expect("writes");
         let said = std::fs::read_to_string(&path).expect("reads");
         assert!(said.contains("theme = \"system\""), "{said}");
-        assert!(said.contains("wakes-with-session = true"), "{said}");
         assert!(said.contains("keeps-days = 30"), "{said}");
     }
 

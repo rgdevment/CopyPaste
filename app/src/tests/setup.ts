@@ -8,12 +8,11 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn((what: string, args?: { config?: unknown }) => {
+  invoke: vi.fn((what: string, args?: { config?: unknown; wanted?: boolean }) => {
     if (what === "settings") {
       return Promise.resolve({
-        locale: null,
+        locale: "es",
         theme: "system",
-        "wakes-with-session": true,
         shortcut: "Ctrl+Alt+V",
         "hides-when-left": true,
         "keeps-days": 30,
@@ -21,6 +20,13 @@ vi.mock("@tauri-apps/api/core", () => ({
       });
     }
     if (what === "keep") return Promise.resolve(args?.config);
+    if (what === "relabel") return Promise.resolve(null);
+    if (what === "waking") {
+      return Promise.resolve({ offered: true, wakes: false, theirs: false });
+    }
+    if (what === "wake") {
+      return Promise.resolve({ offered: true, wakes: Boolean(args?.wanted), theirs: false });
+    }
     if (what === "former") {
       return Promise.resolve({
         path: "C:UsersquienAppDataLocalCopyPasteclipboard.db",

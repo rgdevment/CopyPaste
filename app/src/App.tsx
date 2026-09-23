@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useKept } from "./core";
+import { t } from "./locales";
 import About from "./ui/About";
 import Backup from "./ui/Backup";
 import Chrome from "./ui/Chrome";
@@ -8,9 +9,9 @@ import History from "./ui/History";
 import { Clock, Gear, Info, Vault } from "./ui/Icons";
 
 const WHERE = [
-  { key: "general", says: "General", icon: Gear },
-  { key: "history", says: "Historial", icon: Clock },
-  { key: "backup", says: "Copia de seguridad", icon: Vault },
+  { key: "general", says: "railGeneral", icon: Gear },
+  { key: "history", says: "railHistory", icon: Clock },
+  { key: "backup", says: "railBackup", icon: Vault },
 ] as const;
 
 type Where = (typeof WHERE)[number]["key"] | "about";
@@ -23,7 +24,7 @@ export default function App() {
     <>
       <Chrome />
       <div className="shell">
-        <nav className="rail" aria-label="Secciones">
+        <nav className="rail" aria-label={t("railSections")}>
           {WHERE.map((one) => {
             const Icon = one.icon;
             return (
@@ -34,14 +35,14 @@ export default function App() {
                 onClick={() => setWhere(one.key)}
               >
                 <Icon />
-                {one.says}
+                {t(one.says)}
               </button>
             );
           })}
           <span className="spacer" />
           <button type="button" aria-current={where === "about"} onClick={() => setWhere("about")}>
             <Info />
-            Acerca de
+            {t("railAbout")}
           </button>
         </nav>
 

@@ -1,5 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useRef } from "react";
+import { t } from "../locales";
 
 export default function Chrome() {
   const held = useRef<ReturnType<typeof getCurrentWindow>>(null);
@@ -15,7 +16,7 @@ export default function Chrome() {
         <button
           type="button"
           className="chrome-knob"
-          aria-label="Minimizar"
+          aria-label={t("chromeMinimise")}
           onClick={() => {
             void win.minimize();
           }}
@@ -27,7 +28,7 @@ export default function Chrome() {
         <button
           type="button"
           className="chrome-knob shut"
-          aria-label="Cerrar"
+          aria-label={t("chromeClose")}
           onClick={() => {
             void win.close();
           }}

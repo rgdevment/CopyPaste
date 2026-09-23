@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { adopt } from "./locales";
 
 export type Look = "system" | "light" | "dark";
 
 export type Kept = {
   locale: string | null;
   theme: Look;
-  "wakes-with-session": boolean;
   shortcut: string;
   "hides-when-left": boolean;
   "keeps-days": number | null;
@@ -16,7 +16,6 @@ export type Kept = {
 export const FRESH: Kept = {
   locale: null,
   theme: "system",
-  "wakes-with-session": true,
   shortcut: "Ctrl+Alt+V",
   "hides-when-left": true,
   "keeps-days": 30,
@@ -41,6 +40,7 @@ export function useKept() {
       .then((one) => {
         setKept(one);
         wear(one.theme);
+        adopt(one.locale);
       })
       .catch((why) => {
         setKept(FRESH);
@@ -53,6 +53,10 @@ export function useKept() {
       if (!was) return was;
       const next = { ...was, ...what };
       if (what.theme) wear(what.theme);
+      if ("locale" in what) {
+        adopt(what.locale ?? null);
+        invoke("relabel", { locale: what.locale ?? null }).catch(() => {});
+      }
       invoke<Kept>("keep", { config: next })
         .then((landed) => {
           setKept(landed);
@@ -68,4 +72,24 @@ export function useKept() {
 
 export function whereItLives() {
   return invoke<string>("where_it_lives");
+}
+
+export type Waking = { offered: boolean; wakes: boolean; theirs: boolean };
+
+export function useWaking() {
+  const [waking, setWaking] = useState<Waking | null>(null);
+
+  useEffect(() => {
+    invoke<Waking>("waking")
+      .then(setWaking)
+      .catch(() => setWaking(null));
+  }, []);
+
+  const ask = useCallback((wanted: boolean) => {
+    invoke<Waking>("wake", { wanted })
+      .then(setWaking)
+      .catch(() => {});
+  }, []);
+
+  return { waking, ask };
 }

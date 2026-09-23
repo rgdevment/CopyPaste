@@ -1,5 +1,6 @@
 mod settings;
 mod tray;
+mod waking;
 
 pub fn run() {
     let app = tauri::Builder::default()
@@ -11,10 +12,15 @@ pub fn run() {
             settings::settings,
             settings::keep,
             settings::where_it_lives,
-            settings::former
+            settings::former,
+            waking::waking,
+            waking::wake,
+            relabel
         ])
         .setup(|app| {
-            tray::raise(app.handle());
+            let kept = settings::settings().ok();
+            let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));
+            tray::raise(app.handle(), spanish);
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -28,4 +34,9 @@ pub fn run() {
             api.prevent_exit();
         }
     });
+}
+
+#[tauri::command]
+fn relabel(app: tauri::AppHandle, locale: Option<String>) {
+    tray::reword(&app, tray::spanish(locale.as_deref()));
 }

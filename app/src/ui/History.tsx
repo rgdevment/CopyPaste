@@ -1,6 +1,7 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { type Kept, whereItLives } from "../core";
+import { fill, t } from "../locales";
 import { Band, Line } from "./Bits";
 
 export default function History({
@@ -20,45 +21,39 @@ export default function History({
 
   return (
     <>
-      <h1>Historial</h1>
+      <h1>{t("railHistory")}</h1>
 
-      <Band says="Qué se guarda" />
+      <Band says={t("bandKeeps")} />
 
-      <Line says="Guardar durante" why="Lo más viejo se borra solo. Lo anclado nunca caduca">
+      <Line says={t("keeps")} why={t("keepsWhy")}>
         <select
-          aria-label="Guardar durante"
+          aria-label={t("keeps")}
           value={String(kept["keeps-days"] ?? 0)}
           onChange={(event) => change({ "keeps-days": Number(event.target.value) || null })}
         >
-          <option value="7">7 días</option>
-          <option value="30">30 días</option>
-          <option value="90">90 días</option>
-          <option value="0">Siempre</option>
+          <option value="7">{fill("keepsDays", "7")}</option>
+          <option value="30">{fill("keepsDays", "30")}</option>
+          <option value="90">{fill("keepsDays", "90")}</option>
+          <option value="0">{t("keepsForever")}</option>
         </select>
       </Line>
 
-      <Line
-        says="Espacio para imágenes"
-        why="Al llegar al tope se van las imágenes más antiguas; el texto no se toca"
-      >
+      <Line says={t("quota")} why={t("quotaWhy")}>
         <select
-          aria-label="Espacio para imágenes"
+          aria-label={t("quota")}
           value={String(kept["images-quota-mb"] ?? 0)}
           onChange={(event) => change({ "images-quota-mb": Number(event.target.value) || null })}
         >
-          <option value="0">Sin límite</option>
+          <option value="0">{t("quotaNone")}</option>
           <option value="256">256 MB</option>
           <option value="512">512 MB</option>
           <option value="1024">1 GB</option>
         </select>
       </Line>
 
-      <Band says="Dónde vive" />
+      <Band says={t("bandWhere")} />
 
-      <Line
-        says="Carpeta de datos"
-        why={<span className="path">{where ?? "No se pudo averiguar"}</span>}
-      >
+      <Line says={t("where")} why={<span className="path">{where ?? t("whereUnknown")}</span>}>
         <button
           type="button"
           className="mild"
@@ -67,16 +62,13 @@ export default function History({
             if (where) void revealItemInDir(where).catch(() => {});
           }}
         >
-          Abrir carpeta
+          {t("whereOpen")}
         </button>
       </Line>
 
-      <Line
-        says="Vaciar el historial"
-        why="Borra todo lo copiado, incluso lo anclado. No se puede deshacer"
-      >
+      <Line says={t("empty")} why={t("emptyWhy")}>
         <button type="button" className="grave" disabled>
-          Vaciar
+          {t("emptyDo")}
         </button>
       </Line>
     </>

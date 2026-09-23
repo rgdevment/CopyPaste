@@ -545,7 +545,8 @@ select {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  margin-top: 11px;
+  margin-top: 10px;
+  margin-left: 32px;
   cursor: pointer;
 }
 

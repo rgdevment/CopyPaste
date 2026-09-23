@@ -1,4 +1,5 @@
-import type { Kept, Look } from "../core";
+import { type Kept, type Look, useWaking } from "../core";
+import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
 export default function General({
@@ -8,61 +9,59 @@ export default function General({
   kept: Kept;
   change: (what: Partial<Kept>) => void;
 }) {
+  const { waking, ask } = useWaking();
+
   return (
     <>
-      <h1>General</h1>
+      <h1>{t("railGeneral")}</h1>
 
-      <Band says="Ventana" />
+      <Band says={t("bandWindow")} />
 
-      <Line says="Idioma" why="El de tu equipo, salvo que elijas otro">
+      <Line says={t("tongue")} why={t("tongueWhy")}>
         <select
-          aria-label="Idioma"
+          aria-label={t("tongue")}
           value={kept.locale ?? ""}
           onChange={(event) => change({ locale: event.target.value || null })}
         >
-          <option value="">El del sistema</option>
+          <option value="">{t("tongueTheirs")}</option>
           <option value="es">Español</option>
           <option value="en">English</option>
         </select>
       </Line>
 
-      <Line says="Tema" why="Claro, oscuro, o el que use tu equipo">
+      <Line says={t("look")} why={t("lookWhy")}>
         <select
-          aria-label="Tema"
+          aria-label={t("look")}
           value={kept.theme}
           onChange={(event) => change({ theme: event.target.value as Look })}
         >
-          <option value="system">El del sistema</option>
-          <option value="light">Claro</option>
-          <option value="dark">Oscuro</option>
+          <option value="system">{t("lookTheirs")}</option>
+          <option value="light">{t("lookLight")}</option>
+          <option value="dark">{t("lookDark")}</option>
         </select>
       </Line>
 
-      <Line
-        says="Arranca con la sesión"
-        why="CopyPaste se abre al iniciar tu equipo y espera en la bandeja"
-      >
-        <Knob
-          on={kept["wakes-with-session"]}
-          says="Arranca con la sesión"
-          onPress={() => change({ "wakes-with-session": !kept["wakes-with-session"] })}
-        />
-      </Line>
+      {waking?.offered && (
+        <Line
+          says={t("wake")}
+          why={t("wakeWhy")}
+          more={waking.theirs ? <div className="said">{t("wakeTheirs")}</div> : null}
+        >
+          <Knob on={waking.wakes} says={t("wake")} onPress={() => ask(!waking.wakes)} />
+        </Line>
+      )}
 
-      <Line
-        says="Atajo del panel"
-        why="Presiónalo en cualquier parte y el panel aparece donde estés escribiendo"
-      >
+      <Line says={t("keys")} why={t("keysWhy")}>
         <span className="keys">{kept.shortcut.replaceAll("+", " + ")}</span>
         <button type="button" className="mild" disabled>
-          Cambiar
+          {t("keysChange")}
         </button>
       </Line>
 
-      <Line says="Ocultar al perder el foco" why="El panel se va solo en cuanto tocas otra ventana">
+      <Line says={t("hides")} why={t("hidesWhy")}>
         <Knob
           on={kept["hides-when-left"]}
-          says="Ocultar al perder el foco"
+          says={t("hides")}
           onPress={() => change({ "hides-when-left": !kept["hides-when-left"] })}
         />
       </Line>
