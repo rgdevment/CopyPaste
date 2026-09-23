@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useKept } from "./core";
 import About from "./ui/About";
 import Backup from "./ui/Backup";
 import Chrome from "./ui/Chrome";
@@ -16,6 +17,7 @@ type Where = (typeof WHERE)[number]["key"] | "about";
 
 export default function App() {
   const [where, setWhere] = useState<Where>("general");
+  const { kept, trouble, change } = useKept();
 
   return (
     <>
@@ -44,8 +46,9 @@ export default function App() {
         </nav>
 
         <main className="pane">
-          {where === "general" && <General />}
-          {where === "history" && <History />}
+          {trouble && <p className="alarm">{trouble}</p>}
+          {kept && where === "general" && <General kept={kept} change={change} />}
+          {kept && where === "history" && <History kept={kept} change={change} />}
           {where === "backup" && <Backup />}
           {where === "about" && <About />}
         </main>

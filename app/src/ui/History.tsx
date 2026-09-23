@@ -1,9 +1,22 @@
-import { useState } from "react";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { useEffect, useState } from "react";
+import { type Kept, whereItLives } from "../core";
 import { Band, Line } from "./Bits";
 
-export default function History() {
-  const [days, setDays] = useState("30");
-  const [quota, setQuota] = useState("0");
+export default function History({
+  kept,
+  change,
+}: {
+  kept: Kept;
+  change: (what: Partial<Kept>) => void;
+}) {
+  const [where, setWhere] = useState<string | null>(null);
+
+  useEffect(() => {
+    whereItLives()
+      .then(setWhere)
+      .catch(() => setWhere(null));
+  }, []);
 
   return (
     <>
@@ -14,8 +27,8 @@ export default function History() {
       <Line says="Guardar durante" why="Lo más viejo se borra solo. Lo anclado nunca caduca">
         <select
           aria-label="Guardar durante"
-          value={days}
-          onChange={(event) => setDays(event.target.value)}
+          value={String(kept["keeps-days"] ?? 0)}
+          onChange={(event) => change({ "keeps-days": Number(event.target.value) || null })}
         >
           <option value="7">7 días</option>
           <option value="30">30 días</option>
@@ -30,8 +43,8 @@ export default function History() {
       >
         <select
           aria-label="Espacio para imágenes"
-          value={quota}
-          onChange={(event) => setQuota(event.target.value)}
+          value={String(kept["images-quota-mb"] ?? 0)}
+          onChange={(event) => change({ "images-quota-mb": Number(event.target.value) || null })}
         >
           <option value="0">Sin límite</option>
           <option value="256">256 MB</option>
@@ -42,8 +55,18 @@ export default function History() {
 
       <Band says="Dónde vive" />
 
-      <Line says="Carpeta de datos" why={<span className="path">Calculando…</span>}>
-        <button type="button" className="mild">
+      <Line
+        says="Carpeta de datos"
+        why={<span className="path">{where ?? "No se pudo averiguar"}</span>}
+      >
+        <button
+          type="button"
+          className="mild"
+          disabled={!where}
+          onClick={() => {
+            if (where) void revealItemInDir(where).catch(() => {});
+          }}
+        >
           Abrir carpeta
         </button>
       </Line>
@@ -52,7 +75,7 @@ export default function History() {
         says="Vaciar el historial"
         why="Borra todo lo copiado, incluso lo anclado. No se puede deshacer"
       >
-        <button type="button" className="grave">
+        <button type="button" className="grave" disabled>
           Vaciar
         </button>
       </Line>

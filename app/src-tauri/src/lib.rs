@@ -1,3 +1,4 @@
+mod settings;
 mod tray;
 
 pub fn run() {
@@ -6,6 +7,12 @@ pub fn run() {
             tray::surface(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            settings::settings,
+            settings::keep,
+            settings::where_it_lives,
+            settings::former
+        ])
         .setup(|app| {
             tray::raise(app.handle());
             Ok(())

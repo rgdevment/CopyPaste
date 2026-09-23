@@ -1,12 +1,13 @@
-import { useState } from "react";
+import type { Kept, Look } from "../core";
 import { Band, Knob, Line } from "./Bits";
 
-export default function General() {
-  const [wakes, setWakes] = useState(true);
-  const [hides, setHides] = useState(true);
-  const [locale, setLocale] = useState("");
-  const [theme, setTheme] = useState("");
-
+export default function General({
+  kept,
+  change,
+}: {
+  kept: Kept;
+  change: (what: Partial<Kept>) => void;
+}) {
   return (
     <>
       <h1>General</h1>
@@ -16,8 +17,8 @@ export default function General() {
       <Line says="Idioma" why="El de tu equipo, salvo que elijas otro">
         <select
           aria-label="Idioma"
-          value={locale}
-          onChange={(event) => setLocale(event.target.value)}
+          value={kept.locale ?? ""}
+          onChange={(event) => change({ locale: event.target.value || null })}
         >
           <option value="">El del sistema</option>
           <option value="es">Español</option>
@@ -28,18 +29,10 @@ export default function General() {
       <Line says="Tema" why="Claro, oscuro, o el que use tu equipo">
         <select
           aria-label="Tema"
-          value={theme}
-          onChange={(event) => {
-            setTheme(event.target.value);
-            const root = document.documentElement;
-            if (event.target.value) {
-              root.setAttribute("data-theme", event.target.value);
-            } else {
-              root.removeAttribute("data-theme");
-            }
-          }}
+          value={kept.theme}
+          onChange={(event) => change({ theme: event.target.value as Look })}
         >
-          <option value="">El del sistema</option>
+          <option value="system">El del sistema</option>
           <option value="light">Claro</option>
           <option value="dark">Oscuro</option>
         </select>
@@ -49,21 +42,29 @@ export default function General() {
         says="Arranca con la sesión"
         why="CopyPaste se abre al iniciar tu equipo y espera en la bandeja"
       >
-        <Knob on={wakes} says="Arranca con la sesión" onPress={() => setWakes(!wakes)} />
+        <Knob
+          on={kept["wakes-with-session"]}
+          says="Arranca con la sesión"
+          onPress={() => change({ "wakes-with-session": !kept["wakes-with-session"] })}
+        />
       </Line>
 
       <Line
         says="Atajo del panel"
         why="Presiónalo en cualquier parte y el panel aparece donde estés escribiendo"
       >
-        <span className="keys">Ctrl + Alt + V</span>
-        <button type="button" className="mild">
+        <span className="keys">{kept.shortcut.replaceAll("+", " + ")}</span>
+        <button type="button" className="mild" disabled>
           Cambiar
         </button>
       </Line>
 
       <Line says="Ocultar al perder el foco" why="El panel se va solo en cuanto tocas otra ventana">
-        <Knob on={hides} says="Ocultar al perder el foco" onPress={() => setHides(!hides)} />
+        <Knob
+          on={kept["hides-when-left"]}
+          says="Ocultar al perder el foco"
+          onPress={() => change({ "hides-when-left": !kept["hides-when-left"] })}
+        />
       </Line>
     </>
   );

@@ -359,6 +359,15 @@ select {
   color: var(--panel);
 }
 
+.alarm {
+  margin: 12px 0 0;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
 .said {
   margin-top: 9px;
   padding: 9px 11px;

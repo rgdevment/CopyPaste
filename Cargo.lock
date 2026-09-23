@@ -979,6 +979,8 @@ name = "cp-gui"
 version = "3.0.0"
 dependencies = [
  "cp-config",
+ "cp-mac-sys",
+ "cp-win-sys",
  "serde",
  "serde_json",
  "tauri",

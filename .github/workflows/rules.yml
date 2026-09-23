@@ -164,7 +164,7 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
-      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs'
+      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
 
   coverage-windows:
     name: Coverage does not slip on Windows
@@ -185,7 +185,7 @@ jobs:
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example probe
-      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs'
+      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
 
   budget:
     name: Latency stays within budget
