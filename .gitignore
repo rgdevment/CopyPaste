@@ -13,3 +13,10 @@ __pycache__/
 *.pem
 *.key
 *.base64
+
+node_modules/
+app/dist/
+app/coverage/
+app/src-tauri/target/
+app/src-tauri/binaries/
+app/src-tauri/gen/

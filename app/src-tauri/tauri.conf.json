@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CopyPaste",
+  "identifier": "com.rgdevment.copypaste",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "CopyPaste",
+        "width": 780,
+        "height": 580,
+        "minWidth": 620,
+        "minHeight": 460,
+        "visible": false,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1421 http://localhost:1420"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "app", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "RGDevment",
+    "copyright": "Copyright © 2026 rgdevment",
+    "category": "Productivity",
+    "shortDescription": "Clipboard history that stays on your machine. No ads, no telemetry, no account",
+    "longDescription": "CopyPaste keeps what you copy within reach of a shortcut: text, images, files, links and colours, searchable in milliseconds and stored only on your own machine. No account, no subscription, no telemetry and no server.",
+    "licenseFile": "../../LICENSE",
+    "windows": {
+      "minimumWebview2Version": "111.0.0.0",
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "Spanish"],
+        "displayLanguageSelector": false
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "13.3"
+    }
+  }
+}

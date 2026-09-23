@@ -112,10 +112,10 @@ jobs:
 
       - name: The code carries no comments
         run: |
-          if grep -rnE '[/]{2}' crates --include='*.rs' | grep -vE '[a-z]+:[/][/]' | grep -q .; then
+          if grep -rnE '[/]{2}' crates app/src-tauri/src --include='*.rs' | grep -vE '[a-z]+:[/][/]' | grep -q .; then
             echo "::error::el código va sin comentarios; lo que haya que explicar va al expediente"; exit 1
           fi
-          if grep -rnE '[/][*]' crates --include='*.rs' | grep -q .; then
+          if grep -rnE '[/][*]' crates app/src-tauri/src --include='*.rs' | grep -q .; then
             echo "::error::tampoco comentarios de bloque"; exit 1
           fi
 
