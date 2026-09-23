@@ -1,0 +1,63 @@
+name: Caches
+
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Lista lo que se iría, sin borrar nada."
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+
+jobs:
+  sweep:
+    name: a closed pull request takes its caches with it
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Everything written under this pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: gh cache delete --all --ref "$REF" --succeed-on-no-caches
+
+  generations:
+    name: one generation of each cache, and nothing a tag left behind
+    # El filtro de rama de workflow_run lee la rama del run que lo disparó, y el fork de un
+    # pull request puede llamar main a la suya: solo cuenta un push a este repositorio.
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+      || (github.event_name == 'workflow_run'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_branch == 'main'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && github.event.workflow_run.conclusion != 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    concurrency:
+      group: cache-generations
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: What no build will ask for again
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: python3 scripts/generations.py

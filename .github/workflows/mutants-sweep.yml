@@ -21,9 +21,12 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: workspace
+          save-if: false
       - uses: taiki-e/install-action@cargo-mutants
 
       - name: Half of every mutant the pure crates carry
@@ -40,7 +43,7 @@ jobs:
           TITLE: cp-core and cp-store, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mutants-core-${{ matrix.shard }}
@@ -56,9 +59,12 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: workspace
+          save-if: false
       - uses: taiki-e/install-action@cargo-mutants
 
       - name: Half of every mutant the Windows crate carries
@@ -77,7 +83,7 @@ jobs:
           TITLE: cp-win, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mutants-windows-${{ matrix.shard }}
@@ -93,9 +99,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: mutants-*
           path: outcomes

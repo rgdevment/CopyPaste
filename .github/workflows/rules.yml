@@ -4,17 +4,50 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "41 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: rules-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   conventions:
     name: Project conventions
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      # El que importa es el de publicación: solo corre cuando la etiqueta ya está empujada.
+      - name: The workflows parse
+        run: |
+          set -euo pipefail
+          python3 -c "import yaml" 2>/dev/null \
+            || python3 -m pip install --quiet --break-system-packages pyyaml
+          python3 - <<'PY'
+          import pathlib
+          import sys
+
+          import yaml
+
+          bad = 0
+          for one in sorted(pathlib.Path(".github/workflows").glob("*.yml")):
+              try:
+                  yaml.safe_load(one.read_text(encoding="utf-8"))
+              except yaml.YAMLError as why:
+                  print(f"::error::{one} no es YAML válido, así que lo que lanza no se lanzará")
+                  print(why)
+                  bad = 1
+          sys.exit(bad)
+          PY
 
       - name: Unsafe lives only in the -sys crates
         run: |
@@ -23,55 +56,56 @@ jobs:
           for dir in $found; do
             case " $expected " in
               *" $dir "*) ;;
-              *) echo "unsafe declarado fuera de los crates -sys: $dir"; exit 1 ;;
+              *) echo "::error::unsafe declarado fuera de los crates -sys: $dir"; exit 1 ;;
             esac
           done
 
       - name: The core produces no terminal output
         run: |
           if grep -rnE '^[^"]*(^|[ \t{;(=>|&])(e?print(ln)?!)' crates/cp-core/src --include='*.rs'; then
-            echo "cp-core no imprime: usa tracing"; exit 1
+            echo "::error::cp-core no imprime: usa tracing"; exit 1
           fi
 
       - name: The core touches neither platform nor interface
         run: |
           if grep -rn 'use tauri\|use windows\|use objc2' crates/cp-core/src --include='*.rs'; then
-            echo "cp-core no depende de plataforma ni de interfaz"; exit 1
+            echo "::error::cp-core no depende de plataforma ni de interfaz"; exit 1
           fi
 
       - name: No Spanish identifiers
         run: |
           if grep -rnE '\b(fecha|limite|prioridad|filtro|tarea|titulo|etiqueta|imagen|archivo) *:' \
                crates/*/src --include='*.rs' | grep -v '"' | grep -vE ':[0-9]+: *///?!?'; then
-            echo "los identificadores van en ingles"; exit 1
+            echo "::error::los identificadores van en inglés"; exit 1
           fi
 
       - name: No voseo in the Spanish anywhere
         run: |
-          if grep -rniE '\b(vos|tenés|querés|podés|andá|mirá|hacé|che)\b' \
+          if grep -rniE '\b(v[o]s|ten[é]s|quer[é]s|pod[é]s|and[á]|mir[á]|hac[é]|ch[e])\b' \
                crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
-            echo "espanol neutro, sin voseo"; exit 1
+            echo "::error::español neutro, sin voseo"; exit 1
           fi
 
       - name: No peninsular Spanish in what a person reads
         run: |
           if grep -rniE '\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b' \
                crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
-            echo "espanol neutro: archivo, computador, presiona"; exit 1
+            echo "::error::español neutro: archivo, computador, presiona"; exit 1
           fi
 
       - name: The code carries no comments
         run: |
           if grep -rnE '[/]{2}' crates --include='*.rs' | grep -vE '[a-z]+:[/][/]' | grep -q .; then
-            echo "el codigo va sin comentarios; lo que haya que explicar va al expediente"; exit 1
+            echo "::error::el código va sin comentarios; lo que haya que explicar va al expediente"; exit 1
           fi
           if grep -rnE '[/][*]' crates --include='*.rs' | grep -q .; then
-            echo "tampoco comentarios de bloque"; exit 1
+            echo "::error::tampoco comentarios de bloque"; exit 1
           fi
 
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -80,21 +114,36 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Twenty consecutive runs of the core
-        run: for i in $(seq 1 20); do cargo test -p cp-core --quiet || exit 1; done
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: workspace
+          save-if: false
+      - uses: taiki-e/install-action@nextest
+      - name: The core, over and over
+        run: |
+          turns=4
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            turns=20
+          fi
+          for i in $(seq 1 "$turns"); do
+            cargo nextest run -p cp-core --no-tests=pass || exit 1
+          done
 
   coverage:
     name: Coverage does not slip
     runs-on: macos-15
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: coverage
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
@@ -103,12 +152,16 @@ jobs:
   coverage-windows:
     name: Coverage does not slip on Windows
     runs-on: windows-2025
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: coverage
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys -p cp-panel
       - name: The probe reads a real clipboard, so leave something on it
@@ -120,10 +173,14 @@ jobs:
   budget:
     name: Latency stays within budget
     runs-on: macos-15
+    timeout-minutes: 30
     env:
       CP_BUDGET_SLACK: "4"
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: budget
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo run -p cp-store --release --example budget
