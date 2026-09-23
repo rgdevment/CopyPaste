@@ -201,3 +201,4 @@ jobs:
           shared-key: budget
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo run -p cp-store --release --example budget
+      - run: cargo run -p cp-config --release --example weigh
