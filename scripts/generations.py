@@ -9,8 +9,6 @@ from datetime import datetime
 MAIN = "refs/heads/main"
 TAGS = "refs/heads/refs/tags/"
 DRY = os.environ.get("DRY_RUN", "").lower() == "true"
-# Only rust: a setup-node key carries the hash of its lockfile and nothing else, so two live
-# caches for one platform look alike and the sweep would take one of them for a leftover.
 RUST = re.compile(r"^(v0-rust-.+)-[0-9a-f]{8}-[0-9a-f]{8}$")
 GONE = "Could not find a cache matching"
 
@@ -42,7 +40,6 @@ def superseded():
     return stale
 
 
-# A tag is written once and never built again, so nothing will ever ask for these by key.
 def petrified():
     return [one for one in listed() if one["ref"].startswith(TAGS)]
 

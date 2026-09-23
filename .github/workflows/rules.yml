@@ -26,7 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # El que importa es el de publicación: solo corre cuando la etiqueta ya está empujada.
       - name: The workflows parse
         run: |
           set -euo pipefail

@@ -1,5 +1,15 @@
 /target
 **/*.rs.bk
 .DS_Store
+Thumbs.db
+*.pdb
 /mutants.out
 /mutants.out.old
+/mutants.json
+__pycache__/
+.signing/
+*.pfx
+*.p12
+*.pem
+*.key
+*.base64

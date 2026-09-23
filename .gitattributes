@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+*.rs   text eol=lf
+*.toml text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.json text eol=lf
+*.slint text eol=lf
+
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.db binary

@@ -36,7 +36,7 @@ nothing else would notice.
 
 ## First time only — what a human has to do
 
-None of these can be automated on the first release. All three are one-off.
+Three channels need a decision or a human before they can be switched on.
 
 ### 1. winget
 
@@ -55,14 +55,18 @@ the workflow before the package exists: it logs a notice and does nothing.
 
 ### 2. Microsoft Store
 
-The Store requires a human to accept the first submission per SKU. Later tags
-go through the Partner Center API without intervention, gated on
-`vars.STORE_PUBLISH`.
+The SKU is the one the 2.x already publishes, so the usual first-submission
+hurdle does not apply: the pipeline could submit on day one. That is exactly
+the problem — see the update manifest below. Keep `vars.STORE_PUBLISH` off
+until the crossing from 2.x is decided.
 
 ### 3. Homebrew tap
 
-The first cask in `rgdevment/homebrew-tap` is written by hand. From then on the
-`homebrew` job rewrites it on every stable tag.
+The tap repository already exists and the `homebrew` job rewrites the cask
+itself, so there is nothing to write by hand. What is manual is the decision:
+the `copypaste` cask is live and serving 2.x users, so the first 3.0 tag that
+rewrites it turns `brew upgrade` into a forced migration. Gate the job behind a
+variable of its own and leave the frozen Linux formulae alone.
 
 ## Cutting a release
 
@@ -99,14 +103,33 @@ The second is strictly more powerful and strictly more code. The file is still
 versioned in this repo, so the decision costs nothing until the pipeline is
 written. Decide before `publish` is implemented — it is what the job signs.
 
+**Whatever is decided, one thing is already true and constrains it.** Every
+installed 2.x copy polls
+`https://github.com/rgdevment/CopyPaste/releases/latest/download/release-manifest.json`
+and its `.sig`, and caches the answer for fifteen days
+(`app/lib/services/release_manifest_service.dart` on `v2-stable`). The moment a
+3.0 release is marked `latest` and carries that file, every 2.x install is told
+to move to a version that **does not migrate its history**. So:
+
+- The first 3.0 releases must not ship `release-manifest.json` at all — a 404
+  is what keeps 2.x quiet.
+- The same applies to the Microsoft Store: the SKU is the one the 2.x already
+  publishes, so `STORE_PUBLISH` moves every Store user silently. The technical
+  condition is met; the product one is not.
+- And to the Homebrew cask, for the same reason.
+
+None of those three is a pipeline problem. They are one decision — how a 2.x
+user crosses to the 3.0 — and it has to be made before any of them is switched
+on.
+
 ## Secrets and variables
 
 The 3.0 pipeline will need these, all named as Tisty names them:
 
 | Name                                        | Kind     | Purpose                                  |
 | ------------------------------------------- | -------- | ---------------------------------------- |
-| `PFX_BASE` / `PFX_PASSWORD`                  | secret   | Signs the Windows binaries and installer. |
-| `MACOS_CERTIFICATE_P` / `..._PASSWORD`       | secret   | Signs the macOS app.                      |
+| `PFX_BASE64` / `PFX_PASSWORD`                  | secret   | Signs the Windows binaries and installer. |
+| `MACOS_CERTIFICATE_P12` / `MACOS_CERTIFICATE_PASSWORD`       | secret   | Signs the macOS app.                      |
 | `APPLE_ID` / `APPLE_APP_PASSWORD` / `APPLE_TEAM_ID` / `APPLE_SIGNING_IDENTITY` | secret | Notarisation. |
 | `TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD` | secret   | Signs the update artifacts.              |
 | `STORE_CLIENT_ID` / `STORE_CLIENT_SECRET` / `STORE_SELLER_ID` / `STORE_TENANT_ID` | secret | Partner Center. |

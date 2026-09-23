@@ -34,8 +34,6 @@ jobs:
 
   generations:
     name: one generation of each cache, and nothing a tag left behind
-    # El filtro de rama de workflow_run lee la rama del run que lo disparó, y el fork de un
-    # pull request puede llamar main a la suya: solo cuenta un push a este repositorio.
     if: >-
       github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
       || (github.event_name == 'workflow_run'
