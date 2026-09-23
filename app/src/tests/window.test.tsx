@@ -38,11 +38,18 @@ describe("la ventana", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
+  it("la barra propia ofrece minimizar y cerrar, que es lo que la nativa daba", () => {
+    render(<App />);
+    expect(screen.getByRole("button", { name: "Minimizar" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Cerrar" })).toBeDefined();
+  });
+
   it("el acerca de dice qué es y que no sale de aquí", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));
-    expect(screen.getByText(/no sale de aquí/i)).toBeDefined();
+    expect(screen.getByText(/sin telemetría/i)).toBeDefined();
+    expect(screen.getByText("Todo local")).toBeDefined();
     expect(screen.getByText("Sin nube")).toBeDefined();
   });
 });

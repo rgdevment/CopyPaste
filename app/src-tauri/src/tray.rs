@@ -1,7 +1,7 @@
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 const SMALL: &[u8] = include_bytes!("../icons/tray/tray-32.png");
 const LARGE: &[u8] = include_bytes!("../icons/tray/tray-64.png");
@@ -48,10 +48,18 @@ fn art() -> Option<Image<'static>> {
 }
 
 pub fn surface<R: Runtime>(app: &AppHandle<R>) {
-    let Some(window) = app.get_webview_window("main") else {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
         return;
-    };
-    let _ = window.show();
-    let _ = window.unminimize();
-    let _ = window.set_focus();
+    }
+
+    let _ = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+        .title("CopyPaste")
+        .inner_size(780.0, 580.0)
+        .min_inner_size(620.0, 460.0)
+        .decorations(false)
+        .center()
+        .build();
 }

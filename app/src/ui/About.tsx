@@ -1,6 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
-import { CloudOff, Code, Gift, Key } from "./Icons";
+import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
 const SPONSOR = "https://github.com/sponsors/rgdevment";
@@ -47,14 +47,18 @@ export default function About() {
       </div>
 
       <div className="what-is">
-        <p>Todo lo que copias queda a un atajo de distancia, en tu equipo y solo en tu equipo.</p>
+        <p className="eyebrow">
+          <Info />
+          CopyPaste
+        </p>
+        <p>Un gestor de portapapeles moderno, nativo en Windows y macOS.</p>
         <p>
-          Sin cuenta, sin suscripción, sin telemetría y sin servidor. Lo que copias no sale de aquí.
+          Todo local — tu historial, siempre a mano. Sin cuentas, sin telemetría, sin suscripciones.
         </p>
         <div className="badges">
           <span className="badge">
             <Key />
-            Local
+            Todo local
           </span>
           <span className="badge">
             <Code />
@@ -158,30 +162,32 @@ export default function About() {
         </button>
       ))}
 
-      <div className="rule">Si algo va mal</div>
-      <p className="quiet">
-        El informe reúne el registro, la versión y los datos de tu equipo en un archivo.{" "}
-        <em>No se envía a ninguna parte</em>: se guarda donde tú digas y lo adjuntas si quieres.
-      </p>
-      <div className="feet">
-        <button type="button" className="mild">
-          Guardar informe…
-        </button>
-        <button type="button" className="mild">
-          Abrir el registro
-        </button>
+      <div className="trouble">
+        <div className="rule" style={{ marginTop: 0 }}>
+          Si algo va mal
+        </div>
+        <p className="quiet">
+          El informe reúne el registro, la versión y los datos de tu equipo en un archivo.{" "}
+          <em>No se envía a ninguna parte</em>: se guarda donde tú digas y lo adjuntas si quieres.
+        </p>
+        <div className="feet">
+          <button type="button" className="mild">
+            Guardar informe…
+          </button>
+          <button type="button" className="mild">
+            Abrir el registro
+          </button>
+        </div>
       </div>
 
-      <div className="feet">
-        <button type="button" className="mild" onClick={() => go(STARS)}>
+      <div className="links">
+        <button type="button" onClick={() => go(STARS)}>
           Repositorio
         </button>
-        <button type="button" className="mild" onClick={() => go(ALTERNATIVE)}>
+        <button type="button" onClick={() => go(ALTERNATIVE)}>
           AlternativeTo
         </button>
-        <button type="button" className="mild">
-          Avisos de terceros
-        </button>
+        <button type="button">Avisos de terceros</button>
       </div>
     </>
   );
