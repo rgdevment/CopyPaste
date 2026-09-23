@@ -163,7 +163,7 @@ jobs:
           shared-key: coverage
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys -p cp-panel
+      - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys -p cp-panel -p cp-config
       - name: The probe reads a real clipboard, so leave something on it
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"

@@ -1,9 +1,12 @@
+[graph]
+targets = [
+  "x86_64-pc-windows-msvc",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+]
+
 [advisories]
 yanked = "deny"
-ignore = [
-  { id = "RUSTSEC-2024-0436", reason = "paste está terminado, no roto: llega por skia-bindings y wgpu, sin alternativa aguas arriba" },
-  { id = "RUSTSEC-2026-0192", reason = "ttf-parser llega por winit (sctk-adwaita, solo Wayland) y por Slint; sin vulnerabilidad, a la espera de que aguas arriba migre a skrifa" },
-]
 
 [licenses]
 allow = [
