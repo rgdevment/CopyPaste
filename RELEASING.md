@@ -55,18 +55,15 @@ the workflow before the package exists: it logs a notice and does nothing.
 
 ### 2. Microsoft Store
 
-The SKU is the one the 2.x already publishes, so the usual first-submission
-hurdle does not apply: the pipeline could submit on day one. That is exactly
-the problem — see the update manifest below. Keep `vars.STORE_PUBLISH` off
-until the crossing from 2.x is decided.
+Nothing manual: the SKU is the one the 2.x already publishes, so the usual
+first-submission hurdle does not apply. `vars.STORE_PUBLISH` goes on with the
+3.0.0 — a decision, not an oversight; see the crossing below.
 
 ### 3. Homebrew tap
 
 The tap repository already exists and the `homebrew` job rewrites the cask
-itself, so there is nothing to write by hand. What is manual is the decision:
-the `copypaste` cask is live and serving 2.x users, so the first 3.0 tag that
-rewrites it turns `brew upgrade` into a forced migration. Gate the job behind a
-variable of its own and leave the frozen Linux formulae alone.
+itself, so there is nothing to write by hand. Leave the frozen Linux formulae
+alone: the job must not sweep them.
 
 ## Cutting a release
 
@@ -88,39 +85,54 @@ binaries and the manifest.
 Pre-releases (`v3.1.0-rc1`, `-beta1`) publish the GitHub Release and skip the
 Store, winget and Homebrew.
 
-## Update manifest — decision still open
+## Crossing from the 2.x — decided 2026-09-23
 
-Two models are on the table and the 3.0 has not committed to either:
-
-- **What Tisty does:** the Tauri updater, signed with minisign, reading a
-  `latest.json` published to a `manifest` branch. The app offers the update and
-  installs it; `feed.yml` proves the feed still answers.
-- **What the 2.x did:** `release-manifest.json`, signed with Ed25519, carrying
-  `severity`, `Min-Supported` and `Blocked` per release, which let a bad
-  version be revoked and let a critical release block older clients.
-
-The second is strictly more powerful and strictly more code. The file is still
-versioned in this repo, so the decision costs nothing until the pipeline is
-written. Decide before `publish` is implemented — it is what the job signs.
-
-**Whatever is decided, one thing is already true and constrains it.** Every
-installed 2.x copy polls
+Every installed 2.x copy polls
 `https://github.com/rgdevment/CopyPaste/releases/latest/download/release-manifest.json`
-and its `.sig`, and caches the answer for fifteen days
-(`app/lib/services/release_manifest_service.dart` on `v2-stable`). The moment a
-3.0 release is marked `latest` and carries that file, every 2.x install is told
-to move to a version that **does not migrate its history**. So:
+and its `.sig`, verifies the signature against an Ed25519 public key bundled in
+the app, and caches the answer for fifteen days
+(`app/lib/services/release_manifest_service.dart` on `v2-stable`). Left with no
+file, that user never learns the 3.0 exists. So the 3.0 keeps speaking both
+languages for a while.
 
-- The first 3.0 releases must not ship `release-manifest.json` at all — a 404
-  is what keeps 2.x quiet.
-- The same applies to the Microsoft Store: the SKU is the one the 2.x already
-  publishes, so `STORE_PUBLISH` moves every Store user silently. The technical
-  condition is met; the product one is not.
-- And to the Homebrew cask, for the same reason.
+**The 3.x publishes the old manifest alongside its own update feed, from
+`v3.0.0` until `v3.1.0`.** `RELEASE_PRIVATE_KEY` is still in the repository's
+secrets, so the file can be signed exactly as the 2.x expects. Three rules
+govern what goes in it:
 
-None of those three is a pipeline problem. They are one decision — how a 2.x
-user crosses to the 3.0 — and it has to be made before any of them is switched
-on.
+- `severity: recommended`. Never `critical`: that paints a full-screen block
+  over a working 2.x, and this user has to be free to stay.
+- `Min-Supported` set explicitly and low. Left to its default it takes the
+  version being tagged — `3.0.0` — which puts every 2.x below the floor.
+- `releaseNotes`, in both languages, **says that the history is not migrated**.
+  It is the only warning that user sees before jumping.
+
+Retirement needs no work: the file is served from `releases/latest/download/`,
+so the first 3.1 release that does not attach it answers 404 and the 2.x goes
+quiet. Until then each copy gets several fifteen-day windows to notice.
+
+The Microsoft Store crosses differently, and deliberately: the 3.0.0 ships to
+the **same SKU** the 2.x already publishes (`9NBJRZF3K856`), so those installs
+update on their own, with no badge and no notes. The Homebrew cask behaves the
+same way on the first stable tag that rewrites it.
+
+### What the installer owes that user
+
+The 3.0 does not read the 2.x database, and installing over it must not pretend
+otherwise. On Windows the 3.0 installer:
+
+- **Offers to uninstall the 2.x, and never deletes its data.** The old history,
+  its blobs and its settings stay on disk, untouched, whatever the user picks.
+- **Offers a backup before anything else** — the 2.x `.cpbackup`, written where
+  the user chooses — so leaving is always reversible.
+- **May offer a migration, and states its losses up front.** What crosses and
+  what does not is decided when it is built; what is not allowed is a migration
+  that looks complete and is not.
+- **Recommends starting fresh.** That is the default and the recommended path;
+  the migration is the exception for whoever asks for it.
+
+The same applies on macOS, where the 2.x app bundle and its Application Support
+folder are separate things: removing the app never touches the folder.
 
 ## Secrets and variables
 
