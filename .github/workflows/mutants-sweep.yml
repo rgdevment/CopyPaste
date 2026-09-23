@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mutants-sweep
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -25,9 +29,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
-          shared-key: workspace
-          save-if: false
+          shared-key: mutants
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-mutants
+      - uses: taiki-e/install-action@nextest
 
       - name: Half of every mutant the pure crates carry
         id: run
@@ -63,9 +68,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
-          shared-key: workspace
-          save-if: false
+          shared-key: mutants
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-mutants
+      - uses: taiki-e/install-action@nextest
 
       - name: Half of every mutant the Windows crate carries
         id: run
@@ -131,4 +137,14 @@ jobs:
             exit 0
           fi
           git commit -m "chore: what the sweep of $(date -u +%Y-%m-%d) came to"
-          git push origin score
+          for attempt in 1 2 3; do
+            if git push origin score; then
+              exit 0
+            fi
+            echo "el marcador no se pudo empujar (${attempt}/3)"
+            git fetch origin score --depth 1 || true
+            git rebase FETCH_HEAD || git rebase --abort || true
+            sleep $((attempt * 5))
+          done
+          echo "::error::el marcador no se pudo empujar"
+          exit 1

@@ -17,6 +17,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
 
 jobs:
   conventions:
@@ -37,10 +38,27 @@ jobs:
 
           import yaml
 
+
+          class Strict(yaml.SafeLoader):
+              pass
+
+
+          def no_twice(loader, node, deep=False):
+              seen = set()
+              for key, _ in node.value:
+                  name = loader.construct_object(key, deep=deep)
+                  if name in seen:
+                      raise yaml.YAMLError(f"la clave «{name}» está repetida")
+                  seen.add(name)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+
+          Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, no_twice)
+
           bad = 0
-          for one in sorted(pathlib.Path(".github/workflows").glob("*.yml")):
+          for one in sorted(pathlib.Path(".github").rglob("*.yml")):
               try:
-                  yaml.safe_load(one.read_text(encoding="utf-8"))
+                  yaml.load(one.read_text(encoding="utf-8"), Strict)
               except yaml.YAMLError as why:
                   print(f"::error::{one} no es YAML válido, así que lo que lanza no se lanzará")
                   print(why)

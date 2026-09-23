@@ -628,7 +628,6 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
     }
     ```
 
-5. **Run flutter gen-l10n** (or flutter pub get) to regenerate the localization classes.
 
 6. **Test your translation** by changing your system language or using the manual override in Settings.
 

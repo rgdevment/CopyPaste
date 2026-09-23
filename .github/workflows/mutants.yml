@@ -57,10 +57,12 @@ jobs:
         if: steps.touched.outputs.any == 'yes'
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
-          shared-key: workspace
+          shared-key: mutants
           save-if: false
         if: steps.touched.outputs.any == 'yes'
       - uses: taiki-e/install-action@cargo-mutants
+        if: steps.touched.outputs.any == 'yes'
+      - uses: taiki-e/install-action@nextest
         if: steps.touched.outputs.any == 'yes'
 
       - name: A mutant that lives on a line this branch wrote

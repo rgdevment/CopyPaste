@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub const FILE: &str = "config.toml";
 
@@ -124,10 +126,37 @@ pub fn write(path: &Path, config: &Config) -> Result<(), Error> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let meanwhile = path.with_extension("toml.new");
-    std::fs::write(&meanwhile, said)?;
-    std::fs::rename(&meanwhile, path)?;
-    Ok(())
+    static TURN: AtomicU64 = AtomicU64::new(0);
+    let turn = TURN.fetch_add(1, Ordering::Relaxed);
+    let meanwhile = path.with_extension(format!("toml.{}.{turn}.new", std::process::id()));
+    let wrote = poured(&meanwhile, said.as_bytes()).and_then(|()| renamed(&meanwhile, path));
+    if wrote.is_err() {
+        let _ = std::fs::remove_file(&meanwhile);
+    }
+    Ok(wrote?)
+}
+
+fn poured(meanwhile: &Path, said: &[u8]) -> std::io::Result<()> {
+    let mut file = std::fs::File::create(meanwhile)?;
+    file.write_all(said)?;
+    file.sync_all()
+}
+
+fn renamed(meanwhile: &Path, path: &Path) -> std::io::Result<()> {
+    let mut wait = 10;
+    for _ in 0..6 {
+        match std::fs::rename(meanwhile, path) {
+            Ok(()) => return Ok(()),
+            Err(why) if !for_a_moment(&why) => return Err(why),
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(wait)),
+        }
+        wait *= 2;
+    }
+    std::fs::rename(meanwhile, path)
+}
+
+fn for_a_moment(why: &std::io::Error) -> bool {
+    cfg!(windows) && matches!(why.raw_os_error(), Some(5) | Some(32))
 }
 
 #[cfg(test)]
@@ -179,7 +208,46 @@ mod tests {
         let path = at(&dir.path().join("deeper"));
         write(&path, &Config::default()).expect("writes");
         assert!(path.exists());
-        assert!(!path.with_extension("toml.new").exists());
+        assert_eq!(leftovers(&dir), 0);
+    }
+
+    #[test]
+    fn two_writers_at_once_leave_one_good_file_and_no_leftovers() {
+        let dir = a_dir();
+        let path = at(dir.path());
+        std::thread::scope(|all| {
+            for turn in 0..8 {
+                let path = path.clone();
+                all.spawn(move || {
+                    let mine = Config {
+                        keeps_days: Some(turn + 1),
+                        ..Config::default()
+                    };
+                    write(&path, &mine).expect("writes");
+                });
+            }
+        });
+        let landed = read(&path).expect("reads");
+        assert!(matches!(landed.keeps_days, Some(one) if (1..=8).contains(&one)));
+        assert_eq!(leftovers(&dir), 0);
+    }
+
+    #[test]
+    fn a_rename_that_is_refused_for_good_is_not_retried_forever() {
+        let dir = a_dir();
+        let path = at(dir.path());
+        std::fs::create_dir(&path).expect("makes a directory");
+        let why = write(&path, &Config::default()).expect_err("refuses");
+        assert!(matches!(why, Error::File(_)), "{why}");
+        assert_eq!(leftovers(&dir), 0);
+    }
+
+    fn leftovers(dir: &tempfile::TempDir) -> usize {
+        std::fs::read_dir(dir.path())
+            .expect("reads the directory")
+            .filter_map(Result::ok)
+            .filter(|one| one.file_name().to_string_lossy().ends_with(".new"))
+            .count()
     }
 
     #[test]
