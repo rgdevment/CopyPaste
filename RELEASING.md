@@ -1,258 +1,170 @@
 # Releasing CopyPaste
 
-This document describes the end-to-end release process: what to change, how
-to tag, what the pipeline does for you, and what (if anything) you still need
-to do by hand.
+**Status (2026-09-23): the 3.0 release pipeline does not exist yet.**
+`.github/workflows/release.yml` was part of the 2.x tree and is gone; the jobs
+this document used to describe (`build-windows`, `github-release`,
+`publish-release-manifest`, `update-scoop-bucket`) no longer run anywhere.
+What follows is the shape the 3.0 pipeline will have — modelled on the one in
+[rgdevment/Tisty](https://github.com/rgdevment/Tisty), which is audited and in
+production — plus the steps that are manual the first time and cannot be
+automated away.
 
-## TL;DR — cutting a normal release
+## The pipeline, once it exists
 
-1. Create and push an **annotated, signed** tag. The tag message body
-   carries the release metadata through `Key: value` trailers.
-2. Wait for GitHub Actions to finish — artifacts, manifest and stores are
-   all updated automatically.
+A `v*` tag on `main` fans out, in this order, with every stage gated on the one
+before it:
 
-`app/pubspec.yaml` stays pinned at `0.0.0-dev`: the version travels from the
-tag to the binaries through the `APP_VERSION` dart-define, so there is nothing
-to bump by hand.
+| Stage                | What it produces                                                       |
+| -------------------- | ---------------------------------------------------------------------- |
+| `gate`               | Style and prose, so a tag never publishes an unformatted tree.          |
+| `tested`             | Proof the commit was green when it landed.                              |
+| `version`            | The version resolved from the tag, used by every stage after it.        |
+| `build-windows`      | `cp-panel` sidecar + the Tauri app, signed with the PFX certificate.    |
+| `build-macos`        | The same, per architecture, signed and notarised.                       |
+| `bundle-windows`     | NSIS installer.                                                         |
+| `bundle-macos`       | `.dmg`.                                                                 |
+| `bundle-msix`        | MSIX for the Microsoft Store.                                           |
+| `publish`            | The GitHub Release with every artifact and the update manifest.         |
+| `verify`             | Installs what was just published and checks the update feed answers.    |
+| `msstore`            | Submits the MSIX (stable tags only).                                    |
+| `winget`             | Opens the pull request that adds this version to `winget-pkgs`.         |
+| `homebrew`           | Rewrites the cask in `rgdevment/homebrew-tap`.                          |
 
-**You do not need to edit `release-manifest.json` for a normal release.**
-The tag message is the single source of truth per release; the pipeline
-rewrites the manifest from it before signing and publishing.
+`feed.yml` then watches the published manifest daily: a deleted asset, a
+retired release or a force-pushed branch breaks the update feed silently, and
+nothing else would notice.
+
+## First time only — what a human has to do
+
+Three channels need a decision or a human before they can be switched on.
+
+### 1. winget
+
+`winget-releaser` **adds a version to a package that already exists**; it
+refuses a package the community repository has never seen. Today
+`rgdevment.CopyPaste` is not in `microsoft/winget-pkgs` at all.
+
+1. Cut the first release and let it publish the installer.
+2. Submit the manifest by hand against that public URL:
+   `wingetcreate new <url-of-the-installer>`.
+3. Wait for a `winget-pkgs` moderator to merge it (days, not hours).
+4. Only then set `vars.WINGET_PUBLISH=true` and `secrets.WINGET_TOKEN`.
+
+The `winget` job starts disabled by that variable, so it is harmless to ship
+the workflow before the package exists: it logs a notice and does nothing.
+
+### 2. Microsoft Store
+
+Nothing manual: the SKU is the one the 2.x already publishes, so the usual
+first-submission hurdle does not apply. `vars.STORE_PUBLISH` goes on with the
+3.0.0 — a decision, not an oversight; see the crossing below.
+
+### 3. Homebrew tap
+
+The tap repository already exists and the `homebrew` job rewrites the cask
+itself, so there is nothing to write by hand. Leave the frozen Linux formulae
+alone: the job must not sweep them.
+
+## Cutting a release
+
+Create and push an **annotated, signed** tag on `main`. The tag body is the
+release notes.
 
 ```sh
 git checkout main && git pull
-TAG=v2.4.0
+TAG=v3.0.0
 git tag -s "$TAG" -m "$TAG
 
-Recommended release. Notes go here.
-
-Severity: recommended
-Min-Supported: 2.3.0"
+What changed, in the user's words."
 git push origin "$TAG"
 ```
 
-That's it. Go watch the Actions tab.
+Nothing to bump by hand: the version travels from the tag name into the
+binaries and the manifest.
 
-## What the pipeline does on tag push
+Pre-releases (`v3.1.0-rc1`, `-beta1`) publish the GitHub Release and skip the
+Store, winget and Homebrew.
 
-On every `v*` tag pushed to `main`, [.github/workflows/release.yml](.github/workflows/release.yml)
-fans out to:
+## Crossing from the 2.x — decided 2026-09-23
 
-| Job                          | What it produces                                                        |
-| ---------------------------- | ----------------------------------------------------------------------- |
-| `build-windows`              | Signed `*_Setup.exe` + MSIX store bundle.                               |
-| `build-macos`                | Universal `*.dmg`.                                                      |
-| `github-release`             | Publishes all artifacts to a GitHub Release on the tag.                 |
-| `publish-release-manifest`   | Patches, signs (Ed25519) and uploads `release-manifest.json(.sig)`.     |
-| `publish-to-store`           | Submits MSIX to the Microsoft Store (stable tags only, no `-rc`).       |
-| `update-homebrew-cask`       | Rewrites the macOS cask in `rgdevment/homebrew-tap`.                    |
-| `update-scoop-bucket`        | Rewrites the manifest in `rgdevment/scoop-bucket`.                      |
+Every installed 2.x copy polls
+`https://github.com/rgdevment/CopyPaste/releases/latest/download/release-manifest.json`
+and its `.sig`, verifies the signature against an Ed25519 public key bundled in
+the app, and caches the answer for fifteen days
+(`app/lib/services/release_manifest_service.dart` on `v2-stable`). Left with no
+file, that user never learns the 3.0 exists. So the 3.0 keeps speaking both
+languages for a while.
 
-## Release manifest — what the pipeline overrides vs. what you own
+**The 3.x publishes the old manifest alongside its own update feed, from
+`v3.0.0` until `v3.1.0`.** `RELEASE_PRIVATE_KEY` is still in the repository's
+secrets, so the file can be signed exactly as the 2.x expects. Three rules
+govern what goes in it:
 
-`release-manifest.json` is versioned in the repo but **most of it is
-rewritten by the pipeline at tag time**. You only need to edit the parts
-you actually want to change.
+- `severity: recommended`. Never `critical`: that paints a full-screen block
+  over a working 2.x, and this user has to be free to stay.
+- `Min-Supported` set explicitly and low. Left to its default it takes the
+  version being tagged — `3.0.0` — which puts every 2.x below the floor.
+- `releaseNotes`, in both languages, **says that the history is not migrated**.
+  It is the only warning that user sees before jumping.
 
-### Fields the pipeline always overrides
+Retirement needs no work: the file is served from `releases/latest/download/`,
+so the first 3.1 release that does not attach it answers 404 and the 2.x goes
+quiet. Until then each copy gets several fifteen-day windows to notice.
 
-- `latest` ← the version extracted from the tag name.
-- `releaseNotes.en.summary` / `releaseNotes.es.summary` ← auto-generated
-  from tag + severity.
-- `releaseNotes.en.url` / `releaseNotes.es.url` ← point to the GitHub
-  Release page for the tag.
-- `channels.msstore.url` ← injected from the `STORE_APP_ID` repository
-  variable.
-- `severity`, `minimumSupported`, `blockedVersions` ← rewritten from tag
-  trailers (see below). Defaults apply when no trailer is provided.
+The Microsoft Store crosses differently, and deliberately: the 3.0.0 ships to
+the **same SKU** the 2.x already publishes (`9NBJRZF3K856`), so those installs
+update on their own, with no badge and no notes. The Homebrew cask behaves the
+same way on the first stable tag that rewrites it.
 
-### Trailer-driven fields (optional overrides per release)
+### What the installer owes that user
 
-The pipeline reads trailers from the **tag message body**. Format is
-`Key: value`, one per line, anywhere in the body.
+The 3.0 does not read the 2.x database, and installing over it must not pretend
+otherwise. On Windows the 3.0 installer:
 
-| Trailer          | Values                               | Default if missing          |
-| ---------------- | ------------------------------------ | --------------------------- |
-| `Severity:`      | `recommended` · `critical` · `patch` | `recommended`               |
-| `Min-Supported:` | A version string, e.g. `2.3.0`       | The new version being tagged|
-| `Blocked:`       | Comma-separated list, e.g. `2.2.6, 2.2.7` | `[]` (empty list)      |
+- **Offers to uninstall the 2.x, and never deletes its data.** The old history,
+  its blobs and its settings stay on disk, untouched, whatever the user picks.
+- **Offers a backup before anything else** — the 2.x `.cpbackup`, written where
+  the user chooses — so leaving is always reversible.
+- **May offer a migration, and states its losses up front.** What crosses and
+  what does not is decided when it is built; what is not allowed is a migration
+  that looks complete and is not.
+- **Recommends starting fresh.** That is the default and the recommended path;
+  the migration is the exception for whoever asks for it.
 
-The in-repo `release-manifest.json` is there for local testing and as a
-static fallback; production values come from the tag.
+The same applies on macOS, where the 2.x app bundle and its Application Support
+folder are separate things: removing the app never touches the folder.
 
-### Fields you own (rarely change)
+## Secrets and variables
 
-- `schema` — only bump if the manifest format itself changes.
-- `channels.*` URLs and commands (other than `msstore.url`) — edit only
-  when the install channel itself changes (e.g. adding a new OS channel).
+The 3.0 pipeline will need these, all named as Tisty names them:
 
-## Severity and how the app reacts
+| Name                                        | Kind     | Purpose                                  |
+| ------------------------------------------- | -------- | ---------------------------------------- |
+| `PFX_BASE64` / `PFX_PASSWORD`                  | secret   | Signs the Windows binaries and installer. |
+| `MACOS_CERTIFICATE_P12` / `MACOS_CERTIFICATE_PASSWORD`       | secret   | Signs the macOS app.                      |
+| `APPLE_ID` / `APPLE_APP_PASSWORD` / `APPLE_TEAM_ID` / `APPLE_SIGNING_IDENTITY` | secret | Notarisation. |
+| `TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD` | secret   | Signs the update artifacts.              |
+| `STORE_CLIENT_ID` / `STORE_CLIENT_SECRET` / `STORE_SELLER_ID` / `STORE_TENANT_ID` | secret | Partner Center. |
+| `WINGET_TOKEN`                               | secret   | Opens the pull request in `winget-pkgs`. |
+| `GIST_TOKEN`                                 | secret   | Pushes to the Homebrew tap.              |
+| `STORE_APP_ID`, `STORE_PUBLISH`              | variable | Store product and its on/off switch.     |
+| `WINGET_PUBLISH`                             | variable | Off until the package exists.            |
+| `MSIX_IDENTITY`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_DISPLAY` | variable | Package identity, frozen from the 2.x. |
 
-Only three severity values are accepted. There is **no** `optional` or
-`silent` — use `patch` if you don't want to bother users, or `recommended`
-if you want a visible badge.
-
-| Severity      | UI effect                                                         | When to use it                                                                                     |
-| ------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `patch`       | No badge, no nagging. Users only see it if they open Settings.    | Cosmetic fixes, internal refactors, test builds, releases that don't affect the user they're on.  |
-| `recommended` | Blue "Update available" badge in the main screen. **Default.**    | Any normal release: new features, bug fixes, improvements to some platforms but not others.       |
-| `critical`    | Full-screen block in standalone builds listing direct install URLs. MS Store builds are never blocked. | Security issue, data corruption, broken auto-update, anything where staying on the old version is unsafe. |
-
-Mark a release `critical` **only** when staying on older versions is
-unsafe. Whenever you use `critical`, consider whether to also fill
-`Blocked:` and/or bump `Min-Supported:` to close the door on the bad
-version(s).
-
-### `Min-Supported` and `Blocked` — how the block works
-
-These are two different mechanisms:
-
-- **`Min-Supported:`** — **range-based floor.** Any version strictly below
-  it is blocked. This is the normal way to drop support for old versions.
-- **`Blocked:`** — **explicit, per-version.** A comma-separated list of
-  specific versions that are blocked, regardless of where `Min-Supported`
-  sits. Use this to surgically revoke a broken release without affecting
-  anything else.
-
-Both default to "do not change the manifest" when the trailer is absent,
-so for a normal release you typically set only `Severity:` and
-`Min-Supported:` (or nothing at all, and let the defaults ride).
-
-#### Discontinued Linux clients and the blocking floor
-
-`Min-Supported:` defaults to the version being tagged, which is harmless at
-`recommended` — only `critical` actually blocks. But Linux installs are frozen
-at v2.11.0 and have nowhere to upgrade to, so a `critical` tag that lets the
-default ride would strand every one of them on the block screen.
-
-The pipeline therefore **fails the release** if `Severity: critical` arrives
-without an explicit `Min-Supported:`. Choose deliberately:
-
-- To revoke specific broken builds, use `Blocked:` — an explicit list never
-  catches a Linux version by accident.
-- To raise the floor while keeping Linux usable, set `Min-Supported: 2.11.0`
-  or lower.
-- Above 2.11.0 you are consciously blocking Linux. Those clients still get a
-  working action button: `channels.github_linux` in `release-manifest.json`
-  points at the v2.11.0 release, which is the last version they can install.
-
-## Examples
-
-### Normal recommended release
-
-```text
-v2.4.0
-
-Adds drag-and-drop and faster search. Full notes: …
-
-Severity: recommended
-Min-Supported: 2.3.0
-```
-
-### Release that only improves one platform
-
-When the new version mostly affects a single platform, you still tag
-`recommended` — the badge encourages the update without being alarming, and
-users who don't care about the platform-specific changes can ignore it.
-There is no `optional` severity.
-
-```text
-v2.4.0
-
-Windows-only: MSIX startup task and taskbar integration fixes.
-macOS unchanged.
-
-Severity: recommended
-Min-Supported: 2.3.0
-```
-
-If you truly don't want to surface the update at all, use `patch`:
-
-```text
-v2.4.1
-
-Installer packaging polish. No user-facing changes.
-
-Severity: patch
-```
-
-### Critical security release
-
-```text
-v2.4.2
-
-Critical fix for CVE-XXXX in the clipboard listener.
-
-Severity: critical
-Min-Supported: 2.4.2
-Blocked: 2.4.0, 2.4.1
-```
-
-### Pre-release / RC (tag ends with `-rc1`, `-beta1`, etc.)
-
-```text
-v2.5.0-rc1
-
-Internal testing build. Not a real release.
-
-Severity: patch
-```
-
-Pre-releases skip Microsoft Store publishing automatically (the pipeline
-checks for a dash in the version).
-
-## Pre-release checklist
-
-- [ ] `main` is green on CI.
-- [ ] Version bumped in `app/pubspec.yaml`.
-- [ ] `CHANGELOG`/release notes drafted (they go into the tag message body).
-- [ ] Smoke-tested locally on at least one platform.
-- [ ] `release-manifest.json` defaults look sane on disk (severity
-      `recommended`, no dangling `blockedVersions`).
-- [ ] Tag is **annotated and signed** (`git tag -s`).
-
-## Post-release checklist
-
-- [ ] GitHub Release has both Windows installers (setup + MSIX), `.dmg`,
-      plus `release-manifest.json(.sig)`.
-- [ ] Microsoft Store submission is in "certification" within 15 min of
-      the tag (stable only).
-- [ ] Homebrew tap (`rgdevment/homebrew-tap`) updated — currently manual;
-      see the tap repo for instructions.
-- [ ] App started on your machine shows the right "Update available"
-      badge severity (or no badge, if `patch`).
-
-## Things that still need manual work (and why)
-
-- **Homebrew tap** — requires a push to a separate repo. Can be automated
-  later with `brew bump-formula-pr`.
-- **Linux formulae in the tap** — `Formula/copypaste-linux.rb` and
-  `copypaste-beta-linux.rb` are no longer written by the pipeline. Mark them
-  `deprecate!` (frozen at v2.11.0) rather than deleting them, so anyone who
-  already installed them keeps a reinstall path.
-- **Microsoft Store first-time submission per SKU** — the Store requires
-  a human to accept the submission the first time. Subsequent tags go
-  through automatically.
+Rotating any of these needs no code change.
 
 ## Rolling back
 
-If a release turns out bad **after** the tag is out:
+A tag is never deleted or re-pointed: the signature over the manifest on the
+old tag cannot be revoked retroactively. Cut a new patch tag with the fix, and
+if the update manifest ends up carrying `Blocked`, that list on the new signed
+manifest is the authoritative signal.
 
-1. Cut a new patch tag immediately (e.g. `v2.4.1`) with the fix.
-2. In the tag body, set `Severity: critical` and `Blocked: 2.4.0` to
-   push every 2.4.0 user to upgrade.
-3. Do **not** delete or re-point the old tag — the Ed25519 signature over
-   `release-manifest.json` on the old tag cannot be revoked retroactively.
-   The `Blocked` list on the new, signed manifest is the authoritative
-   signal.
+## What the 2.x process left behind
 
-## Secrets and variables used by the release pipeline
-
-| Name                    | Where                    | Purpose                                  |
-| ----------------------- | ------------------------ | ---------------------------------------- |
-| `RELEASE_PRIVATE_KEY`   | Actions secret           | Signs `release-manifest.json`.           |
-| `STORE_APP_ID`          | Actions variable         | Microsoft Store product ID.              |
-| `GIST_TOKEN`            | Actions secret           | Pushes to the Homebrew tap and Scoop bucket. |
-| `GITHUB_TOKEN`          | Built-in                 | Releases, uploads, etc.                  |
-
-Rotating any of these does not require code changes.
+- **Scoop** — `rgdevment/scoop-bucket` is not part of the 3.0 plan; winget
+  covers Windows.
+- **Linux formulae** — frozen at v2.11.0 in the tap. Mark them `deprecate!`
+  rather than deleting them, so anyone who installed them keeps a reinstall
+  path.
+- **`app/pubspec.yaml`** — gone with Flutter; there is no version to pin.

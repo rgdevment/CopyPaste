@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+members = ["crates/*", "app/src-tauri"]
 
 [workspace.package]
 version = "3.0.0"
@@ -17,6 +17,7 @@ cp-mac-sys = { path = "crates/cp-mac-sys" }
 cp-mac = { path = "crates/cp-mac" }
 cp-win = { path = "crates/cp-win" }
 cp-win-sys = { path = "crates/cp-win-sys" }
+cp-config = { path = "crates/cp-config" }
 
 thiserror = "2"
 tracing = "0.1"
@@ -26,7 +27,14 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 blake3 = "1"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 unicode-normalization = "0.1"
+serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+toml = "0.9"
+sys-locale = "0.3"
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-build = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
 proptest = "1"
 tempfile = "3"

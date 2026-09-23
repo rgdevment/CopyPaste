@@ -1,8 +1,18 @@
+[graph]
+targets = [
+  "x86_64-pc-windows-msvc",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+]
+
 [advisories]
 yanked = "deny"
 ignore = [
-  { id = "RUSTSEC-2024-0436", reason = "paste está terminado, no roto: llega por skia-bindings y wgpu, sin alternativa aguas arriba" },
-  { id = "RUSTSEC-2026-0192", reason = "ttf-parser llega por winit (sctk-adwaita, solo Wayland) y por Slint; sin vulnerabilidad, a la espera de que aguas arriba migre a skrifa" },
+  { id = "RUSTSEC-2025-0075", reason = "unic-char-range: sin mantenimiento, no vulnerable; llega por urlpattern en tauri-utils y no es nuestro para reemplazar" },
+  { id = "RUSTSEC-2025-0080", reason = "unic-common: igual que el anterior, por la misma cadena de Tauri" },
+  { id = "RUSTSEC-2025-0081", reason = "unic-char-property: igual que el anterior, por la misma cadena de Tauri" },
+  { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: igual que el anterior, por la misma cadena de Tauri" },
+  { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: igual que el anterior, por la misma cadena de Tauri" },
 ]
 
 [licenses]
@@ -16,6 +26,10 @@ allow = [
   "Unicode-3.0",
   "BSL-1.0",
   "Zlib",
+  "Apache-2.0 WITH LLVM-exception",
+  "MPL-2.0",
+  "CC0-1.0",
+  "Unlicense",
 ]
 confidence-threshold = 0.9
 unused-allowed-license = "allow"
@@ -26,5 +40,6 @@ wildcards = "deny"
 allow-wildcard-paths = true
 
 [sources]
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 unknown-registry = "deny"
 unknown-git = "deny"

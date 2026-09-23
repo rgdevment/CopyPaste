@@ -1,0 +1,6 @@
+{
+  "globs": ["**/*.md", "!node_modules", "!target", "!app/node_modules", "!app/dist", "!mutants.out"],
+  "config": {
+    "extends": ".markdownlint.yaml"
+  }
+}

@@ -8,12 +8,6 @@
     <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci.yml">
       <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
     </a>
-    <a href="https://sonarcloud.io/summary/overall?id=rgdevment_CopyPaste">
-      <img src="https://img.shields.io/sonar/quality_gate/rgdevment_CopyPaste?server=https%3A%2F%2Fsonarcloud.io&style=flat-square&logo=sonarcloud&label=Quality%20Gate" alt="Quality Gate"/>
-    </a>
-    <a href="https://codecov.io/gh/rgdevment/CopyPaste">
-      <img src="https://codecov.io/gh/rgdevment/CopyPaste/branch/main/graph/badge.svg?style=flat-square" alt="Coverage"/>
-    </a>
     <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/mutants-sweep.yml">
       <img src="https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fraw.githubusercontent.com%2Frgdevment%2FCopyPaste%2Fscore%2Fmutants.json" alt="Mutation score"/>
     </a>
@@ -634,11 +628,9 @@ CopyPaste uses Flutter's standard ARB-based localization. Adding a new language 
     }
     ```
 
-5. **Run flutter gen-l10n** (or flutter pub get) to regenerate the localization classes.
+5. **Test your translation** by changing your system language or using the manual override in Settings.
 
-6. **Test your translation** by changing your system language or using the manual override in Settings.
-
-7. **Submit a Pull Request** with your ARB file.
+6. **Submit a Pull Request** with your ARB file.
 
 #### Translation Guidelines
 
