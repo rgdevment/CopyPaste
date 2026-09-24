@@ -1,4 +1,4 @@
-import { type Kept, type Look, useWaking } from "../core";
+import { type Kept, type Look, useKeys, useWaking } from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
@@ -10,6 +10,7 @@ export default function General({
   change: (what: Partial<Kept>) => void;
 }) {
   const { waking, trouble, ask } = useWaking();
+  const keys = useKeys();
 
   return (
     <>
@@ -66,8 +67,10 @@ export default function General({
         <Line says={t("wake")} why={t("wakeMac")} />
       )}
 
-      <Line says={t("keys")} why={t("keysWhy")}>
-        <span className="keys">{kept.shortcut.replaceAll("+", " + ")}</span>
+      <Line says={t("keys")} why={keys && !keys.bound ? t("keysTaken") : t("keysWhy")}>
+        <span className={keys && !keys.bound ? "keys taken" : "keys"}>
+          {kept.shortcut.replaceAll("+", " + ")}
+        </span>
         <button type="button" className="mild" disabled>
           {t("keysChange")}
         </button>

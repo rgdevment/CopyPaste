@@ -64,11 +64,12 @@ fn kept(store: &Store) -> Option<i64> {
         }
         Captured::Nothing | Captured::Superseded => return None,
     };
-    keep(store, &item, crate::app::now_ms())
+    let from = cp_win_sys::source::in_front();
+    keep(store, &item, crate::app::now_ms(), from.as_deref())
 }
 
 #[cfg(target_os = "windows")]
-fn keep(store: &Store, item: &Item, at: i64) -> Option<i64> {
+fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> {
     match store.find_by_hash(item) {
         Ok(Some(id)) => {
             if let Err(why) = store.reactivate(id, at) {
@@ -86,6 +87,11 @@ fn keep(store: &Store, item: &Item, at: i64) -> Option<i64> {
             return None;
         }
     };
+    if let Some(from) = from
+        && let Err(why) = store.set_source(id, from, at)
+    {
+        note(&format!("{id} se quedó sin saber de dónde vino: {why}"));
+    }
     for job in jobs_for(item) {
         if let Err(why) = store.enqueue(id, job) {
             note(&format!("{id} se quedó sin encolar {job}: {why}"));
@@ -196,9 +202,20 @@ mod tests {
     }
 
     #[test]
+    fn without_a_window_in_front_the_card_simply_has_no_app() {
+        let (_dir, store) = somewhere();
+        let id = keep(&store, &text("de ninguna parte"), 1_000, None).expect("guardado");
+        let page = store
+            .list(&cp_store::Filter::default(), 10, None)
+            .expect("listar");
+        let mine = page.rows.iter().find(|one| one.id == id).expect("está");
+        assert_eq!(mine.app, None);
+    }
+
+    #[test]
     fn what_is_copied_lands_with_its_preview_and_its_kind() {
         let (_dir, store) = somewhere();
-        let id = keep(&store, &text("lo primero"), 1_000).expect("guardado");
+        let id = keep(&store, &text("lo primero"), 1_000, None).expect("guardado");
         let kept = store.item(id).expect("leer").expect("sigue ahí");
         assert_eq!(kept.kind, Some(Kind::Text));
         assert_eq!(store.count().expect("contar"), 1);
@@ -207,8 +224,8 @@ mod tests {
     #[test]
     fn the_same_thing_copied_twice_is_one_row_that_rises() {
         let (_dir, store) = somewhere();
-        let first = keep(&store, &text("igual"), 1_000).expect("guardado");
-        let again = keep(&store, &text("igual"), 5_000).expect("reconocido");
+        let first = keep(&store, &text("igual"), 1_000, None).expect("guardado");
+        let again = keep(&store, &text("igual"), 5_000, None).expect("reconocido");
         assert_eq!(first, again);
         assert_eq!(store.count().expect("contar"), 1);
     }
@@ -216,24 +233,36 @@ mod tests {
     #[test]
     fn two_different_copies_are_two_rows() {
         let (_dir, store) = somewhere();
-        keep(&store, &text("una"), 1_000).expect("guardado");
-        keep(&store, &text("otra"), 2_000).expect("guardado");
+        keep(&store, &text("una"), 1_000, None).expect("guardado");
+        keep(&store, &text("otra"), 2_000, None).expect("guardado");
         assert_eq!(store.count().expect("contar"), 2);
     }
 
     #[test]
     fn an_image_leaves_its_reading_and_its_thumbnail_pending() {
         let (_dir, store) = somewhere();
-        let id = keep(&store, &image(), 1_000).expect("guardada");
+        let id = keep(&store, &image(), 1_000, None).expect("guardada");
         let mut waiting = store.take_pending("ocr", 2_000, 10).expect("cola");
         waiting.extend(store.take_pending("thumb", 2_000, 10).expect("cola"));
         assert_eq!(waiting, [id, id]);
     }
 
     #[test]
+    fn what_was_copied_remembers_the_app_it_came_from() {
+        let (_dir, store) = somewhere();
+        let id =
+            keep(&store, &text("desde el navegador"), 1_000, Some("chrome")).expect("guardado");
+        let page = store
+            .list(&cp_store::Filter::default(), 10, None)
+            .expect("listar");
+        let mine = page.rows.iter().find(|one| one.id == id).expect("está");
+        assert_eq!(mine.app.as_deref(), Some("chrome"));
+    }
+
+    #[test]
     fn plain_text_asks_nobody_for_anything() {
         let (_dir, store) = somewhere();
-        keep(&store, &text("sin adornos"), 1_000).expect("guardado");
+        keep(&store, &text("sin adornos"), 1_000, None).expect("guardado");
         assert!(
             store
                 .take_pending("thumb", 2_000, 10)

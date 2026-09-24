@@ -313,7 +313,7 @@ impl App {
                 if handed {
                     deliver(&ui, &state);
                 } else {
-                    complain(&ui);
+                    complain(&ui, BUSY);
                 }
             }
         });
@@ -480,7 +480,7 @@ impl App {
                     if paste_as(&store, engine.as_deref(), id, key.as_str()) {
                         deliver(&ui, &state);
                     } else {
-                        complain(&ui);
+                        complain(&ui, BUSY);
                     }
                 }
                 Asking::Kinds => {
@@ -504,7 +504,7 @@ impl App {
                 if done {
                     deliver(&ui, &state);
                 } else {
-                    complain(&ui);
+                    complain(&ui, BUSY);
                 }
             }
         });
@@ -867,8 +867,11 @@ fn vanish(ui: &Panel) {
     });
 }
 
-fn complain(ui: &Panel) {
-    ui.set_count_text("no se pudo pegar: el portapapeles está ocupado".into());
+const BUSY: &str = "no se pudo pegar: el portapapeles está ocupado";
+const NOT_THERE: &str = "está copiado, pero no se pudo pegar ahí";
+
+fn complain(ui: &Panel, said: &str) {
+    ui.set_count_text(said.into());
     let weak = ui.as_weak();
     slint::Timer::single_shot(Duration::from_millis(2_200), move || {
         if let Some(ui) = weak.upgrade() {
@@ -1005,6 +1008,11 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
         });
         if let cp_win::paste::Outcome::Degraded(why) = sent {
             note(&format!("queda en el portapapeles, sin pegar: {why:?}"));
+            if ui.show().is_ok() {
+                forward(ui);
+                appear(ui);
+                complain(ui, NOT_THERE);
+            }
         }
         return;
     }

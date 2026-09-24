@@ -29,6 +29,9 @@ vi.mock("@tauri-apps/api/core", () => ({
       return Promise.resolve(config);
     }
     if (what === "relabel") return Promise.resolve(null);
+    if (what === "keys") {
+      return Promise.resolve({ wanted: "Ctrl+Alt+V", bound: true });
+    }
     if (what === "waking") {
       return Promise.resolve({ offered: true, wakes: false, theirs: false });
     }

@@ -83,6 +83,20 @@ export function whereItLives() {
   return invoke<string>("where_it_lives");
 }
 
+export type Keys = { wanted: string; bound: boolean };
+
+export function useKeys() {
+  const [keys, setKeys] = useState<Keys | null>(null);
+
+  useEffect(() => {
+    invoke<Keys>("keys")
+      .then(setKeys)
+      .catch(() => setKeys(null));
+  }, []);
+
+  return keys;
+}
+
 export type Waking = { offered: boolean; wakes: boolean; theirs: boolean };
 
 export function useWaking() {

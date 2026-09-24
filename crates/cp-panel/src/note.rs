@@ -1,16 +1,33 @@
 use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const UP_TO: u64 = 1024 * 1024;
+
 pub fn where_to() -> std::path::PathBuf {
-    std::env::temp_dir().join("cp-panel.log")
+    folder().join("cp-panel.log")
+}
+
+fn folder() -> std::path::PathBuf {
+    #[cfg(target_os = "windows")]
+    if let Some(dir) = cp_win_sys::paths::data_dir() {
+        return dir.join("logs");
+    }
+    std::env::temp_dir()
 }
 
 pub fn note(what: &str) {
     let clock = clock_now();
+    let path = where_to();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if std::fs::metadata(&path).map_or(0, |it| it.len()) > UP_TO {
+        let _ = std::fs::write(&path, b"");
+    }
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(where_to())
+        .open(&path)
     {
         let _ = writeln!(file, "{clock} {what}");
     }
@@ -53,9 +70,9 @@ mod tests {
     }
 
     #[test]
-    fn the_log_sits_next_to_the_other_temporary_files() {
+    fn the_log_sits_where_the_privacy_note_says_it_does() {
         let where_it_is = where_to();
-        assert!(where_it_is.starts_with(std::env::temp_dir()));
+        assert!(where_it_is.starts_with(folder()));
         assert_eq!(
             where_it_is.file_name().and_then(|name| name.to_str()),
             Some("cp-panel.log")

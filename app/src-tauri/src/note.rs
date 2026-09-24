@@ -1,15 +1,26 @@
 use std::io::Write;
 use std::path::PathBuf;
 
+const UP_TO: u64 = 1024 * 1024;
+
 pub fn where_to() -> PathBuf {
-    std::env::temp_dir().join("cp-gui.log")
+    crate::settings::folder()
+        .map_or_else(std::env::temp_dir, |dir| dir.join("logs"))
+        .join("cp-gui.log")
 }
 
 pub fn note(what: &str) {
+    let path = where_to();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if std::fs::metadata(&path).map_or(0, |it| it.len()) > UP_TO {
+        let _ = std::fs::write(&path, b"");
+    }
     let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(where_to())
+        .open(&path)
     else {
         return;
     };
@@ -30,8 +41,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_log_sits_among_the_other_temporary_files() {
-        assert_eq!(where_to().parent(), Some(std::env::temp_dir().as_path()));
+    fn the_log_sits_where_the_privacy_note_says_it_does() {
+        let path = where_to();
+        assert_eq!(
+            path.file_name().and_then(|it| it.to_str()),
+            Some("cp-gui.log")
+        );
+        if let Some(dir) = crate::settings::folder() {
+            assert!(path.starts_with(dir));
+        }
     }
 
     #[test]

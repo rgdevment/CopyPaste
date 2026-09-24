@@ -20,6 +20,7 @@ pub fn run() {
             settings::former,
             waking::waking,
             waking::wake,
+            keys::keys,
             relabel
         ])
         .setup(|app| {
@@ -33,10 +34,7 @@ pub fn run() {
             let wanted = kept
                 .as_ref()
                 .map_or(cp_config::SHORTCUT, |one| one.shortcut.as_str());
-            match keys::bind(app.handle(), wanted) {
-                Ok(()) => note::note(&format!("el atajo «{wanted}» responde")),
-                Err(why) => note::note(&format!("sin atajo del panel: {why}")),
-            }
+            keys::raise(app.handle(), wanted);
             Ok(())
         })
         .build(tauri::generate_context!())

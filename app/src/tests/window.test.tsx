@@ -86,6 +86,24 @@ describe("la ventana", () => {
     );
   });
 
+  it("dice que el atajo no responde cuando otro programa lo tiene tomado", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "keys"
+        ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
+        : real?.(what, args)) as never);
+    render(<App />);
+    expect(await screen.findByText(/Otro programa ya usa esa combinación/)).toBeDefined();
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("calla sobre el atajo cuando el sistema sí lo cedió", async () => {
+    render(<App />);
+    expect(await screen.findByText("Ctrl + Alt + V")).toBeDefined();
+    expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
+  });
+
   it("no afirma que está actualizada cuando nadie lo ha comprobado", async () => {
     const who = userEvent.setup();
     render(<App />);

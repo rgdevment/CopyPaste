@@ -25,6 +25,8 @@ const ES = {
   keys: "Atajo del panel",
   keysWhy: "Presiónalo en cualquier parte: lo que elijas se pega donde estabas escribiendo",
   keysChange: "Cambiar",
+  keysTaken:
+    "Otro programa ya usa esa combinación, así que el panel no se abre con ella. Elige otra cuando puedas cambiarla",
   hides: "Ocultar al hacer clic fuera",
   hidesWhy: "El panel se va solo en cuanto haces clic en otra ventana",
 
@@ -129,6 +131,8 @@ const EN: Record<keyof Said, string> = {
   keys: "Panel shortcut",
   keysWhy: "Press it anywhere: what you pick is pasted where you were typing",
   keysChange: "Change",
+  keysTaken:
+    "Another program already uses that combination, so the panel will not open with it. Pick another one when you can change it",
   hides: "Hide when you click elsewhere",
   hidesWhy: "The panel goes away on its own as soon as you click another window",
 

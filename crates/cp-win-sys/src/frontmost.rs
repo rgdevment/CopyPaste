@@ -41,11 +41,15 @@ pub fn let_it_come_forward(pid: u32) -> bool {
     unsafe { AllowSetForegroundWindow(pid) }.is_ok()
 }
 
+pub fn process_of_is_ours(window: HWND) -> bool {
+    process_of(window) == Some(std::process::id())
+}
+
 pub fn ahead() -> isize {
     let Some(window) = foreground() else {
         return 0;
     };
-    if process_of(window) == Some(std::process::id()) {
+    if process_of_is_ours(window) {
         return 0;
     }
     window.0 as isize
