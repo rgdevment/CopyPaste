@@ -31,7 +31,7 @@ pub struct App {
 
 struct State {
     store: Rc<Store>,
-    engine: Option<crate::engine::Engine>,
+    engine: Option<Rc<crate::engine::Engine>>,
     ahead: Arc<AtomicIsize>,
     query: String,
     tags: Vec<String>,
@@ -115,7 +115,9 @@ impl App {
             appear(panel);
             panel.invoke_focus_search();
         }
-        self.keep_watch(panel.as_weak());
+        if !self.state.borrow().options.measure {
+            self.keep_watch(panel.as_weak());
+        }
         if let Some(dir) = self.state.borrow().options.signals.clone() {
             watch_signals(panel.as_weak(), dir);
         }
@@ -137,12 +139,12 @@ impl App {
         let db = self.state.borrow().options.db.clone();
         match crate::engine::Engine::start(&db, move |_| {
             let _ = ui.upgrade_in_event_loop(|panel| {
-                if panel.window().is_visible() {
-                    panel.invoke_reopened();
+                if panel.window().is_visible() && !panel.get_sheet_open() {
+                    panel.invoke_arrived();
                 }
             });
         }) {
-            Ok(engine) => self.state.borrow_mut().engine = Some(engine),
+            Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
             Err(why) => note(&format!("nadie vigila el portapapeles: {why}")),
         }
     }
@@ -302,8 +304,11 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste(move |id| {
-            let store = state.borrow().store.clone();
-            let handed = hand_over(&store, i64::from(id));
+            let (store, engine) = {
+                let state = state.borrow();
+                (state.store.clone(), state.engine.clone())
+            };
+            let handed = hand_over(&store, engine.as_deref(), i64::from(id));
             if let Some(ui) = ui.upgrade() {
                 if handed {
                     deliver(&ui, &state);
@@ -425,6 +430,28 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
+        panel.on_fresh_start(move || {
+            {
+                let mut state = state.borrow_mut();
+                state.query.clear();
+                state.tags.clear();
+                state.pinned = false;
+            }
+            if let Some(ui) = ui.upgrade() {
+                ui.set_query(Default::default());
+                ui.set_sheet_open(false);
+                refresh(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_arrived(move || {
+            if let Some(ui) = ui.upgrade() {
+                keeping_place(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
         panel.on_ask_keys(move || {
             let Some(ui) = ui.upgrade() else {
                 return;
@@ -446,9 +473,12 @@ impl App {
             let asking = state.borrow().asking;
             match asking {
                 Asking::Forms(id) => {
-                    let store = state.borrow().store.clone();
-                    if paste_as(&store, id, key.as_str()) {
-                        vanish(&ui);
+                    let (store, engine) = {
+                        let state = state.borrow();
+                        (state.store.clone(), state.engine.clone())
+                    };
+                    if paste_as(&store, engine.as_deref(), id, key.as_str()) {
+                        deliver(&ui, &state);
                     } else {
                         complain(&ui);
                     }
@@ -464,8 +494,11 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste_as(move |id, key| {
-            let store = state.borrow().store.clone();
-            let done = paste_as(&store, i64::from(id), key.as_str());
+            let (store, engine) = {
+                let state = state.borrow();
+                (state.store.clone(), state.engine.clone())
+            };
+            let done = paste_as(&store, engine.as_deref(), i64::from(id), key.as_str());
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
                 if done {
@@ -697,7 +730,7 @@ fn keys_of(filter: &Filter) -> Vec<String> {
         .collect()
 }
 
-fn hand_over(store: &Store, id: i64) -> bool {
+fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> bool {
     let item = match store.item(id) {
         Ok(Some(item)) => item,
         Ok(None) => {
@@ -718,6 +751,8 @@ fn hand_over(store: &Store, id: i64) -> bool {
         let how = cp_win::restore::to_clipboard(&clipboard, &item);
         let written = matches!(how, cp_win::restore::Restored::Written { .. });
         if written {
+            mark(engine);
+            drop(clipboard);
             if let Err(why) = store.record_paste(id, now_ms()) {
                 note(&format!("pegado {id} sin anotar: {why}"));
             }
@@ -898,9 +933,9 @@ fn forms_of(_store: &Store, _id: i64) -> Vec<FormRow> {
 }
 
 #[cfg(target_os = "windows")]
-fn paste_as(store: &Store, id: i64, key: &str) -> bool {
+fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key: &str) -> bool {
     if key == AS_IS {
-        return hand_over(store, id);
+        return hand_over(store, engine, id);
     }
     let Some(form) = form_of(key) else {
         note(&format!("forma desconocida: {key}"));
@@ -926,13 +961,17 @@ fn paste_as(store: &Store, id: i64, key: &str) -> bool {
         cp_win::restore::Restored::Written { .. }
     );
     if written {
-        let _ = store.record_paste(id, now_ms());
+        mark(engine);
+        drop(clipboard);
+        if let Err(why) = store.record_paste(id, now_ms()) {
+            note(&format!("pegado {id} sin anotar: {why}"));
+        }
     }
     written
 }
 
 #[cfg(not(target_os = "windows"))]
-fn paste_as(_store: &Store, _id: i64, key: &str) -> bool {
+fn paste_as(_store: &Store, _engine: Option<&crate::engine::Engine>, _id: i64, key: &str) -> bool {
     let _ = form_of(key);
     false
 }
@@ -944,14 +983,17 @@ pub fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
-    let ahead = {
-        let state = state.borrow();
-        if let Some(engine) = state.engine.as_ref() {
-            engine.ours();
-        }
-        state.ahead.swap(0, Ordering::Relaxed)
+fn mark(engine: Option<&crate::engine::Engine>) {
+    let Some(engine) = engine else {
+        return;
     };
+    if !engine.ours() {
+        note("no se pudo marcar como nuestra la escritura del portapapeles");
+    }
+}
+
+fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let ahead = state.borrow().ahead.swap(0, Ordering::Relaxed);
     #[cfg(target_os = "windows")]
     if let Some(target) = cp_win_sys::frontmost::target_at(ahead) {
         let weak = ui.as_weak();
@@ -997,12 +1039,17 @@ fn ahead_now() -> isize {
     }
 }
 
+const ORDER_UP_TO: u64 = 64;
+
 fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
     std::thread::spawn(move || {
+        use std::io::{BufRead, Read};
+        let input = std::io::stdin();
+        let mut reader = std::io::BufReader::new(input.lock());
         let mut said = String::new();
         loop {
             said.clear();
-            match std::io::stdin().read_line(&mut said) {
+            match (&mut reader).take(ORDER_UP_TO).read_line(&mut said) {
                 Ok(0) | Err(_) => break,
                 Ok(_) => {}
             }
@@ -1016,16 +1063,17 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                         }
                         dress(&panel, &dressed);
                         forward(&panel);
-                        panel.invoke_reopened();
+                        panel.invoke_fresh_start();
                         appear(&panel);
                         panel.invoke_focus_search();
                     });
                 }
                 "hide" => {
+                    ahead.store(0, Ordering::Relaxed);
                     let _ = ui.upgrade_in_event_loop(|panel| vanish(&panel));
                 }
                 "quit" => break,
-                other => note(&format!("no entiendo la orden «{other}»")),
+                _ => note("llegó una orden que no entiendo"),
             }
         }
         let _ = ui.upgrade_in_event_loop(|_| {

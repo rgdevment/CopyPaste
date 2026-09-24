@@ -162,12 +162,12 @@ jobs:
           shared-key: coverage
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
-      - name: The panel travels inside the app, so it has to be there first
-        env:
-          PY: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+      - name: The app only needs the sidecar to exist here, nobody runs it
         shell: bash
         run: |
-          "$PY" scripts/sidecar.py --debug
+          mkdir -p app/src-tauri/binaries
+          triple=$(rustc -vV | sed -n 's/^host: //p')
+          : > "app/src-tauri/binaries/cp-panel-$triple"
 
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe

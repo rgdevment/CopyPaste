@@ -28,6 +28,7 @@ pub fn run() {
             if tray::raise(app.handle(), spanish).is_none() {
                 tray::surface(app.handle());
             }
+            #[cfg(target_os = "windows")]
             panel::raise(app.handle());
             let wanted = kept
                 .as_ref()

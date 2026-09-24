@@ -28,8 +28,8 @@ impl Engine {
         Ok(Self { watching })
     }
 
-    pub fn ours(&self) {
-        self.watching.ours();
+    pub fn ours(&self) -> bool {
+        self.watching.ours()
     }
 }
 
@@ -42,7 +42,9 @@ impl Engine {
         Ok(Self {})
     }
 
-    pub fn ours(&self) {}
+    pub fn ours(&self) -> bool {
+        true
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -52,8 +54,8 @@ fn kept(store: &Store) -> Option<i64> {
         cp_core::watch::RETRY,
     ) {
         Captured::Kept(item) => item,
-        Captured::Refused(why) => {
-            note(&format!("copia descartada: {why:?}"));
+        Captured::Refused(_) => {
+            note("una copia se descartó por lo que la aplicación de origen pidió");
             return None;
         }
         Captured::TooSlow => {

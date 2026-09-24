@@ -75,7 +75,7 @@ impl Options {
             }
         }
         Self {
-            db: db.unwrap_or_else(where_it_lives),
+            db: db.unwrap_or_else(|| if measure { seeded() } else { where_it_lives() }),
             measure,
             serve,
             signals: std::env::var_os("CP_PANEL_SIGNALS").map(PathBuf::from),
@@ -85,10 +85,14 @@ impl Options {
     }
 }
 
+fn seeded() -> PathBuf {
+    std::env::temp_dir().join("cp-seed").join("history.db")
+}
+
 fn where_it_lives() -> PathBuf {
     #[cfg(target_os = "windows")]
     if let Some(path) = cp_win_sys::paths::database() {
         return path;
     }
-    std::env::temp_dir().join("cp-seed").join("history.db")
+    seeded()
 }

@@ -27,20 +27,6 @@
         }
       ]
     },
-    "opener:allow-reveal-item-in-dir",
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "binaries/cp-panel",
-          "sidecar": true,
-          "args": [
-            "--serve"
-          ]
-        }
-      ]
-    },
-    "shell:allow-stdin-write",
-    "shell:allow-kill"
+    "opener:allow-reveal-item-in-dir"
   ]
 }

@@ -42,7 +42,13 @@ pub fn let_it_come_forward(pid: u32) -> bool {
 }
 
 pub fn ahead() -> isize {
-    foreground().map_or(0, |window| window.0 as isize)
+    let Some(window) = foreground() else {
+        return 0;
+    };
+    if process_of(window) == Some(std::process::id()) {
+        return 0;
+    }
+    window.0 as isize
 }
 
 pub fn target_at(handle: isize) -> Option<Target> {
@@ -226,6 +232,16 @@ mod tests {
         }
         let target = target_at(handle).expect("la ventana de delante sigue viva");
         assert_eq!(target.window.0 as isize, handle);
+    }
+
+    #[test]
+    fn a_window_of_our_own_is_never_what_is_ahead() {
+        let handle = ahead();
+        if handle == 0 {
+            return;
+        }
+        let window = target_at(handle).expect("viva").window;
+        assert_ne!(process_of(window), Some(std::process::id()));
     }
 
     #[test]
