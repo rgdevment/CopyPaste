@@ -1,5 +1,6 @@
 mod age;
 mod app;
+mod engine;
 mod measure;
 mod model;
 mod note;
@@ -49,6 +50,7 @@ fn main() {
 pub struct Options {
     pub db: PathBuf,
     pub measure: bool,
+    pub serve: bool,
     pub signals: Option<PathBuf>,
     pub backdrop: String,
     pub flat: bool,
@@ -58,6 +60,7 @@ impl Options {
     fn from_args() -> Self {
         let mut db = None;
         let mut measure = false;
+        let mut serve = false;
         let mut flat = false;
         let mut backdrop = "none".to_owned();
         let mut args = std::env::args().skip(1);
@@ -65,17 +68,27 @@ impl Options {
             match arg.as_str() {
                 "--db" => db = args.next().map(PathBuf::from),
                 "--measure" => measure = true,
+                "--serve" => serve = true,
                 "--flat" => flat = true,
                 "--backdrop" => backdrop = args.next().unwrap_or_default(),
                 other => eprintln!("argumento ignorado: {other}"),
             }
         }
         Self {
-            db: db.unwrap_or_else(|| std::env::temp_dir().join("cp-seed").join("history.db")),
+            db: db.unwrap_or_else(where_it_lives),
             measure,
+            serve,
             signals: std::env::var_os("CP_PANEL_SIGNALS").map(PathBuf::from),
             backdrop,
             flat,
         }
     }
+}
+
+fn where_it_lives() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    if let Some(path) = cp_win_sys::paths::database() {
+        return path;
+    }
+    std::env::temp_dir().join("cp-seed").join("history.db")
 }

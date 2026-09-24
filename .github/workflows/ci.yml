@@ -36,6 +36,13 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@nextest
 
+      - name: The panel travels inside the app, so it has to be there first
+        env:
+          PY: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        shell: bash
+        run: |
+          "$PY" scripts/sidecar.py --debug
+
       - run: cargo clippy --workspace --all-targets
       - run: cargo nextest run --workspace --no-tests=pass
       - if: runner.os == 'Windows'

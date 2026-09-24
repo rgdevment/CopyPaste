@@ -1,3 +1,6 @@
+mod keys;
+mod note;
+mod panel;
 mod settings;
 mod tray;
 mod waking;
@@ -8,6 +11,8 @@ pub fn run() {
             tray::surface(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             settings::settings,
             settings::keep,
@@ -23,18 +28,25 @@ pub fn run() {
             if tray::raise(app.handle(), spanish).is_none() {
                 tray::surface(app.handle());
             }
+            panel::raise(app.handle());
+            let wanted = kept
+                .as_ref()
+                .map_or(cp_config::SHORTCUT, |one| one.shortcut.as_str());
+            match keys::bind(app.handle(), wanted) {
+                Ok(()) => note::note(&format!("el atajo «{wanted}» responde")),
+                Err(why) => note::note(&format!("sin atajo del panel: {why}")),
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("CopyPaste no pudo arrancar");
 
-    app.run(|_app, event| {
-        if let tauri::RunEvent::ExitRequested {
+    app.run(|app, event| match event {
+        tauri::RunEvent::ExitRequested {
             code: None, api, ..
-        } = event
-        {
-            api.prevent_exit();
-        }
+        } => api.prevent_exit(),
+        tauri::RunEvent::Exit => panel::quit(app),
+        _ => {}
     });
 }
 

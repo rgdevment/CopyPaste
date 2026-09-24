@@ -9,7 +9,7 @@ use cp_store::{Clock, Filter, Store};
 use slint::{ComponentHandle, Model, ModelRc};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicIsize, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
@@ -31,6 +31,8 @@ pub struct App {
 
 struct State {
     store: Rc<Store>,
+    engine: Option<crate::engine::Engine>,
+    ahead: Arc<AtomicIsize>,
     query: String,
     tags: Vec<String>,
     pinned: bool,
@@ -76,6 +78,8 @@ impl App {
         let counter = spawn_counter(options.db.clone(), panel.as_weak(), generation.clone());
         let state = Rc::new(RefCell::new(State {
             store: Rc::new(store),
+            engine: None,
+            ahead: Arc::new(AtomicIsize::new(0)),
             query: String::new(),
             tags: Vec::new(),
             pinned: false,
@@ -104,17 +108,43 @@ impl App {
     }
 
     pub fn run(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
-        panel.show()?;
-        self.dress(panel);
-        appear(panel);
-        panel.invoke_focus_search();
+        let serving = self.state.borrow().options.serve;
+        if !serving {
+            panel.show()?;
+            self.dress(panel);
+            appear(panel);
+            panel.invoke_focus_search();
+        }
+        self.keep_watch(panel.as_weak());
         if let Some(dir) = self.state.borrow().options.signals.clone() {
             watch_signals(panel.as_weak(), dir);
+        }
+        if serving {
+            let state = self.state.borrow();
+            listen(
+                panel.as_weak(),
+                state.ahead.clone(),
+                state.options.backdrop.clone(),
+            );
         }
         if self.state.borrow().options.measure {
             crate::measure::run(self);
         }
         slint::run_event_loop_until_quit()
+    }
+
+    fn keep_watch(&self, ui: slint::Weak<Panel>) {
+        let db = self.state.borrow().options.db.clone();
+        match crate::engine::Engine::start(&db, move |_| {
+            let _ = ui.upgrade_in_event_loop(|panel| {
+                if panel.window().is_visible() {
+                    panel.invoke_reopened();
+                }
+            });
+        }) {
+            Ok(engine) => self.state.borrow_mut().engine = Some(engine),
+            Err(why) => note(&format!("nadie vigila el portapapeles: {why}")),
+        }
     }
 
     pub fn ui(&self) -> slint::Weak<Panel> {
@@ -276,7 +306,7 @@ impl App {
             let handed = hand_over(&store, i64::from(id));
             if let Some(ui) = ui.upgrade() {
                 if handed {
-                    vanish(&ui);
+                    deliver(&ui, &state);
                 } else {
                     complain(&ui);
                 }
@@ -439,7 +469,7 @@ impl App {
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
                 if done {
-                    vanish(&ui);
+                    deliver(&ui, &state);
                 } else {
                     complain(&ui);
                 }
@@ -461,21 +491,26 @@ impl App {
     }
 
     fn dress(&self, panel: &Panel) {
-        #[cfg(target_os = "windows")]
+        dress(panel, &self.state.borrow().options.backdrop);
+    }
+}
+
+fn dress(panel: &Panel, wanted: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let handle = panel.window().window_handle();
+        if let Ok(raw) = HasWindowHandle::window_handle(&handle)
+            && let RawWindowHandle::Win32(win32) = raw.as_raw()
         {
-            use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-            let handle = panel.window().window_handle();
-            if let Ok(raw) = HasWindowHandle::window_handle(&handle)
-                && let RawWindowHandle::Win32(win32) = raw.as_raw()
-            {
-                let wanted = self.state.borrow().options.backdrop.clone();
-                let backdrop = cp_win_sys::backdrop::Backdrop::from_name(&wanted)
-                    .unwrap_or(cp_win_sys::backdrop::Backdrop::Mica);
-                cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, true);
-            }
+            let backdrop = cp_win_sys::backdrop::Backdrop::from_name(wanted)
+                .unwrap_or(cp_win_sys::backdrop::Backdrop::Mica);
+            cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, true);
         }
-        #[cfg(not(target_os = "windows"))]
-        let _ = panel;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (panel, wanted);
     }
 }
 
@@ -907,6 +942,96 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let ahead = {
+        let state = state.borrow();
+        if let Some(engine) = state.engine.as_ref() {
+            engine.ours();
+        }
+        state.ahead.swap(0, Ordering::Relaxed)
+    };
+    #[cfg(target_os = "windows")]
+    if let Some(target) = cp_win_sys::frontmost::target_at(ahead) {
+        let weak = ui.as_weak();
+        let sent = cp_win::paste::paste_into(&target, move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_sheet_open(false);
+                let _ = ui.hide();
+            }
+        });
+        if let cp_win::paste::Outcome::Degraded(why) = sent {
+            note(&format!("queda en el portapapeles, sin pegar: {why:?}"));
+        }
+        return;
+    }
+    let _ = ahead;
+    vanish(ui);
+}
+
+fn forward(panel: &Panel) {
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let handle = panel.window().window_handle();
+        if let Ok(raw) = HasWindowHandle::window_handle(&handle)
+            && let RawWindowHandle::Win32(win32) = raw.as_raw()
+            && let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get())
+        {
+            cp_win_sys::frontmost::bring_forward(target.window);
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = panel;
+}
+
+fn ahead_now() -> isize {
+    #[cfg(target_os = "windows")]
+    {
+        cp_win_sys::frontmost::ahead()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        0
+    }
+}
+
+fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
+    std::thread::spawn(move || {
+        let mut said = String::new();
+        loop {
+            said.clear();
+            match std::io::stdin().read_line(&mut said) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+            match said.trim() {
+                "show" => {
+                    ahead.store(ahead_now(), Ordering::Relaxed);
+                    let dressed = backdrop.clone();
+                    let _ = ui.upgrade_in_event_loop(move |panel| {
+                        if panel.show().is_err() {
+                            return;
+                        }
+                        dress(&panel, &dressed);
+                        forward(&panel);
+                        panel.invoke_reopened();
+                        appear(&panel);
+                        panel.invoke_focus_search();
+                    });
+                }
+                "hide" => {
+                    let _ = ui.upgrade_in_event_loop(|panel| vanish(&panel));
+                }
+                "quit" => break,
+                other => note(&format!("no entiendo la orden «{other}»")),
+            }
+        }
+        let _ = ui.upgrade_in_event_loop(|_| {
+            let _ = slint::quit_event_loop();
+        });
+    });
 }
 
 fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {

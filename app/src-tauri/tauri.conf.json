@@ -48,6 +48,9 @@
     },
     "macOS": {
       "minimumSystemVersion": "13.3"
-    }
+    },
+    "externalBin": [
+      "binaries/cp-panel"
+    ]
   }
 }

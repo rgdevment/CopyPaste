@@ -7,8 +7,8 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetFocus, SetFocus};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GUITHREADINFO, GetForegroundWindow, GetGUIThreadInfo, IsWindow, SMTO_ABORTIFHUNG, SMTO_BLOCK,
-    SendMessageTimeoutW, SetForegroundWindow, WM_NULL,
+    AllowSetForegroundWindow, GUITHREADINFO, GetForegroundWindow, GetGUIThreadInfo, IsWindow,
+    SMTO_ABORTIFHUNG, SMTO_BLOCK, SendMessageTimeoutW, SetForegroundWindow, WM_NULL,
 };
 
 use crate::source::process_of;
@@ -35,6 +35,22 @@ pub fn capture_target() -> Option<Target> {
         focus: inner_focus(thread),
         thread,
     })
+}
+
+pub fn let_it_come_forward(pid: u32) -> bool {
+    unsafe { AllowSetForegroundWindow(pid) }.is_ok()
+}
+
+pub fn ahead() -> isize {
+    foreground().map_or(0, |window| window.0 as isize)
+}
+
+pub fn target_at(handle: isize) -> Option<Target> {
+    if handle == 0 {
+        return None;
+    }
+    let window = HWND(handle as *mut std::ffi::c_void);
+    is_alive(window).then(|| target_for(window))
 }
 
 pub fn target_for(window: HWND) -> Target {
@@ -190,6 +206,26 @@ mod tests {
     #[test]
     fn a_process_that_does_not_exist_has_no_level() {
         assert_eq!(integrity_of(0), None);
+    }
+
+    #[test]
+    fn nothing_ahead_is_no_target() {
+        assert_eq!(target_at(0), None);
+    }
+
+    #[test]
+    fn a_handle_that_is_no_longer_a_window_is_no_target() {
+        assert_eq!(target_at(isize::MAX), None);
+    }
+
+    #[test]
+    fn what_is_ahead_can_be_picked_up_again_by_its_handle() {
+        let handle = ahead();
+        if handle == 0 {
+            return;
+        }
+        let target = target_at(handle).expect("la ventana de delante sigue viva");
+        assert_eq!(target.window.0 as isize, handle);
     }
 
     #[test]

@@ -28,6 +28,8 @@ sys-locale.workspace = true
 tauri.workspace = true
 tauri-plugin-opener.workspace = true
 tauri-plugin-single-instance.workspace = true
+tauri-plugin-shell.workspace = true
+tauri-plugin-global-shortcut.workspace = true
 
 [target."cfg(windows)".dependencies]
 cp-win-sys.workspace = true

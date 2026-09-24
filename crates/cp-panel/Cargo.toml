@@ -17,6 +17,9 @@ raw-window-handle.workspace = true
 cp-win-sys.workspace = true
 cp-win.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [build-dependencies]
 slint-build.workspace = true
 
