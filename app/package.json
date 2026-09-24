@@ -2,6 +2,7 @@
   "name": "copypaste-window",
   "private": true,
   "version": "3.0.0",
+  "homepage": "https://rgdevment.com/copypaste/",
   "type": "module",
   "scripts": {
     "dev": "vite",

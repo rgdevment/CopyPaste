@@ -14,6 +14,10 @@ use cp_store::Store;
 pub struct Engine {
     #[cfg(target_os = "windows")]
     watching: cp_win::watching::Watching,
+    #[cfg(target_os = "windows")]
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    #[cfg(target_os = "windows")]
+    errands: Option<std::thread::JoinHandle<()>>,
 }
 
 #[cfg(target_os = "windows")]
@@ -25,7 +29,13 @@ impl Engine {
                 fresh(id);
             }
         });
-        Ok(Self { watching })
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let errands = errands(db, stop.clone());
+        Ok(Self {
+            watching,
+            stop,
+            errands,
+        })
     }
 
     pub fn ours(&self) -> bool {
@@ -44,6 +54,140 @@ impl Engine {
 
     pub fn ours(&self) -> bool {
         true
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for Engine {
+    fn drop(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        if let Some(thread) = self.errands.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
+#[cfg(target_os = "windows")]
+const NAP: std::time::Duration = std::time::Duration::from_millis(400);
+#[cfg(target_os = "windows")]
+const LATER: i64 = 60_000;
+
+#[cfg(target_os = "windows")]
+fn errands(
+    db: &Path,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+) -> Option<std::thread::JoinHandle<()>> {
+    let store = match Store::open(db) {
+        Ok(store) => store,
+        Err(why) => {
+            note(&format!("nadie enriquece lo copiado: {why}"));
+            return None;
+        }
+    };
+    let thumbs = cp_win_sys::paths::thumbs_dir()?;
+    Some(std::thread::spawn(move || {
+        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+            if !errand(&store, &thumbs) {
+                std::thread::sleep(NAP);
+            }
+        }
+    }))
+}
+
+#[cfg(target_os = "windows")]
+fn errand(store: &Store, thumbs: &Path) -> bool {
+    let at = crate::app::now_ms();
+    if let Some(id) = first_waiting(store, "thumb", at) {
+        thumbed(store, id, at, thumbs);
+        return true;
+    }
+    if let Some(id) = first_waiting(store, "ocr", at) {
+        read_out(store, id, at);
+        return true;
+    }
+    false
+}
+
+#[cfg(target_os = "windows")]
+fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
+    match store.take_pending(job, at, 1) {
+        Ok(waiting) => waiting.into_iter().next(),
+        Err(why) => {
+            note(&format!("no se pudo mirar la cola de {job}: {why}"));
+            None
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
+    let Some(png) = store.item(id).ok().flatten().as_ref().and_then(thumb_of) else {
+        give_up(store, id, "thumb", "no se pudo hacer la miniatura", at);
+        return;
+    };
+    let Some(landed) = written(thumbs, id, &png) else {
+        give_up(store, id, "thumb", "la miniatura no se pudo guardar", at);
+        return;
+    };
+    if let Err(why) = store.set_thumb(id, Some(&landed), at) {
+        note(&format!("{id} con miniatura sin anotar: {why}"));
+    }
+    done(store, id, "thumb");
+}
+
+#[cfg(target_os = "windows")]
+fn read_out(store: &Store, id: i64, at: i64) {
+    if !cp_win_sys::ocr::is_available() {
+        done(store, id, "ocr");
+        return;
+    }
+    let found = store
+        .item(id)
+        .ok()
+        .flatten()
+        .as_ref()
+        .and_then(|item| cp_win::content::content_of(item, None).image.map(Vec::from))
+        .and_then(|image| cp_win_sys::ocr::text_in(&image));
+    if let Some(text) = found
+        && let Err(why) = store.set_ocr_text(id, &text, at)
+    {
+        note(&format!("{id} leída sin anotar: {why}"));
+    }
+    done(store, id, "ocr");
+}
+
+#[cfg(target_os = "windows")]
+fn thumb_of(item: &Item) -> Option<Vec<u8>> {
+    let content = cp_win::content::content_of(item, None);
+    if let Some(image) = content.image {
+        return cp_core::thumbnail::of_image(image, cp_core::thumbnail::MAX_SIDE);
+    }
+    let first = content.paths.first()?;
+    let dib = cp_win_sys::thumbnail::dib_of_file(std::path::Path::new(first), SIDE)?;
+    cp_core::dib::to_png(&dib)
+}
+
+#[cfg(target_os = "windows")]
+fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
+    std::fs::create_dir_all(dir).ok()?;
+    let landed = dir.join(format!("{id}.png"));
+    std::fs::write(&landed, png).ok()?;
+    Some(landed.to_string_lossy().into_owned())
+}
+
+#[cfg(target_os = "windows")]
+fn done(store: &Store, id: i64, job: &str) {
+    if let Err(why) = store.work_done(id, job) {
+        note(&format!("{id} sigue en la cola de {job}: {why}"));
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) {
+    if let Err(trouble) = store.work_failed(id, job, why, at + LATER) {
+        note(&format!("{id} sin anotar el fallo de {job}: {trouble}"));
     }
 }
 
@@ -147,6 +291,21 @@ mod tests {
             formats: vec![Format {
                 id: SYNTHETIC_IMAGE.into(),
                 payload: Payload::Inline(vec![0x89, b'P', b'N', b'G']),
+            }],
+        }
+    }
+
+    fn drawn(side: u32) -> Item {
+        let square = image::RgbaImage::from_pixel(side, side, image::Rgba([12, 200, 140, 255]));
+        let mut out = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(square)
+            .write_to(&mut out, image::ImageFormat::Png)
+            .expect("dibujar");
+        Item {
+            kind: Some(Kind::Image),
+            formats: vec![Format {
+                id: SYNTHETIC_IMAGE.into(),
+                payload: Payload::Inline(out.into_inner()),
             }],
         }
     }
@@ -257,6 +416,55 @@ mod tests {
             .expect("listar");
         let mine = page.rows.iter().find(|one| one.id == id).expect("está");
         assert_eq!(mine.app.as_deref(), Some("chrome"));
+    }
+
+    #[test]
+    fn a_picture_ends_up_with_a_thumbnail_it_can_show() {
+        let (dir, store) = somewhere();
+        let thumbs = dir.path().join("thumbs");
+        let id = keep(&store, &drawn(600), 1_000, None).expect("guardada");
+        assert!(errand(&store, &thumbs), "había trabajo que hacer");
+        let page = store
+            .list(&cp_store::Filter::default(), 10, None)
+            .expect("listar");
+        let mine = page.rows.iter().find(|one| one.id == id).expect("está");
+        let made = mine.thumb_path.as_deref().expect("tiene miniatura");
+        assert!(std::path::Path::new(made).exists(), "{made} no se escribió");
+        let side =
+            cp_core::thumbnail::size_of(&std::fs::read(made).expect("leer")).expect("tamaño");
+        assert!(side.width <= cp_core::thumbnail::MAX_SIDE);
+        assert!(
+            store
+                .take_pending("thumb", 2_000, 10)
+                .expect("cola")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn nothing_waiting_means_nothing_to_do() {
+        let (dir, store) = somewhere();
+        assert!(!errand(&store, &dir.path().join("thumbs")));
+    }
+
+    #[test]
+    fn something_that_cannot_be_drawn_waits_instead_of_spinning() {
+        let (dir, store) = somewhere();
+        let thumbs = dir.path().join("thumbs");
+        let id = keep(&store, &image(), 1_000, None).expect("guardada");
+        assert!(errand(&store, &thumbs), "lo intentó");
+        let now = crate::app::now_ms();
+        assert!(
+            store
+                .take_pending("thumb", now, 10)
+                .expect("cola")
+                .is_empty(),
+            "no se reintenta de inmediato"
+        );
+        let later = store
+            .take_pending("thumb", now + LATER + 1_000, 10)
+            .expect("cola");
+        assert_eq!(later, [id], "vuelve a tocarle el turno más tarde");
     }
 
     #[test]

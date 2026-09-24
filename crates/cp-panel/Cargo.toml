@@ -19,6 +19,7 @@ cp-win.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+image.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true

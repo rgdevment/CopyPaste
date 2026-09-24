@@ -684,19 +684,24 @@ CopyPaste follows your system theme automatically — no configuration needed.
 
 ## Other Tools by the Same Author
 
-I build free, open source tools focused on privacy and productivity. If you like CopyPaste, you might also find this useful:
+I build free, open source tools focused on privacy and productivity. If you like CopyPaste, you might also find these useful:
 
 <p align="center">
-  <a href="https://github.com/rgdevment/LinkUnbound">
+  <a href="https://rgdevment.com/linkunbound/">
     <img src="https://raw.githubusercontent.com/rgdevment/LinkUnbound/main/resources/assets/icon_256.png" alt="LinkUnbound" width="72" height="72"/>
   </a>
 </p>
 
-### [LinkUnbound](https://github.com/rgdevment/LinkUnbound)
+### [LinkUnbound](https://rgdevment.com/linkunbound/)
 
 A free, open source browser picker for Windows and Mac. Every link you click gets intercepted — domain rules open the assigned browser instantly, or a small picker appears near your cursor to let you choose. Resolves Microsoft SafeLinks and redirect wrappers before matching rules.
 
 No ads. No telemetry. No accounts. Everything local.
+
+### [Tisty](https://rgdevment.com/tisty/)
+
+Notes, documents and tasks that stay on your machine, in plain files you can read
+without it. Same rules as everything else here: no accounts, no telemetry, no cloud.
 
 ---
 

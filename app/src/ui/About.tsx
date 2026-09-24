@@ -18,15 +18,17 @@ const TOOLS = [
     name: "Tisty",
     hue: "#7c6cf0",
     says: "toolTisty",
-    at: "https://github.com/rgdevment/Tisty",
+    at: "https://rgdevment.com/tisty/",
   },
   {
     name: "LinkUnbound",
     hue: "#3fbfa6",
     says: "toolLinkUnbound",
-    at: "https://github.com/rgdevment/LinkUnbound",
+    at: "https://rgdevment.com/linkunbound/",
   },
 ];
+
+export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY, NOTICES];
 
 export default function About() {
   const [trouble, setTrouble] = useState<string | null>(null);

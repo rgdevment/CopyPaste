@@ -1033,6 +1033,7 @@ dependencies = [
  "cp-store",
  "cp-win",
  "cp-win-sys",
+ "image",
  "raw-window-handle",
  "slint",
  "slint-build",

@@ -13,6 +13,10 @@ pub fn legacy_database() -> Option<PathBuf> {
     Some(data_dir()?.join("clipboard.db"))
 }
 
+pub fn thumbs_dir() -> Option<PathBuf> {
+    Some(data_dir()?.join("thumbs"))
+}
+
 pub fn blobs_dir() -> Option<PathBuf> {
     Some(data_dir()?.join("blobs"))
 }
@@ -32,6 +36,7 @@ mod tests {
             database().expect("base"),
             legacy_database().expect("base vieja"),
             blobs_dir().expect("blobs"),
+            thumbs_dir().expect("miniaturas"),
         ] {
             assert!(path.starts_with(&root), "{path:?} se salió de {root:?}");
         }
