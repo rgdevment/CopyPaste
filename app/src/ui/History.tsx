@@ -5,6 +5,7 @@ import { fill, t } from "../locales";
 import { Band, Line } from "./Bits";
 
 const KEPT = [7, 30, 90];
+const QUOTA = [0, 256, 512, 1024];
 
 export default function History({
   kept,
@@ -18,6 +19,8 @@ export default function History({
   const [said, setSaid] = useState<string | null>(null);
   const days = kept["keeps-days"];
   const DAYS = KEPT.includes(days) || days === 0 ? KEPT : [...KEPT, days].sort((a, b) => a - b);
+  const mb = kept["images-quota-mb"];
+  const QUOTAS = QUOTA.includes(mb) ? QUOTA : [...QUOTA, mb].sort((a, b) => a - b);
 
   useEffect(() => {
     whereItLives()
@@ -60,10 +63,11 @@ export default function History({
           value={String(kept["images-quota-mb"])}
           onChange={(event) => change({ "images-quota-mb": Number(event.target.value) })}
         >
-          <option value="0">{t("quotaNone")}</option>
-          <option value="256">256 MB</option>
-          <option value="512">512 MB</option>
-          <option value="1024">1 GB</option>
+          {QUOTAS.map((one) => (
+            <option key={one} value={String(one)}>
+              {one === 0 ? t("quotaNone") : one >= 1024 ? `${one / 1024} GB` : `${one} MB`}
+            </option>
+          ))}
         </select>
       </Line>
 

@@ -31,12 +31,14 @@ export default function Backup() {
         <button type="button" className="strong" disabled>
           {t("outDo")}
         </button>
+        <span className="soon">{t("soon")}</span>
       </Line>
 
       <Line says={t("in")} why={t("inWhy")}>
         <button type="button" className="mild" disabled>
           {t("inDo")}
         </button>
+        <span className="soon">{t("soon")}</span>
       </Line>
 
       <Band says={t("bandFormer")} />
@@ -53,6 +55,7 @@ export default function Backup() {
           <button type="button" className="grave" disabled>
             {t("formerDrop")}
           </button>
+          <span className="soon">{t("soon")}</span>
         </Line>
       ) : (
         <Line says={t("former")} why={trouble ?? t("formerNone")} />

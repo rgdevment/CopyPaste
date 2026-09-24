@@ -104,6 +104,36 @@ describe("la ventana", () => {
     expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
   });
 
+  it("un tope de imágenes que no está en la lista se muestra tal cual", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "settings"
+        ? Promise.resolve({
+            locale: "es",
+            theme: "system",
+            shortcut: "Ctrl+Alt+V",
+            "hides-when-left": true,
+            "keeps-days": 30,
+            "images-quota-mb": 700,
+          })
+        : real?.(what, args)) as never);
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Historial" }));
+    const picked = (await screen.findByLabelText("Espacio para imágenes")) as HTMLSelectElement;
+    expect(picked.value).toBe("700");
+    expect(screen.getByRole("option", { name: "700 MB" })).toBeDefined();
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("los botones de copia de seguridad dicen que todavía no están", async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+    const exporta = await screen.findByRole("button", { name: "Exportar…" });
+    expect(exporta).toBeDisabled();
+    expect(screen.getAllByText("Todavía no").length).toBeGreaterThan(0);
+  });
+
   it("cambiar el atajo guarda la combinación que se presiona", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);

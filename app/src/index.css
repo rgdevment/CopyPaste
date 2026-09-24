@@ -1,30 +1,4 @@
 :root {
-  --panel: #1a1d2b;
-  --rail: #171a27;
-  --card: #1e2132;
-  --field: #1f2234;
-  --edge: #2a2e44;
-  --hair: rgb(255 255 255 / 0.07);
-  --tile: #262a40;
-  --ink: #d6d7da;
-  --title: #bcbdc2;
-  --muted: #83858e;
-  --placeholder: #6d6f7b;
-  --accent: #a5b4fc;
-  --accent-dim: #7c86c9;
-  --accent-soft: rgb(165 180 252 / 0.12);
-  --selected: #282c46;
-  --selected-edge: #3a3f66;
-  --danger: #f28b82;
-  --danger-soft: rgb(242 139 130 / 0.12);
-  --good: #86efac;
-  --warn: #fcd34d;
-  --warn-soft: #46351c;
-  --ui: "Segoe UI", -apple-system, system-ui, sans-serif;
-  --mono: "Cascadia Mono", ui-monospace, Consolas, Menlo, monospace;
-}
-
-:root[data-theme="light"] {
   --panel: #f7f8fb;
   --rail: #eef0f5;
   --card: #ffffff;
@@ -46,6 +20,61 @@
   --good: #2f8f4e;
   --warn: #9a6b00;
   --warn-soft: #fdf0d2;
+  color-scheme: light;
+  --ui: "Segoe UI", -apple-system, system-ui, sans-serif;
+  --mono: "Cascadia Mono", ui-monospace, Consolas, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --panel: #1a1d2b;
+    --rail: #171a27;
+    --card: #1e2132;
+    --field: #1f2234;
+    --edge: #2a2e44;
+    --hair: rgb(255 255 255 / 0.07);
+    --tile: #262a40;
+    --ink: #d6d7da;
+    --title: #bcbdc2;
+    --muted: #83858e;
+    --placeholder: #6d6f7b;
+    --accent: #a5b4fc;
+    --accent-dim: #7c86c9;
+    --accent-soft: rgb(165 180 252 / 0.12);
+    --selected: #282c46;
+    --selected-edge: #3a3f66;
+    --danger: #f28b82;
+    --danger-soft: rgb(242 139 130 / 0.12);
+    --good: #86efac;
+    --warn: #fcd34d;
+    --warn-soft: #46351c;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --panel: #1a1d2b;
+  --rail: #171a27;
+  --card: #1e2132;
+  --field: #1f2234;
+  --edge: #2a2e44;
+  --hair: rgb(255 255 255 / 0.07);
+  --tile: #262a40;
+  --ink: #d6d7da;
+  --title: #bcbdc2;
+  --muted: #83858e;
+  --placeholder: #6d6f7b;
+  --accent: #a5b4fc;
+  --accent-dim: #7c86c9;
+  --accent-soft: rgb(165 180 252 / 0.12);
+  --selected: #282c46;
+  --selected-edge: #3a3f66;
+  --danger: #f28b82;
+  --danger-soft: rgb(242 139 130 / 0.12);
+  --good: #86efac;
+  --warn: #fcd34d;
+  --warn-soft: #46351c;
 }
 
 * {
