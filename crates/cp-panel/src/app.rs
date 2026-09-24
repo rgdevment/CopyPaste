@@ -781,7 +781,7 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = item;
+        let _ = (item, engine);
         false
     }
 }
@@ -886,6 +886,7 @@ fn vanish(ui: &Panel) {
 }
 
 const BUSY: &str = "no se pudo pegar: el portapapeles está ocupado";
+#[cfg(target_os = "windows")]
 const NOT_THERE: &str = "está copiado, pero no se pudo pegar ahí";
 
 fn complain(ui: &Panel, said: &str) {
@@ -1004,6 +1005,7 @@ pub fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
+#[cfg(target_os = "windows")]
 fn mark(engine: Option<&crate::engine::Engine>) {
     let Some(engine) = engine else {
         return;

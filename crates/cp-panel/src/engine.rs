@@ -51,10 +51,6 @@ impl Engine {
     ) -> Result<Self, cp_store::Error> {
         Ok(Self {})
     }
-
-    pub fn ours(&self) -> bool {
-        true
-    }
 }
 
 #[cfg(target_os = "windows")]

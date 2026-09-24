@@ -145,7 +145,8 @@ describe("la ventana", () => {
       .mocked(invoke)
       .mock.calls.filter(([what]) => what === "keep")
       .pop();
-    expect((kept?.[1] as { config: { shortcut: string } }).config.shortcut).toBe("Ctrl+Alt+F9");
+    const said = kept?.[1] as { config: { shortcut: string } } | undefined;
+    expect(said?.config.shortcut).toBe("Ctrl+Alt+F9");
   });
 
   it("vaciar el historial pide confirmación antes de hacerlo", async () => {
