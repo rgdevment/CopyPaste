@@ -21,6 +21,7 @@ pub fn run() {
             waking::waking,
             waking::wake,
             keys::keys,
+            empty,
             relabel
         ])
         .setup(|app| {
@@ -47,6 +48,11 @@ pub fn run() {
         tauri::RunEvent::Exit => panel::quit(app),
         _ => {}
     });
+}
+
+#[tauri::command]
+fn empty(app: tauri::AppHandle) -> Result<(), String> {
+    panel::empty(&app)
 }
 
 #[tauri::command]

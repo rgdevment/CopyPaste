@@ -39,6 +39,10 @@ pub fn hide<R: Runtime>(app: &AppHandle<R>) {
     let _ = say(app, "hide");
 }
 
+pub fn empty<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    say(app, "empty").map_err(|_| "el panel no está escuchando".to_owned())
+}
+
 pub fn quit<R: Runtime>(app: &AppHandle<R>) {
     let _ = say(app, "quit");
     if let Some(state) = app.try_state::<Sidecar>()

@@ -8,6 +8,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+cp-config.workspace = true
 cp-core.workspace = true
 cp-store.workspace = true
 slint.workspace = true

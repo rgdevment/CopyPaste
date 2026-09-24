@@ -19,6 +19,7 @@ const OUT: Duration = Duration::from_millis(130);
 const NEXT_FRAME: Duration = Duration::from_millis(16);
 const SETTLES: Duration = Duration::from_millis(70);
 const HOVERS: Duration = Duration::from_millis(55);
+const LOOKS: Duration = Duration::from_millis(250);
 const SETTLES_SHEET: Duration = Duration::from_millis(260);
 const AFTER_ROLLING: Duration = Duration::from_millis(220);
 const JUST_ROLLED: Duration = Duration::from_millis(260);
@@ -41,6 +42,7 @@ struct State {
     metrics: Metrics,
     asking: Asking,
     typing: slint::Timer,
+    leaving: slint::Timer,
     pointing: slint::Timer,
     arming: slint::Timer,
     rolled: Instant,
@@ -88,6 +90,7 @@ impl App {
             metrics,
             asking: Asking::Kinds,
             typing: slint::Timer::default(),
+            leaving: slint::Timer::default(),
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
             rolled: Instant::now() - JUST_ROLLED,
@@ -440,6 +443,19 @@ impl App {
             if let Some(ui) = ui.upgrade() {
                 ui.set_query(Default::default());
                 ui.set_sheet_open(false);
+                refresh(&ui, &state);
+                watch_leaving(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_emptied(move || {
+            let store = state.borrow().store.clone();
+            match store.clear_all_unpinned(now_ms()) {
+                Ok(gone) => note(&format!("se vaciaron {gone} elementos sin anclar")),
+                Err(why) => note(&format!("no se pudo vaciar: {why}")),
+            }
+            if let Some(ui) = ui.upgrade() {
                 refresh(&ui, &state);
             }
         });
@@ -1036,6 +1052,47 @@ fn forward(panel: &Panel) {
     let _ = panel;
 }
 
+fn hides_when_left() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        cp_win_sys::paths::data_dir()
+            .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
+            .is_none_or(|kept| kept.hides_when_left)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        true
+    }
+}
+
+fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let held = state.borrow();
+    held.leaving.stop();
+    if !hides_when_left() {
+        return;
+    }
+    let weak = ui.as_weak();
+    let mine = state.clone();
+    let mut was_ours = false;
+    held.leaving
+        .start(slint::TimerMode::Repeated, LOOKS, move || {
+            let Some(ui) = weak.upgrade() else {
+                return;
+            };
+            if !ui.window().is_visible() {
+                return;
+            }
+            if ahead_now() == 0 {
+                was_ours = true;
+                return;
+            }
+            if was_ours {
+                mine.borrow().leaving.stop();
+                vanish(&ui);
+            }
+        });
+}
+
 fn ahead_now() -> isize {
     #[cfg(target_os = "windows")]
     {
@@ -1075,6 +1132,9 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                         appear(&panel);
                         panel.invoke_focus_search();
                     });
+                }
+                "empty" => {
+                    let _ = ui.upgrade_in_event_loop(|panel| panel.invoke_emptied());
                 }
                 "hide" => {
                     ahead.store(0, Ordering::Relaxed);

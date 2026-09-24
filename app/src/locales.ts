@@ -25,6 +25,8 @@ const ES = {
   keys: "Atajo del panel",
   keysWhy: "Presiónalo en cualquier parte: lo que elijas se pega donde estabas escribiendo",
   keysChange: "Cambiar",
+  keysAsk: "Presiona la combinación que quieres",
+  keysStop: "Dejarlo como está",
   keysTaken:
     "Otro programa ya usa esa combinación, así que el panel no se abre con ella. Elige otra cuando puedas cambiarla",
   hides: "Ocultar al hacer clic fuera",
@@ -43,8 +45,10 @@ const ES = {
   whereUnknown: "No se pudo averiguar",
   whereOpen: "Abrir carpeta",
   empty: "Vaciar el historial",
-  emptyWhy: "Borra todo lo copiado, incluso lo anclado. No se puede deshacer",
+  emptyWhy: "Borra todo lo copiado y conserva lo que hayas anclado. No se puede deshacer",
   emptyDo: "Vaciar",
+  emptySure: "¿Seguro?",
+  emptyGone: "Listo, el historial quedó vacío",
 
   bandCopies: "Exportar e importar",
   out: "Exportar",
@@ -131,6 +135,8 @@ const EN: Record<keyof Said, string> = {
   keys: "Panel shortcut",
   keysWhy: "Press it anywhere: what you pick is pasted where you were typing",
   keysChange: "Change",
+  keysAsk: "Press the combination you want",
+  keysStop: "Leave it as it is",
   keysTaken:
     "Another program already uses that combination, so the panel will not open with it. Pick another one when you can change it",
   hides: "Hide when you click elsewhere",
@@ -149,8 +155,10 @@ const EN: Record<keyof Said, string> = {
   whereUnknown: "Could not be found",
   whereOpen: "Open folder",
   empty: "Empty the history",
-  emptyWhy: "Deletes everything you copied, pinned items included. It cannot be undone",
+  emptyWhy: "Deletes everything you copied and keeps whatever you pinned. It cannot be undone",
   emptyDo: "Empty",
+  emptySure: "Sure?",
+  emptyGone: "Done, the history is empty",
 
   bandCopies: "Export and import",
   out: "Export",

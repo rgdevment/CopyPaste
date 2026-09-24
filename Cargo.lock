@@ -1029,6 +1029,7 @@ dependencies = [
 name = "cp-panel"
 version = "3.0.0"
 dependencies = [
+ "cp-config",
  "cp-core",
  "cp-store",
  "cp-win",

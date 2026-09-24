@@ -73,6 +73,10 @@ const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
 #[cfg(target_os = "windows")]
 const LATER: i64 = 60_000;
+#[cfg(target_os = "windows")]
+const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
+#[cfg(target_os = "windows")]
+const A_DAY: i64 = 24 * 60 * 60 * 1_000;
 
 #[cfg(target_os = "windows")]
 fn errands(
@@ -88,12 +92,62 @@ fn errands(
     };
     let thumbs = cp_win_sys::paths::thumbs_dir()?;
     Some(std::thread::spawn(move || {
+        let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
         while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+            if swept.elapsed() >= SWEEPS_EVERY {
+                sweep(&store);
+                swept = std::time::Instant::now();
+            }
             if !errand(&store, &thumbs) {
                 std::thread::sleep(NAP);
             }
         }
     }))
+}
+
+#[cfg(target_os = "windows")]
+fn sweep(store: &Store) {
+    let Some(dir) = cp_win_sys::paths::data_dir() else {
+        return;
+    };
+    let kept = match cp_config::read(&cp_config::at(&dir)) {
+        Ok(kept) => kept,
+        Err(why) => {
+            note(&format!("no se pudo leer qué conservar: {why}"));
+            return;
+        }
+    };
+    let policy = policy_of(&kept);
+    if policy == cp_store::Policy::default() {
+        return;
+    }
+    match store.sweep(&policy, crate::app::now_ms()) {
+        Ok(swept) => {
+            if swept.expired + swept.over_bytes + swept.orphans > 0 {
+                note(&format!(
+                    "se fueron {} por edad, {} por espacio y {} sueltos",
+                    swept.expired, swept.over_bytes, swept.orphans
+                ));
+            }
+        }
+        Err(why) => note(&format!("no se pudo hacer sitio: {why}")),
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
+    cp_store::Policy {
+        keep_for: kept
+            .keeps_days
+            .filter(|days| *days > 0)
+            .map(|days| i64::from(days) * A_DAY),
+        keep_at_most: None,
+        bytes_at_most: kept
+            .images_quota_mb
+            .filter(|mb| *mb > 0)
+            .map(|mb| i64::from(mb) * 1024 * 1024),
+        broken_for: None,
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -439,6 +493,56 @@ mod tests {
                 .expect("cola")
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn what_the_settings_say_becomes_what_the_store_sweeps() {
+        let kept = cp_config::Config {
+            keeps_days: Some(30),
+            images_quota_mb: Some(512),
+            ..cp_config::Config::default()
+        };
+        let policy = policy_of(&kept);
+        assert_eq!(policy.keep_for, Some(30 * A_DAY));
+        assert_eq!(policy.bytes_at_most, Some(512 * 1024 * 1024));
+    }
+
+    #[test]
+    fn keeping_things_forever_and_without_a_limit_sweeps_nothing() {
+        let kept = cp_config::Config {
+            keeps_days: None,
+            images_quota_mb: None,
+            ..cp_config::Config::default()
+        };
+        assert_eq!(policy_of(&kept), cp_store::Policy::default());
+        let zeroed = cp_config::Config {
+            keeps_days: Some(0),
+            images_quota_mb: Some(0),
+            ..cp_config::Config::default()
+        };
+        assert_eq!(policy_of(&zeroed), cp_store::Policy::default());
+    }
+
+    #[test]
+    fn what_is_older_than_the_setting_goes_and_what_is_pinned_stays() {
+        let (_dir, store) = somewhere();
+        let now = 100 * A_DAY;
+        let old = keep(&store, &text("de hace mucho"), now - 40 * A_DAY, None).expect("guardado");
+        let recent = keep(&store, &text("de ayer"), now - A_DAY, None).expect("guardado");
+        let pinned = keep(&store, &text("anclado y viejo"), now - 40 * A_DAY, None).expect("g");
+        store.set_pinned(pinned, true, now).expect("anclar");
+        let kept = cp_config::Config {
+            keeps_days: Some(30),
+            ..cp_config::Config::default()
+        };
+        store.sweep(&policy_of(&kept), now).expect("barrer");
+        let page = store
+            .list(&cp_store::Filter::default(), 10, None)
+            .expect("listar");
+        let left: Vec<i64> = page.rows.iter().map(|one| one.id).collect();
+        assert!(!left.contains(&old), "lo viejo tenía que irse");
+        assert!(left.contains(&recent), "lo reciente se queda");
+        assert!(left.contains(&pinned), "lo anclado nunca caduca");
     }
 
     #[test]

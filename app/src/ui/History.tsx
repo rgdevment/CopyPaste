@@ -1,6 +1,6 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
-import { type Kept, whereItLives } from "../core";
+import { empty, type Kept, whereItLives } from "../core";
 import { fill, t } from "../locales";
 import { Band, Line } from "./Bits";
 
@@ -14,6 +14,8 @@ export default function History({
   change: (what: Partial<Kept>) => void;
 }) {
   const [where, setWhere] = useState<string | null>(null);
+  const [sure, setSure] = useState(false);
+  const [said, setSaid] = useState<string | null>(null);
   const days = kept["keeps-days"];
   const DAYS = KEPT.includes(days) || days === 0 ? KEPT : [...KEPT, days].sort((a, b) => a - b);
 
@@ -22,6 +24,14 @@ export default function History({
       .then(setWhere)
       .catch(() => setWhere(null));
   }, []);
+
+  useEffect(() => {
+    if (!sure) {
+      return;
+    }
+    const forgets = setTimeout(() => setSure(false), 4_000);
+    return () => clearTimeout(forgets);
+  }, [sure]);
 
   return (
     <>
@@ -72,9 +82,22 @@ export default function History({
         </button>
       </Line>
 
-      <Line says={t("empty")} why={t("emptyWhy")}>
-        <button type="button" className="grave" disabled>
-          {t("emptyDo")}
+      <Line says={t("empty")} why={said ?? t("emptyWhy")}>
+        <button
+          type="button"
+          className="grave"
+          onClick={() => {
+            if (!sure) {
+              setSure(true);
+              return;
+            }
+            setSure(false);
+            empty()
+              .then(() => setSaid(t("emptyGone")))
+              .catch((why) => setSaid(String(why)));
+          }}
+        >
+          {sure ? t("emptySure") : t("emptyDo")}
         </button>
       </Line>
     </>
