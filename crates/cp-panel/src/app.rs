@@ -106,6 +106,7 @@ impl App {
             panel.global::<crate::Theme>().set_shadow_blur(0.0);
         }
         app.wire(&panel);
+        dress_theme(&panel);
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
@@ -443,6 +444,7 @@ impl App {
             if let Some(ui) = ui.upgrade() {
                 ui.set_query(Default::default());
                 ui.set_sheet_open(false);
+                dress_theme(&ui);
                 refresh(&ui, &state);
                 watch_leaving(&ui, &state);
             }
@@ -554,7 +556,7 @@ fn dress(panel: &Panel, wanted: &str) {
         {
             let backdrop = cp_win_sys::backdrop::Backdrop::from_name(wanted)
                 .unwrap_or(cp_win_sys::backdrop::Backdrop::Mica);
-            cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, true);
+            cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, !wants_light());
         }
     }
     #[cfg(not(target_os = "windows"))]
@@ -1052,6 +1054,32 @@ fn forward(panel: &Panel) {
     let _ = panel;
 }
 
+fn light_for(asked: cp_config::Theme, the_system_is_light: bool) -> bool {
+    match asked {
+        cp_config::Theme::Light => true,
+        cp_config::Theme::Dark => false,
+        cp_config::Theme::System => the_system_is_light,
+    }
+}
+
+fn wants_light() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let asked = cp_win_sys::paths::data_dir()
+            .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
+            .map_or(cp_config::Theme::System, |kept| kept.theme);
+        light_for(asked, cp_win_sys::theme::wants_light().unwrap_or(false))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        light_for(cp_config::Theme::System, false)
+    }
+}
+
+fn dress_theme(ui: &Panel) {
+    ui.global::<crate::Theme>().set_light(wants_light());
+}
+
 fn hides_when_left() -> bool {
     #[cfg(target_os = "windows")]
     {
@@ -1172,4 +1200,21 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn choosing_a_theme_wins_over_what_the_system_wants() {
+        assert!(light_for(cp_config::Theme::Light, false));
+        assert!(!light_for(cp_config::Theme::Dark, true));
+    }
+
+    #[test]
+    fn leaving_it_to_the_system_follows_the_system_both_ways() {
+        assert!(light_for(cp_config::Theme::System, true));
+        assert!(!light_for(cp_config::Theme::System, false));
+    }
 }
