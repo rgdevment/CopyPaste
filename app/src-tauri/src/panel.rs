@@ -1,4 +1,3 @@
-use crate::note::note;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_shell::ShellExt;
@@ -8,11 +7,16 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 pub struct Sidecar(Mutex<Option<CommandChild>>);
 
 pub fn raise<R: Runtime>(app: &AppHandle<R>) {
-    app.manage(Sidecar::default());
-    match light(app) {
-        Ok(()) => note("el panel queda esperando en segundo plano"),
-        Err(why) => note(&format!("el panel no arrancó: {why}")),
+    #[cfg(target_os = "windows")]
+    {
+        app.manage(Sidecar::default());
+        match light(app) {
+            Ok(()) => crate::note::note("el panel queda esperando en segundo plano"),
+            Err(why) => crate::note::note(&format!("el panel no arrancó: {why}")),
+        }
     }
+    #[cfg(not(target_os = "windows"))]
+    let _ = app;
 }
 
 pub fn show<R: Runtime>(app: &AppHandle<R>) {
