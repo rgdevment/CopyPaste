@@ -1,0 +1,174 @@
+name: Feed
+
+# What a release checks the moment it publishes, checked again every day and again whenever a
+# release is touched by hand. A feed breaks between releases — an asset deleted, one replaced with
+# other bytes, a release retired, a branch force-pushed — and nothing else would notice until
+# somebody wondered why their CopyPaste had not changed in a month.
+on:
+  schedule:
+    - cron: "41 7 * * *"
+  release:
+    types: [unpublished, deleted]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  answers:
+    name: the feed answers what a copy would read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read it the way an installed copy does
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            sudo apt-get update -qq && sudo apt-get install -y -qq minisign && break
+            echo "minisign would not install (${attempt}/3)"
+            sleep $((attempt * 5))
+          done
+          command -v minisign
+          feed="https://raw.githubusercontent.com/${{ github.repository }}/manifest"
+
+          # The key every installed copy carries. Verifying against anything else would be
+          # verifying that the release signs itself, which it always does.
+          jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
+
+          # What GitHub calls the latest release is the one published most recently, which is not
+          # the highest version: a fix published for an older series after a newer one is out would
+          # be it. The feed follows the versions, so this has to as well.
+          # Only the series this feed answers for: 1.x asks GitHub directly and never reads it.
+          newest=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
+            -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' \
+            | sed 's/^v//' | grep -E '^[3-9][0-9]*\.' | sort -V | tail -1 || true)
+
+          if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+            -H "Cache-Control: no-cache" -o manifest.json "$feed/release-manifest.json"; then
+            echo "::error::the feed did not answer. Every copy out there is looking at nothing, \
+                  and will go on looking at nothing until the branch is put back."
+            exit 1
+          fi
+          if ! jq -e . manifest.json >/dev/null 2>&1; then
+            echo "::error::the feed answered with something that is not json"
+            cat manifest.json
+            exit 1
+          fi
+
+          said=$(jq -r '.latest // ""' manifest.json)
+
+          if [ -z "$newest" ] && [ "$said" != "0.0.0" ]; then
+            echo "::error::the feed announces «$said» and no release of that series is published"
+            exit 1
+          fi
+
+          # The seed, and only while nothing it answers for has been published. Tied to the
+          # releases rather than to the string, because a release that went out and failed to
+          # write the feed leaves it saying 0.0.0 too — which is the one moment this has to
+          # speak. The 1.x releases are not on this feed at all: that series asks GitHub
+          # directly and never reads this branch.
+          seeded=0
+          if [ "$said" = "0.0.0" ]; then
+            if [ -n "$newest" ]; then
+              echo "::error::the feed is still at its seed while $newest is published. The release \
+                    went out and the feed was never written, so nobody will be told about it."
+              exit 1
+            fi
+            echo "::notice::the feed is still at its seed; the stable channel announces nothing yet"
+            seeded=1
+          fi
+
+          if [ "$seeded" = 0 ]; then
+            echo "the feed says $said; the highest release is $newest"
+            if [ "$said" != "$newest" ]; then
+              echo "::error::the feed says «$said» and the highest release is «$newest». Every copy \
+                    out there is being told about a version that is not the one being published."
+              exit 1
+            fi
+          fi
+
+          # A channel is more than a version: it carries the address and the signature, and those
+          # are what decide whether an update announced can actually be taken. Checking that the
+          # installer answers 200 is not enough — an asset can be deleted and put back with other
+          # bytes, which answers 200 and fails on every machine in the world.
+          takes() {
+            local what="$1" expected="$2"
+            if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+              -H "Cache-Control: no-cache" -o channel.json "$feed/$what"; then
+              echo "::error::$what did not answer, so what is announced is an update nobody \
+                    can take"
+              return 1
+            fi
+            local version
+            version=$(jq -r '.version // ""' channel.json)
+            if [ "$version" != "$expected" ]; then
+              echo "::error::$what offers «$version» and the feed announces «$expected»"
+              return 1
+            fi
+
+            local names
+            names=$(jq -r '.platforms | keys[]' channel.json 2>/dev/null || true)
+            if [ -z "$names" ]; then
+              echo "::error::$what names no platform at all, so it offers nothing to anybody"
+              return 1
+            fi
+
+            local os url
+            for os in $names; do
+              url=$(jq -r --arg os "$os" '.platforms[$os].url' channel.json)
+              jq -r --arg os "$os" '.platforms[$os].signature' channel.json | base64 -d > one.sig
+              if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o one.bin "$url"; then
+                echo "::error::the installer for $os in $what does not answer: $url"
+                return 1
+              fi
+              if ! minisign -Vm one.bin -p feed.pub -x one.sig >/dev/null; then
+                echo "::error::the installer for $os in $what does not verify against the key \
+                      every installed copy carries. It answers, and it cannot be installed: $url"
+                return 1
+              fi
+              echo "  $os verifies"
+            done
+          }
+
+          if [ "$seeded" = 0 ]; then
+            echo "the stable channel:"
+            takes latest.json "$said"
+          fi
+
+          # The candidates' channel exists only between a candidate and the stable release that
+          # retires it, and that release deletes the evidence along with the file. Unwatched,
+          # anything that happens to a candidate is invisible for its whole life.
+          ahead=$(jq -r '.latestPrerelease // ""' manifest.json)
+          if [ -n "$ahead" ]; then
+            echo "the candidates' channel, announcing $ahead:"
+            takes candidate.json "$ahead"
+          elif curl -fsSL -H "Cache-Control: no-cache" -o /dev/null \
+            "$feed/candidate.json" 2>/dev/null; then
+            echo "::error::candidate.json is still being served and the feed announces no \
+                  candidate. A copy that remembers one would be sent to a version nobody is \
+                  publishing any more."
+            exit 1
+          else
+            echo "no candidate is announced, and none is served"
+          fi
+
+      # The branch is the feed and nothing else. Cut with `checkout -B` instead of `--orphan` it
+      # carries a copy of the whole source, and that copy would sit there ageing unnoticed.
+      - name: The branch holds only the feed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          held=$(gh api "repos/${{ github.repository }}/contents?ref=manifest" -q '.[].name' | sort)
+          allowed=$(printf '%s\n' candidate.json latest.json release-manifest.json | sort)
+          extra=$(comm -23 <(echo "$held") <(echo "$allowed"))
+          if [ -n "$extra" ]; then
+            echo "::error::the manifest branch carries files that are not the feed: \
+                  $(echo "$extra" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "the branch holds only: $(echo "$held" | tr '\n' ' ')"

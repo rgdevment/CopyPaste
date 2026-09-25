@@ -1,0 +1,1425 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build. Publishes nothing."
+        required: false
+        default: "0.0.0-dispatch"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  BUILD_MACOS: "false"
+
+jobs:
+  gate:
+    name: Style and prose
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+      - run: npm ci
+      - run: npm run lint:md
+      - name: Frontend style
+        working-directory: app
+        run: |
+          npm ci
+          npm run lint
+
+  tested:
+    name: Tested when it landed
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: This commit was tested when it landed
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in $(seq 1 40); do
+            if ! said=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --event push \
+              --limit 1 --json status,conclusion \
+              --jq 'if length == 0 then "" else .[0] | "\(.status) \(.conclusion)" end' \
+              2>"$RUNNER_TEMP/gh.err"); then
+              echo "::error::the run history could not be read: $(cat "$RUNNER_TEMP/gh.err")"
+              exit 1
+            fi
+            case "$said" in
+              "completed success")
+                echo "the commit this tag names passed CI on main"
+                exit 0
+                ;;
+              "completed "*)
+                echo "::error::CI on ${GITHUB_SHA:0:8} ended ${said#completed }, so this tag is \
+                  not a release"
+                exit 1
+                ;;
+              "")
+                echo "no CI run for ${GITHUB_SHA:0:8} yet (${attempt}/40)"
+                sleep 30
+                ;;
+              *)
+                echo "CI on ${GITHUB_SHA:0:8} is still running (${attempt}/40)"
+                sleep 30
+                ;;
+            esac
+          done
+          echo "::error::twenty minutes and CI on ${GITHUB_SHA:0:8} has not finished, or never \
+            ran: a tag belongs on a commit that reached main and was tested there"
+          exit 1
+
+  rust:
+    name: fmt + clippy
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: workspace
+          save-if: false
+      - uses: ./.github/actions/sidecar
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets
+
+  version:
+    name: Resolve the version
+    needs: [gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
+      macos: ${{ steps.resolve.outputs.macos }}
+    env:
+      HAS_P12: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+      HAS_P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD != '' }}
+      HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
+      HAS_APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD != '' }}
+      HAS_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID != '' }}
+      HAS_APPLE_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY != '' }}
+      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
+      HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
+      HAS_PFX_PASSWORD: ${{ secrets.PFX_PASSWORD != '' }}
+    steps:
+      - name: Signing secrets come in pairs
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+
+          if [ "$HAS_PFX" = "true" ] && [ "$HAS_PFX_PASSWORD" != "true" ]; then
+            fail "PFX_BASE64 is set but PFX_PASSWORD is empty"
+          fi
+          if [ "$HAS_P12" = "true" ] && [ "$HAS_P12_PASSWORD" != "true" ]; then
+            fail "MACOS_CERTIFICATE_P12 is set but MACOS_CERTIFICATE_PASSWORD is empty"
+          fi
+          if [ "$HAS_APPLE_ID" = "true" ] &&
+            { [ "$HAS_APPLE_APP_PASSWORD" != "true" ] || [ "$HAS_APPLE_TEAM_ID" != "true" ]; }; then
+            fail "APPLE_ID is set but APPLE_APP_PASSWORD or APPLE_TEAM_ID is empty"
+          fi
+          if [ "$HAS_P12" = "true" ] && [ "$HAS_APPLE_IDENTITY" != "true" ]; then
+            fail "MACOS_CERTIFICATE_P12 is set but APPLE_SIGNING_IDENTITY is empty: the app would be bundled unsigned"
+          fi
+          if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$HAS_UPDATER_PASSWORD" != "true" ]; then
+            echo "::notice::the updater key carries no password; that is fine if it was made without one"
+          fi
+          if [ "$HAS_UPDATER_KEY" != "true" ]; then
+            echo "::warning::no updater key; this release cannot be installed by an existing copy"
+          fi
+
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            missing=""
+            want() { [ "$2" = "true" ] || missing="$missing $1"; }
+            want TAURI_SIGNING_PRIVATE_KEY "$HAS_UPDATER_KEY"
+            want PFX_BASE64 "$HAS_PFX"
+            want PFX_PASSWORD "$HAS_PFX_PASSWORD"
+            if [ "$BUILD_MACOS" = "true" ]; then
+              want MACOS_CERTIFICATE_P12 "$HAS_P12"
+              want MACOS_CERTIFICATE_PASSWORD "$HAS_P12_PASSWORD"
+              want APPLE_SIGNING_IDENTITY "$HAS_APPLE_IDENTITY"
+              want APPLE_ID "$HAS_APPLE_ID"
+              want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
+              want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
+            fi
+            [ -z "$missing" ] || fail "this tag would be released without:$missing"
+          fi
+
+          echo "signing secrets are coherent"
+
+      - id: resolve
+        env:
+          ASKED_FOR: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF" =~ ^refs/tags/v(.+)$ ]]; then
+            version="${BASH_REMATCH[1]}"
+          else
+            version="$ASKED_FOR"
+          fi
+
+          strict='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+          strict+='(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
+          strict+='(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?$'
+          if [[ ! "$version" =~ $strict ]]; then
+            echo "::error::«$version» is not a version semver reads (1.2.3 or 1.2.3-rc.1)"
+            exit 1
+          fi
+
+          if [[ "$version" =~ -rc[0-9]{2,} ]]; then
+            echo "::error::«$version» has to be written rc.${BASH_REMATCH[0]#-rc}: past rc9, \
+          semver reads rc10 as older than rc2"
+            exit 1
+          fi
+
+          prerelease=false
+          if [[ "$version" == *-* ]]; then
+            prerelease=true
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "macos=${BUILD_MACOS}" >> "$GITHUB_OUTPUT"
+          echo "version $version (pre-release: $prerelease)"
+
+  bundle-windows:
+    name: copypaste-windows-installer
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 60
+    outputs:
+      stage: ${{ steps.stage.outputs.sha }}
+    env:
+      TARGET: x86_64-pc-windows-msvc
+      HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
+      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/prepare
+        with:
+          version: ${{ needs.version.outputs.version }}
+          targets: ${{ env.TARGET }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Frontend
+        working-directory: app
+        run: npm ci
+
+      - uses: ./.github/actions/sidecar
+        with:
+          profile: release
+
+      - name: Teach the bundler to sign what it packs
+        if: env.HAS_PFX == 'true'
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "bundler.pfx"
+          Set-Content -Path $pfx -Value ([Convert]::FromBase64String($env:PFX_BASE64)) -AsByteStream
+          try {
+            $said = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
+            $cert = @(Import-PfxCertificate -FilePath $pfx `
+              -CertStoreLocation Cert:\CurrentUser\My -Password $said)[0]
+          } finally {
+            Remove-Item $pfx -ErrorAction SilentlyContinue
+          }
+
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" `
+            -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -match "x64" } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { Write-Error "signtool not found"; exit 1 }
+
+          @{ bundle = @{ windows = @{ signCommand = @{
+            cmd = $signtool.FullName
+            args = @("sign", "/sha1", $cert.Thumbprint, "/fd", "sha256",
+              "/tr", "http://timestamp.digicert.com", "/td", "sha256", "%1")
+          } } } } | ConvertTo-Json -Depth 8 | Set-Content -Path app/sign.json -Encoding utf8
+          "CERT_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "the bundler signs with $($cert.Thumbprint)"
+
+      - name: Bundle
+        working-directory: app
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          sign=""
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then sign="--no-sign"; fi
+          packs=""
+          if [ -f sign.json ]; then packs="--config sign.json"; fi
+          npm run tauri build -- --bundles nsis $sign $packs
+
+      - name: The installer carries both binaries
+        shell: bash
+        run: |
+          setup=$(ls target/release/bundle/nsis/*-setup.exe 2>/dev/null | head -1) || true
+          if [ -z "$setup" ]; then
+            echo "::error::the bundler produced no installer"
+            exit 1
+          fi
+          script=$(ls target/release/nsis/*/installer.nsi | head -1)
+          if [ -z "$script" ] || ! grep -q 'oname=cp-panel.exe' "$script"; then
+            echo "::error::the generated installer script does not lay down the panel; the sidecar was not bundled"
+            exit 1
+          fi
+          echo "the installer lays down the panel"
+
+      - name: Set the binaries aside for the MSIX
+        shell: bash
+        run: |
+          mkdir -p stage
+          cp target/release/CopyPaste.exe stage/
+          cp target/release/cp-panel.exe stage/
+
+      - name: Sign what the MSIX will carry
+        if: env.HAS_PFX == 'true'
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" `
+            -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -like "*x64*" } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { Write-Error "signtool not found"; exit 1 }
+
+          & $signtool.FullName sign /sha1 $env:CERT_THUMBPRINT /fd sha256 `
+            /tr http://timestamp.digicert.com /td sha256 `
+            stage/CopyPaste.exe stage/cp-panel.exe
+          if ($LASTEXITCODE -ne 0) { Write-Error "signing failed"; exit 1 }
+
+      - name: What the installer will put on disk is signed
+        if: env.HAS_PFX == 'true'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Path "target/release/bundle/nsis" -Filter "*-setup.exe" |
+            Select-Object -First 1
+          if (-not $setup) { Write-Error "no installer to open"; exit 1 }
+
+          $seven = @(
+            "C:\Program Files\7-Zip\7z.exe",
+            "C:\Program Files (x86)\7-Zip\7z.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $seven) {
+            $seven = (Get-Command 7z, 7za -ErrorAction SilentlyContinue |
+              Select-Object -First 1).Source
+          }
+          if (-not $seven) { Write-Error "no 7-Zip to open the installer with"; exit 1 }
+
+          $peek = Join-Path $env:RUNNER_TEMP "peek"
+          & $seven x $setup.FullName "-o$peek" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Error "the installer could not be opened"; exit 1 }
+
+          $mine = Get-ChildItem -Path $peek -Recurse -File |
+            Where-Object { $_.Extension -in ".exe", ".dll" -and $_.FullName -notmatch [regex]::Escape('$PLUGINSDIR') }
+          if (-not $mine) { Write-Error "the installer holds nothing to run"; exit 1 }
+
+          $status = 0
+          foreach ($one in $mine) {
+            $where = $one.FullName.Substring($peek.Length).TrimStart("\\")
+            $sig = Get-AuthenticodeSignature $one.FullName
+            if (-not $sig.SignerCertificate) {
+              Write-Error "$where goes out unsigned"
+              $status = 1
+            } elseif ($sig.SignerCertificate.Thumbprint -ne $env:CERT_THUMBPRINT) {
+              Write-Error "$where is signed by $($sig.SignerCertificate.Subject), which is not this build's certificate"
+              $status = 1
+            } elseif (-not $sig.TimeStamperCertificate) {
+              Write-Error "$where is signed without a timestamp, so it dies with the certificate"
+              $status = 1
+            } else {
+              Write-Host "$where <- $($sig.SignerCertificate.Subject)"
+            }
+          }
+          exit $status
+
+      - name: What the MSIX job must find unchanged
+        id: stage
+        shell: bash
+        run: |
+          echo "sha=$(cat stage/CopyPaste.exe stage/cp-panel.exe | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: stage-windows
+          path: stage
+          retention-days: 5
+          if-no-files-found: error
+
+      - name: Sign the installer
+        if: env.HAS_PFX == 'true'
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" `
+            -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -like "*x64*" } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { Write-Error "signtool not found"; exit 1 }
+
+          $setup = Get-ChildItem -Path "target/release/bundle/nsis" -Filter "*-setup.exe" |
+            Select-Object -First 1
+          if (-not $setup) { Write-Error "no installer to sign"; exit 1 }
+
+          & $signtool.FullName sign /sha1 $env:CERT_THUMBPRINT /fd sha256 `
+            /tr http://timestamp.digicert.com /td sha256 $setup.FullName
+          if ($LASTEXITCODE -ne 0) { Write-Error "signing failed"; exit 1 }
+
+          $sig = Get-AuthenticodeSignature $setup.FullName
+          if (-not $sig.TimeStamperCertificate) {
+            Write-Error "no timestamp: the signature would die with the certificate"; exit 1
+          }
+          if ($sig.SignerCertificate.Thumbprint -ne $env:CERT_THUMBPRINT) {
+            Write-Error "the installer was signed by $($sig.SignerCertificate.Subject), not by this build's certificate"; exit 1
+          }
+          Write-Host "status: $($sig.Status)"
+
+      - name: Name it after the release
+        shell: bash
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          mkdir -p dist
+          setup=$(ls target/release/bundle/nsis/*-setup.exe 2>/dev/null | head -1) || true
+          if [ -z "$setup" ]; then
+            echo "::error::the bundler produced no installer"
+            exit 1
+          fi
+          cp "$setup" "dist/copypaste-installer-$v-windows-x86_64.exe"
+          ls -l dist
+
+      - name: Sign it for the updater
+        if: env.HAS_UPDATER_KEY == 'true'
+        working-directory: app
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          exe="../dist/copypaste-installer-$v-windows-x86_64.exe"
+          rm -f "$exe.sig"
+          npm run tauri -- signer sign "$exe"
+          test -s "$exe.sig" || { echo "::error::no updater signature was written"; exit 1; }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bundle-windows
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
+
+  bundle-macos:
+    name: copypaste-macos-installer (${{ matrix.arch }})
+    needs: version
+    if: needs.version.outputs.macos == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            arch: aarch64
+          - target: x86_64-apple-darwin
+            arch: x86_64
+    env:
+      TARGET: ${{ matrix.target }}
+      ARCH: ${{ matrix.arch }}
+      HAS_P12: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+      HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
+      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/prepare
+        with:
+          version: ${{ needs.version.outputs.version }}
+          targets: ${{ matrix.target }}
+          cache-key: ${{ matrix.target }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Frontend
+        working-directory: app
+        run: npm ci
+
+      - name: One deployment target for the panel and the app
+        run: |
+          floor=$(jq -r '.bundle.macOS.minimumSystemVersion' app/src-tauri/tauri.conf.json)
+          echo "MACOSX_DEPLOYMENT_TARGET=$floor" >> "$GITHUB_ENV"
+
+      - uses: ./.github/actions/sidecar
+        with:
+          profile: release
+          target: ${{ matrix.target }}
+
+      - name: Import signing certificate
+        if: env.HAS_P12 == 'true'
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          rm -f "$CERT_PATH"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: app
+        run: npm run tauri build -- --target "$TARGET" --no-bundle
+
+      - name: Sign the settings binary
+        if: env.HAS_P12 == 'true'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          bin="target/$TARGET/release/CopyPaste"
+          codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$bin"
+          codesign --verify --strict --verbose "$bin"
+
+      - name: Bundle
+        working-directory: app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          sign=""
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then sign="--no-sign"; fi
+          npm run tauri bundle -- --target "$TARGET" --bundles app,dmg $sign
+
+      - name: It carries the panel, on one chip
+        run: |
+          app="target/$TARGET/release/bundle/macos/CopyPaste.app"
+          plist="$app/Contents/Info.plist"
+          test -d "$app" || { echo "::error::the bundler produced no app"; exit 1; }
+          status=0
+          want() {
+            if [ "$(plutil -extract "$1" raw -o - "$plist" 2>/dev/null)" != "$2" ]; then
+              echo "::error::$1 is «$(plutil -extract "$1" raw -o - "$plist" 2>/dev/null)», not «$2»"
+              status=1
+            fi
+          }
+          want CFBundleExecutable CopyPaste
+          want CFBundleIdentifier com.rgdevment.copypaste
+          want CFBundleShortVersionString "${{ needs.version.outputs.version }}"
+          chip=x86_64; [ "$ARCH" = aarch64 ] && chip=arm64
+          for one in cp-panel CopyPaste; do
+            bin="$app/Contents/MacOS/$one"
+            test -x "$bin" || { echo "::error::$one is not in the bundle"; status=1; continue; }
+            archs=$(lipo -archs "$bin")
+            if [ "$archs" != "$chip" ]; then
+              echo "::error::$one is «$archs», not $chip alone"
+              status=1
+            fi
+            echo "$one: $archs"
+          done
+          exit $status
+
+      - name: The app is really signed
+        if: env.HAS_P12 == 'true'
+        run: |
+          app="target/$TARGET/release/bundle/macos/CopyPaste.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          if codesign -dv "$app" 2>&1 | grep -q "Signature=adhoc"; then
+            echo "::error::$app came out ad-hoc signed; notarisation would refuse it"
+            exit 1
+          fi
+
+      - name: Notarize
+        if: env.HAS_APPLE_ID == 'true' && env.HAS_P12 == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          dmg=$(ls target/$TARGET/release/bundle/dmg/*.dmg | head -1)
+          xcrun notarytool submit "$dmg" \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" --wait --timeout 900
+          xcrun stapler staple "$dmg"
+
+      - name: Staple the app itself, and tar it again
+        if: env.HAS_APPLE_ID == 'true' && env.HAS_P12 == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          out="target/$TARGET/release/bundle/macos"
+          app="$out/CopyPaste.app"
+
+          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/app.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/app.zip" \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" --wait --timeout 900
+          xcrun stapler staple "$app"
+          xcrun stapler validate "$app"
+
+          rm -f "$out"/*.app.tar.gz "$out"/*.app.tar.gz.sig
+          COPYFILE_DISABLE=1 tar --no-xattrs -czf "$out/CopyPaste.app.tar.gz" -C "$out" CopyPaste.app
+
+          rm -rf "$RUNNER_TEMP/rt" && mkdir -p "$RUNNER_TEMP/rt"
+          tar -xzf "$out/CopyPaste.app.tar.gz" -C "$RUNNER_TEMP/rt"
+          codesign --verify --deep --strict "$RUNNER_TEMP/rt/CopyPaste.app"
+          xcrun stapler validate "$RUNNER_TEMP/rt/CopyPaste.app"
+
+      - name: Sign it for the updater
+        if: env.HAS_UPDATER_KEY == 'true' && env.HAS_APPLE_ID == 'true'
+        working-directory: app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          out="../target/$TARGET/release/bundle/macos"
+          npm run tauri -- signer sign "$out/CopyPaste.app.tar.gz"
+          test -s "$out/CopyPaste.app.tar.gz.sig"
+
+      - name: Name it after the release
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          mkdir -p dist
+          out="target/$TARGET/release/bundle/macos"
+          app="$out/CopyPaste.app"
+          if xcrun stapler validate "$app" >/dev/null 2>&1 \
+            && [ -s "$out/CopyPaste.app.tar.gz.sig" ]; then
+            cp "$out/CopyPaste.app.tar.gz" "dist/copypaste-$v-macos-$ARCH.app.tar.gz"
+            cp "$out/CopyPaste.app.tar.gz.sig" "dist/copypaste-$v-macos-$ARCH.app.tar.gz.sig"
+          else
+            echo "::warning::no stapled, signed tarball; macOS $ARCH gets no self-update this release"
+            rm -f "$out/CopyPaste.app.tar.gz" "$out/CopyPaste.app.tar.gz.sig"
+          fi
+          dmg=$(ls target/$TARGET/release/bundle/dmg/*.dmg 2>/dev/null | head -1) || true
+          if [ -z "$dmg" ]; then
+            echo "::error::the bundler produced no disk image"
+            exit 1
+          fi
+          cp "$dmg" "dist/copypaste-installer-$v-macos-$ARCH.dmg"
+          ls -l dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bundle-macos-${{ matrix.arch }}
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Cleanup keychain
+        if: always() && env.KEYCHAIN_PATH != ''
+        run: security delete-keychain "$KEYCHAIN_PATH" || true
+
+  bundle-msix:
+    name: copypaste-windows-msix
+    needs: [version, bundle-windows]
+    if: needs.version.outputs.prerelease == 'false'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    outputs:
+      made: ${{ steps.gate.outputs.go }}
+    env:
+      MSIX_IDENTITY: ${{ vars.MSIX_IDENTITY }}
+      MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+      MSIX_PUBLISHER_DISPLAY: ${{ vars.MSIX_PUBLISHER_DISPLAY }}
+    steps:
+      - name: Nothing to build without a reserved identity
+        id: gate
+        shell: bash
+        run: |
+          if [ -z "$MSIX_IDENTITY" ] || [ -z "$MSIX_PUBLISHER" ]; then
+            echo "::notice::MSIX_IDENTITY or MSIX_PUBLISHER not set; no MSIX this run"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.go == 'yes'
+
+      - uses: actions/download-artifact@v8
+        if: steps.gate.outputs.go == 'yes'
+        with:
+          name: stage-windows
+          path: msix
+
+      - name: Lay the package out
+        if: steps.gate.outputs.go == 'yes'
+        shell: bash
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          export QUAD="${v%%-*}.0"
+
+          test -s msix/CopyPaste.exe
+          test -s msix/cp-panel.exe
+          test "$(cat msix/CopyPaste.exe msix/cp-panel.exe | sha256sum | cut -d' ' -f1)" \
+            = "${{ needs.bundle-windows.outputs.stage }}"
+
+          mkdir -p msix/Assets
+          for logo in StoreLogo Square44x44Logo Square71x71Logo Square150x150Logo; do
+            cp "app/src-tauri/icons/$logo.png" "msix/Assets/$logo.png"
+          done
+
+          python scripts/fill_manifest.py app/src-tauri/msix/AppxManifest.xml.in msix/AppxManifest.xml
+
+          if grep -q "@[A-Z_]*@" msix/AppxManifest.xml; then
+            echo "::error::a placeholder survived the manifest"
+            exit 1
+          fi
+
+      - name: Pack
+        if: steps.gate.outputs.go == 'yes'
+        shell: pwsh
+        run: |
+          $sdk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory |
+            Where-Object {
+              (Test-Path "$($_.FullName)\x64\makeappx.exe") -and (Test-Path "$($_.FullName)\x64\makepri.exe")
+            } |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) { Write-Host "::error::no Windows SDK with makeappx and makepri"; exit 1 }
+
+          $v = "${{ needs.version.outputs.version }}"
+          New-Item -ItemType Directory -Force dist | Out-Null
+
+          & "$($sdk.FullName)\x64\makepri.exe" createconfig /cf priconfig.xml /dq en-US_es-ES /o
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::makepri would not write a config"; exit 1 }
+          & "$($sdk.FullName)\x64\makepri.exe" new /pr msix /cf priconfig.xml /of msix/resources.pri /o
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::makepri would not index the package"; exit 1 }
+
+          & "$($sdk.FullName)\x64\makeappx.exe" pack /d msix /p "dist/copypaste-$v-windows-x64.msix" /o
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::makeappx refused the package"; exit 1 }
+          Get-ChildItem dist
+
+      - name: It went in under the identity 1.x shipped with
+        if: steps.gate.outputs.go == 'yes'
+        shell: pwsh
+        run: |
+          $sdk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory |
+            Where-Object { Test-Path "$($_.FullName)\x64\makeappx.exe" } |
+            Sort-Object Name -Descending | Select-Object -First 1
+          $v = "${{ needs.version.outputs.version }}"
+          $out = "$env:RUNNER_TEMP\unpacked"
+          & "$($sdk.FullName)\x64\makeappx.exe" unpack /p "dist/copypaste-$v-windows-x64.msix" /d $out /o | Out-Null
+
+          [xml]$m = Get-Content "$out\AppxManifest.xml"
+          $said = $m.Package.Identity.Name
+          $quad = ($v -split '-')[0] + '.0'
+          Write-Host "identity: $said   version: $($m.Package.Identity.Version)"
+
+          $was = "rgdevment.CopyPaste-BrowserPicker"
+          if ($said -ne $was) {
+            Write-Host "::error::the package went in as $said. 1.x shipped as $was, and under any other name nobody who has it installed is offered this."; exit 1
+          }
+          if ($m.Package.Identity.Version -ne $quad) {
+            Write-Host "::error::the package says $($m.Package.Identity.Version) and the tag says $quad"; exit 1
+          }
+          $exe = $m.Package.Applications.Application.Executable
+          if ($exe -ne "cp-panel.exe") {
+            Write-Host "::error::the package launches $exe, which is not what the shell runs for a link"; exit 1
+          }
+
+      - uses: actions/upload-artifact@v7
+        if: steps.gate.outputs.go == 'yes'
+        with:
+          name: bundle-msix
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: GitHub Release
+    needs: [rust, tested, version, bundle-windows, bundle-macos, bundle-msix]
+    if: >-
+      !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      && needs.rust.result == 'success' && needs.tested.result == 'success'
+      && needs.version.result == 'success'
+      && needs.bundle-windows.result == 'success'
+      && (needs.bundle-macos.result == 'success' || needs.bundle-macos.result == 'skipped')
+      && (needs.bundle-msix.result == 'success' || needs.bundle-msix.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: release-publish-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bundle-*
+          path: dist
+          merge-multiple: true
+
+      - name: Gather
+        run: |
+          rm -f dist/*.msix
+          ls -l dist
+
+      - name: Everything that should be here, is
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          status=0
+          want="dist/copypaste-installer-$v-windows-x86_64.exe"
+          if [ "${BUILD_MACOS}" = "true" ]; then
+            for arch in aarch64 x86_64; do
+              want="$want dist/copypaste-$v-macos-$arch.app.tar.gz"
+              if [ ! -s "dist/copypaste-installer-$v-macos-$arch.dmg" ]; then
+                echo "::error::the macOS $arch disk image is missing"
+                status=1
+              fi
+            done
+          fi
+          for one in $want; do
+            if [ ! -s "$one" ]; then
+              echo "::error::$one is missing or empty"
+              status=1
+            fi
+            if [ ! -s "$one.sig" ]; then
+              echo "::error::$one.sig is missing; the release would offer an update nobody can take"
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: The signature answers to the key this build ships
+        run: |
+          for attempt in 1 2 3; do
+            sudo apt-get update -qq && sudo apt-get install -y -qq minisign && break
+            echo "minisign would not install (${attempt}/3)"
+            sleep $((attempt * 5))
+          done
+          command -v minisign
+          v="${{ needs.version.outputs.version }}"
+
+          jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
+          for one in "dist/copypaste-installer-$v-windows-x86_64.exe" \
+                     "dist/copypaste-$v-macos-aarch64.app.tar.gz" \
+                     "dist/copypaste-$v-macos-x86_64.app.tar.gz"; do
+            [ -s "$one" ] || continue
+            base64 -d < "$one.sig" > one.minisig
+            if ! minisign -Vm "$one" -p feed.pub -x one.minisig; then
+              echo "::error::$one was signed with a key that is not the one in \
+          tauri.conf.json. Every copy built from this tree carries that public key, so nothing \
+          could ever verify this update. Nothing was published."
+              exit 1
+            fi
+          done
+          rm -f feed.pub one.minisig
+          echo "the signatures and the shipped key are halves of the same pair"
+
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: dist/copypaste-*,dist/SHA256SUMS
+
+      - name: Notes from the tag
+        id: notes
+        run: |
+          body=$(git tag -l --format='%(contents:subject)%0a%0a%(contents:body)' "${GITHUB_REF_NAME}" \
+            | sed '/-----BEGIN SSH SIGNATURE-----/,$d' \
+            | sed -e :a -e '/^\n*$/{$d;N;ba}')
+          edge="LU_EOF_$(openssl rand -hex 8)"
+          {
+            echo "body<<$edge"
+            echo "$body"
+            echo "$edge"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: The feed does not walk backwards
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          if ! git fetch origin manifest --depth 1 2>/dev/null; then
+            if git ls-remote --exit-code --heads origin manifest >/dev/null 2>&1; then
+              echo "::error::the feed exists and could not be read, so it cannot be checked"
+              exit 1
+            fi
+            echo "no feed yet"
+            exit 0
+          fi
+          feed=$(git show FETCH_HEAD:release-manifest.json 2>/dev/null || echo '{}')
+          if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
+            was=$(jq -r '.latestPrerelease // ""' <<< "$feed"); track="candidates"
+          else
+            was=$(jq -r '.latest // ""' <<< "$feed"); track="stable"
+          fi
+          if [ -n "$was" ] && [ "$was" != "$v" ] \
+             && [ "$(printf '%s\n%s\n' "$was" "$v" | sort -V | tail -1)" != "$v" ]; then
+            echo "::error::the $track feed already says $was; publishing $v would hand everybody \
+                  a version they left behind"
+            exit 1
+          fi
+          echo "the $track feed says «${was:-nothing}»; $v may follow"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTES: ${{ steps.notes.outputs.body }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
+
+          tags=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
+          if ! grep -qx "$tag" <<< "$tags"; then
+            gh release create "$tag" --draft --verify-tag --title "$tag" \
+              --prerelease="$PRERELEASE" --generate-notes --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+
+          state=$(gh release view "$tag" --json isDraft,assets)
+          draft=$(jq -r .isDraft <<< "$state")
+          for f in dist/*; do
+            name=$(basename "$f")
+            have=$(jq -r --arg n "$name" '.assets[] | select(.name == $n) | .digest // ""' <<< "$state")
+            want="sha256:$(sha256sum "$f" | cut -d' ' -f1)"
+            if [ "$have" = "$want" ]; then
+              echo "$name is already up, same bytes"
+              continue
+            fi
+            if [ "$draft" = false ] && [ -n "$have" ]; then
+              echo "::error::$name is published with other bytes; this run would replace a live \
+                file. Rerun only the failed jobs, or delete the release and let it be made again."
+              exit 1
+            fi
+            secs=$((180 + $(stat -c %s "$f") / 50000))
+            for attempt in 1 2 3; do
+              began=$(date +%s)
+              if timeout "$secs" gh release upload "$tag" "$f" --clobber; then
+                echo "$name is up in $(( $(date +%s) - began ))s"
+                break
+              fi
+              if [ "$attempt" = 3 ]; then
+                echo "::error::$name never made it up; the release stays a draft"
+                exit 1
+              fi
+              echo "::warning::$name stalled after ${secs}s (${attempt}/3)"
+              sleep $((attempt * 10))
+            done
+          done
+
+          have=$(gh release view "$tag" --json assets -q '.assets[].name' | sort)
+          want=$(ls dist | sort)
+          missing=$(comm -23 <(echo "$want") <(echo "$have"))
+          if [ -n "$missing" ]; then
+            echo "::error::the release is missing files this run built; it stays a draft"
+            echo "$missing"
+            exit 1
+          fi
+          spare=$(comm -13 <(echo "$want") <(echo "$have"))
+          if [ -n "$spare" ]; then
+            echo "::warning::the release carries files this run did not build:"
+            echo "$spare"
+          fi
+
+          latest=false; [ "$PRERELEASE" = "false" ] && latest=true
+          gh release edit "$tag" --draft=false --latest="$latest"
+
+      - name: The feed
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          base="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          win="copypaste-installer-$v-windows-x86_64.exe"
+          arm="copypaste-$v-macos-aarch64.app.tar.gz"
+          intel="copypaste-$v-macos-x86_64.app.tar.gz"
+
+          if [ -s "dist/$win.sig" ]; then
+            ws=$(cat "dist/$win.sig")
+            as=$(cat "dist/$arm.sig" 2>/dev/null || true)
+            is=$(cat "dist/$intel.sig" 2>/dev/null || true)
+            if [ "${{ needs.version.outputs.macos }}" = "true" ] \
+               && { [ -z "$as" ] || [ -z "$is" ]; }; then
+              echo "::error::no updater signature for a Mac, so no Mac would be offered $v"
+              exit 1
+            fi
+            jq -n --arg v "$v" \
+                  --arg n "https://github.com/${{ github.repository }}/releases/tag/${GITHUB_REF_NAME}" \
+                  --arg wu "$base/$win" --arg ws "$ws" \
+                  --arg au "$base/$arm" --arg as "$as" \
+                  --arg iu "$base/$intel" --arg is "$is" \
+              '{version: $v, notes: $n, platforms:
+                 ({"windows-x86_64": {url: $wu, signature: $ws}}
+                  + (if $as == "" then {} else {"darwin-aarch64": {url: $au, signature: $as}} end)
+                  + (if $is == "" then {} else {"darwin-x86_64": {url: $iu, signature: $is}} end))}' \
+              > "$RUNNER_TEMP/channel.json"
+            cat "$RUNNER_TEMP/channel.json"
+          else
+            echo "::error::no updater signature for $v; the release would offer an update nobody can take"
+            exit 1
+          fi
+
+          if git fetch origin manifest --depth 1 2>/dev/null; then
+            git checkout -B manifest FETCH_HEAD
+          else
+            git checkout --orphan manifest
+            git rm -rq --cached . 2>/dev/null || true
+            rm -f release-manifest.json latest.json candidate.json
+          fi
+
+          if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
+            was=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
+            track="candidates"
+          else
+            was=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
+            track="stable"
+          fi
+          if [ -n "$was" ] && [ "$was" != "$v" ] \
+             && [ "$(printf '%s\n%s\n' "$was" "$v" | sort -V | tail -1)" != "$v" ]; then
+            echo "::error::the $track feed already says $was, and this run would set it back to \
+                  $v. Nothing was written."
+            exit 1
+          fi
+
+          latest=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
+          ahead=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
+          if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
+            jq -n --arg l "${latest:-0.0.0}" --arg c "$v" \
+              '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
+            cp "$RUNNER_TEMP/channel.json" candidate.json
+          else
+            keep=""
+            if [ -n "$ahead" ] \
+               && [ "$(printf '%s\n%s\n' "${ahead%%-*}" "$v" | sort -V | tail -1)" != "$v" ]; then
+              keep="$ahead"
+            fi
+            if [ -n "$keep" ]; then
+              jq -n --arg l "$v" --arg c "$keep" \
+                '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
+            else
+              jq -n --arg l "$v" '{schema: 1, latest: $l}' > release-manifest.json
+              rm -f candidate.json
+            fi
+            cp "$RUNNER_TEMP/channel.json" latest.json
+          fi
+          cat release-manifest.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for one in release-manifest.json latest.json candidate.json; do
+            git add -A -- "$one" 2>/dev/null || true
+          done
+          if git diff --cached --quiet; then
+            echo "already says $v"
+            exit 0
+          fi
+          git commit -m "chore: release manifest for $v"
+          for attempt in 1 2 3 4 5; do
+            if git push origin manifest; then
+              exit 0
+            fi
+            echo "the feed would not push (${attempt}/5)"
+            git fetch origin manifest || true
+            git rebase FETCH_HEAD || git rebase --abort || true
+            sleep $((attempt * 5))
+          done
+          echo "::error::the feed could not be pushed; the release is out and nothing announces it"
+          exit 1
+
+  verify:
+    name: The update is installable
+    needs: [version, publish]
+    if: >-
+      !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      && needs.version.result == 'success' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Take the update the way an installed copy would
+        run: |
+          for attempt in 1 2 3; do
+            sudo apt-get update -qq && sudo apt-get install -y -qq minisign && break
+            echo "minisign would not install (${attempt}/3)"
+            sleep $((attempt * 5))
+          done
+          command -v minisign
+          v="${{ needs.version.outputs.version }}"
+          file=latest.json
+          if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then file=candidate.json; fi
+          feed="https://raw.githubusercontent.com/${{ github.repository }}/manifest/$file"
+
+          said=""
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL -H "Cache-Control: no-cache" -o channel.json "$feed"; then
+              said=$(jq -r .version channel.json)
+              [ "$said" = "$v" ] && break
+            fi
+            echo "the channel still says «${said:-nothing}» (${attempt}/6)"
+            sleep $((attempt * 20))
+          done
+          if [ -s channel.json ]; then jq . channel.json; fi
+
+          ahead=$(jq -r .version channel.json 2>/dev/null || echo "")
+          if [ ! -s channel.json ] && [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
+            ahead=$(curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 \
+                      -H "Cache-Control: no-cache" \
+                      "https://raw.githubusercontent.com/${{ github.repository }}/manifest/latest.json" \
+                    | jq -r .version 2>/dev/null || echo "")
+          fi
+
+          overtaken=no
+          if printf "%s" "$ahead" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$"; then
+            mine=${v%%-*}
+            theirs=${ahead%%-*}
+            if [ "$theirs" != "$mine" ]; then
+              if [ "$(printf "%s\n%s\n" "$mine" "$theirs" | sort -V | tail -1)" = "$theirs" ]; then
+                overtaken=yes
+              fi
+            elif [ "$v" != "$mine" ] && [ "$ahead" = "$theirs" ]; then
+              overtaken=yes
+            elif [ "$v" != "$mine" ] && [ "$ahead" != "$theirs" ] \
+                 && [ "$(printf "%s\n%s\n" "$v" "$ahead" | sort -V | tail -1)" = "$ahead" ]; then
+              overtaken=yes
+            fi
+          fi
+
+          if [ "$said" != "$v" ] && [ "$overtaken" = "yes" ]; then
+            echo "::warning::the feed already carries $ahead, so $v was overtaken before it could be taken here. Its signatures were not checked by this run."
+            exit 0
+          fi
+
+          if [ "$said" != "$v" ]; then
+            echo "::error::$file says «${said:-nothing}», this release is $v"
+            exit 1
+          fi
+
+          jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
+
+          for os in $(jq -r '.platforms | keys[]' channel.json); do
+            url=$(jq -r --arg os "$os" '.platforms[$os].url' channel.json)
+            jq -r --arg os "$os" '.platforms[$os].signature' channel.json | base64 -d > one.sig
+
+            case "$url" in
+              "https://github.com/${{ github.repository }}/releases/download/v$v/"*) ;;
+              *) echo "::error::$os points at $url, which is not the v$v release"; exit 1 ;;
+            esac
+
+            curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o one.bin "$url"
+            if minisign -Vm one.bin -p feed.pub -x one.sig; then
+              echo "$os verifies"
+            else
+              echo "::error::$os does not verify against the key this build ships"
+              exit 1
+            fi
+          done
+
+  msstore:
+    name: Microsoft Store
+    needs: [version, publish, verify, bundle-msix]
+    if: >-
+      !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      && needs.version.result == 'success' && needs.publish.result == 'success'
+      && needs.verify.result == 'success'
+      && needs.bundle-msix.result == 'success'
+      && needs.version.outputs.prerelease == 'false'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    concurrency:
+      group: release-msstore-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      STORE_PUBLISH: ${{ vars.STORE_PUBLISH }}
+      STORE_APP_ID: ${{ vars.STORE_APP_ID }}
+      STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
+      STORE_SELLER_ID: ${{ secrets.STORE_SELLER_ID }}
+      STORE_CLIENT_ID: ${{ secrets.STORE_CLIENT_ID }}
+      STORE_CLIENT_SECRET: ${{ secrets.STORE_CLIENT_SECRET }}
+    steps:
+      - name: Nothing to submit without being asked
+        id: gate
+        shell: bash
+        run: |
+          if [ "$STORE_PUBLISH" != "true" ]; then
+            echo "::notice::STORE_PUBLISH is not true; the Store gets nothing until it is"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          elif [ "${{ needs.bundle-msix.outputs.made }}" != "yes" ]; then
+            echo "::notice::no MSIX was built this run; nothing to submit"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          elif [ -z "$STORE_APP_ID" ] || [ -z "$STORE_TENANT_ID" ] || [ -z "$STORE_SELLER_ID" ] \
+            || [ -z "$STORE_CLIENT_ID" ] || [ -z "$STORE_CLIENT_SECRET" ]; then
+            echo "::notice::the Store credentials are not all here; nothing to submit"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v8
+        if: steps.gate.outputs.go == 'yes'
+        with:
+          name: bundle-msix
+          path: dist
+
+      - uses: microsoft/microsoft-store-apppublisher@cc9910a8d59f2eb55cbb83df0a3800cf3b5300e0 # v1.4
+        if: steps.gate.outputs.go == 'yes'
+        with:
+          version: v0.4.2
+
+      - name: Submit
+        id: sent
+        if: steps.gate.outputs.go == 'yes'
+        shell: bash
+        run: |
+          msix=$(ls dist/*.msix 2>/dev/null | head -1) || true
+          if [ -z "$msix" ]; then
+            echo "::error::the artifact carried no package to submit"
+            exit 1
+          fi
+          msstore reconfigure \
+            --tenantId "$STORE_TENANT_ID" \
+            --sellerId "$STORE_SELLER_ID" \
+            --clientId "$STORE_CLIENT_ID" \
+            --clientSecret "$STORE_CLIENT_SECRET"
+          set +e
+          msstore publish "$msix" --appId "$STORE_APP_ID" 2>&1 | tee publish.log
+          code=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$code" -ne 0 ] && grep -q "CommitStarted" publish.log; then
+            echo "::warning::the Store took the submission and is processing it; the client lost \
+            the poll it was holding. Nothing here has to be sent again."
+            exit 0
+          fi
+          if [ "$code" -eq 0 ]; then
+            echo "submitted $msix; the listing is reviewed by people and appears when they say so"
+          fi
+          exit "$code"
+
+      - name: What the Store made of it
+        if: always() && steps.gate.outputs.go == 'yes' && steps.sent.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::publishing failed before the Store took the submission; asking what state it is in"
+          msstore submission status "$STORE_APP_ID" || true
+          echo "::error::the package reached the Store but no commit was confirmed. Read the status \
+          above before tagging again: a submission already committed must not be sent twice."
+
+  homebrew:
+    name: Homebrew tap
+    needs: [version, publish, verify]
+    if: >-
+      !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      && needs.version.result == 'success' && needs.publish.result == 'success'
+      && needs.verify.result == 'success'
+      && needs.version.outputs.macos == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: release-homebrew-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+    steps:
+      - name: Update the tap
+        if: env.GIST_TOKEN != ''
+        run: |
+          set -euo pipefail
+
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${{ needs.version.outputs.version }}"
+          BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+          DMG_ARM="copypaste-installer-${VERSION}-macos-aarch64.dmg"
+          DMG_INTEL="copypaste-installer-${VERSION}-macos-x86_64.dmg"
+
+          if [[ "$VERSION" == *-* ]]; then
+            CASK="copypaste-beta"; CASK_OTHER="copypaste"; SUFFIX=" (beta)"
+          else
+            CASK="copypaste"; CASK_OTHER="copypaste-beta"; SUFFIX=""
+          fi
+
+          fetch() {
+            for attempt in 1 2 3 4 5; do
+              if curl -fSL -o "/tmp/$1" "$BASE/$1" && [ -s "/tmp/$1" ]; then
+                return 0
+              fi
+              echo "$1 not downloadable yet (attempt ${attempt}/5)"
+              sleep $((attempt * 10))
+            done
+            echo "::error::could not download $1"
+            return 1
+          }
+          if ! fetch "$DMG_ARM" || ! fetch "$DMG_INTEL"; then
+            echo "::warning::a disk image is missing for ${VERSION}; leaving the cask as it is"
+            exit 0
+          fi
+          ARM_SHA=$(sha256sum "/tmp/$DMG_ARM" | awk '{print $1}')
+          INTEL_SHA=$(sha256sum "/tmp/$DMG_INTEL" | awk '{print $1}')
+
+          git clone https://github.com/rgdevment/homebrew-tap.git /tmp/tap
+          git -C /tmp/tap config --local http.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GIST_TOKEN" | base64 -w0)"
+          cd /tmp/tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p Casks
+
+          if [ -f "Casks/${CASK}.rb" ]; then
+            had=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${CASK}.rb" | head -1)
+            if [ -n "$had" ] && [ "$had" != "$VERSION" ] \
+               && [ "$(printf '%s\n%s\n' "$had" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
+              echo "::warning::the tap already offers ${had}; writing ${VERSION} would downgrade every Mac that runs brew upgrade"
+              exit 0
+            fi
+          fi
+
+          cat > "Casks/${CASK}.rb" <<-CASK
+          	cask "${CASK}" do
+          	  arch arm: "aarch64", intel: "x86_64"
+
+          	  version "${VERSION}"
+          	  sha256 arm:   "${ARM_SHA}",
+          	         intel: "${INTEL_SHA}"
+
+          	  url "${BASE}/copypaste-installer-${VERSION}-macos-#{arch}.dmg"
+          	  name "CopyPaste"
+          	  desc "Clipboard history that stays on your machine${SUFFIX}"
+          	  homepage "https://rgdevment.com/copypaste/"
+
+          	  auto_updates true
+
+          	  conflicts_with cask: "${CASK_OTHER}"
+          	  depends_on macos: :ventura
+
+          	  app "CopyPaste.app"
+
+          	  uninstall script: {
+          	              executable:   "#{appdir}/CopyPaste.app/Contents/MacOS/CopyPaste",
+          	              args:         ["--unregister"],
+          	              must_succeed: false,
+          	            },
+          	            quit:   "com.rgdevment.copypaste"
+
+          	  zap trash: [
+          	    "~/Library/Application Support/CopyPaste",
+          	    "~/Library/Preferences/com.rgdevment.copypaste.plist",
+          	    "~/Library/Preferences/com.rgdevment.copypaste.plist",
+          	    "~/Library/Saved Application State/com.rgdevment.copypaste.savedState",
+          	    "~/Library/Saved Application State/com.rgdevment.copypaste.savedState",
+          	  ]
+          	end
+          CASK
+
+          if [ "${{ needs.version.outputs.prerelease }}" = "false" ] \
+             && [ -f "Casks/${CASK_OTHER}.rb" ]; then
+            beta=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${CASK_OTHER}.rb" | head -1)
+            if [ -n "$beta" ] \
+               && [ "$(printf '%s\n%s\n' "${beta%%-*}" "$VERSION" | sort -V | tail -1)" \
+                    = "$VERSION" ]; then
+              git rm -q "Casks/${CASK_OTHER}.rb"
+              echo "retired Casks/${CASK_OTHER}.rb: it still offered $beta, and $VERSION passes it"
+            fi
+          fi
+
+          git add Casks
+          if git diff --cached --quiet; then
+            echo "tap already at ${VERSION}"
+            exit 0
+          fi
+          git commit -m "copypaste ${VERSION}"
+
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}/5); rebasing onto the concurrent release"
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "::error::the tap moved under this commit and it will not rebase cleanly"
+              exit 1
+            fi
+          done
+          echo "::error::could not push the tap after 5 attempts"
+          exit 1
+
+  winget:
+    name: Windows Package Manager
+    needs: [version, publish, verify]
+    if: >-
+      !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      && needs.version.result == 'success' && needs.publish.result == 'success'
+      && needs.verify.result == 'success'
+      && needs.version.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: release-winget-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      WINGET_PUBLISH: ${{ vars.WINGET_PUBLISH }}
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Is there anything to add a version to
+        id: gate
+        shell: bash
+        run: |
+          if [ "$WINGET_PUBLISH" != "true" ]; then
+            echo "::notice::WINGET_PUBLISH is not true; winget-pkgs gets nothing until it is"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          elif [ -z "$WINGET_TOKEN" ]; then
+            echo "::notice::no winget token; skipping"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the pull request that adds this version
+        if: steps.gate.outputs.go == 'yes'
+        uses: vedantmgoyal9/winget-releaser@4ffc7888bffd451b357355dc214d43bb9f23917e # v2
+        with:
+          identifier: rgdevment.CopyPaste
+          version: ${{ needs.version.outputs.version }}
+          release-tag: ${{ github.ref_name }}
+          installers-regex: 'copypaste-installer-.*-windows-x86_64\.exe$'
+          max-versions-to-keep: 5
+          fork-user: rgdevment-bot
+          token: ${{ secrets.WINGET_TOKEN }}
