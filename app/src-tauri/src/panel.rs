@@ -59,6 +59,7 @@ pub fn quit<R: Runtime>(app: &AppHandle<R>) {
 
 fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
     let (mut heard, child) = app.shell().sidecar("cp-panel")?.args(["--serve"]).spawn()?;
+    let whose = child.pid();
     if let Some(state) = app.try_state::<Sidecar>()
         && let Ok(mut held) = state.0.lock()
         && let Some(old) = held.replace(child)
@@ -69,7 +70,7 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
     tauri::async_runtime::spawn(async move {
         while let Some(event) = heard.recv().await {
             if let CommandEvent::Terminated(_) = event {
-                forget(&handle);
+                forget(&handle, whose);
                 break;
             }
         }
@@ -88,9 +89,10 @@ fn say<R: Runtime>(app: &AppHandle<R>, what: &str) -> Result<(), Said> {
     Ok(())
 }
 
-fn forget<R: Runtime>(app: &AppHandle<R>) {
+fn forget<R: Runtime>(app: &AppHandle<R>, whose: u32) {
     if let Some(state) = app.try_state::<Sidecar>()
         && let Ok(mut held) = state.0.lock()
+        && held.as_ref().is_some_and(|child| child.pid() == whose)
     {
         held.take();
     }

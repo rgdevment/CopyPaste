@@ -120,7 +120,7 @@ describe("la ventana", () => {
         : real?.(what, args)) as never);
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Historial" }));
-    const picked = (await screen.findByLabelText("Espacio para imágenes")) as HTMLSelectElement;
+    const picked = (await screen.findByLabelText("Espacio del historial")) as HTMLSelectElement;
     expect(picked.value).toBe("700");
     expect(screen.getByRole("option", { name: "700 MB" })).toBeDefined();
     vi.mocked(invoke).mockImplementation(real as never);

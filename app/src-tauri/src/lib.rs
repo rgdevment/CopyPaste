@@ -25,6 +25,7 @@ pub fn run() {
             relabel
         ])
         .setup(|app| {
+            settings::settle();
             let kept = settings::settings().ok();
             let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));
             if tray::raise(app.handle(), spanish).is_none() {

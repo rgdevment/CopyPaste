@@ -1150,7 +1150,10 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
             }
             match said.trim() {
                 "show" => {
-                    ahead.store(ahead_now(), Ordering::Relaxed);
+                    let in_front = ahead_now();
+                    if in_front != 0 {
+                        ahead.store(in_front, Ordering::Relaxed);
+                    }
                     let dressed = backdrop.clone();
                     let _ = ui.upgrade_in_event_loop(move |panel| {
                         if panel.show().is_err() {

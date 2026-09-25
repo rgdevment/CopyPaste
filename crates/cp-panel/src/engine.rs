@@ -86,7 +86,10 @@ fn errands(
             return None;
         }
     };
-    let thumbs = cp_win_sys::paths::thumbs_dir()?;
+    let Some(thumbs) = cp_win_sys::paths::thumbs_dir() else {
+        note("no hay dónde dejar las miniaturas");
+        return None;
+    };
     Some(std::thread::spawn(move || {
         let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
         while !stop.load(std::sync::atomic::Ordering::Relaxed) {
@@ -106,7 +109,11 @@ fn sweep(store: &Store) {
     let Some(dir) = cp_win_sys::paths::data_dir() else {
         return;
     };
-    let kept = match cp_config::read(&cp_config::at(&dir)) {
+    let path = cp_config::at(&dir);
+    if !path.exists() {
+        return;
+    }
+    let kept = match cp_config::read(&path) {
         Ok(kept) => kept,
         Err(why) => {
             note(&format!("no se pudo leer qué conservar: {why}"));
@@ -193,13 +200,26 @@ fn read_out(store: &Store, id: i64, at: i64) {
         done(store, id, "ocr");
         return;
     }
-    let found = store
-        .item(id)
-        .ok()
-        .flatten()
-        .as_ref()
-        .and_then(|item| cp_win::content::content_of(item, None).image.map(Vec::from))
-        .and_then(|image| cp_win_sys::ocr::text_in(&image));
+    let item = match store.item(id) {
+        Ok(Some(item)) => item,
+        Ok(None) => {
+            done(store, id, "ocr");
+            return;
+        }
+        Err(why) => {
+            give_up(
+                store,
+                id,
+                "ocr",
+                &format!("no se pudo leer para leerla: {why}"),
+                at,
+            );
+            return;
+        }
+    };
+    let found = cp_win::content::content_of(&item, None)
+        .image
+        .and_then(cp_win_sys::ocr::text_in);
     if let Some(text) = found
         && let Err(why) = store.set_ocr_text(id, &text, at)
     {
@@ -236,8 +256,10 @@ fn done(store: &Store, id: i64, job: &str) {
 
 #[cfg(target_os = "windows")]
 fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) {
-    if let Err(trouble) = store.work_failed(id, job, why, at + LATER) {
-        note(&format!("{id} sin anotar el fallo de {job}: {trouble}"));
+    match store.work_failed(id, job, why, at + LATER) {
+        Ok(true) => {}
+        Ok(false) => note(&format!("{id} se queda sin {job} para siempre: {why}")),
+        Err(trouble) => note(&format!("{id} sin anotar el fallo de {job}: {trouble}")),
     }
 }
 
@@ -307,8 +329,13 @@ fn preview_of(item: &Item) -> String {
 }
 
 #[cfg(target_os = "windows")]
-fn name_for(at: i64, item: &Item) -> String {
-    format!("{at:x}-{:016x}", item.fingerprint())
+fn name_for(at: i64, _item: &Item) -> String {
+    static TURN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let turn = TURN.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let since = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |it| it.subsec_nanos());
+    format!("{at:x}-{since:08x}{turn:08x}")
 }
 
 #[cfg(target_os = "windows")]
@@ -387,14 +414,13 @@ mod tests {
     }
 
     #[test]
-    fn the_same_content_copied_twice_gets_the_same_tail_and_a_different_head() {
-        let one = name_for(1_000, &text("igual"));
-        let other = name_for(2_000, &text("igual"));
-        assert_ne!(one, other);
-        assert_eq!(
-            one.split_once('-').map(|it| it.1),
-            other.split_once('-').map(|it| it.1)
-        );
+    fn the_name_never_gives_away_what_was_copied() {
+        let secret = text("una contraseña");
+        let one = name_for(1_000, &secret);
+        let other = name_for(1_000, &secret);
+        assert_ne!(one, other, "dos copias iguales no comparten nombre");
+        let fingerprint = format!("{:016x}", secret.fingerprint());
+        assert!(!one.contains(&fingerprint), "el nombre delata el contenido");
     }
 
     #[test]

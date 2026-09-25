@@ -20,6 +20,19 @@ fn nowhere() -> String {
     "no se encontró la carpeta donde CopyPaste guarda lo suyo".to_owned()
 }
 
+pub fn settle() {
+    let Some(dir) = folder() else {
+        return;
+    };
+    let path = cp_config::at(&dir);
+    if path.exists() {
+        return;
+    }
+    if let Err(why) = cp_config::write(&path, &Config::default()) {
+        crate::note::note(&format!("los ajustes no se pudieron estrenar: {why}"));
+    }
+}
+
 #[tauri::command]
 pub fn settings() -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
