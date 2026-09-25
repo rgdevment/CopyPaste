@@ -1,0 +1,43 @@
+name: Prepare the build
+description: Rust toolchain, cache, and the release version stamped into the manifest.
+
+inputs:
+  version:
+    description: Version to stamp into Cargo.toml.
+    required: true
+  targets:
+    description: Rust targets to install, comma separated.
+    required: true
+  cache-key:
+    description: Added to the cache key when one job id builds more than one target.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      with:
+        targets: ${{ inputs.targets }}
+
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      with:
+        key: ${{ inputs.cache-key }}
+        save-if: false
+
+    - name: Stamp the version
+      shell: bash
+      run: |
+        version="${{ inputs.version }}"
+
+        cargo fetch --locked --offline 2>/dev/null || cargo fetch --locked
+
+        sed -i.bak -e "s/^version = .*/version = \"$version\"/" Cargo.toml
+        rm -f Cargo.toml.bak
+
+        if ! grep -q "^version = \"$version\"\$" Cargo.toml; then
+          echo "::error::could not stamp $version into Cargo.toml"
+          exit 1
+        fi
+
+        cargo update --workspace --offline

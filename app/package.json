@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src",
-    "format": "biome check src --write"
+    "format": "biome check src --write",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
+    "@tauri-apps/cli": "^2.11.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.7",

@@ -1,0 +1,33 @@
+name: The panel the app carries
+description: >-
+  `externalBin` in tauri.conf.json makes the binary a build-time requirement of
+  the app, so anything that compiles the workspace — a test, a clippy run —
+  needs it there first, not only a bundle.
+
+inputs:
+  profile:
+    description: debug or release.
+    required: false
+    default: debug
+  target:
+    description: Rust target the panel is built for, empty for the host.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PY: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        PROFILE: ${{ inputs.profile }}
+        TARGET: ${{ inputs.target }}
+      run: |
+        said=""
+        if [ "$PROFILE" = "debug" ]; then
+          said="--debug"
+        fi
+        if [ -n "$TARGET" ]; then
+          said="$said --target $TARGET"
+        fi
+        "$PY" scripts/sidecar.py $said
