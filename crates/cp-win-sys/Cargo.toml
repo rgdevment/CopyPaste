@@ -10,7 +10,7 @@ publish = false
 [target.'cfg(target_os = "windows")'.dependencies]
 windows.workspace = true
 windows-future.workspace = true
-winreg = "0.55"
+winreg = "0.56"
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
 image.workspace = true
