@@ -27,16 +27,14 @@ fn main() {
     let store = match cp_store::Store::open(&options.db) {
         Ok(store) => store,
         Err(why) => {
-            note::note(&format!("no se pudo abrir {}: {why}", options.db.display()));
-            eprintln!("no se pudo abrir {}: {why}", options.db.display());
+            note::trouble(&format!("no se pudo abrir el historial: {why}"));
             std::process::exit(1);
         }
     };
     let (panel, app) = match app::App::start(store, options.clone()) {
         Ok(started) => started,
         Err(why) => {
-            note::note(&format!("el panel no arrancó: {why}"));
-            eprintln!("el panel no arrancó: {why}");
+            note::trouble(&format!("el panel no se pudo dibujar: {why}"));
             std::process::exit(1);
         }
     };

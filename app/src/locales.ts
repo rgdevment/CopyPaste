@@ -27,6 +27,8 @@ const ES = {
   keysChange: "Cambiar",
   keysAsk: "Presiona la combinación que quieres",
   keysStop: "Dejarlo como está",
+  panelTrouble:
+    "El panel no está funcionando: {one}. Lo copiado no se está guardando hasta que se resuelva",
   keysTaken:
     "Otro programa ya usa esa combinación, así que el panel no se abre con ella. Elige otra cuando puedas cambiarla",
   hides: "Ocultar al hacer clic fuera",
@@ -137,6 +139,8 @@ const EN: Record<keyof Said, string> = {
   keysChange: "Change",
   keysAsk: "Press the combination you want",
   keysStop: "Leave it as it is",
+  panelTrouble:
+    "The panel is not working: {one}. Nothing you copy is being kept until this is fixed",
   keysTaken:
     "Another program already uses that combination, so the panel will not open with it. Pick another one when you can change it",
   hides: "Hide when you click elsewhere",

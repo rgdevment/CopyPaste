@@ -33,6 +33,19 @@ pub fn note(what: &str) {
     }
 }
 
+pub fn tell(what: &str) {
+    use std::io::Write;
+    let out = std::io::stdout();
+    let mut out = out.lock();
+    let _ = writeln!(out, "{what}");
+    let _ = out.flush();
+}
+
+pub fn trouble(what: &str) {
+    note(what);
+    tell(&format!("trouble {what}"));
+}
+
 pub fn catch_panics() {
     let before = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {

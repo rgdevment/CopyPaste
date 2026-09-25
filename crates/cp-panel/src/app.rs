@@ -149,7 +149,7 @@ impl App {
             });
         }) {
             Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
-            Err(why) => note(&format!("nadie vigila el portapapeles: {why}")),
+            Err(why) => crate::note::trouble(&format!("nadie vigila el portapapeles: {why}")),
         }
     }
 
@@ -454,8 +454,11 @@ impl App {
         panel.on_emptied(move || {
             let store = state.borrow().store.clone();
             match store.clear_all_unpinned(now_ms()) {
-                Ok(gone) => note(&format!("se vaciaron {gone} elementos sin anclar")),
-                Err(why) => note(&format!("no se pudo vaciar: {why}")),
+                Ok(gone) => {
+                    note(&format!("se vaciaron {gone} elementos sin anclar"));
+                    crate::note::tell(&format!("emptied {gone}"));
+                }
+                Err(why) => crate::note::trouble(&format!("no se pudo vaciar: {why}")),
             }
             if let Some(ui) = ui.upgrade() {
                 refresh(&ui, &state);

@@ -22,6 +22,7 @@ pub fn run() {
             waking::wake,
             keys::keys,
             empty,
+            trouble,
             relabel
         ])
         .setup(|app| {
@@ -53,6 +54,11 @@ pub fn run() {
 #[tauri::command]
 fn empty(app: tauri::AppHandle) -> Result<(), String> {
     panel::empty(&app)
+}
+
+#[tauri::command]
+fn trouble(app: tauri::AppHandle) -> Option<String> {
+    panel::trouble(&app)
 }
 
 #[tauri::command]

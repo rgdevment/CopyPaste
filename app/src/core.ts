@@ -113,6 +113,23 @@ export function combination(press: {
   return held.join("+");
 }
 
+export function useTrouble() {
+  const [said, setSaid] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ask = () => {
+      invoke<string | null>("trouble")
+        .then(setSaid)
+        .catch(() => setSaid(null));
+    };
+    ask();
+    const again = setInterval(ask, 5_000);
+    return () => clearInterval(again);
+  }, []);
+
+  return said;
+}
+
 export function empty(): Promise<void> {
   return invoke<void>("empty");
 }

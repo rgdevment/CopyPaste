@@ -86,6 +86,25 @@ describe("la ventana", () => {
     );
   });
 
+  it("avisa cuando el panel no está funcionando, en vez de callarlo", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "trouble"
+        ? Promise.resolve("no se pudo abrir el historial: base dañada")
+        : real?.(what, args)) as never);
+    render(<App />);
+    expect(await screen.findByText(/no se pudo abrir el historial/)).toBeDefined();
+    expect(screen.getByText(/no se está guardando/)).toBeDefined();
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("no inventa problemas del panel cuando todo va bien", async () => {
+    render(<App />);
+    await screen.findByRole("button", { name: "General" });
+    expect(screen.queryByText(/no se está guardando/)).toBeNull();
+  });
+
   it("dice que el atajo no responde cuando otro programa lo tiene tomado", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();

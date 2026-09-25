@@ -6,10 +6,39 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 #[derive(Default)]
 pub struct Sidecar(Mutex<Option<CommandChild>>);
 
+#[derive(Default)]
+pub struct Trouble(Mutex<Option<String>>);
+
+pub fn trouble<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
+    app.try_state::<Trouble>()
+        .and_then(|state| state.0.lock().ok().and_then(|held| held.clone()))
+}
+
+fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
+    let Some(what) = said.strip_prefix("trouble ") else {
+        return;
+    };
+    crate::note::note(&format!("el panel avisa: {what}"));
+    if let Some(state) = app.try_state::<Trouble>()
+        && let Ok(mut held) = state.0.lock()
+    {
+        *held = Some(what.to_owned());
+    }
+}
+
+fn all_is_well<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(state) = app.try_state::<Trouble>()
+        && let Ok(mut held) = state.0.lock()
+    {
+        held.take();
+    }
+}
+
 pub fn raise<R: Runtime>(app: &AppHandle<R>) {
     #[cfg(target_os = "windows")]
     {
         app.manage(Sidecar::default());
+        app.manage(Trouble::default());
         match light(app) {
             Ok(()) => crate::note::note("el panel queda esperando en segundo plano"),
             Err(why) => crate::note::note(&format!("el panel no arrancó: {why}")),
@@ -66,12 +95,19 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
     {
         let _ = old.kill();
     }
+    all_is_well(app);
     let handle = app.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(event) = heard.recv().await {
-            if let CommandEvent::Terminated(_) = event {
-                forget(&handle, whose);
-                break;
+            match event {
+                CommandEvent::Stdout(line) => {
+                    heard_from_panel(&handle, String::from_utf8_lossy(&line).trim());
+                }
+                CommandEvent::Terminated(_) => {
+                    forget(&handle, whose);
+                    break;
+                }
+                _ => {}
             }
         }
     });
