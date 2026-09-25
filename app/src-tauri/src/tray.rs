@@ -14,11 +14,11 @@ pub fn spanish(locale: Option<&str>) -> bool {
     !asked.to_lowercase().starts_with("en")
 }
 
-fn worded(spanish: bool) -> [&'static str; 2] {
+fn worded(spanish: bool) -> [&'static str; 3] {
     if spanish {
-        ["Ajustes…", "Salir de CopyPaste"]
+        ["Mostrar el panel", "Ajustes…", "Salir de CopyPaste"]
     } else {
-        ["Settings…", "Quit CopyPaste"]
+        ["Show the panel", "Settings…", "Quit CopyPaste"]
     }
 }
 
@@ -28,10 +28,11 @@ const BAR: &[u8] = include_bytes!("../icons/tray/macos@2x.png");
 const BAR: &[u8] = include_bytes!("../icons/tray/windows-32.png");
 
 pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
-    let [asks, leaves] = worded(spanish);
+    let [shows, asks, leaves] = worded(spanish);
+    let panel = MenuItem::with_id(app, "panel", shows, true, None::<&str>).ok()?;
     let settings = MenuItem::with_id(app, "settings", asks, true, None::<&str>).ok()?;
     let quit = MenuItem::with_id(app, "quit", leaves, true, None::<&str>).ok()?;
-    let menu = Menu::with_items(app, &[&settings, &quit]).ok()?;
+    let menu = Menu::with_items(app, &[&panel, &settings, &quit]).ok()?;
 
     let tray = TrayIconBuilder::with_id("copypaste")
         .icon(Image::from_bytes(BAR).ok()?)
@@ -39,6 +40,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
+            "panel" => crate::panel::show(app),
             "settings" => surface(app),
             "quit" => app.exit(0),
             _ => {}
@@ -61,7 +63,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
     #[cfg(not(target_os = "macos"))]
     let _ = &tray;
 
-    app.manage(Said(Mutex::new(vec![settings, quit])));
+    app.manage(Said(Mutex::new(vec![panel, settings, quit])));
 
     Some(())
 }
@@ -79,6 +81,7 @@ pub fn reword<R: Runtime>(app: &AppHandle<R>, spanish: bool) {
 }
 
 pub fn surface<R: Runtime>(app: &AppHandle<R>) {
+    crate::panel::hide(app);
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();

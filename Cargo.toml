@@ -7,6 +7,7 @@ version = "3.0.0"
 edition = "2024"
 rust-version = "1.98"
 license = "GPL-3.0-only"
+homepage = "https://rgdevment.com/copypaste/"
 repository = "https://github.com/rgdevment/CopyPaste"
 publish = false
 
@@ -35,6 +36,9 @@ tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-build = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-global-shortcut = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
 proptest = "1"
 tempfile = "3"

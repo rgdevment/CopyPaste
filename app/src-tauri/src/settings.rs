@@ -20,6 +20,19 @@ fn nowhere() -> String {
     "no se encontró la carpeta donde CopyPaste guarda lo suyo".to_owned()
 }
 
+pub fn settle() {
+    let Some(dir) = folder() else {
+        return;
+    };
+    let path = cp_config::at(&dir);
+    if path.exists() {
+        return;
+    }
+    if let Err(why) = cp_config::write(&path, &Config::default()) {
+        crate::note::note(&format!("los ajustes no se pudieron estrenar: {why}"));
+    }
+}
+
 #[tauri::command]
 pub fn settings() -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
@@ -27,11 +40,18 @@ pub fn settings() -> Result<Config, String> {
 }
 
 #[tauri::command]
-pub fn keep(config: Config) -> Result<Config, String> {
+pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
     let path = cp_config::at(&dir);
+    let before = cp_config::read(&path).ok().map(|one| one.shortcut);
     cp_config::write(&path, &config).map_err(|why| why.to_string())?;
-    cp_config::read(&path).map_err(|why| why.to_string())
+    let landed = cp_config::read(&path).map_err(|why| why.to_string())?;
+    if before.as_deref() != Some(landed.shortcut.as_str())
+        && let Err(why) = crate::keys::bind(&app, &landed.shortcut)
+    {
+        crate::note::note(&format!("el atajo nuevo no se pudo tomar: {why}"));
+    }
+    Ok(landed)
 }
 
 #[tauri::command]

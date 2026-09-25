@@ -31,6 +31,15 @@ pub fn name_of(pid: u32) -> Option<String> {
     Some(stem_of(&path))
 }
 
+pub fn in_front() -> Option<String> {
+    let window = crate::frontmost::foreground()?;
+    if crate::frontmost::process_of_is_ours(window) {
+        return None;
+    }
+    let named = name_of(process_of(window)?)?;
+    (!named.is_empty()).then_some(named)
+}
+
 fn stem_of(path: &str) -> String {
     let file = path.rsplit(['\\', '/']).next().unwrap_or(path);
     file.rsplit_once('.')
@@ -50,6 +59,14 @@ mod tests {
         );
         assert_eq!(stem_of(r"C:\Windows\explorer.exe"), "explorer");
         assert_eq!(stem_of("WINWORD.EXE"), "WINWORD");
+    }
+
+    #[test]
+    fn what_is_in_front_is_never_ourselves() {
+        if let Some(named) = in_front() {
+            assert!(!named.is_empty());
+            assert_ne!(Some(named), name_of(std::process::id()));
+        }
     }
 
     #[test]

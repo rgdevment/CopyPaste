@@ -8,6 +8,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+cp-config.workspace = true
 cp-core.workspace = true
 cp-store.workspace = true
 slint.workspace = true
@@ -16,6 +17,10 @@ raw-window-handle.workspace = true
 [target.'cfg(target_os = "windows")'.dependencies]
 cp-win-sys.workspace = true
 cp-win.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+image.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true

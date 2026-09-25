@@ -1,5 +1,6 @@
 mod age;
 mod app;
+mod engine;
 mod measure;
 mod model;
 mod note;
@@ -26,16 +27,14 @@ fn main() {
     let store = match cp_store::Store::open(&options.db) {
         Ok(store) => store,
         Err(why) => {
-            note::note(&format!("no se pudo abrir {}: {why}", options.db.display()));
-            eprintln!("no se pudo abrir {}: {why}", options.db.display());
+            note::trouble(&format!("no se pudo abrir el historial: {why}"));
             std::process::exit(1);
         }
     };
     let (panel, app) = match app::App::start(store, options.clone()) {
         Ok(started) => started,
         Err(why) => {
-            note::note(&format!("el panel no arrancó: {why}"));
-            eprintln!("el panel no arrancó: {why}");
+            note::trouble(&format!("el panel no se pudo dibujar: {why}"));
             std::process::exit(1);
         }
     };
@@ -49,6 +48,7 @@ fn main() {
 pub struct Options {
     pub db: PathBuf,
     pub measure: bool,
+    pub serve: bool,
     pub signals: Option<PathBuf>,
     pub backdrop: String,
     pub flat: bool,
@@ -58,6 +58,7 @@ impl Options {
     fn from_args() -> Self {
         let mut db = None;
         let mut measure = false;
+        let mut serve = false;
         let mut flat = false;
         let mut backdrop = "none".to_owned();
         let mut args = std::env::args().skip(1);
@@ -65,17 +66,31 @@ impl Options {
             match arg.as_str() {
                 "--db" => db = args.next().map(PathBuf::from),
                 "--measure" => measure = true,
+                "--serve" => serve = true,
                 "--flat" => flat = true,
                 "--backdrop" => backdrop = args.next().unwrap_or_default(),
                 other => eprintln!("argumento ignorado: {other}"),
             }
         }
         Self {
-            db: db.unwrap_or_else(|| std::env::temp_dir().join("cp-seed").join("history.db")),
+            db: db.unwrap_or_else(|| if measure { seeded() } else { where_it_lives() }),
             measure,
+            serve,
             signals: std::env::var_os("CP_PANEL_SIGNALS").map(PathBuf::from),
             backdrop,
             flat,
         }
     }
+}
+
+fn seeded() -> PathBuf {
+    std::env::temp_dir().join("cp-seed").join("history.db")
+}
+
+fn where_it_lives() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    if let Some(path) = cp_win_sys::paths::database() {
+        return path;
+    }
+    seeded()
 }

@@ -86,6 +86,99 @@ describe("la ventana", () => {
     );
   });
 
+  it("avisa cuando el panel no está funcionando, en vez de callarlo", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "trouble"
+        ? Promise.resolve("no se pudo abrir el historial: base dañada")
+        : real?.(what, args)) as never);
+    render(<App />);
+    expect(await screen.findByText(/no se pudo abrir el historial/)).toBeDefined();
+    expect(screen.getByText(/no se está guardando/)).toBeDefined();
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("no inventa problemas del panel cuando todo va bien", async () => {
+    render(<App />);
+    await screen.findByRole("button", { name: "General" });
+    expect(screen.queryByText(/no se está guardando/)).toBeNull();
+  });
+
+  it("dice que el atajo no responde cuando otro programa lo tiene tomado", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "keys"
+        ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
+        : real?.(what, args)) as never);
+    render(<App />);
+    expect(await screen.findByText(/Otro programa ya usa esa combinación/)).toBeDefined();
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("calla sobre el atajo cuando el sistema sí lo cedió", async () => {
+    render(<App />);
+    expect(await screen.findByText("Ctrl + Alt + V")).toBeDefined();
+    expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
+  });
+
+  it("un tope de imágenes que no está en la lista se muestra tal cual", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "settings"
+        ? Promise.resolve({
+            locale: "es",
+            theme: "system",
+            shortcut: "Ctrl+Alt+V",
+            "hides-when-left": true,
+            "keeps-days": 30,
+            "images-quota-mb": 700,
+          })
+        : real?.(what, args)) as never);
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Historial" }));
+    const picked = (await screen.findByLabelText("Espacio del historial")) as HTMLSelectElement;
+    expect(picked.value).toBe("700");
+    expect(screen.getByRole("option", { name: "700 MB" })).toBeDefined();
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("los botones de copia de seguridad dicen que todavía no están", async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+    const exporta = await screen.findByRole("button", { name: "Exportar…" });
+    expect(exporta).toBeDisabled();
+    expect(screen.getAllByText("Todavía no").length).toBeGreaterThan(0);
+  });
+
+  it("cambiar el atajo guarda la combinación que se presiona", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Cambiar" }));
+    const stop = await screen.findByRole("button", { name: "Dejarlo como está" });
+    stop.focus();
+    await userEvent.keyboard("{Control>}{Alt>}[F9]{/Alt}{/Control}");
+    const kept = vi
+      .mocked(invoke)
+      .mock.calls.filter(([what]) => what === "keep")
+      .pop();
+    const said = kept?.[1] as { config: { shortcut: string } } | undefined;
+    expect(said?.config.shortcut).toBe("Ctrl+Alt+F9");
+  });
+
+  it("vaciar el historial pide confirmación antes de hacerlo", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Historial" }));
+    const wipe = await screen.findByRole("button", { name: "Vaciar" });
+    await userEvent.click(wipe);
+    expect(vi.mocked(invoke).mock.calls.some(([what]) => what === "empty")).toBe(false);
+    await userEvent.click(await screen.findByRole("button", { name: "¿Seguro?" }));
+    expect(vi.mocked(invoke).mock.calls.some(([what]) => what === "empty")).toBe(true);
+  });
+
   it("no afirma que está actualizada cuando nadie lo ha comprobado", async () => {
     const who = userEvent.setup();
     render(<App />);

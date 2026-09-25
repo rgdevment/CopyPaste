@@ -65,6 +65,10 @@ The tap repository already exists and the `homebrew` job rewrites the cask
 itself, so there is nothing to write by hand. Leave the frozen Linux formulae
 alone: the job must not sweep them.
 
+The cask's `homepage` is `https://rgdevment.com/copypaste/`, the product page —
+not the repository. The same holds anywhere a store or a package manager asks
+for a website: the repository is where the code lives, not where a user is sent.
+
 ## Cutting a release
 
 Create and push an **annotated, signed** tag on `main`. The tag body is the

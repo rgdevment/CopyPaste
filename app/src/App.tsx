@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useKept } from "./core";
-import { t } from "./locales";
+import { useKept, useTrouble } from "./core";
+import { fill, t } from "./locales";
 import About from "./ui/About";
 import Backup from "./ui/Backup";
 import Chrome from "./ui/Chrome";
@@ -19,6 +19,7 @@ type Where = (typeof WHERE)[number]["key"] | "about";
 export default function App() {
   const [where, setWhere] = useState<Where>("general");
   const { kept, trouble, change, look } = useKept();
+  const panelTrouble = useTrouble();
 
   return (
     <>
@@ -47,6 +48,7 @@ export default function App() {
         </nav>
 
         <main className="pane">
+          {panelTrouble && <p className="alarm">{fill("panelTrouble", panelTrouble)}</p>}
           {trouble && (
             <p className="alarm">
               {trouble}

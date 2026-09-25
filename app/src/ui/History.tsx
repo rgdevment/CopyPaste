@@ -1,10 +1,11 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
-import { type Kept, whereItLives } from "../core";
+import { empty, type Kept, whereItLives } from "../core";
 import { fill, t } from "../locales";
 import { Band, Line } from "./Bits";
 
 const KEPT = [7, 30, 90];
+const QUOTA = [0, 256, 512, 1024];
 
 export default function History({
   kept,
@@ -14,14 +15,26 @@ export default function History({
   change: (what: Partial<Kept>) => void;
 }) {
   const [where, setWhere] = useState<string | null>(null);
+  const [sure, setSure] = useState(false);
+  const [said, setSaid] = useState<string | null>(null);
   const days = kept["keeps-days"];
   const DAYS = KEPT.includes(days) || days === 0 ? KEPT : [...KEPT, days].sort((a, b) => a - b);
+  const mb = kept["images-quota-mb"];
+  const QUOTAS = QUOTA.includes(mb) ? QUOTA : [...QUOTA, mb].sort((a, b) => a - b);
 
   useEffect(() => {
     whereItLives()
       .then(setWhere)
       .catch(() => setWhere(null));
   }, []);
+
+  useEffect(() => {
+    if (!sure) {
+      return;
+    }
+    const forgets = setTimeout(() => setSure(false), 4_000);
+    return () => clearTimeout(forgets);
+  }, [sure]);
 
   return (
     <>
@@ -50,10 +63,11 @@ export default function History({
           value={String(kept["images-quota-mb"])}
           onChange={(event) => change({ "images-quota-mb": Number(event.target.value) })}
         >
-          <option value="0">{t("quotaNone")}</option>
-          <option value="256">256 MB</option>
-          <option value="512">512 MB</option>
-          <option value="1024">1 GB</option>
+          {QUOTAS.map((one) => (
+            <option key={one} value={String(one)}>
+              {one === 0 ? t("quotaNone") : one >= 1024 ? `${one / 1024} GB` : `${one} MB`}
+            </option>
+          ))}
         </select>
       </Line>
 
@@ -72,9 +86,22 @@ export default function History({
         </button>
       </Line>
 
-      <Line says={t("empty")} why={t("emptyWhy")}>
-        <button type="button" className="grave" disabled>
-          {t("emptyDo")}
+      <Line says={t("empty")} why={said ?? t("emptyWhy")}>
+        <button
+          type="button"
+          className="grave"
+          onClick={() => {
+            if (!sure) {
+              setSure(true);
+              return;
+            }
+            setSure(false);
+            empty()
+              .then(() => setSaid(t("emptyGone")))
+              .catch((why) => setSaid(String(why)));
+          }}
+        >
+          {sure ? t("emptySure") : t("emptyDo")}
         </button>
       </Line>
     </>

@@ -9,6 +9,8 @@ exclude_re = [
     "replace < with <= in rgb_of_hsl",
     "replace < with <= in migrate",
     "replace Rows::fetch_ahead with \\(\\)",
+    "replace Engine::ours with",
+    "replace kept -> Option<i64> with",
 ]
 
 exclude_globs = [

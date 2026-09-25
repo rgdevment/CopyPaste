@@ -14,6 +14,7 @@ pub mod paths;
 pub mod permissions;
 pub mod reading;
 pub mod source;
+pub mod theme;
 pub mod thumbnail;
 pub mod window;
 pub mod writing;

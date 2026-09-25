@@ -9,7 +9,7 @@ use cp_store::{Clock, Filter, Store};
 use slint::{ComponentHandle, Model, ModelRc};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicIsize, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
@@ -19,6 +19,7 @@ const OUT: Duration = Duration::from_millis(130);
 const NEXT_FRAME: Duration = Duration::from_millis(16);
 const SETTLES: Duration = Duration::from_millis(70);
 const HOVERS: Duration = Duration::from_millis(55);
+const LOOKS: Duration = Duration::from_millis(250);
 const SETTLES_SHEET: Duration = Duration::from_millis(260);
 const AFTER_ROLLING: Duration = Duration::from_millis(220);
 const JUST_ROLLED: Duration = Duration::from_millis(260);
@@ -31,6 +32,8 @@ pub struct App {
 
 struct State {
     store: Rc<Store>,
+    engine: Option<Rc<crate::engine::Engine>>,
+    ahead: Arc<AtomicIsize>,
     query: String,
     tags: Vec<String>,
     pinned: bool,
@@ -39,6 +42,7 @@ struct State {
     metrics: Metrics,
     asking: Asking,
     typing: slint::Timer,
+    leaving: slint::Timer,
     pointing: slint::Timer,
     arming: slint::Timer,
     rolled: Instant,
@@ -76,6 +80,8 @@ impl App {
         let counter = spawn_counter(options.db.clone(), panel.as_weak(), generation.clone());
         let state = Rc::new(RefCell::new(State {
             store: Rc::new(store),
+            engine: None,
+            ahead: Arc::new(AtomicIsize::new(0)),
             query: String::new(),
             tags: Vec::new(),
             pinned: false,
@@ -84,6 +90,7 @@ impl App {
             metrics,
             asking: Asking::Kinds,
             typing: slint::Timer::default(),
+            leaving: slint::Timer::default(),
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
             rolled: Instant::now() - JUST_ROLLED,
@@ -99,22 +106,51 @@ impl App {
             panel.global::<crate::Theme>().set_shadow_blur(0.0);
         }
         app.wire(&panel);
+        dress_theme(&panel);
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
 
     pub fn run(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
-        panel.show()?;
-        self.dress(panel);
-        appear(panel);
-        panel.invoke_focus_search();
+        let serving = self.state.borrow().options.serve;
+        if !serving {
+            panel.show()?;
+            self.dress(panel);
+            appear(panel);
+            panel.invoke_focus_search();
+        }
+        if !self.state.borrow().options.measure {
+            self.keep_watch(panel.as_weak());
+        }
         if let Some(dir) = self.state.borrow().options.signals.clone() {
             watch_signals(panel.as_weak(), dir);
+        }
+        if serving {
+            let state = self.state.borrow();
+            listen(
+                panel.as_weak(),
+                state.ahead.clone(),
+                state.options.backdrop.clone(),
+            );
         }
         if self.state.borrow().options.measure {
             crate::measure::run(self);
         }
         slint::run_event_loop_until_quit()
+    }
+
+    fn keep_watch(&self, ui: slint::Weak<Panel>) {
+        let db = self.state.borrow().options.db.clone();
+        match crate::engine::Engine::start(&db, move |_| {
+            let _ = ui.upgrade_in_event_loop(|panel| {
+                if panel.window().is_visible() && !panel.get_sheet_open() {
+                    panel.invoke_arrived();
+                }
+            });
+        }) {
+            Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
+            Err(why) => crate::note::trouble(&format!("nadie vigila el portapapeles: {why}")),
+        }
     }
 
     pub fn ui(&self) -> slint::Weak<Panel> {
@@ -272,13 +308,16 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste(move |id| {
-            let store = state.borrow().store.clone();
-            let handed = hand_over(&store, i64::from(id));
+            let (store, engine) = {
+                let state = state.borrow();
+                (state.store.clone(), state.engine.clone())
+            };
+            let handed = hand_over(&store, engine.as_deref(), i64::from(id));
             if let Some(ui) = ui.upgrade() {
                 if handed {
-                    vanish(&ui);
+                    deliver(&ui, &state);
                 } else {
-                    complain(&ui);
+                    complain(&ui, BUSY);
                 }
             }
         });
@@ -395,6 +434,45 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
+        panel.on_fresh_start(move || {
+            {
+                let mut state = state.borrow_mut();
+                state.query.clear();
+                state.tags.clear();
+                state.pinned = false;
+            }
+            if let Some(ui) = ui.upgrade() {
+                ui.set_query(Default::default());
+                ui.set_sheet_open(false);
+                dress_theme(&ui);
+                refresh(&ui, &state);
+                watch_leaving(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_emptied(move || {
+            let store = state.borrow().store.clone();
+            match store.clear_all_unpinned(now_ms()) {
+                Ok(gone) => {
+                    note(&format!("se vaciaron {gone} elementos sin anclar"));
+                    crate::note::tell(&format!("emptied {gone}"));
+                }
+                Err(why) => crate::note::trouble(&format!("no se pudo vaciar: {why}")),
+            }
+            if let Some(ui) = ui.upgrade() {
+                refresh(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_arrived(move || {
+            if let Some(ui) = ui.upgrade() {
+                keeping_place(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
         panel.on_ask_keys(move || {
             let Some(ui) = ui.upgrade() else {
                 return;
@@ -416,11 +494,14 @@ impl App {
             let asking = state.borrow().asking;
             match asking {
                 Asking::Forms(id) => {
-                    let store = state.borrow().store.clone();
-                    if paste_as(&store, id, key.as_str()) {
-                        vanish(&ui);
+                    let (store, engine) = {
+                        let state = state.borrow();
+                        (state.store.clone(), state.engine.clone())
+                    };
+                    if paste_as(&store, engine.as_deref(), id, key.as_str()) {
+                        deliver(&ui, &state);
                     } else {
-                        complain(&ui);
+                        complain(&ui, BUSY);
                     }
                 }
                 Asking::Kinds => {
@@ -434,14 +515,17 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste_as(move |id, key| {
-            let store = state.borrow().store.clone();
-            let done = paste_as(&store, i64::from(id), key.as_str());
+            let (store, engine) = {
+                let state = state.borrow();
+                (state.store.clone(), state.engine.clone())
+            };
+            let done = paste_as(&store, engine.as_deref(), i64::from(id), key.as_str());
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
                 if done {
-                    vanish(&ui);
+                    deliver(&ui, &state);
                 } else {
-                    complain(&ui);
+                    complain(&ui, BUSY);
                 }
             }
         });
@@ -461,21 +545,26 @@ impl App {
     }
 
     fn dress(&self, panel: &Panel) {
-        #[cfg(target_os = "windows")]
+        dress(panel, &self.state.borrow().options.backdrop);
+    }
+}
+
+fn dress(panel: &Panel, wanted: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let handle = panel.window().window_handle();
+        if let Ok(raw) = HasWindowHandle::window_handle(&handle)
+            && let RawWindowHandle::Win32(win32) = raw.as_raw()
         {
-            use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-            let handle = panel.window().window_handle();
-            if let Ok(raw) = HasWindowHandle::window_handle(&handle)
-                && let RawWindowHandle::Win32(win32) = raw.as_raw()
-            {
-                let wanted = self.state.borrow().options.backdrop.clone();
-                let backdrop = cp_win_sys::backdrop::Backdrop::from_name(&wanted)
-                    .unwrap_or(cp_win_sys::backdrop::Backdrop::Mica);
-                cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, true);
-            }
+            let backdrop = cp_win_sys::backdrop::Backdrop::from_name(wanted)
+                .unwrap_or(cp_win_sys::backdrop::Backdrop::Mica);
+            cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, !wants_light());
         }
-        #[cfg(not(target_os = "windows"))]
-        let _ = panel;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (panel, wanted);
     }
 }
 
@@ -662,7 +751,7 @@ fn keys_of(filter: &Filter) -> Vec<String> {
         .collect()
 }
 
-fn hand_over(store: &Store, id: i64) -> bool {
+fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> bool {
     let item = match store.item(id) {
         Ok(Some(item)) => item,
         Ok(None) => {
@@ -683,6 +772,8 @@ fn hand_over(store: &Store, id: i64) -> bool {
         let how = cp_win::restore::to_clipboard(&clipboard, &item);
         let written = matches!(how, cp_win::restore::Restored::Written { .. });
         if written {
+            mark(engine);
+            drop(clipboard);
             if let Err(why) = store.record_paste(id, now_ms()) {
                 note(&format!("pegado {id} sin anotar: {why}"));
             }
@@ -693,7 +784,7 @@ fn hand_over(store: &Store, id: i64) -> bool {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = item;
+        let _ = (item, engine);
         false
     }
 }
@@ -797,8 +888,12 @@ fn vanish(ui: &Panel) {
     });
 }
 
-fn complain(ui: &Panel) {
-    ui.set_count_text("no se pudo pegar: el portapapeles está ocupado".into());
+const BUSY: &str = "no se pudo pegar: el portapapeles está ocupado";
+#[cfg(target_os = "windows")]
+const NOT_THERE: &str = "está copiado, pero no se pudo pegar ahí";
+
+fn complain(ui: &Panel, said: &str) {
+    ui.set_count_text(said.into());
     let weak = ui.as_weak();
     slint::Timer::single_shot(Duration::from_millis(2_200), move || {
         if let Some(ui) = weak.upgrade() {
@@ -863,9 +958,9 @@ fn forms_of(_store: &Store, _id: i64) -> Vec<FormRow> {
 }
 
 #[cfg(target_os = "windows")]
-fn paste_as(store: &Store, id: i64, key: &str) -> bool {
+fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key: &str) -> bool {
     if key == AS_IS {
-        return hand_over(store, id);
+        return hand_over(store, engine, id);
     }
     let Some(form) = form_of(key) else {
         note(&format!("forma desconocida: {key}"));
@@ -891,13 +986,17 @@ fn paste_as(store: &Store, id: i64, key: &str) -> bool {
         cp_win::restore::Restored::Written { .. }
     );
     if written {
-        let _ = store.record_paste(id, now_ms());
+        mark(engine);
+        drop(clipboard);
+        if let Err(why) = store.record_paste(id, now_ms()) {
+            note(&format!("pegado {id} sin anotar: {why}"));
+        }
     }
     written
 }
 
 #[cfg(not(target_os = "windows"))]
-fn paste_as(_store: &Store, _id: i64, key: &str) -> bool {
+fn paste_as(_store: &Store, _engine: Option<&crate::engine::Engine>, _id: i64, key: &str) -> bool {
     let _ = form_of(key);
     false
 }
@@ -907,6 +1006,184 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+#[cfg(target_os = "windows")]
+fn mark(engine: Option<&crate::engine::Engine>) {
+    let Some(engine) = engine else {
+        return;
+    };
+    if !engine.ours() {
+        note("no se pudo marcar como nuestra la escritura del portapapeles");
+    }
+}
+
+fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let ahead = state.borrow().ahead.swap(0, Ordering::Relaxed);
+    #[cfg(target_os = "windows")]
+    if let Some(target) = cp_win_sys::frontmost::target_at(ahead) {
+        let weak = ui.as_weak();
+        let sent = cp_win::paste::paste_into(&target, move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_sheet_open(false);
+                let _ = ui.hide();
+            }
+        });
+        if let cp_win::paste::Outcome::Degraded(why) = sent {
+            note(&format!("queda en el portapapeles, sin pegar: {why:?}"));
+            if ui.show().is_ok() {
+                forward(ui);
+                appear(ui);
+                complain(ui, NOT_THERE);
+            }
+        }
+        return;
+    }
+    let _ = ahead;
+    vanish(ui);
+}
+
+fn forward(panel: &Panel) {
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let handle = panel.window().window_handle();
+        if let Ok(raw) = HasWindowHandle::window_handle(&handle)
+            && let RawWindowHandle::Win32(win32) = raw.as_raw()
+            && let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get())
+        {
+            cp_win_sys::frontmost::bring_forward(target.window);
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = panel;
+}
+
+fn light_for(asked: cp_config::Theme, the_system_is_light: bool) -> bool {
+    match asked {
+        cp_config::Theme::Light => true,
+        cp_config::Theme::Dark => false,
+        cp_config::Theme::System => the_system_is_light,
+    }
+}
+
+fn wants_light() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let asked = cp_win_sys::paths::data_dir()
+            .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
+            .map_or(cp_config::Theme::System, |kept| kept.theme);
+        light_for(asked, cp_win_sys::theme::wants_light().unwrap_or(false))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        light_for(cp_config::Theme::System, false)
+    }
+}
+
+fn dress_theme(ui: &Panel) {
+    ui.global::<crate::Theme>().set_light(wants_light());
+}
+
+fn hides_when_left() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        cp_win_sys::paths::data_dir()
+            .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
+            .is_none_or(|kept| kept.hides_when_left)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        true
+    }
+}
+
+fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let held = state.borrow();
+    held.leaving.stop();
+    if !hides_when_left() {
+        return;
+    }
+    let weak = ui.as_weak();
+    let mine = state.clone();
+    let mut was_ours = false;
+    held.leaving
+        .start(slint::TimerMode::Repeated, LOOKS, move || {
+            let Some(ui) = weak.upgrade() else {
+                return;
+            };
+            if !ui.window().is_visible() {
+                return;
+            }
+            if ahead_now() == 0 {
+                was_ours = true;
+                return;
+            }
+            if was_ours {
+                mine.borrow().leaving.stop();
+                vanish(&ui);
+            }
+        });
+}
+
+fn ahead_now() -> isize {
+    #[cfg(target_os = "windows")]
+    {
+        cp_win_sys::frontmost::ahead()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        0
+    }
+}
+
+const ORDER_UP_TO: u64 = 64;
+
+fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
+    std::thread::spawn(move || {
+        use std::io::{BufRead, Read};
+        let input = std::io::stdin();
+        let mut reader = std::io::BufReader::new(input.lock());
+        let mut said = String::new();
+        loop {
+            said.clear();
+            match (&mut reader).take(ORDER_UP_TO).read_line(&mut said) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+            match said.trim() {
+                "show" => {
+                    let in_front = ahead_now();
+                    if in_front != 0 {
+                        ahead.store(in_front, Ordering::Relaxed);
+                    }
+                    let dressed = backdrop.clone();
+                    let _ = ui.upgrade_in_event_loop(move |panel| {
+                        if panel.show().is_err() {
+                            return;
+                        }
+                        dress(&panel, &dressed);
+                        forward(&panel);
+                        panel.invoke_fresh_start();
+                        appear(&panel);
+                        panel.invoke_focus_search();
+                    });
+                }
+                "empty" => {
+                    let _ = ui.upgrade_in_event_loop(|panel| panel.invoke_emptied());
+                }
+                "hide" => {
+                    ahead.store(0, Ordering::Relaxed);
+                    let _ = ui.upgrade_in_event_loop(|panel| vanish(&panel));
+                }
+                "quit" => break,
+                _ => note("llegó una orden que no entiendo"),
+            }
+        }
+        let _ = ui.upgrade_in_event_loop(|_| {
+            let _ = slint::quit_event_loop();
+        });
+    });
 }
 
 fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
@@ -931,4 +1208,21 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn choosing_a_theme_wins_over_what_the_system_wants() {
+        assert!(light_for(cp_config::Theme::Light, false));
+        assert!(!light_for(cp_config::Theme::Dark, true));
+    }
+
+    #[test]
+    fn leaving_it_to_the_system_follows_the_system_both_ways() {
+        assert!(light_for(cp_config::Theme::System, true));
+        assert!(!light_for(cp_config::Theme::System, false));
+    }
 }

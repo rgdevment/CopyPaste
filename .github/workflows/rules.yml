@@ -162,6 +162,13 @@ jobs:
           shared-key: coverage
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: The app only needs the sidecar to exist here, nobody runs it
+        shell: bash
+        run: |
+          mkdir -p app/src-tauri/binaries
+          triple=$(rustc -vV | sed -n 's/^host: //p')
+          : > "app/src-tauri/binaries/cp-panel-$triple"
+
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
       - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'

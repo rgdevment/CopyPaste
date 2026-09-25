@@ -519,6 +519,7 @@ impl Store {
     }
 
     fn erase(&self, id: i64, at: i64) -> Result<()> {
+        self.drop_thumb(id)?;
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
@@ -529,6 +530,20 @@ impl Store {
             params![id, at],
         )?;
         self.release(id)
+    }
+
+    fn drop_thumb(&self, id: i64) -> Result<()> {
+        let path: Option<String> = self
+            .db
+            .query_row("SELECT thumb_path FROM items WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })
+            .optional()?
+            .flatten();
+        if let Some(path) = path {
+            let _ = std::fs::remove_file(path);
+        }
+        Ok(())
     }
 
     fn release(&self, id: i64) -> Result<()> {
@@ -1826,6 +1841,36 @@ mod tests {
                 .is_none(),
             "volver a copiarlo debe crear un ítem nuevo, no resucitar la lápida"
         );
+    }
+
+    #[test]
+    fn deleting_an_item_takes_its_thumbnail_off_the_disk() {
+        let (dir, store) = on_disk();
+        let made = dir.path().join("una.png");
+        std::fs::write(&made, b"no es un png, pero pesa").expect("escribir");
+        let id = store
+            .insert_item("uuid-con-miniatura", &sample_item(), "algo", 1)
+            .expect("insert");
+        store
+            .set_thumb(id, Some(&made.to_string_lossy()), 2)
+            .expect("miniatura");
+        store.mark_deleted(id, 3).expect("borra");
+        assert!(!made.exists(), "la miniatura sobrevivió al borrado");
+    }
+
+    #[test]
+    fn emptying_the_history_takes_every_thumbnail_with_it() {
+        let (dir, store) = on_disk();
+        let made = dir.path().join("otra.png");
+        std::fs::write(&made, b"tampoco es un png").expect("escribir");
+        let id = store
+            .insert_item("uuid-vaciado", &sample_item(), "algo", 1)
+            .expect("insert");
+        store
+            .set_thumb(id, Some(&made.to_string_lossy()), 2)
+            .expect("miniatura");
+        store.clear_all_unpinned(3).expect("vacía");
+        assert!(!made.exists(), "vaciar dejó la miniatura en el disco");
     }
 
     #[test]

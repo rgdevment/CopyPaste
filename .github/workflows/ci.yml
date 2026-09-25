@@ -36,6 +36,8 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@nextest
 
+      - uses: ./.github/actions/sidecar
+
       - run: cargo clippy --workspace --all-targets
       - run: cargo nextest run --workspace --no-tests=pass
       - if: runner.os == 'Windows'

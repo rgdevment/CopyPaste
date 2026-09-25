@@ -43,11 +43,26 @@
           "English",
           "Spanish"
         ],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "template": "installer.nsi"
       }
     },
     "macOS": {
       "minimumSystemVersion": "13.3"
+    },
+    "externalBin": [
+      "binaries/cp-panel"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNCRjc2NTAyRDdEQ0JCRUYKUldUdnU5elhBbVgzTzI0MnhTV3k5RTA4aVdFb2oxUUtGaW5FY0pjUkJ2bkorZllNL0FpeW94b1IK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
