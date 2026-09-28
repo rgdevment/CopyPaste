@@ -260,10 +260,11 @@ export function useUpdate() {
     invoke<void>("update_install").catch((why) => {
       setTrouble(String(why));
       setBusy(false);
-      // the backend forgets what it could not install, so what is on screen is stale
-      look(true);
+      // the backend forgets what it could not install, so the offer goes with it — and looking
+      // again here would wipe the reason before anyone could read it
+      setSeen((was) => (was ? { ...was, ready: null } : was));
     });
-  }, [look]);
+  }, []);
 
   return { seen, busy, trouble, look, install };
 }

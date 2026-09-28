@@ -280,6 +280,52 @@ describe("la ventana", () => {
     }
   });
 
+  it("si la instalación falla, se ve por qué y deja de ofrecerla", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") {
+        return Promise.resolve({
+          route: "download",
+          looked: true,
+          ready: { version: "3.1.0", installs: true },
+        });
+      }
+      if (what === "update_install") {
+        return Promise.reject(new Error("3.1.0 is not on the feed any more"));
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      const who = userEvent.setup();
+      render(<App />);
+      await who.click(screen.getByRole("button", { name: "Acerca de" }));
+      await who.click(await screen.findByRole("button", { name: "Actualizar" }));
+      expect(await screen.findByText(/is not on the feed any more/)).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("una comprobación que falla no deja el punto en verde", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") return Promise.reject(new Error("no hay red"));
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText(/no hay red/)).toBeDefined();
+      expect(screen.queryByText("Estás en la última versión")).toBeNull();
+      expect(document.querySelector(".pip.ok")).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
   it("con brew no ofrece instalar: dice el comando", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();

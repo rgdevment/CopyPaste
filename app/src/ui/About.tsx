@@ -19,7 +19,8 @@ function Newer() {
   const store = seen?.route === "store";
   const brew = seen?.route === "brew";
   const ready = seen?.ready ?? null;
-  const looked = seen?.looked ?? false;
+  // a look that failed says nothing about being up to date
+  const looked = !trouble && (seen?.looked ?? false);
 
   const says = ready
     ? fill("updateThere", ready.version)
@@ -29,7 +30,13 @@ function Newer() {
         ? t("updateNone")
         : t("updateLook");
 
-  const why = ready ? (brew ? t("updateBrew") : t("updateTake")) : t("updateWhen");
+  const why = ready
+    ? brew
+      ? t("updateBrew")
+      : ready.installs
+        ? t("updateTake")
+        : t("updateMove")
+    : t("updateWhen");
 
   return (
     <div className="newer">
