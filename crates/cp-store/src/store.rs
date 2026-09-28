@@ -246,12 +246,6 @@ pub struct Store {
     exposure: Restricted,
 }
 
-impl Drop for Store {
-    fn drop(&mut self) {
-        let _ = self.db.execute_batch("PRAGMA optimize;");
-    }
-}
-
 impl Store {
     pub fn raw(&self) -> &Connection {
         &self.db
