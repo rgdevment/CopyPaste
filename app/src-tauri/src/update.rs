@@ -79,8 +79,6 @@ pub fn worth_offering(found: &str, here: &str) -> bool {
     found > here
 }
 
-/// Gatekeeper runs a quarantined bundle from a read-only copy under a name that changes every
-/// launch, and the plugin only finds that out after the whole download.
 pub fn mounted(running: Option<&Path>) -> bool {
     cfg!(target_os = "macos")
         && running.is_some_and(|at| {
@@ -90,8 +88,6 @@ pub fn mounted(running: Option<&Path>) -> bool {
         })
 }
 
-/// A Windows path seen from a Mac is one single component, so the separators are split by hand
-/// rather than trusted to the host.
 fn parted(at: &Path) -> impl Iterator<Item = &str> {
     at.as_os_str()
         .to_str()
@@ -105,8 +101,6 @@ const CASKROOMS: [&str; 2] = [
 ];
 const APPDIR: &str = "/Applications/";
 
-/// The cask ships `app "CopyPaste.app"`, and Homebrew moves that bundle into /Applications: the
-/// running path never says Caskroom, so the receipt beside it is what tells the two apart.
 fn chosen(running: Option<&Path>, there: impl Fn(&Path) -> bool) -> Route {
     let named = |what: &str| {
         running.is_some_and(|at| parted(at).any(|part| part.eq_ignore_ascii_case(what)))
@@ -147,8 +141,6 @@ fn kept() -> Kept {
         .unwrap_or_default()
 }
 
-/// Written the way the settings beside it are: a torn file would send every launch back to the
-/// feed, and two looks at once would otherwise interleave their writes.
 fn keep(one: &Kept) {
     let Some(path) = at() else {
         return;
@@ -189,8 +181,6 @@ pub async fn update_ready(
     now_please: Option<bool>,
 ) -> Result<Looked, String> {
     let route = route();
-    // The Store hands its own copies their updates, so this one is never told of a release it
-    // cannot take. Saying nothing is not the same as saying it is up to date.
     if route == Route::Store {
         return Ok(Looked {
             route,
@@ -259,8 +249,6 @@ pub async fn update_install(
     let asked = want.clone();
     let update = app
         .updater_builder()
-        // Pinned to what the person was shown, so a feed that moves in between cannot hand them
-        // a different version than the one they agreed to.
         .version_comparator(move |_, release| release.version.to_string() == asked)
         .timeout(std::time::Duration::from_secs(30))
         .build()
@@ -273,8 +261,6 @@ pub async fn update_install(
         forget();
         return Err(format!("{want} is not on the feed any more"));
     };
-    // The feed names the address the installer comes from, so it is checked against where our
-    // releases live before a single byte is asked for.
     if !ours(update.download_url.as_str()) {
         return Err("the feed points the download somewhere that is not ours".to_owned());
     }
@@ -284,8 +270,6 @@ pub async fn update_install(
         .await
         .map_err(|why| why.to_string())?;
 
-    // Only now: on Windows an installer cannot replace a binary that is running, and the whole
-    // download would otherwise have gone by with nothing watching the clipboard.
     let waiting = app.clone();
     let _ = tauri::async_runtime::spawn_blocking(move || crate::panel::quit(&waiting)).await;
     if let Err(why) = update.install(bytes) {
