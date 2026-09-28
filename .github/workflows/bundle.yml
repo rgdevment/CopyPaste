@@ -114,14 +114,28 @@ jobs:
               status=1
             fi
           }
+          never() {
+            if grep -q "$1" "$script"; then
+              echo "::error::the generated installer would $2"
+              status=1
+            fi
+          }
           want 'oname=cp-panel.exe' \
             "lay down the panel; the sidecar was not bundled"
           want 'StrCpy .INSTDIR ".LOCALAPPDATA.Programs' \
             "keep the binaries out of the data folder"
           want '_is1" "UninstallString"' \
             "look for CopyPaste 2 before copying anything"
-          want 'RmDir /r ".LOCALAPPDATA.${PRODUCTNAME}"' \
-            "point its delete-my-data box at the folder the data is actually in"
+          want 'Delete ".LOCALAPPDATA.${PRODUCTNAME}.history.db"' \
+            "take the history it owns when asked to delete its data"
+          want 'Delete ".LOCALAPPDATA.${PRODUCTNAME}.config.toml"' \
+            "take the settings it owns"
+          want 'RmDir /r ".LOCALAPPDATA.${PRODUCTNAME}.blobs"' \
+            "take the blobs it owns"
+          want 'RmDir ".LOCALAPPDATA.${PRODUCTNAME}"' \
+            "leave the shared folder standing unless it is already empty"
+          never 'RmDir /r ".LOCALAPPDATA.${PRODUCTNAME}"' \
+            "wipe the folder it shares with CopyPaste 2, history and all"
           exit $status
 
       - name: How big it came out
