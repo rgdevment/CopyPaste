@@ -167,7 +167,7 @@ mod tests {
         let huge = Payload::TooBig {
             size: BLOB_UP_TO + 1,
         };
-        assert_eq!(huge.size(), Some(BLOB_UP_TO + 1), "el tamaño se conserva");
+        assert_eq!(huge.size(), Some(BLOB_UP_TO + 1), "the size is kept");
     }
 
     #[test]
@@ -181,7 +181,7 @@ mod tests {
             formats: vec![announced],
         };
         assert!(item.format("com.apple.icns").is_some());
-        assert_eq!(item.stored_bytes(), 0, "anotado no es guardado");
+        assert_eq!(item.stored_bytes(), 0, "announced is not stored");
     }
 
     #[test]
@@ -203,7 +203,7 @@ mod tests {
         assert_ne!(
             one.fingerprint(),
             other.fingerprint(),
-            "dos capturas distintas con el mismo preview vacío"
+            "two different captures with the same empty preview"
         );
     }
 
@@ -237,29 +237,29 @@ mod tests {
                 Format {
                     id: "public.html".into(),
                     payload: Payload::Inline(
-                        format!("<b style=\"font-weight:normal;\" id=\"docs-internal-guid-{guid}\"><span>hola</span></b>")
+                        format!("<b style=\"font-weight:normal;\" id=\"docs-internal-guid-{guid}\"><span>hi</span></b>")
                             .into_bytes(),
                     ),
                 },
                 Format {
                     id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(b"hola".to_vec()),
+                    payload: Payload::Inline(b"hi".to_vec()),
                 },
             ],
         }
         };
         let first = docs("4a1e6b2f-7fff-1d3e-8c5a-2b3c4d5e6f70");
         let second = docs("0c9d8e7f-7fff-aaaa-bbbb-000000000001");
-        assert_ne!(first, second, "los bytes sí difieren");
+        assert_ne!(first, second, "the bytes really do differ");
         assert_eq!(first.fingerprint(), second.fingerprint());
         assert_ne!(
             first.fingerprint(),
-            Item::plain("hola").fingerprint(),
-            "el texto plano copiado de donde se pegó sigue siendo otro ítem"
+            Item::plain("hi").fingerprint(),
+            "plain text copied from where it was pasted is still a different item"
         );
         let other_words = docs("4a1e6b2f-7fff-1d3e-8c5a-2b3c4d5e6f70");
         let mut changed = other_words.clone();
-        changed.formats[1].payload = Payload::Inline(b"adios".to_vec());
+        changed.formats[1].payload = Payload::Inline(b"bye".to_vec());
         assert_ne!(other_words.fingerprint(), changed.fingerprint());
     }
 
@@ -271,17 +271,17 @@ mod tests {
                 Format {
                     id: "public.rtf".into(),
                     payload: Payload::Inline(
-                        format!("{{\\rtf1{{\\*\\rsidtbl \\rsid{rsid}}}\\insrsid{rsid} hola}}")
+                        format!("{{\\rtf1{{\\*\\rsidtbl \\rsid{rsid}}}\\insrsid{rsid} hi}}")
                             .into_bytes(),
                     ),
                 },
                 Format {
                     id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(b"hola".to_vec()),
+                    payload: Payload::Inline(b"hi".to_vec()),
                 },
                 Format {
                     id: "public.html".into(),
-                    payload: Payload::Inline(b"<p class=MsoNormal>hola</p>".to_vec()),
+                    payload: Payload::Inline(b"<p class=MsoNormal>hi</p>".to_vec()),
                 },
                 Format {
                     id: "com.apple.webarchive".into(),
@@ -299,10 +299,10 @@ mod tests {
         assert_eq!(
             first.fingerprint(),
             second.fingerprint(),
-            "los rsid, el UUID del webarchive y la fecha del RTFD no son contenido"
+            "the rsids, the webarchive UUID and the RTFD timestamp are not content"
         );
         let mut other_words = second.clone();
-        other_words.formats[2].payload = Payload::Inline(b"<p class=MsoNormal>adios</p>".to_vec());
+        other_words.formats[2].payload = Payload::Inline(b"<p class=MsoNormal>bye</p>".to_vec());
         assert_ne!(first.fingerprint(), other_words.fingerprint());
     }
 
@@ -340,7 +340,7 @@ mod tests {
             formats: vec![
                 Format {
                     id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(b"hola".to_vec()),
+                    payload: Payload::Inline(b"hi".to_vec()),
                 },
                 Format {
                     id: "com.apple.icns".into(),
@@ -352,7 +352,7 @@ mod tests {
             kind: None,
             formats: vec![Format {
                 id: "public.utf8-plain-text".into(),
-                payload: Payload::Inline(b"hola".to_vec()),
+                payload: Payload::Inline(b"hi".to_vec()),
             }],
         };
         assert_eq!(with_note.fingerprint(), without.fingerprint());

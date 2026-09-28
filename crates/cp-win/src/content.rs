@@ -200,7 +200,7 @@ mod tests {
         assert!(forms.contains(&Form::LinkMarkdown));
         assert!(
             !forms.contains(&Form::LinkTitled),
-            "sin título no hay forma titulada"
+            "with no title there is no titled form"
         );
     }
 
@@ -234,7 +234,7 @@ mod tests {
         assert_eq!(
             content.image,
             Some(&[137u8, 80, 78, 71][..]),
-            "el DIB crudo no se ofrece: la imagen es el PNG sintético"
+            "the raw DIB is not offered: the image is the synthetic PNG"
         );
         let both = Item {
             kind: Some(Kind::Image),
@@ -283,6 +283,6 @@ mod tests {
         let content = content_of(&item, None);
         assert_eq!(content.text, None);
         assert_eq!(content.html, None);
-        assert!(!content.rich, "un HTML ilegible no hace rico al ítem");
+        assert!(!content.rich, "unreadable HTML does not make an item rich");
     }
 }

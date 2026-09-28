@@ -58,11 +58,11 @@ mod tests {
                 if tries < 2 {
                     Captured::TooSlow
                 } else {
-                    Captured::Kept(Item::plain("tarde pero llega"))
+                    Captured::Kept(Item::plain("late, but it got here"))
                 }
             },
         );
-        assert_eq!(got, Captured::Kept(Item::plain("tarde pero llega")));
+        assert_eq!(got, Captured::Kept(Item::plain("late, but it got here")));
     }
 
     #[test]
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn only_what_was_kept_is_an_item() {
-        let item = Item::plain("hola");
+        let item = Item::plain("hello");
         assert_eq!(Captured::Kept(item.clone()).kept(), Some(item));
         assert_eq!(Captured::Nothing.kept(), None);
         assert_eq!(Captured::TooSlow.kept(), None);

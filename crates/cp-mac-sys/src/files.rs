@@ -72,9 +72,9 @@ mod tests {
         );
         assert_eq!(path_of("file:///tmp/plain.txt"), "/tmp/plain.txt");
         assert_eq!(
-            path_of("/ya/es/ruta"),
-            "/ya/es/ruta",
-            "sin esquema se deja como llegó"
+            path_of("/already/a/path"),
+            "/already/a/path",
+            "with no scheme it is left as it arrived"
         );
     }
 
@@ -95,9 +95,9 @@ mod tests {
 
     #[test]
     fn what_is_not_there_is_neither_opened_nor_revealed() {
-        let ghost = Path::new("/tmp/cp-no-existe-nunca/archivo.txt");
-        assert!(!open(ghost), "abrir lo que no existe no lanza nada");
-        assert!(!reveal(ghost), "ni activa el Finder");
+        let ghost = Path::new("/tmp/cp-never-exists/file.txt");
+        assert!(!open(ghost), "opening what is not there launches nothing");
+        assert!(!reveal(ghost), "nor does it activate Finder");
     }
 
     #[test]
@@ -105,12 +105,12 @@ mod tests {
         for name in ["setup.pkg", "run.SH", "Thing.app", "x.command", "a.scpt"] {
             assert!(runs_when_opened(Path::new(name)), "{name}");
         }
-        for name in ["notas.txt", "foto.png", "sin-extension", "archivo.shtml"] {
+        for name in ["notes.txt", "photo.png", "no-extension", "file.shtml"] {
             assert!(!runs_when_opened(Path::new(name)), "{name}");
         }
         assert!(
-            !open(Path::new("/tmp/cp-no-existe-nunca/peligro.sh")),
-            "revelar lo que no existe también dice que no"
+            !open(Path::new("/tmp/cp-never-exists/danger.sh")),
+            "revealing what is not there also says no"
         );
     }
 
@@ -123,7 +123,7 @@ mod tests {
             .unwrap_or_default();
         assert_eq!(
             text, "file:///tmp/cp%20a9/cancio%CC%81n.png",
-            "NSURL descompone el acento como lo hace el sistema de archivos"
+            "NSURL decomposes the accent the way the file system does"
         );
     }
 }

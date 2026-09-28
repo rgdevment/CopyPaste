@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn a_path_with_accents_and_spaces_survives() {
-        let paths = [r"C:\Mis Documentos\informe ñ.pdf"];
+        let paths = [r"C:\My Documents\report ñ.pdf"];
         assert_eq!(paths_in(&drop_of(&paths)), paths);
     }
 

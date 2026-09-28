@@ -16,8 +16,8 @@ pub fn folder() -> Option<PathBuf> {
     }
 }
 
-fn nowhere() -> String {
-    "no se encontró la carpeta donde CopyPaste guarda lo suyo".to_owned()
+pub fn nowhere() -> String {
+    "the folder where CopyPaste keeps its own was not found".to_owned()
 }
 
 pub fn settle() {
@@ -29,7 +29,7 @@ pub fn settle() {
         return;
     }
     if let Err(why) = cp_config::write(&path, &Config::default()) {
-        crate::note::note(&format!("los ajustes no se pudieron estrenar: {why}"));
+        crate::note::note(&format!("the settings could not be started off: {why}"));
     }
 }
 
@@ -46,12 +46,25 @@ pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
     let before = cp_config::read(&path).ok().map(|one| one.shortcut);
     cp_config::write(&path, &config).map_err(|why| why.to_string())?;
     let landed = cp_config::read(&path).map_err(|why| why.to_string())?;
-    if before.as_deref() != Some(landed.shortcut.as_str())
-        && let Err(why) = crate::keys::bind(&app, &landed.shortcut)
-    {
-        crate::note::note(&format!("el atajo nuevo no se pudo tomar: {why}"));
+    if before.as_deref() == Some(landed.shortcut.as_str()) {
+        return Ok(landed);
     }
-    Ok(landed)
+    let Err(why) = crate::keys::bind(&app, &landed.shortcut) else {
+        return Ok(landed);
+    };
+    crate::note::note(&format!("the new shortcut could not be taken: {why}"));
+    let was = before.unwrap_or_else(|| cp_config::SHORTCUT.to_owned());
+    let back = Config {
+        shortcut: was.clone(),
+        ..landed
+    };
+    let _ = cp_config::write(&path, &back);
+    if let Err(twice) = crate::keys::bind(&app, &was) {
+        crate::note::note(&format!(
+            "and the one before it did not come back either: {twice}"
+        ));
+    }
+    Err(why)
 }
 
 #[tauri::command]

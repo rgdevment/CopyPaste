@@ -13,6 +13,7 @@ pub fn note(what: &str) {
     let path = where_to();
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
+        let _ = cp_store::restrict(dir, 0o700);
     }
     if std::fs::metadata(&path).map_or(0, |it| it.len()) > UP_TO {
         let _ = std::fs::write(&path, b"");
@@ -24,6 +25,7 @@ pub fn note(what: &str) {
     else {
         return;
     };
+    let _ = cp_store::restrict(&path, 0o600);
     let _ = writeln!(file, "{} {what}", clock());
 }
 

@@ -38,7 +38,7 @@ mod tests {
             blobs_dir().expect("blobs"),
             thumbs_dir().expect("miniaturas"),
         ] {
-            assert!(path.starts_with(&root), "{path:?} se salió de {root:?}");
+            assert!(path.starts_with(&root), "{path:?} stepped outside {root:?}");
         }
     }
 
@@ -49,7 +49,7 @@ mod tests {
         assert!(text.contains("local"), "{text}");
         assert!(
             !text.contains("roaming"),
-            "un perfil itinerante subiría el historial a la red: {text}"
+            "a roaming profile would upload the history to the network: {text}"
         );
     }
 

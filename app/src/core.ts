@@ -79,6 +79,10 @@ export function useKept() {
   return { kept, trouble, change, look };
 }
 
+export function onMac() {
+  return /Mac|iPhone|iPad/.test(navigator.userAgent);
+}
+
 export function whereItLives() {
   return invoke<string>("where_it_lives");
 }
@@ -170,4 +174,40 @@ export function useWaking() {
   }, []);
 
   return { waking, trouble, ask };
+}
+
+export type Trust = {
+  offered: boolean;
+  pastes: boolean;
+  secureInput: boolean;
+};
+
+export const PRIVACY_PANE =
+  "x-apple.systempreferences://com.apple.preference.security?Privacy_Accessibility";
+
+export function useTrust() {
+  const [trust, setTrust] = useState<Trust | null>(null);
+  const [asked, setAsked] = useState(false);
+
+  const look = useCallback(() => {
+    invoke<Trust>("trust")
+      .then(setTrust)
+      .catch(() => setTrust(null));
+  }, []);
+
+  useEffect(look, [look]);
+
+  useEffect(() => {
+    const again = setInterval(look, 4_000);
+    return () => clearInterval(again);
+  }, [look]);
+
+  const ask = useCallback(() => {
+    setAsked(true);
+    invoke<Trust>("ask_trust")
+      .then(setTrust)
+      .catch(() => {});
+  }, []);
+
+  return { trust, asked, ask };
 }

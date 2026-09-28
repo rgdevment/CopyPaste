@@ -23,7 +23,7 @@ mod tests {
     fn the_upper_half_of_the_range_does_not_turn_negative() {
         for raw in [0x8000_0000u32, 0xFFFF_FFFF] {
             let counted = sequence(raw).expect("no es cero");
-            assert!(counted > 0, "{raw} salió como {counted}");
+            assert!(counted > 0, "{raw} came out as {counted}");
         }
     }
 
@@ -39,7 +39,7 @@ mod tests {
                 fresh += 1;
             }
         }
-        assert_eq!(fresh, 0, "nadie copió, y nada se registró");
+        assert_eq!(fresh, 0, "nobody copied, and nothing was recorded");
     }
 
     #[test]

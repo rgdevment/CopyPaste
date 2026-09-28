@@ -185,12 +185,15 @@ mod tests {
 
     #[test]
     fn plain_words_are_the_search() {
-        let filter = parsed("el café de la esquina");
-        assert_eq!(filter.query.as_deref(), Some("el café de la esquina"));
+        let filter = parsed("the coffee shop on the corner");
+        assert_eq!(
+            filter.query.as_deref(),
+            Some("the coffee shop on the corner")
+        );
         assert_eq!(
             filter,
             Filter {
-                query: Some("el café de la esquina".into()),
+                query: Some("the coffee shop on the corner".into()),
                 ..Default::default()
             }
         );
@@ -221,11 +224,11 @@ mod tests {
     #[test]
     fn a_prefix_is_only_an_operator_when_its_value_is_known() {
         assert_eq!(parsed("/nada").query.as_deref(), Some("/nada"));
-        assert_eq!(parsed("k:foto").query.as_deref(), Some("k:foto"));
+        assert_eq!(parsed("k:photo").query.as_deref(), Some("k:photo"));
         assert_eq!(
-            parsed("k:image,foto").query.as_deref(),
-            Some("k:image,foto"),
-            "una lista con un desconocido no es media lista"
+            parsed("k:image,photo").query.as_deref(),
+            Some("k:image,photo"),
+            "a list with one unknown value is not half a list"
         );
         assert_eq!(parsed("#FF8800").query.as_deref(), Some("#FF8800"));
         assert_eq!(parsed("c:9").query.as_deref(), Some("c:9"));
@@ -245,9 +248,9 @@ mod tests {
 
     #[test]
     fn an_email_is_not_an_application() {
-        let filter = parsed("escribe a juan@ejemplo.test");
+        let filter = parsed("write to john@example.test");
         assert!(filter.apps.is_empty());
-        assert_eq!(filter.query.as_deref(), Some("escribe a juan@ejemplo.test"));
+        assert_eq!(filter.query.as_deref(), Some("write to john@example.test"));
     }
 
     #[test]
@@ -271,7 +274,7 @@ mod tests {
         assert_eq!(
             parsed("A:Slack").apps,
             vec!["Slack"],
-            "el nombre de la app se conserva"
+            "the app name keeps its own case"
         );
     }
 
@@ -280,9 +283,9 @@ mod tests {
         assert_eq!(parsed("sort:pasted sort:used").order, Order::LastUsed);
         assert_eq!(parsed("k:json k:json").kinds, vec![Kind::Json, Kind::Json]);
         assert_eq!(
-            parsed("k:ímage").query.as_deref(),
-            Some("k:ímage"),
-            "con acento no es una clase"
+            parsed("k:ïmage").query.as_deref(),
+            Some("k:ïmage"),
+            "with a diacritic mark it is not a class"
         );
     }
 
@@ -292,13 +295,13 @@ mod tests {
         assert_eq!(filter.query.as_deref(), Some("PR #3"));
         assert!(
             filter.colors.is_empty(),
-            "«#3» es un número de PR, no el morado"
+            "«#3» is a PR number, not the colour purple"
         );
         assert_eq!(parsed("#3,red").query.as_deref(), Some("#3,red"));
         assert_eq!(
             parsed("c:3").colors,
             vec![3],
-            "por clave, el índice sí vale"
+            "by key, the index does count"
         );
     }
 
@@ -322,7 +325,7 @@ mod tests {
         assert_eq!(parsed("~0h").query.as_deref(), Some("~0h"));
         assert_eq!(parsed("~h").query.as_deref(), Some("~h"));
         assert_eq!(parsed("~1y").query.as_deref(), Some("~1y"));
-        assert_eq!(parsed("~ayer").query.as_deref(), Some("~ayer"));
+        assert_eq!(parsed("~yesterday").query.as_deref(), Some("~yesterday"));
     }
 
     #[test]
@@ -344,8 +347,8 @@ mod tests {
 
     #[test]
     fn the_label_is_searched_on_its_own_column() {
-        let filter = parsed("label:factura l:mayo");
-        assert_eq!(filter.label_query.as_deref(), Some("factura mayo"));
+        let filter = parsed("label:invoice l:may");
+        assert_eq!(filter.label_query.as_deref(), Some("invoice may"));
         assert_eq!(filter.query, None);
     }
 
@@ -355,7 +358,7 @@ mod tests {
         assert_eq!(parsed("order:used").order, Order::LastUsed);
         let explicit = parsed("sort:recent");
         assert_eq!(explicit.order, Order::Recent);
-        assert_eq!(explicit.query, None, "es un operador, no texto");
+        assert_eq!(explicit.query, None, "it is an operator, not text");
     }
 
     #[test]
@@ -363,9 +366,9 @@ mod tests {
         assert_eq!(parsed("-is:pinned").query.as_deref(), Some("-is:pinned"));
         assert_eq!(parsed("-~1h").query.as_deref(), Some("-~1h"));
         assert_eq!(parsed("-c:red").query.as_deref(), Some("-c:red"));
-        assert_eq!(parsed("-l:factura").query.as_deref(), Some("-l:factura"));
+        assert_eq!(parsed("-l:invoice").query.as_deref(), Some("-l:invoice"));
         assert_eq!(parsed("-sort:used").query.as_deref(), Some("-sort:used"));
-        assert_eq!(parsed("-l:factura").label_query, None);
+        assert_eq!(parsed("-l:invoice").label_query, None);
         assert_eq!(parsed("-sort:used").order, Order::Recent);
     }
 
@@ -390,18 +393,18 @@ mod tests {
             assert_eq!(
                 parsed(typed),
                 Filter::default(),
-                "«{typed}» es el historial entero"
+                "«{typed}» is the whole history"
             );
         }
-        assert_eq!(parsed("hola ...").query.as_deref(), Some("hola"));
+        assert_eq!(parsed("hello ...").query.as_deref(), Some("hello"));
     }
 
     #[test]
     fn a_colon_inside_ordinary_text_is_not_a_key() {
         assert_eq!(
-            parsed("https://ejemplo.test").query.as_deref(),
-            Some("https://ejemplo.test"),
-            "https no es una clave"
+            parsed("https://example.test").query.as_deref(),
+            Some("https://example.test"),
+            "https is not a key"
         );
         assert_eq!(parsed("12:30").query.as_deref(), Some("12:30"));
         assert_eq!(parsed("a-b:c").query.as_deref(), Some("a-b:c"));
@@ -423,26 +426,23 @@ mod tests {
 
     #[test]
     fn everything_at_once() {
-        let filter = parsed("  pedido  k:json,text -@safari #red ~7d is:pinned l:mayo sort:used ");
-        assert_eq!(filter.query.as_deref(), Some("pedido"));
+        let filter = parsed("  request  k:json,text -@safari #red ~7d is:pinned l:may sort:used ");
+        assert_eq!(filter.query.as_deref(), Some("request"));
         assert_eq!(filter.kinds, vec![Kind::Json, Kind::Text]);
         assert_eq!(filter.exclude_apps, vec!["safari"]);
         assert_eq!(filter.colors, vec![1]);
         assert_eq!(filter.since, Some(CLOCK.now - WEEK));
         assert!(filter.pinned_only);
-        assert_eq!(filter.label_query.as_deref(), Some("mayo"));
+        assert_eq!(filter.label_query.as_deref(), Some("may"));
         assert_eq!(filter.order, Order::LastUsed);
     }
 
     #[test]
     fn quotes_group_words_and_then_disappear() {
+        assert_eq!(parsed("\"two words\"").query.as_deref(), Some("two words"));
         assert_eq!(
-            parsed("\"dos palabras\"").query.as_deref(),
-            Some("dos palabras")
-        );
-        assert_eq!(
-            parsed("sin cerrar \"la cita").query.as_deref(),
-            Some("sin cerrar la cita")
+            parsed("not closing \"the quote").query.as_deref(),
+            Some("not closing the quote")
         );
     }
 }

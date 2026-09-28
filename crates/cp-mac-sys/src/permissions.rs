@@ -72,7 +72,7 @@ mod tests {
         assert!(with(true, false, false).can_paste());
         assert!(
             with(true, false, true).can_paste(),
-            "el input seguro no manda"
+            "secure input does not get the final word"
         );
         assert!(with(false, true, false).can_paste());
         assert!(!with(false, false, false).can_paste());

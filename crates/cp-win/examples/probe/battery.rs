@@ -20,17 +20,17 @@ use cp_win_sys::{files, media, ocr, source, thumbnail};
 
 const CASES: u32 = 46;
 const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2"];
-const SKIPPED: &str = "omitido: ";
+const SKIPPED: &str = "skipped: ";
 
-const VIRTUAL_FILE_NAME: &str = "adjunto virtual.txt";
-const VIRTUAL_FILE_BYTES: &[u8] = b"cp-e2 contenido";
+const VIRTUAL_FILE_NAME: &str = "virtual attachment.txt";
+const VIRTUAL_FILE_BYTES: &[u8] = b"cp-e2 content";
 const VIRTUAL_FILE_SCRIPT: &str = "Add-Type -AssemblyName System.Windows.Forms; \
-$bytes = [System.Text.Encoding]::UTF8.GetBytes('cp-e2 contenido'); \
+$bytes = [System.Text.Encoding]::UTF8.GetBytes('cp-e2 content'); \
 $fgd = New-Object byte[] 596; \
 [BitConverter]::GetBytes([uint32]1).CopyTo($fgd, 0); \
 [BitConverter]::GetBytes([uint32]0x40).CopyTo($fgd, 4); \
 [BitConverter]::GetBytes([uint32]$bytes.Length).CopyTo($fgd, 72); \
-[System.Text.Encoding]::Unicode.GetBytes('adjunto virtual.txt').CopyTo($fgd, 76); \
+[System.Text.Encoding]::Unicode.GetBytes('virtual attachment.txt').CopyTo($fgd, 76); \
 $d = New-Object System.Windows.Forms.DataObject; \
 $d.SetData('FileGroupDescriptorW', (New-Object System.IO.MemoryStream(,$fgd))); \
 $d.SetData('FileContents', (New-Object System.IO.MemoryStream(,$bytes))); \
@@ -56,7 +56,7 @@ impl Battery {
             }
             Err(why) => {
                 self.failed += 1;
-                println!("    FALLA {id:<5} {what}\n            {why}");
+                println!("    FAIL  {id:<5} {what}\n            {why}");
             }
         }
     }
@@ -78,10 +78,10 @@ impl Battery {
     fn skip(&mut self, id: &'static str, what: &str, why: &str) {
         if MAY_SKIP.contains(&id) {
             self.skipped.push(id);
-            println!("    salta {id:<5} {what}\n            {why}");
+            println!("    skip  {id:<5} {what}\n            {why}");
         } else {
             self.failed += 1;
-            println!("    FALLA {id:<5} {what}: este caso no puede saltarse");
+            println!("    FAIL  {id:<5} {what}: this case cannot be skipped");
         }
     }
 }
@@ -114,9 +114,9 @@ fn shell_is_running() -> Result<(), String> {
     match powershell_within("(Get-Process -Name explorer -ErrorAction SilentlyContinue).Count") {
         Some(count) if !count.is_empty() && count != "0" => Ok(()),
         Some(_) => Err(format!(
-            "{SKIPPED}no hay Explorador en esta sesión: no hay escritorio al que abrir o revelar"
+            "{SKIPPED}there is no Explorer in this session: there is no desktop to open or reveal onto"
         )),
-        None => Err(format!("{SKIPPED}PowerShell no contesta")),
+        None => Err(format!("{SKIPPED}PowerShell does not answer")),
     }
 }
 
@@ -150,19 +150,19 @@ fn wait_until(what: &str, mut observed: impl FnMut() -> Option<bool>) -> Result<
         match observed() {
             Some(true) => return Ok(()),
             Some(false) => {}
-            None => return Err("PowerShell no contesta o falló al preguntar".into()),
+            None => return Err("PowerShell does not answer or failed to ask".into()),
         }
     }
-    Err(format!("{what}: no pasó a tiempo"))
+    Err(format!("{what}: did not happen in time"))
 }
 
 fn offered_names() -> Result<Vec<String>, String> {
-    let clipboard = Clipboard::open().ok_or("no se pudo abrir el portapapeles")?;
+    let clipboard = Clipboard::open().ok_or("the clipboard could not be opened")?;
     Ok(clipboard.offered().into_iter().map(name_of).collect())
 }
 
 fn main() -> std::process::ExitCode {
-    println!("\nBatería del núcleo contra el portapapeles de Windows");
+    println!("\nCore battery against the Windows clipboard");
 
     let mut b = Battery {
         passed: 0,
@@ -170,57 +170,57 @@ fn main() -> std::process::ExitCode {
         skipped: Vec::new(),
     };
 
-    b.group("A · El portapapeles responde");
+    b.group("A · The clipboard responds");
 
-    b.case("A1", "se abre y se cierra sin quedarse tomado", || {
+    b.case("A1", "it opens and closes without staying locked", || {
         {
-            let _first = Clipboard::open().ok_or("no abrió")?;
+            let _first = Clipboard::open().ok_or("did not open")?;
         }
-        let _second = Clipboard::open().ok_or("no abrió la segunda vez")?;
+        let _second = Clipboard::open().ok_or("did not open the second time")?;
         Ok(())
     });
 
-    b.case("A2", "el contador de secuencia se lee", || {
-        clipboard::sequence()
-            .map(|_| ())
-            .ok_or_else(|| "devolvió cero: no se alcanza la estación de ventanas".into())
+    b.case("A2", "the sequence counter can be read", || {
+        clipboard::sequence().map(|_| ()).ok_or_else(|| {
+            "returned zero: the window station cannot be reached".into()
+        })
     });
 
-    b.case("A3", "enumerar no pide un solo byte", || {
+    b.case("A3", "enumerating does not ask for a single byte", || {
         let names = offered_names()?;
-        println!("            {} formatos: {}", names.len(), names.join(", "));
+        println!("            {} formats: {}", names.len(), names.join(", "));
         Ok(())
     });
 
-    b.group("B · El catálogo contra lo que hay de verdad");
+    b.group("B · The catalog against what is really there");
 
-    b.case("B1", "todo lo ofrecido recibe una decisión", || {
+    b.case("B1", "everything offered gets a decision", || {
         let names = offered_names()?;
         if names.is_empty() {
-            return Err("el portapapeles está vacío: copia algo y repite".into());
+            return Err("the clipboard is empty: copy something and try again".into());
         }
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         let family = CATALOG.classify(&refs);
         for name in &names {
             let take = CATALOG.decide_in(family, name);
             let mark = match take {
-                Take::Payload => "copia",
-                Take::Presence => "anota",
-                Take::Never => "nunca",
+                Take::Payload => "copy",
+                Take::Presence => "note",
+                Take::Never => "never",
             };
             println!("            {mark}  {name}");
         }
         Ok(())
     });
 
-    b.case_or_skip("B2", "lo que se copia se puede leer de verdad", || {
-        let clipboard = Clipboard::open().ok_or("no abrió")?;
+    b.case_or_skip("B2", "what is copied can really be read", || {
+        let clipboard = Clipboard::open().ok_or("did not open")?;
         let ids = clipboard.offered();
         let names: Vec<String> = ids.iter().map(|id| name_of(*id)).collect();
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         if let Some(refusal) = CATALOG.refusal(&refs) {
             return Err(format!(
-                "{SKIPPED}la fuente pidió no registrar esto ({refusal:?}): no hay nada que leer"
+                "{SKIPPED}the source asked not to record this ({refusal:?}): there is nothing to read"
             ));
         }
         let family = CATALOG.classify(&refs);
@@ -238,17 +238,17 @@ fn main() -> std::process::ExitCode {
                     bytes += size;
                     println!("            {size:>9} B  {name}");
                 }
-                None => println!("            {:>9}  {name}", "sin datos"),
+                None => println!("            {:>9}  {name}", "no data"),
             }
         }
         if read == 0 {
-            return Err("nada de lo que el catálogo quiere entregó bytes".into());
+            return Err("nothing the catalog wants delivered bytes".into());
         }
-        println!("            {read} formatos, {bytes} bytes");
+        println!("            {read} formats, {bytes} bytes");
         Ok(())
     });
 
-    b.case("B3", "la clase que sale es una de las tres", || {
+    b.case("B3", "the class that comes out is one of the three", || {
         let names = offered_names()?;
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         match CATALOG.classify(&refs) {
@@ -256,7 +256,7 @@ fn main() -> std::process::ExitCode {
                 println!("            {family:?}");
                 Ok(())
             }
-            None => Err(format!("ninguna clase para {names:?}")),
+            None => Err(format!("no class for {names:?}")),
         }
     });
 
@@ -267,111 +267,111 @@ fn main() -> std::process::ExitCode {
     if courtesy {
         b.case(
             "B4",
-            "una hoja de cálculo no se guarda como foto",
+            "a spreadsheet is not stored as a photo",
             || match CATALOG.classify(&refs) {
                 Some(Family::Text) => Ok(()),
-                other => Err(format!("se clasificó como {other:?}")),
+                other => Err(format!("classified as {other:?}")),
             },
         );
     } else {
         b.skip(
             "B4",
-            "una hoja de cálculo no se guarda como foto",
-            "lo copiado no es un documento con imagen: copia un rango de Excel y repite",
+            "a spreadsheet is not stored as a photo",
+            "what was copied is not a document with an image: copy a range from Excel and try again",
         );
     }
 
-    b.group("F · Ida y vuelta, montada por nosotros");
+    b.group("F · Round trip, staged by us");
 
-    b.case("F1", "lo que escribimos se vuelve a leer igual", || {
-        let written = "cp-f1-ida-y-vuelta ñ 🦀";
+    b.case("F1", "what we write reads back the same", || {
+        let written = "cp-f1-round-trip ñ 🦀";
         {
-            let clipboard = Clipboard::open().ok_or("no abrió para escribir")?;
+            let clipboard = Clipboard::open().ok_or("did not open for writing")?;
             match clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]) {
                 Written::Placed { formats: 1 } => {}
-                other => return Err(format!("la escritura dio {other:?}")),
+                other => return Err(format!("the write gave {other:?}")),
             }
         }
-        let clipboard = Clipboard::open().ok_or("no abrió para leer")?;
-        let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("no devolvió bytes")?;
+        let clipboard = Clipboard::open().ok_or("did not open for reading")?;
+        let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("returned no bytes")?;
         match text_of(&bytes).as_deref() {
             Some(back) if back == written => Ok(()),
-            other => Err(format!("volvió «{other:?}»")),
+            other => Err(format!("came back «{other:?}»")),
         }
     });
 
-    b.case("F2", "escribir mueve el contador y leer no", || {
-        let before = clipboard::sequence().ok_or("sin contador")?;
+    b.case("F2", "writing moves the counter and reading does not", || {
+        let before = clipboard::sequence().ok_or("no counter")?;
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f2"))]);
         }
-        let after = clipboard::sequence().ok_or("sin contador")?;
+        let after = clipboard::sequence().ok_or("no counter")?;
         if after == before {
-            return Err("el contador no se movió al escribir".into());
+            return Err("the counter did not move when writing".into());
         }
         let quiet = {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             let _ = clipboard.bytes(CF_UNICODETEXT);
-            clipboard::sequence().ok_or("sin contador")?
+            clipboard::sequence().ok_or("no counter")?
         };
         if quiet != after {
-            return Err(format!("leer movió el contador de {after} a {quiet}"));
+            return Err(format!("reading moved the counter from {after} to {quiet}"));
         }
-        println!("            {before} → {after} por una escritura");
+        println!("            {before} → {after} from one write");
         Ok(())
     });
 
     b.case(
         "F3",
-        "el vigilante ve nuestra escritura como nuestra",
+        "the watcher sees our write as ours",
         || {
             let mut watcher = Watcher::new(Cadence::Opaque);
-            watcher.tick(clipboard::sequence().ok_or("sin contador")?);
+            watcher.tick(clipboard::sequence().ok_or("no counter")?);
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f3"))]);
             }
-            let ours = clipboard::sequence().ok_or("sin contador")?;
+            let ours = clipboard::sequence().ok_or("no counter")?;
             watcher.wrote(ours);
             match watcher.tick(ours) {
                 Seen::Ours => Ok(()),
-                other => Err(format!("se vio como {other:?}")),
+                other => Err(format!("seen as {other:?}")),
             }
         },
     );
 
-    b.case("F4", "una copia ajena tras la nuestra no se traga", || {
+    b.case("F4", "a foreign copy after ours is not swallowed", || {
         let mut watcher = Watcher::new(Cadence::Opaque);
-        watcher.tick(clipboard::sequence().ok_or("sin contador")?);
+        watcher.tick(clipboard::sequence().ok_or("no counter")?);
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f4-nuestro"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f4-ours"))]);
         }
-        let ours = clipboard::sequence().ok_or("sin contador")?;
+        let ours = clipboard::sequence().ok_or("no counter")?;
         watcher.wrote(ours);
         if watcher.tick(ours) != Seen::Ours {
-            return Err("la nuestra no se reconoció".into());
+            return Err("ours was not recognised".into());
         }
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f4-ajeno"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f4-foreign"))]);
         }
-        let theirs = clipboard::sequence().ok_or("sin contador")?;
+        let theirs = clipboard::sequence().ok_or("no counter")?;
         match watcher.tick(theirs) {
             Seen::Fresh { .. } => Ok(()),
-            other => Err(format!("la siguiente copia se vio como {other:?}")),
+            other => Err(format!("the next copy was seen as {other:?}")),
         }
     });
 
-    b.group("G · Lo que no entrega a tiempo se abandona");
+    b.group("G · What does not deliver in time is abandoned");
 
     b.case(
         "G1",
-        "un formato con datos responde muy por debajo del techo",
+        "a format with data responds well under the ceiling",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g1"))]);
             }
             let started = std::time::Instant::now();
@@ -381,14 +381,14 @@ fn main() -> std::process::ExitCode {
             });
             let took = started.elapsed();
             if seen.is_too_slow() {
-                return Err(format!("no llegó en {PATIENCE:?}"));
+                return Err(format!("did not arrive within {PATIENCE:?}"));
             }
-            println!("            {took:?} contra un techo de {PATIENCE:?}");
+            println!("            {took:?} against a ceiling of {PATIENCE:?}");
             Ok(())
         },
     );
 
-    b.case("G2", "lo que no contesta se abandona en el techo", || {
+    b.case("G2", "what does not answer is abandoned at the ceiling", || {
         let started = std::time::Instant::now();
         let seen = reading::within(PATIENCE, || {
             std::thread::sleep(std::time::Duration::from_secs(30));
@@ -396,33 +396,33 @@ fn main() -> std::process::ExitCode {
         });
         let took = started.elapsed();
         if seen != Reading::TooSlow {
-            return Err(format!("se esperó de más y dio {seen:?}"));
+            return Err(format!("it waited too long and gave {seen:?}"));
         }
         if took > PATIENCE * 3 {
-            return Err(format!("tardó {took:?} en rendirse"));
+            return Err(format!("took {took:?} to give up"));
         }
-        println!("            abandonado en {took:?}, no en los 30 s medidos");
+        println!("            abandoned at {took:?}, not at the measured 30 s");
         Ok(())
     });
 
-    b.group("H · La captura, de punta a punta");
+    b.group("H · The capture, end to end");
 
-    b.case("G3", "la captura entera tiene su propio techo", || {
+    b.case("G3", "the whole capture has its own ceiling", || {
         let started = std::time::Instant::now();
         let seen = capture::capture_within(std::time::Duration::from_nanos(1));
         let took = started.elapsed();
         if seen != Captured::TooSlow {
-            return Err(format!("con un techo imposible dio {seen:?}"));
+            return Err(format!("with an impossible ceiling it gave {seen:?}"));
         }
         if took > std::time::Duration::from_millis(500) {
-            return Err(format!("tardo {took:?} en rendirse"));
+            return Err(format!("took {took:?} to give up"));
         }
         let after = capture::capture_within(capture::PATIENCE);
         if after == Captured::TooSlow {
-            return Err("y el techo normal ya no alcanza para nada".into());
+            return Err("and the normal ceiling is no longer enough for anything".into());
         }
         println!(
-            "            abandonado en {took:?}; con {:?} si captura",
+            "            abandoned at {took:?}; with {:?} it does capture",
             capture::PATIENCE
         );
         Ok(())
@@ -430,15 +430,15 @@ fn main() -> std::process::ExitCode {
 
     b.case(
         "G4",
-        "insistir ante una fuente que responde no cuesta un segundo intento",
+        "insisting on a source that responds costs no second attempt",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g4"))]);
             }
             let direct = {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
-                capture(&clipboard).kept().ok_or("no se capturó")?
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                capture(&clipboard).kept().ok_or("nothing was captured")?
             };
             let started = std::time::Instant::now();
             let got = capture::capture_insisting(capture::PATIENCE, cp_core::watch::RETRY);
@@ -448,59 +448,59 @@ fn main() -> std::process::ExitCode {
                     if took < capture::PATIENCE {
                         Ok(())
                     } else {
-                        Err(format!("tardó {took:?}: hubo pausa sin motivo"))
+                        Err(format!("took {took:?}: there was a pause for no reason"))
                     }
                 }
-                other => Err(format!("llegó {other:?}")),
+                other => Err(format!("got {other:?}")),
             }
         },
     );
 
-    b.case("H1", "un texto copiado se convierte en un ítem", || {
+    b.case("H1", "a copied text becomes an item", || {
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("alguien@ejemplo.test"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("someone@example.test"))]);
         }
-        let clipboard = Clipboard::open().ok_or("no abrió")?;
+        let clipboard = Clipboard::open().ok_or("did not open")?;
         match capture(&clipboard) {
             Captured::Kept(item) => {
                 if item.kind != Some(cp_core::kind::Kind::Email) {
-                    return Err(format!("la clase salió {:?}", item.kind));
+                    return Err(format!("the class came out {:?}", item.kind));
                 }
                 println!(
-                    "            {} formatos, {} bytes guardados, clase {:?}",
+                    "            {} formats, {} bytes stored, class {:?}",
                     item.formats.len(),
                     item.stored_bytes(),
                     item.kind
                 );
                 Ok(())
             }
-            other => Err(format!("no se capturó: {other:?}")),
+            other => Err(format!("nothing was captured: {other:?}")),
         }
     });
 
     b.case(
         "H2",
-        "el conjunto entero se anota, no solo lo que se copia",
+        "the whole set is noted, not just what is copied",
         || {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             let offered = clipboard.offered().len();
             match capture(&clipboard) {
                 Captured::Kept(item) => {
                     if item.formats.len() < offered {
                         return Err(format!(
-                            "se ofrecieron {offered} y solo se anotaron {}",
+                            "{offered} were offered and only {} were noted",
                             item.formats.len()
                         ));
                     }
                     Ok(())
                 }
-                other => Err(format!("no se capturó: {other:?}")),
+                other => Err(format!("nothing was captured: {other:?}")),
             }
         },
     );
 
-    b.case("H3", "dos copias iguales tienen la misma huella", || {
+    b.case("H3", "two identical copies have the same fingerprint", || {
         let write = |text: &str| {
             let clipboard = Clipboard::open()?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(text))]);
@@ -513,184 +513,185 @@ fn main() -> std::process::ExitCode {
                 _ => None,
             }
         };
-        write("cp-h3-mismo").ok_or("no escribió")?;
-        let first = taken(()).ok_or("no capturó")?;
-        write("cp-h3-mismo").ok_or("no escribió")?;
-        let again = taken(()).ok_or("no capturó")?;
-        write("cp-h3-distinto").ok_or("no escribió")?;
-        let other = taken(()).ok_or("no capturó")?;
+        write("cp-h3-same").ok_or("did not write")?;
+        let first = taken(()).ok_or("did not capture")?;
+        write("cp-h3-same").ok_or("did not write")?;
+        let again = taken(()).ok_or("did not capture")?;
+        write("cp-h3-different").ok_or("did not write")?;
+        let other = taken(()).ok_or("did not capture")?;
         if first != again {
-            return Err("lo mismo dio dos huellas".into());
+            return Err("the same thing gave two fingerprints".into());
         }
         if first == other {
-            return Err("dos contenidos distintos dieron la misma huella".into());
+            return Err("two different contents gave the same fingerprint".into());
         }
         Ok(())
     });
 
-    b.case("H4", "un marcador de secreto detiene la captura", || {
+    b.case("H4", "a secrecy marker stops the capture", || {
         let marker = cp_win_sys::formats::name_of(
-            cp_win_sys::clipboard::register("Clipboard Viewer Ignore").ok_or("no registró")?,
+            cp_win_sys::clipboard::register("Clipboard Viewer Ignore")
+                .ok_or("did not register")?,
         );
         if marker != "Clipboard Viewer Ignore" {
-            return Err(format!("el formato se registró como «{marker}»"));
+            return Err(format!("the format registered as «{marker}»"));
         }
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            let id =
-                cp_win_sys::clipboard::register("Clipboard Viewer Ignore").ok_or("no registró")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("una-contrasena")), (id, &[1u8])]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let id = cp_win_sys::clipboard::register("Clipboard Viewer Ignore")
+                .ok_or("did not register")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("a-password")), (id, &[1u8])]);
         }
         let seen = {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             capture(&clipboard)
         };
         {
-            let clipboard = Clipboard::open().ok_or("no abrió para limpiar")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-h4-limpio"))]);
+            let clipboard = Clipboard::open().ok_or("did not open to clean up")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-h4-clean"))]);
         }
         match seen {
             Captured::Refused(why) => {
-                println!("            rechazada por {why:?}, y el marcador se retiró");
+                println!("            refused for {why:?}, and the marker was removed");
                 Ok(())
             }
-            other => Err(format!("se capturó igualmente: {other:?}")),
+            other => Err(format!("it was captured anyway: {other:?}")),
         }
     });
 
-    b.case("H5", "la batería no deja marcadores puestos", || {
-        let clipboard = Clipboard::open().ok_or("no abrió")?;
+    b.case("H5", "the battery leaves no markers behind", || {
+        let clipboard = Clipboard::open().ok_or("did not open")?;
         let names: Vec<String> = clipboard.offered().into_iter().map(name_of).collect();
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         match CATALOG.refusal(&refs) {
             None => Ok(()),
-            Some(left) => Err(format!("quedó {left:?} del caso anterior")),
+            Some(left) => Err(format!("{left:?} was left over from the previous case")),
         }
     });
 
-    b.group("I · Restaurar");
+    b.group("I · Restore");
 
     b.case(
         "I1",
-        "un ítem vuelve al portapapeles con sus formatos",
+        "an item comes back to the clipboard with its formats",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-original"))]);
             }
             let item = {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 match capture(&clipboard) {
                     Captured::Kept(item) => item,
-                    other => return Err(format!("no se capturó: {other:?}")),
+                    other => return Err(format!("nothing was captured: {other:?}")),
                 }
             };
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-otra-cosa"))]);
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-something-else"))]);
             }
             let written = {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 to_clipboard(&clipboard, &item)
             };
             match written {
                 Restored::Written { formats, .. } => {
-                    println!("            {formats} formatos devueltos");
+                    println!("            {formats} formats returned");
                 }
-                other => return Err(format!("no se restauró: {other:?}")),
+                other => return Err(format!("not restored: {other:?}")),
             }
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("sin texto")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("no text")?;
             match text_of(&bytes).as_deref() {
                 Some("cp-i1-original") => Ok(()),
-                other => Err(format!("volvió «{other:?}»")),
+                other => Err(format!("came back «{other:?}»")),
             }
         },
     );
 
-    b.case("I2", "capturar lo restaurado da la misma huella", || {
+    b.case("I2", "capturing what was restored gives the same fingerprint", || {
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i2-ida-y-vuelta"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i2-round-trip"))]);
         }
         let (first, item) = {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             match capture(&clipboard) {
                 Captured::Kept(item) => (item.fingerprint(), item),
-                other => return Err(format!("no se capturó: {other:?}")),
+                other => return Err(format!("nothing was captured: {other:?}")),
             }
         };
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             to_clipboard(&clipboard, &item);
         }
-        let clipboard = Clipboard::open().ok_or("no abrió")?;
+        let clipboard = Clipboard::open().ok_or("did not open")?;
         match capture(&clipboard) {
             Captured::Kept(again) => {
                 if again.fingerprint() == first {
                     Ok(())
                 } else {
-                    Err("la huella cambió al ir y volver".into())
+                    Err("the fingerprint changed on the round trip".into())
                 }
             }
-            other => Err(format!("no se recapturó: {other:?}")),
+            other => Err(format!("not recaptured: {other:?}")),
         }
     });
 
-    b.case("I3", "pegar en plano no mutila el ítem guardado", || {
-        let html = id_of("HTML Format").ok_or("no se registró HTML Format")?;
+    b.case("I3", "pasting as plain text does not mutilate the stored item", || {
+        let html = id_of("HTML Format").ok_or("HTML Format did not register")?;
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             clipboard.replace(&[
-                (CF_UNICODETEXT, &utf16_of("con estilos")),
-                (html, b"<b>con estilos</b>"),
+                (CF_UNICODETEXT, &utf16_of("with styles")),
+                (html, b"<b>with styles</b>"),
             ]);
         }
         let item = {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            capture(&clipboard).kept().ok_or("no se capturó")?
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            capture(&clipboard).kept().ok_or("nothing was captured")?
         };
         let had = item.formats.len();
 
         let plain = render(Form::PlainText, &content_of(&item, None))
-            .ok_or("no se ofreció la forma plana")?
+            .ok_or("the plain form was not offered")?
             .into_item();
         let written = {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             to_clipboard(&clipboard, &plain)
         };
         match written {
             Restored::Written { formats: 1, .. } => {}
-            other => return Err(format!("devolvió {other:?}")),
+            other => return Err(format!("returned {other:?}")),
         }
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             if clipboard.offered().contains(&html) {
-                return Err("quedó el HTML: no se pegó en plano".into());
+                return Err("the HTML remained: it was not pasted as plain text".into());
             }
         }
 
         if item.formats.len() != had {
-            return Err("el ítem perdió formatos".into());
+            return Err("the item lost formats".into());
         }
         let restored = {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             to_clipboard(&clipboard, &item)
         };
         match restored {
             Restored::Written { .. } => {}
-            other => return Err(format!("no se pudo restaurar con estilos: {other:?}")),
+            other => return Err(format!("could not restore with styles: {other:?}")),
         }
-        let clipboard = Clipboard::open().ok_or("no abrió")?;
+        let clipboard = Clipboard::open().ok_or("did not open")?;
         if !clipboard.offered().contains(&html) {
-            return Err("el HTML no volvió: el ítem había quedado mutilado".into());
+            return Err("the HTML did not come back: the item had been left mutilated".into());
         }
         Ok(())
     });
 
     b.case(
         "I4",
-        "un ítem sin texto plano no se puede pegar en plano",
+        "an item with no plain text cannot be pasted as plain text",
         || {
             let only_image = cp_core::item::Item {
                 kind: Some(cp_core::kind::Kind::Image),
@@ -701,18 +702,18 @@ fn main() -> std::process::ExitCode {
             };
             let content = content_of(&only_image, None);
             if forms_for(&content).contains(&Form::PlainText) {
-                return Err("se ofreció pegar en plano sin texto".into());
+                return Err("pasting as plain text was offered without text".into());
             }
             match render(Form::PlainText, &content) {
                 None => Ok(()),
-                Some(other) => Err(format!("devolvió {other:?}")),
+                Some(other) => Err(format!("returned {other:?}")),
             }
         },
     );
 
-    b.group("J · El vigilante en marcha");
+    b.group("J · The watcher in action");
 
-    b.case("J1", "una copia despierta al vigilante", || {
+    b.case("J1", "a copy wakes the watcher", || {
         use std::sync::Arc;
         use std::sync::atomic::{AtomicUsize, Ordering};
         let seen = Arc::new(AtomicUsize::new(0));
@@ -722,26 +723,26 @@ fn main() -> std::process::ExitCode {
         });
         std::thread::sleep(std::time::Duration::from_millis(60));
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j1"))]);
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
         drop(watching);
         match seen.load(Ordering::Relaxed) {
-            0 => Err("la copia no se vio".into()),
+            0 => Err("the copy was not seen".into()),
             n => {
-                println!("            {n} aviso(s) por una copia");
+                println!("            {n} notice(s) for one copy");
                 Ok(())
             }
         }
     });
 
-    b.case("J2", "un portapapeles quieto no despierta a nadie", || {
+    b.case("J2", "a quiet clipboard wakes nobody", || {
         use std::sync::Arc;
         use std::sync::atomic::{AtomicUsize, Ordering};
         {
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j2-quieto"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j2-quiet"))]);
         }
         std::thread::sleep(std::time::Duration::from_millis(60));
         let seen = Arc::new(AtomicUsize::new(0));
@@ -753,11 +754,11 @@ fn main() -> std::process::ExitCode {
         drop(watching);
         match seen.load(Ordering::Relaxed) {
             0 => Ok(()),
-            n => Err(format!("{n} avisos sin que nadie copiara")),
+            n => Err(format!("{n} notices without anyone copying")),
         }
     });
 
-    b.case("J4", "lo que restauramos no se captura de vuelta", || {
+    b.case("J4", "what we restore is not captured back", || {
         use std::sync::Arc;
         use std::sync::atomic::{AtomicUsize, Ordering};
         let seen = Arc::new(AtomicUsize::new(0));
@@ -768,16 +769,16 @@ fn main() -> std::process::ExitCode {
         std::thread::sleep(std::time::Duration::from_millis(60));
 
         {
-            let clipboard = Clipboard::open().ok_or("no abrio")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-nuestra"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-ours"))]);
         }
         watching.ours();
         std::thread::sleep(std::time::Duration::from_millis(200));
         let after_ours = seen.load(Ordering::Relaxed);
 
         {
-            let clipboard = Clipboard::open().ok_or("no abrio")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-ajena"))]);
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-foreign"))]);
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
         let after_theirs = seen.load(Ordering::Relaxed);
@@ -785,53 +786,53 @@ fn main() -> std::process::ExitCode {
 
         if after_ours != 0 {
             return Err(format!(
-                "lo nuestro desperto al vigilante {after_ours} vez(ces)"
+                "ours woke the watcher {after_ours} time(s)"
             ));
         }
         if after_theirs == 0 {
-            return Err("y entonces tampoco ve lo ajeno: la prueba no probaria nada".into());
+            return Err("and then it would not see foreign copies either: the test would prove nothing".into());
         }
-        println!("            lo nuestro 0 avisos, lo ajeno {after_theirs}");
+        println!("            ours 0 notices, foreign {after_theirs}");
         Ok(())
     });
 
-    b.case("J3", "sondear el contador es casi gratis", || {
+    b.case("J3", "polling the counter is almost free", || {
         let rounds = 10_000;
         let started = std::time::Instant::now();
         for _ in 0..rounds {
             let _ = clipboard::sequence();
         }
         let each = started.elapsed() / rounds;
-        println!("            {each:?} por sondeo");
+        println!("            {each:?} per poll");
         if each > std::time::Duration::from_micros(50) {
-            return Err(format!("{each:?} es demasiado para sondear seguido"));
+            return Err(format!("{each:?} is too much to poll continuously"));
         }
         Ok(())
     });
 
-    b.group("K · Permisos");
+    b.group("K · Permissions");
 
-    b.case("K1", "se sabe qué se puede hacer y qué no", || {
+    b.case("K1", "it is known what can be done and what cannot", || {
         let ready = Readiness::probe();
         println!(
-            "            estación: {}  nivel: {:?}  elevado: {}",
+            "            station: {}  level: {:?}  elevated: {}",
             ready.can_watch(),
             ready.integrity,
             ready.is_elevated()
         );
         if !ready.can_watch() {
-            return Err("no se alcanza la estación de ventanas".into());
+            return Err("the window station cannot be reached".into());
         }
-        let ours = ready.integrity.ok_or("sin nivel propio")?;
+        let ours = ready.integrity.ok_or("no level of our own")?;
         if !ready.can_paste_into(ours) {
-            return Err("no se puede pegar en nuestro propio nivel".into());
+            return Err("cannot paste at our own level".into());
         }
         Ok(())
     });
 
-    b.group("L · Pegar de verdad");
+    b.group("L · Pasting for real");
 
-    let stage = EditWindow::open("destino de la bateria").and_then(|target| {
+    let stage = EditWindow::open("battery target").and_then(|target| {
         let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
         while frontmost::foreground() != Some(target.window()) {
             if std::time::Instant::now() > until {
@@ -844,39 +845,39 @@ fn main() -> std::process::ExitCode {
     });
 
     match stage {
-        Some(target) => b.case("L1", "el texto llega a una ventana de destino", || {
-            let written = "cp-l1-pegado-real";
+        Some(target) => b.case("L1", "the text reaches a target window", || {
+            let written = "cp-l1-real-paste";
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]);
             }
             let seen = frontmost::target_for(target.window());
             match paste_into(&seen, || {}) {
-                Outcome::Sent { took } => println!("            enviado en {took:?}"),
-                Outcome::Degraded(why) => return Err(format!("degradó a {why:?}")),
+                Outcome::Sent { took } => println!("            sent in {took:?}"),
+                Outcome::Degraded(why) => return Err(format!("degraded to {why:?}")),
             }
             target.pump(std::time::Duration::from_millis(400));
             let arrived = target.text();
             if arrived.contains(written) {
                 Ok(())
             } else {
-                Err(format!("llegó «{arrived}» en vez de «{written}»"))
+                Err(format!("got «{arrived}» instead of «{written}»"))
             }
         }),
         None => b.skip(
             "L1",
-            "el texto llega a una ventana de destino",
-            "Windows solo deja cambiar el primer plano a quien ya lo tiene: ejecuta la bateria desde una consola con el foco",
+            "the text reaches a target window",
+            "Windows only lets whoever already has it change the foreground: run the battery from a console with focus",
         ),
     }
 
     b.case(
         "L2",
-        "el peor resultado sigue siendo pegarlo a mano",
+        "the worst outcome is still pasting it by hand",
         || {
-            let written = "cp-l2-degradado";
+            let written = "cp-l2-degraded";
             {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::open().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]);
             }
             let gone = Target {
@@ -886,41 +887,41 @@ fn main() -> std::process::ExitCode {
             };
             match paste_into(&gone, || {}) {
                 Outcome::Degraded(cp_core::paste::Failure::TargetGone) => {}
-                other => return Err(format!("con un destino muerto dio {other:?}")),
+                other => return Err(format!("with a dead target it gave {other:?}")),
             }
-            let clipboard = Clipboard::open().ok_or("no abrió")?;
-            let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("sin texto")?;
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("no text")?;
             match text_of(&bytes).as_deref() {
                 Some(back) if back == written => Ok(()),
-                other => Err(format!("el portapapeles quedó con «{other:?}»")),
+                other => Err(format!("the clipboard was left with «{other:?}»")),
             }
         },
     );
 
-    b.group("M · Texto dentro de una imagen");
+    b.group("M · Text inside an image");
 
-    b.case("M1", "el sistema ofrece un motor de lectura", || {
+    b.case("M1", "the system offers a reading engine", || {
         if ocr::is_available() {
             Ok(())
         } else {
-            Err("no hay motor para los idiomas del perfil".into())
+            Err("there is no engine for the profile's languages".into())
         }
     });
 
-    b.case("M2", "se lee el texto de una imagen real", || {
+    b.case("M2", "the text of a real image is read", || {
         let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("no se pudo leer el fixture: {why}"))?;
+            .map_err(|why| format!("could not read the fixture: {why}"))?;
         let started = std::time::Instant::now();
-        let text = ocr::text_in(&png).ok_or("no se reconoció nada")?;
+        let text = ocr::text_in(&png).ok_or("nothing was recognised")?;
         println!(
-            "            {:?} para leer «{}»",
+            "            {:?} to read «{}»",
             started.elapsed(),
             text.lines().next().unwrap_or("").trim()
         );
         Ok(())
     });
 
-    b.case("M3", "una imagen en blanco no inventa texto", || {
+    b.case("M3", "a blank image does not invent text", || {
         let blank = image::RgbaImage::from_pixel(120, 60, image::Rgba([255, 255, 255, 255]));
         let mut png = std::io::Cursor::new(Vec::new());
         image::DynamicImage::ImageRgba8(blank)
@@ -928,99 +929,99 @@ fn main() -> std::process::ExitCode {
             .map_err(|why| why.to_string())?;
         match ocr::text_in(&png.into_inner()) {
             None => Ok(()),
-            Some(invented) => Err(format!("se inventó «{invented}»")),
+            Some(invented) => Err(format!("invented «{invented}»")),
         }
     });
 
-    b.group("N · Miniaturas y medios por el shell");
+    b.group("N · Thumbnails and media via the shell");
 
     b.case(
         "N1",
-        "el shell da miniatura de una imagen del disco",
+        "the shell gives a thumbnail for an image on disk",
         || {
             let png = std::path::Path::new("fixtures/texto-en-imagen.png");
             let started = std::time::Instant::now();
             let dib = thumbnail::dib_of_file(png, thumbnail::SIDE)
-                .ok_or("el shell no devolvió miniatura")?;
+                .ok_or("the shell returned no thumbnail")?;
             let took = started.elapsed();
-            let small = cp_core::dib::to_png(&dib).ok_or("el DIB no se pudo convertir")?;
+            let small = cp_core::dib::to_png(&dib).ok_or("the DIB could not be converted")?;
             let original = std::fs::metadata(png).map_err(|why| why.to_string())?.len();
             println!(
-                "            {took:?}, {} B de miniatura contra {original} del original",
+                "            {took:?}, {} B of thumbnail against {original} of the original",
                 small.len()
             );
             if small.len() as u64 >= original {
-                return Err("la miniatura no es más pequeña que el original".into());
+                return Err("the thumbnail is not smaller than the original".into());
             }
             Ok(())
         },
     );
 
-    b.case("N2", "lo que no tiene miniatura no inventa uno", || {
-        let dir = std::env::temp_dir().join("cp-sin-miniatura");
+    b.case("N2", "what has no thumbnail does not invent one", || {
+        let dir = std::env::temp_dir().join("cp-no-thumbnail");
         std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
-        let path = dir.join("vacio.bin");
+        let path = dir.join("empty.bin");
         std::fs::write(&path, b"   ").map_err(|why| why.to_string())?;
         match thumbnail::dib_of_file(&path, thumbnail::SIDE) {
             None => Ok(()),
-            Some(_) => Err("devolvió algo para un archivo sin vista previa".into()),
+            Some(_) => Err("returned something for a file with no preview".into()),
         }
     });
 
     b.case(
         "N3",
-        "un archivo sin metadatos de medios no los inventa",
+        "a file with no media metadata does not invent any",
         || {
-            let dir = std::env::temp_dir().join("cp-sin-medios");
+            let dir = std::env::temp_dir().join("cp-no-media");
             std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
-            let path = dir.join("nota.txt");
-            std::fs::write(&path, b"solo texto").map_err(|why| why.to_string())?;
+            let path = dir.join("note.txt");
+            std::fs::write(&path, b"just text").map_err(|why| why.to_string())?;
             match media::info_for(&path) {
                 None => Ok(()),
-                Some(info) => Err(format!("se inventó {info:?}")),
+                Some(info) => Err(format!("invented {info:?}")),
             }
         },
     );
 
-    b.case("N4", "la miniatura va al almacén y vuelve", || {
+    b.case("N4", "the thumbnail goes to the store and comes back", || {
         let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", std::process::id()));
         let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
         let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("falta el fixture: {why}"))?;
+            .map_err(|why| format!("missing fixture: {why}"))?;
         let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
-            .ok_or("no se generó")?;
+            .ok_or("it was not generated")?;
         let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
         let back = blobs
             .get(&digest)
             .map_err(|why| why.to_string())?
-            .ok_or("no volvió")?;
+            .ok_or("did not come back")?;
         std::fs::remove_dir_all(&dir).ok();
         if back != thumb {
-            return Err("la miniatura volvió distinta".into());
+            return Err("the thumbnail came back different".into());
         }
         Ok(())
     });
 
-    b.group("O · Origen");
+    b.group("O · Origin");
 
     b.case(
         "O1",
-        "la aplicación de origen se guarda con su nombre visible",
+        "the source application is stored with its visible name",
         || {
             let pid = frontmost::foreground()
                 .and_then(source::process_of)
                 .unwrap_or_else(std::process::id);
-            let name = source::name_of(pid).ok_or("sin nombre visible")?;
+            let name = source::name_of(pid).ok_or("no visible name")?;
             if name.is_empty() {
-                return Err("el nombre llegó vacío".into());
+                return Err("the name came back empty".into());
             }
             if name.contains('\\') || name.to_ascii_lowercase().ends_with(".exe") {
-                return Err(format!("«{name}» es la ruta, no el nombre"));
+                return Err(format!("«{name}» is the path, not the name"));
             }
 
             let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
             let id = store
-                .insert_text("uuid-origen", "algo copiado", 1)
+                .insert_text("uuid-origin", "something copied", 1)
                 .map_err(|why| why.to_string())?;
             store
                 .set_source(id, &name, 2)
@@ -1037,28 +1038,28 @@ fn main() -> std::process::ExitCode {
                 .map_err(|why| why.to_string())?
                 .rows;
             if found.len() != 1 {
-                return Err(format!("buscando «{name}» salieron {} ítems", found.len()));
+                return Err(format!("searching for «{name}» returned {} items", found.len()));
             }
-            println!("            origen «{name}», guardado y encontrado");
+            println!("            origin «{name}», stored and found");
             Ok(())
         },
     );
 
-    b.group("P · Abrir y revelar");
+    b.group("P · Open and reveal");
 
     b.case_or_skip(
         "P1",
-        "revelar un archivo lo deja seleccionado en el Explorador",
+        "revealing a file leaves it selected in Explorer",
         || {
             shell_is_running()?;
             let scratch = Scratch::new("cp-p1")?;
-            let file = scratch.file("revelado.txt", b"cp-p1")?;
+            let file = scratch.file("revealed.txt", b"cp-p1")?;
             if !files::reveal(&file) {
-                return Err("reveal dijo que no".into());
+                return Err("reveal said no".into());
             }
             let mut window_seen = false;
             let mut selection = String::new();
-            let shown = wait_until("el Explorador deja el archivo seleccionado", || {
+            let shown = wait_until("Explorer leaves the file selected", || {
                 let listing = powershell_within(
                     "(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { $_.LocationURL + ' | ' + (($_.Document.SelectedItems() | ForEach-Object { $_.Path }) -join ',') }",
                 )?;
@@ -1068,40 +1069,40 @@ fn main() -> std::process::ExitCode {
                     .and_then(|line| line.split_once(" | "))
                     .map(|(_, selected)| selected.trim().to_owned())
                     .unwrap_or_default();
-                Some(selection.contains("revelado.txt"))
+                Some(selection.contains("revealed.txt"))
             });
             powershell_within(
                 "(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationURL -like '*cp-p1*' } | ForEach-Object { $_.Quit() }",
             );
             if shown.is_err() && !window_seen {
                 return Err(format!(
-                    "{SKIPPED}el Explorador no abrió ninguna ventana en esta sesión: sin escritorio interactivo"
+                    "{SKIPPED}Explorer did not open any window in this session: no interactive desktop"
                 ));
             }
             if shown.is_err() && selection.is_empty() {
                 return Err(format!(
-                    "{SKIPPED}la carpeta se abrió, pero la vista no reporta selección en esta sesión"
+                    "{SKIPPED}the folder opened, but the view does not report a selection in this session"
                 ));
             }
-            shown.map_err(|why| format!("{why}; seleccionado: «{selection}»"))
+            shown.map_err(|why| format!("{why}; selected: «{selection}»"))
         },
     );
 
-    b.case_or_skip("P2", "abrir un archivo lo entrega a su aplicación", || {
+    b.case_or_skip("P2", "opening a file hands it to its application", || {
         shell_is_running()?;
         let scratch = Scratch::new("cp-p2")?;
-        let file = scratch.file("abierto.txt", b"cp-p2")?;
+        let file = scratch.file("opened.txt", b"cp-p2")?;
         if !files::open(&file) {
-            return Err("open dijo que no".into());
+            return Err("open said no".into());
         }
-        let opened = wait_until("la aplicación tiene el documento abierto", || {
+        let opened = wait_until("the application has the document open", || {
             powershell_within(
-                "Get-Process | Where-Object { $_.MainWindowTitle -like '*abierto.txt*' } | ForEach-Object { $_.ProcessName }",
+                "Get-Process | Where-Object { $_.MainWindowTitle -like '*opened.txt*' } | ForEach-Object { $_.ProcessName }",
             )
             .map(|names| !names.is_empty())
         });
         powershell_within(
-            "Get-Process | Where-Object { $_.MainWindowTitle -like '*abierto.txt*' } | ForEach-Object { $_.CloseMainWindow() | Out-Null }",
+            "Get-Process | Where-Object { $_.MainWindowTitle -like '*opened.txt*' } | ForEach-Object { $_.CloseMainWindow() | Out-Null }",
         );
         opened
     });

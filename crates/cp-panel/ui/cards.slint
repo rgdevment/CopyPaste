@@ -1,5 +1,6 @@
 import { Card, Chip } from "types.slint";
 import { Theme } from "theme.slint";
+import { Words } from "words.slint";
 
 export component Icon inherits Image {
     in property <color> tint: Theme.muted;
@@ -261,9 +262,9 @@ export component CardView inherits Rectangle {
                 alignment: center;
                 opacity: lit ? 1.0 : 0.0;
                 animate opacity { duration: 120ms; easing: ease-out; }
-                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: "pegar como"; awake: lit; pressed => { root.forms(card.id); } }
-                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? "desanclar" : "anclar"; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
-                Action { icon: @image-url("../assets/icons/trash-2.svg"); says: "borrar"; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
+                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; pressed => { root.forms(card.id); } }
+                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
+                Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
             }
             Text { text: card.age; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
         }

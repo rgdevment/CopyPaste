@@ -93,9 +93,9 @@ mod tests {
         assert!(is_paste_shortcut("V", 0));
         assert!(
             !is_paste_shortcut("v", 1),
-            "⇧⌘V es «pegar con el mismo estilo»"
+            "⇧⌘V is «paste with the same style»"
         );
-        assert!(!is_paste_shortcut("v", 2), "⌥⌘V es otra cosa");
+        assert!(!is_paste_shortcut("v", 2), "⌥⌘V is something else");
         assert!(!is_paste_shortcut("c", 0));
         assert!(!is_paste_shortcut("", 0));
     }

@@ -158,9 +158,9 @@ mod tests {
     fn the_patience_sits_between_the_two_measured_worlds() {
         let delivered = std::time::Duration::from_millis(9);
         let promised = std::time::Duration::from_secs(60);
-        assert!(delivered < PATIENCE, "Finder entrega 16 tipos en 9 ms");
+        assert!(delivered < PATIENCE, "Finder delivers 16 types in 9 ms");
         assert!(PATIENCE < std::time::Duration::from_secs(1));
-        assert!(PATIENCE < promised, "una promesa tarda 60 s en rendirse");
+        assert!(PATIENCE < promised, "a promise takes 60 s to give up");
     }
 
     #[test]
@@ -169,6 +169,6 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_secs(60));
             Captured::Nothing
         });
-        assert_eq!(seen, None, "el hilo se abandona y no se espera");
+        assert_eq!(seen, None, "the thread is abandoned and not waited for");
     }
 }

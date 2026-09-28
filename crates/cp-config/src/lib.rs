@@ -14,11 +14,11 @@ pub const KEEPS_DAYS: u16 = 30;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("el archivo: {0}")]
+    #[error("the file: {0}")]
     File(#[from] std::io::Error),
-    #[error("la configuración no es TOML válido: {0}")]
+    #[error("the settings are not valid TOML: {0}")]
     Malformed(#[from] toml::de::Error),
-    #[error("la configuración no se pudo escribir: {0}")]
+    #[error("the settings could not be written: {0}")]
     Unwritable(#[from] toml::ser::Error),
 }
 
@@ -324,7 +324,7 @@ mod tests {
         let asked: Config = serde_json::from_str(
             r#"{"locale":null,"theme":"system","shortcut":"Ctrl+Alt+V","hides-when-left":true,"keeps-days":null,"images-quota-mb":null}"#,
         )
-        .expect("lo que manda la ventana entra");
+        .expect("what the window sends gets in");
         assert_eq!(asked.keeps_days, None);
         assert_eq!(asked.images_quota_mb, None);
     }

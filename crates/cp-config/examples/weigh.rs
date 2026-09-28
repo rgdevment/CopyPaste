@@ -4,7 +4,7 @@ use std::time::Instant;
 const TURNS: usize = 200;
 
 fn main() {
-    let room = tempfile::tempdir().expect("una carpeta temporal");
+    let room = tempfile::tempdir().expect("a temporary folder");
     let path = cp_config::at(room.path());
     let mut kept = Config::default();
 
@@ -15,18 +15,18 @@ fn main() {
         kept.keeps_days = Some((turn % 90) as u16 + 1);
 
         let at = Instant::now();
-        cp_config::write(&path, &kept).expect("escribe");
+        cp_config::write(&path, &kept).expect("writes");
         writing.push(at.elapsed().as_micros());
 
         let at = Instant::now();
-        let back = cp_config::read(&path).expect("lee");
+        let back = cp_config::read(&path).expect("reads");
         reading.push(at.elapsed().as_micros());
 
         assert_eq!(back.keeps_days, kept.keeps_days);
     }
 
-    let writing_slow = tell("escribir", &mut writing);
-    let reading_slow = tell("leer", &mut reading);
+    let writing_slow = tell("write", &mut writing);
+    let reading_slow = tell("read", &mut reading);
     if writing_slow || reading_slow {
         std::process::exit(1);
     }
@@ -39,9 +39,9 @@ fn tell(what: &str, times: &mut [u128]) -> bool {
     let p50 = times[times.len() / 2];
     let p95 = times[times.len() * 95 / 100];
     let worst = times[times.len() - 1];
-    println!("{what}: p50 {p50} µs · p95 {p95} µs · peor {worst} µs");
+    println!("{what}: p50 {p50} µs · p95 {p95} µs · worst {worst} µs");
     if p95 > CEILING {
-        println!("::error::{what} pasó de {CEILING} µs en p95: {p95} µs");
+        println!("::error::{what} went past {CEILING} µs at p95: {p95} µs");
         return true;
     }
     false

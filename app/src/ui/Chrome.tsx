@@ -1,14 +1,16 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useRef } from "react";
+import { onMac } from "../core";
 import { t } from "../locales";
 
 export default function Chrome() {
   const held = useRef<ReturnType<typeof getCurrentWindow>>(null);
   held.current ??= getCurrentWindow();
   const win = held.current;
+  const mac = onMac();
 
   return (
-    <div className="chrome" data-tauri-drag-region>
+    <div className={mac ? "chrome mac" : "chrome"} data-tauri-drag-region>
       <span className="chrome-who" data-tauri-drag-region>
         CopyPaste
       </span>

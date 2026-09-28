@@ -311,12 +311,12 @@ mod tests {
         let mut names: Vec<&str> = Kind::ALL.iter().map(|kind| kind.as_str()).collect();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(names.len(), 15, "quince clases, quince nombres distintos");
+        assert_eq!(names.len(), 15, "fifteen classes, fifteen distinct names");
     }
 
     #[test]
     fn a_name_that_is_not_a_class_is_nobody() {
-        assert_eq!(Kind::from_name("Text"), None, "el nombre es exacto");
+        assert_eq!(Kind::from_name("Text"), None, "the name is exact");
         assert_eq!(Kind::from_name("imagen"), None);
         assert_eq!(Kind::from_name(""), None);
     }
@@ -345,7 +345,7 @@ mod tests {
         assert_eq!(
             classify_text("  sk-not-a-real-key-for-tests-0123456789\n"),
             Kind::Token,
-            "recortado, como todo lo demás"
+            "trimmed, like everything else"
         );
         assert_eq!(classify_text("sk-corto"), Kind::Text);
     }
@@ -474,27 +474,31 @@ mod borders {
             (Kind::Audio, "audio"),
             (Kind::Video, "video"),
         ] {
-            assert_eq!(kind.as_str(), name, "el nombre viaja a la columna kind");
+            assert_eq!(
+                kind.as_str(),
+                name,
+                "the name travels straight into the kind column"
+            );
         }
     }
 
     #[test]
     fn an_address_needs_every_piece_at_once() {
         assert!(is_email("a@b.co"));
-        assert!(!is_email("@ejemplo.test"), "sin usuario");
-        assert!(!is_email("a@b@c.co"), "dos arrobas");
-        assert!(!is_email("a@.co"), "sin nombre de dominio");
-        assert!(!is_email("a@b.c"), "dominio de primer nivel de una letra");
-        assert!(!is_email("a@b.c1"), "dominio de primer nivel con cifra");
-        assert!(!is_email("a b@c.co"), "espacio en el usuario");
-        assert!(!is_email("a@b c.co"), "espacio en el dominio");
-        assert!(!is_email("a@bc"), "sin punto");
+        assert!(!is_email("@ejemplo.test"), "no user");
+        assert!(!is_email("a@b@c.co"), "two at-signs");
+        assert!(!is_email("a@.co"), "no domain name");
+        assert!(!is_email("a@b.c"), "a one-letter top-level domain");
+        assert!(!is_email("a@b.c1"), "a top-level domain with a digit");
+        assert!(!is_email("a b@c.co"), "a space in the user part");
+        assert!(!is_email("a@b c.co"), "a space in the domain");
+        assert!(!is_email("a@bc"), "no dot");
     }
 
     #[test]
     fn a_scheme_on_its_own_is_not_an_address() {
         assert!(is_url("http://a"));
-        assert!(!is_url("http://"), "el esquema entero y nada más");
+        assert!(!is_url("http://"), "the whole scheme and nothing else");
         assert!(!is_url("https://"));
     }
 
@@ -503,65 +507,68 @@ mod borders {
         assert!(is_color("#FF8800"));
         assert!(
             !is_color("#GGG"),
-            "tres caracteres que no son hexadecimales"
+            "three characters that are not hexadecimal"
         );
-        assert!(!is_color("rgb(1, 2)"), "le falta una componente");
+        assert!(!is_color("rgb(1, 2)"), "missing one component");
         assert!(
             !is_color("rgb(a, b, c)"),
-            "tres componentes que no son números"
+            "three components that are not numbers"
         );
     }
 
     #[test]
     fn a_uuid_needs_shape_and_digits_at_once() {
         assert!(is_uuid("6ba7b810-9dad-11d1-80b4-00c04fd430c8"));
-        assert!(!is_uuid("1-2-3-4-5"), "cinco grupos de largo equivocado");
+        assert!(!is_uuid("1-2-3-4-5"), "five groups of the wrong length");
         assert!(
             !is_uuid("zzzzzzzz-9dad-11d1-80b4-00c04fd430c8"),
-            "el largo correcto con caracteres que no son hexadecimales"
+            "the right length with characters that are not hexadecimal"
         );
     }
 
     #[test]
     fn a_number_needs_shape_and_a_reason_to_be_a_phone() {
-        assert!(is_phone("+1234567"), "el prefijo internacional basta");
-        assert!(is_phone("(123) 4567"), "el paréntesis de área basta");
-        assert!(is_phone("123456789"), "nueve cifras bastan por sí solas");
+        assert!(is_phone("+1234567"), "the international prefix is enough");
+        assert!(is_phone("(123) 4567"), "the area parenthesis is enough");
+        assert!(is_phone("123456789"), "nine digits are enough on their own");
         assert!(
             !is_phone("1234567"),
-            "siete cifras sueltas no son un teléfono"
+            "seven loose digits are not a phone number"
         );
-        assert!(!is_phone("(123) 456-7890 ñ"), "una letra rompe la forma");
+        assert!(!is_phone("(123) 456-7890 ñ"), "one letter breaks the shape");
     }
 
     #[test]
     fn nothing_at_all_is_not_an_object() {
-        assert!(!is_json(""), "sin un primer carácter no hay delimitador");
+        assert!(
+            !is_json(""),
+            "without a first character there is no delimiter"
+        );
         assert!(is_json("{}"));
     }
 
     #[test]
     fn a_quote_inside_a_string_does_not_close_it() {
-        assert!(balanced(r#"{"\""}"#), "la comilla escapada sigue dentro");
-        assert!(!balanced(r#"{"a": {}"#), "queda una llave sin cerrar");
-        assert!(!balanced(r#"{"a"#), "la cadena se quedó abierta");
+        assert!(balanced(r#"{"\""}"#), "the escaped quote stays inside");
+        assert!(!balanced(r#"{"a": {}"#), "a brace is left unclosed");
+        assert!(!balanced(r#"{"a"#), "the string was left open");
     }
 
     #[test]
     fn one_marker_alone_is_not_code() {
-        assert!(looks_like_code("const a = 1;\n  return a;"), "dos marcas");
-        assert!(!looks_like_code("const"), "ni una marca completa");
+        assert!(looks_like_code("const a = 1;\n  return a;"), "two markers");
+        assert!(!looks_like_code("const"), "not even one complete marker");
         assert!(
             !looks_like_code("const x"),
-            "una marca, una línea, sin sangrar"
+            "one marker, one line, no indent"
         );
         assert!(
             !looks_like_code("  const x"),
-            "una marca sangrada, pero de una sola línea"
+            "one indented marker, but a single line"
         );
         assert!(
             !looks_like_code("const x\nmás texto"),
-            "una marca en dos líneas, ninguna sangrada"
+            "one marker across two lines, neither indented"
         );
     }
 }

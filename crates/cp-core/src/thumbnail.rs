@@ -59,16 +59,16 @@ mod tests {
     #[test]
     fn a_thumbnail_keeps_the_proportions() {
         let bytes = png(1600, 400);
-        let thumb = of_image(&bytes, MAX_SIDE).expect("miniatura");
-        let size = size_of(&thumb).expect("tamaño");
+        let thumb = of_image(&bytes, MAX_SIDE).expect("thumbnail");
+        let size = size_of(&thumb).expect("size");
         assert_eq!(size.width, MAX_SIDE);
-        assert_eq!(size.height, MAX_SIDE / 4, "4:1 sigue siendo 4:1");
+        assert_eq!(size.height, MAX_SIDE / 4, "4:1 is still 4:1");
     }
 
     #[test]
     fn a_tall_image_is_bounded_by_its_height() {
         let bytes = png(300, 1200);
-        let size = size_of(&of_image(&bytes, MAX_SIDE).expect("miniatura")).expect("tamaño");
+        let size = size_of(&of_image(&bytes, MAX_SIDE).expect("thumbnail")).expect("size");
         assert_eq!(size.height, MAX_SIDE);
         assert!(size.width < MAX_SIDE);
     }
@@ -77,11 +77,11 @@ mod tests {
     fn an_image_that_already_fits_is_not_enlarged() {
         for (width, height) in [(1, 1), (64, 64), (MAX_SIDE, MAX_SIDE), (100, 250)] {
             let bytes = png(width, height);
-            let size = size_of(&of_image(&bytes, MAX_SIDE).expect("miniatura")).expect("tamaño");
+            let size = size_of(&of_image(&bytes, MAX_SIDE).expect("thumbnail")).expect("size");
             assert_eq!(
                 size,
                 Size { width, height },
-                "una miniatura mayor que su original ocupa más y se ve peor"
+                "a thumbnail bigger than its original takes more space and looks worse"
             );
         }
     }
@@ -89,10 +89,10 @@ mod tests {
     #[test]
     fn a_thumbnail_weighs_much_less_than_the_original() {
         let bytes = png(2000, 2000);
-        let thumb = of_image(&bytes, MAX_SIDE).expect("miniatura");
+        let thumb = of_image(&bytes, MAX_SIDE).expect("thumbnail");
         assert!(
             thumb.len() * 10 < bytes.len(),
-            "miniatura de {} bytes para un original de {}",
+            "thumbnail of {} bytes for an original of {}",
             thumb.len(),
             bytes.len()
         );
@@ -100,8 +100,8 @@ mod tests {
 
     #[test]
     fn something_that_is_not_an_image_is_refused_not_guessed() {
-        assert!(size_of(b"esto no es una imagen").is_none());
-        assert!(of_image(b"esto no es una imagen", MAX_SIDE).is_none());
+        assert!(size_of(b"this is not an image").is_none());
+        assert!(of_image(b"this is not an image", MAX_SIDE).is_none());
         assert!(size_of(&[]).is_none());
     }
 
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn a_wide_image_that_exceeds_only_the_width_is_still_scaled_down() {
         let bytes = png(100, 10);
-        let size = size_of(&of_image(&bytes, 50).expect("miniatura")).expect("tamaño");
+        let size = size_of(&of_image(&bytes, 50).expect("thumbnail")).expect("size");
         assert_eq!(
             size,
             Size {
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn a_tall_image_that_exceeds_only_the_height_is_still_scaled_down() {
         let bytes = png(10, 100);
-        let size = size_of(&of_image(&bytes, 50).expect("miniatura")).expect("tamaño");
+        let size = size_of(&of_image(&bytes, 50).expect("thumbnail")).expect("size");
         assert_eq!(
             size,
             Size {
@@ -151,7 +151,7 @@ mod tests {
         assert_eq!(
             untouched.to_rgba8().into_raw(),
             through_thumbnail.to_rgba8().into_raw(),
-            "con un lado igual al maximo, thumbnail no altera un solo pixel"
+            "with a side equal to the maximum, thumbnail does not alter a single pixel"
         );
     }
 }

@@ -63,24 +63,24 @@ mod tests {
             let _ = gate.recv();
             42
         });
-        assert_eq!(pending.wait(Duration::from_millis(20)), None, "aún no");
-        release.send(()).expect("la fuente contesta");
+        assert_eq!(pending.wait(Duration::from_millis(20)), None, "not yet");
+        release.send(()).expect("the source answers");
         assert_eq!(
             pending.wait(Duration::from_secs(5)),
             Some(42),
-            "sin leer dos veces"
+            "not read twice"
         );
         assert_eq!(
             pending.wait(Duration::from_millis(20)),
             None,
-            "y una vez entregada, no hay más"
+            "and once delivered, there is no more"
         );
     }
 
     #[test]
     fn a_read_that_panics_is_abandoned_like_any_other() {
         let seen = anything_within(Duration::from_millis(50), || -> u8 {
-            panic!("el proveedor murió")
+            panic!("the provider died")
         });
         assert_eq!(seen, None);
     }

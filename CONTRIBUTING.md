@@ -52,9 +52,17 @@ In many ways! Code is just one of them:
 2. **Create a branch** from `main` (`git checkout -b feature/my-improvement`)
 3. **Make your changes** following our style:
    - Clean and minimalist code
-   - Comments in English (for consistency)
+   - Code, identifiers and comments in English
    - Tests when appropriate
-4. **Make sure** all tests pass
+4. **Make sure** all tests pass:
+
+   ```sh
+   python3 scripts/sidecar.py --debug   # the app carries the panel; build it first
+   cargo clippy --workspace --all-targets
+   cargo test --workspace
+   cd app && npm ci && npm run lint && npm test
+   ```
+
 5. **Open a Pull Request** to `main`
 
 ### Translate
@@ -77,9 +85,10 @@ Found something confusing? Missing information? Documentation is also code—PRs
 
 We keep the code simple and consistent:
 
-- **Modern Dart** — We leverage the latest language features
+- **Rust 2024, and the toolchain the repository pins** — `rust-toolchain.toml` decides, not your machine
 - **Descriptive names** — Code should read like prose
-- **Useful comments** — Explain the _why_, not the _what_
+- **Almost no comments** — the name says the what; a comment is for a why that surprises
+- **`cargo fmt`, `cargo clippy` and `biome` all clean** — CI runs them on macOS and on Windows
 - **KISS** — Keep It Simple, Stupid
 - **DRY** — Don't Repeat Yourself
 

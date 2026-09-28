@@ -15,15 +15,15 @@ pub struct Keys {
 pub fn raise<R: Runtime>(app: &AppHandle<R>, said: &str) {
     app.manage(Bound::default());
     match bind(app, said) {
-        Ok(()) => note(&format!("el atajo «{said}» responde")),
-        Err(why) => note(&format!("sin atajo del panel: {why}")),
+        Ok(()) => note(&format!("the «{said}» shortcut answers")),
+        Err(why) => note(&format!("no shortcut for the panel: {why}")),
     }
 }
 
 pub fn bind<R: Runtime>(app: &AppHandle<R>, said: &str) -> Result<(), String> {
     let wanted: Shortcut = said
         .parse()
-        .map_err(|_| format!("«{said}» no es una combinación que el sistema entienda"))?;
+        .map_err(|_| format!("«{said}» is not a combination the system understands"))?;
     let keys = app.global_shortcut();
     let _ = keys.unregister_all();
     remember(app, None);
@@ -33,7 +33,7 @@ pub fn bind<R: Runtime>(app: &AppHandle<R>, said: &str) -> Result<(), String> {
             crate::panel::show(&handle);
         }
     })
-    .map_err(|why| format!("el sistema no cedió «{said}»: {why}"))?;
+    .map_err(|why| format!("the system would not give up «{said}»: {why}"))?;
     remember(app, Some(said));
     Ok(())
 }
@@ -76,6 +76,6 @@ mod tests {
     #[test]
     fn nothing_is_bound_until_the_system_says_yes() {
         let bound = Bound::default();
-        assert!(bound.0.lock().expect("sin envenenar").is_none());
+        assert!(bound.0.lock().expect("unpoisoned").is_none());
     }
 }

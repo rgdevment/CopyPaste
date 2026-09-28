@@ -131,7 +131,10 @@ mod tests {
         while attempt.on_failure(Failure::NotForeground) == Next::Retry {
             tries += 1;
         }
-        assert_eq!(tries, 12, "Office y Electron tardan cientos de ms en venir");
+        assert_eq!(
+            tries, 12,
+            "Office and Electron take hundreds of ms to come forward"
+        );
     }
 
     #[test]
@@ -196,7 +199,7 @@ mod tests {
         assert_eq!(
             attempt.on_failure(Failure::ForegroundTimeout),
             Next::Degrade,
-            "un pegado doble es peor que ninguno"
+            "a double paste is worse than none"
         );
     }
 
@@ -209,7 +212,7 @@ mod tests {
         assert_eq!(
             attempt.on_failure(Failure::NoKeyboardFocus),
             Next::Degrade,
-            "el presupuesto se comparte entre las dos carreras"
+            "the budget is shared between the two races"
         );
     }
 
@@ -219,7 +222,7 @@ mod tests {
         assert_eq!(
             attempt.on_failure(Failure::SendDenied),
             Next::Degrade,
-            "es UIPI o TCC: reintentar no cambia nada"
+            "it's UIPI or TCC: retrying changes nothing"
         );
     }
 
@@ -252,7 +255,7 @@ mod properties {
                 .iter()
                 .filter(|failure| attempt.on_failure(**failure) == Next::Retry)
                 .count();
-            prop_assert!(retried <= RACE_RETRIES as usize, "reintentó {retried} veces");
+            prop_assert!(retried <= RACE_RETRIES as usize, "retried {retried} times");
         }
 
         #[test]

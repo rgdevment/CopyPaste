@@ -1,9 +1,11 @@
 mod age;
 mod app;
 mod engine;
+mod here;
 mod measure;
 mod model;
 mod note;
+mod say;
 mod view;
 
 slint::include_modules!();
@@ -11,11 +13,17 @@ slint::include_modules!();
 use std::path::PathBuf;
 
 fn main() {
-    let options = Options::from_args();
     note::catch_panics();
-    note::note(&format!("arranca sobre {}", options.db.display()));
+    let options = match Options::from_args() {
+        Ok(options) => options,
+        Err(why) => {
+            note::trouble(why);
+            std::process::exit(1);
+        }
+    };
+    note::note(&format!("starting over {}", options.db.display()));
     eprintln!(
-        "las incidencias se anotan en {}",
+        "anything worth noting is written to {}",
         note::where_to().display()
     );
     if std::env::var_os("SLINT_BACKEND").is_none() {
@@ -27,19 +35,19 @@ fn main() {
     let store = match cp_store::Store::open(&options.db) {
         Ok(store) => store,
         Err(why) => {
-            note::trouble(&format!("no se pudo abrir el historial: {why}"));
+            note::trouble(&format!("the history could not be opened: {why}"));
             std::process::exit(1);
         }
     };
     let (panel, app) = match app::App::start(store, options.clone()) {
         Ok(started) => started,
         Err(why) => {
-            note::trouble(&format!("el panel no se pudo dibujar: {why}"));
+            note::trouble(&format!("the panel could not be drawn: {why}"));
             std::process::exit(1);
         }
     };
     if let Err(why) = app.run(&panel) {
-        eprintln!("el panel se cerró con error: {why}");
+        eprintln!("the panel closed with an error: {why}");
         std::process::exit(1);
     }
 }
@@ -55,7 +63,7 @@ pub struct Options {
 }
 
 impl Options {
-    fn from_args() -> Self {
+    fn from_args() -> Result<Self, &'static str> {
         let mut db = None;
         let mut measure = false;
         let mut serve = false;
@@ -69,17 +77,22 @@ impl Options {
                 "--serve" => serve = true,
                 "--flat" => flat = true,
                 "--backdrop" => backdrop = args.next().unwrap_or_default(),
-                other => eprintln!("argumento ignorado: {other}"),
+                other => eprintln!("argument ignored: {other}"),
             }
         }
-        Self {
-            db: db.unwrap_or_else(|| if measure { seeded() } else { where_it_lives() }),
+        let db = match db {
+            Some(db) => db,
+            None if measure => seeded(),
+            None => where_it_lives().ok_or("the folder the history lives in was not found")?,
+        };
+        Ok(Self {
+            db,
             measure,
             serve,
             signals: std::env::var_os("CP_PANEL_SIGNALS").map(PathBuf::from),
             backdrop,
             flat,
-        }
+        })
     }
 }
 
@@ -87,10 +100,6 @@ fn seeded() -> PathBuf {
     std::env::temp_dir().join("cp-seed").join("history.db")
 }
 
-fn where_it_lives() -> PathBuf {
-    #[cfg(target_os = "windows")]
-    if let Some(path) = cp_win_sys::paths::database() {
-        return path;
-    }
-    seeded()
+fn where_it_lives() -> Option<PathBuf> {
+    here::data_dir().map(|dir| dir.join("history.db"))
 }

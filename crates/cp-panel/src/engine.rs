@@ -1,35 +1,28 @@
-use std::path::Path;
-
-#[cfg(target_os = "windows")]
+use crate::here;
 use crate::note::note;
-#[cfg(target_os = "windows")]
 use cp_core::capture::Captured;
-#[cfg(target_os = "windows")]
 use cp_core::item::Item;
-#[cfg(target_os = "windows")]
 use cp_core::kind::Kind;
-#[cfg(target_os = "windows")]
 use cp_store::Store;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct Engine {
-    #[cfg(target_os = "windows")]
-    watching: cp_win::watching::Watching,
-    #[cfg(target_os = "windows")]
-    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
-    #[cfg(target_os = "windows")]
+    watching: here::Watching,
+    stop: Arc<AtomicBool>,
     errands: Option<std::thread::JoinHandle<()>>,
 }
 
-#[cfg(target_os = "windows")]
 impl Engine {
     pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
-        let watching = cp_win::watching::Watching::start(move || {
+        let watching = here::Watching::start(move || {
             if let Some(id) = kept(&store) {
                 fresh(id);
             }
         });
-        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let stop = Arc::new(AtomicBool::new(false));
         let errands = errands(db, stop.clone());
         Ok(Self {
             watching,
@@ -43,56 +36,36 @@ impl Engine {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-impl Engine {
-    pub fn start(
-        _db: &Path,
-        _fresh: impl Fn(i64) + Send + 'static,
-    ) -> Result<Self, cp_store::Error> {
-        Ok(Self {})
-    }
-}
-
-#[cfg(target_os = "windows")]
 impl Drop for Engine {
     fn drop(&mut self) {
-        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.stop.store(true, Ordering::Relaxed);
         if let Some(thread) = self.errands.take() {
             let _ = thread.join();
         }
     }
 }
 
-#[cfg(target_os = "windows")]
 const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
-#[cfg(target_os = "windows")]
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
-#[cfg(target_os = "windows")]
 const LATER: i64 = 60_000;
-#[cfg(target_os = "windows")]
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
-#[cfg(target_os = "windows")]
 const A_DAY: i64 = 24 * 60 * 60 * 1_000;
 
-#[cfg(target_os = "windows")]
-fn errands(
-    db: &Path,
-    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
-) -> Option<std::thread::JoinHandle<()>> {
+fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<()>> {
     let store = match Store::open(db) {
         Ok(store) => store,
         Err(why) => {
-            note(&format!("nadie enriquece lo copiado: {why}"));
+            note(&format!("nobody enriches what was copied: {why}"));
             return None;
         }
     };
-    let Some(thumbs) = cp_win_sys::paths::thumbs_dir() else {
-        note("no hay dónde dejar las miniaturas");
+    let Some(thumbs) = here::thumbs_dir() else {
+        note("there is nowhere to leave the thumbnails");
         return None;
     };
     Some(std::thread::spawn(move || {
         let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
-        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+        while !stop.load(Ordering::Relaxed) {
             if swept.elapsed() >= SWEEPS_EVERY {
                 sweep(&store);
                 swept = std::time::Instant::now();
@@ -104,9 +77,8 @@ fn errands(
     }))
 }
 
-#[cfg(target_os = "windows")]
 fn sweep(store: &Store) {
-    let Some(dir) = cp_win_sys::paths::data_dir() else {
+    let Some(dir) = here::data_dir() else {
         return;
     };
     let path = cp_config::at(&dir);
@@ -116,7 +88,7 @@ fn sweep(store: &Store) {
     let kept = match cp_config::read(&path) {
         Ok(kept) => kept,
         Err(why) => {
-            note(&format!("no se pudo leer qué conservar: {why}"));
+            note(&format!("what to keep could not be read: {why}"));
             return;
         }
     };
@@ -128,16 +100,15 @@ fn sweep(store: &Store) {
         Ok(swept) => {
             if swept.expired + swept.over_bytes + swept.orphans > 0 {
                 note(&format!(
-                    "se fueron {} por edad, {} por espacio y {} sueltos",
+                    "{} went by age, {} by room and {} were left loose",
                     swept.expired, swept.over_bytes, swept.orphans
                 ));
             }
         }
-        Err(why) => note(&format!("no se pudo hacer sitio: {why}")),
+        Err(why) => note(&format!("room could not be made: {why}")),
     }
 }
 
-#[cfg(target_os = "windows")]
 fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
     cp_store::Policy {
         keep_for: kept
@@ -153,7 +124,6 @@ fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
     }
 }
 
-#[cfg(target_os = "windows")]
 fn errand(store: &Store, thumbs: &Path) -> bool {
     let at = crate::app::now_ms();
     if let Some(id) = first_waiting(store, "thumb", at) {
@@ -167,36 +137,33 @@ fn errand(store: &Store, thumbs: &Path) -> bool {
     false
 }
 
-#[cfg(target_os = "windows")]
 fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
     match store.take_pending(job, at, 1) {
         Ok(waiting) => waiting.into_iter().next(),
         Err(why) => {
-            note(&format!("no se pudo mirar la cola de {job}: {why}"));
+            note(&format!("the {job} queue could not be looked at: {why}"));
             None
         }
     }
 }
 
-#[cfg(target_os = "windows")]
 fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
     let Some(png) = store.item(id).ok().flatten().as_ref().and_then(thumb_of) else {
-        give_up(store, id, "thumb", "no se pudo hacer la miniatura", at);
+        give_up(store, id, "thumb", "the thumbnail could not be drawn", at);
         return;
     };
     let Some(landed) = written(thumbs, id, &png) else {
-        give_up(store, id, "thumb", "la miniatura no se pudo guardar", at);
+        give_up(store, id, "thumb", "the thumbnail could not be stored", at);
         return;
     };
     if let Err(why) = store.set_thumb(id, Some(&landed), at) {
-        note(&format!("{id} con miniatura sin anotar: {why}"));
+        note(&format!("{id} has a thumbnail nobody wrote down: {why}"));
     }
     done(store, id, "thumb");
 }
 
-#[cfg(target_os = "windows")]
 fn read_out(store: &Store, id: i64, at: i64) {
-    if !cp_win_sys::ocr::is_available() {
+    if !here::ocr_available() {
         done(store, id, "ocr");
         return;
     }
@@ -211,114 +178,109 @@ fn read_out(store: &Store, id: i64, at: i64) {
                 store,
                 id,
                 "ocr",
-                &format!("no se pudo leer para leerla: {why}"),
+                &format!("it could not be read in order to read it: {why}"),
                 at,
             );
             return;
         }
     };
-    let found = cp_win::content::content_of(&item, None)
-        .image
-        .and_then(cp_win_sys::ocr::text_in);
+    let found = here::content_of(&item, None).image.and_then(here::text_in);
     if let Some(text) = found
         && let Err(why) = store.set_ocr_text(id, &text, at)
     {
-        note(&format!("{id} leída sin anotar: {why}"));
+        note(&format!("{id} was read and nobody wrote it down: {why}"));
     }
     done(store, id, "ocr");
 }
 
-#[cfg(target_os = "windows")]
 fn thumb_of(item: &Item) -> Option<Vec<u8>> {
-    let content = cp_win::content::content_of(item, None);
+    let content = here::content_of(item, None);
     if let Some(image) = content.image {
         return cp_core::thumbnail::of_image(image, cp_core::thumbnail::MAX_SIDE);
     }
     let first = content.paths.first()?;
-    let dib = cp_win_sys::thumbnail::dib_of_file(std::path::Path::new(first), SIDE)?;
-    cp_core::dib::to_png(&dib)
+    here::thumb_of_file(Path::new(first), SIDE)
 }
 
-#[cfg(target_os = "windows")]
 fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
     std::fs::create_dir_all(dir).ok()?;
+    let _ = cp_store::restrict(dir, 0o700);
     let landed = dir.join(format!("{id}.png"));
     std::fs::write(&landed, png).ok()?;
+    let _ = cp_store::restrict(&landed, 0o600);
     Some(landed.to_string_lossy().into_owned())
 }
 
-#[cfg(target_os = "windows")]
 fn done(store: &Store, id: i64, job: &str) {
     if let Err(why) = store.work_done(id, job) {
-        note(&format!("{id} sigue en la cola de {job}: {why}"));
+        note(&format!("{id} is still in the {job} queue: {why}"));
     }
 }
 
-#[cfg(target_os = "windows")]
 fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) {
     match store.work_failed(id, job, why, at + LATER) {
         Ok(true) => {}
-        Ok(false) => note(&format!("{id} se queda sin {job} para siempre: {why}")),
-        Err(trouble) => note(&format!("{id} sin anotar el fallo de {job}: {trouble}")),
+        Ok(false) => note(&format!("{id} goes without {job} for good: {why}")),
+        Err(trouble) => note(&format!(
+            "the {job} failure of {id} went unwritten: {trouble}"
+        )),
     }
 }
 
-#[cfg(target_os = "windows")]
 fn kept(store: &Store) -> Option<i64> {
-    let item = match cp_win::capture::capture_insisting(
-        cp_win::capture::PATIENCE,
-        cp_core::watch::RETRY,
-    ) {
+    let item = match here::capture_insisting() {
         Captured::Kept(item) => item,
         Captured::Refused(_) => {
-            note("una copia se descartó por lo que la aplicación de origen pidió");
+            note("a copy was dropped because the app it came from asked for that");
             return None;
         }
         Captured::TooSlow => {
-            note("el portapapeles siguió ocupado tras insistir");
+            note("the clipboard stayed busy however much we insisted");
             return None;
         }
         Captured::Nothing | Captured::Superseded => return None,
     };
-    let from = cp_win_sys::source::in_front();
+    let from = here::in_front();
     keep(store, &item, crate::app::now_ms(), from.as_deref())
 }
 
-#[cfg(target_os = "windows")]
 fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> {
     match store.find_by_hash(item) {
         Ok(Some(id)) => {
             if let Err(why) = store.reactivate(id, at) {
-                note(&format!("la repetida {id} no subió: {why}"));
+                note(&format!("the repeat of {id} did not rise: {why}"));
             }
             return Some(id);
         }
         Ok(None) => {}
-        Err(why) => note(&format!("no se pudo buscar si ya estaba: {why}")),
+        Err(why) => note(&format!(
+            "whether it was already here could not be looked up: {why}"
+        )),
     }
     let id = match store.insert_item(&name_for(at, item), item, &preview_of(item), at) {
         Ok(id) => id,
         Err(why) => {
-            note(&format!("lo copiado no se pudo guardar: {why}"));
+            note(&format!("what was copied could not be stored: {why}"));
             return None;
         }
     };
     if let Some(from) = from
         && let Err(why) = store.set_source(id, from, at)
     {
-        note(&format!("{id} se quedó sin saber de dónde vino: {why}"));
+        note(&format!(
+            "{id} was left not knowing where it came from: {why}"
+        ));
     }
     for job in jobs_for(item) {
         if let Err(why) = store.enqueue(id, job) {
-            note(&format!("{id} se quedó sin encolar {job}: {why}"));
+            note(&format!("{id} was left without {job} queued: {why}"));
         }
     }
     Some(id)
 }
 
-#[cfg(target_os = "windows")]
 fn preview_of(item: &Item) -> String {
-    let content = cp_win::content::content_of(item, None);
+    let content = here::content_of(item, None);
     if let Some(text) = content.text {
         return text.into_owned();
     }
@@ -328,26 +290,24 @@ fn preview_of(item: &Item) -> String {
     String::new()
 }
 
-#[cfg(target_os = "windows")]
 fn name_for(at: i64, _item: &Item) -> String {
     static TURN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let turn = TURN.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let turn = TURN.fetch_add(1, Ordering::Relaxed);
     let since = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |it| it.subsec_nanos());
     format!("{at:x}-{since:08x}{turn:08x}")
 }
 
-#[cfg(target_os = "windows")]
 fn jobs_for(item: &Item) -> &'static [&'static str] {
     match item.kind {
         Some(Kind::Image) => &["thumb", "ocr"],
-        Some(Kind::File) | Some(Kind::Folder) => &["thumb"],
+        Some(Kind::File) | Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb"],
         _ => &[],
     }
 }
 
-#[cfg(all(test, target_os = "windows"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use cp_core::item::{Format, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
@@ -377,7 +337,7 @@ mod tests {
         let mut out = std::io::Cursor::new(Vec::new());
         image::DynamicImage::ImageRgba8(square)
             .write_to(&mut out, image::ImageFormat::Png)
-            .expect("dibujar");
+            .expect("drawn");
         Item {
             kind: Some(Kind::Image),
             formats: vec![Format {
@@ -387,6 +347,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "windows")]
     fn files(paths: &[&str]) -> Item {
         Item {
             kind: Some(Kind::File),
@@ -397,9 +358,30 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    fn files(paths: &[&str]) -> Item {
+        let urls = paths
+            .iter()
+            .map(|path| format!("file://{path}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        Item {
+            kind: Some(Kind::File),
+            formats: vec![Format {
+                id: "public.file-url".into(),
+                payload: Payload::Inline(urls.into_bytes()),
+            }],
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    const SOMEWHERE: [&str; 2] = ["C:\\uno.txt", "C:\\dos.txt"];
+    #[cfg(target_os = "macos")]
+    const SOMEWHERE: [&str; 2] = ["/tmp/uno.txt", "/tmp/dos.txt"];
+
     #[test]
     fn the_preview_of_text_is_the_text_itself() {
-        assert_eq!(preview_of(&text("hola mundo")), "hola mundo");
+        assert_eq!(preview_of(&text("hello world")), "hello world");
     }
 
     #[test]
@@ -409,88 +391,102 @@ mod tests {
 
     #[test]
     fn files_preview_as_their_paths_one_per_line() {
-        let said = preview_of(&files(&["C:\\uno.txt", "C:\\dos.txt"]));
-        assert_eq!(said, "C:\\uno.txt\nC:\\dos.txt");
+        let said = preview_of(&files(&SOMEWHERE));
+        assert_eq!(said, SOMEWHERE.join("\n"));
     }
 
     #[test]
     fn the_name_never_gives_away_what_was_copied() {
-        let secret = text("una contraseña");
+        let secret = text("a password");
         let one = name_for(1_000, &secret);
         let other = name_for(1_000, &secret);
-        assert_ne!(one, other, "dos copias iguales no comparten nombre");
+        assert_ne!(one, other, "two identical copies never share a name");
         let fingerprint = format!("{:016x}", secret.fingerprint());
-        assert!(!one.contains(&fingerprint), "el nombre delata el contenido");
+        assert!(
+            !one.contains(&fingerprint),
+            "the name gives away what was copied"
+        );
     }
 
     #[test]
     fn only_what_can_be_enriched_is_queued() {
         assert_eq!(jobs_for(&image()), ["thumb", "ocr"]);
-        assert_eq!(jobs_for(&files(&["C:\\uno.txt"])), ["thumb"]);
-        assert!(jobs_for(&text("nada que hacer")).is_empty());
+        assert!(jobs_for(&text("nothing to do here")).is_empty());
+    }
+
+    #[test]
+    fn a_file_is_only_queued_where_its_thumbnail_can_be_drawn() {
+        let queued = jobs_for(&files(&SOMEWHERE));
+        if here::THUMBNAILS_FILES {
+            assert_eq!(queued, ["thumb"]);
+        } else {
+            assert!(
+                queued.is_empty(),
+                "queueing what nobody will draw is no use"
+            );
+        }
     }
 
     fn somewhere() -> (tempfile::TempDir, Store) {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let store = Store::open(&dir.path().join("history.db")).expect("abrir");
+        let dir = tempfile::tempdir().expect("a folder");
+        let store = Store::open(&dir.path().join("history.db")).expect("opened");
         (dir, store)
     }
 
     #[test]
     fn without_a_window_in_front_the_card_simply_has_no_app() {
         let (_dir, store) = somewhere();
-        let id = keep(&store, &text("de ninguna parte"), 1_000, None).expect("guardado");
+        let id = keep(&store, &text("from nowhere at all"), 1_000, None).expect("stored");
         let page = store
             .list(&cp_store::Filter::default(), 10, None)
-            .expect("listar");
-        let mine = page.rows.iter().find(|one| one.id == id).expect("está");
+            .expect("listed");
+        let mine = page.rows.iter().find(|one| one.id == id).expect("is here");
         assert_eq!(mine.app, None);
     }
 
     #[test]
     fn what_is_copied_lands_with_its_preview_and_its_kind() {
         let (_dir, store) = somewhere();
-        let id = keep(&store, &text("lo primero"), 1_000, None).expect("guardado");
-        let kept = store.item(id).expect("leer").expect("sigue ahí");
+        let id = keep(&store, &text("the first thing"), 1_000, None).expect("stored");
+        let kept = store.item(id).expect("read").expect("still there");
         assert_eq!(kept.kind, Some(Kind::Text));
-        assert_eq!(store.count().expect("contar"), 1);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
     fn the_same_thing_copied_twice_is_one_row_that_rises() {
         let (_dir, store) = somewhere();
-        let first = keep(&store, &text("igual"), 1_000, None).expect("guardado");
-        let again = keep(&store, &text("igual"), 5_000, None).expect("reconocido");
+        let first = keep(&store, &text("the same"), 1_000, None).expect("stored");
+        let again = keep(&store, &text("the same"), 5_000, None).expect("recognised");
         assert_eq!(first, again);
-        assert_eq!(store.count().expect("contar"), 1);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
     fn two_different_copies_are_two_rows() {
         let (_dir, store) = somewhere();
-        keep(&store, &text("una"), 1_000, None).expect("guardado");
-        keep(&store, &text("otra"), 2_000, None).expect("guardado");
-        assert_eq!(store.count().expect("contar"), 2);
+        keep(&store, &text("one"), 1_000, None).expect("stored");
+        keep(&store, &text("another"), 2_000, None).expect("stored");
+        assert_eq!(store.count().expect("counted"), 2);
     }
 
     #[test]
     fn an_image_leaves_its_reading_and_its_thumbnail_pending() {
         let (_dir, store) = somewhere();
-        let id = keep(&store, &image(), 1_000, None).expect("guardada");
-        let mut waiting = store.take_pending("ocr", 2_000, 10).expect("cola");
-        waiting.extend(store.take_pending("thumb", 2_000, 10).expect("cola"));
+        let id = keep(&store, &image(), 1_000, None).expect("stored");
+        let mut waiting = store.take_pending("ocr", 2_000, 10).expect("the queue");
+        waiting.extend(store.take_pending("thumb", 2_000, 10).expect("the queue"));
         assert_eq!(waiting, [id, id]);
     }
 
     #[test]
     fn what_was_copied_remembers_the_app_it_came_from() {
         let (_dir, store) = somewhere();
-        let id =
-            keep(&store, &text("desde el navegador"), 1_000, Some("chrome")).expect("guardado");
+        let id = keep(&store, &text("from the browser"), 1_000, Some("chrome")).expect("stored");
         let page = store
             .list(&cp_store::Filter::default(), 10, None)
-            .expect("listar");
-        let mine = page.rows.iter().find(|one| one.id == id).expect("está");
+            .expect("listed");
+        let mine = page.rows.iter().find(|one| one.id == id).expect("is here");
         assert_eq!(mine.app.as_deref(), Some("chrome"));
     }
 
@@ -498,21 +494,24 @@ mod tests {
     fn a_picture_ends_up_with_a_thumbnail_it_can_show() {
         let (dir, store) = somewhere();
         let thumbs = dir.path().join("thumbs");
-        let id = keep(&store, &drawn(600), 1_000, None).expect("guardada");
-        assert!(errand(&store, &thumbs), "había trabajo que hacer");
+        let id = keep(&store, &drawn(600), 1_000, None).expect("stored");
+        assert!(errand(&store, &thumbs), "there was work to do");
         let page = store
             .list(&cp_store::Filter::default(), 10, None)
-            .expect("listar");
-        let mine = page.rows.iter().find(|one| one.id == id).expect("está");
-        let made = mine.thumb_path.as_deref().expect("tiene miniatura");
-        assert!(std::path::Path::new(made).exists(), "{made} no se escribió");
+            .expect("listed");
+        let mine = page.rows.iter().find(|one| one.id == id).expect("is here");
+        let made = mine.thumb_path.as_deref().expect("it has a thumbnail");
+        assert!(
+            std::path::Path::new(made).exists(),
+            "{made} was never written"
+        );
         let side =
-            cp_core::thumbnail::size_of(&std::fs::read(made).expect("leer")).expect("tamaño");
+            cp_core::thumbnail::size_of(&std::fs::read(made).expect("read")).expect("a size");
         assert!(side.width <= cp_core::thumbnail::MAX_SIDE);
         assert!(
             store
                 .take_pending("thumb", 2_000, 10)
-                .expect("cola")
+                .expect("the queue")
                 .is_empty()
         );
     }
@@ -549,22 +548,22 @@ mod tests {
     fn what_is_older_than_the_setting_goes_and_what_is_pinned_stays() {
         let (_dir, store) = somewhere();
         let now = 100 * A_DAY;
-        let old = keep(&store, &text("de hace mucho"), now - 40 * A_DAY, None).expect("guardado");
-        let recent = keep(&store, &text("de ayer"), now - A_DAY, None).expect("guardado");
-        let pinned = keep(&store, &text("anclado y viejo"), now - 40 * A_DAY, None).expect("g");
-        store.set_pinned(pinned, true, now).expect("anclar");
+        let old = keep(&store, &text("from long ago"), now - 40 * A_DAY, None).expect("stored");
+        let recent = keep(&store, &text("from yesterday"), now - A_DAY, None).expect("stored");
+        let pinned = keep(&store, &text("pinned and old"), now - 40 * A_DAY, None).expect("stored");
+        store.set_pinned(pinned, true, now).expect("pinned");
         let kept = cp_config::Config {
             keeps_days: Some(30),
             ..cp_config::Config::default()
         };
-        store.sweep(&policy_of(&kept), now).expect("barrer");
+        store.sweep(&policy_of(&kept), now).expect("swept");
         let page = store
             .list(&cp_store::Filter::default(), 10, None)
-            .expect("listar");
+            .expect("listed");
         let left: Vec<i64> = page.rows.iter().map(|one| one.id).collect();
-        assert!(!left.contains(&old), "lo viejo tenía que irse");
-        assert!(left.contains(&recent), "lo reciente se queda");
-        assert!(left.contains(&pinned), "lo anclado nunca caduca");
+        assert!(!left.contains(&old), "what was old had to go");
+        assert!(left.contains(&recent), "what is recent stays");
+        assert!(left.contains(&pinned), "what is pinned never expires");
     }
 
     #[test]
@@ -577,36 +576,36 @@ mod tests {
     fn something_that_cannot_be_drawn_waits_instead_of_spinning() {
         let (dir, store) = somewhere();
         let thumbs = dir.path().join("thumbs");
-        let id = keep(&store, &image(), 1_000, None).expect("guardada");
-        assert!(errand(&store, &thumbs), "lo intentó");
+        let id = keep(&store, &image(), 1_000, None).expect("stored");
+        assert!(errand(&store, &thumbs), "it gave it a try");
         let now = crate::app::now_ms();
         assert!(
             store
                 .take_pending("thumb", now, 10)
-                .expect("cola")
+                .expect("the queue")
                 .is_empty(),
-            "no se reintenta de inmediato"
+            "it is not retried straight away"
         );
         let later = store
             .take_pending("thumb", now + LATER + 1_000, 10)
-            .expect("cola");
-        assert_eq!(later, [id], "vuelve a tocarle el turno más tarde");
+            .expect("the queue");
+        assert_eq!(later, [id], "its turn comes round again later");
     }
 
     #[test]
     fn plain_text_asks_nobody_for_anything() {
         let (_dir, store) = somewhere();
-        keep(&store, &text("sin adornos"), 1_000, None).expect("guardado");
+        keep(&store, &text("with no trimmings"), 1_000, None).expect("stored");
         assert!(
             store
                 .take_pending("thumb", 2_000, 10)
-                .expect("cola")
+                .expect("the queue")
                 .is_empty()
         );
         assert!(
             store
                 .take_pending("ocr", 2_000, 10)
-                .expect("cola")
+                .expect("the queue")
                 .is_empty()
         );
     }

@@ -1,9 +1,10 @@
 import { ListView } from "std-widgets.slint";
 import { Card, Chip, FormRow } from "types.slint";
 import { Theme } from "theme.slint";
+import { Words } from "words.slint";
 import { Icon, Action, Pill, Tag, CardView, Hue } from "cards.slint";
 
-export { Card, Chip, FormRow, Theme }
+export { Card, Chip, FormRow, Theme, Words }
 
 export component Panel inherits Window {
     width: Theme.width + Theme.margin * 2;
@@ -235,7 +236,7 @@ export component Panel inherits Window {
                                 x: 0;
                                 height: parent.height;
                                 vertical-alignment: center;
-                                text: "Busca o filtra con # en el portapapeles";
+                                text: Words.hint;
                                 color: Theme.placeholder;
                                 font-size: 13px;
                             }
@@ -551,7 +552,7 @@ export component Panel inherits Window {
                             spacing: 4px;
                             alignment: end;
                             Icon { source: @image-url("../assets/icons/corner-down-left.svg"); tint: Theme.placeholder; width: 12px; height: 12px; y: (parent.height - 12px) / 2; }
-                            Text { text: "pegar · alt+enter: más formas"; color: Theme.placeholder; font-size: 10px; vertical-alignment: center; }
+                            Text { text: Words.footer; color: Theme.placeholder; font-size: 10px; vertical-alignment: center; }
                         }
                     }
                     Action {

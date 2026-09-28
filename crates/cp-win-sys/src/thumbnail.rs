@@ -153,7 +153,7 @@ mod tests {
     fn asking_for_a_small_image_never_calls_it_an_icon() {
         assert!(
             !is_an_icon(32, 32, 32),
-            "si se pidió pequeño, pequeño está bien"
+            "if small was asked for, small is fine"
         );
     }
 }

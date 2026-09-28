@@ -140,7 +140,7 @@ fn percentile(values: &[f64], pct: f64) -> f64 {
         return 0.0;
     }
     let mut sorted = values.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).expect("números"));
+    sorted.sort_by(|a, b| a.partial_cmp(b).expect("numbers"));
     let rank = ((pct / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
     sorted[rank.min(sorted.len() - 1)]
 }

@@ -1,15 +1,11 @@
 # Releasing CopyPaste
 
-**Status (2026-09-23): the 3.0 release pipeline does not exist yet.**
-`.github/workflows/release.yml` was part of the 2.x tree and is gone; the jobs
-this document used to describe (`build-windows`, `github-release`,
-`publish-release-manifest`, `update-scoop-bucket`) no longer run anywhere.
-What follows is the shape the 3.0 pipeline will have — modelled on the one in
-[rgdevment/Tisty](https://github.com/rgdevment/Tisty), which is audited and in
-production — plus the steps that are manual the first time and cannot be
-automated away.
+`.github/workflows/release.yml` builds, signs and publishes the 3.0 — modelled
+on the pipeline in [rgdevment/Tisty](https://github.com/rgdevment/Tisty), which
+is audited and in production. What follows is what it does, plus the steps that
+are manual the first time and cannot be automated away.
 
-## The pipeline, once it exists
+## The pipeline
 
 A `v*` tag on `main` fans out, in this order, with every stage gated on the one
 before it:
@@ -19,10 +15,8 @@ before it:
 | `gate`               | Style and prose, so a tag never publishes an unformatted tree.          |
 | `tested`             | Proof the commit was green when it landed.                              |
 | `version`            | The version resolved from the tag, used by every stage after it.        |
-| `build-windows`      | `cp-panel` sidecar + the Tauri app, signed with the PFX certificate.    |
-| `build-macos`        | The same, per architecture, signed and notarised.                       |
-| `bundle-windows`     | NSIS installer.                                                         |
-| `bundle-macos`       | `.dmg`.                                                                 |
+| `bundle-windows`     | `cp-panel` sidecar + the Tauri app, signed with the PFX, as an NSIS installer. |
+| `bundle-macos`       | The same, per architecture, signed and notarised, as a `.dmg`.          |
 | `bundle-msix`        | MSIX for the Microsoft Store.                                           |
 | `publish`            | The GitHub Release with every artifact and the update manifest.         |
 | `verify`             | Installs what was just published and checks the update feed answers.    |
@@ -33,6 +27,31 @@ before it:
 `feed.yml` then watches the published manifest daily: a deleted asset, a
 retired release or a force-pushed branch breaks the update feed silently, and
 nothing else would notice.
+
+### macOS is built, and the tag refuses to go out unsigned
+
+`BUILD_MACOS` at the top of `release.yml` gates `bundle-macos` and is set to
+`"true"`: the Apple secrets are the ones the 2.x already used. With it on, the
+`version` job demands all six (`MACOS_CERTIFICATE_P12`,
+`MACOS_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
+`APPLE_APP_PASSWORD`, `APPLE_TEAM_ID`) and fails the tag before anything is
+built if one is missing. That is the point: an unsigned, un-notarised `.dmg` is
+worse than no `.dmg`.
+
+The job has never run yet, so the first tag is also the first proof that the
+sidecar is signed and the bundle notarises. Cut it with `workflow_dispatch`
+before cutting it for real.
+
+### What the 3.0 does not carry yet
+
+Three pieces, in the order they will be built, each on its own branch:
+
+1. **An app that checks for updates.** `tauri-plugin-updater` is registered and
+   the feed is published to the `manifest` branch, but nothing reads it yet:
+   the «Check now» button in About is disabled and says so.
+2. **Bringing the 2.x history over.** `former` finds `clipboard.db` and weighs
+   it; the two buttons that would act on it are still disabled.
+3. **The bridge for whoever stays on the 2.x.** See the crossing below.
 
 ## First time only — what a human has to do
 
@@ -99,10 +118,14 @@ the app, and caches the answer for fifteen days
 file, that user never learns the 3.0 exists. So the 3.0 keeps speaking both
 languages for a while.
 
-**The 3.x publishes the old manifest alongside its own update feed, from
-`v3.0.0` until `v3.1.0`.** `RELEASE_PRIVATE_KEY` is still in the repository's
-secrets, so the file can be signed exactly as the 2.x expects. Three rules
-govern what goes in it:
+**The bridge is built from the 2.x, not from the 3.0** (decided 28/09/2026). A
+new 2.x release is published that reads the `manifest` branch, so that whoever
+stays on the 2 hears about the 3.0 through the channel they already have. It is
+the last thing to be done, once the 3.0 is ready — not before.
+
+`RELEASE_PRIVATE_KEY` is still in the repository's secrets, so anything that
+has to be signed the way the 2.x expects can be. Three rules govern what that
+release says:
 
 - `severity: recommended`. Never `critical`: that paints a full-screen block
   over a working 2.x, and this user has to be free to stay.
@@ -111,9 +134,8 @@ govern what goes in it:
 - `releaseNotes`, in both languages, **says that the history is not migrated**.
   It is the only warning that user sees before jumping.
 
-Retirement needs no work: the file is served from `releases/latest/download/`,
-so the first 3.1 release that does not attach it answers 404 and the 2.x goes
-quiet. Until then each copy gets several fifteen-day windows to notice.
+Each installed copy polls every fifteen days, so there is no hurry once the
+bridge release is out: every one of them gets several windows to notice.
 
 The Microsoft Store crosses differently, and deliberately: the 3.0.0 ships to
 the **same SKU** the 2.x already publishes (`9NBJRZF3K856`), so those installs

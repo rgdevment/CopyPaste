@@ -228,7 +228,7 @@ mod tests {
                 "ExcludeClipboardContentFromMonitorProcessing"
             ))
         );
-        assert_eq!(CATALOG.refusal(WORD), None, "Word no lo pide");
+        assert_eq!(CATALOG.refusal(WORD), None, "Word does not ask for it");
     }
 
     #[test]
@@ -240,7 +240,7 @@ mod tests {
         assert_eq!(
             CATALOG.declines("CanIncludeInClipboardHistory", &[1, 0, 0, 0]),
             None,
-            "la captura de pantalla dice que sí y se guarda"
+            "the screen capture says yes and it is stored"
         );
     }
 
@@ -257,7 +257,7 @@ mod tests {
             for degraded in ["CF_TEXT", "CF_OEMTEXT"] {
                 assert!(
                     CATALOG.costlier_twin(degraded, source),
-                    "{degraded} se guardó pudiendo guardar el Unicode"
+                    "{degraded} would be kept while the Unicode could be"
                 );
             }
             assert!(!CATALOG.costlier_twin("CF_UNICODETEXT", source));
@@ -287,7 +287,7 @@ mod tests {
         let kept = kept(EXPLORER);
         assert!(kept.contains(&"CF_HDROP"), "{kept:?}");
         assert!(kept.contains(&"Preferred DropEffect"), "{kept:?}");
-        assert_eq!(kept.len(), 2, "y nada más: {kept:?}");
+        assert_eq!(kept.len(), 2, "and nothing else: {kept:?}");
         for partial in ["FileName", "FileNameW"] {
             assert_eq!(CATALOG.decide(partial), Take::Presence, "{partial}");
         }
@@ -301,7 +301,7 @@ mod tests {
         assert_eq!(
             CATALOG.classify(&["FileGroupDescriptorW", "FileContents"]),
             None,
-            "sin CF_HDROP el catálogo no ve archivos: la captura los pide por OLE cuando no hay drop"
+            "without CF_HDROP the catalog sees no files: the capture asks for them over OLE when there is no drop"
         );
     }
 
@@ -320,13 +320,13 @@ mod tests {
         assert_eq!(
             CATALOG.decide("Chromium internal source RFH token"),
             Take::Presence,
-            "el testigo interno no es contexto de nadie"
+            "the internal token is nobody's context"
         );
     }
 
     #[test]
     fn the_unknown_is_only_noted() {
-        for unknown in ["ApplicationXYZ", "", "algo/inventado"] {
+        for unknown in ["ApplicationXYZ", "", "invented/type"] {
             assert_eq!(CATALOG.decide(unknown), Take::Presence);
         }
     }
@@ -338,8 +338,8 @@ mod tests {
             ("Excel", EXCEL),
             ("Firefox", FIREFOX),
             ("Chrome", CHROME),
-            ("Explorador", EXPLORER),
-            ("Recortes", SNIP),
+            ("Explorer", EXPLORER),
+            ("Snip", SNIP),
             ("Terminal", TERMINAL),
         ] {
             assert!(CATALOG.classify(source).is_some(), "{name}");
@@ -349,10 +349,7 @@ mod tests {
     #[test]
     fn nothing_is_both_wanted_and_wasteful() {
         for id in CATALOG.wanted {
-            assert!(
-                !CATALOG.wasteful.contains(id),
-                "«{id}» está en las dos listas"
-            );
+            assert!(!CATALOG.wasteful.contains(id), "«{id}» is on both lists");
         }
     }
 
@@ -372,7 +369,7 @@ mod tests {
             assert_eq!(
                 CATALOG.decide(id),
                 Take::Payload,
-                "«{id}» decide por su valor y nadie pediría sus bytes"
+                "«{id}» decides by its value and nobody would ask for its bytes"
             );
         }
     }
@@ -380,7 +377,7 @@ mod tests {
     #[test]
     fn the_preferred_of_each_group_is_one_that_gets_copied() {
         for group in CATALOG.equivalents {
-            let first = group.first().expect("un grupo vacío no desempata nada");
+            let first = group.first().expect("an empty group breaks no ties");
             assert_eq!(CATALOG.decide(first), Take::Payload, "«{first}»");
         }
     }

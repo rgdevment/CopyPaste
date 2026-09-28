@@ -1374,9 +1374,9 @@ mod tests {
     }
 
     fn rendered(form: Form, content: &Content) -> String {
-        match render(form, content).expect("se puede") {
+        match render(form, content).expect("renders") {
             Rendered::Text(text) => text,
-            other => panic!("no era texto: {other:?}"),
+            other => panic!("wasn't text: {other:?}"),
         }
     }
 
@@ -1389,7 +1389,7 @@ mod tests {
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), Form::ALL.len());
-        assert_eq!(Form::from_name("Markdown"), None, "el nombre es exacto");
+        assert_eq!(Form::from_name("Markdown"), None, "the name is exact");
     }
 
     #[test]
@@ -1418,7 +1418,7 @@ mod tests {
         assert_eq!(
             owned.text.as_deref(),
             Some("propio"),
-            "el texto puede ser prestado o propio"
+            "the text can be borrowed or owned"
         );
     }
 
@@ -1430,7 +1430,7 @@ mod tests {
         );
         assert!(
             forms_for(&Content::default()).is_empty(),
-            "sin texto no hay nada que ofrecer"
+            "with no text there's nothing to offer"
         );
         let two_lines = text_of(
             Kind::Text,
@@ -1445,7 +1445,7 @@ otra",
                 Form::TextUpper,
                 Form::TextLower
             ],
-            "juntar las líneas solo se ofrece cuando hay más de una"
+            "joining lines is only offered when there is more than one"
         );
     }
 
@@ -1494,7 +1494,7 @@ otro.txt"
         };
         assert!(
             !forms_for(&nameless).contains(&Form::FileName),
-            "una ruta sin nombre no se ofrece"
+            "a path with no name is not offered"
         );
         let padded = Content {
             kind: Some(Kind::File),
@@ -1504,7 +1504,7 @@ otro.txt"
         assert_eq!(
             rendered(Form::FileName, &padded),
             "con espacios.txt",
-            "el nombre llega limpio de espacios"
+            "the name arrives clear of spaces"
         );
     }
 
@@ -1544,10 +1544,7 @@ otro.txt"
             let forms = forms_for(content);
             assert!(!forms.is_empty(), "{content:?}");
             for form in forms {
-                assert!(
-                    render(form, content).is_some(),
-                    "{form:?} sobre {content:?}"
-                );
+                assert!(render(form, content).is_some(), "{form:?} on {content:?}");
             }
         }
     }
@@ -1579,7 +1576,7 @@ otro.txt"
         assert_eq!(
             rendered(Form::PlainText, &spaced),
             "  hola \n",
-            "el texto plano se entrega como se copió, sin recortar"
+            "plain text is delivered exactly as copied, untrimmed"
         );
         let rtf_only = Content {
             rich: true,
@@ -1614,7 +1611,7 @@ otro.txt"
         assert_eq!(
             rendered(Form::JsonPretty, &content),
             "{\n  \"b\": 1,\n  \"a\": {\n    \"x\": [\n      1,\n      2\n    ]\n  },\n  \"c\": \"hola\\tque tal\"\n}",
-            "en el orden en que estaban las claves"
+            "in the order the keys were in"
         );
         assert_eq!(
             rendered(Form::JsonMinified, &content),
@@ -1624,7 +1621,7 @@ otro.txt"
         assert_eq!(
             rendered(Form::JsonTable, &content),
             "b\t1\na\t{\"x\":[1,2]}\nc\thola que tal",
-            "una tabulación entre clave y valor; los anidados van minificados"
+            "a tab between key and value; nested ones go minified"
         );
     }
 
@@ -1638,7 +1635,7 @@ otro.txt"
         assert_eq!(
             rendered(Form::JsonTable, &content),
             "name\tage\tcity\nana\t3\t\nbo\t\tLima",
-            "las columnas son la unión de claves; lo que falta queda vacío"
+            "the columns are the union of the keys; what's missing stays empty"
         );
     }
 
@@ -1775,11 +1772,11 @@ otro.txt"
         assert!(green > red && green > blue);
         assert!(
             redmean_squared([250, 0, 0], [235, 0, 0]) > redmean_squared([10, 0, 0], [25, 0, 0]),
-            "una diferencia de rojo pesa más donde hay mucho rojo"
+            "a difference in red weighs more where there is a lot of red"
         );
         assert!(
             redmean_squared([250, 0, 0], [250, 0, 15]) < redmean_squared([10, 0, 0], [10, 0, 15]),
-            "y una de azul pesa más donde hay poco rojo"
+            "and one in blue weighs more where there is little red"
         );
         assert_eq!(
             redmean_squared([255, 0, 0], [240, 0, 0]),
@@ -1828,7 +1825,7 @@ otro.txt"
                 &text_of(Kind::Color, "hsl(400, 150%, -10%)")
             ),
             "rgb(0, 0, 0)",
-            "fuera de rango se recorta, no se rompe"
+            "out of range it gets clamped, not broken"
         );
     }
 
@@ -1929,7 +1926,7 @@ otro.txt"
                 &text_of(Kind::Link, "https://EJEMPLO.TEST/X")
             ),
             "ejemplo.test",
-            "un dominio no distingue mayúsculas"
+            "a domain does not distinguish case"
         );
         let titled = Content {
             title: Some(" Ejemplo, la página ".into()),
@@ -1963,25 +1960,25 @@ otro.txt"
         assert_eq!(
             domain_of("https://localhost:3000/"),
             None,
-            "sin punto no es dominio"
+            "no dot means no domain"
         );
         assert_eq!(domain_of("https://"), None);
         assert_eq!(domain_of(""), None);
         assert_eq!(
             domain_of("192.168.0.1:8080"),
             Some("192.168.0.1"),
-            "sin esquema, lo de antes del puerto es el host"
+            "with no scheme, what's before the port is the host"
         );
         assert_eq!(
             domain_of("https://ejemplo.test:abc/"),
             Some("ejemplo.test:abc"),
-            "un puerto que no es número no se recorta"
+            "a port that is not a number is not trimmed off"
         );
         assert_eq!(domain_of("https://ejemplo.test:/"), Some("ejemplo.test:"));
         assert_eq!(
             domain_of(":ejemplo.test"),
             Some(":ejemplo.test"),
-            "un esquema vacío no es esquema"
+            "an empty scheme is no scheme"
         );
     }
 
@@ -2004,12 +2001,12 @@ otro.txt"
         assert_eq!(
             rendered(Form::CodeDedented, &content),
             "fn main() {\n    println!(\"hola\");\n}\n",
-            "se quita lo que todas las líneas comparten y nada más"
+            "what's stripped is only what every line shares, nothing more"
         );
         assert_eq!(
             dedent("\n  a\n\n    b\n"),
             "\na\n\n  b\n",
-            "las líneas vacías no cuentan"
+            "empty lines don't count"
         );
     }
 
@@ -2059,8 +2056,8 @@ otro.txt"
     }
 
     fn middle_of_jpeg(bytes: &[u8]) -> [u8; 3] {
-        assert_eq!(&bytes[..2], &[0xFF, 0xD8], "cabecera JPEG");
-        let back = image::load_from_memory(bytes).expect("se lee").to_rgb8();
+        assert_eq!(&bytes[..2], &[0xFF, 0xD8], "JPEG header");
+        let back = image::load_from_memory(bytes).expect("reads").to_rgb8();
         back.get_pixel(8, 8).0
     }
 
@@ -2101,28 +2098,28 @@ otro.txt"
             };
             match render(Form::ImageJpeg, &content) {
                 Some(Rendered::Jpeg(bytes)) => middle_of_jpeg(&bytes),
-                other => panic!("no salió un JPEG: {other:?}"),
+                other => panic!("no JPEG came out: {other:?}"),
             }
         };
         assert!(
             near(jpeg_of_solid([200, 30, 30, 255]), [200, 30, 30]),
-            "opaco intacto"
+            "opaque untouched"
         );
         assert!(
             near(jpeg_of_solid([0, 0, 0, 0]), [255, 255, 255]),
-            "lo transparente se vuelve blanco, no negro"
+            "transparent turns white, not black"
         );
         assert!(
             near(jpeg_of_solid([0, 0, 255, 128]), [127, 127, 255]),
-            "azul al 50 % sobre blanco"
+            "blue at 50% over white"
         );
         assert!(
             near(jpeg_of_solid([0, 0, 255, 64]), [191, 191, 255]),
-            "azul al 25 % sobre blanco"
+            "blue at 25% over white"
         );
         assert!(
             near(jpeg_of_solid([200, 30, 30, 128]), [227, 142, 142]),
-            "un rojo apagado al 50 % se aclara canal a canal"
+            "a muted red at 50% lightens channel by channel"
         );
         assert_eq!(
             render(Form::ImageJpeg, &text_of(Kind::Image, "no bytes")),
@@ -2150,7 +2147,7 @@ otro.txt"
             ..Default::default()
         };
         let Some(Rendered::Jpeg(bytes)) = render(Form::ImageJpeg, &content) else {
-            panic!("un TIFF también se vuelve JPEG");
+            panic!("a TIFF becomes a JPEG too");
         };
         let middle = middle_of_jpeg(&bytes);
         assert!(
@@ -2271,14 +2268,14 @@ otro.txt"
         assert_eq!(
             decode_entities("&#99999999;"),
             "&#99999999;",
-            "fuera de Unicode"
+            "outside Unicode"
         );
         assert_eq!(decode_entities("&aacute;&Ntilde;&euro;&hellip;"), "áÑ€…");
         assert_eq!(decode_entities("&yacute;&uuml;"), "ýü");
         assert_eq!(
             decode_entities("&rarr;"),
             "&rarr;",
-            "las nombradas que no se conocen se dejan"
+            "unknown named entities are left alone"
         );
     }
 
@@ -2308,7 +2305,7 @@ otro.txt"
         assert_eq!(
             markdown_of_html("<br>x"),
             "x",
-            "un salto al principio no deja hueco"
+            "a line break at the very start leaves no gap"
         );
         assert_eq!(markdown_of_html("<ul><li> a</li></ul>"), "- a");
         assert_eq!(markdown_of_html("<ol><li> a</li></ol>"), "1. a");
@@ -2348,12 +2345,12 @@ otro.txt"
         assert_eq!(
             markdown_of_html("<pre>a    <a href=\"x\"></b></a></pre>"),
             "```\na    [](x)\n```",
-            "dentro de un preformateado los espacios no se recortan, un cierre suelto se ignora y el ancla vacía no rompe"
+            "inside a preformatted block spaces are not trimmed, a stray closing tag is ignored, and an empty anchor does not break"
         );
         assert_eq!(
             markdown_of_html("<pre><b>x </b>y</pre>"),
             "```\nx y\n```",
-            "dentro de un cerco de código los asteriscos serían literales"
+            "inside a code fence the asterisks would be literal"
         );
         assert_eq!(markdown_of_html("<a href=\"x\"> </a>"), "[](x)");
     }
@@ -2400,12 +2397,12 @@ otro.txt"
         assert_eq!(
             markdown_of_html("a<td><blockquote>x</td></blockquote>"),
             "a\n\n> x",
-            "una celda fuera de una fila no se traga el texto"
+            "a cell outside a row does not swallow the text"
         );
         assert_eq!(
             markdown_of_html("<table><tr><td>ab<blockquote>x</td></blockquote></tr></table>"),
             "| ab  x |\n| --- |",
-            "la celda recorta la salida por debajo del inicio de la cita, y la cita no se cae"
+            "the cell cuts off the output before the start of the quote, and the quote does not collapse"
         );
         assert_eq!(
             markdown_of_html("<blockquote><blockquote>x</blockquote>y</blockquote>"),
@@ -2456,7 +2453,7 @@ otro.txt"
         assert_eq!(
             markdown_of_html("<b>a</b> <b>b</b>"),
             "**a** **b**",
-            "con texto en medio no se funden"
+            "with text in between they do not merge"
         );
         assert_eq!(markdown_of_html("<b>a</b><i>b</i>"), "**a***b*");
     }
@@ -2509,19 +2506,19 @@ otro.txt"
         assert_eq!(
             dedent("\u{a0}\u{a0}x\n   y"),
             "\u{a0}\u{a0}x\n   y",
-            "nada en común"
+            "nothing in common"
         );
         assert_eq!(dedent("\u{a0}\u{a0}x\n\u{a0}\u{a0}\u{a0}y"), "x\n\u{a0}y");
         assert_eq!(dedent("\tx\n\t\ty"), "x\n\ty");
         assert_eq!(
             dedent("\tx\n  y"),
             "\tx\n  y",
-            "tabulador y espacios no son lo mismo"
+            "a tab and spaces are not the same"
         );
         assert_eq!(
             dedent("  x\n \n  y"),
             "x\n\ny",
-            "una línea en blanco corta no estorba"
+            "a short blank line does not get in the way"
         );
     }
 

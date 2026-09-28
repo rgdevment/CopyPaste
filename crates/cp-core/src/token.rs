@@ -137,7 +137,7 @@ mod tests {
             out
         };
         format!(
-            "{}.{}.firma",
+            "{}.{}.sig",
             encode(r#"{"alg":"HS256","typ":"JWT"}"#),
             encode(payload)
         )
@@ -147,7 +147,7 @@ mod tests {
     fn a_jwt_is_a_token_and_says_what_it_carries() {
         let token = jwt(r#"{"sub":"cp-3","env":"staging","exp":1700000000,"iss":"cp"}"#);
         assert!(looks_like(&token));
-        let claims = claims_of(&token).expect("se lee");
+        let claims = claims_of(&token).expect("reads");
         assert_eq!(claims.subject(), Some("cp-3"));
         assert_eq!(claims.issuer(), Some("cp"));
         assert_eq!(claims.expires_at(), Some(1_700_000_000));
@@ -155,36 +155,33 @@ mod tests {
         assert_eq!(
             claims.expired_by(1_700_000_000),
             Some(true),
-            "en el segundo exacto ya no vale"
+            "right at the exact second, it no longer holds"
         );
         assert_eq!(claims.expired_by(1_699_999_999), Some(false));
         assert_eq!(claims.expired_by(1_600_000_000), Some(false));
         assert_eq!(
             claims.payload.get("env").and_then(|v| v.as_str()),
             Some("staging"),
-            "el problema real no es que se vea: es saber cuál de los doce es el de staging"
+            "the real problem isn't seeing it: it's knowing which of the twelve is staging"
         );
     }
 
     #[test]
     fn a_jwt_without_expiry_does_not_pretend_to_know() {
-        let claims = claims_of(&jwt(r#"{"sub":"x"}"#)).expect("se lee");
+        let claims = claims_of(&jwt(r#"{"sub":"x"}"#)).expect("reads");
         assert_eq!(claims.expired_by(0), None);
     }
 
     #[test]
     fn three_dotted_words_are_not_a_jwt() {
-        assert!(
-            claims_of("uno.dos.tres").is_none(),
-            "no es base64 de un JSON"
-        );
-        assert!(claims_of("a.b").is_none(), "faltan partes");
+        assert!(claims_of("one.two.three").is_none(), "not base64 of a JSON");
+        assert!(claims_of("a.b").is_none(), "parts are missing");
         assert!(
             claims_of(&format!("{}.extra", jwt("{}"))).is_none(),
-            "sobran"
+            "one part too many"
         );
-        assert!(!looks_like("uno.dos.tres"));
-        assert!(!looks_like("archivo.tar.gz"));
+        assert!(!looks_like("one.two.three"));
+        assert!(!looks_like("archive.tar.gz"));
     }
 
     #[test]
@@ -214,31 +211,31 @@ mod tests {
 
     #[test]
     fn a_prefix_alone_or_with_spaces_is_not_a_token() {
-        assert!(!looks_like("sk-"), "vacío detrás");
-        assert!(!looks_like("sk-corto"), "demasiado corto");
+        assert!(!looks_like("sk-"), "nothing behind it");
+        assert!(!looks_like("sk-short"), "too short");
         assert!(!looks_like(
-            "ghp_ tiene espacios dentro 0123456789012345678901"
+            "ghp_ has spaces inside it 0123456789012345678901"
         ));
-        assert!(!looks_like("AKIA con espacios y todo"));
+        assert!(!looks_like("AKIA with spaces and all"));
         assert!(!looks_like(
-            "sk-not-a-real-key-for-tests-0123456789 y luego"
+            "sk-not-a-real-key-for-tests-0123456789 and then some"
         ));
         assert!(!looks_like(""));
         assert!(
-            !looks_like(&format!("{} con espacio", jwt("{}"))),
-            "un JWT seguido de palabras no es un token"
+            !looks_like(&format!("{} with a space", jwt("{}"))),
+            "a JWT followed by words is not a token"
         );
         assert!(
             !looks_like("skeleton-key-of-the-castle-0123456789"),
-            "sk- exacto"
+            "an exact sk-, not just its letters"
         );
     }
 
     #[test]
     fn what_a_person_copies_every_day_is_not_a_token() {
         for text in [
-            "https://ejemplo.test/ruta",
-            "alguien@ejemplo.test",
+            "https://example.test/path",
+            "someone@example.test",
             "7ab3f6de-1c4b-4f5e-8a2d-9f0e1b2c3d4e",
             "d41d8cd98f00b204e9800998ecf8427e",
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnop",
@@ -257,12 +254,12 @@ mod tests {
         assert_eq!(
             base64url("_w").as_deref(),
             Some(&[0xff][..]),
-            "alfabeto url"
+            "url alphabet"
         );
         assert_eq!(
             base64url("/w").as_deref(),
             Some(&[0xff][..]),
-            "y el clásico"
+            "and the classic one"
         );
         assert_eq!(base64url("-w").as_deref(), Some(&[0xfb][..]));
         assert_eq!(base64url("+w").as_deref(), Some(&[0xfb][..]));

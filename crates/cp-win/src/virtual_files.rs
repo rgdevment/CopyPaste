@@ -201,25 +201,25 @@ mod tests {
     #[test]
     fn a_descriptor_names_its_files_with_their_sizes_and_folders() {
         let described = described_in(&descriptor_of(&[
-            ("informe.pdf", Some(1234), false),
-            ("adjuntos", None, true),
-            ("adjuntos\\foto ñ.jpg", Some(5 << 32 | 7), false),
+            ("report.pdf", Some(1234), false),
+            ("attachments", None, true),
+            ("attachments\\photo copy.jpg", Some(5 << 32 | 7), false),
         ]));
         assert_eq!(
             described,
             vec![
                 Described {
-                    name: "informe.pdf".into(),
+                    name: "report.pdf".into(),
                     size: Some(1234),
                     is_dir: false
                 },
                 Described {
-                    name: "adjuntos".into(),
+                    name: "attachments".into(),
                     size: None,
                     is_dir: true
                 },
                 Described {
-                    name: "adjuntos\\foto ñ.jpg".into(),
+                    name: "attachments\\photo copy.jpg".into(),
                     size: Some(5 << 32 | 7),
                     is_dir: false
                 },
@@ -243,14 +243,14 @@ mod tests {
         only_flag[4 + ATTRIBUTES_AT..4 + ATTRIBUTES_AT + 4].copy_from_slice(&0x20u32.to_le_bytes());
         assert!(
             !described_in(&only_flag)[0].is_dir,
-            "FD_ATTRIBUTES con un archivo corriente"
+            "FD_ATTRIBUTES on an ordinary file"
         );
         let mut only_attribute = descriptor_of(&[("x", Some(1), false)]);
         only_attribute[4 + ATTRIBUTES_AT..4 + ATTRIBUTES_AT + 4]
             .copy_from_slice(&FILE_ATTRIBUTE_DIRECTORY.to_le_bytes());
         assert!(
             !described_in(&only_attribute)[0].is_dir,
-            "sin FD_ATTRIBUTES el atributo no vale"
+            "without FD_ATTRIBUTES the attribute counts for nothing"
         );
         let mut both_bits = descriptor_of(&[("x", None, true)]);
         both_bits[4 + ATTRIBUTES_AT..4 + ATTRIBUTES_AT + 4]
@@ -278,7 +278,7 @@ mod tests {
         assert!(described_in(&[0, 0, 0]).is_empty());
         let mut lying = descriptor_of(&[("a.txt", None, false)]);
         lying[..4].copy_from_slice(&9u32.to_le_bytes());
-        assert_eq!(described_in(&lying).len(), 1, "dice nueve, trae uno");
+        assert_eq!(described_in(&lying).len(), 1, "says nine, brings one");
         let cut = &descriptor_of(&[("a.txt", None, false)])[..300];
         assert!(described_in(cut).is_empty());
     }
@@ -304,7 +304,7 @@ mod tests {
         ]));
         assert!(
             !offered_without_a_drop(&[DESCRIPTOR, CONTENTS, "CF_HDROP"]),
-            "el Explorador ofrece ambos: los de disco mandan"
+            "Explorer offers both: the ones on disk win"
         );
         assert!(!offered_without_a_drop(&[DESCRIPTOR]));
         assert!(!offered_without_a_drop(&[CONTENTS]));
@@ -313,12 +313,12 @@ mod tests {
     #[test]
     fn a_name_from_the_descriptor_never_escapes_its_folder() {
         assert_eq!(
-            relative_path_of("informe.pdf"),
-            Some(PathBuf::from("informe.pdf"))
+            relative_path_of("report.pdf"),
+            Some(PathBuf::from("report.pdf"))
         );
         assert_eq!(
-            relative_path_of("carpeta\\sub/nota.txt"),
-            Some(PathBuf::from("carpeta").join("sub").join("nota.txt"))
+            relative_path_of("folder\\sub/note.txt"),
+            Some(PathBuf::from("folder").join("sub").join("note.txt"))
         );
         for bad in [
             "",
@@ -327,7 +327,7 @@ mod tests {
             ".",
             "C:\\x.txt",
             "\\\\srv\\share",
-            "con<sola>.txt",
+            "bad<name>.txt",
             "trailing. ",
             "tab\tname",
         ] {
@@ -344,36 +344,39 @@ mod tests {
                 inline(
                     DESCRIPTOR,
                     &descriptor_of(&[
-                        ("informe.pdf", Some(4), false),
-                        ("adjuntos", None, true),
-                        ("adjuntos\\nota.txt", Some(3), false),
+                        ("report.pdf", Some(4), false),
+                        ("attachments", None, true),
+                        ("attachments\\note.txt", Some(3), false),
                     ]),
                 ),
                 inline(&contents_id(0), b"%PDF"),
-                inline(&contents_id(2), b"hola"),
+                inline(&contents_id(2), b"hello"),
             ],
         };
-        let out = materialize(&item, &root).expect("se escribió");
+        let out = materialize(&item, &root).expect("it was written");
         assert!(out.complete);
         assert_eq!(
             out.paths.len(),
             2,
-            "informe.pdf y adjuntos: {:?}",
+            "report.pdf and attachments: {:?}",
             out.paths
         );
         assert_eq!(std::fs::read(&out.paths[0]).expect("pdf"), b"%PDF");
         assert!(out.paths[1].is_dir());
         assert_eq!(
-            std::fs::read(out.paths[1].join("nota.txt")).expect("nota"),
-            b"hola"
+            std::fs::read(out.paths[1].join("note.txt")).expect("note"),
+            b"hello"
         );
         assert!(
             out.paths[0].starts_with(&root),
-            "{:?} fuera de {root:?}",
+            "{:?} outside {root:?}",
             out.paths[0]
         );
-        let again = materialize(&item, &root).expect("pegar dos veces");
-        assert_eq!(again.paths, out.paths, "la misma huella, la misma carpeta");
+        let again = materialize(&item, &root).expect("paste twice");
+        assert_eq!(
+            again.paths, out.paths,
+            "the same fingerprint, the same folder"
+        );
         std::fs::remove_dir_all(&root).ok();
     }
 
@@ -386,8 +389,8 @@ mod tests {
                 inline(
                     DESCRIPTOR,
                     &descriptor_of(&[
-                        ("grande.iso", Some(1 << 40), false),
-                        ("..\\fuera.txt", Some(1), false),
+                        ("big.iso", Some(1 << 40), false),
+                        ("..\\outside.txt", Some(1), false),
                         ("ok.txt", Some(2), false),
                     ]),
                 ),
@@ -399,13 +402,13 @@ mod tests {
                 inline(&contents_id(2), b"ok"),
             ],
         };
-        let out = materialize(&item, &root).expect("algo se escribió");
+        let out = materialize(&item, &root).expect("something was written");
         assert!(!out.complete);
         assert_eq!(out.paths.len(), 1);
         assert!(out.paths[0].ends_with("ok.txt"));
         assert!(
-            !root.join("fuera.txt").exists(),
-            "nada se escapa de la carpeta"
+            !root.join("outside.txt").exists(),
+            "nothing escapes the folder"
         );
         std::fs::remove_dir_all(&root).ok();
     }
@@ -413,7 +416,7 @@ mod tests {
     #[test]
     fn an_item_without_virtual_files_has_nothing_to_materialize() {
         let root = scratch("none");
-        assert_eq!(materialize(&Item::plain("hola"), &root), None);
+        assert_eq!(materialize(&Item::plain("hello"), &root), None);
         let empty = Item {
             kind: None,
             formats: vec![inline(DESCRIPTOR, &descriptor_of(&[]))],
@@ -427,6 +430,6 @@ mod tests {
             }],
         };
         assert_eq!(materialize(&announced, &root), None);
-        assert!(!root.exists(), "sin archivos no se crea carpeta");
+        assert!(!root.exists(), "with no files, no folder is created");
     }
 }

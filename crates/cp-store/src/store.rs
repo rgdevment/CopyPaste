@@ -251,6 +251,10 @@ impl Store {
         &self.db
     }
 
+    pub fn blobs(&self) -> Option<&crate::Blobs> {
+        self.blobs.as_ref()
+    }
+
     pub fn in_memory() -> Result<Self> {
         let db = Connection::open_in_memory()?;
         crate::schema::create(&db)?;
@@ -541,7 +545,7 @@ impl Store {
             .optional()?
             .flatten();
         if let Some(path) = path {
-            let _ = std::fs::remove_file(path);
+            let _ = crate::blobs::remove_at(std::path::Path::new(&path));
         }
         Ok(())
     }
@@ -714,7 +718,7 @@ impl Store {
             }],
         };
         if self.blobs.is_none() && edited.needs_blob_store() {
-            let (format, size) = edited.oversized_format().expect("lo acaba de decir");
+            let (format, size) = edited.oversized_format().expect("it just said so");
             return Err(Error::NeedsBlobStore { format, size });
         }
         let rows = self.rows_of(&edited)?;
@@ -1226,7 +1230,7 @@ fn sidecars(path: &std::path::Path) -> [std::path::PathBuf; 2] {
     })
 }
 
-pub(crate) fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> {
+pub fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -1260,8 +1264,8 @@ fn under(path: &std::path::Path, root: &std::path::Path) -> bool {
 
 #[cfg(test)]
 fn on_disk() -> (tempfile::TempDir, Store) {
-    let dir = tempfile::tempdir().expect("carpeta");
-    let store = Store::open(&dir.path().join("history.db")).expect("abre");
+    let dir = tempfile::tempdir().expect("a folder");
+    let store = Store::open(&dir.path().join("history.db")).expect("opened");
     (dir, store)
 }
 
@@ -1290,7 +1294,7 @@ fn search(store: &Store, query: &str) -> Vec<String> {
     };
     store
         .list(&filter, Store::PAGE, None)
-        .expect("consulta")
+        .expect("queried")
         .rows
         .into_iter()
         .map(|one| one.preview)
@@ -1317,15 +1321,15 @@ mod tests {
                 ..Default::default()
             },
         ] {
-            let clauses = Clauses::of(&filter, true, true).expect("cláusulas");
+            let clauses = Clauses::of(&filter, true, true).expect("clauses");
             let sql = format!("EXPLAIN QUERY PLAN SELECT COUNT(*) {}", clauses.source());
-            let mut stmt = store.db.prepare(&sql).expect("plan");
+            let mut stmt = store.db.prepare(&sql).expect("a plan");
             let steps: Vec<String> = stmt
                 .query_map(params_from_iter(clauses.bound.iter()), |row| {
                     row.get::<_, String>(3)
                 })
-                .expect("plan")
-                .map(|step| step.expect("paso"))
+                .expect("a plan")
+                .map(|step| step.expect("a step"))
                 .collect();
             assert!(
                 steps
@@ -1335,15 +1339,15 @@ mod tests {
             );
             assert!(
                 !steps.iter().any(|step| step.contains("items_pinned")),
-                "el índice parcial de anclados hacía barrer el FTS por cada fila: {steps:?}"
+                "the partial pinned index made the FTS get swept on every row: {steps:?}"
             );
         }
     }
 
     fn seeded() -> Store {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for (at, text) in [
-            "el café de la esquina",
+            "the café on the corner",
             "Straße Hauptbahnhof",
             "encyclopædia britannica",
             "Łódź centrum",
@@ -1363,7 +1367,7 @@ mod tests {
     fn the_four_cases_that_2x_gets_wrong() {
         let store = seeded();
         for (query, expected) in [
-            ("cafe", "el café de la esquina"),
+            ("cafe", "the café on the corner"),
             ("strasse", "Straße Hauptbahnhof"),
             ("encyclopaedia", "encyclopædia britannica"),
             ("lodz", "Łódź centrum"),
@@ -1371,7 +1375,7 @@ mod tests {
             let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit == expected),
-                "buscando «{query}» no apareció «{expected}»: {hits:?}"
+                "searching «{query}» did not turn up «{expected}»: {hits:?}"
             );
         }
     }
@@ -1380,7 +1384,7 @@ mod tests {
     fn it_works_in_both_directions() {
         let store = seeded();
         for (query, expected) in [
-            ("café", "el café de la esquina"),
+            ("café", "the café on the corner"),
             ("Straße", "Straße Hauptbahnhof"),
             ("encyclopædia", "encyclopædia britannica"),
             ("Łódź", "Łódź centrum"),
@@ -1389,7 +1393,7 @@ mod tests {
             let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit == expected),
-                "buscando «{query}» no apareció «{expected}»: {hits:?}"
+                "searching «{query}» did not turn up «{expected}»: {hits:?}"
             );
         }
     }
@@ -1400,8 +1404,8 @@ mod tests {
         let hits = search(&store, "cafe");
         assert_eq!(
             hits.first().map(String::as_str),
-            Some("el café de la esquina"),
-            "se busca sin tildes pero se muestra como se copió"
+            Some("the café on the corner"),
+            "it is searched without accents but shown just as it was copied"
         );
     }
 
@@ -1411,7 +1415,7 @@ mod tests {
             formats: vec![
                 Format {
                     id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(b"hola".to_vec()),
+                    payload: Payload::Inline(b"hello".to_vec()),
                 },
                 Format {
                     id: "public.rtf".into(),
@@ -1431,7 +1435,7 @@ mod tests {
 
     #[test]
     fn an_item_too_big_for_the_row_is_refused_not_emptied() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let big = Item {
             kind: None,
             formats: vec![Format {
@@ -1441,14 +1445,14 @@ mod tests {
         };
         assert!(
             store.insert_item("uuid-grande", &big, "", 1).is_err(),
-            "mejor negarse que guardar un ítem sin sus bytes"
+            "better to refuse than store an item without its bytes"
         );
-        assert_eq!(store.count().expect("cuenta"), 0);
+        assert_eq!(store.count().expect("counted"), 0);
     }
 
     #[test]
     fn two_images_with_no_preview_are_two_items() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = |byte: u8| Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![Format {
@@ -1465,96 +1469,100 @@ mod tests {
         let hashes: Vec<i64> = store
             .db
             .prepare("SELECT content_hash FROM items ORDER BY id")
-            .expect("prepara")
+            .expect("prepared")
             .query_map([], |row| row.get(0))
-            .expect("consulta")
-            .map(|row| row.expect("fila"))
+            .expect("queried")
+            .map(|row| row.expect("a row"))
             .collect();
         assert_ne!(
             hashes[0], hashes[1],
-            "hashear el preview vacío las haría la misma"
+            "hashing the empty preview would make them the same"
         );
     }
 
     #[test]
     fn an_item_keeps_every_format_it_was_offered() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_item("uuid-multi", &sample_item(), "hola", 1)
+            .insert_item("uuid-multi", &sample_item(), "hello", 1)
             .expect("insert");
-        let formats = store.formats_of(id).expect("formatos");
-        assert_eq!(formats.len(), 4, "las cuatro filas, incluidas las vacías");
+        let formats = store.formats_of(id).expect("formats");
+        assert_eq!(formats.len(), 4, "all four rows, including the empty ones");
         assert!(formats.contains(&"com.apple.icns".to_string()));
         assert!(formats.contains(&"fndf".to_string()));
     }
 
     #[test]
     fn the_same_content_is_found_by_its_hash() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         store.insert_text("uuid-a", "repetido", 1).expect("insert");
         assert!(
             store
                 .find_by_hash(&Item::plain("repetido"))
-                .expect("busca")
+                .expect("searched")
                 .is_some()
         );
         assert!(
             store
                 .find_by_hash(&Item::plain("distinto"))
-                .expect("busca")
+                .expect("searched")
                 .is_none()
         );
     }
 
     #[test]
     fn deleting_an_item_takes_its_formats_with_it() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_item("uuid-cascade", &sample_item(), "hola", 1)
+            .insert_item("uuid-cascade", &sample_item(), "hello", 1)
             .expect("insert");
-        store.mark_broken(id, 10).expect("marca");
-        store.purge_broken_before(20).expect("purga");
-        assert_eq!(store.formats_of(id).expect("formatos").len(), 0);
+        store.mark_broken(id, 10).expect("marked");
+        store.purge_broken_before(20).expect("purged");
+        assert_eq!(store.formats_of(id).expect("formats").len(), 0);
     }
 
     #[test]
     fn a_broken_item_survives_until_its_time_is_up() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
             .insert_text("uuid-roto", "archivo ido", 1)
             .expect("insert");
-        store.mark_broken(id, 100).expect("marca");
-        assert_eq!(store.purge_broken_before(50).expect("purga"), 0);
-        assert_eq!(store.count().expect("cuenta"), 1, "aún no cumple el plazo");
-        assert_eq!(store.purge_broken_before(150).expect("purga"), 1);
-        assert_eq!(store.count().expect("cuenta"), 0);
+        store.mark_broken(id, 100).expect("marked");
+        assert_eq!(store.purge_broken_before(50).expect("purged"), 0);
+        assert_eq!(
+            store.count().expect("counted"),
+            1,
+            "the deadline has not been met yet"
+        );
+        assert_eq!(store.purge_broken_before(150).expect("purged"), 1);
+        assert_eq!(store.count().expect("counted"), 0);
     }
 
     #[test]
     fn marking_a_broken_item_twice_does_not_restart_its_clock() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
             .insert_text("uuid-roto", "archivo ido", 1)
             .expect("insert");
-        store.mark_broken(id, 100).expect("primera");
-        store.mark_broken(id, 900).expect("segunda");
+        store.mark_broken(id, 100).expect("first");
+        store.mark_broken(id, 900).expect("second");
         assert_eq!(
-            store.purge_broken_before(150).expect("purga"),
+            store.purge_broken_before(150).expect("purged"),
             1,
-            "vale la primera vez que se vio roto, no la última"
+            "it is the first time it was seen broken that counts, not the last"
         );
     }
 
     #[test]
     fn a_pinned_item_is_never_purged_even_when_broken() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
             .insert_text("uuid-fijado", "importante", 1)
             .expect("insert");
-        store.set_pinned(id, true, 0).expect("fija");
-        store.mark_broken(id, 100).expect("marca");
-        assert_eq!(store.purge_broken_before(9999).expect("purga"), 0);
-        assert_eq!(store.count().expect("cuenta"), 1);
+        store.set_pinned(id, true, 0).expect("pinned");
+        store.mark_broken(id, 100).expect("marked");
+        assert_eq!(store.purge_broken_before(9999).expect("purged"), 0);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
@@ -1598,7 +1606,7 @@ mod tests {
                     10,
                     None,
                 )
-                .unwrap_or_else(|why| panic!("«{query}» rompió la búsqueda: {why}"));
+                .unwrap_or_else(|why| panic!("«{query}» broke the search: {why}"));
         }
     }
 
@@ -1608,7 +1616,7 @@ mod tests {
         for empty in ["", "   ", "\t", "-", "!!", "***"] {
             assert!(
                 search(&store, empty).is_empty(),
-                "«{empty}» debería no devolver nada"
+                "«{empty}» should not return anything"
             );
         }
     }
@@ -1620,19 +1628,19 @@ mod tests {
             let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit.contains("café")),
-                "«{query}» no encontró el café"
+                "«{query}» did not find the café"
             );
         }
     }
 
     #[test]
     fn scripts_that_are_not_latin_go_in_and_come_out() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for (at, text) in [
             "日本語のテキスト",
             "Привет мир",
             "مرحبا بالعالم",
-            "🎉 fiesta 🎊",
+            "🎉 party 🎊",
             "한국어 텍스트",
         ]
         .iter()
@@ -1645,87 +1653,85 @@ mod tests {
         for (query, expected) in [
             ("日本語", "日本語のテキスト"),
             ("Привет", "Привет мир"),
-            ("fiesta", "🎉 fiesta 🎊"),
+            ("party", "🎉 party 🎊"),
             ("한국어", "한국어 텍스트"),
         ] {
             let hits = search(&store, query);
             assert!(
                 hits.iter().any(|hit| hit == expected),
-                "buscando «{query}» faltó «{expected}»: {hits:?}"
+                "searching «{query}» was missing «{expected}»: {hits:?}"
             );
         }
     }
 
     #[test]
     fn a_very_long_text_is_stored_and_found() {
-        let store = Store::in_memory().expect("esquema");
-        let long = format!(
-            "{} aguja {}",
-            "paja ".repeat(50_000),
-            "paja ".repeat(50_000)
-        );
-        store.insert_text("uuid-largo", &long, 1).expect("insert");
-        assert_eq!(search(&store, "aguja").len(), 1);
+        let store = Store::in_memory().expect("schema");
+        let long = format!("{} needle {}", "hay ".repeat(50_000), "hay ".repeat(50_000));
+        store.insert_text("uuid-long", &long, 1).expect("insert");
+        assert_eq!(search(&store, "needle").len(), 1);
     }
 
     #[test]
     fn the_same_uuid_twice_is_refused_not_duplicated() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         store
-            .insert_text("uuid-unico", "primero", 1)
+            .insert_text("uuid-unique", "first", 1)
             .expect("insert");
         assert!(
-            store.insert_text("uuid-unico", "segundo", 2).is_err(),
-            "el uuid es único por contrato"
+            store.insert_text("uuid-unique", "second", 2).is_err(),
+            "the uuid is unique by contract"
         );
-        assert_eq!(store.count().expect("cuenta"), 1);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
     fn marking_an_item_that_does_not_exist_is_not_a_failure() {
-        let store = Store::in_memory().expect("esquema");
-        store.mark_broken(9999, 1).expect("no existe, no pasa nada");
-        assert_eq!(store.count().expect("cuenta"), 0);
+        let store = Store::in_memory().expect("schema");
+        store
+            .mark_broken(9999, 1)
+            .expect("it does not exist, and nothing happens");
+        assert_eq!(store.count().expect("counted"), 0);
     }
 
     #[test]
     fn a_purge_with_nothing_to_purge_removes_nothing() {
         let store = seeded();
-        let before = store.count().expect("cuenta");
-        assert_eq!(store.purge_broken_before(-1).expect("purga"), 0);
-        assert_eq!(store.purge_broken_before(i64::MAX).expect("purga"), 0);
-        assert_eq!(store.count().expect("cuenta"), before);
+        let before = store.count().expect("counted");
+        assert_eq!(store.purge_broken_before(-1).expect("purged"), 0);
+        assert_eq!(store.purge_broken_before(i64::MAX).expect("purged"), 0);
+        assert_eq!(store.count().expect("counted"), before);
     }
 
     #[test]
     fn an_item_with_no_formats_at_all_is_still_an_item() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let empty = Item {
             kind: None,
             formats: vec![],
         };
         let id = store
-            .insert_item("uuid-vacio", &empty, "", 1)
+            .insert_item("uuid-empty", &empty, "", 1)
             .expect("insert");
-        assert_eq!(store.formats_of(id).expect("formatos").len(), 0);
-        assert_eq!(store.count().expect("cuenta"), 1);
+        assert_eq!(store.formats_of(id).expect("formats").len(), 0);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
     fn a_search_that_matches_everything_still_returns_one_page() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for at in 0..250 {
             store
-                .insert_text(&format!("uuid-{at}"), &format!("comun {at}"), at)
+                .insert_text(&format!("uuid-{at}"), &format!("common {at}"), at)
                 .expect("insert");
         }
-        let page = search(&store, "comun");
+        let page = search(&store, "common");
         assert_eq!(page.len(), Store::PAGE);
     }
 
     #[test]
     fn the_cursor_walks_a_search_without_repeating_or_skipping() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for at in 0..25 {
             store
                 .insert_text(&format!("uuid-{at}"), &format!("cursor {at}"), at)
@@ -1738,150 +1744,158 @@ mod tests {
         let mut seen = Vec::new();
         let mut after = None;
         loop {
-            let page = store.list(&filter, 10, after).expect("consulta");
+            let page = store.list(&filter, 10, after).expect("queried");
             seen.extend(page.rows.into_iter().map(|one| one.preview));
             match page.next {
                 Some(cursor) => after = Some(cursor),
                 None => break,
             }
         }
-        assert_eq!(seen.len(), 25, "recorrió todo sin quedarse atascado");
+        assert_eq!(seen.len(), 25, "went through it all without getting stuck");
         let mut unique = seen.clone();
         unique.sort();
         unique.dedup();
-        assert_eq!(unique.len(), 25, "sin repetir");
+        assert_eq!(unique.len(), 25, "without repeating");
     }
 
     #[test]
     fn copying_something_again_lifts_it_instead_of_duplicating_it() {
-        let store = Store::in_memory().expect("esquema");
-        let first = store.insert_text("uuid-a", "lo viejo", 10).expect("insert");
-        store.insert_text("uuid-b", "lo nuevo", 20).expect("insert");
+        let store = Store::in_memory().expect("schema");
+        let first = store
+            .insert_text("uuid-a", "the old one", 10)
+            .expect("insert");
+        store
+            .insert_text("uuid-b", "the new one", 20)
+            .expect("insert");
 
-        let before = search(&store, "lo");
-        assert_eq!(before.first().map(String::as_str), Some("lo nuevo"));
+        let before = search(&store, "the");
+        assert_eq!(before.first().map(String::as_str), Some("the new one"));
 
-        store.reactivate(first, 30).expect("recopiado");
-        let after = search(&store, "lo");
+        store.reactivate(first, 30).expect("copied again");
+        let after = search(&store, "the");
         assert_eq!(
             after.first().map(String::as_str),
-            Some("lo viejo"),
-            "recopiar algo lo sube al principio"
+            Some("the old one"),
+            "copying something again lifts it to the top"
         );
     }
 
     #[test]
     fn a_label_can_be_searched_for() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-etq", "un texto cualquiera", 1)
+            .insert_text("uuid-etq", "some random text", 1)
             .expect("insert");
-        assert!(search(&store, "factura").is_empty());
+        assert!(search(&store, "invoice").is_empty());
         store
-            .set_label(id, Some("Factura Mayo"), 2)
-            .expect("etiqueta");
-        let hits = search(&store, "factura");
-        assert_eq!(hits.len(), 1, "la etiqueta entra en el índice");
+            .set_label(id, Some("Invoice May"), 2)
+            .expect("labelled");
+        let hits = search(&store, "invoice");
+        assert_eq!(hits.len(), 1, "the label gets into the index");
     }
 
     #[test]
     fn the_source_application_can_be_searched_for() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-app", "algo copiado", 1)
+            .insert_text("uuid-app", "something copied", 1)
             .expect("insert");
-        store.set_source(id, "Safari", 2).expect("origen");
+        store.set_source(id, "Safari", 2).expect("sourced");
         assert_eq!(search(&store, "safari").len(), 1);
     }
 
     #[test]
     fn a_label_with_accents_is_found_without_them() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-tilde", "contenido", 1)
+            .insert_text("uuid-tilde", "content", 1)
             .expect("insert");
         store
-            .set_label(id, Some("Reunión Diseño"), 2)
-            .expect("etiqueta");
-        assert_eq!(search(&store, "reunion").len(), 1);
-        assert_eq!(search(&store, "diseño").len(), 1);
+            .set_label(id, Some("Design Meeting"), 2)
+            .expect("labelled");
+        assert_eq!(search(&store, "meeting").len(), 1);
+        assert_eq!(search(&store, "design").len(), 1);
     }
 
     #[test]
     fn removing_a_label_takes_it_out_of_the_index() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-quita", "contenido", 1)
+            .insert_text("uuid-quita", "content", 1)
             .expect("insert");
-        store.set_label(id, Some("temporal"), 2).expect("pone");
-        assert_eq!(search(&store, "temporal").len(), 1);
-        store.set_label(id, None, 3).expect("quita");
-        assert!(search(&store, "temporal").is_empty());
+        store.set_label(id, Some("temporary"), 2).expect("set");
+        assert_eq!(search(&store, "temporary").len(), 1);
+        store.set_label(id, None, 3).expect("cleared");
+        assert!(search(&store, "temporary").is_empty());
     }
 
     #[test]
     fn deleting_hides_the_item_from_everything_the_user_can_see() {
         let store = seeded();
         let id = store
-            .insert_text("uuid-secreto", "contraseña del banco", 500)
+            .insert_text("uuid-secreto", "the bank password", 500)
             .expect("insert");
-        let before = store.count().expect("cuenta");
+        let before = store.count().expect("counted");
 
-        store.mark_deleted(id, 600).expect("borra");
+        store.mark_deleted(id, 600).expect("removed");
 
-        assert_eq!(store.count().expect("cuenta"), before - 1, "deja de contar");
+        assert_eq!(
+            store.count().expect("counted"),
+            before - 1,
+            "stops counting"
+        );
         assert!(
-            search(&store, "contraseña").is_empty(),
-            "no puede seguir encontrándose"
+            search(&store, "password").is_empty(),
+            "it can no longer be found"
         );
         assert!(
             store
-                .find_by_hash(&Item::plain("contraseña del banco"))
+                .find_by_hash(&Item::plain("the bank password"))
                 .expect("hash")
                 .is_none(),
-            "volver a copiarlo debe crear un ítem nuevo, no resucitar la lápida"
+            "copying it again must create a new item, not resurrect the tombstone"
         );
     }
 
     #[test]
     fn deleting_an_item_takes_its_thumbnail_off_the_disk() {
         let (dir, store) = on_disk();
-        let made = dir.path().join("una.png");
-        std::fs::write(&made, b"no es un png, pero pesa").expect("escribir");
+        let made = dir.path().join("a.png");
+        std::fs::write(&made, b"not a real png, but it has heft").expect("written");
         let id = store
-            .insert_item("uuid-con-miniatura", &sample_item(), "algo", 1)
+            .insert_item("uuid-with-thumbnail", &sample_item(), "something", 1)
             .expect("insert");
         store
             .set_thumb(id, Some(&made.to_string_lossy()), 2)
-            .expect("miniatura");
-        store.mark_deleted(id, 3).expect("borra");
-        assert!(!made.exists(), "la miniatura sobrevivió al borrado");
+            .expect("a thumbnail");
+        store.mark_deleted(id, 3).expect("removed");
+        assert!(!made.exists(), "the thumbnail survived the deletion");
     }
 
     #[test]
     fn emptying_the_history_takes_every_thumbnail_with_it() {
         let (dir, store) = on_disk();
-        let made = dir.path().join("otra.png");
-        std::fs::write(&made, b"tampoco es un png").expect("escribir");
+        let made = dir.path().join("another.png");
+        std::fs::write(&made, b"this is not a png either").expect("written");
         let id = store
-            .insert_item("uuid-vaciado", &sample_item(), "algo", 1)
+            .insert_item("uuid-emptied", &sample_item(), "something", 1)
             .expect("insert");
         store
             .set_thumb(id, Some(&made.to_string_lossy()), 2)
-            .expect("miniatura");
-        store.clear_all_unpinned(3).expect("vacía");
-        assert!(!made.exists(), "vaciar dejó la miniatura en el disco");
+            .expect("a thumbnail");
+        store.clear_all_unpinned(3).expect("emptied");
+        assert!(!made.exists(), "emptying left the thumbnail on disk");
     }
 
     #[test]
     fn a_deleted_item_leaves_no_content_behind() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let item = sample_item();
         let id = store
-            .insert_item("uuid-borrado", &item, "texto en claro", 1)
+            .insert_item("uuid-borrado", &item, "plain text", 1)
             .expect("insert");
-        store.set_label(id, Some("etiqueta"), 2).expect("etiqueta");
-        store.mark_deleted(id, 3).expect("borra");
+        store.set_label(id, Some("label"), 2).expect("labelled");
+        store.mark_deleted(id, 3).expect("removed");
 
         let (preview, search, label): (String, String, Option<String>) = store
             .db
@@ -1890,75 +1904,79 @@ mod tests {
                 [id],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
-            .expect("consulta");
-        assert_eq!(preview, "", "el contenido en claro se va");
-        assert_eq!(search, "", "y su copia en el índice también");
+            .expect("queried");
+        assert_eq!(preview, "", "the plain content goes away");
+        assert_eq!(search, "", "and so does its copy in the index");
         assert_eq!(label, None);
         assert_eq!(
-            store.formats_of(id).expect("formatos").len(),
+            store.formats_of(id).expect("formats").len(),
             0,
-            "los bytes de los formatos se van con el ítem"
+            "the bytes of the formats go away with the item"
         );
     }
 
     #[test]
     fn the_tombstone_still_tells_the_sync_what_happened() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-tumba", "se va", 1).expect("insert");
-        store.mark_deleted(id, 50).expect("borra");
+        let store = Store::in_memory().expect("schema");
+        let id = store
+            .insert_text("uuid-tumba", "goes away", 1)
+            .expect("insert");
+        store.mark_deleted(id, 50).expect("removed");
         assert!(
             store
                 .changed_since(40)
-                .expect("cambios")
+                .expect("changes")
                 .contains(&"uuid-tumba".to_string()),
-            "sin esto, otra máquina lo resucita"
+            "without this, another machine resurrects it"
         );
     }
 
     #[test]
     fn only_what_changed_after_the_mark_is_reported() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let old = store
-            .insert_text("uuid-viejo", "antiguo", 10)
+            .insert_text("uuid-old", "ancient", 10)
             .expect("insert");
         store
-            .insert_text("uuid-nuevo", "reciente", 100)
+            .insert_text("uuid-new", "recent", 100)
             .expect("insert");
-        let changed = store.changed_since(50).expect("cambios");
-        assert_eq!(changed, vec!["uuid-nuevo".to_string()]);
+        let changed = store.changed_since(50).expect("changes");
+        assert_eq!(changed, vec!["uuid-new".to_string()]);
 
-        store.reactivate(old, 200).expect("recopiado");
-        let after = store.changed_since(50).expect("cambios");
+        store.reactivate(old, 200).expect("copied again");
+        let after = store.changed_since(50).expect("changes");
         assert_eq!(
             after,
-            vec!["uuid-nuevo".to_string(), "uuid-viejo".to_string()],
-            "ordenados por versión, y el recopiado ahora cuenta"
+            vec!["uuid-new".to_string(), "uuid-old".to_string()],
+            "ordered by version, and the recopy now counts"
         );
     }
 
     #[test]
     fn copying_something_again_does_not_inflate_the_paste_counter() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-recopiado", "algo", 1)
+            .insert_text("uuid-recopiado", "something", 1)
             .expect("insert");
         for at in 2..10 {
-            store.reactivate(id, at).expect("recopiado");
+            store.reactivate(id, at).expect("copied again");
         }
         assert_eq!(
-            store.paste_count(id).expect("cuenta"),
+            store.paste_count(id).expect("counted"),
             0,
-            "volver a copiar no es pegar, y el ×N de la tarjeta lo enseña"
+            "copying again is not pasting, and the card's ×N shows it"
         );
     }
 
     #[test]
     fn pasting_from_the_history_is_what_counts() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-pegado", "algo", 1).expect("insert");
-        store.record_paste(id, 2).expect("pega");
-        store.record_paste(id, 3).expect("pega");
-        assert_eq!(store.paste_count(id).expect("cuenta"), 2);
+        let store = Store::in_memory().expect("schema");
+        let id = store
+            .insert_text("uuid-pegado", "something", 1)
+            .expect("insert");
+        store.record_paste(id, 2).expect("pasted");
+        store.record_paste(id, 3).expect("pasted");
+        assert_eq!(store.paste_count(id).expect("counted"), 2);
     }
 
     #[test]
@@ -1966,18 +1984,18 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
-        let oldest = listed.last().expect("hay").id;
-        store.record_paste(oldest, 999).expect("pega");
+        let oldest = listed.last().expect("there is one").id;
+        store.record_paste(oldest, 999).expect("pasted");
         let after = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
         assert_eq!(
             after.last().map(|one| one.id),
             Some(oldest),
-            "pegar cuenta, pero no reordena el historial"
+            "pasting counts, but it does not reorder the history"
         );
     }
 
@@ -1986,21 +2004,21 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
         store.set_color(listed[0].id, 3, 100).expect("color");
         let filter = Filter {
             colors: vec![3],
             ..Default::default()
         };
-        let coloured = store.list(&filter, 10, None).expect("listado").rows;
+        let coloured = store.list(&filter, 10, None).expect("listed").rows;
         assert_eq!(coloured.len(), 1);
         assert_eq!(coloured[0].id, listed[0].id);
     }
 
     #[test]
     fn an_image_becomes_findable_by_what_is_written_inside_it() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![Format {
@@ -2009,34 +2027,34 @@ mod tests {
             }],
         };
         let id = store
-            .insert_item("uuid-captura", &image, "", 1)
+            .insert_item("uuid-capture", &image, "", 1)
             .expect("insert");
 
         assert!(
-            search(&store, "pedido").is_empty(),
-            "todavía no se le ha pasado el OCR"
+            search(&store, "order").is_empty(),
+            "it has not been through OCR yet"
         );
-        assert_eq!(store.pending_ocr(10).expect("pendientes"), vec![id]);
+        assert_eq!(store.pending_ocr(10).expect("pending"), vec![id]);
 
         store
-            .set_ocr_text(id, "Pedido AB-4417 entrega 12 marzo", 2)
+            .set_ocr_text(id, "Order AB-4417 delivery 12 March", 2)
             .expect("ocr");
 
         assert_eq!(
-            search(&store, "pedido").len(),
+            search(&store, "order").len(),
             1,
-            "una captura de pantalla se encuentra por lo que pone dentro"
+            "a screenshot can be found by what it says inside"
         );
         assert_eq!(search(&store, "AB-4417").len(), 1);
         assert!(
-            store.pending_ocr(10).expect("pendientes").is_empty(),
-            "ya no está pendiente"
+            store.pending_ocr(10).expect("pending").is_empty(),
+            "it is no longer pending"
         );
     }
 
     #[test]
     fn the_ocr_text_is_folded_like_everything_else() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![Format {
@@ -2047,19 +2065,19 @@ mod tests {
         let id = store
             .insert_item("uuid-tilde", &image, "", 1)
             .expect("insert");
-        store.set_ocr_text(id, "Reunión en Múnich", 2).expect("ocr");
-        assert_eq!(search(&store, "reunion").len(), 1);
+        store.set_ocr_text(id, "Meeting in Munich", 2).expect("ocr");
+        assert_eq!(search(&store, "meeting").len(), 1);
         assert_eq!(search(&store, "munich").len(), 1);
         assert_eq!(
-            store.ocr_text(id).expect("lee").as_deref(),
-            Some("Reunión en Múnich"),
-            "lo que se pega o se enseña conserva mayúsculas y tildes"
+            store.ocr_text(id).expect("read").as_deref(),
+            Some("Meeting in Munich"),
+            "what gets pasted or shown keeps its capitals and accents"
         );
     }
 
     #[test]
     fn the_recognised_text_is_gone_with_the_item_and_with_an_edit() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![Format {
@@ -2068,23 +2086,23 @@ mod tests {
             }],
         };
         let id = store
-            .insert_item("uuid-crudo", &image, "", 1)
+            .insert_item("uuid-raw", &image, "", 1)
             .expect("insert");
-        assert_eq!(store.ocr_text(id).expect("lee"), None);
-        store.set_ocr_text(id, "Factura 77", 2).expect("ocr");
-        store.update_text(id, "ya es texto", 3).expect("edita");
+        assert_eq!(store.ocr_text(id).expect("read"), None);
+        store.set_ocr_text(id, "Invoice 77", 2).expect("ocr");
+        store.update_text(id, "already text", 3).expect("edited");
         assert_eq!(
-            store.ocr_text(id).expect("lee"),
+            store.ocr_text(id).expect("read"),
             None,
-            "el texto editado sustituye a la imagen y a lo que se leyó en ella"
+            "the edited text replaces the image and what was read inside it"
         );
-        store.set_ocr_text(id, "Factura 78", 4).expect("ocr");
+        store.set_ocr_text(id, "Invoice 78", 4).expect("ocr");
         assert_eq!(
-            store.ocr_text(id).expect("lee").as_deref(),
-            Some("Factura 78")
+            store.ocr_text(id).expect("read").as_deref(),
+            Some("Invoice 78")
         );
-        store.mark_deleted(id, 5).expect("borra");
-        assert_eq!(store.ocr_text(id).expect("lee"), None);
+        store.mark_deleted(id, 5).expect("removed");
+        assert_eq!(store.ocr_text(id).expect("read"), None);
         assert!(
             store
                 .raw()
@@ -2093,19 +2111,19 @@ mod tests {
                     [id],
                     |row| row.get::<_, bool>(0),
                 )
-                .expect("consulta"),
-            "borrar limpia las dos columnas, no solo la que se busca"
+                .expect("queried"),
+            "deleting clears both columns, not just the searchable one"
         );
         assert!(
-            store.set_ocr_text(id, "tarde", 6).is_ok(),
-            "un OCR que llega después del borrado no resucita nada"
+            store.set_ocr_text(id, "late", 6).is_ok(),
+            "an OCR that arrives after the deletion resurrects nothing"
         );
-        assert_eq!(store.ocr_text(id).expect("lee"), None);
+        assert_eq!(store.ocr_text(id).expect("read"), None);
     }
 
     #[test]
     fn deleting_takes_the_recognised_text_with_it() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![Format {
@@ -2114,27 +2132,25 @@ mod tests {
             }],
         };
         let id = store
-            .insert_item("uuid-secreta", &image, "", 1)
+            .insert_item("uuid-secret", &image, "", 1)
             .expect("insert");
-        store
-            .set_ocr_text(id, "clave de recuperación 8842", 2)
-            .expect("ocr");
-        store.mark_deleted(id, 3).expect("borra");
+        store.set_ocr_text(id, "recovery key 8842", 2).expect("ocr");
+        store.mark_deleted(id, 3).expect("removed");
         assert!(
-            search(&store, "recuperacion").is_empty(),
-            "lo leído dentro de la imagen también es contenido del usuario"
+            search(&store, "recovery").is_empty(),
+            "what was read inside the image is also the user's content"
         );
     }
 
     fn nowhere_on_disk(dir: &std::path::Path, words: &[&str]) {
         for file in ["history.db", "history.db-wal"] {
-            let bytes = std::fs::read(dir.join(file)).expect("se puede leer");
+            let bytes = std::fs::read(dir.join(file)).expect("can be read");
             for word in words {
                 assert!(
                     !bytes
                         .windows(word.len())
                         .any(|window| window == word.as_bytes()),
-                    "«{word}» sigue legible en {file}"
+                    "«{word}» is still legible in {file}"
                 );
             }
         }
@@ -2142,40 +2158,36 @@ mod tests {
 
     #[test]
     fn a_deleted_secret_is_not_left_lying_in_the_write_ahead_log() {
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("history.db");
-        let secret = "zqxjkvbnm7hunter2 correo del banco";
-        let store = Store::open(&path).expect("abre");
-        let id = store
-            .insert_text("uuid-secreto", secret, 1)
-            .expect("insert");
+        let secret = "zqxjkvbnm7hunter2 bank mail";
+        let store = Store::open(&path).expect("opened");
+        let id = store.insert_text("uuid-secret", secret, 1).expect("insert");
 
-        store.mark_deleted(id, 2).expect("borra");
+        store.mark_deleted(id, 2).expect("removed");
 
-        nowhere_on_disk(dir.path(), &["zqxjkvbnm7hunter2", "correo", "banco"]);
+        nowhere_on_disk(dir.path(), &["zqxjkvbnm7hunter2", "bank", "mail"]);
     }
 
     #[test]
     fn the_search_index_forgets_every_token_of_what_was_removed() {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let store = Store::open(&dir.path().join("history.db")).expect("abre");
+        let dir = tempfile::tempdir().expect("a folder");
+        let store = Store::open(&dir.path().join("history.db")).expect("opened");
         type Removal = dyn Fn(&Store, i64);
         let cases: [(&str, &Removal); 4] = [
-            ("qwzplk1secreto", &|store, id| {
-                store.mark_deleted(id, 9).expect("borra")
+            ("qwzplk1secret", &|store, id| {
+                store.mark_deleted(id, 9).expect("removed")
             }),
-            ("qwzplk2secreto", &|store, id| {
-                store.update_text(id, "inocente", 9).expect("edita")
+            ("qwzplk2secret", &|store, id| {
+                store.update_text(id, "innocent", 9).expect("edited")
             }),
-            ("qwzplk3secreto", &|store, id| {
-                store
-                    .set_label(id, Some("qwzplk3etiqueta"), 8)
-                    .expect("pone");
-                store.set_label(id, None, 9).expect("quita");
+            ("qwzplk3secret", &|store, id| {
+                store.set_label(id, Some("qwzplk3label"), 8).expect("set");
+                store.set_label(id, None, 9).expect("cleared");
             }),
-            ("qwzplk4secreto", &|store, id| {
-                store.mark_broken(id, 8).expect("roto");
-                store.purge_broken_before(10).expect("purga");
+            ("qwzplk4secret", &|store, id| {
+                store.mark_broken(id, 8).expect("broken");
+                store.purge_broken_before(10).expect("purged");
             }),
         ];
         for (at, (word, remove)) in cases.into_iter().enumerate() {
@@ -2187,33 +2199,33 @@ mod tests {
         nowhere_on_disk(
             dir.path(),
             &[
-                "qwzplk1secreto",
-                "qwzplk2secreto",
-                "qwzplk3etiqueta",
-                "qwzplk4secreto",
+                "qwzplk1secret",
+                "qwzplk2secret",
+                "qwzplk3label",
+                "qwzplk4secret",
             ],
         );
     }
 
     #[test]
     fn what_is_written_survives_closing_the_application() {
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("sub").join("history.db");
 
         {
-            let store = Store::open(&path).expect("abre");
+            let store = Store::open(&path).expect("opened");
             store
-                .insert_text("uuid-persiste", "sobrevive", 1)
+                .insert_text("uuid-persists", "survives", 1)
                 .expect("insert");
             store.checkpoint().expect("checkpoint");
         }
 
-        let reopened = Store::open(&path).expect("reabre");
-        assert_eq!(reopened.count().expect("cuenta"), 1);
+        let reopened = Store::open(&path).expect("reopened");
+        assert_eq!(reopened.count().expect("counted"), 1);
         assert_eq!(
-            search(&reopened, "sobrevive").len(),
+            search(&reopened, "survives").len(),
             1,
-            "y el índice también sobrevive"
+            "and the index survives too"
         );
     }
 
@@ -2221,27 +2233,27 @@ mod tests {
     #[test]
     fn the_write_ahead_log_is_as_private_as_the_database() {
         use std::os::unix::fs::PermissionsExt;
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("history.db");
-        let store = Store::open(&path).expect("abre");
+        let store = Store::open(&path).expect("opened");
         store
-            .insert_text("uuid-privado", "contraseña", 1)
+            .insert_text("uuid-private", "password", 1)
             .expect("insert");
 
         let wal = sidecars(&path)
             .into_iter()
             .find(|side| side.exists())
-            .expect("el WAL existe mientras la base está abierta");
+            .expect("the WAL exists while the database is open");
         let mode = std::fs::metadata(&wal).expect("wal").permissions().mode() & 0o777;
         assert_eq!(
             mode, 0o600,
-            "lo recién copiado vive aquí antes que en la base"
+            "what was just copied lives here before it lives in the database"
         );
     }
 
     #[test]
     fn the_sidecars_are_named_after_the_database() {
-        let [wal, shm] = sidecars(std::path::Path::new("/datos/history.db"));
+        let [wal, shm] = sidecars(std::path::Path::new("/data/history.db"));
         assert!(wal.to_string_lossy().ends_with("history.db-wal"));
         assert!(shm.to_string_lossy().ends_with("history.db-shm"));
     }
@@ -2250,27 +2262,27 @@ mod tests {
     #[test]
     fn the_history_is_not_readable_by_other_users() {
         use std::os::unix::fs::PermissionsExt;
-        let dir = tempfile::tempdir().expect("carpeta");
-        let path = dir.path().join("datos").join("history.db");
-        let store = Store::open(&path).expect("abre");
+        let dir = tempfile::tempdir().expect("a folder");
+        let path = dir.path().join("data").join("history.db");
+        let store = Store::open(&path).expect("opened");
         store
-            .insert_text("uuid-privado", "contraseña", 1)
+            .insert_text("uuid-private", "password", 1)
             .expect("insert");
         assert_eq!(store.exposure(), Restricted::Mode(0o600));
         drop(store);
 
         let file = std::fs::metadata(&path)
-            .expect("archivo")
+            .expect("a file")
             .permissions()
             .mode()
             & 0o777;
-        let folder = std::fs::metadata(path.parent().expect("padre"))
-            .expect("carpeta")
+        let folder = std::fs::metadata(path.parent().expect("a parent"))
+            .expect("a folder")
             .permissions()
             .mode()
             & 0o777;
-        assert_eq!(file, 0o600, "solo su dueño");
-        assert_eq!(folder, 0o700, "y la carpeta igual");
+        assert_eq!(file, 0o600, "only its owner");
+        assert_eq!(folder, 0o700, "and the folder the same way");
     }
 
     #[cfg(windows)]
@@ -2282,22 +2294,22 @@ mod tests {
         let dir = tempfile::Builder::new()
             .prefix("copypaste-")
             .tempdir_in(profile)
-            .expect("carpeta");
-        let path = dir.path().join("datos").join("history.db");
-        let store = Store::open(&path).expect("abre");
+            .expect("a folder");
+        let path = dir.path().join("data").join("history.db");
+        let store = Store::open(&path).expect("opened");
         store
-            .insert_text("uuid-privado", "contraseña", 1)
+            .insert_text("uuid-private", "password", 1)
             .expect("insert");
         assert_eq!(store.exposure(), Restricted::InheritedFromProfile);
     }
 
     fn a_profile_with(entry: &str) -> (tempfile::TempDir, std::path::PathBuf) {
-        let profile = tempfile::tempdir().expect("perfil");
+        let profile = tempfile::tempdir().expect("profile");
         let path = profile.path().join(entry);
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).expect("carpeta");
+            std::fs::create_dir_all(parent).expect("a folder");
         }
-        std::fs::write(&path, b"x").expect("archivo");
+        std::fs::write(&path, b"x").expect("a file");
         (profile, path)
     }
 
@@ -2328,8 +2340,8 @@ mod tests {
 
     #[test]
     fn a_path_that_does_not_exist_is_never_taken_for_protected() {
-        let profile = tempfile::tempdir().expect("perfil");
-        let ghost = profile.path().join("todavia-no").join("history.db");
+        let profile = tempfile::tempdir().expect("profile");
+        let ghost = profile.path().join("not-yet").join("history.db");
         assert!(!under(&ghost, profile.path()));
         assert_eq!(
             exposure_of(&ghost, Some(profile.path())),
@@ -2346,27 +2358,24 @@ mod tests {
 
     #[test]
     fn a_sibling_that_merely_starts_alike_is_outside() {
-        let root = tempfile::tempdir().expect("raiz");
-        let ana = root.path().join("ana");
-        let anabel = root.path().join("anabel");
-        std::fs::create_dir_all(&ana).expect("ana");
-        std::fs::create_dir_all(&anabel).expect("anabel");
-        let history = anabel.join("history.db");
-        std::fs::write(&history, b"x").expect("archivo");
-        assert!(
-            !under(&history, &ana),
-            "un prefijo de texto no es un prefijo de ruta"
-        );
+        let root = tempfile::tempdir().expect("a root");
+        let ann = root.path().join("ann");
+        let annabel = root.path().join("annabel");
+        std::fs::create_dir_all(&ann).expect("ann");
+        std::fs::create_dir_all(&annabel).expect("annabel");
+        let history = annabel.join("history.db");
+        std::fs::write(&history, b"x").expect("a file");
+        assert!(!under(&history, &ann), "a text prefix is not a path prefix");
     }
 
     #[test]
     fn a_checkpoint_leaves_the_data_in_the_main_file() {
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("history.db");
-        let store = Store::open(&path).expect("abre");
+        let store = Store::open(&path).expect("opened");
         for at in 0..50 {
             store
-                .insert_text(&format!("uuid-{at}"), &format!("linea {at}"), at)
+                .insert_text(&format!("uuid-{at}"), &format!("line {at}"), at)
                 .expect("insert");
         }
         store.checkpoint().expect("checkpoint");
@@ -2374,57 +2383,57 @@ mod tests {
         let wal_size = std::fs::metadata(&wal).map(|m| m.len()).unwrap_or(0);
         assert!(
             wal_size == 0 || !wal.exists(),
-            "tras el checkpoint el WAL queda vacío, no con {wal_size} bytes"
+            "after the checkpoint the WAL is left empty, not at {wal_size} bytes"
         );
     }
 
     #[test]
     fn an_incremental_vacuum_actually_frees_pages() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for at in 0..2000 {
             let id = store
                 .insert_text(&format!("uuid-{at}"), &"x".repeat(200), at)
                 .expect("insert");
-            store.mark_broken(id, at).expect("marca");
+            store.mark_broken(id, at).expect("marked");
         }
-        store.purge_broken_before(i64::MAX).expect("purga");
+        store.purge_broken_before(i64::MAX).expect("purged");
 
         let before: i64 = store
             .db
             .query_row("PRAGMA freelist_count", [], |row| row.get(0))
-            .expect("consulta");
+            .expect("queried");
         assert!(
             before > 0,
-            "borrar tantas filas tiene que dejar páginas libres, no {before}"
+            "deleting so many rows has to leave free pages, not {before}"
         );
 
         store
             .vacuum_step(before as u32)
-            .expect("vacía las páginas libres");
+            .expect("empties the free pages");
 
         let after: i64 = store
             .db
             .query_row("PRAGMA freelist_count", [], |row| row.get(0))
-            .expect("consulta");
+            .expect("queried");
         assert!(
             after < before,
-            "incremental_vacuum tiene que reducir el freelist: antes {before}, después {after}"
+            "incremental_vacuum has to shrink the freelist: before {before}, after {after}"
         );
     }
 
     #[test]
     fn reopening_keeps_the_pragmas_that_protect_the_data() {
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("history.db");
-        drop(Store::open(&path).expect("abre"));
-        let store = Store::open(&path).expect("reabre");
+        drop(Store::open(&path).expect("opened"));
+        let store = Store::open(&path).expect("reopened");
         let vacuum: i64 = store
             .db
             .query_row("PRAGMA auto_vacuum", [], |row| row.get(0))
-            .expect("consulta");
+            .expect("queried");
         assert_eq!(
             vacuum, 2,
-            "el modo se guarda en el archivo y debe seguir ahí"
+            "the mode gets saved in the file and it should stay that way"
         );
     }
 
@@ -2442,12 +2451,12 @@ mod tests {
     fn an_image_too_big_for_the_row_goes_to_disk_and_comes_back() {
         let (_dir, store) = on_disk();
         let id = store
-            .insert_item("uuid-imagen", &big_image(7), "", 1)
+            .insert_item("uuid-image", &big_image(7), "", 1)
             .expect("insert");
         let bytes = store
             .payload_of(id, "public.png")
-            .expect("lee")
-            .expect("está");
+            .expect("read")
+            .expect("is there");
         assert_eq!(bytes.len(), 200_000);
         assert!(bytes.iter().all(|b| *b == 7));
     }
@@ -2462,12 +2471,9 @@ mod tests {
             .insert_item("uuid-b", &big_image(9), "", 2)
             .expect("b");
         let files = std::fs::read_dir(dir.path().join("blobs"))
-            .expect("carpeta")
+            .expect("a folder")
             .count();
-        assert_eq!(
-            files, 1,
-            "el nombre es el contenido, así que es el mismo archivo"
-        );
+        assert_eq!(files, 1, "the name is the content, so it is the same file");
     }
 
     #[test]
@@ -2481,9 +2487,9 @@ mod tests {
 
     #[test]
     fn blobs_of_an_item_with_no_blobs_is_empty() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-sin-blobs", "solo texto", 1)
+            .insert_text("uuid-no-blobs", "just text", 1)
             .expect("insert");
         assert!(store.blobs_of(id).expect("blobs").is_empty());
     }
@@ -2492,10 +2498,14 @@ mod tests {
     fn a_blob_used_by_only_one_item_is_not_shared() {
         let (_dir, store) = on_disk();
         let id = store
-            .insert_item("uuid-solo", &big_image(11), "", 1)
+            .insert_item("uuid-only", &big_image(11), "", 1)
             .expect("insert");
-        let digest = store.blobs_of(id).expect("blobs").pop().expect("hay uno");
-        assert!(!store.blob_is_shared(&digest, id).expect("consulta"));
+        let digest = store
+            .blobs_of(id)
+            .expect("blobs")
+            .pop()
+            .expect("there is one");
+        assert!(!store.blob_is_shared(&digest, id).expect("queried"));
     }
 
     #[test]
@@ -2511,34 +2521,34 @@ mod tests {
             .blobs_of(first)
             .expect("blobs")
             .pop()
-            .expect("hay uno");
-        assert!(store.blob_is_shared(&digest, first).expect("consulta"));
+            .expect("there is one");
+        assert!(store.blob_is_shared(&digest, first).expect("queried"));
     }
 
     #[test]
     fn an_inline_payload_comes_back_as_is() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_item("uuid-inline", &sample_item(), "hola", 1)
+            .insert_item("uuid-inline", &sample_item(), "hello", 1)
             .expect("insert");
         let bytes = store
             .payload_of(id, "public.utf8-plain-text")
-            .expect("lee")
-            .expect("está");
-        assert_eq!(bytes, b"hola");
+            .expect("read")
+            .expect("is there");
+        assert_eq!(bytes, b"hello");
     }
 
     #[test]
     fn deleting_an_image_takes_its_bytes_off_the_disk() {
         let (_dir, store) = on_disk();
         let id = store
-            .insert_item("uuid-borrar", &big_image(3), "", 1)
+            .insert_item("uuid-delete", &big_image(3), "", 1)
             .expect("insert");
-        assert!(store.payload_of(id, "public.png").expect("lee").is_some());
-        store.mark_deleted(id, 2).expect("borra");
+        assert!(store.payload_of(id, "public.png").expect("read").is_some());
+        store.mark_deleted(id, 2).expect("removed");
         assert!(
-            store.payload_of(id, "public.png").expect("lee").is_none(),
-            "los bytes de una imagen borrada no pueden seguir en disco"
+            store.payload_of(id, "public.png").expect("read").is_none(),
+            "the bytes of a deleted image cannot remain on disk"
         );
     }
 
@@ -2551,153 +2561,159 @@ mod tests {
         let second = store
             .insert_item("uuid-2", &big_image(5), "", 2)
             .expect("b");
-        store.mark_deleted(first, 3).expect("borra el primero");
+        store.mark_deleted(first, 3).expect("deletes the first one");
         assert!(
             store
                 .payload_of(second, "public.png")
-                .expect("lee")
+                .expect("read")
                 .is_some(),
-            "el otro ítem sigue necesitando esos bytes"
+            "the other item still needs those bytes"
         );
     }
 
     #[test]
     fn an_in_memory_store_refuses_what_it_cannot_keep() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         assert!(
-            store
-                .insert_item("uuid-grande", &big_image(1), "", 1)
-                .is_err(),
-            "sin carpeta donde escribir, mejor negarse"
+            store.insert_item("uuid-big", &big_image(1), "", 1).is_err(),
+            "with no folder to write to, better to refuse"
         );
     }
 
     #[test]
     fn the_queue_hands_out_work_and_forgets_it_when_done() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-trabajo", "algo", 1)
+            .insert_text("uuid-work", "something", 1)
             .expect("insert");
-        store.enqueue(id, "ocr").expect("encola");
+        store.enqueue(id, "ocr").expect("queued");
         store
             .enqueue(id, "ocr")
-            .expect("encolar dos veces no duplica");
-        assert_eq!(
-            store.take_pending("ocr", 10, 5).expect("pendientes"),
-            vec![id]
-        );
+            .expect("queuing twice does not duplicate");
+        assert_eq!(store.take_pending("ocr", 10, 5).expect("pending"), vec![id]);
         assert!(
             store
                 .take_pending("thumbnail", 10, 5)
-                .expect("otro tipo")
+                .expect("a different kind")
                 .is_empty(),
-            "cada cola es la suya"
+            "each queue is its own"
         );
-        store.work_done(id, "ocr").expect("hecho");
+        store.work_done(id, "ocr").expect("done");
         assert!(
             store
                 .take_pending("ocr", 10, 5)
-                .expect("pendientes")
+                .expect("pending")
                 .is_empty()
         );
     }
 
     #[test]
     fn a_job_that_keeps_failing_is_given_up_on() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-falla", "algo", 1).expect("insert");
-        store.enqueue(id, "ocr").expect("encola");
+        let store = Store::in_memory().expect("schema");
+        let id = store
+            .insert_text("uuid-failure", "something", 1)
+            .expect("insert");
+        store.enqueue(id, "ocr").expect("queued");
         for attempt in 1..Store::MAX_ATTEMPTS {
             assert!(
                 store
-                    .work_failed(id, "ocr", "no se pudo", 0)
-                    .expect("falla"),
-                "intento {attempt} todavía se reintenta"
+                    .work_failed(id, "ocr", "could not do it", 0)
+                    .expect("failed"),
+                "attempt {attempt} is still retried"
             );
         }
         assert!(
             !store
-                .work_failed(id, "ocr", "no se pudo", 0)
-                .expect("falla"),
-            "al agotar los intentos se abandona"
+                .work_failed(id, "ocr", "could not do it", 0)
+                .expect("failed"),
+            "once the attempts run out, it gives up"
         );
         assert!(
             store
                 .take_pending("ocr", 10, 5)
-                .expect("pendientes")
+                .expect("pending")
                 .is_empty()
         );
     }
 
     #[test]
     fn a_failed_job_waits_before_being_retried() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-espera", "algo", 1).expect("insert");
-        store.enqueue(id, "ocr").expect("encola");
+        let store = Store::in_memory().expect("schema");
+        let id = store
+            .insert_text("uuid-wait", "something", 1)
+            .expect("insert");
+        store.enqueue(id, "ocr").expect("queued");
         store
-            .work_failed(id, "ocr", "temporal", 500)
-            .expect("falla");
+            .work_failed(id, "ocr", "temporary", 500)
+            .expect("failed");
         assert!(
             store
                 .take_pending("ocr", 100, 5)
-                .expect("aún no")
+                .expect("not yet")
                 .is_empty(),
-            "no antes de su hora"
+            "not before its time"
         );
-        assert_eq!(store.take_pending("ocr", 500, 5).expect("ya"), vec![id]);
+        assert_eq!(
+            store.take_pending("ocr", 500, 5).expect("already"),
+            vec![id]
+        );
     }
 
     #[test]
     fn deleted_items_drop_out_of_the_queue() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-fuera", "algo", 1).expect("insert");
-        store.enqueue(id, "ocr").expect("encola");
-        store.mark_deleted(id, 2).expect("borra");
+        let store = Store::in_memory().expect("schema");
+        let id = store
+            .insert_text("uuid-out", "something", 1)
+            .expect("insert");
+        store.enqueue(id, "ocr").expect("queued");
+        store.mark_deleted(id, 2).expect("removed");
         assert!(
             store
                 .take_pending("ocr", 10, 5)
-                .expect("pendientes")
+                .expect("pending")
                 .is_empty(),
-            "no se enriquece lo que el usuario borró"
+            "what the user deleted does not get enriched"
         );
     }
 
     #[test]
     fn metadata_is_kept_per_key_and_replaced_not_duplicated() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-meta", "un vídeo", 1)
+            .insert_text("uuid-meta", "a video", 1)
             .expect("insert");
-        store.set_meta(id, "duration", "227").expect("pone");
-        store.set_meta(id, "width", "1920").expect("pone");
-        store.set_meta(id, "duration", "228").expect("corrige");
+        store.set_meta(id, "duration", "227").expect("set");
+        store.set_meta(id, "width", "1920").expect("set");
+        store.set_meta(id, "duration", "228").expect("corrected");
         assert_eq!(
-            store.meta(id, "duration").expect("lee").as_deref(),
+            store.meta(id, "duration").expect("read").as_deref(),
             Some("228")
         );
-        assert_eq!(store.all_meta(id).expect("todo").len(), 2);
-        assert!(store.meta(id, "artist").expect("lee").is_none());
+        assert_eq!(store.all_meta(id).expect("everything").len(), 2);
+        assert!(store.meta(id, "artist").expect("read").is_none());
     }
 
     #[test]
     fn metadata_goes_away_with_the_item() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-meta", "algo", 1).expect("insert");
-        store.set_meta(id, "artist", "alguien").expect("pone");
-        store.mark_deleted(id, 2).expect("borra");
+        let store = Store::in_memory().expect("schema");
+        let id = store
+            .insert_text("uuid-meta", "something", 1)
+            .expect("insert");
+        store.set_meta(id, "artist", "someone").expect("set");
+        store.mark_deleted(id, 2).expect("removed");
         assert!(
-            store.all_meta(id).expect("todo").is_empty(),
-            "los datos derivados son del usuario igual que el contenido"
+            store.all_meta(id).expect("everything").is_empty(),
+            "derived data belongs to the user just like the content does"
         );
     }
 
     fn a_little_history() -> Store {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let rows = [
-            ("uuid-1", "primera nota", Kind::Text, 10),
-            ("uuid-2", "alguien@ejemplo.test", Kind::Email, 20),
+            ("uuid-1", "first note", Kind::Text, 10),
+            ("uuid-2", "someone@example.test", Kind::Email, 20),
             ("uuid-3", "#FF8800", Kind::Color, 30),
-            ("uuid-4", "segunda nota", Kind::Text, 40),
+            ("uuid-4", "second note", Kind::Text, 40),
         ];
         for (uuid, text, kind, at) in rows {
             let item = Item {
@@ -2717,13 +2733,13 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
-        assert_eq!(listed.len(), 4, "sin término se devuelve el historial");
+        assert_eq!(listed.len(), 4, "with no term the history comes back");
         assert_eq!(
             listed.first().map(|one| one.preview.as_str()),
-            Some("segunda nota"),
-            "lo más reciente primero"
+            Some("second note"),
+            "the most recent one comes first"
         );
     }
 
@@ -2734,7 +2750,7 @@ mod tests {
             kinds: vec![Kind::Text],
             ..Default::default()
         };
-        let listed = store.list(&filter, 10, None).expect("listado").rows;
+        let listed = store.list(&filter, 10, None).expect("listed").rows;
         assert_eq!(listed.len(), 2);
         assert!(listed.iter().all(|one| one.kind == Some(Kind::Text)));
     }
@@ -2746,37 +2762,31 @@ mod tests {
             kinds: vec![Kind::Email, Kind::Color],
             ..Default::default()
         };
-        assert_eq!(
-            store.list(&filter, 10, None).expect("listado").rows.len(),
-            2
-        );
+        assert_eq!(store.list(&filter, 10, None).expect("listed").rows.len(), 2);
     }
 
     #[test]
     fn filtering_and_searching_work_together() {
         let store = a_little_history();
         let filter = Filter {
-            query: Some("nota".into()),
+            query: Some("note".into()),
             kinds: vec![Kind::Text],
             ..Default::default()
         };
-        assert_eq!(
-            store.list(&filter, 10, None).expect("listado").rows.len(),
-            2
-        );
+        assert_eq!(store.list(&filter, 10, None).expect("listed").rows.len(), 2);
 
         let narrower = Filter {
-            query: Some("nota".into()),
+            query: Some("note".into()),
             kinds: vec![Kind::Email],
             ..Default::default()
         };
         assert!(
             store
                 .list(&narrower, 10, None)
-                .expect("listado")
+                .expect("listed")
                 .rows
                 .is_empty(),
-            "el filtro y el término se aplican los dos"
+            "both the filter and the term get applied"
         );
     }
 
@@ -2785,15 +2795,15 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
-        let id = listed.first().expect("hay").id;
-        store.set_pinned(id, true, 0).expect("fija");
+        let id = listed.first().expect("there is one").id;
+        store.set_pinned(id, true, 0).expect("pinned");
         let filter = Filter {
             pinned_only: true,
             ..Default::default()
         };
-        let pinned = store.list(&filter, 10, None).expect("listado").rows;
+        let pinned = store.list(&filter, 10, None).expect("listed").rows;
         assert_eq!(pinned.len(), 1);
         assert!(pinned[0].pinned);
     }
@@ -2801,21 +2811,21 @@ mod tests {
     #[test]
     fn the_list_hands_out_a_cursor_only_while_there_is_more() {
         let store = a_little_history();
-        let first = store.list(&Filter::default(), 2, None).expect("página");
+        let first = store.list(&Filter::default(), 2, None).expect("a page");
         assert_eq!(first.rows.len(), 2);
-        let cursor = first.next.expect("quedan dos más");
+        let cursor = first.next.expect("two more remain");
         let second = store
             .list(&Filter::default(), 2, Some(cursor))
-            .expect("siguiente");
+            .expect("next");
         assert_eq!(second.rows.len(), 2);
         assert!(second.rows.iter().all(|one| !first.rows.contains(one)));
-        assert_eq!(second.next, None, "la última página no promete otra");
+        assert_eq!(second.next, None, "the last page promises no other");
     }
 
     #[test]
     fn a_page_that_ends_exactly_at_the_last_row_promises_nothing_more() {
         let store = a_little_history();
-        let whole = store.list(&Filter::default(), 4, None).expect("página");
+        let whole = store.list(&Filter::default(), 4, None).expect("a page");
         assert_eq!(whole.rows.len(), 4);
         assert_eq!(whole.next, None);
     }
@@ -2830,10 +2840,10 @@ mod tests {
         assert!(
             store
                 .list(&filter, 10, None)
-                .expect("listado")
+                .expect("listed")
                 .rows
                 .is_empty(),
-            "pedir buscar algo imposible no puede devolver el historial entero"
+            "asking to search for something impossible cannot return the whole history"
         );
     }
 
@@ -2842,13 +2852,13 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
-        store.mark_deleted(listed[0].id, 99).expect("borra");
+        store.mark_deleted(listed[0].id, 99).expect("removed");
         assert_eq!(
             store
                 .list(&Filter::default(), 10, None)
-                .expect("listado")
+                .expect("listed")
                 .rows
                 .len(),
             3
@@ -2860,26 +2870,26 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
-        let oldest = listed.last().expect("hay").id;
+        let oldest = listed.last().expect("there is one").id;
         store
             .set_pinned(oldest, true, 0)
-            .expect("fija el más viejo");
+            .expect("pins the oldest one");
 
-        let removed = store.clear_older_than(35).expect("retención");
+        let removed = store.clear_older_than(35).expect("retention");
         assert_eq!(
             removed, 2,
-            "se van los de antes del corte que no estén fijados"
+            "what is from before the cutoff and not pinned goes away"
         );
         let left = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
         assert_eq!(left.len(), 2);
         assert!(
             left.iter().any(|one| one.id == oldest),
-            "un ítem fijado no lo borra la limpieza"
+            "a pinned item does not get removed by cleanup"
         );
     }
 
@@ -2888,19 +2898,19 @@ mod tests {
         let store = a_little_history();
         let listed = store
             .list(&Filter::default(), 10, None)
-            .expect("listado")
+            .expect("listed")
             .rows;
-        store.set_pinned(listed[0].id, true, 0).expect("fija");
-        let removed = store.clear_all_unpinned(100).expect("vacía");
+        store.set_pinned(listed[0].id, true, 0).expect("pinned");
+        let removed = store.clear_all_unpinned(100).expect("emptied");
         assert_eq!(removed, 3);
-        assert_eq!(store.count().expect("cuenta"), 1);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
     fn retention_with_nothing_old_enough_removes_nothing() {
         let store = a_little_history();
-        assert_eq!(store.clear_older_than(0).expect("retención"), 0);
-        assert_eq!(store.count().expect("cuenta"), 4);
+        assert_eq!(store.clear_older_than(0).expect("retention"), 0);
+        assert_eq!(store.count().expect("counted"), 4);
     }
 
     #[test]
@@ -2916,29 +2926,29 @@ mod identity {
 
     #[test]
     fn what_was_captured_is_found_again() {
-        let store = Store::in_memory().expect("abre");
-        let item = captured("hola");
+        let store = Store::in_memory().expect("opened");
+        let item = captured("hello");
         store
-            .insert_item("uuid-1", &item, "hola", 1)
-            .expect("inserta");
+            .insert_item("uuid-1", &item, "hello", 1)
+            .expect("inserted");
         assert_eq!(
-            store.find_by_hash(&item).expect("busca"),
+            store.find_by_hash(&item).expect("searched"),
             Some(1),
-            "lo que guarda insert_item tiene que reconocerlo find_by_hash"
+            "what insert_item stores, find_by_hash has to recognise"
         );
     }
 
     #[test]
     fn a_different_rendering_is_a_different_item() {
-        let store = Store::in_memory().expect("abre");
-        let plain = captured("hola");
+        let store = Store::in_memory().expect("opened");
+        let plain = captured("hello");
         store
-            .insert_item("uuid-1", &plain, "hola", 1)
-            .expect("inserta");
+            .insert_item("uuid-1", &plain, "hello", 1)
+            .expect("inserted");
         assert!(
             store
-                .find_by_hash(&Item::plain("**hola**"))
-                .expect("busca")
+                .find_by_hash(&Item::plain("**hello**"))
+                .expect("searched")
                 .is_none()
         );
     }
@@ -2946,45 +2956,45 @@ mod identity {
     #[test]
     fn a_synthetic_text_is_not_a_captured_one() {
         assert_ne!(
-            Item::plain("hola").fingerprint(),
-            captured("hola").fingerprint()
+            Item::plain("hello").fingerprint(),
+            captured("hello").fingerprint()
         );
     }
 
     #[test]
     fn copying_the_same_thing_twice_from_google_reactivates_instead_of_duplicating() {
         use cp_core::item::Format;
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let docs = |guid: &str| Item {
             kind: Some(Kind::Text),
             formats: vec![
                 Format {
                     id: "public.html".into(),
                     payload: Payload::Inline(
-                        format!("<b id=\"docs-internal-guid-{guid}\"><span>hola</span></b>")
+                        format!("<b id=\"docs-internal-guid-{guid}\"><span>hello</span></b>")
                             .into_bytes(),
                     ),
                 },
                 Format {
                     id: "public.utf8-plain-text".into(),
-                    payload: Payload::Inline(b"hola".to_vec()),
+                    payload: Payload::Inline(b"hello".to_vec()),
                 },
             ],
         };
         let id = store
-            .insert_item("uuid-docs", &docs("4a1e6b2f-7fff-1d3e"), "hola", 1)
-            .expect("inserta");
+            .insert_item("uuid-docs", &docs("4a1e6b2f-7fff-1d3e"), "hello", 1)
+            .expect("inserted");
         assert_eq!(
             store
                 .find_by_hash(&docs("0c9d8e7f-7fff-aaaa"))
-                .expect("busca"),
+                .expect("searched"),
             Some(id),
-            "otro GUID, el mismo ítem"
+            "a different GUID, the same item"
         );
         assert_eq!(
-            store.find_by_hash(&Item::plain("hola")).expect("busca"),
+            store.find_by_hash(&Item::plain("hello")).expect("searched"),
             None,
-            "el texto plano copiado de donde se pegó es otro ítem"
+            "plain text copied from where it was pasted is a different item"
         );
     }
 }
@@ -3005,25 +3015,25 @@ mod listing {
     }
 
     fn history() -> Store {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let rows = [
-            ("uuid-1", "primera nota", Kind::Text, 10, "Safari"),
-            ("uuid-2", "alguien@ejemplo.test", Kind::Email, 20, "Slack"),
+            ("uuid-1", "first note", Kind::Text, 10, "Safari"),
+            ("uuid-2", "someone@example.test", Kind::Email, 20, "Slack"),
             ("uuid-3", "#FF8800", Kind::Color, 30, "Slack"),
-            ("uuid-4", "segunda nota", Kind::Text, 40, "Code"),
+            ("uuid-4", "second note", Kind::Text, 40, "Code"),
             ("uuid-5", "fn main() {}", Kind::Code, 50, "Code"),
         ];
         for (uuid, text, kind, at, app) in rows {
             let id = store
                 .insert_item(uuid, &text_item(text, kind), text, at)
                 .expect("insert");
-            store.set_source(id, app, at).expect("origen");
+            store.set_source(id, app, at).expect("sourced");
         }
         store
     }
 
     fn all(store: &Store, filter: &Filter) -> Vec<Listed> {
-        store.list(filter, 100, None).expect("listado").rows
+        store.list(filter, 100, None).expect("listed").rows
     }
 
     fn previews(rows: &[Listed]) -> Vec<&str> {
@@ -3034,39 +3044,39 @@ mod listing {
     fn the_card_gets_everything_the_row_knows() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.set_label(id, Some("Arranque"), 60).expect("etiqueta");
+        store.set_label(id, Some("Startup"), 60).expect("labelled");
         store.set_color(id, 5, 61).expect("color");
-        store.record_paste(id, 62).expect("pega");
-        store.set_pinned(id, true, 0).expect("fija");
+        store.record_paste(id, 62).expect("pasted");
+        store.set_pinned(id, true, 0).expect("pinned");
         let card = all(&store, &Filter::default())
             .into_iter()
             .find(|one| one.id == id)
-            .expect("está");
+            .expect("is there");
         assert_eq!(card.preview, "fn main() {}");
         assert_eq!(card.kind, Some(Kind::Code));
         assert_eq!(card.app.as_deref(), Some("Code"));
-        assert_eq!(card.label.as_deref(), Some("Arranque"));
+        assert_eq!(card.label.as_deref(), Some("Startup"));
         assert_eq!(card.color, 5);
         assert_eq!(card.paste_count, 1);
         assert_eq!(card.last_used_at, Some(62));
         assert_eq!(card.created_at, 50);
-        assert_eq!(card.modified_at, 50, "pegar no lo mueve");
+        assert_eq!(card.modified_at, 50, "pasting does not move it");
         assert!(card.pinned);
         assert_eq!(card.broken_since, None);
         assert_eq!(card.thumb_path, None);
-        assert_eq!(card.snippet, None, "sin término no hay fragmento");
+        assert_eq!(card.snippet, None, "with no term there is no snippet");
     }
 
     #[test]
     fn searching_marks_the_fragment_that_matched() {
         let store = history();
         let filter = Filter {
-            query: Some("segun".into()),
+            query: Some("sec".into()),
             ..Default::default()
         };
         let rows = all(&store, &filter);
         assert_eq!(rows.len(), 1);
-        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        let snippet = rows[0].snippet.as_ref().expect("a snippet");
         assert_eq!(snippet.found_in, FoundIn::Text);
         let marked: Vec<&str> = snippet
             .excerpt
@@ -3075,8 +3085,8 @@ mod listing {
             .filter(|one| one.matched)
             .map(|one| one.text.as_str())
             .collect();
-        assert_eq!(marked, vec!["segun"]);
-        assert_eq!(snippet.excerpt.plain(), "segunda nota");
+        assert_eq!(marked, vec!["sec"]);
+        assert_eq!(snippet.excerpt.plain(), "second note");
     }
 
     #[test]
@@ -3084,22 +3094,22 @@ mod listing {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
         store
-            .set_label(id, Some("Factura mayo"), 60)
-            .expect("etiqueta");
+            .set_label(id, Some("Invoice may"), 60)
+            .expect("labelled");
         let filter = Filter {
-            query: Some("factura".into()),
+            query: Some("invoice".into()),
             ..Default::default()
         };
         let rows = all(&store, &filter);
         assert_eq!(rows.len(), 1);
-        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        let snippet = rows[0].snippet.as_ref().expect("a snippet");
         assert_eq!(snippet.found_in, FoundIn::Label);
-        assert_eq!(snippet.excerpt.plain(), "Factura mayo");
+        assert_eq!(snippet.excerpt.plain(), "Invoice may");
     }
 
     #[test]
     fn a_hit_on_what_was_read_inside_an_image_says_so() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = Item {
             kind: Some(Kind::Image),
             formats: vec![Format {
@@ -3111,7 +3121,7 @@ mod listing {
             .insert_item("uuid-img", &image, "", 1)
             .expect("insert");
         store
-            .set_ocr_text(id, "Pedido AB-4417 entrega", 2)
+            .set_ocr_text(id, "Order AB-4417 delivery", 2)
             .expect("ocr");
         let filter = Filter {
             query: Some("ab-4417".into()),
@@ -3119,18 +3129,18 @@ mod listing {
         };
         let rows = all(&store, &filter);
         assert_eq!(rows.len(), 1);
-        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        let snippet = rows[0].snippet.as_ref().expect("a snippet");
         assert_eq!(snippet.found_in, FoundIn::Ocr);
         assert_eq!(
             snippet.excerpt.plain(),
-            "Pedido AB-4417 entrega",
-            "el fragmento enseña lo leído tal cual, no plegado"
+            "Order AB-4417 delivery",
+            "the snippet shows what was read exactly as is, not folded"
         );
     }
 
     #[test]
     fn an_old_folded_ocr_is_still_shown_until_it_is_read_again() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![Format {
@@ -3139,29 +3149,29 @@ mod listing {
             }],
         };
         let id = store
-            .insert_item("uuid-viejo", &image, "", 1)
+            .insert_item("uuid-old", &image, "", 1)
             .expect("insert");
         store
             .raw()
             .execute(
-                "UPDATE items SET search_ocr = 'pedido plegado' WHERE id = ?1",
+                "UPDATE items SET search_ocr = 'folded order' WHERE id = ?1",
                 [id],
             )
-            .expect("como lo dejó la versión 3");
+            .expect("the way version 3 left it");
         assert_eq!(
-            store.ocr_text(id).expect("lee").as_deref(),
-            Some("pedido plegado")
+            store.ocr_text(id).expect("read").as_deref(),
+            Some("folded order")
         );
         let rows = all(
             &store,
             &Filter {
-                query: Some("plegado".into()),
+                query: Some("folded".into()),
                 ..Default::default()
             },
         );
-        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        let snippet = rows[0].snippet.as_ref().expect("a snippet");
         assert_eq!(snippet.found_in, FoundIn::Ocr);
-        assert_eq!(snippet.excerpt.plain(), "pedido plegado");
+        assert_eq!(snippet.excerpt.plain(), "folded order");
     }
 
     #[test]
@@ -3188,7 +3198,7 @@ mod listing {
         };
         assert_eq!(
             previews(&all(&store, &filter)),
-            vec!["#FF8800", "alguien@ejemplo.test"]
+            vec!["#FF8800", "someone@example.test"]
         );
     }
 
@@ -3197,14 +3207,14 @@ mod listing {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
         store
-            .set_label(id, Some("pegar en slack"), 60)
-            .expect("etiqueta");
+            .set_label(id, Some("paste into slack"), 60)
+            .expect("labelled");
         let filter = Filter {
             apps: vec!["slack".into()],
             ..Default::default()
         };
         let rows = all(&store, &filter);
-        assert_eq!(rows.len(), 2, "solo lo copiado desde Slack, sin mayúsculas");
+        assert_eq!(rows.len(), 2, "only what was copied from Slack, case aside");
         assert!(rows.iter().all(|one| one.app.as_deref() == Some("Slack")));
     }
 
@@ -3230,22 +3240,25 @@ mod listing {
             since: Some(30),
             ..Default::default()
         };
-        assert_eq!(all(&store, &filter).len(), 3, "el 30 incluido");
+        assert_eq!(all(&store, &filter).len(), 3, "the 30 is included");
     }
 
     #[test]
     fn since_counts_a_recopy_as_copied_again() {
         let store = history();
-        let oldest = all(&store, &Filter::default()).last().expect("hay").id;
-        store.reactivate(oldest, 100).expect("recopiado");
+        let oldest = all(&store, &Filter::default())
+            .last()
+            .expect("there is one")
+            .id;
+        store.reactivate(oldest, 100).expect("copied again");
         let filter = Filter {
             since: Some(100),
             ..Default::default()
         };
         assert_eq!(
             previews(&all(&store, &filter)),
-            vec!["primera nota"],
-            "lo que se vuelve a copiar hoy es de hoy"
+            vec!["first note"],
+            "what gets copied again today belongs to today"
         );
     }
 
@@ -3253,7 +3266,7 @@ mod listing {
     fn broken_items_are_hidden_unless_asked_for() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.mark_broken(id, 99).expect("roto");
+        store.mark_broken(id, 99).expect("broken");
         assert_eq!(all(&store, &Filter::default()).len(), 4);
         let shown = Filter {
             broken: Broken::Shown,
@@ -3274,18 +3287,14 @@ mod listing {
         let store = history();
         let rows = all(&store, &Filter::default());
         store
-            .set_label(rows[1].id, Some("nota"), 60)
-            .expect("etiqueta");
+            .set_label(rows[1].id, Some("note"), 60)
+            .expect("labelled");
         let by_label = Filter {
-            label_query: Some("nota".into()),
+            label_query: Some("note".into()),
             ..Default::default()
         };
         let found = all(&store, &by_label);
-        assert_eq!(
-            found.len(),
-            1,
-            "«nota» está en dos contenidos y una etiqueta"
-        );
+        assert_eq!(found.len(), 1, "«note» is in two contents and one label");
         assert_eq!(found[0].id, rows[1].id);
     }
 
@@ -3294,14 +3303,14 @@ mod listing {
         let store = history();
         let rows = all(&store, &Filter::default());
         store
-            .set_label(rows[0].id, Some("arranque"), 60)
-            .expect("etiqueta");
+            .set_label(rows[0].id, Some("startup"), 60)
+            .expect("labelled");
         store
-            .set_label(rows[1].id, Some("arranque"), 61)
-            .expect("etiqueta");
+            .set_label(rows[1].id, Some("startup"), 61)
+            .expect("labelled");
         let filter = Filter {
             query: Some("main".into()),
-            label_query: Some("arranque".into()),
+            label_query: Some("startup".into()),
             ..Default::default()
         };
         assert_eq!(previews(&all(&store, &filter)), vec!["fn main() {}"]);
@@ -3322,9 +3331,9 @@ mod listing {
         let store = history();
         let rows = all(&store, &Filter::default());
         for _ in 0..3 {
-            store.record_paste(rows[4].id, 70).expect("pega");
+            store.record_paste(rows[4].id, 70).expect("pasted");
         }
-        store.record_paste(rows[2].id, 71).expect("pega");
+        store.record_paste(rows[2].id, 71).expect("pasted");
         let filter = Filter {
             order: Order::MostPasted,
             ..Default::default()
@@ -3335,7 +3344,7 @@ mod listing {
         assert_eq!(
             ordered[2..].iter().map(|one| one.id).collect::<Vec<_>>(),
             vec![rows[0].id, rows[1].id, rows[3].id],
-            "a igual cuenta, el más nuevo primero"
+            "at an equal count, the newest one first"
         );
     }
 
@@ -3343,8 +3352,8 @@ mod listing {
     fn last_used_puts_what_was_never_pasted_at_the_end() {
         let store = history();
         let rows = all(&store, &Filter::default());
-        store.record_paste(rows[3].id, 80).expect("pega");
-        store.record_paste(rows[1].id, 90).expect("pega");
+        store.record_paste(rows[3].id, 80).expect("pasted");
+        store.record_paste(rows[1].id, 90).expect("pasted");
         let filter = Filter {
             order: Order::LastUsed,
             ..Default::default()
@@ -3359,7 +3368,7 @@ mod listing {
         let mut seen = Vec::new();
         let mut after = None;
         loop {
-            let got = store.list(filter, page, after).expect("página");
+            let got = store.list(filter, page, after).expect("a page");
             seen.extend(got.rows.iter().map(|one| one.id));
             match got.next {
                 Some(cursor) => after = Some(cursor),
@@ -3370,18 +3379,18 @@ mod listing {
 
     #[test]
     fn every_order_pages_without_repeating_or_skipping_even_with_ties() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for at in 0..23 {
             let id = store
                 .insert_item(
                     &format!("uuid-{at}"),
-                    &text_item(&format!("nota {at}"), Kind::Text),
-                    &format!("nota {at}"),
+                    &text_item(&format!("note {at}"), Kind::Text),
+                    &format!("note {at}"),
                     at % 4,
                 )
                 .expect("insert");
             for _ in 0..(at % 3) {
-                store.record_paste(id, at % 5).expect("pega");
+                store.record_paste(id, at % 5).expect("pasted");
             }
         }
         for order in [Order::Recent, Order::MostPasted, Order::LastUsed] {
@@ -3390,17 +3399,17 @@ mod listing {
                 ..Default::default()
             };
             let mut ids = walk(&store, &filter, 4);
-            assert_eq!(ids.len(), 23, "{order:?} se saltó filas");
+            assert_eq!(ids.len(), 23, "{order:?} skipped rows");
             ids.sort_unstable();
             ids.dedup();
-            assert_eq!(ids.len(), 23, "{order:?} repitió filas");
+            assert_eq!(ids.len(), 23, "{order:?} repeated rows");
         }
     }
 
     #[test]
     fn the_tabs_count_only_the_classes_that_exist_within_the_search() {
         let store = history();
-        let facets = store.facets(&Filter::default()).expect("facetas");
+        let facets = store.facets(&Filter::default()).expect("facets");
         assert_eq!(
             facets,
             vec![
@@ -3421,24 +3430,24 @@ mod listing {
                     count: 1
                 },
             ],
-            "por cantidad, y a igual cantidad por nombre"
+            "by count, and at an equal count by name"
         );
         let within = Filter {
             apps: vec!["Slack".into()],
             kinds: vec![Kind::Text],
             ..Default::default()
         };
-        let facets = store.facets(&within).expect("facetas");
+        let facets = store.facets(&within).expect("facets");
         assert_eq!(
             facets.iter().map(|one| one.kind).collect::<Vec<_>>(),
             vec![Kind::Color, Kind::Email],
-            "la pestaña elegida no recorta las demás; la app y el término sí"
+            "the chosen tab does not narrow the others; the app and the term do"
         );
     }
 
     #[test]
     fn an_item_without_a_class_has_no_tab() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         store
             .insert_item(
                 "uuid-none",
@@ -3450,12 +3459,7 @@ mod listing {
                 1,
             )
             .expect("insert");
-        assert!(
-            store
-                .facets(&Filter::default())
-                .expect("facetas")
-                .is_empty()
-        );
+        assert!(store.facets(&Filter::default()).expect("facets").is_empty());
     }
 
     #[test]
@@ -3465,7 +3469,7 @@ mod listing {
             query: Some("!!!".into()),
             ..Default::default()
         };
-        assert!(store.facets(&filter).expect("facetas").is_empty());
+        assert!(store.facets(&filter).expect("facets").is_empty());
     }
 
     #[test]
@@ -3495,9 +3499,12 @@ mod listing {
     fn two_spellings_of_one_application_are_one_entry() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.set_source(id, "slack", 60).expect("origen");
+        store.set_source(id, "slack", 60).expect("sourced");
         let apps = store.distinct_apps(&Filter::default()).expect("apps");
-        let slack = apps.iter().find(|one| one.app == "Slack").expect("está");
+        let slack = apps
+            .iter()
+            .find(|one| one.app == "Slack")
+            .expect("is there");
         assert_eq!(slack.count, 3);
         assert!(apps.iter().all(|one| one.app != "slack"));
     }
@@ -3506,8 +3513,8 @@ mod listing {
     fn deleted_items_count_for_nothing() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.mark_deleted(id, 99).expect("borra");
-        let facets = store.facets(&Filter::default()).expect("facetas");
+        store.mark_deleted(id, 99).expect("removed");
+        let facets = store.facets(&Filter::default()).expect("facets");
         assert!(facets.iter().all(|one| one.kind != Kind::Code));
         let apps = store.distinct_apps(&Filter::default()).expect("apps");
         assert_eq!(
@@ -3526,19 +3533,20 @@ mod listing {
                 order,
                 ..Default::default()
             };
-            let clauses = Clauses::of(&filter, true, true).expect("sin término hay cláusulas");
+            let clauses =
+                Clauses::of(&filter, true, true).expect("with no term there are still clauses");
             let sql = page_sql(&clauses, order.key(), false);
             let plan: Vec<String> = store
                 .db
                 .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
-                .expect("prepara")
+                .expect("prepared")
                 .query_map([50i64], |row| row.get::<_, String>(3))
-                .expect("plan")
-                .map(|row| row.expect("fila"))
+                .expect("a plan")
+                .map(|row| row.expect("a row"))
                 .collect();
             assert!(
                 !plan.iter().any(|step| step.contains("TEMP B-TREE")),
-                "{order:?} ordena en memoria: {plan:?}"
+                "{order:?} sorts in memory: {plan:?}"
             );
         }
     }
@@ -3553,7 +3561,7 @@ mod listing {
                     kind: None,
                     formats: vec![],
                 },
-                "sin clase",
+                "no class",
                 60,
             )
             .expect("insert");
@@ -3564,7 +3572,7 @@ mod listing {
         assert_eq!(
             all(&store, &filter).len(),
             6,
-            "excluir imágenes no puede esconder lo que no es nada"
+            "excluding images cannot hide what is nothing at all"
         );
     }
 
@@ -3575,7 +3583,7 @@ mod listing {
             exclude_kinds: vec![Kind::Text],
             ..Default::default()
         };
-        let facets = store.facets(&filter).expect("facetas");
+        let facets = store.facets(&filter).expect("facets");
         assert!(facets.iter().all(|one| one.kind != Kind::Text));
         assert_eq!(facets.len(), 3);
     }
@@ -3583,12 +3591,12 @@ mod listing {
     #[test]
     fn asking_for_no_rows_is_an_empty_page_not_a_panic() {
         let store = history();
-        let page = store.list(&Filter::default(), 0, None).expect("página");
+        let page = store.list(&Filter::default(), 0, None).expect("a page");
         assert!(page.rows.is_empty());
         assert_eq!(page.next, None);
         let huge = store
             .list(&Filter::default(), usize::MAX, None)
-            .expect("página");
+            .expect("a page");
         assert_eq!(huge.rows.len(), 5);
         assert_eq!(huge.next, None);
     }
@@ -3597,16 +3605,16 @@ mod listing {
     fn a_broken_item_can_be_found_again() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.mark_broken(id, 99).expect("roto");
+        store.mark_broken(id, 99).expect("broken");
         assert_eq!(all(&store, &Filter::default()).len(), 4);
-        store.mark_present(id).expect("vuelve");
+        store.mark_present(id).expect("came back");
         let rows = all(&store, &Filter::default());
-        assert_eq!(rows.len(), 5, "el volumen se volvió a montar");
+        assert_eq!(rows.len(), 5, "the volume got remounted");
         assert_eq!(rows[0].broken_since, None);
         assert_eq!(
-            store.purge_broken_before(i64::MAX).expect("purga"),
+            store.purge_broken_before(i64::MAX).expect("purged"),
             0,
-            "y ya no está en el plazo de nadie"
+            "and it is no longer within anyone's deadline"
         );
     }
 
@@ -3614,35 +3622,35 @@ mod listing {
     fn the_footer_count_matches_what_the_list_shows() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.mark_broken(id, 99).expect("roto");
+        store.mark_broken(id, 99).expect("broken");
         assert_eq!(
             store.count().expect("total"),
             5,
-            "el total sigue contando rotos"
+            "the total keeps counting broken ones"
         );
         assert_eq!(
-            store.count_matching(&Filter::default()).expect("cuenta"),
+            store.count_matching(&Filter::default()).expect("counted"),
             4,
-            "lo que el pie enseña es lo que la lista enseña"
+            "what the footer shows is what the list shows"
         );
         let filter = Filter {
-            query: Some("nota".into()),
+            query: Some("note".into()),
             apps: vec!["safari".into()],
             ..Default::default()
         };
-        assert_eq!(store.count_matching(&filter).expect("cuenta"), 1);
+        assert_eq!(store.count_matching(&filter).expect("counted"), 1);
         let impossible = Filter {
             query: Some("!!!".into()),
             ..Default::default()
         };
-        assert_eq!(store.count_matching(&impossible).expect("cuenta"), 0);
+        assert_eq!(store.count_matching(&impossible).expect("counted"), 0);
         let facets: i64 = store
             .facets(&Filter::default())
-            .expect("facetas")
+            .expect("facets")
             .iter()
             .map(|one| one.count)
             .sum();
-        assert_eq!(facets, 4, "y las pestañas suman lo mismo");
+        assert_eq!(facets, 4, "and the tabs add up to the same");
         assert_eq!(
             store
                 .distinct_apps(&Filter::default())
@@ -3651,7 +3659,7 @@ mod listing {
                 .map(|one| one.count)
                 .sum::<i64>(),
             4,
-            "las apps tampoco cuentan rotos"
+            "apps do not count broken ones either"
         );
     }
 
@@ -3664,14 +3672,14 @@ mod listing {
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), 3);
-        assert_eq!(Order::from_name("Recent"), None, "el nombre es exacto");
+        assert_eq!(Order::from_name("Recent"), None, "the name is exact");
     }
 
     #[test]
     fn a_cursor_from_another_order_is_refused_not_misread() {
         let store = history();
-        let recent = store.list(&Filter::default(), 2, None).expect("página");
-        let cursor = recent.next.expect("hay más");
+        let recent = store.list(&Filter::default(), 2, None).expect("a page");
+        let cursor = recent.next.expect("there is more");
         let pasted = Filter {
             order: Order::MostPasted,
             ..Default::default()
@@ -3684,7 +3692,7 @@ mod listing {
         assert_eq!(
             Cursor::decode(&text),
             Some(cursor),
-            "va y vuelve como texto"
+            "it goes out and comes back as text"
         );
         assert_eq!(Cursor::decode("recent:1"), None);
         assert_eq!(Cursor::decode("sideways:1:2"), None);
@@ -3694,27 +3702,27 @@ mod listing {
 
     #[test]
     fn the_preview_is_capped_but_the_excerpt_still_sees_the_whole_text() {
-        let store = Store::in_memory().expect("esquema");
-        let text = format!("{}aguja", "paja ".repeat(1_000));
-        store.insert_text("uuid-largo", &text, 1).expect("insert");
+        let store = Store::in_memory().expect("schema");
+        let text = format!("{}needle", "hay ".repeat(1_000));
+        store.insert_text("uuid-long", &text, 1).expect("insert");
         let rows = store
             .list(&Filter::default(), 10, None)
-            .expect("lista")
+            .expect("listed")
             .rows;
         assert_eq!(rows[0].preview.chars().count(), PREVIEW_CHARS);
         let filter = Filter {
-            query: Some("aguja".into()),
+            query: Some("needle".into()),
             ..Default::default()
         };
-        let rows = store.list(&filter, 10, None).expect("lista").rows;
-        let snippet = rows[0].snippet.as_ref().expect("fragmento");
+        let rows = store.list(&filter, 10, None).expect("listed").rows;
+        let snippet = rows[0].snippet.as_ref().expect("a snippet");
         assert!(
             snippet
                 .excerpt
                 .segments
                 .iter()
-                .any(|one| one.matched && one.text == "aguja"),
-            "la aguja está más allá del tope de la vista previa"
+                .any(|one| one.matched && one.text == "needle"),
+            "the needle is past the cap on the preview"
         );
     }
 
@@ -3722,7 +3730,7 @@ mod listing {
     fn the_applications_follow_the_search_but_not_their_own_filter() {
         let store = history();
         let within = Filter {
-            query: Some("nota".into()),
+            query: Some("note".into()),
             apps: vec!["Safari".into()],
             ..Default::default()
         };
@@ -3730,7 +3738,7 @@ mod listing {
         assert_eq!(
             apps.iter().map(|one| one.app.as_str()).collect::<Vec<_>>(),
             vec!["Code", "Safari"],
-            "las dos apps con una nota, aunque el filtro pida solo Safari"
+            "both apps with a note, even though the filter asks for only Safari"
         );
         let impossible = Filter {
             query: Some("!!!".into()),
@@ -3743,15 +3751,15 @@ mod listing {
     fn pinning_can_be_undone_and_moves_the_version() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.set_pinned(id, true, 70).expect("fija");
+        store.set_pinned(id, true, 70).expect("pinned");
         assert!(all(&store, &Filter::default())[0].pinned);
         assert!(
             store
                 .changed_since(60)
-                .expect("cambios")
+                .expect("changes")
                 .contains(&"uuid-5".to_string())
         );
-        store.set_pinned(id, false, 71).expect("suelta");
+        store.set_pinned(id, false, 71).expect("unpinned");
         assert!(!all(&store, &Filter::default())[0].pinned);
     }
 
@@ -3761,12 +3769,12 @@ mod listing {
         let id = all(&store, &Filter::default())[0].id;
         store
             .set_thumb(id, Some("thumbs/5.png"), 70)
-            .expect("miniatura");
+            .expect("a thumbnail");
         assert_eq!(
             all(&store, &Filter::default())[0].thumb_path.as_deref(),
             Some("thumbs/5.png")
         );
-        store.set_thumb(id, None, 71).expect("sin miniatura");
+        store.set_thumb(id, None, 71).expect("no thumbnail");
         assert_eq!(all(&store, &Filter::default())[0].thumb_path, None);
     }
 
@@ -3791,7 +3799,7 @@ mod listing {
             ],
         };
         let id = store.insert_item("uuid-item", &big, "", 1).expect("insert");
-        let back = store.item(id).expect("lee").expect("está");
+        let back = store.item(id).expect("read").expect("is there");
         assert_eq!(back.kind, Some(Kind::Image));
         assert_eq!(back.formats.len(), 3);
         assert!(
@@ -3805,19 +3813,19 @@ mod listing {
             back.format("com.apple.icns").expect("icns").payload,
             Payload::Absent
         );
-        assert_eq!(store.item(404).expect("lee"), None);
-        store.mark_deleted(id, 2).expect("borra");
-        assert_eq!(store.item(id).expect("lee"), None, "lo borrado no vuelve");
+        assert_eq!(store.item(404).expect("read"), None);
+        store.mark_deleted(id, 2).expect("removed");
+        assert_eq!(store.item(id).expect("read"), None, "lo borrado no vuelve");
     }
 
     #[test]
     fn a_text_inserted_directly_is_classified_like_a_capture() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         store.insert_text("uuid-c", "#FF8800", 1).expect("insert");
         store.insert_text("uuid-t", "una nota", 2).expect("insert");
         let rows = store
             .list(&Filter::default(), 10, None)
-            .expect("lista")
+            .expect("listed")
             .rows;
         assert_eq!(rows[0].kind, Some(Kind::Text));
         assert_eq!(rows[1].kind, Some(Kind::Color));
@@ -3829,16 +3837,16 @@ mod listing {
         let rows = all(&store, &Filter::default());
         let target = rows
             .iter()
-            .find(|one| one.preview == "segunda nota")
-            .expect("está");
+            .find(|one| one.preview == "second note")
+            .expect("is there");
         store
-            .set_label(target.id, Some("clave"), 60)
-            .expect("etiqueta");
+            .set_label(target.id, Some("key"), 60)
+            .expect("labelled");
         store.set_color(target.id, 2, 61).expect("color");
-        store.set_pinned(target.id, true, 62).expect("fija");
+        store.set_pinned(target.id, true, 62).expect("pinned");
         let filter = Filter {
-            query: Some("nota".into()),
-            label_query: Some("clave".into()),
+            query: Some("note".into()),
+            label_query: Some("key".into()),
             kinds: vec![Kind::Text, Kind::Code],
             exclude_kinds: vec![Kind::Email],
             apps: vec!["Code".into(), "Safari".into()],
@@ -3852,9 +3860,9 @@ mod listing {
         let found = all(&store, &filter);
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].id, target.id);
-        assert_eq!(store.count_matching(&filter).expect("cuenta"), 1);
+        assert_eq!(store.count_matching(&filter).expect("counted"), 1);
         assert_eq!(
-            store.facets(&filter).expect("facetas"),
+            store.facets(&filter).expect("facets"),
             vec![Facet {
                 kind: Kind::Text,
                 count: 1
@@ -3866,16 +3874,18 @@ mod listing {
     fn editing_a_pinned_item_keeps_its_pin_label_colour_and_app() {
         let store = history();
         let id = all(&store, &Filter::default())[0].id;
-        store.set_label(id, Some("fijo"), 60).expect("etiqueta");
+        store.set_label(id, Some("fixed"), 60).expect("labelled");
         store.set_color(id, 3, 61).expect("color");
-        store.set_pinned(id, true, 62).expect("fija");
-        store.update_text(id, "otro contenido", 63).expect("edita");
+        store.set_pinned(id, true, 62).expect("pinned");
+        store
+            .update_text(id, "different content", 63)
+            .expect("edited");
         let card = all(&store, &Filter::default())
             .into_iter()
             .find(|one| one.id == id)
-            .expect("está");
+            .expect("is there");
         assert!(card.pinned);
-        assert_eq!(card.label.as_deref(), Some("fijo"));
+        assert_eq!(card.label.as_deref(), Some("fixed"));
         assert_eq!(card.color, 3);
         assert_eq!(card.app.as_deref(), Some("Code"));
     }
@@ -3889,26 +3899,26 @@ mod listing {
                 "UPDATE items SET kind = 'hologram' WHERE uuid = 'uuid-5'",
                 [],
             )
-            .expect("una base más nueva");
+            .expect("a newer database");
         let rows = all(&store, &Filter::default());
         assert_eq!(rows[0].kind, None);
-        assert!(store.facets(&Filter::default()).expect("facetas").len() == 3);
+        assert!(store.facets(&Filter::default()).expect("facets").len() == 3);
     }
 
     #[test]
     fn walking_the_pages_reads_the_same_order_as_one_big_page() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         for at in 0..23 {
             let id = store
                 .insert_item(
                     &format!("uuid-{at}"),
-                    &text_item(&format!("nota {at}"), Kind::Text),
-                    &format!("nota {at}"),
+                    &text_item(&format!("note {at}"), Kind::Text),
+                    &format!("note {at}"),
                     at % 4,
                 )
                 .expect("insert");
             for _ in 0..(at % 3) {
-                store.record_paste(id, at % 5).expect("pega");
+                store.record_paste(id, at % 5).expect("pasted");
             }
         }
         for order in Order::ALL {
@@ -3931,9 +3941,13 @@ mod listing {
             };
             store
                 .list(&filter, 10, None)
-                .unwrap_or_else(|why| panic!("«{app}» rompió el listado: {why}"));
+                .unwrap_or_else(|why| panic!("«{app}» broke the listing: {why}"));
         }
-        assert_eq!(store.count().expect("cuenta"), 5, "la tabla sigue ahí");
+        assert_eq!(
+            store.count().expect("counted"),
+            5,
+            "the table is still there"
+        );
     }
 }
 
@@ -3956,7 +3970,7 @@ mod housekeeping {
         (1..=count)
             .map(|at| {
                 store
-                    .insert_text(&format!("uuid-{at}"), &format!("nota {at}"), at)
+                    .insert_text(&format!("uuid-{at}"), &format!("note {at}"), at)
                     .expect("insert")
             })
             .collect()
@@ -3967,16 +3981,16 @@ mod housekeeping {
             std::fs::File::options()
                 .write(true)
                 .open(&path)
-                .expect("abre")
+                .expect("opened")
                 .set_modified(std::time::UNIX_EPOCH)
-                .expect("envejece");
+                .expect("aged");
         }
     }
 
     fn alive(store: &Store) -> Vec<i64> {
         store
             .list(&Filter::default(), 100, None)
-            .expect("listado")
+            .expect("listed")
             .rows
             .iter()
             .map(|one| one.id)
@@ -3985,9 +3999,9 @@ mod housekeeping {
 
     #[test]
     fn a_policy_with_nothing_set_sweeps_nothing() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         fill(&store, 5);
-        let swept = store.sweep(&Policy::default(), 100).expect("barre");
+        let swept = store.sweep(&Policy::default(), 100).expect("swept");
         assert_eq!(
             swept,
             Swept {
@@ -3995,64 +4009,68 @@ mod housekeeping {
                 ..Swept::default()
             }
         );
-        assert_eq!(store.count().expect("cuenta"), 5);
+        assert_eq!(store.count().expect("counted"), 5);
     }
 
     #[test]
     fn age_takes_the_old_and_leaves_what_was_pinned() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let ids = fill(&store, 5);
-        store.set_pinned(ids[0], true, 0).expect("fija");
+        store.set_pinned(ids[0], true, 0).expect("pinned");
         let policy = Policy {
             keep_for: Some(3),
             ..Default::default()
         };
-        let swept = store.sweep(&policy, 6).expect("barre");
-        assert_eq!(swept.expired, 1, "el de antes del 3 que no está fijado");
+        let swept = store.sweep(&policy, 6).expect("swept");
+        assert_eq!(swept.expired, 1, "the one from before 3 that is not pinned");
         assert_eq!(alive(&store), vec![ids[4], ids[3], ids[2], ids[0]]);
     }
 
     #[test]
     fn a_count_limit_evicts_the_oldest_unpinned_beyond_it() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let ids = fill(&store, 6);
         store
             .set_pinned(ids[0], true, 0)
-            .expect("fija el más viejo");
+            .expect("pins the oldest one");
         let policy = Policy {
             keep_at_most: Some(4),
             ..Default::default()
         };
-        let swept = store.sweep(&policy, 10).expect("barre");
+        let swept = store.sweep(&policy, 10).expect("swept");
         assert_eq!(swept.over_count, 2);
         assert_eq!(
             alive(&store),
             vec![ids[5], ids[4], ids[3], ids[0]],
-            "el fijado cuenta para el límite pero no se va"
+            "the pinned one counts toward the limit but does not go"
         );
-        assert_eq!(store.sweep(&policy, 11).expect("otra vez").over_count, 0);
+        assert_eq!(store.sweep(&policy, 11).expect("again").over_count, 0);
     }
 
     #[test]
     fn a_count_limit_already_met_touches_nothing() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         fill(&store, 3);
         for keep in [3, 5] {
             let policy = Policy {
                 keep_at_most: Some(keep),
                 ..Default::default()
             };
-            assert_eq!(store.sweep(&policy, 10).expect("barre").over_count, 0);
-            assert_eq!(store.count().expect("cuenta"), 3, "con {keep} de límite");
+            assert_eq!(store.sweep(&policy, 10).expect("swept").over_count, 0);
+            assert_eq!(
+                store.count().expect("counted"),
+                3,
+                "with {keep} as the limit"
+            );
         }
     }
 
     #[test]
     fn usage_counts_what_is_actually_kept_and_shared_bytes_once() {
         let (_dir, store) = on_disk();
-        let empty = store.usage().expect("uso");
+        let empty = store.usage().expect("usage");
         assert_eq!((empty.items, empty.bytes), (0, 0));
-        store.insert_text("uuid-t", "hola", 1).expect("insert");
+        store.insert_text("uuid-t", "hello", 1).expect("insert");
         store
             .insert_item("uuid-a", &image(1, 200_000), "", 2)
             .expect("a");
@@ -4069,11 +4087,11 @@ mod housekeeping {
             }],
         };
         store.insert_item("uuid-c", &announced, "", 4).expect("c");
-        let usage = store.usage().expect("uso");
+        let usage = store.usage().expect("usage");
         assert_eq!(usage.items, 4);
         assert_eq!(
             usage.bytes, 200_000,
-            "el texto no tiene formatos guardados, la imagen compartida cuenta una vez, lo anunciado nada"
+            "the text has no stored formats, the shared image counts once, the announced one counts nothing"
         );
     }
 
@@ -4095,12 +4113,15 @@ mod housekeeping {
             bytes_at_most: Some(200_000),
             ..Default::default()
         };
-        let swept = store.sweep(&policy, 10).expect("barre");
-        assert_eq!(swept.over_bytes, 2, "quedar justo en la cuota es caber");
-        assert_eq!(store.usage().expect("uso").bytes, 200_000);
+        let swept = store.sweep(&policy, 10).expect("swept");
+        assert_eq!(
+            swept.over_bytes, 2,
+            "landing exactly on the quota still fits"
+        );
+        assert_eq!(store.usage().expect("usage").bytes, 200_000);
         assert_eq!(alive(&store).len(), 2);
         let files = crate::blobs::files_under(&dir.path().join("blobs")).len();
-        assert_eq!(files, 2, "los bytes desalojados se fueron del disco");
+        assert_eq!(files, 2, "the evicted bytes are gone from disk");
     }
 
     #[test]
@@ -4109,14 +4130,14 @@ mod housekeeping {
         let id = store
             .insert_item("uuid-1", &image(1, 200_000), "", 1)
             .expect("insert");
-        store.set_pinned(id, true, 0).expect("fija");
+        store.set_pinned(id, true, 0).expect("pinned");
         let policy = Policy {
             bytes_at_most: Some(1_000),
             ..Default::default()
         };
-        let swept = store.sweep(&policy, 10).expect("barre");
+        let swept = store.sweep(&policy, 10).expect("swept");
         assert_eq!(swept.over_bytes, 0);
-        assert_eq!(store.count().expect("cuenta"), 1);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
@@ -4132,27 +4153,27 @@ mod housekeeping {
             bytes_at_most: Some(50_000),
             ..Default::default()
         };
-        let swept = store.sweep(&policy, 10).expect("barre");
+        let swept = store.sweep(&policy, 10).expect("swept");
         assert_eq!(
             swept.over_bytes, 2,
-            "borrar el primero no libera nada, así que sigue con el segundo"
+            "deleting the first one frees nothing, so it moves on to the second"
         );
-        assert_eq!(store.usage().expect("uso").bytes, 0);
+        assert_eq!(store.usage().expect("usage").bytes, 0);
     }
 
     #[test]
     fn purging_on_its_own_leaves_nothing_in_the_log_either() {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let store = Store::open(&dir.path().join("history.db")).expect("abre");
-        let secret = "ruta-secreta-del-archivo";
+        let dir = tempfile::tempdir().expect("a folder");
+        let store = Store::open(&dir.path().join("history.db")).expect("opened");
+        let secret = "secret-file-path";
         let id = store.insert_text("uuid-r", secret, 1).expect("insert");
-        store.mark_broken(id, 2).expect("roto");
-        store.purge_broken_before(10).expect("purga");
-        let wal = std::fs::read(dir.path().join("history.db-wal")).expect("se puede leer");
+        store.mark_broken(id, 2).expect("broken");
+        store.purge_broken_before(10).expect("purged");
+        let wal = std::fs::read(dir.path().join("history.db-wal")).expect("can be read");
         assert!(
             !wal.windows(secret.len())
                 .any(|window| window == secret.as_bytes()),
-            "la purga también es un borrado"
+            "purging is a deletion too"
         );
     }
 
@@ -4160,40 +4181,43 @@ mod housekeeping {
     fn broken_items_go_after_their_grace_and_take_their_bytes_along() {
         let (dir, store) = on_disk();
         let id = store
-            .insert_item("uuid-roto", &image(3, 100_000), "", 1)
+            .insert_item("uuid-broken", &image(3, 100_000), "", 1)
             .expect("insert");
-        store.mark_broken(id, 5).expect("roto");
+        store.mark_broken(id, 5).expect("broken");
         settle_blobs(dir.path());
         let policy = Policy {
             broken_for: Some(10),
             ..Default::default()
         };
-        assert_eq!(store.sweep(&policy, 14).expect("aún no").broken, 0);
-        assert_eq!(store.sweep(&policy, 16).expect("ya").broken, 1);
+        assert_eq!(store.sweep(&policy, 14).expect("not yet").broken, 0);
+        assert_eq!(store.sweep(&policy, 16).expect("already").broken, 1);
         let files = crate::blobs::files_under(&dir.path().join("blobs")).len();
-        assert_eq!(files, 0, "purgar un roto no puede dejar su imagen en disco");
+        assert_eq!(
+            files, 0,
+            "purging a broken one cannot leave its image on disk"
+        );
     }
 
     #[test]
     fn deleting_an_item_whose_blob_was_just_written_leaves_the_file_to_the_sweep() {
         let (dir, store) = on_disk();
         let id = store
-            .insert_item("uuid-fresco", &image(6, 100_000), "", 1)
+            .insert_item("uuid-fresh", &image(6, 100_000), "", 1)
             .expect("insert");
-        store.mark_deleted(id, 2).expect("borra");
+        store.mark_deleted(id, 2).expect("removed");
         assert_eq!(
             crate::blobs::files_under(&dir.path().join("blobs")).len(),
             1,
-            "otra conexión puede estar a punto de referenciar el mismo contenido"
+            "another connection might be about to reference the same content"
         );
         assert_eq!(
-            store.sweep(&Policy::default(), 3).expect("barre").orphans,
+            store.sweep(&Policy::default(), 3).expect("swept").orphans,
             0,
-            "aún fresco"
+            "still fresh"
         );
         settle_blobs(dir.path());
         assert_eq!(
-            store.sweep(&Policy::default(), 4).expect("barre").orphans,
+            store.sweep(&Policy::default(), 4).expect("swept").orphans,
             1
         );
         assert!(crate::blobs::files_under(&dir.path().join("blobs")).is_empty());
@@ -4203,7 +4227,7 @@ mod housekeeping {
     fn a_blob_nobody_points_at_is_swept_once_it_has_settled() {
         let (dir, store) = on_disk();
         let blobs = crate::Blobs::at(&dir.path().join("blobs")).expect("blobs");
-        let digest = blobs.put(b"de una escritura interrumpida").expect("guarda");
+        let digest = blobs.put(b"from an interrupted write").expect("stored");
         let path = dir
             .path()
             .join("blobs")
@@ -4213,10 +4237,10 @@ mod housekeeping {
         std::fs::File::options()
             .write(true)
             .open(&path)
-            .expect("abre")
+            .expect("opened")
             .set_modified(std::time::UNIX_EPOCH)
-            .expect("envejece");
-        let swept = store.sweep(&Policy::default(), 10).expect("barre");
+            .expect("aged");
+        let swept = store.sweep(&Policy::default(), 10).expect("swept");
         assert_eq!(swept.orphans, 1);
         assert!(!blobs.exists(&digest));
     }
@@ -4231,29 +4255,29 @@ mod housekeeping {
             std::fs::File::options()
                 .write(true)
                 .open(&path)
-                .expect("abre")
+                .expect("opened")
                 .set_modified(std::time::UNIX_EPOCH)
-                .expect("envejece");
+                .expect("aged");
         }
         assert_eq!(
-            store.sweep(&Policy::default(), 10).expect("barre").orphans,
+            store.sweep(&Policy::default(), 10).expect("swept").orphans,
             0
         );
-        assert!(store.payload_of(1, "public.png").expect("lee").is_some());
+        assert!(store.payload_of(1, "public.png").expect("read").is_some());
     }
 
     #[test]
     fn everything_at_once_reports_each_count() {
         let (_dir, store) = on_disk();
         let ids = fill(&store, 6);
-        store.mark_broken(ids[0], 1).expect("roto");
+        store.mark_broken(ids[0], 1).expect("broken");
         let policy = Policy {
             keep_for: Some(6),
             keep_at_most: Some(2),
             bytes_at_most: Some(i64::MAX),
             broken_for: Some(1),
         };
-        let swept = store.sweep(&policy, 10).expect("barre");
+        let swept = store.sweep(&policy, 10).expect("swept");
         assert_eq!(
             swept,
             Swept {
@@ -4264,7 +4288,7 @@ mod housekeeping {
                 orphans: 0,
                 truncated: true,
             },
-            "cada regla cuenta lo suyo, en orden, sin contar dos veces"
+            "each rule counts what is its own, in order, without counting twice"
         );
         assert_eq!(alive(&store), vec![ids[5], ids[4]]);
     }
@@ -4276,10 +4300,10 @@ mod housekeeping {
         assert_eq!(
             head.len(),
             PREVIEW_UP_TO - 1,
-            "la ñ no cabe entera y se queda fuera"
+            "a multi-byte character does not fit whole and gets left out"
         );
         assert!(head.bytes().all(|b| b == b'a'));
-        assert_eq!(head_of("corto"), "corto");
+        assert_eq!(head_of("short"), "short");
         let exact = "x".repeat(PREVIEW_UP_TO);
         assert_eq!(head_of(&exact).len(), PREVIEW_UP_TO);
     }
@@ -4288,106 +4312,106 @@ mod housekeeping {
     fn a_capture_connection_can_leave_checkpoints_to_maintenance() {
         let (_dir, store) = on_disk();
         assert_eq!(
-            store.autocheckpoint().expect("lee"),
+            store.autocheckpoint().expect("read"),
             1_000,
-            "el valor de fábrica de SQLite"
+            "SQLite's factory default"
         );
-        store.without_autocheckpoint().expect("apaga");
-        assert_eq!(store.autocheckpoint().expect("lee"), 0);
+        store.without_autocheckpoint().expect("turned off");
+        assert_eq!(store.autocheckpoint().expect("read"), 0);
         for at in 0..200 {
             store
                 .insert_text(&format!("uuid-{at}"), &"x".repeat(2_000), at)
                 .expect("insert");
         }
         assert!(
-            store.checkpoint_passive().expect("pasivo") > 0,
-            "hay páginas del WAL que pasar a la base sin esperar a nadie"
+            store.checkpoint_passive().expect("passive") > 0,
+            "there are WAL pages to move into the database without waiting for anyone"
         );
-        assert!(store.checkpoint().expect("trunca"));
+        assert!(store.checkpoint().expect("truncated"));
         assert_eq!(
-            store.checkpoint_passive().expect("otra vez"),
+            store.checkpoint_passive().expect("again"),
             0,
-            "tras truncar no queda nada que pasar"
+            "after truncating there is nothing left to move"
         );
     }
 
     #[test]
     fn a_sweep_leaves_nothing_in_the_write_ahead_log() {
         let (dir, store) = on_disk();
-        let secret = "clave-que-se-va";
+        let secret = "key-that-goes-away";
         store.insert_text("uuid-s", secret, 1).expect("insert");
         let policy = Policy {
             keep_for: Some(1),
             ..Default::default()
         };
-        store.sweep(&policy, 10).expect("barre");
+        store.sweep(&policy, 10).expect("swept");
         for file in ["history.db", "history.db-wal"] {
-            let bytes = std::fs::read(dir.path().join(file)).expect("se puede leer");
+            let bytes = std::fs::read(dir.path().join(file)).expect("can be read");
             assert!(
                 !bytes
                     .windows(secret.len())
                     .any(|window| window == secret.as_bytes()),
-                "«{secret}» sigue legible en {file}"
+                "«{secret}» is still legible in {file}"
             );
         }
     }
 
     #[test]
     fn editing_replaces_the_content_and_drops_the_renderings_that_no_longer_match() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_item("uuid-e", &captured("hola mundo"), "hola mundo", 1)
+            .insert_item("uuid-e", &captured("hello world"), "hello world", 1)
             .expect("insert");
-        store.update_text(id, "adiós mundo", 2).expect("edita");
+        store.update_text(id, "goodbye world", 2).expect("edited");
 
         let card = &store
             .list(&Filter::default(), 10, None)
-            .expect("lista")
+            .expect("listed")
             .rows[0];
-        assert_eq!(card.preview, "adiós mundo");
+        assert_eq!(card.preview, "goodbye world");
         assert_eq!(
             card.modified_at, 1,
-            "editar no lo sube: el usuario ya lo tiene delante"
+            "editing does not bump it up: the user already has it in front of them"
         );
         assert_eq!(
-            store.formats_of(id).expect("formatos"),
+            store.formats_of(id).expect("formats"),
             vec![cp_core::item::SYNTHETIC_TEXT.to_string()],
-            "el RTF decía «hola» y pegarlo sería pegar lo viejo"
+            "the RTF said «hello world» and pasting it would mean pasting the old one"
         );
         assert_eq!(
             store
                 .payload_of(id, cp_core::item::SYNTHETIC_TEXT)
-                .expect("lee")
+                .expect("read")
                 .as_deref(),
-            Some("adiós mundo".as_bytes())
+            Some("goodbye world".as_bytes())
         );
     }
 
     #[test]
     fn the_edited_text_is_what_gets_found_and_classified() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_item("uuid-e", &captured("hola mundo"), "hola mundo", 1)
+            .insert_item("uuid-e", &captured("hello world"), "hello world", 1)
             .expect("insert");
-        store.update_text(id, "#FF8800", 2).expect("edita");
-        assert!(search(&store, "hola").is_empty());
+        store.update_text(id, "#FF8800", 2).expect("edited");
+        assert!(search(&store, "hello").is_empty());
         assert_eq!(search(&store, "ff8800").len(), 1);
         let card = &store
             .list(&Filter::default(), 10, None)
-            .expect("lista")
+            .expect("listed")
             .rows[0];
         assert_eq!(card.kind, Some(Kind::Color));
         assert_eq!(
             store.find_by_hash(&Item::plain("#FF8800")).expect("hash"),
             Some(id),
-            "la identidad es la del texto nuevo"
+            "the identity is that of the new text"
         );
         assert!(
             store
                 .changed_since(1)
-                .expect("cambios")
+                .expect("changes")
                 .contains(&"uuid-e".to_string()),
-            "la versión avanza"
+            "the version moves forward"
         );
     }
 
@@ -4397,51 +4421,55 @@ mod housekeeping {
         let id = store
             .insert_item("uuid-img", &image(2, 100_000), "", 1)
             .expect("insert");
-        store.set_ocr_text(id, "texto leído", 2).expect("ocr");
+        store.set_ocr_text(id, "read text", 2).expect("ocr");
         store.set_meta(id, "width", "800").expect("meta");
         settle_blobs(dir.path());
-        store.update_text(id, "texto leído", 3).expect("edita");
+        store.update_text(id, "read text", 3).expect("edited");
         assert_eq!(
             crate::blobs::files_under(&dir.path().join("blobs")).len(),
             0
         );
         assert!(store.all_meta(id).expect("meta").is_empty());
-        assert_eq!(search(&store, "leido").len(), 1, "ahora es contenido");
+        assert_eq!(search(&store, "read").len(), 1, "now it is content");
         assert!(store.pending_ocr(10).expect("ocr").is_empty());
     }
 
     #[test]
     fn what_was_edited_away_is_not_left_lying_in_the_database_or_its_log() {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let store = Store::open(&dir.path().join("history.db")).expect("abre");
-        let secret = "hunter2-la-de-antes";
+        let dir = tempfile::tempdir().expect("a folder");
+        let store = Store::open(&dir.path().join("history.db")).expect("opened");
+        let secret = "hunter2-the-old-one";
         let id = store.insert_text("uuid-s", secret, 1).expect("insert");
-        store.checkpoint().expect("ya está en la base principal");
-        store.update_text(id, "texto inocente", 2).expect("edita");
+        store
+            .checkpoint()
+            .expect("it is already in the main database");
+        store.update_text(id, "innocent text", 2).expect("edited");
         for file in ["history.db", "history.db-wal"] {
-            let bytes = std::fs::read(dir.path().join(file)).expect("se puede leer");
+            let bytes = std::fs::read(dir.path().join(file)).expect("can be read");
             assert!(
                 !bytes
                     .windows(secret.len())
                     .any(|window| window == secret.as_bytes()),
-                "«{secret}» sigue legible en {file}"
+                "«{secret}» is still legible in {file}"
             );
         }
     }
 
     #[test]
     fn editing_a_broken_file_makes_it_a_whole_text_again() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let id = store
-            .insert_text("uuid-roto", "/tmp/se-fue.txt", 1)
+            .insert_text("uuid-broken", "/tmp/gone.txt", 1)
             .expect("insert");
-        store.mark_broken(id, 5).expect("roto");
-        store.update_text(id, "lo que decía", 6).expect("edita");
+        store.mark_broken(id, 5).expect("broken");
+        store
+            .update_text(id, "what it used to say", 6)
+            .expect("edited");
         let rows = store
             .list(&Filter::default(), 10, None)
-            .expect("lista")
+            .expect("listed")
             .rows;
-        assert_eq!(rows.len(), 1, "un texto no puede estar roto");
+        assert_eq!(rows.len(), 1, "a text item cannot be broken");
         assert_eq!(rows[0].broken_since, None);
     }
 
@@ -4449,39 +4477,39 @@ mod housekeeping {
     fn an_edit_that_cannot_be_written_leaves_the_item_as_it_was() {
         let (dir, store) = on_disk();
         let id = store
-            .insert_item("uuid-e", &captured("intacto"), "intacto", 1)
+            .insert_item("uuid-e", &captured("intact"), "intact", 1)
             .expect("insert");
         let blobs = dir.path().join("blobs");
         let long = "x".repeat(cp_core::item::INLINE_UP_TO + 1);
-        std::fs::remove_dir_all(&blobs).expect("sin carpeta de blobs");
-        std::fs::write(&blobs, b"no soy una carpeta").expect("estorbo");
+        std::fs::remove_dir_all(&blobs).expect("blobs folder gone");
+        std::fs::write(&blobs, b"I am not a folder").expect("gets in the way");
         assert!(
             store.update_text(id, &long, 2).is_err(),
-            "no hay dónde dejar el blob"
+            "there is nowhere to put the blob"
         );
         let card = &store
             .list(&Filter::default(), 10, None)
-            .expect("lista")
+            .expect("listed")
             .rows[0];
-        assert_eq!(card.preview, "intacto", "la fila no cambió");
+        assert_eq!(card.preview, "intact", "the row did not change");
         assert_eq!(
-            store.formats_of(id).expect("formatos").len(),
+            store.formats_of(id).expect("formats").len(),
             2,
-            "y los formatos de antes siguen ahí"
+            "and the previous formats are still there"
         );
         assert_eq!(
             store
                 .payload_of(id, "public.utf8-plain-text")
-                .expect("lee")
+                .expect("read")
                 .as_deref(),
-            Some("intacto".as_bytes())
+            Some("intact".as_bytes())
         );
     }
 
     #[test]
     fn an_edit_bigger_than_a_blob_is_refused_before_touching_the_row() {
         let (_dir, store) = on_disk();
-        let id = store.insert_text("uuid-x", "corto", 1).expect("insert");
+        let id = store.insert_text("uuid-x", "short", 1).expect("insert");
         let absurd = "x".repeat(cp_core::item::BLOB_UP_TO + 1);
         assert!(matches!(
             store.update_text(id, &absurd, 2),
@@ -4490,10 +4518,10 @@ mod housekeeping {
         assert_eq!(
             store
                 .list(&Filter::default(), 10, None)
-                .expect("lista")
+                .expect("listed")
                 .rows[0]
                 .preview,
-            "corto"
+            "short"
         );
         assert!(matches!(
             store.insert_text("uuid-y", &absurd, 3),
@@ -4507,41 +4535,43 @@ mod housekeeping {
         let id = store
             .insert_item("uuid-img", &image(2, 100_000), "", 1)
             .expect("insert");
-        store.set_ocr_text(id, "qzzsecreto leído", 2).expect("ocr");
-        assert_eq!(search(&store, "qzzsecreto").len(), 1);
+        store.set_ocr_text(id, "qzzsecret read", 2).expect("ocr");
+        assert_eq!(search(&store, "qzzsecret").len(), 1);
         settle_blobs(dir.path());
-        store.update_text(id, "otra cosa", 3).expect("edita");
+        store.update_text(id, "something else", 3).expect("edited");
         assert!(
-            search(&store, "qzzsecreto").is_empty(),
-            "lo leído era de la imagen que ya no está"
+            search(&store, "qzzsecret").is_empty(),
+            "what was read belonged to the image that is no longer there"
         );
     }
 
     #[test]
     fn marking_present_what_was_already_purged_is_a_quiet_no_op() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-r", "/tmp/ido", 1).expect("insert");
-        store.mark_broken(id, 5).expect("roto");
-        store.purge_broken_before(10).expect("purga");
-        store.mark_present(id).expect("ya no existe, no pasa nada");
-        assert_eq!(store.count().expect("cuenta"), 0);
+        let store = Store::in_memory().expect("schema");
+        let id = store.insert_text("uuid-r", "/tmp/gone", 1).expect("insert");
+        store.mark_broken(id, 5).expect("broken");
+        store.purge_broken_before(10).expect("purged");
+        store
+            .mark_present(id)
+            .expect("it no longer exists, and nothing happens");
+        assert_eq!(store.count().expect("counted"), 0);
     }
 
     #[test]
     fn a_broken_item_exactly_at_the_cutoff_is_not_purged_yet() {
-        let store = Store::in_memory().expect("esquema");
-        let id = store.insert_text("uuid-r", "/tmp/ido", 1).expect("insert");
-        store.mark_broken(id, 5).expect("roto");
+        let store = Store::in_memory().expect("schema");
+        let id = store.insert_text("uuid-r", "/tmp/gone", 1).expect("insert");
+        store.mark_broken(id, 5).expect("broken");
         let policy = Policy {
             broken_for: Some(10),
             ..Default::default()
         };
         assert_eq!(
-            store.sweep(&policy, 15).expect("justo").broken,
+            store.sweep(&policy, 15).expect("precisely").broken,
             0,
-            "5 no es menor que 15 - 10"
+            "5 is not less than 15 - 10"
         );
-        assert_eq!(store.sweep(&policy, 16).expect("ya").broken, 1);
+        assert_eq!(store.sweep(&policy, 16).expect("already").broken, 1);
     }
 
     #[test]
@@ -4563,78 +4593,78 @@ mod housekeeping {
             bytes_at_most: Some(150_000),
             ..Default::default()
         };
-        let swept = store.sweep(&policy, 10).expect("barre");
+        let swept = store.sweep(&policy, 10).expect("swept");
         assert_eq!(
             (swept.over_count, swept.over_bytes),
             (2, 1),
-            "la cuota ve lo que dejó el límite"
+            "the quota sees what the limit left behind"
         );
-        assert_eq!(store.count().expect("cuenta"), 1);
+        assert_eq!(store.count().expect("counted"), 1);
     }
 
     #[test]
     fn editing_what_does_not_exist_or_was_deleted_is_refused() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         assert!(matches!(
-            store.update_text(404, "nada", 1),
+            store.update_text(404, "nothing", 1),
             Err(Error::NoSuchItem { id: 404 })
         ));
-        let id = store.insert_text("uuid-d", "algo", 1).expect("insert");
-        store.mark_deleted(id, 2).expect("borra");
-        assert!(store.update_text(id, "resucita", 3).is_err());
-        assert_eq!(store.count().expect("cuenta"), 0);
+        let id = store.insert_text("uuid-d", "something", 1).expect("insert");
+        store.mark_deleted(id, 2).expect("removed");
+        assert!(store.update_text(id, "resurrects", 3).is_err());
+        assert_eq!(store.count().expect("counted"), 0);
     }
 
     #[test]
     fn a_long_edit_goes_to_disk_and_an_absurd_one_is_refused() {
         let (_dir, store) = on_disk();
-        let id = store.insert_text("uuid-l", "corto", 1).expect("insert");
+        let id = store.insert_text("uuid-l", "short", 1).expect("insert");
         let long = "x".repeat(cp_core::item::INLINE_UP_TO + 1);
-        store.update_text(id, &long, 2).expect("edita");
-        assert_eq!(store.usage().expect("uso").bytes as usize, long.len());
+        store.update_text(id, &long, 2).expect("edited");
+        assert_eq!(store.usage().expect("usage").bytes as usize, long.len());
 
-        let memory = Store::in_memory().expect("esquema");
-        let id = memory.insert_text("uuid-m", "corto", 1).expect("insert");
+        let memory = Store::in_memory().expect("schema");
+        let id = memory.insert_text("uuid-m", "short", 1).expect("insert");
         assert!(
             matches!(
                 memory.update_text(id, &long, 2),
                 Err(Error::NeedsBlobStore { .. })
             ),
-            "sin carpeta no hay dónde dejarlo"
+            "with no folder there is nowhere to put it"
         );
         assert_eq!(
-            search(&memory, "corto").len(),
+            search(&memory, "short").len(),
             1,
-            "y lo de antes sigue intacto"
+            "and what was there before stays intact"
         );
     }
 
     #[test]
     fn the_parser_and_the_list_speak_the_same_filter() {
-        let store = Store::in_memory().expect("esquema");
+        let store = Store::in_memory().expect("schema");
         let rows = [
-            ("uuid-1", "reunión lunes", "Slack", 10),
-            ("uuid-2", "reunión martes", "Code", 20),
-            ("uuid-3", "otra cosa", "Slack", 30),
+            ("uuid-1", "monday meeting", "Slack", 10),
+            ("uuid-2", "tuesday meeting", "Code", 20),
+            ("uuid-3", "something else", "Slack", 30),
         ];
         for (uuid, text, app, at) in rows {
             let id = store.insert_text(uuid, text, at).expect("insert");
-            store.set_source(id, app, at).expect("origen");
+            store.set_source(id, app, at).expect("sourced");
         }
         let clock = crate::query::Clock {
             now: 40,
             day_start: 0,
         };
-        let filter = crate::query::parse("reunion @slack", &clock);
-        let found = store.list(&filter, 10, None).expect("lista").rows;
+        let filter = crate::query::parse("meeting @slack", &clock);
+        let found = store.list(&filter, 10, None).expect("listed").rows;
         assert_eq!(found.len(), 1);
-        assert_eq!(found[0].preview, "reunión lunes");
+        assert_eq!(found[0].preview, "monday meeting");
         assert_eq!(
             found[0]
                 .snippet
                 .as_ref()
                 .map(|snippet| snippet.excerpt.plain()),
-            Some("reunión lunes".into())
+            Some("monday meeting".into())
         );
     }
 }

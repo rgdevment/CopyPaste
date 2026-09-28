@@ -127,19 +127,19 @@ mod tests {
 
     #[test]
     fn a_synthetic_text_goes_back_as_the_unicode_the_system_wants() {
-        let written = writable(SYNTHETIC_TEXT, b"hola");
-        assert_eq!(written, vec![(CF_UNICODETEXT, utf16_of("hola"))]);
+        let written = writable(SYNTHETIC_TEXT, b"hello");
+        assert_eq!(written, vec![(CF_UNICODETEXT, utf16_of("hello"))]);
     }
 
     #[test]
     fn a_synthetic_image_goes_back_as_both_a_png_and_a_bitmap() {
         let png = image_bytes();
         let written = writable(SYNTHETIC_IMAGE, &png);
-        assert_eq!(written.len(), 2, "el moderno y el clasico");
+        assert_eq!(written.len(), 2, "the modern one and the classic one");
         assert!(written.iter().any(|(id, _)| *id == CF_DIBV5));
         assert!(
             written.iter().any(|(_, bytes)| bytes == &png),
-            "el PNG viaja intacto"
+            "the PNG travels intact"
         );
     }
 
@@ -147,19 +147,19 @@ mod tests {
     fn a_rendered_jpeg_goes_back_as_jfif_and_a_bitmap() {
         let jpeg = jpeg_bytes();
         let written = writable(SYNTHETIC_JPEG, &jpeg);
-        assert_eq!(written.len(), 2, "el JPEG y el clasico");
+        assert_eq!(written.len(), 2, "the JPEG and the classic one");
         let (jfif, _) = written
             .iter()
             .find(|(_, bytes)| bytes == &jpeg)
-            .expect("el JPEG viaja intacto");
+            .expect("the JPEG travels intact");
         assert_eq!(cp_win_sys::formats::name_of(*jfif), JFIF);
         assert!(written.iter().any(|(id, _)| *id == CF_DIBV5));
     }
 
     #[test]
     fn a_jpeg_that_does_not_decode_still_goes_back_as_itself() {
-        let written = writable(SYNTHETIC_JPEG, b"esto no es un jpeg");
-        assert_eq!(written.len(), 1, "sin bitmap, pero el JPEG no se pierde");
+        let written = writable(SYNTHETIC_JPEG, b"this is not a jpeg");
+        assert_eq!(written.len(), 1, "no bitmap, but the JPEG is not lost");
         assert!(written.iter().all(|(id, _)| *id != CF_DIBV5));
     }
 
@@ -174,7 +174,7 @@ mod tests {
     fn an_image_that_needs_two_ids_is_not_an_incomplete_restore() {
         let png = image_bytes();
         let ids = writable(SYNTHETIC_IMAGE, &png);
-        assert_eq!(ids.len(), 2, "un formato guardado sale por dos vias");
+        assert_eq!(ids.len(), 2, "one stored format goes out by two routes");
         let item = Item {
             kind: None,
             formats: vec![Format {
@@ -182,7 +182,7 @@ mod tests {
                 payload: Payload::Inline(png),
             }],
         };
-        assert_eq!(item.formats.len(), 1, "y sigue siendo un solo formato");
+        assert_eq!(item.formats.len(), 1, "and it is still a single format");
     }
 
     #[test]
@@ -191,33 +191,37 @@ mod tests {
         let item = Item {
             kind: Some(cp_core::kind::Kind::File),
             formats: vec![
-                inline(DESCRIPTOR, &descriptor_of(&[("nota.txt", Some(4), false)])),
+                inline(DESCRIPTOR, &descriptor_of(&[("note.txt", Some(4), false)])),
                 Format {
                     id: "FileContents".into(),
                     payload: Payload::Announced { size: None },
                 },
-                inline(&contents_id(0), b"hola"),
+                inline(&contents_id(0), b"hello"),
             ],
         };
         let (owned, delivered) = pasted_files(&item);
         assert_eq!(
             delivered, 3,
-            "los tres formatos virtuales salen por el drop"
+            "the three virtual formats go out through the drop"
         );
-        assert_eq!(owned.len(), 2, "CF_HDROP y el efecto");
+        assert_eq!(owned.len(), 2, "CF_HDROP and the effect");
         assert_eq!(owned[0].0, CF_HDROP);
         let paths = crate::drop::paths_in(&owned[0].1);
         assert_eq!(paths.len(), 1);
-        assert!(paths[0].ends_with("nota.txt"), "{}", paths[0]);
-        assert_eq!(std::fs::read(&paths[0]).expect("en disco"), b"hola");
-        assert_eq!(owned[1].1, COPY.to_le_bytes(), "pegar copia, no mueve");
-        let folder = std::path::Path::new(&paths[0]).parent().expect("carpeta");
+        assert!(paths[0].ends_with("note.txt"), "{}", paths[0]);
+        assert_eq!(std::fs::read(&paths[0]).expect("on disk"), b"hello");
+        assert_eq!(
+            owned[1].1,
+            COPY.to_le_bytes(),
+            "pasting copies, it does not move"
+        );
+        let folder = std::path::Path::new(&paths[0]).parent().expect("a folder");
         std::fs::remove_dir_all(folder).ok();
     }
 
     #[test]
     fn an_item_without_virtual_files_pastes_no_files() {
-        assert_eq!(pasted_files(&Item::plain("hola")), (Vec::new(), 0));
+        assert_eq!(pasted_files(&Item::plain("hello")), (Vec::new(), 0));
     }
 
     #[test]
@@ -238,12 +242,12 @@ mod tests {
         let item = Item {
             kind: Some(cp_core::kind::Kind::Text),
             formats: vec![
-                inline("HTML Format", b"<b>hola</b>"),
-                inline("CF_UNICODETEXT", &utf16_of("hola")),
+                inline("HTML Format", b"<b>hello</b>"),
+                inline("CF_UNICODETEXT", &utf16_of("hello")),
             ],
         };
         let plain = render(Form::PlainText, &crate::content::content_of(&item, None))
-            .expect("hay texto")
+            .expect("there is text")
             .into_item();
         let written: Vec<(u32, Vec<u8>)> = plain
             .formats
@@ -251,8 +255,8 @@ mod tests {
             .filter_map(|one| payload_of(one).map(|bytes| writable(&one.id, bytes)))
             .flatten()
             .collect();
-        assert_eq!(written, vec![(CF_UNICODETEXT, utf16_of("hola"))]);
-        assert_eq!(item.formats.len(), 2, "el ítem guardado no cambia");
+        assert_eq!(written, vec![(CF_UNICODETEXT, utf16_of("hello"))]);
+        assert_eq!(item.formats.len(), 2, "the stored item does not change");
         let only_image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![inline(PNG, &[1, 2, 3])],
@@ -263,7 +267,7 @@ mod tests {
                 &crate::content::content_of(&only_image, None)
             ),
             None,
-            "sin texto plano no hay forma plana que ofrecer"
+            "with no plain text there is no plain form to offer"
         );
     }
 

@@ -2,6 +2,11 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  save: vi.fn(() => Promise.resolve("/donde/quiera/CopyPaste.cpbackup")),
+  open: vi.fn(() => Promise.resolve("/donde/quiera/CopyPaste.cpbackup")),
+}));
+
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: vi.fn(() => Promise.resolve()),
   revealItemInDir: vi.fn(() => Promise.resolve()),
@@ -47,6 +52,19 @@ vi.mock("@tauri-apps/api/core", () => ({
       });
     }
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");
+    if (what === "trust") {
+      return Promise.resolve({
+        offered: false,
+        pastes: false,
+        secureInput: false,
+      });
+    }
+    if (what === "save_backup") {
+      return Promise.resolve({ path: "/donde/quiera/CopyPaste.cpbackup", items: 3, bytes: 2048 });
+    }
+    if (what === "load_backup") {
+      return Promise.resolve({ added: 2, already: 1 });
+    }
     return Promise.reject(new Error(`sin simular: ${what}`));
   }),
 }));
