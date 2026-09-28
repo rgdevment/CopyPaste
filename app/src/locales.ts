@@ -68,7 +68,7 @@ const ES = {
     "El resto llega en plano: de esos la 2 guardó solo el texto, así que lo que pegaba con estilos ya no los tiene",
   formerLosesPictures: "{one} imágenes ya no están en el disco y llegarán sin su contenido",
   formerLosesKept:
-    "{one} son más antiguos que el tiempo que guardas y se irán apenas lleguen. Sube el límite en Ajustes si quieres conservarlos",
+    "{one} son más antiguos que el tiempo que guardas: los que cruces se irán al llegar. Sube el límite en Ajustes si quieres conservarlos",
   formerKeepsSecrets:
     "La 2 guardó cosas que hoy no se capturarían, como lo que un gestor de contraseñas marca en privado. Lo que ya guardó, cruza igual",
   formerPanelRests: "El panel se detiene mientras cruza el historial y vuelve solo al terminar",
@@ -231,7 +231,7 @@ const EN: Record<keyof Said, string> = {
     "The rest arrive plain: for those the 2 kept the text alone, so what used to paste with styling no longer has it",
   formerLosesPictures: "{one} pictures are no longer on disk and will arrive without their content",
   formerLosesKept:
-    "{one} are older than the time you keep and will go the moment they land. Raise the limit in Settings if you want to keep them",
+    "{one} are older than the time you keep: whichever cross will go as they land. Raise the limit in Settings if you want to keep them",
   formerKeepsSecrets:
     "The 2 stored things that would not be captured today, such as what a password manager marks as private. What it already stored comes over all the same",
   formerPanelRests:
