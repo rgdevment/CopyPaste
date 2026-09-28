@@ -49,7 +49,8 @@ const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
 const LATER: i64 = 60_000;
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
-const A_DAY: i64 = 24 * 60 * 60 * 1_000;
+#[cfg(test)]
+const A_DAY: i64 = cp_store::A_DAY;
 
 fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<()>> {
     let store = match Store::open(db) {
@@ -110,18 +111,7 @@ fn sweep(store: &Store) {
 }
 
 fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
-    cp_store::Policy {
-        keep_for: kept
-            .keeps_days
-            .filter(|days| *days > 0)
-            .map(|days| i64::from(days) * A_DAY),
-        keep_at_most: None,
-        bytes_at_most: kept
-            .images_quota_mb
-            .filter(|mb| *mb > 0)
-            .map(|mb| i64::from(mb) * 1024 * 1024),
-        broken_for: None,
-    }
+    cp_store::Policy::keeping(kept.keeps_days, kept.images_quota_mb)
 }
 
 fn errand(store: &Store, thumbs: &Path) -> bool {

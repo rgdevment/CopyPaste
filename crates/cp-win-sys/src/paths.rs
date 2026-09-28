@@ -9,8 +9,12 @@ pub fn database() -> Option<PathBuf> {
     Some(data_dir()?.join("history.db"))
 }
 
+pub fn legacy_dir() -> Option<PathBuf> {
+    data_dir()
+}
+
 pub fn legacy_database() -> Option<PathBuf> {
-    Some(data_dir()?.join("clipboard.db"))
+    Some(legacy_dir()?.join("clipboard.db"))
 }
 
 pub fn thumbs_dir() -> Option<PathBuf> {

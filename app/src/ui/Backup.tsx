@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
 import { fill, items, t } from "../locales";
@@ -13,14 +14,19 @@ type Former = {
   pinned: number;
   labelled: number;
   withStyles: number;
+  beyondKeep: number;
   unreadable: string | null;
 };
+
+type Underway = { done: number; total: number };
 
 type Crossed = {
   added: number;
   already: number;
   refused: number;
   withoutTheirPicture: number;
+  swept: number;
+  crowded: number;
 };
 type Saved = { path: string; items: number; missing: number; bytes: number };
 type Brought = { added: number; already: number; refused: number; fromElsewhere: boolean };
@@ -44,12 +50,31 @@ export default function Backup() {
   const [said, setSaid] = useState<string | null>(null);
   const [came, setCame] = useState<string | null>(null);
   const [crossed, setCrossed] = useState<string | null>(null);
+  const [crossing, setCrossing] = useState<Underway | null>(null);
   const [sure, setSure] = useState(false);
 
   useEffect(() => {
-    invoke<Former | null>("former")
+    invoke<Former | null>("former", { at: Date.now() })
       .then(setFormer)
       .catch((why) => setTrouble(String(why)));
+  }, []);
+
+  useEffect(() => {
+    const going = listen<Underway>("crossing", (event) => {
+      setBusy("former");
+      setCrossing(event.payload);
+    });
+    const gone = listen("crossed", () => {
+      setCrossing(null);
+      setBusy(null);
+      invoke<Former | null>("former", { at: Date.now() })
+        .then(setFormer)
+        .catch(() => {});
+    });
+    return () => {
+      going.then((off) => off()).catch(() => {});
+      gone.then((off) => off()).catch(() => {});
+    };
   }, []);
 
   const out = async () => {
@@ -143,12 +168,15 @@ export default function Backup() {
         said.withoutTheirPicture > 0
           ? fill("formerCameFlat", items(said.withoutTheirPicture))
           : null,
+        said.swept > 0 ? fill("formerCameSwept", items(said.swept)) : null,
+        said.crowded > 0 ? fill("formerCameCrowded", items(said.crowded)) : null,
       ].filter(Boolean);
       const tail = notes.length > 0 ? ` · ${notes.join(" · ")}` : "";
       setCrossed(`${fill("formerCame", items(said.added))}${tail}`);
     } catch (why) {
       setCrossed(String(why));
     } finally {
+      setCrossing(null);
       setBusy(null);
     }
   };
@@ -199,6 +227,11 @@ export default function Backup() {
                     {fill("formerLosesPictures", String(former.picturesGone))}
                   </div>
                 )}
+                {former.beyondKeep > 0 && (
+                  <div className="alarm">{fill("formerLosesKept", items(former.beyondKeep))}</div>
+                )}
+                <div className="said">{t("formerKeepsSecrets")}</div>
+                <div className="said">{t("formerPanelRests")}</div>
                 <div className="said">{t("formerStays")}</div>
                 {sure && <div className="alarm">{t("formerDropWhy")}</div>}
               </>
@@ -211,7 +244,11 @@ export default function Backup() {
             disabled={busy !== null || former.unreadable !== null || former.items === 0}
             onClick={cross}
           >
-            {busy === "former" ? t("formerBringing") : t("formerDo")}
+            {busy !== "former"
+              ? t("formerDo")
+              : crossing && crossing.total > 0
+                ? fill("formerCrossing", `${crossing.done}/${crossing.total}`)
+                : t("formerBringing")}
           </button>
           <button type="button" className="grave" disabled={busy !== null} onClick={drop}>
             {sure ? t("formerDropSure") : t("formerDrop")}

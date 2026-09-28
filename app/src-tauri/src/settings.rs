@@ -1,6 +1,21 @@
 use cp_config::Config;
 use std::path::PathBuf;
 
+pub fn former_folder() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        cp_win_sys::paths::legacy_dir()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        cp_mac_sys::paths::legacy_dir()
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        None
+    }
+}
+
 pub fn folder() -> Option<PathBuf> {
     #[cfg(windows)]
     {
@@ -14,6 +29,19 @@ pub fn folder() -> Option<PathBuf> {
     {
         None
     }
+}
+
+pub fn policy() -> cp_store::Policy {
+    let Some(path) = folder()
+        .map(|dir| cp_config::at(&dir))
+        .filter(|at| at.exists())
+    else {
+        return cp_store::Policy::default();
+    };
+    let Ok(kept) = cp_config::read(&path) else {
+        return cp_store::Policy::default();
+    };
+    cp_store::Policy::keeping(kept.keeps_days, kept.images_quota_mb)
 }
 
 pub fn nowhere() -> String {
@@ -84,12 +112,13 @@ pub struct Former {
     pinned: i64,
     labelled: i64,
     with_styles: i64,
+    beyond_keep: i64,
     unreadable: Option<String>,
 }
 
-#[tauri::command]
-pub fn former() -> Result<Option<Former>, String> {
-    let db = folder().ok_or_else(nowhere)?.join("clipboard.db");
+#[tauri::command(async)]
+pub fn former(at: i64) -> Result<Option<Former>, String> {
+    let db = former_folder().ok_or_else(nowhere)?.join("clipboard.db");
     let weighed = match std::fs::metadata(&db) {
         Ok(weighed) => weighed,
         Err(why) if why.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -104,9 +133,10 @@ pub fn former() -> Result<Option<Former>, String> {
         pinned: 0,
         labelled: 0,
         with_styles: 0,
+        beyond_keep: 0,
         unreadable: None,
     };
-    match cp_store::legacy::look(&db) {
+    match cp_store::legacy::look(&db, at, policy().keep_for) {
         Ok(looked) => {
             former.items = looked.items;
             former.pictures = looked.pictures;
@@ -114,6 +144,7 @@ pub fn former() -> Result<Option<Former>, String> {
             former.pinned = looked.pinned;
             former.labelled = looked.labelled;
             former.with_styles = looked.with_styles;
+            former.beyond_keep = looked.beyond_keep;
         }
         Err(why) => former.unreadable = Some(why.to_string()),
     }

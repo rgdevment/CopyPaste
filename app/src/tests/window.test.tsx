@@ -183,6 +183,16 @@ describe("la ventana", () => {
     expect(screen.getByText(/Nada de CopyPaste 2 se toca ni se borra/)).toBeDefined();
   });
 
+  it("avisa de lo que el tiempo que guardas se llevará apenas llegue", async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+    expect(
+      await screen.findByText(/860 elementos son más antiguos que el tiempo que guardas/),
+    ).toBeDefined();
+    expect(screen.getByText(/un gestor de contraseñas marca en privado/)).toBeDefined();
+    expect(screen.getByText(/El panel se detiene mientras cruza/)).toBeDefined();
+  });
+
   it("trae el historial y cuenta lo que llegó y lo que no", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const who = userEvent.setup();
@@ -191,7 +201,9 @@ describe("la ventana", () => {
     await who.click(await screen.findByRole("button", { name: "Traer el historial" }));
     expect(invoke).toHaveBeenCalledWith("bring_former", expect.objectContaining({}));
     expect(
-      await screen.findByText("Llegaron 1180 elementos · 3 elementos sin su imagen"),
+      await screen.findByText(
+        "Llegaron 1180 elementos · 3 elementos sin su imagen · 860 elementos se fueron por el tiempo que guardas",
+      ),
     ).toBeDefined();
   });
 

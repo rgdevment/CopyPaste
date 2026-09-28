@@ -27,6 +27,17 @@ const BAR: &[u8] = include_bytes!("../icons/tray/macos@2x.png");
 #[cfg(not(target_os = "macos"))]
 const BAR: &[u8] = include_bytes!("../icons/tray/windows-32.png");
 
+fn leave<R: Runtime>(app: &AppHandle<R>) {
+    if app
+        .try_state::<crate::backup::Crossing>()
+        .is_some_and(|crossing| crossing.underway())
+    {
+        surface(app);
+        return;
+    }
+    app.exit(0);
+}
+
 pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
     let [shows, asks, leaves] = worded(spanish);
     let panel = MenuItem::with_id(app, "panel", shows, true, None::<&str>).ok()?;
@@ -42,7 +53,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
         .on_menu_event(|app, event| match event.id.as_ref() {
             "panel" => crate::panel::show(app),
             "settings" => surface(app),
-            "quit" => app.exit(0),
+            "quit" => leave(app),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
