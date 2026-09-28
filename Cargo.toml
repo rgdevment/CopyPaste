@@ -24,13 +24,13 @@ thiserror = "2"
 tracing = "0.1"
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 blake3 = "1"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 unicode-normalization = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-toml = "0.9"
+toml = "1.1"
 sys-locale = "0.3"
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-build = { version = "2", features = [] }
@@ -66,7 +66,7 @@ windows = { version = "0.62", features = [
     "Win32_System_Variant",
 ] }
 
-windows-future = "0.3"
+windows-future = "0.100"
 
 slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-skia", "renderer-skia-opengl", "raw-window-handle-06"] }
 slint-build = "1.18"
