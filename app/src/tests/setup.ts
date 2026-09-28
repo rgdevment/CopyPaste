@@ -49,6 +49,20 @@ vi.mock("@tauri-apps/api/core", () => ({
       return Promise.resolve({
         path: "C:UsersquienAppDataLocalCopyPasteclipboard.db",
         bytes: 224395264,
+        items: 1200,
+        pictures: 40,
+        picturesGone: 3,
+        pinned: 12,
+        labelled: 5,
+        unreadable: null,
+      });
+    }
+    if (what === "bring_former") {
+      return Promise.resolve({
+        added: 1180,
+        already: 0,
+        refused: 0,
+        withoutTheirPicture: 3,
       });
     }
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");

@@ -31,6 +31,8 @@ pub fn run() {
             backup::save_backup,
             backup::peek_backup,
             backup::load_backup,
+            backup::bring_former,
+            backup::drop_former,
             update::update_ready,
             update::update_install,
             empty,

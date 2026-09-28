@@ -895,7 +895,18 @@ Section Uninstall
     DeleteRegKey /ifempty HKCU "${MANUKEY}"
 
     SetShellVarContext current
-    RmDir /r "$LOCALAPPDATA\${PRODUCTNAME}"
+    ; The 2.x keeps its history in this same folder, and it is not ours to delete.
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\history.db"
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\history.db-wal"
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\history.db-shm"
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\config.toml"
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\update.json"
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\logs\cp-gui.log"
+    Delete "$LOCALAPPDATA\${PRODUCTNAME}\logs\cp-panel.log"
+    RmDir /r "$LOCALAPPDATA\${PRODUCTNAME}\blobs"
+    RmDir /r "$LOCALAPPDATA\${PRODUCTNAME}\thumbs"
+    RmDir "$LOCALAPPDATA\${PRODUCTNAME}\logs"
+    RmDir "$LOCALAPPDATA\${PRODUCTNAME}"
     RmDir /r "$LOCALAPPDATA\${BUNDLEID}"
   ${EndIf}
 
