@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn text_survives_the_round_trip() {
-        for original in ["hola", "", "acentos: ñáéíóú", "emoji: 🦀", "日本語"] {
+        for original in ["hola", "", "accents: ñáéíóú", "emoji: 🦀", "日本語"] {
             let bytes = utf16_of(original);
             assert_eq!(text_of(&bytes).as_deref(), Some(original), "«{original}»");
         }
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn the_encoding_ends_where_the_terminator_says() {
         let bytes = utf16_of("ab");
-        assert_eq!(bytes.len(), 6, "dos unidades más el cero");
+        assert_eq!(bytes.len(), 6, "two units plus the zero");
         assert_eq!(&bytes[4..], &[0, 0]);
     }
 

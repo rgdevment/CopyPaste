@@ -12,7 +12,7 @@ use cp_mac_sys::{frontmost, keystroke};
 use objc2_foundation::{MainThreadMarker, NSString, NSURL};
 use std::time::{Duration, Instant};
 
-const SKIPPED: &str = "omitido: ";
+const SKIPPED: &str = "skipped: ";
 
 struct Battery {
     passed: u32,
@@ -33,7 +33,7 @@ impl Battery {
             }
             Err(why) => {
                 self.failed += 1;
-                println!("    FALLA {id:<5} {what}\n            {why}");
+                println!("    FAILS {id:<5} {what}\n            {why}");
             }
         }
     }
@@ -55,7 +55,7 @@ impl Battery {
 
 fn main() -> std::process::ExitCode {
     let Some(mtm) = MainThreadMarker::new() else {
-        eprintln!("esto tiene que correr en el hilo principal");
+        eprintln!("this has to run on the main thread");
         return std::process::ExitCode::FAILURE;
     };
     let pb = Pasteboard::general(mtm);
@@ -66,27 +66,27 @@ fn main() -> std::process::ExitCode {
         skipped: 0,
     };
 
-    b.group("A · Captura y formatos");
+    b.group("A · Capture and formats");
 
-    b.case("A1", "el texto plano va y vuelve", || {
+    b.case("A1", "plain text goes and comes back", || {
         pb.write_text("cp-a1");
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         if item.kind != Some(Kind::Text) {
-            return Err(format!("se clasificó como {:?}", item.kind));
+            return Err(format!("it was classified as {:?}", item.kind));
         }
         match &item
             .format("public.utf8-plain-text")
-            .ok_or("falta el texto")?
+            .ok_or("the text is missing")?
             .payload
         {
             Payload::Inline(bytes) if bytes == b"cp-a1" => Ok(()),
-            other => Err(format!("llegó {other:?}")),
+            other => Err(format!("{other:?} arrived")),
         }
     });
 
-    b.case("A2", "los gemelos legados no se guardan dos veces", || {
+    b.case("A2", "the legacy twins are not stored twice", || {
         pb.write_text("cp-a2");
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         let ids: Vec<&str> = item.formats.iter().map(|f| f.id.as_str()).collect();
         let mut unique = ids.clone();
         unique.sort_unstable();
@@ -95,94 +95,98 @@ fn main() -> std::process::ExitCode {
             return Err(format!("repetidos: {ids:?}"));
         }
         if ids.contains(&"NSStringPboardType") {
-            return Err("el gemelo legado no colapsó".into());
+            return Err("the legacy twin did not collapse".into());
         }
         Ok(())
     });
 
-    b.case("A3", "un texto vacío sigue siendo un ítem", || {
+    b.case("A3", "an empty text is still an item", || {
         pb.write_text("");
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         if item.formats.is_empty() {
-            return Err("sin formatos".into());
+            return Err("no formats".into());
         }
         Ok(())
     });
 
-    b.case("A4", "diez megabytes van y vuelven enteros", || {
+    b.case("A4", "ten megabytes go and come back whole", || {
         let big = "a".repeat(10 * 1024 * 1024);
         pb.write_text(&big);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         match &item
             .format("public.utf8-plain-text")
-            .ok_or("falta el texto")?
+            .ok_or("the text is missing")?
             .payload
         {
             Payload::Blob(bytes) if bytes.len() == big.len() => Ok(()),
-            other => Err(format!("llegó {other:?}")),
+            other => Err(format!("{other:?} arrived")),
         }
     });
 
-    b.case("A5", "un solo carácter multibyte", || {
+    b.case("A5", "a single multibyte character", || {
         pb.write_text("🎯");
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         match &item
             .format("public.utf8-plain-text")
-            .ok_or("falta el texto")?
+            .ok_or("the text is missing")?
             .payload
         {
             Payload::Inline(bytes) if bytes == "🎯".as_bytes() => Ok(()),
-            other => Err(format!("llegó {other:?}")),
+            other => Err(format!("{other:?} arrived")),
         }
     });
 
-    b.case("A6", "saltos de línea de los tres tipos", || {
+    b.case("A6", "line breaks of all three kinds", || {
         let mixed = "uno\r\ndos\rtres\ncuatro";
         pb.write_text(mixed);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         match &item
             .format("public.utf8-plain-text")
-            .ok_or("falta el texto")?
+            .ok_or("the text is missing")?
             .payload
         {
             Payload::Inline(bytes) if bytes == mixed.as_bytes() => Ok(()),
-            other => Err(format!("llegó {other:?}")),
+            other => Err(format!("{other:?} arrived")),
         }
     });
 
-    b.case("A7", "tres archivos copiados son tres rutas", || {
+    b.case("A7", "three copied files are three paths", || {
         pb.write_items(&[
             vec![("public.file-url", "file:///tmp/uno.txt")],
             vec![("public.file-url", "file:///tmp/dos.txt")],
             vec![("public.file-url", "file:///tmp/tres.txt")],
         ]);
         if pb.item_count() != 3 {
-            return Err(format!("el portapapeles tiene {} ítems", pb.item_count()));
+            return Err(format!("the clipboard holds {} items", pb.item_count()));
         }
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
-        let urls = item.format("public.file-url").ok_or("falta la ruta")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
+        let urls = item
+            .format("public.file-url")
+            .ok_or("the path is missing")?;
         let text = match &urls.payload {
             Payload::Inline(bytes) => String::from_utf8_lossy(bytes).to_string(),
-            other => return Err(format!("llegó {other:?}")),
+            other => return Err(format!("{other:?} arrived")),
         };
         let lines: Vec<&str> = text.lines().collect();
         if lines.len() != 3 {
-            return Err(format!("se guardaron {} rutas: {lines:?}", lines.len()));
+            return Err(format!("{} paths were stored: {lines:?}", lines.len()));
         }
         Ok(())
     });
 
-    b.case("A8", "un solo archivo sigue siendo una ruta", || {
+    b.case("A8", "a single file is still one path", || {
         pb.write_items(&[vec![("public.file-url", "file:///tmp/solo.txt")]]);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
-        let urls = item.format("public.file-url").ok_or("falta la ruta")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
+        let urls = item
+            .format("public.file-url")
+            .ok_or("the path is missing")?;
         match &urls.payload {
             Payload::Inline(bytes) if !String::from_utf8_lossy(bytes).contains('\n') => Ok(()),
-            other => Err(format!("llegó {other:?}")),
+            other => Err(format!("{other:?} arrived")),
         }
     });
 
-    b.case("A9", "una referencia de Finder se guarda como ruta", || {
+    b.case("A9", "a Finder reference is stored as a path", || {
         let dir = std::env::temp_dir().join(format!("cp-a9-{}", pb.change_count()));
         std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
         let file = dir.join("cp a9.png");
@@ -191,133 +195,135 @@ fn main() -> std::process::ExitCode {
             .fileReferenceURL()
             .and_then(|url| url.absoluteString())
             .map(|url| url.to_string())
-            .ok_or("el archivo no tiene referencia")?;
+            .ok_or("the file has no reference")?;
         if !reference.starts_with("file:///.file/id=") {
             return Err(format!(
-                "la referencia no tiene la forma de Finder: {reference}"
+                "the reference is not shaped the way Finder shapes one: {reference}"
             ));
         }
         pb.write_items(&[vec![("public.file-url", reference.as_str())]]);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         let stored = match &item
             .format("public.file-url")
-            .ok_or("falta la ruta")?
+            .ok_or("the path is missing")?
             .payload
         {
             Payload::Inline(bytes) => String::from_utf8_lossy(bytes).to_string(),
-            other => return Err(format!("llegó {other:?}")),
+            other => return Err(format!("{other:?} arrived")),
         };
         let missing = frontmost::missing_paths(&stored);
         std::fs::remove_dir_all(&dir).ok();
         if stored.contains(".file/id=") || !stored.ends_with("/cp%20a9.png") {
-            return Err(format!("se guardó «{stored}»"));
+            return Err(format!("«{stored}» was stored"));
         }
         if item.kind != Some(Kind::Image) {
-            return Err(format!("se clasificó como {:?}", item.kind));
+            return Err(format!("it was classified as {:?}", item.kind));
         }
         if !missing.is_empty() {
-            return Err(format!("se dio por borrado: {missing:?}"));
+            return Err(format!("it was taken for deleted: {missing:?}"));
         }
         Ok(())
     });
 
-    b.case("A10", "un archivo copiado no cuesta megabytes", || {
+    b.case("A10", "a copied file does not cost megabytes", || {
         let icon = vec![0u8; 4 * 1024 * 1024];
         pb.write_all(&[
             ("public.file-url", b"file:///tmp/cp-a10.txt"),
             ("public.tiff", &icon),
         ]);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         match &item
             .format("public.tiff")
-            .ok_or("el icono ni se anotó")?
+            .ok_or("the icon was not even written down")?
             .payload
         {
             Payload::Announced { size: None } => {}
-            other => return Err(format!("el icono se guardó: {other:?}")),
+            other => return Err(format!("the icon was stored: {other:?}")),
         }
         if item.oversized_format().is_some() || item.stored_bytes() > 1024 {
-            return Err(format!("se guardaron {} bytes", item.stored_bytes()));
+            return Err(format!("{} bytes were stored", item.stored_bytes()));
         }
         Ok(())
     });
 
-    b.case("A11", "una hoja de cálculo no se guarda como foto", || {
+    b.case("A11", "a spreadsheet is not stored as a picture", || {
         let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("falta el fixture: {why}"))?;
+            .map_err(|why| format!("the fixture is missing: {why}"))?;
         pb.write_all(&[
             ("com.microsoft.Embed-Source", b"\x01"),
             ("public.utf8-plain-text", b"A\tB\nC\tD"),
             ("public.png", &png),
         ]);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
+        let item = capture(&pb).kept().ok_or("nothing was captured")?;
         if item.kind == Some(Kind::Image) {
-            return Err("el rango se clasificó como imagen".into());
+            return Err("the range was classified as an image".into());
         }
         match &item
             .format("public.utf8-plain-text")
-            .ok_or("falta el texto")?
+            .ok_or("the text is missing")?
             .payload
         {
             Payload::Inline(bytes) if bytes == b"A\tB\nC\tD" => Ok(()),
-            other => Err(format!("llegó {other:?}")),
+            other => Err(format!("{other:?} arrived")),
         }
     });
 
     b.case(
         "A12",
-        "una imagen anunciada sin bytes no hace al ítem imagen",
+        "an image announced without bytes does not make the item an image",
         || {
             pb.write_all(&[("public.utf8-plain-text", b"celda"), ("public.png", b"")]);
-            let item = capture(&pb).kept().ok_or("no se capturó")?;
+            let item = capture(&pb).kept().ok_or("nothing was captured")?;
             match &item
                 .format("public.png")
-                .ok_or("la imagen ni se anotó")?
+                .ok_or("the image was not even written down")?
                 .payload
             {
                 Payload::Absent => {}
-                other => return Err(format!("una imagen vacía se guardó: {other:?}")),
+                other => return Err(format!("an empty image was stored: {other:?}")),
             }
             if item.kind != Some(Kind::Text) {
-                return Err(format!("se clasificó como {:?}", item.kind));
+                return Err(format!("it was classified as {:?}", item.kind));
             }
             Ok(())
         },
     );
 
-    b.group("I · Volver al portapapeles");
+    b.group("I · Back to the clipboard");
 
-    b.case("I1", "un ítem vuelve con todos sus formatos", || {
+    b.case("I1", "an item comes back with every format it had", || {
         pb.write_types(&[
             ("public.utf8-plain-text", "texto plano"),
             ("public.html", "<b>texto plano</b>"),
         ]);
-        let captured = capture(&pb).kept().ok_or("no se capturó")?;
+        let captured = capture(&pb).kept().ok_or("nothing was captured")?;
         let had = captured.formats.len();
 
-        pb.write_text("algo distinto");
+        pb.write_text("something else");
 
         match cp_mac::restore::to_pasteboard(&pb, &captured) {
             cp_mac::restore::Restored::Written { formats, .. } if formats >= 2 => {}
-            other => return Err(format!("restauró {other:?} de {had} formatos")),
+            other => return Err(format!("it restored {other:?} of {had} formats")),
         }
 
-        let back = capture(&pb).kept().ok_or("no se capturó lo restaurado")?;
+        let back = capture(&pb)
+            .kept()
+            .ok_or("what was restored was not captured")?;
         let text = back
             .format("public.utf8-plain-text")
-            .ok_or("falta el texto")?;
+            .ok_or("the text is missing")?;
         if text.payload != Payload::Inline(b"texto plano".to_vec()) {
-            return Err(format!("el texto volvió como {:?}", text.payload));
+            return Err(format!("the text came back as {:?}", text.payload));
         }
         if back.format("public.html").is_none() {
-            return Err("el HTML no volvió: pegarlo perdería los estilos".into());
+            return Err("the HTML did not come back: pasting it would lose the styling".into());
         }
         Ok(())
     });
 
-    b.case("I2", "una imagen vuelve entera", || {
+    b.case("I2", "an image comes back whole", || {
         let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("falta el fixture: {why}"))?;
+            .map_err(|why| format!("the fixture is missing: {why}"))?;
         let item = cp_core::item::Item {
             kind: Some(Kind::Image),
             formats: vec![cp_core::item::Format {
@@ -325,21 +331,21 @@ fn main() -> std::process::ExitCode {
                 payload: cp_core::item::Payload::Blob(png.clone()),
             }],
         };
-        pb.write_text("otra cosa");
+        pb.write_text("something else entirely");
         match cp_mac::restore::to_pasteboard(&pb, &item) {
             cp_mac::restore::Restored::Written { .. } => {}
-            other => return Err(format!("no se restauró: {other:?}")),
+            other => return Err(format!("it was not restored: {other:?}")),
         }
-        let back = pb.data("public.png").ok_or("no volvió el png")?;
+        let back = pb.data("public.png").ok_or("the png did not come back")?;
         if back.len() != png.len() {
-            return Err(format!("volvieron {} bytes de {}", back.len(), png.len()));
+            return Err(format!("{} bytes of {} came back", back.len(), png.len()));
         }
         Ok(())
     });
 
     b.case(
         "I3",
-        "un ítem sin bytes lo dice en vez de vaciar el portapapeles",
+        "an item with no bytes says so instead of emptying the clipboard",
         || {
             let hollow = cp_core::item::Item {
                 kind: None,
@@ -348,17 +354,17 @@ fn main() -> std::process::ExitCode {
                     payload: cp_core::item::Payload::Announced { size: Some(10) },
                 }],
             };
-            pb.write_text("lo que había antes");
+            pb.write_text("what was there before");
             match cp_mac::restore::to_pasteboard(&pb, &hollow) {
                 cp_mac::restore::Restored::NothingToWrite => {}
-                other => return Err(format!("devolvió {other:?}")),
+                other => return Err(format!("it gave back {other:?}")),
             }
             let kept = pb
                 .data("public.utf8-plain-text")
                 .and_then(|bytes| String::from_utf8(bytes).ok())
                 .unwrap_or_default();
-            if kept != "lo que había antes" {
-                return Err("se perdió lo que el usuario tenía copiado".into());
+            if kept != "what was there before" {
+                return Err("what the person had copied was lost".into());
             }
             Ok(())
         },
@@ -366,7 +372,7 @@ fn main() -> std::process::ExitCode {
 
     b.case(
         "I4",
-        "restaurar avisa si el ítem estaba incompleto",
+        "restoring says so when the item was incomplete",
         || {
             let partial = cp_core::item::Item {
                 kind: Some(Kind::Text),
@@ -386,38 +392,38 @@ fn main() -> std::process::ExitCode {
                     formats: 1,
                     incomplete: true,
                 } => Ok(()),
-                other => Err(format!("devolvió {other:?}")),
+                other => Err(format!("it gave back {other:?}")),
             }
         },
     );
 
-    b.group("J · Archivos que ya no están");
+    b.group("J · Files that are gone");
 
-    b.case("J1", "una ruta que existe no se marca como rota", || {
+    b.case("J1", "a path that exists is not marked broken", || {
         let path = std::env::temp_dir().join("cp-probe-existe.txt");
         std::fs::write(&path, b"aqui estoy").map_err(|why| why.to_string())?;
         let url = format!("file://{}", path.display());
         let missing = frontmost::missing_paths(&url);
         std::fs::remove_file(&path).ok();
         if !missing.is_empty() {
-            return Err(format!("dijo que faltaba: {missing:?}"));
+            return Err(format!("it said this was missing: {missing:?}"));
         }
         Ok(())
     });
 
-    b.case("J2", "una ruta borrada se detecta", || {
+    b.case("J2", "a deleted path is noticed", || {
         let path = std::env::temp_dir().join("cp-probe-borrado.txt");
         std::fs::write(&path, "efimero".as_bytes()).map_err(|why| why.to_string())?;
         let url = format!("file://{}", path.display());
         std::fs::remove_file(&path).map_err(|why| why.to_string())?;
         let missing = frontmost::missing_paths(&url);
         if missing.len() != 1 {
-            return Err("no se enteró de que el archivo ya no está".into());
+            return Err("it never noticed the file is gone".into());
         }
         Ok(())
     });
 
-    b.case("J3", "de tres archivos se dice cuál falta", || {
+    b.case("J3", "of three files it says which one is missing", || {
         let dir = std::env::temp_dir();
         let uno = dir.join("cp-probe-uno.txt");
         let dos = dir.join("cp-probe-dos.txt");
@@ -433,14 +439,14 @@ fn main() -> std::process::ExitCode {
         std::fs::remove_file(&uno).ok();
         std::fs::remove_file(&dos).ok();
         if missing.len() != 1 || !missing[0].contains("fantasma") {
-            return Err(format!("dijo que faltaban: {missing:?}"));
+            return Err(format!("it said these were missing: {missing:?}"));
         }
         Ok(())
     });
 
-    b.case("J4", "una ruta con espacios y acentos se entiende", || {
+    b.case("J4", "a path with spaces and accents is understood", || {
         let path = std::env::temp_dir().join("cp probe ñandú.txt");
-        std::fs::write(&path, b"con acentos").map_err(|why| why.to_string())?;
+        std::fs::write(&path, b"with accents").map_err(|why| why.to_string())?;
         let encoded = format!(
             "file://{}",
             path.display()
@@ -452,29 +458,29 @@ fn main() -> std::process::ExitCode {
         let missing = frontmost::missing_paths(&encoded);
         std::fs::remove_file(&path).ok();
         if !missing.is_empty() {
-            return Err("una ruta escapada se tomó por inexistente".into());
+            return Err("an escaped path was taken for one that is not there".into());
         }
         Ok(())
     });
 
-    b.group("K · Origen");
+    b.group("K · Where it came from");
 
     b.case(
         "K1",
-        "la aplicación de origen se guarda con su nombre visible",
+        "the app it came from is stored under the name people see",
         || {
-            let (pid, bundle) = frontmost::frontmost().ok_or("nadie al frente")?;
-            let name = frontmost::app_name(pid).ok_or("sin nombre visible")?;
+            let (pid, bundle) = frontmost::frontmost().ok_or("nobody in front")?;
+            let name = frontmost::app_name(pid).ok_or("no name people would see")?;
             if name.is_empty() {
-                return Err("el nombre llegó vacío".into());
+                return Err("the name arrived empty".into());
             }
             if Some(name.as_str()) == bundle.as_deref() {
-                return Err(format!("«{name}» es el identificador, no el nombre"));
+                return Err(format!("«{name}» is the identifier, not the name"));
             }
 
             let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
             let id = store
-                .insert_text("uuid-origen", "algo copiado", 1)
+                .insert_text("uuid-origen", "something copied", 1)
                 .map_err(|why| why.to_string())?;
             store
                 .set_source(id, &name, 2)
@@ -491,21 +497,24 @@ fn main() -> std::process::ExitCode {
                 .map_err(|why| why.to_string())?
                 .rows;
             if found.len() != 1 {
-                return Err(format!("buscando «{name}» salieron {} ítems", found.len()));
+                return Err(format!(
+                    "searching «{name}» turned up {} items",
+                    found.len()
+                ));
             }
             Ok(())
         },
     );
 
-    b.group("L · Miniaturas y medios");
+    b.group("L · Thumbnails and media");
 
     b.case(
         "L1",
-        "una captura da sus dimensiones sin decodificarse",
+        "a screenshot gives its dimensions without being decoded",
         || {
             let png = std::fs::read("fixtures/texto-en-imagen.png")
-                .map_err(|why| format!("falta el fixture: {why}"))?;
-            let size = cp_core::thumbnail::size_of(&png).ok_or("no se leyó el tamaño")?;
+                .map_err(|why| format!("the fixture is missing: {why}"))?;
+            let size = cp_core::thumbnail::size_of(&png).ok_or("the size was not read")?;
             if size.width != 1440 || size.height != 320 {
                 return Err(format!("dijo {}×{}", size.width, size.height));
             }
@@ -515,15 +524,15 @@ fn main() -> std::process::ExitCode {
 
     b.case(
         "L2",
-        "la miniatura pesa mucho menos y guarda la proporción",
+        "the thumbnail weighs far less and keeps its proportions",
         || {
             let png = std::fs::read("fixtures/texto-en-imagen.png")
-                .map_err(|why| format!("falta el fixture: {why}"))?;
+                .map_err(|why| format!("the fixture is missing: {why}"))?;
             let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
-                .ok_or("no se generó")?;
-            let size = cp_core::thumbnail::size_of(&thumb).ok_or("sin tamaño")?;
+                .ok_or("it was not generated")?;
+            let size = cp_core::thumbnail::size_of(&thumb).ok_or("no size")?;
             if size.width != cp_core::thumbnail::MAX_SIDE {
-                return Err(format!("el lado mayor quedó en {}", size.width));
+                return Err(format!("the longer side came out at {}", size.width));
             }
             if thumb.len() >= png.len() {
                 return Err(format!("pesa {} frente a {}", thumb.len(), png.len()));
@@ -532,88 +541,92 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.case("L3", "la miniatura va al almacén y vuelve", || {
-        let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", pb.change_count()));
-        let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
-        let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("falta el fixture: {why}"))?;
-        let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
-            .ok_or("no se generó")?;
-        let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
-        let back = blobs
-            .get(&digest)
-            .map_err(|why| why.to_string())?
-            .ok_or("no volvió")?;
-        std::fs::remove_dir_all(&dir).ok();
-        if back != thumb {
-            return Err("la miniatura volvió distinta".into());
-        }
-        Ok(())
-    });
-
     b.case(
-        "L4",
-        "un archivo que no es medio no inventa metadatos",
+        "L3",
+        "the thumbnail goes to the store and comes back",
         || {
-            let path = std::env::temp_dir().join("cp-probe-no-media.txt");
-            std::fs::write(&path, b"solo texto").map_err(|why| why.to_string())?;
-            let info = cp_mac_sys::media::info_for(&path);
-            std::fs::remove_file(&path).ok();
-            match info {
-                None => Ok(()),
-                Some(found) if found.duration.is_none() => Ok(()),
-                Some(found) => Err(format!("se inventó {found:?}")),
+            let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", pb.change_count()));
+            let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
+            let png = std::fs::read("fixtures/texto-en-imagen.png")
+                .map_err(|why| format!("the fixture is missing: {why}"))?;
+            let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
+                .ok_or("it was not generated")?;
+            let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
+            let back = blobs
+                .get(&digest)
+                .map_err(|why| why.to_string())?
+                .ok_or("it did not come back")?;
+            std::fs::remove_dir_all(&dir).ok();
+            if back != thumb {
+                return Err("the thumbnail came back different".into());
             }
+            Ok(())
         },
     );
 
-    b.case("L5", "una ruta inexistente no es un medio", || {
-        let ghost = std::env::temp_dir().join("cp-probe-no-existe.mp4");
-        if cp_mac_sys::media::info_for(&ghost).is_some() {
-            return Err("devolvió datos de algo que no está".into());
+    b.case("L4", "a file that is not media invents no metadata", || {
+        let path = std::env::temp_dir().join("cp-probe-no-media.txt");
+        std::fs::write(&path, b"text and nothing else").map_err(|why| why.to_string())?;
+        let info = cp_mac_sys::media::info_for(&path);
+        std::fs::remove_file(&path).ok();
+        match info {
+            None => Ok(()),
+            Some(found) if found.duration.is_none() => Ok(()),
+            Some(found) => Err(format!("it made up {found:?}")),
         }
-        Ok(())
     });
 
-    b.case("I5", "pegar en plano no mutila el ítem guardado", || {
-        pb.write_types(&[
-            ("public.utf8-plain-text", "con estilos"),
-            ("public.html", "<b>con estilos</b>"),
-            ("public.rtf", "{\\rtf1 con estilos}"),
-        ]);
-        let item = capture(&pb).kept().ok_or("no se capturó")?;
-        let had = item.formats.len();
-
-        let plain = cp_core::paste_as::render(
-            cp_core::paste_as::Form::PlainText,
-            &cp_mac::content::content_of(&item, None),
-        )
-        .ok_or("no se ofreció la forma plana")?
-        .into_item();
-        match cp_mac::restore::to_pasteboard(&pb, &plain) {
-            cp_mac::restore::Restored::Written { formats: 1, .. } => {}
-            other => return Err(format!("devolvió {other:?}")),
-        }
-        if pb.data("public.html").is_some() {
-            return Err("quedó el HTML: no se pegó en plano".into());
-        }
-
-        if item.formats.len() != had {
-            return Err("el ítem perdió formatos".into());
-        }
-        match cp_mac::restore::to_pasteboard(&pb, &item) {
-            cp_mac::restore::Restored::Written { .. } => {}
-            other => return Err(format!("no se pudo restaurar con estilos: {other:?}")),
-        }
-        if pb.data("public.html").is_none() {
-            return Err("el HTML no volvió: el ítem había quedado mutilado".into());
+    b.case("L5", "a path that is not there is no media", || {
+        let ghost = std::env::temp_dir().join("cp-probe-not-there.mp4");
+        if cp_mac_sys::media::info_for(&ghost).is_some() {
+            return Err("it gave back data for something that is not there".into());
         }
         Ok(())
     });
 
     b.case(
+        "I5",
+        "pasting as plain text does not maim what was stored",
+        || {
+            pb.write_types(&[
+                ("public.utf8-plain-text", "with styling"),
+                ("public.html", "<b>with styling</b>"),
+                ("public.rtf", "{\\rtf1 with styling}"),
+            ]);
+            let item = capture(&pb).kept().ok_or("nothing was captured")?;
+            let had = item.formats.len();
+
+            let plain = cp_core::paste_as::render(
+                cp_core::paste_as::Form::PlainText,
+                &cp_mac::content::content_of(&item, None),
+            )
+            .ok_or("the plain form was never offered")?
+            .into_item();
+            match cp_mac::restore::to_pasteboard(&pb, &plain) {
+                cp_mac::restore::Restored::Written { formats: 1, .. } => {}
+                other => return Err(format!("it gave back {other:?}")),
+            }
+            if pb.data("public.html").is_some() {
+                return Err("the HTML stayed: it was not pasted as plain text".into());
+            }
+
+            if item.formats.len() != had {
+                return Err("the item lost formats".into());
+            }
+            match cp_mac::restore::to_pasteboard(&pb, &item) {
+                cp_mac::restore::Restored::Written { .. } => {}
+                other => return Err(format!("it could not be restored with styling: {other:?}")),
+            }
+            if pb.data("public.html").is_none() {
+                return Err("the HTML did not come back: the item had been maimed".into());
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
         "I6",
-        "un ítem sin texto plano no se puede pegar en plano",
+        "an item with no plain text cannot be pasted as plain text",
         || {
             let only_image = cp_core::item::Item {
                 kind: Some(Kind::Image),
@@ -622,20 +635,20 @@ fn main() -> std::process::ExitCode {
                     payload: cp_core::item::Payload::Inline(vec![1, 2, 3]),
                 }],
             };
-            pb.write_text("lo que había");
+            pb.write_text("what was there");
             let content = cp_mac::content::content_of(&only_image, None);
             let forms = cp_core::paste_as::forms_for(&content);
             if forms.contains(&cp_core::paste_as::Form::PlainText) {
-                return Err("se ofreció pegar en plano sin texto".into());
+                return Err("pasting as plain text was offered with no text".into());
             }
             match cp_core::paste_as::render(cp_core::paste_as::Form::PlainText, &content) {
                 None => Ok(()),
-                Some(other) => Err(format!("devolvió {other:?}")),
+                Some(other) => Err(format!("it gave back {other:?}")),
             }
         },
     );
 
-    b.group("G · Clasificación");
+    b.group("G · Classification");
 
     for (id, text, expected) in [
         ("G1", "alguien@ejemplo.test", Kind::Email),
@@ -646,49 +659,54 @@ fn main() -> std::process::ExitCode {
         ("G6", "+34 600 123 456", Kind::Phone),
         ("G7", "{\"clave\": [1, 2]}", Kind::Json),
         ("G8", "fn main() {\n    println!(\"hola\");\n}", Kind::Code),
-        ("G9", "una frase corriente y nada más", Kind::Text),
+        ("G9", "an ordinary sentence and nothing more", Kind::Text),
     ] {
         b.case(
             id,
-            &format!("se clasifica como {}", expected.as_str()),
+            &format!("it is classified as {}", expected.as_str()),
             || {
                 pb.write_text(text);
-                let item = capture(&pb).kept().ok_or("no se capturó")?;
+                let item = capture(&pb).kept().ok_or("nothing was captured")?;
                 if item.kind != Some(expected) {
-                    return Err(format!("salió {:?}", item.kind));
+                    return Err(format!("it came out {:?}", item.kind));
                 }
                 Ok(())
             },
         );
     }
 
-    b.group("H · Búsqueda inteligente");
+    b.group("H · Clever search");
 
-    b.case("H1", "el texto dentro de una imagen se reconoce", || {
+    b.case("H1", "the text inside an image is recognised", || {
         let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("falta el fixture: {why}"))?;
-        let text = cp_mac_sys::ocr::searchable_text(&png).ok_or("Vision no pudo con la imagen")?;
+            .map_err(|why| format!("the fixture is missing: {why}"))?;
+        let text =
+            cp_mac_sys::ocr::searchable_text(&png).ok_or("Vision could not manage the image")?;
         if !text.contains("AB-4417") {
-            return Err(format!("leyó «{text}»"));
+            return Err(format!("it read «{text}»"));
         }
         Ok(())
     });
 
     b.case(
         "H2",
-        "una captura copiada se encuentra por lo que pone dentro",
+        "a copied screenshot is found by what it says inside",
         || {
             let png = std::fs::read("fixtures/texto-en-imagen.png")
-                .map_err(|why| format!("falta el fixture: {why}"))?;
+                .map_err(|why| format!("the fixture is missing: {why}"))?;
             pb.write_data("public.png", &png);
 
-            let item = capture(&pb).kept().ok_or("no se capturó")?;
+            let item = capture(&pb).kept().ok_or("nothing was captured")?;
             if item.kind != Some(Kind::Image) {
-                return Err(format!("se clasificó como {:?}", item.kind));
+                return Err(format!("it was classified as {:?}", item.kind));
             }
-            let bytes = match &item.format("public.png").ok_or("falta el png")?.payload {
+            let bytes = match &item
+                .format("public.png")
+                .ok_or("the png is missing")?
+                .payload
+            {
                 Payload::Inline(bytes) | Payload::Blob(bytes) => bytes.clone(),
-                other => return Err(format!("llegó {other:?}")),
+                other => return Err(format!("{other:?} arrived")),
             };
 
             let store = cp_store::Store::in_memory().map_err(|why| why.to_string())?;
@@ -705,7 +723,7 @@ fn main() -> std::process::ExitCode {
                 .insert_item("uuid-captura", &light, "", 1)
                 .map_err(|why| why.to_string())?;
             let recognised = cp_mac_sys::ocr::searchable_text(&bytes)
-                .ok_or("Vision no pudo con lo capturado")?;
+                .ok_or("Vision could not manage what was captured")?;
             store
                 .set_ocr_text(id, &recognised, 2)
                 .map_err(|why| why.to_string())?;
@@ -722,13 +740,13 @@ fn main() -> std::process::ExitCode {
                 .map_err(|why| why.to_string())?
                 .rows;
             if hits.len() != 1 {
-                return Err(format!("buscando «pedido» salieron {} ítems", hits.len()));
+                return Err(format!("searching «order» turned up {} items", hits.len()));
             }
             Ok(())
         },
     );
 
-    b.group("B · Privacidad");
+    b.group("B · Privacy");
 
     for (id, marker) in [
         ("B1", "org.nspasteboard.ConcealedType"),
@@ -737,36 +755,36 @@ fn main() -> std::process::ExitCode {
         ("B4", "net.antelle.keeweb"),
         ("B5", "PasswordPboardType"),
     ] {
-        b.case(id, &format!("«{marker}» excluye el ítem"), || {
+        b.case(id, &format!("«{marker}» leaves the item out"), || {
             pb.write_types(&[("public.utf8-plain-text", "secreto"), (marker, "1")]);
             if capture(&pb).kept().is_some() {
-                return Err("se capturó contenido marcado".into());
+                return Err("content that was marked got captured".into());
             }
             Ok(())
         });
     }
 
-    b.case("B6", "sin marcador se vuelve a capturar", || {
-        pb.write_text("esto sí");
+    b.case("B6", "with no marker it is captured again", || {
+        pb.write_text("this one does");
         capture(&pb)
             .kept()
-            .ok_or("un texto normal debe capturarse")?;
+            .ok_or("an ordinary text has to be captured")?;
         Ok(())
     });
 
-    b.group("C · Vigilante");
+    b.group("C · The watcher");
 
-    b.case("C1", "el contador sube de uno en uno", || {
+    b.case("C1", "the counter rises one at a time", || {
         let before = pb.change_count();
         pb.write_text("cp-c1");
         let after = pb.change_count();
         if after - before != 1 {
-            return Err(format!("saltó de {before} a {after}"));
+            return Err(format!("it jumped from {before} to {after}"));
         }
         Ok(())
     });
 
-    b.case("C2", "cien copias, ninguna perdida en silencio", || {
+    b.case("C2", "a hundred copies, not one lost in silence", || {
         let mut watcher = Watcher::new(Cadence::OnePerCopy);
         watcher.tick(pb.change_count());
         let mut seen = 0u64;
@@ -776,82 +794,82 @@ fn main() -> std::process::ExitCode {
                 seen += 1;
             }
         }
-        let missed = watcher.missed().ok_or("la cadencia de macOS cuenta")?;
+        let missed = watcher.missed().ok_or("the macOS cadence counts")?;
         if seen + missed != 100 {
-            return Err(format!("{seen} vistas y {missed} contadas"));
-        }
-        Ok(())
-    });
-
-    b.case("C3", "sondeo desde otro hilo sin perder nada", || {
-        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let (tell, hear) = std::sync::mpsc::channel();
-        let watching = {
-            let stop = stop.clone();
-            std::thread::spawn(move || {
-                let mut watcher = Watcher::new(Cadence::OnePerCopy);
-                let mut fresh = 0u64;
-                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-                    if let Seen::Fresh { .. } =
-                        watcher.tick(pasteboard::change_count_from_any_thread())
-                    {
-                        fresh += 1;
-                    }
-                    std::thread::sleep(Duration::from_millis(2));
-                }
-                let _ = tell.send((fresh, watcher.missed().unwrap_or(0)));
-            })
-        };
-        std::thread::sleep(Duration::from_millis(40));
-        for round in 0..25 {
-            pb.write_text(&format!("cp-c3-{round}"));
-            std::thread::sleep(Duration::from_millis(12));
-        }
-        std::thread::sleep(Duration::from_millis(80));
-        stop.store(true, std::sync::atomic::Ordering::Relaxed);
-        watching.join().map_err(|_| "el hilo murió")?;
-        let (fresh, missed) = hear.recv().map_err(|why| why.to_string())?;
-        if fresh + missed != 25 {
-            return Err(format!("{fresh} vistas y {missed} contadas de 25"));
+            return Err(format!("{seen} seen and {missed} counted"));
         }
         Ok(())
     });
 
     b.case(
-        "C4",
-        "nuestra escritura no se confunde con una copia",
+        "C3",
+        "polling from another thread without losing a thing",
         || {
-            let mut watcher = Watcher::new(Cadence::OnePerCopy);
-            watcher.tick(pb.change_count());
-            pb.write_text("cp-c4-nuestro");
-            let ours = pb.change_count();
-            watcher.wrote(ours);
-            match watcher.tick(ours) {
-                Seen::Ours => Ok(()),
-                other => Err(format!("se vio como {other:?}")),
+            let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let (tell, hear) = std::sync::mpsc::channel();
+            let watching = {
+                let stop = stop.clone();
+                std::thread::spawn(move || {
+                    let mut watcher = Watcher::new(Cadence::OnePerCopy);
+                    let mut fresh = 0u64;
+                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                        if let Seen::Fresh { .. } =
+                            watcher.tick(pasteboard::change_count_from_any_thread())
+                        {
+                            fresh += 1;
+                        }
+                        std::thread::sleep(Duration::from_millis(2));
+                    }
+                    let _ = tell.send((fresh, watcher.missed().unwrap_or(0)));
+                })
+            };
+            std::thread::sleep(Duration::from_millis(40));
+            for round in 0..25 {
+                pb.write_text(&format!("cp-c3-{round}"));
+                std::thread::sleep(Duration::from_millis(12));
             }
+            std::thread::sleep(Duration::from_millis(80));
+            stop.store(true, std::sync::atomic::Ordering::Relaxed);
+            watching.join().map_err(|_| "the thread died")?;
+            let (fresh, missed) = hear.recv().map_err(|why| why.to_string())?;
+            if fresh + missed != 25 {
+                return Err(format!("{fresh} seen and {missed} counted out of 25"));
+            }
+            Ok(())
         },
     );
 
+    b.case("C4", "a write of ours is never mistaken for a copy", || {
+        let mut watcher = Watcher::new(Cadence::OnePerCopy);
+        watcher.tick(pb.change_count());
+        pb.write_text("cp-c4-nuestro");
+        let ours = pb.change_count();
+        watcher.wrote(ours);
+        match watcher.tick(ours) {
+            Seen::Ours => Ok(()),
+            other => Err(format!("it was seen as {other:?}")),
+        }
+    });
+
     b.case(
         "C5",
-        "la captura acotada devuelve lo mismo que la directa",
+        "the bounded capture gives back what the direct one gives",
         || {
             pb.write_text("cp-c5");
-            let direct = capture(&pb).kept().ok_or("no se capturó")?;
+            let direct = capture(&pb).kept().ok_or("nothing was captured")?;
             match capture_within(PATIENCE) {
                 Captured::Kept(item) if item == direct => Ok(()),
-                other => Err(format!("llegó {other:?}")),
+                other => Err(format!("{other:?} arrived")),
             }
         },
     );
 
     b.case(
         "C6",
-        "insistir ante una fuente que responde no cuesta un segundo intento",
+        "insisting on a source that answers costs no second attempt",
         || {
             pb.write_text("cp-c6");
-            let direct = capture(&pb).kept().ok_or("no se capturó")?;
+            let direct = capture(&pb).kept().ok_or("nothing was captured")?;
             let started = std::time::Instant::now();
             let got = cp_mac::capture::capture_insisting(PATIENCE, cp_core::watch::RETRY);
             let took = started.elapsed();
@@ -860,38 +878,38 @@ fn main() -> std::process::ExitCode {
                     if took < PATIENCE {
                         Ok(())
                     } else {
-                        Err(format!("tardó {took:?}: hubo pausa sin motivo"))
+                        Err(format!("it took {took:?}: there was a pause for no reason"))
                     }
                 }
-                other => Err(format!("llegó {other:?}")),
+                other => Err(format!("{other:?} arrived")),
             }
         },
     );
 
-    b.group("D · Teclado");
+    b.group("D · Keyboard");
 
-    b.case("D1", "el layout activo resuelve la «v»", || {
+    b.case("D1", "the active layout resolves the «v»", || {
         keyboard::keycode_with_command('v')
             .map(|_| ())
-            .ok_or_else(|| "no se pudo resolver".to_string())
+            .ok_or_else(|| "it could not be resolved".to_string())
     });
 
     b.case(
         "D2",
-        "Dvorak necesita un keycode distinto",
+        "Dvorak needs a different keycode",
         || match keyboard::keycode_with_command_in(keyboard::DVORAK, 'v') {
             Some(code) if code != QWERTY_V => Ok(()),
-            Some(code) => Err(format!("dio 0x{code:02X}, igual que QWERTY")),
-            None => Err("Dvorak no está instalado".into()),
+            Some(code) => Err(format!("it gave 0x{code:02X}, the same as QWERTY")),
+            None => Err("Dvorak is not installed".into()),
         },
     );
 
-    b.case("D3", "los demás layouts coinciden con QWERTY", || {
+    b.case("D3", "every other layout agrees with QWERTY", || {
         for (name, id) in [
             ("ABC", keyboard::ABC),
             ("AZERTY", keyboard::AZERTY),
             ("QWERTZ", keyboard::QWERTZ),
-            ("Español ISO", keyboard::SPANISH_ISO),
+            ("Spanish ISO", keyboard::SPANISH_ISO),
             ("Colemak", keyboard::COLEMAK),
             ("Dvorak-QWERTY ⌘", keyboard::DVORAK_COMMAND_QWERTY),
         ] {
@@ -904,24 +922,22 @@ fn main() -> std::process::ExitCode {
         Ok(())
     });
 
-    b.case(
-        "D4",
-        "una letra que ningún layout produce no inventa nada",
-        || match keyboard::keycode_with_command_in(keyboard::ABC, '\u{1F600}') {
+    b.case("D4", "a letter no layout produces invents nothing", || {
+        match keyboard::keycode_with_command_in(keyboard::ABC, '\u{1F600}') {
             None => Ok(()),
-            Some(code) => Err(format!("devolvió 0x{code:02X} para un emoji")),
-        },
-    );
+            Some(code) => Err(format!("it gave back 0x{code:02X} for an emoji")),
+        }
+    });
 
     b.case(
         "D5",
-        "el keycode se resuelve al pegar, no al arrancar",
+        "the keycode is resolved when pasting, not when starting",
         || {
-            let paster = Paster::new().ok_or("sin fuente de eventos")?;
+            let paster = Paster::new().ok_or("no event source")?;
             let now = keyboard::keycode_with_command('v').unwrap_or(QWERTY_V);
             if paster.keycode() != now {
                 return Err(format!(
-                    "el pegador dice 0x{:02X} y el sistema 0x{now:02X}",
+                    "the paster says 0x{:02X} and the system says 0x{now:02X}",
                     paster.keycode()
                 ));
             }
@@ -929,35 +945,39 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.group("E · Permisos");
+    b.group("E · Permissions");
 
-    b.case("E1", "pegar depende solo de poder postear eventos", || {
-        if ready.can_paste() != ready.can_post {
-            return Err("la regla se torció".into());
-        }
-        Ok(())
-    });
+    b.case(
+        "E1",
+        "pasting hangs only on being able to post events",
+        || {
+            if ready.can_paste() != ready.can_post {
+                return Err("the rule bent".into());
+            }
+            Ok(())
+        },
+    );
 
-    b.case("E2", "el input seguro no bloquea el pegado", || {
+    b.case("E2", "secure input does not block pasting", || {
         if ready.secure_input && !ready.can_paste() && ready.can_post {
-            return Err("se está tratando el input seguro como bloqueo".into());
+            return Err("secure input is being treated as a block".into());
         }
         Ok(())
     });
 
-    b.group("F · Destino y pegado");
+    b.group("F · Target and pasting");
 
     b.case(
         "F1",
-        "el destino sobrevive a que el panel tome el frente",
+        "the target survives the panel taking the front",
         || {
             let mut tracker = Tracker::new(frontmost::our_pid());
-            let (pid, bundle) = frontmost::frontmost().ok_or("nadie al frente")?;
+            let (pid, bundle) = frontmost::frontmost().ok_or("nobody in front")?;
             tracker.saw(pid, bundle.as_deref());
-            let target = tracker.destination().ok_or("sin destino")?.clone();
+            let target = tracker.destination().ok_or("no target")?.clone();
             tracker.saw(frontmost::our_pid(), Some("dev.rgdevment.copypaste"));
             if tracker.destination() != Some(&target) {
-                return Err("el destino cambió".into());
+                return Err("the target changed".into());
             }
             Ok(())
         },
@@ -965,11 +985,11 @@ fn main() -> std::process::ExitCode {
 
     b.case(
         "F2",
-        "los modificadores físicos se leen de la fuente",
+        "the physical modifiers are read from the source",
         || {
             let _ = keystroke::physical_modifiers();
             if keystroke::modifiers_still_held() {
-                return Err("hay modificadores pulsados; suelta las teclas".into());
+                return Err("modifiers are held down; let the keys go".into());
             }
             Ok(())
         },
@@ -977,26 +997,30 @@ fn main() -> std::process::ExitCode {
 
     match Paster::new() {
         Some(paster) => {
-            b.case("F3", "el pegador entrega un keycode utilizable", || {
-                if paster.keycode() == 0 {
-                    return Err("keycode inválido".into());
-                }
-                Ok(())
-            });
+            b.case(
+                "F3",
+                "the paster hands over a keycode that can be used",
+                || {
+                    if paster.keycode() == 0 {
+                        return Err("an invalid keycode".into());
+                    }
+                    Ok(())
+                },
+            );
             for (id, route, what, allowed, permission) in [
                 (
                     "F4",
                     Route::Keystroke,
                     "pegado real en TextEdit",
                     ready.can_post,
-                    "sin permiso para postear eventos",
+                    "no permission to post events",
                 ),
                 (
                     "F5",
                     Route::Menu,
-                    "pegado por el menú Edición cuando ⌘V no entra",
+                    "pasted through the Edit menu when ⌘V will not go in",
                     ready.accessibility,
-                    "sin permiso de Accesibilidad",
+                    "no Accessibility permission",
                 ),
             ] {
                 if !allowed {
@@ -1006,46 +1030,46 @@ fn main() -> std::process::ExitCode {
                 match paste_round_trip(&pb, &paster, route) {
                     Ok(()) => {
                         b.passed += 1;
-                        println!("    ok    {id:<5} {what}, ida y vuelta");
+                        println!("    ok    {id:<5} {what}, there and back");
                     }
-                    Err(why) if why.starts_with("TextEdit no llegó") => {
+                    Err(why) if why.starts_with("TextEdit never arrived") => {
                         b.skip(id, what, &why);
                     }
                     Err(why) => {
                         b.failed += 1;
-                        println!("    FALLA {id:<5} {what}\n            {why}");
+                        println!("    FAILS {id:<5} {what}\n            {why}");
                     }
                 }
             }
         }
-        None => b.skip("F3", "el pegador se construye", "no hay fuente de eventos"),
+        None => b.skip("F3", "the paster is built", "there is no event source"),
     }
 
-    b.group("M · Abrir y revelar");
+    b.group("M · Open and reveal");
 
     b.case_or_skip(
         "M1",
-        "revelar un archivo lo deja seleccionado en el Finder",
+        "revealing a file leaves it selected in the Finder",
         || {
             let scratch = Scratch::new("cp-m1")?;
             let file = scratch.file("revelado.txt", b"cp-m1")?;
             if !cp_mac_sys::files::reveal(&file) {
-                return Err("reveal dijo que no".into());
+                return Err("reveal said no".into());
             }
-            wait_until("el Finder deja el archivo seleccionado", || {
+            wait_until("the Finder leaves the file selected", || {
                 osascript_within("tell application \"Finder\" to get selection as text")
                     .map(|selected| selected.contains("revelado.txt"))
             })
         },
     );
 
-    b.case_or_skip("M2", "abrir un archivo lo entrega a su aplicación", || {
+    b.case_or_skip("M2", "opening a file hands it to its application", || {
         let scratch = Scratch::new("cp-m2")?;
         let file = scratch.file("abierto.txt", b"cp-m2")?;
         if !cp_mac_sys::files::open(&file) {
-            return Err("open dijo que no".into());
+            return Err("open said no".into());
         }
-        let opened = wait_until("TextEdit tiene el documento abierto", || {
+        let opened = wait_until("TextEdit has the document open", || {
             osascript_within("tell application \"TextEdit\" to get name of every document")
                 .map(|names| names.contains("abierto.txt"))
         });
@@ -1057,7 +1081,7 @@ fn main() -> std::process::ExitCode {
 
     println!();
     println!(
-        "  {} pasan · {} fallan · {} omitidas",
+        "  {} pass · {} fail · {} skipped",
         b.passed, b.failed, b.skipped
     );
     if b.failed == 0 {
@@ -1124,12 +1148,12 @@ fn wait_until(what: &str, mut observed: impl FnMut() -> Option<bool>) -> Result<
             Some(false) => {}
             None => {
                 return Err(format!(
-                    "{SKIPPED}la app no responde a AppleScript: sin permiso de Automatización o un diálogo pendiente"
+                    "{SKIPPED}the app does not answer AppleScript: no Automation permission, or a dialog is waiting"
                 ));
             }
         }
     }
-    Err(format!("{what}: no pasó en 7,5 s"))
+    Err(format!("{what}: it did not happen within 7.5 s"))
 }
 
 fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<(), String> {
@@ -1159,7 +1183,7 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<()
     }
     let (pid, bundle) = front.ok_or_else(|| {
         format!(
-            "TextEdit no llegó al frente en 8 s; al frente está {:?}",
+            "TextEdit did not come to the front within 8 s; in front is {:?}",
             frontmost::frontmost().and_then(|(_, b)| b)
         )
     })?;
@@ -1174,15 +1198,15 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<()
 
     let started = Instant::now();
     match paster.paste_via(Some(route), &target, || {}) {
-        cp_mac::paste::Outcome::Degraded(why) => return Err(format!("degradó: {why:?}")),
+        cp_mac::paste::Outcome::Degraded(why) => return Err(format!("it degraded: {why:?}")),
         cp_mac::paste::Outcome::Sent { via, .. } if via != route => {
-            return Err(format!("fue por {via:?}"));
+            return Err(format!("it went by {via:?}"));
         }
         cp_mac::paste::Outcome::Sent { .. } => {}
     }
     std::thread::sleep(Duration::from_millis(400));
 
-    let keys = cp_mac_sys::keystroke::Keystroke::new().ok_or("sin fuente")?;
+    let keys = cp_mac_sys::keystroke::Keystroke::new().ok_or("no source")?;
     keys.command(0x00);
     std::thread::sleep(Duration::from_millis(200));
     keys.command(0x08);
@@ -1194,10 +1218,13 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<()
         .unwrap_or_default();
 
     if back.contains(&marca) {
-        println!("            (ida y vuelta en {:?})", started.elapsed());
+        println!("            (there and back in {:?})", started.elapsed());
         Ok(())
     } else {
-        Err(format!("volvió «{}», se esperaba «{marca}»", back.trim()))
+        Err(format!(
+            "«{}» came back, «{marca}» was expected",
+            back.trim()
+        ))
     }
 }
 

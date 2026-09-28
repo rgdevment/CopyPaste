@@ -101,7 +101,11 @@ mod tests {
             ],
         };
         let written = writable_of(&item);
-        assert_eq!(written.len(), 2, "what is announced without bytes is not written");
+        assert_eq!(
+            written.len(),
+            2,
+            "what is announced without bytes is not written"
+        );
         assert_eq!(written[0].0, "public.rtf");
         assert_eq!(written[1].0, PLAIN_TEXT);
     }

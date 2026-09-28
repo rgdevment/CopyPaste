@@ -91,7 +91,7 @@ mod tests {
     fn every_standard_id_maps_to_exactly_one_name() {
         for (id, _) in STANDARD {
             let matches = STANDARD.iter().filter(|(other, _)| other == id).count();
-            assert_eq!(matches, 1, "el identificador {id} está dos veces");
+            assert_eq!(matches, 1, "the {id} identifier is there twice");
         }
     }
 

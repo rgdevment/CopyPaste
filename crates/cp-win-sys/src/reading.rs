@@ -111,7 +111,7 @@ mod tests {
             let _ = gate.recv();
             42
         });
-        assert_eq!(pending.wait(Duration::from_millis(20)), None, "aún no");
+        assert_eq!(pending.wait(Duration::from_millis(20)), None, "not yet");
         release.send(()).expect("la fuente contesta");
         assert_eq!(
             pending.wait(Duration::from_secs(5)),
@@ -121,7 +121,7 @@ mod tests {
         assert_eq!(
             pending.wait(Duration::from_millis(20)),
             None,
-            "y una vez entregada, no hay más"
+            "and once handed over, there is no more"
         );
     }
 
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn a_read_that_panics_is_abandoned_like_any_other() {
-        let seen = within(Duration::from_millis(50), || panic!("el proveedor murió"));
+        let seen = within(Duration::from_millis(50), || panic!("the provider died"));
         assert_eq!(seen, Reading::TooSlow);
     }
 }

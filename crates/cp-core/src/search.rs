@@ -134,7 +134,7 @@ fn char_at(text: &str, at: usize) -> char {
     text[at..]
         .chars()
         .next()
-        .expect("un origen apunta a un carácter")
+        .expect("an origin points to a character")
 }
 
 fn segment(text: &str, from: usize, to: usize, matched: bool) -> Option<Segment> {
@@ -250,7 +250,7 @@ mod tests {
         assert_eq!(
             folded.origin,
             vec![0, 1, 2, 3, 4, 4, 6],
-            "la ß se abre en dos y ocupa dos bytes: el origen es el byte"
+            "the ß expands into two and takes two bytes: the origin is the byte"
         );
         let folded = fold_mapped("café");
         assert_eq!(folded.origin, vec![0, 1, 2, 3]);
@@ -260,18 +260,18 @@ mod tests {
 
     #[test]
     fn the_excerpt_shows_the_text_as_copied_with_the_match_marked() {
-        let found = excerpt("el café de la esquina", &terms(&["cafe"]), EXCERPT_CHARS)
-            .expect("hay coincidencia");
+        let found =
+            excerpt("el café de la esquina", &terms(&["cafe"]), EXCERPT_CHARS).expect("matches");
         assert_eq!(
             found.segments,
             vec![plain("el "), hit("café"), plain(" de la esquina")],
-            "se busca sin tilde y se enseña con ella"
+            "searching drops the accent, but showing it keeps it"
         );
     }
 
     #[test]
     fn a_prefix_marks_only_what_was_typed() {
-        let found = excerpt("la esquina", &terms(&["esq"]), 100).expect("hay");
+        let found = excerpt("la esquina", &terms(&["esq"]), 100).expect("matches");
         assert_eq!(
             found.segments,
             vec![plain("la "), hit("esq"), plain("uina")]
@@ -282,14 +282,14 @@ mod tests {
     fn a_word_that_only_appears_inside_another_is_not_a_match() {
         assert!(
             excerpt("encafetado", &terms(&["cafe"]), 100).is_none(),
-            "el índice tampoco lo encontraría: los términos van por prefijo de palabra"
+            "the index would not find it either: terms match by word prefix"
         );
     }
 
     #[test]
     fn a_term_with_punctuation_matches_the_same_phrase_the_index_does() {
         let found =
-            excerpt("Pedido AB-4417 entrega 12 marzo", &terms(&["ab-4417"]), 100).expect("hay");
+            excerpt("Pedido AB-4417 entrega 12 marzo", &terms(&["ab-4417"]), 100).expect("matches");
         assert_eq!(
             found.segments,
             vec![plain("Pedido "), hit("AB-4417"), plain(" entrega 12 marzo")]
@@ -298,19 +298,19 @@ mod tests {
 
     #[test]
     fn an_expanded_letter_is_marked_whole() {
-        let found = excerpt("Straße Hauptbahnhof", &terms(&["strasse"]), 100).expect("hay");
+        let found = excerpt("Straße Hauptbahnhof", &terms(&["strasse"]), 100).expect("matches");
         assert_eq!(found.segments, vec![hit("Straße"), plain(" Hauptbahnhof")]);
     }
 
     #[test]
     fn overlapping_terms_become_one_mark() {
-        let found = excerpt("un café", &terms(&["caf", "cafe"]), 100).expect("hay");
+        let found = excerpt("un café", &terms(&["caf", "cafe"]), 100).expect("matches");
         assert_eq!(found.segments, vec![plain("un "), hit("café")]);
     }
 
     #[test]
     fn every_term_that_matches_is_marked() {
-        let found = excerpt("rojo verde azul", &terms(&["rojo", "azul"]), 100).expect("hay");
+        let found = excerpt("rojo verde azul", &terms(&["rojo", "azul"]), 100).expect("matches");
         assert_eq!(
             found.segments,
             vec![hit("rojo"), plain(" verde "), hit("azul")]
@@ -320,13 +320,13 @@ mod tests {
     #[test]
     fn a_long_text_is_cut_around_the_first_match() {
         let text = format!("{}aguja{}", "paja ".repeat(100), " heno".repeat(100));
-        let found = excerpt(&text, &terms(&["aguja"]), 60).expect("hay");
+        let found = excerpt(&text, &terms(&["aguja"]), 60).expect("matches");
         let shown = found.plain();
         assert!(shown.starts_with('…') && shown.ends_with('…'), "{shown}");
         assert_eq!(
             shown.chars().count(),
             62,
-            "sesenta más los dos puntos suspensivos"
+            "sixty plus one ellipsis on each side"
         );
         assert!(
             found
@@ -334,43 +334,43 @@ mod tests {
                 .iter()
                 .any(|one| one.matched && one.text == "aguja")
         );
-        let before = shown.find("aguja").expect("está");
+        let before = shown.find("aguja").expect("is there");
         assert!(
             before < shown.len() / 2,
-            "la coincidencia queda en el primer tercio, no al final de la ventana"
+            "the match falls in the first third, not at the end of the window"
         );
     }
 
     #[test]
     fn exactly_a_third_of_the_window_comes_before_the_match() {
-        let found = excerpt("abcdefghij aguja", &terms(&["aguja"]), 9).expect("hay");
+        let found = excerpt("abcdefghij aguja", &terms(&["aguja"]), 9).expect("matches");
         assert_eq!(
             found.plain(),
             "…ij aguja",
-            "tres caracteres delante, ni uno más"
+            "three characters ahead, not one more"
         );
-        let found = excerpt("ñññññ aguja", &terms(&["aguja"]), 9).expect("hay");
+        let found = excerpt("ñññññ aguja", &terms(&["aguja"]), 9).expect("matches");
         assert_eq!(
             found.plain(),
             "…ññ aguja",
-            "y el corte cae en un límite de carácter aunque el anterior ocupe dos bytes"
+            "and the cut falls on a character boundary even though the one before it takes two bytes"
         );
     }
 
     #[test]
     fn a_combining_mark_travels_with_the_word_it_marks() {
-        let found = excerpt("cafe\u{301} rico", &terms(&["cafe"]), 100).expect("hay");
+        let found = excerpt("cafe\u{301} rico", &terms(&["cafe"]), 100).expect("matches");
         assert_eq!(found.segments, vec![hit("cafe\u{301}"), plain(" rico")]);
     }
 
     #[test]
     fn the_window_never_cuts_a_mark_or_a_skin_tone_from_its_base() {
         let text = format!("{} aguja x", "e\u{301}".repeat(30));
-        let found = excerpt(&text, &terms(&["aguja"]), 9).expect("hay");
+        let found = excerpt(&text, &terms(&["aguja"]), 9).expect("matches");
         let shown = found.plain();
         assert!(!shown.starts_with("…\u{301}"), "{shown:?}");
         let text = format!("{}aguja", "👍🏽".repeat(30));
-        let found = excerpt(&text, &terms(&["aguja"]), 9).expect("hay");
+        let found = excerpt(&text, &terms(&["aguja"]), 9).expect("matches");
         let shown = found.plain();
         assert!(!shown.starts_with("…🏽"), "{shown:?}");
     }
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     fn a_match_at_the_very_end_only_needs_the_leading_ellipsis() {
         let text = format!("{}fin", "x ".repeat(200));
-        let found = excerpt(&text, &terms(&["fin"]), 40).expect("hay");
+        let found = excerpt(&text, &terms(&["fin"]), 40).expect("matches");
         let shown = found.plain();
         assert!(shown.starts_with('…'));
         assert!(shown.ends_with("fin"), "{shown}");
@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn a_match_at_the_start_only_needs_the_trailing_ellipsis() {
         let text = format!("inicio{}", " x".repeat(200));
-        let found = excerpt(&text, &terms(&["inicio"]), 40).expect("hay");
+        let found = excerpt(&text, &terms(&["inicio"]), 40).expect("matches");
         let shown = found.plain();
         assert!(shown.starts_with("inicio"), "{shown}");
         assert!(shown.ends_with('…'));
@@ -395,14 +395,14 @@ mod tests {
 
     #[test]
     fn a_short_text_comes_back_whole() {
-        let found = excerpt("nota corta", &terms(&["nota"]), EXCERPT_CHARS).expect("hay");
+        let found = excerpt("nota corta", &terms(&["nota"]), EXCERPT_CHARS).expect("matches");
         assert_eq!(found.plain(), "nota corta");
     }
 
     #[test]
     fn a_second_match_past_the_window_does_not_stretch_it() {
         let text = format!("aguja {}aguja", "paja ".repeat(100));
-        let found = excerpt(&text, &terms(&["aguja"]), 30).expect("hay");
+        let found = excerpt(&text, &terms(&["aguja"]), 30).expect("matches");
         assert_eq!(found.segments.iter().filter(|one| one.matched).count(), 1);
         assert!(found.plain().chars().count() <= 31);
     }
@@ -439,7 +439,7 @@ mod tests {
             ("þ", "th"),
             ("Þ", "th"),
         ] {
-            assert_eq!(fold(given), expected, "«{given}» no se expandió bien");
+            assert_eq!(fold(given), expected, "«{given}» did not expand correctly");
         }
     }
 
@@ -465,7 +465,7 @@ mod tests {
     fn folding_twice_changes_nothing() {
         for text in ["Straße", "encyclopædia", "Łódź", "café", "ÞÓRR"] {
             let once = fold(text);
-            assert_eq!(fold(&once), once, "«{text}» no era estable");
+            assert_eq!(fold(&once), once, "«{text}» was not stable");
         }
     }
 

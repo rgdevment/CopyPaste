@@ -141,10 +141,7 @@ mod tests {
         let resolved = resolved_file_url(&reference).unwrap();
         std::fs::remove_dir_all(&dir).ok();
         assert!(resolved.starts_with("file:///"), "{resolved}");
-        assert!(
-            resolved.ends_with("/profile%20picture.png"),
-            "{resolved}"
-        );
+        assert!(resolved.ends_with("/profile%20picture.png"), "{resolved}");
         assert!(!resolved.contains(".file/id="));
     }
 

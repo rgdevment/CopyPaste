@@ -281,7 +281,7 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_secs(30));
             Captured::Nothing
         });
-        assert_eq!(seen, None, "el hilo se abandona y no se espera");
+        assert_eq!(seen, None, "the thread is abandoned and not waited for");
     }
 
     #[test]
@@ -297,7 +297,7 @@ mod tests {
     fn a_folder_is_told_apart_by_its_trailing_separator() {
         let formats = vec![Format {
             id: "CF_HDROP".into(),
-            payload: Payload::Inline(drop_of(&[r"C:\Documentos\\"])),
+            payload: Payload::Inline(drop_of(&[r"C:\Documents\\"])),
         }];
         assert_eq!(refine(Some(Family::Files), &formats), Some(Kind::Folder));
     }
@@ -306,7 +306,7 @@ mod tests {
     fn text_is_refined_by_what_it_says() {
         let formats = vec![Format {
             id: "CF_UNICODETEXT".into(),
-            payload: Payload::Inline(cp_win_sys::writing::utf16_of("alguien@ejemplo.test")),
+            payload: Payload::Inline(cp_win_sys::writing::utf16_of("someone@example.test")),
         }];
         assert_eq!(refine(Some(Family::Text), &formats), Some(Kind::Email));
     }
@@ -334,12 +334,12 @@ mod tests {
     fn a_virtual_file_is_classed_by_the_name_its_descriptor_gives() {
         let formats = vec![Format {
             id: DESCRIPTOR.into(),
-            payload: Payload::Inline(descriptor_of(&[("captura.png", Some(9), false)])),
+            payload: Payload::Inline(descriptor_of(&[("capture.png", Some(9), false)])),
         }];
         assert_eq!(refine(Some(Family::Files), &formats), Some(Kind::Image));
         let folder = vec![Format {
             id: DESCRIPTOR.into(),
-            payload: Payload::Inline(descriptor_of(&[("adjuntos", None, true)])),
+            payload: Payload::Inline(descriptor_of(&[("attachments", None, true)])),
         }];
         assert_eq!(refine(Some(Family::Files), &folder), Some(Kind::Folder));
         let real_drop_wins = vec![
@@ -380,7 +380,7 @@ mod tests {
         };
         assert!(
             !awaits_virtual_contents(&too_big),
-            "lo que no cabe no se pide"
+            "what does not fit is not asked for"
         );
         let plain_absent = Item {
             kind: Some(Kind::Text),
@@ -390,7 +390,7 @@ mod tests {
             }],
         };
         assert!(!awaits_virtual_contents(&plain_absent));
-        assert!(!awaits_virtual_contents(&Item::plain("hola")));
+        assert!(!awaits_virtual_contents(&Item::plain("hello")));
     }
 
     #[test]

@@ -80,7 +80,7 @@ mod tests {
     fn missing_paths_reports_what_is_gone_and_only_that() {
         let dir = std::env::temp_dir().join(format!("cp-missing-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("a folder");
-        let present = dir.join("está aquí.txt");
+        let present = dir.join("it is here.txt");
         std::fs::write(&present, b"x").expect("a file");
         let urls = format!(
             "file://{}\nfile://{}/does-not-exist.txt\n\n",

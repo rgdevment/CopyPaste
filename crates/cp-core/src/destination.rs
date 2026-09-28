@@ -76,7 +76,10 @@ mod tests {
         tracker.saw(200, Some("com.apple.Terminal"));
         tracker.saw(201, Some("com.apple.Terminal"));
         let destination = tracker.destination().expect("there is a destination");
-        assert_eq!(destination.pid, 201, "the specific instance, not the bundle");
+        assert_eq!(
+            destination.pid, 201,
+            "the specific instance, not the bundle"
+        );
         assert_eq!(destination.bundle_id.as_deref(), Some("com.apple.Terminal"));
     }
 

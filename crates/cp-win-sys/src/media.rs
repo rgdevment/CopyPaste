@@ -167,6 +167,10 @@ mod tests {
             ..Default::default()
         };
         assert!(!info.is_empty());
-        assert_eq!(info.searchable(), "", "una duración no se busca por texto");
+        assert_eq!(
+            info.searchable(),
+            "",
+            "a duration is not searched for by text"
+        );
     }
 }

@@ -173,13 +173,13 @@ mod tests {
 
     #[test]
     fn an_empty_catalogue_notes_everything_and_promises_nothing() {
-        assert_eq!(NOTHING.decide("cualquier/cosa"), Take::Presence);
+        assert_eq!(NOTHING.decide("any/thing"), Take::Presence);
         assert_eq!(NOTHING.decide(""), Take::Presence);
-        assert_eq!(NOTHING.classify(&["cualquier/cosa"]), None);
-        assert_eq!(NOTHING.preferred_image(&["cualquier/cosa"]), None);
-        assert_eq!(NOTHING.refusal(&["cualquier/cosa"]), None);
-        assert_eq!(NOTHING.declines("cualquier/cosa", &[0, 0, 0, 0]), None);
-        assert!(!NOTHING.costlier_twin("cualquier/cosa", &["otra/cosa"]));
+        assert_eq!(NOTHING.classify(&["any/thing"]), None);
+        assert_eq!(NOTHING.preferred_image(&["any/thing"]), None);
+        assert_eq!(NOTHING.refusal(&["any/thing"]), None);
+        assert_eq!(NOTHING.declines("any/thing", &[0, 0, 0, 0]), None);
+        assert!(!NOTHING.costlier_twin("any/thing", &["other/thing"]));
         assert_eq!(NOTHING.canonical("x"), "x");
     }
 
@@ -228,7 +228,7 @@ mod tests {
         assert_eq!(
             GREEDY.decide("costly/image"),
             Take::Presence,
-            "estar en la lista de deseados no salva a un tipo que derrocha"
+            "being on the wanted list doesn't save a type that wastes"
         );
         assert_eq!(GREEDY.decide("plain/text"), Take::Payload);
     }
@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(
             kept.len(),
             3,
-            "clasificar no es elegir uno y tirar el resto"
+            "classifying isn't picking one and discarding the rest"
         );
     }
 
@@ -324,12 +324,12 @@ mod tests {
         assert_eq!(
             ARCHIVING.decide_in(Some(Family::Image), "whole/page"),
             Take::Presence,
-            "un logo de 43 KB no puede costar la página entera"
+            "a 43 KB logo shouldn't cost the whole page"
         );
         assert_eq!(
             ARCHIVING.decide_in(Some(Family::Text), "whole/page"),
             Take::Payload,
-            "para un texto con estilos el archivo es el contenido"
+            "for styled text, the archive is the content"
         );
         assert_eq!(ARCHIVING.decide_in(None, "whole/page"), Take::Payload);
         assert_eq!(
@@ -566,7 +566,7 @@ mod properties {
                         prop_assert_eq!(u32::from_le_bytes([a, b, c, d]), 0);
                     }
                 }
-                Some(other) => prop_assert!(false, "no es una negativa por valor: {:?}", other),
+                Some(other) => prop_assert!(false, "not a value-based refusal: {:?}", other),
                 None => {}
             }
         }

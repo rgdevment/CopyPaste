@@ -174,10 +174,7 @@ mod tests {
 
     #[test]
     fn three_dotted_words_are_not_a_jwt() {
-        assert!(
-            claims_of("one.two.three").is_none(),
-            "not base64 of a JSON"
-        );
+        assert!(claims_of("one.two.three").is_none(), "not base64 of a JSON");
         assert!(claims_of("a.b").is_none(), "parts are missing");
         assert!(
             claims_of(&format!("{}.extra", jwt("{}"))).is_none(),

@@ -15,31 +15,31 @@ const APPS: [&str; 9] = [
     "Microsoft Teams",
     "Excel",
     "Word",
-    "Recortes",
+    "Screenshot",
     "Orca",
-    "Explorador",
+    "Explorer",
 ];
 
 const SENTENCES: [&str; 12] = [
-    "Confirmamos la reunión del jueves a las 16:30 en la sala Ventura.",
-    "El orden del día es el cierre del núcleo de macOS y la batería de pruebas de sistema.",
-    "Si alguien no puede, que avise antes del miércoles.",
+    "We are confirming Thursday's meeting at 16:30 in the Ventura room.",
+    "The agenda is the macOS kernel freeze and the system test suite.",
+    "If anyone cannot make it, let us know before Wednesday.",
     "The invoice for September is attached; payment is due within thirty days.",
     "東京の天気は晴れ、明日は雨の予報です。",
     "مرحبا بالعالم، هذا نص تجريبي للبحث.",
-    "Straße, encyclopædia y otras palabras con caracteres fuera del ASCII.",
-    "🚀 Lanzamos la 3.1 con emoji a color y búsqueda instantánea 🎉",
-    "Recuerda renovar el certificado antes del 30 de octubre.",
-    "La cuota de blobs se barre a las 03:00 con el equipo en reposo.",
-    "Pedido AB-4417: entrega el 12 de marzo, dos bultos, sin firma.",
-    "Nada de lo que se copia desde Excel se guarda: la fuente pide no registrarse.",
+    "Straße, encyclopædia and other words with characters outside ASCII.",
+    "🚀 We are launching 3.1 with colour emoji and instant search 🎉",
+    "Remember to renew the certificate before October 30.",
+    "The blob quota gets swept at 03:00 while the machine is idle.",
+    "Order AB-4417: delivery on March 12, two parcels, no signature.",
+    "Nothing copied from Excel gets stored: the source asks not to be recorded.",
 ];
 
 const SPECIAL: [&str; 10] = [
     "{\"id\":\"zk5whptc-0033\",\"items\":412,\"ocr\":true,\"since\":\"2026-09-11\"}",
-    "fn main() {\n    println!(\"hola\");\n}",
-    "https://ejemplo.test/ruta/larga?con=parametros&y=mas",
-    "correo@ejemplo.test",
+    "fn main() {\n    println!(\"hello\");\n}",
+    "https://example.test/long/path?with=parameters&and=more",
+    "mail@example.test",
     "#FF8800",
     "192.168.10.1",
     "7ab3f6de-1c4b-4f5e-8a2d-9f0e1b2c3d4e",
@@ -58,10 +58,10 @@ fn main() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(ITEMS);
     if root.exists() {
-        std::fs::remove_dir_all(&root).expect("limpiar");
+        std::fs::remove_dir_all(&root).expect("cleared");
     }
-    std::fs::create_dir_all(root.join("thumbs")).expect("carpeta");
-    let store = Store::open(&root.join("history.db")).expect("abrir");
+    std::fs::create_dir_all(root.join("thumbs")).expect("a folder");
+    let store = Store::open(&root.join("history.db")).expect("opened");
     store.without_autocheckpoint().expect("wal");
     let started = Instant::now();
     let now = 1_789_990_000_000i64;
@@ -80,12 +80,12 @@ fn main() {
             let item = text_item(&text);
             store
                 .insert_item(&uuid, &item, &text, created)
-                .expect("texto")
+                .expect("text")
         } else if roll < 90 {
             images += 1;
             let png = thumbnail_png(at, seed);
             let path = root.join("thumbs").join(format!("{at:06}.png"));
-            std::fs::write(&path, &png).expect("miniatura");
+            std::fs::write(&path, &png).expect("a thumbnail");
             let item = Item {
                 kind: Some(Kind::Image),
                 formats: vec![Format {
@@ -93,16 +93,14 @@ fn main() {
                     payload: Payload::stored(png),
                 }],
             };
-            let id = store
-                .insert_item(&uuid, &item, "", created)
-                .expect("imagen");
+            let id = store.insert_item(&uuid, &item, "", created).expect("image");
             store
                 .set_thumb(id, Some(&path.to_string_lossy()), created)
                 .expect("thumb");
             store
                 .set_ocr_text(
                     id,
-                    &format!("Pedido AB-{} entrega {}", 4000 + at % 900, at % 28 + 1),
+                    &format!("Order AB-{} delivery {}", 4000 + at % 900, at % 28 + 1),
                     created,
                 )
                 .expect("ocr");
@@ -124,22 +122,22 @@ fn main() {
             };
             store
                 .insert_item(&uuid, &item, &path, created)
-                .expect("archivo")
+                .expect("a file")
         };
         store
             .set_source(id, APPS[(seed >> 40) as usize % APPS.len()], created)
-            .expect("origen");
+            .expect("sourced");
         if at.is_multiple_of(97) {
-            store.set_pinned(id, true, created).expect("fijado");
+            store.set_pinned(id, true, created).expect("pinned");
         }
         if at.is_multiple_of(53) {
-            store.mark_broken(id, created).expect("roto");
+            store.mark_broken(id, created).expect("broken");
         }
         for _ in 0..((seed >> 50) % 4) {
-            store.record_paste(id, created + 60_000).expect("pegado");
+            store.record_paste(id, created + 60_000).expect("pasted");
         }
         if at % 5_000 == 0 && at > 0 {
-            println!("  {at} ítems en {:.1?}", started.elapsed());
+            println!("  {at} items in {:.1?}", started.elapsed());
         }
     }
     store.checkpoint().expect("checkpoint");
@@ -147,7 +145,7 @@ fn main() {
         .map(|m| m.len())
         .unwrap_or(0);
     println!(
-        "{count} ítems ({images} imágenes con miniatura, {files} archivos) en {:.1?} → {} · history.db {:.1} MB",
+        "{count} items ({images} images with a thumbnail, {files} files) in {:.1?} → {} · history.db {:.1} MB",
         started.elapsed(),
         root.display(),
         db_size as f64 / 1_048_576.0
@@ -182,37 +180,37 @@ fn text_item(text: &str) -> Item {
 
 fn folder_path_at(at: usize, seed: u64) -> String {
     const FOLDERS: [&str; 6] = [
-        "Proyectos",
-        "Facturas 2026",
-        "Capturas",
-        "Documentos de trabajo",
-        "Música",
-        "Respaldos",
+        "Projects",
+        "Invoices 2026",
+        "Screenshots",
+        "Work documents",
+        "Music",
+        "Backups",
     ];
     let name = FOLDERS[(seed >> 44) as usize % FOLDERS.len()];
     if cfg!(windows) {
-        format!("C:\\Users\\Mario\\Documentos\\{at}\\{name}")
+        format!("C:\\Users\\Mario\\Documents\\{at}\\{name}")
     } else {
-        format!("/Users/mario/Documentos/{at}/{name}")
+        format!("/Users/mario/Documents/{at}/{name}")
     }
 }
 
 fn file_path_at(at: usize, seed: u64) -> String {
     const NAMES: [&str; 8] = [
-        "informe.pdf",
-        "foto ñ.jpg",
-        "grabación.mp4",
-        "canción.flac",
-        "presupuesto.xlsx",
-        "notas.txt",
-        "captura.png",
-        "instalador.msi",
+        "report.pdf",
+        "photo ü.jpg",
+        "recording.mp4",
+        "song.flac",
+        "budget.xlsx",
+        "notes.txt",
+        "screenshot.png",
+        "installer.msi",
     ];
     let name = NAMES[(seed >> 44) as usize % NAMES.len()];
     if cfg!(windows) {
-        format!("C:\\Users\\Mario\\Documentos\\{at}\\{name}")
+        format!("C:\\Users\\Mario\\Documents\\{at}\\{name}")
     } else {
-        format!("/Users/mario/Documentos/{at}/{name}")
+        format!("/Users/mario/Documents/{at}/{name}")
     }
 }
 

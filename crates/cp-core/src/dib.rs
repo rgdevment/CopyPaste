@@ -266,7 +266,7 @@ mod tests {
             assert_eq!(
                 pixel_offset(&dib.build()),
                 Some(size as usize),
-                "cabecera de {size} bytes"
+                "header of {size} bytes"
             );
         }
     }
@@ -280,7 +280,7 @@ mod tests {
         assert_eq!(
             pixel_offset(&dib.build()),
             Some(INFO_HEADER + 256 * RGBQUAD),
-            "sin biClrUsed se asume la paleta entera"
+            "without biClrUsed the whole palette is assumed"
         );
     }
 
@@ -301,7 +301,7 @@ mod tests {
         assert_eq!(
             pixel_offset(&dib.build()),
             Some(INFO_HEADER),
-            "lo que no cabe no se resta"
+            "what doesn't fit isn't subtracted"
         );
     }
 
@@ -322,7 +322,7 @@ mod tests {
         assert_eq!(
             header(&raw).map(|head| head.size),
             Some(INFO_HEADER as u32),
-            "medir justo lo que hay no es medir de más"
+            "measuring exactly what's there isn't measuring too much"
         );
         assert_eq!(pixel_offset(&raw), Some(INFO_HEADER));
     }
@@ -337,7 +337,7 @@ mod tests {
         assert_eq!(
             pixel_offset(&raw),
             Some(INFO_HEADER),
-            "ocho bytes de paleta no caben en cinco"
+            "eight bytes of palette don't fit in five"
         );
     }
 
@@ -353,18 +353,26 @@ mod tests {
         assert_eq!(
             pixel_offset(&raw),
             Some(INFO_HEADER + 12),
-            "doce de máscaras más doce de paleta no caben en veinte"
+            "twelve of masks plus twelve of palette don't fit in twenty"
         );
     }
 
     #[test]
     fn nonsense_is_not_a_bitmap() {
         assert_eq!(header(&[]), None);
-        assert_eq!(header(&[0; 8]), None, "ni siquiera llega a la cabecera");
-        assert_eq!(header(&[0; 40]), None, "una cabecera que dice medir cero");
+        assert_eq!(header(&[0; 8]), None, "doesn't even reach the header");
+        assert_eq!(
+            header(&[0; 40]),
+            None,
+            "a header that claims to measure zero"
+        );
         let mut lying = Dib::rgb32(2, 2).build();
         lying[0..4].copy_from_slice(&9999u32.to_le_bytes());
-        assert_eq!(header(&lying), None, "dice medir más que todo el buffer");
+        assert_eq!(
+            header(&lying),
+            None,
+            "claims to measure more than the whole buffer"
+        );
         assert_eq!(as_bmp(&[]), None);
         assert_eq!(to_png(&[]), None);
     }
@@ -377,13 +385,13 @@ mod tests {
         assert_eq!(
             u32::from_le_bytes([bmp[2], bmp[3], bmp[4], bmp[5]]) as usize,
             FILE_HEADER + dib.len(),
-            "el tamaño declarado es el del archivo entero"
+            "the declared size is that of the whole file"
         );
         assert_eq!(
             u32::from_le_bytes([bmp[10], bmp[11], bmp[12], bmp[13]]) as usize,
             FILE_HEADER + INFO_HEADER
         );
-        assert_eq!(&bmp[FILE_HEADER..], &dib[..], "el DIB viaja intacto");
+        assert_eq!(&bmp[FILE_HEADER..], &dib[..], "the DIB travels intact");
     }
 
     #[test]
@@ -409,7 +417,7 @@ mod tests {
         assert_eq!(
             alpha(&dib.build()),
             Alpha::Real,
-            "unos a cero y otros opacos es un recorte con bordes"
+            "some at zero and others opaque is a cutout with edges"
         );
     }
 
@@ -427,7 +435,7 @@ mod tests {
         dib.pixels = Vec::new();
         let raw = dib.build();
         assert_eq!(raw.len(), INFO_HEADER);
-        assert_eq!(pixel_offset(&raw), None, "las máscaras no caben");
+        assert_eq!(pixel_offset(&raw), None, "the masks don't fit");
         assert_eq!(alpha(&raw), Alpha::Absent);
         assert_eq!(to_png(&raw), None);
     }
@@ -442,7 +450,7 @@ mod tests {
         assert_eq!(
             alpha(&raw),
             Alpha::Absent,
-            "el cuarto byte parece alfa, pero la cabecera dice que no lo es"
+            "the fourth byte looks like alpha, but the header says it isn't"
         );
     }
 
@@ -452,10 +460,10 @@ mod tests {
         dib.header_size = 124;
         dib.pixels = [0x20, 0x60, 0xA0, 0x7F].repeat(16);
         let png = to_png(&dib.build()).expect("png");
-        let back = image::load_from_memory(&png).expect("se relee").to_rgba8();
+        let back = image::load_from_memory(&png).expect("rereads").to_rgba8();
         assert!(
             back.pixels().all(|pixel| pixel[3] == 0xFF),
-            "una transparencia que nadie declaró no se graba"
+            "a transparency nobody declared isn't recorded"
         );
     }
 
@@ -470,11 +478,11 @@ mod tests {
         raw[44..48].copy_from_slice(&0x0000_FF00u32.to_le_bytes());
         raw[48..52].copy_from_slice(&0x0000_00FFu32.to_le_bytes());
         raw[52..56].copy_from_slice(&0xFF00_0000u32.to_le_bytes());
-        assert_eq!(pixel_offset(&raw), Some(56), "las máscaras van dentro");
+        assert_eq!(pixel_offset(&raw), Some(56), "the masks go inside");
         assert_eq!(
             alpha(&raw),
             Alpha::Real,
-            "declara la máscara de alfa y hay que leerla"
+            "it declares the alpha mask, so it has to be read"
         );
     }
 
@@ -503,10 +511,10 @@ mod tests {
         assert_eq!(
             alpha(&raw),
             Alpha::Opaque,
-            "cuatro bytes de cola daban la captura por transparente"
+            "four trailing bytes used to make the capture look transparent"
         );
         let back = image::load_from_memory(&to_png(&raw).expect("png"))
-            .expect("se relee")
+            .expect("rereads")
             .to_rgba8();
         assert!(back.pixels().all(|pixel| pixel[3] == 0xFF));
     }
@@ -546,7 +554,7 @@ mod tests {
         let png = to_png(&raw).expect("png");
         assert!(
             png.len() * 20 < raw.len(),
-            "{} bytes de DIB contra {} de PNG",
+            "{} bytes of DIB against {} of PNG",
             raw.len(),
             png.len()
         );
@@ -575,7 +583,7 @@ mod tests {
         let dib = Dib::rgb32(4, 4).build();
         let png = to_png(&dib).expect("png");
         let back = from_png(&png).expect("dib");
-        let head = header(&back).expect("cabecera");
+        let head = header(&back).expect("header");
         assert_eq!((head.width, head.height.abs()), (4, 4));
         assert!(pixel_offset(&back).is_some());
     }
@@ -588,12 +596,12 @@ mod tests {
             0xFF, 0xFF,
         ];
         let once = image::load_from_memory(&to_png(&dib.build()).expect("png"))
-            .expect("relee")
+            .expect("rereads")
             .to_rgba8();
         let twice = image::load_from_memory(
             &to_png(&from_png(&to_png(&dib.build()).expect("png")).expect("dib")).expect("png"),
         )
-        .expect("relee")
+        .expect("rereads")
         .to_rgba8();
         assert_eq!(once.as_raw(), twice.as_raw());
     }
@@ -601,7 +609,7 @@ mod tests {
     #[test]
     fn what_is_not_a_png_is_not_a_bitmap_either() {
         assert_eq!(from_png(&[]), None);
-        assert_eq!(from_png(b"esto no es un png"), None);
+        assert_eq!(from_png(b"this is not a png"), None);
         assert_eq!(from_png(&vec![0u8; LARGEST_BITMAP + 1]), None);
     }
 
@@ -611,7 +619,7 @@ mod tests {
         let png = to_png(&dib).expect("png");
         let mut jpeg = Vec::new();
         image::load_from_memory(&png)
-            .expect("relee")
+            .expect("rereads")
             .to_rgb8()
             .write_to(
                 &mut std::io::Cursor::new(&mut jpeg),
@@ -619,13 +627,16 @@ mod tests {
             )
             .expect("jpeg");
         let back = from_jpeg(&jpeg).expect("dib");
-        let head = header(&back).expect("cabecera");
+        let head = header(&back).expect("header");
         assert_eq!((head.width, head.height.abs()), (4, 4));
-        assert_eq!(head.bit_count, 24, "un JPEG no trae alfa y el DIB tampoco");
+        assert_eq!(
+            head.bit_count, 24,
+            "a JPEG carries no alpha and neither does the DIB"
+        );
         assert_eq!(
             from_jpeg(&png),
             None,
-            "un PNG no se cuela por la puerta del JPEG"
+            "a PNG doesn't sneak in through the JPEG door"
         );
         assert_eq!(from_jpeg(&[]), None);
         assert_eq!(from_jpeg(&vec![0u8; LARGEST_BITMAP + 1]), None);
@@ -636,9 +647,9 @@ mod tests {
         assert_eq!(from_image(&image::DynamicImage::new_rgb8(0, 0)), None);
         assert_eq!(from_image(&image::DynamicImage::new_rgba8(3, 0)), None);
         let opaque = from_image(&image::DynamicImage::new_rgb8(1, 1)).expect("dib");
-        assert_eq!(header(&opaque).expect("cabecera").bit_count, 24);
+        assert_eq!(header(&opaque).expect("header").bit_count, 24);
         let translucent = from_image(&image::DynamicImage::new_rgba8(1, 1)).expect("dib");
-        assert_eq!(header(&translucent).expect("cabecera").bit_count, 32);
+        assert_eq!(header(&translucent).expect("header").bit_count, 32);
     }
 
     #[test]
@@ -646,7 +657,7 @@ mod tests {
         let dib = Dib::rgb32(4, 4).build();
         let png = to_png(&dib).expect("png");
         assert_eq!(&png[1..4], b"PNG");
-        let back = image::load_from_memory(&png).expect("se relee");
+        let back = image::load_from_memory(&png).expect("rereads");
         assert_eq!((back.width(), back.height()), (4, 4));
     }
 
@@ -655,10 +666,10 @@ mod tests {
         let mut dib = Dib::rgb32(4, 4);
         dib.pixels = [0x20, 0x60, 0xA0, 0x00].repeat(16);
         let png = to_png(&dib.build()).expect("png");
-        let back = image::load_from_memory(&png).expect("se relee").to_rgba8();
+        let back = image::load_from_memory(&png).expect("rereads").to_rgba8();
         assert!(
             back.pixels().all(|pixel| pixel[3] == 0xFF),
-            "la imagen tiene que verse"
+            "the image has to be visible"
         );
     }
 
@@ -673,16 +684,12 @@ mod tests {
         raw[44..48].copy_from_slice(&0x0000_FF00u32.to_le_bytes());
         raw[48..52].copy_from_slice(&0x0000_00FFu32.to_le_bytes());
         raw[52..56].copy_from_slice(&0xFF00_0000u32.to_le_bytes());
-        assert_eq!(
-            alpha(&raw),
-            Alpha::Opaque,
-            "todo a cero no es transparencia"
-        );
+        assert_eq!(alpha(&raw), Alpha::Opaque, "all zero is not transparency");
         let png = to_png(&raw).expect("png");
-        let back = image::load_from_memory(&png).expect("se relee").to_rgba8();
+        let back = image::load_from_memory(&png).expect("rereads").to_rgba8();
         assert!(
             back.pixels().all(|pixel| pixel[3] == 0xFF),
-            "la captura tiene que verse"
+            "the capture has to be visible"
         );
     }
 
@@ -702,11 +709,11 @@ mod tests {
         raw[52..56].copy_from_slice(&0xFF00_0000u32.to_le_bytes());
         assert_eq!(alpha(&raw), Alpha::Real);
         let png = to_png(&raw).expect("png");
-        let back = image::load_from_memory(&png).expect("se relee").to_rgba8();
+        let back = image::load_from_memory(&png).expect("rereads").to_rgba8();
         let seen: Vec<u8> = back.pixels().map(|pixel| pixel[3]).collect();
         assert!(
             seen.contains(&0x00) && seen.contains(&0xFF),
-            "los cuatro niveles de alfa llegaron como {seen:?}"
+            "the four alpha levels arrived as {seen:?}"
         );
     }
 

@@ -243,10 +243,7 @@ mod insisting {
     #[test]
     fn the_shipped_policy_waits_less_than_a_person_notices() {
         let worst = RETRY.pause.as_millis() * u128::from(RETRY.attempts - 1);
-        assert!(
-            worst <= 1_000,
-            "{worst} ms of piled-up pauses is too much"
-        );
+        assert!(worst <= 1_000, "{worst} ms of piled-up pauses is too much");
     }
 }
 
@@ -281,7 +278,10 @@ mod tests {
         for step in 1..=4 {
             watcher.tick(i64::MAX / 4 * step);
         }
-        assert!(watcher.missed() > Some(0), "something was lost, and it is known");
+        assert!(
+            watcher.missed() > Some(0),
+            "something was lost, and it is known"
+        );
     }
 
     #[test]
