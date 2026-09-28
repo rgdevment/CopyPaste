@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -27,9 +27,24 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
     if ocr_text_is_missing(db)? {
         db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
     }
+    if found < 5 {
+        db.execute_batch(&format!(
+            "DROP TRIGGER IF EXISTS items_au; {SEARCH_TRIGGER}"
+        ))?;
+    }
     db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION}; COMMIT;"))?;
     Ok(true)
 }
+
+const SEARCH_TRIGGER: &str = "
+        CREATE TRIGGER IF NOT EXISTS items_au
+        AFTER UPDATE OF search_text, search_label, search_app, search_ocr ON items BEGIN
+            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
+                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
+            INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
+                VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
+        END;
+";
 
 fn ordering_indexes_are_stale(db: &Connection) -> Result<bool> {
     let mut stmt = db.prepare(
@@ -186,7 +201,8 @@ const TABLES: &str = r#"
             INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
                 VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
         END;
-        CREATE TRIGGER IF NOT EXISTS items_au AFTER UPDATE ON items BEGIN
+        CREATE TRIGGER IF NOT EXISTS items_au
+        AFTER UPDATE OF search_text, search_label, search_app, search_ocr ON items BEGIN
             INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
                 VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
             INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
@@ -208,6 +224,81 @@ mod tests {
         assert_eq!(
             mode, 2,
             "INCREMENTAL is 2; if it comes out 0 the pragma arrived late and was ignored"
+        );
+    }
+
+    #[test]
+    fn a_touch_that_leaves_the_words_alone_does_not_reindex_them() {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        db.execute(
+            "INSERT INTO items (id, uuid, preview_text, created_at, modified_at, content_hash,
+                                search_text, updated_at)
+             VALUES (1, 'u1', 'a copy', 10, 10, 7, 'a copy worth finding', 10)",
+            [],
+        )
+        .expect("stored");
+
+        let indexed = |db: &Connection| -> i64 {
+            db.query_row(
+                "SELECT count(*) FROM items_fts WHERE items_fts MATCH 'finding'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("searched")
+        };
+        assert_eq!(indexed(&db), 1);
+
+        db.execute(
+            "UPDATE items SET modified_at = 20, updated_at = 20 WHERE id = 1",
+            [],
+        )
+        .expect("touched");
+        assert_eq!(indexed(&db), 1, "the words are still where they were");
+
+        db.execute(
+            "UPDATE items SET search_text = 'something else entirely' WHERE id = 1",
+            [],
+        )
+        .expect("rewritten");
+        assert_eq!(indexed(&db), 0, "and when they change, the index follows");
+        let now: i64 = db
+            .query_row(
+                "SELECT count(*) FROM items_fts WHERE items_fts MATCH 'entirely'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("searched");
+        assert_eq!(now, 1);
+    }
+
+    #[test]
+    fn a_database_from_before_the_narrowed_trigger_gets_the_new_one() {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        db.execute_batch(
+            "DROP TRIGGER items_au;
+             CREATE TRIGGER items_au AFTER UPDATE ON items BEGIN
+                 INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
+                     VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
+                 INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
+                     VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
+             END;
+             PRAGMA user_version = 4;",
+        )
+        .expect("an older shape");
+
+        assert!(migrate(&db).expect("migrated"));
+        let sql: String = db
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = 'items_au'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("queried");
+        assert!(
+            sql.contains("UPDATE OF"),
+            "the migration replaces the one that fired on everything: {sql}"
         );
     }
 
