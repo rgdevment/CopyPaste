@@ -181,9 +181,9 @@ fn main() -> std::process::ExitCode {
     });
 
     b.case("A2", "the sequence counter can be read", || {
-        clipboard::sequence().map(|_| ()).ok_or_else(|| {
-            "returned zero: the window station cannot be reached".into()
-        })
+        clipboard::sequence()
+            .map(|_| ())
+            .ok_or_else(|| "returned zero: the window station cannot be reached".into())
     });
 
     b.case("A3", "enumerating does not ask for a single byte", || {
@@ -300,46 +300,46 @@ fn main() -> std::process::ExitCode {
         }
     });
 
-    b.case("F2", "writing moves the counter and reading does not", || {
-        let before = clipboard::sequence().ok_or("no counter")?;
-        {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f2"))]);
-        }
-        let after = clipboard::sequence().ok_or("no counter")?;
-        if after == before {
-            return Err("the counter did not move when writing".into());
-        }
-        let quiet = {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            let _ = clipboard.bytes(CF_UNICODETEXT);
-            clipboard::sequence().ok_or("no counter")?
-        };
-        if quiet != after {
-            return Err(format!("reading moved the counter from {after} to {quiet}"));
-        }
-        println!("            {before} → {after} from one write");
-        Ok(())
-    });
-
     b.case(
-        "F3",
-        "the watcher sees our write as ours",
+        "F2",
+        "writing moves the counter and reading does not",
         || {
-            let mut watcher = Watcher::new(Cadence::Opaque);
-            watcher.tick(clipboard::sequence().ok_or("no counter")?);
+            let before = clipboard::sequence().ok_or("no counter")?;
             {
                 let clipboard = Clipboard::open().ok_or("did not open")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f3"))]);
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f2"))]);
             }
-            let ours = clipboard::sequence().ok_or("no counter")?;
-            watcher.wrote(ours);
-            match watcher.tick(ours) {
-                Seen::Ours => Ok(()),
-                other => Err(format!("seen as {other:?}")),
+            let after = clipboard::sequence().ok_or("no counter")?;
+            if after == before {
+                return Err("the counter did not move when writing".into());
             }
+            let quiet = {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let _ = clipboard.bytes(CF_UNICODETEXT);
+                clipboard::sequence().ok_or("no counter")?
+            };
+            if quiet != after {
+                return Err(format!("reading moved the counter from {after} to {quiet}"));
+            }
+            println!("            {before} → {after} from one write");
+            Ok(())
         },
     );
+
+    b.case("F3", "the watcher sees our write as ours", || {
+        let mut watcher = Watcher::new(Cadence::Opaque);
+        watcher.tick(clipboard::sequence().ok_or("no counter")?);
+        {
+            let clipboard = Clipboard::open().ok_or("did not open")?;
+            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f3"))]);
+        }
+        let ours = clipboard::sequence().ok_or("no counter")?;
+        watcher.wrote(ours);
+        match watcher.tick(ours) {
+            Seen::Ours => Ok(()),
+            other => Err(format!("seen as {other:?}")),
+        }
+    });
 
     b.case("F4", "a foreign copy after ours is not swallowed", || {
         let mut watcher = Watcher::new(Cadence::Opaque);
@@ -388,22 +388,26 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.case("G2", "what does not answer is abandoned at the ceiling", || {
-        let started = std::time::Instant::now();
-        let seen = reading::within(PATIENCE, || {
-            std::thread::sleep(std::time::Duration::from_secs(30));
-            Some(Vec::new())
-        });
-        let took = started.elapsed();
-        if seen != Reading::TooSlow {
-            return Err(format!("it waited too long and gave {seen:?}"));
-        }
-        if took > PATIENCE * 3 {
-            return Err(format!("took {took:?} to give up"));
-        }
-        println!("            abandoned at {took:?}, not at the measured 30 s");
-        Ok(())
-    });
+    b.case(
+        "G2",
+        "what does not answer is abandoned at the ceiling",
+        || {
+            let started = std::time::Instant::now();
+            let seen = reading::within(PATIENCE, || {
+                std::thread::sleep(std::time::Duration::from_secs(30));
+                Some(Vec::new())
+            });
+            let took = started.elapsed();
+            if seen != Reading::TooSlow {
+                return Err(format!("it waited too long and gave {seen:?}"));
+            }
+            if took > PATIENCE * 3 {
+                return Err(format!("took {took:?} to give up"));
+            }
+            println!("            abandoned at {took:?}, not at the measured 30 s");
+            Ok(())
+        },
+    );
 
     b.group("H · The capture, end to end");
 
@@ -500,38 +504,41 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.case("H3", "two identical copies have the same fingerprint", || {
-        let write = |text: &str| {
-            let clipboard = Clipboard::open()?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(text))]);
-            Some(())
-        };
-        let taken = |()| {
-            let clipboard = Clipboard::open()?;
-            match capture(&clipboard) {
-                Captured::Kept(item) => Some(item.fingerprint()),
-                _ => None,
+    b.case(
+        "H3",
+        "two identical copies have the same fingerprint",
+        || {
+            let write = |text: &str| {
+                let clipboard = Clipboard::open()?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(text))]);
+                Some(())
+            };
+            let taken = |()| {
+                let clipboard = Clipboard::open()?;
+                match capture(&clipboard) {
+                    Captured::Kept(item) => Some(item.fingerprint()),
+                    _ => None,
+                }
+            };
+            write("cp-h3-same").ok_or("did not write")?;
+            let first = taken(()).ok_or("did not capture")?;
+            write("cp-h3-same").ok_or("did not write")?;
+            let again = taken(()).ok_or("did not capture")?;
+            write("cp-h3-different").ok_or("did not write")?;
+            let other = taken(()).ok_or("did not capture")?;
+            if first != again {
+                return Err("the same thing gave two fingerprints".into());
             }
-        };
-        write("cp-h3-same").ok_or("did not write")?;
-        let first = taken(()).ok_or("did not capture")?;
-        write("cp-h3-same").ok_or("did not write")?;
-        let again = taken(()).ok_or("did not capture")?;
-        write("cp-h3-different").ok_or("did not write")?;
-        let other = taken(()).ok_or("did not capture")?;
-        if first != again {
-            return Err("the same thing gave two fingerprints".into());
-        }
-        if first == other {
-            return Err("two different contents gave the same fingerprint".into());
-        }
-        Ok(())
-    });
+            if first == other {
+                return Err("two different contents gave the same fingerprint".into());
+            }
+            Ok(())
+        },
+    );
 
     b.case("H4", "a secrecy marker stops the capture", || {
         let marker = cp_win_sys::formats::name_of(
-            cp_win_sys::clipboard::register("Clipboard Viewer Ignore")
-                .ok_or("did not register")?,
+            cp_win_sys::clipboard::register("Clipboard Viewer Ignore").ok_or("did not register")?,
         );
         if marker != "Clipboard Viewer Ignore" {
             return Err(format!("the format registered as «{marker}»"));
@@ -609,85 +616,93 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.case("I2", "capturing what was restored gives the same fingerprint", || {
-        {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i2-round-trip"))]);
-        }
-        let (first, item) = {
+    b.case(
+        "I2",
+        "capturing what was restored gives the same fingerprint",
+        || {
+            {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i2-round-trip"))]);
+            }
+            let (first, item) = {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                match capture(&clipboard) {
+                    Captured::Kept(item) => (item.fingerprint(), item),
+                    other => return Err(format!("nothing was captured: {other:?}")),
+                }
+            };
+            {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                to_clipboard(&clipboard, &item);
+            }
             let clipboard = Clipboard::open().ok_or("did not open")?;
             match capture(&clipboard) {
-                Captured::Kept(item) => (item.fingerprint(), item),
-                other => return Err(format!("nothing was captured: {other:?}")),
+                Captured::Kept(again) => {
+                    if again.fingerprint() == first {
+                        Ok(())
+                    } else {
+                        Err("the fingerprint changed on the round trip".into())
+                    }
+                }
+                other => Err(format!("not recaptured: {other:?}")),
             }
-        };
-        {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            to_clipboard(&clipboard, &item);
-        }
-        let clipboard = Clipboard::open().ok_or("did not open")?;
-        match capture(&clipboard) {
-            Captured::Kept(again) => {
-                if again.fingerprint() == first {
-                    Ok(())
-                } else {
-                    Err("the fingerprint changed on the round trip".into())
+        },
+    );
+
+    b.case(
+        "I3",
+        "pasting as plain text does not mutilate the stored item",
+        || {
+            let html = id_of("HTML Format").ok_or("HTML Format did not register")?;
+            {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                clipboard.replace(&[
+                    (CF_UNICODETEXT, &utf16_of("with styles")),
+                    (html, b"<b>with styles</b>"),
+                ]);
+            }
+            let item = {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                capture(&clipboard).kept().ok_or("nothing was captured")?
+            };
+            let had = item.formats.len();
+
+            let plain = render(Form::PlainText, &content_of(&item, None))
+                .ok_or("the plain form was not offered")?
+                .into_item();
+            let written = {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                to_clipboard(&clipboard, &plain)
+            };
+            match written {
+                Restored::Written { formats: 1, .. } => {}
+                other => return Err(format!("returned {other:?}")),
+            }
+            {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                if clipboard.offered().contains(&html) {
+                    return Err("the HTML remained: it was not pasted as plain text".into());
                 }
             }
-            other => Err(format!("not recaptured: {other:?}")),
-        }
-    });
 
-    b.case("I3", "pasting as plain text does not mutilate the stored item", || {
-        let html = id_of("HTML Format").ok_or("HTML Format did not register")?;
-        {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            clipboard.replace(&[
-                (CF_UNICODETEXT, &utf16_of("with styles")),
-                (html, b"<b>with styles</b>"),
-            ]);
-        }
-        let item = {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            capture(&clipboard).kept().ok_or("nothing was captured")?
-        };
-        let had = item.formats.len();
-
-        let plain = render(Form::PlainText, &content_of(&item, None))
-            .ok_or("the plain form was not offered")?
-            .into_item();
-        let written = {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            to_clipboard(&clipboard, &plain)
-        };
-        match written {
-            Restored::Written { formats: 1, .. } => {}
-            other => return Err(format!("returned {other:?}")),
-        }
-        {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            if clipboard.offered().contains(&html) {
-                return Err("the HTML remained: it was not pasted as plain text".into());
+            if item.formats.len() != had {
+                return Err("the item lost formats".into());
             }
-        }
-
-        if item.formats.len() != had {
-            return Err("the item lost formats".into());
-        }
-        let restored = {
+            let restored = {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                to_clipboard(&clipboard, &item)
+            };
+            match restored {
+                Restored::Written { .. } => {}
+                other => return Err(format!("could not restore with styles: {other:?}")),
+            }
             let clipboard = Clipboard::open().ok_or("did not open")?;
-            to_clipboard(&clipboard, &item)
-        };
-        match restored {
-            Restored::Written { .. } => {}
-            other => return Err(format!("could not restore with styles: {other:?}")),
-        }
-        let clipboard = Clipboard::open().ok_or("did not open")?;
-        if !clipboard.offered().contains(&html) {
-            return Err("the HTML did not come back: the item had been left mutilated".into());
-        }
-        Ok(())
-    });
+            if !clipboard.offered().contains(&html) {
+                return Err("the HTML did not come back: the item had been left mutilated".into());
+            }
+            Ok(())
+        },
+    );
 
     b.case(
         "I4",
@@ -785,12 +800,13 @@ fn main() -> std::process::ExitCode {
         drop(watching);
 
         if after_ours != 0 {
-            return Err(format!(
-                "ours woke the watcher {after_ours} time(s)"
-            ));
+            return Err(format!("ours woke the watcher {after_ours} time(s)"));
         }
         if after_theirs == 0 {
-            return Err("and then it would not see foreign copies either: the test would prove nothing".into());
+            return Err(
+                "and then it would not see foreign copies either: the test would prove nothing"
+                    .into(),
+            );
         }
         println!("            ours 0 notices, foreign {after_theirs}");
         Ok(())
@@ -983,24 +999,28 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.case("N4", "the thumbnail goes to the store and comes back", || {
-        let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", std::process::id()));
-        let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
-        let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("missing fixture: {why}"))?;
-        let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
-            .ok_or("it was not generated")?;
-        let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
-        let back = blobs
-            .get(&digest)
-            .map_err(|why| why.to_string())?
-            .ok_or("did not come back")?;
-        std::fs::remove_dir_all(&dir).ok();
-        if back != thumb {
-            return Err("the thumbnail came back different".into());
-        }
-        Ok(())
-    });
+    b.case(
+        "N4",
+        "the thumbnail goes to the store and comes back",
+        || {
+            let dir = std::env::temp_dir().join(format!("cp-probe-thumbs-{}", std::process::id()));
+            let blobs = cp_store::Blobs::at(&dir).map_err(|why| why.to_string())?;
+            let png = std::fs::read("fixtures/texto-en-imagen.png")
+                .map_err(|why| format!("missing fixture: {why}"))?;
+            let thumb = cp_core::thumbnail::of_image(&png, cp_core::thumbnail::MAX_SIDE)
+                .ok_or("it was not generated")?;
+            let digest = blobs.put(&thumb).map_err(|why| why.to_string())?;
+            let back = blobs
+                .get(&digest)
+                .map_err(|why| why.to_string())?
+                .ok_or("did not come back")?;
+            std::fs::remove_dir_all(&dir).ok();
+            if back != thumb {
+                return Err("the thumbnail came back different".into());
+            }
+            Ok(())
+        },
+    );
 
     b.group("O · Origin");
 
@@ -1038,7 +1058,10 @@ fn main() -> std::process::ExitCode {
                 .map_err(|why| why.to_string())?
                 .rows;
             if found.len() != 1 {
-                return Err(format!("searching for «{name}» returned {} items", found.len()));
+                return Err(format!(
+                    "searching for «{name}» returned {} items",
+                    found.len()
+                ));
             }
             println!("            origin «{name}», stored and found");
             Ok(())
