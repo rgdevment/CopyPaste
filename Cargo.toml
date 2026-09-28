@@ -33,14 +33,14 @@ serde_json = { version = "1", features = ["preserve_order"] }
 toml = "0.9"
 semver = "1"
 sys-locale = "0.3"
-tauri = { version = "2", features = ["tray-icon", "image-png"] }
-tauri-build = { version = "2", features = [] }
-tauri-plugin-opener = "2"
-tauri-plugin-single-instance = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-global-shortcut = "2"
+tauri = { version = "2.12", features = ["tray-icon", "image-png"] }
+tauri-build = { version = "2.7", features = [] }
+tauri-plugin-opener = "2.6"
+tauri-plugin-single-instance = "2.5"
+tauri-plugin-shell = "2.4"
+tauri-plugin-dialog = "2.8"
+tauri-plugin-updater = "2.13"
+tauri-plugin-global-shortcut = "2.4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
 proptest = "1"
 tempfile = "3"
