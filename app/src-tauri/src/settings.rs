@@ -31,6 +31,13 @@ pub fn folder() -> Option<PathBuf> {
     }
 }
 
+pub fn policy() -> cp_store::Policy {
+    let Some(kept) = folder().and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok()) else {
+        return cp_store::Policy::default();
+    };
+    cp_store::Policy::keeping(kept.keeps_days, kept.images_quota_mb)
+}
+
 pub fn nowhere() -> String {
     "the folder where CopyPaste keeps its own was not found".to_owned()
 }
@@ -99,11 +106,12 @@ pub struct Former {
     pinned: i64,
     labelled: i64,
     with_styles: i64,
+    beyond_keep: i64,
     unreadable: Option<String>,
 }
 
-#[tauri::command]
-pub fn former() -> Result<Option<Former>, String> {
+#[tauri::command(async)]
+pub fn former(at: i64) -> Result<Option<Former>, String> {
     let db = former_folder().ok_or_else(nowhere)?.join("clipboard.db");
     let weighed = match std::fs::metadata(&db) {
         Ok(weighed) => weighed,
@@ -119,9 +127,10 @@ pub fn former() -> Result<Option<Former>, String> {
         pinned: 0,
         labelled: 0,
         with_styles: 0,
+        beyond_keep: 0,
         unreadable: None,
     };
-    match cp_store::legacy::look(&db) {
+    match cp_store::legacy::look(&db, policy().keep_for.map(|age| at - age)) {
         Ok(looked) => {
             former.items = looked.items;
             former.pictures = looked.pictures;
@@ -129,6 +138,7 @@ pub fn former() -> Result<Option<Former>, String> {
             former.pinned = looked.pinned;
             former.labelled = looked.labelled;
             former.with_styles = looked.with_styles;
+            former.beyond_keep = looked.beyond_keep;
         }
         Err(why) => former.unreadable = Some(why.to_string()),
     }

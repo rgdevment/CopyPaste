@@ -7,6 +7,10 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(() => Promise.resolve("/donde/quiera/CopyPaste.cpbackup")),
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(() => Promise.resolve(() => {})),
+}));
+
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: vi.fn(() => Promise.resolve()),
   revealItemInDir: vi.fn(() => Promise.resolve()),
@@ -55,6 +59,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         pinned: 12,
         labelled: 5,
         withStyles: 260,
+        beyondKeep: 860,
         unreadable: null,
       });
     }
@@ -64,6 +69,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         already: 0,
         refused: 0,
         withoutTheirPicture: 3,
+        swept: 860,
       });
     }
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");

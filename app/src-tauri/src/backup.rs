@@ -1,4 +1,31 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use tauri::Emitter;
+
+#[derive(Default)]
+pub struct Crossing(AtomicBool);
+
+pub struct Alone<'a>(&'a AtomicBool);
+
+impl Crossing {
+    fn claim(&self) -> Option<Alone<'_>> {
+        self.0
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+            .then(|| Alone(&self.0))
+    }
+
+    pub fn underway(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
+}
+
+impl Drop for Alone<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
+}
 
 #[derive(serde::Serialize)]
 pub struct Saved {
@@ -102,10 +129,26 @@ pub struct Crossed {
     already: i64,
     refused: i64,
     without_their_picture: i64,
+    swept: i64,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Underway {
+    done: i64,
+    total: i64,
 }
 
 #[tauri::command(async)]
-pub fn bring_former(app: tauri::AppHandle, at: i64) -> Result<Crossed, String> {
+pub fn bring_former(
+    app: tauri::AppHandle,
+    alone: tauri::State<'_, Crossing>,
+    at: i64,
+) -> Result<Crossed, String> {
+    let _busy = alone
+        .inner()
+        .claim()
+        .ok_or_else(|| "the CopyPaste 2 history is already being brought over".to_owned())?;
     let former = crate::settings::former_folder()
         .ok_or_else(crate::settings::nowhere)?
         .join("clipboard.db");
@@ -113,26 +156,44 @@ pub fn bring_former(app: tauri::AppHandle, at: i64) -> Result<Crossed, String> {
         return Err("there is no CopyPaste 2 history here".to_owned());
     }
     crate::panel::quit(&app);
-    let landed = crossed(&former, at);
+    let landed = crossed(&app, &former, at);
     if let Err(why) = crate::panel::relight(&app) {
         crate::note::note(&format!("the panel did not come back: {why}"));
     }
-    let brought = landed?;
+    let (brought, swept) = landed?;
     crate::note::note(&format!(
-        "from CopyPaste 2: {} brought in, {} were already here",
-        brought.added, brought.already
+        "from CopyPaste 2: {} brought in, {} were already here, {} went by the kept time",
+        brought.added, brought.already, swept
     ));
     Ok(Crossed {
         added: brought.added,
         already: brought.already,
         refused: brought.refused,
         without_their_picture: brought.without_their_picture,
+        swept,
     })
 }
 
-fn crossed(from: &std::path::Path, at: i64) -> Result<cp_store::legacy::Brought, String> {
+fn crossed(
+    app: &tauri::AppHandle,
+    from: &std::path::Path,
+    at: i64,
+) -> Result<(cp_store::legacy::Brought, i64), String> {
     let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
-    cp_store::legacy::bring(from, &store, at).map_err(|why| why.to_string())
+    let telling = app.clone();
+    let brought = cp_store::legacy::bring_telling(from, &store, at, &move |done, total| {
+        let _ = telling.emit("crossing", Underway { done, total });
+    })
+    .map_err(|why| why.to_string())?;
+    let policy = crate::settings::policy();
+    let swept = match store.sweep(&policy, at) {
+        Ok(swept) => swept.expired as i64,
+        Err(why) => {
+            crate::note::note(&format!("what is kept could not be applied: {why}"));
+            0
+        }
+    };
+    Ok((brought, swept))
 }
 
 #[derive(serde::Serialize)]

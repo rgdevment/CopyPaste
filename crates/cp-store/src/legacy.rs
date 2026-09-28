@@ -1,8 +1,8 @@
-use crate::{Error, Result, Store};
-use cp_core::item::{Format, Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
+use crate::{Error, More, Result, Store};
+use cp_core::item::{Format, Item, Payload, Placement, SYNTHETIC_IMAGE, SYNTHETIC_TEXT, placement};
 use cp_core::kind::Kind;
 use rusqlite::{Connection, OpenFlags};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Former {
@@ -12,6 +12,7 @@ pub struct Former {
     pub pinned: i64,
     pub labelled: i64,
     pub with_styles: i64,
+    pub beyond_keep: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -96,17 +97,21 @@ fn opened(from: &Path) -> Result<Connection> {
     Ok(db)
 }
 
-pub fn look(from: &Path) -> Result<Former> {
+pub fn look(from: &Path, keeps_until: Option<i64>) -> Result<Former> {
     let db = opened(from)?;
-    let mut stmt =
-        db.prepare("SELECT type, content, is_pinned, label, metadata FROM clipboard_items")?;
+    let root = root_of(from);
+    let mut stmt = db.prepare(
+        "SELECT type, content, is_pinned, label, metadata, created_at, modified_at
+         FROM clipboard_items",
+    )?;
     let mut rows = stmt.query([])?;
     let mut former = Former::default();
     while let Some(row) = rows.next()? {
         let kind = kind_of(row.get::<_, i64>(0).unwrap_or(0)).unwrap_or(Kind::Text);
         let content: String = row.get(1).unwrap_or_default();
+        let pinned = row.get::<_, Option<i64>>(2).ok().flatten().unwrap_or(0) != 0;
         former.items += 1;
-        if row.get::<_, Option<i64>>(2).ok().flatten().unwrap_or(0) != 0 {
+        if pinned {
             former.pinned += 1;
         }
         if row
@@ -117,12 +122,20 @@ pub fn look(from: &Path) -> Result<Former> {
         {
             former.labelled += 1;
         }
-        if !rich_of(row.get::<_, Option<String>>(4).ok().flatten().as_deref()).is_empty() {
+        if styled_of(row.get::<_, Option<String>>(4).ok().flatten().as_deref()) {
             former.with_styles += 1;
+        }
+        let created = row.get::<_, Option<i64>>(5).ok().flatten().unwrap_or(0);
+        let modified = row.get::<_, Option<i64>>(6).ok().flatten().unwrap_or(0);
+        if let Some(cutoff) = keeps_until
+            && !pinned
+            && in_millis(created.max(modified)) < cutoff
+        {
+            former.beyond_keep += 1;
         }
         if kind == Kind::Image {
             former.pictures += 1;
-            if !Path::new(&content).exists() {
+            if picture_at(root.as_deref(), &content).is_none() {
                 former.pictures_gone += 1;
             }
         }
@@ -130,8 +143,44 @@ pub fn look(from: &Path) -> Result<Former> {
     Ok(former)
 }
 
+fn root_of(from: &Path) -> Option<PathBuf> {
+    std::fs::canonicalize(from.parent()?).ok()
+}
+
+fn picture_at(root: Option<&Path>, said: &str) -> Option<PathBuf> {
+    if said.is_empty() {
+        return None;
+    }
+    let root = root?;
+    let real = std::fs::canonicalize(said).ok()?;
+    if !real.starts_with(root) {
+        return None;
+    }
+    let weighed = std::fs::symlink_metadata(&real).ok()?;
+    if !weighed.is_file() || weighed.len() == 0 {
+        return None;
+    }
+    let size = usize::try_from(weighed.len()).ok()?;
+    (placement(size) != Placement::Refused).then_some(real)
+}
+
 pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
+    bring_telling(from, into, at, &|_, _| {})
+}
+
+const AT_A_TIME: usize = 500;
+
+pub fn bring_telling(
+    from: &Path,
+    into: &Store,
+    at: i64,
+    telling: &dyn Fn(i64, i64),
+) -> Result<Brought> {
     let db = opened(from)?;
+    let root = root_of(from);
+    let total: i64 = db
+        .query_row("SELECT count(*) FROM clipboard_items", [], |row| row.get(0))
+        .unwrap_or(0);
     let mut stmt = db.prepare(
         "SELECT id, content, type, created_at, modified_at, app_source, is_pinned, label,
                 card_color, metadata, paste_count, broken_since
@@ -162,21 +211,38 @@ pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
     })?;
 
     let mut brought = Brought::default();
-    for row in rows {
-        let Ok(row) = row else {
-            brought.refused += 1;
-            continue;
-        };
-        match carry(into, &row, at) {
-            Ok(Landed::Added { without_picture }) => {
-                brought.added += 1;
-                if without_picture {
-                    brought.without_their_picture += 1;
+    let mut rows = rows;
+    let mut done = 0i64;
+    loop {
+        let mut carried = 0;
+        into.all_or_nothing(|| {
+            for _ in 0..AT_A_TIME {
+                let Some(row) = rows.next() else {
+                    break;
+                };
+                carried += 1;
+                let Ok(row) = row else {
+                    brought.refused += 1;
+                    continue;
+                };
+                match carry(into, &row, at, root.as_deref()) {
+                    Ok(Landed::Added { without_picture }) => {
+                        brought.added += 1;
+                        if without_picture {
+                            brought.without_their_picture += 1;
+                        }
+                    }
+                    Ok(Landed::Already) => brought.already += 1,
+                    Err(_) => brought.refused += 1,
                 }
             }
-            Ok(Landed::Already) => brought.already += 1,
-            Err(_) => brought.refused += 1,
+            Ok(())
+        })?;
+        if carried == 0 {
+            break;
         }
+        done += carried as i64;
+        telling(done, total);
     }
     Ok(brought)
 }
@@ -186,8 +252,8 @@ enum Landed {
     Already,
 }
 
-fn carry(into: &Store, row: &Row, at: i64) -> Result<Landed> {
-    let (item, without_picture) = made_of(row);
+fn carry(into: &Store, row: &Row, at: i64, root: Option<&Path>) -> Result<Landed> {
+    let (item, without_picture) = made_of(row, root);
     if into.find_by_hash(&item)?.is_some() {
         return Ok(Landed::Already);
     }
@@ -196,45 +262,31 @@ fn carry(into: &Store, row: &Row, at: i64) -> Result<Landed> {
     } else {
         at
     };
-    let id = into.insert_item(
+    let meta = meta_in(row.meta.as_deref());
+    let more = More {
+        modified_at: (row.modified_at > row.created_at).then(|| in_millis(row.modified_at)),
+        touched_at: Some(at),
+        app: row.app.as_deref(),
+        label: row.label.as_deref(),
+        color: row.colour,
+        pinned: row.pinned,
+        pastes: row.pastes,
+        broken: row.broken.map(in_millis),
+        meta: &meta,
+        jobs: jobs_for(row.kind, !without_picture),
+    };
+    into.insert_full(
         &named(row, at),
         &item,
         &preview_of(row, without_picture),
         when,
+        &more,
     )?;
-    if row.modified_at > row.created_at {
-        into.reactivate(id, in_millis(row.modified_at))?;
-    }
-
-    if let Some(app) = row.app.as_deref() {
-        into.set_source(id, app, at)?;
-    }
-    if let Some(label) = row.label.as_deref() {
-        into.set_label(id, Some(label), at)?;
-    }
-    if row.colour != 0 {
-        into.set_color(id, row.colour, at)?;
-    }
-    if row.pinned {
-        into.set_pinned(id, true, at)?;
-    }
-    if row.pastes > 0 {
-        into.set_pastes(id, row.pastes)?;
-    }
-    if let Some(broken) = row.broken {
-        into.mark_broken(id, in_millis(broken))?;
-    }
-    for (key, value) in meta_in(row.meta.as_deref()) {
-        into.set_meta(id, &key, &value)?;
-    }
-    for job in jobs_for(row.kind, !without_picture) {
-        into.enqueue(id, job)?;
-    }
     Ok(Landed::Added { without_picture })
 }
 
-fn made_of(row: &Row) -> (Item, bool) {
-    let (mut item, without_picture) = body_of(row);
+fn made_of(row: &Row, root: Option<&Path>) -> (Item, bool) {
+    let (mut item, without_picture) = body_of(row, root);
     for (id, bytes) in rich_of(row.meta.as_deref()) {
         item.formats.push(Format {
             id: id.into(),
@@ -244,10 +296,11 @@ fn made_of(row: &Row) -> (Item, bool) {
     (item, without_picture)
 }
 
-fn body_of(row: &Row) -> (Item, bool) {
+fn body_of(row: &Row, root: Option<&Path>) -> (Item, bool) {
     if row.kind == Kind::Image {
-        return match std::fs::read(&row.content) {
-            Ok(bytes) if !bytes.is_empty() => (
+        let read = picture_at(root, &row.content).and_then(|at| std::fs::read(at).ok());
+        return match read {
+            Some(bytes) if !bytes.is_empty() => (
                 Item {
                     kind: Some(Kind::Image),
                     formats: vec![Format {
@@ -330,30 +383,51 @@ pub fn rich_of(said: Option<&str>) -> Vec<(&'static str, Vec<u8>)> {
             .and_then(un_base64)
     };
     let mut carried = Vec::new();
-    if let Some(bytes) = decoded("html").and_then(html_for) {
+    if let Some(bytes) = decoded("html")
+        .filter(|bytes| html_ok(bytes))
+        .and_then(html_for)
+    {
         carried.push((RICH_HTML, bytes));
     }
-    if let Some(bytes) = decoded("rtf").filter(|bytes| bytes.starts_with(br"{\rtf")) {
+    if let Some(bytes) = decoded("rtf").filter(|bytes| rtf_ok(bytes)) {
         carried.push((RICH_RTF, bytes));
     }
     carried
 }
 
+const A_HEAD: usize = THE_WINDOWS_HEADER.len();
+
+fn styled_of(said: Option<&str>) -> bool {
+    let Some(read) = read_object(said) else {
+        return false;
+    };
+    let head = |key: &str| {
+        read.get(key)
+            .and_then(serde_json::Value::as_str)
+            .and_then(|one| un_base64_upto(one, A_HEAD))
+            .unwrap_or_default()
+    };
+    html_ok(&head("html")) || rtf_ok(&head("rtf"))
+}
+
+fn html_ok(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return false;
+    }
+    !cfg!(target_os = "windows") || bytes.starts_with(THE_WINDOWS_HEADER)
+}
+
+fn rtf_ok(bytes: &[u8]) -> bool {
+    bytes.starts_with(br"{\rtf")
+}
+
 const THE_WINDOWS_HEADER: &[u8] = b"Version:";
 
 fn html_for(bytes: Vec<u8>) -> Option<Vec<u8>> {
-    if bytes.is_empty() {
-        return None;
+    if cfg!(target_os = "windows") || !bytes.starts_with(THE_WINDOWS_HEADER) {
+        return Some(bytes);
     }
-    let wrapped = bytes.starts_with(THE_WINDOWS_HEADER);
-    if cfg!(target_os = "windows") {
-        return wrapped.then_some(bytes);
-    }
-    if wrapped {
-        unwrapped(&bytes)
-    } else {
-        Some(bytes)
-    }
+    unwrapped(&bytes)
 }
 
 fn unwrapped(bytes: &[u8]) -> Option<Vec<u8>> {
@@ -377,7 +451,11 @@ fn said_at(bytes: &[u8], key: &[u8]) -> Option<usize> {
 }
 
 fn un_base64(said: &str) -> Option<Vec<u8>> {
-    let mut out = Vec::with_capacity(said.len() / 4 * 3);
+    un_base64_upto(said, usize::MAX)
+}
+
+fn un_base64_upto(said: &str, most: usize) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity((said.len() / 4 * 3).min(most));
     let mut held: u32 = 0;
     let mut bits: u32 = 0;
     for byte in said.bytes() {
@@ -396,6 +474,9 @@ fn un_base64(said: &str) -> Option<Vec<u8>> {
         if bits >= 8 {
             bits -= 8;
             out.push(u8::try_from((held >> bits) & 0xFF).ok()?);
+            if out.len() >= most {
+                break;
+            }
         }
     }
     (!out.is_empty()).then_some(out)
@@ -417,6 +498,8 @@ pub const OURS_ALONE: [&str; 5] = [
 
 pub const THEIR_LOGS: &str = "copypaste_";
 
+pub const THEIR_SPARE: &str = ".pre-restore-";
+
 pub fn drop_former(dir: &Path) -> Result<Swept> {
     let mut swept = Swept::default();
     let db = dir.join("clipboard.db");
@@ -424,16 +507,39 @@ pub fn drop_former(dir: &Path) -> Result<Swept> {
         swept = taken(&one, swept)?;
     }
     for one in OURS_ALONE {
-        let at = dir.join(one);
-        if at.is_dir() {
-            swept = emptied(&at, swept)?;
-            let _ = std::fs::remove_dir_all(&at);
-        } else {
-            swept = taken(&at, swept)?;
-        }
+        swept = gone(&dir.join(one), swept)?;
+    }
+    for one in named_like(dir, THEIR_SPARE) {
+        swept = gone(&one, swept)?;
     }
     swept = their_logs(&dir.join("logs"), swept)?;
     Ok(swept)
+}
+
+fn named_like(dir: &Path, head: &str) -> Vec<PathBuf> {
+    let Ok(read) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    read.filter_map(std::result::Result::ok)
+        .map(|one| one.path())
+        .filter(|at| {
+            at.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with(head))
+        })
+        .collect()
+}
+
+fn gone(at: &Path, mut swept: Swept) -> Result<Swept> {
+    let Ok(kind) = std::fs::symlink_metadata(at) else {
+        return Ok(swept);
+    };
+    if kind.is_dir() {
+        swept = emptied(at, swept)?;
+        let _ = std::fs::remove_dir_all(at);
+        return Ok(swept);
+    }
+    taken(at, swept)
 }
 
 fn their_logs(dir: &Path, mut swept: Swept) -> Result<Swept> {
@@ -459,20 +565,20 @@ fn emptied(dir: &Path, mut swept: Swept) -> Result<Swept> {
         return Ok(swept);
     };
     for one in read.filter_map(std::result::Result::ok) {
-        let at = one.path();
-        if at.is_dir() {
-            swept = emptied(&at, swept)?;
-        } else {
-            swept = taken(&at, swept)?;
-        }
+        swept = gone(&one.path(), swept)?;
     }
     Ok(swept)
 }
 
 fn taken(at: &Path, mut swept: Swept) -> Result<Swept> {
-    let Ok(weighed) = std::fs::metadata(at) else {
+    let Ok(weighed) = std::fs::symlink_metadata(at) else {
         return Ok(swept);
     };
+    if weighed.file_type().is_symlink() {
+        std::fs::remove_file(at).map_err(Error::Io)?;
+        swept.files += 1;
+        return Ok(swept);
+    }
     if !weighed.is_file() {
         return Ok(swept);
     }
@@ -482,10 +588,10 @@ fn taken(at: &Path, mut swept: Swept) -> Result<Swept> {
     Ok(swept)
 }
 
-fn sidecar(path: &Path, tail: &str) -> std::path::PathBuf {
+fn sidecar(path: &Path, tail: &str) -> PathBuf {
     let mut said = path.as_os_str().to_os_string();
     said.push(tail);
-    std::path::PathBuf::from(said)
+    PathBuf::from(said)
 }
 
 #[cfg(test)]
@@ -687,7 +793,7 @@ mod tests {
         std::fs::write(&picture, b"\x89PNG-pretend").expect("written");
         let former = a_former_history(there.path(), &picture);
 
-        let looked = look(&former).expect("looked");
+        let looked = look(&former, None).expect("looked");
         assert_eq!(looked.items, 5);
         assert_eq!(looked.pictures, 2);
         assert_eq!(looked.pictures_gone, 1, "one picture is no longer on disk");
@@ -893,7 +999,7 @@ mod tests {
         db.execute_batch("CREATE TABLE something (id INTEGER);")
             .expect("made");
         drop(db);
-        assert!(matches!(look(&stranger), Err(Error::NotTheFormerOne)));
+        assert!(matches!(look(&stranger, None), Err(Error::NotTheFormerOne)));
     }
     #[test]
     fn the_seconds_the_2x_counts_become_the_milliseconds_the_3_0_counts() {
@@ -925,25 +1031,29 @@ mod tests {
         }
     }
 
+    const A_DAY: i64 = 24 * 60 * 60 * 1_000;
+
+    fn aged(former: &Path, seconds: i64) {
+        let db = Connection::open(former).expect("opened");
+        db.execute(
+            "UPDATE clipboard_items SET created_at = ?1, modified_at = ?1",
+            [seconds],
+        )
+        .expect("aged");
+    }
+
     #[test]
-    fn a_history_brought_over_survives_the_sweep_that_keeps_a_month() {
+    fn a_history_younger_than_the_kept_time_survives_the_first_sweep() {
         let there = tempfile::tempdir().expect("a folder");
         let picture = there.path().join("shot.png");
         std::fs::write(&picture, b"png").expect("written");
         let former = a_former_history(there.path(), &picture);
         let yesterday = 1_789_950_000;
-        let db = Connection::open(&former).expect("opened");
-        db.execute(
-            "UPDATE clipboard_items SET created_at = ?1, modified_at = ?1",
-            [yesterday],
-        )
-        .expect("aged");
-        drop(db);
+        aged(&former, yesterday);
 
         let here = tempfile::tempdir().expect("a folder");
         let into = Store::open(&here.path().join("history.db")).expect("opened");
-        let a_day = 24 * 60 * 60 * 1_000;
-        let now = in_millis(yesterday) + a_day;
+        let now = in_millis(yesterday) + A_DAY;
         bring(&former, &into, now).expect("brought");
         let before = into.count().expect("counted");
         assert!(before > 0);
@@ -951,7 +1061,7 @@ mod tests {
         let swept = into
             .sweep(
                 &crate::Policy {
-                    keep_for: Some(30 * a_day),
+                    keep_for: Some(30 * A_DAY),
                     ..Default::default()
                 },
                 now,
@@ -960,6 +1070,160 @@ mod tests {
 
         assert_eq!(swept.expired, 0, "nothing brought over is a month old yet");
         assert_eq!(into.count().expect("counted"), before);
+    }
+
+    #[test]
+    fn what_the_look_counts_as_beyond_the_kept_time_is_what_the_sweep_takes() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+        let a_year_ago = 1_758_000_000;
+        aged(&former, a_year_ago);
+        let now = in_millis(a_year_ago) + 365 * A_DAY;
+        let cutoff = now - 30 * A_DAY;
+
+        let said = look(&former, Some(cutoff)).expect("looked");
+        assert!(said.beyond_keep > 0, "a year old is past a month");
+        assert_eq!(
+            said.beyond_keep,
+            said.items - said.pinned,
+            "what is pinned is not swept and is not counted"
+        );
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, now).expect("brought");
+        let swept = into
+            .sweep(
+                &crate::Policy {
+                    keep_for: Some(30 * A_DAY),
+                    ..Default::default()
+                },
+                now,
+            )
+            .expect("swept");
+
+        assert_eq!(
+            swept.expired as i64, said.beyond_keep,
+            "the warning shown beforehand is what actually happens"
+        );
+        assert_eq!(into.count().expect("counted"), said.pinned);
+    }
+
+    #[test]
+    fn a_picture_the_old_database_points_outside_its_folder_is_not_read() {
+        let theirs = tempfile::tempdir().expect("a folder");
+        let elsewhere = tempfile::tempdir().expect("another folder");
+        let key = elsewhere.path().join("id_rsa");
+        let secret = b"zqxjkvbnm-opensshprivatekey";
+        std::fs::write(&key, secret).expect("written");
+        let former = a_former_history(theirs.path(), &key);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        let brought = bring(&former, &into, 10_000).expect("brought");
+        drop(into);
+
+        assert!(
+            brought.without_their_picture >= 1,
+            "it came over, but without a file we were never meant to read"
+        );
+        for at in crate::blobs::files_under(here.path()) {
+            let read = std::fs::read(&at).unwrap_or_default();
+            assert!(
+                !read.windows(secret.len()).any(|one| one == secret),
+                "{} holds what was outside the old folder",
+                at.display()
+            );
+        }
+    }
+
+    #[test]
+    fn a_picture_bigger_than_we_would_store_today_comes_over_without_it() {
+        let there = tempfile::tempdir().expect("a folder");
+        let huge = there.path().join("huge.png");
+        let file = std::fs::File::create(&huge).expect("made");
+        file.set_len(cp_core::item::BLOB_UP_TO as u64 + 1)
+            .expect("sized");
+        drop(file);
+        let former = a_former_history(there.path(), &huge);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        let brought = bring(&former, &into, 10_000).expect("brought");
+
+        assert!(brought.without_their_picture >= 1);
+        assert!(
+            into.usage().expect("weighed").bytes < cp_core::item::BLOB_UP_TO as i64,
+            "nothing the capture would refuse today is let in by the migration"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_where_the_pictures_were_is_not_followed_out_of_the_folder() {
+        let theirs = tempfile::tempdir().expect("a folder");
+        let mine = tempfile::tempdir().expect("my own folder");
+        let keepsake = mine.path().join("taxes.pdf");
+        std::fs::write(&keepsake, b"the only copy I have").expect("written");
+        std::os::unix::fs::symlink(mine.path(), theirs.path().join("images")).expect("linked");
+
+        drop_former(theirs.path()).expect("swept");
+
+        assert!(keepsake.exists(), "somebody else's file was deleted");
+        assert_eq!(
+            std::fs::read(&keepsake).expect("read"),
+            b"the only copy I have",
+            "somebody else's file was written over"
+        );
+        assert!(
+            !theirs.path().join("images").exists(),
+            "the link itself is still ours to remove"
+        );
+    }
+
+    #[test]
+    fn the_spare_copy_a_broken_restore_left_behind_goes_with_the_rest() {
+        let theirs = tempfile::tempdir().expect("a folder");
+        let spare = theirs.path().join(format!("{THEIR_SPARE}1700000000"));
+        std::fs::create_dir_all(&spare).expect("made");
+        let inside = spare.join("clipboard.db");
+        std::fs::write(&inside, b"a whole second history").expect("written");
+
+        let swept = drop_former(theirs.path()).expect("swept");
+
+        assert!(!inside.exists());
+        assert!(!spare.exists());
+        assert!(swept.files >= 1);
+    }
+
+    #[test]
+    fn what_came_over_is_searchable_by_the_application_it_came_from() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 10_000).expect("brought");
+
+        let found = |query: &str| {
+            into.list(
+                &crate::Filter {
+                    query: Some(query.into()),
+                    ..Default::default()
+                },
+                Store::PAGE,
+                None,
+            )
+            .expect("queried")
+            .rows
+            .len()
+        };
+        assert_eq!(found("mail"), 1, "the application it came from");
+        assert_eq!(found("receipt"), 1, "the label it was given");
     }
 
     #[test]

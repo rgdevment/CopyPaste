@@ -67,14 +67,21 @@ const ES = {
   formerLosesPlain:
     "El resto llega en plano: de esos la 2 guardó solo el texto, así que lo que pegaba con estilos ya no los tiene",
   formerLosesPictures: "{one} imágenes ya no están en el disco y llegarán sin su contenido",
+  formerLosesKept:
+    "{one} son más antiguos que el tiempo que guardas y se irán apenas lleguen. Sube el límite en Ajustes si quieres conservarlos",
+  formerKeepsSecrets:
+    "La 2 guardó cosas que hoy no se capturarían, como lo que un gestor de contraseñas marca en privado. Lo que ya guardó, cruza igual",
+  formerPanelRests: "El panel se detiene mientras cruza el historial y vuelve solo al terminar",
   formerKeeps:
     "Cruzan las fechas, lo anclado, las etiquetas, el color, de qué aplicación vino cada cosa y cuántas veces la pegaste",
   formerDo: "Traer el historial",
   formerBringing: "Trayéndolo…",
+  formerCrossing: "Trayendo {one}…",
   formerCame: "Llegaron {one}",
   formerCameAlready: "{one} ya estaban",
   formerCameRefused: "{one} no se pudieron traer",
   formerCameFlat: "{one} sin su imagen",
+  formerCameSwept: "{one} se fueron por el tiempo que guardas",
   formerUnreadable: "No se pudo leer: {one}",
   formerStays: "Nada de CopyPaste 2 se toca ni se borra: se lee y se queda donde está",
   formerDrop: "Borrar los datos de CopyPaste 2",
@@ -223,14 +230,22 @@ const EN: Record<keyof Said, string> = {
   formerLosesPlain:
     "The rest arrive plain: for those the 2 kept the text alone, so what used to paste with styling no longer has it",
   formerLosesPictures: "{one} pictures are no longer on disk and will arrive without their content",
+  formerLosesKept:
+    "{one} are older than the time you keep and will go the moment they land. Raise the limit in Settings if you want to keep them",
+  formerKeepsSecrets:
+    "The 2 stored things that would not be captured today, such as what a password manager marks as private. What it already stored comes over all the same",
+  formerPanelRests:
+    "The panel rests while the history crosses and comes back on its own when it is done",
   formerKeeps:
     "Dates, what was pinned, labels, colour, which app each one came from and how many times you pasted it all cross over",
   formerDo: "Bring the history over",
   formerBringing: "Bringing it over…",
+  formerCrossing: "Bringing {one} over…",
   formerCame: "{one} came over",
   formerCameAlready: "{one} were already here",
   formerCameRefused: "{one} could not be brought",
   formerCameFlat: "{one} without their picture",
+  formerCameSwept: "{one} went by the time you keep",
   formerUnreadable: "It could not be read: {one}",
   formerStays: "Nothing of CopyPaste 2 is touched or deleted: it is read and left where it is",
   formerDrop: "Delete CopyPaste 2's data",

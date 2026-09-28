@@ -676,6 +676,72 @@ impl Store {
         Ok(id)
     }
 
+    pub fn insert_full(
+        &self,
+        uuid: &str,
+        item: &Item,
+        preview: &str,
+        created_at: i64,
+        more: &More<'_>,
+    ) -> Result<i64> {
+        if self.blobs.is_none()
+            && let Some(oversized) = item.oversized_format()
+        {
+            return Err(Error::NeedsBlobStore {
+                format: oversized.0,
+                size: oversized.1,
+            });
+        }
+        let hash = item.fingerprint() as i64;
+        let kind = item.kind.map(|k| k.as_str());
+        let rows = self.rows_of(item)?;
+        let modified = more.modified_at.unwrap_or(created_at).max(created_at);
+        let touched = more.touched_at.unwrap_or(modified);
+        let point = Point::open(&self.db, "carry")?;
+        self.db.execute(
+            "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
+                                content_hash, search_text, app_source, search_app,
+                                label, search_label, card_color, pinned, paste_count,
+                                broken_since)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+            params![
+                uuid,
+                kind,
+                head_of(preview),
+                created_at,
+                modified,
+                hash,
+                fold(preview),
+                more.app,
+                more.app.map(fold).unwrap_or_default(),
+                more.label,
+                more.label.map(fold).unwrap_or_default(),
+                more.color,
+                i64::from(more.pinned),
+                more.pastes.max(0),
+                more.broken,
+                touched
+            ],
+        )?;
+        let id = self.db.last_insert_rowid();
+        self.write_rows(id, &rows)?;
+        for (key, value) in more.meta {
+            self.set_meta(id, key, value)?;
+        }
+        for job in more.jobs {
+            self.enqueue(id, job)?;
+        }
+        point.keep()?;
+        Ok(id)
+    }
+
+    pub fn all_or_nothing<T>(&self, work: impl FnOnce() -> Result<T>) -> Result<T> {
+        let point = Point::open(&self.db, "batch")?;
+        let out = work()?;
+        point.keep()?;
+        Ok(out)
+    }
+
     fn rows_of(&self, item: &Item) -> Result<Vec<FormatRow>> {
         let mut rows = Vec::with_capacity(item.formats.len());
         for format in &item.formats {
@@ -1147,6 +1213,23 @@ pub struct Policy {
     pub broken_for: Option<i64>,
 }
 
+pub const A_DAY: i64 = 24 * 60 * 60 * 1_000;
+
+impl Policy {
+    pub fn keeping(days: Option<u16>, quota_mb: Option<u32>) -> Self {
+        Self {
+            keep_for: days
+                .filter(|days| *days > 0)
+                .map(|days| i64::from(days) * A_DAY),
+            keep_at_most: None,
+            bytes_at_most: quota_mb
+                .filter(|mb| *mb > 0)
+                .map(|mb| i64::from(mb) * 1024 * 1024),
+            broken_for: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Swept {
     pub broken: usize,
@@ -1172,6 +1255,54 @@ struct FormatRow {
     size: Option<i64>,
     inline: Option<Vec<u8>>,
     blob: Option<String>,
+}
+
+#[derive(Debug, Default)]
+pub struct More<'a> {
+    pub modified_at: Option<i64>,
+    pub touched_at: Option<i64>,
+    pub app: Option<&'a str>,
+    pub label: Option<&'a str>,
+    pub color: i64,
+    pub pinned: bool,
+    pub pastes: i64,
+    pub broken: Option<i64>,
+    pub meta: &'a [(String, String)],
+    pub jobs: &'a [&'a str],
+}
+
+struct Point<'a> {
+    db: &'a Connection,
+    name: &'static str,
+    open: bool,
+}
+
+impl<'a> Point<'a> {
+    fn open(db: &'a Connection, name: &'static str) -> Result<Self> {
+        db.execute_batch(&format!("SAVEPOINT {name}"))?;
+        Ok(Self {
+            db,
+            name,
+            open: true,
+        })
+    }
+
+    fn keep(mut self) -> Result<()> {
+        self.open = false;
+        self.db
+            .execute_batch(&format!("RELEASE {}", self.name))
+            .map_err(Error::from)
+    }
+}
+
+impl Drop for Point<'_> {
+    fn drop(&mut self) {
+        if self.open {
+            let _ = self
+                .db
+                .execute_batch(&format!("ROLLBACK TO {0}; RELEASE {0}", self.name));
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

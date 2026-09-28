@@ -108,6 +108,8 @@ fn digest_of(name: &str) -> Option<(&str, bool)> {
     shaped.then_some((digest, partial))
 }
 
+const AT_A_TIME: usize = 1 << 20;
+
 pub fn remove_at(path: &Path) -> Result<()> {
     use std::io::Write;
     let Ok(metadata) = std::fs::symlink_metadata(path) else {
@@ -124,8 +126,13 @@ pub fn remove_at(path: &Path) -> Result<()> {
         .write(true)
         .open(path)
         .map_err(Error::Io)?;
-    let zeros = vec![0u8; metadata.len() as usize];
-    file.write_all(&zeros).map_err(Error::Io)?;
+    let zeros = [0u8; AT_A_TIME];
+    let mut left = metadata.len();
+    while left > 0 {
+        let now = usize::try_from(left).unwrap_or(AT_A_TIME).min(AT_A_TIME);
+        file.write_all(&zeros[..now]).map_err(Error::Io)?;
+        left -= now as u64;
+    }
     file.sync_all().map_err(Error::Io)?;
     drop(file);
     std::fs::remove_file(path).map_err(Error::Io)?;
