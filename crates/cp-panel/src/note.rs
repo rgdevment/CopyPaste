@@ -16,6 +16,7 @@ pub fn note(what: &str) {
     let path = where_to();
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
+        let _ = cp_store::restrict(dir, 0o700);
     }
     if std::fs::metadata(&path).map_or(0, |it| it.len()) > UP_TO {
         let _ = std::fs::write(&path, b"");
@@ -25,6 +26,7 @@ pub fn note(what: &str) {
         .append(true)
         .open(&path)
     {
+        let _ = cp_store::restrict(&path, 0o600);
         let _ = writeln!(file, "{clock} {what}");
     }
 }
@@ -45,7 +47,10 @@ pub fn trouble(what: &str) {
 pub fn catch_panics() {
     let before = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        note(&format!("pánico: {info}"));
+        match info.location() {
+            Some(at) => note(&format!("panic at {}:{}", at.file(), at.line())),
+            None => note("a panic somewhere that could not be placed"),
+        }
         before(info);
     }));
 }
@@ -76,6 +81,23 @@ mod tests {
             stamp.chars().all(|one| one.is_ascii_digit() || one == ':'),
             "{stamp}"
         );
+    }
+
+    #[test]
+    fn what_the_log_holds_is_only_readable_by_whoever_copied_it() {
+        note("any line at all");
+        let path = where_to();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path)
+                .expect("is here")
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o600, "the log is nobody else's business");
+        }
+        #[cfg(not(unix))]
+        assert!(path.exists());
     }
 
     #[test]

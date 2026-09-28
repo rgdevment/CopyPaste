@@ -108,7 +108,7 @@ fn digest_of(name: &str) -> Option<(&str, bool)> {
     shaped.then_some((digest, partial))
 }
 
-fn remove_at(path: &Path) -> Result<()> {
+pub fn remove_at(path: &Path) -> Result<()> {
     use std::io::Write;
     let Ok(metadata) = std::fs::symlink_metadata(path) else {
         return Ok(());
@@ -153,35 +153,35 @@ mod tests {
     use super::*;
 
     fn temporary() -> (tempfile::TempDir, Blobs) {
-        let dir = tempfile::tempdir().expect("carpeta");
-        let blobs = Blobs::at(&dir.path().join("blobs")).expect("almacén");
+        let dir = tempfile::tempdir().expect("a folder");
+        let blobs = Blobs::at(&dir.path().join("blobs")).expect("a store");
         (dir, blobs)
     }
 
     #[test]
     fn what_goes_in_comes_out() {
         let (_dir, blobs) = temporary();
-        let digest = blobs.put(b"unos bytes cualesquiera").expect("guarda");
+        let digest = blobs.put(b"some arbitrary bytes").expect("stored");
         assert_eq!(
-            blobs.get(&digest).expect("lee").as_deref(),
-            Some(&b"unos bytes cualesquiera"[..])
+            blobs.get(&digest).expect("read").as_deref(),
+            Some(&b"some arbitrary bytes"[..])
         );
     }
 
     #[test]
     fn the_same_content_is_stored_once() {
         let (_dir, blobs) = temporary();
-        let first = blobs.put(b"repetido").expect("guarda");
-        let second = blobs.put(b"repetido").expect("guarda otra vez");
-        assert_eq!(first, second, "el nombre es el contenido");
+        let first = blobs.put(b"repeated").expect("stored");
+        let second = blobs.put(b"repeated").expect("stored again");
+        assert_eq!(first, second, "the name is the content");
     }
 
     #[test]
     fn different_content_never_shares_a_name() {
         let (_dir, blobs) = temporary();
         assert_ne!(
-            blobs.put(b"uno").expect("a"),
-            blobs.put(b"otro").expect("b")
+            blobs.put(b"one").expect("a"),
+            blobs.put(b"other").expect("b")
         );
     }
 
@@ -189,10 +189,10 @@ mod tests {
     fn an_io_error_that_is_not_a_missing_file_is_not_swallowed() {
         let (_dir, blobs) = temporary();
         let digest = "a".repeat(64);
-        std::fs::create_dir_all(blobs.path_for(&digest)).expect("crea carpeta");
+        std::fs::create_dir_all(blobs.path_for(&digest)).expect("creates a folder");
         assert!(
             blobs.get(&digest).is_err(),
-            "un error de E/S real no puede devolver Ok(None)"
+            "a genuine I/O error cannot come back as Ok(None)"
         );
     }
 
@@ -200,56 +200,56 @@ mod tests {
     fn asking_for_something_that_is_not_there_is_not_an_error() {
         let (_dir, blobs) = temporary();
         let missing = "0".repeat(64);
-        assert!(blobs.get(&missing).expect("lee").is_none());
+        assert!(blobs.get(&missing).expect("read").is_none());
         assert!(!blobs.exists(&missing));
         blobs
             .remove(&missing)
-            .expect("borrar lo que no está no falla");
+            .expect("deleting what is not there does not fail");
     }
 
     #[test]
     fn deleting_overwrites_before_unlinking() {
         let (dir, blobs) = temporary();
-        let digest = blobs.put(b"contrasena del banco").expect("guarda");
-        let twin = dir.path().join("gemelo");
-        std::fs::hard_link(blobs.path_for(&digest), &twin).expect("enlace duro");
-        blobs.remove(&digest).expect("borra");
+        let digest = blobs.put(b"the bank password").expect("stored");
+        let twin = dir.path().join("twin");
+        std::fs::hard_link(blobs.path_for(&digest), &twin).expect("a hard link");
+        blobs.remove(&digest).expect("removed");
         assert!(!blobs.exists(&digest));
-        assert!(blobs.get(&digest).expect("lee").is_none());
-        let bytes = std::fs::read(&twin).expect("el otro nombre sigue");
-        assert_eq!(bytes.len(), b"contrasena del banco".len());
+        assert!(blobs.get(&digest).expect("read").is_none());
+        let bytes = std::fs::read(&twin).expect("the other name still stands");
+        assert_eq!(bytes.len(), b"the bank password".len());
         assert!(
             bytes.iter().all(|b| *b == 0),
-            "los bloques se pisaron con ceros antes de soltar el nombre"
+            "the blocks were overwritten with zeros before the name was let go"
         );
     }
 
     #[cfg(unix)]
     fn symlink_file(target: &Path, link: &Path) {
-        std::os::unix::fs::symlink(target, link).expect("enlace");
+        std::os::unix::fs::symlink(target, link).expect("a link");
     }
 
     #[cfg(windows)]
     fn symlink_file(target: &Path, link: &Path) {
-        std::os::windows::fs::symlink_file(target, link).expect("enlace");
+        std::os::windows::fs::symlink_file(target, link).expect("a link");
     }
 
     #[test]
     fn a_symlink_named_like_a_digest_is_unlinked_never_followed() {
         let (dir, blobs) = temporary();
-        let victim = dir.path().join("ajeno.txt");
-        std::fs::write(&victim, b"no me toques").expect("archivo");
+        let victim = dir.path().join("not-ours.txt");
+        std::fs::write(&victim, b"do not touch me").expect("a file");
         let digest = "c".repeat(64);
         let link = blobs.path_for(&digest);
-        std::fs::create_dir_all(link.parent().expect("padre")).expect("carpeta");
+        std::fs::create_dir_all(link.parent().expect("a parent")).expect("a folder");
         symlink_file(&victim, &link);
         aged(&victim);
-        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 1);
+        assert_eq!(blobs.sweep(&|_| false).expect("swept"), 1);
         assert!(!link.exists() && std::fs::symlink_metadata(&link).is_err());
         assert_eq!(
-            std::fs::read(&victim).expect("sigue"),
-            b"no me toques",
-            "se borra el enlace, nunca lo que hay detrás"
+            std::fs::read(&victim).expect("still there"),
+            b"do not touch me",
+            "the link gets removed, never what is behind it"
         );
     }
 
@@ -258,62 +258,65 @@ mod tests {
         let (_dir, blobs) = temporary();
         let digest = "d".repeat(64);
         let folder = blobs.path_for(&digest);
-        std::fs::create_dir_all(&folder).expect("carpeta");
-        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 0);
+        std::fs::create_dir_all(&folder).expect("a folder");
+        assert_eq!(blobs.sweep(&|_| false).expect("swept"), 0);
         assert!(folder.is_dir());
         blobs
             .remove(&digest)
-            .expect("borrar una carpeta no es borrar un blob");
+            .expect("deleting a folder is not deleting a blob");
         assert!(folder.is_dir());
     }
 
     #[test]
     fn an_empty_blob_is_still_a_blob() {
         let (_dir, blobs) = temporary();
-        let digest = blobs.put(b"").expect("guarda");
-        assert_eq!(blobs.get(&digest).expect("lee"), Some(Vec::new()));
+        let digest = blobs.put(b"").expect("stored");
+        assert_eq!(blobs.get(&digest).expect("read"), Some(Vec::new()));
     }
 
     #[test]
     fn nothing_is_left_behind_when_writing_succeeds() {
         let (dir, blobs) = temporary();
-        blobs.put(b"algo").expect("guarda");
+        blobs.put(b"something").expect("stored");
         let partials = files_under(&dir.path().join("blobs"))
             .into_iter()
             .filter(|p| p.extension().is_some_and(|e| e == "partial"))
             .count();
-        assert_eq!(partials, 0, "el temporal se renombra, no se queda");
+        assert_eq!(
+            partials, 0,
+            "the temporary file gets renamed, not left behind"
+        );
     }
 
     fn aged(path: &Path) {
         let file = std::fs::File::options()
             .write(true)
             .open(path)
-            .expect("abre");
-        file.set_modified(std::time::UNIX_EPOCH).expect("envejece");
+            .expect("opened");
+        file.set_modified(std::time::UNIX_EPOCH).expect("aged");
     }
 
     #[test]
     fn a_blob_nobody_references_is_removed_once_it_is_old_enough() {
         let (_dir, blobs) = temporary();
-        let digest = blobs.put(b"huerfano").expect("guarda");
+        let digest = blobs.put(b"orphaned").expect("stored");
         assert_eq!(
-            blobs.sweep(&|_| false).expect("barre"),
+            blobs.sweep(&|_| false).expect("swept"),
             0,
-            "recién escrito: puede ser de un ítem a medio guardar"
+            "freshly written: it might belong to an item that is only half stored"
         );
         aged(&blobs.path_for(&digest));
-        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 1);
+        assert_eq!(blobs.sweep(&|_| false).expect("swept"), 1);
         assert!(!blobs.exists(&digest));
     }
 
     #[test]
     fn a_referenced_blob_survives_the_sweep_however_old() {
         let (_dir, blobs) = temporary();
-        let digest = blobs.put(b"con dueno").expect("guarda");
+        let digest = blobs.put(b"has an owner").expect("stored");
         aged(&blobs.path_for(&digest));
         let keep = digest.clone();
-        assert_eq!(blobs.sweep(&|name| name == keep).expect("barre"), 0);
+        assert_eq!(blobs.sweep(&|name| name == keep).expect("swept"), 0);
         assert!(blobs.exists(&digest));
     }
 
@@ -322,36 +325,36 @@ mod tests {
         let (_dir, blobs) = temporary();
         let digest = "b".repeat(64);
         let leftover = blobs.path_for(&digest).with_extension("partial");
-        std::fs::create_dir_all(leftover.parent().expect("padre")).expect("carpeta");
-        std::fs::write(&leftover, b"a medias").expect("escribe");
+        std::fs::create_dir_all(leftover.parent().expect("a parent")).expect("a folder");
+        std::fs::write(&leftover, b"halfway done").expect("written");
         aged(&leftover);
-        assert_eq!(blobs.sweep(&|_| true).expect("barre"), 1);
-        assert!(!leftover.exists(), "aunque su digest esté referenciado");
+        assert_eq!(blobs.sweep(&|_| true).expect("swept"), 1);
+        assert!(!leftover.exists(), "even though its digest is referenced");
     }
 
     #[test]
     fn a_fresh_blob_is_not_removed_by_a_release_only_by_the_sweep_later() {
         let (_dir, blobs) = temporary();
-        let digest = blobs.put(b"recien escrito").expect("guarda");
+        let digest = blobs.put(b"freshly written").expect("stored");
         assert!(
-            !blobs.remove_if_settled(&digest).expect("no toca"),
-            "otra conexión puede estar a punto de referenciarlo"
+            !blobs.remove_if_settled(&digest).expect("does not touch it"),
+            "another connection might be about to reference it"
         );
         assert!(blobs.exists(&digest));
         aged(&blobs.path_for(&digest));
-        assert!(blobs.remove_if_settled(&digest).expect("ahora sí"));
+        assert!(blobs.remove_if_settled(&digest).expect("now it does"));
         assert!(!blobs.exists(&digest));
         assert!(
-            !blobs.remove_if_settled(&digest).expect("ya no está"),
-            "borrar dos veces no es error"
+            !blobs.remove_if_settled(&digest).expect("it is gone now"),
+            "deleting twice is not an error"
         );
     }
 
     #[test]
     fn two_writers_never_share_a_temporary_file() {
         let (dir, blobs) = temporary();
-        let a = blobs.put(b"uno").expect("a");
-        let b = blobs.put(b"dos").expect("b");
+        let a = blobs.put(b"one").expect("a");
+        let b = blobs.put(b"two").expect("b");
         assert_ne!(a, b);
         let leftovers = files_under(&dir.path().join("blobs"))
             .into_iter()
@@ -363,7 +366,7 @@ mod tests {
     #[test]
     fn sweeping_an_empty_store_is_nothing() {
         let (_dir, blobs) = temporary();
-        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 0);
+        assert_eq!(blobs.sweep(&|_| false).expect("swept"), 0);
     }
 
     #[test]
@@ -373,17 +376,17 @@ mod tests {
         let strays = [
             root.join(".DS_Store"),
             root.join("x"),
-            root.join("ñ.txt"),
+            root.join("façade.txt"),
             root.join("ab").join("cd").join("notes.partial"),
         ];
         for stray in &strays {
-            std::fs::create_dir_all(stray.parent().expect("padre")).expect("carpeta");
-            std::fs::write(stray, b"ajeno").expect("escribe");
+            std::fs::create_dir_all(stray.parent().expect("a parent")).expect("a folder");
+            std::fs::write(stray, b"not ours").expect("written");
             aged(stray);
         }
-        assert_eq!(blobs.sweep(&|_| false).expect("barre"), 0);
+        assert_eq!(blobs.sweep(&|_| false).expect("swept"), 0);
         for stray in &strays {
-            assert!(stray.exists(), "{} no era nuestro", stray.display());
+            assert!(stray.exists(), "{} was not ours", stray.display());
         }
     }
 
@@ -396,21 +399,21 @@ mod tests {
         let private = format!("{digest}.4242-7.partial");
         assert_eq!(digest_of(&private), Some((digest.as_str(), true)));
         assert_eq!(digest_of(".DS_Store"), None);
-        assert_eq!(digest_of(&"g".repeat(64)), None, "no es hexadecimal");
-        assert_eq!(digest_of(&"a".repeat(63)), None, "le falta uno");
+        assert_eq!(digest_of(&"g".repeat(64)), None, "is not hexadecimal");
+        assert_eq!(digest_of(&"a".repeat(63)), None, "it is one short");
         assert_eq!(digest_of("x.partial"), None);
     }
 
     #[test]
     fn reclaiming_a_blob_that_already_exists_makes_it_fresh_again() {
         let (_dir, blobs) = temporary();
-        let digest = blobs.put(b"reclamado").expect("guarda");
+        let digest = blobs.put(b"reclaimed").expect("stored");
         aged(&blobs.path_for(&digest));
-        blobs.put(b"reclamado").expect("otra vez");
+        blobs.put(b"reclaimed").expect("again");
         assert_eq!(
-            blobs.sweep(&|_| false).expect("barre"),
+            blobs.sweep(&|_| false).expect("swept"),
             0,
-            "quien lo acaba de reclamar aún no ha escrito su fila"
+            "whoever just reclaimed it has not written its row yet"
         );
         assert!(blobs.exists(&digest));
     }

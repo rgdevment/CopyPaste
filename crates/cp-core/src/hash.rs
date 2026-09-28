@@ -35,19 +35,19 @@ mod tests {
     fn two_captures_sharing_a_menu_bar_are_not_the_same_capture() {
         let a = screenshot(512 * 1024, 0x01);
         let b = screenshot(512 * 1024, 0x02);
-        assert_eq!(a.len(), b.len(), "mismo tamaño, media imagen idéntica");
+        assert_eq!(a.len(), b.len(), "same size, half the image identical");
         assert_ne!(
             content_hash(&a),
             content_hash(&b),
-            "muestrear solo la cabecera las daría por iguales"
+            "sampling just the header would call them equal"
         );
     }
 
     #[test]
     fn two_long_texts_that_begin_alike_are_different_items() {
         let shared = "x".repeat(100);
-        let a = format!("{shared}primero");
-        let b = format!("{shared}segundo");
+        let a = format!("{shared}first");
+        let b = format!("{shared}second");
         assert_ne!(content_hash(a.as_bytes()), content_hash(b.as_bytes()));
     }
 
@@ -72,7 +72,7 @@ mod tests {
         assert_ne!(
             content_hash(&big),
             content_hash(&tail_changed),
-            "si los bloques cayeran todos al principio, esto no se vería"
+            "if the blocks all fell at the start, this would go unnoticed"
         );
     }
 
@@ -84,7 +84,7 @@ mod tests {
         assert_eq!(
             content_hash(&big),
             content_hash(&hole),
-            "si esto cambiara, el muestreo dejó de ser un muestreo"
+            "if this changed, the sampling would have stopped being a sampling"
         );
     }
 
@@ -95,12 +95,12 @@ mod tests {
         assert_eq!(
             content_hash(&under),
             xxh3_64(&under),
-            "hasta el umbral se mira el contenido entero"
+            "up to the threshold, the whole content is looked at"
         );
         assert_ne!(
             content_hash(&over),
             xxh3_64(&over),
-            "por encima se muestrea, así que no coincide con el hash directo"
+            "above it, it is sampled, so it does not match the direct hash"
         );
     }
 
@@ -116,7 +116,7 @@ mod tests {
             assert_ne!(
                 content_hash(&poked),
                 reference,
-                "el bloque {block}, que empieza en {at}, no entra en la mezcla"
+                "block {block}, starting at {at}, is missing from the mix"
             );
         }
     }

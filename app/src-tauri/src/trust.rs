@@ -1,8 +1,8 @@
 #[derive(serde::Serialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Trust {
     pub offered: bool,
     pub pastes: bool,
-    pub asked_before: bool,
     pub secure_input: bool,
 }
 
@@ -27,7 +27,6 @@ mod there {
         Trust {
             offered: true,
             pastes: ready.can_paste(),
-            asked_before: ready.accessibility,
             secure_input: ready.secure_input,
         }
     }
@@ -50,7 +49,6 @@ mod there {
         Trust {
             offered: false,
             pastes: false,
-            asked_before: false,
             secure_input: false,
         }
     }
@@ -66,7 +64,7 @@ mod tests {
     fn where_nothing_is_asked_nothing_is_offered() {
         let said = trust();
         if !said.offered {
-            assert!(!said.pastes && !said.asked_before && !said.secure_input);
+            assert!(!said.pastes && !said.secure_input);
         }
     }
 

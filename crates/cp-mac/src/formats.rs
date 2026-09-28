@@ -213,7 +213,7 @@ mod tests {
             .filter(|id| CATALOG.decide(id) == Take::Payload)
             .collect();
         assert_eq!(CATALOG.classify(SAFARI), Some(Family::Text));
-        assert!(kept.len() >= 5, "se guardaron {} tipos", kept.len());
+        assert!(kept.len() >= 5, "{} types were kept", kept.len());
         assert!(kept.iter().any(|id| **id == "com.apple.flat-rtfd"));
         assert!(kept.iter().any(|id| **id == "com.apple.webarchive"));
     }
@@ -258,7 +258,7 @@ mod tests {
         assert_eq!(
             CATALOG.preferred_image(SAFARI_IMAGE),
             Some("public.tiff"),
-            "Safari no ofrece PNG"
+            "Safari offers no PNG"
         );
         for archive in ["com.apple.webarchive", "Apple Web Archive pasteboard type"] {
             assert_eq!(
@@ -276,7 +276,7 @@ mod tests {
         assert_eq!(
             CATALOG.decide_in(Some(Family::Text), "com.apple.webarchive"),
             Take::Payload,
-            "Word sigue guardando el suyo"
+            "Word still keeps its own"
         );
     }
 
@@ -352,7 +352,7 @@ mod tests {
                 CATALOG
                     .refusal(&["public.utf8-plain-text", marker])
                     .is_some(),
-                "{marker} debe excluir el ítem"
+                "{marker} must exclude the item"
             );
         }
     }

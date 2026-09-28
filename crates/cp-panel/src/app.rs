@@ -292,7 +292,7 @@ impl App {
         panel.on_pin(move |id, on| {
             let now = now_ms();
             if let Err(why) = state.borrow().store.set_pinned(i64::from(id), on, now) {
-                note(&format!("no se pudo anclar {id}: {why}"));
+                note(&format!("{id} could not be pinned: {why}"));
             }
             if let Some(ui) = ui.upgrade() {
                 keeping_place(&ui, &state);
@@ -302,7 +302,7 @@ impl App {
         let state = self.state.clone();
         panel.on_remove(move |id| {
             if let Err(why) = state.borrow().store.mark_deleted(i64::from(id), now_ms()) {
-                note(&format!("no se pudo borrar {id}: {why}"));
+                note(&format!("{id} could not be deleted: {why}"));
             }
             if let Some(ui) = ui.upgrade() {
                 keeping_place(&ui, &state);
@@ -373,7 +373,7 @@ impl App {
                 ui.set_sheet_subject(slint::format!("{} · {}", card.title, card.source));
                 ui.set_sheet_kind(card.kind.clone());
             }
-            open_sheet(&ui, "PEGAR COMO", rows);
+            open_sheet(&ui, crate::say::pick("PEGAR COMO", "PASTE AS"), rows);
             arm_sheet(&state, &ui);
         });
         let ui = self.ui.clone();
@@ -398,7 +398,11 @@ impl App {
             ui.set_sheet_anchor(0.0);
             ui.set_sheet_span(0.0);
             ui.set_sheet_subject(Default::default());
-            open_sheet(&ui, "FILTRAR POR TIPO", rows);
+            open_sheet(
+                &ui,
+                crate::say::pick("FILTRAR POR TIPO", "FILTER BY KIND"),
+                rows,
+            );
             arm_sheet(&state, &ui);
         });
         let ui = self.ui.clone();
@@ -458,7 +462,7 @@ impl App {
             let store = state.borrow().store.clone();
             match store.clear_all_unpinned(now_ms()) {
                 Ok(gone) => {
-                    note(&format!("se vaciaron {gone} elementos sin anclar"));
+                    note(&format!("{gone} unpinned items were emptied out"));
                     crate::note::tell(&format!("emptied {gone}"));
                 }
                 Err(why) => crate::note::trouble(&format!("no se pudo vaciar: {why}")),
@@ -484,7 +488,7 @@ impl App {
             ui.set_sheet_anchor(0.0);
             ui.set_sheet_span(0.0);
             ui.set_sheet_subject(Default::default());
-            open_sheet(&ui, "ATAJOS", keys_sheet());
+            open_sheet(&ui, crate::say::pick("ATAJOS", "SHORTCUTS"), keys_sheet());
             arm_sheet(&state, &ui);
         });
         let ui = self.ui.clone();
@@ -643,7 +647,7 @@ fn spawn_counter(
         let store = match Store::open(&db) {
             Ok(store) => store,
             Err(why) => {
-                note(&format!("el contador no pudo abrir el almacén: {why}"));
+                note(&format!("the counter could not open the store: {why}"));
                 return;
             }
         };
@@ -753,22 +757,22 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
     let item = match store.item(id) {
         Ok(Some(item)) => item,
         Ok(None) => {
-            note(&format!("pegar {id}: ya no está en el almacén"));
+            note(&format!("pasting {id}: it is no longer in the store"));
             return false;
         }
         Err(why) => {
-            note(&format!("pegar {id}: {why}"));
+            note(&format!("pasting {id}: {why}"));
             return false;
         }
     };
     let written = here::to_clipboard(&item, || mark(engine));
     if written {
         if let Err(why) = store.record_paste(id, now_ms()) {
-            note(&format!("pegado {id} sin anotar: {why}"));
+            note(&format!("{id} was pasted and nobody wrote it down: {why}"));
         }
     } else {
         note(&format!(
-            "pegar {id}: la escritura no llegó al portapapeles"
+            "pasting {id}: the write never reached the clipboard"
         ));
     }
     written
@@ -796,25 +800,79 @@ fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
 }
 
 fn keys_sheet() -> Vec<FormRow> {
-    const KEYS: [(&str, &str); 12] = [
-        ("Enter", "pegar lo seleccionado"),
-        ("Shift + Enter", "pegar en plano"),
-        ("Alt + Enter  ·  Ctrl + Enter", "pegar como…"),
-        ("Flechas", "moverse por la lista"),
-        ("Clic", "abrir la tarjeta; otro clic la cierra"),
-        ("Doble clic", "pegar esa tarjeta"),
-        ("Tab  ·  Shift + Tab", "recorrer los filtros"),
-        ("#imagen  ·  #carpeta", "filtrar por tipo desde el buscador"),
-        ("Retroceso", "quitar la última etiqueta"),
-        ("Supr", "borrar la seleccionada"),
-        ("Ctrl + P", "anclar o desanclar"),
-        ("Esc", "cerrar el panel"),
+    keys_sheet_in(crate::say::in_english())
+}
+
+fn keys_sheet_in(english: bool) -> Vec<FormRow> {
+    const KEYS: [(&str, &str, &str, &str); 12] = [
+        (
+            "Enter",
+            "Enter",
+            "pegar lo seleccionado",
+            "paste what is selected",
+        ),
+        (
+            "Shift + Enter",
+            "Shift + Enter",
+            "pegar en plano",
+            "paste as plain text",
+        ),
+        (
+            "Alt + Enter  ·  Ctrl + Enter",
+            "Alt + Enter  ·  Ctrl + Enter",
+            "pegar como…",
+            "paste as…",
+        ),
+        (
+            "Flechas",
+            "Arrows",
+            "moverse por la lista",
+            "move through the list",
+        ),
+        (
+            "Clic",
+            "Click",
+            "abrir la tarjeta; otro clic la cierra",
+            "open the card; another click closes it",
+        ),
+        (
+            "Doble clic",
+            "Double click",
+            "pegar esa tarjeta",
+            "paste that card",
+        ),
+        (
+            "Tab  ·  Shift + Tab",
+            "Tab  ·  Shift + Tab",
+            "recorrer los filtros",
+            "step through the filters",
+        ),
+        (
+            "#imagen  ·  #carpeta",
+            "#image  ·  #folder",
+            "filtrar por tipo desde el buscador",
+            "filter by kind from the search box",
+        ),
+        (
+            "Retroceso",
+            "Backspace",
+            "quitar la última etiqueta",
+            "drop the last tag",
+        ),
+        (
+            "Supr",
+            "Delete",
+            "borrar la seleccionada",
+            "delete the selected one",
+        ),
+        ("Ctrl + P", "Ctrl + P", "anclar o desanclar", "pin or unpin"),
+        ("Esc", "Esc", "cerrar el panel", "close the panel"),
     ];
     KEYS.iter()
-        .map(|(keys, what)| FormRow {
+        .map(|(keys_es, keys_en, what_es, what_en)| FormRow {
             key: Default::default(),
-            label: (*what).into(),
-            preview: (*keys).into(),
+            label: crate::say::pick_in(english, what_es, what_en).into(),
+            preview: crate::say::pick_in(english, keys_es, keys_en).into(),
         })
         .collect()
 }
@@ -949,7 +1007,7 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
         return hand_over(store, engine, id);
     }
     let Some(form) = form_of(key) else {
-        note(&format!("forma desconocida: {key}"));
+        note(&format!("a form nobody knows: {key}"));
         return false;
     };
     let Ok(Some(item)) = store.item(id) else {
@@ -959,14 +1017,14 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
     let content = here::content_of(&item, ocr.as_deref());
     let Some(rendered) = cp_core::paste_as::render(form, &content) else {
         note(&format!(
-            "pegar como {key} sobre {id}: la forma no dio nada"
+            "pasting {id} as {key}: the form gave nothing back"
         ));
         return false;
     };
     let made = rendered.into_item();
     let written = here::to_clipboard(&made, || mark(engine));
     if written && let Err(why) = store.record_paste(id, now_ms()) {
-        note(&format!("pegado {id} sin anotar: {why}"));
+        note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
     written
 }
@@ -983,7 +1041,7 @@ fn mark(engine: Option<&crate::engine::Engine>) {
         return;
     };
     if !engine.ours() {
-        note("no se pudo marcar como nuestra la escritura del portapapeles");
+        note("the clipboard write could not be marked as ours");
     }
 }
 
@@ -999,7 +1057,7 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
         here::Sent::Nobody => vanish(ui),
         here::Sent::Done => {}
         here::Sent::Degraded(why) => {
-            note(&format!("queda en el portapapeles, sin pegar: {why:?}"));
+            note(&format!("it stays on the clipboard, unpasted: {why:?}"));
             if ui.show().is_ok() {
                 forward(ui);
                 appear(ui);
@@ -1114,7 +1172,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                     let _ = ui.upgrade_in_event_loop(|panel| vanish(&panel));
                 }
                 "quit" => break,
-                _ => note("llegó una orden que no entiendo"),
+                _ => note("an order arrived that means nothing here"),
             }
         }
         let _ = ui.upgrade_in_event_loop(|_| {
@@ -1149,6 +1207,41 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_shortcut_sheet_is_written_in_both_tongues() {
+        let spanish = keys_sheet_in(false);
+        let english = keys_sheet_in(true);
+        assert_eq!(spanish.len(), english.len());
+        assert!(!spanish.is_empty());
+        for (es, en) in spanish.iter().zip(english.iter()) {
+            assert!(!es.label.is_empty() && !en.label.is_empty());
+            assert!(!es.preview.is_empty() && !en.preview.is_empty());
+        }
+        let shared = spanish
+            .iter()
+            .zip(english.iter())
+            .filter(|(es, en)| es.label == en.label)
+            .count();
+        assert_eq!(shared, 0, "not one row was left untranslated");
+    }
+
+    #[test]
+    fn the_filter_example_names_kinds_the_search_box_understands() {
+        for sheet in [keys_sheet_in(false), keys_sheet_in(true)] {
+            let row = sheet
+                .iter()
+                .find(|row| row.preview.starts_with('#'))
+                .expect("the filter row is there");
+            for word in row.preview.split('·') {
+                let tag = word.trim().trim_start_matches('#');
+                assert!(
+                    crate::view::kind_from_word(tag).is_some(),
+                    "«{tag}» is not a kind the search box knows"
+                );
+            }
+        }
+    }
+
     use super::*;
 
     #[test]

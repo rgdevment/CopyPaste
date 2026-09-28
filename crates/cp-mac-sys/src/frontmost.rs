@@ -1,4 +1,4 @@
-use objc2_app_kit::NSWorkspace;
+use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication, NSWorkspace};
 
 pub fn frontmost() -> Option<(i32, Option<String>)> {
     let app = NSWorkspace::sharedWorkspace().frontmostApplication()?;
@@ -42,7 +42,6 @@ pub fn in_front() -> Option<String> {
     }
     app_name(pid).filter(|named| !named.is_empty())
 }
-use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication};
 
 pub fn bring_to_front(pid: i32) -> bool {
     let Some(app) = NSRunningApplication::runningApplicationWithProcessIdentifier(pid) else {
@@ -80,18 +79,18 @@ mod tests {
     #[test]
     fn missing_paths_reports_what_is_gone_and_only_that() {
         let dir = std::env::temp_dir().join(format!("cp-missing-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("carpeta");
+        std::fs::create_dir_all(&dir).expect("a folder");
         let present = dir.join("está aquí.txt");
-        std::fs::write(&present, b"x").expect("archivo");
+        std::fs::write(&present, b"x").expect("a file");
         let urls = format!(
-            "file://{}\nfile://{}/no-existe.txt\n\n",
+            "file://{}\nfile://{}/does-not-exist.txt\n\n",
             present.display().to_string().replace(' ', "%20"),
             dir.display()
         );
         let missing = missing_paths(&urls);
         std::fs::remove_dir_all(&dir).ok();
         assert_eq!(missing.len(), 1);
-        assert!(missing[0].ends_with("/no-existe.txt"));
+        assert!(missing[0].ends_with("/does-not-exist.txt"));
         assert!(missing_paths("").is_empty());
     }
 }

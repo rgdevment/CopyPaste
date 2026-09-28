@@ -313,7 +313,7 @@ mod tests {
         assert_eq!(more, PAGE);
         assert_eq!(rows.row_count(), 2 * PAGE);
         assert_eq!(rows.load_page(), 60);
-        assert_eq!(rows.load_page(), 0, "no hay más páginas");
+        assert_eq!(rows.load_page(), 0, "there are no more pages");
         assert_eq!(rows.row_count(), 300);
     }
 
@@ -324,7 +324,7 @@ mod tests {
         assert_eq!(first.body.as_str(), "elemento 2");
         assert_eq!(first.age.as_str(), "ahora");
         assert!(rows.cards.borrow()[0].is_some());
-        let again = rows.row_data(0).expect("de la caché");
+        let again = rows.row_data(0).expect("from the cache");
         assert_eq!((again.id, again.body.as_str()), (first.id, "elemento 2"));
         assert_eq!(rows.row_data(9).map(|card| card.id), None);
     }
@@ -337,7 +337,7 @@ mod tests {
         assert!(rows.needs_more(PAGE - AHEAD));
         assert!(rows.needs_more(PAGE - 1));
         rows.loading.set(true);
-        assert!(!rows.needs_more(PAGE - 1), "ya hay una página en camino");
+        assert!(!rows.needs_more(PAGE - 1), "a page is already on its way");
         rows.loading.set(false);
         while rows.load_page() > 0 {}
         assert!(!rows.needs_more(299), "no queda nada que pedir");
@@ -389,7 +389,7 @@ mod tests {
         let rows = open(store, 0);
         assert_eq!(rows.span_of(0), Some((0.0, SIZES.tall)));
         let card = rows.row_data(0).expect("fila");
-        assert!(!card.has_thumb, "la miniatura no está en disco");
+        assert!(!card.has_thumb, "the thumbnail is not on disk");
         assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
         assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
     }
@@ -421,7 +421,7 @@ mod tests {
         assert_eq!(
             rows.span_of(2),
             Some((SIZES.plain + long, SIZES.plain)),
-            "la de abajo baja lo que creció la abierta"
+            "the one below drops by what the open one grew"
         );
 
         rows.open_at(Some(2));
@@ -453,7 +453,7 @@ mod tests {
         assert_eq!(
             rows.span_of(0),
             Some((0.0, SIZES.plain)),
-            "cerrarla no le devuelve el alto de una miniatura que no está"
+            "closing it does not give back the height of a thumbnail that is not there"
         );
         assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.plain)));
     }

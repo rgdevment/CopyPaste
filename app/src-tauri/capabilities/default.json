@@ -27,6 +27,9 @@
         },
         {
           "url": "ms-windows-store://*"
+        },
+        {
+          "url": "x-apple.systempreferences://*"
         }
       ]
     },

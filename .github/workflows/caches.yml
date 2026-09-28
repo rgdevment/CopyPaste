@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Lista lo que se iría, sin borrar nada."
+        description: "Lists what would go, deleting nothing."
         type: boolean
         default: true
 

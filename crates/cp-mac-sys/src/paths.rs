@@ -39,11 +39,11 @@ mod tests {
         let root = data_dir().expect("HOME");
         for path in [
             database().expect("base"),
-            legacy_database().expect("base vieja"),
+            legacy_database().expect("the legacy base"),
             blobs_dir().expect("blobs"),
-            thumbs_dir().expect("miniaturas"),
+            thumbs_dir().expect("thumbnails"),
         ] {
-            assert!(path.starts_with(&root), "{path:?} se salió de {root:?}");
+            assert!(path.starts_with(&root), "{path:?} strayed from {root:?}");
         }
     }
 
@@ -65,7 +65,7 @@ mod tests {
         let pastes = pastes_dir();
         assert!(pastes.starts_with(std::env::temp_dir()), "{pastes:?}");
         if let Some(root) = data_dir() {
-            assert!(!pastes.starts_with(&root), "{pastes:?} no es historial");
+            assert!(!pastes.starts_with(&root), "{pastes:?} is not history");
         }
         assert_eq!(
             pastes.file_name().and_then(|n| n.to_str()),

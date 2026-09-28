@@ -34,7 +34,7 @@ jobs:
             subject=$(git log -1 --format=%s "$sha" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
             if ! printf '%s' "$subject" | grep -qE "$pattern"; then
-              echo "::error::${sha:0:8} no sigue la convención"
+              echo "::error::${sha:0:8} does not follow the convention"
               printf '  %s\n' "$subject"
               failed=1
               continue
@@ -49,10 +49,10 @@ jobs:
 
           if [ "$failed" -eq 1 ]; then
             echo ""
-            echo "Se espera: tipo(ámbito opcional): descripción"
+            echo "Expected: type(optional scope): description"
             echo "Tipos:     feat fix docs style refactor perf test build ci chore revert"
             echo "Ejemplo:   fix(panel): the menu yields to the wheel"
             exit 1
           fi
 
-          echo "todos los asuntos están bien formados"
+          echo "every subject is well formed"

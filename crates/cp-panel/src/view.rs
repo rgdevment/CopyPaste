@@ -231,15 +231,15 @@ fn form_pair(form: Form) -> (&'static str, &'static str) {
         Form::CodeBlock => ("Bloque Markdown", "Markdown block"),
         Form::CodeDedented => ("Sin indentación", "Without indentation"),
         Form::TokenHeader => ("Como cabecera", "As a header"),
-        Form::TokenClaims => ("Su contenido", "What it carries"),
+        Form::TokenClaims => ("Su contenido", "Its contents"),
         Form::TokenCurl => ("Como curl", "As curl"),
         Form::ImageJpeg => ("Como JPEG", "As JPEG"),
         Form::ImageOcr => ("El texto que leyó", "The text it read"),
         Form::Path => ("Su ruta", "Its path"),
         Form::FileName => ("Su nombre", "Its name"),
         Form::TextQuote => ("Como cita", "As a quote"),
-        Form::TextUpper => ("TODO EN MAYÚSCULAS", "ALL IN CAPITALS"),
-        Form::TextLower => ("todo en minúsculas", "all in lower case"),
+        Form::TextUpper => ("TODO EN MAYÚSCULAS", "ALL CAPS"),
+        Form::TextLower => ("todo en minúsculas", "all lowercase"),
     }
 }
 
@@ -397,7 +397,7 @@ pub fn dress_words(ui: &crate::Panel) {
     words.set_hint(
         crate::say::pick(
             "Busca o filtra con # en el portapapeles",
-            "Search, or filter with #",
+            "Search the clipboard, or filter with #",
         )
         .into(),
     );
@@ -521,7 +521,10 @@ mod tests {
             ["text", "file", "image"],
             "solo tipos, del que más tiene al que menos"
         );
-        assert!(chips[0].selected, "el elegido se marca donde caiga");
+        assert!(
+            chips[0].selected,
+            "the chosen one is marked wherever it lands"
+        );
         assert!(!chips[1].selected);
         assert_eq!(chips[0].count.as_str(), "3");
         assert!(
@@ -531,7 +534,10 @@ mod tests {
             "todo y anclados no son tipos y no viven aquí"
         );
 
-        assert!(chips_of(&[], &[]).is_empty(), "sin facetas no hay fila");
+        assert!(
+            chips_of(&[], &[]).is_empty(),
+            "with no facets there is no row"
+        );
     }
 
     fn excerpt_of(parts: &[(&str, bool)]) -> Excerpt {
@@ -567,7 +573,7 @@ mod tests {
     fn an_excerpt_with_nothing_matched_is_all_text_and_no_hit() {
         let (lead, hit, tail) = parts_of(&excerpt_of(&[("sin coincidencias", false)]));
         assert_eq!(lead, "sin coincidencias");
-        assert!(hit.is_empty(), "sin hit no hay nada que resaltar");
+        assert!(hit.is_empty(), "with no hit there is nothing to highlight");
         assert!(tail.is_empty());
     }
 
@@ -575,7 +581,7 @@ mod tests {
     fn a_long_lead_is_cut_from_the_left_so_the_hit_does_not_fall_off() {
         let long = "una entrada muy larga que empuja el término lejos del principio ";
         let (lead, hit, _) = parts_of(&excerpt_of(&[(long, false), ("término", true)]));
-        assert!(lead.starts_with('…'), "se corta por la izquierda: {lead}");
+        assert!(lead.starts_with('…'), "it is cut from the left: {lead}");
         assert!(lead.chars().count() <= LEAD + 1);
         assert!(lead.ends_with("lejos del principio "));
         assert_eq!(hit, "término");
@@ -638,16 +644,20 @@ mod tests {
 
     #[test]
     fn a_card_asks_for_as_many_lines_as_its_text_needs() {
-        assert_eq!(lines_of("#FF8800"), 2, "lo corto no crece al abrirse");
+        assert_eq!(
+            lines_of("#FF8800"),
+            2,
+            "what is short does not grow when it opens"
+        );
         assert_eq!(lines_of(""), 2);
         assert_eq!(lines_of(&"a".repeat(57)), 2);
         assert_eq!(
             lines_of(&"a".repeat(58)),
             2,
-            "dos líneas siguen siendo el mínimo"
+            "two lines are still the floor"
         );
         assert_eq!(lines_of(&"a".repeat(57 * 3)), 3);
-        assert_eq!(lines_of(&"a".repeat(57 * 20)), 7, "y hay un techo");
+        assert_eq!(lines_of(&"a".repeat(57 * 20)), 7, "and there is a ceiling");
         assert_eq!(
             lines_of(
                 "uno
@@ -699,14 +709,14 @@ cuatro"
             let (es, en) = form_pair(form);
             assert!(
                 !es.is_empty() && !en.is_empty(),
-                "{form:?} se quedó sin nombre"
+                "{form:?} was left without a name"
             );
         }
         for kind in [None, Some(Kind::Text), Some(Kind::Code), Some(Kind::Image)] {
             let (es, en) = label_pair(kind);
             assert!(
                 !es.is_empty() && !en.is_empty(),
-                "{kind:?} se quedó sin nombre"
+                "{kind:?} was left without a name"
             );
         }
     }
@@ -724,7 +734,7 @@ cuatro"
                 es == en
             })
             .count();
-        assert!(shared <= 3, "demasiadas formas sin traducir: {shared}");
+        assert!(shared <= 3, "too many forms left untranslated: {shared}");
         assert!(english.iter().all(|said| !said.contains('ó')));
     }
 
@@ -755,7 +765,7 @@ cuatro"
     #[test]
     fn every_form_has_a_name_for_the_sheet() {
         for form in Form::ALL {
-            assert!(!label_of_form(form).is_empty(), "{form:?} sin nombre");
+            assert!(!label_of_form(form).is_empty(), "{form:?} has no name");
         }
     }
 
@@ -773,7 +783,7 @@ cuatro"
 
         let (title, hint) = empty_of(",", false, false);
         assert_eq!(title, "Nada coincide con «,»");
-        assert!(hint.contains("por palabras"), "la coma no es una palabra");
+        assert!(hint.contains("por palabras"), "a comma is not a word");
 
         let (title, hint) = empty_of("reunion", false, true);
         assert_eq!(title, "Nada coincide con «reunion»");

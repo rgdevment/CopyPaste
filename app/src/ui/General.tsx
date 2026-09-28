@@ -1,5 +1,15 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
-import { combination, type Kept, type Look, onMac, useKeys, useTrust, useWaking } from "../core";
+import {
+  combination,
+  type Kept,
+  type Look,
+  onMac,
+  PRIVACY_PANE,
+  useKeys,
+  useTrust,
+  useWaking,
+} from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
@@ -11,7 +21,7 @@ export default function General({
   change: (what: Partial<Kept>) => void;
 }) {
   const { waking, trouble, ask } = useWaking();
-  const { trust, ask: askTrust } = useTrust();
+  const { trust, asked, ask: askTrust } = useTrust();
   const keys = useKeys();
   const [asking, setAsking] = useState(false);
 
@@ -47,7 +57,7 @@ export default function General({
 
       <Band says={t("bandDoes")} />
 
-      {waking?.offered ? (
+      {waking && (
         <Line
           says={t("wake")}
           why={t("wakeWhy")}
@@ -66,21 +76,29 @@ export default function General({
             onPress={() => ask(!waking.wakes)}
           />
         </Line>
-      ) : (
-        <Line says={t("wake")} why={t("wakeMac")} />
       )}
 
       {trust?.offered && (
         <Line
           says={t("trust")}
           why={trust.pastes ? t("trustGranted") : t("trustMissing")}
-          more={trust.secure_input ? <div className="said">{t("trustSecure")}</div> : null}
+          more={trust.secureInput ? <div className="said">{t("trustSecure")}</div> : null}
         >
           {trust.pastes ? (
             <Knob on says={t("trust")} asleep onPress={() => {}} />
+          ) : asked ? (
+            <button
+              type="button"
+              className="strong"
+              onClick={() => {
+                void openUrl(PRIVACY_PANE).catch(() => {});
+              }}
+            >
+              {t("trustOpen")}
+            </button>
           ) : (
             <button type="button" className="strong" onClick={askTrust}>
-              {trust.asked_before ? t("trustOpen") : t("trustAsk")}
+              {t("trustAsk")}
             </button>
           )}
         </Line>

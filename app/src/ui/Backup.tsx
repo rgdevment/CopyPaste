@@ -5,8 +5,8 @@ import { fill, items, t } from "../locales";
 import { Band, Line } from "./Bits";
 
 type Former = { path: string; bytes: number };
-type Kept = { path: string; items: number; bytes: number };
-type Brought = { added: number; already: number };
+type Saved = { path: string; items: number; missing: number; bytes: number };
+type Brought = { added: number; already: number; refused: number; fromElsewhere: boolean };
 
 const EXTENSION = "cpbackup";
 
@@ -35,17 +35,19 @@ export default function Backup() {
 
   const out = async () => {
     setSaid(null);
+    setBusy("out");
     const where = await save({
       defaultPath: named(),
       filters: [{ name: "CopyPaste", extensions: [EXTENSION] }],
     }).catch(() => null);
     if (!where) {
+      setBusy(null);
       return;
     }
-    setBusy("out");
     try {
-      const kept = await invoke<Kept>("save_backup", { path: where, at: Date.now() });
-      setSaid(fill("outDone", items(kept.items)));
+      const kept = await invoke<Saved>("save_backup", { path: where, at: Date.now() });
+      const lost = kept.missing > 0 ? ` · ${fill("outMissing", items(kept.missing))}` : "";
+      setSaid(`${fill("outDone", items(kept.items))}${lost}`);
     } catch (why) {
       setSaid(String(why));
     } finally {
@@ -55,22 +57,28 @@ export default function Backup() {
 
   const bring = async () => {
     setCame(null);
+    setBusy("in");
     const chosen = await open({
       multiple: false,
       filters: [{ name: "CopyPaste", extensions: [EXTENSION] }],
     }).catch(() => null);
     if (typeof chosen !== "string") {
+      setBusy(null);
       return;
     }
-    setBusy("in");
     try {
       const brought = await invoke<Brought>("load_backup", { path: chosen, at: Date.now() });
-      if (brought.added === 0) {
-        setCame(t("inNothing"));
-      } else {
-        const more = brought.already > 0 ? ` · ${fill("inAlready", items(brought.already))}` : "";
-        setCame(`${fill("inDone", items(brought.added))}${more}`);
-      }
+      const notes = [
+        brought.already > 0 ? fill("inAlready", items(brought.already)) : null,
+        brought.refused > 0 ? fill("inRefused", items(brought.refused)) : null,
+        brought.fromElsewhere ? t("inElsewhere") : null,
+      ].filter(Boolean);
+      const tail = notes.length > 0 ? ` · ${notes.join(" · ")}` : "";
+      setCame(
+        brought.added === 0 && notes.length === 0
+          ? t("inNothing")
+          : `${brought.added === 0 ? t("inNothing") : fill("inDone", items(brought.added))}${tail}`,
+      );
     } catch (why) {
       setCame(String(why));
     } finally {
@@ -84,7 +92,11 @@ export default function Backup() {
 
       <Band says={t("bandCopies")} />
 
-      <Line says={t("out")} why={said ?? t("outWhy")}>
+      <Line
+        says={t("out")}
+        why={said ?? t("outWhy")}
+        more={<div className="said">{t("outPlain")}</div>}
+      >
         <button type="button" className="strong" disabled={busy !== null} onClick={out}>
           {busy === "out" ? t("busy") : t("outDo")}
         </button>

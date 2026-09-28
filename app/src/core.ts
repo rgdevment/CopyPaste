@@ -179,12 +179,15 @@ export function useWaking() {
 export type Trust = {
   offered: boolean;
   pastes: boolean;
-  asked_before: boolean;
-  secure_input: boolean;
+  secureInput: boolean;
 };
+
+export const PRIVACY_PANE =
+  "x-apple.systempreferences://com.apple.preference.security?Privacy_Accessibility";
 
 export function useTrust() {
   const [trust, setTrust] = useState<Trust | null>(null);
+  const [asked, setAsked] = useState(false);
 
   const look = useCallback(() => {
     invoke<Trust>("trust")
@@ -200,10 +203,11 @@ export function useTrust() {
   }, [look]);
 
   const ask = useCallback(() => {
+    setAsked(true);
     invoke<Trust>("ask_trust")
       .then(setTrust)
       .catch(() => {});
   }, []);
 
-  return { trust, ask };
+  return { trust, asked, ask };
 }

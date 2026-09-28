@@ -15,7 +15,7 @@ def asked_for() -> str:
     for line in said.stdout.splitlines():
         if line.startswith("host: "):
             return line.removeprefix("host: ").strip()
-    raise SystemExit("rustc no dijo para qué máquina compila")
+    raise SystemExit("rustc did not say which machine it compiles for")
 
 
 def main() -> int:
@@ -35,13 +35,13 @@ def main() -> int:
         where = where / triple
     made = where / ("release" if release else "debug") / f"cp-panel{tail}"
     if not made.exists():
-        raise SystemExit(f"no se encontró {made}")
+        raise SystemExit(f"{made} was not found")
 
     WHERE.mkdir(parents=True, exist_ok=True)
     named = f"cp-panel-{triple}{tail}"
     for landed in (WHERE / named, made.parent / named):
         shutil.copy2(made, landed)
-        print(f"{landed.relative_to(ROOT)} listo desde {made.relative_to(ROOT)}")
+        print(f"{landed.relative_to(ROOT)} ready from {made.relative_to(ROOT)}")
     return 0
 
 

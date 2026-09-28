@@ -82,11 +82,11 @@ mod tests {
     fn the_period_keeps_up_with_a_person_without_spinning() {
         assert!(
             EVERY <= Duration::from_millis(250),
-            "una copia no puede tardar en verse"
+            "a copy must not take long to be noticed"
         );
         assert!(
             EVERY >= Duration::from_millis(16),
-            "ni sondear mas rapido que la pantalla"
+            "nor should it poll faster than the screen"
         );
     }
 
@@ -104,7 +104,7 @@ mod tests {
         drop(watching);
         assert!(
             started.elapsed() < Duration::from_secs(1),
-            "cerrar la aplicacion no puede esperar al siguiente sondeo"
+            "closing the application must not wait for the next poll"
         );
     }
 

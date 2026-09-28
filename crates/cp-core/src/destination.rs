@@ -58,7 +58,7 @@ mod tests {
         assert_eq!(
             tracker.destination().map(|one| one.pid),
             Some(200),
-            "el destino sigue siendo quien estaba antes del panel"
+            "the destination is still whoever was there before the panel"
         );
     }
 
@@ -75,8 +75,8 @@ mod tests {
         let mut tracker = Tracker::new(100);
         tracker.saw(200, Some("com.apple.Terminal"));
         tracker.saw(201, Some("com.apple.Terminal"));
-        let destination = tracker.destination().expect("hay destino");
-        assert_eq!(destination.pid, 201, "la instancia concreta, no el bundle");
+        let destination = tracker.destination().expect("there is a destination");
+        assert_eq!(destination.pid, 201, "the specific instance, not the bundle");
         assert_eq!(destination.bundle_id.as_deref(), Some("com.apple.Terminal"));
     }
 

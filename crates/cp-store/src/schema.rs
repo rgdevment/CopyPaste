@@ -135,9 +135,9 @@ const TABLES: &str = r#"
             PRIMARY KEY (item_id, format)
         );
 
-        -- Lo que se deriva de un ítem y no es su contenido: dimensiones,
-        -- duración, tamaño, artista. Tabla y no columna JSON porque así se
-        -- puede filtrar e indexar por clave sin traer el módulo JSON.
+        -- What is derived from an item and is not its content: dimensions,
+        -- duration, size, artist. A table rather than a JSON column so it
+        -- can be filtered and indexed by key without pulling in the JSON module.
         CREATE INDEX IF NOT EXISTS formats_by_blob ON item_formats(blob_path)
             WHERE blob_path IS NOT NULL;
         CREATE INDEX IF NOT EXISTS formats_inline_size ON item_formats(size_bytes)
@@ -152,10 +152,9 @@ const TABLES: &str = r#"
 
         CREATE INDEX IF NOT EXISTS meta_by_key ON item_meta(key, value);
 
-        -- El enriquecimiento va en cola: reconocer texto, generar una
-        -- miniatura o leer la duración de un vídeo cuestan demasiado para el
-        -- camino de captura. Con su estado, para no reintentar en bucle lo
-        -- que siempre falla.
+        -- Enrichment goes in a queue: recognising text, generating a
+        -- thumbnail or reading a video's duration costs too much for the
+        -- capture path. With its state, so what always fails is not retried in a loop.
         CREATE TABLE IF NOT EXISTS pending_work (
             item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
             job         TEXT    NOT NULL,
@@ -201,71 +200,80 @@ mod tests {
 
     #[test]
     fn auto_vacuum_actually_took() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
         let mode: i64 = db
             .query_row("PRAGMA auto_vacuum", [], |row| row.get(0))
-            .expect("consulta");
+            .expect("queried");
         assert_eq!(
             mode, 2,
-            "INCREMENTAL es 2; si sale 0 el pragma llegó tarde y se ignoró"
+            "INCREMENTAL is 2; if it comes out 0 the pragma arrived late and was ignored"
         );
     }
 
     #[test]
     fn the_pragmas_that_protect_the_data_are_on() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
         let secure: i64 = db
             .query_row("PRAGMA secure_delete", [], |row| row.get(0))
-            .expect("consulta");
-        assert_eq!(secure, 1, "una contraseña borrada no puede quedar legible");
+            .expect("queried");
+        assert_eq!(secure, 1, "a deleted password cannot remain legible");
         let foreign: i64 = db
             .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
-            .expect("consulta");
-        assert_eq!(foreign, 1, "sin esto la cascada de formatos no ocurre");
+            .expect("queried");
+        assert_eq!(
+            foreign, 1,
+            "without this the cascade over formats does not happen"
+        );
     }
 
     #[test]
     fn a_fresh_database_is_stamped_with_its_version() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
-        assert!(migrate(&db).expect("migra"), "no había versión: sí migra");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        assert!(
+            migrate(&db).expect("migrated"),
+            "no version yet: it does migrate"
+        );
         let version: u32 = db
             .query_row("PRAGMA user_version", [], |row| row.get(0))
-            .expect("consulta");
+            .expect("queried");
         assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
     fn a_database_from_the_future_is_refused_not_repaired() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
         db.execute_batch("PRAGMA user_version = 99;")
-            .expect("sella");
+            .expect("stamped");
         let refused = migrate(&db);
         assert!(
             matches!(refused, Err(crate::Error::FromTheFuture { found: 99, .. })),
-            "abrir y «arreglar» una base más nueva destroza el historial"
+            "opening and «fixing» a newer database destroys the history"
         );
     }
 
     #[test]
     fn migrating_twice_changes_nothing() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
-        assert!(migrate(&db).expect("primera"), "la primera vez sí migra");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
         assert!(
-            !migrate(&db).expect("segunda"),
-            "ya estaba al día: no hay nada que hacer"
+            migrate(&db).expect("first"),
+            "the first time it does migrate"
+        );
+        assert!(
+            !migrate(&db).expect("second"),
+            "already up to date: there is nothing to do"
         );
     }
 
     #[test]
     fn creating_twice_is_harmless() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("primera");
-        create(&db).expect("segunda");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("first");
+        create(&db).expect("second");
     }
 
     fn index_sql(db: &Connection, name: &str) -> String {
@@ -274,108 +282,105 @@ mod tests {
             [name],
             |row| row.get(0),
         )
-        .expect("el índice existe")
+        .expect("the index exists")
     }
 
     #[test]
     fn the_index_forgets_what_was_deleted_and_the_setting_survives_reopening() {
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("history.db");
         {
-            let db = Connection::open(&path).expect("abre");
-            create(&db).expect("esquema");
+            let db = Connection::open(&path).expect("opened");
+            create(&db).expect("schema");
         }
-        let db = Connection::open(&path).expect("reabre");
-        configure(&db).expect("pragmas");
+        let db = Connection::open(&path).expect("reopened");
+        configure(&db).expect("pragmas set");
         let secure: i64 = db
             .query_row(
                 "SELECT v FROM items_fts_config WHERE k = 'secure-delete'",
                 [],
                 |row| row.get(0),
             )
-            .expect("la opción vive en la tabla de configuración del índice");
-        assert_eq!(
-            secure, 1,
-            "un token borrado no puede quedar en un segmento viejo"
-        );
+            .expect("the setting lives in the index configuration table");
+        assert_eq!(secure, 1, "a deleted token cannot remain in an old segment");
     }
 
     #[test]
     fn a_version_two_database_forgets_what_its_index_still_remembered() {
-        let dir = tempfile::tempdir().expect("carpeta");
+        let dir = tempfile::tempdir().expect("a folder");
         let path = dir.path().join("history.db");
-        let secret = "qzvrxtoken7secreto";
+        let secret = "qzvrxtoken7secret";
         {
-            let db = Connection::open(&path).expect("abre");
-            create(&db).expect("esquema");
+            let db = Connection::open(&path).expect("opened");
+            create(&db).expect("schema");
             db.execute_batch(
                 "INSERT INTO items_fts(items_fts, rank) VALUES ('secure-delete', 0);
                  PRAGMA user_version = 2;",
             )
-            .expect("una base como la dejó la versión 2");
+            .expect("a database as version 2 left it");
             db.execute(
                 "INSERT INTO items (uuid, preview_text, created_at, modified_at, updated_at,
                                     content_hash, search_text)
                  VALUES ('u', ?1, 1, 1, 1, 0, ?1)",
                 [secret],
             )
-            .expect("inserta");
+            .expect("inserted");
             db.execute(
                 "UPDATE items SET preview_text = '', search_text = '', deleted_at = 2 WHERE uuid = 'u'",
                 [],
             )
-            .expect("borra como borraba la versión 2");
+            .expect("deletes the way version 2 used to delete");
             db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
-                .expect("checkpoint");
+                .expect("checkpointed");
         }
-        let bytes = std::fs::read(&path).expect("lee");
+        let bytes = std::fs::read(&path).expect("read");
         assert!(
             bytes.windows(secret.len()).any(|w| w == secret.as_bytes()),
-            "sin secure-delete el índice conserva el token borrado"
+            "without secure-delete the index keeps the deleted token"
         );
-        let db = Connection::open(&path).expect("reabre");
-        create(&db).expect("crea");
-        assert!(migrate(&db).expect("migra"));
+        let db = Connection::open(&path).expect("reopened");
+        create(&db).expect("created");
+        assert!(migrate(&db).expect("migrated"));
         db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
-            .expect("checkpoint");
+            .expect("checkpointed");
         drop(db);
-        let bytes = std::fs::read(&path).expect("lee");
+        let bytes = std::fs::read(&path).expect("read");
         assert!(
             !bytes.windows(secret.len()).any(|w| w == secret.as_bytes()),
-            "la migración a la versión 3 funde los segmentos y lo borrado desaparece"
+            "the migration to version 3 merges the segments and what was deleted disappears"
         );
     }
 
     #[test]
     fn a_version_three_database_gains_the_column_for_the_text_as_read() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
         db.execute_batch(
             "ALTER TABLE items DROP COLUMN ocr_text;
              PRAGMA user_version = 3;",
         )
-        .expect("una base como la dejó la versión 3");
-        create(&db).expect("abrir no añade columnas a una tabla que existe");
-        assert!(ocr_text_is_missing(&db).expect("mira"));
+        .expect("a database as version 3 left it");
+        create(&db).expect("opening does not add columns to a table that already exists");
+        assert!(ocr_text_is_missing(&db).expect("looked"));
 
-        assert!(migrate(&db).expect("migra"));
-        assert!(!ocr_text_is_missing(&db).expect("mira"));
+        assert!(migrate(&db).expect("migrated"));
+        assert!(!ocr_text_is_missing(&db).expect("looked"));
         db.execute(
             "INSERT INTO items (uuid, created_at, modified_at, updated_at, content_hash, ocr_text)
-             VALUES ('u', 1, 1, 1, 0, 'Crudo')",
+             VALUES ('u', 1, 1, 1, 0, 'Raw')",
             [],
         )
-        .expect("la columna nueva acepta texto");
+        .expect("the new column accepts text");
         assert!(
-            !migrate(&db).expect("migra"),
-            "y la segunda vez no hay nada que hacer"
+            !migrate(&db).expect("migrated"),
+            "and the second time there is nothing to do"
         );
     }
 
     #[test]
     fn a_version_one_database_gets_its_ordering_indexes_rebuilt() {
-        let db = Connection::open_in_memory().expect("abre");
-        create(&db).expect("esquema");
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
         db.execute_batch(
             "DROP INDEX items_by_recency;
              DROP INDEX items_by_kind;
@@ -383,21 +388,21 @@ mod tests {
              CREATE INDEX items_by_kind ON items(kind, modified_at DESC);
              PRAGMA user_version = 1;",
         )
-        .expect("una base como la dejó la versión 1");
-        create(&db).expect("abrir la vuelve a crear sin tocar lo que existe");
+        .expect("a database as version 1 left it");
+        create(&db).expect("opening recreates it without touching what already exists");
         assert!(
             !index_sql(&db, "items_by_recency").contains("id DESC"),
-            "IF NOT EXISTS no rehace un índice viejo: por eso hace falta migrar"
+            "IF NOT EXISTS does not redo an old index: that is why a migration is needed"
         );
-        assert!(ordering_indexes_are_stale(&db).expect("mira"));
+        assert!(ordering_indexes_are_stale(&db).expect("looked"));
 
-        assert!(migrate(&db).expect("migra"));
-        assert!(!ordering_indexes_are_stale(&db).expect("mira"));
+        assert!(migrate(&db).expect("migrated"));
+        assert!(!ordering_indexes_are_stale(&db).expect("looked"));
         assert!(index_sql(&db, "items_by_recency").contains("modified_at DESC, id DESC"));
         assert!(index_sql(&db, "items_by_kind").contains("kind, modified_at DESC, id DESC"));
         let version: u32 = db
             .query_row("PRAGMA user_version", [], |row| row.get(0))
-            .expect("consulta");
+            .expect("queried");
         assert_eq!(version, SCHEMA_VERSION);
     }
 }

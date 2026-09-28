@@ -67,9 +67,9 @@ mod tests {
     fn a_synthetic_text_goes_back_as_the_type_the_system_reads() {
         let item = Item {
             kind: None,
-            formats: vec![inline(SYNTHETIC_TEXT, b"hola")],
+            formats: vec![inline(SYNTHETIC_TEXT, b"hello")],
         };
-        assert_eq!(writable_of(&item), vec![(PLAIN_TEXT, &b"hola"[..])]);
+        assert_eq!(writable_of(&item), vec![(PLAIN_TEXT, &b"hello"[..])]);
     }
 
     #[test]
@@ -92,8 +92,8 @@ mod tests {
         let item = Item {
             kind: None,
             formats: vec![
-                inline("public.rtf", b"{\\rtf1 hola}"),
-                inline(PLAIN_TEXT, b"hola"),
+                inline("public.rtf", b"{\\rtf1 hello}"),
+                inline(PLAIN_TEXT, b"hello"),
                 Format {
                     id: "public.tiff".into(),
                     payload: Payload::Announced { size: None },
@@ -101,7 +101,7 @@ mod tests {
             ],
         };
         let written = writable_of(&item);
-        assert_eq!(written.len(), 2, "lo anunciado sin bytes no se escribe");
+        assert_eq!(written.len(), 2, "what is announced without bytes is not written");
         assert_eq!(written[0].0, "public.rtf");
         assert_eq!(written[1].0, PLAIN_TEXT);
     }
@@ -124,16 +124,16 @@ mod tests {
         let item = Item {
             kind: Some(cp_core::kind::Kind::Text),
             formats: vec![
-                inline("public.html", b"<b>hola</b>"),
-                inline(PLAIN_TEXT, b"hola"),
+                inline("public.html", b"<b>hello</b>"),
+                inline(PLAIN_TEXT, b"hello"),
             ],
         };
         let content = crate::content::content_of(&item, None);
         let plain = render(Form::PlainText, &content)
-            .expect("hay texto")
+            .expect("there is text")
             .into_item();
-        assert_eq!(writable_of(&plain), vec![(PLAIN_TEXT, &b"hola"[..])]);
-        assert_eq!(item.formats.len(), 2, "el ítem guardado no cambia");
+        assert_eq!(writable_of(&plain), vec![(PLAIN_TEXT, &b"hello"[..])]);
+        assert_eq!(item.formats.len(), 2, "the stored item does not change");
         let only_image = Item {
             kind: Some(cp_core::kind::Kind::Image),
             formats: vec![inline(PNG, &[1, 2, 3])],
@@ -144,7 +144,7 @@ mod tests {
                 &crate::content::content_of(&only_image, None)
             ),
             None,
-            "sin texto plano no hay forma plana que ofrecer"
+            "with no plain text there is no plain form to offer"
         );
     }
 }

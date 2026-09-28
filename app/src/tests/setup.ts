@@ -56,8 +56,7 @@ vi.mock("@tauri-apps/api/core", () => ({
       return Promise.resolve({
         offered: false,
         pastes: false,
-        asked_before: false,
-        secure_input: false,
+        secureInput: false,
       });
     }
     if (what === "save_backup") {

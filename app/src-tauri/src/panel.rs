@@ -18,7 +18,7 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
     let Some(what) = said.strip_prefix("trouble ") else {
         return;
     };
-    crate::note::note(&format!("el panel avisa: {what}"));
+    crate::note::note(&format!("the panel says: {what}"));
     if let Some(state) = app.try_state::<Trouble>()
         && let Ok(mut held) = state.0.lock()
     {
@@ -38,16 +38,36 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>) {
     app.manage(Sidecar::default());
     app.manage(Trouble::default());
     match light(app) {
-        Ok(()) => crate::note::note("el panel queda esperando en segundo plano"),
-        Err(why) => crate::note::note(&format!("el panel no arrancó: {why}")),
+        Ok(()) => crate::note::note("the panel waits in the background"),
+        Err(why) => crate::note::note(&format!("the panel did not start: {why}")),
     }
 }
 
 pub fn show<R: Runtime>(app: &AppHandle<R>) {
+    if shown(app) {
+        return;
+    }
+    crate::note::note("the panel would not show itself, not even freshly started");
+    trouble_is(app, "the panel is not answering");
+}
+
+fn shown<R: Runtime>(app: &AppHandle<R>) -> bool {
     allow(app);
-    if say(app, "show").is_err() && light(app).is_ok() {
-        allow(app);
-        let _ = say(app, "show");
+    if say(app, "show").is_ok() {
+        return true;
+    }
+    if light(app).is_err() {
+        return false;
+    }
+    allow(app);
+    say(app, "show").is_ok()
+}
+
+fn trouble_is<R: Runtime>(app: &AppHandle<R>, what: &str) {
+    if let Some(state) = app.try_state::<Trouble>()
+        && let Ok(mut held) = state.0.lock()
+    {
+        *held = Some(what.to_owned());
     }
 }
 
@@ -68,17 +88,31 @@ pub fn hide<R: Runtime>(app: &AppHandle<R>) {
 }
 
 pub fn empty<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
-    say(app, "empty").map_err(|_| "el panel no está escuchando".to_owned())
+    say(app, "empty").map_err(|_| "the panel is not listening".to_owned())
 }
+
+const GOES_IN: std::time::Duration = std::time::Duration::from_millis(600);
+const LOOKS_EVERY: std::time::Duration = std::time::Duration::from_millis(15);
 
 pub fn quit<R: Runtime>(app: &AppHandle<R>) {
     let _ = say(app, "quit");
+    let until = std::time::Instant::now() + GOES_IN;
+    while std::time::Instant::now() < until && still_there(app) {
+        std::thread::sleep(LOOKS_EVERY);
+    }
     if let Some(state) = app.try_state::<Sidecar>()
         && let Ok(mut held) = state.0.lock()
         && let Some(child) = held.take()
     {
+        crate::note::note("the panel would not leave on its own and had to be closed");
         let _ = child.kill();
     }
+}
+
+fn still_there<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<Sidecar>()
+        .and_then(|state| state.0.lock().ok().map(|held| held.is_some()))
+        .unwrap_or(false)
 }
 
 pub fn relight<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
@@ -103,7 +137,11 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
                     heard_from_panel(&handle, String::from_utf8_lossy(&line).trim());
                 }
                 CommandEvent::Terminated(_) => {
-                    forget(&handle, whose);
+                    let ours = forget(&handle, whose);
+                    if ours {
+                        crate::note::note("the panel closed on its own");
+                        trouble_is(&handle, "the panel stopped watching the clipboard");
+                    }
                     break;
                 }
                 _ => {}
@@ -124,13 +162,15 @@ fn say<R: Runtime>(app: &AppHandle<R>, what: &str) -> Result<(), Said> {
     Ok(())
 }
 
-fn forget<R: Runtime>(app: &AppHandle<R>, whose: u32) {
+fn forget<R: Runtime>(app: &AppHandle<R>, whose: u32) -> bool {
     if let Some(state) = app.try_state::<Sidecar>()
         && let Ok(mut held) = state.0.lock()
         && held.as_ref().is_some_and(|child| child.pid() == whose)
     {
         held.take();
+        return true;
     }
+    false
 }
 
 #[derive(Debug)]
@@ -145,6 +185,6 @@ mod tests {
     #[test]
     fn a_sidecar_starts_with_nobody_on_the_other_end() {
         let sidecar = Sidecar::default();
-        assert!(sidecar.0.lock().expect("sin envenenar").is_none());
+        assert!(sidecar.0.lock().expect("unpoisoned").is_none());
     }
 }

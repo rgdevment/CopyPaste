@@ -132,11 +132,11 @@ mod insisting {
             || 1,
             || {
                 asked.set(asked.get() + 1);
-                Some("hola")
+                Some("hi")
             },
             |_| paused.set(paused.get() + 1),
         );
-        assert_eq!(got, Retried::Done("hola"));
+        assert_eq!(got, Retried::Done("hi"));
         assert_eq!((asked.get(), paused.get()), (1, 0));
     }
 
@@ -149,16 +149,16 @@ mod insisting {
             || 1,
             || {
                 asked.set(asked.get() + 1);
-                (asked.get() == 3).then_some("al fin")
+                (asked.get() == 3).then_some("at last")
             },
             |how_long| pauses.borrow_mut().push(how_long),
         );
-        assert_eq!(got, Retried::Done("al fin"));
+        assert_eq!(got, Retried::Done("at last"));
         assert_eq!(asked.get(), 3);
         assert_eq!(
             *pauses.borrow(),
             vec![Duration::from_millis(7); 2],
-            "una pausa entre cada dos intentos, ninguna antes del primero"
+            "a pause between every two attempts, none before the first"
         );
     }
 
@@ -175,7 +175,7 @@ mod insisting {
             |_| {},
         );
         assert_eq!(got, Retried::Exhausted);
-        assert_eq!(asked.get(), 4, "exactamente los intentos de la política");
+        assert_eq!(asked.get(), 4, "exactly the policy's attempts");
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod insisting {
         assert_eq!(
             asked.get(),
             1,
-            "lo copiado después lo verá el vigilante; no se lee dos veces"
+            "whatever gets copied afterward, the watcher will see; it isn't read twice"
         );
     }
 
@@ -245,7 +245,7 @@ mod insisting {
         let worst = RETRY.pause.as_millis() * u128::from(RETRY.attempts - 1);
         assert!(
             worst <= 1_000,
-            "{worst} ms de pausas acumuladas es demasiado"
+            "{worst} ms of piled-up pauses is too much"
         );
     }
 }
@@ -281,7 +281,7 @@ mod tests {
         for step in 1..=4 {
             watcher.tick(i64::MAX / 4 * step);
         }
-        assert!(watcher.missed() > Some(0), "algo se perdió, y se sabe");
+        assert!(watcher.missed() > Some(0), "something was lost, and it is known");
     }
 
     #[test]
@@ -322,7 +322,7 @@ mod tests {
         assert_eq!(
             watcher.missed(),
             Some(3),
-            "tres copias ocurrieron y se perdieron"
+            "three copies happened and were lost"
         );
     }
 
@@ -344,7 +344,7 @@ mod tests {
         assert_eq!(
             watcher.tick(22),
             Seen::Fresh { skipped: Some(0) },
-            "la ventana ciega de la 2.x se comía esta"
+            "the blind window in 2.x used to swallow this one"
         );
     }
 
@@ -370,14 +370,14 @@ mod windows_counter {
         let mut watcher = windows();
         watcher.tick(51);
         assert_eq!(watcher.tick(56), Seen::Fresh { skipped: None });
-        assert_eq!(watcher.missed(), None, "no se sabe, y se dice");
+        assert_eq!(watcher.missed(), None, "it is not known, and it says so");
 
         let mut as_if_mac = Watcher::new(Cadence::OnePerCopy);
         as_if_mac.tick(51);
         assert_eq!(
             as_if_mac.tick(56),
             Seen::Fresh { skipped: Some(4) },
-            "la cadencia equivocada inventa cuatro copias perdidas"
+            "the wrong cadence invents four lost copies"
         );
     }
 
@@ -389,7 +389,7 @@ mod windows_counter {
             assert_eq!(
                 watcher.tick(1000 + jump),
                 Seen::Fresh { skipped: None },
-                "un salto de {jump} sigue siendo una copia"
+                "a jump of {jump} is still one copy"
             );
         }
     }

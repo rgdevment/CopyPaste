@@ -7,12 +7,12 @@ mod on_mac {
 
     pub fn main() {
         let pb = Pasteboard::general_from_any_thread();
-        println!("copia algo… (esperando la primera copia)");
+        println!("copy something… (waiting for the first copy)");
         let first = next_copy(&pb);
-        println!("primera: huella {:016x}", first.fingerprint());
-        println!("vuelve a copiar exactamente lo mismo…");
+        println!("first: fingerprint {:016x}", first.fingerprint());
+        println!("copy the exact same thing again…");
         let second = next_copy(&pb);
-        println!("segunda: huella {:016x}", second.fingerprint());
+        println!("second: fingerprint {:016x}", second.fingerprint());
         for format in &first.formats {
             let Some(a) = bytes_of(format) else { continue };
             match second
@@ -21,8 +21,8 @@ mod on_mac {
                 .find(|f| f.id == format.id)
                 .and_then(bytes_of)
             {
-                None => println!("  {:40} solo en la primera", format.id),
-                Some(b) if a == b => println!("  {:40} {:>8} B  iguales", format.id, a.len()),
+                None => println!("  {:40} only in the first", format.id),
+                Some(b) if a == b => println!("  {:40} {:>8} B  identical", format.id, a.len()),
                 Some(b) => {
                     let at = a
                         .iter()
@@ -30,7 +30,7 @@ mod on_mac {
                         .position(|(x, y)| x != y)
                         .unwrap_or(a.len().min(b.len()));
                     println!(
-                        "  {:40} {:>8} B / {:>8} B  DIFIEREN desde el byte {at}",
+                        "  {:40} {:>8} B / {:>8} B  DIFFER from byte {at}",
                         format.id,
                         a.len(),
                         b.len()
@@ -42,13 +42,13 @@ mod on_mac {
         }
         for format in &second.formats {
             if bytes_of(format).is_some() && !first.formats.iter().any(|f| f.id == format.id) {
-                println!("  {:40} solo en la segunda", format.id);
+                println!("  {:40} only in the second", format.id);
             }
         }
         if first.fingerprint() == second.fingerprint() {
-            println!("misma identidad: se reactivaría, no se duplicaría");
+            println!("same identity: it would be reactivated, not duplicated");
         } else {
-            println!("identidades distintas: hoy serían dos ítems");
+            println!("different identities: today they would be two items");
         }
     }
 

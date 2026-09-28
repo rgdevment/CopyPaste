@@ -55,9 +55,9 @@ mod tests {
         let item = Item {
             kind: Some(Kind::Text),
             formats: vec![
-                inline("public.rtf", b"{\\rtf1 hola}"),
-                inline("public.html", b"<p><b>hola</b></p>"),
-                inline("public.utf8-plain-text", b"hola"),
+                inline("public.rtf", b"{\\rtf1 hello}"),
+                inline("public.html", b"<p><b>hello</b></p>"),
+                inline("public.utf8-plain-text", b"hello"),
                 Format {
                     id: "public.tiff".into(),
                     payload: Payload::Announced { size: None },
@@ -65,8 +65,8 @@ mod tests {
             ],
         };
         let content = content_of(&item, None);
-        assert_eq!(content.text.as_deref(), Some("hola"));
-        assert_eq!(content.html.as_deref(), Some("<p><b>hola</b></p>"));
+        assert_eq!(content.text.as_deref(), Some("hello"));
+        assert_eq!(content.html.as_deref(), Some("<p><b>hello</b></p>"));
         assert!(content.rich);
         assert_eq!(content.image, None);
         assert_eq!(
@@ -86,13 +86,13 @@ mod tests {
         let item = Item {
             kind: Some(Kind::Text),
             formats: vec![
-                inline("public.html", b"<i>hola</i>"),
-                inline("public.utf8-plain-text", b"hola"),
+                inline("public.html", b"<i>hello</i>"),
+                inline("public.utf8-plain-text", b"hello"),
             ],
         };
         let content = content_of(&item, None);
         assert!(content.rich);
-        assert_eq!(content.html.as_deref(), Some("<i>hola</i>"));
+        assert_eq!(content.html.as_deref(), Some("<i>hello</i>"));
     }
 
     #[test]
@@ -100,19 +100,19 @@ mod tests {
         let item = Item {
             kind: Some(Kind::Text),
             formats: vec![
-                inline("public.rtf", b"{\\rtf1 hola}"),
+                inline("public.rtf", b"{\\rtf1 hello}"),
                 Format {
                     id: "public.utf8-plain-text".into(),
-                    payload: Payload::Blob(b"hola".to_vec()),
+                    payload: Payload::Blob(b"hello".to_vec()),
                 },
             ],
         };
         let content = content_of(&item, None);
-        assert!(content.rich, "el RTF a solas ya es enriquecido");
+        assert!(content.rich, "RTF alone is already rich");
         assert_eq!(
             content.text.as_deref(),
-            Some("hola"),
-            "un blob se lee igual que un inline"
+            Some("hello"),
+            "a blob reads just like an inline"
         );
     }
 
@@ -121,8 +121,8 @@ mod tests {
         let item = Item {
             kind: Some(Kind::Text),
             formats: vec![
-                inline("public.rtf", b"{\\rtf1 hola}"),
-                inline("public.utf8-plain-text", b"hola"),
+                inline("public.rtf", b"{\\rtf1 hello}"),
+                inline("public.utf8-plain-text", b"hello"),
                 inline("public.png", &[137, 80, 78, 71]),
             ],
         };
@@ -135,7 +135,7 @@ mod tests {
                 Form::TextUpper,
                 Form::TextLower
             ],
-            "un documento con una imagen incrustada se puede pegar como texto o como su imagen"
+            "a document with an embedded image can be pasted as text or as its image"
         );
     }
 
@@ -145,7 +145,7 @@ mod tests {
             kind: Some(Kind::Text),
             formats: vec![
                 inline("com.apple.flat-rtfd", b"rtfd"),
-                inline("public.utf8-plain-text", b"hola"),
+                inline("public.utf8-plain-text", b"hello"),
             ],
         };
         let content = content_of(&item, None);
@@ -168,23 +168,23 @@ mod tests {
             kind: Some(Kind::File),
             formats: vec![inline(
                 "public.file-url",
-                b"file:///tmp/cp%20a9.png\nfile:///tmp/dos.txt\n",
+                b"file:///tmp/cp%20a9.png\nfile:///tmp/two.txt\n",
             )],
         };
         let content = content_of(&files, None);
-        assert_eq!(content.paths, vec!["/tmp/cp a9.png", "/tmp/dos.txt"]);
+        assert_eq!(content.paths, vec!["/tmp/cp a9.png", "/tmp/two.txt"]);
         assert_eq!(content.text, None);
 
         let link = Item {
             kind: Some(Kind::Link),
             formats: vec![
-                inline("public.utf8-plain-text", b"https://ejemplo.test"),
-                inline("public.url", b"https://ejemplo.test"),
-                inline("public.url-name", "Ejemplo — inicio".as_bytes()),
+                inline("public.utf8-plain-text", b"https://example.test"),
+                inline("public.url", b"https://example.test"),
+                inline("public.url-name", "Example — Home".as_bytes()),
             ],
         };
         let content = content_of(&link, None);
-        assert_eq!(content.title.as_deref(), Some("Ejemplo — inicio"));
+        assert_eq!(content.title.as_deref(), Some("Example — Home"));
         assert!(forms_for(&content).contains(&Form::LinkTitled));
     }
 
@@ -194,9 +194,9 @@ mod tests {
             kind: Some(Kind::Image),
             formats: vec![inline("public.png", &[137, 80, 78, 71])],
         };
-        let content = content_of(&item, Some("Pedido 4417"));
+        let content = content_of(&item, Some("Order 4417"));
         assert_eq!(content.image, Some(&[137u8, 80, 78, 71][..]));
-        assert_eq!(content.ocr, Some("Pedido 4417"));
+        assert_eq!(content.ocr, Some("Order 4417"));
         assert!(!content.rich);
         assert_eq!(forms_for(&content), vec![Form::ImageJpeg, Form::ImageOcr]);
     }
@@ -224,16 +224,16 @@ mod tests {
         assert_eq!(
             content_of(&both, None).image,
             Some(&[2u8][..]),
-            "el PNG manda si lo hay"
+            "the PNG wins when there is one"
         );
     }
 
     #[test]
     fn what_the_store_wrote_itself_is_read_back_the_same_way() {
-        let edited = Item::plain("editado a mano");
+        let edited = Item::plain("edited by hand");
         assert_eq!(
             content_of(&edited, None).text.as_deref(),
-            Some("editado a mano")
+            Some("edited by hand")
         );
         let synthetic = Item {
             kind: Some(Kind::Image),

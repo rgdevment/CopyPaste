@@ -61,7 +61,7 @@ mod tests {
     use super::*;
 
     const DOCS: &str = "<meta charset=\"utf-8\"><b style=\"font-weight:normal;\" \
-        id=\"docs-internal-guid-4a1e6b2f-7fff-1d3e-8c5a-2b3c4d5e6f70\"><span>hola</span></b>";
+        id=\"docs-internal-guid-4a1e6b2f-7fff-1d3e-8c5a-2b3c4d5e6f70\"><span>hi</span></b>";
 
     #[test]
     fn the_guid_google_writes_on_every_copy_leaves_the_identity() {
@@ -77,27 +77,27 @@ mod tests {
         assert_eq!(
             stable("HTML Format", DOCS.as_bytes()),
             stable("HTML Format", again.as_bytes()),
-            "en Windows el mismo HTML llega bajo otro nombre"
+            "on Windows the same HTML arrives under another name"
         );
         let kept = stable("public.html", DOCS.as_bytes());
         assert!(
             std::str::from_utf8(&kept)
                 .unwrap()
-                .contains("id=\"docs-internal-guid-\"><span>hola</span>"),
-            "queda el marcador sin su parte variable, y el resto intacto"
+                .contains("id=\"docs-internal-guid-\"><span>hi</span>"),
+            "the marker is left without its variable part, and the rest untouched"
         );
     }
 
     #[test]
     fn markup_without_anything_volatile_is_borrowed_not_copied() {
-        let html = b"<b>hola</b>";
+        let html = b"<b>hi</b>";
         assert!(matches!(stable("public.html", html), Cow::Borrowed(_)));
         assert_eq!(stable("public.html", html).as_ref(), html);
     }
 
     #[test]
     fn only_markup_is_looked_at() {
-        let text = b"pega docs-internal-guid-1234 tal cual";
+        let text = b"paste docs-internal-guid-1234 as is";
         assert!(matches!(
             stable("public.utf8-plain-text", text),
             Cow::Borrowed(_)
@@ -154,7 +154,7 @@ mod tests {
         assert_eq!(
             stable("public.html", upper).as_ref(),
             b"id=\"docs-internal-guid-\">",
-            "el GUID puede venir en mayúsculas"
+            "the GUID may come in uppercase"
         );
     }
 }

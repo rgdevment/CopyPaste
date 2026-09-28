@@ -54,7 +54,7 @@ mod there {
         let exe = std::env::current_exe()?;
         if written().is_some_and(|said| !ours(&said, &exe)) {
             return Err(std::io::Error::other(
-                "otro programa ocupa el arranque con el nombre de CopyPaste",
+                "another program holds the startup entry under CopyPaste's name",
             ));
         }
         let key =
@@ -129,28 +129,19 @@ mod there {
             return Waking::none();
         };
         let written = std::fs::read_to_string(&plist).ok();
-        let ours = written
-            .as_deref()
-            .and_then(program_in)
-            .is_some_and(|said| ours(&said, &exe));
         Waking {
             offered: true,
-            wakes: ours,
-            theirs: written.is_some() && !ours,
+            wakes: written
+                .as_deref()
+                .and_then(program_in)
+                .is_some_and(|said| ours(&said, &exe)),
+            theirs: false,
         }
     }
 
     pub fn wake(wanted: bool) -> std::io::Result<()> {
         let exe = std::env::current_exe()?;
-        let plist =
-            at().ok_or_else(|| std::io::Error::other("no se encontró la carpeta del usuario"))?;
-        if let Ok(written) = std::fs::read_to_string(&plist)
-            && program_in(&written).is_some_and(|said| !ours(&said, &exe))
-        {
-            return Err(std::io::Error::other(
-                "otro programa ocupa el arranque con el nombre de CopyPaste",
-            ));
-        }
+        let plist = at().ok_or_else(|| std::io::Error::other("the home folder was not found"))?;
         if !wanted {
             return match std::fs::remove_file(&plist) {
                 Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -299,9 +290,22 @@ mod tests {
     fn a_path_the_xml_had_to_escape_comes_back_whole() {
         let exe = Path::new("/Users/alguien/Rock & Roll/CopyPaste.app/Contents/MacOS/CopyPaste");
         let written = agent_for(exe);
-        assert!(written.contains("&amp;"), "el & crudo rompe el plist");
+        assert!(written.contains("&amp;"), "a raw & breaks the plist");
         assert_eq!(program_in(&written).as_deref(), exe.to_str());
-        assert!(ours(&program_in(&written).expect("ruta"), exe));
+        assert!(ours(&program_in(&written).expect("a path"), exe));
+    }
+
+    #[test]
+    fn an_agent_pointing_at_a_copy_that_moved_reads_as_off_so_it_can_be_written_again() {
+        let moved = Path::new("/Users/quien/Downloads/CopyPaste.app/Contents/MacOS/CopyPaste");
+        let now = Path::new("/Applications/CopyPaste.app/Contents/MacOS/CopyPaste");
+        let written = agent_for(moved);
+        let said = program_in(&written).expect("a path");
+        assert!(ours(&said, moved));
+        assert!(
+            !ours(&said, now),
+            "once it moves, the startup entry no longer points at this copy"
+        );
     }
 
     #[test]

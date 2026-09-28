@@ -48,7 +48,7 @@ jobs:
               for key, _ in node.value:
                   name = loader.construct_object(key, deep=deep)
                   if name in seen:
-                      raise yaml.YAMLError(f"la clave «{name}» está repetida")
+                      raise yaml.YAMLError(f"the «{name}» key is repeated")
                   seen.add(name)
               return yaml.SafeLoader.construct_mapping(loader, node, deep)
 
@@ -60,7 +60,7 @@ jobs:
               try:
                   yaml.load(one.read_text(encoding="utf-8"), Strict)
               except yaml.YAMLError as why:
-                  print(f"::error::{one} no es YAML válido, así que lo que lanza no se lanzará")
+                  print(f"::error::{one} is not valid YAML, so what it launches will not launch")
                   print(why)
                   bad = 1
           sys.exit(bad)
@@ -86,37 +86,37 @@ jobs:
       - name: The core touches neither platform nor interface
         run: |
           if grep -rn 'use tauri\|use windows\|use objc2' crates/cp-core/src --include='*.rs'; then
-            echo "::error::cp-core no depende de plataforma ni de interfaz"; exit 1
+            echo "::error::cp-core depends on neither platform nor interface"; exit 1
           fi
 
       - name: No Spanish identifiers
         run: |
           if grep -rnE '\b(fecha|limite|prioridad|filtro|tarea|titulo|etiqueta|imagen|archivo) *:' \
                crates/*/src --include='*.rs' | grep -v '"' | grep -vE ':[0-9]+: *///?!?'; then
-            echo "::error::los identificadores van en inglés"; exit 1
+            echo "::error::identifiers are written in English"; exit 1
           fi
 
       - name: No voseo in the Spanish anywhere
         run: |
           if grep -rniE '\b(v[o]s|ten[é]s|quer[é]s|pod[é]s|and[á]|mir[á]|hac[é]|ch[e])\b' \
                crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
-            echo "::error::español neutro, sin voseo"; exit 1
+            echo "::error::neutral Spanish, no voseo"; exit 1
           fi
 
       - name: No peninsular Spanish in what a person reads
         run: |
           if grep -rniE '\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b' \
                crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
-            echo "::error::español neutro: archivo, computador, presiona"; exit 1
+            echo "::error::neutral Spanish: archivo, computador, presiona"; exit 1
           fi
 
       - name: The code carries no comments
         run: |
           if grep -rnE '[/]{2}' crates app/src-tauri/src --include='*.rs' | grep -vE '[a-z]+:[/][/]' | grep -q .; then
-            echo "::error::el código va sin comentarios; lo que haya que explicar va al expediente"; exit 1
+            echo "::error::the code carries no comments; whatever needs explaining goes on the record"; exit 1
           fi
           if grep -rnE '[/][*]' crates app/src-tauri/src --include='*.rs' | grep -q .; then
-            echo "::error::tampoco comentarios de bloque"; exit 1
+            echo "::error::no block comments either"; exit 1
           fi
 
   deterministic:

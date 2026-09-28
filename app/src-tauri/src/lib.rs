@@ -51,7 +51,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("CopyPaste no pudo arrancar");
+        .expect("CopyPaste could not start");
 
     app.run(|app, event| match event {
         tauri::RunEvent::ExitRequested {

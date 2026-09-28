@@ -545,7 +545,7 @@ impl Store {
             .optional()?
             .flatten();
         if let Some(path) = path {
-            let _ = std::fs::remove_file(path);
+            let _ = crate::blobs::remove_at(std::path::Path::new(&path));
         }
         Ok(())
     }
@@ -1230,7 +1230,7 @@ fn sidecars(path: &std::path::Path) -> [std::path::PathBuf; 2] {
     })
 }
 
-pub(crate) fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> {
+pub fn restrict(path: &std::path::Path, mode: u32) -> Result<Restricted> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
