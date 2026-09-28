@@ -60,7 +60,7 @@ vi.mock("@tauri-apps/api/core", () => ({
       });
     }
     if (what === "update_ready") {
-      return Promise.resolve(null);
+      return Promise.resolve({ route: "download", looked: true, ready: null });
     }
     if (what === "update_install") {
       return Promise.resolve(null);

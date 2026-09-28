@@ -15,27 +15,36 @@ const NOTICES = "https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md
 const onMac = navigator.userAgent.includes("Macintosh");
 
 function Newer() {
-  const { ready, looked, busy, trouble, look, install } = useUpdate();
-  const brew = ready?.route === "brew";
+  const { seen, busy, trouble, look, install } = useUpdate();
+  const store = seen?.route === "store";
+  const brew = seen?.route === "brew";
+  const ready = seen?.ready ?? null;
+  const looked = seen?.looked ?? false;
+
+  const says = ready
+    ? fill("updateThere", ready.version)
+    : store
+      ? t("updateStore")
+      : looked
+        ? t("updateNone")
+        : t("updateLook");
+
+  const why = ready ? (brew ? t("updateBrew") : t("updateTake")) : t("updateWhen");
 
   return (
     <div className="newer">
       <span className={looked && !ready ? "pip ok" : "pip"} />
       <span className="grow">
-        <b>
-          {ready ? fill("updateThere", ready.version) : looked ? t("updateNone") : t("updateLook")}
-        </b>
-        <span>
-          {trouble ?? (ready ? (brew ? t("updateBrew") : t("updateTake")) : t("updateWhen"))}
-        </span>
+        <b>{says}</b>
+        <span>{trouble ?? (store ? t("updateStoreWhy") : why)}</span>
       </span>
       {ready?.installs ? (
         <button type="button" className="strong" disabled={busy} onClick={install}>
           {busy ? t("updateGetting") : t("updateDo")}
         </button>
-      ) : (
+      ) : store ? null : (
         <button type="button" className="mild" disabled={busy} onClick={() => look(true)}>
-          {busy ? t("busy") : t("updateLookDo")}
+          {busy ? t("busy") : t("updateLook")}
         </button>
       )}
     </div>

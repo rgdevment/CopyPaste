@@ -214,29 +214,42 @@ export function useTrust() {
 
 export type Route = "store" | "brew" | "download";
 
-export type Ready = {
-  version: string;
-  notes: string | null;
-  route: Route;
-  installs: boolean;
-};
+export type Ready = { version: string; installs: boolean };
+
+export type Looked = { route: Route; looked: boolean; ready: Ready | null };
 
 export function useUpdate() {
-  const [ready, setReady] = useState<Ready | null>(null);
-  const [looked, setLooked] = useState(false);
+  const [seen, setSeen] = useState<Looked | null>(null);
   const [busy, setBusy] = useState(false);
   const [trouble, setTrouble] = useState<string | null>(null);
+  const alive = useRef(true);
+  const inFlight = useRef(false);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   const look = useCallback((nowPlease: boolean) => {
+    if (inFlight.current) {
+      return;
+    }
+    inFlight.current = true;
     setTrouble(null);
     setBusy(true);
-    invoke<Ready | null>("update_ready", { nowPlease })
+    invoke<Looked>("update_ready", { nowPlease })
       .then((one) => {
-        setReady(one);
-        setLooked(true);
+        if (alive.current) setSeen(one);
       })
-      .catch((why) => setTrouble(String(why)))
-      .finally(() => setBusy(false));
+      .catch((why) => {
+        if (alive.current) setTrouble(String(why));
+      })
+      .finally(() => {
+        inFlight.current = false;
+        if (alive.current) setBusy(false);
+      });
   }, []);
 
   useEffect(() => look(false), [look]);
@@ -247,8 +260,10 @@ export function useUpdate() {
     invoke<void>("update_install").catch((why) => {
       setTrouble(String(why));
       setBusy(false);
+      // the backend forgets what it could not install, so what is on screen is stale
+      look(true);
     });
-  }, []);
+  }, [look]);
 
-  return { ready, looked, busy, trouble, look, install };
+  return { seen, busy, trouble, look, install };
 }

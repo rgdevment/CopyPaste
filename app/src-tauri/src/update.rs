@@ -1,13 +1,30 @@
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const APART: u64 = 24 * 60 * 60;
-const GETS: Duration = Duration::from_secs(600);
 
 const FROM: [&str; 2] = ["github.com", "objects.githubusercontent.com"];
 
-const CASKS: [&str; 1] = ["copypaste"];
-const PREFIXES: [&str; 2] = ["/opt/homebrew", "/usr/local"];
+#[derive(Default)]
+pub struct Installing(AtomicBool);
+
+struct Alone<'a>(&'a AtomicBool);
+
+impl Installing {
+    fn claim(&self) -> Option<Alone<'_>> {
+        self.0
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+            .then(|| Alone(&self.0))
+    }
+}
+
+impl Drop for Alone<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,9 +38,15 @@ pub enum Route {
 #[serde(rename_all = "camelCase")]
 pub struct Ready {
     pub version: String,
-    pub notes: Option<String>,
-    pub route: Route,
     pub installs: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Looked {
+    pub route: Route,
+    pub looked: bool,
+    pub ready: Option<Ready>,
 }
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
@@ -37,7 +60,7 @@ pub const fn self_installs(route: Route) -> bool {
 }
 
 pub fn ours(url: &str) -> bool {
-    url.parse::<url::Url>().is_ok_and(|at| {
+    url.parse::<tauri::Url>().is_ok_and(|at| {
         at.scheme() == "https" && at.host_str().is_some_and(|host| FROM.contains(&host))
     })
 }
@@ -56,33 +79,41 @@ pub fn worth_offering(found: &str, here: &str) -> bool {
     found > here
 }
 
+/// Gatekeeper runs a quarantined bundle from a read-only copy under a name that changes every
+/// launch, and the plugin only finds that out after the whole download.
 pub fn mounted(running: Option<&Path>) -> bool {
     cfg!(target_os = "macos")
-        && running.is_some_and(|at| at.starts_with("/Volumes/") || at.starts_with("/private/tmp/"))
+        && running.is_some_and(|at| {
+            at.starts_with("/Volumes/")
+                || at.starts_with("/private/tmp/")
+                || parted(at).any(|part| part == "AppTranslocation")
+        })
 }
 
-fn chosen(running: Option<&Path>, there: impl Fn(&Path) -> bool) -> Route {
-    let packaged = running.is_some_and(|at| {
-        at.to_string_lossy()
-            .split(['/', '\\'])
-            .any(|part| part.eq_ignore_ascii_case("WindowsApps"))
-    });
-    if packaged {
+/// A Windows path seen from a Mac is one single component, so the separators are split by hand
+/// rather than trusted to the host.
+fn parted(at: &Path) -> impl Iterator<Item = &str> {
+    at.as_os_str()
+        .to_str()
+        .unwrap_or_default()
+        .split(['/', '\\'])
+}
+
+fn chosen(running: Option<&Path>) -> Route {
+    let named = |what: &str| {
+        running.is_some_and(|at| parted(at).any(|part| part.eq_ignore_ascii_case(what)))
+    };
+    if named("WindowsApps") {
         return Route::Store;
     }
-    let brewed = CASKS.iter().any(|cask| {
-        PREFIXES
-            .iter()
-            .any(|root| there(Path::new(&format!("{root}/Caskroom/{cask}"))))
-    });
-    if brewed {
+    if named("Caskroom") {
         return Route::Brew;
     }
     Route::Download
 }
 
 pub fn route() -> Route {
-    chosen(std::env::current_exe().ok().as_deref(), |at| at.is_dir())
+    chosen(std::env::current_exe().ok().as_deref())
 }
 
 fn now() -> u64 {
@@ -101,6 +132,8 @@ fn kept() -> Kept {
         .unwrap_or_default()
 }
 
+/// Written the way the settings beside it are: a torn file would send every launch back to the
+/// feed, and two looks at once would otherwise interleave their writes.
 fn keep(one: &Kept) {
     let Some(path) = at() else {
         return;
@@ -111,14 +144,26 @@ fn keep(one: &Kept) {
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let _ = std::fs::write(&path, said);
+    let landing = path.with_extension(format!("{}.part", std::process::id()));
+    if poured(&landing, said.as_bytes()).is_err() {
+        let _ = std::fs::remove_file(&landing);
+        return;
+    }
+    if std::fs::rename(&landing, &path).is_err() {
+        let _ = std::fs::remove_file(&landing);
+    }
 }
 
-fn offered(version: String, notes: Option<String>, route: Route) -> Option<Ready> {
-    worth_offering(&version, env!("CARGO_PKG_VERSION")).then(|| Ready {
-        version,
-        notes,
-        route,
+fn poured(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut file = std::fs::File::create(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()
+}
+
+fn offered(version: &str, route: Route) -> Option<Ready> {
+    worth_offering(version, env!("CARGO_PKG_VERSION")).then(|| Ready {
+        version: version.to_owned(),
         installs: self_installs(route) && !mounted(std::env::current_exe().ok().as_deref()),
     })
 }
@@ -127,15 +172,25 @@ fn offered(version: String, notes: Option<String>, route: Route) -> Option<Ready
 pub async fn update_ready(
     app: tauri::AppHandle,
     now_please: Option<bool>,
-) -> Result<Option<Ready>, String> {
+) -> Result<Looked, String> {
     let route = route();
+    // The Store hands its own copies their updates, so this one is never told of a release it
+    // cannot take. Saying nothing is not the same as saying it is up to date.
     if route == Route::Store {
-        return Ok(None);
+        return Ok(Looked {
+            route,
+            looked: false,
+            ready: None,
+        });
     }
     let asked = now_please.unwrap_or(false);
     let held = kept();
     if !asked && !due(held.checked_at, now()) {
-        return Ok(held.found.and_then(|version| offered(version, None, route)));
+        return Ok(Looked {
+            route,
+            looked: held.checked_at.is_some(),
+            ready: held.found.as_deref().and_then(|one| offered(one, route)),
+        });
     }
 
     use tauri_plugin_updater::UpdaterExt;
@@ -146,67 +201,94 @@ pub async fn update_ready(
         .await
         .map_err(|why| why.to_string())?;
 
-    let seen = found.map(|one| (one.version.clone(), one.body.clone()));
+    let seen = found.map(|one| one.version.clone());
     keep(&Kept {
         checked_at: Some(now()),
-        found: seen.as_ref().map(|(version, _)| version.clone()),
+        found: seen.clone(),
     });
-    Ok(seen.and_then(|(version, notes)| offered(version, notes, route)))
+    Ok(Looked {
+        route,
+        looked: true,
+        ready: seen.as_deref().and_then(|one| offered(one, route)),
+    })
 }
 
 #[tauri::command(async)]
-pub async fn update_install(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn update_install(
+    app: tauri::AppHandle,
+    alone: tauri::State<'_, Installing>,
+) -> Result<(), String> {
+    let _busy = alone
+        .inner()
+        .claim()
+        .ok_or_else(|| "an update is already on its way".to_owned())?;
+
     let route = route();
     if !self_installs(route) {
         return Err("this copy is updated by whoever installed it".to_owned());
     }
     if mounted(std::env::current_exe().ok().as_deref()) {
-        return Err("a copy running from the disk image cannot replace itself".to_owned());
+        return Err("a copy running from a read-only place cannot replace itself".to_owned());
     }
     let want = kept()
         .found
         .ok_or_else(|| "there is nothing waiting to be installed".to_owned())?;
+    if !worth_offering(&want, env!("CARGO_PKG_VERSION")) {
+        forget();
+        return Err(format!("{want} is not newer than what is running"));
+    }
 
     use tauri_plugin_updater::UpdaterExt;
     let asked = want.clone();
     let update = app
         .updater_builder()
+        // Pinned to what the person was shown, so a feed that moves in between cannot hand them
+        // a different version than the one they agreed to.
         .version_comparator(move |_, release| release.version.to_string() == asked)
-        .timeout(Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|why| why.to_string())?
         .check()
         .await
         .map_err(|why| why.to_string())?;
 
-    let Some(mut update) = update else {
-        keep(&Kept {
-            checked_at: None,
-            found: None,
-        });
+    let Some(update) = update else {
+        forget();
         return Err(format!("{want} is not on the feed any more"));
     };
+    // The feed names the address the installer comes from, so it is checked against where our
+    // releases live before a single byte is asked for.
     if !ours(update.download_url.as_str()) {
         return Err("the feed points the download somewhere that is not ours".to_owned());
     }
-    update.timeout = Some(GETS);
 
-    crate::panel::quit(&app);
-    let landed = update.download_and_install(|_, _| {}, || {}).await;
-    if landed.is_err()
-        && let Err(why) = crate::panel::relight(&app)
-    {
-        crate::note::note(&format!("the panel did not come back: {why}"));
+    let bytes = update
+        .download(|_, _| {}, || {})
+        .await
+        .map_err(|why| why.to_string())?;
+
+    // Only now: on Windows an installer cannot replace a binary that is running, and the whole
+    // download would otherwise have gone by with nothing watching the clipboard.
+    let waiting = app.clone();
+    let _ = tauri::async_runtime::spawn_blocking(move || crate::panel::quit(&waiting)).await;
+    if let Err(why) = update.install(bytes) {
+        if let Err(back) = crate::panel::relight(&app) {
+            crate::note::note(&format!("the panel did not come back: {back}"));
+        }
+        return Err(why.to_string());
     }
-    landed.map_err(|why| why.to_string())?;
 
+    forget();
+    let handle = app.clone();
+    app.run_on_main_thread(move || handle.restart())
+        .map_err(|why| why.to_string())
+}
+
+fn forget() {
     keep(&Kept {
         checked_at: None,
         found: None,
     });
-    let handle = app.clone();
-    app.run_on_main_thread(move || handle.restart())
-        .map_err(|why| why.to_string())
 }
 
 #[cfg(test)]
@@ -215,54 +297,49 @@ mod tests {
 
     #[test]
     fn a_copy_the_store_keeps_is_updated_by_the_store() {
-        let there = |_: &Path| false;
         assert_eq!(
-            chosen(
-                Some(Path::new(
-                    r"C:\Program Files\WindowsApps\CopyPaste\cp-gui.exe"
-                )),
-                there
-            ),
+            chosen(Some(Path::new(
+                r"C:\Program Files\WindowsApps\CopyPaste\cp-gui.exe"
+            ))),
             Route::Store
         );
         assert!(!self_installs(Route::Store));
     }
 
     #[test]
-    fn a_copy_brew_keeps_is_updated_by_brew() {
-        let there = |at: &Path| at == Path::new("/opt/homebrew/Caskroom/copypaste");
+    fn a_copy_brew_keeps_is_the_one_running_from_the_caskroom() {
         assert_eq!(
-            chosen(
-                Some(Path::new(
-                    "/Applications/CopyPaste.app/Contents/MacOS/CopyPaste"
-                )),
-                there
-            ),
+            chosen(Some(Path::new(
+                "/opt/homebrew/Caskroom/copypaste/3.0.0/CopyPaste.app/Contents/MacOS/CopyPaste"
+            ))),
             Route::Brew
         );
         assert!(!self_installs(Route::Brew));
     }
 
     #[test]
-    fn anything_else_installs_its_own_update() {
-        let there = |_: &Path| false;
+    fn a_caskroom_somewhere_else_does_not_speak_for_this_copy() {
         assert_eq!(
-            chosen(
-                Some(Path::new(
-                    "/Applications/CopyPaste.app/Contents/MacOS/CopyPaste"
-                )),
-                there
-            ),
-            Route::Download
+            chosen(Some(Path::new(
+                "/Users/quien/Applications/CopyPaste.app/Contents/MacOS/CopyPaste"
+            ))),
+            Route::Download,
+            "another copy being brewed says nothing about the one running"
         );
-        assert_eq!(chosen(None, there), Route::Download);
+        assert_eq!(chosen(None), Route::Download);
         assert!(self_installs(Route::Download));
     }
 
     #[test]
-    fn a_copy_running_from_the_disk_image_knows_it_cannot_replace_itself() {
+    fn a_copy_running_from_somewhere_read_only_knows_it_cannot_replace_itself() {
         if cfg!(target_os = "macos") {
             assert!(mounted(Some(Path::new("/Volumes/CopyPaste/CopyPaste.app"))));
+            assert!(
+                mounted(Some(Path::new(
+                    "/private/var/folders/xy/AppTranslocation/1E2/d/CopyPaste.app"
+                ))),
+                "Gatekeeper's copy is read only too"
+            );
             assert!(!mounted(Some(Path::new("/Applications/CopyPaste.app"))));
         }
         assert!(!mounted(None));
@@ -276,6 +353,7 @@ mod tests {
         assert!(ours("https://objects.githubusercontent.com/whatever"));
         assert!(!ours("https://evil.example.com/copypaste.exe"));
         assert!(!ours("http://github.com/rgdevment/CopyPaste"));
+        assert!(!ours("https://github.com.evil.example.com/x"));
         assert!(!ours("github.com/rgdevment"));
         assert!(!ours(""));
     }
@@ -292,7 +370,6 @@ mod tests {
     #[test]
     fn only_a_higher_version_is_worth_offering() {
         assert!(worth_offering("3.0.1", "3.0.0"));
-        assert!(worth_offering("3.1.0", "3.0.9"));
         assert!(!worth_offering("3.0.0", "3.0.0"));
         assert!(!worth_offering("2.9.9", "3.0.0"));
         assert!(!worth_offering("not a version", "3.0.0"));
@@ -303,6 +380,16 @@ mod tests {
     fn a_candidate_is_not_offered_over_the_stable_it_came_from() {
         assert!(!worth_offering("3.0.0-rc.1", "3.0.0"));
         assert!(worth_offering("3.0.0", "3.0.0-rc.1"));
+    }
+
+    #[test]
+    fn only_one_install_can_be_under_way_at_a_time() {
+        let alone = Installing::default();
+        let first = alone.claim();
+        assert!(first.is_some());
+        assert!(alone.claim().is_none(), "a second one is turned away");
+        drop(first);
+        assert!(alone.claim().is_some(), "and the next one may go");
     }
 
     #[test]
@@ -318,5 +405,18 @@ mod tests {
 
         let empty: Kept = serde_json::from_str("{}").expect("an empty one still reads");
         assert!(empty.checked_at.is_none() && empty.found.is_none());
+    }
+
+    #[test]
+    fn a_store_copy_never_claims_to_have_looked() {
+        let looked = Looked {
+            route: Route::Store,
+            looked: false,
+            ready: None,
+        };
+        assert!(
+            !looked.looked,
+            "saying nothing is not saying it is up to date"
+        );
     }
 }

@@ -37,6 +37,7 @@ pub fn run() {
             trouble,
             relabel
         ])
+        .manage(update::Installing::default())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);

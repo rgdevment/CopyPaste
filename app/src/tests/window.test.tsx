@@ -220,6 +220,28 @@ describe("la ventana", () => {
       expect(await screen.findByText(/Se mira una vez al día/)).toBeDefined();
       expect(screen.queryByText("Estás en la última versión")).toBeNull();
       expect(document.querySelector(".pip.ok")).toBeNull();
+      expect(screen.queryByText("Recibir versiones de prueba")).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("una copia de la Store no afirma nada: la Store se encarga", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") {
+        return Promise.resolve({ route: "store", looked: false, ready: null });
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText("La Microsoft Store se encarga")).toBeDefined();
+      expect(screen.queryByText("Estás en la última versión")).toBeNull();
+      expect(document.querySelector(".pip.ok")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Buscar ahora" })).toBeNull();
     } finally {
       vi.mocked(invoke).mockImplementation(real as never);
     }
@@ -239,10 +261,9 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
       if (what === "update_ready") {
         return Promise.resolve({
-          version: "3.1.0",
-          notes: null,
           route: "download",
-          installs: true,
+          looked: true,
+          ready: { version: "3.1.0", installs: true },
         });
       }
       return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
@@ -265,10 +286,9 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
       if (what === "update_ready") {
         return Promise.resolve({
-          version: "3.1.0",
-          notes: null,
           route: "brew",
-          installs: false,
+          looked: true,
+          ready: { version: "3.1.0", installs: false },
         });
       }
       return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
