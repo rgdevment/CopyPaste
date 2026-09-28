@@ -998,6 +998,7 @@ dependencies = [
  "cp-mac-sys",
  "cp-store",
  "cp-win-sys",
+ "semver",
  "serde",
  "serde_json",
  "sys-locale",
@@ -1009,6 +1010,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "url",
  "winreg",
 ]
 

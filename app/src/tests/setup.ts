@@ -59,6 +59,12 @@ vi.mock("@tauri-apps/api/core", () => ({
         secureInput: false,
       });
     }
+    if (what === "update_ready") {
+      return Promise.resolve(null);
+    }
+    if (what === "update_install") {
+      return Promise.resolve(null);
+    }
     if (what === "save_backup") {
       return Promise.resolve({ path: "/donde/quiera/CopyPaste.cpbackup", items: 3, bytes: 2048 });
     }

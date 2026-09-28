@@ -211,3 +211,44 @@ export function useTrust() {
 
   return { trust, asked, ask };
 }
+
+export type Route = "store" | "brew" | "download";
+
+export type Ready = {
+  version: string;
+  notes: string | null;
+  route: Route;
+  installs: boolean;
+};
+
+export function useUpdate() {
+  const [ready, setReady] = useState<Ready | null>(null);
+  const [looked, setLooked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [trouble, setTrouble] = useState<string | null>(null);
+
+  const look = useCallback((nowPlease: boolean) => {
+    setTrouble(null);
+    setBusy(true);
+    invoke<Ready | null>("update_ready", { nowPlease })
+      .then((one) => {
+        setReady(one);
+        setLooked(true);
+      })
+      .catch((why) => setTrouble(String(why)))
+      .finally(() => setBusy(false));
+  }, []);
+
+  useEffect(() => look(false), [look]);
+
+  const install = useCallback(() => {
+    setTrouble(null);
+    setBusy(true);
+    invoke<void>("update_install").catch((why) => {
+      setTrouble(String(why));
+      setBusy(false);
+    });
+  }, []);
+
+  return { ready, looked, busy, trouble, look, install };
+}

@@ -44,14 +44,28 @@ before cutting it for real.
 
 ### What the 3.0 does not carry yet
 
-Three pieces, in the order they will be built, each on its own branch:
+Two pieces, in the order they will be built, each on its own branch:
 
-1. **An app that checks for updates.** `tauri-plugin-updater` is registered and
-   the feed is published to the `manifest` branch, but nothing reads it yet:
-   the «Check now» button in About is disabled and says so.
-2. **Bringing the 2.x history over.** `former` finds `clipboard.db` and weighs
+1. **Bringing the 2.x history over.** `former` finds `clipboard.db` and weighs
    it; the two buttons that would act on it are still disabled.
-3. **The bridge for whoever stays on the 2.x.** See the crossing below.
+2. **The bridge for whoever stays on the 2.x.** See the crossing below.
+
+### The app does check for updates
+
+`app/src-tauri/src/update.rs` reads the feed the `publish` job writes, once a
+day and whenever the person asks. What it does then depends on where the copy
+came from, which it reads off its own path: a copy under `WindowsApps` is the
+Store's to update and is never offered anything; one under a `Caskroom` is
+told the `brew` command rather than handed an installer; anything else
+installs its own update.
+
+Three things guard the install, all of them borrowed from Tisty: the download
+address must be on `github.com` or `objects.githubusercontent.com` before a
+byte is fetched, the version is pinned to the one the person was shown so a
+feed that moves cannot hand over another, and a copy running from the mounted
+`.dmg` refuses rather than failing after the whole download. The panel is
+stopped first, because on Windows an installer cannot replace a binary that is
+running, and it is brought back if the install does not go through.
 
 ## First time only — what a human has to do
 
