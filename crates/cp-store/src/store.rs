@@ -251,6 +251,10 @@ impl Store {
         &self.db
     }
 
+    pub fn blobs(&self) -> Option<&crate::Blobs> {
+        self.blobs.as_ref()
+    }
+
     pub fn in_memory() -> Result<Self> {
         let db = Connection::open_in_memory()?;
         crate::schema::create(&db)?;

@@ -1,8 +1,10 @@
+mod backup;
 mod keys;
 mod note;
 mod panel;
 mod settings;
 mod tray;
+mod trust;
 mod waking;
 
 pub fn run() {
@@ -12,6 +14,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
@@ -22,11 +25,18 @@ pub fn run() {
             waking::waking,
             waking::wake,
             keys::keys,
+            trust::trust,
+            trust::ask_trust,
+            backup::save_backup,
+            backup::peek_backup,
+            backup::load_backup,
             empty,
             trouble,
             relabel
         ])
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             settings::settle();
             let kept = settings::settings().ok();
             let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));

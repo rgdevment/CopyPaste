@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 
+pub mod activation;
 pub mod files;
 pub mod frontmost;
 pub mod keyboard;
@@ -12,3 +13,4 @@ pub mod paths;
 pub mod permissions;
 pub mod reading;
 pub mod runloop;
+pub mod theme;

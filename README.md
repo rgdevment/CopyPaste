@@ -235,28 +235,30 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 ## Keyboard Shortcuts
 
-CopyPaste keeps `Ctrl+V` under the active application's control and uses
-dedicated shortcuts for its global actions and history panel.
+CopyPaste keeps `Ctrl+V` under the active application's control and uses one
+global shortcut of its own to open the history panel.
 
 | Scope | Shortcut | Action |
 | :---- | :------- | :----- |
 | Active application | Ctrl+V (Windows) / Cmd+V (macOS) | Paste the current system clipboard normally. CopyPaste does not intercept it. |
-| CopyPaste global | Ctrl+Alt+C (Windows) / Control+Shift+V (macOS) | Open/close CopyPaste (customizable). |
-| CopyPaste global, optional | Ctrl+Alt+V (Windows; configurable on macOS) | Paste the current system clipboard as plain text without opening the panel. |
-| CopyPaste panel open | Enter | Paste the hovered item, keyboard selection, or first visible history item normally, in that order. |
-| CopyPaste panel open | Shift+Enter | Paste the hovered item, keyboard selection, or first visible history item as plain text (text/link only), in that order. |
-| CopyPaste panel open | ↓ or Tab | Navigate from search to clipboard items. |
-| CopyPaste panel open | ↑ / ↓ | Navigate between clipboard items. |
-| CopyPaste panel open | → | Expand/collapse the selected card. |
-| CopyPaste panel open | Shift+Tab | Return focus to the search box. |
-| CopyPaste panel open | Delete | Delete the selected item. |
-| CopyPaste panel open | P | Pin/unpin the selected item. |
-| CopyPaste panel open | E | Edit the selected card (label and color). |
-| CopyPaste panel open | Ctrl+1 / Cmd+1 | Switch to Recent. |
-| CopyPaste panel open | Ctrl+2 / Cmd+2 | Switch to Pinned. |
-| CopyPaste panel open | Alt+C | Focus the search box. |
-| CopyPaste panel open | Alt+G / Alt+T | Open the filter menu. |
-| CopyPaste panel open | Esc | Clear the current filter or close the panel. |
+| CopyPaste global | Ctrl+Alt+V (Windows) / Cmd+Alt+V (macOS) | Open the panel where you were typing. Customizable in Settings → General. |
+| Panel open | ↑ / ↓ | Move through the history. |
+| Panel open | Tab / Shift+Tab | Move forward and back through the same list. |
+| Panel open | Enter | Paste what is selected, in the app you came from. |
+| Panel open | Shift+Enter | Paste it as plain text. |
+| Panel open | Alt+Enter or Ctrl+Enter | Open «paste as» and choose a form for it. |
+| Panel open | Ctrl+P | Pin or unpin what is selected. |
+| Panel open | Delete | Delete what is selected (with the search box empty). |
+| Panel open | Backspace | Drop the last filter (with the search box empty). |
+| Panel open | F1 | Show this list inside the panel. |
+| Panel open | Esc | Close the panel. |
+| «Paste as» open | ↑ / ↓ | Move through the forms. |
+| «Paste as» open | Enter | Paste in the form that is selected. |
+| «Paste as» open | Esc or Tab | Go back to the list. |
+
+The search box always has the focus, so you type to search the moment the panel
+opens. A word starting with `#` filters by kind (`#image`, `#link`, `#imagen`)
+instead of searching for it.
 
 ### Card Customization
 
@@ -596,50 +598,39 @@ CopyPaste should speak your language. Currently it supports English and Spanish,
 
 ### Help Add a New Language
 
-CopyPaste uses Flutter's standard ARB-based localization. Adding a new language requires creating one file.
+CopyPaste is written in two languages at once, and every string sits next to its
+twin. There is no translation file format to learn: the pairs live in the code.
 
-#### Steps to Add a New Translation
+#### Where the words are
 
-1. **Create a branch** from main in the repository.
+| File                             | What speaks through it                                  |
+| :------------------------------- | :------------------------------------------------------ |
+| `app/src/locales.ts`             | The settings window. One `ES` object and one `EN` object. |
+| `crates/cp-panel/src/view.rs`    | The panel: kinds, paste-as forms, empty states, counts.  |
+| `crates/cp-panel/src/age.rs`     | How old a copy reads on its card.                        |
+| `app/src-tauri/src/tray.rs`      | The three entries in the tray menu.                      |
 
-2. **Copy the base language file:**
+In Rust the pairs are written `("español", "english")` and picked by
+`say::pick`. In TypeScript they are two objects with the same keys.
 
-    ```text
-    app/lib/l10n/app_en.arb
-    ```
+#### Steps to add a language
 
-    This is the reference file with all translation keys.
-
-3. **Name your file using the language code:**
-    - app_de.arb (German)
-    - app_fr.arb (French)
-    - app_pt.arb (Portuguese - Brazil)
-    - app_ja.arb (Japanese)
-
-4. **Translate the values** (keep the keys in English — only change values):
-
-    ```json
-    {
-        "@@locale": "de",
-        "searchPlaceholder": "Suche im Zwischenablage…",
-        "emptyStateSubtitle": "Kopiere etwas, um zu starten",
-        "pinned": "Angeheftet",
-        "recent": "Zuletzt"
-    }
-    ```
-
-5. **Test your translation** by changing your system language or using the manual override in Settings.
-
-6. **Submit a Pull Request** with your ARB file.
+1. **Create a branch** from main.
+2. **Widen the pair into a choice.** A third language means `say::pick` and
+   `locales.ts` stop being a pair and become a lookup — open an issue first so
+   the shape is agreed before anyone translates 300 strings into a dead end.
+3. **Translate**, keeping the keys and the placeholders (`{one}`) untouched.
+4. **Check it** with `cargo test -p cp-panel` and `npm test`: both suites assert
+   that nothing is left empty and that the tongues actually differ.
+5. **Submit a pull request.**
 
 #### Translation Guidelines
 
 - Keep translations concise — UI space is limited
-- Use formal or neutral tone
-- Preserve ARB placeholders like {name} or {count}
-- Include "@@locale": "xx" at the top of the file
+- Use a neutral tone, and address the reader informally
+- Preserve placeholders like `{one}`
 - Don't translate brand names (CopyPaste, Windows, etc.)
-- Don't change ARB keys (only values)
+- Don't change the keys, only what they say
 
 ---
 
@@ -658,17 +649,18 @@ Contributions are always appreciated — whether that's a bug report, a translat
 
 If you're curious about what's under the hood of this open source clipboard manager:
 
-| Technology                                            | Why                                                                                   |
-| :---------------------------------------------------- | :------------------------------------------------------------------------------------ |
-| **Flutter**                                           | Cross-platform UI toolkit — native on Windows and macOS.                              |
-| **Dart**                                              | Clean, performant language for core logic, services, and domain models.               |
-| **Platform Channels + FFI**                           | Native integration with each OS for clipboard hooks and system APIs.                  |
-| **Windows Mica / macOS Sidebar**                      | Native translucent effects that match each platform's design language.                |
-| **C++ Plugin (Win) / Swift (Mac)**                    | Low-level clipboard listener to capture every content type before the OS discards it. |
-| **Native C++ Launcher (Win)**                         | Lightweight splash process that appears instantly while Flutter warms up.             |
-| **SQLite (Drift) + FTS5**                             | Local database with full-text search across content and labels.                       |
-| **Auto-update (Standalone)**                          | Ed25519-signed release manifest hosted on GitHub Releases; in-app badge notifies users of new versions and enforces blocks on versions with critical issues. |
-| **Theme System**                                      | Built-in Default and Compact themes, plus custom theme support via external packages. |
+| Technology                        | Why                                                                                                    |
+| :-------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| **Rust**                          | One workspace, eight crates, no `unsafe` outside the two that talk to the operating system.            |
+| **Tauri 2**                       | The settings window, the tray icon, the global shortcut and the updater.                               |
+| **React + TypeScript**            | What the settings window is made of. It is the only part that runs in a webview.                       |
+| **Slint**                         | The panel itself, drawn by a separate process so the history opens without waiting for a webview.      |
+| **Sidecar over stdin**            | The app starts the panel and speaks four words to it — show, hide, empty, quit. Nothing else crosses.   |
+| **SQLite (rusqlite) + FTS5**      | Local database with full-text search across content, labels, source app and recognised text.           |
+| **Win32 / AppKit, direct**        | `cp-win-sys` and `cp-mac-sys` call the system themselves: clipboard, keystrokes, thumbnails, OCR.       |
+| **Windows OCR / Apple Vision**    | Text inside an image is read on the machine, by the system, and becomes searchable.                     |
+| **blake3 + xxHash**               | What identifies a copy and what recognises it again, so the same thing twice is one row that rises.     |
+| **Auto-update (Standalone)**      | Ed25519-signed feed published to the `manifest` branch. The app does not read it yet — see RELEASING.md. |
 
 ---
 

@@ -8,11 +8,7 @@ pub fn where_to() -> std::path::PathBuf {
 }
 
 fn folder() -> std::path::PathBuf {
-    #[cfg(target_os = "windows")]
-    if let Some(dir) = cp_win_sys::paths::data_dir() {
-        return dir.join("logs");
-    }
-    std::env::temp_dir()
+    crate::here::data_dir().map_or_else(std::env::temp_dir, |dir| dir.join("logs"))
 }
 
 pub fn note(what: &str) {

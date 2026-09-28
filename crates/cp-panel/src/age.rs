@@ -3,9 +3,14 @@ const HOUR: i64 = 60 * MINUTE;
 const DAY: i64 = 24 * HOUR;
 
 pub fn age_text(now: i64, at: i64) -> String {
+    age_in(crate::say::in_english(), now, at)
+}
+
+fn age_in(english: bool, now: i64, at: i64) -> String {
+    let say = |es: &'static str, en: &'static str| crate::say::pick_in(english, es, en);
     let gone = now - at;
     if gone < MINUTE {
-        return "ahora".into();
+        return say("ahora", "now").into();
     }
     if gone < HOUR {
         return format!("{} min", gone / MINUTE);
@@ -14,18 +19,18 @@ pub fn age_text(now: i64, at: i64) -> String {
         return format!("{} h", gone / HOUR);
     }
     if gone < 2 * DAY {
-        return "ayer".into();
+        return say("ayer", "yesterday").into();
     }
     if gone < 7 * DAY {
-        return format!("{} d", gone / DAY);
+        return format!("{} {}", gone / DAY, say("d", "d"));
     }
     if gone < 30 * DAY {
-        return format!("{} sem", gone / (7 * DAY));
+        return format!("{} {}", gone / (7 * DAY), say("sem", "w"));
     }
     if gone < 365 * DAY {
-        return format!("{} mes", gone / (30 * DAY));
+        return format!("{} {}", gone / (30 * DAY), say("mes", "mo"));
     }
-    format!("{} a", gone / (365 * DAY))
+    format!("{} {}", gone / (365 * DAY), say("a", "y"))
 }
 
 #[cfg(test)]
@@ -67,5 +72,16 @@ mod tests {
     #[test]
     fn a_clock_that_runs_behind_the_item_is_still_now() {
         assert_eq!(age_text(100, 5_000), "ahora");
+    }
+
+    #[test]
+    fn the_same_ages_read_in_english_when_english_is_the_tongue() {
+        let now = 10 * DAY;
+        assert_eq!(age_in(true, now, now - 5_000), "now");
+        assert_eq!(age_in(true, now, now - 9 * MINUTE), "9 min");
+        assert_eq!(age_in(true, now, now - 30 * HOUR), "yesterday");
+        assert_eq!(age_in(true, now, now - 9 * DAY), "1 w");
+        assert_eq!(age_in(true, now, now - 100 * DAY), "3 mo");
+        assert_eq!(age_in(true, now, now - 800 * DAY), "2 y");
     }
 }

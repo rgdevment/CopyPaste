@@ -1,9 +1,11 @@
 mod age;
 mod app;
 mod engine;
+mod here;
 mod measure;
 mod model;
 mod note;
+mod say;
 mod view;
 
 slint::include_modules!();
@@ -88,9 +90,5 @@ fn seeded() -> PathBuf {
 }
 
 fn where_it_lives() -> PathBuf {
-    #[cfg(target_os = "windows")]
-    if let Some(path) = cp_win_sys::paths::database() {
-        return path;
-    }
-    seeded()
+    here::data_dir().map_or_else(seeded, |dir| dir.join("history.db"))
 }

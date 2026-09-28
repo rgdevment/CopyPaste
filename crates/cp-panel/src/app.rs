@@ -1,6 +1,6 @@
+use crate::here;
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
-#[cfg(target_os = "windows")]
 use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
 use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
@@ -68,6 +68,9 @@ struct Request {
 impl App {
     pub fn start(store: Store, options: Options) -> Result<(Panel, Self), slint::PlatformError> {
         let panel = Panel::new()?;
+        here::stay_out_of_the_dock();
+        crate::say::adopt_what_was_kept();
+        crate::view::dress_words(&panel);
         let theme = panel.global::<crate::Theme>();
         let metrics = Metrics {
             tall: theme.get_row_thumb(),
@@ -317,7 +320,7 @@ impl App {
                 if handed {
                     deliver(&ui, &state);
                 } else {
-                    complain(&ui, BUSY);
+                    complain(&ui, busy());
                 }
             }
         });
@@ -501,7 +504,7 @@ impl App {
                     if paste_as(&store, engine.as_deref(), id, key.as_str()) {
                         deliver(&ui, &state);
                     } else {
-                        complain(&ui, BUSY);
+                        complain(&ui, busy());
                     }
                 }
                 Asking::Kinds => {
@@ -525,7 +528,7 @@ impl App {
                 if done {
                     deliver(&ui, &state);
                 } else {
-                    complain(&ui, BUSY);
+                    complain(&ui, busy());
                 }
             }
         });
@@ -549,22 +552,17 @@ impl App {
     }
 }
 
+fn handle_of(panel: &Panel) -> Option<raw_window_handle::RawWindowHandle> {
+    use raw_window_handle::HasWindowHandle;
+    let handle = panel.window().window_handle();
+    HasWindowHandle::window_handle(&handle)
+        .ok()
+        .map(|raw| raw.as_raw())
+}
+
 fn dress(panel: &Panel, wanted: &str) {
-    #[cfg(target_os = "windows")]
-    {
-        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-        let handle = panel.window().window_handle();
-        if let Ok(raw) = HasWindowHandle::window_handle(&handle)
-            && let RawWindowHandle::Win32(win32) = raw.as_raw()
-        {
-            let backdrop = cp_win_sys::backdrop::Backdrop::from_name(wanted)
-                .unwrap_or(cp_win_sys::backdrop::Backdrop::Mica);
-            cp_win_sys::backdrop::apply(win32.hwnd.get(), backdrop, !wants_light());
-        }
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = (panel, wanted);
+    if let Some(handle) = handle_of(panel) {
+        here::dress(handle, wanted, wants_light());
     }
 }
 
@@ -763,33 +761,19 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
             return false;
         }
     };
-    #[cfg(target_os = "windows")]
-    {
-        let Some(clipboard) = cp_win_sys::clipboard::Clipboard::open() else {
-            note(&format!("pegar {id}: el portapapeles no se dejó abrir"));
-            return false;
-        };
-        let how = cp_win::restore::to_clipboard(&clipboard, &item);
-        let written = matches!(how, cp_win::restore::Restored::Written { .. });
-        if written {
-            mark(engine);
-            drop(clipboard);
-            if let Err(why) = store.record_paste(id, now_ms()) {
-                note(&format!("pegado {id} sin anotar: {why}"));
-            }
-        } else {
-            note(&format!("pegar {id}: la escritura salió {how:?}"));
+    let written = here::to_clipboard(&item, || mark(engine));
+    if written {
+        if let Err(why) = store.record_paste(id, now_ms()) {
+            note(&format!("pegado {id} sin anotar: {why}"));
         }
-        written
+    } else {
+        note(&format!(
+            "pegar {id}: la escritura no llegó al portapapeles"
+        ));
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = (item, engine);
-        false
-    }
+    written
 }
 
-#[cfg(target_os = "windows")]
 fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
     const SHOWN: usize = 22;
     let text = match rendered {
@@ -888,9 +872,18 @@ fn vanish(ui: &Panel) {
     });
 }
 
-const BUSY: &str = "no se pudo pegar: el portapapeles está ocupado";
-#[cfg(target_os = "windows")]
-const NOT_THERE: &str = "está copiado, pero no se pudo pegar ahí";
+fn busy() -> &'static str {
+    crate::say::pick(
+        "no se pudo pegar: el portapapeles está ocupado",
+        "could not paste: the clipboard is busy",
+    )
+}
+fn not_there() -> &'static str {
+    crate::say::pick(
+        "está copiado, pero no se pudo pegar ahí",
+        "it is copied, but it could not be pasted there",
+    )
+}
 
 fn complain(ui: &Panel, said: &str) {
     ui.set_count_text(said.into());
@@ -912,13 +905,12 @@ fn blink(ui: &Panel) {
     });
 }
 
-#[cfg(target_os = "windows")]
 fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
     let Ok(Some(item)) = store.item(id) else {
         return Vec::new();
     };
     let ocr = store.ocr_text(id).ok().flatten();
-    let content = cp_win::content::content_of(&item, ocr.as_deref());
+    let content = here::content_of(&item, ocr.as_deref());
     let mut rows = vec![FormRow {
         key: AS_IS.into(),
         label: as_is_label(item.kind).into(),
@@ -952,12 +944,6 @@ fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
     rows
 }
 
-#[cfg(not(target_os = "windows"))]
-fn forms_of(_store: &Store, _id: i64) -> Vec<FormRow> {
-    Vec::new()
-}
-
-#[cfg(target_os = "windows")]
 fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key: &str) -> bool {
     if key == AS_IS {
         return hand_over(store, engine, id);
@@ -970,7 +956,7 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
         return false;
     };
     let ocr = store.ocr_text(id).ok().flatten();
-    let content = cp_win::content::content_of(&item, ocr.as_deref());
+    let content = here::content_of(&item, ocr.as_deref());
     let Some(rendered) = cp_core::paste_as::render(form, &content) else {
         note(&format!(
             "pegar como {key} sobre {id}: la forma no dio nada"
@@ -978,27 +964,11 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
         return false;
     };
     let made = rendered.into_item();
-    let Some(clipboard) = cp_win_sys::clipboard::Clipboard::open() else {
-        return false;
-    };
-    let written = matches!(
-        cp_win::restore::to_clipboard(&clipboard, &made),
-        cp_win::restore::Restored::Written { .. }
-    );
-    if written {
-        mark(engine);
-        drop(clipboard);
-        if let Err(why) = store.record_paste(id, now_ms()) {
-            note(&format!("pegado {id} sin anotar: {why}"));
-        }
+    let written = here::to_clipboard(&made, || mark(engine));
+    if written && let Err(why) = store.record_paste(id, now_ms()) {
+        note(&format!("pegado {id} sin anotar: {why}"));
     }
     written
-}
-
-#[cfg(not(target_os = "windows"))]
-fn paste_as(_store: &Store, _engine: Option<&crate::engine::Engine>, _id: i64, key: &str) -> bool {
-    let _ = form_of(key);
-    false
 }
 
 pub fn now_ms() -> i64 {
@@ -1008,7 +978,6 @@ pub fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
-#[cfg(target_os = "windows")]
 fn mark(engine: Option<&crate::engine::Engine>) {
     let Some(engine) = engine else {
         return;
@@ -1020,43 +989,30 @@ fn mark(engine: Option<&crate::engine::Engine>) {
 
 fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
     let ahead = state.borrow().ahead.swap(0, Ordering::Relaxed);
-    #[cfg(target_os = "windows")]
-    if let Some(target) = cp_win_sys::frontmost::target_at(ahead) {
-        let weak = ui.as_weak();
-        let sent = cp_win::paste::paste_into(&target, move || {
-            if let Some(ui) = weak.upgrade() {
-                ui.set_sheet_open(false);
-                let _ = ui.hide();
-            }
-        });
-        if let cp_win::paste::Outcome::Degraded(why) = sent {
+    let weak = ui.as_weak();
+    match here::paste_into(ahead, move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_sheet_open(false);
+            let _ = ui.hide();
+        }
+    }) {
+        here::Sent::Nobody => vanish(ui),
+        here::Sent::Done => {}
+        here::Sent::Degraded(why) => {
             note(&format!("queda en el portapapeles, sin pegar: {why:?}"));
             if ui.show().is_ok() {
                 forward(ui);
                 appear(ui);
-                complain(ui, NOT_THERE);
+                complain(ui, not_there());
             }
         }
-        return;
     }
-    let _ = ahead;
-    vanish(ui);
 }
 
 fn forward(panel: &Panel) {
-    #[cfg(target_os = "windows")]
-    {
-        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-        let handle = panel.window().window_handle();
-        if let Ok(raw) = HasWindowHandle::window_handle(&handle)
-            && let RawWindowHandle::Win32(win32) = raw.as_raw()
-            && let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get())
-        {
-            cp_win_sys::frontmost::bring_forward(target.window);
-        }
+    if let Some(handle) = handle_of(panel) {
+        here::forward(handle);
     }
-    #[cfg(not(target_os = "windows"))]
-    let _ = panel;
 }
 
 fn light_for(asked: cp_config::Theme, the_system_is_light: bool) -> bool {
@@ -1068,17 +1024,10 @@ fn light_for(asked: cp_config::Theme, the_system_is_light: bool) -> bool {
 }
 
 fn wants_light() -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        let asked = cp_win_sys::paths::data_dir()
-            .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
-            .map_or(cp_config::Theme::System, |kept| kept.theme);
-        light_for(asked, cp_win_sys::theme::wants_light().unwrap_or(false))
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        light_for(cp_config::Theme::System, false)
-    }
+    let asked = here::data_dir()
+        .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
+        .map_or(cp_config::Theme::System, |kept| kept.theme);
+    light_for(asked, here::system_is_light())
 }
 
 fn dress_theme(ui: &Panel) {
@@ -1086,16 +1035,9 @@ fn dress_theme(ui: &Panel) {
 }
 
 fn hides_when_left() -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        cp_win_sys::paths::data_dir()
-            .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
-            .is_none_or(|kept| kept.hides_when_left)
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        true
-    }
+    here::data_dir()
+        .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
+        .is_none_or(|kept| kept.hides_when_left)
 }
 
 fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
@@ -1127,14 +1069,7 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
 }
 
 fn ahead_now() -> isize {
-    #[cfg(target_os = "windows")]
-    {
-        cp_win_sys::frontmost::ahead()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        0
-    }
+    here::ahead_now()
 }
 
 const ORDER_UP_TO: u64 = 64;
@@ -1157,11 +1092,13 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                     if in_front != 0 {
                         ahead.store(in_front, Ordering::Relaxed);
                     }
+                    crate::say::adopt_what_was_kept();
                     let dressed = backdrop.clone();
                     let _ = ui.upgrade_in_event_loop(move |panel| {
                         if panel.show().is_err() {
                             return;
                         }
+                        crate::view::dress_words(&panel);
                         dress(&panel, &dressed);
                         forward(&panel);
                         panel.invoke_fresh_start();

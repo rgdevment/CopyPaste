@@ -106,6 +106,21 @@ const ES = {
   aboutPrivacyLink: "Privacidad",
   keysFormer: "En CopyPaste 2 era Ctrl + Alt + C",
   wakeMac: "En macOS se activa en Ajustes del Sistema › General › Elementos de inicio",
+  wakeTheirsMac: "Otro programa ocupa el arranque con el nombre de CopyPaste",
+  trust: "Permiso para pegar",
+  trustWhy: "macOS pide tu permiso para que CopyPaste escriba en la ventana donde estabas",
+  trustGranted: "Concedido: lo que elijas se pega solo",
+  trustMissing: "Sin él, lo elegido queda en el portapapeles y lo pegas tú",
+  trustAsk: "Conceder",
+  trustOpen: "Abrir Ajustes del Sistema",
+  trustSecure: "Hay un campo de contraseña abierto: mientras dure, nadie puede pegar por ti",
+  outDone: "Guardado: {one}",
+  inDone: "Llegaron {one}",
+  inAlready: "{one} ya estaban y no se duplicaron",
+  inNothing: "Todo lo del archivo ya estaba aquí",
+  busy: "Un momento…",
+  itemOne: "1 elemento",
+  itemMany: "{one} elementos",
 } as const;
 
 type Said = typeof ES;
@@ -218,6 +233,21 @@ const EN: Record<keyof Said, string> = {
   aboutPrivacyLink: "Privacy",
   keysFormer: "In CopyPaste 2 it was Ctrl + Alt + C",
   wakeMac: "On macOS, turn it on in System Settings › General › Login Items",
+  wakeTheirsMac: "Another program holds the login entry under CopyPaste's name",
+  trust: "Permission to paste",
+  trustWhy: "macOS asks for your permission before CopyPaste types into the window you were in",
+  trustGranted: "Granted: what you pick is pasted for you",
+  trustMissing: "Without it, what you pick stays on the clipboard for you to paste",
+  trustAsk: "Grant",
+  trustOpen: "Open System Settings",
+  trustSecure: "A password field is open: while it is, nobody can paste for you",
+  outDone: "Saved: {one}",
+  inDone: "Brought in: {one}",
+  inAlready: "{one} were already here and were not duplicated",
+  inNothing: "Everything in the file was already here",
+  busy: "One moment…",
+  itemOne: "1 item",
+  itemMany: "{one} items",
 };
 
 let now: Record<keyof Said, string> = ES;
@@ -235,4 +265,8 @@ export function t(key: keyof Said) {
 
 export function fill(key: keyof Said, one: string) {
   return now[key].replace("{one}", one);
+}
+
+export function items(count: number) {
+  return count === 1 ? t("itemOne") : fill("itemMany", String(count));
 }

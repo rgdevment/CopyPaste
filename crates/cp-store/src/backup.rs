@@ -1,0 +1,496 @@
+use crate::{Blobs, Error, Result, Store};
+use rusqlite::Connection;
+use std::path::Path;
+
+pub const FORMAT: u32 = 1;
+pub const EXTENSION: &str = "cpbackup";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Made {
+    pub items: i64,
+    pub blobs: i64,
+    pub bytes: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Brought {
+    pub added: i64,
+    pub already: i64,
+    pub blobs: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Taken {
+    pub format: u32,
+    pub schema: u32,
+    pub items: i64,
+    pub written_at: i64,
+    pub bytes: u64,
+}
+
+pub fn write(store: &Store, to: &Path, at: i64) -> Result<Made> {
+    if let Some(parent) = to.parent() {
+        std::fs::create_dir_all(parent).map_err(Error::Io)?;
+    }
+    for path in [to.to_path_buf(), sidecar(to, "-wal"), sidecar(to, "-shm")] {
+        remove(&path)?;
+    }
+    store
+        .raw()
+        .execute("VACUUM INTO ?1", [&to.to_string_lossy()])?;
+    crate::store::restrict(to, 0o600)?;
+
+    let copy = Connection::open(to)?;
+    copy.execute_batch(
+        "CREATE TABLE backup_blobs (digest TEXT PRIMARY KEY, bytes BLOB NOT NULL);
+         CREATE TABLE backup_note (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+    )?;
+
+    let blobs = store.blobs();
+    let mut kept = 0;
+    if let Some(blobs) = blobs {
+        let digests = wanted(&copy)?;
+        let mut insert =
+            copy.prepare("INSERT OR IGNORE INTO backup_blobs (digest, bytes) VALUES (?1, ?2)")?;
+        for digest in digests {
+            let Some(bytes) = blobs.get(&digest)? else {
+                continue;
+            };
+            insert.execute(rusqlite::params![digest, bytes])?;
+            kept += 1;
+        }
+    }
+
+    let items: i64 = copy.query_row("SELECT COUNT(*) FROM items", [], |row| row.get(0))?;
+    for (key, value) in [
+        ("format", FORMAT.to_string()),
+        ("schema", crate::SCHEMA_VERSION.to_string()),
+        ("written_at", at.to_string()),
+        ("items", items.to_string()),
+    ] {
+        copy.execute(
+            "INSERT OR REPLACE INTO backup_note (key, value) VALUES (?1, ?2)",
+            rusqlite::params![key, value],
+        )?;
+    }
+    copy.execute_batch("PRAGMA journal_mode = DELETE; VACUUM;")?;
+    drop(copy);
+    for side in [sidecar(to, "-wal"), sidecar(to, "-shm")] {
+        remove(&side)?;
+    }
+
+    Ok(Made {
+        items,
+        blobs: kept,
+        bytes: weighed(to),
+    })
+}
+
+pub fn read(from: &Path) -> Result<Taken> {
+    let copy = Connection::open_with_flags(from, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let format = u32::try_from(noted(&copy, "format")?.ok_or(Error::NotABackup)?)
+        .map_err(|_| Error::NotABackup)?;
+    if format > FORMAT {
+        return Err(Error::BackupFromTheFuture {
+            found: format,
+            supported: FORMAT,
+        });
+    }
+    Ok(Taken {
+        format,
+        schema: u32::try_from(noted(&copy, "schema")?.unwrap_or(0)).unwrap_or(0),
+        items: noted(&copy, "items")?.unwrap_or(0),
+        written_at: noted(&copy, "written_at")?.unwrap_or(0),
+        bytes: weighed(from),
+    })
+}
+
+pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
+    let taken = read(from)?;
+    if taken.schema > crate::SCHEMA_VERSION {
+        return Err(Error::FromTheFuture {
+            found: taken.schema,
+            supported: crate::SCHEMA_VERSION,
+        });
+    }
+    let opened = Opened::of(from)?;
+    let source = Store::open(&opened.db)?;
+    let mut brought = Brought {
+        added: 0,
+        already: 0,
+        blobs: opened.blobs,
+    };
+    let mut after = None;
+    loop {
+        let page = source.list(&crate::Filter::default(), Store::PAGE, after)?;
+        if page.rows.is_empty() {
+            break;
+        }
+        for row in &page.rows {
+            match carry(&source, into, row, at) {
+                Ok(true) => brought.added += 1,
+                Ok(false) => brought.already += 1,
+                Err(why) => return Err(why),
+            }
+        }
+        after = page.next;
+        if after.is_none() {
+            break;
+        }
+    }
+    Ok(brought)
+}
+
+fn carry(source: &Store, into: &Store, row: &crate::Listed, at: i64) -> Result<bool> {
+    let Some(item) = source.item(row.id)? else {
+        return Ok(false);
+    };
+    if into.find_by_hash(&item)?.is_some() {
+        return Ok(false);
+    }
+    let id = into.insert_item(
+        &named(source, row.id, at),
+        &item,
+        &row.preview,
+        row.created_at,
+    )?;
+    if let Some(app) = row.app.as_deref() {
+        into.set_source(id, app, at)?;
+    }
+    if let Some(label) = row.label.as_deref() {
+        into.set_label(id, Some(label), at)?;
+    }
+    if row.color != 0 {
+        into.set_color(id, row.color, at)?;
+    }
+    if row.pinned {
+        into.set_pinned(id, true, at)?;
+    }
+    if let Some(text) = source.ocr_text(row.id)? {
+        into.set_ocr_text(id, &text, at)?;
+    }
+    Ok(true)
+}
+
+fn named(source: &Store, id: i64, at: i64) -> String {
+    source
+        .raw()
+        .query_row("SELECT uuid FROM items WHERE id = ?1", [id], |row| {
+            row.get::<_, String>(0)
+        })
+        .unwrap_or_else(|_| format!("{at:x}-{id:08x}"))
+}
+
+struct Opened {
+    dir: std::path::PathBuf,
+    db: std::path::PathBuf,
+    blobs: i64,
+}
+
+impl Opened {
+    fn of(from: &Path) -> Result<Self> {
+        let dir = std::env::temp_dir().join(format!(
+            "cp-backup-{}-{}",
+            std::process::id(),
+            TURN.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(&dir).map_err(Error::Io)?;
+        let mut opened = Self {
+            db: dir.join("history.db"),
+            blobs: 0,
+            dir,
+        };
+        std::fs::copy(from, &opened.db).map_err(Error::Io)?;
+        let blobs = Blobs::at(&opened.dir.join("blobs"))?;
+        let coming = Connection::open(&opened.db)?;
+        let mut kept = 0;
+        {
+            let mut stmt = coming.prepare("SELECT digest, bytes FROM backup_blobs")?;
+            let mut rows = stmt.query([])?;
+            while let Some(row) = rows.next()? {
+                let digest: String = row.get(0)?;
+                let bytes: Vec<u8> = row.get(1)?;
+                if blobs.put(&bytes)? == digest {
+                    kept += 1;
+                }
+            }
+        }
+        coming.execute_batch(
+            "DROP TABLE IF EXISTS backup_blobs;
+             DROP TABLE IF EXISTS backup_note;",
+        )?;
+        drop(coming);
+        opened.blobs = kept;
+        Ok(opened)
+    }
+}
+
+impl Drop for Opened {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
+}
+
+static TURN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn wanted(db: &Connection) -> Result<Vec<String>> {
+    let mut stmt =
+        db.prepare("SELECT DISTINCT blob_path FROM item_formats WHERE blob_path IS NOT NULL")?;
+    let found = stmt
+        .query_map([], |row| row.get::<_, String>(0))?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(found)
+}
+
+fn noted(db: &Connection, key: &str) -> Result<Option<i64>> {
+    let found: Option<String> = db
+        .query_row(
+            "SELECT value FROM backup_note WHERE key = ?1",
+            [key],
+            |row| row.get(0),
+        )
+        .or_else(|why| match why {
+            rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            rusqlite::Error::SqliteFailure(_, Some(ref said)) if said.contains("no such table") => {
+                Ok(None)
+            }
+            other => Err(other),
+        })?;
+    Ok(found.and_then(|said| said.parse().ok()))
+}
+
+fn sidecar(path: &Path, tail: &str) -> std::path::PathBuf {
+    let mut said = path.as_os_str().to_os_string();
+    said.push(tail);
+    std::path::PathBuf::from(said)
+}
+
+fn remove(path: &Path) -> Result<()> {
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(why) => Err(Error::Io(why)),
+    }
+}
+
+fn weighed(path: &Path) -> u64 {
+    std::fs::metadata(path).map_or(0, |it| it.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cp_core::item::{Format, Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
+    use cp_core::kind::Kind;
+
+    fn text(what: &str) -> Item {
+        Item {
+            kind: Some(Kind::Text),
+            formats: vec![Format {
+                id: SYNTHETIC_TEXT.into(),
+                payload: Payload::Inline(what.as_bytes().to_vec()),
+            }],
+        }
+    }
+
+    fn heavy() -> Item {
+        Item {
+            kind: Some(Kind::Image),
+            formats: vec![Format {
+                id: SYNTHETIC_IMAGE.into(),
+                payload: Payload::Blob(vec![7u8; cp_core::item::INLINE_UP_TO + 64]),
+            }],
+        }
+    }
+
+    fn somewhere(name: &str) -> (tempfile::TempDir, Store) {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let store = Store::open(&dir.path().join(name)).expect("abrir");
+        (dir, store)
+    }
+
+    #[test]
+    fn what_was_kept_travels_whole_from_one_machine_to_another() {
+        let (there, store) = somewhere("history.db");
+        store
+            .insert_item("uno", &text("lo primero"), "lo primero", 1_000)
+            .expect("guardar");
+        let heavy_id = store
+            .insert_item("dos", &heavy(), "", 2_000)
+            .expect("guardar");
+        store.set_pinned(heavy_id, true, 2_000).expect("anclar");
+        let backup = there.path().join("mine.cpbackup");
+        let made = write(&store, &backup, 3_000).expect("exportar");
+        assert_eq!(made.items, 2);
+        assert_eq!(made.blobs, 1, "el blob tenía que viajar dentro");
+        assert!(made.bytes > 0);
+        drop(store);
+
+        let taken = read(&backup).expect("leer");
+        assert_eq!(taken.format, FORMAT);
+        assert_eq!(taken.items, 2);
+        assert_eq!(taken.written_at, 3_000);
+
+        let (_here, landed) = somewhere("history.db");
+        let brought = bring(&backup, &landed, 4_000).expect("importar");
+        assert_eq!(brought.added, 2);
+        assert_eq!(brought.already, 0);
+        assert_eq!(landed.count().expect("contar"), 2);
+        let page = landed
+            .list(&crate::Filter::default(), 10, None)
+            .expect("listar");
+        let picture = page
+            .rows
+            .iter()
+            .find(|one| one.kind == Some(Kind::Image))
+            .expect("la imagen llegó");
+        assert!(picture.pinned, "lo anclado sigue anclado");
+        let payload = landed
+            .payload_of(picture.id, SYNTHETIC_IMAGE)
+            .expect("leer")
+            .expect("el blob está");
+        assert_eq!(payload.len(), cp_core::item::INLINE_UP_TO + 64);
+    }
+
+    #[test]
+    fn importing_adds_and_never_takes_away_what_was_already_there() {
+        let (there, store) = somewhere("history.db");
+        store
+            .insert_item("uno", &text("de la copia"), "de la copia", 1_000)
+            .expect("guardar");
+        let backup = there.path().join("mine.cpbackup");
+        write(&store, &backup, 1_000).expect("exportar");
+        drop(store);
+
+        let (_here, landed) = somewhere("history.db");
+        for (at, what) in [(1, "uno"), (2, "dos"), (3, "tres")] {
+            landed
+                .insert_item(&format!("v{at}"), &text(what), what, at)
+                .expect("guardar");
+        }
+        let brought = bring(&backup, &landed, 5_000).expect("importar");
+        assert_eq!(brought.added, 1);
+        assert_eq!(landed.count().expect("contar"), 4, "nada de lo suyo se fue");
+    }
+
+    #[test]
+    fn the_same_copy_brought_twice_does_not_double_anything() {
+        let (there, store) = somewhere("history.db");
+        store
+            .insert_item("uno", &text("algo"), "algo", 1_000)
+            .expect("guardar");
+        store
+            .insert_item("dos", &text("otra cosa"), "otra cosa", 2_000)
+            .expect("guardar");
+        let backup = there.path().join("mine.cpbackup");
+        write(&store, &backup, 1_000).expect("exportar");
+        drop(store);
+
+        let (_here, landed) = somewhere("history.db");
+        let first = bring(&backup, &landed, 3_000).expect("importar");
+        let again = bring(&backup, &landed, 4_000).expect("importar de nuevo");
+        assert_eq!(first.added, 2);
+        assert_eq!(again.added, 0);
+        assert_eq!(again.already, 2);
+        assert_eq!(landed.count().expect("contar"), 2);
+    }
+
+    #[test]
+    fn what_was_opened_to_read_a_backup_is_swept_when_it_is_done() {
+        let (there, store) = somewhere("history.db");
+        store
+            .insert_item("uno", &text("algo"), "algo", 1_000)
+            .expect("guardar");
+        let backup = there.path().join("mine.cpbackup");
+        write(&store, &backup, 1_000).expect("exportar");
+        drop(store);
+
+        let dir = {
+            let opened = Opened::of(&backup).expect("abrir");
+            assert!(opened.db.exists(), "la copia se materializa para leerla");
+            opened.dir.clone()
+        };
+        assert!(!dir.exists(), "la copia abierta se quedó en el disco");
+    }
+
+    #[test]
+    fn what_is_brought_in_is_a_history_and_not_a_backup() {
+        let (there, store) = somewhere("history.db");
+        store
+            .insert_item("uno", &text("algo"), "algo", 1_000)
+            .expect("guardar");
+        let backup = there.path().join("mine.cpbackup");
+        write(&store, &backup, 1_000).expect("exportar");
+        drop(store);
+
+        let (_here, landed) = somewhere("history.db");
+        bring(&backup, &landed, 2_000).expect("importar");
+        let left: i64 = landed
+            .raw()
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'backup_%'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("contar");
+        assert_eq!(left, 0);
+    }
+
+    #[test]
+    fn a_file_that_is_not_a_backup_is_refused_before_anything_is_touched() {
+        let dir = tempfile::tempdir().expect("carpeta");
+        let stranger = dir.path().join("cualquiera.cpbackup");
+        std::fs::write(&stranger, b"no soy una base de datos").expect("escribir");
+        assert!(read(&stranger).is_err());
+
+        let plain = dir.path().join("plain.db");
+        let store = Store::open(&plain).expect("abrir");
+        store
+            .insert_item("uno", &text("algo"), "algo", 1_000)
+            .expect("guardar");
+        drop(store);
+        assert!(
+            matches!(read(&plain), Err(Error::NotABackup)),
+            "una base suelta no es un respaldo"
+        );
+
+        let (_here, landed) = somewhere("history.db");
+        landed
+            .insert_item("mio", &text("lo mío"), "lo mío", 1_000)
+            .expect("guardar");
+        assert!(bring(&plain, &landed, 2_000).is_err());
+        assert_eq!(landed.count().expect("contar"), 1, "lo suyo sigue ahí");
+    }
+
+    #[test]
+    fn exporting_twice_over_the_same_file_simply_writes_it_again() {
+        let (there, store) = somewhere("history.db");
+        store
+            .insert_item("uno", &text("algo"), "algo", 1_000)
+            .expect("guardar");
+        let backup = there.path().join("mine.cpbackup");
+        let first = write(&store, &backup, 1_000).expect("exportar");
+        store
+            .insert_item("dos", &text("otra cosa"), "otra cosa", 2_000)
+            .expect("guardar");
+        let again = write(&store, &backup, 2_000).expect("exportar de nuevo");
+        assert_eq!(first.items, 1);
+        assert_eq!(again.items, 2);
+        assert_eq!(read(&backup).expect("leer").items, 2);
+    }
+
+    #[test]
+    fn an_empty_history_still_makes_a_backup_that_can_be_brought_back() {
+        let (there, store) = somewhere("history.db");
+        let backup = there.path().join("vacio.cpbackup");
+        let made = write(&store, &backup, 1_000).expect("exportar");
+        assert_eq!(made.items, 0);
+        assert_eq!(made.blobs, 0);
+        drop(store);
+
+        let (_here, landed) = somewhere("history.db");
+        let brought = bring(&backup, &landed, 2_000).expect("importar");
+        assert_eq!(brought.added, 0);
+        assert_eq!(landed.count().expect("contar"), 0);
+    }
+}

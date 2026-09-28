@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { combination, type Kept, type Look, useKeys, useWaking } from "../core";
+import { combination, type Kept, type Look, onMac, useKeys, useTrust, useWaking } from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
@@ -11,6 +11,7 @@ export default function General({
   change: (what: Partial<Kept>) => void;
 }) {
   const { waking, trouble, ask } = useWaking();
+  const { trust, ask: askTrust } = useTrust();
   const keys = useKeys();
   const [asking, setAsking] = useState(false);
 
@@ -52,7 +53,7 @@ export default function General({
           why={t("wakeWhy")}
           more={
             waking.theirs ? (
-              <div className="said">{t("wakeTheirs")}</div>
+              <div className="said">{t(onMac() ? "wakeTheirsMac" : "wakeTheirs")}</div>
             ) : trouble ? (
               <div className="alarm">{trouble}</div>
             ) : null
@@ -67,6 +68,22 @@ export default function General({
         </Line>
       ) : (
         <Line says={t("wake")} why={t("wakeMac")} />
+      )}
+
+      {trust?.offered && (
+        <Line
+          says={t("trust")}
+          why={trust.pastes ? t("trustGranted") : t("trustMissing")}
+          more={trust.secure_input ? <div className="said">{t("trustSecure")}</div> : null}
+        >
+          {trust.pastes ? (
+            <Knob on says={t("trust")} asleep onPress={() => {}} />
+          ) : (
+            <button type="button" className="strong" onClick={askTrust}>
+              {trust.asked_before ? t("trustOpen") : t("trustAsk")}
+            </button>
+          )}
+        </Line>
       )}
 
       <Line

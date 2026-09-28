@@ -145,11 +145,38 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
-  it("los botones de copia de seguridad dicen que todavía no están", async () => {
+  it("exportar escribe el archivo que se elija y dice cuánto guardó", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const { save } = await import("@tauri-apps/plugin-dialog");
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
-    const exporta = await screen.findByRole("button", { name: "Exportar…" });
-    expect(exporta).toBeDisabled();
+    await userEvent.click(await screen.findByRole("button", { name: "Exportar…" }));
+    expect(save).toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith(
+      "save_backup",
+      expect.objectContaining({ path: "/donde/quiera/CopyPaste.cpbackup" }),
+    );
+    expect(await screen.findByText("Guardado: 3 elementos")).toBeDefined();
+  });
+
+  it("importar trae lo que falta y no duplica lo que ya estaba", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Elegir archivo…" }));
+    expect(invoke).toHaveBeenCalledWith(
+      "load_backup",
+      expect.objectContaining({ path: "/donde/quiera/CopyPaste.cpbackup" }),
+    );
+    expect(
+      await screen.findByText("Llegaron 2 elementos · 1 elemento ya estaban y no se duplicaron"),
+    ).toBeDefined();
+  });
+
+  it("lo que de verdad no está todavía sigue diciéndolo", async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+    expect(await screen.findByRole("button", { name: "Traer el historial…" })).toBeDisabled();
     expect(screen.getAllByText("Todavía no").length).toBeGreaterThan(0);
   });
 

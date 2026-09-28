@@ -35,17 +35,12 @@ fn all_is_well<R: Runtime>(app: &AppHandle<R>) {
 }
 
 pub fn raise<R: Runtime>(app: &AppHandle<R>) {
-    #[cfg(target_os = "windows")]
-    {
-        app.manage(Sidecar::default());
-        app.manage(Trouble::default());
-        match light(app) {
-            Ok(()) => crate::note::note("el panel queda esperando en segundo plano"),
-            Err(why) => crate::note::note(&format!("el panel no arrancó: {why}")),
-        }
+    app.manage(Sidecar::default());
+    app.manage(Trouble::default());
+    match light(app) {
+        Ok(()) => crate::note::note("el panel queda esperando en segundo plano"),
+        Err(why) => crate::note::note(&format!("el panel no arrancó: {why}")),
     }
-    #[cfg(not(target_os = "windows"))]
-    let _ = app;
 }
 
 pub fn show<R: Runtime>(app: &AppHandle<R>) {
@@ -84,6 +79,10 @@ pub fn quit<R: Runtime>(app: &AppHandle<R>) {
     {
         let _ = child.kill();
     }
+}
+
+pub fn relight<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
+    light(app)
 }
 
 fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {

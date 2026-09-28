@@ -1,15 +1,11 @@
 # Releasing CopyPaste
 
-**Status (2026-09-23): the 3.0 release pipeline does not exist yet.**
-`.github/workflows/release.yml` was part of the 2.x tree and is gone; the jobs
-this document used to describe (`build-windows`, `github-release`,
-`publish-release-manifest`, `update-scoop-bucket`) no longer run anywhere.
-What follows is the shape the 3.0 pipeline will have — modelled on the one in
-[rgdevment/Tisty](https://github.com/rgdevment/Tisty), which is audited and in
-production — plus the steps that are manual the first time and cannot be
-automated away.
+`.github/workflows/release.yml` builds, signs and publishes the 3.0 — modelled
+on the pipeline in [rgdevment/Tisty](https://github.com/rgdevment/Tisty), which
+is audited and in production. What follows is what it does, plus the steps that
+are manual the first time and cannot be automated away.
 
-## The pipeline, once it exists
+## The pipeline
 
 A `v*` tag on `main` fans out, in this order, with every stage gated on the one
 before it:
@@ -19,10 +15,8 @@ before it:
 | `gate`               | Style and prose, so a tag never publishes an unformatted tree.          |
 | `tested`             | Proof the commit was green when it landed.                              |
 | `version`            | The version resolved from the tag, used by every stage after it.        |
-| `build-windows`      | `cp-panel` sidecar + the Tauri app, signed with the PFX certificate.    |
-| `build-macos`        | The same, per architecture, signed and notarised.                       |
-| `bundle-windows`     | NSIS installer.                                                         |
-| `bundle-macos`       | `.dmg`.                                                                 |
+| `bundle-windows`     | `cp-panel` sidecar + the Tauri app, signed with the PFX, as an NSIS installer. |
+| `bundle-macos`       | The same, per architecture, signed and notarised, as a `.dmg`.          |
 | `bundle-msix`        | MSIX for the Microsoft Store.                                           |
 | `publish`            | The GitHub Release with every artifact and the update manifest.         |
 | `verify`             | Installs what was just published and checks the update feed answers.    |
@@ -33,6 +27,27 @@ before it:
 `feed.yml` then watches the published manifest daily: a deleted asset, a
 retired release or a force-pushed branch breaks the update feed silently, and
 nothing else would notice.
+
+### macOS is built only when it is switched on
+
+`BUILD_MACOS` at the top of `release.yml` gates `bundle-macos`, and it ships
+set to `"false"`. While it stays off, a tag publishes Windows alone and the
+`version` job does not demand the Apple secrets. Turning it on without all six
+(`MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`,
+`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_APP_PASSWORD`, `APPLE_TEAM_ID`)
+fails the tag before anything is built, which is the point: an unsigned,
+un-notarised `.dmg` is worse than no `.dmg`.
+
+### What the 3.0 does not carry yet
+
+- **The 2.x update manifest.** The crossing below asks for the old
+  `release-manifest.json` to be signed with `RELEASE_PRIVATE_KEY` and attached
+  to every release until `v3.1.0`. No job does that today, so a standalone 2.x
+  install has no way to learn the 3.0 exists. The file at the repository root
+  is still the 2.3.0 one.
+- **An app that checks for updates.** `tauri-plugin-updater` is registered and
+  the feed is published to the `manifest` branch, but nothing reads it yet: the
+  «Check now» button in About is disabled and says so.
 
 ## First time only — what a human has to do
 

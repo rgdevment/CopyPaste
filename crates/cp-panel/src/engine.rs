@@ -1,35 +1,28 @@
-use std::path::Path;
-
-#[cfg(target_os = "windows")]
+use crate::here;
 use crate::note::note;
-#[cfg(target_os = "windows")]
 use cp_core::capture::Captured;
-#[cfg(target_os = "windows")]
 use cp_core::item::Item;
-#[cfg(target_os = "windows")]
 use cp_core::kind::Kind;
-#[cfg(target_os = "windows")]
 use cp_store::Store;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct Engine {
-    #[cfg(target_os = "windows")]
-    watching: cp_win::watching::Watching,
-    #[cfg(target_os = "windows")]
-    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
-    #[cfg(target_os = "windows")]
+    watching: here::Watching,
+    stop: Arc<AtomicBool>,
     errands: Option<std::thread::JoinHandle<()>>,
 }
 
-#[cfg(target_os = "windows")]
 impl Engine {
     pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
-        let watching = cp_win::watching::Watching::start(move || {
+        let watching = here::Watching::start(move || {
             if let Some(id) = kept(&store) {
                 fresh(id);
             }
         });
-        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let stop = Arc::new(AtomicBool::new(false));
         let errands = errands(db, stop.clone());
         Ok(Self {
             watching,
@@ -43,42 +36,22 @@ impl Engine {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-impl Engine {
-    pub fn start(
-        _db: &Path,
-        _fresh: impl Fn(i64) + Send + 'static,
-    ) -> Result<Self, cp_store::Error> {
-        Ok(Self {})
-    }
-}
-
-#[cfg(target_os = "windows")]
 impl Drop for Engine {
     fn drop(&mut self) {
-        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.stop.store(true, Ordering::Relaxed);
         if let Some(thread) = self.errands.take() {
             let _ = thread.join();
         }
     }
 }
 
-#[cfg(target_os = "windows")]
 const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
-#[cfg(target_os = "windows")]
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
-#[cfg(target_os = "windows")]
 const LATER: i64 = 60_000;
-#[cfg(target_os = "windows")]
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
-#[cfg(target_os = "windows")]
 const A_DAY: i64 = 24 * 60 * 60 * 1_000;
 
-#[cfg(target_os = "windows")]
-fn errands(
-    db: &Path,
-    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
-) -> Option<std::thread::JoinHandle<()>> {
+fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<()>> {
     let store = match Store::open(db) {
         Ok(store) => store,
         Err(why) => {
@@ -86,13 +59,13 @@ fn errands(
             return None;
         }
     };
-    let Some(thumbs) = cp_win_sys::paths::thumbs_dir() else {
+    let Some(thumbs) = here::thumbs_dir() else {
         note("no hay dónde dejar las miniaturas");
         return None;
     };
     Some(std::thread::spawn(move || {
         let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
-        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+        while !stop.load(Ordering::Relaxed) {
             if swept.elapsed() >= SWEEPS_EVERY {
                 sweep(&store);
                 swept = std::time::Instant::now();
@@ -104,9 +77,8 @@ fn errands(
     }))
 }
 
-#[cfg(target_os = "windows")]
 fn sweep(store: &Store) {
-    let Some(dir) = cp_win_sys::paths::data_dir() else {
+    let Some(dir) = here::data_dir() else {
         return;
     };
     let path = cp_config::at(&dir);
@@ -137,7 +109,6 @@ fn sweep(store: &Store) {
     }
 }
 
-#[cfg(target_os = "windows")]
 fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
     cp_store::Policy {
         keep_for: kept
@@ -153,7 +124,6 @@ fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
     }
 }
 
-#[cfg(target_os = "windows")]
 fn errand(store: &Store, thumbs: &Path) -> bool {
     let at = crate::app::now_ms();
     if let Some(id) = first_waiting(store, "thumb", at) {
@@ -167,7 +137,6 @@ fn errand(store: &Store, thumbs: &Path) -> bool {
     false
 }
 
-#[cfg(target_os = "windows")]
 fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
     match store.take_pending(job, at, 1) {
         Ok(waiting) => waiting.into_iter().next(),
@@ -178,7 +147,6 @@ fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
     }
 }
 
-#[cfg(target_os = "windows")]
 fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
     let Some(png) = store.item(id).ok().flatten().as_ref().and_then(thumb_of) else {
         give_up(store, id, "thumb", "no se pudo hacer la miniatura", at);
@@ -194,9 +162,8 @@ fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
     done(store, id, "thumb");
 }
 
-#[cfg(target_os = "windows")]
 fn read_out(store: &Store, id: i64, at: i64) {
-    if !cp_win_sys::ocr::is_available() {
+    if !here::ocr_available() {
         done(store, id, "ocr");
         return;
     }
@@ -217,9 +184,7 @@ fn read_out(store: &Store, id: i64, at: i64) {
             return;
         }
     };
-    let found = cp_win::content::content_of(&item, None)
-        .image
-        .and_then(cp_win_sys::ocr::text_in);
+    let found = here::content_of(&item, None).image.and_then(here::text_in);
     if let Some(text) = found
         && let Err(why) = store.set_ocr_text(id, &text, at)
     {
@@ -228,18 +193,15 @@ fn read_out(store: &Store, id: i64, at: i64) {
     done(store, id, "ocr");
 }
 
-#[cfg(target_os = "windows")]
 fn thumb_of(item: &Item) -> Option<Vec<u8>> {
-    let content = cp_win::content::content_of(item, None);
+    let content = here::content_of(item, None);
     if let Some(image) = content.image {
         return cp_core::thumbnail::of_image(image, cp_core::thumbnail::MAX_SIDE);
     }
     let first = content.paths.first()?;
-    let dib = cp_win_sys::thumbnail::dib_of_file(std::path::Path::new(first), SIDE)?;
-    cp_core::dib::to_png(&dib)
+    here::thumb_of_file(Path::new(first), SIDE)
 }
 
-#[cfg(target_os = "windows")]
 fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
     std::fs::create_dir_all(dir).ok()?;
     let landed = dir.join(format!("{id}.png"));
@@ -247,14 +209,12 @@ fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
     Some(landed.to_string_lossy().into_owned())
 }
 
-#[cfg(target_os = "windows")]
 fn done(store: &Store, id: i64, job: &str) {
     if let Err(why) = store.work_done(id, job) {
         note(&format!("{id} sigue en la cola de {job}: {why}"));
     }
 }
 
-#[cfg(target_os = "windows")]
 fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) {
     match store.work_failed(id, job, why, at + LATER) {
         Ok(true) => {}
@@ -263,12 +223,8 @@ fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) {
     }
 }
 
-#[cfg(target_os = "windows")]
 fn kept(store: &Store) -> Option<i64> {
-    let item = match cp_win::capture::capture_insisting(
-        cp_win::capture::PATIENCE,
-        cp_core::watch::RETRY,
-    ) {
+    let item = match here::capture_insisting() {
         Captured::Kept(item) => item,
         Captured::Refused(_) => {
             note("una copia se descartó por lo que la aplicación de origen pidió");
@@ -280,11 +236,10 @@ fn kept(store: &Store) -> Option<i64> {
         }
         Captured::Nothing | Captured::Superseded => return None,
     };
-    let from = cp_win_sys::source::in_front();
+    let from = here::in_front();
     keep(store, &item, crate::app::now_ms(), from.as_deref())
 }
 
-#[cfg(target_os = "windows")]
 fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> {
     match store.find_by_hash(item) {
         Ok(Some(id)) => {
@@ -316,9 +271,8 @@ fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> 
     Some(id)
 }
 
-#[cfg(target_os = "windows")]
 fn preview_of(item: &Item) -> String {
-    let content = cp_win::content::content_of(item, None);
+    let content = here::content_of(item, None);
     if let Some(text) = content.text {
         return text.into_owned();
     }
@@ -328,26 +282,24 @@ fn preview_of(item: &Item) -> String {
     String::new()
 }
 
-#[cfg(target_os = "windows")]
 fn name_for(at: i64, _item: &Item) -> String {
     static TURN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let turn = TURN.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let turn = TURN.fetch_add(1, Ordering::Relaxed);
     let since = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |it| it.subsec_nanos());
     format!("{at:x}-{since:08x}{turn:08x}")
 }
 
-#[cfg(target_os = "windows")]
 fn jobs_for(item: &Item) -> &'static [&'static str] {
     match item.kind {
         Some(Kind::Image) => &["thumb", "ocr"],
-        Some(Kind::File) | Some(Kind::Folder) => &["thumb"],
+        Some(Kind::File) | Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb"],
         _ => &[],
     }
 }
 
-#[cfg(all(test, target_os = "windows"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use cp_core::item::{Format, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
@@ -387,6 +339,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "windows")]
     fn files(paths: &[&str]) -> Item {
         Item {
             kind: Some(Kind::File),
@@ -396,6 +349,27 @@ mod tests {
             }],
         }
     }
+
+    #[cfg(target_os = "macos")]
+    fn files(paths: &[&str]) -> Item {
+        let urls = paths
+            .iter()
+            .map(|path| format!("file://{path}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        Item {
+            kind: Some(Kind::File),
+            formats: vec![Format {
+                id: "public.file-url".into(),
+                payload: Payload::Inline(urls.into_bytes()),
+            }],
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    const SOMEWHERE: [&str; 2] = ["C:\\uno.txt", "C:\\dos.txt"];
+    #[cfg(target_os = "macos")]
+    const SOMEWHERE: [&str; 2] = ["/tmp/uno.txt", "/tmp/dos.txt"];
 
     #[test]
     fn the_preview_of_text_is_the_text_itself() {
@@ -409,8 +383,8 @@ mod tests {
 
     #[test]
     fn files_preview_as_their_paths_one_per_line() {
-        let said = preview_of(&files(&["C:\\uno.txt", "C:\\dos.txt"]));
-        assert_eq!(said, "C:\\uno.txt\nC:\\dos.txt");
+        let said = preview_of(&files(&SOMEWHERE));
+        assert_eq!(said, SOMEWHERE.join("\n"));
     }
 
     #[test]
@@ -426,8 +400,17 @@ mod tests {
     #[test]
     fn only_what_can_be_enriched_is_queued() {
         assert_eq!(jobs_for(&image()), ["thumb", "ocr"]);
-        assert_eq!(jobs_for(&files(&["C:\\uno.txt"])), ["thumb"]);
         assert!(jobs_for(&text("nada que hacer")).is_empty());
+    }
+
+    #[test]
+    fn a_file_is_only_queued_where_its_thumbnail_can_be_drawn() {
+        let queued = jobs_for(&files(&SOMEWHERE));
+        if here::THUMBNAILS_FILES {
+            assert_eq!(queued, ["thumb"]);
+        } else {
+            assert!(queued.is_empty(), "encolar lo que nadie dibujará no sirve");
+        }
     }
 
     fn somewhere() -> (tempfile::TempDir, Store) {

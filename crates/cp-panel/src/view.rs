@@ -56,12 +56,16 @@ pub fn badge_of(claims: Option<&Claims>) -> &'static str {
 
 pub fn alert_of(row: &Listed, claims: Option<&Claims>, now: i64) -> &'static str {
     if row.broken_since.is_some() {
-        return "No encontrado";
+        return crate::say::pick("No encontrado", "Not found");
     }
     let stale = claims
         .and_then(|claims| claims.expired_by(now / 1_000))
         .unwrap_or(false);
-    if stale { "CADUCADO" } else { "" }
+    if stale {
+        crate::say::pick("CADUCADO", "EXPIRED")
+    } else {
+        ""
+    }
 }
 
 fn claims_in(row: &Listed) -> Option<Claims> {
@@ -113,22 +117,27 @@ pub fn body_of(row: &Listed) -> String {
 }
 
 pub fn label_of(kind: Option<Kind>) -> &'static str {
+    let (es, en) = label_pair(kind);
+    crate::say::pick(es, en)
+}
+
+fn label_pair(kind: Option<Kind>) -> (&'static str, &'static str) {
     match kind {
-        Some(Kind::Text) | None => "Texto",
-        Some(Kind::Code) => "Código",
-        Some(Kind::Json) => "JSON",
-        Some(Kind::Link) => "Enlace",
-        Some(Kind::Email) => "Correo",
-        Some(Kind::Phone) => "Teléfono",
-        Some(Kind::Color) => "Color",
-        Some(Kind::Ip) => "IP",
-        Some(Kind::Uuid) => "UUID",
-        Some(Kind::Image) => "Imagen",
-        Some(Kind::File) => "Archivo",
-        Some(Kind::Folder) => "Carpeta",
-        Some(Kind::Audio) => "Audio",
-        Some(Kind::Video) => "Video",
-        Some(Kind::Token) => "Token",
+        Some(Kind::Text) | None => ("Texto", "Text"),
+        Some(Kind::Code) => ("Código", "Code"),
+        Some(Kind::Json) => ("JSON", "JSON"),
+        Some(Kind::Link) => ("Enlace", "Link"),
+        Some(Kind::Email) => ("Correo", "Email"),
+        Some(Kind::Phone) => ("Teléfono", "Phone"),
+        Some(Kind::Color) => ("Color", "Colour"),
+        Some(Kind::Ip) => ("IP", "IP"),
+        Some(Kind::Uuid) => ("UUID", "UUID"),
+        Some(Kind::Image) => ("Imagen", "Image"),
+        Some(Kind::File) => ("Archivo", "File"),
+        Some(Kind::Folder) => ("Carpeta", "Folder"),
+        Some(Kind::Audio) => ("Audio", "Audio"),
+        Some(Kind::Video) => ("Video", "Video"),
+        Some(Kind::Token) => ("Token", "Token"),
     }
 }
 
@@ -198,61 +207,63 @@ pub fn sweeten(query: &str) -> String {
         .join(" ")
 }
 
-#[cfg(target_os = "windows")]
 pub fn label_of_form(form: Form) -> &'static str {
+    let (es, en) = form_pair(form);
+    crate::say::pick(es, en)
+}
+
+fn form_pair(form: Form) -> (&'static str, &'static str) {
     match form {
-        Form::PlainText => "En texto plano",
-        Form::Markdown => "Como Markdown",
-        Form::JsonPretty => "Formateado",
-        Form::JsonMinified => "Minificado",
-        Form::JsonKeys => "Solo las claves",
-        Form::JsonTable => "Como tabla",
-        Form::ColorHex => "En hex",
-        Form::ColorRgb => "En rgb()",
-        Form::ColorHsl => "En hsl()",
-        Form::ColorName => "Por su nombre",
-        Form::LinkMarkdown => "En Markdown",
-        Form::LinkDomain => "Solo el dominio",
-        Form::LinkTitled => "Con su título",
-        Form::CodeOneLine => "Sin saltos de línea",
-        Form::CodeBlock => "Bloque Markdown",
-        Form::CodeDedented => "Sin indentación",
-        Form::TokenHeader => "Como cabecera",
-        Form::TokenClaims => "Su contenido",
-        Form::TokenCurl => "Como curl",
-        Form::ImageJpeg => "Como JPEG",
-        Form::ImageOcr => "El texto que leyó",
-        Form::Path => "Su ruta",
-        Form::FileName => "Su nombre",
-        Form::TextQuote => "Como cita",
-        Form::TextUpper => "TODO EN MAYÚSCULAS",
-        Form::TextLower => "todo en minúsculas",
+        Form::PlainText => ("En texto plano", "As plain text"),
+        Form::Markdown => ("Como Markdown", "As Markdown"),
+        Form::JsonPretty => ("Formateado", "Formatted"),
+        Form::JsonMinified => ("Minificado", "Minified"),
+        Form::JsonKeys => ("Solo las claves", "Keys only"),
+        Form::JsonTable => ("Como tabla", "As a table"),
+        Form::ColorHex => ("En hex", "In hex"),
+        Form::ColorRgb => ("En rgb()", "In rgb()"),
+        Form::ColorHsl => ("En hsl()", "In hsl()"),
+        Form::ColorName => ("Por su nombre", "By its name"),
+        Form::LinkMarkdown => ("En Markdown", "In Markdown"),
+        Form::LinkDomain => ("Solo el dominio", "Domain only"),
+        Form::LinkTitled => ("Con su título", "With its title"),
+        Form::CodeOneLine => ("Sin saltos de línea", "Without line breaks"),
+        Form::CodeBlock => ("Bloque Markdown", "Markdown block"),
+        Form::CodeDedented => ("Sin indentación", "Without indentation"),
+        Form::TokenHeader => ("Como cabecera", "As a header"),
+        Form::TokenClaims => ("Su contenido", "What it carries"),
+        Form::TokenCurl => ("Como curl", "As curl"),
+        Form::ImageJpeg => ("Como JPEG", "As JPEG"),
+        Form::ImageOcr => ("El texto que leyó", "The text it read"),
+        Form::Path => ("Su ruta", "Its path"),
+        Form::FileName => ("Su nombre", "Its name"),
+        Form::TextQuote => ("Como cita", "As a quote"),
+        Form::TextUpper => ("TODO EN MAYÚSCULAS", "ALL IN CAPITALS"),
+        Form::TextLower => ("todo en minúsculas", "all in lower case"),
     }
 }
 
-#[cfg(target_os = "windows")]
 pub const AS_IS: &str = "as-is";
 
-#[cfg(target_os = "windows")]
 pub fn shorthand_of(form: Form) -> Option<&'static str> {
     match form {
         Form::ColorHex => Some("hex"),
         Form::ColorRgb => Some("rgb"),
         Form::ColorHsl => Some("hsl"),
-        Form::ColorName => Some("nombre"),
+        Form::ColorName => Some(crate::say::pick("nombre", "name")),
         _ => None,
     }
 }
 
-#[cfg(target_os = "windows")]
 pub fn as_is_label(kind: Option<Kind>) -> &'static str {
-    match kind {
-        Some(Kind::Token) => "El token",
-        Some(Kind::File) | Some(Kind::Folder) => "El archivo",
-        Some(Kind::Image) => "La imagen",
-        Some(Kind::Link) => "El enlace",
-        _ => "Tal cual",
-    }
+    let (es, en) = match kind {
+        Some(Kind::Token) => ("El token", "The token"),
+        Some(Kind::File) | Some(Kind::Folder) => ("El archivo", "The file"),
+        Some(Kind::Image) => ("La imagen", "The image"),
+        Some(Kind::Link) => ("El enlace", "The link"),
+        _ => ("Tal cual", "As it is"),
+    };
+    crate::say::pick(es, en)
 }
 
 pub fn form_of(key: &str) -> Option<Form> {
@@ -304,34 +315,56 @@ pub fn compact(count: i64) -> String {
 const SHOWN_QUERY: usize = 24;
 
 pub fn empty_of(query: &str, pinned: bool, kinds: bool) -> (String, String) {
+    empty_in(crate::say::in_english(), query, pinned, kinds)
+}
+
+fn empty_in(english: bool, query: &str, pinned: bool, kinds: bool) -> (String, String) {
+    let say = |es: &'static str, en: &'static str| crate::say::pick_in(english, es, en).to_owned();
     let query = query.trim();
     if query.is_empty() {
         return match (pinned, kinds) {
             (true, _) => (
-                "No hay nada anclado".into(),
-                "Ancla lo que uses seguido y se queda a mano".into(),
+                say("No hay nada anclado", "Nothing is pinned"),
+                say(
+                    "Ancla lo que uses seguido y se queda a mano",
+                    "Pin what you use often and it stays within reach",
+                ),
             ),
             (false, true) => (
-                "No hay nada de este tipo".into(),
-                "Quita el filtro para ver todo".into(),
+                say("No hay nada de este tipo", "Nothing of this kind"),
+                say(
+                    "Quita el filtro para ver todo",
+                    "Drop the filter to see everything",
+                ),
             ),
             (false, false) => (
-                "Todavía no hay nada".into(),
-                "Lo que copies aparece aquí".into(),
+                say("Todavía no hay nada", "Nothing here yet"),
+                say("Lo que copies aparece aquí", "What you copy shows up here"),
             ),
         };
     }
-    let asked = format!("Nada coincide con «{}»", shorten(query));
+    let shown = shorten(query);
+    let asked = crate::say::pick_in(english, "Nada coincide con «{}»", "Nothing matches “{}”")
+        .replace("{}", &shown);
     if !query.chars().any(char::is_alphanumeric) {
         return (
             asked,
-            "La búsqueda va por palabras: los signos solos no se buscan".into(),
+            say(
+                "La búsqueda va por palabras: los signos solos no se buscan",
+                "Search goes by words: punctuation alone is not searched",
+            ),
         );
     }
     if pinned || kinds {
-        (asked, "Prueba con menos letras o quita el filtro".into())
+        (
+            asked,
+            say(
+                "Prueba con menos letras o quita el filtro",
+                "Try fewer letters, or drop the filter",
+            ),
+        )
     } else {
-        (asked, "Prueba con menos letras".into())
+        (asked, say("Prueba con menos letras", "Try fewer letters"))
     }
 }
 
@@ -344,11 +377,41 @@ fn shorten(query: &str) -> String {
 }
 
 pub fn count_text(count: i64) -> String {
-    match count {
-        0 => "sin elementos".into(),
-        1 => "1 elemento".into(),
-        n => format!("{n} elementos"),
+    count_in(crate::say::in_english(), count)
+}
+
+fn count_in(english: bool, count: i64) -> String {
+    match (count, english) {
+        (0, false) => "sin elementos".into(),
+        (0, true) => "nothing kept".into(),
+        (1, false) => "1 elemento".into(),
+        (1, true) => "1 item".into(),
+        (n, false) => format!("{n} elementos"),
+        (n, true) => format!("{n} items"),
     }
+}
+
+pub fn dress_words(ui: &crate::Panel) {
+    use slint::ComponentHandle;
+    let words = ui.global::<crate::Words>();
+    words.set_hint(
+        crate::say::pick(
+            "Busca o filtra con # en el portapapeles",
+            "Search, or filter with #",
+        )
+        .into(),
+    );
+    words.set_footer(
+        crate::say::pick(
+            "pegar · alt+enter: más formas",
+            "paste · alt+enter: more forms",
+        )
+        .into(),
+    );
+    words.set_paste_as(crate::say::pick("pegar como", "paste as").into());
+    words.set_pin(crate::say::pick("anclar", "pin").into());
+    words.set_unpin(crate::say::pick("desanclar", "unpin").into());
+    words.set_remove(crate::say::pick("borrar", "delete").into());
 }
 
 #[cfg(test)]
@@ -630,7 +693,65 @@ cuatro"
         assert_eq!(form_of("no-existe"), None);
     }
 
-    #[cfg(target_os = "windows")]
+    #[test]
+    fn nothing_the_panel_says_is_left_untranslated() {
+        for form in Form::ALL {
+            let (es, en) = form_pair(form);
+            assert!(
+                !es.is_empty() && !en.is_empty(),
+                "{form:?} se quedó sin nombre"
+            );
+        }
+        for kind in [None, Some(Kind::Text), Some(Kind::Code), Some(Kind::Image)] {
+            let (es, en) = label_pair(kind);
+            assert!(
+                !es.is_empty() && !en.is_empty(),
+                "{kind:?} se quedó sin nombre"
+            );
+        }
+    }
+
+    #[test]
+    fn what_is_written_in_english_is_not_the_spanish_copied_over() {
+        let english: Vec<&str> = Form::ALL
+            .into_iter()
+            .map(|form| form_pair(form).1)
+            .collect();
+        let shared = Form::ALL
+            .into_iter()
+            .filter(|form| {
+                let (es, en) = form_pair(*form);
+                es == en
+            })
+            .count();
+        assert!(shared <= 3, "demasiadas formas sin traducir: {shared}");
+        assert!(english.iter().all(|said| !said.contains('ó')));
+    }
+
+    #[test]
+    fn an_empty_list_explains_itself_in_both_tongues() {
+        for english in [false, true] {
+            let (title, hint) = empty_in(english, "", false, false);
+            assert!(!title.is_empty() && !hint.is_empty());
+            let (asked, _) = empty_in(english, "perdido", false, false);
+            assert!(asked.contains("perdido"), "{asked}");
+        }
+        assert_ne!(
+            empty_in(false, "", true, false).0,
+            empty_in(true, "", true, false).0
+        );
+    }
+
+    #[test]
+    fn the_count_reads_the_way_each_tongue_counts() {
+        assert_eq!(count_in(false, 0), "sin elementos");
+        assert_eq!(count_in(false, 1), "1 elemento");
+        assert_eq!(count_in(false, 7), "7 elementos");
+        assert_eq!(count_in(true, 0), "nothing kept");
+        assert_eq!(count_in(true, 1), "1 item");
+        assert_eq!(count_in(true, 7), "7 items");
+    }
+
     #[test]
     fn every_form_has_a_name_for_the_sheet() {
         for form in Form::ALL {

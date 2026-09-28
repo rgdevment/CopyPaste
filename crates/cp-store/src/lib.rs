@@ -1,8 +1,10 @@
+pub mod backup;
 pub mod blobs;
 pub mod query;
 pub mod schema;
 pub mod store;
 
+pub use backup::{Brought, Made, Taken};
 pub use blobs::Blobs;
 pub use query::{Clock, parse};
 pub use schema::SCHEMA_VERSION;
@@ -25,6 +27,10 @@ pub enum Error {
     TooBig { size: usize },
     #[error("no hay ningún ítem {id}")]
     NoSuchItem { id: i64 },
+    #[error("el archivo no es una copia de seguridad de CopyPaste")]
+    NotABackup,
+    #[error("la copia es del formato {found} y esta versión entiende hasta el {supported}")]
+    BackupFromTheFuture { found: u32, supported: u32 },
     #[error("el cursor es de un orden ({cursor}) y la lista de otro ({order})")]
     WrongCursor {
         cursor: &'static str,

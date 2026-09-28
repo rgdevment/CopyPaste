@@ -27,6 +27,21 @@ pub fn missing_paths(file_urls: &str) -> Vec<String> {
 pub fn our_pid() -> i32 {
     std::process::id() as i32
 }
+
+pub fn ahead() -> i32 {
+    let Some((pid, _)) = frontmost() else {
+        return 0;
+    };
+    if pid == our_pid() { 0 } else { pid }
+}
+
+pub fn in_front() -> Option<String> {
+    let (pid, _) = frontmost()?;
+    if pid == our_pid() {
+        return None;
+    }
+    app_name(pid).filter(|named| !named.is_empty())
+}
 use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication};
 
 pub fn bring_to_front(pid: i32) -> bool {
@@ -43,6 +58,24 @@ pub fn is_alive(pid: i32) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn what_is_in_front_is_never_ourselves() {
+        if let Some(named) = in_front() {
+            assert!(!named.is_empty());
+            assert_ne!(Some(named), app_name(our_pid()));
+        }
+        assert_ne!(ahead(), our_pid());
+    }
+
+    #[test]
+    fn nobody_in_front_reads_as_zero_and_never_as_a_pid() {
+        let pid = ahead();
+        assert!(pid >= 0);
+        if pid != 0 {
+            assert!(is_alive(pid));
+        }
+    }
 
     #[test]
     fn missing_paths_reports_what_is_gone_and_only_that() {
