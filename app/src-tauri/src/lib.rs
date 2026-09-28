@@ -5,6 +5,7 @@ mod panel;
 mod settings;
 mod tray;
 mod trust;
+mod update;
 mod waking;
 
 pub fn run() {
@@ -30,10 +31,13 @@ pub fn run() {
             backup::save_backup,
             backup::peek_backup,
             backup::load_backup,
+            update::update_ready,
+            update::update_install,
             empty,
             trouble,
             relabel
         ])
+        .manage(update::Installing::default())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);

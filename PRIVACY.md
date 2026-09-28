@@ -193,30 +193,29 @@ CopyPaste makes **one type of network request** for update checking:
 
 | Detail | Value |
 | :--- | :--- |
-| **Purpose** | Check if a newer version of CopyPaste is available and enforce blocks for versions with known critical issues |
-| **URL (all platforms)** | `https://github.com/rgdevment/CopyPaste/releases/latest/download/release-manifest.json` (and its `.sig` signature file) |
+| **Purpose** | Check whether a newer version of CopyPaste is available |
+| **URL** | `https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json` |
 | **Method** | `GET` (read-only) |
 | **Data sent** | Standard HTTP headers only — **no user data** |
-| **Data received** | A small signed JSON file listing the latest version, minimum supported version, any blocked versions, and per-channel install info. An accompanying Ed25519 signature is verified locally before the manifest is trusted |
-| **Frequency** | Every 24 hours, plus once at startup |
-| **Cached locally** | Yes — last successfully verified manifest is cached for up to 15 days so the app works offline |
+| **Data received** | A small JSON file naming the latest version and, per platform, where its installer lives and the signature for it |
+| **Frequency** | At most once a day, when you open the Settings window, plus whenever you press «Check now» |
+| **Cached locally** | Yes — the last answer is kept in `update.json`, next to your settings, so the app does not ask again within the day |
 
 **Important notes:**
 
-- This request is **read-only** — it only downloads two small public files; no data is ever uploaded
+- This request is **read-only** — it downloads one small public file; no data is ever uploaded
 - **No clipboard content, no usage data, no personal information** is ever sent
-- The manifest is **cryptographically signed** with an Ed25519 key. If the signature does not verify, the manifest is discarded and no update indicator is shown
-- **All platforms:** If an update is found, a non-invasive indicator appears in the app's footer bar — no popups or dialogs interrupt your workflow. You can click the indicator to see details
-- **Standalone builds (Windows / macOS):** Clicking the indicator opens the GitHub release page (or shows the Homebrew / Scoop upgrade command). Nothing is downloaded or installed automatically
-- **Microsoft Store version:** Clicking the indicator opens a dialog explaining that Microsoft Store delivers updates on its own schedule. The app is never blocked on Store builds, since update delivery is outside our control
-- **Blocked versions:** If the manifest flags the installed version as having a critical issue (for example, a severe security bug or data-corruption fix), standalone builds show a full-screen prompt with direct install/download instructions. This mechanism is disabled on Microsoft Store builds
+- There is **no background polling**: nothing is asked while you are not looking at the Settings window
+- The installer is **cryptographically signed**, and the signature is verified against a public key built into the app before anything is installed. The download address is also checked against our own release hosts before a single byte is fetched
+- **Microsoft Store version:** nothing is checked and nothing is offered. The Store delivers its own updates
+- **Homebrew:** you are told the `brew upgrade` command. Nothing is downloaded or installed behind Homebrew's back
+- **Standalone builds (Windows / macOS):** if you press «Update», and only then, the installer is downloaded and run, and CopyPaste restarts itself. Nothing is downloaded or installed without you asking for it
 
 ### User-Initiated Browser Navigation
 
 When you explicitly click certain UI buttons, CopyPaste opens URLs in your default browser:
 
 - **"Report issue"** button → Opens `https://github.com/rgdevment/CopyPaste/issues`
-- **"Download update"** indicator → Opens the GitHub release page
 
 These are standard browser navigations initiated by your action — CopyPaste does not make these requests itself.
 

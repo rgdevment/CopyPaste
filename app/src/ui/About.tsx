@@ -1,6 +1,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
+import { useUpdate } from "../core";
 import { fill, t } from "../locales";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
@@ -12,6 +13,50 @@ const RATING = "ms-windows-store://review/?ProductId=9NBJRZF3K856";
 const PRIVACY = "https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md";
 const NOTICES = "https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md";
 const onMac = navigator.userAgent.includes("Macintosh");
+
+function Newer() {
+  const { seen, busy, trouble, look, install } = useUpdate();
+  const store = seen?.route === "store";
+  const brew = seen?.route === "brew";
+  const ready = seen?.ready ?? null;
+  // a look that failed says nothing about being up to date
+  const looked = !trouble && (seen?.looked ?? false);
+
+  const says = ready
+    ? fill("updateThere", ready.version)
+    : store
+      ? t("updateStore")
+      : looked
+        ? t("updateNone")
+        : t("updateLook");
+
+  const why = ready
+    ? brew
+      ? t("updateBrew")
+      : ready.installs
+        ? t("updateTake")
+        : t("updateMove")
+    : t("updateWhen");
+
+  return (
+    <div className="newer">
+      <span className={looked && !ready ? "pip ok" : "pip"} />
+      <span className="grow">
+        <b>{says}</b>
+        <span>{trouble ?? (store ? t("updateStoreWhy") : why)}</span>
+      </span>
+      {ready?.installs ? (
+        <button type="button" className="strong" disabled={busy} onClick={install}>
+          {busy ? t("updateGetting") : t("updateDo")}
+        </button>
+      ) : store ? null : (
+        <button type="button" className="mild" disabled={busy} onClick={() => look(true)}>
+          {busy ? t("busy") : t("updateLook")}
+        </button>
+      )}
+    </div>
+  );
+}
 
 const TOOLS = [
   {
@@ -90,17 +135,7 @@ export default function About() {
         </div>
       </div>
 
-      <div className="newer">
-        <span className="pip" />
-        <span className="grow">
-          <b>{t("updateNone")}</b>
-          <span>{t("updateWhen")}</span>
-        </span>
-        <button type="button" className="mild" disabled>
-          {t("updateLook")}
-          <span className="soon">{t("soon")}</span>
-        </button>
-      </div>
+      <Newer />
 
       <div className="rule">{t("supportTitle")}</div>
       <p className="quiet">{t("supportWhy")}</p>

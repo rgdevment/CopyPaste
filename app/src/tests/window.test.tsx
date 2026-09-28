@@ -206,13 +206,147 @@ describe("la ventana", () => {
     expect(vi.mocked(invoke).mock.calls.some(([what]) => what === "empty")).toBe(true);
   });
 
-  it("no afirma que está actualizada cuando nadie lo ha comprobado", async () => {
+  it("no afirma que está actualizada mientras nadie lo ha comprobado", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") return new Promise(() => {});
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      const who = userEvent.setup();
+      render(<App />);
+      await who.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText(/Se mira una vez al día/)).toBeDefined();
+      expect(screen.queryByText("Estás en la última versión")).toBeNull();
+      expect(document.querySelector(".pip.ok")).toBeNull();
+      expect(screen.queryByText("Recibir versiones de prueba")).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("una copia de la Store no afirma nada: la Store se encarga", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") {
+        return Promise.resolve({ route: "store", looked: false, ready: null });
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText("La Microsoft Store se encarga")).toBeDefined();
+      expect(screen.queryByText("Estás en la última versión")).toBeNull();
+      expect(document.querySelector(".pip.ok")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Buscar ahora" })).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("dice que estás al día solo después de haber mirado", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));
-    expect(await screen.findByText(/Todavía no busca actualizaciones/)).toBeDefined();
-    expect(screen.getByRole("button", { name: /Buscar ahora/ })).toBeDisabled();
-    expect(screen.queryByText("Recibir versiones de prueba")).toBeNull();
+    expect(await screen.findByText("Estás en la última versión")).toBeDefined();
+    expect(document.querySelector(".pip.ok")).not.toBeNull();
+  });
+
+  it("ofrece instalar la versión que encontró, y la instala", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") {
+        return Promise.resolve({
+          route: "download",
+          looked: true,
+          ready: { version: "3.1.0", installs: true },
+        });
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      const who = userEvent.setup();
+      render(<App />);
+      await who.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText("La versión 3.1.0 ya está disponible")).toBeDefined();
+      await who.click(screen.getByRole("button", { name: "Actualizar" }));
+      expect(invoke).toHaveBeenCalledWith("update_install");
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("si la instalación falla, se ve por qué y deja de ofrecerla", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") {
+        return Promise.resolve({
+          route: "download",
+          looked: true,
+          ready: { version: "3.1.0", installs: true },
+        });
+      }
+      if (what === "update_install") {
+        return Promise.reject(new Error("3.1.0 is not on the feed any more"));
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      const who = userEvent.setup();
+      render(<App />);
+      await who.click(screen.getByRole("button", { name: "Acerca de" }));
+      await who.click(await screen.findByRole("button", { name: "Actualizar" }));
+      expect(await screen.findByText(/is not on the feed any more/)).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("una comprobación que falla no deja el punto en verde", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") return Promise.reject(new Error("no hay red"));
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText(/no hay red/)).toBeDefined();
+      expect(screen.queryByText("Estás en la última versión")).toBeNull();
+      expect(document.querySelector(".pip.ok")).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("con brew no ofrece instalar: dice el comando", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "update_ready") {
+        return Promise.resolve({
+          route: "brew",
+          looked: true,
+          ready: { version: "3.1.0", installs: false },
+        });
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText(/brew upgrade --cask copypaste/)).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
   });
 
   it("la versión sale del propio programa, no de un texto escrito a mano", async () => {

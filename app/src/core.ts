@@ -211,3 +211,60 @@ export function useTrust() {
 
   return { trust, asked, ask };
 }
+
+export type Route = "store" | "brew" | "download";
+
+export type Ready = { version: string; installs: boolean };
+
+export type Looked = { route: Route; looked: boolean; ready: Ready | null };
+
+export function useUpdate() {
+  const [seen, setSeen] = useState<Looked | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [trouble, setTrouble] = useState<string | null>(null);
+  const alive = useRef(true);
+  const inFlight = useRef(false);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  const look = useCallback((nowPlease: boolean) => {
+    if (inFlight.current) {
+      return;
+    }
+    inFlight.current = true;
+    setTrouble(null);
+    setBusy(true);
+    invoke<Looked>("update_ready", { nowPlease })
+      .then((one) => {
+        if (alive.current) setSeen(one);
+      })
+      .catch((why) => {
+        if (alive.current) setTrouble(String(why));
+      })
+      .finally(() => {
+        inFlight.current = false;
+        if (alive.current) setBusy(false);
+      });
+  }, []);
+
+  useEffect(() => look(false), [look]);
+
+  const install = useCallback(() => {
+    setTrouble(null);
+    setBusy(true);
+    invoke<void>("update_install").catch((why) => {
+      setTrouble(String(why));
+      setBusy(false);
+      // the backend forgets what it could not install, so the offer goes with it — and looking
+      // again here would wipe the reason before anyone could read it
+      setSeen((was) => (was ? { ...was, ready: null } : was));
+    });
+  }, []);
+
+  return { seen, busy, trouble, look, install };
+}
