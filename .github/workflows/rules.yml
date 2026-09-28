@@ -120,6 +120,9 @@ jobs:
             echo "::error::no block comments either"; exit 1
           fi
 
+      - name: No file grows past what a person can hold
+        run: python3 scripts/oversized.py
+
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

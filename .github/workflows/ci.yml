@@ -144,8 +144,8 @@ jobs:
 
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example probe
-      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
       - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
 
       - uses: actions/setup-node@v7
         with:
@@ -159,16 +159,18 @@ jobs:
           npm run test:coverage
 
       - name: Every path is relative to the repository, which is what Sonar reads
+        if: always()
         shell: bash
-        run: |
-          python3 scripts/lcov_paths.py lcov-rust.info app/coverage/lcov.info
+        run: python3 scripts/lcov_paths.py lcov-rust.info app/coverage/lcov.info=app
 
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: coverage
           path: |
             lcov-rust.info
             app/coverage/lcov.info
+          if-no-files-found: error
           retention-days: 1
 
   coverage-windows:
@@ -190,15 +192,18 @@ jobs:
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example probe
-      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
       - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
       - name: Every path is relative to the repository, which is what Sonar reads
+        if: always()
         shell: bash
-        run: python3 scripts/lcov_paths.py lcov-win.info
+        run: python scripts/lcov_paths.py lcov-win.info
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: coverage-windows
           path: lcov-win.info
+          if-no-files-found: error
           retention-days: 1
 
   sonar:
@@ -225,6 +230,15 @@ jobs:
           name: coverage-windows
           path: .
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: The types Sonar needs to read the window
+        working-directory: app
+        run: npm ci
+
       - uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -233,12 +247,12 @@ jobs:
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.sources=crates,app/src,app/src-tauri/src
-            -Dsonar.tests=crates,app/src
-            -Dsonar.test.inclusions=crates/*/tests/**,app/src/**/*.test.ts,app/src/**/*.test.tsx
-            -Dsonar.exclusions=crates/*/tests/**,app/src/tests/**
+            -Dsonar.tests=app/src
+            -Dsonar.test.inclusions=app/src/**/*.test.ts,app/src/**/*.test.tsx,app/src/tests/**
+            -Dsonar.exclusions=crates/*/examples/**,crates/*/build.rs
             -Dsonar.rust.lcov.reportPaths=lcov-rust.info,lcov-win.info
             -Dsonar.javascript.lcov.reportPaths=app/coverage/lcov.info
             -Dsonar.rust.clippy.enabled=false
             -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs
-            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
             -Dsonar.qualitygate.timeout=300

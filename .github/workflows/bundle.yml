@@ -108,34 +108,48 @@ jobs:
           fi
 
           status=0
+          flat=$(mktemp)
+          tr -s '[:space:]' ' ' < "$script" > "$flat"
           want() {
-            if ! grep -q "$1" "$script"; then
+            if ! grep -qiF "$1" "$flat"; then
               echo "::error::the generated installer does not $2"
               status=1
             fi
           }
           never() {
-            if grep -q "$1" "$script"; then
+            if grep -qiE "$1" "$flat"; then
               echo "::error::the generated installer would $2"
               status=1
             fi
           }
           want 'oname=cp-panel.exe' \
             "lay down the panel; the sidecar was not bundled"
-          want 'StrCpy .INSTDIR ".LOCALAPPDATA.Programs' \
+          want 'StrCpy $INSTDIR "$LOCALAPPDATA\Programs' \
             "keep the binaries out of the data folder"
           want '_is1" "UninstallString"' \
             "look for CopyPaste 2 before copying anything"
-          want 'Delete ".LOCALAPPDATA.${PRODUCTNAME}.history.db"' \
-            "take the history it owns when asked to delete its data"
-          want 'Delete ".LOCALAPPDATA.${PRODUCTNAME}.config.toml"' \
-            "take the settings it owns"
-          want 'RmDir /r ".LOCALAPPDATA.${PRODUCTNAME}.blobs"' \
-            "take the blobs it owns"
-          want 'RmDir ".LOCALAPPDATA.${PRODUCTNAME}"' \
+          for one in history.db history.db-wal history.db-shm config.toml update.json; do
+            want "Delete \"\$LOCALAPPDATA\\\${PRODUCTNAME}\\$one\"" \
+              "take the $one it owns when asked to delete its data"
+          done
+          for one in cp-gui.log cp-panel.log; do
+            want "Delete \"\$LOCALAPPDATA\\\${PRODUCTNAME}\\logs\\$one\"" \
+              "take its own $one"
+          done
+          for one in blobs thumbs; do
+            want "RmDir /r \"\$LOCALAPPDATA\\\${PRODUCTNAME}\\$one\"" \
+              "take the $one it owns"
+          done
+          want 'RmDir "$LOCALAPPDATA\${PRODUCTNAME}\logs"' \
+            "leave the log folder only once its own logs are gone"
+          want 'RmDir "$LOCALAPPDATA\${PRODUCTNAME}"' \
             "leave the shared folder standing unless it is already empty"
-          never 'RmDir /r ".LOCALAPPDATA.${PRODUCTNAME}"' \
-            "wipe the folder it shares with CopyPaste 2, history and all"
+          stray=$(grep -oiE 'RmDir( /[A-Za-z]+)* /r "[^"]*"' "$flat" \
+            | grep -viE '(\\blobs|\\thumbs|\$\{BUNDLEID\})"$' || true)
+          if [ -n "$stray" ]; then
+            echo "::error::the generated installer takes a whole folder that is not its own, and the one it shares with CopyPaste 2 holds that history: $stray"
+            status=1
+          fi
           exit $status
 
       - name: How big it came out
