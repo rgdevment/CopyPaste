@@ -27,9 +27,24 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
     if ocr_text_is_missing(db)? {
         db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
     }
+    if found < 5 {
+        db.execute_batch(&format!(
+            "DROP TRIGGER IF EXISTS items_au; {SEARCH_TRIGGER}"
+        ))?;
+    }
     db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION}; COMMIT;"))?;
     Ok(true)
 }
+
+const SEARCH_TRIGGER: &str = "
+        CREATE TRIGGER items_au
+        AFTER UPDATE OF search_text, search_label, search_app, search_ocr ON items BEGIN
+            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
+                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
+            INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
+                VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
+        END;
+";
 
 fn ordering_indexes_are_stale(db: &Connection) -> Result<bool> {
     let mut stmt = db.prepare(
@@ -43,6 +58,17 @@ fn ordering_indexes_are_stale(db: &Connection) -> Result<bool> {
         }
     }
     Ok(false)
+}
+
+fn search_trigger_is_broad(db: &Connection) -> Result<bool> {
+    let said: Option<String> = db
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = 'items_au'",
+            [],
+            |row| row.get(0),
+        )
+        .ok();
+    Ok(said.is_some_and(|one| !one.contains("UPDATE OF")))
 }
 
 fn ocr_text_is_missing(db: &Connection) -> Result<bool> {
@@ -78,7 +104,25 @@ pub fn create(db: &Connection) -> Result<()> {
     configure(db)?;
     db.execute_batch(TABLES)?;
     db.execute_batch(ORDERING_INDEXES)?;
+    if search_trigger_is_broad(db)? {
+        db.execute_batch(&format!(
+            "DROP TRIGGER IF EXISTS items_au;
+             {SEARCH_TRIGGER}
+             INSERT INTO items_fts(items_fts) VALUES ('rebuild');"
+        ))?;
+    } else if !trigger_exists(db)? {
+        db.execute_batch(SEARCH_TRIGGER)?;
+    }
     Ok(())
+}
+
+fn trigger_exists(db: &Connection) -> Result<bool> {
+    let found: i64 = db.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name = 'items_au'",
+        [],
+        |row| row.get(0),
+    )?;
+    Ok(found > 0)
 }
 
 const TABLES: &str = r#"
@@ -186,12 +230,6 @@ const TABLES: &str = r#"
             INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
                 VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
         END;
-        CREATE TRIGGER IF NOT EXISTS items_au AFTER UPDATE ON items BEGIN
-            INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
-                VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
-            INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
-                VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
-        END;
         "#;
 
 #[cfg(test)]
@@ -208,6 +246,119 @@ mod tests {
         assert_eq!(
             mode, 2,
             "INCREMENTAL is 2; if it comes out 0 the pragma arrived late and was ignored"
+        );
+    }
+
+    #[test]
+    fn a_touch_that_leaves_the_words_alone_does_not_reindex_them() {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        db.execute(
+            "INSERT INTO items (id, uuid, preview_text, created_at, modified_at, content_hash,
+                                search_text, updated_at)
+             VALUES (1, 'u1', 'a copy', 10, 10, 7, 'a copy worth finding', 10)",
+            [],
+        )
+        .expect("stored");
+
+        let indexed = |db: &Connection| -> i64 {
+            db.query_row(
+                "SELECT count(*) FROM items_fts WHERE items_fts MATCH 'finding'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("searched")
+        };
+        assert_eq!(indexed(&db), 1);
+
+        let before = db.total_changes();
+        db.execute(
+            "UPDATE items SET modified_at = 20, updated_at = 20 WHERE id = 1",
+            [],
+        )
+        .expect("touched");
+        assert_eq!(
+            db.total_changes() - before,
+            1,
+            "one row written and nothing else: a trigger that fired would have added its own"
+        );
+        assert_eq!(indexed(&db), 1, "the words are still where they were");
+
+        db.execute(
+            "UPDATE items SET search_text = 'something else entirely' WHERE id = 1",
+            [],
+        )
+        .expect("rewritten");
+        assert_eq!(indexed(&db), 0, "and when they change, the index follows");
+        let now: i64 = db
+            .query_row(
+                "SELECT count(*) FROM items_fts WHERE items_fts MATCH 'entirely'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("searched");
+        assert_eq!(now, 1);
+    }
+
+    #[test]
+    fn a_database_carrying_the_broad_trigger_is_healed_by_its_shape_not_its_version() {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        db.execute_batch(
+            "DROP TRIGGER items_au;
+             CREATE TRIGGER items_au AFTER UPDATE ON items BEGIN
+                 INSERT INTO items_fts(items_fts, rowid, search_text, search_label, search_app, search_ocr)
+                     VALUES ('delete', old.id, old.search_text, old.search_label, old.search_app, old.search_ocr);
+                 INSERT INTO items_fts(rowid, search_text, search_label, search_app, search_ocr)
+                     VALUES (new.id, new.search_text, new.search_label, new.search_app, new.search_ocr);
+             END;
+             PRAGMA user_version = 4;",
+        )
+        .expect("an older shape");
+        assert!(search_trigger_is_broad(&db).expect("looked"));
+
+        create(&db).expect("opened again");
+        assert!(
+            !search_trigger_is_broad(&db).expect("looked"),
+            "the shape is what heals it, with the version already up to date"
+        );
+    }
+
+    #[test]
+    fn a_database_that_never_had_the_trigger_gets_one() {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        db.execute_batch("DROP TRIGGER items_au;").expect("dropped");
+        assert!(!trigger_exists(&db).expect("looked"));
+        create(&db).expect("opened again");
+        assert!(trigger_exists(&db).expect("looked"));
+    }
+
+    #[test]
+    fn the_planner_statistics_never_learn_what_was_copied() {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        for i in 0..40 {
+            db.execute(
+                "INSERT INTO items (uuid, kind, preview_text, app_source, search_app,
+                                    created_at, modified_at, content_hash, search_text, updated_at)
+                 VALUES (?1, 'text', 'x', 'APasswordManager', 'apasswordmanager',
+                         ?2, ?2, ?2, 'a password worth hiding', ?2)",
+                rusqlite::params![format!("u{i}"), i],
+            )
+            .expect("stored");
+        }
+        let stats: i64 = db
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE name LIKE 'sqlite_stat%'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("queried");
+        assert_eq!(
+            stats, 0,
+            "ANALYZE samples raw index keys into sqlite_stat4 — app names, meta values, search \
+             terms — and nothing scrubs it: not erase, not sweep, not secure_delete"
         );
     }
 
