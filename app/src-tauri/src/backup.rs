@@ -94,3 +94,63 @@ mod tests {
         );
     }
 }
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Crossed {
+    added: i64,
+    already: i64,
+    refused: i64,
+    without_their_picture: i64,
+}
+
+#[tauri::command(async)]
+pub fn bring_former(app: tauri::AppHandle, at: i64) -> Result<Crossed, String> {
+    let former = crate::settings::folder()
+        .ok_or_else(crate::settings::nowhere)?
+        .join("clipboard.db");
+    if !former.exists() {
+        return Err("there is no CopyPaste 2 history here".to_owned());
+    }
+    crate::panel::quit(&app);
+    let landed = crossed(&former, at);
+    if let Err(why) = crate::panel::relight(&app) {
+        crate::note::note(&format!("the panel did not come back: {why}"));
+    }
+    let brought = landed?;
+    crate::note::note(&format!(
+        "from CopyPaste 2: {} brought in, {} were already here",
+        brought.added, brought.already
+    ));
+    Ok(Crossed {
+        added: brought.added,
+        already: brought.already,
+        refused: brought.refused,
+        without_their_picture: brought.without_their_picture,
+    })
+}
+
+fn crossed(from: &std::path::Path, at: i64) -> Result<cp_store::legacy::Brought, String> {
+    let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
+    cp_store::legacy::bring(from, &store, at).map_err(|why| why.to_string())
+}
+
+#[derive(serde::Serialize)]
+pub struct Swept {
+    files: i64,
+    bytes: u64,
+}
+
+#[tauri::command(async)]
+pub fn drop_former() -> Result<Swept, String> {
+    let dir = crate::settings::folder().ok_or_else(crate::settings::nowhere)?;
+    let swept = cp_store::legacy::drop_former(&dir).map_err(|why| why.to_string())?;
+    crate::note::note(&format!(
+        "CopyPaste 2 is gone from this machine: {} files",
+        swept.files
+    ));
+    Ok(Swept {
+        files: swept.files,
+        bytes: swept.bytes,
+    })
+}

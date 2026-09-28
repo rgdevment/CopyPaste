@@ -173,11 +173,51 @@ describe("la ventana", () => {
     ).toBeDefined();
   });
 
-  it("lo que de verdad no está todavía sigue diciéndolo", async () => {
+  it("dice lo que se pierde antes de traer el historial de la 2", async () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
-    expect(await screen.findByRole("button", { name: "Traer el historial…" })).toBeDisabled();
-    expect(screen.getAllByText("Todavía no").length).toBeGreaterThan(0);
+    expect(await screen.findByText("1200 elementos guardados en CopyPaste 2")).toBeDefined();
+    expect(screen.getByText(/El texto llega en plano/)).toBeDefined();
+    expect(screen.getByText(/3 imágenes ya no están en el disco/)).toBeDefined();
+    expect(screen.getByText(/Nada de CopyPaste 2 se toca ni se borra/)).toBeDefined();
+  });
+
+  it("trae el historial y cuenta lo que llegó y lo que no", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+    await who.click(await screen.findByRole("button", { name: "Traer el historial" }));
+    expect(invoke).toHaveBeenCalledWith("bring_former", expect.objectContaining({}));
+    expect(
+      await screen.findByText("Llegaron 1180 elementos · 3 elementos sin su imagen"),
+    ).toBeDefined();
+  });
+
+  it("borrar los datos de la 2 pide confirmación antes de tocar nada", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "drop_former") return Promise.resolve({ files: 41, bytes: 900 });
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      const who = userEvent.setup();
+      render(<App />);
+      await who.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+      const button = await screen.findByRole("button", {
+        name: "Borrar los datos de CopyPaste 2",
+      });
+      await who.click(button);
+      expect(invoke).not.toHaveBeenCalledWith("drop_former");
+      expect(screen.getByText(/Los archivos que copiaste no se tocan/)).toBeDefined();
+
+      await who.click(await screen.findByRole("button", { name: "Sí, borrarlos" }));
+      expect(invoke).toHaveBeenCalledWith("drop_former");
+      expect(await screen.findByText("Borrado: 41 archivos")).toBeDefined();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
   });
 
   it("cambiar el atajo guarda la combinación que se presiona", async () => {
@@ -371,7 +411,7 @@ describe("la ventana", () => {
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Copia de seguridad" }));
     expect(await screen.findByText(/214\.0 MB/)).toBeDefined();
-    expect(screen.getByText(/empezar de cero es lo recomendado/i)).toBeDefined();
+    expect(screen.getByText(/El texto llega en plano/)).toBeDefined();
   });
 
   it("elegir English cambia la ventana entera, no solo la fila del idioma", async () => {

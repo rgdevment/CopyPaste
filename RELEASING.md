@@ -158,18 +158,25 @@ same way on the first stable tag that rewrites it.
 
 ### What the installer owes that user
 
-The 3.0 does not read the 2.x database, and installing over it must not pretend
-otherwise. On Windows the 3.0 installer:
+The 3.0 reads the 2.x database when the person asks it to, and never otherwise.
+On Windows the 3.0 installer:
 
 - **Offers to uninstall the 2.x, and never deletes its data.** The old history,
-  its blobs and its settings stay on disk, untouched, whatever the user picks.
-- **Offers a backup before anything else** — the 2.x `.cpbackup`, written where
-  the user chooses — so leaving is always reversible.
-- **May offer a migration, and states its losses up front.** What crosses and
-  what does not is decided when it is built; what is not allowed is a migration
-  that looks complete and is not.
-- **Recommends starting fresh.** That is the default and the recommended path;
-  the migration is the exception for whoever asks for it.
+  its pictures and its settings stay on disk, untouched, whatever the user
+  picks. The uninstaller is explicit about it: it deletes the files the 3.0
+  owns one by one — `history.db`, `blobs`, `thumbs`, `config.toml`,
+  `update.json`, its two logs — and then tries `RmDir` without `/r`, so the
+  shared folder survives for as long as anything of the 2.x is still in it.
+- **Recommends starting fresh.** That is the default; bringing the history over
+  is there for whoever asks.
+
+Bringing it over happens inside the app, in Settings → Backup, not in the
+installer, and it states its losses before anything is touched: how many items
+there are, that text arrives plain because the 2.x never stored styling, how
+many pictures are no longer on disk, and that nothing of the 2.x is read more
+than once. Deleting the 2.x data is a separate button, behind a confirmation,
+and it takes `clipboard.db`, `images`, `config` and `.initialized` — never the
+files the history merely pointed at, which belong to the person.
 
 The same applies on macOS, where the 2.x app bundle and its Application Support
 folder are separate things: removing the app never touches the folder.

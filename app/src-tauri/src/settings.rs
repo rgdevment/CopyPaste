@@ -74,20 +74,45 @@ pub fn where_it_lives() -> Result<String, String> {
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Former {
     path: String,
     bytes: u64,
+    items: i64,
+    pictures: i64,
+    pictures_gone: i64,
+    pinned: i64,
+    labelled: i64,
+    unreadable: Option<String>,
 }
 
 #[tauri::command]
 pub fn former() -> Result<Option<Former>, String> {
     let db = folder().ok_or_else(nowhere)?.join("clipboard.db");
-    match std::fs::metadata(&db) {
-        Ok(weighed) => Ok(Some(Former {
-            path: db.to_string_lossy().into_owned(),
-            bytes: weighed.len(),
-        })),
-        Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(why) => Err(why.to_string()),
+    let weighed = match std::fs::metadata(&db) {
+        Ok(weighed) => weighed,
+        Err(why) if why.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(why) => return Err(why.to_string()),
+    };
+    let mut former = Former {
+        path: db.to_string_lossy().into_owned(),
+        bytes: weighed.len(),
+        items: 0,
+        pictures: 0,
+        pictures_gone: 0,
+        pinned: 0,
+        labelled: 0,
+        unreadable: None,
+    };
+    match cp_store::legacy::look(&db) {
+        Ok(looked) => {
+            former.items = looked.items;
+            former.pictures = looked.pictures;
+            former.pictures_gone = looked.pictures_gone;
+            former.pinned = looked.pinned;
+            former.labelled = looked.labelled;
+        }
+        Err(why) => former.unreadable = Some(why.to_string()),
     }
+    Ok(Some(former))
 }

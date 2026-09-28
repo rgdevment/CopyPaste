@@ -62,10 +62,26 @@ const ES = {
   bandFormer: "La versión anterior",
   former: "Datos de CopyPaste 2",
   formerNone: "No quedan en este equipo",
-  formerLoses:
-    "Sus datos se quedan donde están hasta que tú los borres. Lo que entre desde CopyPaste 2 llegará sin miniaturas, sin el texto leído de las imágenes y sin las veces que pegaste cada cosa: empezar de cero es lo recomendado.",
-  formerBring: "Traer el historial…",
+  formerHas: "{one} guardados en CopyPaste 2",
+  formerLosesPlain:
+    "El texto llega en plano: la 2 no guardaba negritas ni colores, así que lo que pegaba con estilos ya no los tiene",
+  formerLosesPictures: "{one} imágenes ya no están en el disco y llegarán sin su contenido",
+  formerKeeps:
+    "Cruzan las fechas, lo anclado, las etiquetas, el color y de qué aplicación vino cada cosa",
+  formerDo: "Traer el historial",
+  formerBringing: "Trayéndolo…",
+  formerCame: "Llegaron {one}",
+  formerCameAlready: "{one} ya estaban",
+  formerCameRefused: "{one} no se pudieron traer",
+  formerCameFlat: "{one} sin su imagen",
+  formerUnreadable: "No se pudo leer: {one}",
+  formerStays: "Nada de CopyPaste 2 se toca ni se borra: se lee y se queda donde está",
   formerDrop: "Borrar los datos de CopyPaste 2",
+  formerDropSure: "Sí, borrarlos",
+  formerDropWhy:
+    "Se borran su historial, sus imágenes y sus ajustes. Los archivos que copiaste no se tocan: esos son tuyos",
+  formerDropGone: "Borrado: {one}",
+  formerDropFiles: "{one} archivos",
 
   aboutIs: "Qué es",
   aboutWhat: "Un gestor de portapapeles moderno, nativo en Windows y macOS.",
@@ -201,10 +217,26 @@ const EN: Record<keyof Said, string> = {
   bandFormer: "The previous version",
   former: "CopyPaste 2 data",
   formerNone: "None left on this computer",
-  formerLoses:
-    "Its data stays where it is until you delete it. What comes across from CopyPaste 2 arrives without thumbnails, without the text read from images, and without how many times you pasted each thing: starting fresh is the recommended path.",
-  formerBring: "Bring the history over…",
+  formerHas: "{one} kept in CopyPaste 2",
+  formerLosesPlain:
+    "Text arrives plain: the 2 never stored bold or colour, so what used to paste with styling no longer has it",
+  formerLosesPictures: "{one} pictures are no longer on disk and will arrive without their content",
+  formerKeeps:
+    "Dates, what was pinned, labels, colour and which app each one came from all cross over",
+  formerDo: "Bring the history over",
+  formerBringing: "Bringing it over…",
+  formerCame: "{one} came over",
+  formerCameAlready: "{one} were already here",
+  formerCameRefused: "{one} could not be brought",
+  formerCameFlat: "{one} without their picture",
+  formerUnreadable: "It could not be read: {one}",
+  formerStays: "Nothing of CopyPaste 2 is touched or deleted: it is read and left where it is",
   formerDrop: "Delete CopyPaste 2's data",
+  formerDropSure: "Yes, delete it",
+  formerDropWhy:
+    "Its history, its pictures and its settings go. The files you copied are untouched: those are yours",
+  formerDropGone: "Deleted: {one}",
+  formerDropFiles: "{one} files",
 
   aboutIs: "What it is",
   aboutWhat: "A modern clipboard manager, native on Windows and macOS.",

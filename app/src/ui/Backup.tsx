@@ -4,7 +4,23 @@ import { useEffect, useState } from "react";
 import { fill, items, t } from "../locales";
 import { Band, Line } from "./Bits";
 
-type Former = { path: string; bytes: number };
+type Former = {
+  path: string;
+  bytes: number;
+  items: number;
+  pictures: number;
+  picturesGone: number;
+  pinned: number;
+  labelled: number;
+  unreadable: string | null;
+};
+
+type Crossed = {
+  added: number;
+  already: number;
+  refused: number;
+  withoutTheirPicture: number;
+};
 type Saved = { path: string; items: number; missing: number; bytes: number };
 type Brought = { added: number; already: number; refused: number; fromElsewhere: boolean };
 
@@ -23,9 +39,11 @@ function named() {
 export default function Backup() {
   const [former, setFormer] = useState<Former | null>(null);
   const [trouble, setTrouble] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"out" | "in" | null>(null);
+  const [busy, setBusy] = useState<"out" | "in" | "former" | null>(null);
   const [said, setSaid] = useState<string | null>(null);
   const [came, setCame] = useState<string | null>(null);
+  const [crossed, setCrossed] = useState<string | null>(null);
+  const [sure, setSure] = useState(false);
 
   useEffect(() => {
     invoke<Former | null>("former")
@@ -86,6 +104,54 @@ export default function Backup() {
     }
   };
 
+  useEffect(() => {
+    if (!sure) {
+      return;
+    }
+    const forgets = setTimeout(() => setSure(false), 4_000);
+    return () => clearTimeout(forgets);
+  }, [sure]);
+
+  const drop = async () => {
+    if (!sure) {
+      setSure(true);
+      return;
+    }
+    setSure(false);
+    setCrossed(null);
+    setBusy("former");
+    try {
+      const swept = await invoke<{ files: number; bytes: number }>("drop_former");
+      setCrossed(fill("formerDropGone", fill("formerDropFiles", String(swept.files))));
+      setFormer(null);
+    } catch (why) {
+      setCrossed(String(why));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const cross = async () => {
+    setCrossed(null);
+    setBusy("former");
+    try {
+      const said = await invoke<Crossed>("bring_former", { at: Date.now() });
+      const notes = [
+        said.already > 0 ? fill("formerCameAlready", items(said.already)) : null,
+        said.refused > 0 ? fill("formerCameRefused", items(said.refused)) : null,
+        said.withoutTheirPicture > 0
+          ? fill("formerCameFlat", items(said.withoutTheirPicture))
+          : null,
+      ].filter(Boolean);
+      const tail = notes.length > 0 ? ` · ${notes.join(" · ")}` : "";
+      setCrossed(`${fill("formerCame", items(said.added))}${tail}`);
+    } catch (why) {
+      setCrossed(String(why));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <>
       <h1>{t("railBackup")}</h1>
@@ -113,19 +179,42 @@ export default function Backup() {
       {former ? (
         <Line
           says={t("former")}
-          why={<span className="path">{`${former.path} · ${weighed(former.bytes)}`}</span>}
-          more={<div className="said">{t("formerLoses")}</div>}
+          why={
+            crossed ?? <span className="path">{`${former.path} · ${weighed(former.bytes)}`}</span>
+          }
+          more={
+            former.unreadable ? (
+              <div className="alarm">{fill("formerUnreadable", former.unreadable)}</div>
+            ) : (
+              <>
+                <div className="said">{fill("formerHas", items(former.items))}</div>
+                <div className="said">{t("formerKeeps")}</div>
+                <div className="said">{t("formerLosesPlain")}</div>
+                {former.picturesGone > 0 && (
+                  <div className="said">
+                    {fill("formerLosesPictures", String(former.picturesGone))}
+                  </div>
+                )}
+                <div className="said">{t("formerStays")}</div>
+                {sure && <div className="alarm">{t("formerDropWhy")}</div>}
+              </>
+            )
+          }
         >
-          <button type="button" className="mild" disabled>
-            {t("formerBring")}
+          <button
+            type="button"
+            className="strong"
+            disabled={busy !== null || former.unreadable !== null || former.items === 0}
+            onClick={cross}
+          >
+            {busy === "former" ? t("formerBringing") : t("formerDo")}
           </button>
-          <button type="button" className="grave" disabled>
-            {t("formerDrop")}
+          <button type="button" className="grave" disabled={busy !== null} onClick={drop}>
+            {sure ? t("formerDropSure") : t("formerDrop")}
           </button>
-          <span className="soon">{t("soon")}</span>
         </Line>
       ) : (
-        <Line says={t("former")} why={trouble ?? t("formerNone")} />
+        <Line says={t("former")} why={crossed ?? trouble ?? t("formerNone")} />
       )}
     </>
   );
