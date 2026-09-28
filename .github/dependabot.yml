@@ -29,6 +29,11 @@ updates:
     commit-message:
       prefix: "chore"
     groups:
+      # windows-rs crates share a windows-core: one moving alone breaks the OCR.
+      windows-rs:
+        patterns:
+          - "windows"
+          - "windows-*"
       rust:
         patterns:
           - "*"

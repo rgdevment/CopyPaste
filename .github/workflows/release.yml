@@ -19,7 +19,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  BUILD_MACOS: "false"
+  BUILD_MACOS: "true"
 
 jobs:
   gate:
