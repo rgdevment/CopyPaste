@@ -2,10 +2,6 @@ name: Mutants
 
 on:
   pull_request:
-    paths:
-      - crates/**
-      - .cargo/mutants.toml
-      - .github/workflows/mutants.yml
 
 permissions:
   contents: read
