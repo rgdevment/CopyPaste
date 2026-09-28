@@ -83,6 +83,7 @@ pub struct Former {
     pictures_gone: i64,
     pinned: i64,
     labelled: i64,
+    with_styles: i64,
     unreadable: Option<String>,
 }
 
@@ -102,6 +103,7 @@ pub fn former() -> Result<Option<Former>, String> {
         pictures_gone: 0,
         pinned: 0,
         labelled: 0,
+        with_styles: 0,
         unreadable: None,
     };
     match cp_store::legacy::look(&db) {
@@ -111,6 +113,7 @@ pub fn former() -> Result<Option<Former>, String> {
             former.pictures_gone = looked.pictures_gone;
             former.pinned = looked.pinned;
             former.labelled = looked.labelled;
+            former.with_styles = looked.with_styles;
         }
         Err(why) => former.unreadable = Some(why.to_string()),
     }

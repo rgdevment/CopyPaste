@@ -12,6 +12,7 @@ type Former = {
   picturesGone: number;
   pinned: number;
   labelled: number;
+  withStyles: number;
   unreadable: string | null;
 };
 
@@ -189,6 +190,9 @@ export default function Backup() {
               <>
                 <div className="said">{fill("formerHas", items(former.items))}</div>
                 <div className="said">{t("formerKeeps")}</div>
+                {former.withStyles > 0 ? (
+                  <div className="said">{fill("formerKeepsStyles", String(former.withStyles))}</div>
+                ) : null}
                 <div className="said">{t("formerLosesPlain")}</div>
                 {former.picturesGone > 0 && (
                   <div className="said">

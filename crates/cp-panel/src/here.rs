@@ -23,9 +23,8 @@ mod platform {
     use super::*;
     use cp_win_sys::clipboard::Clipboard;
 
+    pub use cp_core::thumbnail::THUMBNAILS_FILES;
     pub use cp_win::watching::Watching;
-
-    pub const THUMBNAILS_FILES: bool = true;
 
     pub fn data_dir() -> Option<PathBuf> {
         cp_win_sys::paths::data_dir()
@@ -120,9 +119,8 @@ mod platform {
     use cp_core::destination::Destination;
     use cp_mac_sys::pasteboard::Pasteboard;
 
+    pub use cp_core::thumbnail::THUMBNAILS_FILES;
     pub use cp_mac::watching::Watching;
-
-    pub const THUMBNAILS_FILES: bool = false;
 
     pub fn data_dir() -> Option<PathBuf> {
         cp_mac_sys::paths::data_dir()

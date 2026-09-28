@@ -11,6 +11,7 @@ pub struct Former {
     pub pictures_gone: i64,
     pub pinned: i64,
     pub labelled: i64,
+    pub with_styles: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -40,6 +41,24 @@ pub fn kind_of(said: i64) -> Option<Kind> {
     }
 }
 
+#[cfg(target_os = "windows")]
+pub const RICH_HTML: &str = "HTML Format";
+#[cfg(not(target_os = "windows"))]
+pub const RICH_HTML: &str = "public.html";
+
+#[cfg(target_os = "windows")]
+pub const RICH_RTF: &str = "Rich Text Format";
+#[cfg(not(target_os = "windows"))]
+pub const RICH_RTF: &str = "public.rtf";
+
+pub const RICH_KEYS: [&str; 2] = ["html", "rtf"];
+
+const A_SECOND: i64 = 1_000;
+
+pub const fn in_millis(seconds: i64) -> i64 {
+    seconds.saturating_mul(A_SECOND)
+}
+
 pub const fn holds_a_path(kind: Kind) -> bool {
     matches!(
         kind,
@@ -58,8 +77,8 @@ struct Row {
     label: Option<String>,
     colour: i64,
     meta: Option<String>,
-    thumb: Option<String>,
-    broken: bool,
+    pastes: i64,
+    broken: Option<i64>,
 }
 
 fn opened(from: &Path) -> Result<Connection> {
@@ -79,7 +98,8 @@ fn opened(from: &Path) -> Result<Connection> {
 
 pub fn look(from: &Path) -> Result<Former> {
     let db = opened(from)?;
-    let mut stmt = db.prepare("SELECT type, content, is_pinned, label FROM clipboard_items")?;
+    let mut stmt =
+        db.prepare("SELECT type, content, is_pinned, label, metadata FROM clipboard_items")?;
     let mut rows = stmt.query([])?;
     let mut former = Former::default();
     while let Some(row) = rows.next()? {
@@ -97,6 +117,9 @@ pub fn look(from: &Path) -> Result<Former> {
         {
             former.labelled += 1;
         }
+        if !rich_of(row.get::<_, Option<String>>(4).ok().flatten().as_deref()).is_empty() {
+            former.with_styles += 1;
+        }
         if kind == Kind::Image {
             former.pictures += 1;
             if !Path::new(&content).exists() {
@@ -111,7 +134,7 @@ pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
     let db = opened(from)?;
     let mut stmt = db.prepare(
         "SELECT id, content, type, created_at, modified_at, app_source, is_pinned, label,
-                card_color, metadata, thumb_path, broken_since
+                card_color, metadata, paste_count, broken_since
          FROM clipboard_items
          ORDER BY created_at",
     )?;
@@ -133,10 +156,8 @@ pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
             meta: row
                 .get::<_, Option<String>>(9)?
                 .filter(|one| !one.is_empty()),
-            thumb: row
-                .get::<_, Option<String>>(10)?
-                .filter(|one| !one.is_empty()),
-            broken: row.get::<_, Option<i64>>(11)?.is_some(),
+            pastes: row.get::<_, Option<i64>>(10)?.unwrap_or(0),
+            broken: row.get::<_, Option<i64>>(11)?,
         })
     })?;
 
@@ -171,11 +192,19 @@ fn carry(into: &Store, row: &Row, at: i64) -> Result<Landed> {
         return Ok(Landed::Already);
     }
     let when = if row.created_at > 0 {
-        row.created_at
+        in_millis(row.created_at)
     } else {
         at
     };
-    let id = into.insert_item(&named(row, at), &item, &preview_of(row), when)?;
+    let id = into.insert_item(
+        &named(row, at),
+        &item,
+        &preview_of(row, without_picture),
+        when,
+    )?;
+    if row.modified_at > row.created_at {
+        into.reactivate(id, in_millis(row.modified_at))?;
+    }
 
     if let Some(app) = row.app.as_deref() {
         into.set_source(id, app, at)?;
@@ -189,21 +218,33 @@ fn carry(into: &Store, row: &Row, at: i64) -> Result<Landed> {
     if row.pinned {
         into.set_pinned(id, true, at)?;
     }
-    if let Some(thumb) = row.thumb.as_deref()
-        && Path::new(thumb).exists()
-    {
-        into.set_thumb(id, Some(thumb), at)?;
+    if row.pastes > 0 {
+        into.set_pastes(id, row.pastes)?;
     }
-    if row.broken {
-        into.mark_broken(id, at)?;
+    if let Some(broken) = row.broken {
+        into.mark_broken(id, in_millis(broken))?;
     }
     for (key, value) in meta_in(row.meta.as_deref()) {
         into.set_meta(id, &key, &value)?;
+    }
+    for job in jobs_for(row.kind, !without_picture) {
+        into.enqueue(id, job)?;
     }
     Ok(Landed::Added { without_picture })
 }
 
 fn made_of(row: &Row) -> (Item, bool) {
+    let (mut item, without_picture) = body_of(row);
+    for (id, bytes) in rich_of(row.meta.as_deref()) {
+        item.formats.push(Format {
+            id: id.into(),
+            payload: Payload::stored(bytes),
+        });
+    }
+    (item, without_picture)
+}
+
+fn body_of(row: &Row) -> (Item, bool) {
     if row.kind == Kind::Image {
         return match std::fs::read(&row.content) {
             Ok(bytes) if !bytes.is_empty() => (
@@ -232,7 +273,18 @@ fn text_of(row: &Row, kind: Kind) -> Item {
     }
 }
 
-fn preview_of(row: &Row) -> String {
+pub fn jobs_for(kind: Kind, with_its_picture: bool) -> &'static [&'static str] {
+    match kind {
+        Kind::Image if with_its_picture => &["thumb", "ocr"],
+        Kind::File | Kind::Folder if cp_core::thumbnail::THUMBNAILS_FILES => &["thumb"],
+        _ => &[],
+    }
+}
+
+fn preview_of(row: &Row, without_picture: bool) -> String {
+    if row.kind == Kind::Image && !without_picture {
+        return String::new();
+    }
     row.content.clone()
 }
 
@@ -245,14 +297,11 @@ fn named(row: &Row, at: i64) -> String {
 }
 
 pub fn meta_in(said: Option<&str>) -> Vec<(String, String)> {
-    let Some(said) = said else {
-        return Vec::new();
-    };
-    let Ok(serde_json::Value::Object(read)) = serde_json::from_str::<serde_json::Value>(said)
-    else {
+    let Some(read) = read_object(said) else {
         return Vec::new();
     };
     read.into_iter()
+        .filter(|(key, _)| !RICH_KEYS.contains(&key.as_str()))
         .filter_map(|(key, value)| {
             let said = match value {
                 serde_json::Value::String(one) => one,
@@ -264,13 +313,81 @@ pub fn meta_in(said: Option<&str>) -> Vec<(String, String)> {
         .collect()
 }
 
+fn read_object(said: Option<&str>) -> Option<serde_json::Map<String, serde_json::Value>> {
+    match serde_json::from_str(said?) {
+        Ok(serde_json::Value::Object(read)) => Some(read),
+        _ => None,
+    }
+}
+
+pub fn rich_of(said: Option<&str>) -> Vec<(&'static str, Vec<u8>)> {
+    let Some(read) = read_object(said) else {
+        return Vec::new();
+    };
+    let decoded = |key: &str| {
+        read.get(key)
+            .and_then(serde_json::Value::as_str)
+            .and_then(un_base64)
+    };
+    let mut carried = Vec::new();
+    if let Some(bytes) = decoded("html").filter(|bytes| html_fits(bytes)) {
+        carried.push((RICH_HTML, bytes));
+    }
+    if let Some(bytes) = decoded("rtf").filter(|bytes| bytes.starts_with(br"{\rtf")) {
+        carried.push((RICH_RTF, bytes));
+    }
+    carried
+}
+
+const THE_WINDOWS_HEADER: &[u8] = b"Version:";
+
+fn html_fits(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return false;
+    }
+    bytes.starts_with(THE_WINDOWS_HEADER) == cfg!(target_os = "windows")
+}
+
+fn un_base64(said: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(said.len() / 4 * 3);
+    let mut held: u32 = 0;
+    let mut bits: u32 = 0;
+    for byte in said.bytes() {
+        let six = match byte {
+            b'A'..=b'Z' => byte - b'A',
+            b'a'..=b'z' => byte - b'a' + 26,
+            b'0'..=b'9' => byte - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            b'=' => break,
+            b'\r' | b'\n' => continue,
+            _ => return None,
+        };
+        held = (held << 6) | u32::from(six);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push(u8::try_from((held >> bits) & 0xFF).ok()?);
+        }
+    }
+    (!out.is_empty()).then_some(out)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Swept {
     pub files: i64,
     pub bytes: u64,
 }
 
-pub const OURS_ALONE: [&str; 3] = ["images", "config", ".initialized"];
+pub const OURS_ALONE: [&str; 5] = [
+    "images",
+    "config",
+    ".initialized",
+    "crash.log",
+    "last_cleanup.txt",
+];
+
+pub const THEIR_LOGS: &str = "copypaste_";
 
 pub fn drop_former(dir: &Path) -> Result<Swept> {
     let mut swept = Swept::default();
@@ -287,6 +404,25 @@ pub fn drop_former(dir: &Path) -> Result<Swept> {
             swept = taken(&at, swept)?;
         }
     }
+    swept = their_logs(&dir.join("logs"), swept)?;
+    Ok(swept)
+}
+
+fn their_logs(dir: &Path, mut swept: Swept) -> Result<Swept> {
+    let Ok(read) = std::fs::read_dir(dir) else {
+        return Ok(swept);
+    };
+    for one in read.filter_map(std::result::Result::ok) {
+        let at = one.path();
+        let theirs = at
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with(THEIR_LOGS));
+        if theirs {
+            swept = taken(&at, swept)?;
+        }
+    }
+    let _ = std::fs::remove_dir(dir);
     Ok(swept)
 }
 
@@ -387,8 +523,8 @@ mod tests {
             label: None,
             colour: 0,
             meta: None,
-            thumb: None,
-            broken: false,
+            pastes: 0,
+            broken: None,
         };
         assert_eq!(named(&row, 9), "2x-abc-123");
         let nameless = Row {
@@ -631,16 +767,21 @@ mod tests {
         std::fs::create_dir_all(at.join("config")).expect("made");
         std::fs::write(at.join("config/app.json"), b"its settings").expect("written");
         std::fs::write(at.join(".initialized"), b"").expect("written");
+        std::fs::write(at.join("crash.log"), b"where it fell over").expect("written");
+        std::fs::write(at.join("last_cleanup.txt"), b"when it last swept").expect("written");
+        std::fs::create_dir_all(at.join("logs")).expect("made");
+        std::fs::write(at.join("logs/copypaste_2026-09-24.log"), b"its day").expect("written");
 
         std::fs::write(at.join("history.db"), b"what the 3.0 keeps").expect("written");
         std::fs::create_dir_all(at.join("blobs")).expect("made");
         std::fs::write(at.join("blobs/kept"), b"ours").expect("written");
         std::fs::write(at.join("config.toml"), b"ours too").expect("written");
+        std::fs::write(at.join("logs/cp-panel.log"), b"ours as well").expect("written");
 
         let swept = drop_former(at).expect("swept");
         assert_eq!(
-            swept.files, 5,
-            "database, log, picture, settings and the flag"
+            swept.files, 8,
+            "database, log, picture, settings, the flag, the crash, the sweep mark and its day"
         );
         assert!(swept.bytes > 0);
 
@@ -650,13 +791,21 @@ mod tests {
             "images",
             "config",
             ".initialized",
+            "crash.log",
+            "last_cleanup.txt",
+            "logs/copypaste_2026-09-24.log",
         ] {
             assert!(
                 !at.join(gone).exists(),
                 "{gone} was the 2.x's and had to go"
             );
         }
-        for kept in ["history.db", "blobs/kept", "config.toml"] {
+        for kept in [
+            "history.db",
+            "blobs/kept",
+            "config.toml",
+            "logs/cp-panel.log",
+        ] {
             assert!(at.join(kept).exists(), "{kept} is the 3.0's and stays");
         }
     }
@@ -694,5 +843,267 @@ mod tests {
             .expect("made");
         drop(db);
         assert!(matches!(look(&stranger), Err(Error::NotTheFormerOne)));
+    }
+    #[test]
+    fn the_seconds_the_2x_counts_become_the_milliseconds_the_3_0_counts() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 9_999).expect("brought");
+
+        let page = into
+            .list(
+                &crate::Filter {
+                    broken: crate::Broken::Shown,
+                    ..Default::default()
+                },
+                20,
+                None,
+            )
+            .expect("listed");
+        for row in &page.rows {
+            assert!(
+                row.created_at >= 1_000_000,
+                "{} is the row of seconds the 2.x wrote, not milliseconds",
+                row.created_at
+            );
+        }
+    }
+
+    #[test]
+    fn a_history_brought_over_survives_the_sweep_that_keeps_a_month() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+        let yesterday = 1_789_950_000;
+        let db = Connection::open(&former).expect("opened");
+        db.execute(
+            "UPDATE clipboard_items SET created_at = ?1, modified_at = ?1",
+            [yesterday],
+        )
+        .expect("aged");
+        drop(db);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        let a_day = 24 * 60 * 60 * 1_000;
+        let now = in_millis(yesterday) + a_day;
+        bring(&former, &into, now).expect("brought");
+        let before = into.count().expect("counted");
+        assert!(before > 0);
+
+        let swept = into
+            .sweep(
+                &crate::Policy {
+                    keep_for: Some(30 * a_day),
+                    ..Default::default()
+                },
+                now,
+            )
+            .expect("swept");
+
+        assert_eq!(swept.expired, 0, "nothing brought over is a month old yet");
+        assert_eq!(into.count().expect("counted"), before);
+    }
+
+    #[test]
+    fn what_was_copied_again_in_the_2x_keeps_the_day_it_was_copied_again() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+        let db = Connection::open(&former).expect("opened");
+        db.execute(
+            "UPDATE clipboard_items SET modified_at = 8_000 WHERE id = 'one'",
+            [],
+        )
+        .expect("touched");
+        drop(db);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 9_999).expect("brought");
+
+        let page = into
+            .list(&crate::Filter::default(), 20, None)
+            .expect("listed");
+        let first = page.rows.first().expect("something came over");
+        assert_eq!(
+            first.created_at,
+            in_millis(1_000),
+            "the one copied again is at the top, and it was created first"
+        );
+    }
+
+    #[test]
+    fn the_styles_the_2x_kept_cross_as_a_format_and_not_as_a_note() {
+        let carried = rich_of(Some(
+            r#"{"html": "VmVyc2lvbjowLjkNCjxiPmhvbGE8L2I+", "width": 8}"#,
+        ));
+        let (id, bytes) = carried.first().expect("the html crossed");
+        assert_eq!(*id, RICH_HTML);
+        assert!(
+            std::str::from_utf8(bytes)
+                .expect("utf8")
+                .contains("<b>hola</b>")
+        );
+        assert!(
+            !meta_in(Some(r#"{"html": "VmVyc2lvbjowLjk=", "width": 8}"#))
+                .iter()
+                .any(|(key, _)| key == "html"),
+            "what crossed as a format is not written down twice"
+        );
+    }
+
+    #[test]
+    fn base64_the_2x_wrote_comes_back_byte_for_byte() {
+        assert_eq!(un_base64("aG9sYQ==").expect("decoded"), b"hola");
+        assert_eq!(un_base64("aG9sYQ").expect("decoded"), b"hola");
+        assert_eq!(
+            un_base64("aG9s\r\nYQ==").expect("decoded"),
+            b"hola",
+            "a line break inside it is not a byte"
+        );
+        assert!(un_base64("not base64 at all").is_none());
+        assert!(un_base64("").is_none());
+    }
+    #[test]
+    fn a_picture_that_crossed_asks_for_its_thumbnail_and_its_reading() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 9_999).expect("brought");
+
+        let waiting = into.take_pending("thumb", 9_999, 20).expect("asked");
+        let reading = into.take_pending("ocr", 9_999, 20).expect("asked");
+        assert_eq!(waiting.len(), 1, "the picture that came with its bytes");
+        assert_eq!(reading.len(), 1);
+
+        let page = into
+            .list(&crate::Filter::default(), 20, None)
+            .expect("listed");
+        let carried = page
+            .rows
+            .iter()
+            .find(|one| one.label.as_deref() == Some("the receipt"))
+            .expect("the picture is here");
+        assert!(
+            waiting.contains(&carried.id),
+            "the one queued is the picture itself"
+        );
+    }
+
+    #[test]
+    fn a_picture_whose_file_is_gone_asks_for_nothing() {
+        assert!(jobs_for(Kind::Image, false).is_empty());
+        assert_eq!(jobs_for(Kind::Image, true), ["thumb", "ocr"]);
+        assert!(jobs_for(Kind::Text, true).is_empty());
+    }
+
+    #[test]
+    fn the_path_the_2x_kept_a_picture_at_is_not_what_the_card_says() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 9_999).expect("brought");
+
+        let page = into
+            .list(&crate::Filter::default(), 20, None)
+            .expect("listed");
+        let carried = page
+            .rows
+            .iter()
+            .find(|one| one.label.as_deref() == Some("the receipt"))
+            .expect("the picture is here");
+        assert!(
+            carried.preview.is_empty(),
+            "a picture that crossed as bytes shows its picture, not where it used to live: {:?}",
+            carried.preview
+        );
+        assert!(
+            into.list(
+                &crate::Filter {
+                    query: Some("shot".to_owned()),
+                    ..Default::default()
+                },
+                20,
+                None,
+            )
+            .expect("searched")
+            .rows
+            .is_empty(),
+            "and the path it used to live at is not searchable either"
+        );
+    }
+
+    #[test]
+    fn how_many_times_something_was_pasted_crosses_too() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 9_999).expect("brought");
+
+        let page = into
+            .list(&crate::Filter::default(), 20, None)
+            .expect("listed");
+        let counted: Vec<i64> = page
+            .rows
+            .iter()
+            .map(|one| one.paste_count)
+            .filter(|times| *times > 0)
+            .collect();
+        assert_eq!(
+            counted,
+            vec![3],
+            "the 2.x had pasted one of them three times"
+        );
+    }
+
+    #[test]
+    fn a_thumbnail_the_2x_left_in_its_own_folder_is_not_adopted() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+        let thumb = there.path().join("images");
+        std::fs::create_dir_all(&thumb).expect("made");
+        let thumb = thumb.join("shot_thumb.png");
+        std::fs::write(&thumb, b"png").expect("written");
+        let db = Connection::open(&former).expect("opened");
+        db.execute(
+            "UPDATE clipboard_items SET thumb_path = ?1 WHERE id = 'two'",
+            [thumb.to_string_lossy()],
+        )
+        .expect("pointed");
+        drop(db);
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, 9_999).expect("brought");
+
+        let page = into
+            .list(&crate::Filter::default(), 20, None)
+            .expect("listed");
+        assert!(
+            page.rows.iter().all(|one| one.thumb_path.is_none()),
+            "it lives in the folder that deleting the 2.x empties, so the 3.0 draws its own"
+        );
     }
 }
