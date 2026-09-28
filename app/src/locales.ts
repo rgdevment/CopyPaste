@@ -63,11 +63,12 @@ const ES = {
   former: "Datos de CopyPaste 2",
   formerNone: "No quedan en este equipo",
   formerHas: "{one} guardados en CopyPaste 2",
+  formerKeepsStyles: "{one} conservan sus estilos, los que la 2 alcanzó a guardar",
   formerLosesPlain:
-    "El texto llega en plano: la 2 no guardaba negritas ni colores, así que lo que pegaba con estilos ya no los tiene",
+    "El resto llega en plano: de esos la 2 guardó solo el texto, así que lo que pegaba con estilos ya no los tiene",
   formerLosesPictures: "{one} imágenes ya no están en el disco y llegarán sin su contenido",
   formerKeeps:
-    "Cruzan las fechas, lo anclado, las etiquetas, el color y de qué aplicación vino cada cosa",
+    "Cruzan las fechas, lo anclado, las etiquetas, el color, de qué aplicación vino cada cosa y cuántas veces la pegaste",
   formerDo: "Traer el historial",
   formerBringing: "Trayéndolo…",
   formerCame: "Llegaron {one}",
@@ -218,11 +219,12 @@ const EN: Record<keyof Said, string> = {
   former: "CopyPaste 2 data",
   formerNone: "None left on this computer",
   formerHas: "{one} kept in CopyPaste 2",
+  formerKeepsStyles: "{one} keep their styling, the ones the 2 did store",
   formerLosesPlain:
-    "Text arrives plain: the 2 never stored bold or colour, so what used to paste with styling no longer has it",
+    "The rest arrive plain: for those the 2 kept the text alone, so what used to paste with styling no longer has it",
   formerLosesPictures: "{one} pictures are no longer on disk and will arrive without their content",
   formerKeeps:
-    "Dates, what was pinned, labels, colour and which app each one came from all cross over",
+    "Dates, what was pinned, labels, colour, which app each one came from and how many times you pasted it all cross over",
   formerDo: "Bring the history over",
   formerBringing: "Bringing it over…",
   formerCame: "{one} came over",

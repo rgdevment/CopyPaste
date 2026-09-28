@@ -54,6 +54,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         picturesGone: 3,
         pinned: 12,
         labelled: 5,
+        withStyles: 260,
         unreadable: null,
       });
     }

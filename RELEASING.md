@@ -172,11 +172,13 @@ On Windows the 3.0 installer:
 
 Bringing it over happens inside the app, in Settings → Backup, not in the
 installer, and it states its losses before anything is touched: how many items
-there are, that text arrives plain because the 2.x never stored styling, how
-many pictures are no longer on disk, and that nothing of the 2.x is read more
-than once. Deleting the 2.x data is a separate button, behind a confirmation,
-and it takes `clipboard.db`, `images`, `config` and `.initialized` — never the
-files the history merely pointed at, which belong to the person.
+there are, how many keep the styling the 2.x did store and that the rest arrive
+plain, how many pictures are no longer on disk, and that nothing of the 2.x is
+read more than once. Deleting the 2.x data is a separate button, behind a
+confirmation, and it takes `clipboard.db`, `images`, `config`, `.initialized`,
+`crash.log`, `last_cleanup.txt` and the `copypaste_*.log` files in `logs` — never
+the logs the 3.0 writes beside them, and never the files the history merely
+pointed at, which belong to the person.
 
 The same applies on macOS, where the 2.x app bundle and its Application Support
 folder are separate things: removing the app never touches the folder.

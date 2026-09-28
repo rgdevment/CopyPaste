@@ -177,7 +177,8 @@ describe("la ventana", () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
     expect(await screen.findByText("1200 elementos guardados en CopyPaste 2")).toBeDefined();
-    expect(screen.getByText(/El texto llega en plano/)).toBeDefined();
+    expect(screen.getByText(/260 conservan sus estilos/)).toBeDefined();
+    expect(screen.getByText(/El resto llega en plano/)).toBeDefined();
     expect(screen.getByText(/3 imágenes ya no están en el disco/)).toBeDefined();
     expect(screen.getByText(/Nada de CopyPaste 2 se toca ni se borra/)).toBeDefined();
   });
@@ -411,7 +412,7 @@ describe("la ventana", () => {
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Copia de seguridad" }));
     expect(await screen.findByText(/214\.0 MB/)).toBeDefined();
-    expect(screen.getByText(/El texto llega en plano/)).toBeDefined();
+    expect(screen.getByText(/El resto llega en plano/)).toBeDefined();
   });
 
   it("elegir English cambia la ventana entera, no solo la fila del idioma", async () => {

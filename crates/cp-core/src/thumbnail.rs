@@ -1,5 +1,10 @@
 pub const MAX_SIDE: u32 = 256;
 
+#[cfg(target_os = "windows")]
+pub const THUMBNAILS_FILES: bool = true;
+#[cfg(not(target_os = "windows"))]
+pub const THUMBNAILS_FILES: bool = false;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Size {
     pub width: u32,
