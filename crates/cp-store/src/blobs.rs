@@ -108,7 +108,7 @@ fn digest_of(name: &str) -> Option<(&str, bool)> {
     shaped.then_some((digest, partial))
 }
 
-const AT_A_TIME: usize = 1 << 20;
+const AT_A_TIME: usize = 64 * 1024;
 
 pub fn remove_at(path: &Path) -> Result<()> {
     use std::io::Write;

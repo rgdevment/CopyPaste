@@ -70,6 +70,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         refused: 0,
         withoutTheirPicture: 3,
         swept: 860,
+        crowded: 0,
       });
     }
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");

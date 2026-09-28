@@ -97,7 +97,7 @@ fn opened(from: &Path) -> Result<Connection> {
     Ok(db)
 }
 
-pub fn look(from: &Path, keeps_until: Option<i64>) -> Result<Former> {
+pub fn look(from: &Path, at: i64, keep_for: Option<i64>) -> Result<Former> {
     let db = opened(from)?;
     let root = root_of(from);
     let mut stmt = db.prepare(
@@ -127,9 +127,9 @@ pub fn look(from: &Path, keeps_until: Option<i64>) -> Result<Former> {
         }
         let created = row.get::<_, Option<i64>>(5).ok().flatten().unwrap_or(0);
         let modified = row.get::<_, Option<i64>>(6).ok().flatten().unwrap_or(0);
-        if let Some(cutoff) = keeps_until
+        if let Some(age) = keep_for
             && !pinned
-            && in_millis(created.max(modified)) < cutoff
+            && lands_at(created, modified, at) < at - age
         {
             former.beyond_keep += 1;
         }
@@ -141,6 +141,15 @@ pub fn look(from: &Path, keeps_until: Option<i64>) -> Result<Former> {
         }
     }
     Ok(former)
+}
+
+fn lands_at(created: i64, modified: i64, at: i64) -> i64 {
+    let when = if created > 0 { in_millis(created) } else { at };
+    if modified > created {
+        in_millis(modified).max(when)
+    } else {
+        when
+    }
 }
 
 fn root_of(from: &Path) -> Option<PathBuf> {
@@ -793,7 +802,7 @@ mod tests {
         std::fs::write(&picture, b"\x89PNG-pretend").expect("written");
         let former = a_former_history(there.path(), &picture);
 
-        let looked = look(&former, None).expect("looked");
+        let looked = look(&former, 0, None).expect("looked");
         assert_eq!(looked.items, 5);
         assert_eq!(looked.pictures, 2);
         assert_eq!(looked.pictures_gone, 1, "one picture is no longer on disk");
@@ -999,7 +1008,10 @@ mod tests {
         db.execute_batch("CREATE TABLE something (id INTEGER);")
             .expect("made");
         drop(db);
-        assert!(matches!(look(&stranger, None), Err(Error::NotTheFormerOne)));
+        assert!(matches!(
+            look(&stranger, 0, None),
+            Err(Error::NotTheFormerOne)
+        ));
     }
     #[test]
     fn the_seconds_the_2x_counts_become_the_milliseconds_the_3_0_counts() {
@@ -1081,9 +1093,8 @@ mod tests {
         let a_year_ago = 1_758_000_000;
         aged(&former, a_year_ago);
         let now = in_millis(a_year_ago) + 365 * A_DAY;
-        let cutoff = now - 30 * A_DAY;
 
-        let said = look(&former, Some(cutoff)).expect("looked");
+        let said = look(&former, now, Some(30 * A_DAY)).expect("looked");
         assert!(said.beyond_keep > 0, "a year old is past a month");
         assert_eq!(
             said.beyond_keep,
@@ -1109,6 +1120,44 @@ mod tests {
             "the warning shown beforehand is what actually happens"
         );
         assert_eq!(into.count().expect("counted"), said.pinned);
+    }
+
+    #[test]
+    fn a_row_without_a_day_of_its_own_lands_today_and_is_not_counted_as_lost() {
+        let there = tempfile::tempdir().expect("a folder");
+        let picture = there.path().join("shot.png");
+        std::fs::write(&picture, b"png").expect("written");
+        let former = a_former_history(there.path(), &picture);
+        let long_ago = 1_758_000_000;
+        let db = Connection::open(&former).expect("opened");
+        db.execute(
+            "UPDATE clipboard_items SET created_at = 0, modified_at = ?1",
+            [long_ago],
+        )
+        .expect("aged");
+        drop(db);
+        let now = in_millis(long_ago) + 365 * A_DAY;
+
+        let said = look(&former, now, Some(30 * A_DAY)).expect("looked");
+        assert_eq!(
+            said.beyond_keep, 0,
+            "a row the migration dates today is not a row the sweep will take"
+        );
+
+        let here = tempfile::tempdir().expect("a folder");
+        let into = Store::open(&here.path().join("history.db")).expect("opened");
+        bring(&former, &into, now).expect("brought");
+        let swept = into
+            .sweep(
+                &crate::Policy {
+                    keep_for: Some(30 * A_DAY),
+                    ..Default::default()
+                },
+                now,
+            )
+            .expect("swept");
+        assert_eq!(swept.expired, 0);
+        assert_eq!(into.count().expect("counted"), said.items);
     }
 
     #[test]

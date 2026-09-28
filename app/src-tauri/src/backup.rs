@@ -130,6 +130,7 @@ pub struct Crossed {
     refused: i64,
     without_their_picture: i64,
     swept: i64,
+    crowded: i64,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -160,17 +161,19 @@ pub fn bring_former(
     if let Err(why) = crate::panel::relight(&app) {
         crate::note::note(&format!("the panel did not come back: {why}"));
     }
+    let _ = app.emit("crossed", ());
     let (brought, swept) = landed?;
     crate::note::note(&format!(
-        "from CopyPaste 2: {} brought in, {} were already here, {} went by the kept time",
-        brought.added, brought.already, swept
+        "from CopyPaste 2: {} brought in, {} were already here, {} went by the kept time and {} for room",
+        brought.added, brought.already, swept.expired, swept.over_bytes
     ));
     Ok(Crossed {
         added: brought.added,
         already: brought.already,
         refused: brought.refused,
         without_their_picture: brought.without_their_picture,
-        swept,
+        swept: swept.expired as i64,
+        crowded: swept.over_bytes as i64,
     })
 }
 
@@ -178,22 +181,25 @@ fn crossed(
     app: &tauri::AppHandle,
     from: &std::path::Path,
     at: i64,
-) -> Result<(cp_store::legacy::Brought, i64), String> {
+) -> Result<(cp_store::legacy::Brought, cp_store::Swept), String> {
     let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
+    let policy = crate::settings::policy();
+    let swept = |why: &str| match store.sweep(&policy, at) {
+        Ok(swept) => swept,
+        Err(trouble) => {
+            crate::note::note(&format!(
+                "what is kept could not be applied {why}: {trouble}"
+            ));
+            cp_store::Swept::default()
+        }
+    };
+    swept("before");
     let telling = app.clone();
     let brought = cp_store::legacy::bring_telling(from, &store, at, &move |done, total| {
         let _ = telling.emit("crossing", Underway { done, total });
     })
     .map_err(|why| why.to_string())?;
-    let policy = crate::settings::policy();
-    let swept = match store.sweep(&policy, at) {
-        Ok(swept) => swept.expired as i64,
-        Err(why) => {
-            crate::note::note(&format!("what is kept could not be applied: {why}"));
-            0
-        }
-    };
-    Ok((brought, swept))
+    Ok((brought, swept("after")))
 }
 
 #[derive(serde::Serialize)]

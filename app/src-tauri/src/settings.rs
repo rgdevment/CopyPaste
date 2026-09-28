@@ -32,7 +32,13 @@ pub fn folder() -> Option<PathBuf> {
 }
 
 pub fn policy() -> cp_store::Policy {
-    let Some(kept) = folder().and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok()) else {
+    let Some(path) = folder()
+        .map(|dir| cp_config::at(&dir))
+        .filter(|at| at.exists())
+    else {
+        return cp_store::Policy::default();
+    };
+    let Ok(kept) = cp_config::read(&path) else {
         return cp_store::Policy::default();
     };
     cp_store::Policy::keeping(kept.keeps_days, kept.images_quota_mb)
@@ -130,7 +136,7 @@ pub fn former(at: i64) -> Result<Option<Former>, String> {
         beyond_keep: 0,
         unreadable: None,
     };
-    match cp_store::legacy::look(&db, policy().keep_for.map(|age| at - age)) {
+    match cp_store::legacy::look(&db, at, policy().keep_for) {
         Ok(looked) => {
             former.items = looked.items;
             former.pictures = looked.pictures;

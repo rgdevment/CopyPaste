@@ -26,6 +26,7 @@ type Crossed = {
   refused: number;
   withoutTheirPicture: number;
   swept: number;
+  crowded: number;
 };
 type Saved = { path: string; items: number; missing: number; bytes: number };
 type Brought = { added: number; already: number; refused: number; fromElsewhere: boolean };
@@ -59,12 +60,20 @@ export default function Backup() {
   }, []);
 
   useEffect(() => {
-    const stops = listen<Underway>("crossing", (event) => {
+    const going = listen<Underway>("crossing", (event) => {
       setBusy("former");
       setCrossing(event.payload);
     });
+    const gone = listen("crossed", () => {
+      setCrossing(null);
+      setBusy(null);
+      invoke<Former | null>("former", { at: Date.now() })
+        .then(setFormer)
+        .catch(() => {});
+    });
     return () => {
-      stops.then((off) => off()).catch(() => {});
+      going.then((off) => off()).catch(() => {});
+      gone.then((off) => off()).catch(() => {});
     };
   }, []);
 
@@ -160,10 +169,10 @@ export default function Backup() {
           ? fill("formerCameFlat", items(said.withoutTheirPicture))
           : null,
         said.swept > 0 ? fill("formerCameSwept", items(said.swept)) : null,
+        said.crowded > 0 ? fill("formerCameCrowded", items(said.crowded)) : null,
       ].filter(Boolean);
       const tail = notes.length > 0 ? ` · ${notes.join(" · ")}` : "";
       setCrossed(`${fill("formerCame", items(said.added))}${tail}`);
-      setFormer(await invoke<Former | null>("former", { at: Date.now() }));
     } catch (why) {
       setCrossed(String(why));
     } finally {
