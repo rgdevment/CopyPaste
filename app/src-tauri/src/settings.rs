@@ -1,6 +1,21 @@
 use cp_config::Config;
 use std::path::PathBuf;
 
+pub fn former_folder() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        cp_win_sys::paths::legacy_dir()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        cp_mac_sys::paths::legacy_dir()
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        None
+    }
+}
+
 pub fn folder() -> Option<PathBuf> {
     #[cfg(windows)]
     {
@@ -89,7 +104,7 @@ pub struct Former {
 
 #[tauri::command]
 pub fn former() -> Result<Option<Former>, String> {
-    let db = folder().ok_or_else(nowhere)?.join("clipboard.db");
+    let db = former_folder().ok_or_else(nowhere)?.join("clipboard.db");
     let weighed = match std::fs::metadata(&db) {
         Ok(weighed) => weighed,
         Err(why) if why.kind() == std::io::ErrorKind::NotFound => return Ok(None),

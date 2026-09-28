@@ -106,7 +106,7 @@ pub struct Crossed {
 
 #[tauri::command(async)]
 pub fn bring_former(app: tauri::AppHandle, at: i64) -> Result<Crossed, String> {
-    let former = crate::settings::folder()
+    let former = crate::settings::former_folder()
         .ok_or_else(crate::settings::nowhere)?
         .join("clipboard.db");
     if !former.exists() {
@@ -143,7 +143,7 @@ pub struct Swept {
 
 #[tauri::command(async)]
 pub fn drop_former() -> Result<Swept, String> {
-    let dir = crate::settings::folder().ok_or_else(crate::settings::nowhere)?;
+    let dir = crate::settings::former_folder().ok_or_else(crate::settings::nowhere)?;
     let swept = cp_store::legacy::drop_former(&dir).map_err(|why| why.to_string())?;
     crate::note::note(&format!(
         "CopyPaste 2 is gone from this machine: {} files",

@@ -14,8 +14,19 @@ pub fn database() -> Option<PathBuf> {
     Some(data_dir()?.join("history.db"))
 }
 
+pub fn legacy_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    Some(
+        PathBuf::from(home)
+            .join("Library")
+            .join("Application Support")
+            .join("com.rgdevment.copypaste")
+            .join("CopyPaste"),
+    )
+}
+
 pub fn legacy_database() -> Option<PathBuf> {
-    Some(data_dir()?.join("clipboard.db"))
+    Some(legacy_dir()?.join("clipboard.db"))
 }
 
 pub fn blobs_dir() -> Option<PathBuf> {
@@ -39,12 +50,29 @@ mod tests {
         let root = data_dir().expect("HOME");
         for path in [
             database().expect("base"),
-            legacy_database().expect("the legacy base"),
             blobs_dir().expect("blobs"),
             thumbs_dir().expect("thumbnails"),
         ] {
             assert!(path.starts_with(&root), "{path:?} strayed from {root:?}");
         }
+    }
+
+    #[test]
+    fn the_2x_kept_its_own_folder_under_the_bundle_id() {
+        let ours = data_dir().expect("HOME");
+        let theirs = legacy_dir().expect("HOME");
+        assert_ne!(
+            ours, theirs,
+            "Flutter put it under the bundle id, not beside us"
+        );
+        assert!(
+            theirs.ends_with("com.rgdevment.copypaste/CopyPaste"),
+            "{theirs:?}"
+        );
+        assert!(
+            !legacy_database().expect("theirs").starts_with(&ours),
+            "so nothing of the 2.x lives inside our folder on a Mac"
+        );
     }
 
     #[test]

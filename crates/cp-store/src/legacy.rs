@@ -330,7 +330,7 @@ pub fn rich_of(said: Option<&str>) -> Vec<(&'static str, Vec<u8>)> {
             .and_then(un_base64)
     };
     let mut carried = Vec::new();
-    if let Some(bytes) = decoded("html").filter(|bytes| html_fits(bytes)) {
+    if let Some(bytes) = decoded("html").and_then(html_for) {
         carried.push((RICH_HTML, bytes));
     }
     if let Some(bytes) = decoded("rtf").filter(|bytes| bytes.starts_with(br"{\rtf")) {
@@ -341,11 +341,39 @@ pub fn rich_of(said: Option<&str>) -> Vec<(&'static str, Vec<u8>)> {
 
 const THE_WINDOWS_HEADER: &[u8] = b"Version:";
 
-fn html_fits(bytes: &[u8]) -> bool {
+fn html_for(bytes: Vec<u8>) -> Option<Vec<u8>> {
     if bytes.is_empty() {
-        return false;
+        return None;
     }
-    bytes.starts_with(THE_WINDOWS_HEADER) == cfg!(target_os = "windows")
+    let wrapped = bytes.starts_with(THE_WINDOWS_HEADER);
+    if cfg!(target_os = "windows") {
+        return wrapped.then_some(bytes);
+    }
+    if wrapped {
+        unwrapped(&bytes)
+    } else {
+        Some(bytes)
+    }
+}
+
+fn unwrapped(bytes: &[u8]) -> Option<Vec<u8>> {
+    let at = said_at(bytes, b"StartHTML:")
+        .filter(|at| bytes.get(*at) == Some(&b'<'))
+        .or_else(|| bytes.iter().position(|one| *one == b'<'))?;
+    Some(bytes[at..].to_vec())
+}
+
+fn said_at(bytes: &[u8], key: &[u8]) -> Option<usize> {
+    let at = bytes
+        .windows(key.len())
+        .position(|one| one == key)?
+        .checked_add(key.len())?;
+    let digits: String = bytes[at..]
+        .iter()
+        .take_while(|one| one.is_ascii_digit())
+        .map(|one| *one as char)
+        .collect();
+    digits.parse().ok()
 }
 
 fn un_base64(said: &str) -> Option<Vec<u8>> {
@@ -811,6 +839,29 @@ mod tests {
     }
 
     #[test]
+    fn the_shared_log_folder_loses_only_what_the_2x_wrote_there() {
+        let dir = tempfile::tempdir().expect("a folder");
+        let logs = dir.path().join("logs");
+        std::fs::create_dir_all(&logs).expect("made");
+        std::fs::write(logs.join("copypaste_2026-09-24.log"), b"theirs").expect("written");
+        std::fs::write(logs.join("copypaste_2026-09-25.log"), b"theirs too").expect("written");
+        std::fs::write(logs.join("cp-gui.log"), b"ours").expect("written");
+        std::fs::write(logs.join("cp-panel.log"), b"ours too").expect("written");
+        std::fs::write(dir.path().join("clipboard.db"), b"history").expect("written");
+
+        let swept = drop_former(dir.path()).expect("swept");
+        assert_eq!(swept.files, 3, "the history and their two logs");
+        assert!(!logs.join("copypaste_2026-09-24.log").exists());
+        assert!(!logs.join("copypaste_2026-09-25.log").exists());
+        assert!(logs.join("cp-gui.log").exists(), "ours stays");
+        assert!(
+            logs.join("cp-panel.log").exists(),
+            "and so does the panel's"
+        );
+        assert!(logs.exists(), "the folder is shared, so it stays");
+    }
+
+    #[test]
     fn dropping_the_2x_never_reaches_the_files_it_only_pointed_at() {
         let dir = tempfile::tempdir().expect("a folder");
         let elsewhere = tempfile::tempdir().expect("another folder");
@@ -938,6 +989,85 @@ mod tests {
             in_millis(1_000),
             "the one copied again is at the top, and it was created first"
         );
+    }
+
+    fn as_windows_wraps_it(markup: &str) -> String {
+        let head = |at: usize| format!("Version:0.9\r\nStartHTML:{at:08}\r\n");
+        let mut at = head(0).len();
+        loop {
+            let said = format!("{}{markup}", head(at));
+            let found = said.find('<').expect("markup");
+            if found == at {
+                return said;
+            }
+            at = found;
+        }
+    }
+
+    #[test]
+    fn the_windows_wrapper_is_taken_off_by_its_own_offset() {
+        let wrapped = as_windows_wraps_it("<b>hi</b>");
+        let kept = unwrapped(wrapped.as_bytes()).expect("the html is in there");
+        assert_eq!(kept, b"<b>hi</b>", "the header goes, the markup stays");
+    }
+
+    #[test]
+    fn a_wrapper_whose_offset_lies_still_gives_back_the_markup() {
+        let lying = b"Version:0.9\r\nStartHTML:00000002\r\n<p>still here</p>";
+        let kept = unwrapped(lying).expect("an offset that points at nothing is not trusted");
+        assert_eq!(kept, b"<p>still here</p>");
+
+        let far = b"Version:0.9\r\nStartHTML:99999999\r\n<p>still here</p>";
+        assert_eq!(
+            unwrapped(far).expect("found by its tag"),
+            b"<p>still here</p>"
+        );
+
+        let none = b"Version:0.9\r\nnothing that looks like markup";
+        assert!(unwrapped(none).is_none(), "and nothing is invented");
+    }
+
+    #[test]
+    fn a_history_carried_from_windows_keeps_its_styles_on_a_mac() {
+        let from_windows = as_windows_wraps_it("<b>the receipt</b>");
+        let carried = rich_of(Some(&format!(
+            r#"{{"html": "{}"}}"#,
+            to_base64(from_windows.as_bytes())
+        )));
+        if cfg!(target_os = "windows") {
+            let (id, bytes) = carried.first().expect("it crossed whole");
+            assert_eq!(*id, RICH_HTML);
+            assert!(
+                bytes.starts_with(THE_WINDOWS_HEADER),
+                "Windows wants CF_HTML"
+            );
+        } else {
+            let (id, bytes) = carried.first().expect("it crossed unwrapped");
+            assert_eq!(*id, RICH_HTML);
+            assert_eq!(
+                bytes, b"<b>the receipt</b>",
+                "a Mac pasteboard wants the markup on its own"
+            );
+        }
+    }
+
+    fn to_base64(bytes: &[u8]) -> String {
+        const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::new();
+        for chunk in bytes.chunks(3) {
+            let mut held = [0u8; 3];
+            held[..chunk.len()].copy_from_slice(chunk);
+            let joined = u32::from(held[0]) << 16 | u32::from(held[1]) << 8 | u32::from(held[2]);
+            for at in 0..4 {
+                if at <= chunk.len() {
+                    let six = (joined >> (18 - at * 6)) & 0x3F;
+                    out.push(ALPHABET[six as usize] as char);
+                } else {
+                    out.push('=');
+                }
+            }
+        }
+        out
     }
 
     #[test]
