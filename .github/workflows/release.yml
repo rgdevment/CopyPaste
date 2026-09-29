@@ -128,6 +128,8 @@ jobs:
       HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
       HAS_PFX_PASSWORD: ${{ secrets.PFX_PASSWORD != '' }}
+      HAS_BRIDGE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY != '' }}
+      WANTS_BRIDGE: ${{ vars.BRIDGE_MANIFEST == 'true' }}
     steps:
       - name: Signing secrets come in pairs
         run: |
@@ -162,6 +164,9 @@ jobs:
               want APPLE_ID "$HAS_APPLE_ID"
               want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
               want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
+            fi
+            if [ "$WANTS_BRIDGE" = "true" ]; then
+              want RELEASE_PRIVATE_KEY "$HAS_BRIDGE_KEY"
             fi
             [ -z "$missing" ] || fail "this tag would be released without:$missing"
           fi
@@ -870,26 +875,34 @@ jobs:
             exit 1
           fi
 
-          said=$(curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 \
-                   "https://github.com/${{ github.repository }}/releases/latest/download/release-manifest.json" \
-                 2>/dev/null | jq -r '.latest // ""' || true)
-          echo "the manifest a 2.x reads today says «${said:-nothing}»"
-
-          if [ "$PRERELEASE" = "true" ]; then
-            if [ -z "$said" ]; then
-              echo "::warning::there is no manifest to carry forward, and a prerelease is not \
-          what latest/download serves, so this release carries none"
-              exit 0
-            fi
-            latest="$said"
-          else
-            if [ -n "$said" ] && [ "$said" != "$v" ] \
-               && [ "$(printf '%s\n%s\n' "$said" "$v" | sort -V | tail -1)" != "$v" ]; then
-              echo "::error::the manifest out there already says $said, and $v would walk it \
-          back. Nothing was written."
-              exit 1
-            fi
+          latest="${v%%-*}"
+          if [ "$PRERELEASE" = "false" ]; then
             latest="$v"
+            code=$(curl -sSL --retry 5 --retry-all-errors --retry-delay 3 \
+                     -H "Cache-Control: no-cache" -o "$RUNNER_TEMP/live.json" -w '%{http_code}' \
+                     "https://github.com/${{ github.repository }}/releases/latest/download/release-manifest.json" \
+                   || echo 000)
+            if [ "$code" = "404" ]; then
+              echo "nothing is served there yet, so $v is the first"
+            elif [ "$code" != "200" ]; then
+              echo "::error::the manifest a 2.x reads answered $code, so whether $v walks it \
+          back cannot be known. Nothing was written."
+              exit 1
+            else
+              said=$(jq -r '.latest // ""' "$RUNNER_TEMP/live.json" 2>/dev/null || echo "")
+              if ! printf '%s' "$said" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+                echo "::error::the manifest a 2.x reads answered 200 and says «$said», which is \
+          no version at all. Nothing was written."
+                exit 1
+              fi
+              echo "the manifest a 2.x reads today says $said"
+              if [ "$said" != "$v" ] \
+                 && [ "$(printf '%s\n%s\n' "$said" "$v" | sort -V | tail -1)" != "$v" ]; then
+                echo "::error::the manifest out there already says $said, and $v would walk it \
+          back. Nothing was written."
+                exit 1
+              fi
+            fi
           fi
 
           made="$RUNNER_TEMP/release-manifest.json"
@@ -932,9 +945,14 @@ jobs:
 
           printf '%s' "$RELEASE_PRIVATE_KEY" | bash scripts/sign_manifest.sh \
             "$made" "$made.sig" .github/v2-release-pubkey.txt
+          cat "$made"
 
+          if [ "$PRERELEASE" = "true" ]; then
+            echo "::notice::built and signed, and deliberately not attached: latest/download \
+          serves the last stable release, so no 2.x would ever read a candidate's copy"
+            exit 0
+          fi
           mv "$made" "$made.sig" dist/
-          cat dist/release-manifest.json
 
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS

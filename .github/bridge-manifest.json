@@ -11,9 +11,6 @@
     "github_macos": {
       "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
     },
-    "scoop": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
-    },
     "msstore": {
       "url": "ms-windows-store://pdp/?productid=PLACEHOLDER"
     },

@@ -140,13 +140,24 @@ no new 2.x is cut. The alternative — a bridge version of the 2.x that reads th
 would need this same channel anyway.
 
 It lives in the `publish` job as `The manifest a 2.x can read`, behind the
-`BRIDGE_MANIFEST` variable, which is how it gets switched off a couple of
-versions later without touching the workflow. `.github/bridge-manifest.json` is
-the template, `scripts/sign_manifest.sh` signs it with `RELEASE_PRIVATE_KEY`
-— still in the repository's secrets — and refuses to write anything unless the
-signature answers to `.github/v2-release-pubkey.txt`, the very key those copies
-carry. A 2.x drops a manifest whose signature does not verify without a word,
-so that check cannot be left to chance.
+`BRIDGE_MANIFEST` variable. `.github/bridge-manifest.json` is the template,
+`scripts/sign_manifest.sh` signs it with `RELEASE_PRIVATE_KEY` — still in the
+repository's secrets — and refuses to write anything unless the signature
+answers to `.github/v2-release-pubkey.txt`, the very key those copies carry. A
+2.x drops a manifest whose signature does not verify without a word, so that
+check cannot be left to chance. With the variable on, `RELEASE_PRIVATE_KEY`
+joins the secrets the `version` job demands before anything is built, because
+finding out at the end costs an hour of builds and the release aborts before
+the GitHub Release is even created.
+
+**Switching the variable off is not a quiet retirement.** The asset is served
+from `releases/latest/download/`, so the first stable tag published without it
+hands a 404 to every copy still on the 2.x, all at once, and they fall back to
+their own cache and go quiet for good — the very outcome this exists to
+prevent. So the watchdog in `feed.yml` does _not_ hide when the variable is
+off: it keeps looking, and while the release that is out still carries the
+manifest it warns, every morning, that the next stable tag will cut it. Turning
+it off is a decision to be made after that warning, not before.
 
 This file has nothing to do with the `release-manifest.json` on the `manifest`
 branch beyond the name, which the URL above forces. The 2.x wants `schema`,
@@ -176,10 +187,16 @@ What a 2.x actually shows from it is narrower than the schema suggests:
 `critical`, and that combination is refused, but a floor at the version being
 tagged would put every 2.x below it the day someone changes one line.
 
-A prerelease is not what `releases/latest` serves, so nothing out there reads
-the manifest attached to an `-rc`: it carries the `latest` already published
-and exercises the path without exposing anybody. Exposure begins with the
-first stable 3.0, whose asset every installed copy will read within a day.
+A prerelease is not what `releases/latest` serves, so no 2.x would ever read a
+candidate's copy. It is therefore built, validated and signed on every `-rc`
+and **deliberately not attached**: the path gets exercised before the run that
+cannot fail, and the release carries no asset whose bytes depend on what a
+server answered that morning — which would collide with the Publish step's
+refusal to replace a published asset with different bytes on a rerun. Exposure
+begins with the first stable 3.0, whose asset every installed copy reads within
+a day. On a stable tag the live manifest is fetched for one purpose only, to
+refuse a version that walks it backwards, and a reply that is neither 200 nor
+404 stops the release rather than guessing.
 
 The Microsoft Store crosses differently, and deliberately: the 3.0.0 ships to
 the **same SKU** the 2.x already publishes (`9NBJRZF3K856`), so those installs

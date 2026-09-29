@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Read it the way an installed copy does
         env:
@@ -156,42 +158,6 @@ jobs:
             echo "no candidate is announced, and none is served"
           fi
 
-      - name: The 2.x is still being told
-        if: vars.BRIDGE_MANIFEST == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          base="https://github.com/${{ github.repository }}/releases/latest/download"
-          for one in release-manifest.json release-manifest.json.sig; do
-            if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
-              -H "Cache-Control: no-cache" -o "bridge-$one" "$base/$one"; then
-              echo "::error::$one does not answer. Every copy still on the 2.x is reading its own \
-                    cache and will call it stale in fifteen days, and none of them will hear \
-                    about the 3.0."
-              exit 1
-            fi
-          done
-
-          bash scripts/verify_manifest.sh bridge-release-manifest.json \
-            bridge-release-manifest.json.sig .github/v2-release-pubkey.txt
-
-          said=$(jq -r '.latest // ""' bridge-release-manifest.json)
-          newest=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
-            -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' \
-            | sed 's/^v//' | grep -E '^[3-9][0-9]*\.' | sort -V | tail -1 || true)
-          if [ -z "$newest" ]; then
-            echo "the 2.x is being told «$said», and no stable 3.x is out for it to be told about"
-            exit 0
-          fi
-          if [ "$said" != "$newest" ]; then
-            echo "::error::the 2.x is being told «$said» and the highest stable release is \
-                  «$newest». Either the bridge was left off the release that went out, or it \
-                  carries a version nobody is publishing."
-            exit 1
-          fi
-          echo "the 2.x is being told $said, which is the release that is out"
-
       # The branch is the feed and nothing else. Cut with `checkout -B` instead of `--orphan` it
       # carries a copy of the whole source, and that copy would sit there ageing unnoticed.
       - name: The branch holds only the feed
@@ -208,3 +174,68 @@ jobs:
             exit 1
           fi
           echo "the branch holds only: $(echo "$held" | tr '\n' ' ')"
+
+      - name: The 2.x is still being told
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WANTED: ${{ vars.BRIDGE_MANIFEST }}
+        run: |
+          set -euo pipefail
+          base="https://github.com/${{ github.repository }}/releases/latest/download"
+          grab() {
+            curl -sSL --retry 5 --retry-all-errors --retry-delay 3 \
+              -H "Cache-Control: no-cache" -o "$2" -w '%{http_code}' "$base/$1" || echo 000
+          }
+
+          code=$(grab release-manifest.json bridge.json)
+
+          if [ "$WANTED" != "true" ]; then
+            if [ "$code" = "200" ]; then
+              echo "::warning::the bridge is switched off and the release that is out still \
+                    carries it. The next stable tag will not, and on its next poll every copy \
+                    still on the 2.x gets a 404, falls back to its own cache and goes quiet for \
+                    good. Make sure nobody is left over there before cutting it."
+            else
+              echo "the bridge is off and nothing is served; nobody on the 2.x is being told"
+            fi
+            exit 0
+          fi
+
+          if [ "$code" != "200" ]; then
+            echo "::error::release-manifest.json answered $code. Every copy still on the 2.x is \
+                  reading its own cache and will call it stale in fifteen days, and none of them \
+                  will hear about the 3.0."
+            exit 1
+          fi
+          if [ "$(grab release-manifest.json.sig bridge.sig)" != "200" ]; then
+            echo "::error::the manifest is served and its signature is not, so every 2.x drops \
+                  the manifest unread. Half a bridge is none."
+            exit 1
+          fi
+
+          bash scripts/verify_manifest.sh bridge.json bridge.sig .github/v2-release-pubkey.txt
+
+          if [ "$(jq -r .severity bridge.json)" = "critical" ] \
+             || [ "$(jq -r '.blockedVersions | length' bridge.json)" != "0" ]; then
+            echo "::error::the manifest being served would put a 2.x behind its blocked-version \
+                  screen, over a history only that person has. It verifies, so it was signed with \
+                  the release key: somebody did that by hand, because the pipeline refuses both."
+            exit 1
+          fi
+
+          said=$(jq -r '.latest // ""' bridge.json)
+          published=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
+            -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName')
+          newest=$(printf '%s\n' "$published" | sed 's/^v//' \
+            | grep -E '^([3-9]|[1-9][0-9]+)\.' | sort -V | tail -1 || true)
+          if [ -z "$newest" ]; then
+            echo "the 2.x is being told «$said», and no stable 3.x is out for it to be told about"
+            exit 0
+          fi
+          if [ "$said" != "$newest" ]; then
+            echo "::error::the 2.x is being told «$said» and the highest stable release is \
+                  «$newest». Either the bridge was left off the release that went out, or it \
+                  carries a version nobody is publishing."
+            exit 1
+          fi
+          echo "the 2.x is being told $said, which is the release that is out"
