@@ -44,13 +44,13 @@ jobs:
         run: cargo test --doc --workspace
 
       - if: runner.os == 'macOS'
-        run: cargo run -p cp-mac --example probe
+        run: cargo run -p cp-mac --example mac_probe
       - name: The probe reads a real clipboard, so leave something on it
         if: runner.os == 'Windows'
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
       - if: runner.os == 'Windows'
-        run: cargo run -p cp-win --example probe
+        run: cargo run -p cp-win --example win_probe
 
   lint:
     name: fmt
@@ -143,7 +143,7 @@ jobs:
           : > "app/src-tauri/binaries/cp-panel-$triple"
 
       - run: cargo llvm-cov --no-report --workspace
-      - run: cargo llvm-cov --no-report run -p cp-mac --example probe
+      - run: cargo llvm-cov --no-report run -p cp-mac --example mac_probe
       - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
       - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
 
@@ -191,7 +191,7 @@ jobs:
       - name: The probe reads a real clipboard, so leave something on it
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
-      - run: cargo llvm-cov --no-report run -p cp-win --example probe
+      - run: cargo llvm-cov --no-report run -p cp-win --example win_probe
       - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
       - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
       - name: Every path is relative to the repository, which is what Sonar reads
