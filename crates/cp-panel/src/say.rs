@@ -34,30 +34,5 @@ pub fn pick_in(english: bool, es: &'static str, en: &'static str) -> &'static st
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn only_a_locale_that_starts_with_en_gets_english() {
-        assert!(english_for(Some("en")));
-        assert!(english_for(Some("en-GB")));
-        assert!(english_for(Some("EN-us")));
-        assert!(!english_for(Some("es")));
-        assert!(!english_for(Some("es-CL")));
-        assert!(!english_for(Some("pt-BR")));
-    }
-
-    #[test]
-    fn what_was_chosen_is_what_is_said() {
-        assert_eq!(pick_in(false, "hola", "hello"), "hola");
-        assert_eq!(pick_in(true, "hola", "hello"), "hello");
-    }
-
-    #[test]
-    fn the_panel_speaks_spanish_until_somebody_says_otherwise() {
-        assert_eq!(
-            pick("hola", "hello"),
-            pick_in(in_english(), "hola", "hello")
-        );
-    }
-}
+#[path = "say_test.rs"]
+mod tests;
