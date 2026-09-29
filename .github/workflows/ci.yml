@@ -18,7 +18,7 @@ env:
 
 jobs:
   check:
-    name: Lints and tests (${{ matrix.os }})
+    name: test / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -53,7 +53,7 @@ jobs:
         run: cargo run -p cp-win --example probe
 
   lint:
-    name: Format
+    name: fmt
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,7 +66,7 @@ jobs:
         run: rustfmt --check --edition 2024 crates/cp-mac/examples/probe/battery.rs crates/cp-win/examples/probe/battery.rs
 
   window:
-    name: The window
+    name: frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -85,7 +85,7 @@ jobs:
       - run: npm test
 
   prose:
-    name: Markdown
+    name: markdown
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -99,7 +99,7 @@ jobs:
       - run: npm run lint:md
 
   cross:
-    name: The macOS crates still build
+    name: the macOS crates still build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -114,9 +114,145 @@ jobs:
       - run: cargo check --target aarch64-apple-darwin -p cp-mac -p cp-mac-sys
 
   deny:
-    name: Dependency audit
+    name: advisories + licences
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
+
+  coverage:
+    name: coverage
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: coverage
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: The app only needs the sidecar to exist here, nobody runs it
+        shell: bash
+        run: |
+          mkdir -p app/src-tauri/binaries
+          triple=$(rustc -vV | sed -n 's/^host: //p')
+          : > "app/src-tauri/binaries/cp-panel-$triple"
+
+      - run: cargo llvm-cov --no-report --workspace
+      - run: cargo llvm-cov --no-report run -p cp-mac --example probe
+      - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: The window, measured too
+        working-directory: app
+        run: |
+          npm ci
+          npm run test:coverage
+
+      - name: Every path is relative to the repository, which is what Sonar reads
+        if: always()
+        shell: bash
+        run: python3 scripts/lcov_paths.py lcov-rust.info app/coverage/lcov.info=app
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage
+          path: |
+            lcov-rust.info
+            app/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage-windows:
+    name: coverage / the Windows crates
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: coverage
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: cargo llvm-cov --no-report -p cp-core -p cp-store -p cp-win -p cp-win-sys -p cp-panel -p cp-config
+      - name: The probe reads a real clipboard, so leave something on it
+        shell: pwsh
+        run: Set-Clipboard -Value "cp-probe"
+      - run: cargo llvm-cov --no-report run -p cp-win --example probe
+      - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|src-tauri[/\]src[/\]'
+      - name: Every path is relative to the repository, which is what Sonar reads
+        if: always()
+        shell: bash
+        run: python scripts/lcov_paths.py lcov-win.info
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-windows
+          path: lcov-win.info
+          if-no-files-found: error
+          retention-days: 1
+
+  sonar:
+    name: sonarcloud
+    needs: [coverage, coverage-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: >-
+      github.actor != 'dependabot[bot]'
+      && (github.event_name == 'push'
+      || github.event.pull_request.head.repo.full_name == github.repository)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage
+          path: .
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-windows
+          path: .
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: The types Sonar needs to read the window
+        working-directory: app
+        run: npm ci
+
+      - uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.sources=crates,app/src,app/src-tauri/src
+            -Dsonar.tests=app/src
+            -Dsonar.test.inclusions=app/src/**/*.test.ts,app/src/**/*.test.tsx,app/src/tests/**
+            -Dsonar.exclusions=crates/*/examples/**,crates/*/build.rs
+            -Dsonar.rust.lcov.reportPaths=lcov-rust.info,lcov-win.info
+            -Dsonar.javascript.lcov.reportPaths=app/coverage/lcov.info
+            -Dsonar.rust.clippy.enabled=false
+            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs
+            -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
+            -Dsonar.qualitygate.timeout=300

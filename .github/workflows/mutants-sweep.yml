@@ -17,9 +17,9 @@ env:
 
 jobs:
   core:
-    name: cp-core and cp-store / shard ${{ matrix.shard }} of 2
+    name: the crates macOS can build / shard ${{ matrix.shard }} of 2
     runs-on: macos-15
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -38,14 +38,14 @@ jobs:
         id: run
         run: |
           set +e
-          cargo mutants -p cp-core -p cp-store --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
+          cargo mutants -p cp-core -p cp-store -p cp-config -p cp-mac --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
           echo "code=$?" >> "$GITHUB_OUTPUT"
 
       - name: What survived
         if: always()
         env:
           CODE: ${{ steps.run.outputs.code }}
-          TITLE: cp-core and cp-store, shard ${{ matrix.shard }} of 2
+          TITLE: the crates macOS can build, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
       - uses: actions/upload-artifact@v7
@@ -56,7 +56,7 @@ jobs:
           retention-days: 14
 
   windows:
-    name: cp-win / shard ${{ matrix.shard }} of 2
+    name: the crates Windows can build / shard ${{ matrix.shard }} of 2
     runs-on: windows-2025
     timeout-minutes: 180
     strategy:
@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          cargo mutants -p cp-win --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
+          cargo mutants -p cp-win -p cp-panel --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
           echo "code=$?" >> "$GITHUB_OUTPUT"
 
       - name: What survived
@@ -86,7 +86,7 @@ jobs:
         shell: bash
         env:
           CODE: ${{ steps.run.outputs.code }}
-          TITLE: cp-win, shard ${{ matrix.shard }} of 2
+          TITLE: the crates Windows can build, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
       - uses: actions/upload-artifact@v7
@@ -96,10 +96,63 @@ jobs:
           path: mutants.out/
           retention-days: 14
 
+  front:
+    name: the window / shard ${{ matrix.shard }} of 2
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      - name: Half of the window, dealt out so the shards weigh the same
+        run: |
+          list=$(git ls-files src \
+            | grep -E '\.tsx?$' \
+            | grep -vE '\.test\.tsx?$|^src/tests/|^src/locales\.ts$|^src/main\.tsx$|\.d\.ts$' \
+            | xargs wc -l \
+            | grep -v ' total$' \
+            | sort -rn \
+            | awk -v shard=${{ matrix.shard }} -v many=2 '
+                { name[NR] = $2; wide[NR] = $1; count = NR }
+                END {
+                  for (i = 1; i <= count; i++) {
+                    least = 1
+                    for (s = 2; s <= many; s++) if (load[s] < load[least]) least = s
+                    load[least] += wide[i]
+                    if (least == shard) print name[i]
+                  }
+                }' \
+            | paste -sd, -)
+          echo "$list"
+          npx stryker run --mutate "$list" --concurrency 4 \
+            --reporters progress-append-only,clear-text,json
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mutants-window-${{ matrix.shard }}
+          path: app/reports/stryker.json
+          if-no-files-found: error
+          retention-days: 14
+
   score:
     name: what the whole sweep came to
     if: always() && !cancelled()
-    needs: [core, windows]
+    needs: [core, windows, front]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -115,6 +168,7 @@ jobs:
       - name: Every shard told as one number
         env:
           WANT: 4
+          WANT_WINDOW: 2
         run: python3 scripts/mutants_score.py
 
       - name: The number, on the branch that holds nothing else
@@ -141,10 +195,10 @@ jobs:
             if git push origin score; then
               exit 0
             fi
-            echo "el marcador no se pudo empujar (${attempt}/3)"
+            echo "the score would not push (${attempt}/3)"
             git fetch origin score --depth 1 || true
             git rebase FETCH_HEAD || git rebase --abort || true
             sleep $((attempt * 5))
           done
-          echo "::error::el marcador no se pudo empujar"
+          echo "::error::the score would not push"
           exit 1

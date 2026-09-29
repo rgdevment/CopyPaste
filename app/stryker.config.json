@@ -1,0 +1,47 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.ts"
+  },
+  "coverageAnalysis": "perTest",
+  "reporters": [
+    "progress",
+    "clear-text",
+    "html",
+    "json"
+  ],
+  "htmlReporter": {
+    "fileName": "reports/stryker.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/stryker.json"
+  },
+  "inPlace": false,
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": "always",
+  "ignorePatterns": [
+    "src-tauri/target",
+    "src-tauri/binaries",
+    "src-tauri/icons",
+    "src-tauri/gen",
+    "dist",
+    "coverage"
+  ],
+  "mutate": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "!src/**/*.d.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/tests/**",
+    "!src/main.tsx",
+    "!src/locales.ts"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": null
+  }
+}

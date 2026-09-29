@@ -46,7 +46,7 @@ jobs:
   tested:
     name: Tested when it landed
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read
@@ -58,7 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for attempt in $(seq 1 40); do
+          for attempt in $(seq 1 80); do
             if ! said=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --event push \
               --limit 1 --json status,conclusion \
               --jq 'if length == 0 then "" else .[0] | "\(.status) \(.conclusion)" end' \
@@ -77,16 +77,16 @@ jobs:
                 exit 1
                 ;;
               "")
-                echo "no CI run for ${GITHUB_SHA:0:8} yet (${attempt}/40)"
+                echo "no CI run for ${GITHUB_SHA:0:8} yet (${attempt}/80)"
                 sleep 30
                 ;;
               *)
-                echo "CI on ${GITHUB_SHA:0:8} is still running (${attempt}/40)"
+                echo "CI on ${GITHUB_SHA:0:8} is still running (${attempt}/80)"
                 sleep 30
                 ;;
             esac
           done
-          echo "::error::twenty minutes and CI on ${GITHUB_SHA:0:8} has not finished, or never \
+          echo "::error::forty minutes and CI on ${GITHUB_SHA:0:8} has not finished, or never \
             ran: a tag belongs on a commit that reached main and was tested there"
           exit 1
 
@@ -124,7 +124,6 @@ jobs:
       HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
       HAS_APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD != '' }}
       HAS_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID != '' }}
-      HAS_APPLE_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY != '' }}
       HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
       HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
@@ -144,9 +143,6 @@ jobs:
             { [ "$HAS_APPLE_APP_PASSWORD" != "true" ] || [ "$HAS_APPLE_TEAM_ID" != "true" ]; }; then
             fail "APPLE_ID is set but APPLE_APP_PASSWORD or APPLE_TEAM_ID is empty"
           fi
-          if [ "$HAS_P12" = "true" ] && [ "$HAS_APPLE_IDENTITY" != "true" ]; then
-            fail "MACOS_CERTIFICATE_P12 is set but APPLE_SIGNING_IDENTITY is empty: the app would be bundled unsigned"
-          fi
           if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$HAS_UPDATER_PASSWORD" != "true" ]; then
             echo "::notice::the updater key carries no password; that is fine if it was made without one"
           fi
@@ -163,7 +159,6 @@ jobs:
             if [ "$BUILD_MACOS" = "true" ]; then
               want MACOS_CERTIFICATE_P12 "$HAS_P12"
               want MACOS_CERTIFICATE_PASSWORD "$HAS_P12_PASSWORD"
-              want APPLE_SIGNING_IDENTITY "$HAS_APPLE_IDENTITY"
               want APPLE_ID "$HAS_APPLE_ID"
               want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
               want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
@@ -209,7 +204,7 @@ jobs:
 
   bundle-windows:
     name: copypaste-windows-installer
-    needs: version
+    needs: [version, tested]
     runs-on: windows-latest
     timeout-minutes: 60
     outputs:
@@ -442,7 +437,7 @@ jobs:
 
   bundle-macos:
     name: copypaste-macos-installer (${{ matrix.arch }})
-    needs: version
+    needs: [version, tested]
     if: needs.version.outputs.macos == 'true'
     runs-on: macos-latest
     timeout-minutes: 60
@@ -509,14 +504,20 @@ jobs:
           rm -f "$CERT_PATH"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
+          identity=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | grep "Developer ID Application" | head -1 | awk '{print $2}')
+          if [ -z "$identity" ]; then
+            echo "::error::the certificate went in but no Developer ID Application came out of it"
+            exit 1
+          fi
+          echo "APPLE_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
+
       - name: Build
         working-directory: app
         run: npm run tauri build -- --target "$TARGET" --no-bundle
 
       - name: Sign the settings binary
         if: env.HAS_P12 == 'true'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           bin="target/$TARGET/release/CopyPaste"
           codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$bin"
@@ -525,7 +526,6 @@ jobs:
       - name: Bundle
         working-directory: app
         env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |

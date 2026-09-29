@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   conventional:
-    name: Conventional commits
+    name: Conventional commit messages
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
