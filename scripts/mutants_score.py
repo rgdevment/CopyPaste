@@ -52,10 +52,26 @@ def of_the_window(one: pathlib.Path) -> tuple[int, int] | None:
     return caught, missed
 
 
+def counted(name: str, fallback: int) -> int | None:
+    said = os.environ.get(name)
+    if said is None:
+        return fallback
+    said = said.strip()
+    if not said.isdigit():
+        print(
+            f"::error::{name} is set to «{said}» and a shard count is a number. "
+            "Left empty it would switch off the very check it configures"
+        )
+        return None
+    return int(said)
+
+
 def score() -> int:
     root = pathlib.Path(os.environ.get("FROM", "outcomes"))
-    want = int(os.environ.get("WANT", "1") or "0")
-    want_window = int(os.environ.get("WANT_WINDOW", "0") or "0")
+    want = counted("WANT", 1)
+    want_window = counted("WANT_WINDOW", 0)
+    if want is None or want_window is None:
+        return 1
     badge = pathlib.Path(os.environ.get("BADGE", "mutants.json"))
 
     crates = sorted(root.rglob("outcomes.json"))

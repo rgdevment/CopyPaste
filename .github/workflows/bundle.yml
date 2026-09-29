@@ -139,7 +139,7 @@ jobs:
           want 'RmDir "$LOCALAPPDATA\${PRODUCTNAME}"' \
             "leave the shared folder standing unless it is already empty"
           stray=$(grep -oiE 'RmDir( /[A-Za-z]+)* /r "[^"]*"' "$flat" \
-            | grep -viE '(\\blobs|\\thumbs|\$\{BUNDLEID\})"$' || true)
+            | grep -viE '(\\blobs|\\thumbs|\$\{BUNDLEID\}|\$INSTDIR)"$' || true)
           if [ -n "$stray" ]; then
             echo "::error::the generated installer takes a whole folder that is not its own, and the one it shares with CopyPaste 2 holds that history: $stray"
             status=1
