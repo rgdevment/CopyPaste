@@ -120,7 +120,7 @@ jobs:
             echo "::error::no block comments either"; exit 1
           fi
 
-      - name: No file grows past what a person can hold
+      - name: No file or function grows past what a person can hold
         run: python3 scripts/oversized.py
 
       - name: No crate slips out of mutation
