@@ -10,93 +10,95 @@ SAID = KEPT.as_posix()
 WHERE = ("crates", "app/src", "app/src-tauri/src")
 TABLES = ("locales.ts",)
 QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"')
+CHARRED = re.compile(r"'(?:[^'\\]|\\.)'")
+NOTED = re.compile(r"//.*$")
+ONLY_IN_TESTS = re.compile(r"#\[cfg\((all\()?\s*test\b")
 HEADED = re.compile(
     r"(?P<lead>\s*)(pub(\([^)]*\))? )?(default )?(const )?(async )?(unsafe )?"
     r'(extern "[A-Za-z-]+" )?fn (?P<name>\w+)'
 )
 
 
+def bare_of(line: str) -> str:
+    return NOTED.sub("", CHARRED.sub("''", QUOTED.sub('""', line)))
+
+
 def braces(line: str) -> int:
-    bare = QUOTED.sub('""', line)
+    bare = bare_of(line)
     return bare.count("{") - bare.count("}")
 
 
-def code_of(at: pathlib.Path) -> int:
-    lines = at.read_text(encoding="utf-8", errors="replace").splitlines()
-    if at.suffix != ".rs":
-        return len(lines)
-    held, turn, last = 0, 0, len(lines)
-    while turn < last:
-        if lines[turn].strip() == "#[cfg(test)]":
-            ahead = turn + 1
-            while ahead < last and not lines[ahead].strip():
-                ahead += 1
-            depth, opened = 0, False
-            while ahead < last:
-                bare = QUOTED.sub('""', lines[ahead])
-                depth += braces(lines[ahead])
-                opened = opened or "{" in bare
-                if opened and depth <= 0:
-                    break
-                if not opened and bare.rstrip().endswith(";"):
-                    break
-                ahead += 1
-            turn = ahead + 1
-            continue
-        held += 1
-        turn += 1
-    return held
+def block_ends(lines: list[str], from_turn: int) -> int:
+    last = len(lines)
+    ahead = from_turn
+    while ahead < last and not lines[ahead].strip():
+        ahead += 1
+    depth, opened = 0, False
+    while ahead < last:
+        bare = bare_of(lines[ahead])
+        depth += braces(lines[ahead])
+        opened = opened or "{" in bare
+        if opened and depth <= 0:
+            break
+        if not opened and bare.rstrip().endswith(";"):
+            break
+        ahead += 1
+    return ahead
 
 
-def without_tests(at: pathlib.Path) -> list[str]:
+def blanked(at: pathlib.Path) -> list[str | None]:
     lines = at.read_text(encoding="utf-8", errors="replace").splitlines()
-    kept = list(lines)
+    kept: list[str | None] = list(lines)
     turn, last = 0, len(lines)
     while turn < last:
-        if lines[turn].strip() != "#[cfg(test)]":
+        if not ONLY_IN_TESTS.match(lines[turn].strip()):
             turn += 1
             continue
-        ahead = turn + 1
-        while ahead < last and not lines[ahead].strip():
-            ahead += 1
-        depth, opened = 0, False
-        while ahead < last:
-            bare = QUOTED.sub('""', lines[ahead])
-            depth += braces(lines[ahead])
-            opened = opened or "{" in bare
-            if opened and depth <= 0:
-                break
-            if not opened and bare.rstrip().endswith(";"):
-                break
-            ahead += 1
-        for each in range(turn, min(ahead + 1, last)):
-            kept[each] = ""
-        turn = ahead + 1
+        ends = block_ends(lines, turn + 1)
+        for each in range(turn, min(ends + 1, last)):
+            kept[each] = None
+        turn = ends + 1
     return kept
+
+
+def code_of(at: pathlib.Path) -> int:
+    if at.suffix != ".rs":
+        return len(at.read_text(encoding="utf-8", errors="replace").splitlines())
+    return sum(1 for line in blanked(at) if line is not None)
 
 
 def held_of(at: pathlib.Path) -> dict[str, int]:
     if at.suffix != ".rs":
         return {}
-    lines = without_tests(at)
+    lines = blanked(at)
     found: dict[str, int] = {}
-    open_at = None
-    name = ""
-    lead = 0
+    open_at: list[tuple[str, int, int]] = []
+    waiting: tuple[str, int] | None = None
+    depth = 0
     for turn, line in enumerate(lines):
-        said = HEADED.match(line)
-        if said and line.rstrip().endswith("{"):
-            if open_at is not None:
-                found[name] = turn - open_at
-            open_at, name, lead = turn, said.group("name"), len(said.group("lead"))
+        if line is None:
             continue
-        if open_at is None:
-            continue
-        if line.rstrip().lstrip().startswith("}") and (len(line) - len(line.lstrip())) <= lead:
-            found[name] = turn - open_at + 1
-            open_at = None
-    if open_at is not None:
-        found[name] = len(lines) - open_at
+        bare = bare_of(line)
+        if waiting is None:
+            said = HEADED.match(line)
+            if said:
+                waiting = (said.group("name"), turn)
+        if waiting is not None:
+            if "{" in bare:
+                open_at.append((waiting[0], waiting[1], depth))
+                waiting = None
+            elif ";" in bare:
+                waiting = None
+        for letter in bare:
+            if letter == "{":
+                depth += 1
+            elif letter == "}":
+                depth -= 1
+                while open_at and depth <= open_at[-1][2]:
+                    name, began, _ = open_at.pop()
+                    found[name] = max(found.get(name, 0), turn - began + 1)
+    for name, began, _ in open_at:
+        found[name] = max(found.get(name, 0), len(lines) - began)
     return found
 
 
@@ -114,7 +116,7 @@ def reaching() -> list[pathlib.Path]:
                 continue
             if any(said.endswith(one) for one in TABLES):
                 continue
-            if where == "crates" and "/src/" not in said:
+            if where == "crates" and "/src/" not in said and "/examples/" not in said:
                 continue
             every.append(at)
     return every
@@ -142,11 +144,11 @@ def noted() -> dict[str, int] | None:
         said = line.strip()
         if not said or said.startswith("#"):
             continue
-        parts = said.split(None, 1)
-        if len(parts) != 2 or not parts[0].isdigit():
-            print(f"::error file={SAID},line={turn}::{SAID} wants a count and a path, and this line says «{said}»")
+        parts = said.split(None, 2)
+        if len(parts) < 3 or not parts[0].isdigit():
+            print(f"::error file={SAID},line={turn}::{SAID} wants a count, a path and why it stays, and this line says «{said}»")
             return None
-        kept[parts[1].split("  ")[0].strip()] = int(parts[0])
+        kept[parts[1]] = int(parts[0])
     return kept
 
 
@@ -167,7 +169,7 @@ def main() -> int:
         it = f"{name} in {at}" if name else at
         if was is None:
             if now > roof:
-                print(f"::error file={at}::{it} is {now} lines of code; {roof} is the ceiling. Split it along a seam, or write «{now} {what}  why it stays» into {SAID}")
+                print(f"::error file={at}::{it} is {now} lines of code; {roof} is the ceiling. Split it along a seam, or write «{now} {what} why it stays» into {SAID}")
                 status = 1
         elif now > was:
             print(f"::error file={at}::{it} was already over the ceiling at {was} lines and grew to {now}. What is above it only shrinks")

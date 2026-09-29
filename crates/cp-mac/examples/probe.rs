@@ -1,4 +1,3 @@
-#![allow(clippy::too_many_lines)]
 #[cfg(target_os = "macos")]
 include!("probe/battery.rs");
 
