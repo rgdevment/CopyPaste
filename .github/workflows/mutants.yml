@@ -60,7 +60,7 @@ jobs:
             shard: --shard 1/2
           - os: macos-15
             name: macos
-            crates: -p cp-core -p cp-store -p cp-config
+            crates: -p cp-core -p cp-store -p cp-config -p cp-mac
             shard: ""
     steps:
       - uses: actions/checkout@v7

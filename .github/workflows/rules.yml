@@ -123,6 +123,9 @@ jobs:
       - name: No file grows past what a person can hold
         run: python3 scripts/oversized.py
 
+      - name: No crate slips out of mutation
+        run: python3 scripts/mutants_cover.py
+
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
