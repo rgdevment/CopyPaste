@@ -26,16 +26,18 @@ def code_of(at: pathlib.Path) -> int:
             ahead = turn + 1
             while ahead < last and not lines[ahead].strip():
                 ahead += 1
-            if ahead < last and lines[ahead].lstrip().startswith("mod "):
-                depth, opened = 0, False
-                while ahead < last:
-                    depth += braces(lines[ahead])
-                    opened = opened or "{" in QUOTED.sub('""', lines[ahead])
-                    if opened and depth <= 0:
-                        break
-                    ahead += 1
-                turn = ahead + 1
-                continue
+            depth, opened = 0, False
+            while ahead < last:
+                bare = QUOTED.sub('""', lines[ahead])
+                depth += braces(lines[ahead])
+                opened = opened or "{" in bare
+                if opened and depth <= 0:
+                    break
+                if not opened and bare.rstrip().endswith(";"):
+                    break
+                ahead += 1
+            turn = ahead + 1
+            continue
         held += 1
         turn += 1
     return held

@@ -22,6 +22,7 @@
   "tempDirName": ".stryker-tmp",
   "cleanTempDir": "always",
   "ignorePatterns": [
+    "src-tauri/target",
     "src-tauri/binaries",
     "src-tauri/icons",
     "src-tauri/gen",

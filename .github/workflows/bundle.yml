@@ -116,12 +116,6 @@ jobs:
               status=1
             fi
           }
-          never() {
-            if grep -qiE "$1" "$flat"; then
-              echo "::error::the generated installer would $2"
-              status=1
-            fi
-          }
           want 'oname=cp-panel.exe' \
             "lay down the panel; the sidecar was not bundled"
           want 'StrCpy $INSTDIR "$LOCALAPPDATA\Programs' \
