@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import pathlib
 import re
 import sys
@@ -13,6 +14,7 @@ QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"')
 CHARRED = re.compile(r"'(?:[^'\\]|\\.)'")
 NOTED = re.compile(r"//.*$")
 ONLY_IN_TESTS = re.compile(r"#\[cfg\((all\()?\s*test\b")
+DECLARED = re.compile(r'#\[path\s*=\s*"([^"]+)"\]')
 HEADED = re.compile(
     r"(?P<lead>\s*)(pub(\([^)]*\))? )?(default )?(const )?(async )?(unsafe )?"
     r'(extern "[A-Za-z-]+" )?fn (?P<name>\w+)'
@@ -102,8 +104,28 @@ def held_of(at: pathlib.Path) -> dict[str, int]:
     return found
 
 
+def only_tests() -> set[str]:
+    said = set()
+    for where in WHERE:
+        base = pathlib.Path(where)
+        if not base.is_dir():
+            continue
+        for at in base.rglob("*.rs"):
+            lines = at.read_text(encoding="utf-8", errors="replace").splitlines()
+            for turn, line in enumerate(lines):
+                if not ONLY_IN_TESTS.match(line.strip()):
+                    continue
+                for ahead in lines[turn + 1:turn + 4]:
+                    found = DECLARED.search(ahead)
+                    if found:
+                        said.add(pathlib.Path(os.path.normpath(at.parent / found.group(1))).as_posix())
+                        break
+    return said
+
+
 def reaching() -> list[pathlib.Path]:
     every = []
+    apart = only_tests()
     for where in WHERE:
         base = pathlib.Path(where)
         if not base.is_dir():
@@ -113,6 +135,8 @@ def reaching() -> list[pathlib.Path]:
                 continue
             said = at.as_posix()
             if "node_modules" in said or "/tests/" in said or ".test." in said:
+                continue
+            if said in apart:
                 continue
             if any(said.endswith(one) for one in TABLES):
                 continue
