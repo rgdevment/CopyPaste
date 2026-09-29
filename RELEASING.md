@@ -44,11 +44,13 @@ before cutting it for real.
 
 ### What the 3.0 does not carry yet
 
-Two pieces, in the order they will be built, each on its own branch:
+Bringing the 2.x history over is done and wired: `former` finds `clipboard.db`
+and weighs it, and Settings → Backup brings it over or deletes it, each behind
+its own button.
 
-1. **Bringing the 2.x history over.** `former` finds `clipboard.db` and weighs
-   it; the two buttons that would act on it are still disabled.
-2. **The bridge for whoever stays on the 2.x.** See the crossing below.
+What is left is publishing the bridge for whoever stays on the 2.x. It is
+built — see the crossing below — and waits only on the `BRIDGE_MANIFEST`
+variable and a stable tag.
 
 ### The app does check for updates
 
@@ -122,34 +124,79 @@ binaries and the manifest.
 Pre-releases (`v3.1.0-rc1`, `-beta1`) publish the GitHub Release and skip the
 Store, winget and Homebrew.
 
-## Crossing from the 2.x — decided 2026-09-23
+## Crossing from the 2.x — decided 2026-09-29
 
 Every installed 2.x copy polls
 `https://github.com/rgdevment/CopyPaste/releases/latest/download/release-manifest.json`
-and its `.sig`, verifies the signature against an Ed25519 public key bundled in
-the app, and caches the answer for fifteen days
+and its `.sig` every 24 hours, verifies the signature against an Ed25519 public
+key bundled in the app, and caches the answer for fifteen days
 (`app/lib/services/release_manifest_service.dart` on `v2-stable`). Left with no
-file, that user never learns the 3.0 exists. So the 3.0 keeps speaking both
-languages for a while.
+file it falls back to that cache and marks it stale; it never learns the 3.0
+exists. So the 3.0 speaks the old language too, for a while.
 
-**The bridge is built from the 2.x, not from the 3.0** (decided 28/09/2026). A
-new 2.x release is published that reads the `manifest` branch, so that whoever
-stays on the 2 hears about the 3.0 through the channel they already have. It is
-the last thing to be done, once the 3.0 is ready — not before.
+**The 3.0 publishes the bridge itself**, as an asset on its own releases, and
+no new 2.x is cut. The alternative — a bridge version of the 2.x that reads the
+`manifest` branch — reaches only whoever installs it, and to hear of it they
+would need this same channel anyway.
 
-`RELEASE_PRIVATE_KEY` is still in the repository's secrets, so anything that
-has to be signed the way the 2.x expects can be. Three rules govern what that
-release says:
+It lives in the `publish` job as `The manifest a 2.x can read`, behind the
+`BRIDGE_MANIFEST` variable. `.github/bridge-manifest.json` is the template,
+`scripts/sign_manifest.sh` signs it with `RELEASE_PRIVATE_KEY` — still in the
+repository's secrets — and refuses to write anything unless the signature
+answers to `.github/v2-release-pubkey.txt`, the very key those copies carry. A
+2.x drops a manifest whose signature does not verify without a word, so that
+check cannot be left to chance. With the variable on, `RELEASE_PRIVATE_KEY`
+joins the secrets the `version` job demands before anything is built, because
+finding out at the end costs an hour of builds and the release aborts before
+the GitHub Release is even created.
 
-- `severity: recommended`. Never `critical`: that paints a full-screen block
-  over a working 2.x, and this user has to be free to stay.
-- `Min-Supported` set explicitly and low. Left to its default it takes the
-  version being tagged — `3.0.0` — which puts every 2.x below the floor.
-- `releaseNotes`, in both languages, **says that the history is not migrated**.
-  It is the only warning that user sees before jumping.
+**Switching the variable off is not a quiet retirement.** The asset is served
+from `releases/latest/download/`, so the first stable tag published without it
+hands a 404 to every copy still on the 2.x, all at once, and they fall back to
+their own cache and go quiet for good — the very outcome this exists to
+prevent. So the watchdog in `feed.yml` does _not_ hide when the variable is
+off: it keeps looking, and while the release that is out still carries the
+manifest it warns, every morning, that the next stable tag will cut it. Turning
+it off is a decision to be made after that warning, not before.
 
-Each installed copy polls every fifteen days, so there is no hurry once the
-bridge release is out: every one of them gets several windows to notice.
+This file has nothing to do with the `release-manifest.json` on the `manifest`
+branch beyond the name, which the URL above forces. The 2.x wants `schema`,
+`latest`, `minimumSupported`, `blockedVersions`, `severity`, `channels` and
+`releaseNotes`, and rejects the whole document if `minimumSupported` is
+missing; the feed on the branch is a three-key index. Both are generated, and
+neither is the other.
+
+What a 2.x actually shows from it is narrower than the schema suggests:
+
+- `latest` reaches the badge in the bottom bar and the dialog behind it.
+- `severity` decides whether that badge is quiet or red. It must be one of
+  `patch`, `minor`, `major`, `critical` — **anything else silently means
+  `patch`**, which is what `recommended` has been doing all along. The template
+  says `major`.
+- `channels` and `releaseNotes` are read **only** by the blocked-version
+  screen, which needs `critical` or a listed version to appear. Neither is
+  used, and the step refuses both: a working 2.x is never locked out of a
+  history only that person has. Should a 2.x ever have to be blocked for real,
+  it is a deliberate edit here, not a default.
+- The dialog's own text is compiled into the 2.x and its button opens
+  `releases/latest`. **The release notes on the tag are the warning that user
+  reads**, so they are where the crossing gets explained — that the history is
+  found and offered, and that nothing moves unless asked.
+
+`minimumSupported` stays at `2.0.0`: explicit and low. It only matters through
+`critical`, and that combination is refused, but a floor at the version being
+tagged would put every 2.x below it the day someone changes one line.
+
+A prerelease is not what `releases/latest` serves, so no 2.x would ever read a
+candidate's copy. It is therefore built, validated and signed on every `-rc`
+and **deliberately not attached**: the path gets exercised before the run that
+cannot fail, and the release carries no asset whose bytes depend on what a
+server answered that morning — which would collide with the Publish step's
+refusal to replace a published asset with different bytes on a rerun. Exposure
+begins with the first stable 3.0, whose asset every installed copy reads within
+a day. On a stable tag the live manifest is fetched for one purpose only, to
+refuse a version that walks it backwards, and a reply that is neither 200 nor
+404 stops the release rather than guessing.
 
 The Microsoft Store crosses differently, and deliberately: the 3.0.0 ships to
 the **same SKU** the 2.x already publishes (`9NBJRZF3K856`), so those installs
@@ -193,11 +240,13 @@ The 3.0 pipeline will need these, all named as Tisty names them:
 | `MACOS_CERTIFICATE_P12` / `MACOS_CERTIFICATE_PASSWORD`       | secret   | Signs the macOS app.                      |
 | `APPLE_ID` / `APPLE_APP_PASSWORD` / `APPLE_TEAM_ID` / `APPLE_SIGNING_IDENTITY` | secret | Notarisation. |
 | `TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD` | secret   | Signs the update artifacts.              |
+| `RELEASE_PRIVATE_KEY`                        | secret   | Signs the bridge manifest the 2.x reads. |
 | `STORE_CLIENT_ID` / `STORE_CLIENT_SECRET` / `STORE_SELLER_ID` / `STORE_TENANT_ID` | secret | Partner Center. |
 | `WINGET_TOKEN`                               | secret   | Opens the pull request in `winget-pkgs`. |
 | `GIST_TOKEN`                                 | secret   | Pushes to the Homebrew tap.              |
 | `STORE_APP_ID`, `STORE_PUBLISH`              | variable | Store product and its on/off switch.     |
 | `WINGET_PUBLISH`                             | variable | Off until the package exists.            |
+| `BRIDGE_MANIFEST`                            | variable | The manifest a 2.x reads. Off once nobody is left on the 2. |
 | `MSIX_IDENTITY`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_DISPLAY` | variable | Package identity, frozen from the 2.x. |
 
 Rotating any of these needs no code change.
