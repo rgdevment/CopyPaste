@@ -1,0 +1,1 @@
+370 crates/cp-panel/src/app.rs::wire  the panel callbacks, one after another: splitting it would only move the list
