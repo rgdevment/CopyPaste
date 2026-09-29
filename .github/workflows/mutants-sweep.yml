@@ -17,7 +17,7 @@ env:
 
 jobs:
   core:
-    name: cp-core and cp-store / shard ${{ matrix.shard }} of 2
+    name: the crates macOS can build / shard ${{ matrix.shard }} of 2
     runs-on: macos-15
     timeout-minutes: 120
     strategy:
@@ -38,14 +38,14 @@ jobs:
         id: run
         run: |
           set +e
-          cargo mutants -p cp-core -p cp-store --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
+          cargo mutants -p cp-core -p cp-store -p cp-config -p cp-mac --shard $(( ${{ matrix.shard }} - 1 ))/2 --no-times -j 2
           echo "code=$?" >> "$GITHUB_OUTPUT"
 
       - name: What survived
         if: always()
         env:
           CODE: ${{ steps.run.outputs.code }}
-          TITLE: cp-core and cp-store, shard ${{ matrix.shard }} of 2
+          TITLE: the crates macOS can build, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
       - uses: actions/upload-artifact@v7
