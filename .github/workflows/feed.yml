@@ -156,6 +156,42 @@ jobs:
             echo "no candidate is announced, and none is served"
           fi
 
+      - name: The 2.x is still being told
+        if: vars.BRIDGE_MANIFEST == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          base="https://github.com/${{ github.repository }}/releases/latest/download"
+          for one in release-manifest.json release-manifest.json.sig; do
+            if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+              -H "Cache-Control: no-cache" -o "bridge-$one" "$base/$one"; then
+              echo "::error::$one does not answer. Every copy still on the 2.x is reading its own \
+                    cache and will call it stale in fifteen days, and none of them will hear \
+                    about the 3.0."
+              exit 1
+            fi
+          done
+
+          bash scripts/verify_manifest.sh bridge-release-manifest.json \
+            bridge-release-manifest.json.sig .github/v2-release-pubkey.txt
+
+          said=$(jq -r '.latest // ""' bridge-release-manifest.json)
+          newest=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
+            -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' \
+            | sed 's/^v//' | grep -E '^[3-9][0-9]*\.' | sort -V | tail -1 || true)
+          if [ -z "$newest" ]; then
+            echo "the 2.x is being told «$said», and no stable 3.x is out for it to be told about"
+            exit 0
+          fi
+          if [ "$said" != "$newest" ]; then
+            echo "::error::the 2.x is being told «$said» and the highest stable release is \
+                  «$newest». Either the bridge was left off the release that went out, or it \
+                  carries a version nobody is publishing."
+            exit 1
+          fi
+          echo "the 2.x is being told $said, which is the release that is out"
+
       # The branch is the feed and nothing else. Cut with `checkout -B` instead of `--orphan` it
       # carries a copy of the whole source, and that copy would sit there ageing unnoticed.
       - name: The branch holds only the feed

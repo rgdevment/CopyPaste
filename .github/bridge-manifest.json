@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "latest": "0.0.0",
+  "minimumSupported": "2.0.0",
+  "blockedVersions": [],
+  "severity": "major",
+  "channels": {
+    "github_windows": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "github_macos": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "scoop": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "msstore": {
+      "url": "ms-windows-store://pdp/?productid=PLACEHOLDER"
+    },
+    "homebrew": {
+      "command": "brew upgrade --cask copypaste"
+    }
+  },
+  "releaseNotes": {
+    "en": {
+      "summary": "CopyPaste 3.0 is a new application. It finds the history of your 2.x and offers to bring it over; nothing moves until you ask for it.",
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    },
+    "es": {
+      "summary": "CopyPaste 3.0 es una aplicación nueva. Encuentra el historial de tu 2.x y ofrece traerlo; nada se mueve hasta que tú lo pidas.",
+      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+    }
+  }
+}

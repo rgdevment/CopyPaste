@@ -856,6 +856,86 @@ jobs:
           rm -f feed.pub one.minisig
           echo "the signatures and the shipped key are halves of the same pair"
 
+      - name: The manifest a 2.x can read
+        if: vars.BRIDGE_MANIFEST == 'true'
+        env:
+          RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          STORE_APP_ID: ${{ vars.STORE_APP_ID }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          v="${{ needs.version.outputs.version }}"
+          if [ -z "$RELEASE_PRIVATE_KEY" ]; then
+            echo "::error::BRIDGE_MANIFEST is on and RELEASE_PRIVATE_KEY is not, so the bridge \
+          would be a manifest no 2.x can verify. Nothing was written."
+            exit 1
+          fi
+
+          said=$(curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 \
+                   "https://github.com/${{ github.repository }}/releases/latest/download/release-manifest.json" \
+                 2>/dev/null | jq -r '.latest // ""' || true)
+          echo "the manifest a 2.x reads today says «${said:-nothing}»"
+
+          if [ "$PRERELEASE" = "true" ]; then
+            if [ -z "$said" ]; then
+              echo "::warning::there is no manifest to carry forward, and a prerelease is not \
+          what latest/download serves, so this release carries none"
+              exit 0
+            fi
+            latest="$said"
+          else
+            if [ -n "$said" ] && [ "$said" != "$v" ] \
+               && [ "$(printf '%s\n%s\n' "$said" "$v" | sort -V | tail -1)" != "$v" ]; then
+              echo "::error::the manifest out there already says $said, and $v would walk it \
+          back. Nothing was written."
+              exit 1
+            fi
+            latest="$v"
+          fi
+
+          made="$RUNNER_TEMP/release-manifest.json"
+          jq --arg l "$latest" \
+             --arg u "https://github.com/${{ github.repository }}/releases/tag/${GITHUB_REF_NAME}" \
+             --arg store "$STORE_APP_ID" '
+            .latest = $l
+            | .releaseNotes.en.url = $u
+            | .releaseNotes.es.url = $u
+            | if $store == "" then del(.channels.msstore)
+              else .channels.msstore.url = "ms-windows-store://pdp/?productid=" + $store end
+          ' .github/bridge-manifest.json > "$made"
+
+          if grep -q PLACEHOLDER "$made"; then
+            echo "::error::a placeholder survived the bridge manifest"
+            exit 1
+          fi
+
+          if ! jq -e '
+            def semver: split("-")[0] | split(".") as $p
+              | ($p | length) == 3 and ([$p[] | tonumber?] | length) == 3;
+            .schema == 1
+            and (.latest | semver)
+            and (.minimumSupported | semver)
+            and (.blockedVersions | type == "array")
+            and ([.severity] - ["patch", "minor", "major", "critical"] | length == 0)
+          ' "$made" > /dev/null; then
+            echo "::error::a 2.x would refuse this manifest whole: it wants schema 1, two \
+          three-number versions, an array of blocked ones, and a severity it knows. Anything \
+          else it drops without a word."
+            exit 1
+          fi
+
+          if [ "$(jq -r .severity "$made")" = "critical" ] \
+             || [ "$(jq -r '.blockedVersions | length' "$made")" != "0" ]; then
+            echo "::error::this manifest would put a 2.x behind its blocked-version screen and \
+          shut people out of a history only they have. The bridge invites; it does not lock."
+            exit 1
+          fi
+
+          printf '%s' "$RELEASE_PRIVATE_KEY" | bash scripts/sign_manifest.sh \
+            "$made" "$made.sig" .github/v2-release-pubkey.txt
+
+          mv "$made" "$made.sig" dist/
+          cat dist/release-manifest.json
+
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
 
