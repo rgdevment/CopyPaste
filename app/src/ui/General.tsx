@@ -1,15 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useState } from "react";
-import {
-  combination,
-  type Kept,
-  type Look,
-  onMac,
-  PRIVACY_PANE,
-  useKeys,
-  useTrust,
-  useWaking,
-} from "../core";
+import { type Kept, type Look, onMac, PRIVACY_PANE, useTrust, useWaking } from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
@@ -18,12 +8,10 @@ export default function General({
   change,
 }: {
   kept: Kept;
-  change: (what: Partial<Kept>) => void;
+  change: (what: Partial<Kept>) => Promise<void>;
 }) {
   const { waking, trouble, ask } = useWaking();
   const { trust, asked, ask: askTrust } = useTrust();
-  const keys = useKeys();
-  const [asking, setAsking] = useState(false);
 
   return (
     <>
@@ -103,37 +91,6 @@ export default function General({
           )}
         </Line>
       )}
-
-      <Line
-        says={t("keys")}
-        why={asking ? t("keysAsk") : keys && !keys.bound ? t("keysTaken") : t("keysWhy")}
-      >
-        <span className={keys && !keys.bound && !asking ? "keys taken" : "keys"}>
-          {kept.shortcut.replaceAll("+", " + ")}
-        </span>
-        <button
-          type="button"
-          className="mild"
-          onClick={() => setAsking(!asking)}
-          onKeyDown={(press) => {
-            if (!asking) {
-              return;
-            }
-            press.preventDefault();
-            if (press.code === "Escape") {
-              setAsking(false);
-              return;
-            }
-            const said = combination(press);
-            if (said !== null) {
-              setAsking(false);
-              change({ shortcut: said });
-            }
-          }}
-        >
-          {asking ? t("keysStop") : t("keysChange")}
-        </button>
-      </Line>
 
       <Line says={t("hides")} why={t("hidesWhy")}>
         <Knob

@@ -29,3 +29,29 @@ fn a_write_that_got_through_is_the_only_one_allowed_to_replace() {
         "a clipboard opened to read claims it may replace"
     );
 }
+
+#[test]
+fn a_read_is_only_called_stuck_once_it_is_past_the_ceiling() {
+    let floor = STUCK_AFTER.as_millis() as u64;
+    assert_eq!(
+        stuck_for(1, 1_000, 1_000 + floor - 1),
+        None,
+        "still working"
+    );
+    assert_eq!(
+        stuck_for(1, 1_000, 1_000 + floor),
+        Some(STUCK_AFTER),
+        "past the ceiling it is stuck"
+    );
+}
+
+#[test]
+fn nothing_is_stuck_when_no_read_is_counted() {
+    assert_eq!(stuck_for(0, 1_000, 9_999_999), None);
+    assert_eq!(stuck_for(1, 0, 9_999_999), None, "nobody wrote a start");
+}
+
+#[test]
+fn a_clock_that_went_backwards_is_not_read_as_an_eternity() {
+    assert_eq!(stuck_for(1, 9_000, 1_000), None);
+}

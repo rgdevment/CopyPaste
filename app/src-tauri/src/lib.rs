@@ -26,6 +26,7 @@ pub fn run() {
             waking::waking,
             waking::wake,
             keys::keys,
+            keys::spare,
             trust::trust,
             trust::ask_trust,
             backup::save_backup,

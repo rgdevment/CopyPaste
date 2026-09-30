@@ -63,7 +63,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
                 ..
             } = event
             {
-                surface(tray.app_handle());
+                crate::panel::show(tray.app_handle());
             }
         })
         .build(app)
@@ -96,17 +96,29 @@ pub fn surface<R: Runtime>(app: &AppHandle<R>) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
-        let _ = window.set_focus();
+        ahead(&window);
         return;
     }
 
-    let _ = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+    let built = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
         .title("CopyPaste")
         .inner_size(780.0, 580.0)
         .min_inner_size(620.0, 460.0)
         .decorations(false)
         .center()
         .build();
+    if let Ok(window) = built {
+        ahead(&window);
+    }
+}
+
+fn ahead<R: Runtime>(window: &tauri::WebviewWindow<R>) {
+    let was = window.is_always_on_top().unwrap_or(false);
+    let _ = window.set_always_on_top(true);
+    let _ = window.set_focus();
+    if !was {
+        let _ = window.set_always_on_top(false);
+    }
 }
 
 #[cfg(test)]

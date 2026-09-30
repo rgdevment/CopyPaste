@@ -1,11 +1,11 @@
 use crate::formats::CATALOG;
 pub use cp_core::capture::Captured;
-use cp_core::capture::insisting;
+use cp_core::capture::insisting_afresh;
 use cp_core::formats::{Family, Take};
 use cp_core::item::{Format, Item, Payload};
 use cp_core::kind::{self, Kind};
+use cp_core::reading;
 use cp_mac_sys::pasteboard::{self, Pasteboard};
-use cp_mac_sys::reading;
 
 pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 
@@ -17,31 +17,12 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
-    let started = pasteboard::change_count_from_any_thread();
-    let afresh = || reading::begin(|| capture(&Pasteboard::general_from_any_thread()));
-    let mut pending = afresh();
-    let mut left = retry.attempts;
-    let got = insisting(retry, pasteboard::change_count_from_any_thread, || {
-        left = left.saturating_sub(1);
-        match pending.waited(patience) {
-            reading::Waited::StillRunning => Captured::TooSlow,
-            reading::Waited::Answered(Captured::TooSlow) | reading::Waited::Gone => {
-                if left > 0 && pasteboard::change_count_from_any_thread() == started {
-                    pending = afresh();
-                }
-                Captured::TooSlow
-            }
-            reading::Waited::Answered(other) => other,
-        }
-    });
-    match got {
-        Captured::Nothing | Captured::TooSlow
-            if pasteboard::change_count_from_any_thread() != started =>
-        {
-            Captured::Superseded
-        }
-        other => other,
-    }
+    insisting_afresh(
+        retry,
+        patience,
+        pasteboard::change_count_from_any_thread,
+        || reading::begin(|| capture(&Pasteboard::general_from_any_thread())),
+    )
 }
 
 pub fn capture(pb: &Pasteboard) -> Captured {

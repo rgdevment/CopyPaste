@@ -55,7 +55,6 @@ struct State {
 enum Asking {
     Forms(i64),
     Kinds,
-    Keys,
 }
 
 struct Request {
@@ -172,6 +171,27 @@ impl App {
     pub fn choose_chip(&self, key: &str) {
         toggle_tag(&self.state, key);
         self.refresh();
+    }
+
+    fn wire_chrome(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        panel.on_ask_settings(move || {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            ui.set_sheet_open(false);
+            let _ = ui.hide();
+            crate::note::tell("settings");
+        });
+        let ui = self.ui.clone();
+        panel.on_nudge(move |dx, dy| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            let window = ui.window();
+            let at = window.position().to_logical(window.scale_factor());
+            window.set_position(slint::LogicalPosition::new(at.x + dx, at.y + dy));
+        });
     }
 
     fn wire(&self, panel: &Panel) {
@@ -478,19 +498,7 @@ impl App {
                 keeping_place(&ui, &state);
             }
         });
-        let ui = self.ui.clone();
-        let state = self.state.clone();
-        panel.on_ask_keys(move || {
-            let Some(ui) = ui.upgrade() else {
-                return;
-            };
-            state.borrow_mut().asking = Asking::Keys;
-            ui.set_sheet_anchor(0.0);
-            ui.set_sheet_span(0.0);
-            ui.set_sheet_subject(Default::default());
-            open_sheet(&ui, crate::say::pick("ATAJOS", "SHORTCUTS"), keys_sheet());
-            arm_sheet(&state, &ui);
-        });
+        self.wire_chrome(panel);
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_sheet_chosen(move |key| {
@@ -516,7 +524,6 @@ impl App {
                     blink(&ui);
                     refresh(&ui, &state);
                 }
-                Asking::Keys => {}
             }
         });
         let ui = self.ui.clone();
@@ -799,108 +806,6 @@ fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
     format!("{}…", kept.trim_end())
 }
 
-fn keys_sheet() -> Vec<FormRow> {
-    keys_sheet_in(crate::say::in_english())
-}
-
-fn keys_sheet_in(english: bool) -> Vec<FormRow> {
-    const KEYS: [(&str, &str, &str, &str); 16] = [
-        (
-            "Enter",
-            "Enter",
-            "pegar lo seleccionado",
-            "paste what is selected",
-        ),
-        (
-            "Shift + Enter",
-            "Shift + Enter",
-            "pegar en plano",
-            "paste as plain text",
-        ),
-        (
-            "Alt + Enter  ·  Ctrl + Enter",
-            "Alt + Enter  ·  Ctrl + Enter",
-            "pegar como…",
-            "paste as…",
-        ),
-        (
-            "Flechas",
-            "Arrows",
-            "moverse por la lista",
-            "move through the list",
-        ),
-        (
-            "Clic",
-            "Click",
-            "abrir la tarjeta; otro clic la cierra",
-            "open the card; another click closes it",
-        ),
-        (
-            "Doble clic",
-            "Double click",
-            "pegar esa tarjeta",
-            "paste that card",
-        ),
-        (
-            "Tab  ·  Shift + Tab",
-            "Tab  ·  Shift + Tab",
-            "recorrer los filtros",
-            "step through the filters",
-        ),
-        (
-            "#imagen  ·  #carpeta",
-            "#image  ·  #folder",
-            "filtrar por tipo desde el buscador",
-            "filter by kind from the search box",
-        ),
-        (
-            "Retroceso",
-            "Backspace",
-            "quitar la última etiqueta",
-            "drop the last tag",
-        ),
-        (
-            "Supr",
-            "Delete",
-            "borrar la seleccionada",
-            "delete the selected one",
-        ),
-        ("Ctrl + P", "Ctrl + P", "anclar o desanclar", "pin or unpin"),
-        (
-            "Ctrl + E",
-            "Ctrl + E",
-            "editar la seleccionada",
-            "edit the selected one",
-        ),
-        (
-            "Flecha derecha",
-            "Right arrow",
-            "abrir o cerrar la tarjeta",
-            "open or close the card",
-        ),
-        (
-            "Ctrl + 1  ·  Ctrl + 2",
-            "Ctrl + 1  ·  Ctrl + 2",
-            "todo  ·  solo lo anclado",
-            "everything  ·  only what is pinned",
-        ),
-        (
-            "Alt + G  ·  Alt + T",
-            "Alt + G  ·  Alt + T",
-            "elegir el tipo",
-            "choose the kind",
-        ),
-        ("Esc", "Esc", "cerrar el panel", "close the panel"),
-    ];
-    KEYS.iter()
-        .map(|(keys_es, keys_en, what_es, what_en)| FormRow {
-            key: Default::default(),
-            label: crate::say::pick_in(english, what_es, what_en).into(),
-            preview: crate::say::pick_in(english, keys_es, keys_en).into(),
-        })
-        .collect()
-}
-
 fn open_sheet(ui: &Panel, title: &str, rows: Vec<FormRow>) {
     ui.set_sheet_at(ui.get_scroll_y());
     ui.set_sheet_armed(false);
@@ -955,6 +860,12 @@ fn vanish(ui: &Panel) {
 }
 
 fn busy() -> &'static str {
+    if crate::here::read_stuck() {
+        return crate::say::pick(
+            "una app dejó de responder con lo copiado; reinicia CopyPaste",
+            "an app stopped answering about what it copied; restart CopyPaste",
+        );
+    }
     crate::say::pick(
         "no se pudo pegar: el portapapeles está ocupado",
         "could not paste: the clipboard is busy",

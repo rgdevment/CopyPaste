@@ -84,6 +84,8 @@ fn ocr_text_is_missing(db: &Connection) -> Result<bool> {
 
 const ORDERING_INDEXES: &str = "
         CREATE INDEX IF NOT EXISTS items_by_recency ON items(modified_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS items_by_touch
+            ON items(MAX(modified_at, COALESCE(last_used_at, 0)) DESC, id DESC);
         CREATE INDEX IF NOT EXISTS items_by_kind ON items(kind, modified_at DESC, id DESC);
 ";
 

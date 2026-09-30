@@ -216,23 +216,23 @@ export default function Backup() {
               <div className="alarm">{fill("formerUnreadable", former.unreadable)}</div>
             ) : (
               <>
-                <div className="said">{fill("formerHas", items(former.items))}</div>
-                <div className="said">{t("formerKeeps")}</div>
-                {former.withStyles > 0 ? (
-                  <div className="said">{fill("formerKeepsStyles", String(former.withStyles))}</div>
-                ) : null}
-                <div className="said">{t("formerLosesPlain")}</div>
-                {former.picturesGone > 0 && (
-                  <div className="said">
-                    {fill("formerLosesPictures", String(former.picturesGone))}
-                  </div>
-                )}
+                <ul className="facts">
+                  <li>{fill("formerHas", items(former.items))}</li>
+                  <li>{t("formerKeeps")}</li>
+                  {former.withStyles > 0 ? (
+                    <li>{fill("formerKeepsStyles", String(former.withStyles))}</li>
+                  ) : null}
+                  <li>{t("formerLosesPlain")}</li>
+                  {former.picturesGone > 0 && (
+                    <li>{fill("formerLosesPictures", String(former.picturesGone))}</li>
+                  )}
+                  <li>{t("formerKeepsSecrets")}</li>
+                  <li>{t("formerPanelRests")}</li>
+                  <li>{t("formerStays")}</li>
+                </ul>
                 {former.beyondKeep > 0 && (
                   <div className="alarm">{fill("formerLosesKept", items(former.beyondKeep))}</div>
                 )}
-                <div className="said">{t("formerKeepsSecrets")}</div>
-                <div className="said">{t("formerPanelRests")}</div>
-                <div className="said">{t("formerStays")}</div>
                 {sure && <div className="alarm">{t("formerDropWhy")}</div>}
               </>
             )

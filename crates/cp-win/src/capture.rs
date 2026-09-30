@@ -1,12 +1,12 @@
 pub use cp_core::capture::Captured;
-use cp_core::capture::insisting;
+use cp_core::capture::insisting_afresh;
 use cp_core::dib;
 use cp_core::formats::{Family, Refusal, Take};
 use cp_core::item::{BLOB_UP_TO, Format, Item, Payload, SYNTHETIC_IMAGE};
 use cp_core::kind::{self, Kind};
+use cp_core::reading;
 use cp_win_sys::clipboard::{self, Clipboard};
 use cp_win_sys::formats::name_of;
-use cp_win_sys::reading;
 use cp_win_sys::writing::text_of;
 
 pub use crate::drop::paths_in;
@@ -25,26 +25,7 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
-    let started = sequence_now();
-    let mut pending = begin_counted();
-    let mut left = retry.attempts;
-    let got = insisting(retry, sequence_now, || {
-        left = left.saturating_sub(1);
-        match pending.waited(patience) {
-            reading::Waited::StillRunning => Captured::TooSlow,
-            reading::Waited::Answered(Captured::TooSlow) | reading::Waited::Gone => {
-                if left > 0 && sequence_now() == started {
-                    pending = begin_counted();
-                }
-                Captured::TooSlow
-            }
-            reading::Waited::Answered(other) => other,
-        }
-    });
-    match got {
-        Captured::Nothing | Captured::TooSlow if sequence_now() != started => Captured::Superseded,
-        other => other,
-    }
+    insisting_afresh(retry, patience, sequence_now, begin_counted)
 }
 
 fn begin_counted() -> reading::Pending<Captured> {
@@ -60,7 +41,7 @@ pub fn capture_now() -> Captured {
 fn capture_counted(counted: &clipboard::Reading) -> Captured {
     let captured = match Clipboard::within(counted) {
         Some(clipboard) => capture(&clipboard),
-        None => Captured::TooSlow,
+        None => Captured::Busy,
     };
     let Captured::Kept(item) = captured else {
         return captured;

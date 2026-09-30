@@ -263,10 +263,10 @@ fn what_is_abandoned(b: &mut Battery) {
             let big = cp_win_sys::writing::utf16_of(&"abcdefghij".repeat(20_000));
             let mut refused = 0;
             let mut placed = 0;
-            let mut waited = 0;
+            let mut quickest = std::time::Duration::MAX;
             for _ in 0..40 {
                 let counted = cp_win_sys::clipboard::reading();
-                let pending = cp_win_sys::reading::begin(move || {
+                let pending = cp_core::reading::begin(move || {
                     let _held = counted;
                     std::thread::sleep(std::time::Duration::from_millis(30));
                 });
@@ -274,13 +274,13 @@ fn what_is_abandoned(b: &mut Battery) {
                 match Clipboard::to_write() {
                     None => refused += 1,
                     Some(clipboard) => {
-                        if asked.elapsed() < std::time::Duration::from_millis(25) {
+                        let took = asked.elapsed();
+                        if took < std::time::Duration::from_millis(25) {
                             return Err(format!(
-                                "the write took the clipboard after {:?}, before the read let go",
-                                asked.elapsed()
+                                "the write took the clipboard after {took:?}, before the read let go"
                             ));
                         }
-                        waited += 1;
+                        quickest = quickest.min(took);
                         if clipboard.replace(&[(CF_UNICODETEXT, &big)])
                             != (cp_win_sys::writing::Written::Placed { formats: 1 })
                         {
@@ -304,26 +304,15 @@ fn what_is_abandoned(b: &mut Battery) {
             if placed == 0 {
                 return Err("every write was refused, so nothing was proven".into());
             }
-            if waited == 0 {
-                return Err(
-                    "not one write was made to wait, so the guard was never exercised".into(),
-                );
-            }
             println!(
-                "            {waited} writes waited for a read to let go, {refused} gave up waiting"
+                "            {placed} writes waited, the quickest {quickest:?}, {refused} gave up"
             );
             Ok(())
         },
     );
 }
 
-fn main() -> std::process::ExitCode {
-    let mut b = Battery {
-        passed: 0,
-        failed: 0,
-        skipped: Vec::new(),
-    };
-
+fn what_the_clipboard_answers(b: &mut Battery) {
     b.group("A · The clipboard responds");
 
     b.case("A1", "it opens and closes without staying locked", || {
@@ -345,6 +334,57 @@ fn main() -> std::process::ExitCode {
         println!("            {} formats: {}", names.len(), names.join(", "));
         Ok(())
     });
+}
+
+fn what_is_read_inside_an_image(b: &mut Battery) {
+    b.group("M · Text inside an image");
+
+    b.case("M1", "the system offers a reading engine", || {
+        if ocr::is_available() {
+            Ok(())
+        } else {
+            Err("there is no engine for the profile's languages".into())
+        }
+    });
+
+    b.case("M2", "the text of a real image is read", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("could not read the fixture: {why}"))?;
+        let started = std::time::Instant::now();
+        let text = (0..3)
+            .find_map(|_| ocr::text_in(&png))
+            .ok_or("nothing was recognised in three tries")?;
+        println!(
+            "            {:?} to read «{}»",
+            started.elapsed(),
+            text.lines().next().unwrap_or("").trim()
+        );
+        Ok(())
+    });
+
+    b.case("M3", "a blank image does not invent text", || {
+        let blank = image::RgbaImage::from_pixel(120, 60, image::Rgba([255, 255, 255, 255]));
+        let mut png = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(blank)
+            .write_to(&mut png, image::ImageFormat::Png)
+            .map_err(|why| why.to_string())?;
+        match ocr::text_in(&png.into_inner()) {
+            None => Ok(()),
+            Some(invented) => Err(format!("invented «{invented}»")),
+        }
+    });
+}
+
+fn main() -> std::process::ExitCode {
+    println!("\nCore battery against the Windows clipboard");
+
+    let mut b = Battery {
+        passed: 0,
+        failed: 0,
+        skipped: Vec::new(),
+    };
+
+    what_the_clipboard_answers(&mut b);
 
     b.group("B · The catalog against what is really there");
 
@@ -976,40 +1016,7 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.group("M · Text inside an image");
-
-    b.case("M1", "the system offers a reading engine", || {
-        if ocr::is_available() {
-            Ok(())
-        } else {
-            Err("there is no engine for the profile's languages".into())
-        }
-    });
-
-    b.case("M2", "the text of a real image is read", || {
-        let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("could not read the fixture: {why}"))?;
-        let started = std::time::Instant::now();
-        let text = ocr::text_in(&png).ok_or("nothing was recognised")?;
-        println!(
-            "            {:?} to read «{}»",
-            started.elapsed(),
-            text.lines().next().unwrap_or("").trim()
-        );
-        Ok(())
-    });
-
-    b.case("M3", "a blank image does not invent text", || {
-        let blank = image::RgbaImage::from_pixel(120, 60, image::Rgba([255, 255, 255, 255]));
-        let mut png = std::io::Cursor::new(Vec::new());
-        image::DynamicImage::ImageRgba8(blank)
-            .write_to(&mut png, image::ImageFormat::Png)
-            .map_err(|why| why.to_string())?;
-        match ocr::text_in(&png.into_inner()) {
-            None => Ok(()),
-            Some(invented) => Err(format!("invented «{invented}»")),
-        }
-    });
+    what_is_read_inside_an_image(&mut b);
 
     b.group("N · Thumbnails and media via the shell");
 

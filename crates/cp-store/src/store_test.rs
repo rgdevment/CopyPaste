@@ -675,7 +675,7 @@ fn pasting_from_the_history_is_what_counts() {
 }
 
 #[test]
-fn pasting_does_not_move_the_item_up_the_list() {
+fn pasting_moves_the_item_to_the_top_of_the_history() {
     let store = a_little_history();
     let listed = store
         .list(&Filter::default(), 10, None)
@@ -688,9 +688,9 @@ fn pasting_does_not_move_the_item_up_the_list() {
         .expect("listed")
         .rows;
     assert_eq!(
-        after.last().map(|one| one.id),
+        after.first().map(|one| one.id),
         Some(oldest),
-        "pasting counts, but it does not reorder the history"
+        "what you paste is what you reach for next"
     );
 }
 

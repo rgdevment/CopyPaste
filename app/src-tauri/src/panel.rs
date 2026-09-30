@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 
@@ -15,6 +15,11 @@ pub fn trouble<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
 }
 
 fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
+    if said == "settings" {
+        let _ = app.emit("rail", "keys");
+        crate::tray::surface(app);
+        return;
+    }
     let Some(what) = said.strip_prefix("trouble ") else {
         return;
     };

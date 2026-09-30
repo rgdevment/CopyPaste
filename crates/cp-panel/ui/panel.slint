@@ -53,7 +53,8 @@ export component Panel inherits Window {
     callback clear-filters();
     callback ask-forms(int);
     callback ask-kinds();
-    callback ask-keys();
+    callback ask-settings();
+    callback nudge(length, length);
     callback reopened();
     callback fresh-start();
     callback emptied();
@@ -102,8 +103,28 @@ export component Panel inherits Window {
             padding: 0px;
             spacing: 0px;
 
+            Rectangle {
+                height: 14px;
+                handle := TouchArea {
+                    mouse-cursor: move;
+                    moved => {
+                        if (handle.pressed) {
+                            root.nudge(handle.mouse-x - handle.pressed-x, handle.mouse-y - handle.pressed-y);
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 34px;
+                    height: 3px;
+                    border-radius: 2px;
+                    background: handle.has-hover ? Theme.muted : Theme.selected-edge;
+                    animate background { duration: 120ms; }
+                }
+            }
+
             VerticalLayout {
                 padding: 10px;
+                padding-top: 2px;
                 padding-bottom: 8px;
                 spacing: 9px;
                 search-box := Rectangle {
@@ -165,7 +186,7 @@ export component Panel inherits Window {
                                         return reject;
                                     }
                                     if event.text == Key.F1 {
-                                        root.ask-keys();
+                                        root.ask-settings();
                                         return accept;
                                     }
                                     if event.text == Key.Return
@@ -342,21 +363,6 @@ export component Panel inherits Window {
                     Rectangle {
                         horizontal-stretch: 1;
                         clip: true;
-                        strip := Flickable {
-                            width: parent.width;
-                            height: 24px;
-                            interactive: true;
-                            content-width: row.preferred-width;
-                            content-height: 24px;
-                            row := HorizontalLayout {
-                                spacing: 6px;
-                                alignment: start;
-                                for chip in root.chips : Pill {
-                                    chip: chip;
-                                    chosen(key) => { root.chip-chosen(key); }
-                                }
-                            }
-                        }
                         TouchArea {
                             scroll-event(event) => {
                                 strip.content-x = clamp(
@@ -365,6 +371,21 @@ export component Panel inherits Window {
                                     0px
                                 );
                                 return accept;
+                            }
+                            strip := Flickable {
+                                width: parent.width;
+                                height: 24px;
+                                interactive: true;
+                                content-width: row.preferred-width;
+                                content-height: 24px;
+                                row := HorizontalLayout {
+                                    spacing: 6px;
+                                    alignment: start;
+                                    for chip in root.chips : Pill {
+                                        chip: chip;
+                                        chosen(key) => { root.chip-chosen(key); }
+                                    }
+                                }
                             }
                         }
                         Rectangle {
@@ -556,6 +577,14 @@ export component Panel inherits Window {
             Rectangle {
                 height: 32px;
                 background: Theme.footer;
+                mover := TouchArea {
+                    mouse-cursor: move;
+                    moved => {
+                        if (mover.pressed) {
+                            root.nudge(mover.mouse-x - mover.pressed-x, mover.mouse-y - mover.pressed-y);
+                        }
+                    }
+                }
                 HorizontalLayout {
                     padding-left: 10px;
                     padding-right: 8px;
@@ -576,9 +605,9 @@ export component Panel inherits Window {
                         }
                     }
                     Action {
-                        icon: @image-url("../assets/icons/sliders-horizontal.svg");
+                        icon: @image-url("../assets/icons/settings.svg");
                         y: (parent.height - 22px) / 2;
-                        pressed => { root.ask-keys(); }
+                        pressed => { root.ask-settings(); }
                     }
                 }
             }

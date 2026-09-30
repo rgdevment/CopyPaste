@@ -10,7 +10,7 @@ pub enum Written {
     Refused,
 }
 
-impl Clipboard {
+impl Clipboard<'_> {
     pub fn replace(&self, entries: &[(u32, &[u8])]) -> Written {
         if entries.is_empty() {
             return Written::Refused;

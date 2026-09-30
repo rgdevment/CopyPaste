@@ -13,14 +13,29 @@ describe("la ventana", () => {
   it("abre en General, que es donde está lo que se toca una vez", async () => {
     render(<App />);
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("General");
-    expect(screen.getByText("Ctrl + Alt + V")).toBeDefined();
+    expect(await screen.findByLabelText("Idioma")).toBeDefined();
   });
 
-  it("ofrece tres secciones y el acerca de, y nada más", () => {
+  it("el atajo y lo que responde el panel viven en su propia sección", async () => {
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Atajos de teclado");
+    expect(await screen.findByText("Ctrl + Alt + V")).toBeDefined();
+    expect(screen.getByText("Doble clic")).toBeDefined();
+  });
+
+  it("ofrece cuatro secciones y el acerca de, y nada más", () => {
     render(<App />);
     const rail = screen.getByRole("navigation", { name: "Secciones" });
     const says = buttonsIn(rail).map((one) => one.textContent);
-    expect(says).toEqual(["General", "Historial", "Copia de seguridad", "Acerca de"]);
+    expect(says).toEqual([
+      "General",
+      "Atajos de teclado",
+      "Historial",
+      "Copia de seguridad",
+      "Acerca de",
+    ]);
   });
 
   it("cambia de sección al elegirla", async () => {
@@ -112,13 +127,40 @@ describe("la ventana", () => {
       what === "keys"
         ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
         : real?.(what, args)) as never);
+    const who = userEvent.setup();
     render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     expect(await screen.findByText(/Otro programa ya usa esa combinación/)).toBeDefined();
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
-  it("calla sobre el atajo cuando el sistema sí lo cedió", async () => {
+  it("ofrece las combinaciones libres y adopta la que se pulsa", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "keys"
+        ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
+        : real?.(what, args)) as never);
     render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    expect(await screen.findByText(/Estas están libres ahora mismo/)).toBeDefined();
+    const offered = await screen.findByRole("button", { name: "Ctrl + Shift + V" });
+    await who.click(offered);
+    const asked = vi
+      .mocked(invoke)
+      .mock.calls.filter(([what]) => what === "keep")
+      .pop();
+    expect(asked).toBeDefined();
+    const sent = asked?.[1] as { config: { shortcut: string } } | undefined;
+    expect(sent?.config.shortcut).toBe("Ctrl+Shift+V");
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
+  it("calla sobre el atajo cuando el sistema sí lo cedió", async () => {
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     expect(await screen.findByText("Ctrl + Alt + V")).toBeDefined();
     expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
   });
@@ -236,6 +278,7 @@ describe("la ventana", () => {
   it("cambiar el atajo guarda la combinación que se presiona", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     await userEvent.click(await screen.findByRole("button", { name: "Cambiar" }));
     const stop = await screen.findByRole("button", { name: "Dejarlo como está" });
     stop.focus();
