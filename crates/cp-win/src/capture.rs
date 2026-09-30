@@ -18,11 +18,6 @@ pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 const _: () = assert!(PATIENCE.as_millis() > cp_win_sys::reading::PATIENCE.as_millis());
 const _: () = assert!(PATIENCE.as_millis() < 30_000);
 
-const AFRESH_AT_MOST: u8 = 2;
-
-const _: () = assert!(AFRESH_AT_MOST >= 1);
-const _: () = assert!(AFRESH_AT_MOST < cp_core::watch::RETRY.attempts);
-
 pub fn capture_within(patience: std::time::Duration) -> Captured {
     let counted = clipboard::reading();
     reading::anything_within(patience, move || capture_counted(&counted))
@@ -32,18 +27,22 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
     let started = sequence_now();
     let mut pending = begin_counted();
-    let mut afresh = 0;
-    let got = insisting(retry, sequence_now, || match pending.wait(patience) {
-        None => Captured::TooSlow,
-        Some(Captured::TooSlow) if afresh < AFRESH_AT_MOST => {
-            afresh += 1;
-            pending = begin_counted();
-            Captured::TooSlow
+    let mut left = retry.attempts;
+    let got = insisting(retry, sequence_now, || {
+        left = left.saturating_sub(1);
+        match pending.waited(patience) {
+            reading::Waited::StillRunning => Captured::TooSlow,
+            reading::Waited::Answered(Captured::TooSlow) | reading::Waited::Gone => {
+                if left > 0 && sequence_now() == started {
+                    pending = begin_counted();
+                }
+                Captured::TooSlow
+            }
+            reading::Waited::Answered(other) => other,
         }
-        Some(other) => other,
     });
     match got {
-        Captured::Nothing if sequence_now() != started => Captured::Superseded,
+        Captured::Nothing | Captured::TooSlow if sequence_now() != started => Captured::Superseded,
         other => other,
     }
 }

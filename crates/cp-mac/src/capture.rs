@@ -18,12 +18,26 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
     let started = pasteboard::change_count_from_any_thread();
-    let pending = reading::begin(|| capture(&Pasteboard::general_from_any_thread()));
+    let afresh = || reading::begin(|| capture(&Pasteboard::general_from_any_thread()));
+    let mut pending = afresh();
+    let mut left = retry.attempts;
     let got = insisting(retry, pasteboard::change_count_from_any_thread, || {
-        pending.wait(patience).unwrap_or(Captured::TooSlow)
+        left = left.saturating_sub(1);
+        match pending.waited(patience) {
+            reading::Waited::StillRunning => Captured::TooSlow,
+            reading::Waited::Answered(Captured::TooSlow) | reading::Waited::Gone => {
+                if left > 0 && pasteboard::change_count_from_any_thread() == started {
+                    pending = afresh();
+                }
+                Captured::TooSlow
+            }
+            reading::Waited::Answered(other) => other,
+        }
     });
     match got {
-        Captured::Nothing if pasteboard::change_count_from_any_thread() != started => {
+        Captured::Nothing | Captured::TooSlow
+            if pasteboard::change_count_from_any_thread() != started =>
+        {
             Captured::Superseded
         }
         other => other,

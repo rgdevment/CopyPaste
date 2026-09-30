@@ -40,9 +40,26 @@ pub struct Pending<T> {
     hear: std::sync::mpsc::Receiver<T>,
 }
 
+pub enum Waited<T> {
+    Answered(T),
+    StillRunning,
+    Gone,
+}
+
 impl<T> Pending<T> {
     pub fn wait(&self, patience: Duration) -> Option<T> {
-        self.hear.recv_timeout(patience).ok()
+        match self.waited(patience) {
+            Waited::Answered(what) => Some(what),
+            Waited::StillRunning | Waited::Gone => None,
+        }
+    }
+
+    pub fn waited(&self, patience: Duration) -> Waited<T> {
+        match self.hear.recv_timeout(patience) {
+            Ok(what) => Waited::Answered(what),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Waited::StillRunning,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => Waited::Gone,
+        }
     }
 }
 
