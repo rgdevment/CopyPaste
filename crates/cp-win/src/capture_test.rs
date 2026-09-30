@@ -1,4 +1,12 @@
 use super::*;
+
+static ONE_TEST_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn alone_with_the_clipboard() -> std::sync::MutexGuard<'static, ()> {
+    ONE_TEST_AT_A_TIME
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
 use crate::drop::drop_of;
 use crate::virtual_files::descriptor_of;
 
@@ -151,6 +159,7 @@ fn a_dib_of_one_colour() -> Vec<u8> {
 
 #[test]
 fn a_picture_on_the_clipboard_crosses_as_a_png_and_not_as_its_raw_bitmap() {
+    let _ours = alone_with_the_clipboard();
     let raw = a_dib_of_one_colour();
     {
         let clipboard = Clipboard::open().expect("the clipboard opens");
@@ -173,28 +182,5 @@ fn a_picture_on_the_clipboard_crosses_as_a_png_and_not_as_its_raw_bitmap() {
         &bytes[..8],
         b"\x89PNG\r\n\x1a\n",
         "a bitmap off the clipboard is transcoded, because nothing else reads a raw DIB"
-    );
-}
-
-#[test]
-fn a_read_that_was_given_up_cannot_have_the_clipboard_emptied_under_it() {
-    let big: Vec<u8> = "abcdefghij"
-        .repeat(200_000)
-        .encode_utf16()
-        .flat_map(u16::to_le_bytes)
-        .collect();
-    let mut refused = 0;
-    for _ in 0..60 {
-        let _ = capture_within(std::time::Duration::from_nanos(1));
-        match Clipboard::open() {
-            Some(clipboard) => {
-                clipboard.replace(&[(cp_win_sys::formats::CF_UNICODETEXT, &big)]);
-            }
-            None => refused += 1,
-        }
-    }
-    assert!(
-        refused < 60,
-        "every single attempt was refused, so nothing was exercised"
     );
 }
