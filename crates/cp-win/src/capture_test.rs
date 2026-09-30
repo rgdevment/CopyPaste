@@ -134,3 +134,44 @@ fn a_drop_with_no_paths_is_still_a_file() {
     }];
     assert_eq!(refine(Some(Family::Files), &formats), Some(Kind::File));
 }
+
+fn a_dib_of_one_colour() -> Vec<u8> {
+    let mut out = Vec::new();
+    out.extend_from_slice(&40u32.to_le_bytes());
+    out.extend_from_slice(&2i32.to_le_bytes());
+    out.extend_from_slice(&2i32.to_le_bytes());
+    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&32u16.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&16u32.to_le_bytes());
+    out.extend_from_slice(&[0u8; 16]);
+    out.extend_from_slice(&[0x20, 0x60, 0xA0, 0xFF].repeat(4));
+    out
+}
+
+#[test]
+fn a_picture_on_the_clipboard_crosses_as_a_png_and_not_as_its_raw_bitmap() {
+    let raw = a_dib_of_one_colour();
+    {
+        let clipboard = Clipboard::open().expect("the clipboard opens");
+        clipboard.replace(&[(cp_win_sys::formats::CF_DIB, &raw)]);
+    }
+    let clipboard = Clipboard::open().expect("the clipboard opens");
+    let item = capture(&clipboard).kept().expect("a picture was captured");
+    assert_eq!(item.kind, Some(Kind::Image));
+    let picture = item
+        .formats
+        .iter()
+        .find(|one| one.id == SYNTHETIC_IMAGE)
+        .expect("the picture is carried under its own name");
+    let bytes = match &picture.payload {
+        Payload::Inline(bytes) => bytes.clone(),
+        Payload::Blob(bytes) => bytes.clone(),
+        other => panic!("the picture arrived as {other:?}"),
+    };
+    assert_eq!(
+        &bytes[..8],
+        b"\x89PNG\r\n\x1a\n",
+        "a bitmap off the clipboard is transcoded, because nothing else reads a raw DIB"
+    );
+}
