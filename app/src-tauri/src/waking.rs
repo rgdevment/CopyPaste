@@ -221,9 +221,9 @@ mod there {
 }
 
 #[cfg(all(test, windows))]
-#[path = "waking_test_windows.rs"]
+#[path = "waking_windows_test.rs"]
 mod tests;
 
 #[cfg(all(test, target_os = "macos"))]
-#[path = "waking_test_macos.rs"]
+#[path = "waking_macos_test.rs"]
 mod tests;

@@ -49,8 +49,6 @@ const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
 const LATER: i64 = 60_000;
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
-#[cfg(test)]
-const A_DAY: i64 = cp_store::A_DAY;
 
 fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<()>> {
     let store = match Store::open(db) {

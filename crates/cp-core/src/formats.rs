@@ -134,9 +134,9 @@ impl Catalog {
 mod tests;
 
 #[cfg(test)]
-#[path = "formats_windows_needs.rs"]
+#[path = "formats_windows_needs_test.rs"]
 mod windows_needs;
 
 #[cfg(test)]
-#[path = "formats_properties.rs"]
+#[path = "formats_properties_test.rs"]
 mod properties;

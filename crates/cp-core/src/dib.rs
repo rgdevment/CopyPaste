@@ -199,5 +199,5 @@ pub fn from_image(decoded: &image::DynamicImage) -> Option<Vec<u8>> {
 mod tests;
 
 #[cfg(test)]
-#[path = "dib_properties.rs"]
+#[path = "dib_properties_test.rs"]
 mod properties;

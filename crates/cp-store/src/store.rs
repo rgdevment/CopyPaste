@@ -1445,13 +1445,13 @@ fn search(store: &Store, query: &str) -> Vec<String> {
 mod tests;
 
 #[cfg(test)]
-#[path = "store_identity.rs"]
+#[path = "store_identity_test.rs"]
 mod identity;
 
 #[cfg(test)]
-#[path = "store_listing.rs"]
+#[path = "store_listing_test.rs"]
 mod listing;
 
 #[cfg(test)]
-#[path = "store_housekeeping.rs"]
+#[path = "store_housekeeping_test.rs"]
 mod housekeeping;

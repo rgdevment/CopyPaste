@@ -111,7 +111,7 @@ impl Watcher {
 }
 
 #[cfg(test)]
-#[path = "watch_insisting.rs"]
+#[path = "watch_insisting_test.rs"]
 mod insisting;
 
 #[cfg(test)]
@@ -119,9 +119,9 @@ mod insisting;
 mod tests;
 
 #[cfg(test)]
-#[path = "watch_windows_counter.rs"]
+#[path = "watch_windows_counter_test.rs"]
 mod windows_counter;
 
 #[cfg(test)]
-#[path = "watch_properties.rs"]
+#[path = "watch_properties_test.rs"]
 mod properties;

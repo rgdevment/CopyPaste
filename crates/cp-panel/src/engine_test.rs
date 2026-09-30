@@ -1,3 +1,5 @@
+const A_DAY: i64 = cp_store::A_DAY;
+
 use super::*;
 use cp_core::item::{Format, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
 

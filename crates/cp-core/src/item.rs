@@ -135,5 +135,5 @@ impl Item {
 mod tests;
 
 #[cfg(test)]
-#[path = "item_properties.rs"]
+#[path = "item_properties_test.rs"]
 mod properties;

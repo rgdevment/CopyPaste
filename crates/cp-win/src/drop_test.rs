@@ -1,3 +1,16 @@
+fn ansi_drop_of(paths: &[&str]) -> Vec<u8> {
+    let mut out = Vec::new();
+    out.extend_from_slice(&(HEADER as u32).to_le_bytes());
+    out.extend_from_slice(&[0u8; 12]);
+    out.extend_from_slice(&0u32.to_le_bytes());
+    for path in paths {
+        out.extend_from_slice(path.as_bytes());
+        out.push(0);
+    }
+    out.push(0);
+    out
+}
+
 use super::*;
 
 #[test]

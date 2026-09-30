@@ -113,5 +113,5 @@ impl Failure {
 mod tests;
 
 #[cfg(test)]
-#[path = "paste_properties.rs"]
+#[path = "paste_properties_test.rs"]
 mod properties;

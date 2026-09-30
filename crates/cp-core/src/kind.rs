@@ -304,13 +304,13 @@ fn looks_like_code(text: &str) -> bool {
 mod tests;
 
 #[cfg(test)]
-#[path = "kind_borders.rs"]
+#[path = "kind_borders_test.rs"]
 mod borders;
 
 #[cfg(test)]
-#[path = "kind_redundancy.rs"]
+#[path = "kind_redundancy_test.rs"]
 mod redundancy;
 
 #[cfg(test)]
-#[path = "kind_inherited_from_2x.rs"]
+#[path = "kind_inherited_from_2x_test.rs"]
 mod inherited_from_2x;
