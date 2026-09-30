@@ -369,14 +369,6 @@ impl Store {
         Ok(())
     }
 
-    pub fn set_pastes(&self, id: i64, times: i64) -> Result<()> {
-        self.db.execute(
-            "UPDATE items SET paste_count = ?2 WHERE id = ?1",
-            params![id, times.max(0)],
-        )?;
-        Ok(())
-    }
-
     pub fn set_color(&self, id: i64, color: i64, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET card_color = ?2, updated_at = ?3 WHERE id = ?1",

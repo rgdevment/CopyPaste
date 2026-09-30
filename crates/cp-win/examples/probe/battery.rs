@@ -409,8 +409,6 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.group("H · The capture, end to end");
-
     b.case("G3", "the whole capture has its own ceiling", || {
         let started = std::time::Instant::now();
         let seen = capture::capture_within(std::time::Duration::from_nanos(1));
@@ -459,6 +457,8 @@ fn main() -> std::process::ExitCode {
             }
         },
     );
+
+    b.group("H · The capture, end to end");
 
     b.case("H1", "a copied text becomes an item", || {
         {

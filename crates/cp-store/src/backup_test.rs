@@ -376,3 +376,60 @@ fn an_empty_history_still_makes_a_backup_that_can_be_brought_back() {
     assert_eq!(brought.added, 0);
     assert_eq!(landed.count().expect("counted"), 0);
 }
+
+fn a_backup_saying(key: &str, value: u32) -> (tempfile::TempDir, std::path::PathBuf) {
+    let (there, store) = somewhere("history.db");
+    store
+        .insert_item(
+            "one",
+            &text("from a later version"),
+            "from a later version",
+            1_000,
+        )
+        .expect("stored");
+    let at = there.path().join("later.cpbackup");
+    write(&store, &at, 2_000).expect("exported");
+    drop(store);
+    let db = Connection::open(&at).expect("opened");
+    db.execute(
+        "UPDATE backup_note SET value = ?1 WHERE key = ?2",
+        rusqlite::params![value.to_string(), key],
+    )
+    .expect("aged");
+    drop(db);
+    (there, at)
+}
+
+#[test]
+fn a_backup_from_a_later_format_is_refused_instead_of_half_read() {
+    let (_there, at) = a_backup_saying("format", FORMAT + 1);
+    match read(&at) {
+        Err(Error::BackupFromTheFuture { found, supported }) => {
+            assert_eq!(found, FORMAT + 1);
+            assert_eq!(supported, FORMAT);
+        }
+        other => panic!("a backup written by a later version gave {other:?}"),
+    }
+}
+
+#[test]
+fn a_backup_whose_schema_is_ahead_is_refused_before_anything_is_written() {
+    let (_there, at) = a_backup_saying("schema", crate::SCHEMA_VERSION + 1);
+    let (_here, landed) = somewhere("landing.db");
+    match bring(&at, &landed, 3_000) {
+        Err(Error::FromTheFuture { found, supported }) => {
+            assert_eq!(found, crate::SCHEMA_VERSION + 1);
+            assert_eq!(supported, crate::SCHEMA_VERSION);
+        }
+        other => panic!("a backup from a later schema gave {other:?}"),
+    }
+    assert_eq!(
+        landed
+            .list(&crate::Filter::default(), 10, None)
+            .expect("listed")
+            .rows
+            .len(),
+        0,
+        "and the history it would have landed in is untouched"
+    );
+}
