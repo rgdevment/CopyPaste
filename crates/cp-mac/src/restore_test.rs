@@ -1,0 +1,98 @@
+use super::*;
+use cp_core::item::Format;
+
+fn inline(id: &str, bytes: &[u8]) -> Format {
+    Format {
+        id: id.into(),
+        payload: Payload::Inline(bytes.to_vec()),
+    }
+}
+
+#[test]
+fn a_synthetic_text_goes_back_as_the_type_the_system_reads() {
+    let item = Item {
+        kind: None,
+        formats: vec![inline(SYNTHETIC_TEXT, b"hello")],
+    };
+    assert_eq!(writable_of(&item), vec![(PLAIN_TEXT, &b"hello"[..])]);
+}
+
+#[test]
+fn a_synthetic_image_goes_back_as_a_png() {
+    let item = Item {
+        kind: None,
+        formats: vec![inline(SYNTHETIC_IMAGE, &[137, 80, 78, 71])],
+    };
+    assert_eq!(writable_of(&item), vec![(PNG, &[137u8, 80, 78, 71][..])]);
+}
+
+#[test]
+fn a_rendered_jpeg_goes_back_as_the_type_the_system_reads() {
+    let item = cp_core::paste_as::Rendered::Jpeg(vec![0xFF, 0xD8]).into_item();
+    assert_eq!(writable_of(&item), vec![(JPEG, &[0xFFu8, 0xD8][..])]);
+}
+
+#[test]
+fn a_captured_type_goes_back_under_its_own_name() {
+    let item = Item {
+        kind: None,
+        formats: vec![
+            inline("public.rtf", b"{\\rtf1 hello}"),
+            inline(PLAIN_TEXT, b"hello"),
+            Format {
+                id: "public.tiff".into(),
+                payload: Payload::Announced { size: None },
+            },
+        ],
+    };
+    let written = writable_of(&item);
+    assert_eq!(
+        written.len(),
+        2,
+        "what is announced without bytes is not written"
+    );
+    assert_eq!(written[0].0, "public.rtf");
+    assert_eq!(written[1].0, PLAIN_TEXT);
+}
+
+#[test]
+fn nothing_readable_is_nothing_to_write() {
+    let item = Item {
+        kind: None,
+        formats: vec![Format {
+            id: PLAIN_TEXT.into(),
+            payload: Payload::Absent,
+        }],
+    };
+    assert!(writable_of(&item).is_empty());
+}
+
+#[test]
+fn pasting_as_plain_text_is_a_rendered_form_written_like_any_item() {
+    use cp_core::paste_as::{Form, render};
+    let item = Item {
+        kind: Some(cp_core::kind::Kind::Text),
+        formats: vec![
+            inline("public.html", b"<b>hello</b>"),
+            inline(PLAIN_TEXT, b"hello"),
+        ],
+    };
+    let content = crate::content::content_of(&item, None);
+    let plain = render(Form::PlainText, &content)
+        .expect("there is text")
+        .into_item();
+    assert_eq!(writable_of(&plain), vec![(PLAIN_TEXT, &b"hello"[..])]);
+    assert_eq!(item.formats.len(), 2, "the stored item does not change");
+    let only_image = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![inline(PNG, &[1, 2, 3])],
+    };
+    assert_eq!(
+        render(
+            Form::PlainText,
+            &crate::content::content_of(&only_image, None)
+        ),
+        None,
+        "with no plain text there is no plain form to offer"
+    );
+}

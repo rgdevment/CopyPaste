@@ -52,9 +52,33 @@ In many ways! Code is just one of them:
 2. **Create a branch** from `main` (`git checkout -b feature/my-improvement`)
 3. **Make your changes** following our style:
    - Clean and minimalist code
-   - Code, identifiers and comments in English
-   - Tests when appropriate
-4. **Make sure** all tests pass:
+   - Code and identifiers in English
+   - No comments, with no exception. CI refuses any `//` or `/*` in `crates` and
+     `app/src-tauri/src`: a name that needs a comment is the wrong name
+   - Tests when appropriate, and **in a file of their own** — see below
+4. **Where a test goes.** Never inside the file it tests. Each file keeps its
+   tests in a sibling, declared at the bottom of the file under test:
+
+   ```rust
+   #[cfg(test)]
+   #[path = "watch_test.rs"]
+   mod tests;
+   ```
+
+   The sibling lives in the same directory, holds the body without the
+   `mod tests { }` wrapper, and is still a child module — `use super::*` and
+   access to private items work exactly as if it were inline. Its name is the
+   file plus `_test.rs`; when one file has several test modules, the name says
+   which one it is and still ends in `_test.rs`: `store_listing_test.rs`,
+   `kind_borders_test.rs`, `waking_windows_test.rs`. The suffix is not decorative:
+   the ceiling refuses a declaration pointing at a name without it, so a sibling
+   named anything else is measured as production code and fails at 1500 lines.
+   The declaration goes **last** in the file, after the code — clippy asked for
+   that while the module was inline and cannot see it any more, so
+   `scripts/oversized.py --inline` does. A test module written inside the file
+   fails CI, as does a `*_test.rs` that nothing declares.
+
+5. **Make sure** all tests pass:
 
    ```sh
    python3 scripts/sidecar.py --debug   # the app carries the panel; build it first
@@ -63,7 +87,7 @@ In many ways! Code is just one of them:
    cd app && npm ci && npm run lint && npm test
    ```
 
-5. **Open a Pull Request** to `main`
+6. **Open a Pull Request** to `main`
 
 ### Translate
 

@@ -120,6 +120,28 @@ jobs:
             echo "::error::no block comments either"; exit 1
           fi
 
+      - name: The tests live beside the file, not inside it
+        run: python3 scripts/oversized.py --inline
+
+      - name: No two crates name an example the same
+        run: |
+          set -euo pipefail
+          dirs=$(find . -type d -name examples -not -path './target/*' \
+            -not -path '*/node_modules/*' | sort)
+          said=$(for one in $dirs; do
+            find "$one" -mindepth 1 -maxdepth 1 -name '*.rs' -exec basename {} .rs \;
+            find "$one" -mindepth 2 -maxdepth 2 -name 'main.rs' -printf '%h\n' \
+              | xargs -r -n1 basename
+          done | sort)
+          twice=$(printf '%s\n' "$said" | uniq -d)
+          if [ -n "$twice" ]; then
+            echo "::error::two crates name an example the same, and cargo links every example to \
+                  target/<profile>/examples/<name>, so they are one binary and the two link steps \
+                  race: $(echo "$twice" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "every example has a name of its own: $(echo "$said" | tr '\n' ' ')"
+
       - name: No file or function grows past what a person can hold
         run: python3 scripts/oversized.py
 
