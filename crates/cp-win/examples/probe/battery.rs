@@ -18,7 +18,7 @@ use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{files, media, ocr, source, thumbnail};
 
-const CASES: u32 = 46;
+const CASES: u32 = 47;
 const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2"];
 const SKIPPED: &str = "skipped: ";
 
@@ -159,6 +159,147 @@ fn wait_until(what: &str, mut observed: impl FnMut() -> Option<bool>) -> Result<
 fn offered_names() -> Result<Vec<String>, String> {
     let clipboard = Clipboard::open().ok_or("the clipboard could not be opened")?;
     Ok(clipboard.offered().into_iter().map(name_of).collect())
+}
+
+fn what_is_abandoned(b: &mut Battery) {
+    b.group("G · What does not deliver in time is abandoned");
+
+    b.case(
+        "G1",
+        "a format with data responds well under the ceiling",
+        || {
+            {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g1"))]);
+            }
+            let started = std::time::Instant::now();
+            let seen = reading::within(PATIENCE, || {
+                let clipboard = Clipboard::open()?;
+                clipboard.bytes(CF_UNICODETEXT)
+            });
+            let took = started.elapsed();
+            if seen.is_too_slow() {
+                return Err(format!("did not arrive within {PATIENCE:?}"));
+            }
+            println!("            {took:?} against a ceiling of {PATIENCE:?}");
+            Ok(())
+        },
+    );
+
+    b.case(
+        "G2",
+        "what does not answer is abandoned at the ceiling",
+        || {
+            let started = std::time::Instant::now();
+            let seen = reading::within(PATIENCE, || {
+                std::thread::sleep(std::time::Duration::from_secs(30));
+                Some(Vec::new())
+            });
+            let took = started.elapsed();
+            if seen != Reading::TooSlow {
+                return Err(format!("it waited too long and gave {seen:?}"));
+            }
+            if took > PATIENCE * 3 {
+                return Err(format!("took {took:?} to give up"));
+            }
+            println!("            abandoned at {took:?}, not at the measured 30 s");
+            Ok(())
+        },
+    );
+
+    b.case("G3", "the whole capture has its own ceiling", || {
+        let started = std::time::Instant::now();
+        let seen = capture::capture_within(std::time::Duration::from_nanos(1));
+        let took = started.elapsed();
+        if seen != Captured::TooSlow {
+            return Err(format!("with an impossible ceiling it gave {seen:?}"));
+        }
+        if took > std::time::Duration::from_millis(500) {
+            return Err(format!("took {took:?} to give up"));
+        }
+        let after = capture::capture_within(capture::PATIENCE);
+        if after == Captured::TooSlow {
+            return Err("and the normal ceiling is no longer enough for anything".into());
+        }
+        println!(
+            "            abandoned at {took:?}; with {:?} it does capture",
+            capture::PATIENCE
+        );
+        Ok(())
+    });
+
+    b.case(
+        "G4",
+        "insisting on a source that responds costs no second attempt",
+        || {
+            {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g4"))]);
+            }
+            let direct = {
+                let clipboard = Clipboard::open().ok_or("did not open")?;
+                capture(&clipboard).kept().ok_or("nothing was captured")?
+            };
+            let started = std::time::Instant::now();
+            let got = capture::capture_insisting(capture::PATIENCE, cp_core::watch::RETRY);
+            let took = started.elapsed();
+            match got {
+                Captured::Kept(item) if item == direct => {
+                    if took < capture::PATIENCE {
+                        Ok(())
+                    } else {
+                        Err(format!("took {took:?}: there was a pause for no reason"))
+                    }
+                }
+                other => Err(format!("got {other:?}")),
+            }
+        },
+    );
+
+    b.case(
+            "G5",
+            "what a read that was given up still holds is never freed under it",
+            || {
+                let big = cp_win_sys::writing::utf16_of(&"abcdefghij".repeat(20_000));
+                let mut written = 0;
+                for _ in 0..40 {
+                    let _ = capture::capture_within(std::time::Duration::from_nanos(1));
+                    let Some(clipboard) = Clipboard::open() else {
+                        continue;
+                    };
+                    if clipboard.replace(&[(CF_UNICODETEXT, &big)])
+                        != (cp_win_sys::writing::Written::Placed { formats: 1 })
+                    {
+                        continue;
+                    }
+                    written += 1;
+                    let back = clipboard
+                        .bytes(CF_UNICODETEXT)
+                        .ok_or("what was just written does not read back")?;
+                    if back != big {
+                        return Err(format!(
+                            "the bytes came back changed at {} of {} written: something was freed under a read",
+                            back.len(),
+                            big.len()
+                        ));
+                    }
+                }
+                if written == 0 {
+                    return Err("not one write went through, so nothing was proven".into());
+                }
+                println!("            {written} of 40 writes went through with a reader abandoned");
+                for _ in 0..40 {
+                    if let Some(clipboard) = Clipboard::open()
+                        && clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-probe"))])
+                            == (cp_win_sys::writing::Written::Placed { formats: 1 })
+                    {
+                        return Ok(());
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(25));
+                }
+                Err("the abandoned readers never let go, so the cases after this one would fail".into())
+            },
+        );
 }
 
 fn main() -> std::process::ExitCode {
@@ -364,99 +505,7 @@ fn main() -> std::process::ExitCode {
         }
     });
 
-    b.group("G · What does not deliver in time is abandoned");
-
-    b.case(
-        "G1",
-        "a format with data responds well under the ceiling",
-        || {
-            {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g1"))]);
-            }
-            let started = std::time::Instant::now();
-            let seen = reading::within(PATIENCE, || {
-                let clipboard = Clipboard::open()?;
-                clipboard.bytes(CF_UNICODETEXT)
-            });
-            let took = started.elapsed();
-            if seen.is_too_slow() {
-                return Err(format!("did not arrive within {PATIENCE:?}"));
-            }
-            println!("            {took:?} against a ceiling of {PATIENCE:?}");
-            Ok(())
-        },
-    );
-
-    b.case(
-        "G2",
-        "what does not answer is abandoned at the ceiling",
-        || {
-            let started = std::time::Instant::now();
-            let seen = reading::within(PATIENCE, || {
-                std::thread::sleep(std::time::Duration::from_secs(30));
-                Some(Vec::new())
-            });
-            let took = started.elapsed();
-            if seen != Reading::TooSlow {
-                return Err(format!("it waited too long and gave {seen:?}"));
-            }
-            if took > PATIENCE * 3 {
-                return Err(format!("took {took:?} to give up"));
-            }
-            println!("            abandoned at {took:?}, not at the measured 30 s");
-            Ok(())
-        },
-    );
-
-    b.case("G3", "the whole capture has its own ceiling", || {
-        let started = std::time::Instant::now();
-        let seen = capture::capture_within(std::time::Duration::from_nanos(1));
-        let took = started.elapsed();
-        if seen != Captured::TooSlow {
-            return Err(format!("with an impossible ceiling it gave {seen:?}"));
-        }
-        if took > std::time::Duration::from_millis(500) {
-            return Err(format!("took {took:?} to give up"));
-        }
-        let after = capture::capture_within(capture::PATIENCE);
-        if after == Captured::TooSlow {
-            return Err("and the normal ceiling is no longer enough for anything".into());
-        }
-        println!(
-            "            abandoned at {took:?}; with {:?} it does capture",
-            capture::PATIENCE
-        );
-        Ok(())
-    });
-
-    b.case(
-        "G4",
-        "insisting on a source that responds costs no second attempt",
-        || {
-            {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g4"))]);
-            }
-            let direct = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                capture(&clipboard).kept().ok_or("nothing was captured")?
-            };
-            let started = std::time::Instant::now();
-            let got = capture::capture_insisting(capture::PATIENCE, cp_core::watch::RETRY);
-            let took = started.elapsed();
-            match got {
-                Captured::Kept(item) if item == direct => {
-                    if took < capture::PATIENCE {
-                        Ok(())
-                    } else {
-                        Err(format!("took {took:?}: there was a pause for no reason"))
-                    }
-                }
-                other => Err(format!("got {other:?}")),
-            }
-        },
-    );
+    what_is_abandoned(&mut b);
 
     b.group("H · The capture, end to end");
 

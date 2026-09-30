@@ -6,16 +6,77 @@ use windows::Win32::System::DataExchange::{
 use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
 const BACKOFF_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400];
+const CLEARING_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100];
+
+const _: () = assert!(CLEARING_MS[0] == 0);
+
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+static READERS: AtomicUsize = AtomicUsize::new(0);
+static A_WRITE_IS_COMING: AtomicBool = AtomicBool::new(false);
+
+pub struct Reading {
+    _stays_put: std::marker::PhantomData<*const ()>,
+}
+
+pub fn reading() -> Reading {
+    READERS.fetch_add(1, Ordering::AcqRel);
+    Reading {
+        _stays_put: std::marker::PhantomData,
+    }
+}
+
+impl Drop for Reading {
+    fn drop(&mut self) {
+        READERS.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+pub(crate) struct Alone {
+    _stays_put: std::marker::PhantomData<*const ()>,
+}
+
+#[cfg(test)]
+pub(crate) fn readers_now() -> usize {
+    READERS.load(Ordering::Acquire)
+}
+
+pub(crate) fn alone(ours: usize) -> Option<Alone> {
+    A_WRITE_IS_COMING.store(true, Ordering::Release);
+    let held = Alone {
+        _stays_put: std::marker::PhantomData,
+    };
+    for wait in CLEARING_MS {
+        std::thread::sleep(std::time::Duration::from_millis(*wait));
+        if READERS.load(Ordering::Acquire) <= ours {
+            return Some(held);
+        }
+    }
+    None
+}
+
+impl Drop for Alone {
+    fn drop(&mut self) {
+        A_WRITE_IS_COMING.store(false, Ordering::Release);
+    }
+}
 
 pub struct Clipboard {
-    _private: (),
+    _counted: Reading,
+    _stays_put: std::marker::PhantomData<*const ()>,
 }
 
 impl Clipboard {
     pub fn open() -> Option<Self> {
         for wait in BACKOFF_MS {
-            if unsafe { OpenClipboard(Some(HWND::default())) }.is_ok() {
-                return Some(Self { _private: () });
+            if !A_WRITE_IS_COMING.load(Ordering::Acquire) {
+                let counted = reading();
+                if unsafe { OpenClipboard(Some(HWND::default())) }.is_ok() {
+                    return Some(Self {
+                        _counted: counted,
+                        _stays_put: std::marker::PhantomData,
+                    });
+                }
             }
             std::thread::sleep(std::time::Duration::from_millis(*wait));
         }
