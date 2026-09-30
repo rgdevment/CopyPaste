@@ -10,6 +10,10 @@ const CLEARING_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400, 400, 400];
 
 pub const STUCK_AFTER: std::time::Duration = std::time::Duration::from_secs(5);
 
+const QUICK_TURNS: usize = 4;
+
+const _: () = assert!(QUICK_TURNS < CLEARING_MS.len());
+
 const _: () = assert!(CLEARING_MS[0] == 0);
 const _: () = {
     let mut backoff = 0;
@@ -124,11 +128,8 @@ impl Clipboard<'static> {
     }
 
     pub fn to_write() -> Option<Self> {
-        if read_stuck_for().is_some() {
-            return None;
-        }
         let coming = coming();
-        for wait in CLEARING_MS {
+        for (turn, wait) in CLEARING_MS.iter().enumerate() {
             std::thread::sleep(std::time::Duration::from_millis(*wait));
             if READERS.load(Ordering::SeqCst) == 0
                 && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
@@ -139,6 +140,9 @@ impl Clipboard<'static> {
                     opened_for: For::Writing,
                     _coming: Some(coming),
                 });
+            }
+            if turn >= QUICK_TURNS && read_stuck_for().is_some() {
+                return None;
             }
         }
         None

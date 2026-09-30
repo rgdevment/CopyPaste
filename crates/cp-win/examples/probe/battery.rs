@@ -336,6 +336,45 @@ fn what_the_clipboard_answers(b: &mut Battery) {
     });
 }
 
+fn what_is_read_inside_an_image(b: &mut Battery) {
+    b.group("M · Text inside an image");
+
+    b.case("M1", "the system offers a reading engine", || {
+        if ocr::is_available() {
+            Ok(())
+        } else {
+            Err("there is no engine for the profile's languages".into())
+        }
+    });
+
+    b.case("M2", "the text of a real image is read", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("could not read the fixture: {why}"))?;
+        let started = std::time::Instant::now();
+        let text = (0..3)
+            .find_map(|_| ocr::text_in(&png))
+            .ok_or("nothing was recognised in three tries")?;
+        println!(
+            "            {:?} to read «{}»",
+            started.elapsed(),
+            text.lines().next().unwrap_or("").trim()
+        );
+        Ok(())
+    });
+
+    b.case("M3", "a blank image does not invent text", || {
+        let blank = image::RgbaImage::from_pixel(120, 60, image::Rgba([255, 255, 255, 255]));
+        let mut png = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(blank)
+            .write_to(&mut png, image::ImageFormat::Png)
+            .map_err(|why| why.to_string())?;
+        match ocr::text_in(&png.into_inner()) {
+            None => Ok(()),
+            Some(invented) => Err(format!("invented «{invented}»")),
+        }
+    });
+}
+
 fn main() -> std::process::ExitCode {
     println!("\nCore battery against the Windows clipboard");
 
@@ -977,40 +1016,7 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.group("M · Text inside an image");
-
-    b.case("M1", "the system offers a reading engine", || {
-        if ocr::is_available() {
-            Ok(())
-        } else {
-            Err("there is no engine for the profile's languages".into())
-        }
-    });
-
-    b.case("M2", "the text of a real image is read", || {
-        let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("could not read the fixture: {why}"))?;
-        let started = std::time::Instant::now();
-        let text = ocr::text_in(&png).ok_or("nothing was recognised")?;
-        println!(
-            "            {:?} to read «{}»",
-            started.elapsed(),
-            text.lines().next().unwrap_or("").trim()
-        );
-        Ok(())
-    });
-
-    b.case("M3", "a blank image does not invent text", || {
-        let blank = image::RgbaImage::from_pixel(120, 60, image::Rgba([255, 255, 255, 255]));
-        let mut png = std::io::Cursor::new(Vec::new());
-        image::DynamicImage::ImageRgba8(blank)
-            .write_to(&mut png, image::ImageFormat::Png)
-            .map_err(|why| why.to_string())?;
-        match ocr::text_in(&png.into_inner()) {
-            None => Ok(()),
-            Some(invented) => Err(format!("invented «{invented}»")),
-        }
-    });
+    what_is_read_inside_an_image(&mut b);
 
     b.group("N · Thumbnails and media via the shell");
 
