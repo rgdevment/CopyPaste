@@ -46,3 +46,35 @@ fn leaving_it_to_the_system_follows_the_system_both_ways() {
     assert!(light_for(cp_config::Theme::System, true));
     assert!(!light_for(cp_config::Theme::System, false));
 }
+
+#[test]
+fn every_shortcut_the_sheet_promises_is_one_the_panel_handles() {
+    const PANEL: &str = include_str!("../ui/panel.slint");
+    for row in keys_sheet_in(true) {
+        for combination in row.preview.split('·') {
+            let parts: Vec<&str> = combination
+                .split('+')
+                .map(str::trim)
+                .filter(|one| !one.is_empty())
+                .collect();
+            let Some(last) = parts.last() else {
+                continue;
+            };
+            let wanted = match last.to_ascii_lowercase().as_str() {
+                one if one.len() == 1 => format!("event.text == \"{one}\""),
+                "enter" => "event.text == Key.Return".to_owned(),
+                "esc" => "event.text == Key.Escape".to_owned(),
+                "backspace" => "event.text == Key.Backspace".to_owned(),
+                "delete" => "event.text == Key.Delete".to_owned(),
+                "tab" => "event.text == Key.Tab".to_owned(),
+                "right arrow" => "event.text == Key.RightArrow".to_owned(),
+                _ => continue,
+            };
+            assert!(
+                PANEL.contains(&wanted),
+                "the sheet offers «{}» and the panel never looks for {wanted}",
+                row.preview
+            );
+        }
+    }
+}
