@@ -19,10 +19,10 @@ impl Clipboard {
             return Written::Refused;
         };
 
-        let Some(_alone) = crate::clipboard::alone(1) else {
+        if !self.opened_to_write() {
             release(&ready);
             return Written::Refused;
-        };
+        }
         if unsafe { EmptyClipboard() }.is_err() {
             release(&ready);
             return Written::Refused;

@@ -1,4 +1,3 @@
 370 crates/cp-panel/src/app.rs::wire the panel callbacks, one after another: splitting it would only move the list
 1039 crates/cp-win/examples/probe/battery.rs::main a diagnostic main that walks every invariant of its platform in one pass
 1037 crates/cp-mac/examples/probe/battery.rs::main the same battery, for the other platform
-140 crates/cp-win/examples/probe/battery.rs::what_is_abandoned the group of cases that give a read up on purpose, lifted out so the main above it could shrink

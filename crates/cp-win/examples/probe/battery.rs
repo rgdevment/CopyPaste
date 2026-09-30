@@ -169,7 +169,7 @@ fn what_is_abandoned(b: &mut Battery) {
         "a format with data responds well under the ceiling",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g1"))]);
             }
             let started = std::time::Instant::now();
@@ -233,7 +233,7 @@ fn what_is_abandoned(b: &mut Battery) {
         "insisting on a source that responds costs no second attempt",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-g4"))]);
             }
             let direct = {
@@ -257,54 +257,67 @@ fn what_is_abandoned(b: &mut Battery) {
     );
 
     b.case(
-            "G5",
-            "what a read that was given up still holds is never freed under it",
-            || {
-                let big = cp_win_sys::writing::utf16_of(&"abcdefghij".repeat(20_000));
-                let mut written = 0;
-                for _ in 0..40 {
-                    let _ = capture::capture_within(std::time::Duration::from_nanos(1));
-                    let Some(clipboard) = Clipboard::open() else {
-                        continue;
-                    };
-                    if clipboard.replace(&[(CF_UNICODETEXT, &big)])
-                        != (cp_win_sys::writing::Written::Placed { formats: 1 })
-                    {
-                        continue;
-                    }
-                    written += 1;
-                    let back = clipboard
-                        .bytes(CF_UNICODETEXT)
-                        .ok_or("what was just written does not read back")?;
-                    if back != big {
-                        return Err(format!(
-                            "the bytes came back changed at {} of {} written: something was freed under a read",
-                            back.len(),
-                            big.len()
-                        ));
+        "G5",
+        "a write waits for a read that was given up instead of freeing under it",
+        || {
+            let big = cp_win_sys::writing::utf16_of(&"abcdefghij".repeat(20_000));
+            let mut refused = 0;
+            let mut placed = 0;
+            let mut waited = 0;
+            for _ in 0..40 {
+                let counted = cp_win_sys::clipboard::reading();
+                let pending = cp_win_sys::reading::begin(move || {
+                    let _held = counted;
+                    std::thread::sleep(std::time::Duration::from_millis(30));
+                });
+                let asked = std::time::Instant::now();
+                match Clipboard::to_write() {
+                    None => refused += 1,
+                    Some(clipboard) => {
+                        if asked.elapsed() < std::time::Duration::from_millis(25) {
+                            return Err(format!(
+                                "the write took the clipboard after {:?}, before the read let go",
+                                asked.elapsed()
+                            ));
+                        }
+                        waited += 1;
+                        if clipboard.replace(&[(CF_UNICODETEXT, &big)])
+                            != (cp_win_sys::writing::Written::Placed { formats: 1 })
+                        {
+                            return Err("the write was let through and then failed".into());
+                        }
+                        placed += 1;
+                        let back = clipboard
+                            .bytes(CF_UNICODETEXT)
+                            .ok_or("what was just written does not read back")?;
+                        if !back.starts_with(&big) {
+                            return Err(format!(
+                                "the bytes came back changed: {} of {} match",
+                                back.iter().zip(&big).take_while(|(a, b)| a == b).count(),
+                                big.len()
+                            ));
+                        }
                     }
                 }
-                if written == 0 {
-                    return Err("not one write went through, so nothing was proven".into());
-                }
-                println!("            {written} of 40 writes went through with a reader abandoned");
-                for _ in 0..40 {
-                    if let Some(clipboard) = Clipboard::open()
-                        && clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-probe"))])
-                            == (cp_win_sys::writing::Written::Placed { formats: 1 })
-                    {
-                        return Ok(());
-                    }
-                    std::thread::sleep(std::time::Duration::from_millis(25));
-                }
-                Err("the abandoned readers never let go, so the cases after this one would fail".into())
-            },
-        );
+                let _ = pending.wait(std::time::Duration::from_secs(2));
+            }
+            if placed == 0 {
+                return Err("every write was refused, so nothing was proven".into());
+            }
+            if waited == 0 {
+                return Err(
+                    "not one write was made to wait, so the guard was never exercised".into(),
+                );
+            }
+            println!(
+                "            {waited} writes waited for a read to let go, {refused} gave up waiting"
+            );
+            Ok(())
+        },
+    );
 }
 
 fn main() -> std::process::ExitCode {
-    println!("\nCore battery against the Windows clipboard");
-
     let mut b = Battery {
         passed: 0,
         failed: 0,
@@ -427,7 +440,7 @@ fn main() -> std::process::ExitCode {
     b.case("F1", "what we write reads back the same", || {
         let written = "cp-f1-round-trip ñ 🦀";
         {
-            let clipboard = Clipboard::open().ok_or("did not open for writing")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open for writing")?;
             match clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]) {
                 Written::Placed { formats: 1 } => {}
                 other => return Err(format!("the write gave {other:?}")),
@@ -447,7 +460,7 @@ fn main() -> std::process::ExitCode {
         || {
             let before = clipboard::sequence().ok_or("no counter")?;
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f2"))]);
             }
             let after = clipboard::sequence().ok_or("no counter")?;
@@ -471,7 +484,7 @@ fn main() -> std::process::ExitCode {
         let mut watcher = Watcher::new(Cadence::Opaque);
         watcher.tick(clipboard::sequence().ok_or("no counter")?);
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f3"))]);
         }
         let ours = clipboard::sequence().ok_or("no counter")?;
@@ -486,7 +499,7 @@ fn main() -> std::process::ExitCode {
         let mut watcher = Watcher::new(Cadence::Opaque);
         watcher.tick(clipboard::sequence().ok_or("no counter")?);
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f4-ours"))]);
         }
         let ours = clipboard::sequence().ok_or("no counter")?;
@@ -495,7 +508,7 @@ fn main() -> std::process::ExitCode {
             return Err("ours was not recognised".into());
         }
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-f4-foreign"))]);
         }
         let theirs = clipboard::sequence().ok_or("no counter")?;
@@ -511,7 +524,7 @@ fn main() -> std::process::ExitCode {
 
     b.case("H1", "a copied text becomes an item", || {
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("someone@example.test"))]);
         }
         let clipboard = Clipboard::open().ok_or("did not open")?;
@@ -558,7 +571,7 @@ fn main() -> std::process::ExitCode {
         "two identical copies have the same fingerprint",
         || {
             let write = |text: &str| {
-                let clipboard = Clipboard::open()?;
+                let clipboard = Clipboard::to_write()?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(text))]);
                 Some(())
             };
@@ -593,7 +606,7 @@ fn main() -> std::process::ExitCode {
             return Err(format!("the format registered as «{marker}»"));
         }
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             let id = cp_win_sys::clipboard::register("Clipboard Viewer Ignore")
                 .ok_or("did not register")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("a-password")), (id, &[1u8])]);
@@ -603,7 +616,7 @@ fn main() -> std::process::ExitCode {
             capture(&clipboard)
         };
         {
-            let clipboard = Clipboard::open().ok_or("did not open to clean up")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open to clean up")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-h4-clean"))]);
         }
         match seen {
@@ -632,7 +645,7 @@ fn main() -> std::process::ExitCode {
         "an item comes back to the clipboard with its formats",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-original"))]);
             }
             let item = {
@@ -643,11 +656,11 @@ fn main() -> std::process::ExitCode {
                 }
             };
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-something-else"))]);
             }
             let written = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 to_clipboard(&clipboard, &item)
             };
             match written {
@@ -670,7 +683,7 @@ fn main() -> std::process::ExitCode {
         "capturing what was restored gives the same fingerprint",
         || {
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i2-round-trip"))]);
             }
             let (first, item) = {
@@ -681,7 +694,7 @@ fn main() -> std::process::ExitCode {
                 }
             };
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 to_clipboard(&clipboard, &item);
             }
             let clipboard = Clipboard::open().ok_or("did not open")?;
@@ -704,7 +717,7 @@ fn main() -> std::process::ExitCode {
         || {
             let html = id_of("HTML Format").ok_or("HTML Format did not register")?;
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[
                     (CF_UNICODETEXT, &utf16_of("with styles")),
                     (html, b"<b>with styles</b>"),
@@ -720,7 +733,7 @@ fn main() -> std::process::ExitCode {
                 .ok_or("the plain form was not offered")?
                 .into_item();
             let written = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 to_clipboard(&clipboard, &plain)
             };
             match written {
@@ -738,7 +751,7 @@ fn main() -> std::process::ExitCode {
                 return Err("the item lost formats".into());
             }
             let restored = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 to_clipboard(&clipboard, &item)
             };
             match restored {
@@ -787,7 +800,7 @@ fn main() -> std::process::ExitCode {
         });
         std::thread::sleep(std::time::Duration::from_millis(60));
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j1"))]);
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
@@ -805,7 +818,7 @@ fn main() -> std::process::ExitCode {
         use std::sync::Arc;
         use std::sync::atomic::{AtomicUsize, Ordering};
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j2-quiet"))]);
         }
         std::thread::sleep(std::time::Duration::from_millis(60));
@@ -833,7 +846,7 @@ fn main() -> std::process::ExitCode {
         std::thread::sleep(std::time::Duration::from_millis(60));
 
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-ours"))]);
         }
         watching.ours();
@@ -841,7 +854,7 @@ fn main() -> std::process::ExitCode {
         let after_ours = seen.load(Ordering::Relaxed);
 
         {
-            let clipboard = Clipboard::open().ok_or("did not open")?;
+            let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-foreign"))]);
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
@@ -913,7 +926,7 @@ fn main() -> std::process::ExitCode {
         Some(target) => b.case("L1", "the text reaches a target window", || {
             let written = "cp-l1-real-paste";
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]);
             }
             let seen = frontmost::target_for(target.window());
@@ -942,7 +955,7 @@ fn main() -> std::process::ExitCode {
         || {
             let written = "cp-l2-degraded";
             {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
                 clipboard.replace(&[(CF_UNICODETEXT, &utf16_of(written))]);
             }
             let gone = Target {
@@ -1293,7 +1306,7 @@ fn main() -> std::process::ExitCode {
             );
 
             let written = {
-                let clipboard = Clipboard::open().ok_or("no abrió")?;
+                let clipboard = Clipboard::to_write().ok_or("no abrió")?;
                 to_clipboard(&clipboard, &item)
             };
             match written {

@@ -60,7 +60,7 @@ mod platform {
     }
 
     pub fn to_clipboard(item: &Item, ours: impl FnOnce()) -> bool {
-        let Some(clipboard) = Clipboard::open() else {
+        let Some(clipboard) = Clipboard::to_write() else {
             return false;
         };
         let written = matches!(

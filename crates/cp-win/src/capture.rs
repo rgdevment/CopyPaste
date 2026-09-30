@@ -24,18 +24,20 @@ const _: () = assert!(AFRESH_AT_MOST >= 1);
 const _: () = assert!(AFRESH_AT_MOST < cp_core::watch::RETRY.attempts);
 
 pub fn capture_within(patience: std::time::Duration) -> Captured {
-    reading::anything_within(patience, capture_now).unwrap_or(Captured::TooSlow)
+    let counted = clipboard::reading();
+    reading::anything_within(patience, move || capture_counted(&counted))
+        .unwrap_or(Captured::TooSlow)
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
     let started = sequence_now();
-    let mut pending = reading::begin(capture_now);
+    let mut pending = begin_counted();
     let mut afresh = 0;
     let got = insisting(retry, sequence_now, || match pending.wait(patience) {
         None => Captured::TooSlow,
         Some(Captured::TooSlow) if afresh < AFRESH_AT_MOST => {
             afresh += 1;
-            pending = reading::begin(capture_now);
+            pending = begin_counted();
             Captured::TooSlow
         }
         Some(other) => other,
@@ -46,9 +48,18 @@ pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::R
     }
 }
 
+fn begin_counted() -> reading::Pending<Captured> {
+    let counted = clipboard::reading();
+    reading::begin(move || capture_counted(&counted))
+}
+
 pub fn capture_now() -> Captured {
-    let _counted = clipboard::reading();
-    let captured = match Clipboard::open() {
+    let counted = clipboard::reading();
+    capture_counted(&counted)
+}
+
+fn capture_counted(counted: &clipboard::Reading) -> Captured {
+    let captured = match Clipboard::within(counted) {
         Some(clipboard) => capture(&clipboard),
         None => Captured::TooSlow,
     };
