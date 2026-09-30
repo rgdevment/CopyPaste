@@ -1,6 +1,7 @@
 const ES = {
   railGeneral: "General",
   railHistory: "Historial",
+  railKeys: "Atajos de teclado",
   railBackup: "Copia de seguridad",
   railAbout: "Acerca de",
   railSections: "Secciones",
@@ -32,6 +33,7 @@ const ES = {
   keysTaken:
     "Otro programa ya usa esa combinación, así que el panel no se abre con ella. Elige otra cuando puedas cambiarla",
   keysFree: "Estas están libres ahora mismo:",
+  bandOpens: "ABRIR EL PANEL",
   keysTable: "Lo que responde el panel",
   keysTableWhy: "Estas teclas funcionan mientras el panel está abierto",
   hides: "Ocultar al hacer clic fuera",
@@ -168,6 +170,7 @@ type Said = typeof ES;
 const EN: Record<keyof Said, string> = {
   railGeneral: "General",
   railHistory: "History",
+  railKeys: "Keyboard shortcuts",
   railBackup: "Backup",
   railAbout: "About",
   railSections: "Sections",
@@ -199,6 +202,7 @@ const EN: Record<keyof Said, string> = {
   keysTaken:
     "Another program already uses that combination, so the panel will not open with it. Pick another one when you can change it",
   keysFree: "These are free right now:",
+  bandOpens: "OPENING THE PANEL",
   keysTable: "What the panel answers to",
   keysTableWhy: "These keys work while the panel is open",
   hides: "Hide when you click elsewhere",

@@ -363,21 +363,6 @@ export component Panel inherits Window {
                     Rectangle {
                         horizontal-stretch: 1;
                         clip: true;
-                        strip := Flickable {
-                            width: parent.width;
-                            height: 24px;
-                            interactive: true;
-                            content-width: row.preferred-width;
-                            content-height: 24px;
-                            row := HorizontalLayout {
-                                spacing: 6px;
-                                alignment: start;
-                                for chip in root.chips : Pill {
-                                    chip: chip;
-                                    chosen(key) => { root.chip-chosen(key); }
-                                }
-                            }
-                        }
                         TouchArea {
                             scroll-event(event) => {
                                 strip.content-x = clamp(
@@ -386,6 +371,21 @@ export component Panel inherits Window {
                                     0px
                                 );
                                 return accept;
+                            }
+                            strip := Flickable {
+                                width: parent.width;
+                                height: 24px;
+                                interactive: true;
+                                content-width: row.preferred-width;
+                                content-height: 24px;
+                                row := HorizontalLayout {
+                                    spacing: 6px;
+                                    alignment: start;
+                                    for chip in root.chips : Pill {
+                                        chip: chip;
+                                        chosen(key) => { root.chip-chosen(key); }
+                                    }
+                                }
                             }
                         }
                         Rectangle {

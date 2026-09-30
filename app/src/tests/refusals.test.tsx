@@ -50,7 +50,9 @@ describe("cuando el backend dice que no", () => {
     undo.push(
       await insteadOf((what) => (what === "keys" ? Promise.reject(new Error("no answer")) : null)),
     );
+    const who = userEvent.setup();
     render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     expect(await screen.findByText("Atajo del panel")).toBeDefined();
     expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
   });
@@ -64,7 +66,9 @@ describe("cuando el backend dice que no", () => {
         return what === "spare" ? Promise.reject(new Error("no answer")) : null;
       }),
     );
+    const who = userEvent.setup();
     render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     expect(await screen.findByText(/Otro programa ya usa esa combinación/)).toBeDefined();
     expect(screen.queryByText(/Estas están libres/)).toBeNull();
   });

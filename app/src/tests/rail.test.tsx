@@ -18,26 +18,26 @@ describe("la ventana", () => {
     vi.clearAllMocks();
   });
 
-  it("aterriza en General cuando el panel pide los ajustes", async () => {
+  it("aterriza en los atajos cuando el panel pide los ajustes", async () => {
     render(<App />);
-    await screen.findByText("Ctrl + Alt + V");
+    await screen.findByLabelText("Idioma");
 
     const rail = await heardOn("rail");
     rail({ payload: "backup" });
     expect(await screen.findByText("Exportar")).toBeDefined();
 
-    rail({ payload: "general" });
+    rail({ payload: "keys" });
     expect(await screen.findByText("Atajo del panel")).toBeDefined();
   });
 
   it("no se mueve si le piden una sección que no existe", async () => {
     render(<App />);
-    await screen.findByText("Ctrl + Alt + V");
+    await screen.findByLabelText("Idioma");
 
     const rail = await heardOn("rail");
     rail({ payload: "inventada" });
     await waitFor(() => {
-      expect(screen.getByText("Atajo del panel")).toBeDefined();
+      expect(screen.getByLabelText("Idioma")).toBeDefined();
     });
   });
 });

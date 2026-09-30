@@ -7,10 +7,12 @@ import Backup from "./ui/Backup";
 import Chrome from "./ui/Chrome";
 import General from "./ui/General";
 import History from "./ui/History";
-import { Clock, Gear, Info, Vault } from "./ui/Icons";
+import { Clock, Gear, Info, Key, Vault } from "./ui/Icons";
+import Keys from "./ui/Keys";
 
 const WHERE = [
   { key: "general", says: "railGeneral", icon: Gear },
+  { key: "keys", says: "railKeys", icon: Key },
   { key: "history", says: "railHistory", icon: Clock },
   { key: "backup", says: "railBackup", icon: Vault },
 ] as const;
@@ -70,6 +72,7 @@ export default function App() {
             </p>
           )}
           {kept && where === "general" && <General kept={kept} change={change} />}
+          {kept && where === "keys" && <Keys kept={kept} change={change} />}
           {kept && where === "history" && <History kept={kept} change={change} />}
           {where === "backup" && <Backup />}
           {where === "about" && <About />}
