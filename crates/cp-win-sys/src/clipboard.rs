@@ -7,15 +7,27 @@ use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
 const BACKOFF_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400];
 
+static ONE_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 pub struct Clipboard {
-    _private: (),
+    _held: std::sync::MutexGuard<'static, ()>,
+}
+
+fn ours() -> Option<std::sync::MutexGuard<'static, ()>> {
+    match ONE_AT_A_TIME.try_lock() {
+        Ok(held) => Some(held),
+        Err(std::sync::TryLockError::Poisoned(fell)) => Some(fell.into_inner()),
+        Err(std::sync::TryLockError::WouldBlock) => None,
+    }
 }
 
 impl Clipboard {
     pub fn open() -> Option<Self> {
         for wait in BACKOFF_MS {
-            if unsafe { OpenClipboard(Some(HWND::default())) }.is_ok() {
-                return Some(Self { _private: () });
+            if let Some(held) = ours()
+                && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
+            {
+                return Some(Self { _held: held });
             }
             std::thread::sleep(std::time::Duration::from_millis(*wait));
         }

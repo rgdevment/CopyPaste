@@ -175,3 +175,26 @@ fn a_picture_on_the_clipboard_crosses_as_a_png_and_not_as_its_raw_bitmap() {
         "a bitmap off the clipboard is transcoded, because nothing else reads a raw DIB"
     );
 }
+
+#[test]
+fn a_read_that_was_given_up_cannot_have_the_clipboard_emptied_under_it() {
+    let big: Vec<u8> = "abcdefghij"
+        .repeat(200_000)
+        .encode_utf16()
+        .flat_map(u16::to_le_bytes)
+        .collect();
+    let mut refused = 0;
+    for _ in 0..60 {
+        let _ = capture_within(std::time::Duration::from_nanos(1));
+        match Clipboard::open() {
+            Some(clipboard) => {
+                clipboard.replace(&[(cp_win_sys::formats::CF_UNICODETEXT, &big)]);
+            }
+            None => refused += 1,
+        }
+    }
+    assert!(
+        refused < 60,
+        "every single attempt was refused, so nothing was exercised"
+    );
+}
