@@ -103,8 +103,28 @@ export component Panel inherits Window {
             padding: 0px;
             spacing: 0px;
 
+            Rectangle {
+                height: 14px;
+                handle := TouchArea {
+                    mouse-cursor: move;
+                    moved => {
+                        if (handle.pressed) {
+                            root.nudge(handle.mouse-x - handle.pressed-x, handle.mouse-y - handle.pressed-y);
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 34px;
+                    height: 3px;
+                    border-radius: 2px;
+                    background: handle.has-hover ? Theme.muted : Theme.selected-edge;
+                    animate background { duration: 120ms; }
+                }
+            }
+
             VerticalLayout {
                 padding: 10px;
+                padding-top: 2px;
                 padding-bottom: 8px;
                 spacing: 9px;
                 search-box := Rectangle {
