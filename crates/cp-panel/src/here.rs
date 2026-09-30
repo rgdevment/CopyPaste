@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir, dress, forward,
-    in_front, ocr_available, paste_into, stay_out_of_the_dock, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard,
+    in_front, ocr_available, paste_into, read_stuck, stay_out_of_the_dock, system_is_light,
+    text_in, thumb_of_file, thumbs_dir, to_clipboard,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,6 +72,10 @@ mod platform {
             drop(clipboard);
         }
         written
+    }
+
+    pub fn read_stuck() -> bool {
+        cp_win_sys::clipboard::read_stuck_for().is_some()
     }
 
     pub fn system_is_light() -> bool {
@@ -164,6 +168,10 @@ mod platform {
             ours();
         }
         written
+    }
+
+    pub fn read_stuck() -> bool {
+        false
     }
 
     pub fn system_is_light() -> bool {

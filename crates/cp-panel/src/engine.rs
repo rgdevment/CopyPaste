@@ -223,7 +223,11 @@ fn kept(store: &Store) -> Option<i64> {
             return None;
         }
         Captured::TooSlow => {
-            note("the clipboard stayed busy however much we insisted");
+            note("a read of the clipboard never came back, however much we insisted");
+            return None;
+        }
+        Captured::Busy => {
+            note("the clipboard was held by another program every time we asked");
             return None;
         }
         Captured::Nothing | Captured::Superseded => return None,

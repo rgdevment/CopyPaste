@@ -860,6 +860,12 @@ fn vanish(ui: &Panel) {
 }
 
 fn busy() -> &'static str {
+    if crate::here::read_stuck() {
+        return crate::say::pick(
+            "una app dejó de responder con lo copiado; reinicia CopyPaste",
+            "an app stopped answering about what it copied; restart CopyPaste",
+        );
+    }
     crate::say::pick(
         "no se pudo pegar: el portapapeles está ocupado",
         "could not paste: the clipboard is busy",

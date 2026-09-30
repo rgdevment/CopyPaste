@@ -266,7 +266,7 @@ fn what_is_abandoned(b: &mut Battery) {
             let mut quickest = std::time::Duration::MAX;
             for _ in 0..40 {
                 let counted = cp_win_sys::clipboard::reading();
-                let pending = cp_win_sys::reading::begin(move || {
+                let pending = cp_core::reading::begin(move || {
                     let _held = counted;
                     std::thread::sleep(std::time::Duration::from_millis(30));
                 });
@@ -337,8 +337,7 @@ fn what_the_clipboard_answers(b: &mut Battery) {
 }
 
 fn main() -> std::process::ExitCode {
-    println!("
-Core battery against the Windows clipboard");
+    println!("\nCore battery against the Windows clipboard");
 
     let mut b = Battery {
         passed: 0,

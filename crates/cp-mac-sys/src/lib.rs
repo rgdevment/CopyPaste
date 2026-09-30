@@ -11,6 +11,5 @@ pub mod ocr;
 pub mod pasteboard;
 pub mod paths;
 pub mod permissions;
-pub mod reading;
 pub mod runloop;
 pub mod theme;

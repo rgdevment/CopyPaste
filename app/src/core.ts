@@ -72,8 +72,8 @@ export function useKept() {
           }
         })
         .catch((why) => {
-          setTrouble(String(why));
           look();
+          setTrouble(String(why));
         });
       return queue.current.then(() => undefined);
     },

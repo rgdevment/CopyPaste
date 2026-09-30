@@ -96,3 +96,62 @@ fn only_what_was_kept_is_an_item() {
     assert_eq!(Captured::Superseded.kept(), None);
     assert_eq!(Captured::Refused(Refusal::Declined("x")).kept(), None);
 }
+
+#[test]
+fn a_clipboard_held_by_someone_else_is_insisted_on_like_a_slow_one() {
+    let mut tries = 0;
+    let got = insisting(
+        quick(),
+        || 7,
+        || {
+            tries += 1;
+            if tries < 3 {
+                Captured::Busy
+            } else {
+                Captured::Nothing
+            }
+        },
+    );
+    assert_eq!(got, Captured::Nothing);
+    assert_eq!(tries, 3, "Busy is retried, not taken as an answer");
+}
+
+#[test]
+fn a_read_that_never_comes_back_stays_a_timeout_and_is_not_swallowed() {
+    let got = insisting_afresh(
+        quick(),
+        std::time::Duration::from_millis(5),
+        || 7,
+        || {
+            crate::reading::begin(|| {
+                std::thread::sleep(std::time::Duration::from_secs(30));
+                Captured::Nothing
+            })
+        },
+    );
+    assert_eq!(
+        got,
+        Captured::TooSlow,
+        "a read still running is a timeout the engine must log"
+    );
+}
+
+#[test]
+fn a_busy_clipboard_becomes_superseded_only_when_a_newer_copy_arrived() {
+    let moved = std::sync::atomic::AtomicI64::new(1);
+    let got = insisting_afresh(
+        quick(),
+        std::time::Duration::from_secs(5),
+        || moved.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+        || crate::reading::begin(|| Captured::Busy),
+    );
+    assert_eq!(got, Captured::Superseded);
+
+    let still = insisting_afresh(
+        quick(),
+        std::time::Duration::from_secs(5),
+        || 7,
+        || crate::reading::begin(|| Captured::Busy),
+    );
+    assert_eq!(still, Captured::Busy, "nothing newer, so it stays busy");
+}

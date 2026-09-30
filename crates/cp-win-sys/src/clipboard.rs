@@ -6,7 +6,9 @@ use windows::Win32::System::DataExchange::{
 use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
 const BACKOFF_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400];
-const CLEARING_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400];
+const CLEARING_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400, 400, 400];
+
+pub const STUCK_AFTER: std::time::Duration = std::time::Duration::from_secs(5);
 
 const _: () = assert!(CLEARING_MS[0] == 0);
 const _: () = {
@@ -22,27 +24,54 @@ const _: () = {
         clearing += CLEARING_MS[turn];
         turn += 1;
     }
-    assert!(clearing >= backoff);
+    assert!(clearing > backoff);
 };
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 static READERS: AtomicUsize = AtomicUsize::new(0);
 static WRITES_COMING: AtomicUsize = AtomicUsize::new(0);
+static OLDEST_READ: AtomicU64 = AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    std::time::UNIX_EPOCH.elapsed().map_or(0, |gone| {
+        u64::try_from(gone.as_millis()).unwrap_or(u64::MAX)
+    })
+}
 
 pub struct Reading {
     _private: (),
 }
 
 pub fn reading() -> Reading {
-    READERS.fetch_add(1, Ordering::SeqCst);
+    if READERS.fetch_add(1, Ordering::SeqCst) == 0 {
+        OLDEST_READ.store(now_ms(), Ordering::SeqCst);
+    }
     Reading { _private: () }
 }
 
 impl Drop for Reading {
     fn drop(&mut self) {
-        READERS.fetch_sub(1, Ordering::SeqCst);
+        if READERS.fetch_sub(1, Ordering::SeqCst) == 1 {
+            OLDEST_READ.store(0, Ordering::SeqCst);
+        }
     }
+}
+
+fn stuck_for(readers: usize, since: u64, now: u64) -> Option<std::time::Duration> {
+    if readers == 0 || since == 0 || now < since {
+        return None;
+    }
+    let gone = std::time::Duration::from_millis(now - since);
+    (gone >= STUCK_AFTER).then_some(gone)
+}
+
+pub fn read_stuck_for() -> Option<std::time::Duration> {
+    stuck_for(
+        READERS.load(Ordering::SeqCst),
+        OLDEST_READ.load(Ordering::SeqCst),
+        now_ms(),
+    )
 }
 
 struct Coming {
@@ -66,23 +95,24 @@ enum For {
     Writing,
 }
 
-pub struct Clipboard {
+pub struct Clipboard<'a> {
     _counted: Option<Reading>,
+    _borrowed: Option<&'a Reading>,
     opened_for: For,
     _coming: Option<Coming>,
 }
 
-impl Clipboard {
+impl Clipboard<'static> {
     pub fn open() -> Option<Self> {
         for wait in BACKOFF_MS {
             if WRITES_COMING.load(Ordering::SeqCst) == 0 {
                 let counted = reading();
-                if READERS.load(Ordering::SeqCst) > 0
-                    && WRITES_COMING.load(Ordering::SeqCst) == 0
+                if WRITES_COMING.load(Ordering::SeqCst) == 0
                     && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
                 {
                     return Some(Self {
                         _counted: Some(counted),
+                        _borrowed: None,
                         opened_for: For::Reading,
                         _coming: None,
                     });
@@ -93,21 +123,10 @@ impl Clipboard {
         None
     }
 
-    pub fn within(_counted: &Reading) -> Option<Self> {
-        for wait in BACKOFF_MS {
-            if unsafe { OpenClipboard(Some(HWND::default())) }.is_ok() {
-                return Some(Self {
-                    _counted: None,
-                    opened_for: For::Reading,
-                    _coming: None,
-                });
-            }
-            std::thread::sleep(std::time::Duration::from_millis(*wait));
-        }
-        None
-    }
-
     pub fn to_write() -> Option<Self> {
+        if read_stuck_for().is_some() {
+            return None;
+        }
         let coming = coming();
         for wait in CLEARING_MS {
             std::thread::sleep(std::time::Duration::from_millis(*wait));
@@ -116,10 +135,30 @@ impl Clipboard {
             {
                 return Some(Self {
                     _counted: None,
+                    _borrowed: None,
                     opened_for: For::Writing,
                     _coming: Some(coming),
                 });
             }
+        }
+        None
+    }
+}
+
+impl<'a> Clipboard<'a> {
+    pub fn within(counted: &'a Reading) -> Option<Self> {
+        for wait in BACKOFF_MS {
+            if WRITES_COMING.load(Ordering::SeqCst) == 0
+                && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
+            {
+                return Some(Self {
+                    _counted: None,
+                    _borrowed: Some(counted),
+                    opened_for: For::Reading,
+                    _coming: None,
+                });
+            }
+            std::thread::sleep(std::time::Duration::from_millis(*wait));
         }
         None
     }
@@ -165,7 +204,7 @@ impl Clipboard {
     }
 }
 
-impl Drop for Clipboard {
+impl Drop for Clipboard<'_> {
     fn drop(&mut self) {
         let _ = unsafe { CloseClipboard() };
     }

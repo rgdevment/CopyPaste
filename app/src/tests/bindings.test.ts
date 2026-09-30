@@ -62,9 +62,10 @@ describe("la tabla de atajos", () => {
         if (!looked) {
           continue;
         }
-        expect(PANEL, `«${row.keys}» promises ${looked} and the panel never looks for it`).toContain(
-          looked,
-        );
+        expect(
+          PANEL,
+          `«${row.keys}» promises ${looked} and the panel never looks for it`,
+        ).toContain(looked);
       }
     }
   });
