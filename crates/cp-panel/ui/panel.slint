@@ -190,6 +190,26 @@ export component Panel inherits Window {
                                         root.pin(root.cards[root.current].id, !root.cards[root.current].pinned);
                                         return accept;
                                     }
+                                    if event.text == "e" && event.modifiers.control && root.current >= 0 {
+                                        root.edit(root.cards[root.current].id);
+                                        return accept;
+                                    }
+                                    if (event.text == "g" || event.text == "t") && event.modifiers.alt {
+                                        root.ask-kinds();
+                                        return accept;
+                                    }
+                                    if event.text == "2" && event.modifiers.control {
+                                        root.pin-filter();
+                                        return accept;
+                                    }
+                                    if event.text == "1" && event.modifiers.control {
+                                        root.clear-filters();
+                                        return accept;
+                                    }
+                                    if event.text == Key.RightArrow && root.current >= 0 {
+                                        root.opened = !root.opened;
+                                        return accept;
+                                    }
                                     if event.text == Key.Escape {
                                         root.dismiss();
                                         return accept;

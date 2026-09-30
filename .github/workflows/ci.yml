@@ -145,10 +145,8 @@ jobs:
 
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example mac_probe
-      - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)(_test)?\.rs|src-tauri[/\]src[/\]'
-      - run: cargo llvm-cov report --fail-under-lines 90 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)(_test)?\.rs|src-tauri[/\]src[/\]'
-      - name: What the product alone covers, for the day the threshold moves
-        run: cargo llvm-cov report --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]' | tail -1
+      - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
 
       - uses: actions/setup-node@v7
         with:
@@ -195,10 +193,8 @@ jobs:
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example win_probe
-      - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)(_test)?\.rs|src-tauri[/\]src[/\]'
-      - run: cargo llvm-cov report --fail-under-lines 95 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)(_test)?\.rs|src-tauri[/\]src[/\]'
-      - name: What the product alone covers, for the day the threshold moves
-        run: cargo llvm-cov report --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]' | tail -1
+      - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
       - name: Every path is relative to the repository, which is what Sonar reads
         if: always()
         shell: bash
@@ -252,12 +248,12 @@ jobs:
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.sources=crates,app/src,app/src-tauri/src
-            -Dsonar.tests=app/src
-            -Dsonar.test.inclusions=app/src/**/*.test.ts,app/src/**/*.test.tsx,app/src/tests/**
-            -Dsonar.exclusions=crates/*/examples/**,crates/*/build.rs
+            -Dsonar.tests=crates,app/src,app/src-tauri/src
+            -Dsonar.test.inclusions=app/src/**/*.test.ts,app/src/**/*.test.tsx,app/src/tests/**,crates/**/*_test.rs,app/src-tauri/src/**/*_test.rs
+            -Dsonar.exclusions=crates/*/examples/**,crates/*/build.rs,crates/**/*_test.rs,app/src-tauri/src/**/*_test.rs
             -Dsonar.rust.lcov.reportPaths=lcov-rust.info,lcov-win.info
             -Dsonar.javascript.lcov.reportPaths=app/coverage/lcov.info
             -Dsonar.rust.clippy.enabled=false
-            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/app_test.rs,crates/cp-panel/src/measure.rs,crates/cp-panel/src/measure_test.rs
+            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs
             -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
             -Dsonar.qualitygate.timeout=300

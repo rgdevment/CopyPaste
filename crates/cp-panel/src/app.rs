@@ -804,7 +804,7 @@ fn keys_sheet() -> Vec<FormRow> {
 }
 
 fn keys_sheet_in(english: bool) -> Vec<FormRow> {
-    const KEYS: [(&str, &str, &str, &str); 12] = [
+    const KEYS: [(&str, &str, &str, &str); 16] = [
         (
             "Enter",
             "Enter",
@@ -866,6 +866,30 @@ fn keys_sheet_in(english: bool) -> Vec<FormRow> {
             "delete the selected one",
         ),
         ("Ctrl + P", "Ctrl + P", "anclar o desanclar", "pin or unpin"),
+        (
+            "Ctrl + E",
+            "Ctrl + E",
+            "editar la seleccionada",
+            "edit the selected one",
+        ),
+        (
+            "Flecha derecha",
+            "Right arrow",
+            "abrir o cerrar la tarjeta",
+            "open or close the card",
+        ),
+        (
+            "Ctrl + 1  ·  Ctrl + 2",
+            "Ctrl + 1  ·  Ctrl + 2",
+            "todo  ·  solo lo anclado",
+            "everything  ·  only what is pinned",
+        ),
+        (
+            "Alt + G  ·  Alt + T",
+            "Alt + G  ·  Alt + T",
+            "elegir el tipo",
+            "choose the kind",
+        ),
         ("Esc", "Esc", "cerrar el panel", "close the panel"),
     ];
     KEYS.iter()
