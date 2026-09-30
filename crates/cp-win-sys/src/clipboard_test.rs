@@ -15,11 +15,17 @@ fn the_backoff_covers_most_of_a_second_without_a_busy_loop() {
 }
 
 #[test]
-fn a_write_waits_for_the_reads_that_are_not_its_own() {
-    let base = readers_now();
-    let _held = reading();
+fn a_write_that_got_through_is_the_only_one_allowed_to_replace() {
+    let Some(writing) = Clipboard::to_write() else {
+        return;
+    };
+    assert!(writing.opened_to_write());
+    drop(writing);
+    let Some(reading) = Clipboard::open() else {
+        return;
+    };
     assert!(
-        alone(base).is_none(),
-        "a write cleared the way while a read it does not own was still counted"
+        !reading.opened_to_write(),
+        "a clipboard opened to read claims it may replace"
     );
 }

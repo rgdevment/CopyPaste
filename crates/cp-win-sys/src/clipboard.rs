@@ -6,81 +6,126 @@ use windows::Win32::System::DataExchange::{
 use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
 const BACKOFF_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400];
-const CLEARING_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100];
+const CLEARING_MS: &[u64] = &[0, 1, 2, 5, 10, 20, 50, 100, 200, 400];
 
 const _: () = assert!(CLEARING_MS[0] == 0);
+const _: () = {
+    let mut backoff = 0;
+    let mut clearing = 0;
+    let mut turn = 0;
+    while turn < BACKOFF_MS.len() {
+        backoff += BACKOFF_MS[turn];
+        turn += 1;
+    }
+    turn = 0;
+    while turn < CLEARING_MS.len() {
+        clearing += CLEARING_MS[turn];
+        turn += 1;
+    }
+    assert!(clearing >= backoff);
+};
 
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 static READERS: AtomicUsize = AtomicUsize::new(0);
-static A_WRITE_IS_COMING: AtomicBool = AtomicBool::new(false);
+static WRITES_COMING: AtomicUsize = AtomicUsize::new(0);
 
 pub struct Reading {
-    _stays_put: std::marker::PhantomData<*const ()>,
+    _private: (),
 }
 
 pub fn reading() -> Reading {
-    READERS.fetch_add(1, Ordering::AcqRel);
-    Reading {
-        _stays_put: std::marker::PhantomData,
-    }
+    READERS.fetch_add(1, Ordering::SeqCst);
+    Reading { _private: () }
 }
 
 impl Drop for Reading {
     fn drop(&mut self) {
-        READERS.fetch_sub(1, Ordering::AcqRel);
+        READERS.fetch_sub(1, Ordering::SeqCst);
     }
 }
 
-pub(crate) struct Alone {
-    _stays_put: std::marker::PhantomData<*const ()>,
+struct Coming {
+    _private: (),
 }
 
-#[cfg(test)]
-pub(crate) fn readers_now() -> usize {
-    READERS.load(Ordering::Acquire)
+fn coming() -> Coming {
+    WRITES_COMING.fetch_add(1, Ordering::SeqCst);
+    Coming { _private: () }
 }
 
-pub(crate) fn alone(ours: usize) -> Option<Alone> {
-    A_WRITE_IS_COMING.store(true, Ordering::Release);
-    let held = Alone {
-        _stays_put: std::marker::PhantomData,
-    };
-    for wait in CLEARING_MS {
-        std::thread::sleep(std::time::Duration::from_millis(*wait));
-        if READERS.load(Ordering::Acquire) <= ours {
-            return Some(held);
-        }
-    }
-    None
-}
-
-impl Drop for Alone {
+impl Drop for Coming {
     fn drop(&mut self) {
-        A_WRITE_IS_COMING.store(false, Ordering::Release);
+        WRITES_COMING.fetch_sub(1, Ordering::SeqCst);
     }
+}
+
+#[derive(PartialEq, Eq)]
+enum For {
+    Reading,
+    Writing,
 }
 
 pub struct Clipboard {
-    _counted: Reading,
-    _stays_put: std::marker::PhantomData<*const ()>,
+    _counted: Option<Reading>,
+    opened_for: For,
+    _coming: Option<Coming>,
 }
 
 impl Clipboard {
     pub fn open() -> Option<Self> {
         for wait in BACKOFF_MS {
-            if !A_WRITE_IS_COMING.load(Ordering::Acquire) {
+            if WRITES_COMING.load(Ordering::SeqCst) == 0 {
                 let counted = reading();
-                if unsafe { OpenClipboard(Some(HWND::default())) }.is_ok() {
+                if READERS.load(Ordering::SeqCst) > 0
+                    && WRITES_COMING.load(Ordering::SeqCst) == 0
+                    && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
+                {
                     return Some(Self {
-                        _counted: counted,
-                        _stays_put: std::marker::PhantomData,
+                        _counted: Some(counted),
+                        opened_for: For::Reading,
+                        _coming: None,
                     });
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(*wait));
         }
         None
+    }
+
+    pub fn within(_counted: &Reading) -> Option<Self> {
+        for wait in BACKOFF_MS {
+            if unsafe { OpenClipboard(Some(HWND::default())) }.is_ok() {
+                return Some(Self {
+                    _counted: None,
+                    opened_for: For::Reading,
+                    _coming: None,
+                });
+            }
+            std::thread::sleep(std::time::Duration::from_millis(*wait));
+        }
+        None
+    }
+
+    pub fn to_write() -> Option<Self> {
+        let coming = coming();
+        for wait in CLEARING_MS {
+            std::thread::sleep(std::time::Duration::from_millis(*wait));
+            if READERS.load(Ordering::SeqCst) == 0
+                && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
+            {
+                return Some(Self {
+                    _counted: None,
+                    opened_for: For::Writing,
+                    _coming: Some(coming),
+                });
+            }
+        }
+        None
+    }
+
+    pub(crate) fn opened_to_write(&self) -> bool {
+        self.opened_for == For::Writing
     }
 
     pub fn offered(&self) -> Vec<u32> {

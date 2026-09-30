@@ -1,12 +1,4 @@
 use super::*;
-
-static ONE_TEST_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-fn alone_with_the_clipboard() -> std::sync::MutexGuard<'static, ()> {
-    ONE_TEST_AT_A_TIME
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-}
 use crate::drop::drop_of;
 use crate::virtual_files::descriptor_of;
 
@@ -159,11 +151,14 @@ fn a_dib_of_one_colour() -> Vec<u8> {
 
 #[test]
 fn a_picture_on_the_clipboard_crosses_as_a_png_and_not_as_its_raw_bitmap() {
-    let _ours = alone_with_the_clipboard();
     let raw = a_dib_of_one_colour();
     {
-        let clipboard = Clipboard::open().expect("the clipboard opens");
-        clipboard.replace(&[(cp_win_sys::formats::CF_DIB, &raw)]);
+        let clipboard = Clipboard::to_write().expect("the clipboard opens to write");
+        assert_eq!(
+            clipboard.replace(&[(cp_win_sys::formats::CF_DIB, &raw)]),
+            cp_win_sys::writing::Written::Placed { formats: 1 },
+            "the picture never reached the clipboard, so what follows would test nothing"
+        );
     }
     let clipboard = Clipboard::open().expect("the clipboard opens");
     let item = capture(&clipboard).kept().expect("a picture was captured");
