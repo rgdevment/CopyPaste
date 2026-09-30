@@ -121,24 +121,18 @@ jobs:
           fi
 
       - name: The tests live beside the file, not inside it
-        run: |
-          found=$(grep -rnA1 -E '^[[:space:]]*#\[cfg\([^)]*\btest\b' \
-            crates app/src-tauri/src --include='*.rs' \
-            | grep -E '^[^:]+[:-][0-9]+[:-][[:space:]]*mod [a-z_0-9]+ \{' || true)
-          if [ -n "$found" ]; then
-            echo "$found"
-            echo "::error::a test module goes in a file of its own beside the one it tests, \
-                  declared as «#[cfg(test)] #[path = \"<file>_test.rs\"] mod tests;». Inside the \
-                  file it buries the code and the ceiling stops measuring what a reader has to \
-                  scroll past."
-            exit 1
-          fi
-          echo "no test module is buried in a file of code"
+        run: python3 scripts/oversized.py --inline
 
       - name: No two crates name an example the same
         run: |
-          said=$(find crates -mindepth 3 -maxdepth 3 -path '*/examples/*.rs' \
-            -exec basename {} .rs \; | sort)
+          set -euo pipefail
+          dirs=$(find . -type d -name examples -not -path './target/*' \
+            -not -path '*/node_modules/*' | sort)
+          said=$(for one in $dirs; do
+            find "$one" -mindepth 1 -maxdepth 1 -name '*.rs' -exec basename {} .rs \;
+            find "$one" -mindepth 2 -maxdepth 2 -name 'main.rs' -printf '%h\n' \
+              | xargs -r -n1 basename
+          done | sort)
           twice=$(printf '%s\n' "$said" | uniq -d)
           if [ -n "$twice" ]; then
             echo "::error::two crates name an example the same, and cargo links every example to \

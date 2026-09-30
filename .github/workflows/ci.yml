@@ -112,6 +112,7 @@ jobs:
           shared-key: cross
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo check --target aarch64-apple-darwin -p cp-mac -p cp-mac-sys
+      - run: cargo check --target aarch64-apple-darwin -p cp-mac-sys --all-targets
 
   deny:
     name: advisories + licences
@@ -248,7 +249,7 @@ jobs:
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.sources=crates,app/src,app/src-tauri/src
             -Dsonar.tests=app/src
-            -Dsonar.test.inclusions=app/src/**/*.test.ts,app/src/**/*.test.tsx,app/src/tests/**,crates/**/*_test.rs,app/src-tauri/src/**/*_test.rs
+            -Dsonar.test.inclusions=app/src/**/*.test.ts,app/src/**/*.test.tsx,app/src/tests/**
             -Dsonar.exclusions=crates/*/examples/**,crates/*/build.rs
             -Dsonar.rust.lcov.reportPaths=lcov-rust.info,lcov-win.info
             -Dsonar.javascript.lcov.reportPaths=app/coverage/lcov.info

@@ -53,8 +53,8 @@ In many ways! Code is just one of them:
 3. **Make your changes** following our style:
    - Clean and minimalist code
    - Code and identifiers in English
-   - No comments. CI refuses them: a name that needs a comment is the wrong name.
-     Only a hidden constraint earns one line
+   - No comments, with no exception. CI refuses any `//` or `/*` in `crates` and
+     `app/src-tauri/src`: a name that needs a comment is the wrong name
    - Tests when appropriate, and **in a file of their own** — see below
 4. **Where a test goes.** Never inside the file it tests. Each file keeps its
    tests in a sibling, declared at the bottom of the file under test:
@@ -70,9 +70,13 @@ In many ways! Code is just one of them:
    access to private items work exactly as if it were inline. Its name is the
    file plus `_test.rs`; when one file has several test modules, the name says
    which one it is and still ends in `_test.rs`: `store_listing_test.rs`,
-   `kind_borders_test.rs`, `waking_windows_test.rs`. The name matters, because
-   it is how the line ceiling, the coverage report and Sonar tell a test from
-   the code it tests. A test module written inline fails CI.
+   `kind_borders_test.rs`, `waking_windows_test.rs`. The suffix is not decorative:
+   the ceiling refuses a declaration pointing at a name without it, so a sibling
+   named anything else is measured as production code and fails at 1500 lines.
+   The declaration goes **last** in the file, after the code — clippy asked for
+   that while the module was inline and cannot see it any more, so
+   `scripts/oversized.py --inline` does. A test module written inside the file
+   fails CI, as does a `*_test.rs` that nothing declares.
 
 5. **Make sure** all tests pass:
 

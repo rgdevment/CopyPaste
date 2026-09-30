@@ -104,10 +104,6 @@ fn bring(from: &std::path::Path, at: i64) -> Result<cp_store::Brought, String> {
     cp_store::backup::bring(from, &store, at).map_err(|why| why.to_string())
 }
 
-#[cfg(test)]
-#[path = "backup_test.rs"]
-mod tests;
-
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Crossed {
@@ -207,3 +203,7 @@ pub fn drop_former() -> Result<Swept, String> {
         bytes: swept.bytes,
     })
 }
+
+#[cfg(test)]
+#[path = "backup_test.rs"]
+mod tests;

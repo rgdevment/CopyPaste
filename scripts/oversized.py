@@ -12,9 +12,13 @@ TABLES = ("locales.ts",)
 QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"')
 CHARRED = re.compile(r"'(?:[^'\\]|\\.)'")
 NOTED = re.compile(r"//.*$")
-GATED = re.compile(r"^#\[cfg\([^)]*\btest\b")
-DECLARED = re.compile(r'^#\[path = "(?P<file>[A-Za-z0-9_]+\.rs)"\]$')
+A_CFG = re.compile(r"^#\[cfg\(")
+NOT_TESTS = re.compile(r"not\s*\(\s*test\s*\)")
+TESTED = re.compile(r"\btest\b")
+DECLARED = re.compile(r'^#\[path = "(?P<file>[A-Za-z0-9_]+_test\.rs)"\]$')
 A_CHILD = re.compile(r"^mod \w+;$")
+A_BLOCK = re.compile(r"^mod \w+\s*\{")
+AN_ATTRIBUTE = re.compile(r"^#\[")
 HEADED = re.compile(
     r"(?P<lead>\s*)(pub(\([^)]*\))? )?(default )?(const )?(async )?(unsafe )?"
     r'(extern "[A-Za-z-]+" )?fn (?P<name>\w+)'
@@ -86,19 +90,33 @@ def candidates() -> list[pathlib.Path]:
     return every
 
 
+def gates_tests(line: str) -> bool:
+    if not A_CFG.match(line):
+        return False
+    bare = NOT_TESTS.sub("", QUOTED.sub('""', line))
+    return TESTED.search(bare) is not None
+
+
+def declares_in(at: pathlib.Path) -> list[tuple[int, str]]:
+    lines = [one.strip() for one in lines_of(at)]
+    found = []
+    for turn in range(len(lines) - 2):
+        if not gates_tests(lines[turn]):
+            continue
+        named = DECLARED.match(lines[turn + 1])
+        if not named or not A_CHILD.match(lines[turn + 2]):
+            continue
+        found.append((turn, named.group("file")))
+    return found
+
+
 def only_tests(among: list[pathlib.Path]) -> set[str]:
     said = set()
     for at in among:
         if at.suffix != ".rs":
             continue
-        lines = [one.strip() for one in lines_of(at)]
-        for turn in range(len(lines) - 2):
-            if not GATED.match(lines[turn]):
-                continue
-            named = DECLARED.match(lines[turn + 1])
-            if not named or not A_CHILD.match(lines[turn + 2]):
-                continue
-            beside = at.with_name(named.group("file"))
+        for _, name in declares_in(at):
+            beside = at.with_name(name)
             if beside != at:
                 said.add(beside.as_posix())
     return said
@@ -140,7 +158,56 @@ def noted() -> dict[str, int] | None:
     return kept
 
 
+def hosts() -> list[pathlib.Path]:
+    every = []
+    for where in WHERE:
+        base = pathlib.Path(where)
+        if not base.is_dir():
+            continue
+        for at in base.rglob("*.rs"):
+            said = at.as_posix()
+            if "/examples/" in said or at.name == "build.rs" or "/tests/" in said:
+                continue
+            if where == "crates" and "/src/" not in said:
+                continue
+            every.append(at)
+    return every
+
+
+def inline() -> int:
+    status = 0
+    every = hosts()
+    for at in every:
+        lines = [one.strip() for one in lines_of(at)]
+        for turn, line in enumerate(lines):
+            if not gates_tests(line):
+                continue
+            ahead = turn + 1
+            while ahead < len(lines) and (AN_ATTRIBUTE.match(lines[ahead]) and not DECLARED.match(lines[ahead])):
+                ahead += 1
+            if ahead < len(lines) and A_BLOCK.match(lines[ahead]):
+                print(f"::error file={at.as_posix()},line={ahead + 1}::a test module goes in a file of its own beside this one, declared as «#[cfg(test)] #[path = \"{at.stem}_test.rs\"] mod tests;». Inside the file it buries the code and the ceiling stops measuring what a reader has to scroll past")
+                status = 1
+        said = declares_in(at)
+        if said:
+            after = said[-1][0] + 3
+            spare = [one for one in lines[after:] if one]
+            if spare:
+                print(f"::error file={at.as_posix()},line={after + 1}::{len(spare)} lines of code follow the test declaration; it goes last, the way clippy's items_after_test_module asked when the module was still inline")
+                status = 1
+    declared = {one for at in every for one in only_tests([at])}
+    for at in every:
+        if at.name.endswith("_test.rs") and at.as_posix() not in declared:
+            print(f"::error file={at.as_posix()}::nothing declares this file, so its tests never run, rustfmt never reaches it and the ceiling measures it as production")
+            status = 1
+    if status == 0:
+        print(f"{len(declared)} test files, each declared last in the file it tests")
+    return status
+
+
 def main() -> int:
+    if "--inline" in sys.argv:
+        return inline()
     found = measured()
     if "--print" in sys.argv:
         for what, held in sorted(found.items(), key=lambda one: -one[1]):
