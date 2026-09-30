@@ -52,9 +52,29 @@ In many ways! Code is just one of them:
 2. **Create a branch** from `main` (`git checkout -b feature/my-improvement`)
 3. **Make your changes** following our style:
    - Clean and minimalist code
-   - Code, identifiers and comments in English
-   - Tests when appropriate
-4. **Make sure** all tests pass:
+   - Code and identifiers in English
+   - No comments. CI refuses them: a name that needs a comment is the wrong name.
+     Only a hidden constraint earns one line
+   - Tests when appropriate, and **in a file of their own** — see below
+4. **Where a test goes.** Never inside the file it tests. Each file keeps its
+   tests in a sibling, declared at the bottom of the file under test:
+
+   ```rust
+   #[cfg(test)]
+   #[path = "watch_test.rs"]
+   mod tests;
+   ```
+
+   The sibling lives in the same directory, holds the body without the
+   `mod tests { }` wrapper, and is still a child module — `use super::*` and
+   access to private items work exactly as if it were inline. Its name is the
+   file plus `_test.rs`; when one file has several test modules, the name says
+   which one it is and still ends in `_test.rs`: `store_listing_test.rs`,
+   `kind_borders_test.rs`, `waking_windows_test.rs`. The name matters, because
+   it is how the line ceiling, the coverage report and Sonar tell a test from
+   the code it tests. A test module written inline fails CI.
+
+5. **Make sure** all tests pass:
 
    ```sh
    python3 scripts/sidecar.py --debug   # the app carries the panel; build it first
@@ -63,7 +83,7 @@ In many ways! Code is just one of them:
    cd app && npm ci && npm run lint && npm test
    ```
 
-5. **Open a Pull Request** to `main`
+6. **Open a Pull Request** to `main`
 
 ### Translate
 
