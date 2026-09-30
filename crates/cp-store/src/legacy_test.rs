@@ -2,9 +2,27 @@ use super::*;
 
 #[test]
 fn the_numbers_the_2x_stores_are_not_the_positions_of_its_enum() {
-    assert_eq!(kind_of(0), Some(Kind::Text));
-    assert_eq!(kind_of(1), Some(Kind::Image));
-    assert_eq!(kind_of(12), Some(Kind::Json));
+    for (said, want) in [
+        (0, Kind::Text),
+        (1, Kind::Image),
+        (2, Kind::File),
+        (3, Kind::Folder),
+        (4, Kind::Link),
+        (5, Kind::Audio),
+        (6, Kind::Video),
+        (7, Kind::Email),
+        (8, Kind::Phone),
+        (9, Kind::Color),
+        (10, Kind::Ip),
+        (11, Kind::Uuid),
+        (12, Kind::Json),
+    ] {
+        assert_eq!(
+            kind_of(said),
+            Some(want),
+            "the 2.x wrote {said} for {want:?} and that number is in its database, not ours"
+        );
+    }
     assert_eq!(
         kind_of(-1),
         Some(Kind::Text),
@@ -940,5 +958,76 @@ fn a_thumbnail_the_2x_left_in_its_own_folder_is_not_adopted() {
     assert!(
         page.rows.iter().all(|one| one.thumb_path.is_none()),
         "it lives in the folder that deleting the 2.x empties, so the 3.0 draws its own"
+    );
+}
+
+#[test]
+fn a_picture_is_taken_only_if_it_is_a_real_file_with_bytes_inside_its_folder() {
+    let there = tempfile::tempdir().expect("a folder");
+    let root = std::fs::canonicalize(there.path()).expect("canonical");
+
+    assert_eq!(picture_at(Some(&root), ""), None, "the 2.x stored no path");
+    assert_eq!(picture_at(None, "shot.png"), None, "and we know no folder");
+
+    let empty = root.join("empty.png");
+    std::fs::write(&empty, b"").expect("written");
+    assert_eq!(
+        picture_at(Some(&root), empty.to_str().expect("utf8")),
+        None,
+        "a file of zero bytes carries no picture"
+    );
+
+    let folder = root.join("inside");
+    std::fs::create_dir(&folder).expect("created");
+    assert_eq!(
+        picture_at(Some(&root), folder.to_str().expect("utf8")),
+        None,
+        "a folder is not a picture"
+    );
+
+    let elsewhere = tempfile::tempdir().expect("a folder");
+    let stray = elsewhere.path().join("stray.png");
+    std::fs::write(&stray, b"png").expect("written");
+    assert_eq!(
+        picture_at(Some(&root), stray.to_str().expect("utf8")),
+        None,
+        "and what the database points at outside its own folder is not followed"
+    );
+
+    let good = root.join("shot.png");
+    std::fs::write(&good, b"png").expect("written");
+    assert_eq!(
+        picture_at(Some(&root), good.to_str().expect("utf8")),
+        Some(std::fs::canonicalize(&good).expect("canonical"))
+    );
+}
+
+#[test]
+fn a_row_the_2x_left_unreadable_is_counted_and_the_rest_still_crosses() {
+    let there = tempfile::tempdir().expect("a folder");
+    let at = there.path().join("clipboard.db");
+    let db = Connection::open(&at).expect("opened");
+    db.execute_batch(FORMER).expect("made");
+    db.execute(
+        "INSERT INTO clipboard_items (id, content, type, created_at, modified_at)
+             VALUES ('good', 'plain text', 0, 1000, 1000)",
+        [],
+    )
+    .expect("stored");
+    db.execute(
+        "INSERT INTO clipboard_items (id, content, type, created_at, modified_at)
+             VALUES ('bad', 'plain text', 'not a number', 2000, 2000)",
+        [],
+    )
+    .expect("stored");
+    drop(db);
+
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    let brought = bring(&at, &into, 9_999).expect("brought");
+    assert_eq!(brought.added, 1);
+    assert_eq!(
+        brought.refused, 1,
+        "a row that cannot be read is counted, not swallowed, and does not stop the others"
     );
 }
