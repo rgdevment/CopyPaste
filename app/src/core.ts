@@ -50,7 +50,7 @@ export function useKept() {
     (what: Partial<Kept>) => {
       const was = held.current;
       if (!was) {
-        return;
+        return Promise.resolve();
       }
       const next = { ...was, ...what };
       held.current = next;
@@ -71,9 +71,13 @@ export function useKept() {
             setTrouble(null);
           }
         })
-        .catch((why) => setTrouble(String(why)));
+        .catch((why) => {
+          setTrouble(String(why));
+          look();
+        });
+      return queue.current.then(() => undefined);
     },
-    [land],
+    [land, look],
   );
 
   return { kept, trouble, change, look };
@@ -140,16 +144,38 @@ export function empty(): Promise<void> {
 
 export type Keys = { wanted: string; bound: boolean };
 
-export function useKeys() {
+export function useKeys(shortcut: string) {
   const [keys, setKeys] = useState<Keys | null>(null);
+  const [spare, setSpare] = useState<string[]>([]);
+  const live = useRef(true);
 
-  useEffect(() => {
+  const ask = useCallback((taken: string) => {
     invoke<Keys>("keys")
-      .then(setKeys)
-      .catch(() => setKeys(null));
+      .then((said) => {
+        if (!live.current) {
+          return;
+        }
+        setKeys(said);
+        if (said.bound) {
+          setSpare([]);
+          return;
+        }
+        invoke<string[]>("spare", { taken })
+          .then((free) => live.current && setSpare(free))
+          .catch(() => live.current && setSpare([]));
+      })
+      .catch(() => live.current && setKeys(null));
   }, []);
 
-  return keys;
+  useEffect(() => {
+    live.current = true;
+    ask(shortcut);
+    return () => {
+      live.current = false;
+    };
+  }, [shortcut, ask]);
+
+  return { keys, spare, recheck: ask };
 }
 
 export type Waking = { offered: boolean; wakes: boolean; theirs: boolean };

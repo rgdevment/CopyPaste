@@ -63,7 +63,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
                 ..
             } = event
             {
-                surface(tray.app_handle());
+                crate::panel::show(tray.app_handle());
             }
         })
         .build(app)

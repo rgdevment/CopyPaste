@@ -117,6 +117,28 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
+  it("ofrece las combinaciones libres y adopta la que se pulsa", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "keys"
+        ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
+        : real?.(what, args)) as never);
+    render(<App />);
+    expect(await screen.findByText(/Estas están libres ahora mismo/)).toBeDefined();
+    const offered = await screen.findByRole("button", { name: "Ctrl + Shift + V" });
+    await who.click(offered);
+    const asked = vi
+      .mocked(invoke)
+      .mock.calls.filter(([what]) => what === "keep")
+      .pop();
+    expect(asked).toBeDefined();
+    const sent = asked?.[1] as { config: { shortcut: string } } | undefined;
+    expect(sent?.config.shortcut).toBe("Ctrl+Shift+V");
+    vi.mocked(invoke).mockImplementation(real as never);
+  });
+
   it("calla sobre el atajo cuando el sistema sí lo cedió", async () => {
     render(<App />);
     expect(await screen.findByText("Ctrl + Alt + V")).toBeDefined();

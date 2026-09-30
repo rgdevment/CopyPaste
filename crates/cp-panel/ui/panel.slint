@@ -53,7 +53,8 @@ export component Panel inherits Window {
     callback clear-filters();
     callback ask-forms(int);
     callback ask-kinds();
-    callback ask-keys();
+    callback ask-settings();
+    callback nudge(length, length);
     callback reopened();
     callback fresh-start();
     callback emptied();
@@ -165,7 +166,7 @@ export component Panel inherits Window {
                                         return reject;
                                     }
                                     if event.text == Key.F1 {
-                                        root.ask-keys();
+                                        root.ask-settings();
                                         return accept;
                                     }
                                     if event.text == Key.Return
@@ -556,6 +557,14 @@ export component Panel inherits Window {
             Rectangle {
                 height: 32px;
                 background: Theme.footer;
+                mover := TouchArea {
+                    mouse-cursor: move;
+                    moved => {
+                        if (mover.pressed) {
+                            root.nudge(mover.mouse-x - mover.pressed-x, mover.mouse-y - mover.pressed-y);
+                        }
+                    }
+                }
                 HorizontalLayout {
                     padding-left: 10px;
                     padding-right: 8px;
@@ -576,9 +585,9 @@ export component Panel inherits Window {
                         }
                     }
                     Action {
-                        icon: @image-url("../assets/icons/sliders-horizontal.svg");
+                        icon: @image-url("../assets/icons/settings.svg");
                         y: (parent.height - 22px) / 2;
-                        pressed => { root.ask-keys(); }
+                        pressed => { root.ask-settings(); }
                     }
                 }
             }

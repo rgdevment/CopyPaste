@@ -46,6 +46,61 @@ fn remember<R: Runtime>(app: &AppHandle<R>, said: Option<&str>) {
     }
 }
 
+#[cfg(target_os = "macos")]
+pub const SPARE: &[&str] = &[
+    "Alt+Cmd+V",
+    "Shift+Cmd+V",
+    "Alt+Cmd+C",
+    "Shift+Cmd+Space",
+    "Ctrl+Alt+V",
+    "Alt+Cmd+Space",
+];
+#[cfg(not(target_os = "macos"))]
+pub const SPARE: &[&str] = &[
+    "Ctrl+Alt+V",
+    "Ctrl+Shift+V",
+    "Ctrl+Alt+C",
+    "Ctrl+Shift+Space",
+    "Alt+Shift+V",
+    "Ctrl+Alt+Space",
+];
+
+fn grantable<R: Runtime>(app: &AppHandle<R>, one: Shortcut) -> bool {
+    let keys = app.global_shortcut();
+    if keys.is_registered(one) {
+        return false;
+    }
+    let handle = app.clone();
+    if keys
+        .on_shortcut(one, move |_app, _shortcut, event| {
+            if event.state() == ShortcutState::Pressed {
+                crate::panel::show(&handle);
+            }
+        })
+        .is_err()
+    {
+        return false;
+    }
+    if let Err(why) = keys.unregister(one) {
+        note(&format!(
+            "«{one:?}» stayed registered after the probe: {why}"
+        ));
+    }
+    true
+}
+
+#[tauri::command]
+pub fn spare(app: tauri::AppHandle, taken: String) -> Vec<String> {
+    let held = taken.parse::<Shortcut>().ok();
+    SPARE
+        .iter()
+        .filter_map(|said| said.parse::<Shortcut>().ok().map(|one| (said, one)))
+        .filter(|(_, one)| held != Some(*one))
+        .filter(|(_, one)| grantable(&app, *one))
+        .map(|(said, _)| (*said).to_owned())
+        .collect()
+}
+
 #[tauri::command]
 pub fn keys(app: tauri::AppHandle) -> Keys {
     let wanted = crate::settings::settings()

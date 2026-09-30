@@ -72,6 +72,8 @@ pub struct Page {
     pub next: Option<Cursor>,
 }
 
+pub const TOUCHED: &str = "MAX(items.modified_at, COALESCE(items.last_used_at, 0))";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Order {
     #[default]
@@ -97,7 +99,7 @@ impl Order {
 
     fn key(self) -> &'static str {
         match self {
-            Order::Recent => "items.modified_at",
+            Order::Recent => TOUCHED,
             Order::MostPasted => "items.paste_count",
             Order::LastUsed => "COALESCE(items.last_used_at, -1)",
         }

@@ -31,6 +31,9 @@ const ES = {
     "El panel no está funcionando: {one}. Lo copiado no se está guardando hasta que se resuelva",
   keysTaken:
     "Otro programa ya usa esa combinación, así que el panel no se abre con ella. Elige otra cuando puedas cambiarla",
+  keysFree: "Estas están libres ahora mismo:",
+  keysTable: "Lo que responde el panel",
+  keysTableWhy: "Estas teclas funcionan mientras el panel está abierto",
   hides: "Ocultar al hacer clic fuera",
   hidesWhy: "El panel se va solo en cuanto haces clic en otra ventana",
 
@@ -195,6 +198,9 @@ const EN: Record<keyof Said, string> = {
     "The panel is not working: {one}. Nothing you copy is being kept until this is fixed",
   keysTaken:
     "Another program already uses that combination, so the panel will not open with it. Pick another one when you can change it",
+  keysFree: "These are free right now:",
+  keysTable: "What the panel answers to",
+  keysTableWhy: "These keys work while the panel is open",
   hides: "Hide when you click elsewhere",
   hidesWhy: "The panel goes away on its own as soon as you click another window",
 
@@ -325,6 +331,46 @@ const EN: Record<keyof Said, string> = {
   itemMany: "{one} items",
 };
 
+export type Binding = { keys: string; does: string };
+
+const PANEL_KEYS_ES: Binding[] = [
+  { keys: "Enter", does: "pegar lo seleccionado" },
+  { keys: "Shift + Enter", does: "pegar en plano" },
+  { keys: "Alt + Enter  ·  Ctrl + Enter", does: "pegar como…" },
+  { keys: "Flechas", does: "moverse por la lista" },
+  { keys: "Clic", does: "abrir la tarjeta; otro clic la cierra" },
+  { keys: "Doble clic", does: "pegar esa tarjeta" },
+  { keys: "Tab  ·  Shift + Tab", does: "recorrer los filtros" },
+  { keys: "#imagen  ·  #carpeta", does: "filtrar por tipo desde el buscador" },
+  { keys: "Retroceso", does: "quitar la última etiqueta" },
+  { keys: "Supr", does: "borrar la seleccionada" },
+  { keys: "Ctrl + P", does: "anclar o desanclar" },
+  { keys: "Ctrl + E", does: "editar la seleccionada" },
+  { keys: "Flecha derecha", does: "abrir o cerrar la tarjeta" },
+  { keys: "Ctrl + 1  ·  Ctrl + 2", does: "todo  ·  solo lo anclado" },
+  { keys: "Alt + G  ·  Alt + T", does: "elegir el tipo" },
+  { keys: "Esc", does: "cerrar el panel" },
+];
+
+const PANEL_KEYS_EN: Binding[] = [
+  { keys: "Enter", does: "paste what is selected" },
+  { keys: "Shift + Enter", does: "paste as plain text" },
+  { keys: "Alt + Enter  ·  Ctrl + Enter", does: "paste as…" },
+  { keys: "Arrows", does: "move through the list" },
+  { keys: "Click", does: "open the card; another click closes it" },
+  { keys: "Double click", does: "paste that card" },
+  { keys: "Tab  ·  Shift + Tab", does: "step through the filters" },
+  { keys: "#image  ·  #folder", does: "filter by kind from the search box" },
+  { keys: "Backspace", does: "drop the last tag" },
+  { keys: "Delete", does: "delete the selected one" },
+  { keys: "Ctrl + P", does: "pin or unpin" },
+  { keys: "Ctrl + E", does: "edit the selected one" },
+  { keys: "Right arrow", does: "open or close the card" },
+  { keys: "Ctrl + 1  ·  Ctrl + 2", does: "everything  ·  only what is pinned" },
+  { keys: "Alt + G  ·  Alt + T", does: "choose the kind" },
+  { keys: "Esc", does: "close the panel" },
+];
+
 let now: Record<keyof Said, string> = ES;
 
 export function adopt(locale: string | null) {
@@ -344,4 +390,8 @@ export function fill(key: keyof Said, one: string) {
 
 export function items(count: number) {
   return count === 1 ? t("itemOne") : fill("itemMany", String(count));
+}
+
+export function panelKeys(): Binding[] {
+  return now === EN ? PANEL_KEYS_EN : PANEL_KEYS_ES;
 }

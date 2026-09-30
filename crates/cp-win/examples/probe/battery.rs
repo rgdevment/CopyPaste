@@ -263,7 +263,7 @@ fn what_is_abandoned(b: &mut Battery) {
             let big = cp_win_sys::writing::utf16_of(&"abcdefghij".repeat(20_000));
             let mut refused = 0;
             let mut placed = 0;
-            let mut waited = 0;
+            let mut quickest = std::time::Duration::MAX;
             for _ in 0..40 {
                 let counted = cp_win_sys::clipboard::reading();
                 let pending = cp_win_sys::reading::begin(move || {
@@ -274,13 +274,13 @@ fn what_is_abandoned(b: &mut Battery) {
                 match Clipboard::to_write() {
                     None => refused += 1,
                     Some(clipboard) => {
-                        if asked.elapsed() < std::time::Duration::from_millis(25) {
+                        let took = asked.elapsed();
+                        if took < std::time::Duration::from_millis(25) {
                             return Err(format!(
-                                "the write took the clipboard after {:?}, before the read let go",
-                                asked.elapsed()
+                                "the write took the clipboard after {took:?}, before the read let go"
                             ));
                         }
-                        waited += 1;
+                        quickest = quickest.min(took);
                         if clipboard.replace(&[(CF_UNICODETEXT, &big)])
                             != (cp_win_sys::writing::Written::Placed { formats: 1 })
                         {
@@ -304,26 +304,15 @@ fn what_is_abandoned(b: &mut Battery) {
             if placed == 0 {
                 return Err("every write was refused, so nothing was proven".into());
             }
-            if waited == 0 {
-                return Err(
-                    "not one write was made to wait, so the guard was never exercised".into(),
-                );
-            }
             println!(
-                "            {waited} writes waited for a read to let go, {refused} gave up waiting"
+                "            {placed} writes waited, the quickest {quickest:?}, {refused} gave up"
             );
             Ok(())
         },
     );
 }
 
-fn main() -> std::process::ExitCode {
-    let mut b = Battery {
-        passed: 0,
-        failed: 0,
-        skipped: Vec::new(),
-    };
-
+fn what_the_clipboard_answers(b: &mut Battery) {
     b.group("A · The clipboard responds");
 
     b.case("A1", "it opens and closes without staying locked", || {
@@ -345,6 +334,19 @@ fn main() -> std::process::ExitCode {
         println!("            {} formats: {}", names.len(), names.join(", "));
         Ok(())
     });
+}
+
+fn main() -> std::process::ExitCode {
+    println!("
+Core battery against the Windows clipboard");
+
+    let mut b = Battery {
+        passed: 0,
+        failed: 0,
+        skipped: Vec::new(),
+    };
+
+    what_the_clipboard_answers(&mut b);
 
     b.group("B · The catalog against what is really there");
 

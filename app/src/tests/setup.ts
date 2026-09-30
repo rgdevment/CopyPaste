@@ -90,6 +90,9 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (what === "save_backup") {
       return Promise.resolve({ path: "/donde/quiera/CopyPaste.cpbackup", items: 3, bytes: 2048 });
     }
+    if (what === "spare") {
+      return Promise.resolve(["Ctrl+Shift+V", "Ctrl+Alt+C"]);
+    }
     if (what === "load_backup") {
       return Promise.resolve({ added: 2, already: 1 });
     }

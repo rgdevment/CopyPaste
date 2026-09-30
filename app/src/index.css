@@ -359,6 +359,29 @@ select {
   padding: 6px 11px;
 }
 
+.spare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.spare-one {
+  cursor: pointer;
+  color: var(--ink);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.spare-one:hover {
+  background: var(--tile);
+  border-color: var(--selected-edge);
+}
+
 .path {
   font-family: var(--mono);
   font-size: 12px;
@@ -391,12 +414,12 @@ select {
     background 140ms ease;
 }
 
-.knob[aria-pressed="true"] {
+.knob[aria-checked="true"] {
   background: var(--accent-soft);
   border-color: var(--selected-edge);
 }
 
-.knob[aria-pressed="true"]::after {
+.knob[aria-checked="true"]::after {
   transform: translateX(17px);
   background: var(--accent);
 }
@@ -445,6 +468,65 @@ select {
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 12.5px;
+}
+
+.said-plain {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.bindings {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.bindings th,
+.bindings td {
+  padding: 7px 0;
+  text-align: left;
+  font-weight: 400;
+  border-bottom: 1px solid var(--edge);
+  vertical-align: top;
+}
+
+.bindings th {
+  width: 40%;
+  padding-right: 14px;
+  font-family: var(--mono);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.bindings td {
+  color: var(--muted);
+}
+
+.bindings tr:last-child th,
+.bindings tr:last-child td {
+  border-bottom: 0;
+}
+
+.facts {
+  margin: 9px 0 0;
+  padding: 10px 12px 10px 26px;
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  background: var(--tile);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.facts li {
+  margin: 0;
+  padding: 0;
+}
+
+.facts li::marker {
+  color: var(--placeholder);
 }
 
 .said {

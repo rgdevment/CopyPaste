@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useEffect, useState } from "react";
 import { useKept, useTrouble } from "./core";
 import { fill, t } from "./locales";
 import About from "./ui/About";
@@ -20,6 +21,17 @@ export default function App() {
   const [where, setWhere] = useState<Where>("general");
   const { kept, trouble, change, look } = useKept();
   const panelTrouble = useTrouble();
+
+  useEffect(() => {
+    const asked = listen<string>("rail", (event) => {
+      if (WHERE.some((one) => one.key === event.payload)) {
+        setWhere(event.payload as Where);
+      }
+    });
+    return () => {
+      void asked.then((drop) => drop());
+    };
+  }, []);
 
   return (
     <>

@@ -10,7 +10,7 @@ import {
   useTrust,
   useWaking,
 } from "../core";
-import { t } from "../locales";
+import { panelKeys, t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
 export default function General({
@@ -18,11 +18,11 @@ export default function General({
   change,
 }: {
   kept: Kept;
-  change: (what: Partial<Kept>) => void;
+  change: (what: Partial<Kept>) => Promise<void>;
 }) {
   const { waking, trouble, ask } = useWaking();
   const { trust, asked, ask: askTrust } = useTrust();
-  const keys = useKeys();
+  const { keys, spare, recheck } = useKeys(kept.shortcut);
   const [asking, setAsking] = useState(false);
 
   return (
@@ -107,6 +107,23 @@ export default function General({
       <Line
         says={t("keys")}
         why={asking ? t("keysAsk") : keys && !keys.bound ? t("keysTaken") : t("keysWhy")}
+        more={
+          !asking && keys && !keys.bound && spare.length > 0 ? (
+            <div className="spare">
+              <span>{t("keysFree")}</span>
+              {spare.map((one) => (
+                <button
+                  key={one}
+                  type="button"
+                  className="keys spare-one"
+                  onClick={() => void change({ shortcut: one }).finally(() => recheck(one))}
+                >
+                  {one.replaceAll("+", " + ")}
+                </button>
+              ))}
+            </div>
+          ) : null
+        }
       >
         <span className={keys && !keys.bound && !asking ? "keys taken" : "keys"}>
           {kept.shortcut.replaceAll("+", " + ")}
@@ -127,7 +144,7 @@ export default function General({
             const said = combination(press);
             if (said !== null) {
               setAsking(false);
-              change({ shortcut: said });
+              void change({ shortcut: said }).finally(() => recheck(said));
             }
           }}
         >
@@ -142,6 +159,20 @@ export default function General({
           onPress={() => change({ "hides-when-left": !kept["hides-when-left"] })}
         />
       </Line>
+      <Band says={t("keysTable")} />
+
+      <p className="said-plain">{t("keysTableWhy")}</p>
+
+      <table className="bindings">
+        <tbody>
+          {panelKeys().map((one) => (
+            <tr key={one.keys}>
+              <th scope="row">{one.keys}</th>
+              <td>{one.does}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
   );
 }

@@ -57,7 +57,7 @@ fn the_card_gets_everything_the_row_knows() {
     assert_eq!(card.paste_count, 1);
     assert_eq!(card.last_used_at, Some(62));
     assert_eq!(card.created_at, 50);
-    assert_eq!(card.modified_at, 50, "pasting does not move it");
+    assert_eq!(card.modified_at, 50, "pasting does not move the clock");
     assert!(card.pinned);
     assert_eq!(card.broken_since, None);
     assert_eq!(card.thumb_path, None);
@@ -945,4 +945,45 @@ fn nothing_a_person_can_type_as_an_application_breaks_the_query() {
         5,
         "the table is still there"
     );
+}
+
+#[test]
+fn the_ordering_expression_is_the_one_the_index_was_built_for() {
+    const SCHEMA: &str = include_str!("schema.rs");
+    let bare = TOUCHED.replace("items.", "");
+    assert!(
+        SCHEMA.contains(&bare),
+        "items_by_touch has to spell «{bare}» or sqlite plans a scan"
+    );
+}
+
+#[test]
+fn pasting_does_not_move_the_retention_clock() {
+    let store = history();
+    let one = all(&store, &Filter::default())[0].id;
+    let was = all(&store, &Filter::default())[0].modified_at;
+    store.record_paste(one, 10_000).expect("pasted");
+    let after = all(&store, &Filter::default())
+        .into_iter()
+        .find(|row| row.id == one)
+        .expect("still there");
+    assert_eq!(after.modified_at, was, "expiry and d: read this one");
+    assert_eq!(after.last_used_at, Some(10_000));
+}
+
+#[test]
+fn what_you_paste_rises_to_the_top_of_the_recent_order() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    let buried = rows.last().expect("there are rows").id;
+    assert_ne!(rows[0].id, buried, "it starts at the bottom");
+
+    store.record_paste(buried, 100).expect("pasted");
+
+    let ordered = all(&store, &Filter::default());
+    assert_eq!(
+        ordered[0].id, buried,
+        "pasting moves it up, not just its count"
+    );
+    assert_eq!(ordered[0].paste_count, 1);
 }

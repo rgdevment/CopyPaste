@@ -16,3 +16,44 @@ fn nothing_is_bound_until_the_system_says_yes() {
     let bound = Bound::default();
     assert!(bound.0.lock().expect("unpoisoned").is_none());
 }
+
+#[test]
+fn every_spare_combination_is_one_the_system_can_be_asked_for() {
+    assert!(!SPARE.is_empty());
+    for said in SPARE {
+        assert!(
+            said.parse::<Shortcut>().is_ok(),
+            "«{said}» would be dropped in silence"
+        );
+    }
+}
+
+#[test]
+fn the_spare_list_spells_its_modifiers_the_way_the_picker_does() {
+    for said in SPARE {
+        let parts: Vec<&str> = said.split('+').collect();
+        let order = ["Ctrl", "Alt", "Shift", "Cmd"];
+        let mut seen = 0;
+        for part in &parts[..parts.len() - 1] {
+            let at = order
+                .iter()
+                .position(|one| one == part)
+                .unwrap_or_else(|| panic!("«{part}» is not a modifier the picker emits"));
+            assert!(at >= seen, "«{said}» is spelled out of the picker's order");
+            seen = at;
+        }
+    }
+}
+
+#[test]
+fn no_two_spare_entries_are_the_same_combination_spelled_differently() {
+    let parsed: Vec<Shortcut> = SPARE
+        .iter()
+        .filter_map(|said| said.parse::<Shortcut>().ok())
+        .collect();
+    for (at, one) in parsed.iter().enumerate() {
+        for other in &parsed[at + 1..] {
+            assert_ne!(one, other, "one combination is offered twice");
+        }
+    }
+}
