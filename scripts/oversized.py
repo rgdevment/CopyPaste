@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import pathlib
 import re
 import sys
@@ -13,8 +12,9 @@ TABLES = ("locales.ts",)
 QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"')
 CHARRED = re.compile(r"'(?:[^'\\]|\\.)'")
 NOTED = re.compile(r"//.*$")
-ONLY_IN_TESTS = re.compile(r"#\[cfg\((all\()?\s*test\b")
-DECLARED = re.compile(r'#\[path\s*=\s*"([^"]+)"\]')
+GATED = re.compile(r"^#\[cfg\([^)]*\btest\b")
+DECLARED = re.compile(r'^#\[path = "(?P<file>[A-Za-z0-9_]+\.rs)"\]$')
+A_CHILD = re.compile(r"^mod \w+;$")
 HEADED = re.compile(
     r"(?P<lead>\s*)(pub(\([^)]*\))? )?(default )?(const )?(async )?(unsafe )?"
     r'(extern "[A-Za-z-]+" )?fn (?P<name>\w+)'
@@ -25,61 +25,23 @@ def bare_of(line: str) -> str:
     return NOTED.sub("", CHARRED.sub("''", QUOTED.sub('""', line)))
 
 
-def braces(line: str) -> int:
-    bare = bare_of(line)
-    return bare.count("{") - bare.count("}")
-
-
-def block_ends(lines: list[str], from_turn: int) -> int:
-    last = len(lines)
-    ahead = from_turn
-    while ahead < last and not lines[ahead].strip():
-        ahead += 1
-    depth, opened = 0, False
-    while ahead < last:
-        bare = bare_of(lines[ahead])
-        depth += braces(lines[ahead])
-        opened = opened or "{" in bare
-        if opened and depth <= 0:
-            break
-        if not opened and bare.rstrip().endswith(";"):
-            break
-        ahead += 1
-    return ahead
-
-
-def blanked(at: pathlib.Path) -> list[str | None]:
-    lines = at.read_text(encoding="utf-8", errors="replace").splitlines()
-    kept: list[str | None] = list(lines)
-    turn, last = 0, len(lines)
-    while turn < last:
-        if not ONLY_IN_TESTS.match(lines[turn].strip()):
-            turn += 1
-            continue
-        ends = block_ends(lines, turn + 1)
-        for each in range(turn, min(ends + 1, last)):
-            kept[each] = None
-        turn = ends + 1
-    return kept
+def lines_of(at: pathlib.Path) -> list[str]:
+    return at.read_text(encoding="utf-8", errors="replace").splitlines()
 
 
 def code_of(at: pathlib.Path) -> int:
-    if at.suffix != ".rs":
-        return len(at.read_text(encoding="utf-8", errors="replace").splitlines())
-    return sum(1 for line in blanked(at) if line is not None)
+    return len(lines_of(at))
 
 
 def held_of(at: pathlib.Path) -> dict[str, int]:
     if at.suffix != ".rs":
         return {}
-    lines = blanked(at)
+    lines = lines_of(at)
     found: dict[str, int] = {}
     open_at: list[tuple[str, int, int]] = []
     waiting: tuple[str, int] | None = None
     depth = 0
     for turn, line in enumerate(lines):
-        if line is None:
-            continue
         bare = bare_of(line)
         if waiting is None:
             said = HEADED.match(line)
@@ -104,28 +66,8 @@ def held_of(at: pathlib.Path) -> dict[str, int]:
     return found
 
 
-def only_tests() -> set[str]:
-    said = set()
-    for where in WHERE:
-        base = pathlib.Path(where)
-        if not base.is_dir():
-            continue
-        for at in base.rglob("*.rs"):
-            lines = at.read_text(encoding="utf-8", errors="replace").splitlines()
-            for turn, line in enumerate(lines):
-                if not ONLY_IN_TESTS.match(line.strip()):
-                    continue
-                for ahead in lines[turn + 1:turn + 4]:
-                    found = DECLARED.search(ahead)
-                    if found:
-                        said.add(pathlib.Path(os.path.normpath(at.parent / found.group(1))).as_posix())
-                        break
-    return said
-
-
-def reaching() -> list[pathlib.Path]:
+def candidates() -> list[pathlib.Path]:
     every = []
-    apart = only_tests()
     for where in WHERE:
         base = pathlib.Path(where)
         if not base.is_dir():
@@ -136,14 +78,36 @@ def reaching() -> list[pathlib.Path]:
             said = at.as_posix()
             if "node_modules" in said or "/tests/" in said or ".test." in said:
                 continue
-            if said in apart:
-                continue
             if any(said.endswith(one) for one in TABLES):
                 continue
             if where == "crates" and "/src/" not in said and "/examples/" not in said:
                 continue
             every.append(at)
     return every
+
+
+def only_tests(among: list[pathlib.Path]) -> set[str]:
+    said = set()
+    for at in among:
+        if at.suffix != ".rs":
+            continue
+        lines = [one.strip() for one in lines_of(at)]
+        for turn in range(len(lines) - 2):
+            if not GATED.match(lines[turn]):
+                continue
+            named = DECLARED.match(lines[turn + 1])
+            if not named or not A_CHILD.match(lines[turn + 2]):
+                continue
+            beside = at.with_name(named.group("file"))
+            if beside != at:
+                said.add(beside.as_posix())
+    return said
+
+
+def reaching() -> list[pathlib.Path]:
+    among = candidates()
+    apart = only_tests(among)
+    return [at for at in among if at.as_posix() not in apart]
 
 
 def measured() -> dict[str, int]:
