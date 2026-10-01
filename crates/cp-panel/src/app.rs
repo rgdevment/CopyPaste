@@ -855,7 +855,8 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
             return false;
         }
     };
-    let written = here::to_clipboard(&item, || starting(engine), || mark(engine));
+    let landed = here::to_clipboard(&item, || starting(engine), || mark(engine));
+    let written = short_of(id, landed);
     if written {
         if let Err(why) = store.record_paste(id, now_ms()) {
             note(&format!("{id} was pasted and nobody wrote it down: {why}"));
@@ -1036,7 +1037,10 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
         return false;
     };
     let made = rendered.into_item();
-    let written = here::to_clipboard(&made, || starting(engine), || mark(engine));
+    let written = short_of(
+        id,
+        here::to_clipboard(&made, || starting(engine), || mark(engine)),
+    );
     if written && let Err(why) = store.record_paste(id, now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
@@ -1048,6 +1052,15 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+fn short_of(id: i64, landed: here::Landed) -> bool {
+    if let here::Landed::Short { placed, wanted } = landed {
+        note(&format!(
+            "pasting {id}: only {placed} of {wanted} formats fitted on the clipboard"
+        ));
+    }
+    landed != here::Landed::Nothing
 }
 
 fn starting(engine: Option<&crate::engine::Engine>) {

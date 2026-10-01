@@ -24,6 +24,10 @@ pub const RETRY: Retry = Retry {
 
 const _: () = assert!(RETRY.attempts >= 2);
 
+const LONGEST_WRITE: i64 = 16;
+
+const _: () = assert!(LONGEST_WRITE >= 8);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Retried<T> {
     Done(T),
@@ -89,7 +93,11 @@ impl Watcher {
         }
         self.last = Some(count);
         if let Some((from, through)) = self.ours {
-            if count >= from && through.is_none_or(|end| count <= end) {
+            let within = through.map_or_else(
+                || count <= from.saturating_add(LONGEST_WRITE),
+                |end| count <= end,
+            );
+            if count >= from && within {
                 if through.is_some_and(|end| count >= end) {
                     self.ours = None;
                 }

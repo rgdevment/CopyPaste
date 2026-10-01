@@ -115,3 +115,21 @@ fn a_counter_below_the_open_stretch_is_a_new_session() {
     assert_eq!(watcher.tick(60), Seen::Fresh { skipped: None });
     assert_eq!(watcher.tick(61), Seen::Fresh { skipped: None });
 }
+
+#[test]
+fn an_open_stretch_nobody_closes_lets_go_on_its_own() {
+    let mut watcher = windows();
+    watcher.tick(100);
+    watcher.writing(100);
+    assert_eq!(
+        watcher.tick(103),
+        Seen::Ours,
+        "the write is still in flight"
+    );
+    assert_eq!(
+        watcher.tick(100 + LONGEST_WRITE + 1),
+        Seen::Fresh { skipped: None },
+        "a mark that never arrives cannot leave the watcher deaf for good"
+    );
+    assert_eq!(watcher.tick(200), Seen::Fresh { skipped: None });
+}

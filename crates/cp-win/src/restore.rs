@@ -25,6 +25,12 @@ pub struct Ready {
     had: usize,
 }
 
+impl Ready {
+    pub fn wanted(&self) -> usize {
+        self.owned.len()
+    }
+}
+
 pub fn ready_for(item: &Item) -> Ready {
     let (mut owned, mut returned) = pasted_files(item);
     for format in &item.formats {
