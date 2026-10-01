@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -26,6 +26,9 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
     }
     if ocr_text_is_missing(db)? {
         db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
+    }
+    if column_is_missing(db, "group_key")? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN group_key TEXT NOT NULL DEFAULT '';")?;
     }
     if found < 5 {
         db.execute_batch(&format!(
@@ -72,10 +75,14 @@ fn search_trigger_is_broad(db: &Connection) -> Result<bool> {
 }
 
 fn ocr_text_is_missing(db: &Connection) -> Result<bool> {
+    column_is_missing(db, "ocr_text")
+}
+
+fn column_is_missing(db: &Connection, wanted: &str) -> Result<bool> {
     let mut stmt = db.prepare("SELECT name FROM pragma_table_info('items')")?;
     let columns = stmt.query_map([], |row| row.get::<_, String>(0))?;
     for column in columns {
-        if column? == "ocr_text" {
+        if column? == wanted {
             return Ok(false);
         }
     }
@@ -87,6 +94,7 @@ const ORDERING_INDEXES: &str = "
         CREATE INDEX IF NOT EXISTS items_by_touch
             ON items(MAX(modified_at, COALESCE(last_used_at, 0)) DESC, id DESC);
         CREATE INDEX IF NOT EXISTS items_by_kind ON items(kind, modified_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS items_by_group ON items(group_key DESC, id DESC);
 ";
 
 pub fn configure(db: &Connection) -> Result<()> {
@@ -134,6 +142,7 @@ const TABLES: &str = r#"
             kind               TEXT,
             preview_text       TEXT    NOT NULL DEFAULT '',
             app_source         TEXT,
+            group_key          TEXT    NOT NULL DEFAULT '',
             label              TEXT,
             card_color         INTEGER NOT NULL DEFAULT 0,
             thumb_path         TEXT,

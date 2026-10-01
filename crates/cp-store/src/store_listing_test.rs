@@ -668,7 +668,7 @@ fn every_order_has_a_stable_name_that_comes_back() {
     let mut names: Vec<&str> = Order::ALL.iter().map(|order| order.as_str()).collect();
     names.sort_unstable();
     names.dedup();
-    assert_eq!(names.len(), 3);
+    assert_eq!(names.len(), 4);
     assert_eq!(Order::from_name("Recent"), None, "the name is exact");
 }
 
@@ -682,7 +682,7 @@ fn a_cursor_from_another_order_is_refused_not_misread() {
         ..Default::default()
     };
     assert!(matches!(
-        store.list(&pasted, 2, Some(cursor)),
+        store.list(&pasted, 2, Some(cursor.clone())),
         Err(Error::WrongCursor { .. })
     ));
     let text = cursor.encode();
@@ -694,7 +694,15 @@ fn a_cursor_from_another_order_is_refused_not_misread() {
     assert_eq!(Cursor::decode("recent:1"), None);
     assert_eq!(Cursor::decode("sideways:1:2"), None);
     assert_eq!(Cursor::decode("recent:1:2:3"), None);
-    assert_eq!(Cursor::decode("recent:x:2"), None);
+    assert_eq!(
+        Cursor::decode("recent:x:2"),
+        None,
+        "a numeric order wants a number"
+    );
+    let grouped = Cursor::decode("by-group:ejemplo.test:7").expect("a group cursor");
+    assert_eq!(Cursor::decode(&grouped.encode()), Some(grouped));
+    let colons = Cursor::decode("by-group:carpeta:de:red:7").expect("a key may hold colons");
+    assert_eq!(Cursor::decode(&colons.encode()), Some(colons));
 }
 
 #[test]

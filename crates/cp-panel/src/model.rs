@@ -60,7 +60,7 @@ pub struct Rows {
     tops: RefCell<Vec<f32>>,
     open: Cell<Option<usize>>,
     thumbless: RefCell<std::collections::HashSet<usize>>,
-    next: Cell<Option<Cursor>>,
+    next: RefCell<Option<Cursor>>,
     exhausted: Cell<bool>,
     loading: Cell<bool>,
     notify: ModelNotify,
@@ -80,7 +80,7 @@ impl Rows {
             tops: RefCell::new(vec![0.0]),
             open: Cell::new(None),
             thumbless: RefCell::new(std::collections::HashSet::new()),
-            next: Cell::new(None),
+            next: RefCell::new(None),
             exhausted: Cell::new(false),
             loading: Cell::new(false),
             notify: ModelNotify::default(),
@@ -189,7 +189,10 @@ impl Rows {
         if self.exhausted.get() {
             return 0;
         }
-        let page = match self.store.list(&self.filter, PAGE, self.next.get()) {
+        let page = match self
+            .store
+            .list(&self.filter, PAGE, self.next.borrow().clone())
+        {
             Ok(page) => page,
             Err(why) => {
                 crate::note::note(&format!("la lista no se pudo leer: {why}"));
@@ -198,10 +201,10 @@ impl Rows {
             }
         };
         let added = page.rows.len();
-        self.next.set(page.next);
         if page.next.is_none() {
             self.exhausted.set(true);
         }
+        *self.next.borrow_mut() = page.next;
         let start = self.rows.borrow().len();
         self.cards.borrow_mut().extend((0..added).map(|_| None));
         {

@@ -42,27 +42,34 @@ pub struct Listed {
     pub last_used_at: Option<i64>,
     pub broken_since: Option<i64>,
     pub pinned: bool,
+    pub group: String,
     pub snippet: Option<Snippet>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cursor {
     order: Order,
-    key: i64,
+    key: String,
     id: i64,
 }
 
 impl Cursor {
-    pub fn encode(self) -> String {
+    pub fn encode(&self) -> String {
         format!("{}:{}:{}", self.order.as_str(), self.key, self.id)
     }
 
     pub fn decode(text: &str) -> Option<Cursor> {
-        let mut parts = text.split(':');
-        let order = Order::from_name(parts.next()?)?;
-        let key = parts.next()?.parse().ok()?;
-        let id = parts.next()?.parse().ok()?;
-        parts.next().is_none().then_some(Cursor { order, key, id })
+        let (name, rest) = text.split_once(':')?;
+        let order = Order::from_name(name)?;
+        let (key, id) = rest.rsplit_once(':')?;
+        if order != Order::ByGroup && key.parse::<i64>().is_err() {
+            return None;
+        }
+        Some(Cursor {
+            order,
+            key: key.to_owned(),
+            id: id.parse().ok()?,
+        })
     }
 }
 
@@ -80,16 +87,23 @@ pub enum Order {
     Recent,
     MostPasted,
     LastUsed,
+    ByGroup,
 }
 
 impl Order {
-    pub const ALL: [Order; 3] = [Order::Recent, Order::MostPasted, Order::LastUsed];
+    pub const ALL: [Order; 4] = [
+        Order::Recent,
+        Order::MostPasted,
+        Order::LastUsed,
+        Order::ByGroup,
+    ];
 
     pub fn as_str(self) -> &'static str {
         match self {
             Order::Recent => "recent",
             Order::MostPasted => "most-pasted",
             Order::LastUsed => "last-used",
+            Order::ByGroup => "by-group",
         }
     }
 
@@ -102,6 +116,7 @@ impl Order {
             Order::Recent => TOUCHED,
             Order::MostPasted => "items.paste_count",
             Order::LastUsed => "COALESCE(items.last_used_at, -1)",
+            Order::ByGroup => "items.group_key",
         }
     }
 }
@@ -241,8 +256,6 @@ impl Clauses {
         }
     }
 }
-
-pub type MetaByItem = std::collections::HashMap<i64, std::collections::HashMap<String, String>>;
 
 pub struct Store {
     db: Connection,
@@ -420,122 +433,6 @@ impl Store {
         )?;
         let rows = stmt.query_map([limit as i64], |row| row.get(0))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
-    pub fn set_meta(&self, id: i64, key: &str, value: &str) -> Result<()> {
-        self.db.execute(
-            "INSERT INTO item_meta (item_id, key, value) VALUES (?1, ?2, ?3)
-             ON CONFLICT(item_id, key) DO UPDATE SET value = excluded.value",
-            params![id, key, value],
-        )?;
-        Ok(())
-    }
-
-    pub fn meta(&self, id: i64, key: &str) -> Result<Option<String>> {
-        Ok(self
-            .db
-            .query_row(
-                "SELECT value FROM item_meta WHERE item_id = ?1 AND key = ?2",
-                params![id, key],
-                |row| row.get(0),
-            )
-            .optional()?)
-    }
-
-    pub fn all_meta(&self, id: i64) -> Result<Vec<(String, String)>> {
-        let mut stmt = self
-            .db
-            .prepare("SELECT key, value FROM item_meta WHERE item_id = ?1 ORDER BY key")?;
-        let rows = stmt.query_map([id], |row| Ok((row.get(0)?, row.get(1)?)))?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
-    pub fn meta_for(&self, ids: &[i64], keys: &[&str]) -> Result<MetaByItem> {
-        if ids.is_empty() || keys.is_empty() {
-            return Ok(MetaByItem::new());
-        }
-        let marks = |how_many: usize| vec!["?"; how_many].join(", ");
-        let sql = format!(
-            "SELECT item_id, key, value FROM item_meta
-             WHERE item_id IN ({}) AND key IN ({})",
-            marks(ids.len()),
-            marks(keys.len())
-        );
-        let mut bound: Vec<Box<dyn ToSql>> = Vec::with_capacity(ids.len() + keys.len());
-        for id in ids {
-            bound.push(Box::new(*id));
-        }
-        for key in keys {
-            bound.push(Box::new((*key).to_owned()));
-        }
-        let mut stmt = self.db.prepare(&sql)?;
-        let rows = stmt.query_map(params_from_iter(bound.iter()), |row| {
-            Ok((
-                row.get::<_, i64>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-            ))
-        })?;
-        let mut found = MetaByItem::new();
-        for row in rows {
-            let (id, key, value) = row?;
-            found.entry(id).or_default().insert(key, value);
-        }
-        Ok(found)
-    }
-
-    pub fn enqueue(&self, id: i64, job: &str) -> Result<()> {
-        self.db.execute(
-            "INSERT OR IGNORE INTO pending_work (item_id, job) VALUES (?1, ?2)",
-            params![id, job],
-        )?;
-        Ok(())
-    }
-
-    pub fn take_pending(&self, job: &str, now: i64, limit: usize) -> Result<Vec<i64>> {
-        let mut stmt = self.db.prepare(
-            "SELECT w.item_id
-             FROM pending_work w
-             JOIN items i ON i.id = w.item_id
-             WHERE w.job = ?1 AND w.not_before <= ?2 AND i.deleted_at IS NULL
-             ORDER BY i.modified_at DESC
-             LIMIT ?3",
-        )?;
-        let rows = stmt.query_map(params![job, now, limit as i64], |row| row.get(0))?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
-    pub fn work_done(&self, id: i64, job: &str) -> Result<()> {
-        self.db.execute(
-            "DELETE FROM pending_work WHERE item_id = ?1 AND job = ?2",
-            params![id, job],
-        )?;
-        Ok(())
-    }
-
-    pub const MAX_ATTEMPTS: i64 = 3;
-
-    pub fn work_failed(&self, id: i64, job: &str, why: &str, retry_at: i64) -> Result<bool> {
-        self.db.execute(
-            "UPDATE pending_work
-             SET attempts = attempts + 1, last_error = ?3, not_before = ?4
-             WHERE item_id = ?1 AND job = ?2",
-            params![id, job, why, retry_at],
-        )?;
-        let attempts: i64 = self
-            .db
-            .query_row(
-                "SELECT attempts FROM pending_work WHERE item_id = ?1 AND job = ?2",
-                params![id, job],
-                |row| row.get(0),
-            )
-            .optional()?
-            .unwrap_or(0);
-        if attempts >= Self::MAX_ATTEMPTS {
-            self.work_done(id, job)?;
-            return Ok(false);
-        }
-        Ok(true)
     }
 
     pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<()> {
@@ -1020,8 +917,8 @@ impl Store {
             clauses
                 .conditions
                 .push(format!("({key} < ? OR ({key} = ? AND items.id < ?))"));
-            clauses.bound.push(Box::new(cursor.key));
-            clauses.bound.push(Box::new(cursor.key));
+            clauses.bound.push(bound_key(filter.order, &cursor.key));
+            clauses.bound.push(bound_key(filter.order, &cursor.key));
             clauses.bound.push(Box::new(cursor.id));
         }
         let sql = page_sql(&clauses, key, !terms.is_empty());
@@ -1048,18 +945,25 @@ impl Store {
                 last_used_at: row.get(10)?,
                 broken_since: row.get(11)?,
                 pinned: row.get::<_, i64>(12)? == 1,
+                group: row.get(16)?,
                 snippet: None,
             };
             listed.snippet = snippet_of(&listed, &whole, &ocr, &terms);
-            Ok((listed, row.get::<_, i64>(14)?))
+            let key = match filter.order {
+                Order::ByGroup => row.get::<_, String>(14)?,
+                Order::Recent | Order::MostPasted | Order::LastUsed => {
+                    row.get::<_, i64>(14)?.to_string()
+                }
+            };
+            Ok((listed, key))
         })?;
-        let mut keyed: Vec<(Listed, i64)> = rows.collect::<rusqlite::Result<_>>()?;
+        let mut keyed: Vec<(Listed, String)> = rows.collect::<rusqlite::Result<_>>()?;
         let more = keyed.len() > limit;
         keyed.truncate(limit);
         let next = match keyed.last() {
             Some((last, key)) if more => Some(Cursor {
                 order: filter.order,
-                key: *key,
+                key: key.clone(),
                 id: last.id,
             }),
             _ => None,
@@ -1343,12 +1247,22 @@ pub struct Usage {
 
 pub const PREVIEW_CHARS: usize = 2_000;
 
+fn bound_key(order: Order, key: &str) -> Box<dyn ToSql> {
+    match order {
+        Order::ByGroup => Box::new(key.to_owned()),
+        Order::Recent | Order::MostPasted | Order::LastUsed => {
+            Box::new(key.parse::<i64>().unwrap_or(i64::MIN))
+        }
+    }
+}
+
 fn page_sql(clauses: &Clauses, key: &str, with_query: bool) -> String {
     format!(
         "SELECT items.id, items.modified_at, items.created_at, items.kind,
                 SUBSTR(items.preview_text, 1, {preview}), items.app_source, items.label,
                 items.card_color, items.thumb_path, items.paste_count, items.last_used_at,
-                items.broken_since, items.pinned, {ocr}, page.key, {whole}
+                items.broken_since, items.pinned, {ocr}, page.key, {whole},
+                items.group_key
          FROM (SELECT items.id AS id, {key} AS key {}
                ORDER BY {key} DESC, items.id DESC LIMIT ?) AS page
          JOIN items ON items.id = page.id

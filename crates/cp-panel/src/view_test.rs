@@ -17,6 +17,7 @@ fn row(kind: Option<Kind>) -> Listed {
         last_used_at: None,
         broken_since: None,
         pinned: true,
+        group: String::new(),
         snippet: None,
     }
 }
