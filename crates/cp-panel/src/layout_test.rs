@@ -94,11 +94,12 @@ fn no_two_layouts_answer_to_the_same_name() {
 }
 
 #[test]
-fn only_the_two_views_the_maquette_grouped_ask_for_grouping() {
-    assert!(Layout::Link.groups());
-    assert!(Layout::Folder.groups());
+fn only_the_views_the_maquette_grouped_ask_for_grouping() {
+    assert!(Layout::Link.groups(), "by domain");
+    assert!(Layout::Folder.groups(), "by drive");
+    assert!(Layout::Papers.groups(), "by format");
     for one in Layout::ALL {
-        if matches!(one, Layout::Link | Layout::Folder) {
+        if matches!(one, Layout::Link | Layout::Folder | Layout::Papers) {
             continue;
         }
         assert!(!one.groups(), "{one:?} was drawn as one flat list");

@@ -16,6 +16,7 @@ mod say;
 mod shape;
 mod view;
 mod wave;
+mod ways;
 
 slint::include_modules!();
 

@@ -26,7 +26,7 @@ impl Layout {
     ];
 
     pub fn groups(self) -> bool {
-        matches!(self, Layout::Link | Layout::Folder)
+        matches!(self, Layout::Link | Layout::Folder | Layout::Papers)
     }
 
     pub fn as_str(self) -> &'static str {

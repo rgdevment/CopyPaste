@@ -21,7 +21,7 @@ pub struct Metrics {
 const EDGE: f32 = 8.0;
 
 pub fn heads_group(filter: &Filter, rows: &[Listed], index: usize) -> bool {
-    if !crate::layout::layout_for(&filter.kinds).groups() {
+    if filter.order != cp_store::Order::ByGroup {
         return false;
     }
     let Some(row) = rows.get(index) else {

@@ -37,6 +37,7 @@ struct State {
     query: String,
     tags: Vec<String>,
     pinned: bool,
+    way: String,
     rows: Option<Rc<Rows>>,
     options: Options,
     metrics: Metrics,
@@ -88,6 +89,7 @@ impl App {
             query: String::new(),
             tags: Vec::new(),
             pinned: false,
+            way: String::new(),
             rows: None,
             options,
             metrics,
@@ -175,6 +177,15 @@ impl App {
     }
 
     fn wire_chrome(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_way_chosen(move |key| {
+            state.borrow_mut().way = key.to_string();
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            refresh(&ui, &state);
+        });
         let ui = self.ui.clone();
         panel.on_ask_settings(move || {
             let Some(ui) = ui.upgrade() else {
@@ -694,6 +705,10 @@ fn spawn_counter(
                 panel.set_pinned_count(anchored.into());
                 panel.set_pinned_on(only_anchored);
                 panel.set_layout(asked.as_str().into());
+                let ways = crate::ways::ways_of(asked);
+                let english = crate::say::in_english();
+                panel.set_way_a(said_way(ways.first(), english));
+                panel.set_way_b(said_way(ways.get(1), english));
             });
         }
     });
@@ -729,7 +744,8 @@ fn filter_of(state: &State) -> Filter {
     if state.pinned {
         filter.pinned_only = true;
     }
-    if crate::layout::layout_for(&filter.kinds).groups() {
+    let layout = crate::layout::layout_for(&filter.kinds);
+    if layout.groups() && !crate::ways::chosen(layout, &state.way).recent {
         filter.order = cp_store::Order::ByGroup;
     }
     filter
@@ -757,6 +773,16 @@ fn tags_of(state: &State) -> Vec<Chip> {
             selected: true,
         })
         .collect()
+}
+
+fn said_way(way: Option<&crate::ways::Way>, english: bool) -> crate::WayPill {
+    match way {
+        Some(way) => crate::WayPill {
+            key: way.key.into(),
+            says: crate::ways::label_of(*way, english).into(),
+        },
+        None => crate::WayPill::default(),
+    }
 }
 
 fn keys_of(filter: &Filter) -> Vec<String> {

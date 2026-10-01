@@ -1,11 +1,11 @@
 import { ListView } from "std-widgets.slint";
 import { GridCell } from "bodies_grid.slint";
-import { Card, Chip, FormRow } from "types.slint";
+import { Card, Chip, FormRow, WayPill } from "types.slint";
 import { Theme } from "theme.slint";
 import { Words } from "words.slint";
 import { Icon, Action, Pill, Tag, CardView, Hue } from "cards.slint";
 
-export { Card, Chip, FormRow, Theme, Words }
+export { Card, Chip, FormRow, WayPill, Theme, Words }
 
 export component Panel inherits Window {
     width: Theme.width + Theme.margin * 2;
@@ -26,6 +26,10 @@ export component Panel inherits Window {
     in property <string> sheet-subject;
     in property <string> sheet-kind;
     in property <string> layout: "everything";
+    in property <WayPill> way-a;
+    in property <WayPill> way-b;
+    in-out property <string> way;
+    callback way-chosen(string);
     in property <string> count-text;
     in property <string> pinned-count;
     in property <string> empty-title;
@@ -363,6 +367,42 @@ export component Panel inherits Window {
                             background: Theme.field-border;
                         }
                     }
+                    if root.way-a.says != "" : HorizontalLayout {
+                        spacing: 6px;
+                        alignment: end;
+                        for pill in [root.way-a, root.way-b] : Rectangle {
+                            width: said.preferred-width;
+                            height: 22px;
+                            border-radius: 11px;
+                            background: root.way == pill.key || (root.way == "" && pill.key == root.way-a.key)
+                                ? Theme.selected
+                                : picked.has-hover ? #242840 : Theme.field;
+                            border-width: 1px;
+                            border-color: root.way == pill.key || (root.way == "" && pill.key == root.way-a.key)
+                                ? Theme.selected-edge
+                                : Theme.field-border;
+                            y: (parent.height - 22px) / 2;
+                            said := HorizontalLayout {
+                                padding-left: 9px;
+                                padding-right: 9px;
+                                Text {
+                                    text: pill.says;
+                                    color: root.way == pill.key || (root.way == "" && pill.key == root.way-a.key)
+                                        ? Theme.accent
+                                        : Theme.muted;
+                                    font-size: 10px;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            picked := TouchArea {
+                                clicked => {
+                                    root.way = pill.key;
+                                    root.way-chosen(pill.key);
+                                }
+                            }
+                        }
+                    }
+
                     Rectangle {
                         horizontal-stretch: 1;
                         clip: true;
@@ -451,8 +491,8 @@ export component Panel inherits Window {
                 grid := ListView {
                     accessible-role: AccessibleRole.list;
                     vertical-scrollbar-policy: ScrollBarPolicy.always-off;
-                    visible: root.layout == "image";
-                    height: root.layout == "image" ? parent.height : 0px;
+                    visible: root.layout == "image" && root.way != "rows";
+                    height: root.layout == "image" && root.way != "rows" ? parent.height : 0px;
                     for line[at] in root.grid-lines : HorizontalLayout {
                         height: Theme.cell;
                         spacing: 8px;
@@ -485,8 +525,8 @@ export component Panel inherits Window {
                     }
                 }
                 list := ListView {
-                    visible: root.layout != "image";
-                    height: root.layout != "image" ? parent.height : 0px;
+                    visible: root.layout != "image" || root.way == "rows";
+                    height: root.layout != "image" || root.way == "rows" ? parent.height : 0px;
                     accessible-role: AccessibleRole.list;
                     vertical-scrollbar-policy: ScrollBarPolicy.always-off;
                     animate content-y { duration: root.gliding ? 110ms : 0ms; easing: ease-out; }
@@ -546,6 +586,7 @@ export component Panel inherits Window {
                                 root.moved(index);
                             }
                             layout: root.layout;
+                            way: root.way;
                             paste(id) => { root.paste(id); }
                             forms(id) => {
                                 root.current = index;

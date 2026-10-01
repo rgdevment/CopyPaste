@@ -164,8 +164,10 @@ export component Tag inherits Rectangle {
 export component CardView inherits Rectangle {
     in property <Card> card;
     in property <string> layout;
-    property <bool> special: layout == "json" || layout == "video" || layout == "audio"
-        || layout == "papers" || layout == "folder" || layout == "link";
+    in property <string> way;
+    property <bool> plain-way: way == "raw" || way == "tight";
+    property <bool> special: !plain-way && (layout == "json" || layout == "video"
+        || layout == "audio" || layout == "papers" || layout == "folder" || layout == "link");
     in property <bool> current;
     in property <bool> open;
     in property <bool> shown-here;
@@ -235,23 +237,23 @@ export component CardView inherits Rectangle {
             Text { text: card.tail; color: Theme.body; font-size: 12.5px; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
         }
 
-        if !card.has-thumb && !open && layout == "json" : JsonBody {
+        if !card.has-thumb && !open && !plain-way && layout == "json" : JsonBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && (layout == "video" || layout == "audio") : MediaBody {
+        if !card.has-thumb && !open && !plain-way && (layout == "video" || layout == "audio") : MediaBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && layout == "papers" : PapersBody {
+        if !card.has-thumb && !open && !plain-way && layout == "papers" : PapersBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && layout == "folder" : FolderBody {
+        if !card.has-thumb && !open && !plain-way && layout == "folder" : FolderBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && layout == "link" : LinkBody {
+        if !card.has-thumb && !open && !plain-way && layout == "link" : LinkBody {
             card: card;
         }
 

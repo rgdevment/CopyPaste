@@ -290,6 +290,7 @@ fn grouped(group: &str) -> cp_store::Listed {
 fn the_first_row_of_a_group_is_the_one_that_heads_it() {
     let linked = Filter {
         kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::ByGroup,
         ..Default::default()
     };
     let rows = [
@@ -315,9 +316,24 @@ fn a_view_that_does_not_group_draws_no_heading_at_all() {
 }
 
 #[test]
+fn choosing_the_newest_way_drops_the_headings_with_the_grouping() {
+    let newest = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::Recent,
+        ..Default::default()
+    };
+    let rows = [grouped("docs.rs"), grouped("github.com")];
+    assert!(
+        !heads_group(&newest, &rows, 0),
+        "a heading over a list that is not grouped would be a lie"
+    );
+}
+
+#[test]
 fn a_group_nobody_could_name_heads_nothing() {
     let linked = Filter {
         kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::ByGroup,
         ..Default::default()
     };
     let rows = [grouped(crate::group::UNKNOWN), grouped("")];

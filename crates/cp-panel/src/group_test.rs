@@ -19,6 +19,16 @@ fn a_folder_is_grouped_by_its_unit() {
 }
 
 #[test]
+fn an_office_file_is_grouped_by_its_format() {
+    assert_eq!(key_of(Some(Kind::File), r"D:\x\cuentas.xlsx"), "XLSX");
+    assert_eq!(
+        key_of(Some(Kind::File), r"D:\x\sin_extension"),
+        UNKNOWN,
+        "no format to group by"
+    );
+}
+
+#[test]
 fn a_kind_that_does_not_group_gets_an_empty_key() {
     assert_eq!(key_of(Some(Kind::Text), "hola"), "");
     assert_eq!(key_of(Some(Kind::Json), "{}"), "");
