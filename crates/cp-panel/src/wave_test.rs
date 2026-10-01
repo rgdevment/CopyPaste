@@ -79,30 +79,93 @@ fn a_real_wav_is_read_and_its_shape_survives() {
     std::fs::remove_dir_all(&dir).ok();
 }
 
-fn tone() -> Vec<u8> {
-    const RATE: u32 = 8_000;
-    const FRAMES: u32 = RATE * 2;
-    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize * 2);
-    for at in 0..FRAMES {
-        let loud = if at < FRAMES / 2 { 0.0 } else { 0.8 };
-        let turn = (at as f32) * 440.0 * std::f32::consts::TAU / RATE as f32;
-        let value = (turn.sin() * loud * f32::from(i16::MAX)) as i16;
-        samples.extend_from_slice(&value.to_le_bytes());
+#[test]
+fn the_same_tone_draws_the_same_shape_whatever_the_samples_are_made_of() {
+    let dir = std::env::temp_dir().join(format!("cp-wave-forms-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    for (name, bytes) in [
+        ("entero-corto.wav", tone()),
+        ("coma-flotante.wav", tone_in_floats()),
+        ("entero-largo.wav", tone_in_long_ints()),
+        ("un-byte.wav", tone_in_bytes()),
+    ] {
+        let path = dir.join(name);
+        std::fs::write(&path, bytes).expect("wrote");
+        let bars = bars_of(&path).unwrap_or_else(|| panic!("{name} gave no wave at all"));
+        assert_eq!(bars.len(), BARS, "{name}");
+        assert_eq!(
+            *bars.iter().max().expect("a bar"),
+            TALLEST,
+            "{name} never reaches the top"
+        );
+        assert!(
+            bars[..BARS / 3].iter().all(|bar| *bar == 0),
+            "{name} starts in silence and the wave has to say so"
+        );
     }
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+const RATE: u32 = 8_000;
+const FRAMES: u32 = RATE * 2;
+
+fn loudness(at: u32) -> f32 {
+    let loud = if at < FRAMES / 2 { 0.0 } else { 0.8 };
+    let turn = (at as f32) * 440.0 * std::f32::consts::TAU / RATE as f32;
+    turn.sin() * loud
+}
+
+fn riff(tag: u16, bits: u16, samples: &[u8]) -> Vec<u8> {
+    let wide = u32::from(bits / 8);
     let data = u32::try_from(samples.len()).expect("fits");
     let mut out = Vec::with_capacity(samples.len() + 44);
     out.extend_from_slice(b"RIFF");
     out.extend_from_slice(&(36 + data).to_le_bytes());
     out.extend_from_slice(b"WAVEfmt ");
     out.extend_from_slice(&16u32.to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&tag.to_le_bytes());
     out.extend_from_slice(&1u16.to_le_bytes());
     out.extend_from_slice(&RATE.to_le_bytes());
-    out.extend_from_slice(&(RATE * 2).to_le_bytes());
-    out.extend_from_slice(&2u16.to_le_bytes());
-    out.extend_from_slice(&16u16.to_le_bytes());
+    out.extend_from_slice(&(RATE * wide).to_le_bytes());
+    out.extend_from_slice(&u16::try_from(wide).expect("fits").to_le_bytes());
+    out.extend_from_slice(&bits.to_le_bytes());
     out.extend_from_slice(b"data");
     out.extend_from_slice(&data.to_le_bytes());
-    out.extend_from_slice(&samples);
+    out.extend_from_slice(samples);
     out
+}
+
+fn tone() -> Vec<u8> {
+    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize * 2);
+    for at in 0..FRAMES {
+        let value = (loudness(at) * f32::from(i16::MAX)) as i16;
+        samples.extend_from_slice(&value.to_le_bytes());
+    }
+    riff(1, 16, &samples)
+}
+
+fn tone_in_floats() -> Vec<u8> {
+    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize * 4);
+    for at in 0..FRAMES {
+        samples.extend_from_slice(&loudness(at).to_le_bytes());
+    }
+    riff(3, 32, &samples)
+}
+
+fn tone_in_long_ints() -> Vec<u8> {
+    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize * 4);
+    for at in 0..FRAMES {
+        let value = (f64::from(loudness(at)) * f64::from(i32::MAX)) as i32;
+        samples.extend_from_slice(&value.to_le_bytes());
+    }
+    riff(1, 32, &samples)
+}
+
+fn tone_in_bytes() -> Vec<u8> {
+    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize);
+    for at in 0..FRAMES {
+        let value = (loudness(at) * 127.0).round() as i16 + 128;
+        samples.push(u8::try_from(value.clamp(0, 255)).expect("fits"));
+    }
+    riff(1, 8, &samples)
 }
