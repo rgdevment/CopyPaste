@@ -53,6 +53,160 @@ impl Battery {
     }
 }
 
+fn what_goes_back_to_the_pasteboard(b: &mut Battery, pb: &Pasteboard) {
+    b.group("I · Back to the clipboard");
+
+    b.case(
+        "I0",
+        "three files come back as three files, not as one broken url",
+        || {
+            pb.write_items(&[
+                vec![("public.file-url", "file:///tmp/cp-i0-uno.txt")],
+                vec![("public.file-url", "file:///tmp/cp-i0-dos.txt")],
+                vec![("public.file-url", "file:///tmp/cp-i0-tres.txt")],
+            ]);
+            let captured = capture(pb).kept().ok_or("nothing was captured")?;
+
+            pb.write_text("something else");
+
+            match cp_mac::restore::to_pasteboard(pb, &captured) {
+                cp_mac::restore::Restored::Written { .. } => {}
+                other => return Err(format!("it restored {other:?}")),
+            }
+            if pb.item_count() != 3 {
+                return Err(format!(
+                    "the clipboard holds {} items: Finder pastes what it is given, one url or none",
+                    pb.item_count()
+                ));
+            }
+            let back = capture(pb)
+                .kept()
+                .ok_or("what was restored was not captured")?;
+            let urls = back
+                .format("public.file-url")
+                .ok_or("the paths are missing")?;
+            match &urls.payload {
+                Payload::Inline(bytes) => {
+                    let text = String::from_utf8_lossy(bytes).to_string();
+                    let lines: Vec<&str> = text.lines().collect();
+                    if lines.len() == 3 {
+                        Ok(())
+                    } else {
+                        Err(format!("{} paths came back: {lines:?}", lines.len()))
+                    }
+                }
+                other => Err(format!("{other:?} arrived")),
+            }
+        },
+    );
+
+    b.case("I1", "an item comes back with every format it had", || {
+        pb.write_types(&[
+            ("public.utf8-plain-text", "texto plano"),
+            ("public.html", "<b>texto plano</b>"),
+        ]);
+        let captured = capture(pb).kept().ok_or("nothing was captured")?;
+        let had = captured.formats.len();
+
+        pb.write_text("something else");
+
+        match cp_mac::restore::to_pasteboard(pb, &captured) {
+            cp_mac::restore::Restored::Written { formats, .. } if formats >= 2 => {}
+            other => return Err(format!("it restored {other:?} of {had} formats")),
+        }
+
+        let back = capture(pb)
+            .kept()
+            .ok_or("what was restored was not captured")?;
+        let text = back
+            .format("public.utf8-plain-text")
+            .ok_or("the text is missing")?;
+        if text.payload != Payload::Inline(b"texto plano".to_vec()) {
+            return Err(format!("the text came back as {:?}", text.payload));
+        }
+        if back.format("public.html").is_none() {
+            return Err("the HTML did not come back: pasting it would lose the styling".into());
+        }
+        Ok(())
+    });
+
+    b.case("I2", "an image comes back whole", || {
+        let png = std::fs::read("fixtures/texto-en-imagen.png")
+            .map_err(|why| format!("the fixture is missing: {why}"))?;
+        let item = cp_core::item::Item {
+            kind: Some(Kind::Image),
+            formats: vec![cp_core::item::Format {
+                id: "public.png".into(),
+                payload: cp_core::item::Payload::Blob(png.clone()),
+            }],
+        };
+        pb.write_text("something else entirely");
+        match cp_mac::restore::to_pasteboard(pb, &item) {
+            cp_mac::restore::Restored::Written { .. } => {}
+            other => return Err(format!("it was not restored: {other:?}")),
+        }
+        let back = pb.data("public.png").ok_or("the png did not come back")?;
+        if back.len() != png.len() {
+            return Err(format!("{} bytes of {} came back", back.len(), png.len()));
+        }
+        Ok(())
+    });
+
+    b.case(
+        "I3",
+        "an item with no bytes says so instead of emptying the clipboard",
+        || {
+            let hollow = cp_core::item::Item {
+                kind: None,
+                formats: vec![cp_core::item::Format {
+                    id: "com.apple.icns".into(),
+                    payload: cp_core::item::Payload::Announced { size: Some(10) },
+                }],
+            };
+            pb.write_text("what was there before");
+            match cp_mac::restore::to_pasteboard(pb, &hollow) {
+                cp_mac::restore::Restored::NothingToWrite => {}
+                other => return Err(format!("it gave back {other:?}")),
+            }
+            let kept = pb
+                .data("public.utf8-plain-text")
+                .and_then(|bytes| String::from_utf8(bytes).ok())
+                .unwrap_or_default();
+            if kept != "what was there before" {
+                return Err("what the person had copied was lost".into());
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
+        "I4",
+        "restoring says so when the item was incomplete",
+        || {
+            let partial = cp_core::item::Item {
+                kind: Some(Kind::Text),
+                formats: vec![
+                    cp_core::item::Format {
+                        id: "public.utf8-plain-text".into(),
+                        payload: cp_core::item::Payload::Inline(b"algo".to_vec()),
+                    },
+                    cp_core::item::Format {
+                        id: "public.tiff".into(),
+                        payload: cp_core::item::Payload::Announced { size: Some(999) },
+                    },
+                ],
+            };
+            match cp_mac::restore::to_pasteboard(pb, &partial) {
+                cp_mac::restore::Restored::Written {
+                    formats: 1,
+                    incomplete: true,
+                } => Ok(()),
+                other => Err(format!("it gave back {other:?}")),
+            }
+        },
+    );
+}
+
 fn main() -> std::process::ExitCode {
     let Some(mtm) = MainThreadMarker::new() else {
         eprintln!("this has to run on the main thread");
@@ -289,113 +443,7 @@ fn main() -> std::process::ExitCode {
         },
     );
 
-    b.group("I · Back to the clipboard");
-
-    b.case("I1", "an item comes back with every format it had", || {
-        pb.write_types(&[
-            ("public.utf8-plain-text", "texto plano"),
-            ("public.html", "<b>texto plano</b>"),
-        ]);
-        let captured = capture(&pb).kept().ok_or("nothing was captured")?;
-        let had = captured.formats.len();
-
-        pb.write_text("something else");
-
-        match cp_mac::restore::to_pasteboard(&pb, &captured) {
-            cp_mac::restore::Restored::Written { formats, .. } if formats >= 2 => {}
-            other => return Err(format!("it restored {other:?} of {had} formats")),
-        }
-
-        let back = capture(&pb)
-            .kept()
-            .ok_or("what was restored was not captured")?;
-        let text = back
-            .format("public.utf8-plain-text")
-            .ok_or("the text is missing")?;
-        if text.payload != Payload::Inline(b"texto plano".to_vec()) {
-            return Err(format!("the text came back as {:?}", text.payload));
-        }
-        if back.format("public.html").is_none() {
-            return Err("the HTML did not come back: pasting it would lose the styling".into());
-        }
-        Ok(())
-    });
-
-    b.case("I2", "an image comes back whole", || {
-        let png = std::fs::read("fixtures/texto-en-imagen.png")
-            .map_err(|why| format!("the fixture is missing: {why}"))?;
-        let item = cp_core::item::Item {
-            kind: Some(Kind::Image),
-            formats: vec![cp_core::item::Format {
-                id: "public.png".into(),
-                payload: cp_core::item::Payload::Blob(png.clone()),
-            }],
-        };
-        pb.write_text("something else entirely");
-        match cp_mac::restore::to_pasteboard(&pb, &item) {
-            cp_mac::restore::Restored::Written { .. } => {}
-            other => return Err(format!("it was not restored: {other:?}")),
-        }
-        let back = pb.data("public.png").ok_or("the png did not come back")?;
-        if back.len() != png.len() {
-            return Err(format!("{} bytes of {} came back", back.len(), png.len()));
-        }
-        Ok(())
-    });
-
-    b.case(
-        "I3",
-        "an item with no bytes says so instead of emptying the clipboard",
-        || {
-            let hollow = cp_core::item::Item {
-                kind: None,
-                formats: vec![cp_core::item::Format {
-                    id: "com.apple.icns".into(),
-                    payload: cp_core::item::Payload::Announced { size: Some(10) },
-                }],
-            };
-            pb.write_text("what was there before");
-            match cp_mac::restore::to_pasteboard(&pb, &hollow) {
-                cp_mac::restore::Restored::NothingToWrite => {}
-                other => return Err(format!("it gave back {other:?}")),
-            }
-            let kept = pb
-                .data("public.utf8-plain-text")
-                .and_then(|bytes| String::from_utf8(bytes).ok())
-                .unwrap_or_default();
-            if kept != "what was there before" {
-                return Err("what the person had copied was lost".into());
-            }
-            Ok(())
-        },
-    );
-
-    b.case(
-        "I4",
-        "restoring says so when the item was incomplete",
-        || {
-            let partial = cp_core::item::Item {
-                kind: Some(Kind::Text),
-                formats: vec![
-                    cp_core::item::Format {
-                        id: "public.utf8-plain-text".into(),
-                        payload: cp_core::item::Payload::Inline(b"algo".to_vec()),
-                    },
-                    cp_core::item::Format {
-                        id: "public.tiff".into(),
-                        payload: cp_core::item::Payload::Announced { size: Some(999) },
-                    },
-                ],
-            };
-            match cp_mac::restore::to_pasteboard(&pb, &partial) {
-                cp_mac::restore::Restored::Written {
-                    formats: 1,
-                    incomplete: true,
-                } => Ok(()),
-                other => Err(format!("it gave back {other:?}")),
-            }
-        },
-    );
+    what_goes_back_to_the_pasteboard(&mut b, &pb);
 
     b.group("J · Files that are gone");
 

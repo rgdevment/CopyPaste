@@ -24,6 +24,10 @@ pub const RETRY: Retry = Retry {
 
 const _: () = assert!(RETRY.attempts >= 2);
 
+const LONGEST_WRITE: i64 = 16;
+
+const _: () = assert!(LONGEST_WRITE >= 8);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Retried<T> {
     Done(T),
@@ -55,7 +59,7 @@ pub fn insist<T>(
 #[derive(Debug)]
 pub struct Watcher {
     last: Option<i64>,
-    ours: Option<i64>,
+    ours: Option<(i64, Option<i64>)>,
     missed: u64,
     cadence: Cadence,
 }
@@ -70,8 +74,13 @@ impl Watcher {
         }
     }
 
+    pub fn writing(&mut self, from: i64) {
+        self.ours = Some((from, None));
+    }
+
     pub fn wrote(&mut self, count: i64) {
-        self.ours = Some(count);
+        let from = self.ours.map_or(count, |(from, _)| from);
+        self.ours = Some((from, Some(count)));
     }
 
     pub fn tick(&mut self, count: i64) -> Seen {
@@ -83,9 +92,18 @@ impl Watcher {
             return Seen::Nothing;
         }
         self.last = Some(count);
-        let ours = self.ours.take();
-        if ours == Some(count) {
-            return Seen::Ours;
+        if let Some((from, through)) = self.ours {
+            let within = through.map_or_else(
+                || count <= from.saturating_add(LONGEST_WRITE),
+                |end| count <= end,
+            );
+            if count >= from && within {
+                if through.is_some_and(|end| count >= end) {
+                    self.ours = None;
+                }
+                return Seen::Ours;
+            }
+            self.ours = None;
         }
         let skipped = match self.cadence {
             Cadence::OnePerCopy => {

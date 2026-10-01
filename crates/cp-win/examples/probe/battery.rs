@@ -10,7 +10,7 @@ use cp_win::transfer::{self, Transfer};
 use cp_win::virtual_files::{self, DESCRIPTOR};
 use cp_win::watching::Watching;
 use cp_win_sys::clipboard::{self, Clipboard};
-use cp_win_sys::formats::{CF_HDROP, CF_UNICODETEXT, id_of, name_of};
+use cp_win_sys::formats::{CF_DIB, CF_DIBV5, CF_HDROP, CF_UNICODETEXT, id_of, name_of};
 use cp_win_sys::frontmost::{self, Target};
 use cp_win_sys::permissions::Readiness;
 use cp_win_sys::reading::{self, PATIENCE, Reading};
@@ -18,7 +18,7 @@ use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{files, media, ocr, source, thumbnail};
 
-const CASES: u32 = 48;
+const CASES: u32 = 51;
 const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2", "Q1"];
 const SKIPPED: &str = "skipped: ";
 
@@ -754,153 +754,36 @@ fn main() -> std::process::ExitCode {
         }
     });
 
-    b.group("I · Restore");
+    what_goes_back_to_the_clipboard(&mut b);
 
     b.case(
-        "I1",
-        "an item comes back to the clipboard with its formats",
+        "I6",
+        "the clipboard counter moves while a write is still open, and again when it closes",
         || {
             {
                 let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-original"))]);
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i6-before"))]);
             }
-            let item = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                match capture(&clipboard) {
-                    Captured::Kept(item) => item,
-                    other => return Err(format!("nothing was captured: {other:?}")),
-                }
+            let settled = clipboard::sequence().ok_or("no counter")?;
+            let (inside, outside) = {
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i6-after"))]);
+                let inside = clipboard::sequence().ok_or("no counter")?;
+                drop(clipboard);
+                (inside, clipboard::sequence().ok_or("no counter")?)
             };
-            {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i1-something-else"))]);
+            println!("            before {settled}, still open {inside}, closed {outside}");
+            if settled == inside {
+                return Err(format!(
+                    "the counter stood still at {settled} during the write: marking at close would then be enough, and this case exists because it is not"
+                ));
             }
-            let written = {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                to_clipboard(&clipboard, &item)
-            };
-            match written {
-                Restored::Written { formats, .. } => {
-                    println!("            {formats} formats returned");
-                }
-                other => return Err(format!("not restored: {other:?}")),
-            }
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            let bytes = clipboard.bytes(CF_UNICODETEXT).ok_or("no text")?;
-            match text_of(&bytes).as_deref() {
-                Some("cp-i1-original") => Ok(()),
-                other => Err(format!("came back «{other:?}»")),
-            }
-        },
-    );
-
-    b.case(
-        "I2",
-        "capturing what was restored gives the same fingerprint",
-        || {
-            {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-i2-round-trip"))]);
-            }
-            let (first, item) = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                match capture(&clipboard) {
-                    Captured::Kept(item) => (item.fingerprint(), item),
-                    other => return Err(format!("nothing was captured: {other:?}")),
-                }
-            };
-            {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                to_clipboard(&clipboard, &item);
-            }
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            match capture(&clipboard) {
-                Captured::Kept(again) => {
-                    if again.fingerprint() == first {
-                        Ok(())
-                    } else {
-                        Err("the fingerprint changed on the round trip".into())
-                    }
-                }
-                other => Err(format!("not recaptured: {other:?}")),
-            }
-        },
-    );
-
-    b.case(
-        "I3",
-        "pasting as plain text does not mutilate the stored item",
-        || {
-            let html = id_of("HTML Format").ok_or("HTML Format did not register")?;
-            {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                clipboard.replace(&[
-                    (CF_UNICODETEXT, &utf16_of("with styles")),
-                    (html, b"<b>with styles</b>"),
-                ]);
-            }
-            let item = {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                capture(&clipboard).kept().ok_or("nothing was captured")?
-            };
-            let had = item.formats.len();
-
-            let plain = render(Form::PlainText, &content_of(&item, None))
-                .ok_or("the plain form was not offered")?
-                .into_item();
-            let written = {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                to_clipboard(&clipboard, &plain)
-            };
-            match written {
-                Restored::Written { formats: 1, .. } => {}
-                other => return Err(format!("returned {other:?}")),
-            }
-            {
-                let clipboard = Clipboard::open().ok_or("did not open")?;
-                if clipboard.offered().contains(&html) {
-                    return Err("the HTML remained: it was not pasted as plain text".into());
-                }
-            }
-
-            if item.formats.len() != had {
-                return Err("the item lost formats".into());
-            }
-            let restored = {
-                let clipboard = Clipboard::to_write().ok_or("did not open")?;
-                to_clipboard(&clipboard, &item)
-            };
-            match restored {
-                Restored::Written { .. } => {}
-                other => return Err(format!("could not restore with styles: {other:?}")),
-            }
-            let clipboard = Clipboard::open().ok_or("did not open")?;
-            if !clipboard.offered().contains(&html) {
-                return Err("the HTML did not come back: the item had been left mutilated".into());
+            if inside == outside {
+                return Err(format!(
+                    "the counter stood still at {inside} on closing, so the write ended where the watcher could already see it"
+                ));
             }
             Ok(())
-        },
-    );
-
-    b.case(
-        "I4",
-        "an item with no plain text cannot be pasted as plain text",
-        || {
-            let only_image = cp_core::item::Item {
-                kind: Some(cp_core::kind::Kind::Image),
-                formats: vec![cp_core::item::Format {
-                    id: "PNG".into(),
-                    payload: cp_core::item::Payload::Inline(vec![1, 2, 3]),
-                }],
-            };
-            let content = content_of(&only_image, None);
-            if forms_for(&content).contains(&Form::PlainText) {
-                return Err("pasting as plain text was offered without text".into());
-            }
-            match render(Form::PlainText, &content) {
-                None => Ok(()),
-                Some(other) => Err(format!("returned {other:?}")),
-            }
         },
     );
 
@@ -961,6 +844,7 @@ fn main() -> std::process::ExitCode {
         });
         std::thread::sleep(std::time::Duration::from_millis(60));
 
+        watching.writing();
         {
             let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-ours"))]);
@@ -989,6 +873,39 @@ fn main() -> std::process::ExitCode {
         println!("            ours 0 notices, foreign {after_theirs}");
         Ok(())
     });
+
+    b.case(
+        "J5",
+        "the pause between letting the clipboard go and marking it is not a copy",
+        || {
+            use std::sync::Arc;
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let seen = Arc::new(AtomicUsize::new(0));
+            let counter = seen.clone();
+            let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+                counter.fetch_add(1, Ordering::Relaxed);
+            });
+            std::thread::sleep(std::time::Duration::from_millis(60));
+
+            watching.writing();
+            {
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j5-ours"))]);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            watching.ours();
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            let after_ours = seen.load(Ordering::Relaxed);
+            drop(watching);
+
+            if after_ours != 0 {
+                return Err(format!(
+                    "{after_ours} notice(s) for our own write: the stretch left a gap"
+                ));
+            }
+            Ok(())
+        },
+    );
 
     b.case("J3", "polling the counter is almost free", || {
         let rounds = 10_000;
@@ -1122,7 +1039,7 @@ fn main() -> std::process::ExitCode {
         let dir = std::env::temp_dir().join("cp-no-thumbnail");
         std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
         let path = dir.join("empty.bin");
-        std::fs::write(&path, b"   ").map_err(|why| why.to_string())?;
+        std::fs::write(&path, b"\0\0\0").map_err(|why| why.to_string())?;
         match thumbnail::dib_of_file(&path, thumbnail::SIDE) {
             None => Ok(()),
             Some(_) => Err("returned something for a file with no preview".into()),

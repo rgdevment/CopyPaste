@@ -19,6 +19,13 @@ pub fn route_of(ready: &Readiness) -> Option<Route> {
     route_for(ready.can_post, ready.accessibility)
 }
 
+pub fn around_protected_input(route: Route, accessibility: bool) -> Option<Route> {
+    match route {
+        Route::Menu => Some(Route::Menu),
+        Route::Keystroke => accessibility.then_some(Route::Menu),
+    }
+}
+
 pub struct Paster {
     keys: Keystroke,
 }
@@ -66,7 +73,7 @@ impl Paster {
                 return Outcome::Degraded(Failure::TargetGone);
             }
             if attempt.on_failure(Failure::NotForeground) != Next::Retry {
-                return Outcome::Degraded(Failure::NotForeground);
+                return Outcome::Degraded(Failure::ForegroundTimeout);
             }
             frontmost::bring_to_front(target.pid);
             self.wait(SETTLE.as_secs_f64());
@@ -76,6 +83,16 @@ impl Paster {
         while keystroke::modifiers_still_held() && waiting.elapsed().as_millis() < 120 {
             self.wait(0.004);
         }
+
+        let now = Readiness::probe();
+        let route = if now.secure_input {
+            match around_protected_input(route, now.accessibility) {
+                Some(other) => other,
+                None => return Outcome::Degraded(Failure::InputProtected),
+            }
+        } else {
+            route
+        };
 
         attempt.sending();
         let sent = match route {
@@ -108,3 +125,7 @@ impl Paster {
 pub fn phases() -> &'static [Phase] {
     ORDER
 }
+
+#[cfg(test)]
+#[path = "paste_test.rs"]
+mod tests;

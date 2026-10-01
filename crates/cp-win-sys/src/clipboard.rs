@@ -82,6 +82,10 @@ struct Coming {
     _private: (),
 }
 
+pub fn writing_now() -> bool {
+    WRITES_COMING.load(Ordering::SeqCst) > 0
+}
+
 fn coming() -> Coming {
     WRITES_COMING.fetch_add(1, Ordering::SeqCst);
     Coming { _private: () }

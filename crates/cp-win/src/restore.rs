@@ -1,7 +1,7 @@
 use cp_core::dib;
 use cp_core::item::{Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_JPEG, SYNTHETIC_TEXT};
 use cp_win_sys::clipboard::Clipboard;
-use cp_win_sys::formats::{CF_DIBV5, CF_HDROP, CF_UNICODETEXT, id_of};
+use cp_win_sys::formats::{CF_DIB, CF_HDROP, CF_UNICODETEXT, id_of};
 use cp_win_sys::writing::{Written, utf16_of};
 
 use crate::drop::drop_of;
@@ -19,7 +19,19 @@ pub enum Restored {
     Failed,
 }
 
-pub fn to_clipboard(clipboard: &Clipboard, item: &Item) -> Restored {
+pub struct Ready {
+    owned: Vec<(u32, Vec<u8>)>,
+    returned: usize,
+    had: usize,
+}
+
+impl Ready {
+    pub fn wanted(&self) -> usize {
+        self.owned.len()
+    }
+}
+
+pub fn ready_for(item: &Item) -> Ready {
     let (mut owned, mut returned) = pasted_files(item);
     for format in &item.formats {
         if virtual_files::is_virtual(&format.id) {
@@ -38,20 +50,33 @@ pub fn to_clipboard(clipboard: &Clipboard, item: &Item) -> Restored {
             }
         }
     }
-    if owned.is_empty() {
+    Ready {
+        owned,
+        returned,
+        had: item.formats.len(),
+    }
+}
+
+pub fn place(clipboard: &Clipboard, ready: &Ready) -> Restored {
+    if ready.owned.is_empty() {
         return Restored::NothingToWrite;
     }
-    let entries: Vec<(u32, &[u8])> = owned
+    let entries: Vec<(u32, &[u8])> = ready
+        .owned
         .iter()
         .map(|(id, bytes)| (*id, bytes.as_slice()))
         .collect();
     match clipboard.replace(&entries) {
         Written::Placed { formats } => Restored::Written {
             formats,
-            incomplete: returned != item.formats.len(),
+            incomplete: ready.returned != ready.had || formats != ready.owned.len(),
         },
         Written::Refused => Restored::Failed,
     }
+}
+
+pub fn to_clipboard(clipboard: &Clipboard, item: &Item) -> Restored {
+    place(clipboard, &ready_for(item))
 }
 
 fn pasted_files(item: &Item) -> (Vec<(u32, Vec<u8>)>, usize) {
@@ -93,10 +118,10 @@ fn writable(id: &str, bytes: &[u8]) -> Vec<(u32, Vec<u8>)> {
             Err(_) => Vec::new(),
         };
     }
-    if id == SYNTHETIC_IMAGE {
+    if id == SYNTHETIC_IMAGE || id == PNG {
         return image_and_bitmap(PNG, bytes, dib::from_png(bytes));
     }
-    if id == SYNTHETIC_JPEG {
+    if id == SYNTHETIC_JPEG || id == JFIF {
         return image_and_bitmap(JFIF, bytes, dib::from_jpeg(bytes));
     }
     id_of(id).map_or_else(Vec::new, |id| vec![(id, bytes.to_vec())])
@@ -108,7 +133,7 @@ fn image_and_bitmap(name: &str, encoded: &[u8], raw: Option<Vec<u8>>) -> Vec<(u3
         both.push((id, encoded.to_vec()));
     }
     if let Some(raw) = raw {
-        both.push((CF_DIBV5, raw));
+        both.push((CF_DIB, raw));
     }
     both
 }

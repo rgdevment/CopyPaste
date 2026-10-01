@@ -4,6 +4,7 @@ use proptest::prelude::*;
 fn any_failure() -> impl Strategy<Value = Failure> {
     prop_oneof![
         Just(Failure::ForegroundTimeout),
+        Just(Failure::InputProtected),
         Just(Failure::NotForeground),
         Just(Failure::NoKeyboardFocus),
         Just(Failure::TargetGone),

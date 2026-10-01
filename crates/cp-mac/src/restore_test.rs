@@ -96,3 +96,98 @@ fn pasting_as_plain_text_is_a_rendered_form_written_like_any_item() {
         "with no plain text there is no plain form to offer"
     );
 }
+
+#[test]
+fn one_file_stays_a_single_item() {
+    let writable = vec![(FILE_URL, &b"file:///a/one.txt"[..])];
+    assert!(
+        one_item_per_file(&writable).is_none(),
+        "a lone file needs no splitting, and the plain write already serves it"
+    );
+}
+
+#[test]
+fn several_files_become_one_item_each() {
+    let joined = &b"file:///a/one.txt
+file:///a/two.txt
+file:///a/three.txt"[..];
+    let per_file = one_item_per_file(&[(FILE_URL, joined)]).expect("three files, three items");
+    assert_eq!(
+        per_file.len(),
+        3,
+        "one pasteboard item per file, not one blob"
+    );
+    assert_eq!(
+        per_file[1],
+        vec![(FILE_URL, &b"file:///a/two.txt"[..])],
+        "every item carries one url and nothing else"
+    );
+}
+
+#[test]
+fn the_other_formats_ride_on_the_first_file() {
+    let writable = vec![
+        (PLAIN_TEXT, &b"one.txt two.txt"[..]),
+        (
+            FILE_URL,
+            &b"file:///a/one.txt
+file:///a/two.txt"[..],
+        ),
+    ];
+    let per_file = one_item_per_file(&writable).expect("two files");
+    assert_eq!(per_file.len(), 2);
+    assert!(
+        per_file[0].iter().any(|(uti, _)| *uti == PLAIN_TEXT),
+        "what is not a url travels with the first file"
+    );
+    assert!(
+        per_file[1].iter().all(|(uti, _)| *uti == FILE_URL),
+        "and is not repeated on the rest"
+    );
+}
+
+#[test]
+fn a_format_that_is_not_text_survives_the_split() {
+    let png = &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0xFF, 0xFE][..];
+    let writable = vec![
+        (PNG, png),
+        (
+            FILE_URL,
+            &b"file:///a/one.png
+file:///a/two.png"[..],
+        ),
+    ];
+    let per_file = one_item_per_file(&writable).expect("two files");
+    assert!(
+        per_file[0]
+            .iter()
+            .any(|(uti, bytes)| *uti == PNG && *bytes == png),
+        "bytes that are not valid text are not quietly dropped on the way out"
+    );
+}
+
+#[test]
+fn a_windows_line_ending_does_not_travel_inside_the_url() {
+    let joined = &b"file:///a/one.txt
+file:///a/two.txt"[..];
+    let per_file = one_item_per_file(&[(FILE_URL, joined)]).expect("two files");
+    assert_eq!(
+        per_file[0],
+        vec![(FILE_URL, &b"file:///a/one.txt"[..])],
+        "a stray carriage return would make Finder look for a file nobody named"
+    );
+}
+
+#[test]
+fn an_empty_line_between_urls_is_not_a_file() {
+    let joined = &b"file:///a/one.txt
+
+file:///a/two.txt
+"[..];
+    let per_file = one_item_per_file(&[(FILE_URL, joined)]).expect("two files");
+    assert_eq!(
+        per_file.len(),
+        2,
+        "the blank lines do not become empty items"
+    );
+}

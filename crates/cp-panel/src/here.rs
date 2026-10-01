@@ -11,6 +11,13 @@ pub use platform::{
     system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Landed {
+    Nothing,
+    Short { placed: usize, wanted: usize },
+    Whole,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Sent {
     Nobody,
@@ -59,19 +66,27 @@ mod platform {
         cp_core::dib::to_png(&dib)
     }
 
-    pub fn to_clipboard(item: &Item, ours: impl FnOnce()) -> bool {
+    pub fn to_clipboard(item: &Item, starting: impl FnOnce(), ours: impl FnOnce()) -> Landed {
+        let ready = cp_win::restore::ready_for(item);
+        starting();
         let Some(clipboard) = Clipboard::to_write() else {
-            return false;
-        };
-        let written = matches!(
-            cp_win::restore::to_clipboard(&clipboard, item),
-            cp_win::restore::Restored::Written { .. }
-        );
-        if written {
             ours();
-            drop(clipboard);
-        }
-        written
+            return Landed::Nothing;
+        };
+        let landed = match cp_win::restore::place(&clipboard, &ready) {
+            cp_win::restore::Restored::Written {
+                formats,
+                incomplete: true,
+            } => Landed::Short {
+                placed: formats,
+                wanted: ready.wanted(),
+            },
+            cp_win::restore::Restored::Written { .. } => Landed::Whole,
+            _ => Landed::Nothing,
+        };
+        drop(clipboard);
+        ours();
+        landed
     }
 
     pub fn read_stuck() -> bool {
@@ -168,16 +183,22 @@ mod platform {
         None
     }
 
-    pub fn to_clipboard(item: &Item, ours: impl FnOnce()) -> bool {
+    pub fn to_clipboard(item: &Item, starting: impl FnOnce(), ours: impl FnOnce()) -> Landed {
         let pb = Pasteboard::general_from_any_thread();
-        let written = matches!(
-            cp_mac::restore::to_pasteboard(&pb, item),
-            cp_mac::restore::Restored::Written { .. }
-        );
-        if written {
-            ours();
-        }
-        written
+        starting();
+        let landed = match cp_mac::restore::to_pasteboard(&pb, item) {
+            cp_mac::restore::Restored::Written {
+                formats,
+                incomplete: true,
+            } => Landed::Short {
+                placed: formats,
+                wanted: item.formats.len(),
+            },
+            cp_mac::restore::Restored::Written { .. } => Landed::Whole,
+            _ => Landed::Nothing,
+        };
+        ours();
+        landed
     }
 
     pub fn read_stuck() -> bool {

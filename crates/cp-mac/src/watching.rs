@@ -49,6 +49,14 @@ impl Watching {
         Self::every(EVERY, on_fresh)
     }
 
+    pub fn writing(&self) -> bool {
+        let Ok(mut watcher) = self.watcher.lock() else {
+            return false;
+        };
+        watcher.writing(pasteboard::change_count_from_any_thread());
+        true
+    }
+
     pub fn ours(&self) -> bool {
         let Ok(mut watcher) = self.watcher.lock() else {
             return false;

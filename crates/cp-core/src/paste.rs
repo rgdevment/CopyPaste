@@ -32,6 +32,7 @@ pub enum Failure {
     TargetGone,
     SendDenied,
     TargetElevated,
+    InputProtected,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,11 +52,6 @@ pub fn route_for(can_post_events: bool, can_drive_menus: bool) -> Option<Route> 
         return Some(Route::Keystroke);
     }
     can_drive_menus.then_some(Route::Menu)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Warning {
-    SecureInputActive,
 }
 
 pub const RACE_RETRIES: u8 = 11;
@@ -94,10 +90,6 @@ impl Attempt {
 
 pub fn aborts(focus: Focus) -> bool {
     focus == Focus::Elsewhere
-}
-
-pub fn aborts_on(_warning: Warning) -> bool {
-    false
 }
 
 pub const REQUIRES_FOREGROUND: bool = true;

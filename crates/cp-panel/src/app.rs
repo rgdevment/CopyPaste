@@ -728,6 +728,7 @@ fn spawn_counter(
                 }
                 panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
                 panel.set_count_text(footer.into());
+                panel.set_complaining(false);
                 panel.set_pinned_count(anchored.into());
                 panel.set_pinned_on(only_anchored);
                 panel.set_layout(asked.as_str().into());
@@ -854,7 +855,8 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
             return false;
         }
     };
-    let written = here::to_clipboard(&item, || mark(engine));
+    let landed = here::to_clipboard(&item, || starting(engine), || mark(engine));
+    let written = short_of(id, landed);
     if written {
         if let Err(why) = store.record_paste(id, now_ms()) {
             note(&format!("{id} was pasted and nobody wrote it down: {why}"));
@@ -954,18 +956,13 @@ fn busy() -> &'static str {
         "could not paste: the clipboard is busy",
     )
 }
-fn not_there() -> &'static str {
-    crate::say::pick(
-        "está copiado, pero no se pudo pegar ahí",
-        "it is copied, but it could not be pasted there",
-    )
-}
-
 fn complain(ui: &Panel, said: &str) {
     ui.set_count_text(said.into());
+    ui.set_complaining(true);
     let weak = ui.as_weak();
     slint::Timer::single_shot(Duration::from_millis(2_200), move || {
         if let Some(ui) = weak.upgrade() {
+            ui.set_complaining(false);
             ui.invoke_reopened();
         }
     });
@@ -1040,7 +1037,10 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
         return false;
     };
     let made = rendered.into_item();
-    let written = here::to_clipboard(&made, || mark(engine));
+    let written = short_of(
+        id,
+        here::to_clipboard(&made, || starting(engine), || mark(engine)),
+    );
     if written && let Err(why) = store.record_paste(id, now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
@@ -1052,6 +1052,24 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+fn short_of(id: i64, landed: here::Landed) -> bool {
+    if let here::Landed::Short { placed, wanted } = landed {
+        note(&format!(
+            "pasting {id}: only {placed} of {wanted} formats fitted on the clipboard"
+        ));
+    }
+    landed != here::Landed::Nothing
+}
+
+fn starting(engine: Option<&crate::engine::Engine>) {
+    let Some(engine) = engine else {
+        return;
+    };
+    if !engine.writing() {
+        note("the start of the clipboard write could not be marked as ours");
+    }
 }
 
 fn mark(engine: Option<&crate::engine::Engine>) {
@@ -1075,11 +1093,15 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
         here::Sent::Nobody => vanish(ui),
         here::Sent::Done => {}
         here::Sent::Degraded(why) => {
-            note(&format!("it stays on the clipboard, unpasted: {why:?}"));
+            state.borrow().ahead.store(ahead, Ordering::Relaxed);
+            let said = crate::excuse::why_not(why, crate::say::in_english());
+            note(&format!(
+                "it stays on the clipboard, unpasted: {why:?}: {said}"
+            ));
             if ui.show().is_ok() {
                 forward(ui);
                 appear(ui);
-                complain(ui, not_there());
+                complain(ui, said);
             }
         }
     }

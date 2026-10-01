@@ -178,6 +178,15 @@ fn from_encoded(encoded: &[u8], format: image::ImageFormat) -> Option<Vec<u8>> {
     if too_large(encoded.len()) {
         return None;
     }
+    let mut reading = image::ImageReader::new(std::io::Cursor::new(encoded));
+    reading.set_format(format);
+    let (wide, high) = reading.into_dimensions().ok()?;
+    let area = (wide as usize)
+        .checked_mul(high as usize)
+        .and_then(|pixels| pixels.checked_mul(4));
+    if area.is_none_or(too_large) {
+        return None;
+    }
     let decoded = image::load_from_memory_with_format(encoded, format).ok()?;
     from_image(&decoded)
 }

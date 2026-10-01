@@ -39,6 +39,7 @@ pub const CATALOG: Catalog = Catalog {
         "Rich Text Format",
         "HTML Format",
         "PNG",
+        "JFIF",
         "CF_DIBV5",
         "CF_DIB",
         "CF_HDROP",
@@ -57,7 +58,7 @@ pub const CATALOG: Catalog = Catalog {
     opaque_prefixes: &[],
     text: &["CF_UNICODETEXT", "Rich Text Format", "HTML Format", "Csv"],
     files: &["CF_HDROP"],
-    images_by_preference: &["PNG", "CF_DIBV5", "CF_DIB"],
+    images_by_preference: &["PNG", "JFIF", "CF_DIBV5", "CF_DIB"],
     equivalents: &[
         &["CF_UNICODETEXT", "CF_TEXT", "CF_OEMTEXT"],
         &["HTML Format", "text/html"],

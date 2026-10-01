@@ -31,6 +31,10 @@ impl Engine {
         })
     }
 
+    pub fn writing(&self) -> bool {
+        self.watching.writing()
+    }
+
     pub fn ours(&self) -> bool {
         self.watching.ours()
     }

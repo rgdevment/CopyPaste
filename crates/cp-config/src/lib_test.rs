@@ -129,7 +129,7 @@ fn a_value_of_the_wrong_type_is_reported_as_malformed_not_guessed() {
 }
 
 #[test]
-fn a_read_only_file_cannot_be_overwritten() {
+fn a_read_only_file_is_kept_only_where_the_system_keeps_it() {
     let dir = a_dir();
     let path = at(dir.path());
     write(&path, &Config::default()).expect("writes the first time");
@@ -144,15 +144,30 @@ fn a_read_only_file_cannot_be_overwritten() {
             ..Config::default()
         },
     );
-    assert!(
-        outcome.is_err(),
-        "a read-only settings file must not be silently replaced"
-    );
-    assert_eq!(
-        read(&path).expect("still readable").theme,
-        Theme::System,
-        "the previous, still read-only content is the one that survives"
-    );
+    #[cfg(windows)]
+    {
+        assert!(
+            outcome.is_err(),
+            "windows refuses to rename onto a read-only file"
+        );
+        assert_eq!(
+            read(&path).expect("still readable").theme,
+            Theme::System,
+            "the previous, still read-only content is the one that survives"
+        );
+    }
+    #[cfg(not(windows))]
+    {
+        assert!(
+            outcome.is_ok(),
+            "a rename asks the directory for permission, not the file it replaces"
+        );
+        assert_eq!(
+            read(&path).expect("still readable").theme,
+            Theme::Dark,
+            "unix replaces a read-only file as long as its directory allows it"
+        );
+    }
 
     let mut permissions = std::fs::metadata(&path).expect("stat").permissions();
     #[allow(clippy::permissions_set_readonly_false)]

@@ -25,6 +25,10 @@ impl Watching {
         let theirs = watcher.clone();
         let thread = std::thread::spawn(move || {
             while !mine.load(Ordering::Relaxed) {
+                if clipboard::writing_now() {
+                    std::thread::sleep(NAP);
+                    continue;
+                }
                 if let Some(count) = clipboard::sequence()
                     && let Ok(mut watcher) = theirs.lock()
                     && let Seen::Fresh { .. } = watcher.tick(count)
@@ -47,6 +51,17 @@ impl Watching {
 
     pub fn start(on_fresh: impl FnMut() + Send + 'static) -> Self {
         Self::every(EVERY, on_fresh)
+    }
+
+    pub fn writing(&self) -> bool {
+        let Some(count) = clipboard::sequence() else {
+            return false;
+        };
+        let Ok(mut watcher) = self.watcher.lock() else {
+            return false;
+        };
+        watcher.writing(count);
+        true
     }
 
     pub fn ours(&self) -> bool {

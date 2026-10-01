@@ -115,6 +115,19 @@ fn a_denied_send_is_reported_not_retried() {
 }
 
 #[test]
-fn secure_input_warns_but_never_aborts() {
-    assert!(!aborts_on(Warning::SecureInputActive));
+fn only_a_window_above_us_is_worth_giving_up_on() {
+    assert!(Failure::TargetElevated.is_permanent());
+    for other in [
+        Failure::NotForeground,
+        Failure::ForegroundTimeout,
+        Failure::NoKeyboardFocus,
+        Failure::TargetGone,
+        Failure::SendDenied,
+        Failure::InputProtected,
+    ] {
+        assert!(
+            !other.is_permanent(),
+            "{other:?} can pass on its own, so the next paste should try again"
+        );
+    }
 }
