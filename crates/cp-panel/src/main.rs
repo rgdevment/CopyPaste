@@ -7,6 +7,7 @@ mod measure;
 mod media;
 mod model;
 mod note;
+mod papers;
 mod say;
 mod shape;
 mod view;

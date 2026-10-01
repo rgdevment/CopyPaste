@@ -80,6 +80,9 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
     let (clock, measures) = crate::media::said_in(meta);
+    let papers = (row.kind == Some(Kind::File))
+        .then(|| crate::papers::papers_of(&row.preview))
+        .flatten();
     let shape = (row.kind == Some(Kind::Json))
         .then(|| crate::shape::said_of(&row.preview, crate::say::in_english()))
         .flatten()
@@ -111,6 +114,12 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         shape_keys: shape.keys.into(),
         media_clock: clock.into(),
         media_measures: measures.into(),
+        papers_format: papers
+            .as_ref()
+            .map(|one| one.format.clone())
+            .unwrap_or_default()
+            .into(),
+        papers_family: papers.as_ref().map_or("plain", |one| one.family).into(),
         body: body.into(),
         found: !hit.is_empty(),
         badge: badge_of(claims.as_ref()).into(),
