@@ -737,3 +737,150 @@ fn every_quota_set_to_zero_with_everything_pinned_sweeps_nothing_and_does_not_lo
     );
     assert_eq!(store.count().expect("counted"), 5);
 }
+
+#[test]
+fn a_loose_blob_is_collected_even_when_nothing_is_ever_meant_to_expire() {
+    let (_dir, store) = on_disk();
+    let blobs = store.blobs().expect("a blob store");
+    let digest = blobs.put(b"nobody will ever claim me").expect("stored");
+    aged(&blobs.where_it_is(&digest).expect("a real digest"));
+
+    let keeping_everything = Policy::keeping(None, None);
+    assert_eq!(
+        keeping_everything,
+        Policy::default(),
+        "«always» and «no limit» is the policy that asks for nothing"
+    );
+
+    let swept = store.sweep(&keeping_everything, 1_000).expect("swept");
+
+    assert_eq!(swept.expired, 0, "nothing was meant to expire");
+    assert_eq!(swept.over_bytes, 0);
+    assert_eq!(
+        swept.orphans, 1,
+        "but a blob nobody references is still nobody's"
+    );
+    assert!(!blobs.exists(&digest));
+}
+
+#[test]
+fn a_blob_that_an_item_still_holds_survives_a_sweep_that_asks_for_nothing() {
+    let (_dir, store) = on_disk();
+    let id = store
+        .insert_item("uuid-held", &big_image(31), "", 1)
+        .expect("insert");
+    let blobs = store.blobs().expect("a blob store");
+    let digest = store
+        .blobs_of(id)
+        .expect("blobs")
+        .pop()
+        .expect("there is one");
+    aged(&blobs.where_it_is(&digest).expect("a real digest"));
+
+    let swept = store.sweep(&Policy::default(), 1_000).expect("swept");
+
+    assert_eq!(swept.orphans, 0);
+    assert!(blobs.exists(&digest), "it has an owner");
+}
+
+fn a_thumb(dir: &std::path::Path, name: &str) -> std::path::PathBuf {
+    std::fs::create_dir_all(dir).expect("a folder");
+    let path = dir.join(name);
+    std::fs::write(&path, b"a drawn thumbnail").expect("a thumb");
+    aged(&path);
+    path
+}
+
+#[test]
+fn a_thumbnail_nobody_shows_any_more_is_let_go() {
+    let (dir, store) = on_disk();
+    let thumbs = dir.path().join("thumbs");
+    let id = store
+        .insert_text("uuid-thumbed", "a copy", 1)
+        .expect("insert");
+    let held = a_thumb(&thumbs, "1.png");
+    store
+        .set_thumb(id, Some(&held.to_string_lossy()), 2)
+        .expect("noted");
+    let loose = a_thumb(&thumbs, "9999.png");
+
+    assert_eq!(store.sweep_thumbs(&thumbs).expect("swept"), 1);
+
+    assert!(held.exists(), "an item still shows this one");
+    assert!(!loose.exists(), "and nobody shows this one");
+}
+
+#[test]
+fn the_thumbnail_of_a_deleted_item_stops_being_shown_and_goes() {
+    let (dir, store) = on_disk();
+    let thumbs = dir.path().join("thumbs");
+    let id = store.insert_text("uuid-gone", "a copy", 1).expect("insert");
+    let drawn = a_thumb(&thumbs, "1.png");
+    store
+        .set_thumb(id, Some(&drawn.to_string_lossy()), 2)
+        .expect("noted");
+    assert_eq!(store.sweep_thumbs(&thumbs).expect("swept"), 0);
+
+    store.mark_deleted(id, 3).expect("deleted");
+    let again = a_thumb(&thumbs, "1.png");
+
+    assert_eq!(store.sweep_thumbs(&thumbs).expect("swept"), 1);
+    assert!(!again.exists());
+}
+
+#[test]
+fn a_thumbnail_just_written_is_left_alone_until_it_settles() {
+    let (dir, store) = on_disk();
+    let thumbs = dir.path().join("thumbs");
+    std::fs::create_dir_all(&thumbs).expect("a folder");
+    let fresh = thumbs.join("7.png");
+    std::fs::write(&fresh, b"only just drawn").expect("a thumb");
+
+    assert_eq!(
+        store.sweep_thumbs(&thumbs).expect("swept"),
+        0,
+        "the row that will point at it may not be written yet"
+    );
+    assert!(fresh.exists());
+}
+
+#[test]
+fn sweeping_a_folder_that_is_not_there_is_nothing() {
+    let (dir, store) = on_disk();
+    assert_eq!(
+        store
+            .sweep_thumbs(&dir.path().join("never-made"))
+            .expect("swept"),
+        0
+    );
+}
+
+#[test]
+fn a_sweep_gives_the_freed_pages_back_and_does_not_wait_to_be_asked() {
+    let (_dir, store) = on_disk();
+    for at in 1..400 {
+        let id = store
+            .insert_text(&format!("uuid-{at}"), &"x".repeat(200), at)
+            .expect("insert");
+        store.mark_broken(id, at).expect("marked");
+    }
+    store.purge_broken_before(i64::MAX).expect("purged");
+    let before: i64 = store
+        .db
+        .query_row("PRAGMA freelist_count", [], |row| row.get(0))
+        .expect("queried");
+    assert!(before > 0, "so many deletions have to free pages");
+
+    store
+        .sweep(&Policy::default(), 1_000)
+        .expect("a sweep that asks for nothing still tidies up");
+
+    let after: i64 = store
+        .db
+        .query_row("PRAGMA freelist_count", [], |row| row.get(0))
+        .expect("queried");
+    assert!(
+        after < before,
+        "after emptying two gigabytes the file cannot still weigh two gigabytes: before {before}, after {after}"
+    );
+}

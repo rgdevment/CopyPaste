@@ -1,5 +1,11 @@
 use super::*;
 
+fn where_it_goes(blobs: &Blobs, digest: &str) -> PathBuf {
+    blobs
+        .path_for(digest)
+        .expect("what put() returned is a digest")
+}
+
 fn temporary() -> (tempfile::TempDir, Blobs) {
     let dir = tempfile::tempdir().expect("a folder");
     let blobs = Blobs::at(&dir.path().join("blobs")).expect("a store");
@@ -37,7 +43,7 @@ fn different_content_never_shares_a_name() {
 fn an_io_error_that_is_not_a_missing_file_is_not_swallowed() {
     let (_dir, blobs) = temporary();
     let digest = "a".repeat(64);
-    std::fs::create_dir_all(blobs.path_for(&digest)).expect("creates a folder");
+    std::fs::create_dir_all(where_it_goes(&blobs, &digest)).expect("creates a folder");
     assert!(
         blobs.get(&digest).is_err(),
         "a genuine I/O error cannot come back as Ok(None)"
@@ -60,7 +66,7 @@ fn deleting_overwrites_before_unlinking() {
     let (dir, blobs) = temporary();
     let digest = blobs.put(b"the bank password").expect("stored");
     let twin = dir.path().join("twin");
-    std::fs::hard_link(blobs.path_for(&digest), &twin).expect("a hard link");
+    std::fs::hard_link(where_it_goes(&blobs, &digest), &twin).expect("a hard link");
     blobs.remove(&digest).expect("removed");
     assert!(!blobs.exists(&digest));
     assert!(blobs.get(&digest).expect("read").is_none());
@@ -88,7 +94,7 @@ fn a_symlink_named_like_a_digest_is_unlinked_never_followed() {
     let victim = dir.path().join("not-ours.txt");
     std::fs::write(&victim, b"do not touch me").expect("a file");
     let digest = "c".repeat(64);
-    let link = blobs.path_for(&digest);
+    let link = where_it_goes(&blobs, &digest);
     std::fs::create_dir_all(link.parent().expect("a parent")).expect("a folder");
     symlink_file(&victim, &link);
     aged(&victim);
@@ -105,7 +111,7 @@ fn a_symlink_named_like_a_digest_is_unlinked_never_followed() {
 fn a_directory_named_like_a_digest_is_left_alone() {
     let (_dir, blobs) = temporary();
     let digest = "d".repeat(64);
-    let folder = blobs.path_for(&digest);
+    let folder = where_it_goes(&blobs, &digest);
     std::fs::create_dir_all(&folder).expect("a folder");
     assert_eq!(blobs.sweep(&|_| false).expect("swept"), 0);
     assert!(folder.is_dir());
@@ -153,7 +159,7 @@ fn a_blob_nobody_references_is_removed_once_it_is_old_enough() {
         0,
         "freshly written: it might belong to an item that is only half stored"
     );
-    aged(&blobs.path_for(&digest));
+    aged(&where_it_goes(&blobs, &digest));
     assert_eq!(blobs.sweep(&|_| false).expect("swept"), 1);
     assert!(!blobs.exists(&digest));
 }
@@ -162,7 +168,7 @@ fn a_blob_nobody_references_is_removed_once_it_is_old_enough() {
 fn a_referenced_blob_survives_the_sweep_however_old() {
     let (_dir, blobs) = temporary();
     let digest = blobs.put(b"has an owner").expect("stored");
-    aged(&blobs.path_for(&digest));
+    aged(&where_it_goes(&blobs, &digest));
     let keep = digest.clone();
     assert_eq!(blobs.sweep(&|name| name == keep).expect("swept"), 0);
     assert!(blobs.exists(&digest));
@@ -172,7 +178,7 @@ fn a_referenced_blob_survives_the_sweep_however_old() {
 fn a_partial_file_left_by_a_crash_goes_too() {
     let (_dir, blobs) = temporary();
     let digest = "b".repeat(64);
-    let leftover = blobs.path_for(&digest).with_extension("partial");
+    let leftover = where_it_goes(&blobs, &digest).with_extension("partial");
     std::fs::create_dir_all(leftover.parent().expect("a parent")).expect("a folder");
     std::fs::write(&leftover, b"halfway done").expect("written");
     aged(&leftover);
@@ -189,7 +195,7 @@ fn a_fresh_blob_is_not_removed_by_a_release_only_by_the_sweep_later() {
         "another connection might be about to reference it"
     );
     assert!(blobs.exists(&digest));
-    aged(&blobs.path_for(&digest));
+    aged(&where_it_goes(&blobs, &digest));
     assert!(blobs.remove_if_settled(&digest).expect("now it does"));
     assert!(!blobs.exists(&digest));
     assert!(
@@ -256,7 +262,7 @@ fn only_a_digest_shaped_name_is_a_blob() {
 fn reclaiming_a_blob_that_already_exists_makes_it_fresh_again() {
     let (_dir, blobs) = temporary();
     let digest = blobs.put(b"reclaimed").expect("stored");
-    aged(&blobs.path_for(&digest));
+    aged(&where_it_goes(&blobs, &digest));
     blobs.put(b"reclaimed").expect("again");
     assert_eq!(
         blobs.sweep(&|_| false).expect("swept"),
@@ -264,4 +270,58 @@ fn reclaiming_a_blob_that_already_exists_makes_it_fresh_again() {
         "whoever just reclaimed it has not written its row yet"
     );
     assert!(blobs.exists(&digest));
+}
+
+#[test]
+fn a_digest_that_is_not_a_digest_is_refused_instead_of_panicking() {
+    let (_dir, blobs) = temporary();
+    for said in [
+        "",
+        "a",
+        "abc",
+        "añ",
+        "zz",
+        "../../etc/passwd",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg",
+    ] {
+        assert_eq!(
+            blobs.get(said).expect("asking must not fail"),
+            None,
+            "«{said}» is not something this store ever wrote"
+        );
+        assert!(!blobs.exists(said), "«{said}»");
+    }
+}
+
+#[test]
+fn what_put_returns_is_always_something_a_path_can_be_built_from() {
+    let (_dir, blobs) = temporary();
+    for bytes in [&b""[..], b"one", &[0u8; 4096][..], "ñandú".as_bytes()] {
+        let digest = blobs.put(bytes).expect("stored");
+        assert!(is_a_digest(&digest), "{digest}");
+        assert_eq!(digest.len(), IN_A_DIGEST);
+    }
+}
+
+#[test]
+fn a_digest_cannot_walk_out_of_the_store() {
+    let (dir, blobs) = temporary();
+    let outside = dir.path().join("outside.txt");
+    std::fs::write(&outside, b"someone else's file").expect("a file");
+    for said in [
+        "../../outside.txt",
+        "..",
+        "/etc/passwd",
+        "//server/share/file",
+        r"\\server\share",
+    ] {
+        assert!(blobs.get(said).expect("asking is not an error").is_none());
+        blobs.remove(said).expect("and neither is removing");
+        assert!(!blobs.exists(said));
+    }
+    assert_eq!(
+        std::fs::read(&outside).expect("still there"),
+        b"someone else's file",
+        "nothing outside the store was read, written or removed"
+    );
 }

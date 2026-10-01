@@ -101,7 +101,28 @@ impl Item {
             mixed.extend_from_slice(&crate::identity::stable(id, bytes));
             mixed.push(0);
         }
+        let mut unread: Vec<(&str, u64)> = self
+            .formats
+            .iter()
+            .filter_map(|format| match &format.payload {
+                Payload::TooBig { size } => Some((format.id.as_str(), *size as u64)),
+                _ => None,
+            })
+            .collect();
+        unread.sort_by(|a, b| a.0.cmp(b.0));
+        for (id, size) in unread {
+            mixed.extend_from_slice(id.as_bytes());
+            mixed.push(0);
+            mixed.extend_from_slice(&size.to_le_bytes());
+            mixed.push(0);
+        }
         crate::hash::content_hash(&mixed)
+    }
+
+    pub fn is_comparable(&self) -> bool {
+        self.formats
+            .iter()
+            .any(|format| matches!(format.payload, Payload::Inline(_) | Payload::Blob(_)))
     }
 
     pub fn needs_blob_store(&self) -> bool {

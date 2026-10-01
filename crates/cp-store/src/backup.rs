@@ -149,7 +149,7 @@ pub fn read(from: &Path) -> Result<Taken> {
     })
 }
 
-pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
+pub fn bring(from: &Path, into: &Store, at: i64, say: &dyn Fn(&str)) -> Result<Brought> {
     let taken = read(from)?;
     if taken.schema > crate::SCHEMA_VERSION {
         return Err(Error::FromTheFuture {
@@ -179,7 +179,13 @@ pub fn bring(from: &Path, into: &Store, at: i64) -> Result<Brought> {
             match carry(&source, into, row, at) {
                 Ok(true) => brought.added += 1,
                 Ok(false) => brought.already += 1,
-                Err(_) => brought.refused += 1,
+                Err(why) => {
+                    say(&format!(
+                        "what was copied on {} could not be brought over: {why}",
+                        row.created_at
+                    ));
+                    brought.refused += 1;
+                }
             }
         }
         after = page.next;
@@ -197,28 +203,61 @@ fn carry(source: &Store, into: &Store, row: &crate::Listed, at: i64) -> Result<b
     if into.find_by_hash(&item)?.is_some() {
         return Ok(false);
     }
-    let id = into.insert_item(
-        &named(source, row.id, at),
+    if !item.is_comparable() && taken(into, &named(source, row.id, at)) {
+        return Ok(false);
+    }
+    let meta = source.all_meta(row.id)?;
+    let nothing: &[&str] = &[];
+    let more = crate::More {
+        modified_at: Some(row.modified_at),
+        touched_at: Some(at),
+        used_at: row.last_used_at,
+        app: row.app.as_deref(),
+        label: row.label.as_deref(),
+        color: row.color,
+        pinned: row.pinned,
+        pastes: row.paste_count,
+        broken: row.broken_since,
+        meta: &meta,
+        jobs: row
+            .kind
+            .map_or(nothing, |kind| crate::legacy::jobs_for(kind, true)),
+    };
+    let id = into.insert_full(
+        &free_name(source, into, row.id, at),
         &item,
         &row.preview,
         row.created_at,
+        &more,
     )?;
-    if let Some(app) = row.app.as_deref() {
-        into.set_source(id, app, at)?;
-    }
-    if let Some(label) = row.label.as_deref() {
-        into.set_label(id, Some(label), at)?;
-    }
-    if row.color != 0 {
-        into.set_color(id, row.color, at)?;
-    }
-    if row.pinned {
-        into.set_pinned(id, true, at)?;
+    if !row.group.is_empty() {
+        into.set_group(id, &row.group)?;
     }
     if let Some(text) = source.ocr_text(row.id)? {
         into.set_ocr_text(id, &text, at)?;
     }
     Ok(true)
+}
+
+fn free_name(source: &Store, into: &Store, id: i64, at: i64) -> String {
+    let said = named(source, id, at);
+    if !taken(into, &said) {
+        return said;
+    }
+    let mut turn = 1;
+    loop {
+        let again = format!("{said}-{turn}");
+        if !taken(into, &again) {
+            return again;
+        }
+        turn += 1;
+    }
+}
+
+fn taken(into: &Store, uuid: &str) -> bool {
+    into.raw()
+        .query_row("SELECT 1 FROM items WHERE uuid = ?1", [uuid], |_| Ok(()))
+        .is_ok()
 }
 
 fn named(source: &Store, id: i64, at: i64) -> String {
@@ -323,7 +362,7 @@ fn same_file(one: &Path, other: &Path) -> bool {
 
 fn wanted(db: &Connection) -> Result<Vec<String>> {
     let mut stmt =
-        db.prepare("SELECT DISTINCT blob_path FROM item_formats WHERE blob_path IS NOT NULL")?;
+        db.prepare("SELECT DISTINCT digest FROM item_formats WHERE digest IS NOT NULL")?;
     let found = stmt
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<std::result::Result<Vec<_>, _>>()?;

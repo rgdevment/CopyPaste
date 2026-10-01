@@ -177,3 +177,7 @@ impl Store {
         Ok(true)
     }
 }
+
+#[cfg(test)]
+#[path = "enrich_test.rs"]
+mod tests;

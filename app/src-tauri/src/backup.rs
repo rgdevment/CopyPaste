@@ -101,7 +101,8 @@ pub fn load_backup(app: tauri::AppHandle, path: String, at: i64) -> Result<Broug
 
 fn bring(from: &std::path::Path, at: i64) -> Result<cp_store::Brought, String> {
     let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
-    cp_store::backup::bring(from, &store, at).map_err(|why| why.to_string())
+    cp_store::backup::bring(from, &store, at, &|what| crate::note::note(what))
+        .map_err(|why| why.to_string())
 }
 
 #[derive(serde::Serialize)]

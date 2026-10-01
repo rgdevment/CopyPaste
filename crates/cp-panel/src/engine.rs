@@ -86,7 +86,7 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
         let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
         while !stop.load(Ordering::Relaxed) {
             if swept.elapsed() >= SWEEPS_EVERY {
-                sweep(&store);
+                sweep(&store, &thumbs);
                 swept = std::time::Instant::now();
             }
             if !errand(&store, &thumbs) {
@@ -117,7 +117,7 @@ fn catch_up(store: &Store) {
     }
 }
 
-fn sweep(store: &Store) {
+fn sweep(store: &Store, thumbs: &Path) {
     let Some(dir) = here::data_dir() else {
         return;
     };
@@ -125,7 +125,11 @@ fn sweep(store: &Store) {
     if !path.exists() {
         return;
     }
-    let kept = match cp_config::read(&path) {
+    sweep_as_kept(store, &path, thumbs);
+}
+
+fn sweep_as_kept(store: &Store, path: &Path, thumbs: &Path) {
+    let kept = match cp_config::read(path) {
         Ok(kept) => kept,
         Err(why) => {
             note(&format!("what to keep could not be read: {why}"));
@@ -133,19 +137,27 @@ fn sweep(store: &Store) {
         }
     };
     let policy = policy_of(&kept);
-    if policy == cp_store::Policy::default() {
-        return;
-    }
-    match store.sweep(&policy, crate::app::now_ms()) {
-        Ok(swept) => {
-            if swept.expired + swept.over_bytes + swept.orphans > 0 {
-                note(&format!(
-                    "{} went by age, {} by room and {} were left loose",
-                    swept.expired, swept.over_bytes, swept.orphans
-                ));
-            }
+    let swept = match store.sweep(&policy, crate::app::now_ms()) {
+        Ok(swept) => swept,
+        Err(why) => {
+            note(&format!("room could not be made: {why}"));
+            return;
         }
-        Err(why) => note(&format!("room could not be made: {why}")),
+    };
+    let drawings = match store.sweep_thumbs(thumbs) {
+        Ok(gone) => gone,
+        Err(why) => {
+            note(&format!(
+                "the thumbnails nobody shows could not be let go: {why}"
+            ));
+            0
+        }
+    };
+    if swept.expired + swept.over_bytes + swept.orphans + drawings > 0 {
+        note(&format!(
+            "{} went by age, {} by room, {} blobs were left loose and {} thumbnails had no owner",
+            swept.expired, swept.over_bytes, swept.orphans, drawings
+        ));
     }
 }
 

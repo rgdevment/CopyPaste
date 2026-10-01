@@ -1,6 +1,13 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 5;
+pub const SCHEMA_VERSION: u32 = 6;
+
+const FORMAT_INDEXES: &str = "
+        CREATE INDEX IF NOT EXISTS formats_by_digest ON item_formats(digest)
+            WHERE digest IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS formats_inline_size ON item_formats(size_bytes)
+            WHERE inline_data IS NOT NULL;
+";
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -30,6 +37,10 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
             "DROP TRIGGER IF EXISTS items_au; {SEARCH_TRIGGER}"
         ))?;
     }
+    if holds_a_promised_path(db)? {
+        db.execute_batch(DIGEST_INSTEAD_OF_A_PATH)?;
+    }
+    db.execute_batch(FORMAT_INDEXES)?;
     db.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION}; COMMIT;"))?;
     Ok(true)
 }
@@ -68,6 +79,37 @@ fn search_trigger_is_broad(db: &Connection) -> Result<bool> {
         .ok();
     Ok(said.is_some_and(|one| !one.contains("UPDATE OF")))
 }
+
+fn holds_a_promised_path(db: &Connection) -> Result<bool> {
+    let mut stmt = db.prepare("SELECT name FROM pragma_table_info('item_formats')")?;
+    let mut columns = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    Ok(columns.any(|column| column.is_ok_and(|name| name == "blob_path")))
+}
+
+const DIGEST_INSTEAD_OF_A_PATH: &str = "
+        UPDATE item_formats SET blob_path = NULL
+         WHERE blob_path IS NOT NULL
+           AND (length(blob_path) <> 64 OR blob_path GLOB '*[^0-9a-f]*');
+
+        DROP INDEX IF EXISTS formats_by_blob;
+        DROP INDEX IF EXISTS formats_inline_size;
+
+        CREATE TABLE item_formats_kept (
+            item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+            format      TEXT    NOT NULL,
+            size_bytes  INTEGER,
+            inline_data BLOB,
+            digest      TEXT    CHECK (digest IS NULL
+                OR (length(digest) = 64 AND digest NOT GLOB '*[^0-9a-f]*')),
+            PRIMARY KEY (item_id, format)
+        );
+
+        INSERT INTO item_formats_kept (item_id, format, size_bytes, inline_data, digest)
+            SELECT item_id, format, size_bytes, inline_data, blob_path FROM item_formats;
+
+        DROP TABLE item_formats;
+        ALTER TABLE item_formats_kept RENAME TO item_formats;
+";
 
 fn added_columns(db: &Connection) -> Result<()> {
     if column_is_missing(db, "ocr_text")? {
@@ -188,17 +230,14 @@ const TABLES: &str = r#"
             format      TEXT    NOT NULL,
             size_bytes  INTEGER,
             inline_data BLOB,
-            blob_path   TEXT,
+            digest      TEXT    CHECK (digest IS NULL
+                OR (length(digest) = 64 AND digest NOT GLOB '*[^0-9a-f]*')),
             PRIMARY KEY (item_id, format)
         );
 
         -- What is derived from an item and is not its content: dimensions,
         -- duration, size, artist. A table rather than a JSON column so it
         -- can be filtered and indexed by key without pulling in the JSON module.
-        CREATE INDEX IF NOT EXISTS formats_by_blob ON item_formats(blob_path)
-            WHERE blob_path IS NOT NULL;
-        CREATE INDEX IF NOT EXISTS formats_inline_size ON item_formats(size_bytes)
-            WHERE inline_data IS NOT NULL;
 
         CREATE TABLE IF NOT EXISTS item_meta (
             item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,

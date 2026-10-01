@@ -257,6 +257,19 @@ impl Clauses {
     }
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct Gone {
+    thumbs: Vec<String>,
+    digests: Vec<String>,
+}
+
+impl Gone {
+    fn and(&mut self, other: Gone) {
+        self.thumbs.extend(other.thumbs);
+        self.digests.extend(other.digests);
+    }
+}
+
 pub struct Store {
     db: Connection,
     blobs: Option<crate::Blobs>,
@@ -452,13 +465,15 @@ impl Store {
     }
 
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
-        self.erase(id, at)?;
+        let gone = self.erase(id, at)?;
+        self.forget(&gone)?;
         self.checkpoint_briefly()?;
         Ok(())
     }
 
-    fn erase(&self, id: i64, at: i64) -> Result<()> {
-        self.drop_thumb(id)?;
+    fn erase(&self, id: i64, at: i64) -> Result<Gone> {
+        let mut gone = Gone::default();
+        gone.thumbs.extend(self.thumb_of(id)?);
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
@@ -468,38 +483,47 @@ impl Store {
              WHERE id = ?1",
             params![id, at],
         )?;
-        self.release(id)
+        gone.and(self.release(id)?);
+        Ok(gone)
     }
 
-    fn drop_thumb(&self, id: i64) -> Result<()> {
-        let path: Option<String> = self
+    fn thumb_of(&self, id: i64) -> Result<Option<String>> {
+        Ok(self
             .db
             .query_row("SELECT thumb_path FROM items WHERE id = ?1", [id], |row| {
                 row.get(0)
             })
             .optional()?
-            .flatten();
-        if let Some(path) = path {
-            let _ = crate::blobs::remove_at(std::path::Path::new(&path));
-        }
-        Ok(())
+            .flatten())
     }
 
-    fn release(&self, id: i64) -> Result<()> {
-        if let Some(blobs) = &self.blobs {
-            for digest in self.blobs_of(id)? {
-                if self.blob_is_shared(&digest, id)? {
-                    continue;
-                }
-                blobs.remove_if_settled(&digest)?;
-            }
-        }
+    fn release(&self, id: i64) -> Result<Gone> {
+        let gone = Gone {
+            thumbs: Vec::new(),
+            digests: self.blobs_of(id)?,
+        };
         self.db
             .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
         self.db
             .execute("DELETE FROM item_meta WHERE item_id = ?1", [id])?;
         self.db
             .execute("DELETE FROM pending_work WHERE item_id = ?1", [id])?;
+        Ok(gone)
+    }
+
+    fn forget(&self, gone: &Gone) -> Result<()> {
+        for path in &gone.thumbs {
+            let _ = crate::blobs::remove_at(std::path::Path::new(path));
+        }
+        let Some(blobs) = &self.blobs else {
+            return Ok(());
+        };
+        for digest in &gone.digests {
+            if self.blob_is_referenced(digest)? {
+                continue;
+            }
+            blobs.remove_if_settled(digest)?;
+        }
         Ok(())
     }
 
@@ -512,26 +536,28 @@ impl Store {
     }
 
     fn erase_all(&self, ids: &[i64], at: i64) -> Result<usize> {
+        let mut gone = Gone::default();
         let transaction = self.db.unchecked_transaction()?;
         for id in ids {
-            self.erase(*id, at)?;
+            gone.and(self.erase(*id, at)?);
         }
         transaction.commit()?;
+        self.forget(&gone)?;
         Ok(ids.len())
     }
 
     fn blobs_of(&self, id: i64) -> Result<Vec<String>> {
-        let mut stmt = self.db.prepare(
-            "SELECT blob_path FROM item_formats WHERE item_id = ?1 AND blob_path IS NOT NULL",
-        )?;
+        let mut stmt = self
+            .db
+            .prepare("SELECT digest FROM item_formats WHERE item_id = ?1 AND digest IS NOT NULL")?;
         let rows = stmt.query_map([id], |row| row.get(0))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    fn blob_is_shared(&self, digest: &str, besides: i64) -> Result<bool> {
+    fn blob_is_referenced(&self, digest: &str) -> Result<bool> {
         let count: i64 = self.db.query_row(
-            "SELECT COUNT(*) FROM item_formats WHERE blob_path = ?1 AND item_id != ?2",
-            params![digest, besides],
+            "SELECT COUNT(*) FROM item_formats WHERE digest = ?1",
+            [digest],
             |row| row.get(0),
         )?;
         Ok(count > 0)
@@ -541,7 +567,7 @@ impl Store {
         let found: Option<(Option<Vec<u8>>, Option<String>)> = self
             .db
             .query_row(
-                "SELECT inline_data, blob_path FROM item_formats
+                "SELECT inline_data, digest FROM item_formats
                  WHERE item_id = ?1 AND format = ?2",
                 params![id, format],
                 |row| Ok((row.get(0)?, row.get(1)?)),
@@ -629,8 +655,8 @@ impl Store {
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text, app_source, search_app,
                                 label, search_label, card_color, pinned, paste_count,
-                                broken_since)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+                                broken_since, last_used_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?17)",
             params![
                 uuid,
                 kind,
@@ -647,7 +673,8 @@ impl Store {
                 i64::from(more.pinned),
                 more.pastes.max(0),
                 more.broken,
-                touched
+                touched,
+                more.used_at
             ],
         )?;
         let id = self.db.last_insert_rowid();
@@ -698,7 +725,7 @@ impl Store {
     fn write_rows(&self, id: i64, rows: &[FormatRow]) -> Result<()> {
         for row in rows {
             self.db.execute(
-                "INSERT INTO item_formats (item_id, format, size_bytes, inline_data, blob_path)
+                "INSERT INTO item_formats (item_id, format, size_bytes, inline_data, digest)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![id, row.id, row.size, row.inline, row.blob],
             )?;
@@ -742,7 +769,10 @@ impl Store {
         if changed == 0 {
             return Err(Error::NoSuchItem { id });
         }
-        let previous = self.blobs_of(id)?;
+        let previous = Gone {
+            thumbs: Vec::new(),
+            digests: self.blobs_of(id)?,
+        };
         self.db
             .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
         self.db
@@ -751,18 +781,15 @@ impl Store {
             .execute("DELETE FROM pending_work WHERE item_id = ?1", [id])?;
         self.write_rows(id, &rows)?;
         transaction.commit()?;
-        if let Some(blobs) = &self.blobs {
-            for digest in previous {
-                if !self.blob_is_shared(&digest, id)? {
-                    blobs.remove_if_settled(&digest)?;
-                }
-            }
-        }
+        self.forget(&previous)?;
         self.checkpoint_briefly()?;
         Ok(())
     }
 
     pub fn find_by_hash(&self, item: &Item) -> Result<Option<i64>> {
+        if !item.is_comparable() {
+            return Ok(None);
+        }
         let hash = item.fingerprint() as i64;
         Ok(self
             .db
@@ -787,7 +814,7 @@ impl Store {
             return Ok(None);
         };
         let mut stmt = self.db.prepare(
-            "SELECT format, size_bytes, inline_data, blob_path FROM item_formats
+            "SELECT format, size_bytes, inline_data, digest FROM item_formats
              WHERE item_id = ?1 ORDER BY format",
         )?;
         let rows = stmt.query_map([id], |row| {
@@ -850,10 +877,14 @@ impl Store {
             "broken_since IS NOT NULL AND broken_since < ?1 AND pinned = 0",
             &[&cutoff],
         )?;
+        let mut gone = Gone::default();
+        let transaction = self.db.unchecked_transaction()?;
         for id in &doomed {
-            self.release(*id)?;
+            gone.and(self.release(*id)?);
             self.db.execute("DELETE FROM items WHERE id = ?1", [id])?;
         }
+        transaction.commit()?;
+        self.forget(&gone)?;
         self.checkpoint_briefly()?;
         Ok(doomed.len())
     }
@@ -1050,8 +1081,8 @@ impl Store {
         )?;
         let blobs: i64 = self.db.query_row(
             "SELECT COALESCE(SUM(size_bytes), 0) FROM (
-                 SELECT DISTINCT blob_path, size_bytes FROM item_formats
-                 WHERE blob_path IS NOT NULL)",
+                 SELECT DISTINCT digest, size_bytes FROM item_formats
+                 WHERE digest IS NOT NULL)",
             [],
             |row| row.get(0),
         )?;
@@ -1061,117 +1092,7 @@ impl Store {
         })
     }
 
-    pub fn sweep(&self, policy: &Policy, now: i64) -> Result<Swept> {
-        let mut swept = Swept::default();
-        if let Some(grace) = policy.broken_for {
-            swept.broken = self.purge_broken_before(now - grace)?;
-        }
-        if let Some(age) = policy.keep_for {
-            swept.expired = self.expire(now - age, now)?;
-        }
-        if let Some(keep) = policy.keep_at_most {
-            let excess = (self.count()? - keep).max(0);
-            let doomed = self.ids_where(
-                "pinned = 0 AND deleted_at IS NULL ORDER BY modified_at, id LIMIT ?1",
-                &[&excess],
-            )?;
-            swept.over_count = self.erase_all(&doomed, now)?;
-        }
-        if let Some(limit) = policy.bytes_at_most {
-            swept.over_bytes = self.evict_until_under(limit, now)?;
-        }
-        if let Some(blobs) = &self.blobs {
-            let referenced = self.referenced_blobs()?;
-            swept.orphans = blobs.sweep(&|digest| referenced.contains(digest))?;
-        }
-        swept.truncated = self.checkpoint()?;
-        Ok(swept)
-    }
-
-    fn evict_until_under(&self, limit: i64, at: i64) -> Result<usize> {
-        let mut evicted = 0;
-        let mut left = usize::MAX;
-        loop {
-            let usage = self.usage()?.bytes;
-            if usage <= limit {
-                return Ok(evicted);
-            }
-            let candidates = self.eviction_candidates()?;
-            if candidates.len() >= left {
-                return Ok(evicted);
-            }
-            left = candidates.len();
-            let mut freed = 0;
-            let transaction = self.db.unchecked_transaction()?;
-            for (id, bytes) in candidates {
-                self.erase(id, at)?;
-                evicted += 1;
-                freed += bytes;
-                if freed >= usage - limit {
-                    break;
-                }
-            }
-            transaction.commit()?;
-        }
-    }
-
-    fn eviction_candidates(&self) -> Result<Vec<(i64, i64)>> {
-        let mut stmt = self.db.prepare(
-            "SELECT items.id, COALESCE(SUM(COALESCE(LENGTH(f.inline_data), f.size_bytes, 0)), 0)
-             FROM items LEFT JOIN item_formats f
-               ON f.item_id = items.id AND (f.inline_data IS NOT NULL OR f.blob_path IS NOT NULL)
-             WHERE items.pinned = 0 AND items.deleted_at IS NULL
-             GROUP BY items.id
-             ORDER BY items.modified_at, items.id",
-        )?;
-        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
-    fn referenced_blobs(&self) -> Result<std::collections::HashSet<String>> {
-        let mut stmt = self
-            .db
-            .prepare("SELECT DISTINCT blob_path FROM item_formats WHERE blob_path IS NOT NULL")?;
-        let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
     pub const PAGE: usize = 100;
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Policy {
-    pub keep_for: Option<i64>,
-    pub keep_at_most: Option<i64>,
-    pub bytes_at_most: Option<i64>,
-    pub broken_for: Option<i64>,
-}
-
-pub const A_DAY: i64 = 24 * 60 * 60 * 1_000;
-
-impl Policy {
-    pub fn keeping(days: Option<u16>, quota_mb: Option<u32>) -> Self {
-        Self {
-            keep_for: days
-                .filter(|days| *days > 0)
-                .map(|days| i64::from(days) * A_DAY),
-            keep_at_most: None,
-            bytes_at_most: quota_mb
-                .filter(|mb| *mb > 0)
-                .map(|mb| i64::from(mb) * 1024 * 1024),
-            broken_for: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Swept {
-    pub broken: usize,
-    pub expired: usize,
-    pub over_count: usize,
-    pub over_bytes: usize,
-    pub orphans: usize,
-    pub truncated: bool,
 }
 
 pub const PREVIEW_UP_TO: usize = 64 * 1024;
@@ -1195,6 +1116,7 @@ struct FormatRow {
 pub struct More<'a> {
     pub modified_at: Option<i64>,
     pub touched_at: Option<i64>,
+    pub used_at: Option<i64>,
     pub app: Option<&'a str>,
     pub label: Option<&'a str>,
     pub color: i64,
@@ -1353,6 +1275,26 @@ fn on_disk() -> (tempfile::TempDir, Store) {
 }
 
 #[cfg(test)]
+fn big_image(byte: u8) -> Item {
+    Item {
+        kind: Some(Kind::Image),
+        formats: vec![cp_core::item::Format {
+            id: "public.png".into(),
+            payload: Payload::Blob(vec![byte; 200_000]),
+        }],
+    }
+}
+
+#[cfg(test)]
+fn aged(path: &std::path::Path) {
+    let file = std::fs::File::options()
+        .write(true)
+        .open(path)
+        .expect("opened");
+    file.set_modified(std::time::UNIX_EPOCH).expect("aged");
+}
+
+#[cfg(test)]
 fn captured(text: &str) -> Item {
     Item {
         kind: Some(Kind::Text),
@@ -1383,6 +1325,11 @@ fn search(store: &Store, query: &str) -> Vec<String> {
         .map(|one| one.preview)
         .collect()
 }
+
+#[path = "store_housekeeping.rs"]
+mod upkeep;
+
+pub use upkeep::{A_DAY, Policy, Swept};
 
 #[cfg(test)]
 #[path = "store_test.rs"]

@@ -275,6 +275,7 @@ fn carry(into: &Store, row: &Row, at: i64, root: Option<&Path>) -> Result<Landed
     let more = More {
         modified_at: (row.modified_at > row.created_at).then(|| in_millis(row.modified_at)),
         touched_at: Some(at),
+        used_at: None,
         app: row.app.as_deref(),
         label: row.label.as_deref(),
         color: row.colour,

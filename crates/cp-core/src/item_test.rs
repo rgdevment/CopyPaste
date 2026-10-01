@@ -511,7 +511,7 @@ fn a_blob_and_an_inline_payload_of_the_same_bytes_are_one_identity() {
 }
 
 #[test]
-fn what_is_too_big_to_keep_leaves_no_identity_behind() {
+fn what_is_too_big_to_keep_still_says_which_capture_it_was() {
     let refused = Item {
         kind: None,
         formats: vec![Format {
@@ -521,17 +521,20 @@ fn what_is_too_big_to_keep_leaves_no_identity_behind() {
             },
         }],
     };
-    assert_eq!(
+    assert_ne!(
         refused.fingerprint(),
         Item {
             kind: None,
             formats: vec![]
         }
         .fingerprint(),
-        "two different items nobody could keep share one hash, so the first of them \
-         answers for every later one"
+        "sharing the hash of nothing at all made the first of them answer for every later one"
     );
     assert_eq!(refused.stored_bytes(), 0);
+    assert!(
+        !refused.is_comparable(),
+        "and nobody can claim it is the same capture as another one nobody read either"
+    );
 }
 
 #[test]
@@ -545,4 +548,104 @@ fn the_exact_size_that_still_fits_in_a_row_is_an_item_like_any_other() {
         );
     }
     assert_eq!(placement(INLINE_UP_TO + 1), Placement::Blob);
+}
+
+fn one_format(id: &str, payload: Payload) -> Item {
+    Item {
+        kind: None,
+        formats: vec![Format {
+            id: id.into(),
+            payload,
+        }],
+    }
+}
+
+#[test]
+fn the_prints_of_what_can_be_read_are_the_ones_the_stored_rows_already_hold() {
+    assert_eq!(
+        Item::plain("copypaste").fingerprint(),
+        0x0ec9_ae20_385c_1feb
+    );
+    assert_eq!(Item::plain("").fingerprint(), 0xcee0_578a_8eb7_fd5a);
+    let two = Item {
+        kind: Some(crate::kind::Kind::Text),
+        formats: vec![
+            Format {
+                id: SYNTHETIC_TEXT.into(),
+                payload: Payload::Inline(b"hola".to_vec()),
+            },
+            Format {
+                id: "public.rtf".into(),
+                payload: Payload::Inline(b"{\rtf1 hola}".to_vec()),
+            },
+        ],
+    };
+    assert_eq!(
+        two.fingerprint(),
+        0x6542_1aab_e9c5_2433,
+        "every row on disk was deduplicated with these numbers"
+    );
+}
+
+#[test]
+fn the_order_the_formats_arrive_in_does_not_change_the_print() {
+    let one = Item {
+        kind: None,
+        formats: vec![
+            Format {
+                id: "a".into(),
+                payload: Payload::Inline(b"first".to_vec()),
+            },
+            Format {
+                id: "b".into(),
+                payload: Payload::TooBig { size: 70_000_000 },
+            },
+        ],
+    };
+    let other = Item {
+        kind: None,
+        formats: vec![
+            Format {
+                id: "b".into(),
+                payload: Payload::TooBig { size: 70_000_000 },
+            },
+            Format {
+                id: "a".into(),
+                payload: Payload::Inline(b"first".to_vec()),
+            },
+        ],
+    };
+    assert_eq!(one.fingerprint(), other.fingerprint());
+}
+
+#[test]
+fn two_captures_too_big_to_read_are_not_the_same_capture() {
+    let one = one_format("public.png", Payload::TooBig { size: 70_000_000 });
+    let other = one_format("public.png", Payload::TooBig { size: 90_000_000 });
+    assert_ne!(
+        one.fingerprint(),
+        other.fingerprint(),
+        "they used to share the hash of nothing at all, so the second never arrived"
+    );
+    let nothing = Item {
+        kind: None,
+        formats: Vec::new(),
+    };
+    assert_ne!(one.fingerprint(), nothing.fingerprint());
+}
+
+#[test]
+fn what_was_never_read_cannot_be_compared_with_anything() {
+    assert!(!one_format("public.png", Payload::TooBig { size: 70_000_000 }).is_comparable());
+    assert!(!one_format("public.png", Payload::Announced { size: Some(10) }).is_comparable());
+    assert!(!one_format("public.png", Payload::Absent).is_comparable());
+    assert!(
+        !Item {
+            kind: None,
+            formats: Vec::new()
+        }
+        .is_comparable()
+    );
+    assert!(Item::plain("something").is_comparable());
+    assert!(one_format("public.png", Payload::Blob(vec![1, 2, 3])).is_comparable());
 }

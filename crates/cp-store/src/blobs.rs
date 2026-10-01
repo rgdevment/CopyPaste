@@ -1,6 +1,15 @@
 use crate::{Error, Result};
 use std::path::{Path, PathBuf};
 
+pub const IN_A_DIGEST: usize = blake3::OUT_LEN * 2;
+
+pub fn is_a_digest(said: &str) -> bool {
+    said.len() == IN_A_DIGEST
+        && said
+            .bytes()
+            .all(|one| one.is_ascii_digit() || (b'a'..=b'f').contains(&one))
+}
+
 pub struct Blobs {
     root: PathBuf,
 }
@@ -16,16 +25,20 @@ impl Blobs {
         })
     }
 
-    fn path_for(&self, digest: &str) -> PathBuf {
+    fn path_of(&self, digest: &str) -> PathBuf {
         self.root
             .join(&digest[0..2])
             .join(&digest[2..4])
             .join(digest)
     }
 
+    fn path_for(&self, digest: &str) -> Option<PathBuf> {
+        is_a_digest(digest).then(|| self.path_of(digest))
+    }
+
     pub fn put(&self, bytes: &[u8]) -> Result<String> {
         let digest = blake3::hash(bytes).to_hex().to_string();
-        let path = self.path_for(&digest);
+        let path = self.path_of(&digest);
         if let Ok(file) = std::fs::File::options().write(true).open(&path) {
             file.set_modified(std::time::SystemTime::now())
                 .map_err(Error::Io)?;
@@ -47,7 +60,9 @@ impl Blobs {
     }
 
     pub fn get(&self, digest: &str) -> Result<Option<Vec<u8>>> {
-        let path = self.path_for(digest);
+        let Some(path) = self.path_for(digest) else {
+            return Ok(None);
+        };
         match std::fs::read(&path) {
             Ok(bytes) => Ok(Some(bytes)),
             Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -56,19 +71,28 @@ impl Blobs {
     }
 
     pub fn remove(&self, digest: &str) -> Result<()> {
-        remove_at(&self.path_for(digest))
+        match self.path_for(digest) {
+            Some(path) => remove_at(&path),
+            None => Ok(()),
+        }
     }
 
     pub fn remove_if_settled(&self, digest: &str) -> Result<bool> {
-        let path = self.path_for(digest);
+        let Some(path) = self.path_for(digest) else {
+            return Ok(false);
+        };
         if !path.exists() || is_fresh(&path) {
             return Ok(false);
         }
         remove_at(&path).map(|()| true)
     }
 
+    pub fn where_it_is(&self, digest: &str) -> Option<PathBuf> {
+        self.path_for(digest)
+    }
+
     pub fn exists(&self, digest: &str) -> bool {
-        self.path_for(digest).exists()
+        self.path_for(digest).is_some_and(|path| path.exists())
     }
 
     pub const GRACE: std::time::Duration = std::time::Duration::from_secs(60);
@@ -92,7 +116,7 @@ impl Blobs {
     }
 }
 
-fn is_fresh(path: &Path) -> bool {
+pub(crate) fn is_fresh(path: &Path) -> bool {
     let settled = std::time::SystemTime::now() - Blobs::GRACE;
     std::fs::metadata(path)
         .and_then(|meta| meta.modified())
@@ -104,8 +128,7 @@ fn digest_of(name: &str) -> Option<(&str, bool)> {
         Some(rest) => (rest.split('.').next().unwrap_or(rest), true),
         None => (name, false),
     };
-    let shaped = digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_hexdigit());
-    shaped.then_some((digest, partial))
+    is_a_digest(digest).then_some((digest, partial))
 }
 
 const AT_A_TIME: usize = 64 * 1024;

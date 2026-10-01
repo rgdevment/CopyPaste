@@ -103,3 +103,30 @@ fn length_alone_separates_two_otherwise_identical_samples() {
     b.push(0x5A);
     assert_ne!(content_hash(&a), content_hash(&b));
 }
+
+#[test]
+fn the_numbers_this_hash_produces_are_the_ones_the_stored_rows_already_hold() {
+    assert_eq!(content_hash(&[]), 0x2d06_8005_38d3_94c2);
+    assert_eq!(content_hash(&[0]), 0xc44b_dff4_074e_ecdb);
+    assert_eq!(content_hash(b"copypaste"), 0x88a5_684e_079f_a7b4);
+    assert_eq!(
+        content_hash(&vec![0x5A; WHOLE_UP_TO]),
+        0x1ff8_f6a1_a534_b1b0
+    );
+    assert_eq!(
+        content_hash(&screenshot(512 * 1024, 0x01)),
+        0x5ae1_923a_567f_d6fb
+    );
+    assert_eq!(
+        content_hash(&vec![0x11; WHOLE_UP_TO + 1]),
+        0xb888_f622_52e3_4eea,
+        "every history on disk was deduplicated with these numbers: if they move,          every user sees every item twice after an update"
+    );
+}
+
+#[test]
+fn the_shape_of_the_hash_is_part_of_the_contract() {
+    assert_eq!(WHOLE_UP_TO, 256 * 1024);
+    assert_eq!(BLOCKS, 16);
+    assert_eq!(BLOCK, 4 * 1024);
+}

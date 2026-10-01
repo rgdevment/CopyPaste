@@ -351,3 +351,38 @@ fn an_engine_nobody_closed_is_still_closed_by_dropping_it() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_loose_blob_is_collected_even_when_the_user_keeps_everything_for_ever() {
+    let dir = aside("keeping-everything");
+    let store = Store::open(&dir.join("history.db")).expect("a store");
+    let blobs = store.blobs().expect("a blob store");
+    let digest = blobs.put(b"nobody will claim me").expect("stored");
+    let kept = cp_config::Config {
+        keeps_days: None,
+        images_quota_mb: None,
+        ..Default::default()
+    };
+    let path = dir.join("config.toml");
+    cp_config::write(&path, &kept).expect("written");
+    assert_eq!(
+        policy_of(&cp_config::read(&path).expect("read")),
+        cp_store::Policy::default(),
+        "«always» and «no limit» is the policy that asks for nothing"
+    );
+    let old = std::time::UNIX_EPOCH;
+    let file = std::fs::File::options()
+        .write(true)
+        .open(blobs.where_it_is(&digest).expect("a real digest"))
+        .expect("opened");
+    file.set_modified(old).expect("aged");
+    drop(file);
+
+    sweep_as_kept(&store, &path, &dir.join("thumbs"));
+
+    assert!(
+        !blobs.exists(&digest),
+        "a blob nobody references is nobody's, whatever the retention says"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

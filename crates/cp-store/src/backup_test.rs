@@ -1,4 +1,6 @@
 use super::*;
+
+fn quietly(_what: &str) {}
 use cp_core::item::{Format, Item, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
 use cp_core::kind::Kind;
 
@@ -67,7 +69,7 @@ fn a_fake_secret_crosses_a_backup_without_being_redacted() {
     drop(store);
 
     let (_here, landed) = somewhere("history.db");
-    let brought = bring(&backup, &landed, 5_000).expect("imported");
+    let brought = bring(&backup, &landed, 5_000, &quietly).expect("imported");
     assert_eq!(brought.added, 1);
     let id = landed
         .find_by_hash(&text(secret))
@@ -108,7 +110,7 @@ fn what_was_kept_travels_whole_from_one_machine_to_another() {
     assert_eq!(taken.written_at, 3_000);
 
     let (_here, landed) = somewhere("history.db");
-    let brought = bring(&backup, &landed, 4_000).expect("imported");
+    let brought = bring(&backup, &landed, 4_000, &quietly).expect("imported");
     assert_eq!(brought.added, 2);
     assert_eq!(brought.already, 0);
     assert_eq!(landed.count().expect("counted"), 2);
@@ -144,7 +146,7 @@ fn importing_adds_and_never_takes_away_what_was_already_there() {
             .insert_item(&format!("v{at}"), &text(what), what, at)
             .expect("stored");
     }
-    let brought = bring(&backup, &landed, 5_000).expect("imported");
+    let brought = bring(&backup, &landed, 5_000, &quietly).expect("imported");
     assert_eq!(brought.added, 1);
     assert_eq!(
         landed.count().expect("counted"),
@@ -167,8 +169,8 @@ fn the_same_copy_brought_twice_does_not_double_anything() {
     drop(store);
 
     let (_here, landed) = somewhere("history.db");
-    let first = bring(&backup, &landed, 3_000).expect("imported");
-    let again = bring(&backup, &landed, 4_000).expect("imported again");
+    let first = bring(&backup, &landed, 3_000, &quietly).expect("imported");
+    let again = bring(&backup, &landed, 4_000, &quietly).expect("imported again");
     assert_eq!(first.added, 2);
     assert_eq!(again.added, 0);
     assert_eq!(again.already, 2);
@@ -176,7 +178,7 @@ fn the_same_copy_brought_twice_does_not_double_anything() {
 }
 
 #[test]
-fn a_uuid_already_used_by_different_content_is_refused_not_renamed() {
+fn a_uuid_already_used_by_different_content_arrives_under_a_fresh_one() {
     let (there, store) = somewhere("history.db");
     store
         .insert_item(
@@ -200,17 +202,29 @@ fn a_uuid_already_used_by_different_content_is_refused_not_renamed() {
         )
         .expect("stored");
 
-    let brought = bring(&backup, &landed, 5_000).expect("imported");
-    assert_eq!(brought.added, 0);
+    let brought = bring(&backup, &landed, 5_000, &quietly).expect("imported");
     assert_eq!(
-        brought.refused, 1,
-        "the uuid collides even though the content does not match by hash, and the item \
-         is silently dropped instead of arriving under a fresh identity"
+        brought.refused, 0,
+        "a name that is taken is not a reason to lose a copy"
     );
+    assert_eq!(brought.added, 1);
     assert_eq!(
         landed.count().expect("counted"),
-        1,
-        "only the item that was already there survives; the backed-up one never arrives"
+        2,
+        "they are different copies and both are kept"
+    );
+    let names: Vec<String> = landed
+        .raw()
+        .prepare("SELECT uuid FROM items ORDER BY uuid")
+        .expect("prepared")
+        .query_map([], |row| row.get(0))
+        .expect("queried")
+        .collect::<rusqlite::Result<_>>()
+        .expect("read");
+    assert!(names.contains(&"shared-uuid".to_owned()));
+    assert!(
+        names.iter().any(|one| one != "shared-uuid"),
+        "the one that arrived got an identity of its own: {names:?}"
     );
 }
 
@@ -273,7 +287,7 @@ fn a_file_that_can_no_longer_be_found_still_travels_and_still_arrives() {
     drop(store);
 
     let (_here, landed) = somewhere("history.db");
-    let brought = bring(&backup, &landed, 4_000).expect("imported");
+    let brought = bring(&backup, &landed, 4_000, &quietly).expect("imported");
     assert_eq!(
         brought.added, 1,
         "what is broken does not get left out silently"
@@ -339,7 +353,7 @@ fn a_backup_says_where_it_was_made_so_the_other_system_can_warn() {
     );
 
     let (_here, landed) = somewhere("history.db");
-    let brought = bring(&backup, &landed, 2_000).expect("imported");
+    let brought = bring(&backup, &landed, 2_000, &quietly).expect("imported");
     assert!(!brought.from_elsewhere, "it comes from this very platform");
 }
 
@@ -396,7 +410,7 @@ fn what_is_brought_in_is_a_history_and_not_a_backup() {
     drop(store);
 
     let (_here, landed) = somewhere("history.db");
-    bring(&backup, &landed, 2_000).expect("imported");
+    bring(&backup, &landed, 2_000, &quietly).expect("imported");
     let left: i64 = landed
         .raw()
         .query_row(
@@ -430,7 +444,7 @@ fn a_file_that_is_not_a_backup_is_refused_before_anything_is_touched() {
     landed
         .insert_item("mine", &text("mine"), "mine", 1_000)
         .expect("stored");
-    assert!(bring(&plain, &landed, 2_000).is_err());
+    assert!(bring(&plain, &landed, 2_000, &quietly).is_err());
     assert_eq!(
         landed.count().expect("counted"),
         1,
@@ -465,7 +479,7 @@ fn an_empty_history_still_makes_a_backup_that_can_be_brought_back() {
     drop(store);
 
     let (_here, landed) = somewhere("history.db");
-    let brought = bring(&backup, &landed, 2_000).expect("imported");
+    let brought = bring(&backup, &landed, 2_000, &quietly).expect("imported");
     assert_eq!(brought.added, 0);
     assert_eq!(landed.count().expect("counted"), 0);
 }
@@ -509,7 +523,7 @@ fn a_backup_from_a_later_format_is_refused_instead_of_half_read() {
 fn a_backup_whose_schema_is_ahead_is_refused_before_anything_is_written() {
     let (_there, at) = a_backup_saying("schema", crate::SCHEMA_VERSION + 1);
     let (_here, landed) = somewhere("landing.db");
-    match bring(&at, &landed, 3_000) {
+    match bring(&at, &landed, 3_000, &quietly) {
         Err(Error::FromTheFuture { found, supported }) => {
             assert_eq!(found, crate::SCHEMA_VERSION + 1);
             assert_eq!(supported, crate::SCHEMA_VERSION);
@@ -525,4 +539,181 @@ fn a_backup_whose_schema_is_ahead_is_refused_before_anything_is_written() {
         0,
         "and the history it would have landed in is untouched"
     );
+}
+
+#[test]
+fn everything_the_schema_knows_how_to_keep_crosses_a_backup() {
+    let (there, store) = somewhere("history.db");
+    let id = store
+        .insert_item(
+            "uuid-rich",
+            &text("worth keeping whole"),
+            "worth keeping",
+            1_000,
+        )
+        .expect("stored");
+    store.set_source(id, "explorer", 1_100).expect("app");
+    store
+        .set_label(id, Some("the one I reuse"), 1_200)
+        .expect("label");
+    store.set_color(id, 3, 1_300).expect("colour");
+    store.set_pinned(id, true, 1_400).expect("pinned");
+    store.set_group(id, "example.com").expect("group");
+    store
+        .set_ocr_text(id, "words read inside it", 1_500)
+        .expect("ocr");
+    store.set_meta(id, "width", "1920").expect("meta");
+    store.set_meta(id, "height", "1080").expect("meta");
+    store.record_paste(id, 1_600).expect("pasted");
+    store.record_paste(id, 1_700).expect("pasted again");
+    let before = only_row(&store);
+
+    let backup = there.path().join("mine.cpbackup");
+    write(&store, &backup, 2_000).expect("exported");
+    drop(store);
+
+    let (_here, landed) = somewhere("history.db");
+    let brought = bring(&backup, &landed, 5_000, &quietly).expect("imported");
+    assert_eq!(brought.added, 1);
+
+    let after = only_row(&landed);
+    assert_eq!(after.app, before.app, "where it was copied from");
+    assert_eq!(after.label, before.label, "the name the person gave it");
+    assert_eq!(after.color, before.color, "its colour");
+    assert_eq!(after.pinned, before.pinned, "that it was pinned");
+    assert_eq!(after.group, before.group, "the group it belongs to");
+    assert_eq!(
+        after.paste_count, before.paste_count,
+        "how often it was used"
+    );
+    assert_eq!(
+        after.last_used_at, before.last_used_at,
+        "when it was last used"
+    );
+    assert_eq!(
+        after.modified_at, before.modified_at,
+        "when it last changed"
+    );
+    assert_eq!(after.created_at, before.created_at, "when it was copied");
+    let id = after.id;
+    assert_eq!(
+        landed.ocr_text(id).expect("read").as_deref(),
+        Some("words read inside it"),
+        "what was read inside the image"
+    );
+    assert_eq!(
+        landed.all_meta(id).expect("read"),
+        vec![
+            ("height".to_owned(), "1080".to_owned()),
+            ("width".to_owned(), "1920".to_owned())
+        ],
+        "its measurements"
+    );
+}
+
+fn only_row(store: &Store) -> crate::Listed {
+    let page = store
+        .list(&everything(), Store::PAGE, None)
+        .expect("listed");
+    assert_eq!(page.rows.len(), 1);
+    page.rows.into_iter().next().expect("one row")
+}
+
+#[test]
+#[ignore = "needs a real history: CP_REAL_DB=<path to history.db> cargo test -p cp-store -- --ignored"]
+fn a_real_history_crosses_a_backup_without_losing_what_it_knows() {
+    let Ok(said) = std::env::var("CP_REAL_DB") else {
+        panic!("point CP_REAL_DB at a copy of a real history.db");
+    };
+    let mine = std::path::PathBuf::from(said);
+    let source = Store::open(&mine).expect("the history opens");
+    let before = measured(&source);
+    assert!(
+        before.items > 100,
+        "this is meant for a history with some life in it"
+    );
+
+    let dir = tempfile::tempdir().expect("a folder");
+    let backup = dir.path().join("mine.cpbackup");
+    write(&source, &backup, 9_000).expect("exported");
+    drop(source);
+
+    let landed = Store::open(&dir.path().join("brought").join("history.db")).expect("a fresh one");
+    let brought = bring(&backup, &landed, 9_100, &|what| println!("    {what}")).expect("imported");
+    let after = measured(&landed);
+
+    println!("    items {} -> {}", before.items, after.items);
+    println!("    con grupo {} -> {}", before.grouped, after.grouped);
+    println!("    con recencia {} -> {}", before.used, after.used);
+    println!("    pegados {} -> {}", before.pastes, after.pastes);
+    println!("    fijados {} -> {}", before.pinned, after.pinned);
+    println!("    con nombre {} -> {}", before.labelled, after.labelled);
+    println!(
+        "    con procedencia {} -> {}",
+        before.sourced, after.sourced
+    );
+    println!("    con medidas {} -> {}", before.meta, after.meta);
+    println!("    con texto leido {} -> {}", before.ocr, after.ocr);
+    println!("    rechazados {}", brought.refused);
+
+    assert_eq!(
+        brought.refused, 0,
+        "nothing may be dropped without a reason"
+    );
+    assert_eq!(after.items, before.items, "every item arrives");
+    assert_eq!(after.grouped, before.grouped, "the groups arrive");
+    assert_eq!(
+        after.used, before.used,
+        "when each one was last used arrives"
+    );
+    assert_eq!(
+        after.pastes, before.pastes,
+        "how often each was used arrives"
+    );
+    assert_eq!(after.pinned, before.pinned, "what was pinned stays pinned");
+    assert_eq!(after.labelled, before.labelled, "the names arrive");
+    assert_eq!(
+        after.sourced, before.sourced,
+        "where each came from arrives"
+    );
+    assert_eq!(after.meta, before.meta, "the measurements arrive");
+    assert_eq!(after.ocr, before.ocr, "what was read inside arrives");
+}
+
+#[cfg(test)]
+struct Counted {
+    items: i64,
+    grouped: i64,
+    used: i64,
+    pastes: i64,
+    pinned: i64,
+    labelled: i64,
+    sourced: i64,
+    meta: i64,
+    ocr: i64,
+}
+
+#[cfg(test)]
+fn measured(store: &Store) -> Counted {
+    let one = |sql: &str| -> i64 {
+        store
+            .raw()
+            .query_row(sql, [], |row| row.get(0))
+            .expect("counted")
+    };
+    Counted {
+        items: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL"),
+        grouped: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND group_key <> ''"),
+        used: one(
+            "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND last_used_at IS NOT NULL",
+        ),
+        pastes: one("SELECT COALESCE(SUM(paste_count), 0) FROM items WHERE deleted_at IS NULL"),
+        pinned: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND pinned = 1"),
+        labelled: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND label IS NOT NULL"),
+        sourced: one(
+            "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND app_source IS NOT NULL",
+        ),
+        meta: one("SELECT COUNT(*) FROM item_meta"),
+        ocr: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND ocr_text IS NOT NULL"),
+    }
 }
