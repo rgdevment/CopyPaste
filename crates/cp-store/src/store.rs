@@ -787,6 +787,9 @@ impl Store {
     }
 
     pub fn find_by_hash(&self, item: &Item) -> Result<Option<i64>> {
+        if !item.is_comparable() {
+            return Ok(None);
+        }
         let hash = item.fingerprint() as i64;
         Ok(self
             .db

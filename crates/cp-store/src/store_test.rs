@@ -1786,3 +1786,49 @@ fn a_clear_that_cannot_be_written_leaves_every_file_where_it_was() {
         "the item still reads back whole"
     );
 }
+
+fn too_big(size: usize) -> Item {
+    Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![Format {
+            id: "public.png".into(),
+            payload: Payload::TooBig { size },
+        }],
+    }
+}
+
+#[test]
+fn a_second_capture_nobody_could_read_is_kept_not_merged_into_the_first() {
+    let store = Store::in_memory().expect("schema");
+    let first = too_big(70_000_000);
+    let second = too_big(90_000_000);
+    store
+        .insert_item("uuid-first", &first, "a huge one", 1)
+        .expect("insert");
+
+    assert_eq!(
+        store.find_by_hash(&second).expect("queried"),
+        None,
+        "nothing was read of either, so neither can answer for the other"
+    );
+    assert_eq!(
+        store.find_by_hash(&first).expect("queried"),
+        None,
+        "not even for itself: what was never read cannot be compared"
+    );
+
+    store
+        .insert_item("uuid-second", &second, "another huge one", 2)
+        .expect("insert");
+    assert_eq!(store.count().expect("counted"), 2);
+}
+
+#[test]
+fn a_capture_that_was_read_is_still_found_by_what_it_holds() {
+    let store = Store::in_memory().expect("schema");
+    let item = captured("something worth keeping");
+    let id = store
+        .insert_item("uuid-read", &item, "something", 1)
+        .expect("insert");
+    assert_eq!(store.find_by_hash(&item).expect("queried"), Some(id));
+}

@@ -112,7 +112,7 @@ fn the_plain_text_pasted_from_a_rich_item_lands_as_a_second_history_entry() {
 }
 
 #[test]
-fn two_different_oversized_captures_collide_into_the_same_identity() {
+fn two_different_oversized_captures_keep_their_own_identity() {
     use cp_core::item::Format;
     let store = Store::in_memory().expect("schema");
     let refused = |size: usize| Item {
@@ -122,16 +122,21 @@ fn two_different_oversized_captures_collide_into_the_same_identity() {
             payload: Payload::TooBig { size },
         }],
     };
-    let id = store
+    store
         .insert_item("uuid-huge-photo", &refused(90_000_000), "", 1)
         .expect("inserted");
     assert_eq!(
         store.find_by_hash(&refused(120_000_000)).expect("searched"),
-        Some(id),
-        "fingerprint() drops every format whose payload is TooBig before hashing, so two \
-         unrelated captures that were both too large to keep hash to the same empty mix \
-         regardless of their real size; a caller that checks find_by_hash before inserting \
-         (as the panel's capture path does) will reactivate the first oversized item instead \
-         of ever recording the second one's existence"
+        None,
+        "the first of them used to answer for every later one, so the second never arrived"
     );
+    assert_ne!(
+        refused(90_000_000).fingerprint(),
+        refused(120_000_000).fingerprint(),
+        "and their stored hashes say which capture each one was"
+    );
+    store
+        .insert_item("uuid-other-photo", &refused(120_000_000), "", 2)
+        .expect("inserted");
+    assert_eq!(store.count().expect("counted"), 2);
 }

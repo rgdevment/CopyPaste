@@ -203,6 +203,9 @@ fn carry(source: &Store, into: &Store, row: &crate::Listed, at: i64) -> Result<b
     if into.find_by_hash(&item)?.is_some() {
         return Ok(false);
     }
+    if !item.is_comparable() && taken(into, &named(source, row.id, at)) {
+        return Ok(false);
+    }
     let meta = source.all_meta(row.id)?;
     let nothing: &[&str] = &[];
     let more = crate::More {
