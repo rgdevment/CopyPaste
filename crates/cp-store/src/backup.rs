@@ -323,7 +323,7 @@ fn same_file(one: &Path, other: &Path) -> bool {
 
 fn wanted(db: &Connection) -> Result<Vec<String>> {
     let mut stmt =
-        db.prepare("SELECT DISTINCT blob_path FROM item_formats WHERE blob_path IS NOT NULL")?;
+        db.prepare("SELECT DISTINCT digest FROM item_formats WHERE digest IS NOT NULL")?;
     let found = stmt
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<std::result::Result<Vec<_>, _>>()?;

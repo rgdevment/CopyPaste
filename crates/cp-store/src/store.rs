@@ -521,16 +521,16 @@ impl Store {
     }
 
     fn blobs_of(&self, id: i64) -> Result<Vec<String>> {
-        let mut stmt = self.db.prepare(
-            "SELECT blob_path FROM item_formats WHERE item_id = ?1 AND blob_path IS NOT NULL",
-        )?;
+        let mut stmt = self
+            .db
+            .prepare("SELECT digest FROM item_formats WHERE item_id = ?1 AND digest IS NOT NULL")?;
         let rows = stmt.query_map([id], |row| row.get(0))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     fn blob_is_shared(&self, digest: &str, besides: i64) -> Result<bool> {
         let count: i64 = self.db.query_row(
-            "SELECT COUNT(*) FROM item_formats WHERE blob_path = ?1 AND item_id != ?2",
+            "SELECT COUNT(*) FROM item_formats WHERE digest = ?1 AND item_id != ?2",
             params![digest, besides],
             |row| row.get(0),
         )?;
@@ -541,7 +541,7 @@ impl Store {
         let found: Option<(Option<Vec<u8>>, Option<String>)> = self
             .db
             .query_row(
-                "SELECT inline_data, blob_path FROM item_formats
+                "SELECT inline_data, digest FROM item_formats
                  WHERE item_id = ?1 AND format = ?2",
                 params![id, format],
                 |row| Ok((row.get(0)?, row.get(1)?)),
@@ -698,7 +698,7 @@ impl Store {
     fn write_rows(&self, id: i64, rows: &[FormatRow]) -> Result<()> {
         for row in rows {
             self.db.execute(
-                "INSERT INTO item_formats (item_id, format, size_bytes, inline_data, blob_path)
+                "INSERT INTO item_formats (item_id, format, size_bytes, inline_data, digest)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![id, row.id, row.size, row.inline, row.blob],
             )?;
@@ -787,7 +787,7 @@ impl Store {
             return Ok(None);
         };
         let mut stmt = self.db.prepare(
-            "SELECT format, size_bytes, inline_data, blob_path FROM item_formats
+            "SELECT format, size_bytes, inline_data, digest FROM item_formats
              WHERE item_id = ?1 ORDER BY format",
         )?;
         let rows = stmt.query_map([id], |row| {
@@ -1050,8 +1050,8 @@ impl Store {
         )?;
         let blobs: i64 = self.db.query_row(
             "SELECT COALESCE(SUM(size_bytes), 0) FROM (
-                 SELECT DISTINCT blob_path, size_bytes FROM item_formats
-                 WHERE blob_path IS NOT NULL)",
+                 SELECT DISTINCT digest, size_bytes FROM item_formats
+                 WHERE digest IS NOT NULL)",
             [],
             |row| row.get(0),
         )?;
@@ -1119,7 +1119,7 @@ impl Store {
         let mut stmt = self.db.prepare(
             "SELECT items.id, COALESCE(SUM(COALESCE(LENGTH(f.inline_data), f.size_bytes, 0)), 0)
              FROM items LEFT JOIN item_formats f
-               ON f.item_id = items.id AND (f.inline_data IS NOT NULL OR f.blob_path IS NOT NULL)
+               ON f.item_id = items.id AND (f.inline_data IS NOT NULL OR f.digest IS NOT NULL)
              WHERE items.pinned = 0 AND items.deleted_at IS NULL
              GROUP BY items.id
              ORDER BY items.modified_at, items.id",
@@ -1131,7 +1131,7 @@ impl Store {
     fn referenced_blobs(&self) -> Result<std::collections::HashSet<String>> {
         let mut stmt = self
             .db
-            .prepare("SELECT DISTINCT blob_path FROM item_formats WHERE blob_path IS NOT NULL")?;
+            .prepare("SELECT DISTINCT digest FROM item_formats WHERE digest IS NOT NULL")?;
         let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }

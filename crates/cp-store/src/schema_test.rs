@@ -384,3 +384,150 @@ fn a_row_that_predates_the_group_column_reads_as_having_no_group() {
         .expect("read");
     assert_eq!(group, "", "empty means «nobody has grouped it yet»");
 }
+
+const AS_IT_WAS_IN_5: &str = "
+    DROP INDEX IF EXISTS formats_by_digest;
+    DROP INDEX IF EXISTS formats_inline_size;
+    CREATE TABLE item_formats_then (
+        item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+        format      TEXT    NOT NULL,
+        size_bytes  INTEGER,
+        inline_data BLOB,
+        blob_path   TEXT,
+        PRIMARY KEY (item_id, format)
+    );
+    INSERT INTO item_formats_then (item_id, format, size_bytes, inline_data, blob_path)
+        SELECT item_id, format, size_bytes, inline_data, digest FROM item_formats;
+    DROP TABLE item_formats;
+    ALTER TABLE item_formats_then RENAME TO item_formats;
+    PRAGMA user_version = 5;
+";
+
+fn with_one_item(db: &Connection) {
+    db.execute(
+        "INSERT INTO items (id, uuid, preview_text, created_at, modified_at, content_hash,
+                            search_text, updated_at)
+             VALUES (1, 'u1', 'a copy', 10, 10, 7, 'a copy worth finding', 10)",
+        [],
+    )
+    .expect("an item to hang formats on");
+}
+
+fn digest_of(db: &Connection, format: &str) -> Option<String> {
+    db.query_row(
+        "SELECT digest FROM item_formats WHERE item_id = 1 AND format = ?1",
+        [format],
+        |row| row.get(0),
+    )
+    .expect("the row is there")
+}
+
+#[test]
+fn a_stored_path_that_was_never_a_digest_does_not_survive_the_migration() {
+    let db = Connection::open_in_memory().expect("opened");
+    create(&db).expect("schema");
+    with_one_item(&db);
+    db.execute_batch(AS_IT_WAS_IN_5)
+        .expect("wound back to when the column promised a path");
+
+    let good = "a".repeat(64);
+    db.execute(
+        "INSERT INTO item_formats (item_id, format, blob_path) VALUES (1, 'good', ?1)",
+        [&good],
+    )
+    .expect("a real digest");
+    for (format, said) in [
+        ("short", "a"),
+        ("letters", "zz"),
+        ("accented", "añ"),
+        ("walks", "../../x"),
+    ] {
+        db.execute(
+            "INSERT INTO item_formats (item_id, format, blob_path) VALUES (1, ?1, ?2)",
+            [format, said],
+        )
+        .expect("the old column took anything at all");
+    }
+
+    migrate(&db).expect("the migration cleans up before it constrains");
+
+    assert_eq!(digest_of(&db, "good").as_deref(), Some(good.as_str()));
+    for format in ["short", "letters", "accented", "walks"] {
+        assert_eq!(
+            digest_of(&db, format),
+            None,
+            "«{format}» kept a value no blob store could ever answer for"
+        );
+    }
+    let left: i64 = db
+        .query_row("SELECT COUNT(*) FROM item_formats", [], |row| row.get(0))
+        .expect("counted");
+    assert_eq!(
+        left, 5,
+        "the rows stay; only what they pointed at is let go"
+    );
+}
+
+#[test]
+fn after_the_migration_the_column_is_named_and_shaped_like_a_digest() {
+    let db = Connection::open_in_memory().expect("opened");
+    create(&db).expect("schema");
+    with_one_item(&db);
+    db.execute_batch(AS_IT_WAS_IN_5).expect("wound back");
+
+    migrate(&db).expect("migrated");
+
+    let named: i64 = db
+        .query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('item_formats') WHERE name = 'digest'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("queried");
+    assert_eq!(named, 1, "the column no longer promises a path");
+    let promised: i64 = db
+        .query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('item_formats') WHERE name = 'blob_path'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("queried");
+    assert_eq!(promised, 0);
+
+    assert!(
+        db.execute(
+            "INSERT INTO item_formats (item_id, format, digest) VALUES (1, 'bad', 'añ')",
+            [],
+        )
+        .is_err(),
+        "the schema itself refuses what is not a digest now"
+    );
+    db.execute(
+        "INSERT INTO item_formats (item_id, format, digest) VALUES (1, 'fine', ?1)",
+        [&"f".repeat(64)],
+    )
+    .expect("and still takes a real one");
+}
+
+#[test]
+fn the_indexes_on_formats_are_there_after_a_migration_and_after_a_fresh_start() {
+    for wound_back in [false, true] {
+        let db = Connection::open_in_memory().expect("opened");
+        create(&db).expect("schema");
+        with_one_item(&db);
+        if wound_back {
+            db.execute_batch(AS_IT_WAS_IN_5).expect("wound back");
+        }
+        migrate(&db).expect("migrated");
+        for index in ["formats_by_digest", "formats_inline_size"] {
+            let found: i64 = db
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?1",
+                    [index],
+                    |row| row.get(0),
+                )
+                .expect("queried");
+            assert_eq!(found, 1, "{index}, wound back: {wound_back}");
+        }
+    }
+}
