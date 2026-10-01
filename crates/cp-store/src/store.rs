@@ -655,8 +655,8 @@ impl Store {
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text, app_source, search_app,
                                 label, search_label, card_color, pinned, paste_count,
-                                broken_since)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+                                broken_since, last_used_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?17)",
             params![
                 uuid,
                 kind,
@@ -673,7 +673,8 @@ impl Store {
                 i64::from(more.pinned),
                 more.pastes.max(0),
                 more.broken,
-                touched
+                touched,
+                more.used_at
             ],
         )?;
         let id = self.db.last_insert_rowid();
@@ -1112,6 +1113,7 @@ struct FormatRow {
 pub struct More<'a> {
     pub modified_at: Option<i64>,
     pub touched_at: Option<i64>,
+    pub used_at: Option<i64>,
     pub app: Option<&'a str>,
     pub label: Option<&'a str>,
     pub color: i64,
