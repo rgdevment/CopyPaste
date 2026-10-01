@@ -59,9 +59,13 @@ fn main() {
         }
     };
     if let Err(why) = app.run(&panel) {
+        note::note(&format!("the panel closed with an error: {why}"));
         eprintln!("the panel closed with an error: {why}");
         std::process::exit(1);
     }
+    note::note("the event loop is done");
+    app.close();
+    note::note("the panel closed cleanly");
 }
 
 #[derive(Debug, Clone)]

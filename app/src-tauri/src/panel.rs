@@ -9,6 +9,15 @@ pub struct Sidecar(Mutex<Option<CommandChild>>);
 #[derive(Default)]
 pub struct Trouble(Mutex<Option<String>>);
 
+#[derive(Default)]
+pub struct Relights(Mutex<Tries>);
+
+#[derive(Default)]
+struct Tries {
+    count: u32,
+    last: Option<std::time::Instant>,
+}
+
 pub fn trouble<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
     app.try_state::<Trouble>()
         .and_then(|state| state.0.lock().ok().and_then(|held| held.clone()))
@@ -42,6 +51,7 @@ fn all_is_well<R: Runtime>(app: &AppHandle<R>) {
 pub fn raise<R: Runtime>(app: &AppHandle<R>) {
     app.manage(Sidecar::default());
     app.manage(Trouble::default());
+    app.manage(Relights::default());
     match light(app) {
         Ok(()) => crate::note::note("the panel waits in the background"),
         Err(why) => crate::note::note(&format!("the panel did not start: {why}")),
@@ -59,13 +69,57 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
 fn shown<R: Runtime>(app: &AppHandle<R>) -> bool {
     allow(app);
     if say(app, "show").is_ok() {
+        forgive(app);
         return true;
+    }
+    if !may_light(app) {
+        return false;
     }
     if light(app).is_err() {
         return false;
     }
     allow(app);
     say(app, "show").is_ok()
+}
+
+fn may_light<R: Runtime>(app: &AppHandle<R>) -> bool {
+    let Some(state) = app.try_state::<Relights>() else {
+        return true;
+    };
+    let Ok(mut tries) = state.0.lock() else {
+        return true;
+    };
+    let now = std::time::Instant::now();
+    let since = tries.last.map(|then| now.duration_since(then));
+    match crate::reviving::asked_again(tries.count, since) {
+        crate::reviving::Verdict::Light { tries: count } => {
+            tries.count = count;
+            tries.last = Some(now);
+            crate::note::note(&format!("the panel is being restarted, attempt {count}"));
+            true
+        }
+        crate::reviving::Verdict::Wait => {
+            crate::note::note("the panel was just restarted, so this press waits its turn");
+            false
+        }
+        crate::reviving::Verdict::Enough => {
+            crate::note::note(&format!(
+                "the panel was restarted {} times without holding, so it will not be again for {} seconds",
+                crate::reviving::AT_MOST,
+                crate::reviving::FORGETS_AFTER.as_secs()
+            ));
+            false
+        }
+    }
+}
+
+fn forgive<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(state) = app.try_state::<Relights>()
+        && let Ok(mut tries) = state.0.lock()
+    {
+        tries.count = 0;
+        tries.last = None;
+    }
 }
 
 fn trouble_is<R: Runtime>(app: &AppHandle<R>, what: &str) {
@@ -121,6 +175,7 @@ fn still_there<R: Runtime>(app: &AppHandle<R>) -> bool {
 }
 
 pub fn relight<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
+    forgive(app);
     light(app)
 }
 
@@ -141,10 +196,21 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
                 CommandEvent::Stdout(line) => {
                     heard_from_panel(&handle, String::from_utf8_lossy(&line).trim());
                 }
-                CommandEvent::Terminated(_) => {
+                CommandEvent::Stderr(line) => {
+                    for said in String::from_utf8_lossy(&line).lines() {
+                        let said = said.trim();
+                        if !said.is_empty() {
+                            crate::note::note(&format!("the panel said: {said}"));
+                        }
+                    }
+                }
+                CommandEvent::Terminated(how) => {
                     let ours = forget(&handle, whose);
                     if ours {
-                        crate::note::note("the panel closed on its own");
+                        crate::note::note(&format!(
+                            "the panel closed on its own, code {:?}, signal {:?}",
+                            how.code, how.signal
+                        ));
                         trouble_is(&handle, "the panel stopped watching the clipboard");
                     }
                     break;

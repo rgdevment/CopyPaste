@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub struct Engine {
     watching: here::Watching,
     stop: Arc<AtomicBool>,
-    errands: Option<std::thread::JoinHandle<()>>,
+    errands: std::sync::Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 impl Engine {
@@ -27,8 +27,24 @@ impl Engine {
         Ok(Self {
             watching,
             stop,
-            errands,
+            errands: std::sync::Mutex::new(errands),
         })
+    }
+
+    pub fn close(&self) {
+        if !self.watching.close() {
+            note("the clipboard watcher would not stop and was left behind");
+        }
+        self.stop.store(true, Ordering::Relaxed);
+        let Ok(mut held) = self.errands.lock() else {
+            note("the errands thread could not be reached to stop it");
+            return;
+        };
+        if let Some(thread) = held.take()
+            && !cp_core::closing::join_soon(thread)
+        {
+            note("the errands thread would not stop and was left behind");
+        }
     }
 
     pub fn writing(&self) -> bool {
@@ -42,10 +58,7 @@ impl Engine {
 
 impl Drop for Engine {
     fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
-        if let Some(thread) = self.errands.take() {
-            let _ = thread.join();
-        }
+        self.close();
     }
 }
 

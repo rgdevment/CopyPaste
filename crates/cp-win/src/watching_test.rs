@@ -15,7 +15,11 @@ fn the_period_keeps_up_with_a_person_without_spinning() {
 #[test]
 fn stopping_is_what_drop_does_and_it_waits_for_the_thread() {
     let watching = Watching::every(Duration::from_millis(5), || {});
-    assert!(watching.thread.is_some());
+    assert!(watching.close(), "the thread ended in time");
+    assert!(
+        watching.close(),
+        "and closing what is already closed is no error"
+    );
     drop(watching);
 }
 

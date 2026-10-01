@@ -1,4 +1,5 @@
 pub mod capture;
+pub mod closing;
 pub mod destination;
 pub mod dib;
 pub mod formats;
@@ -10,6 +11,7 @@ pub mod paste;
 pub mod paste_as;
 pub mod reading;
 pub mod search;
+pub mod stamp;
 pub mod thumbnail;
 pub mod token;
 pub mod watch;

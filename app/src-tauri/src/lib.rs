@@ -2,6 +2,7 @@ mod backup;
 mod keys;
 mod note;
 mod panel;
+mod reviving;
 mod settings;
 mod tray;
 mod trust;
@@ -9,6 +10,7 @@ mod update;
 mod waking;
 
 pub fn run() {
+    note::catch_panics();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             tray::surface(app);

@@ -1007,6 +1007,7 @@ name = "cp-gui"
 version = "3.0.0"
 dependencies = [
  "cp-config",
+ "cp-core",
  "cp-mac-sys",
  "cp-store",
  "cp-win-sys",

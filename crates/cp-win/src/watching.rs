@@ -14,7 +14,7 @@ const _: () = assert!(NAP.as_millis() <= EVERY.as_millis());
 pub struct Watching {
     stop: Arc<AtomicBool>,
     watcher: Arc<Mutex<Watcher>>,
-    thread: Option<std::thread::JoinHandle<()>>,
+    thread: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 impl Watching {
@@ -45,12 +45,23 @@ impl Watching {
         Self {
             stop,
             watcher,
-            thread: Some(thread),
+            thread: Mutex::new(Some(thread)),
         }
     }
 
     pub fn start(on_fresh: impl FnMut() + Send + 'static) -> Self {
         Self::every(EVERY, on_fresh)
+    }
+
+    pub fn close(&self) -> bool {
+        self.stop.store(true, Ordering::Relaxed);
+        let Ok(mut held) = self.thread.lock() else {
+            return false;
+        };
+        match held.take() {
+            Some(thread) => cp_core::closing::join_soon(thread),
+            None => true,
+        }
     }
 
     pub fn writing(&self) -> bool {
@@ -78,10 +89,7 @@ impl Watching {
 
 impl Drop for Watching {
     fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
-        if let Some(thread) = self.thread.take() {
-            let _ = thread.join();
-        }
+        let _ = self.close();
     }
 }
 
