@@ -618,3 +618,102 @@ fn only_row(store: &Store) -> crate::Listed {
     assert_eq!(page.rows.len(), 1);
     page.rows.into_iter().next().expect("one row")
 }
+
+#[test]
+#[ignore = "needs a real history: CP_REAL_DB=<path to history.db> cargo test -p cp-store -- --ignored"]
+fn a_real_history_crosses_a_backup_without_losing_what_it_knows() {
+    let Ok(said) = std::env::var("CP_REAL_DB") else {
+        panic!("point CP_REAL_DB at a copy of a real history.db");
+    };
+    let mine = std::path::PathBuf::from(said);
+    let source = Store::open(&mine).expect("the history opens");
+    let before = measured(&source);
+    assert!(
+        before.items > 100,
+        "this is meant for a history with some life in it"
+    );
+
+    let dir = tempfile::tempdir().expect("a folder");
+    let backup = dir.path().join("mine.cpbackup");
+    write(&source, &backup, 9_000).expect("exported");
+    drop(source);
+
+    let landed = Store::open(&dir.path().join("brought").join("history.db")).expect("a fresh one");
+    let brought = bring(&backup, &landed, 9_100, &|what| println!("    {what}")).expect("imported");
+    let after = measured(&landed);
+
+    println!("    items {} -> {}", before.items, after.items);
+    println!("    con grupo {} -> {}", before.grouped, after.grouped);
+    println!("    con recencia {} -> {}", before.used, after.used);
+    println!("    pegados {} -> {}", before.pastes, after.pastes);
+    println!("    fijados {} -> {}", before.pinned, after.pinned);
+    println!("    con nombre {} -> {}", before.labelled, after.labelled);
+    println!(
+        "    con procedencia {} -> {}",
+        before.sourced, after.sourced
+    );
+    println!("    con medidas {} -> {}", before.meta, after.meta);
+    println!("    con texto leido {} -> {}", before.ocr, after.ocr);
+    println!("    rechazados {}", brought.refused);
+
+    assert_eq!(
+        brought.refused, 0,
+        "nothing may be dropped without a reason"
+    );
+    assert_eq!(after.items, before.items, "every item arrives");
+    assert_eq!(after.grouped, before.grouped, "the groups arrive");
+    assert_eq!(
+        after.used, before.used,
+        "when each one was last used arrives"
+    );
+    assert_eq!(
+        after.pastes, before.pastes,
+        "how often each was used arrives"
+    );
+    assert_eq!(after.pinned, before.pinned, "what was pinned stays pinned");
+    assert_eq!(after.labelled, before.labelled, "the names arrive");
+    assert_eq!(
+        after.sourced, before.sourced,
+        "where each came from arrives"
+    );
+    assert_eq!(after.meta, before.meta, "the measurements arrive");
+    assert_eq!(after.ocr, before.ocr, "what was read inside arrives");
+}
+
+#[cfg(test)]
+struct Counted {
+    items: i64,
+    grouped: i64,
+    used: i64,
+    pastes: i64,
+    pinned: i64,
+    labelled: i64,
+    sourced: i64,
+    meta: i64,
+    ocr: i64,
+}
+
+#[cfg(test)]
+fn measured(store: &Store) -> Counted {
+    let one = |sql: &str| -> i64 {
+        store
+            .raw()
+            .query_row(sql, [], |row| row.get(0))
+            .expect("counted")
+    };
+    Counted {
+        items: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL"),
+        grouped: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND group_key <> ''"),
+        used: one(
+            "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND last_used_at IS NOT NULL",
+        ),
+        pastes: one("SELECT COALESCE(SUM(paste_count), 0) FROM items WHERE deleted_at IS NULL"),
+        pinned: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND pinned = 1"),
+        labelled: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND label IS NOT NULL"),
+        sourced: one(
+            "SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND app_source IS NOT NULL",
+        ),
+        meta: one("SELECT COUNT(*) FROM item_meta"),
+        ocr: one("SELECT COUNT(*) FROM items WHERE deleted_at IS NULL AND ocr_text IS NOT NULL"),
+    }
+}
