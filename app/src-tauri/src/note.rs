@@ -1,7 +1,4 @@
-use std::io::Write;
-use std::path::PathBuf;
-
-const UP_TO: u64 = 1024 * 1024;
+use std::path::{Path, PathBuf};
 
 pub fn where_to() -> PathBuf {
     crate::settings::folder()
@@ -9,33 +6,16 @@ pub fn where_to() -> PathBuf {
         .join("cp-gui.log")
 }
 
-pub fn note(what: &str) {
-    let path = where_to();
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-        let _ = cp_store::restrict(dir, 0o700);
-    }
-    if std::fs::metadata(&path).map_or(0, |it| it.len()) > UP_TO {
-        let _ = std::fs::write(&path, b"");
-    }
-    let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-    else {
-        return;
-    };
-    let _ = cp_store::restrict(&path, 0o600);
-    let _ = writeln!(file, "{} {what}", clock());
+fn guard(at: &Path, mode: u32) {
+    let _ = cp_store::restrict(at, mode);
 }
 
-fn clock() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|it| it.as_secs())
-        .unwrap_or(0);
-    let day = now % 86_400;
-    format!("{:02}:{:02}:{:02}", day / 3600, (day % 3600) / 60, day % 60)
+pub fn note(what: &str) {
+    cp_core::note::note_to(&where_to(), what, &guard);
+}
+
+pub fn catch_panics() {
+    cp_core::note::catch_panics(note);
 }
 
 #[cfg(test)]

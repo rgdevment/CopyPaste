@@ -13,8 +13,17 @@ fn the_log_sits_where_the_privacy_note_says_it_does() {
 }
 
 #[test]
-fn the_clock_reads_as_hours_minutes_and_seconds() {
-    let said = clock();
-    assert_eq!(said.len(), 8);
-    assert!(said.chars().filter(|one| *one == ':').count() == 2);
+fn the_tray_keeps_its_own_log_apart_from_the_panel() {
+    let path = where_to();
+    assert_ne!(
+        path.file_name().and_then(|it| it.to_str()),
+        Some("cp-panel.log"),
+        "two processes writing the same file would interleave their lines"
+    );
+    if crate::settings::folder().is_some() {
+        assert_eq!(
+            path.parent().and_then(|dir| dir.file_name()),
+            Some(std::ffi::OsStr::new("logs"))
+        );
+    }
 }

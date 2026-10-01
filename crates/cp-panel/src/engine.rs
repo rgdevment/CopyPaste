@@ -11,13 +11,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub struct Engine {
     watching: here::Watching,
     stop: Arc<AtomicBool>,
-    errands: Option<std::thread::JoinHandle<()>>,
+    errands: std::sync::Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 impl Engine {
     pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
-        let watching = here::Watching::start(move || {
+        let watching = here::watch_start(move || {
             if let Some(id) = kept(&store) {
                 fresh(id);
             }
@@ -27,8 +27,24 @@ impl Engine {
         Ok(Self {
             watching,
             stop,
-            errands,
+            errands: std::sync::Mutex::new(errands),
         })
+    }
+
+    pub fn close(&self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if !self.watching.close() {
+            note("the clipboard watcher would not stop and was left behind");
+        }
+        let Ok(mut held) = self.errands.lock() else {
+            note("the errands thread could not be reached to stop it");
+            return;
+        };
+        if let Some(thread) = held.take()
+            && !cp_core::closing::join_soon(thread)
+        {
+            note("the errands thread would not stop and was left behind");
+        }
     }
 
     pub fn writing(&self) -> bool {
@@ -42,10 +58,7 @@ impl Engine {
 
 impl Drop for Engine {
     fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
-        if let Some(thread) = self.errands.take() {
-            let _ = thread.join();
-        }
+        self.close();
     }
 }
 

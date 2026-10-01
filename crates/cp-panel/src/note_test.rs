@@ -1,20 +1,23 @@
 use super::*;
 
 #[test]
-fn the_clock_reads_as_hours_minutes_and_seconds() {
-    let stamp = clock_now();
-    assert_eq!(stamp.len(), 8);
-    assert_eq!(stamp.matches(':').count(), 2);
-    assert!(
-        stamp.chars().all(|one| one.is_ascii_digit() || one == ':'),
-        "{stamp}"
+fn the_log_sits_where_the_privacy_note_says_it_does() {
+    let where_it_is = where_to();
+    assert!(where_it_is.starts_with(folder()));
+    assert_eq!(
+        where_it_is.file_name().and_then(|name| name.to_str()),
+        Some("cp-panel.log")
     );
 }
 
 #[test]
 fn what_the_log_holds_is_only_readable_by_whoever_copied_it() {
-    note("any line at all");
-    let path = where_to();
+    let dir = std::env::temp_dir().join(format!("cp-panel-guard-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a folder to write in");
+    let path = dir.join("cp-panel.log");
+    std::fs::write(&path, b"a line\n").expect("a log");
+    guard(&path, 0o600);
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -26,14 +29,5 @@ fn what_the_log_holds_is_only_readable_by_whoever_copied_it() {
     }
     #[cfg(not(unix))]
     assert!(path.exists());
-}
-
-#[test]
-fn the_log_sits_where_the_privacy_note_says_it_does() {
-    let where_it_is = where_to();
-    assert!(where_it_is.starts_with(folder()));
-    assert_eq!(
-        where_it_is.file_name().and_then(|name| name.to_str()),
-        Some("cp-panel.log")
-    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

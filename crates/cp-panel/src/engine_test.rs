@@ -316,3 +316,38 @@ fn plain_text_asks_nobody_for_anything() {
             .is_empty()
     );
 }
+
+fn aside(name: &str) -> std::path::PathBuf {
+    let dir = std::env::temp_dir().join(format!("cp-engine-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a folder to work in");
+    dir
+}
+
+#[test]
+fn an_engine_that_started_closes_and_closing_it_twice_is_no_error() {
+    let dir = aside("closing");
+    let engine = Engine::start(&dir.join("history.db"), |_| {}).expect("an engine");
+    let started = std::time::Instant::now();
+    engine.close();
+    engine.close();
+    assert!(
+        started.elapsed() < cp_core::closing::PATIENCE * 3,
+        "closing cannot take longer than the patience it was given"
+    );
+    drop(engine);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn an_engine_nobody_closed_is_still_closed_by_dropping_it() {
+    let dir = aside("dropping");
+    let engine = Engine::start(&dir.join("history.db"), |_| {}).expect("an engine");
+    let started = std::time::Instant::now();
+    drop(engine);
+    assert!(
+        started.elapsed() < cp_core::closing::PATIENCE * 3,
+        "the drop has the same deadline as the deliberate close"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

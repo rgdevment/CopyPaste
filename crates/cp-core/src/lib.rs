@@ -1,4 +1,5 @@
 pub mod capture;
+pub mod closing;
 pub mod destination;
 pub mod dib;
 pub mod formats;
@@ -6,13 +7,16 @@ pub mod hash;
 pub mod identity;
 pub mod item;
 pub mod kind;
+pub mod note;
 pub mod paste;
 pub mod paste_as;
 pub mod reading;
 pub mod search;
+pub mod stamp;
 pub mod thumbnail;
 pub mod token;
 pub mod watch;
+pub mod watching;
 
 pub use capture::Captured;
 pub use formats::Family;

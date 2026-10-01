@@ -120,6 +120,13 @@ impl App {
         Ok((panel, app))
     }
 
+    pub fn close(&self) {
+        let engine = self.state.borrow().engine.clone();
+        if let Some(engine) = engine {
+            engine.close();
+        }
+    }
+
     pub fn run(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
         let serving = self.state.borrow().options.serve;
         if !serving {
@@ -260,16 +267,15 @@ impl App {
                     ui.set_query(rest.into());
                 }
                 let later = ui.as_weak();
-                let state = state.clone();
-                state.clone().borrow().typing.start(
-                    slint::TimerMode::SingleShot,
-                    SETTLES,
-                    move || {
-                        if let Some(ui) = later.upgrade() {
+                let mine = Rc::downgrade(&state);
+                state
+                    .borrow()
+                    .typing
+                    .start(slint::TimerMode::SingleShot, SETTLES, move || {
+                        if let (Some(ui), Some(state)) = (later.upgrade(), mine.upgrade()) {
                             refresh(&ui, &state);
                         }
-                    },
-                );
+                    });
             }
         });
         let ui = self.ui.clone();
@@ -1145,11 +1151,11 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
         return;
     }
     let weak = ui.as_weak();
-    let mine = state.clone();
+    let mine = Rc::downgrade(state);
     let mut was_ours = false;
     held.leaving
         .start(slint::TimerMode::Repeated, LOOKS, move || {
-            let Some(ui) = weak.upgrade() else {
+            let (Some(ui), Some(state)) = (weak.upgrade(), mine.upgrade()) else {
                 return;
             };
             if !ui.window().is_visible() {
@@ -1160,7 +1166,7 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
                 return;
             }
             if was_ours {
-                mine.borrow().leaving.stop();
+                state.borrow().leaving.stop();
                 vanish(&ui);
             }
         });
