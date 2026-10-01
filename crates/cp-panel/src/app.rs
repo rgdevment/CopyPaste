@@ -1079,8 +1079,8 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
             if ui.show().is_ok() {
                 forward(ui);
                 appear(ui);
+                complain(ui, said);
             }
-            complain(ui, said);
         }
     }
 }

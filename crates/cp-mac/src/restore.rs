@@ -22,9 +22,9 @@ fn writable_of(item: &Item) -> Vec<(&str, &[u8])> {
         .collect()
 }
 
-fn one_item_per_file<'a>(
-    writable: &[(&'a str, &'a [u8])],
-) -> Option<Vec<Vec<(&'a str, &'a [u8])>>> {
+type Entry<'a> = (&'a str, &'a [u8]);
+
+fn one_item_per_file<'a>(writable: &[Entry<'a>]) -> Option<Vec<Vec<Entry<'a>>>> {
     let joined = writable.iter().find(|(uti, _)| *uti == FILE_URL)?.1;
     let urls: Vec<&[u8]> = joined
         .split(|byte| *byte == b'\n')

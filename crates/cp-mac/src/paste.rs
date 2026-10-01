@@ -84,8 +84,9 @@ impl Paster {
             self.wait(0.004);
         }
 
-        let route = if Readiness::probe().secure_input {
-            match around_protected_input(route, Readiness::probe().accessibility) {
+        let now = Readiness::probe();
+        let route = if now.secure_input {
+            match around_protected_input(route, now.accessibility) {
                 Some(other) => other,
                 None => return Outcome::Degraded(Failure::InputProtected),
             }
