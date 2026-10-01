@@ -91,7 +91,7 @@ export component Pill inherits Rectangle {
     in property <Chip> chip;
     accessible-role: AccessibleRole.button;
     accessible-label: chip.label;
-    callback chosen(string);
+    callback chosen(string, bool);
     height: 24px;
     width: content.preferred-width;
     border-radius: 12px;
@@ -116,7 +116,13 @@ export component Pill inherits Rectangle {
         if chip.count != "" : Text { text: chip.count; color: chip.selected ? Theme.accent-dim : Theme.muted; font-size: 10px; vertical-alignment: center; }
     }
     touch := TouchArea {
-        clicked => { root.chosen(chip.key); }
+        property <bool> adding;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                self.adding = event.modifiers.control;
+            }
+        }
+        clicked => { root.chosen(chip.key, touch.adding); }
     }
 }
 

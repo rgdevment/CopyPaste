@@ -172,7 +172,7 @@ impl App {
     }
 
     pub fn choose_chip(&self, key: &str) {
-        toggle_tag(&self.state, key);
+        pick_tag(&self.state, key, false);
         self.refresh();
     }
 
@@ -239,8 +239,8 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
-        panel.on_chip_chosen(move |key| {
-            toggle_tag(&state, key.as_str());
+        panel.on_chip_chosen(move |key, adding| {
+            pick_tag(&state, key.as_str(), adding);
             if let Some(ui) = ui.upgrade() {
                 blink(&ui);
                 refresh(&ui, &state);
@@ -532,7 +532,7 @@ impl App {
                     }
                 }
                 Asking::Kinds => {
-                    toggle_tag(&state, key.as_str());
+                    pick_tag(&state, key.as_str(), false);
                     blink(&ui);
                     refresh(&ui, &state);
                 }
@@ -751,14 +751,9 @@ fn filter_of(state: &State) -> Filter {
     filter
 }
 
-fn toggle_tag(state: &Rc<RefCell<State>>, key: &str) {
-    let mut state = state.borrow_mut();
-    match state.tags.iter().position(|one| one == key) {
-        Some(at) => {
-            state.tags.remove(at);
-        }
-        None => state.tags.push(key.to_owned()),
-    }
+fn pick_tag(state: &Rc<RefCell<State>>, key: &str, adding: bool) {
+    let next = crate::tags::after(&state.borrow().tags, key, adding);
+    state.borrow_mut().tags = next;
 }
 
 fn tags_of(state: &State) -> Vec<Chip> {

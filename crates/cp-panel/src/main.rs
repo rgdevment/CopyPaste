@@ -14,6 +14,7 @@ mod paired;
 mod papers;
 mod say;
 mod shape;
+mod tags;
 mod view;
 mod wave;
 mod ways;

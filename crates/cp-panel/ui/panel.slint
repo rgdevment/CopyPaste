@@ -54,7 +54,7 @@ export component Panel inherits Window {
     out property <length> list-top: list.absolute-position.y - panel.absolute-position.y;
 
     callback search(string);
-    callback chip-chosen(string);
+    callback chip-chosen(string, bool);
     callback pin-filter();
     callback drop-tag(string);
     callback clear-filters();
@@ -426,7 +426,7 @@ export component Panel inherits Window {
                                     alignment: start;
                                     for chip in root.chips : Pill {
                                         chip: chip;
-                                        chosen(key) => { root.chip-chosen(key); }
+                                        chosen(key, adding) => { root.chip-chosen(key, adding); }
                                     }
                                 }
                             }

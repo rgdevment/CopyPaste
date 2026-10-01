@@ -20,6 +20,14 @@ const LOOKED_FOR: Record<string, string> = {
   "right arrow": "event.text == Key.RightArrow",
 };
 
+const CLICKS = new Set(["clic", "click", "doble clic", "double click"]);
+
+const MODIFIER: Record<string, string> = {
+  ctrl: "modifiers.control",
+  alt: "modifiers.alt",
+  shift: "modifiers.shift",
+};
+
 const DESCRIBED = new Set([
   "flechas",
   "arrows",
@@ -82,6 +90,39 @@ describe("la tabla de atajos", () => {
       expect(en[at].keys.length).toBeGreaterThan(0);
       expect(es[at].does).not.toBe(en[at].does);
     }
+  });
+
+  it("un clic con modificador lo lee de verdad lo que se pincha", () => {
+    const cards = readFileSync(
+      join(__dirname, "..", "..", "..", "crates", "cp-panel", "ui", "cards.slint"),
+      "utf8",
+    );
+    let found = 0;
+    for (const tongue of ["es", "en"] as const) {
+      adopt(tongue);
+      for (const row of panelKeys()) {
+        for (const combination of row.keys.split("·")) {
+          const parts = combination
+            .split("+")
+            .map((one) => one.trim().toLowerCase())
+            .filter((one) => one.length > 0);
+          const last = parts.at(-1);
+          if (!last || !CLICKS.has(last) || parts.length < 2) {
+            continue;
+          }
+          for (const held of parts.slice(0, -1)) {
+            const looked = MODIFIER[held];
+            expect(looked, `«${held}» is not a modifier`).toBeTruthy();
+            expect(
+              cards,
+              `«${row.keys}» promises ${looked} and nothing that is clicked reads it`,
+            ).toContain(looked);
+            found += 1;
+          }
+        }
+      }
+    }
+    expect(found, "the table stopped promising any modified click").toBeGreaterThan(0);
   });
 
   it("filtra por tipos que el buscador conoce", () => {
