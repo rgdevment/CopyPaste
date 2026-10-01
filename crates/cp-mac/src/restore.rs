@@ -28,6 +28,19 @@ fn one_item_per_file<'a>(
     let joined = writable.iter().find(|(uti, _)| *uti == FILE_URL)?.1;
     let urls: Vec<&[u8]> = joined
         .split(|byte| *byte == b'\n')
+        .map(|url| {
+            let from = url
+                .iter()
+                .take_while(|byte| byte.is_ascii_whitespace())
+                .count();
+            let kept = url.len()
+                - url
+                    .iter()
+                    .rev()
+                    .take_while(|byte| byte.is_ascii_whitespace())
+                    .count();
+            &url[from..kept]
+        })
         .filter(|url| !url.is_empty())
         .collect();
     if urls.len() < 2 {

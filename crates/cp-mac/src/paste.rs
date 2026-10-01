@@ -73,7 +73,7 @@ impl Paster {
                 return Outcome::Degraded(Failure::TargetGone);
             }
             if attempt.on_failure(Failure::NotForeground) != Next::Retry {
-                return Outcome::Degraded(Failure::NotForeground);
+                return Outcome::Degraded(Failure::ForegroundTimeout);
             }
             frontmost::bring_to_front(target.pid);
             self.wait(SETTLE.as_secs_f64());

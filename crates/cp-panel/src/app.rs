@@ -1072,12 +1072,15 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
         here::Sent::Done => {}
         here::Sent::Degraded(why) => {
             state.borrow().ahead.store(ahead, Ordering::Relaxed);
-            note(&format!("it stays on the clipboard, unpasted: {why:?}"));
+            let said = crate::excuse::why_not(why, crate::say::in_english());
+            note(&format!(
+                "it stays on the clipboard, unpasted: {why:?}: {said}"
+            ));
             if ui.show().is_ok() {
                 forward(ui);
                 appear(ui);
-                complain(ui, crate::excuse::why_not(why, crate::say::in_english()));
             }
+            complain(ui, said);
         }
     }
 }

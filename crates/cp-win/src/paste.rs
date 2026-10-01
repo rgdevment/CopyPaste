@@ -37,7 +37,7 @@ pub fn paste_into(target: &Target, hide_panel: impl FnOnce()) -> Outcome {
             return Outcome::Degraded(Failure::TargetGone);
         }
         if attempt.on_failure(Failure::NotForeground) != Next::Retry {
-            return Outcome::Degraded(Failure::NotForeground);
+            return Outcome::Degraded(Failure::ForegroundTimeout);
         }
         frontmost::bring_forward(target.window);
         std::thread::sleep(SETTLE);

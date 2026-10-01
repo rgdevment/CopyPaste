@@ -167,6 +167,18 @@ file:///a/two.png"[..],
 }
 
 #[test]
+fn a_windows_line_ending_does_not_travel_inside_the_url() {
+    let joined = &b"file:///a/one.txt
+file:///a/two.txt"[..];
+    let per_file = one_item_per_file(&[(FILE_URL, joined)]).expect("two files");
+    assert_eq!(
+        per_file[0],
+        vec![(FILE_URL, &b"file:///a/one.txt"[..])],
+        "a stray carriage return would make Finder look for a file nobody named"
+    );
+}
+
+#[test]
 fn an_empty_line_between_urls_is_not_a_file() {
     let joined = &b"file:///a/one.txt
 
