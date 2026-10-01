@@ -18,8 +18,8 @@ use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{files, media, ocr, source, thumbnail};
 
-const CASES: u32 = 47;
-const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2"];
+const CASES: u32 = 48;
+const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2", "Q1"];
 const SKIPPED: &str = "skipped: ";
 
 const VIRTUAL_FILE_NAME: &str = "virtual attachment.txt";
@@ -372,6 +372,82 @@ fn what_is_read_inside_an_image(b: &mut Battery) {
             None => Ok(()),
             Some(invented) => Err(format!("invented «{invented}»")),
         }
+    });
+}
+
+fn what_the_shell_knows_about_a_document(b: &mut Battery) {
+    b.group("Q · Lo que el shell sabe de un documento");
+
+    b.case_or_skip(
+        "Q1",
+        "un archivo de oficina publica sus propias medidas",
+        || {
+            let Some(said) = std::env::var_os("CP_PROBE_DOC") else {
+                return Err(format!(
+                    "{SKIPPED}pon CP_PROBE_DOC con la ruta de un .xlsx, .docx o .pptx real"
+                ));
+            };
+            let path = std::path::PathBuf::from(said);
+            if !path.exists() {
+                return Err(format!("{SKIPPED}{} no está ahí", path.display()));
+            }
+            let Some(found) = cp_win_sys::media::everything_about(&path) else {
+                return Err("no se pudo abrir la tienda de propiedades de ese archivo".into());
+            };
+            if found.how_many == 0 {
+                return Err("el shell abre el archivo y no publica ni una propiedad".into());
+            }
+            println!(
+                "            {} publicadas, {} legibles como texto:",
+                found.how_many,
+                found.said.len()
+            );
+            for (name, value) in &found.said {
+                let cut: String = value.chars().take(70).collect();
+                println!("              {name} = {cut}");
+            }
+            let counted: Vec<&str> = found
+                .said
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .filter(|name| {
+                    name.contains("PageCount")
+                        || name.contains("SlideCount")
+                        || name.contains("WordCount")
+                        || name.contains("LineCount")
+                        || name.contains("ParagraphCount")
+                })
+                .collect();
+            if counted.is_empty() {
+                return Err(
+                    "ninguna propiedad cuenta páginas, palabras ni diapositivas: la vista de \
+                     oficina tendrá que leer el zip"
+                        .into(),
+                );
+            }
+            println!("            cuentan: {}", counted.join(", "));
+            Ok(())
+        },
+    );
+}
+
+fn what_hangs_is_never_asked_for(b: &mut Battery) {
+    b.group("C · Los formatos que cuelgan no se piden");
+
+    b.case("C1", "nada marcado como presencia se llega a pedir", || {
+        let clipboard = Clipboard::open().ok_or("no abrió")?;
+        let ids = clipboard.offered();
+        let risky: Vec<String> = ids
+            .iter()
+            .map(|id| name_of(*id))
+            .filter(|name| CATALOG.decide(name) != Take::Payload)
+            .collect();
+        println!(
+            "            {} anotados sin pedir: {}",
+            risky.len(),
+            risky.join(", ")
+        );
+        Ok(())
     });
 }
 
@@ -1199,23 +1275,9 @@ fn main() -> std::process::ExitCode {
         opened
     });
 
-    b.group("C · Los formatos que cuelgan no se piden");
+    what_the_shell_knows_about_a_document(&mut b);
 
-    b.case("C1", "nada marcado como presencia se llega a pedir", || {
-        let clipboard = Clipboard::open().ok_or("no abrió")?;
-        let ids = clipboard.offered();
-        let risky: Vec<String> = ids
-            .iter()
-            .map(|id| name_of(*id))
-            .filter(|name| CATALOG.decide(name) != Take::Payload)
-            .collect();
-        println!(
-            "            {} anotados sin pedir: {}",
-            risky.len(),
-            risky.join(", ")
-        );
-        Ok(())
-    });
+    what_hangs_is_never_asked_for(&mut b);
 
     b.group("D · El vigilante");
 
