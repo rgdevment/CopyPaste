@@ -1231,7 +1231,7 @@ fn blobs_of_an_item_with_no_blobs_is_empty() {
 }
 
 #[test]
-fn a_blob_used_by_only_one_item_is_not_shared() {
+fn the_blob_of_the_only_item_that_held_it_stops_being_referenced_when_it_goes() {
     let (_dir, store) = on_disk();
     let id = store
         .insert_item("uuid-only", &big_image(11), "", 1)
@@ -1241,11 +1241,16 @@ fn a_blob_used_by_only_one_item_is_not_shared() {
         .expect("blobs")
         .pop()
         .expect("there is one");
-    assert!(!store.blob_is_shared(&digest, id).expect("queried"));
+    assert!(store.blob_is_referenced(&digest).expect("queried"));
+    store.mark_deleted(id, 2).expect("deleted");
+    assert!(
+        !store.blob_is_referenced(&digest).expect("queried"),
+        "nobody points at it any more, so it can be let go"
+    );
 }
 
 #[test]
-fn a_blob_used_by_two_items_is_shared() {
+fn a_blob_two_items_hold_survives_the_first_of_them_going() {
     let (_dir, store) = on_disk();
     let first = store
         .insert_item("uuid-1", &big_image(12), "", 1)
@@ -1258,7 +1263,15 @@ fn a_blob_used_by_two_items_is_shared() {
         .expect("blobs")
         .pop()
         .expect("there is one");
-    assert!(store.blob_is_shared(&digest, first).expect("queried"));
+    store.mark_deleted(first, 3).expect("deleted");
+    assert!(
+        store.blob_is_referenced(&digest).expect("queried"),
+        "the other item still needs it"
+    );
+    assert!(
+        store.blobs().expect("a blob store").exists(&digest),
+        "and so its bytes are still on disk"
+    );
 }
 
 #[test]
@@ -1701,4 +1714,93 @@ fn retention_with_nothing_old_enough_removes_nothing() {
 fn a_word_that_is_not_there_finds_nothing() {
     let store = seeded();
     assert!(search(&store, "berlin").is_empty());
+}
+
+fn aged(path: &std::path::Path) {
+    let file = std::fs::File::options()
+        .write(true)
+        .open(path)
+        .expect("opened");
+    file.set_modified(std::time::UNIX_EPOCH).expect("aged");
+}
+
+#[test]
+fn editing_a_text_into_the_very_same_text_does_not_throw_its_blob_away() {
+    let (_dir, store) = on_disk();
+    let long = "a".repeat(cp_core::item::INLINE_UP_TO + 1);
+    let as_a_blob = Item {
+        kind: Some(cp_core::kind::Kind::Text),
+        formats: vec![Format {
+            id: cp_core::item::SYNTHETIC_TEXT.into(),
+            payload: Payload::stored(long.as_bytes().to_vec()),
+        }],
+    };
+    let id = store
+        .insert_item("uuid-edited", &as_a_blob, &long[..10], 1)
+        .expect("insert");
+    let digest = store
+        .blobs_of(id)
+        .expect("blobs")
+        .pop()
+        .expect("a text that long lives in a blob");
+    let blobs = store.blobs().expect("a blob store");
+    aged(&blobs.where_it_is(&digest).expect("a real digest"));
+
+    store.update_text(id, &long, 2).expect("edited");
+
+    assert!(
+        blobs.exists(&digest),
+        "the row still points at it, so the bytes cannot be gone"
+    );
+    assert_eq!(
+        store
+            .payload_of(id, cp_core::item::SYNTHETIC_TEXT)
+            .expect("read"),
+        Some(long.as_bytes().to_vec()),
+        "and the item still reads back whole"
+    );
+}
+
+#[test]
+fn a_clear_that_cannot_be_written_leaves_every_file_where_it_was() {
+    let (dir, store) = on_disk();
+    let id = store
+        .insert_item("uuid-kept", &big_image(21), "", 1)
+        .expect("insert");
+    let digest = store
+        .blobs_of(id)
+        .expect("blobs")
+        .pop()
+        .expect("there is one");
+    let blobs = store.blobs().expect("a blob store");
+    let blob = blobs.where_it_is(&digest).expect("a real digest");
+    aged(&blob);
+    let thumb = dir.path().join("thumbs").join("kept.png");
+    std::fs::create_dir_all(thumb.parent().expect("a folder")).expect("a folder");
+    std::fs::write(&thumb, b"a drawn thumbnail").expect("a thumb");
+    store
+        .set_thumb(id, Some(&thumb.to_string_lossy()), 2)
+        .expect("noted");
+
+    let other = rusqlite::Connection::open(dir.path().join("history.db")).expect("a second reader");
+    other
+        .execute_batch("BEGIN EXCLUSIVE;")
+        .expect("the database is held by somebody else");
+
+    assert!(
+        store.clear_all_unpinned(3).is_err(),
+        "nothing can be written while another connection holds it"
+    );
+
+    assert!(blob.exists(), "the blob outlived a clear that never landed");
+    assert!(thumb.exists(), "and so did the thumbnail");
+    other.execute_batch("ROLLBACK;").expect("let go");
+    assert_eq!(
+        store
+            .payload_of(id, "public.png")
+            .expect("read")
+            .map(|b| b.len()),
+        Some(200_000),
+        "the item still reads back whole"
+    );
 }

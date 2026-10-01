@@ -257,6 +257,19 @@ impl Clauses {
     }
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct Gone {
+    thumbs: Vec<String>,
+    digests: Vec<String>,
+}
+
+impl Gone {
+    fn and(&mut self, other: Gone) {
+        self.thumbs.extend(other.thumbs);
+        self.digests.extend(other.digests);
+    }
+}
+
 pub struct Store {
     db: Connection,
     blobs: Option<crate::Blobs>,
@@ -452,13 +465,15 @@ impl Store {
     }
 
     pub fn mark_deleted(&self, id: i64, at: i64) -> Result<()> {
-        self.erase(id, at)?;
+        let gone = self.erase(id, at)?;
+        self.forget(&gone)?;
         self.checkpoint_briefly()?;
         Ok(())
     }
 
-    fn erase(&self, id: i64, at: i64) -> Result<()> {
-        self.drop_thumb(id)?;
+    fn erase(&self, id: i64, at: i64) -> Result<Gone> {
+        let mut gone = Gone::default();
+        gone.thumbs.extend(self.thumb_of(id)?);
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
@@ -468,38 +483,47 @@ impl Store {
              WHERE id = ?1",
             params![id, at],
         )?;
-        self.release(id)
+        gone.and(self.release(id)?);
+        Ok(gone)
     }
 
-    fn drop_thumb(&self, id: i64) -> Result<()> {
-        let path: Option<String> = self
+    fn thumb_of(&self, id: i64) -> Result<Option<String>> {
+        Ok(self
             .db
             .query_row("SELECT thumb_path FROM items WHERE id = ?1", [id], |row| {
                 row.get(0)
             })
             .optional()?
-            .flatten();
-        if let Some(path) = path {
-            let _ = crate::blobs::remove_at(std::path::Path::new(&path));
-        }
-        Ok(())
+            .flatten())
     }
 
-    fn release(&self, id: i64) -> Result<()> {
-        if let Some(blobs) = &self.blobs {
-            for digest in self.blobs_of(id)? {
-                if self.blob_is_shared(&digest, id)? {
-                    continue;
-                }
-                blobs.remove_if_settled(&digest)?;
-            }
-        }
+    fn release(&self, id: i64) -> Result<Gone> {
+        let gone = Gone {
+            thumbs: Vec::new(),
+            digests: self.blobs_of(id)?,
+        };
         self.db
             .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
         self.db
             .execute("DELETE FROM item_meta WHERE item_id = ?1", [id])?;
         self.db
             .execute("DELETE FROM pending_work WHERE item_id = ?1", [id])?;
+        Ok(gone)
+    }
+
+    fn forget(&self, gone: &Gone) -> Result<()> {
+        for path in &gone.thumbs {
+            let _ = crate::blobs::remove_at(std::path::Path::new(path));
+        }
+        let Some(blobs) = &self.blobs else {
+            return Ok(());
+        };
+        for digest in &gone.digests {
+            if self.blob_is_referenced(digest)? {
+                continue;
+            }
+            blobs.remove_if_settled(digest)?;
+        }
         Ok(())
     }
 
@@ -512,11 +536,13 @@ impl Store {
     }
 
     fn erase_all(&self, ids: &[i64], at: i64) -> Result<usize> {
+        let mut gone = Gone::default();
         let transaction = self.db.unchecked_transaction()?;
         for id in ids {
-            self.erase(*id, at)?;
+            gone.and(self.erase(*id, at)?);
         }
         transaction.commit()?;
+        self.forget(&gone)?;
         Ok(ids.len())
     }
 
@@ -528,10 +554,10 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    fn blob_is_shared(&self, digest: &str, besides: i64) -> Result<bool> {
+    fn blob_is_referenced(&self, digest: &str) -> Result<bool> {
         let count: i64 = self.db.query_row(
-            "SELECT COUNT(*) FROM item_formats WHERE digest = ?1 AND item_id != ?2",
-            params![digest, besides],
+            "SELECT COUNT(*) FROM item_formats WHERE digest = ?1",
+            [digest],
             |row| row.get(0),
         )?;
         Ok(count > 0)
@@ -742,7 +768,10 @@ impl Store {
         if changed == 0 {
             return Err(Error::NoSuchItem { id });
         }
-        let previous = self.blobs_of(id)?;
+        let previous = Gone {
+            thumbs: Vec::new(),
+            digests: self.blobs_of(id)?,
+        };
         self.db
             .execute("DELETE FROM item_formats WHERE item_id = ?1", [id])?;
         self.db
@@ -751,13 +780,7 @@ impl Store {
             .execute("DELETE FROM pending_work WHERE item_id = ?1", [id])?;
         self.write_rows(id, &rows)?;
         transaction.commit()?;
-        if let Some(blobs) = &self.blobs {
-            for digest in previous {
-                if !self.blob_is_shared(&digest, id)? {
-                    blobs.remove_if_settled(&digest)?;
-                }
-            }
-        }
+        self.forget(&previous)?;
         self.checkpoint_briefly()?;
         Ok(())
     }
@@ -850,10 +873,14 @@ impl Store {
             "broken_since IS NOT NULL AND broken_since < ?1 AND pinned = 0",
             &[&cutoff],
         )?;
+        let mut gone = Gone::default();
+        let transaction = self.db.unchecked_transaction()?;
         for id in &doomed {
-            self.release(*id)?;
+            gone.and(self.release(*id)?);
             self.db.execute("DELETE FROM items WHERE id = ?1", [id])?;
         }
+        transaction.commit()?;
+        self.forget(&gone)?;
         self.checkpoint_briefly()?;
         Ok(doomed.len())
     }
@@ -1102,9 +1129,10 @@ impl Store {
             }
             left = candidates.len();
             let mut freed = 0;
+            let mut gone = Gone::default();
             let transaction = self.db.unchecked_transaction()?;
             for (id, bytes) in candidates {
-                self.erase(id, at)?;
+                gone.and(self.erase(id, at)?);
                 evicted += 1;
                 freed += bytes;
                 if freed >= usage - limit {
@@ -1112,6 +1140,7 @@ impl Store {
                 }
             }
             transaction.commit()?;
+            self.forget(&gone)?;
         }
     }
 

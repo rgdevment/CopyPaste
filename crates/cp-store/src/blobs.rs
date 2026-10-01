@@ -87,6 +87,11 @@ impl Blobs {
         remove_at(&path).map(|()| true)
     }
 
+    #[cfg(test)]
+    pub fn where_it_is(&self, digest: &str) -> Option<PathBuf> {
+        self.path_for(digest)
+    }
+
     pub fn exists(&self, digest: &str) -> bool {
         self.path_for(digest).is_some_and(|path| path.exists())
     }
