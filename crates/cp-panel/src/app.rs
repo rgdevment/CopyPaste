@@ -954,13 +954,6 @@ fn busy() -> &'static str {
         "could not paste: the clipboard is busy",
     )
 }
-fn not_there() -> &'static str {
-    crate::say::pick(
-        "está copiado, pero no se pudo pegar ahí",
-        "it is copied, but it could not be pasted there",
-    )
-}
-
 fn complain(ui: &Panel, said: &str) {
     ui.set_count_text(said.into());
     let weak = ui.as_weak();
@@ -1079,7 +1072,7 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
             if ui.show().is_ok() {
                 forward(ui);
                 appear(ui);
-                complain(ui, not_there());
+                complain(ui, crate::excuse::why_not(why, crate::say::in_english()));
             }
         }
     }

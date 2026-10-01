@@ -16,6 +16,9 @@ pub enum Outcome {
 }
 
 pub fn route_of(ready: &Readiness) -> Option<Route> {
+    if ready.secure_input {
+        return ready.accessibility.then_some(Route::Menu);
+    }
     route_for(ready.can_post, ready.accessibility)
 }
 
@@ -35,7 +38,12 @@ impl Paster {
     }
 
     pub fn paste_into(&self, target: &Destination, hide_panel: impl FnOnce()) -> Outcome {
-        self.paste_via(route_of(&Readiness::probe()), target, hide_panel)
+        let ready = Readiness::probe();
+        let route = route_of(&ready);
+        if route.is_none() && ready.secure_input {
+            return Outcome::Degraded(Failure::InputProtected);
+        }
+        self.paste_via(route, target, hide_panel)
     }
 
     pub fn paste_via(
@@ -108,3 +116,7 @@ impl Paster {
 pub fn phases() -> &'static [Phase] {
     ORDER
 }
+
+#[cfg(test)]
+#[path = "paste_test.rs"]
+mod tests;
