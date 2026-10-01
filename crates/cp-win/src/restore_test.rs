@@ -180,3 +180,27 @@ fn image_bytes() -> Vec<u8> {
     dib.extend_from_slice(&[0x20, 0x60, 0xA0, 0xFF].repeat(4));
     dib::to_png(&dib).expect("png")
 }
+
+#[test]
+fn an_image_captured_on_windows_goes_back_as_a_bitmap_too() {
+    let png = image_bytes();
+    let written = writable(PNG, &png);
+    assert!(
+        written.iter().any(|(id, _)| *id == CF_DIBV5),
+        "every app that wants a bitmap gets one, not only the private PNG atom"
+    );
+    assert!(
+        written.iter().any(|(_, bytes)| bytes == &png),
+        "the PNG travels intact"
+    );
+}
+
+#[test]
+fn a_jpeg_captured_on_windows_goes_back_as_a_bitmap_too() {
+    let jpeg = jpeg_bytes();
+    let written = writable(JFIF, &jpeg);
+    assert!(
+        written.iter().any(|(id, _)| *id == CF_DIBV5),
+        "a jpeg from the clipboard is as pasteable as a rendered one"
+    );
+}

@@ -93,10 +93,10 @@ fn writable(id: &str, bytes: &[u8]) -> Vec<(u32, Vec<u8>)> {
             Err(_) => Vec::new(),
         };
     }
-    if id == SYNTHETIC_IMAGE {
+    if id == SYNTHETIC_IMAGE || id == PNG {
         return image_and_bitmap(PNG, bytes, dib::from_png(bytes));
     }
-    if id == SYNTHETIC_JPEG {
+    if id == SYNTHETIC_JPEG || id == JFIF {
         return image_and_bitmap(JFIF, bytes, dib::from_jpeg(bytes));
     }
     id_of(id).map_or_else(Vec::new, |id| vec![(id, bytes.to_vec())])
