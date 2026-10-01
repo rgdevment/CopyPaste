@@ -680,6 +680,7 @@ fn spawn_counter(
             let footer = count_text(shown);
             let anchored = compact(pinned);
             let only_anchored = request.full.pinned_only;
+            let asked = crate::layout::layout_for(&request.full.kinds);
             let mine = request.generation;
             let clock = generation.clone();
             let _ = ui.upgrade_in_event_loop(move |panel| {
@@ -690,6 +691,7 @@ fn spawn_counter(
                 panel.set_count_text(footer.into());
                 panel.set_pinned_count(anchored.into());
                 panel.set_pinned_on(only_anchored);
+                panel.set_layout(asked.as_str().into());
             });
         }
     });

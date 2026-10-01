@@ -2,6 +2,7 @@ mod age;
 mod app;
 mod engine;
 mod here;
+mod layout;
 mod measure;
 mod model;
 mod note;
