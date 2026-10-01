@@ -1,4 +1,5 @@
 import { Card, Chip } from "types.slint";
+import { FolderBody } from "bodies_folder.slint";
 import { PapersBody } from "bodies_papers.slint";
 import { MediaBody } from "bodies_media.slint";
 import { JsonBody } from "bodies.slint";
@@ -163,7 +164,7 @@ export component CardView inherits Rectangle {
     in property <Card> card;
     in property <string> layout;
     property <bool> special: layout == "json" || layout == "video" || layout == "audio"
-        || layout == "papers";
+        || layout == "papers" || layout == "folder";
     in property <bool> current;
     in property <bool> open;
     in property <bool> shown-here;
@@ -222,6 +223,10 @@ export component CardView inherits Rectangle {
         }
 
         if !card.has-thumb && !open && layout == "papers" : PapersBody {
+            card: card;
+        }
+
+        if !card.has-thumb && !open && layout == "folder" : FolderBody {
             card: card;
         }
 

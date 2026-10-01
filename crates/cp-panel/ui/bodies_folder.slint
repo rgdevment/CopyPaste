@@ -1,0 +1,41 @@
+import { Card } from "types.slint";
+import { Theme } from "theme.slint";
+
+export component FolderBody inherits HorizontalLayout {
+    in property <Card> card;
+    spacing: 9px;
+
+    Image {
+        source: @image-url("../assets/icons/folder.svg");
+        width: 18px;
+        height: 18px;
+        colorize: #FBBF24;
+        y: 0;
+    }
+
+    VerticalLayout {
+        spacing: 3px;
+        horizontal-stretch: 1;
+        Text {
+            text: card.folder-name;
+            color: Theme.body;
+            font-size: 12.5px;
+            overflow: elide;
+            wrap: no-wrap;
+        }
+        Text {
+            text: card.folder-parent;
+            color: Theme.placeholder;
+            font-size: 10.5px;
+            overflow: elide;
+            wrap: no-wrap;
+        }
+    }
+
+    if card.folder-said != "" : Text {
+        text: card.folder-said;
+        color: Theme.muted;
+        font-size: 10.5px;
+        vertical-alignment: center;
+    }
+}

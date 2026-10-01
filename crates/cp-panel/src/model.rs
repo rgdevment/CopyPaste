@@ -20,11 +20,12 @@ pub struct Metrics {
 
 const EDGE: f32 = 8.0;
 
-pub fn wants_media(filter: &Filter) -> bool {
-    matches!(
-        crate::layout::layout_for(&filter.kinds),
-        crate::layout::Layout::Video | crate::layout::Layout::Audio
-    )
+pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
+    match crate::layout::layout_for(&filter.kinds) {
+        crate::layout::Layout::Video | crate::layout::Layout::Audio => &crate::media::KEYS,
+        crate::layout::Layout::Folder => &crate::folder::KEYS,
+        _ => &[],
+    }
 }
 
 pub fn shut_height_for(filter: &Filter, metrics: &Metrics) -> f32 {
@@ -211,9 +212,10 @@ impl Rows {
                 tops.push(at);
             }
         }
-        if wants_media(&self.filter) {
+        let keys = meta_keys_for(&self.filter);
+        if !keys.is_empty() {
             let ids: Vec<i64> = page.rows.iter().map(|one| one.id).collect();
-            match self.store.meta_for(&ids, &crate::media::KEYS) {
+            match self.store.meta_for(&ids, keys) {
                 Ok(found) => self.meta.borrow_mut().extend(found),
                 Err(why) => crate::note::note(&format!("los metadatos no se pudieron leer: {why}")),
             }

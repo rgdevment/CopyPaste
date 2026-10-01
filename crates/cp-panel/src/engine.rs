@@ -126,6 +126,10 @@ fn errand(store: &Store, thumbs: &Path) -> bool {
         measured(store, id, at);
         return true;
     }
+    if let Some(id) = first_waiting(store, "folder", at) {
+        walked(store, id, at);
+        return true;
+    }
     false
 }
 
@@ -176,6 +180,44 @@ fn measured(store: &Store, id: i64, at: i64) {
         }
     }
     done(store, id, "media");
+}
+
+fn walked(store: &Store, id: i64, at: i64) {
+    let Some(path) = store
+        .item(id)
+        .ok()
+        .flatten()
+        .as_ref()
+        .and_then(crate::media::first_path_of)
+    else {
+        done(store, id, "folder");
+        return;
+    };
+    let counting =
+        cp_core::reading::begin(move || crate::folder::counted_in(std::path::Path::new(&path)));
+    match counting.waited(crate::folder::PATIENCE) {
+        cp_core::reading::Waited::Answered(Some(seen)) => {
+            if let Err(why) = store.set_meta(id, crate::folder::ENTRIES, &seen.to_string()) {
+                note(&format!("{id} was counted and nobody wrote it down: {why}"));
+            }
+            done(store, id, "folder");
+        }
+        cp_core::reading::Waited::Answered(None) => {
+            give_up(store, id, "folder", "the folder could not be read", at);
+        }
+        cp_core::reading::Waited::StillRunning => {
+            give_up(store, id, "folder", "the folder did not answer in time", at);
+        }
+        cp_core::reading::Waited::Gone => {
+            give_up(
+                store,
+                id,
+                "folder",
+                "counting the folder did not survive",
+                at,
+            );
+        }
+    }
 }
 
 fn read_out(store: &Store, id: i64, at: i64) {
@@ -324,7 +366,9 @@ fn jobs_for(item: &Item) -> &'static [&'static str] {
         Some(Kind::Image) => &["thumb", "ocr"],
         Some(Kind::Video) => &["thumb", "media"],
         Some(Kind::Audio) => &["media"],
-        Some(Kind::File) | Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb"],
+        Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb", "folder"],
+        Some(Kind::Folder) => &["folder"],
+        Some(Kind::File) if here::THUMBNAILS_FILES => &["thumb"],
         _ => &[],
     }
 }

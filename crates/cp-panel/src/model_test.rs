@@ -239,3 +239,29 @@ fn a_json_only_list_gives_its_rows_the_taller_shut_height() {
         "two kinds is the general layout, and the general height"
     );
 }
+
+#[test]
+fn only_the_views_that_use_meta_ask_the_store_for_any() {
+    let of = |kinds: Vec<cp_core::kind::Kind>| {
+        meta_keys_for(&Filter {
+            kinds,
+            ..Default::default()
+        })
+    };
+    assert!(of(vec![]).is_empty(), "the general view asks for nothing");
+    assert!(
+        of(vec![cp_core::kind::Kind::Json]).is_empty(),
+        "json parses the preview"
+    );
+    assert!(
+        of(vec![cp_core::kind::Kind::File]).is_empty(),
+        "the format is in the path"
+    );
+    assert_eq!(of(vec![cp_core::kind::Kind::Video]), &crate::media::KEYS);
+    assert_eq!(of(vec![cp_core::kind::Kind::Audio]), &crate::media::KEYS);
+    assert_eq!(of(vec![cp_core::kind::Kind::Folder]), &crate::folder::KEYS);
+    assert!(
+        of(vec![cp_core::kind::Kind::Video, cp_core::kind::Kind::Audio]).is_empty(),
+        "two kinds is the general view, which asks for nothing"
+    );
+}
