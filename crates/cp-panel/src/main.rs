@@ -10,6 +10,7 @@ mod measure;
 mod media;
 mod model;
 mod note;
+mod paired;
 mod papers;
 mod say;
 mod shape;

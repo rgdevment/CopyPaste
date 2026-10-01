@@ -1,4 +1,5 @@
 import { ListView } from "std-widgets.slint";
+import { GridCell } from "bodies_grid.slint";
 import { Card, Chip, FormRow } from "types.slint";
 import { Theme } from "theme.slint";
 import { Words } from "words.slint";
@@ -15,6 +16,7 @@ export component Panel inherits Window {
     title: "CopyPaste";
 
     in property <[Card]> cards;
+    in property <[int]> grid-lines;
     in property <[Chip]> chips;
     in property <[Chip]> tags;
     in property <[FormRow]> sheet-rows;
@@ -446,7 +448,45 @@ export component Panel inherits Window {
                         );
                         return accept;
                     }
+                grid := ListView {
+                    accessible-role: AccessibleRole.list;
+                    vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+                    visible: root.layout == "image";
+                    height: root.layout == "image" ? parent.height : 0px;
+                    for line[at] in root.grid-lines : HorizontalLayout {
+                        height: Theme.cell;
+                        spacing: 8px;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        padding-bottom: 8px;
+                        GridCell {
+                            card: root.cards[line * 2];
+                            current: root.current == line * 2;
+                            chosen => {
+                                root.current = line * 2;
+                                root.moved(line * 2);
+                            }
+                            paste => { root.paste(root.cards[line * 2].id); }
+                            stirred => { root.stirred(line * 2); }
+                        }
+                        if line * 2 + 1 < root.cards.length : GridCell {
+                            card: root.cards[line * 2 + 1];
+                            current: root.current == line * 2 + 1;
+                            chosen => {
+                                root.current = line * 2 + 1;
+                                root.moved(line * 2 + 1);
+                            }
+                            paste => { root.paste(root.cards[line * 2 + 1].id); }
+                            stirred => { root.stirred(line * 2 + 1); }
+                        }
+                        if line * 2 + 1 >= root.cards.length : Rectangle {
+                            horizontal-stretch: 1;
+                        }
+                    }
+                }
                 list := ListView {
+                    visible: root.layout != "image";
+                    height: root.layout != "image" ? parent.height : 0px;
                     accessible-role: AccessibleRole.list;
                     vertical-scrollbar-policy: ScrollBarPolicy.always-off;
                     animate content-y { duration: root.gliding ? 110ms : 0ms; easing: ease-out; }

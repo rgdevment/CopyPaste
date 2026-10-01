@@ -626,6 +626,7 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     ui.set_current(if rows.loaded() > 0 { 0 } else { -1 });
     ui.set_scroll_y(0.0);
     ui.set_cards(ModelRc::from(rows.clone()));
+    ui.set_grid_lines(ModelRc::from(crate::paired::Paired::over(rows.clone())));
     let mut state = state.borrow_mut();
     state.rows = Some(rows);
     state.last_refresh = started.elapsed();
