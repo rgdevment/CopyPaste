@@ -208,7 +208,7 @@ export component CardView inherits Rectangle {
         }
 
         if !card.has-thumb && (!card.found || open) : Text {
-            text: card.body;
+            text: open ? card.body : card.squeezed;
             color: card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? 12px : 13px;
             font-family: card.mono ? "Cascadia Mono" : "Segoe UI";

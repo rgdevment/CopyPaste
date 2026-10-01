@@ -395,3 +395,31 @@ fn big_counts_are_shortened_so_the_pill_stays_a_pill() {
     assert_eq!(count_text(1), "1 elemento");
     assert_eq!(count_text(50_000), "50000 elementos");
 }
+
+#[test]
+fn a_closed_card_shows_content_where_the_indentation_was() {
+    let pretty = "{\n  \"annotations\": [\n    {\n      \"id\": 1,\n      \"note\": \"revisar\"\n    }\n  ]\n}";
+    let squeezed = squeezed_of(pretty);
+    assert!(
+        squeezed.starts_with("{ \"annotations\": [ { \"id\": 1, \"note\": \"revisar\" }"),
+        "«{squeezed}»"
+    );
+    assert!(!squeezed.contains('\n'));
+    assert!(!squeezed.contains("  "), "no run of spaces survives");
+}
+
+#[test]
+fn squeezing_leaves_a_single_line_alone() {
+    assert_eq!(
+        squeezed_of("ya viene en una linea"),
+        "ya viene en una linea"
+    );
+    assert_eq!(squeezed_of(""), "");
+    assert_eq!(squeezed_of("   \n\t  "), "");
+}
+
+#[test]
+fn squeezing_keeps_the_words_and_their_order() {
+    let said = "primero\n\n\tsegundo   tercero\r\ncuarto ";
+    assert_eq!(squeezed_of(said), "primero segundo tercero cuarto");
+}

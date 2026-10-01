@@ -94,6 +94,7 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         },
         age: age_text(now, row.modified_at).into(),
         lines: lines_of(&body),
+        squeezed: squeezed_of(&body).into(),
         body: body.into(),
         found: !hit.is_empty(),
         badge: badge_of(claims.as_ref()).into(),
@@ -107,6 +108,26 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         pinned: row.pinned,
         broken: row.broken_since.is_some(),
     }
+}
+
+pub fn squeezed_of(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut spaced = true;
+    for one in text.chars() {
+        if one.is_whitespace() {
+            if !spaced {
+                out.push(' ');
+                spaced = true;
+            }
+            continue;
+        }
+        out.push(one);
+        spaced = false;
+    }
+    if out.ends_with(' ') {
+        out.pop();
+    }
+    out
 }
 
 pub fn body_of(row: &Listed) -> String {
