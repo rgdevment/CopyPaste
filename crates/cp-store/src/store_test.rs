@@ -368,6 +368,47 @@ fn a_very_long_text_is_stored_and_found() {
 }
 
 #[test]
+fn a_multibyte_character_straddling_the_stored_preview_ceiling_does_not_panic() {
+    let store = Store::in_memory().expect("schema");
+    let padding = "a".repeat(PREVIEW_UP_TO - 1);
+    let text = format!("{padding}🎉tail");
+    store.insert_text("uuid-straddling", &text, 1).expect(
+        "the manual byte-boundary search in head_of must not panic or truncate mid-character",
+    );
+    assert_eq!(store.count().expect("counted"), 1);
+}
+
+#[test]
+fn secrets_are_kept_and_searchable_like_any_other_text_with_no_redaction() {
+    let store = Store::in_memory().expect("schema");
+    let fakes = [
+        "AKIAFAKEFAKEFAKEFAKE",
+        "-----BEGIN FAKE PRIVATE KEY-----\nnot a real key\n-----END FAKE PRIVATE KEY-----",
+        "correct horse battery staple",
+        "4111 1111 1111 1111",
+    ];
+    for (at, secret) in fakes.iter().enumerate() {
+        store
+            .insert_text(&format!("uuid-secret-{at}"), secret, at as i64)
+            .expect("insert");
+    }
+    assert_eq!(
+        search(&store, "AKIAFAKEFAKEFAKEFAKE"),
+        vec!["AKIAFAKEFAKEFAKEFAKE"],
+        "a clipboard history is, by design, a plain-text record of everything copied, \
+         secrets included; nothing here masks, flags, or excludes them"
+    );
+    assert_eq!(search(&store, "battery staple").len(), 1);
+    assert_eq!(search(&store, "4111").len(), 1);
+    let found = store
+        .find_by_hash(&Item::plain(
+            "-----BEGIN FAKE PRIVATE KEY-----\nnot a real key\n-----END FAKE PRIVATE KEY-----",
+        ))
+        .expect("searched");
+    assert!(found.is_some(), "the key text round-trips byte for byte");
+}
+
+#[test]
 fn the_same_uuid_twice_is_refused_not_duplicated() {
     let store = Store::in_memory().expect("schema");
     store
@@ -1368,6 +1409,54 @@ fn deleted_items_drop_out_of_the_queue() {
             .expect("pending")
             .is_empty(),
         "what the user deleted does not get enriched"
+    );
+}
+
+#[test]
+fn failing_a_job_for_an_item_already_deleted_claims_it_will_retry_but_there_is_nothing_left_to_retry()
+ {
+    let store = Store::in_memory().expect("schema");
+    let id = store
+        .insert_text("uuid-gone", "something", 1)
+        .expect("insert");
+    store.enqueue(id, "ocr").expect("queued");
+    store.mark_deleted(id, 2).expect("removed");
+    assert!(
+        store
+            .work_failed(id, "ocr", "too slow", 100)
+            .expect("recorded"),
+        "the queue row is already gone, but work_failed still reports that it will retry"
+    );
+    assert!(
+        store
+            .take_pending("ocr", 1_000, 5)
+            .expect("pending")
+            .is_empty(),
+        "there is nothing left to retry: the row disappeared along with the item"
+    );
+}
+
+#[test]
+fn different_capitalisation_is_a_different_identity_but_the_same_search_result() {
+    let store = Store::in_memory().expect("schema");
+    let upper_id = store
+        .insert_text("uuid-upper", "TEXTO IMPORTANTE", 1)
+        .expect("insert");
+    assert_eq!(
+        store
+            .find_by_hash(&Item::plain("texto importante"))
+            .expect("searched"),
+        None,
+        "case is part of the identity, so the same words in lowercase do not match"
+    );
+    let lower_id = store
+        .insert_text("uuid-lower", "texto importante", 2)
+        .expect("insert");
+    assert_ne!(upper_id, lower_id);
+    assert_eq!(
+        search(&store, "TeXto").len(),
+        2,
+        "search folds case, so both entries turn up for either spelling"
     );
 }
 

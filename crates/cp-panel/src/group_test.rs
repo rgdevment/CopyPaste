@@ -47,6 +47,18 @@ fn a_candidate_nobody_could_read_is_marked_so_it_is_not_tried_forever() {
 }
 
 #[test]
+fn an_empty_blank_or_emoji_preview_is_unreadable_not_empty() {
+    for (kind, preview) in [
+        (Kind::Link, ""),
+        (Kind::Folder, "   "),
+        (Kind::File, "😀🎉"),
+        (Kind::Link, "😀🎉"),
+    ] {
+        assert_eq!(key_of(Some(kind), preview), UNKNOWN, "{kind:?} «{preview}»");
+    }
+}
+
+#[test]
 fn what_is_not_a_real_group_draws_no_heading() {
     assert!(shown("github.com"));
     assert!(shown("D:"));

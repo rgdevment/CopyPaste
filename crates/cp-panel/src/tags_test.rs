@@ -75,3 +75,22 @@ fn nothing_is_ever_chosen_twice() {
     let twice = after(&these(&["image", "text"]), "text", false);
     assert_eq!(twice, these(&["text"]));
 }
+
+#[test]
+fn a_list_that_already_held_a_duplicate_only_loses_one_copy() {
+    assert_eq!(
+        after(&these(&["image", "image"]), "image", true),
+        these(&["image"]),
+        "position() finds only the first match, so toggling off a duplicated key leaves \
+         one copy behind instead of clearing it"
+    );
+}
+
+#[test]
+fn the_key_is_matched_by_exact_case() {
+    assert_eq!(
+        after(&these(&["Image"]), "image", true),
+        these(&["Image", "image"]),
+        "a differently-cased key is treated as a different tag, so both end up selected at once"
+    );
+}

@@ -161,6 +161,97 @@ fn tone_in_long_ints() -> Vec<u8> {
     riff(1, 32, &samples)
 }
 
+fn stereo_riff(left: &[i16], right: &[i16]) -> Vec<u8> {
+    let channels = 2u32;
+    let wide = 2u32 * channels;
+    let mut samples: Vec<u8> = Vec::with_capacity(left.len() * 4);
+    for (l, r) in left.iter().zip(right.iter()) {
+        samples.extend_from_slice(&l.to_le_bytes());
+        samples.extend_from_slice(&r.to_le_bytes());
+    }
+    let data = u32::try_from(samples.len()).expect("fits");
+    let mut out = Vec::with_capacity(samples.len() + 44);
+    out.extend_from_slice(b"RIFF");
+    out.extend_from_slice(&(36 + data).to_le_bytes());
+    out.extend_from_slice(b"WAVEfmt ");
+    out.extend_from_slice(&16u32.to_le_bytes());
+    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&u16::try_from(channels).expect("fits").to_le_bytes());
+    out.extend_from_slice(&RATE.to_le_bytes());
+    out.extend_from_slice(&(RATE * wide).to_le_bytes());
+    out.extend_from_slice(&u16::try_from(wide).expect("fits").to_le_bytes());
+    out.extend_from_slice(&16u16.to_le_bytes());
+    out.extend_from_slice(b"data");
+    out.extend_from_slice(&data.to_le_bytes());
+    out.extend_from_slice(&samples);
+    out
+}
+
+fn riff_lying_about_length(tag: u16, bits: u16, samples: &[u8], claimed_extra: u32) -> Vec<u8> {
+    let wide = u32::from(bits / 8);
+    let data = u32::try_from(samples.len()).expect("fits") + claimed_extra;
+    let mut out = Vec::with_capacity(samples.len() + 44);
+    out.extend_from_slice(b"RIFF");
+    out.extend_from_slice(&(36 + data).to_le_bytes());
+    out.extend_from_slice(b"WAVEfmt ");
+    out.extend_from_slice(&16u32.to_le_bytes());
+    out.extend_from_slice(&tag.to_le_bytes());
+    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&RATE.to_le_bytes());
+    out.extend_from_slice(&(RATE * wide).to_le_bytes());
+    out.extend_from_slice(&u16::try_from(wide).expect("fits").to_le_bytes());
+    out.extend_from_slice(&bits.to_le_bytes());
+    out.extend_from_slice(b"data");
+    out.extend_from_slice(&data.to_le_bytes());
+    out.extend_from_slice(samples);
+    out
+}
+
+#[test]
+fn a_tone_only_on_the_right_channel_is_not_heard_by_the_wave() {
+    let dir = std::env::temp_dir().join(format!("cp-wave-stereo-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    let path = dir.join("solo-derecha.wav");
+    let silence: Vec<i16> = (0..FRAMES).map(|_| 0).collect();
+    let tone: Vec<i16> = (0..FRAMES)
+        .map(|at| (loudness(at) * f32::from(i16::MAX)) as i16)
+        .collect();
+    std::fs::write(&path, stereo_riff(&silence, &tone)).expect("wrote");
+
+    let bars = bars_of(&path).expect("a wave");
+    assert!(
+        bars.iter().all(|bar| *bar == 0),
+        "the wave only reads the left channel, so a recording that is audible only on \
+         the right shows up as flat silence"
+    );
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn a_wav_with_no_samples_at_all_gives_no_wave() {
+    let dir = std::env::temp_dir().join(format!("cp-wave-empty-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    let path = dir.join("vacio.wav");
+    std::fs::write(&path, riff(1, 16, &[])).expect("wrote");
+    assert!(bars_of(&path).is_none());
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn a_data_chunk_that_promises_more_than_it_delivers_does_not_crash_the_reader() {
+    let dir = std::env::temp_dir().join(format!("cp-wave-lying-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    let path = dir.join("miente.wav");
+    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize * 2);
+    for at in 0..FRAMES {
+        let value = (loudness(at) * f32::from(i16::MAX)) as i16;
+        samples.extend_from_slice(&value.to_le_bytes());
+    }
+    std::fs::write(&path, riff_lying_about_length(1, 16, &samples, 100_000)).expect("wrote");
+    let _ = bars_of(&path);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
 fn tone_in_bytes() -> Vec<u8> {
     let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize);
     for at in 0..FRAMES {
@@ -168,4 +259,30 @@ fn tone_in_bytes() -> Vec<u8> {
         samples.push(u8::try_from(value.clamp(0, 255)).expect("fits"));
     }
     riff(1, 8, &samples)
+}
+
+fn tone_in_24_bit_ints() -> Vec<u8> {
+    let mut samples: Vec<u8> = Vec::with_capacity(FRAMES as usize * 3);
+    for at in 0..FRAMES {
+        let value = (loudness(at) * 8_388_607.0) as i32;
+        samples.extend_from_slice(&value.to_le_bytes()[..3]);
+    }
+    riff(1, 24, &samples)
+}
+
+#[test]
+fn a_twenty_four_bit_recording_is_heard_as_silence() {
+    let dir = std::env::temp_dir().join(format!("cp-wave-24bit-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    let path = dir.join("24bit.wav");
+    std::fs::write(&path, tone_in_24_bit_ints()).expect("wrote");
+
+    let bars = bars_of(&path).expect("a wave");
+    assert!(
+        bars.iter().all(|bar| *bar == 0),
+        "symphonia decodes 24-bit PCM as AudioBufferRef::S24, a variant loudest() has no \
+         arm for, so every peak falls to the wildcard 0.0 and a recording with real audio \
+         is drawn as a flat silent line"
+    );
+    std::fs::remove_dir_all(&dir).ok();
 }

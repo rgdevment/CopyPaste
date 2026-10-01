@@ -107,6 +107,60 @@ fn a_file_that_is_not_toml_says_so_instead_of_starting_over() {
 }
 
 #[test]
+fn an_unknown_key_is_ignored_not_rejected() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "theme = \"dark\"\nthis-setting-does-not-exist = \"whatever\"\n",
+    )
+    .expect("writes");
+    let config = read(&path).expect("an unknown key does not refuse the whole file");
+    assert_eq!(config.theme, Theme::Dark);
+}
+
+#[test]
+fn a_value_of_the_wrong_type_is_reported_as_malformed_not_guessed() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "keeps-days = \"treinta\"\n").expect("writes");
+    let why = read(&path).expect_err("a string is not a count of days");
+    assert!(matches!(why, Error::Malformed(_)), "{why}");
+}
+
+#[test]
+fn a_read_only_file_cannot_be_overwritten() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    write(&path, &Config::default()).expect("writes the first time");
+    let mut permissions = std::fs::metadata(&path).expect("stat").permissions();
+    permissions.set_readonly(true);
+    std::fs::set_permissions(&path, permissions).expect("marked read-only");
+
+    let outcome = write(
+        &path,
+        &Config {
+            theme: Theme::Dark,
+            ..Config::default()
+        },
+    );
+    assert!(
+        outcome.is_err(),
+        "a read-only settings file must not be silently replaced"
+    );
+    assert_eq!(
+        read(&path).expect("still readable").theme,
+        Theme::System,
+        "the previous, still read-only content is the one that survives"
+    );
+
+    let mut permissions = std::fs::metadata(&path).expect("stat").permissions();
+    #[allow(clippy::permissions_set_readonly_false)]
+    permissions.set_readonly(false);
+    std::fs::set_permissions(&path, permissions).expect("cleared for cleanup");
+}
+
+#[test]
 fn a_directory_where_the_file_should_be_is_not_mistaken_for_an_empty_one() {
     let dir = a_dir();
     let path = at(dir.path());
@@ -151,6 +205,22 @@ fn the_shortcut_loses_the_spaces_around_it() {
 }
 
 #[test]
+fn a_shortcut_that_matches_no_real_key_combination_is_accepted_untouched() {
+    let asked = Config {
+        shortcut: "this is not a shortcut".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(
+        asked.shortcut, "this is not a shortcut",
+        "sane() only resets an empty or blank shortcut to the default; it never checks \
+         that what is left looks like Ctrl/Alt/Shift plus a key, so garbage from a hand \
+         edited config.toml reaches the rest of the app unchanged, and whether a given \
+         combination is already taken by the OS or another app is never checked here at all"
+    );
+}
+
+#[test]
 fn the_file_reads_as_a_person_would_write_it() {
     let dir = a_dir();
     let path = at(dir.path());
@@ -188,4 +258,45 @@ fn keeping_it_forever_survives_the_file() {
 fn the_path_hangs_from_the_folder_it_is_given() {
     let where_it_is = at(Path::new("anywhere"));
     assert_eq!(where_it_is, Path::new("anywhere").join("config.toml"));
+}
+
+#[test]
+fn an_existing_but_empty_file_reads_as_the_defaults() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "").expect("writes");
+    assert_eq!(read(&path).expect("reads"), Config::default());
+}
+
+#[test]
+fn a_boolean_where_a_string_is_expected_is_rejected() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "shortcut = true\n").expect("writes");
+    assert!(matches!(read(&path), Err(Error::Malformed(_))));
+}
+
+#[test]
+fn a_negative_count_is_a_parse_error_not_something_sane_clamps_to_zero() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "keeps-days = -1\n").expect("writes");
+    assert!(
+        matches!(read(&path), Err(Error::Malformed(_))),
+        "only an explicit 0 is normalised by sane(); a negative count never gets that far \
+         because keeps-days is unsigned, so it fails to parse at all instead"
+    );
+}
+
+#[test]
+fn the_largest_representable_counts_round_trip() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    let mine = Config {
+        keeps_days: Some(u16::MAX),
+        images_quota_mb: Some(u32::MAX),
+        ..Config::default()
+    };
+    write(&path, &mine).expect("writes");
+    assert_eq!(read(&path).expect("reads"), mine);
 }

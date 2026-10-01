@@ -712,3 +712,28 @@ fn the_parser_and_the_list_speak_the_same_filter() {
         Some("monday meeting".into())
     );
 }
+
+#[test]
+fn every_quota_set_to_zero_with_everything_pinned_sweeps_nothing_and_does_not_loop_forever() {
+    let store = Store::in_memory().expect("schema");
+    let ids = fill(&store, 5);
+    for id in &ids {
+        store.set_pinned(*id, true, 0).expect("pinned");
+    }
+    let policy = Policy {
+        keep_for: Some(1),
+        keep_at_most: Some(0),
+        bytes_at_most: Some(0),
+        broken_for: Some(0),
+    };
+    let swept = store.sweep(&policy, 1_000).expect("swept");
+    assert_eq!(
+        swept,
+        Swept {
+            truncated: true,
+            ..Swept::default()
+        },
+        "a quota of zero is still a quota of zero, but pinned items are exempt from every one of them"
+    );
+    assert_eq!(store.count().expect("counted"), 5);
+}

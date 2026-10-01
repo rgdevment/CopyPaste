@@ -269,3 +269,280 @@ fn only_what_was_really_kept_counts_towards_the_size() {
     };
     assert_eq!(item.stored_bytes(), 1000);
 }
+
+#[test]
+fn capitalisation_changes_the_identity_of_plain_text() {
+    assert_ne!(
+        Item::plain("TEXTO").fingerprint(),
+        Item::plain("texto").fingerprint(),
+        "the same word in another case is a different capture"
+    );
+}
+
+#[test]
+fn a_lone_nul_byte_does_not_panic_and_still_tells_content_apart() {
+    assert_ne!(
+        Item::plain("a\0b").fingerprint(),
+        Item::plain("ab").fingerprint()
+    );
+    assert_eq!(
+        Item::plain("a\0b").fingerprint(),
+        Item::plain("a\0b").fingerprint()
+    );
+}
+
+#[test]
+fn crlf_and_lf_line_endings_are_different_identities() {
+    assert_ne!(
+        Item::plain("one\r\ntwo").fingerprint(),
+        Item::plain("one\ntwo").fingerprint(),
+        "line endings are bytes like any other; nothing normalises them here"
+    );
+}
+
+#[test]
+fn emoji_only_content_has_a_stable_and_distinct_identity() {
+    assert_eq!(
+        Item::plain("🚀🎉").fingerprint(),
+        Item::plain("🚀🎉").fingerprint()
+    );
+    assert_ne!(
+        Item::plain("🚀🎉").fingerprint(),
+        Item::plain("🚀").fingerprint()
+    );
+}
+
+#[test]
+fn right_to_left_and_mixed_script_text_hashes_byte_for_byte() {
+    let arabic = "مرحبا بالعالم";
+    let hebrew = "שלום עולם";
+    assert_eq!(
+        Item::plain(arabic).fingerprint(),
+        Item::plain(arabic).fingerprint()
+    );
+    assert_ne!(
+        Item::plain(arabic).fingerprint(),
+        Item::plain(hebrew).fingerprint()
+    );
+    assert_ne!(
+        Item::plain("hello مرحبا").fingerprint(),
+        Item::plain("مرحبا hello").fingerprint(),
+        "the same two scripts in another order are different content"
+    );
+}
+
+#[test]
+fn the_same_letter_in_two_unicode_normal_forms_is_two_different_identities() {
+    let nfc = "caf\u{00e9}";
+    let nfd = "cafe\u{0301}";
+    assert_ne!(
+        nfc.as_bytes(),
+        nfd.as_bytes(),
+        "the two spellings really are different bytes"
+    );
+    assert_ne!(
+        Item::plain(nfc).fingerprint(),
+        Item::plain(nfd).fingerprint(),
+        "the identity is raw bytes, with no Unicode normalisation; the same visible word \
+         typed or pasted from a source that prefers the other normal form becomes a second item"
+    );
+}
+
+fn rich(plain: &str, html: &str, rtf: &str) -> Item {
+    Item {
+        kind: Some(crate::kind::Kind::Text),
+        formats: vec![
+            Format {
+                id: "public.utf8-plain-text".into(),
+                payload: Payload::Inline(plain.as_bytes().to_vec()),
+            },
+            Format {
+                id: "public.html".into(),
+                payload: Payload::Inline(html.as_bytes().to_vec()),
+            },
+            Format {
+                id: "public.rtf".into(),
+                payload: Payload::Inline(rtf.as_bytes().to_vec()),
+            },
+        ],
+    }
+}
+
+fn plain_only(text: &str) -> Item {
+    Item {
+        kind: Some(crate::kind::Kind::Text),
+        formats: vec![Format {
+            id: "public.utf8-plain-text".into(),
+            payload: Payload::Inline(text.as_bytes().to_vec()),
+        }],
+    }
+}
+
+#[test]
+fn the_plain_text_that_comes_out_of_a_rich_copy_has_an_identity_of_its_own() {
+    let styled = rich("hello", "<b>hello</b>", r"{\rtf1 hello}");
+    let replayed = plain_only("hello");
+    assert_ne!(
+        styled.fingerprint(),
+        replayed.fingerprint(),
+        "the rich capture mixes its markup into the identity, so the plain text \
+         pasted out of it and copied again is a second item"
+    );
+    assert_eq!(
+        replayed.fingerprint(),
+        plain_only("hello").fingerprint(),
+        "and that second item is stable, so copying it again does not pile up"
+    );
+}
+
+#[test]
+fn only_the_rendering_changing_leaves_the_identity_alone() {
+    let one = rich("hello", "<b>hello</b>", r"{\rtf1\ansi hello}");
+    let other = rich("hello", "<b>hello</b>", r"{\rtf1\mac\deff0 hello}");
+    assert_ne!(one, other);
+    assert_eq!(
+        one.fingerprint(),
+        other.fingerprint(),
+        "two copies of the same paragraph that only differ in their RTF are one item"
+    );
+}
+
+#[test]
+fn the_markup_changing_is_a_different_item_even_with_the_same_plain_text() {
+    let one = rich("hello", "<b>hello</b>", r"{\rtf1 hello}");
+    let other = rich("hello", "<i>hello</i>", r"{\rtf1 hello}");
+    assert_ne!(
+        one.fingerprint(),
+        other.fingerprint(),
+        "bold and italic are not the same copy"
+    );
+}
+
+#[test]
+fn letter_case_is_content_and_not_a_spelling() {
+    assert_ne!(
+        Item::plain("TEXTO").fingerprint(),
+        Item::plain("texto").fingerprint()
+    );
+}
+
+#[test]
+fn the_line_endings_of_a_text_are_part_of_what_was_copied() {
+    assert_ne!(
+        Item::plain("a\r\nb").fingerprint(),
+        Item::plain("a\nb").fingerprint(),
+        "the same two lines copied from a Windows editor and from a Unix one are two items"
+    );
+}
+
+#[test]
+fn a_byte_order_mark_is_content_like_any_other_byte() {
+    assert_ne!(
+        Item::plain("\u{feff}hello").fingerprint(),
+        Item::plain("hello").fingerprint()
+    );
+}
+
+#[test]
+fn nothing_copied_and_an_empty_text_are_told_apart() {
+    let nothing = Item {
+        kind: None,
+        formats: vec![],
+    };
+    assert_ne!(Item::plain("").fingerprint(), nothing.fingerprint());
+    assert_eq!(Item::plain("").stored_bytes(), 0);
+}
+
+#[test]
+fn control_characters_travel_whole_into_the_identity() {
+    let with_nul = Item::plain("a\0b");
+    assert_eq!(
+        with_nul.stored_bytes(),
+        3,
+        "the nul is a byte like any other"
+    );
+    assert_ne!(with_nul.fingerprint(), Item::plain("ab").fingerprint());
+    for odd in ["\u{7}", "\u{1b}[31m", "\u{200b}", "\u{202e}", "🏳️‍🌈"] {
+        assert_eq!(
+            Item::plain(odd).fingerprint(),
+            Item::plain(odd).fingerprint()
+        );
+    }
+}
+
+#[test]
+fn whitespace_that_looks_alike_never_collapses_into_one_item() {
+    let shapes = [" ", "\n", "\t", "\u{a0}", "\u{3000}"];
+    let mut seen: Vec<u64> = shapes
+        .iter()
+        .map(|one| Item::plain(one).fingerprint())
+        .collect();
+    seen.sort_unstable();
+    seen.dedup();
+    assert_eq!(
+        seen.len(),
+        shapes.len(),
+        "none of them collapses into another"
+    );
+}
+
+#[test]
+fn a_blob_and_an_inline_payload_of_the_same_bytes_are_one_identity() {
+    let bytes = vec![7u8; 32];
+    let inline = Item {
+        kind: None,
+        formats: vec![Format {
+            id: "public.png".into(),
+            payload: Payload::Inline(bytes.clone()),
+        }],
+    };
+    let blob = Item {
+        kind: None,
+        formats: vec![Format {
+            id: "public.png".into(),
+            payload: Payload::Blob(bytes),
+        }],
+    };
+    assert_eq!(
+        inline.fingerprint(),
+        blob.fingerprint(),
+        "where the bytes were kept is not part of what was copied"
+    );
+}
+
+#[test]
+fn what_is_too_big_to_keep_leaves_no_identity_behind() {
+    let refused = Item {
+        kind: None,
+        formats: vec![Format {
+            id: "public.png".into(),
+            payload: Payload::TooBig {
+                size: BLOB_UP_TO + 1,
+            },
+        }],
+    };
+    assert_eq!(
+        refused.fingerprint(),
+        Item {
+            kind: None,
+            formats: vec![]
+        }
+        .fingerprint(),
+        "two different items nobody could keep share one hash, so the first of them \
+         answers for every later one"
+    );
+    assert_eq!(refused.stored_bytes(), 0);
+}
+
+#[test]
+fn the_exact_size_that_still_fits_in_a_row_is_an_item_like_any_other() {
+    for size in [INLINE_UP_TO - 1, INLINE_UP_TO, INLINE_UP_TO + 1] {
+        let item = Item::plain(&"a".repeat(size));
+        assert_eq!(item.stored_bytes(), size);
+        assert!(
+            !item.needs_blob_store(),
+            "Item::plain always inlines, whatever placement would say about {size}"
+        );
+    }
+    assert_eq!(placement(INLINE_UP_TO + 1), Placement::Blob);
+}

@@ -49,6 +49,23 @@ fn only_the_first_line_is_read_because_that_is_the_first_folder() {
 }
 
 #[test]
+fn a_path_with_accents_and_emoji_splits_the_same_way_as_any_other() {
+    let parts = parts_of(r"D:\Descargas\Informe final 📎 revisión.pdf").expect("one");
+    assert_eq!(parts.name, "Informe final 📎 revisión.pdf");
+    assert_eq!(parts.parent, r"D:\Descargas\");
+}
+
+#[test]
+fn counting_a_path_longer_than_the_windows_ceiling_answers_nothing_not_a_panic() {
+    let long = std::env::temp_dir().join(format!(
+        "cp-folder-long-{}-{}",
+        std::process::id(),
+        "x".repeat(300)
+    ));
+    assert_eq!(counted_in(&long), None);
+}
+
+#[test]
 fn a_folder_nobody_counted_yet_says_nothing() {
     assert_eq!(said_in(None, false), "");
     assert_eq!(said_in(Some(&std::collections::HashMap::new()), false), "");
@@ -95,9 +112,48 @@ fn counting_a_real_folder_sees_what_is_in_it() {
 }
 
 #[test]
+fn counting_a_real_empty_folder_answers_zero_not_nothing() {
+    let dir = std::env::temp_dir().join(format!("cp-folder-empty-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    assert_eq!(counted_in(&dir), Some(0));
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn a_real_folder_past_the_ceiling_stops_counting_at_it() {
+    let dir = std::env::temp_dir().join(format!("cp-folder-many-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    for at in 0..UP_TO + 200 {
+        std::fs::write(dir.join(format!("{at}.txt")), b"x").expect("wrote");
+    }
+    assert_eq!(
+        counted_in(&dir),
+        Some(UP_TO),
+        "counting a real folder with thousands of entries stops at the same ceiling as the synthetic test"
+    );
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn counting_what_is_not_there_answers_nothing_instead_of_zero() {
     let nowhere = std::env::temp_dir().join("cp-folder-que-no-existe-jamas");
     assert_eq!(counted_in(&nowhere), None);
+}
+
+#[test]
+fn counting_a_file_instead_of_a_folder_answers_nothing() {
+    let dir = std::env::temp_dir().join(format!("cp-folder-is-a-file-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("made");
+    let file = dir.join("not-a-folder.txt");
+    std::fs::write(&file, b"x").expect("wrote");
+    assert_eq!(counted_in(&file), None);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn a_preview_of_only_whitespace_or_only_emoji_has_no_unit() {
+    assert_eq!(unit_of("   "), "");
+    assert_eq!(unit_of("🎉📎"), "");
 }
 
 #[test]
