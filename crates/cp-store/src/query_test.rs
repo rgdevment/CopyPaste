@@ -271,3 +271,72 @@ fn quotes_group_words_and_then_disappear() {
         Some("not closing the quote")
     );
 }
+
+#[test]
+fn a_dash_that_matches_no_operator_stays_glued_to_the_word() {
+    assert_eq!(
+        parsed("-coffee"),
+        Filter {
+            query: Some("-coffee".into()),
+            ..Default::default()
+        },
+        "there is no way to exclude free text, only a kind, an app or an operator"
+    );
+}
+
+#[test]
+fn a_doubled_negation_on_an_operator_is_not_an_operator_at_all() {
+    assert_eq!(
+        parsed("--k:image"),
+        Filter {
+            query: Some("--k:image".into()),
+            ..Default::default()
+        },
+        "the second dash breaks the all-alphabetic key check, so the whole token falls to text"
+    );
+}
+
+#[test]
+fn a_negative_relative_amount_is_not_a_time_and_falls_to_text() {
+    for literal in ["~-5h", "since:-3d", "d:-1w"] {
+        assert_eq!(
+            parsed(literal),
+            Filter {
+                query: Some(literal.into()),
+                ..Default::default()
+            },
+            "{literal}"
+        );
+    }
+}
+
+#[test]
+fn is_and_sort_only_match_a_single_exact_word_never_a_list() {
+    assert_eq!(
+        parsed("is:pinned,broken"),
+        Filter {
+            query: Some("is:pinned,broken".into()),
+            ..Default::default()
+        },
+        "is: looks at the whole value, not at a comma-split list, so a list is not a word it knows"
+    );
+    assert_eq!(
+        parsed("sort:recent,used"),
+        Filter {
+            query: Some("sort:recent,used".into()),
+            ..Default::default()
+        }
+    );
+}
+
+#[test]
+fn a_quoted_app_with_a_comma_is_split_into_two_apps_not_kept_whole() {
+    let filter = parsed("app:\"Visual Studio, Code\"");
+    assert_eq!(
+        filter.apps,
+        vec!["Visual Studio".to_owned(), " Code".to_owned()],
+        "quoting only protects the space from the tokenizer; the comma still splits the \
+         value into a list, and the second half keeps its leading space, so neither piece \
+         can ever match the real application name"
+    );
+}

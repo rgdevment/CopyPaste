@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
 pub fn migrate(db: &Connection) -> crate::Result<bool> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -14,18 +14,16 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
         return Ok(false);
     }
     db.execute_batch("BEGIN IMMEDIATE;")?;
+    added_columns(db)?;
     if ordering_indexes_are_stale(db)? {
-        db.execute_batch(&format!(
+        db.execute_batch(
             "DROP INDEX IF EXISTS items_by_recency;
-             DROP INDEX IF EXISTS items_by_kind;
-             {ORDERING_INDEXES}"
-        ))?;
+             DROP INDEX IF EXISTS items_by_kind;",
+        )?;
     }
+    db.execute_batch(ORDERING_INDEXES)?;
     if found < 3 {
         db.execute_batch("INSERT INTO items_fts(items_fts) VALUES ('optimize');")?;
-    }
-    if ocr_text_is_missing(db)? {
-        db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
     }
     if found < 5 {
         db.execute_batch(&format!(
@@ -71,11 +69,21 @@ fn search_trigger_is_broad(db: &Connection) -> Result<bool> {
     Ok(said.is_some_and(|one| !one.contains("UPDATE OF")))
 }
 
-fn ocr_text_is_missing(db: &Connection) -> Result<bool> {
+fn added_columns(db: &Connection) -> Result<()> {
+    if column_is_missing(db, "ocr_text")? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
+    }
+    if column_is_missing(db, "group_key")? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN group_key TEXT NOT NULL DEFAULT '';")?;
+    }
+    Ok(())
+}
+
+fn column_is_missing(db: &Connection, wanted: &str) -> Result<bool> {
     let mut stmt = db.prepare("SELECT name FROM pragma_table_info('items')")?;
     let columns = stmt.query_map([], |row| row.get::<_, String>(0))?;
     for column in columns {
-        if column? == "ocr_text" {
+        if column? == wanted {
             return Ok(false);
         }
     }
@@ -87,6 +95,7 @@ const ORDERING_INDEXES: &str = "
         CREATE INDEX IF NOT EXISTS items_by_touch
             ON items(MAX(modified_at, COALESCE(last_used_at, 0)) DESC, id DESC);
         CREATE INDEX IF NOT EXISTS items_by_kind ON items(kind, modified_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS items_by_group ON items(group_key DESC, id DESC);
 ";
 
 pub fn configure(db: &Connection) -> Result<()> {
@@ -105,6 +114,7 @@ pub fn configure(db: &Connection) -> Result<()> {
 pub fn create(db: &Connection) -> Result<()> {
     configure(db)?;
     db.execute_batch(TABLES)?;
+    added_columns(db)?;
     db.execute_batch(ORDERING_INDEXES)?;
     if search_trigger_is_broad(db)? {
         db.execute_batch(&format!(
@@ -134,6 +144,7 @@ const TABLES: &str = r#"
             kind               TEXT,
             preview_text       TEXT    NOT NULL DEFAULT '',
             app_source         TEXT,
+            group_key          TEXT    NOT NULL DEFAULT '',
             label              TEXT,
             card_color         INTEGER NOT NULL DEFAULT 0,
             thumb_path         TEXT,

@@ -121,3 +121,34 @@ fn scaling_to_the_size_it_already_has_changes_nothing() {
         "with a side equal to the maximum, thumbnail does not alter a single pixel"
     );
 }
+
+#[test]
+fn a_wave_is_drawn_as_a_png_of_the_size_it_was_asked_for() {
+    let bars: Vec<u8> = (0..48).map(|at| (at * 2) as u8).collect();
+    let png = of_wave(&bars, 100, 384, 64).expect("drawn");
+    let size = size_of(&png).expect("read back");
+    assert_eq!((size.width, size.height), (384, 64));
+}
+
+#[test]
+fn a_wave_with_nothing_to_draw_draws_nothing() {
+    assert!(of_wave(&[], 100, 384, 64).is_none());
+    assert!(
+        of_wave(&[50], 0, 384, 64).is_none(),
+        "no tallest to scale by"
+    );
+    assert!(of_wave(&[50], 100, 0, 64).is_none());
+    assert!(of_wave(&[50], 100, 384, 0).is_none());
+}
+
+#[test]
+fn a_silent_wave_still_draws_a_line_so_the_row_is_not_empty() {
+    let png = of_wave(&[0, 0, 0, 0], 100, 64, 16).expect("drawn");
+    let decoded = image::load_from_memory(&png).expect("a png");
+    let inked = decoded
+        .to_rgba8()
+        .pixels()
+        .filter(|one| one.0[3] > 0)
+        .count();
+    assert!(inked > 0, "silence is a flat line, not an empty picture");
+}

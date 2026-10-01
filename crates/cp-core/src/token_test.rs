@@ -148,3 +148,38 @@ fn base64url_decodes_with_or_without_padding() {
     assert_eq!(base64url("a b"), None);
     assert_eq!(base64url("ñ"), None);
 }
+
+#[test]
+fn dots_without_substance_are_not_a_jwt_either() {
+    assert!(claims_of("").is_none());
+    assert!(claims_of(".").is_none());
+    assert!(claims_of("..").is_none());
+    assert!(claims_of("...").is_none());
+    assert!(!looks_like(".."));
+    assert!(!looks_like("..."));
+}
+
+#[test]
+fn an_expiry_far_in_the_past_or_the_future_is_still_just_a_comparison() {
+    let long_expired = claims_of(&jwt(r#"{"exp":0}"#)).expect("reads");
+    assert_eq!(long_expired.expired_by(1_700_000_000), Some(true));
+
+    let far_future = claims_of(&jwt(r#"{"exp":253402300799}"#)).expect("reads");
+    assert_eq!(far_future.expired_by(1_700_000_000), Some(false));
+}
+
+#[test]
+fn an_expiry_of_the_wrong_json_type_is_not_guessed_at() {
+    let quoted = claims_of(&jwt(r#"{"exp":"1700000000"}"#)).expect("reads");
+    assert_eq!(
+        quoted.expires_at(),
+        None,
+        "a quoted number is text, not the expiry"
+    );
+    let fractional = claims_of(&jwt(r#"{"exp":1700000000.5}"#)).expect("reads");
+    assert_eq!(
+        fractional.expires_at(),
+        None,
+        "a fractional expiry is not read as a whole second either"
+    );
+}

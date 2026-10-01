@@ -56,6 +56,36 @@ fn somewhere(name: &str) -> (tempfile::TempDir, Store) {
 }
 
 #[test]
+fn a_fake_secret_crosses_a_backup_without_being_redacted() {
+    let (there, store) = somewhere("history.db");
+    let secret = "AKIAFAKEFAKEFAKEFAKE";
+    store
+        .insert_item("uuid-secret", &text(secret), secret, 1_000)
+        .expect("stored");
+    let backup = there.path().join("mine.cpbackup");
+    write(&store, &backup, 1_000).expect("exported");
+    drop(store);
+
+    let (_here, landed) = somewhere("history.db");
+    let brought = bring(&backup, &landed, 5_000).expect("imported");
+    assert_eq!(brought.added, 1);
+    let id = landed
+        .find_by_hash(&text(secret))
+        .expect("searched")
+        .expect("is here");
+    let payload = landed
+        .payload_of(id, SYNTHETIC_TEXT)
+        .expect("read")
+        .expect("the text is there");
+    assert_eq!(
+        payload,
+        secret.as_bytes(),
+        "a backup is a full, unfiltered copy; nothing here recognises or strips a secret \
+         before it is written to the .cpbackup file"
+    );
+}
+
+#[test]
 fn what_was_kept_travels_whole_from_one_machine_to_another() {
     let (there, store) = somewhere("history.db");
     store
@@ -143,6 +173,69 @@ fn the_same_copy_brought_twice_does_not_double_anything() {
     assert_eq!(again.added, 0);
     assert_eq!(again.already, 2);
     assert_eq!(landed.count().expect("counted"), 2);
+}
+
+#[test]
+fn a_uuid_already_used_by_different_content_is_refused_not_renamed() {
+    let (there, store) = somewhere("history.db");
+    store
+        .insert_item(
+            "shared-uuid",
+            &text("from the backup"),
+            "from the backup",
+            1_000,
+        )
+        .expect("stored");
+    let backup = there.path().join("mine.cpbackup");
+    write(&store, &backup, 1_000).expect("exported");
+    drop(store);
+
+    let (_here, landed) = somewhere("history.db");
+    landed
+        .insert_item(
+            "shared-uuid",
+            &text("already here, but different"),
+            "already here, but different",
+            500,
+        )
+        .expect("stored");
+
+    let brought = bring(&backup, &landed, 5_000).expect("imported");
+    assert_eq!(brought.added, 0);
+    assert_eq!(
+        brought.refused, 1,
+        "the uuid collides even though the content does not match by hash, and the item \
+         is silently dropped instead of arriving under a fresh identity"
+    );
+    assert_eq!(
+        landed.count().expect("counted"),
+        1,
+        "only the item that was already there survives; the backed-up one never arrives"
+    );
+}
+
+#[test]
+fn a_backup_truncated_halfway_is_refused_not_read_as_garbage() {
+    let (there, store) = somewhere("history.db");
+    store
+        .insert_item("one", &text("something"), "something", 1_000)
+        .expect("stored");
+    let backup = there.path().join("mine.cpbackup");
+    write(&store, &backup, 1_000).expect("exported");
+    drop(store);
+
+    let full_len = std::fs::metadata(&backup).expect("metadata").len();
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&backup)
+        .expect("opened");
+    file.set_len(full_len / 2).expect("truncated");
+    drop(file);
+
+    assert!(
+        read(&backup).is_err(),
+        "a backup cut in half must be refused, not read as a shorter history"
+    );
 }
 
 #[test]

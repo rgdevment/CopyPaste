@@ -111,6 +111,30 @@ fn the_edges_of_each_class() {
 }
 
 #[test]
+fn the_four_digit_hex_shorthand_with_alpha_is_not_recognised_as_a_color() {
+    assert_ne!(
+        classify_text("#f0a5"),
+        Kind::Color,
+        "is_color only accepts hex lengths of 3, 6 or 8, so the CSS #RGBA shorthand \
+         with its own alpha channel falls through to plain text"
+    );
+}
+
+#[test]
+fn rgb_accepts_channel_values_far_outside_the_valid_range() {
+    assert_eq!(
+        classify_text("rgb(300, -5, 999)"),
+        Kind::Color,
+        "is_color only checks that each part parses as a float, with no bound on 0..=255"
+    );
+    assert_eq!(
+        classify_text("hsl(1e9, 1e9%, 1e9%)"),
+        Kind::Color,
+        "scientific notation parses fine too, however meaningless the hue is"
+    );
+}
+
+#[test]
 fn several_lines_never_become_a_single_line_class() {
     assert_eq!(
         classify_text("alguien@ejemplo.test\notra línea"),
@@ -146,4 +170,46 @@ fn every_kind_has_a_stable_name_for_the_database() {
         assert!(!kind.as_str().is_empty());
         assert_eq!(kind.as_str(), kind.as_str().to_lowercase());
     }
+}
+
+#[test]
+fn an_uppercase_uuid_is_still_a_uuid() {
+    assert_eq!(
+        classify_text("6BA7B810-9DAD-11D1-80B4-00C04FD430C8"),
+        Kind::Uuid
+    );
+}
+
+#[test]
+fn a_byte_order_mark_hides_the_json_from_its_own_classifier() {
+    assert_ne!(
+        classify_text("\u{FEFF}{\"a\":1}"),
+        Kind::Json,
+        "a JSON file saved with a BOM, as Windows editors often do, is no longer \
+         recognised as JSON because the first byte is no longer the opening brace"
+    );
+    assert_eq!(
+        classify_text("{\"a\":1}"),
+        Kind::Json,
+        "without the BOM the very same object is read fine, so the BOM is the whole difference"
+    );
+}
+
+#[test]
+fn a_domain_written_in_its_own_alphabet_is_not_read_as_an_address() {
+    assert_ne!(
+        classify_text("alguien@café.test"),
+        Kind::Email,
+        "the domain check only accepts ASCII, so an accented domain is not an email here"
+    );
+}
+
+#[test]
+fn an_extension_after_the_digits_is_not_read_as_a_phone_number() {
+    assert_ne!(
+        classify_text("+1 555 123 4567 x123"),
+        Kind::Phone,
+        "the trailing «x123» extension is not a digit, a space, or any of «()+-.», so it \
+         breaks the shape check"
+    );
 }

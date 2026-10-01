@@ -599,6 +599,48 @@ fn asking_for_no_rows_is_an_empty_page_not_a_panic() {
 }
 
 #[test]
+fn listing_a_store_with_nothing_in_it_at_all_is_an_empty_page_with_no_cursor() {
+    let store = Store::in_memory().expect("schema");
+    let page = store.list(&Filter::default(), 10, None).expect("a page");
+    assert!(page.rows.is_empty());
+    assert_eq!(page.next, None);
+    assert_eq!(store.count().expect("counted"), 0);
+}
+
+#[test]
+fn a_single_row_on_a_page_exactly_its_size_has_no_next_cursor() {
+    let store = Store::in_memory().expect("schema");
+    store.insert_text("uuid-only", "alone", 1).expect("insert");
+    let page = store.list(&Filter::default(), 1, None).expect("a page");
+    assert_eq!(page.rows.len(), 1);
+    assert_eq!(
+        page.next, None,
+        "a page that exactly holds the only row is still the last page"
+    );
+}
+
+#[test]
+fn two_rows_with_a_page_of_one_hand_out_a_cursor_for_exactly_the_second_and_then_stop() {
+    let store = Store::in_memory().expect("schema");
+    store.insert_text("uuid-first", "first", 1).expect("insert");
+    store
+        .insert_text("uuid-second", "second", 2)
+        .expect("insert");
+    let first_page = store.list(&Filter::default(), 1, None).expect("a page");
+    assert_eq!(first_page.rows.len(), 1);
+    let cursor = first_page.next.expect("a second row is still waiting");
+    let second_page = store
+        .list(&Filter::default(), 1, Some(cursor))
+        .expect("a page");
+    assert_eq!(second_page.rows.len(), 1);
+    assert_ne!(second_page.rows[0].id, first_page.rows[0].id);
+    assert_eq!(
+        second_page.next, None,
+        "nothing is left after the second row"
+    );
+}
+
+#[test]
 fn a_broken_item_can_be_found_again() {
     let store = history();
     let id = all(&store, &Filter::default())[0].id;
@@ -668,7 +710,7 @@ fn every_order_has_a_stable_name_that_comes_back() {
     let mut names: Vec<&str> = Order::ALL.iter().map(|order| order.as_str()).collect();
     names.sort_unstable();
     names.dedup();
-    assert_eq!(names.len(), 3);
+    assert_eq!(names.len(), 4);
     assert_eq!(Order::from_name("Recent"), None, "the name is exact");
 }
 
@@ -682,7 +724,7 @@ fn a_cursor_from_another_order_is_refused_not_misread() {
         ..Default::default()
     };
     assert!(matches!(
-        store.list(&pasted, 2, Some(cursor)),
+        store.list(&pasted, 2, Some(cursor.clone())),
         Err(Error::WrongCursor { .. })
     ));
     let text = cursor.encode();
@@ -694,7 +736,15 @@ fn a_cursor_from_another_order_is_refused_not_misread() {
     assert_eq!(Cursor::decode("recent:1"), None);
     assert_eq!(Cursor::decode("sideways:1:2"), None);
     assert_eq!(Cursor::decode("recent:1:2:3"), None);
-    assert_eq!(Cursor::decode("recent:x:2"), None);
+    assert_eq!(
+        Cursor::decode("recent:x:2"),
+        None,
+        "a numeric order wants a number"
+    );
+    let grouped = Cursor::decode("by-group:ejemplo.test:7").expect("a group cursor");
+    assert_eq!(Cursor::decode(&grouped.encode()), Some(grouped));
+    let colons = Cursor::decode("by-group:carpeta:de:red:7").expect("a key may hold colons");
+    assert_eq!(Cursor::decode(&colons.encode()), Some(colons));
 }
 
 #[test]
@@ -720,6 +770,25 @@ fn the_preview_is_capped_but_the_excerpt_still_sees_the_whole_text() {
             .iter()
             .any(|one| one.matched && one.text == "needle"),
         "the needle is past the cap on the preview"
+    );
+}
+
+#[test]
+fn an_emoji_straddling_the_character_count_cap_is_not_split_in_half() {
+    let store = Store::in_memory().expect("schema");
+    let text = format!("{}🎉tail", "a".repeat(PREVIEW_CHARS - 1));
+    store
+        .insert_text("uuid-emoji-cap", &text, 1)
+        .expect("insert");
+    let rows = store
+        .list(&Filter::default(), 10, None)
+        .expect("listed")
+        .rows;
+    assert_eq!(
+        rows[0].preview.chars().count(),
+        PREVIEW_CHARS,
+        "SUBSTR on a TEXT column counts characters, not bytes, so the emoji is either \
+         whole or left out entirely, never cut in the middle"
     );
 }
 
@@ -986,4 +1055,316 @@ fn what_you_paste_rises_to_the_top_of_the_recent_order() {
         "pasting moves it up, not just its count"
     );
     assert_eq!(ordered[0].paste_count, 1);
+}
+
+#[test]
+fn the_meta_of_a_whole_page_comes_in_one_query() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.set_meta(rows[0].id, "duration", "138").expect("set");
+    store.set_meta(rows[0].id, "width", "1920").expect("set");
+    store.set_meta(rows[0].id, "artist", "nadie").expect("set");
+    store.set_meta(rows[1].id, "duration", "3").expect("set");
+
+    let ids: Vec<i64> = rows.iter().map(|one| one.id).collect();
+    let found = store.meta_for(&ids, &["duration", "width"]).expect("meta");
+
+    assert_eq!(found.len(), 2, "only the two that have any of those keys");
+    let first = &found[&rows[0].id];
+    assert_eq!(first.get("duration").map(String::as_str), Some("138"));
+    assert_eq!(first.get("width").map(String::as_str), Some("1920"));
+    assert!(first.get("artist").is_none(), "a key nobody asked for");
+    assert_eq!(found[&rows[1].id].len(), 1);
+}
+
+#[test]
+fn asking_for_nothing_reads_nothing() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.set_meta(rows[0].id, "duration", "138").expect("set");
+    assert!(store.meta_for(&[], &["duration"]).expect("meta").is_empty());
+    assert!(store.meta_for(&[rows[0].id], &[]).expect("meta").is_empty());
+}
+
+#[test]
+fn an_item_with_no_meta_at_all_is_simply_absent() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    let ids: Vec<i64> = rows.iter().map(|one| one.id).collect();
+    let found = store.meta_for(&ids, &["duration"]).expect("meta");
+    assert!(found.is_empty(), "nobody wrote any, so nobody answers");
+}
+
+#[test]
+fn deleting_an_item_takes_its_meta_with_it() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.set_meta(rows[0].id, "duration", "138").expect("set");
+    store.mark_deleted(rows[0].id, 99).expect("deleted");
+    let found = store.meta_for(&[rows[0].id], &["duration"]).expect("meta");
+    assert!(found.is_empty(), "erasing a row leaves no meta behind");
+}
+
+#[test]
+fn what_is_missing_a_measurement_can_be_found_without_touching_the_rest() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    let kinds: Vec<&str> = vec!["text", "email", "color"];
+    let of_those = rows
+        .iter()
+        .filter(|row| {
+            row.kind
+                .map(|kind| kinds.contains(&kind.as_str()))
+                .unwrap_or(false)
+        })
+        .count();
+    assert!(of_those > 1, "the fixture has a few of those kinds");
+
+    let waiting = store
+        .missing_meta(&kinds, "pixels-wide", 100)
+        .expect("asked");
+    assert_eq!(waiting.len(), of_those, "nobody has been measured yet");
+
+    store
+        .set_meta(waiting[0], "pixels-wide", "1920")
+        .expect("measured");
+    let after = store
+        .missing_meta(&kinds, "pixels-wide", 100)
+        .expect("asked");
+    assert_eq!(after.len(), of_those - 1, "the measured one drops out");
+    assert!(!after.contains(&waiting[0]));
+}
+
+#[test]
+fn a_kind_nobody_asked_about_is_never_queued() {
+    let store = history();
+    let only_colour = store
+        .missing_meta(&["color"], "duration-ms", 100)
+        .expect("asked");
+    let every_row = all(&store, &Filter::default()).len();
+    assert!(only_colour.len() < every_row, "only the colours");
+    assert!(
+        store
+            .missing_meta(&[], "duration-ms", 100)
+            .expect("asked")
+            .is_empty(),
+        "asking about no kind at all reads nothing"
+    );
+}
+
+#[test]
+fn a_deleted_row_is_not_sent_back_to_be_measured() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.mark_deleted(rows[0].id, 99).expect("deleted");
+    let waiting = store
+        .missing_meta(&["text", "email", "color"], "pixels-wide", 100)
+        .expect("asked");
+    assert!(!waiting.contains(&rows[0].id), "it is gone, not unmeasured");
+}
+
+const VOCABULARY: [&str; 12] = [
+    "report",
+    "invoice",
+    "meeting",
+    "password",
+    "address",
+    "phone",
+    "project",
+    "client",
+    "https://example.test/path",
+    "SELECT * FROM table",
+    "Straße",
+    "mail@example.test",
+];
+
+fn filled(total: usize) -> Store {
+    let store = Store::in_memory().expect("schema");
+    for at in 0..total {
+        let word = VOCABULARY[at % VOCABULARY.len()];
+        let other = VOCABULARY[(at * 7) % VOCABULARY.len()];
+        store
+            .insert_text(
+                &format!("uuid-{at}"),
+                &format!("{word} {at} about {other} with some surrounding text"),
+                at as i64,
+            )
+            .expect("insert");
+    }
+    store
+}
+
+#[test]
+#[ignore = "inserts up to 100k rows; run with cargo test -p cp-store -- --ignored"]
+fn listing_searching_counting_and_faceting_stay_fast_at_scale() {
+    for total in [10_000usize, 100_000] {
+        let store = filled(total);
+
+        let start = std::time::Instant::now();
+        let page = store.list(&Filter::default(), 100, None).expect("listed");
+        let listing = start.elapsed();
+        assert_eq!(page.rows.len(), 100);
+
+        let start = std::time::Instant::now();
+        let found = store
+            .list(
+                &Filter {
+                    query: Some("invoice".into()),
+                    ..Default::default()
+                },
+                100,
+                None,
+            )
+            .expect("listed");
+        let searching = start.elapsed();
+        assert!(!found.rows.is_empty());
+
+        let start = std::time::Instant::now();
+        let counted = store.count().expect("counted");
+        let counting = start.elapsed();
+        assert_eq!(counted, total as i64);
+
+        let start = std::time::Instant::now();
+        let facets = store.facets(&Filter::default()).expect("facets");
+        let faceting = start.elapsed();
+        assert!(!facets.is_empty());
+
+        println!(
+            "  {total:>7} rows -> list {listing:>10?} · search {searching:>10?} \
+             · count {counting:>10?} · facets {faceting:>10?}"
+        );
+
+        for (what, took) in [
+            ("listing the first page", listing),
+            ("searching a common word", searching),
+            ("counting everything", counting),
+            ("faceting the whole history", faceting),
+        ] {
+            assert!(
+                took < std::time::Duration::from_secs(2),
+                "{what} at {total} rows took {took:?}, which is not a usable interactive speed"
+            );
+        }
+    }
+}
+
+#[test]
+fn ungrouped_only_offers_the_kinds_it_can_group_and_only_while_they_have_no_group() {
+    let store = Store::in_memory().expect("schema");
+    let link = store
+        .insert_item(
+            "uuid-link",
+            &text_item("https://example.test", Kind::Link),
+            "https://example.test",
+            1,
+        )
+        .expect("insert");
+    let folder = store
+        .insert_item(
+            "uuid-folder",
+            &text_item("C:\\stuff", Kind::Folder),
+            "C:\\stuff",
+            2,
+        )
+        .expect("insert");
+    store
+        .insert_item(
+            "uuid-text",
+            &text_item("just a note", Kind::Text),
+            "just a note",
+            3,
+        )
+        .expect("insert");
+
+    let waiting: Vec<i64> = store
+        .ungrouped(10)
+        .expect("asked")
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect();
+    assert_eq!(
+        waiting,
+        vec![folder, link],
+        "newest first, and the plain text never qualifies regardless of its empty group"
+    );
+
+    store.set_group(link, "example.test").expect("grouped");
+    let waiting: Vec<i64> = store
+        .ungrouped(10)
+        .expect("asked")
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect();
+    assert_eq!(
+        waiting,
+        vec![folder],
+        "once it has a group it stops waiting to be grouped"
+    );
+}
+
+#[test]
+fn ungrouped_with_no_room_asked_for_finds_nothing() {
+    let store = Store::in_memory().expect("schema");
+    store
+        .insert_item(
+            "uuid-link",
+            &text_item("https://example.test", Kind::Link),
+            "https://example.test",
+            1,
+        )
+        .expect("insert");
+    assert_eq!(store.ungrouped(0).expect("asked"), Vec::new());
+}
+
+#[test]
+fn ungrouped_cuts_a_long_preview_without_splitting_a_character() {
+    let store = Store::in_memory().expect("schema");
+    let preview: String = "🎉".repeat(500);
+    let id = store
+        .insert_item(
+            "uuid-emoji-path",
+            &text_item(&preview, Kind::File),
+            &preview,
+            1,
+        )
+        .expect("insert");
+    let (_, _, shown) = store
+        .ungrouped(10)
+        .expect("asked")
+        .into_iter()
+        .find(|(one, _, _)| *one == id)
+        .expect("is here");
+    assert_eq!(
+        shown.chars().count(),
+        400,
+        "cut at 400 characters, not bytes"
+    );
+    assert!(shown.chars().all(|c| c == '🎉'), "no character was split");
+}
+
+#[test]
+fn every_order_including_by_group_pages_without_repeating_or_skipping_when_most_rows_tie() {
+    let store = Store::in_memory().expect("schema");
+    for at in 0..30 {
+        let id = store
+            .insert_item(
+                &format!("uuid-{at}"),
+                &text_item(&format!("note {at}"), Kind::Text),
+                &format!("note {at}"),
+                at,
+            )
+            .expect("insert");
+        if at % 4 == 0 {
+            store.set_group(id, "shared").expect("grouped");
+        }
+    }
+    let filter = Filter {
+        order: Order::ByGroup,
+        ..Default::default()
+    };
+    let mut ids = walk(&store, &filter, 4);
+    assert_eq!(ids.len(), 30, "ByGroup skipped rows");
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), 30, "ByGroup repeated rows");
 }

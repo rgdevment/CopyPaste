@@ -1,12 +1,23 @@
 mod age;
 mod app;
 mod engine;
+mod folder;
+mod group;
 mod here;
+mod layout;
+mod link;
 mod measure;
+mod media;
 mod model;
 mod note;
+mod paired;
+mod papers;
 mod say;
+mod shape;
+mod tags;
 mod view;
+mod wave;
+mod ways;
 
 slint::include_modules!();
 

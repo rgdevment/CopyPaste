@@ -251,3 +251,68 @@ fn folds_both_sides_of_the_index() {
     assert_eq!(fold("Łódź"), "lodz");
     assert_eq!(fold("el café"), "el cafe");
 }
+
+#[test]
+fn the_capital_eszett_does_not_fold_like_its_lowercase_twin() {
+    assert_eq!(fold("ß"), "ss");
+    assert_ne!(
+        fold("ẞ"),
+        "ss",
+        "U+1E9E, the capital ß used in all-caps German text, only lowercases to ß \
+         instead of expanding to ss, so STRASSE written with it would not be found \
+         by searching straße"
+    );
+    assert_eq!(fold("ẞ"), "ß");
+}
+
+#[test]
+fn the_turkish_dotted_capital_i_folds_like_a_plain_i_but_the_dotless_one_does_not() {
+    assert_eq!(
+        fold("İ"),
+        "i",
+        "the dot above decomposes away as a combining mark, leaving a plain i"
+    );
+    assert_eq!(fold("İ"), fold("I"));
+    assert_ne!(
+        fold("ı"),
+        "i",
+        "the dotless lowercase i has no decomposition and is a different letter, so it is \
+         never folded onto an ascii i"
+    );
+}
+
+#[test]
+fn nfc_and_nfd_spellings_of_the_same_letter_fold_the_same() {
+    let nfc = "caf\u{00e9}";
+    let nfd = "cafe\u{0301}";
+    assert_ne!(nfc.as_bytes(), nfd.as_bytes(), "different bytes going in");
+    assert_eq!(fold(nfc), fold(nfd), "the same folded result coming out");
+}
+
+#[test]
+fn terms_of_an_empty_or_symbol_only_query_is_empty() {
+    assert_eq!(terms_of(""), Vec::<String>::new());
+    assert_eq!(terms_of("   "), Vec::<String>::new());
+    assert_eq!(terms_of("!?#"), Vec::<String>::new());
+}
+
+#[test]
+fn a_leading_dash_stays_glued_to_its_word() {
+    assert_eq!(terms_of("gato -perro"), vec!["gato", "-perro"]);
+}
+
+#[test]
+fn quotes_are_not_a_token_boundary() {
+    assert_eq!(terms_of("\"hola mundo\""), vec!["\"hola", "mundo\""]);
+}
+
+#[test]
+fn a_term_longer_than_the_text_finds_nothing_and_does_not_panic() {
+    assert_eq!(excerpt("ab", &["abcdef".to_owned()], 100), None);
+}
+
+#[test]
+fn a_width_of_zero_still_shows_something() {
+    let found = excerpt("a match in here", &["match".to_owned()], 0).expect("a hit");
+    assert!(found.segments.iter().any(|one| one.matched));
+}

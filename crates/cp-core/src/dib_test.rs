@@ -531,3 +531,47 @@ fn a_truncated_bitmap_is_refused_not_panicked_on() {
         let _ = to_png(short);
     }
 }
+
+fn negative_width_rgb32(width: i32, height: i32) -> Vec<u8> {
+    let pixels = [0x40u8, 0x80, 0xC0, 0xFF]
+        .repeat(width.unsigned_abs() as usize * height.unsigned_abs() as usize);
+    let mut out = Vec::new();
+    out.extend_from_slice(&(INFO_HEADER as u32).to_le_bytes());
+    out.extend_from_slice(&width.to_le_bytes());
+    out.extend_from_slice(&height.to_le_bytes());
+    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&32u16.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&(pixels.len() as u32).to_le_bytes());
+    out.extend_from_slice(&2835i32.to_le_bytes());
+    out.extend_from_slice(&2835i32.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.resize(INFO_HEADER, 0);
+    out.extend_from_slice(&pixels);
+    out
+}
+
+#[test]
+fn a_negative_width_is_read_by_alpha_but_refused_by_to_png() {
+    let dib = negative_width_rgb32(-4, 4);
+    assert_eq!(header(&dib).map(|head| head.width), Some(-4));
+    assert_ne!(
+        alpha(&dib),
+        Alpha::Absent,
+        "a negative width is accepted via its magnitude and the pixels are read anyway"
+    );
+    assert_eq!(
+        to_png(&dib),
+        None,
+        "the same negative width is refused once it reaches the BMP decoder, so alpha() \
+         and to_png() disagree about whether this bitmap is usable"
+    );
+}
+
+#[test]
+fn a_zero_width_or_height_is_refused_by_to_png() {
+    for dib in [negative_width_rgb32(0, 4), negative_width_rgb32(4, 0)] {
+        assert_eq!(to_png(&dib), None);
+    }
+}

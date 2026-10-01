@@ -46,6 +46,8 @@ impl Drop for Engine {
 }
 
 const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
+const WAVE_WIDE: u32 = 384;
+const WAVE_HIGH: u32 = 64;
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
 const LATER: i64 = 60_000;
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
@@ -63,6 +65,7 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
         return None;
     };
     Some(std::thread::spawn(move || {
+        catch_up(&store);
         let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
         while !stop.load(Ordering::Relaxed) {
             if swept.elapsed() >= SWEEPS_EVERY {
@@ -74,6 +77,27 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
             }
         }
     }))
+}
+
+const CATCH_UP: usize = 500;
+
+fn catch_up(store: &Store) {
+    for (kinds, key, job) in [
+        (&["image"][..], crate::media::WIDTH, "thumb"),
+        (&["video", "audio"][..], crate::media::DURATION, "media"),
+    ] {
+        match store.missing_meta(kinds, key, CATCH_UP) {
+            Ok(waiting) => {
+                for id in waiting {
+                    if let Err(why) = store.enqueue(id, job) {
+                        note(&format!("{id} was left without {job} queued: {why}"));
+                        break;
+                    }
+                }
+            }
+            Err(why) => note(&format!("what is unmeasured could not be looked at: {why}")),
+        }
+    }
 }
 
 fn sweep(store: &Store) {
@@ -122,7 +146,15 @@ fn errand(store: &Store, thumbs: &Path) -> bool {
         read_out(store, id, at);
         return true;
     }
-    false
+    if let Some(id) = first_waiting(store, "media", at) {
+        measured(store, id, at);
+        return true;
+    }
+    if let Some(id) = first_waiting(store, "folder", at) {
+        walked(store, id, at);
+        return true;
+    }
+    grouped_some(store)
 }
 
 fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
@@ -136,7 +168,15 @@ fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
 }
 
 fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
-    let Some(png) = store.item(id).ok().flatten().as_ref().and_then(thumb_of) else {
+    let item = store.item(id).ok().flatten();
+    if let Some(sides) = item.as_ref().and_then(|one| {
+        here::content_of(one, None)
+            .image
+            .and_then(cp_core::thumbnail::size_of)
+    }) {
+        measured_sides(store, id, sides.width, sides.height);
+    }
+    let Some(png) = item.as_ref().and_then(thumb_of) else {
         give_up(store, id, "thumb", "the thumbnail could not be drawn", at);
         return;
     };
@@ -148,6 +188,94 @@ fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
         note(&format!("{id} has a thumbnail nobody wrote down: {why}"));
     }
     done(store, id, "thumb");
+}
+
+fn measured(store: &Store, id: i64, at: i64) {
+    let Some(path) = store
+        .item(id)
+        .ok()
+        .flatten()
+        .as_ref()
+        .and_then(crate::media::first_path_of)
+    else {
+        done(store, id, "media");
+        return;
+    };
+    let said = here::media_of(std::path::Path::new(&path));
+    if said.is_empty() {
+        give_up(store, id, "media", "the shell knows nothing about it", at);
+        return;
+    }
+    for (key, value) in said {
+        if let Err(why) = store.set_meta(id, key, &value) {
+            note(&format!("{id} has a {key} nobody wrote down: {why}"));
+        }
+    }
+    done(store, id, "media");
+}
+
+fn grouped_some(store: &Store) -> bool {
+    let waiting = match store.ungrouped(crate::group::AT_A_TIME) {
+        Ok(waiting) => waiting,
+        Err(why) => {
+            note(&format!("what has no group could not be looked at: {why}"));
+            return false;
+        }
+    };
+    if waiting.is_empty() {
+        return false;
+    }
+    for (id, kind, preview) in &waiting {
+        let key = crate::group::key_of(*kind, preview);
+        let key = if key.is_empty() {
+            crate::group::UNKNOWN
+        } else {
+            key.as_str()
+        };
+        if let Err(why) = store.set_group(*id, key) {
+            note(&format!("{id} was left without a group: {why}"));
+            return false;
+        }
+    }
+    true
+}
+
+fn walked(store: &Store, id: i64, at: i64) {
+    let Some(path) = store
+        .item(id)
+        .ok()
+        .flatten()
+        .as_ref()
+        .and_then(crate::media::first_path_of)
+    else {
+        done(store, id, "folder");
+        return;
+    };
+    let counting =
+        cp_core::reading::begin(move || crate::folder::counted_in(std::path::Path::new(&path)));
+    match counting.waited(crate::folder::PATIENCE) {
+        cp_core::reading::Waited::Answered(Some(seen)) => {
+            if let Err(why) = store.set_meta(id, crate::folder::ENTRIES, &seen.to_string()) {
+                note(&format!("{id} was counted and nobody wrote it down: {why}"));
+            }
+            done(store, id, "folder");
+        }
+        cp_core::reading::Waited::Answered(None) => {
+            give_up(store, id, "folder", "the folder could not be read", at);
+        }
+        cp_core::reading::Waited::StillRunning => {
+            give_up(store, id, "folder", "the folder did not answer in time", at);
+        }
+        cp_core::reading::Waited::Gone => {
+            give_up(
+                store,
+                id,
+                "folder",
+                "counting the folder did not survive",
+                at,
+            );
+        }
+    }
 }
 
 fn read_out(store: &Store, id: i64, at: i64) {
@@ -187,7 +315,21 @@ fn thumb_of(item: &Item) -> Option<Vec<u8>> {
         return cp_core::thumbnail::of_image(image, cp_core::thumbnail::MAX_SIDE);
     }
     let first = content.paths.first()?;
+    if item.kind == Some(Kind::Audio) {
+        let bars = crate::wave::bars_of(Path::new(first))?;
+        return cp_core::thumbnail::of_wave(&bars, crate::wave::TALLEST, WAVE_WIDE, WAVE_HIGH);
+    }
     here::thumb_of_file(Path::new(first), SIDE)
+}
+
+fn measured_sides(store: &Store, id: i64, width: u32, height: u32) {
+    for (key, value) in [(crate::media::WIDTH, width), (crate::media::HEIGHT, height)] {
+        if value > 0
+            && let Err(why) = store.set_meta(id, key, &value.to_string())
+        {
+            note(&format!("{id} has a {key} nobody wrote down: {why}"));
+        }
+    }
 }
 
 fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
@@ -263,6 +405,12 @@ fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> 
             "{id} was left not knowing where it came from: {why}"
         ));
     }
+    let key = crate::group::key_of(item.kind, &preview_of(item));
+    if !key.is_empty()
+        && let Err(why) = store.set_group(id, &key)
+    {
+        note(&format!("{id} was left without a group: {why}"));
+    }
     for job in jobs_for(item) {
         if let Err(why) = store.enqueue(id, job) {
             note(&format!("{id} was left without {job} queued: {why}"));
@@ -293,8 +441,12 @@ fn name_for(at: i64, _item: &Item) -> String {
 
 fn jobs_for(item: &Item) -> &'static [&'static str] {
     match item.kind {
-        Some(Kind::Image) => &["thumb", "ocr"],
-        Some(Kind::File) | Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb"],
+        Some(Kind::Image) => &["thumb", "ocr", "media"],
+        Some(Kind::Video) => &["thumb", "media"],
+        Some(Kind::Audio) => &["thumb", "media"],
+        Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb", "folder"],
+        Some(Kind::Folder) => &["folder"],
+        Some(Kind::File) if here::THUMBNAILS_FILES => &["thumb"],
         _ => &[],
     }
 }

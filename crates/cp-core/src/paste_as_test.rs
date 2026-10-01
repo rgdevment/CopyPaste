@@ -287,6 +287,64 @@ fn json_that_is_not_an_object_has_no_keys_and_no_table() {
 }
 
 #[test]
+fn json_pretty_printing_keeps_only_the_last_value_for_a_repeated_key() {
+    let content = text_of(Kind::Json, r#"{"a": 1, "a": 2}"#);
+    assert_eq!(
+        rendered(Form::JsonPretty, &content),
+        "{\n  \"a\": 2\n}",
+        "serde_json's map keeps the last occurrence of a repeated key and discards \
+         the earlier one silently, with no warning that anything was dropped"
+    );
+}
+
+#[test]
+fn a_json_integer_with_more_digits_than_any_native_type_holds_loses_its_exact_value() {
+    let huge = "123456789012345678901234567890";
+    let raw = format!("{{\"n\": {huge}}}");
+    let content = text_of(Kind::Json, &raw);
+    assert!(
+        forms_for(&content).contains(&Form::JsonPretty),
+        "it is still read and offered, not refused"
+    );
+    assert_ne!(
+        rendered(Form::JsonPretty, &content),
+        format!("{{\n  \"n\": {huge}\n}}"),
+        "without the arbitrary_precision feature, a number wider than u64 or i64 falls \
+         back to a lossy f64, so the digits that come back out are not the ones that went in"
+    );
+}
+
+#[test]
+fn nesting_right_up_to_serde_jsons_depth_limit_still_renders() {
+    let depth = 127;
+    let nested = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+    assert_eq!(crate::kind::classify_text(&nested), Kind::Json);
+    let content = text_of(Kind::Json, &nested);
+    let pretty = rendered(Form::JsonPretty, &content);
+    assert!(pretty.starts_with("[\n"));
+    assert!(pretty.trim_end().ends_with(']'));
+}
+
+#[test]
+fn one_level_past_serde_jsons_depth_limit_is_still_called_json_but_offers_no_json_form() {
+    let depth = 128;
+    let nested = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+    assert_eq!(
+        crate::kind::classify_text(&nested),
+        Kind::Json,
+        "classify_text only checks that the brackets balance, so it keeps calling \
+         this JSON regardless of depth"
+    );
+    let content = text_of(Kind::Json, &nested);
+    assert!(
+        forms_for(&content).is_empty(),
+        "serde_json::from_str refuses anything past 127 levels of nesting, so the item \
+         is tagged as JSON but paste-as offers none of the JSON forms for it, with \
+         nothing telling the person why it has no conversions"
+    );
+}
+
+#[test]
 fn a_colour_goes_round_the_three_notations() {
     let content = text_of(Kind::Color, "#FF8800");
     assert_eq!(

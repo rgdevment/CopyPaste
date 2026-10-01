@@ -1,0 +1,89 @@
+import { Card } from "types.slint";
+import { Theme } from "theme.slint";
+
+export component GridCell inherits Rectangle {
+    in property <Card> card;
+    in property <bool> current;
+    callback chosen();
+    callback paste();
+    callback stirred();
+    border-radius: 10px;
+    background: current ? Theme.card-hover : Theme.card;
+    border-width: 1px;
+    border-color: current ? Theme.selected-edge : Theme.panel-border;
+    clip: true;
+    accessible-role: AccessibleRole.list-item;
+    accessible-label: card.title + ", " + card.body;
+
+    touch := TouchArea {
+        clicked => { root.chosen(); }
+        double-clicked => { root.paste(); }
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.move) {
+                root.stirred();
+            }
+        }
+    }
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        Rectangle {
+            vertical-stretch: 1;
+            clip: true;
+            background: #12141c;
+            if card.has-thumb : Image {
+                source: card.thumb;
+                width: parent.width;
+                height: parent.height;
+                image-fit: contain;
+            }
+            if !card.has-thumb : VerticalLayout {
+                alignment: center;
+                spacing: 5px;
+                HorizontalLayout {
+                    alignment: center;
+                    Image {
+                        source: @image-url("../assets/icons/image.svg");
+                        colorize: card.broken ? Theme.danger : Theme.field-border;
+                        width: 22px;
+                        height: 22px;
+                    }
+                }
+                Text {
+                    text: card.alert;
+                    color: Theme.danger;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        Rectangle {
+            height: 24px;
+            background: Theme.card;
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                spacing: 6px;
+                Text {
+                    text: card.media-measures;
+                    color: Theme.title;
+                    font-size: 10.5px;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+                Rectangle { horizontal-stretch: 1; }
+                Text {
+                    text: card.source;
+                    color: Theme.muted;
+                    font-size: 10.5px;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}

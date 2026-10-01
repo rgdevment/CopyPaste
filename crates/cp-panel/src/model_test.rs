@@ -1,7 +1,9 @@
 use super::*;
 
 const SIZES: Metrics = Metrics {
+    head: 23.0,
     tall: 146.0,
+    json: 112.0,
     plain: 86.0,
     found: 68.0,
     frame: 50.0,
@@ -19,7 +21,7 @@ fn store_with(count: usize) -> Rc<Store> {
 }
 
 fn open(store: Rc<Store>, now: i64) -> Rc<Rows> {
-    Rows::open(store, Filter::default(), now, SIZES)
+    Rows::open(store, Filter::default(), now, SIZES, false)
 }
 
 #[test]
@@ -82,7 +84,7 @@ fn a_query_that_matches_nothing_is_an_empty_model_not_an_error() {
         query: Some("nada-de-esto".into()),
         ..Default::default()
     };
-    let rows = Rows::open(store_with(10), filter, 0, SIZES);
+    let rows = Rows::open(store_with(10), filter, 0, SIZES, false);
     assert_eq!(rows.row_count(), 0);
     assert!(rows.exhausted.get());
 }
@@ -215,4 +217,197 @@ fn revealing_a_row_only_scrolls_when_the_row_is_out_of_sight() {
         "queda debajo: sube lo justo"
     );
     assert_eq!(reveal(500.0, 124.0, 0.0, 0.0), 0.0, "sin alto no se decide");
+}
+
+#[test]
+fn a_json_only_list_gives_its_rows_the_taller_shut_height() {
+    let metrics = SIZES;
+    let general = Filter::default();
+    let only_json = Filter {
+        kinds: vec![cp_core::kind::Kind::Json],
+        ..Default::default()
+    };
+    let mixed = Filter {
+        kinds: vec![cp_core::kind::Kind::Json, cp_core::kind::Kind::Text],
+        ..Default::default()
+    };
+
+    assert_eq!(shut_height_for(&general, &metrics, false), 86.0);
+    assert_eq!(shut_height_for(&only_json, &metrics, false), 112.0);
+    assert_eq!(
+        shut_height_for(&only_json, &metrics, true),
+        86.0,
+        "read raw, a json row is as tall as any other"
+    );
+    assert_eq!(
+        shut_height_for(&mixed, &metrics, false),
+        86.0,
+        "two kinds is the general layout, and the general height"
+    );
+}
+
+#[test]
+fn only_the_views_that_use_meta_ask_the_store_for_any() {
+    let of = |kinds: Vec<cp_core::kind::Kind>| {
+        meta_keys_for(&Filter {
+            kinds,
+            ..Default::default()
+        })
+    };
+    assert!(of(vec![]).is_empty(), "the general view asks for nothing");
+    assert!(
+        of(vec![cp_core::kind::Kind::Json]).is_empty(),
+        "json parses the preview"
+    );
+    assert!(
+        of(vec![cp_core::kind::Kind::File]).is_empty(),
+        "the format is in the path"
+    );
+    assert_eq!(of(vec![cp_core::kind::Kind::Video]), &crate::media::KEYS);
+    assert_eq!(of(vec![cp_core::kind::Kind::Audio]), &crate::media::KEYS);
+    assert_eq!(of(vec![cp_core::kind::Kind::Folder]), &crate::folder::KEYS);
+    assert!(
+        of(vec![cp_core::kind::Kind::Video, cp_core::kind::Kind::Audio]).is_empty(),
+        "two kinds is the general view, which asks for nothing"
+    );
+}
+
+fn grouped(group: &str) -> cp_store::Listed {
+    cp_store::Listed {
+        id: 1,
+        modified_at: 0,
+        created_at: 0,
+        kind: Some(cp_core::kind::Kind::Link),
+        preview: String::new(),
+        app: None,
+        label: None,
+        color: 0,
+        thumb_path: None,
+        paste_count: 0,
+        last_used_at: None,
+        broken_since: None,
+        pinned: false,
+        group: group.to_owned(),
+        snippet: None,
+    }
+}
+
+#[test]
+fn the_first_row_of_a_group_is_the_one_that_heads_it() {
+    let linked = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = [
+        grouped("docs.rs"),
+        grouped("docs.rs"),
+        grouped("github.com"),
+    ];
+    assert!(heads_group(&linked, &rows, 0), "the first row always heads");
+    assert!(
+        !heads_group(&linked, &rows, 1),
+        "same group as the one above"
+    );
+    assert!(heads_group(&linked, &rows, 2), "the group changed");
+    assert!(!heads_group(&linked, &rows, 9), "there is no row there");
+}
+
+#[test]
+fn a_view_that_does_not_group_draws_no_heading_at_all() {
+    let general = Filter::default();
+    let rows = [grouped("docs.rs"), grouped("github.com")];
+    assert!(!heads_group(&general, &rows, 0));
+    assert!(!heads_group(&general, &rows, 1));
+}
+
+#[test]
+fn choosing_the_newest_way_drops_the_headings_with_the_grouping() {
+    let newest = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::Recent,
+        ..Default::default()
+    };
+    let rows = [grouped("docs.rs"), grouped("github.com")];
+    assert!(
+        !heads_group(&newest, &rows, 0),
+        "a heading over a list that is not grouped would be a lie"
+    );
+}
+
+#[test]
+fn a_group_nobody_could_name_heads_nothing() {
+    let linked = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = [grouped(crate::group::UNKNOWN), grouped("")];
+    assert!(!heads_group(&linked, &rows, 0));
+    assert!(!heads_group(&linked, &rows, 1));
+}
+
+#[test]
+fn the_row_that_heads_a_group_is_taller_by_exactly_its_heading() {
+    let store = Store::in_memory().expect("esquema");
+    for (at, group) in ["a.test", "a.test", "b.test"].iter().enumerate() {
+        let id = store
+            .insert_text(
+                &format!("u{at}"),
+                &format!("https://{group}/{at}"),
+                at as i64,
+            )
+            .expect("insert");
+        store.set_group(id, group).expect("grouped");
+    }
+    let grouped = Filter {
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), grouped, 1_000, SIZES, false);
+    assert_eq!(rows.row_count(), 3);
+    let mut heading = 0;
+    for at in 0..rows.row_count() {
+        let card = rows.row_data(at).expect("a card");
+        let span = rows.span_of(at).expect("a row").1;
+        let wanted = if card.heads_group {
+            heading += 1;
+            SIZES.plain + SIZES.head
+        } else {
+            SIZES.plain
+        };
+        assert_eq!(
+            span, wanted,
+            "row {at} draws its heading as {} and measures {span}",
+            card.heads_group
+        );
+    }
+    assert_eq!(heading, 2, "two groups, two headings");
+}
+
+#[test]
+fn a_filter_on_one_kind_still_comes_back_grouped() {
+    let store = Store::in_memory().expect("esquema");
+    for at in 0..3 {
+        let id = store
+            .insert_text(
+                &format!("u{at}"),
+                &format!("https://una.test/{at}"),
+                at as i64,
+            )
+            .expect("insert");
+        store.set_group(id, "una.test").expect("grouped");
+    }
+    let linked = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), linked, 1_000, SIZES, false);
+    assert_eq!(rows.row_count(), 3, "the three links came back");
+    let first = rows.row_data(0).expect("a card");
+    assert!(first.heads_group, "the first link heads its domain");
+    assert_eq!(first.group_said.as_str(), "una.test");
+    let second = rows.row_data(1).expect("a card");
+    assert!(!second.heads_group, "same domain, no second heading");
 }

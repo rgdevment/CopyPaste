@@ -1,4 +1,9 @@
 import { Card, Chip } from "types.slint";
+import { LinkBody } from "bodies_link.slint";
+import { FolderBody } from "bodies_folder.slint";
+import { PapersBody } from "bodies_papers.slint";
+import { MediaBody } from "bodies_media.slint";
+import { JsonBody } from "bodies.slint";
 import { Theme } from "theme.slint";
 import { Words } from "words.slint";
 
@@ -86,9 +91,11 @@ export component Pill inherits Rectangle {
     in property <Chip> chip;
     accessible-role: AccessibleRole.button;
     accessible-label: chip.label;
-    callback chosen(string);
+    callback chosen(string, bool);
+    callback asked-ways(string);
+    property <bool> shows-arrow: chip.selected && chip.has-ways;
     height: 24px;
-    width: content.preferred-width;
+    width: content.preferred-width + (shows-arrow ? 16px : 0px);
     border-radius: 12px;
     background: chip.selected ? Theme.selected : touch.has-hover ? #242840 : Theme.field;
     border-width: 1px;
@@ -111,7 +118,30 @@ export component Pill inherits Rectangle {
         if chip.count != "" : Text { text: chip.count; color: chip.selected ? Theme.accent-dim : Theme.muted; font-size: 10px; vertical-alignment: center; }
     }
     touch := TouchArea {
-        clicked => { root.chosen(chip.key); }
+        property <bool> adding;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                self.adding = event.modifiers.control;
+            }
+        }
+        clicked => { root.chosen(chip.key, touch.adding); }
+    }
+
+    if shows-arrow : Rectangle {
+        x: parent.width - 17px;
+        width: 17px;
+        height: parent.height;
+        Image {
+            source: @image-url("../assets/icons/chevron-down.svg");
+            width: 11px;
+            height: 11px;
+            colorize: arrow.has-hover ? Theme.body : Theme.accent;
+            x: 0;
+            y: (parent.height - 11px) / 2;
+        }
+        arrow := TouchArea {
+            clicked => { root.asked-ways(chip.key); }
+        }
     }
 }
 
@@ -158,6 +188,10 @@ export component Tag inherits Rectangle {
 
 export component CardView inherits Rectangle {
     in property <Card> card;
+    in property <string> layout;
+    in property <bool> plain-way;
+    property <bool> special: !plain-way && (layout == "json" || layout == "video"
+        || layout == "audio" || layout == "papers" || layout == "folder" || layout == "link");
     in property <bool> current;
     in property <bool> open;
     in property <bool> shown-here;
@@ -207,8 +241,28 @@ export component CardView inherits Rectangle {
             Text { text: card.tail; color: Theme.body; font-size: 12.5px; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
         }
 
-        if !card.has-thumb && (!card.found || open) : Text {
-            text: card.body;
+        if !card.has-thumb && !open && !plain-way && layout == "json" : JsonBody {
+            card: card;
+        }
+
+        if !card.has-thumb && !open && !plain-way && (layout == "video" || layout == "audio") : MediaBody {
+            card: card;
+        }
+
+        if !card.has-thumb && !open && !plain-way && layout == "papers" : PapersBody {
+            card: card;
+        }
+
+        if !card.has-thumb && !open && !plain-way && layout == "folder" : FolderBody {
+            card: card;
+        }
+
+        if !card.has-thumb && !open && !plain-way && layout == "link" : LinkBody {
+            card: card;
+        }
+
+        if !card.has-thumb && (!card.found || open) && !(special && !open) : Text {
+            text: open ? card.body : card.squeezed;
             color: card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? 12px : 13px;
             font-family: card.mono ? "Cascadia Mono" : "Segoe UI";

@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir, dress, forward,
-    in_front, ocr_available, paste_into, read_stuck, stay_out_of_the_dock, system_is_light,
-    text_in, thumb_of_file, thumbs_dir, to_clipboard,
+    in_front, media_of, ocr_available, paste_into, read_stuck, stay_out_of_the_dock,
+    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,6 +76,16 @@ mod platform {
 
     pub fn read_stuck() -> bool {
         cp_win_sys::clipboard::read_stuck_for().is_some()
+    }
+
+    pub fn media_of(path: &Path) -> Vec<(&'static str, String)> {
+        crate::media::said_of(
+            cp_win_sys::media::info_for(path).map(|one| crate::media::Facts {
+                duration: one.duration,
+                width: one.width,
+                height: one.height,
+            }),
+        )
     }
 
     pub fn system_is_light() -> bool {
@@ -172,6 +182,16 @@ mod platform {
 
     pub fn read_stuck() -> bool {
         false
+    }
+
+    pub fn media_of(path: &Path) -> Vec<(&'static str, String)> {
+        crate::media::said_of(
+            cp_mac_sys::media::info_for(path).map(|one| crate::media::Facts {
+                duration: one.duration,
+                width: one.width,
+                height: one.height,
+            }),
+        )
     }
 
     pub fn system_is_light() -> bool {

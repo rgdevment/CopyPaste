@@ -3,7 +3,8 @@ use windows::Win32::Foundation::PROPERTYKEY;
 use windows::Win32::System::Com::CoTaskMemFree;
 use windows::Win32::System::Com::StructuredStorage::{PROPVARIANT, PropVariantToStringAlloc};
 use windows::Win32::UI::Shell::PropertiesSystem::{
-    GPS_DEFAULT, IPropertyStore, SHGetPropertyStoreFromParsingName,
+    GETPROPERTYSTOREFLAGS, GPS_DEFAULT, GPS_OPENSLOWITEM, IPropertyStore, PSGetNameFromPropertyKey,
+    SHGetPropertyStoreFromParsingName,
 };
 use windows::core::{GUID, PCWSTR};
 
@@ -57,21 +58,22 @@ const PKEY_MUSIC_ALBUM: PROPERTYKEY = PROPERTYKEY {
     pid: 4,
 };
 
-pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
+fn store_for(path: &std::path::Path, how: GETPROPERTYSTOREFLAGS) -> Option<IPropertyStore> {
     if !path.exists() {
         return None;
     }
-    let _apartment = crate::com::Apartment::enter();
     let absolute = crate::com::shell_path(path)?;
     let wide: Vec<u16> = absolute
         .as_os_str()
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();
+    unsafe { SHGetPropertyStoreFromParsingName(PCWSTR(wide.as_ptr()), None, how) }.ok()
+}
 
-    let store: IPropertyStore =
-        unsafe { SHGetPropertyStoreFromParsingName(PCWSTR(wide.as_ptr()), None, GPS_DEFAULT) }
-            .ok()?;
+pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
+    let _apartment = crate::com::Apartment::enter();
+    let store = store_for(path, GPS_DEFAULT)?;
 
     let info = MediaInfo {
         duration: hundred_nanos(&store, PKEY_MEDIA_DURATION),
@@ -83,6 +85,39 @@ pub fn info_for(path: &std::path::Path) -> Option<MediaInfo> {
     };
 
     (!info.is_empty()).then_some(info)
+}
+
+pub struct Published {
+    pub how_many: u32,
+    pub said: Vec<(String, String)>,
+}
+
+pub fn everything_about(path: &std::path::Path) -> Option<Published> {
+    let _apartment = crate::com::Apartment::enter();
+    let store = store_for(path, GPS_OPENSLOWITEM)?;
+    let how_many = unsafe { store.GetCount() }.unwrap_or(0);
+    let mut said = Vec::new();
+    for at in 0..how_many {
+        let mut key = PROPERTYKEY::default();
+        if unsafe { store.GetAt(at, &raw mut key) }.is_err() {
+            continue;
+        }
+        let name = named(key).unwrap_or_else(|| format!("{:?}:{}", key.fmtid, key.pid));
+        if let Some(value) = text(&store, key) {
+            said.push((name, value));
+        }
+    }
+    Some(Published { how_many, said })
+}
+
+fn named(key: PROPERTYKEY) -> Option<String> {
+    let raw = unsafe { PSGetNameFromPropertyKey(&key) }.ok()?;
+    if raw.is_null() {
+        return None;
+    }
+    let name = unsafe { raw.to_string() }.ok();
+    unsafe { CoTaskMemFree(Some(raw.as_ptr().cast())) };
+    name
 }
 
 fn value_of(store: &IPropertyStore, key: PROPERTYKEY) -> Option<PROPVARIANT> {

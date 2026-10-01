@@ -158,7 +158,7 @@ fn main() -> std::process::ExitCode {
                 query: Some("with".into()),
                 ..Default::default()
             };
-            store.list(&filter, 100, deep).expect("queried");
+            store.list(&filter, 100, deep.clone()).expect("queried");
         },
     );
     over += measure(

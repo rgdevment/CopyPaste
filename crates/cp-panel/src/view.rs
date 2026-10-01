@@ -6,6 +6,8 @@ use cp_core::search::Excerpt;
 use cp_core::token::Claims;
 use cp_store::{Facet, Listed};
 
+pub type MetaOfOne = std::collections::HashMap<String, String>;
+
 const LEAD: usize = 30;
 const PER_LINE: usize = 57;
 const SHUT: i32 = 2;
@@ -74,9 +76,27 @@ fn claims_in(row: &Listed) -> Option<Claims> {
         .flatten()
 }
 
-pub fn card_of(row: &Listed, now: i64) -> Card {
+pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
+    let (clock, measures) = crate::media::said_in(meta);
+    let link = (row.kind == Some(Kind::Link))
+        .then(|| crate::link::parts_of(&row.preview))
+        .flatten();
+    let folder = (row.kind == Some(Kind::Folder))
+        .then(|| crate::folder::parts_of(&row.preview))
+        .flatten();
+    let papers = (row.kind == Some(Kind::File))
+        .then(|| crate::papers::papers_of(&row.preview))
+        .flatten();
+    let shape = (row.kind == Some(Kind::Json))
+        .then(|| crate::shape::said_of(&row.preview, crate::say::in_english()))
+        .flatten()
+        .unwrap_or_else(|| crate::shape::Said {
+            root: String::new(),
+            counted: String::new(),
+            keys: String::new(),
+        });
     let body = body_of(row);
     let (lead, hit, tail) = match &row.snippet {
         Some(snippet) => parts_of(&snippet.excerpt),
@@ -94,6 +114,41 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         },
         age: age_text(now, row.modified_at).into(),
         lines: lines_of(&body),
+        squeezed: squeezed_of(&body).into(),
+        shape_root: shape.root.into(),
+        shape_said: shape.counted.into(),
+        shape_keys: shape.keys.into(),
+        media_clock: clock.into(),
+        media_measures: measures.into(),
+        papers_format: papers
+            .as_ref()
+            .map(|one| one.format.clone())
+            .unwrap_or_default()
+            .into(),
+        papers_family: papers.as_ref().map_or("plain", |one| one.family).into(),
+        folder_name: folder
+            .as_ref()
+            .map(|one| one.name.clone())
+            .unwrap_or_default()
+            .into(),
+        folder_parent: folder
+            .as_ref()
+            .map(|one| one.parent.clone())
+            .unwrap_or_default()
+            .into(),
+        folder_said: crate::folder::said_in(meta, crate::say::in_english()).into(),
+        link_domain: link
+            .as_ref()
+            .map(|one| one.domain.clone())
+            .unwrap_or_default()
+            .into(),
+        heads_group: false,
+        group_said: Default::default(),
+        link_path: link
+            .as_ref()
+            .map(|one| one.path.clone())
+            .unwrap_or_default()
+            .into(),
         body: body.into(),
         found: !hit.is_empty(),
         badge: badge_of(claims.as_ref()).into(),
@@ -107,6 +162,26 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         pinned: row.pinned,
         broken: row.broken_since.is_some(),
     }
+}
+
+pub fn squeezed_of(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut spaced = true;
+    for one in text.chars() {
+        if one.is_whitespace() {
+            if !spaced {
+                out.push(' ');
+                spaced = true;
+            }
+            continue;
+        }
+        out.push(one);
+        spaced = false;
+    }
+    if out.ends_with(' ') {
+        out.pop();
+    }
+    out
 }
 
 pub fn body_of(row: &Listed) -> String {
@@ -294,11 +369,15 @@ pub fn chips_of(facets: &[Facet], selected: &[String]) -> Vec<Chip> {
 }
 
 fn chip(key: &str, label: &str, count: i64, selected: bool) -> Chip {
+    let of_kind = cp_core::kind::Kind::from_name(key)
+        .map(|kind| crate::layout::layout_for(&[kind]))
+        .unwrap_or(crate::layout::Layout::Everything);
     Chip {
         key: key.into(),
         label: label.into(),
         count: compact(count).into(),
         selected,
+        has_ways: !crate::ways::ways_of(of_kind).is_empty(),
     }
 }
 
@@ -394,13 +473,7 @@ fn count_in(english: bool, count: i64) -> String {
 pub fn dress_words(ui: &crate::Panel) {
     use slint::ComponentHandle;
     let words = ui.global::<crate::Words>();
-    words.set_hint(
-        crate::say::pick(
-            "Busca o filtra con # en el portapapeles",
-            "Search the clipboard, or filter with #",
-        )
-        .into(),
-    );
+    words.set_hint(crate::say::pick("Busca o filtra con #", "Search, or filter with #").into());
     words.set_footer(
         crate::say::pick(
             "pegar · alt+enter: más formas",
@@ -412,6 +485,8 @@ pub fn dress_words(ui: &crate::Panel) {
     words.set_pin(crate::say::pick("anclar", "pin").into());
     words.set_unpin(crate::say::pick("desanclar", "unpin").into());
     words.set_remove(crate::say::pick("borrar", "delete").into());
+    words.set_one_kind(crate::say::pick("uno", "one").into());
+    words.set_many_kinds(crate::say::pick("varios", "many").into());
 }
 
 #[cfg(test)]

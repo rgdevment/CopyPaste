@@ -37,6 +37,8 @@ struct State {
     query: String,
     tags: Vec<String>,
     pinned: bool,
+    keeping: bool,
+    way: String,
     rows: Option<Rc<Rows>>,
     options: Options,
     metrics: Metrics,
@@ -55,6 +57,7 @@ struct State {
 enum Asking {
     Forms(i64),
     Kinds,
+    Ways,
 }
 
 struct Request {
@@ -72,8 +75,10 @@ impl App {
         crate::view::dress_words(&panel);
         let theme = panel.global::<crate::Theme>();
         let metrics = Metrics {
+            head: theme.get_row_head(),
             tall: theme.get_row_thumb(),
             plain: theme.get_row_plain(),
+            json: theme.get_row_json(),
             found: theme.get_row_found(),
             frame: theme.get_row_frame(),
             line: theme.get_line(),
@@ -87,6 +92,8 @@ impl App {
             query: String::new(),
             tags: Vec::new(),
             pinned: false,
+            keeping: false,
+            way: String::new(),
             rows: None,
             options,
             metrics,
@@ -169,11 +176,51 @@ impl App {
     }
 
     pub fn choose_chip(&self, key: &str) {
-        toggle_tag(&self.state, key);
+        pick_tag(&self.state, key, false);
         self.refresh();
     }
 
     fn wire_chrome(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_sheet_chosen(move |key| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            ui.set_sheet_open(false);
+            let asking = state.borrow().asking;
+            match asking {
+                Asking::Forms(id) => {
+                    let (store, engine) = {
+                        let state = state.borrow();
+                        (state.store.clone(), state.engine.clone())
+                    };
+                    if paste_as(&store, engine.as_deref(), id, key.as_str()) {
+                        deliver(&ui, &state);
+                    } else {
+                        complain(&ui, busy());
+                    }
+                }
+                Asking::Kinds => {
+                    pick_tag(&state, key.as_str(), false);
+                    blink(&ui);
+                    refresh(&ui, &state);
+                }
+                Asking::Ways => {
+                    state.borrow_mut().way = key.to_string();
+                    refresh(&ui, &state);
+                }
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_keep_toggled(move || {
+            let now = !state.borrow().keeping;
+            state.borrow_mut().keeping = now;
+            if let Some(ui) = ui.upgrade() {
+                ui.set_keeping(now);
+            }
+        });
         let ui = self.ui.clone();
         panel.on_ask_settings(move || {
             let Some(ui) = ui.upgrade() else {
@@ -227,11 +274,18 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
-        panel.on_chip_chosen(move |key| {
-            toggle_tag(&state, key.as_str());
+        panel.on_chip_chosen(move |key, adding| {
+            pick_tag(&state, key.as_str(), adding);
             if let Some(ui) = ui.upgrade() {
                 blink(&ui);
                 refresh(&ui, &state);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_ask_ways_for(move |_| {
+            if let Some(ui) = ui.upgrade() {
+                ask_ways(&ui, &state);
             }
         });
         let ui = self.ui.clone();
@@ -501,33 +555,6 @@ impl App {
         self.wire_chrome(panel);
         let ui = self.ui.clone();
         let state = self.state.clone();
-        panel.on_sheet_chosen(move |key| {
-            let Some(ui) = ui.upgrade() else {
-                return;
-            };
-            ui.set_sheet_open(false);
-            let asking = state.borrow().asking;
-            match asking {
-                Asking::Forms(id) => {
-                    let (store, engine) = {
-                        let state = state.borrow();
-                        (state.store.clone(), state.engine.clone())
-                    };
-                    if paste_as(&store, engine.as_deref(), id, key.as_str()) {
-                        deliver(&ui, &state);
-                    } else {
-                        complain(&ui, busy());
-                    }
-                }
-                Asking::Kinds => {
-                    toggle_tag(&state, key.as_str());
-                    blink(&ui);
-                    refresh(&ui, &state);
-                }
-            }
-        });
-        let ui = self.ui.clone();
-        let state = self.state.clone();
         panel.on_paste_as(move |id, key| {
             let (store, engine) = {
                 let state = state.borrow();
@@ -605,7 +632,18 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     };
     let keys = keys_of(&filter);
     let full = filter.clone();
-    let rows = Rows::open(store, filter, now, metrics);
+    let way = state.borrow().way.clone();
+    let layout = crate::layout::layout_for(&filter.kinds);
+    let here = crate::ways::chosen(layout, &way);
+    ui.set_way(here.key.into());
+    ui.set_way_said(if crate::ways::ways_of(layout).is_empty() {
+        Default::default()
+    } else {
+        crate::ways::label_of(here, crate::say::in_english()).into()
+    });
+    ui.set_plain_way(here.plain);
+    ui.set_shut(crate::model::shut_height_for(&filter, &metrics, here.plain));
+    let rows = Rows::open(store, filter, now, metrics, here.plain);
     ui.set_opened(false);
     {
         let state = state.borrow();
@@ -625,6 +663,7 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     ui.set_current(if rows.loaded() > 0 { 0 } else { -1 });
     ui.set_scroll_y(0.0);
     ui.set_cards(ModelRc::from(rows.clone()));
+    ui.set_grid_lines(ModelRc::from(crate::paired::Paired::over(rows.clone())));
     let mut state = state.borrow_mut();
     state.rows = Some(rows);
     state.last_refresh = started.elapsed();
@@ -680,6 +719,7 @@ fn spawn_counter(
             let footer = count_text(shown);
             let anchored = compact(pinned);
             let only_anchored = request.full.pinned_only;
+            let asked = crate::layout::layout_for(&request.full.kinds);
             let mine = request.generation;
             let clock = generation.clone();
             let _ = ui.upgrade_in_event_loop(move |panel| {
@@ -690,6 +730,7 @@ fn spawn_counter(
                 panel.set_count_text(footer.into());
                 panel.set_pinned_count(anchored.into());
                 panel.set_pinned_on(only_anchored);
+                panel.set_layout(asked.as_str().into());
             });
         }
     });
@@ -725,17 +766,57 @@ fn filter_of(state: &State) -> Filter {
     if state.pinned {
         filter.pinned_only = true;
     }
+    let layout = crate::layout::layout_for(&filter.kinds);
+    if layout.groups() && !crate::ways::chosen(layout, &state.way).recent {
+        filter.order = cp_store::Order::ByGroup;
+    }
     filter
 }
 
-fn toggle_tag(state: &Rc<RefCell<State>>, key: &str) {
-    let mut state = state.borrow_mut();
-    match state.tags.iter().position(|one| one == key) {
-        Some(at) => {
-            state.tags.remove(at);
-        }
-        None => state.tags.push(key.to_owned()),
+fn ask_ways(ui: &Panel, state: &Rc<RefCell<State>>) {
+    let (keeping, way) = {
+        let state = state.borrow();
+        (state.keeping, state.way.clone())
+    };
+    if keeping {
+        return;
     }
+    let layout = crate::layout::layout_for(&filter_of(&state.borrow()).kinds);
+    let ways = crate::ways::ways_of(layout);
+    if ways.is_empty() {
+        return;
+    }
+    let english = crate::say::in_english();
+    let here = crate::ways::chosen(layout, &way);
+    let rows: Vec<FormRow> = ways
+        .iter()
+        .map(|one| FormRow {
+            key: one.key.into(),
+            label: crate::ways::label_of(*one, english).into(),
+            preview: if one.key == here.key {
+                crate::say::pick("ahora", "now").into()
+            } else {
+                Default::default()
+            },
+        })
+        .collect();
+    state.borrow_mut().asking = Asking::Ways;
+    ui.set_sheet_anchor(0.0);
+    ui.set_sheet_span(0.0);
+    ui.set_sheet_subject(Default::default());
+    open_sheet(
+        ui,
+        crate::say::pick("CÓMO MOSTRARLO", "HOW TO SHOW IT"),
+        rows,
+    );
+    ui.set_sheet_narrow(true);
+    arm_sheet(state, ui);
+}
+
+fn pick_tag(state: &Rc<RefCell<State>>, key: &str, adding: bool) {
+    let adding = adding || state.borrow().keeping;
+    let next = crate::tags::after(&state.borrow().tags, key, adding);
+    state.borrow_mut().tags = next;
 }
 
 fn tags_of(state: &State) -> Vec<Chip> {
@@ -748,6 +829,7 @@ fn tags_of(state: &State) -> Vec<Chip> {
             label: label_of(Some(kind)).into(),
             count: Default::default(),
             selected: true,
+            has_ways: false,
         })
         .collect()
 }
@@ -807,6 +889,7 @@ fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
 }
 
 fn open_sheet(ui: &Panel, title: &str, rows: Vec<FormRow>) {
+    ui.set_sheet_narrow(false);
     ui.set_sheet_at(ui.get_scroll_y());
     ui.set_sheet_armed(false);
     ui.set_sheet_title(title.into());

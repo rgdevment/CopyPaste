@@ -1,4 +1,5 @@
 import { ListView } from "std-widgets.slint";
+import { GridCell } from "bodies_grid.slint";
 import { Card, Chip, FormRow } from "types.slint";
 import { Theme } from "theme.slint";
 import { Words } from "words.slint";
@@ -15,6 +16,7 @@ export component Panel inherits Window {
     title: "CopyPaste";
 
     in property <[Card]> cards;
+    in property <[int]> grid-lines;
     in property <[Chip]> chips;
     in property <[Chip]> tags;
     in property <[FormRow]> sheet-rows;
@@ -23,7 +25,16 @@ export component Panel inherits Window {
     in-out property <length> sheet-span;
     in property <string> sheet-subject;
     in property <string> sheet-kind;
+    in property <string> layout: "everything";
+    in property <length> shut: Theme.row-plain;
+    in property <bool> plain-way;
+    in-out property <bool> keeping;
+    callback keep-toggled();
+    in property <string> way;
+    in property <bool> sheet-narrow;
+    in-out property <length> chip-x;
     in property <string> count-text;
+    in property <string> way-said;
     in property <string> pinned-count;
     in property <string> empty-title;
     in property <string> empty-hint;
@@ -47,7 +58,8 @@ export component Panel inherits Window {
     out property <length> list-top: list.absolute-position.y - panel.absolute-position.y;
 
     callback search(string);
-    callback chip-chosen(string);
+    callback chip-chosen(string, bool);
+    callback ask-ways-for(string);
     callback pin-filter();
     callback drop-tag(string);
     callback clear-filters();
@@ -127,7 +139,12 @@ export component Panel inherits Window {
                 padding-top: 2px;
                 padding-bottom: 8px;
                 spacing: 9px;
+                HorizontalLayout {
+                    height: 34px;
+                    spacing: 8px;
+                    alignment: stretch;
                 search-box := Rectangle {
+                    horizontal-stretch: 1;
                     height: 34px;
                     border-radius: 10px;
                     background: Theme.field;
@@ -282,84 +299,90 @@ export component Panel inherits Window {
                                 font-size: 13px;
                             }
                         }
+                    }
+                }
                         Rectangle {
-                            width: 22px;
-                            height: 22px;
-                            border-radius: 6px;
-                            background: kinds-touch.has-hover ? #333853 : transparent;
-                            y: (parent.height - 22px) / 2;
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 12px;
+                            y: (parent.height - 24px) / 2;
+                            background: root.keeping
+                                ? Theme.selected
+                                : keep-touch.has-hover ? #242840 : Theme.field;
+                            border-width: 1px;
+                            border-color: root.keeping ? Theme.selected-edge : Theme.field-border;
+                            accessible-role: AccessibleRole.button;
+                            accessible-label: root.keeping ? Words.many-kinds : Words.one-kind;
+                            accessible-checked: root.keeping;
+                            animate background, border-color { duration: 120ms; easing: ease-out; }
                             Icon {
-                                source: @image-url("../assets/icons/sliders-horizontal.svg");
-                                tint: kinds-touch.has-hover ? Theme.body : Theme.placeholder;
+                                source: @image-url("../assets/icons/layers.svg");
+                                width: 13px;
+                                height: 13px;
+                                tint: root.keeping ? Theme.accent : Theme.muted;
                             }
-                            kinds-touch := TouchArea {
-                                clicked => { root.ask-kinds(); }
+                            keep-touch := TouchArea {
+                                clicked => { root.keep-toggled(); }
                             }
                         }
-                    }
+                        pin := Rectangle {
+                            width: pin-row.preferred-width;
+                            height: 24px;
+                            border-radius: 12px;
+                            y: (parent.height - 24px) / 2;
+                            background: root.pinned-on ? Theme.selected : pin-touch.has-hover ? #242840 : Theme.field;
+                            border-width: 1px;
+                            border-color: root.pinned-on ? Theme.selected-edge : Theme.field-border;
+                            accessible-role: AccessibleRole.button;
+                            accessible-label: root.pinned-on ? Words.unpin : Words.pin;
+                            animate background, border-color { duration: 120ms; easing: ease-out; }
+                            pin-row := HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                spacing: 5px;
+                                alignment: center;
+                                Icon {
+                                    source: @image-url("../assets/icons/pin.svg");
+                                    width: 12px;
+                                    height: 12px;
+                                    tint: root.pinned-on ? Theme.accent : Theme.muted;
+                                    y: (parent.height - 12px) / 2;
+                                }
+                                Text {
+                                    text: root.pinned-count;
+                                    color: root.pinned-on ? Theme.accent-dim : Theme.muted;
+                                    font-size: 10px;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            pin-touch := TouchArea {
+                                clicked => { root.pin-filter(); }
+                            }
+                        }
+                        if root.filtered : Rectangle {
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 12px;
+                            y: (parent.height - 24px) / 2;
+                            background: broom-touch.has-hover ? #242840 : Theme.field;
+                            border-width: 1px;
+                            border-color: Theme.field-border;
+                            accessible-role: AccessibleRole.button;
+                            Icon {
+                                source: @image-url("../assets/icons/x.svg");
+                                width: 12px;
+                                height: 12px;
+                                tint: broom-touch.has-hover ? Theme.body : Theme.muted;
+                            }
+                            broom-touch := TouchArea {
+                                clicked => { root.clear-filters(); }
+                            }
+                        }
                 }
                 HorizontalLayout {
                     height: 24px;
                     spacing: 8px;
                     alignment: stretch;
-                    pin := Rectangle {
-                        width: pin-row.preferred-width;
-                        height: 24px;
-                        border-radius: 12px;
-                        background: root.pinned-on ? Theme.selected : pin-touch.has-hover ? #242840 : Theme.field;
-                        border-width: 1px;
-                        border-color: root.pinned-on ? Theme.selected-edge : Theme.field-border;
-                        animate background { duration: 120ms; easing: ease-out; }
-                        animate border-color { duration: 120ms; easing: ease-out; }
-                        pin-row := HorizontalLayout {
-                            padding-left: 9px;
-                            padding-right: 9px;
-                            spacing: 5px;
-                            alignment: center;
-                            Icon {
-                                source: @image-url("../assets/icons/pin.svg");
-                                width: 12px;
-                                height: 12px;
-                                tint: root.pinned-on ? Theme.accent : Theme.muted;
-                                y: (parent.height - 12px) / 2;
-                            }
-                            Text {
-                                text: root.pinned-count;
-                                color: root.pinned-on ? Theme.accent-dim : Theme.muted;
-                                font-size: 10px;
-                                vertical-alignment: center;
-                            }
-                        }
-                        pin-touch := TouchArea {
-                            clicked => { root.pin-filter(); }
-                        }
-                    }
-                    if root.filtered : Rectangle {
-                        width: 24px;
-                        height: 24px;
-                        border-radius: 12px;
-                        background: broom-touch.has-hover ? #242840 : Theme.field;
-                        border-width: 1px;
-                        border-color: Theme.field-border;
-                        Icon {
-                            source: @image-url("../assets/icons/x.svg");
-                            width: 12px;
-                            height: 12px;
-                            tint: broom-touch.has-hover ? Theme.body : Theme.muted;
-                        }
-                        broom-touch := TouchArea {
-                            clicked => { root.clear-filters(); }
-                        }
-                    }
-                    Rectangle {
-                        width: 1px;
-                        Rectangle {
-                            y: 5px;
-                            width: 1px;
-                            height: 14px;
-                            background: Theme.field-border;
-                        }
-                    }
                     Rectangle {
                         horizontal-stretch: 1;
                         clip: true;
@@ -383,7 +406,13 @@ export component Panel inherits Window {
                                     alignment: start;
                                     for chip in root.chips : Pill {
                                         chip: chip;
-                                        chosen(key) => { root.chip-chosen(key); }
+                                        chosen(key, adding) => {
+                                            root.chip-chosen(key, adding);
+                                        }
+                                        asked-ways(key) => {
+                                            root.chip-x = self.absolute-position.x - panel.absolute-position.x;
+                                            root.ask-ways-for(key);
+                                        }
                                     }
                                 }
                             }
@@ -445,7 +474,45 @@ export component Panel inherits Window {
                         );
                         return accept;
                     }
+                grid := ListView {
+                    accessible-role: AccessibleRole.list;
+                    vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+                    visible: root.layout == "image" && root.way != "rows";
+                    height: root.layout == "image" && root.way != "rows" ? parent.height : 0px;
+                    for line[at] in root.grid-lines : HorizontalLayout {
+                        height: Theme.cell;
+                        spacing: 8px;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        padding-bottom: 8px;
+                        GridCell {
+                            card: root.cards[line * 2];
+                            current: root.current == line * 2;
+                            chosen => {
+                                root.current = line * 2;
+                                root.moved(line * 2);
+                            }
+                            paste => { root.paste(root.cards[line * 2].id); }
+                            stirred => { root.stirred(line * 2); }
+                        }
+                        if line * 2 + 1 < root.cards.length : GridCell {
+                            card: root.cards[line * 2 + 1];
+                            current: root.current == line * 2 + 1;
+                            chosen => {
+                                root.current = line * 2 + 1;
+                                root.moved(line * 2 + 1);
+                            }
+                            paste => { root.paste(root.cards[line * 2 + 1].id); }
+                            stirred => { root.stirred(line * 2 + 1); }
+                        }
+                        if line * 2 + 1 >= root.cards.length : Rectangle {
+                            horizontal-stretch: 1;
+                        }
+                    }
+                }
                 list := ListView {
+                    visible: root.layout != "image" || root.way == "rows";
+                    height: root.layout != "image" || root.way == "rows" ? parent.height : 0px;
                     accessible-role: AccessibleRole.list;
                     vertical-scrollbar-policy: ScrollBarPolicy.always-off;
                     animate content-y { duration: root.gliding ? 110ms : 0ms; easing: ease-out; }
@@ -473,17 +540,43 @@ export component Panel inherits Window {
                                 root.sheet-span = self.height;
                             }
                         }
-                        height: card.has-thumb
+                        height: (card.heads-group ? Theme.row-head : 0px) + (card.has-thumb
                             ? Theme.row-thumb
                             : index == root.current && root.opened
                                 ? Theme.row-frame + card.lines * Theme.line
-                                : card.found ? Theme.row-found : Theme.row-plain;
+                                : card.found ? Theme.row-found : root.shut);
                         animate height { duration: root.gliding ? Theme.settle : 0ms; easing: ease-out; }
+                        VerticalLayout {
+                        if card.heads-group : Rectangle {
+                            height: Theme.row-head;
+                            HorizontalLayout {
+                                height: 15px;
+                                padding-left: 10px;
+                                padding-right: 10px;
+                                spacing: 7px;
+                                Text {
+                                    text: card.group-said;
+                                    color: Theme.title;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                                Rectangle {
+                                    horizontal-stretch: 1;
+                                    Rectangle {
+                                        y: (parent.height - 1px) / 2;
+                                        height: 1px;
+                                        background: Theme.panel-border;
+                                    }
+                                }
+                            }
+                        }
                         CardView {
                             card: card;
                             current: index == root.current;
                             open: index == root.current && root.opened;
                             shown-here: root.hovered >= 0 ? index == root.hovered : index == root.current;
+                            plain-way: root.plain-way;
                             stirred => {
                                 root.pointer-hidden = false;
                                 if (!root.sheet-open) {
@@ -504,6 +597,7 @@ export component Panel inherits Window {
                                 }
                                 root.moved(index);
                             }
+                            layout: root.layout;
                             paste(id) => { root.paste(id); }
                             forms(id) => {
                                 root.current = index;
@@ -514,6 +608,7 @@ export component Panel inherits Window {
                             edit(id) => { root.edit(id); }
                             pin(id, on) => { root.pin(id, on); }
                             remove(id) => { root.remove(id); }
+                        }
                         }
                     }
                 }
@@ -592,6 +687,12 @@ export component Panel inherits Window {
                     alignment: stretch;
                     Icon { source: @image-url("../assets/icons/clipboard.svg"); tint: Theme.muted; y: (parent.height - 15px) / 2; }
                     Text { text: root.count-text; color: Theme.muted; font-size: 11.5px; vertical-alignment: center; }
+                    if root.way-said != "" : Text {
+                        text: "· " + root.way-said;
+                        color: Theme.placeholder;
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
                     Rectangle { horizontal-stretch: 1; }
                     Rectangle {
                         clip: true;
@@ -614,13 +715,15 @@ export component Panel inherits Window {
         }
 
         if root.sheet-open : Rectangle {
-            x: 10px;
+            x: root.sheet-narrow
+                ? clamp(root.chip-x, 10px, max(10px, parent.width - self.width - 10px))
+                : 10px;
             y: clamp(
-                panel.sheet-top,
+                root.sheet-narrow ? root.list-top + 4px : panel.sheet-top,
                 10px,
                 max(10px, parent.height - self.height - 10px)
             );
-            width: parent.width - 20px;
+            width: root.sheet-narrow ? 168px : parent.width - 20px;
             height: min(sheet.preferred-height, parent.height - 20px);
             background: Theme.field;
                 border-radius: 12px;
