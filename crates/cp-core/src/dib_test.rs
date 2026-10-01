@@ -575,3 +575,19 @@ fn a_zero_width_or_height_is_refused_by_to_png() {
         assert_eq!(to_png(&dib), None);
     }
 }
+
+#[test]
+fn a_small_file_that_declares_a_huge_picture_is_refused_before_it_is_decoded() {
+    let mut png = Vec::new();
+    png.extend_from_slice(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+    png.extend_from_slice(&13u32.to_be_bytes());
+    png.extend_from_slice(b"IHDR");
+    png.extend_from_slice(&20000u32.to_be_bytes());
+    png.extend_from_slice(&20000u32.to_be_bytes());
+    png.extend_from_slice(&[8, 6, 0, 0, 0]);
+    png.extend_from_slice(&0u32.to_be_bytes());
+    assert!(
+        from_png(&png).is_none(),
+        "twenty thousand squared is 1.6 GB of pixels: the few bytes it arrived in say nothing"
+    );
+}

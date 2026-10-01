@@ -728,6 +728,7 @@ fn spawn_counter(
                 }
                 panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
                 panel.set_count_text(footer.into());
+                panel.set_complaining(false);
                 panel.set_pinned_count(anchored.into());
                 panel.set_pinned_on(only_anchored);
                 panel.set_layout(asked.as_str().into());
@@ -956,9 +957,11 @@ fn busy() -> &'static str {
 }
 fn complain(ui: &Panel, said: &str) {
     ui.set_count_text(said.into());
+    ui.set_complaining(true);
     let weak = ui.as_weak();
     slint::Timer::single_shot(Duration::from_millis(2_200), move || {
         if let Some(ui) = weak.upgrade() {
+            ui.set_complaining(false);
             ui.invoke_reopened();
         }
     });
@@ -1068,6 +1071,7 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
         here::Sent::Nobody => vanish(ui),
         here::Sent::Done => {}
         here::Sent::Degraded(why) => {
+            state.borrow().ahead.store(ahead, Ordering::Relaxed);
             note(&format!("it stays on the clipboard, unpasted: {why:?}"));
             if ui.show().is_ok() {
                 forward(ui);

@@ -161,7 +161,10 @@ fn say<R: Runtime>(app: &AppHandle<R>, what: &str) -> Result<(), Said> {
     let mut held = state.0.lock().map_err(|_| Said::Gone)?;
     let child = held.as_mut().ok_or(Said::Gone)?;
     if child.write(format!("{what}\n").as_bytes()).is_err() {
-        held.take();
+        if let Some(child) = held.take() {
+            crate::note::note("the panel stopped listening, so it was closed");
+            let _ = child.kill();
+        }
         return Err(Said::Gone);
     }
     Ok(())

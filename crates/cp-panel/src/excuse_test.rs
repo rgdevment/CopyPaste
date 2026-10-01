@@ -49,11 +49,30 @@ fn a_window_that_went_away_is_not_told_like_one_that_refused() {
 }
 
 #[test]
-fn what_is_said_always_begins_by_saying_the_copy_is_safe() {
+fn the_reason_comes_first_because_the_tail_is_what_gets_cut() {
     for failure in EVERY {
         for english in [false, true] {
             let said = why_not(failure, english);
-            let safe = said.starts_with("está copiado") || said.starts_with("it is copied");
+            let (reason, rest) = said.split_once(';').unwrap_or((said, ""));
+            assert!(
+                !rest.trim().is_empty(),
+                "{failure:?} never says the copy survived: {said}"
+            );
+            assert!(
+                reason.len() <= 52,
+                "{failure:?} spends {} characters on the reason, and the footer elides well before that",
+                reason.len()
+            );
+        }
+    }
+}
+
+#[test]
+fn what_is_said_always_ends_by_saying_the_copy_is_safe() {
+    for failure in EVERY {
+        for english in [false, true] {
+            let said = why_not(failure, english);
+            let safe = said.ends_with("sigue copiado") || said.ends_with("still copied");
             assert!(
                 safe,
                 "{failure:?} alarms without saying the copy survived: {said}"

@@ -74,6 +74,7 @@ impl Pasteboard {
 
     pub fn write_items_data(&self, items: &[Vec<(&str, &[u8])>]) -> bool {
         self.inner.clearContents();
+        let mut every = true;
         let written: Vec<objc2::rc::Retained<NSPasteboardItem>> = items
             .iter()
             .map(|entries| {
@@ -81,11 +82,14 @@ impl Pasteboard {
                 for (uti, bytes) in entries {
                     let name = NSString::from_str(uti);
                     let data = objc2_foundation::NSData::with_bytes(bytes);
-                    item.setData_forType(&data, &name);
+                    every &= item.setData_forType(&data, &name);
                 }
                 item
             })
             .collect();
+        if !every {
+            return false;
+        }
         let refs: Vec<&objc2::runtime::ProtocolObject<dyn NSPasteboardWriting>> = written
             .iter()
             .map(|item| objc2::runtime::ProtocolObject::from_ref(&**item))

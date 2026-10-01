@@ -49,6 +49,13 @@ fn leave<R: Runtime>(app: &AppHandle<R>) {
 }
 
 fn revive<R: Runtime>(app: &AppHandle<R>) {
+    if app
+        .try_state::<crate::backup::Crossing>()
+        .is_some_and(|crossing| crossing.underway())
+    {
+        surface(app);
+        return;
+    }
     crate::panel::quit(app);
     if let Err(why) = crate::panel::relight(app) {
         crate::note::note(&format!("the panel would not come back: {why}"));

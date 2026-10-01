@@ -63,7 +63,7 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all --check
       - name: The probe bodies are formatted too
-        run: rustfmt --check --edition 2024 crates/cp-mac/examples/probe/battery.rs crates/cp-win/examples/probe/battery.rs
+        run: rustfmt --check --edition 2024 crates/cp-mac/examples/probe/battery.rs crates/cp-win/examples/probe/battery.rs crates/cp-win/examples/probe/restoring.rs
 
   window:
     name: frontend

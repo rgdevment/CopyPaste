@@ -16,10 +16,14 @@ pub enum Outcome {
 }
 
 pub fn route_of(ready: &Readiness) -> Option<Route> {
-    if ready.secure_input {
-        return ready.accessibility.then_some(Route::Menu);
-    }
     route_for(ready.can_post, ready.accessibility)
+}
+
+pub fn around_protected_input(route: Route, accessibility: bool) -> Option<Route> {
+    match route {
+        Route::Menu => Some(Route::Menu),
+        Route::Keystroke => accessibility.then_some(Route::Menu),
+    }
 }
 
 pub struct Paster {
@@ -38,12 +42,7 @@ impl Paster {
     }
 
     pub fn paste_into(&self, target: &Destination, hide_panel: impl FnOnce()) -> Outcome {
-        let ready = Readiness::probe();
-        let route = route_of(&ready);
-        if route.is_none() && ready.secure_input {
-            return Outcome::Degraded(Failure::InputProtected);
-        }
-        self.paste_via(route, target, hide_panel)
+        self.paste_via(route_of(&Readiness::probe()), target, hide_panel)
     }
 
     pub fn paste_via(
@@ -84,6 +83,15 @@ impl Paster {
         while keystroke::modifiers_still_held() && waiting.elapsed().as_millis() < 120 {
             self.wait(0.004);
         }
+
+        let route = if Readiness::probe().secure_input {
+            match around_protected_input(route, Readiness::probe().accessibility) {
+                Some(other) => other,
+                None => return Outcome::Degraded(Failure::InputProtected),
+            }
+        } else {
+            route
+        };
 
         attempt.sending();
         let sent = match route {

@@ -19,7 +19,7 @@ fn a_synthetic_image_goes_back_as_both_a_png_and_a_bitmap() {
     let png = image_bytes();
     let written = writable(SYNTHETIC_IMAGE, &png);
     assert_eq!(written.len(), 2, "the modern one and the classic one");
-    assert!(written.iter().any(|(id, _)| *id == CF_DIBV5));
+    assert!(written.iter().any(|(id, _)| *id == CF_DIB));
     assert!(
         written.iter().any(|(_, bytes)| bytes == &png),
         "the PNG travels intact"
@@ -36,14 +36,14 @@ fn a_rendered_jpeg_goes_back_as_jfif_and_a_bitmap() {
         .find(|(_, bytes)| bytes == &jpeg)
         .expect("the JPEG travels intact");
     assert_eq!(cp_win_sys::formats::name_of(*jfif), JFIF);
-    assert!(written.iter().any(|(id, _)| *id == CF_DIBV5));
+    assert!(written.iter().any(|(id, _)| *id == CF_DIB));
 }
 
 #[test]
 fn a_jpeg_that_does_not_decode_still_goes_back_as_itself() {
     let written = writable(SYNTHETIC_JPEG, b"this is not a jpeg");
     assert_eq!(written.len(), 1, "no bitmap, but the JPEG is not lost");
-    assert!(written.iter().all(|(id, _)| *id != CF_DIBV5));
+    assert!(written.iter().all(|(id, _)| *id != CF_DIB));
 }
 
 #[test]
@@ -186,7 +186,7 @@ fn an_image_captured_on_windows_goes_back_as_a_bitmap_too() {
     let png = image_bytes();
     let written = writable(PNG, &png);
     assert!(
-        written.iter().any(|(id, _)| *id == CF_DIBV5),
+        written.iter().any(|(id, _)| *id == CF_DIB),
         "every app that wants a bitmap gets one, not only the private PNG atom"
     );
     assert!(
@@ -196,11 +196,16 @@ fn an_image_captured_on_windows_goes_back_as_a_bitmap_too() {
 }
 
 #[test]
-fn a_jpeg_captured_on_windows_goes_back_as_a_bitmap_too() {
-    let jpeg = jpeg_bytes();
-    let written = writable(JFIF, &jpeg);
+fn the_bitmap_we_publish_has_the_header_its_name_promises() {
+    let png = image_bytes();
+    let written = writable(PNG, &png);
+    let (_, raw) = written
+        .iter()
+        .find(|(id, _)| *id == CF_DIB)
+        .expect("a bitmap travels with the png");
+    let declared = u32::from_le_bytes(raw[..4].try_into().expect("a header starts the bitmap"));
     assert!(
-        written.iter().any(|(id, _)| *id == CF_DIBV5),
-        "a jpeg from the clipboard is as pasteable as a rendered one"
+        declared == 40 || declared == 108,
+        "CF_DIB means a 40 or 108 byte header; {declared} would be a different format"
     );
 }

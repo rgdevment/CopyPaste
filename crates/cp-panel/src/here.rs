@@ -60,11 +60,12 @@ mod platform {
     }
 
     pub fn to_clipboard(item: &Item, ours: impl FnOnce()) -> bool {
+        let ready = cp_win::restore::ready_for(item);
         let Some(clipboard) = Clipboard::to_write() else {
             return false;
         };
         let written = matches!(
-            cp_win::restore::to_clipboard(&clipboard, item),
+            cp_win::restore::place(&clipboard, &ready),
             cp_win::restore::Restored::Written { .. }
         );
         if written {

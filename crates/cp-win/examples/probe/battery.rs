@@ -758,7 +758,7 @@ fn main() -> std::process::ExitCode {
 
     b.case(
         "I6",
-        "the clipboard counter only settles once the write is closed",
+        "the clipboard counter moves while a write is still open, and again when it closes",
         || {
             {
                 let clipboard = Clipboard::to_write().ok_or("did not open")?;
@@ -773,8 +773,15 @@ fn main() -> std::process::ExitCode {
                 (inside, clipboard::sequence().ok_or("no counter")?)
             };
             println!("            before {settled}, still open {inside}, closed {outside}");
+            if settled == inside {
+                return Err(format!(
+                    "the counter stood still at {settled} during the write: marking at close would then be enough, and this case exists because it is not"
+                ));
+            }
             if inside == outside {
-                return Err(format!("the counter stood still at {inside}, so the mark the panel takes before closing would have been right after all"));
+                return Err(format!(
+                    "the counter stood still at {inside} on closing, so the write ended where the watcher could already see it"
+                ));
             }
             Ok(())
         },
