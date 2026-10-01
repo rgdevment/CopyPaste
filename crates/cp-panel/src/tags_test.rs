@@ -28,7 +28,10 @@ fn a_plain_click_never_grows_the_filter() {
 
 #[test]
 fn clicking_the_only_one_chosen_takes_the_filter_off() {
-    assert!(after(&these(&["image"]), "image", false).is_empty());
+    assert!(
+        after(&these(&["image"]), "image", false).is_empty(),
+        "the same kind twice means no filter at all"
+    );
 }
 
 #[test]
@@ -68,7 +71,7 @@ fn adding_respects_the_order_they_were_chosen_in() {
 #[test]
 fn nothing_is_ever_chosen_twice() {
     let once = after(&these(&["image"]), "image", true);
-    assert!(once.is_empty());
+    assert!(once.is_empty(), "adding one that is in takes it out");
     let twice = after(&these(&["image", "text"]), "text", false);
     assert_eq!(twice, these(&["text"]));
 }

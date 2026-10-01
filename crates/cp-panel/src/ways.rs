@@ -6,6 +6,7 @@ pub struct Way {
     pub es: &'static str,
     pub en: &'static str,
     pub recent: bool,
+    pub plain: bool,
 }
 
 const KEYS: Way = Way {
@@ -13,54 +14,63 @@ const KEYS: Way = Way {
     es: "Claves",
     en: "Keys",
     recent: false,
+    plain: false,
 };
 const RAW: Way = Way {
     key: "raw",
     es: "Crudo",
     en: "Raw",
     recent: false,
+    plain: true,
 };
 const GRID: Way = Way {
     key: "grid",
     es: "Rejilla",
     en: "Grid",
     recent: false,
+    plain: false,
 };
 const ROWS: Way = Way {
     key: "rows",
     es: "Lista",
     en: "List",
     recent: false,
+    plain: false,
 };
 const COVER: Way = Way {
     key: "cover",
     es: "Carátula",
     en: "Cover",
     recent: false,
+    plain: false,
 };
 const WAVE: Way = Way {
     key: "wave",
     es: "Onda",
     en: "Wave",
     recent: false,
+    plain: false,
 };
 const TIGHT: Way = Way {
     key: "tight",
     es: "Compacto",
     en: "Compact",
     recent: false,
+    plain: true,
 };
 const BY_GROUP: Way = Way {
     key: "by-group",
     es: "Por grupo",
     en: "By group",
     recent: false,
+    plain: false,
 };
 const NEWEST: Way = Way {
     key: "newest",
     es: "Recientes",
     en: "Newest",
     recent: true,
+    plain: false,
 };
 
 pub fn ways_of(layout: Layout) -> &'static [Way] {

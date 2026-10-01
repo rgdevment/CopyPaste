@@ -10,6 +10,7 @@ const AHEAD: usize = 40;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Metrics {
+    pub head: f32,
     pub tall: f32,
     pub plain: f32,
     pub json: f32,
@@ -44,7 +45,10 @@ pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
     }
 }
 
-pub fn shut_height_for(filter: &Filter, metrics: &Metrics) -> f32 {
+pub fn shut_height_for(filter: &Filter, metrics: &Metrics, plain_way: bool) -> f32 {
+    if plain_way {
+        return metrics.plain;
+    }
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Json => metrics.json,
         _ => metrics.plain,
@@ -70,6 +74,7 @@ pub struct Rows {
     filter: Filter,
     now: i64,
     metrics: Metrics,
+    plain_way: bool,
     rows: RefCell<Vec<Listed>>,
     meta: RefCell<cp_store::MetaByItem>,
     cards: RefCell<Vec<Option<Card>>>,
@@ -84,12 +89,19 @@ pub struct Rows {
 }
 
 impl Rows {
-    pub fn open(store: Rc<Store>, filter: Filter, now: i64, metrics: Metrics) -> Rc<Self> {
+    pub fn open(
+        store: Rc<Store>,
+        filter: Filter,
+        now: i64,
+        metrics: Metrics,
+        plain_way: bool,
+    ) -> Rc<Self> {
         let rows = Rc::new(Self {
             store,
             filter,
             now,
             metrics,
+            plain_way,
             rows: RefCell::new(Vec::new()),
             meta: RefCell::new(cp_store::MetaByItem::new()),
             cards: RefCell::new(Vec::new()),
@@ -133,7 +145,12 @@ impl Rows {
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
-        self.open_of_row(row)
+        let head = if heads_group(&self.filter, &rows, index) {
+            self.metrics.head
+        } else {
+            0.0
+        };
+        self.open_of_row(row) + head
     }
 
     fn open_of_row(&self, row: &Listed) -> f32 {
@@ -163,14 +180,21 @@ impl Rows {
     }
 
     fn height_at(&self, index: usize, row: &Listed) -> f32 {
-        if self.thumbless.borrow().contains(&index) {
-            return if was_found(row) {
+        let shut = if self.thumbless.borrow().contains(&index) {
+            if was_found(row) {
                 self.metrics.found
             } else {
                 self.shut_height()
-            };
+            }
+        } else {
+            self.height_of(row)
+        };
+        let rows = self.rows.borrow();
+        if heads_group(&self.filter, &rows, index) {
+            shut + self.metrics.head
+        } else {
+            shut
         }
-        self.height_of(row)
     }
 
     fn height_of(&self, row: &Listed) -> f32 {
@@ -184,7 +208,7 @@ impl Rows {
     }
 
     fn shut_height(&self) -> f32 {
-        shut_height_for(&self.filter, &self.metrics)
+        shut_height_for(&self.filter, &self.metrics, self.plain_way)
     }
 
     fn resize(&self, index: usize, height: f32) {
@@ -223,14 +247,6 @@ impl Rows {
         *self.next.borrow_mut() = page.next;
         let start = self.rows.borrow().len();
         self.cards.borrow_mut().extend((0..added).map(|_| None));
-        {
-            let mut tops = self.tops.borrow_mut();
-            let mut at = tops.last().copied().unwrap_or(0.0);
-            for row in &page.rows {
-                at += self.height_of(row);
-                tops.push(at);
-            }
-        }
         let keys = meta_keys_for(&self.filter);
         if !keys.is_empty() {
             let ids: Vec<i64> = page.rows.iter().map(|one| one.id).collect();
@@ -240,6 +256,15 @@ impl Rows {
             }
         }
         self.rows.borrow_mut().extend(page.rows);
+        {
+            let rows = self.rows.borrow();
+            let mut tops = self.tops.borrow_mut();
+            let mut at = tops.last().copied().unwrap_or(0.0);
+            for index in start..rows.len() {
+                at += self.height_at(index, &rows[index]);
+                tops.push(at);
+            }
+        }
         self.notify.row_added(start, added);
         added
     }
@@ -267,17 +292,19 @@ impl Rows {
         let rows = self.rows.borrow();
         let row = rows.get(index)?;
         let row_wanted_a_thumb = row.thumb_path.is_some();
-        let without_thumb = if self.open.get() == Some(index) {
-            self.open_of_row(row)
-        } else if was_found(row) {
-            self.metrics.found
-        } else {
-            self.metrics.plain
-        };
+        let heads = heads_group(&self.filter, &rows, index);
+        let without_thumb = if heads { self.metrics.head } else { 0.0 }
+            + if self.open.get() == Some(index) {
+                self.open_of_row(row)
+            } else if was_found(row) {
+                self.metrics.found
+            } else {
+                self.shut_height()
+            };
         let meta = self.meta.borrow();
         let mut card = card_of(row, self.now, meta.get(&row.id));
         drop(meta);
-        if heads_group(&self.filter, &rows, index) {
+        if heads {
             card.heads_group = true;
             card.group_said = row.group.clone().into();
         }

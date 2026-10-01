@@ -15,17 +15,9 @@ export component LinkBody inherits VerticalLayout {
     }
 
     Text {
-        text: card.squeezed;
+        text: card.link-path != "" ? card.link-path : card.squeezed;
         color: Theme.body;
         font-size: 12.5px;
-        overflow: elide;
-        wrap: no-wrap;
-    }
-
-    if card.link-path != "" : Text {
-        text: card.link-path;
-        color: Theme.placeholder;
-        font-size: 10.5px;
         overflow: elide;
         wrap: no-wrap;
     }

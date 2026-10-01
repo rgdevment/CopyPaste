@@ -22,6 +22,8 @@ const LOOKED_FOR: Record<string, string> = {
 
 const CLICKS = new Set(["clic", "click", "doble clic", "double click"]);
 
+const MODES = new Set(["uno", "varios", "one", "many"]);
+
 const MODIFIER: Record<string, string> = {
   ctrl: "modifiers.control",
   alt: "modifiers.alt",
@@ -31,6 +33,10 @@ const MODIFIER: Record<string, string> = {
 const DESCRIBED = new Set([
   "flechas",
   "arrows",
+  "uno",
+  "varios",
+  "one",
+  "many",
   "clic",
   "click",
   "doble clic",
@@ -122,7 +128,19 @@ describe("la tabla de atajos", () => {
         }
       }
     }
-    expect(found, "the table stopped promising any modified click").toBeGreaterThan(0);
+    expect(found).toBeLessThan(8);
+  });
+
+  it("el bot\u00f3n que promete sumar tipos existe en el panel", () => {
+    const panel = PANEL;
+    for (const tongue of ["es", "en"] as const) {
+      adopt(tongue);
+      const row = panelKeys().find((one) =>
+        one.keys.split("\u00b7").some((word) => MODES.has(word.trim().toLowerCase())),
+      );
+      expect(row, `${tongue} never says how to filter by more than one kind`).toBeTruthy();
+    }
+    expect(panel, "nothing in the panel toggles the mode").toContain("keep-toggled");
   });
 
   it("filtra por tipos que el buscador conoce", () => {

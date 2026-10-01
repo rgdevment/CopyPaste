@@ -1,6 +1,7 @@
 use super::*;
 
 const SIZES: Metrics = Metrics {
+    head: 23.0,
     tall: 146.0,
     json: 112.0,
     plain: 86.0,
@@ -20,7 +21,7 @@ fn store_with(count: usize) -> Rc<Store> {
 }
 
 fn open(store: Rc<Store>, now: i64) -> Rc<Rows> {
-    Rows::open(store, Filter::default(), now, SIZES)
+    Rows::open(store, Filter::default(), now, SIZES, false)
 }
 
 #[test]
@@ -83,7 +84,7 @@ fn a_query_that_matches_nothing_is_an_empty_model_not_an_error() {
         query: Some("nada-de-esto".into()),
         ..Default::default()
     };
-    let rows = Rows::open(store_with(10), filter, 0, SIZES);
+    let rows = Rows::open(store_with(10), filter, 0, SIZES, false);
     assert_eq!(rows.row_count(), 0);
     assert!(rows.exhausted.get());
 }
@@ -231,10 +232,15 @@ fn a_json_only_list_gives_its_rows_the_taller_shut_height() {
         ..Default::default()
     };
 
-    assert_eq!(shut_height_for(&general, &metrics), 86.0);
-    assert_eq!(shut_height_for(&only_json, &metrics), 112.0);
+    assert_eq!(shut_height_for(&general, &metrics, false), 86.0);
+    assert_eq!(shut_height_for(&only_json, &metrics, false), 112.0);
     assert_eq!(
-        shut_height_for(&mixed, &metrics),
+        shut_height_for(&only_json, &metrics, true),
+        86.0,
+        "read raw, a json row is as tall as any other"
+    );
+    assert_eq!(
+        shut_height_for(&mixed, &metrics, false),
         86.0,
         "two kinds is the general layout, and the general height"
     );
@@ -339,4 +345,69 @@ fn a_group_nobody_could_name_heads_nothing() {
     let rows = [grouped(crate::group::UNKNOWN), grouped("")];
     assert!(!heads_group(&linked, &rows, 0));
     assert!(!heads_group(&linked, &rows, 1));
+}
+
+#[test]
+fn the_row_that_heads_a_group_is_taller_by_exactly_its_heading() {
+    let store = Store::in_memory().expect("esquema");
+    for (at, group) in ["a.test", "a.test", "b.test"].iter().enumerate() {
+        let id = store
+            .insert_text(
+                &format!("u{at}"),
+                &format!("https://{group}/{at}"),
+                at as i64,
+            )
+            .expect("insert");
+        store.set_group(id, group).expect("grouped");
+    }
+    let grouped = Filter {
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), grouped, 1_000, SIZES, false);
+    assert_eq!(rows.row_count(), 3);
+    let mut heading = 0;
+    for at in 0..rows.row_count() {
+        let card = rows.row_data(at).expect("a card");
+        let span = rows.span_of(at).expect("a row").1;
+        let wanted = if card.heads_group {
+            heading += 1;
+            SIZES.plain + SIZES.head
+        } else {
+            SIZES.plain
+        };
+        assert_eq!(
+            span, wanted,
+            "row {at} draws its heading as {} and measures {span}",
+            card.heads_group
+        );
+    }
+    assert_eq!(heading, 2, "two groups, two headings");
+}
+
+#[test]
+fn a_filter_on_one_kind_still_comes_back_grouped() {
+    let store = Store::in_memory().expect("esquema");
+    for at in 0..3 {
+        let id = store
+            .insert_text(
+                &format!("u{at}"),
+                &format!("https://una.test/{at}"),
+                at as i64,
+            )
+            .expect("insert");
+        store.set_group(id, "una.test").expect("grouped");
+    }
+    let linked = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), linked, 1_000, SIZES, false);
+    assert_eq!(rows.row_count(), 3, "the three links came back");
+    let first = rows.row_data(0).expect("a card");
+    assert!(first.heads_group, "the first link heads its domain");
+    assert_eq!(first.group_said.as_str(), "una.test");
+    let second = rows.row_data(1).expect("a card");
+    assert!(!second.heads_group, "same domain, no second heading");
 }

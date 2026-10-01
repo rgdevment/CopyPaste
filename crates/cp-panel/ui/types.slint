@@ -35,16 +35,12 @@ export struct Card {
     broken: bool,
 }
 
-export struct WayPill {
-    key: string,
-    says: string,
-}
-
 export struct Chip {
     key: string,
     label: string,
     count: string,
     selected: bool,
+    has-ways: bool,
 }
 
 export struct FormRow {

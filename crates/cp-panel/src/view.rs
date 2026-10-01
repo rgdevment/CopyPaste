@@ -369,11 +369,15 @@ pub fn chips_of(facets: &[Facet], selected: &[String]) -> Vec<Chip> {
 }
 
 fn chip(key: &str, label: &str, count: i64, selected: bool) -> Chip {
+    let of_kind = cp_core::kind::Kind::from_name(key)
+        .map(|kind| crate::layout::layout_for(&[kind]))
+        .unwrap_or(crate::layout::Layout::Everything);
     Chip {
         key: key.into(),
         label: label.into(),
         count: compact(count).into(),
         selected,
+        has_ways: !crate::ways::ways_of(of_kind).is_empty(),
     }
 }
 
@@ -469,13 +473,7 @@ fn count_in(english: bool, count: i64) -> String {
 pub fn dress_words(ui: &crate::Panel) {
     use slint::ComponentHandle;
     let words = ui.global::<crate::Words>();
-    words.set_hint(
-        crate::say::pick(
-            "Busca o filtra con # en el portapapeles",
-            "Search the clipboard, or filter with #",
-        )
-        .into(),
-    );
+    words.set_hint(crate::say::pick("Busca o filtra con #", "Search, or filter with #").into());
     words.set_footer(
         crate::say::pick(
             "pegar · alt+enter: más formas",
@@ -487,6 +485,8 @@ pub fn dress_words(ui: &crate::Panel) {
     words.set_pin(crate::say::pick("anclar", "pin").into());
     words.set_unpin(crate::say::pick("desanclar", "unpin").into());
     words.set_remove(crate::say::pick("borrar", "delete").into());
+    words.set_one_kind(crate::say::pick("uno", "one").into());
+    words.set_many_kinds(crate::say::pick("varios", "many").into());
 }
 
 #[cfg(test)]

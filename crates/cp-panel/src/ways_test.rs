@@ -66,6 +66,39 @@ fn a_way_from_another_view_is_not_honoured_in_this_one() {
 }
 
 #[test]
+fn only_the_two_ways_that_ask_for_the_general_body_are_plain() {
+    assert!(
+        chosen(Layout::Json, "raw").plain,
+        "raw json is read as text"
+    );
+    assert!(chosen(Layout::Audio, "tight").plain);
+    assert!(chosen(Layout::Video, "tight").plain);
+    for layout in Layout::ALL {
+        for way in ways_of(layout) {
+            let expected = way.key == "raw" || way.key == "tight";
+            assert_eq!(
+                way.plain, expected,
+                "{layout:?} {} disagrees about yielding the body",
+                way.key
+            );
+        }
+    }
+}
+
+#[test]
+fn a_plain_way_is_never_an_ordering() {
+    for layout in Layout::ALL {
+        for way in ways_of(layout) {
+            assert!(
+                !(way.plain && way.recent),
+                "{} cannot both yield the body and change the order",
+                way.key
+            );
+        }
+    }
+}
+
+#[test]
 fn nothing_is_left_untranslated() {
     for layout in Layout::ALL {
         for way in ways_of(layout) {
