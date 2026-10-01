@@ -2,6 +2,7 @@ use super::*;
 
 const SIZES: Metrics = Metrics {
     tall: 146.0,
+    json: 112.0,
     plain: 86.0,
     found: 68.0,
     frame: 50.0,
@@ -215,4 +216,26 @@ fn revealing_a_row_only_scrolls_when_the_row_is_out_of_sight() {
         "queda debajo: sube lo justo"
     );
     assert_eq!(reveal(500.0, 124.0, 0.0, 0.0), 0.0, "sin alto no se decide");
+}
+
+#[test]
+fn a_json_only_list_gives_its_rows_the_taller_shut_height() {
+    let metrics = SIZES;
+    let general = Filter::default();
+    let only_json = Filter {
+        kinds: vec![cp_core::kind::Kind::Json],
+        ..Default::default()
+    };
+    let mixed = Filter {
+        kinds: vec![cp_core::kind::Kind::Json, cp_core::kind::Kind::Text],
+        ..Default::default()
+    };
+
+    assert_eq!(shut_height_for(&general, &metrics), 86.0);
+    assert_eq!(shut_height_for(&only_json, &metrics), 112.0);
+    assert_eq!(
+        shut_height_for(&mixed, &metrics),
+        86.0,
+        "two kinds is the general layout, and the general height"
+    );
 }

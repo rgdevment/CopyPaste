@@ -74,6 +74,7 @@ impl App {
         let metrics = Metrics {
             tall: theme.get_row_thumb(),
             plain: theme.get_row_plain(),
+            json: theme.get_row_json(),
             found: theme.get_row_found(),
             frame: theme.get_row_frame(),
             line: theme.get_line(),

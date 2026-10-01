@@ -12,12 +12,20 @@ const AHEAD: usize = 40;
 pub struct Metrics {
     pub tall: f32,
     pub plain: f32,
+    pub json: f32,
     pub found: f32,
     pub frame: f32,
     pub line: f32,
 }
 
 const EDGE: f32 = 8.0;
+
+pub fn shut_height_for(filter: &Filter, metrics: &Metrics) -> f32 {
+    match crate::layout::layout_for(&filter.kinds) {
+        crate::layout::Layout::Json => metrics.json,
+        _ => metrics.plain,
+    }
+}
 
 pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
     if viewport <= 0.0 {
@@ -133,7 +141,7 @@ impl Rows {
             return if was_found(row) {
                 self.metrics.found
             } else {
-                self.metrics.plain
+                self.shut_height()
             };
         }
         self.height_of(row)
@@ -145,8 +153,12 @@ impl Rows {
         } else if was_found(row) {
             self.metrics.found
         } else {
-            self.metrics.plain
+            self.shut_height()
         }
+    }
+
+    fn shut_height(&self) -> f32 {
+        shut_height_for(&self.filter, &self.metrics)
     }
 
     fn resize(&self, index: usize, height: f32) {

@@ -505,6 +505,7 @@ export component Panel inherits Window {
                                 }
                                 root.moved(index);
                             }
+                            layout: root.layout;
                             paste(id) => { root.paste(id); }
                             forms(id) => {
                                 root.current = index;
