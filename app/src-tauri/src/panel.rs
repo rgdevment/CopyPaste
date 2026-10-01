@@ -61,6 +61,9 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>) {
 pub fn show<R: Runtime>(app: &AppHandle<R>) {
     match shown(app) {
         Showing::Done | Showing::Waiting => {}
+        Showing::GaveUp => {
+            trouble_is(app, "the panel will not stay up; restart CopyPaste");
+        }
         Showing::Refused => {
             crate::note::note("the panel would not show itself, not even freshly started");
             trouble_is(app, "the panel is not answering");
@@ -71,6 +74,7 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
 enum Showing {
     Done,
     Waiting,
+    GaveUp,
     Refused,
 }
 
@@ -79,8 +83,10 @@ fn shown<R: Runtime>(app: &AppHandle<R>) -> Showing {
     if say(app, "show").is_ok() {
         return Showing::Done;
     }
-    if !may_light(app) {
-        return Showing::Waiting;
+    match asked_again(app) {
+        crate::reviving::Verdict::Wait => return Showing::Waiting,
+        crate::reviving::Verdict::Enough => return Showing::GaveUp,
+        crate::reviving::Verdict::Light { .. } => {}
     }
     if light(app).is_err() {
         return Showing::Refused;
@@ -93,25 +99,25 @@ fn shown<R: Runtime>(app: &AppHandle<R>) -> Showing {
     }
 }
 
-fn may_light<R: Runtime>(app: &AppHandle<R>) -> bool {
+fn asked_again<R: Runtime>(app: &AppHandle<R>) -> crate::reviving::Verdict {
+    let granted = crate::reviving::Verdict::Light { tries: 1 };
     let Some(state) = app.try_state::<Relights>() else {
-        return true;
+        return granted;
     };
     let Ok(mut tries) = state.0.lock() else {
-        return true;
+        return granted;
     };
     let now = std::time::Instant::now();
     let since = tries.last.map(|then| now.duration_since(then));
-    match crate::reviving::asked_again(tries.count, since) {
+    let verdict = crate::reviving::asked_again(tries.count, since);
+    match verdict {
         crate::reviving::Verdict::Light { tries: count } => {
             tries.count = count;
             tries.last = Some(now);
             crate::note::note(&format!("the panel is being restarted, attempt {count}"));
-            true
         }
         crate::reviving::Verdict::Wait => {
             crate::note::note("the panel was just restarted, so this press waits its turn");
-            false
         }
         crate::reviving::Verdict::Enough => {
             crate::note::note(&format!(
@@ -119,9 +125,9 @@ fn may_light<R: Runtime>(app: &AppHandle<R>) -> bool {
                 crate::reviving::AT_MOST,
                 crate::reviving::FORGETS_AFTER.as_secs()
             ));
-            false
         }
     }
+    verdict
 }
 
 fn forgive<R: Runtime>(app: &AppHandle<R>) {
