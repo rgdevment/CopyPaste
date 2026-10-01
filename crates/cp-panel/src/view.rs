@@ -80,6 +80,9 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
     let (clock, measures) = crate::media::said_in(meta);
+    let link = (row.kind == Some(Kind::Link))
+        .then(|| crate::link::parts_of(&row.preview))
+        .flatten();
     let folder = (row.kind == Some(Kind::Folder))
         .then(|| crate::folder::parts_of(&row.preview))
         .flatten();
@@ -134,6 +137,16 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
             .unwrap_or_default()
             .into(),
         folder_said: crate::folder::said_in(meta, crate::say::in_english()).into(),
+        link_domain: link
+            .as_ref()
+            .map(|one| one.domain.clone())
+            .unwrap_or_default()
+            .into(),
+        link_path: link
+            .as_ref()
+            .map(|one| one.path.clone())
+            .unwrap_or_default()
+            .into(),
         body: body.into(),
         found: !hit.is_empty(),
         badge: badge_of(claims.as_ref()).into(),

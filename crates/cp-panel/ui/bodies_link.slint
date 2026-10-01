@@ -1,0 +1,32 @@
+import { Card } from "types.slint";
+import { Theme } from "theme.slint";
+
+export component LinkBody inherits VerticalLayout {
+    in property <Card> card;
+    spacing: 3px;
+
+    Text {
+        text: card.link-domain;
+        color: Theme.accent;
+        font-size: 11px;
+        font-weight: 600;
+        overflow: elide;
+        wrap: no-wrap;
+    }
+
+    Text {
+        text: card.squeezed;
+        color: Theme.body;
+        font-size: 12.5px;
+        overflow: elide;
+        wrap: no-wrap;
+    }
+
+    if card.link-path != "" : Text {
+        text: card.link-path;
+        color: Theme.placeholder;
+        font-size: 10.5px;
+        overflow: elide;
+        wrap: no-wrap;
+    }
+}
