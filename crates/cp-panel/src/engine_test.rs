@@ -378,7 +378,7 @@ fn a_loose_blob_is_collected_even_when_the_user_keeps_everything_for_ever() {
     file.set_modified(old).expect("aged");
     drop(file);
 
-    sweep_as_kept(&store, &path);
+    sweep_as_kept(&store, &path, &dir.join("thumbs"));
 
     assert!(
         !blobs.exists(&digest),

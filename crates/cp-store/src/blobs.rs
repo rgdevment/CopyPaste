@@ -116,7 +116,7 @@ impl Blobs {
     }
 }
 
-fn is_fresh(path: &Path) -> bool {
+pub(crate) fn is_fresh(path: &Path) -> bool {
     let settled = std::time::SystemTime::now() - Blobs::GRACE;
     std::fs::metadata(path)
         .and_then(|meta| meta.modified())
