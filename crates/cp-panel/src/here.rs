@@ -68,8 +68,8 @@ mod platform {
             cp_win::restore::Restored::Written { .. }
         );
         if written {
-            ours();
             drop(clipboard);
+            ours();
         }
         written
     }
