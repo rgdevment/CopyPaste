@@ -7,6 +7,7 @@ pub mod hash;
 pub mod identity;
 pub mod item;
 pub mod kind;
+pub mod note;
 pub mod paste;
 pub mod paste_as;
 pub mod reading;

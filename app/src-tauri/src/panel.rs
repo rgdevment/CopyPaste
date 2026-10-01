@@ -59,27 +59,38 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>) {
 }
 
 pub fn show<R: Runtime>(app: &AppHandle<R>) {
-    if shown(app) {
-        return;
+    match shown(app) {
+        Showing::Done | Showing::Waiting => {}
+        Showing::Refused => {
+            crate::note::note("the panel would not show itself, not even freshly started");
+            trouble_is(app, "the panel is not answering");
+        }
     }
-    crate::note::note("the panel would not show itself, not even freshly started");
-    trouble_is(app, "the panel is not answering");
 }
 
-fn shown<R: Runtime>(app: &AppHandle<R>) -> bool {
+enum Showing {
+    Done,
+    Waiting,
+    Refused,
+}
+
+fn shown<R: Runtime>(app: &AppHandle<R>) -> Showing {
     allow(app);
     if say(app, "show").is_ok() {
-        forgive(app);
-        return true;
+        return Showing::Done;
     }
     if !may_light(app) {
-        return false;
+        return Showing::Waiting;
     }
     if light(app).is_err() {
-        return false;
+        return Showing::Refused;
     }
     allow(app);
-    say(app, "show").is_ok()
+    if say(app, "show").is_ok() {
+        Showing::Done
+    } else {
+        Showing::Refused
+    }
 }
 
 fn may_light<R: Runtime>(app: &AppHandle<R>) -> bool {
@@ -150,7 +161,12 @@ pub fn empty<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     say(app, "empty").map_err(|_| "the panel is not listening".to_owned())
 }
 
-const GOES_IN: std::time::Duration = std::time::Duration::from_millis(600);
+const GOES_IN: std::time::Duration = std::time::Duration::from_millis(2_500);
+
+const _: () = assert!(
+    GOES_IN.as_millis()
+        > cp_core::closing::PATIENCE.as_millis() + cp_core::closing::A_MOMENT.as_millis()
+);
 const LOOKS_EVERY: std::time::Duration = std::time::Duration::from_millis(15);
 
 pub fn quit<R: Runtime>(app: &AppHandle<R>) {

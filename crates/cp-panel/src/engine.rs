@@ -32,10 +32,10 @@ impl Engine {
     }
 
     pub fn close(&self) {
+        self.stop.store(true, Ordering::Relaxed);
         if !self.watching.close() {
             note("the clipboard watcher would not stop and was left behind");
         }
-        self.stop.store(true, Ordering::Relaxed);
         let Ok(mut held) = self.errands.lock() else {
             note("the errands thread could not be reached to stop it");
             return;

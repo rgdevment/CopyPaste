@@ -2,9 +2,11 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 pub const PATIENCE: Duration = Duration::from_millis(1_500);
+pub const A_MOMENT: Duration = Duration::from_millis(500);
 const NAP: Duration = Duration::from_millis(5);
 
 const _: () = assert!(PATIENCE.as_millis() >= 500);
+const _: () = assert!(A_MOMENT.as_millis() < PATIENCE.as_millis());
 
 pub fn join_within(thread: JoinHandle<()>, patience: Duration) -> bool {
     let until = Instant::now() + patience;

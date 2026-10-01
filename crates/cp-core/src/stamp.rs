@@ -9,7 +9,7 @@ pub fn said_of(secs: i64) -> String {
     let (year, month, day) = civil_of(secs.div_euclid(86_400));
     let rest = secs.rem_euclid(86_400);
     format!(
-        "{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02}",
+        "{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02}Z",
         rest / 3_600,
         (rest % 3_600) / 60,
         rest % 60

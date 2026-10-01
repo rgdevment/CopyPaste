@@ -55,7 +55,7 @@ impl Watching {
             return false;
         };
         match held.take() {
-            Some(thread) => cp_core::closing::join_soon(thread),
+            Some(thread) => cp_core::closing::join_within(thread, cp_core::closing::A_MOMENT),
             None => true,
         }
     }
