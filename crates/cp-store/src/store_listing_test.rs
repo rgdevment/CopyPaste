@@ -987,3 +987,51 @@ fn what_you_paste_rises_to_the_top_of_the_recent_order() {
     );
     assert_eq!(ordered[0].paste_count, 1);
 }
+
+#[test]
+fn the_meta_of_a_whole_page_comes_in_one_query() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.set_meta(rows[0].id, "duration", "138").expect("set");
+    store.set_meta(rows[0].id, "width", "1920").expect("set");
+    store.set_meta(rows[0].id, "artist", "nadie").expect("set");
+    store.set_meta(rows[1].id, "duration", "3").expect("set");
+
+    let ids: Vec<i64> = rows.iter().map(|one| one.id).collect();
+    let found = store.meta_for(&ids, &["duration", "width"]).expect("meta");
+
+    assert_eq!(found.len(), 2, "only the two that have any of those keys");
+    let first = &found[&rows[0].id];
+    assert_eq!(first.get("duration").map(String::as_str), Some("138"));
+    assert_eq!(first.get("width").map(String::as_str), Some("1920"));
+    assert!(first.get("artist").is_none(), "a key nobody asked for");
+    assert_eq!(found[&rows[1].id].len(), 1);
+}
+
+#[test]
+fn asking_for_nothing_reads_nothing() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.set_meta(rows[0].id, "duration", "138").expect("set");
+    assert!(store.meta_for(&[], &["duration"]).expect("meta").is_empty());
+    assert!(store.meta_for(&[rows[0].id], &[]).expect("meta").is_empty());
+}
+
+#[test]
+fn an_item_with_no_meta_at_all_is_simply_absent() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    let ids: Vec<i64> = rows.iter().map(|one| one.id).collect();
+    let found = store.meta_for(&ids, &["duration"]).expect("meta");
+    assert!(found.is_empty(), "nobody wrote any, so nobody answers");
+}
+
+#[test]
+fn deleting_an_item_takes_its_meta_with_it() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.set_meta(rows[0].id, "duration", "138").expect("set");
+    store.mark_deleted(rows[0].id, 99).expect("deleted");
+    let found = store.meta_for(&[rows[0].id], &["duration"]).expect("meta");
+    assert!(found.is_empty(), "erasing a row leaves no meta behind");
+}

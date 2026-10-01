@@ -242,6 +242,8 @@ impl Clauses {
     }
 }
 
+pub type MetaByItem = std::collections::HashMap<i64, std::collections::HashMap<String, String>>;
+
 pub struct Store {
     db: Connection,
     blobs: Option<crate::Blobs>,
@@ -446,6 +448,40 @@ impl Store {
             .prepare("SELECT key, value FROM item_meta WHERE item_id = ?1 ORDER BY key")?;
         let rows = stmt.query_map([id], |row| Ok((row.get(0)?, row.get(1)?)))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    pub fn meta_for(&self, ids: &[i64], keys: &[&str]) -> Result<MetaByItem> {
+        if ids.is_empty() || keys.is_empty() {
+            return Ok(MetaByItem::new());
+        }
+        let marks = |how_many: usize| vec!["?"; how_many].join(", ");
+        let sql = format!(
+            "SELECT item_id, key, value FROM item_meta
+             WHERE item_id IN ({}) AND key IN ({})",
+            marks(ids.len()),
+            marks(keys.len())
+        );
+        let mut bound: Vec<Box<dyn ToSql>> = Vec::with_capacity(ids.len() + keys.len());
+        for id in ids {
+            bound.push(Box::new(*id));
+        }
+        for key in keys {
+            bound.push(Box::new((*key).to_owned()));
+        }
+        let mut stmt = self.db.prepare(&sql)?;
+        let rows = stmt.query_map(params_from_iter(bound.iter()), |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })?;
+        let mut found = MetaByItem::new();
+        for row in rows {
+            let (id, key, value) = row?;
+            found.entry(id).or_default().insert(key, value);
+        }
+        Ok(found)
     }
 
     pub fn enqueue(&self, id: i64, job: &str) -> Result<()> {
