@@ -6,6 +6,8 @@ use cp_core::search::Excerpt;
 use cp_core::token::Claims;
 use cp_store::{Facet, Listed};
 
+pub type MetaOfOne = std::collections::HashMap<String, String>;
+
 const LEAD: usize = 30;
 const PER_LINE: usize = 57;
 const SHUT: i32 = 2;
@@ -74,9 +76,10 @@ fn claims_in(row: &Listed) -> Option<Claims> {
         .flatten()
 }
 
-pub fn card_of(row: &Listed, now: i64) -> Card {
+pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
+    let (clock, measures) = crate::media::said_in(meta);
     let shape = (row.kind == Some(Kind::Json))
         .then(|| crate::shape::said_of(&row.preview, crate::say::in_english()))
         .flatten()
@@ -106,6 +109,8 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         shape_root: shape.root.into(),
         shape_said: shape.counted.into(),
         shape_keys: shape.keys.into(),
+        media_clock: clock.into(),
+        media_measures: measures.into(),
         body: body.into(),
         found: !hit.is_empty(),
         badge: badge_of(claims.as_ref()).into(),

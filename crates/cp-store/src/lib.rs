@@ -9,6 +9,7 @@ pub use backup::{Brought, Made, Taken};
 pub use blobs::Blobs;
 pub use query::{Clock, parse};
 pub use schema::SCHEMA_VERSION;
+pub use store::MetaByItem;
 pub use store::restrict;
 pub use store::{
     A_DAY, AppCount, Broken, Cursor, Facet, Filter, FoundIn, Listed, More, Order, PREVIEW_CHARS,

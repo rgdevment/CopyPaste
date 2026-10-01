@@ -23,7 +23,7 @@ fn row(kind: Option<Kind>) -> Listed {
 
 #[test]
 fn a_row_becomes_the_card_the_panel_draws() {
-    let card = card_of(&row(Some(Kind::Json)), 1_000_000 + 9 * 60_000);
+    let card = card_of(&row(Some(Kind::Json)), 1_000_000 + 9 * 60_000, None);
     assert_eq!(card.id, 7);
     assert_eq!(card.kind.as_str(), "json");
     assert_eq!(card.title.as_str(), "JSON");
@@ -58,7 +58,7 @@ fn a_search_hit_shows_its_excerpt_instead_of_the_preview() {
             ],
         },
     });
-    let card = card_of(&hit, 2_000_000);
+    let card = card_of(&hit, 2_000_000, None);
     assert_eq!(card.body.as_str(), "…la reunión del jueves…");
     assert!(!card.mono);
     assert_eq!(card.times.as_str(), "3");
@@ -69,7 +69,7 @@ fn what_was_pasted_once_or_never_carries_no_count() {
     let mut once = row(None);
     once.paste_count = 1;
     once.app = None;
-    let card = card_of(&once, 1_000_000);
+    let card = card_of(&once, 1_000_000, None);
     assert_eq!(card.times.as_str(), "");
     assert_eq!(card.source.as_str(), "—");
     assert_eq!(card.title.as_str(), "Texto");
@@ -176,7 +176,7 @@ fn a_row_that_matched_carries_its_three_parts() {
         found_in: FoundIn::Text,
         excerpt: excerpt_of(&[("antes de ", false), ("esto", true), (" y después", false)]),
     });
-    let card = card_of(&row, 1_000_000);
+    let card = card_of(&row, 1_000_000, None);
     assert!(card.found);
     assert_eq!(card.lead.as_str(), "antes de ");
     assert_eq!(card.hit.as_str(), "esto");

@@ -1,0 +1,43 @@
+import { Card } from "types.slint";
+import { Theme } from "theme.slint";
+
+export component MediaBody inherits HorizontalLayout {
+    in property <Card> card;
+    spacing: 9px;
+
+    if card.media-clock != "" : Rectangle {
+        width: clock-row.preferred-width;
+        height: 18px;
+        border-radius: 4px;
+        background: Theme.field;
+        y: 0;
+        clock-row := HorizontalLayout {
+            padding-left: 6px;
+            padding-right: 6px;
+            Text {
+                text: card.media-clock;
+                color: Theme.accent;
+                font-size: 11px;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    VerticalLayout {
+        spacing: 4px;
+        horizontal-stretch: 1;
+        Text {
+            text: card.squeezed;
+            color: Theme.body;
+            font-size: 12.5px;
+            overflow: elide;
+            wrap: no-wrap;
+        }
+        if card.media-measures != "" : Text {
+            text: card.media-measures;
+            color: Theme.muted;
+            font-size: 10.5px;
+            overflow: elide;
+        }
+    }
+}

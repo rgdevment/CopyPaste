@@ -1,4 +1,5 @@
 import { Card, Chip } from "types.slint";
+import { MediaBody } from "bodies_media.slint";
 import { JsonBody } from "bodies.slint";
 import { Theme } from "theme.slint";
 import { Words } from "words.slint";
@@ -160,6 +161,7 @@ export component Tag inherits Rectangle {
 export component CardView inherits Rectangle {
     in property <Card> card;
     in property <string> layout;
+    property <bool> special: layout == "json" || layout == "video" || layout == "audio";
     in property <bool> current;
     in property <bool> open;
     in property <bool> shown-here;
@@ -213,7 +215,11 @@ export component CardView inherits Rectangle {
             card: card;
         }
 
-        if !card.has-thumb && (!card.found || open) && !(layout == "json" && !open) : Text {
+        if !card.has-thumb && !open && (layout == "video" || layout == "audio") : MediaBody {
+            card: card;
+        }
+
+        if !card.has-thumb && (!card.found || open) && !(special && !open) : Text {
             text: open ? card.body : card.squeezed;
             color: card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? 12px : 13px;

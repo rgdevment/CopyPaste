@@ -20,6 +20,13 @@ pub struct Metrics {
 
 const EDGE: f32 = 8.0;
 
+pub fn wants_media(filter: &Filter) -> bool {
+    matches!(
+        crate::layout::layout_for(&filter.kinds),
+        crate::layout::Layout::Video | crate::layout::Layout::Audio
+    )
+}
+
 pub fn shut_height_for(filter: &Filter, metrics: &Metrics) -> f32 {
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Json => metrics.json,
@@ -47,6 +54,7 @@ pub struct Rows {
     now: i64,
     metrics: Metrics,
     rows: RefCell<Vec<Listed>>,
+    meta: RefCell<cp_store::MetaByItem>,
     cards: RefCell<Vec<Option<Card>>>,
     tops: RefCell<Vec<f32>>,
     open: Cell<Option<usize>>,
@@ -66,6 +74,7 @@ impl Rows {
             now,
             metrics,
             rows: RefCell::new(Vec::new()),
+            meta: RefCell::new(cp_store::MetaByItem::new()),
             cards: RefCell::new(Vec::new()),
             tops: RefCell::new(vec![0.0]),
             open: Cell::new(None),
@@ -202,6 +211,13 @@ impl Rows {
                 tops.push(at);
             }
         }
+        if wants_media(&self.filter) {
+            let ids: Vec<i64> = page.rows.iter().map(|one| one.id).collect();
+            match self.store.meta_for(&ids, &crate::media::KEYS) {
+                Ok(found) => self.meta.borrow_mut().extend(found),
+                Err(why) => crate::note::note(&format!("los metadatos no se pudieron leer: {why}")),
+            }
+        }
         self.rows.borrow_mut().extend(page.rows);
         self.notify.row_added(start, added);
         added
@@ -237,7 +253,9 @@ impl Rows {
         } else {
             self.metrics.plain
         };
-        let mut card = card_of(row, self.now);
+        let meta = self.meta.borrow();
+        let mut card = card_of(row, self.now, meta.get(&row.id));
+        drop(meta);
         if let Some(path) = &row.thumb_path
             && let Ok(image) = slint::Image::load_from_path(std::path::Path::new(path))
         {
