@@ -22,11 +22,52 @@ fn writable_of(item: &Item) -> Vec<(&str, &[u8])> {
         .collect()
 }
 
+fn one_item_per_file<'a>(
+    writable: &[(&'a str, &'a [u8])],
+) -> Option<Vec<Vec<(&'a str, &'a [u8])>>> {
+    let joined = writable.iter().find(|(uti, _)| *uti == FILE_URL)?.1;
+    let urls: Vec<&[u8]> = joined
+        .split(|byte| *byte == b'\n')
+        .filter(|url| !url.is_empty())
+        .collect();
+    if urls.len() < 2 {
+        return None;
+    }
+    let others: Vec<(&str, &[u8])> = writable
+        .iter()
+        .filter(|(uti, _)| *uti != FILE_URL)
+        .copied()
+        .collect();
+    Some(
+        urls.into_iter()
+            .enumerate()
+            .map(|(at, url)| {
+                let mut entries = vec![(FILE_URL, url)];
+                if at == 0 {
+                    entries.extend(others.iter().copied());
+                }
+                entries
+            })
+            .collect(),
+    )
+}
+
 pub fn to_pasteboard(pb: &Pasteboard, item: &Item) -> Restored {
     let writable = writable_of(item);
 
     if writable.is_empty() {
         return Restored::NothingToWrite;
+    }
+
+    if let Some(per_file) = one_item_per_file(&writable) {
+        return if pb.write_items_data(&per_file) {
+            Restored::Written {
+                formats: writable.len(),
+                incomplete: writable.len() != item.formats.len(),
+            }
+        } else {
+            Restored::Failed
+        };
     }
 
     let entries: Vec<(&str, &[u8])> = writable.clone();
@@ -43,6 +84,7 @@ pub fn to_pasteboard(pb: &Pasteboard, item: &Item) -> Restored {
 const PLAIN_TEXT: &str = "public.utf8-plain-text";
 const PNG: &str = "public.png";
 const JPEG: &str = "public.jpeg";
+const FILE_URL: &str = "public.file-url";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
