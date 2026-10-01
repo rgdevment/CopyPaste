@@ -77,6 +77,14 @@ fn claims_in(row: &Listed) -> Option<Claims> {
 pub fn card_of(row: &Listed, now: i64) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
+    let shape = (row.kind == Some(Kind::Json))
+        .then(|| crate::shape::said_of(&row.preview, crate::say::in_english()))
+        .flatten()
+        .unwrap_or_else(|| crate::shape::Said {
+            root: String::new(),
+            counted: String::new(),
+            keys: String::new(),
+        });
     let body = body_of(row);
     let (lead, hit, tail) = match &row.snippet {
         Some(snippet) => parts_of(&snippet.excerpt),
@@ -95,6 +103,9 @@ pub fn card_of(row: &Listed, now: i64) -> Card {
         age: age_text(now, row.modified_at).into(),
         lines: lines_of(&body),
         squeezed: squeezed_of(&body).into(),
+        shape_root: shape.root.into(),
+        shape_said: shape.counted.into(),
+        shape_keys: shape.keys.into(),
         body: body.into(),
         found: !hit.is_empty(),
         badge: badge_of(claims.as_ref()).into(),

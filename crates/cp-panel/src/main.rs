@@ -7,6 +7,7 @@ mod measure;
 mod model;
 mod note;
 mod say;
+mod shape;
 mod view;
 
 slint::include_modules!();
