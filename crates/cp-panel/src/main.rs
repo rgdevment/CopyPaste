@@ -4,6 +4,7 @@ mod engine;
 mod here;
 mod layout;
 mod measure;
+mod media;
 mod model;
 mod note;
 mod say;

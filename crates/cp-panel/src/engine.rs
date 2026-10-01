@@ -122,6 +122,10 @@ fn errand(store: &Store, thumbs: &Path) -> bool {
         read_out(store, id, at);
         return true;
     }
+    if let Some(id) = first_waiting(store, "media", at) {
+        measured(store, id, at);
+        return true;
+    }
     false
 }
 
@@ -148,6 +152,30 @@ fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
         note(&format!("{id} has a thumbnail nobody wrote down: {why}"));
     }
     done(store, id, "thumb");
+}
+
+fn measured(store: &Store, id: i64, at: i64) {
+    let Some(path) = store
+        .item(id)
+        .ok()
+        .flatten()
+        .as_ref()
+        .and_then(crate::media::first_path_of)
+    else {
+        done(store, id, "media");
+        return;
+    };
+    let said = here::media_of(std::path::Path::new(&path));
+    if said.is_empty() {
+        give_up(store, id, "media", "the shell knows nothing about it", at);
+        return;
+    }
+    for (key, value) in said {
+        if let Err(why) = store.set_meta(id, key, &value) {
+            note(&format!("{id} has a {key} nobody wrote down: {why}"));
+        }
+    }
+    done(store, id, "media");
 }
 
 fn read_out(store: &Store, id: i64, at: i64) {
@@ -294,6 +322,8 @@ fn name_for(at: i64, _item: &Item) -> String {
 fn jobs_for(item: &Item) -> &'static [&'static str] {
     match item.kind {
         Some(Kind::Image) => &["thumb", "ocr"],
+        Some(Kind::Video) => &["thumb", "media"],
+        Some(Kind::Audio) => &["media"],
         Some(Kind::File) | Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb"],
         _ => &[],
     }
