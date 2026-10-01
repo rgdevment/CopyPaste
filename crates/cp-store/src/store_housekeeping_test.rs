@@ -737,3 +737,48 @@ fn every_quota_set_to_zero_with_everything_pinned_sweeps_nothing_and_does_not_lo
     );
     assert_eq!(store.count().expect("counted"), 5);
 }
+
+#[test]
+fn a_loose_blob_is_collected_even_when_nothing_is_ever_meant_to_expire() {
+    let (_dir, store) = on_disk();
+    let blobs = store.blobs().expect("a blob store");
+    let digest = blobs.put(b"nobody will ever claim me").expect("stored");
+    aged(&blobs.where_it_is(&digest).expect("a real digest"));
+
+    let keeping_everything = Policy::keeping(None, None);
+    assert_eq!(
+        keeping_everything,
+        Policy::default(),
+        "«always» and «no limit» is the policy that asks for nothing"
+    );
+
+    let swept = store.sweep(&keeping_everything, 1_000).expect("swept");
+
+    assert_eq!(swept.expired, 0, "nothing was meant to expire");
+    assert_eq!(swept.over_bytes, 0);
+    assert_eq!(
+        swept.orphans, 1,
+        "but a blob nobody references is still nobody's"
+    );
+    assert!(!blobs.exists(&digest));
+}
+
+#[test]
+fn a_blob_that_an_item_still_holds_survives_a_sweep_that_asks_for_nothing() {
+    let (_dir, store) = on_disk();
+    let id = store
+        .insert_item("uuid-held", &big_image(31), "", 1)
+        .expect("insert");
+    let blobs = store.blobs().expect("a blob store");
+    let digest = store
+        .blobs_of(id)
+        .expect("blobs")
+        .pop()
+        .expect("there is one");
+    aged(&blobs.where_it_is(&digest).expect("a real digest"));
+
+    let swept = store.sweep(&Policy::default(), 1_000).expect("swept");
+
+    assert_eq!(swept.orphans, 0);
+    assert!(blobs.exists(&digest), "it has an owner");
+}

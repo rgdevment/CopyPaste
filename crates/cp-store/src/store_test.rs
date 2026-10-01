@@ -1173,16 +1173,6 @@ fn reopening_keeps_the_pragmas_that_protect_the_data() {
     );
 }
 
-fn big_image(byte: u8) -> Item {
-    Item {
-        kind: Some(cp_core::kind::Kind::Image),
-        formats: vec![Format {
-            id: "public.png".into(),
-            payload: Payload::Blob(vec![byte; 200_000]),
-        }],
-    }
-}
-
 #[test]
 fn an_image_too_big_for_the_row_goes_to_disk_and_comes_back() {
     let (_dir, store) = on_disk();
@@ -1714,14 +1704,6 @@ fn retention_with_nothing_old_enough_removes_nothing() {
 fn a_word_that_is_not_there_finds_nothing() {
     let store = seeded();
     assert!(search(&store, "berlin").is_empty());
-}
-
-fn aged(path: &std::path::Path) {
-    let file = std::fs::File::options()
-        .write(true)
-        .open(path)
-        .expect("opened");
-    file.set_modified(std::time::UNIX_EPOCH).expect("aged");
 }
 
 #[test]

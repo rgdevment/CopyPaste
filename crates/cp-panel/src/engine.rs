@@ -125,7 +125,11 @@ fn sweep(store: &Store) {
     if !path.exists() {
         return;
     }
-    let kept = match cp_config::read(&path) {
+    sweep_as_kept(store, &path);
+}
+
+fn sweep_as_kept(store: &Store, path: &Path) {
+    let kept = match cp_config::read(path) {
         Ok(kept) => kept,
         Err(why) => {
             note(&format!("what to keep could not be read: {why}"));
@@ -133,9 +137,6 @@ fn sweep(store: &Store) {
         }
     };
     let policy = policy_of(&kept);
-    if policy == cp_store::Policy::default() {
-        return;
-    }
     match store.sweep(&policy, crate::app::now_ms()) {
         Ok(swept) => {
             if swept.expired + swept.over_bytes + swept.orphans > 0 {

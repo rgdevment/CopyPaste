@@ -87,7 +87,6 @@ impl Blobs {
         remove_at(&path).map(|()| true)
     }
 
-    #[cfg(test)]
     pub fn where_it_is(&self, digest: &str) -> Option<PathBuf> {
         self.path_for(digest)
     }

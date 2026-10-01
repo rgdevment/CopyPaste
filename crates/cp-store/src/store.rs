@@ -1089,6 +1089,21 @@ impl Store {
     }
 
     pub fn sweep(&self, policy: &Policy, now: i64) -> Result<Swept> {
+        let mut swept = self.enforce(policy, now)?;
+        swept.orphans = self.collect_orphans()?;
+        swept.truncated = self.checkpoint()?;
+        Ok(swept)
+    }
+
+    fn collect_orphans(&self) -> Result<usize> {
+        let Some(blobs) = &self.blobs else {
+            return Ok(0);
+        };
+        let referenced = self.referenced_blobs()?;
+        blobs.sweep(&|digest| referenced.contains(digest))
+    }
+
+    fn enforce(&self, policy: &Policy, now: i64) -> Result<Swept> {
         let mut swept = Swept::default();
         if let Some(grace) = policy.broken_for {
             swept.broken = self.purge_broken_before(now - grace)?;
@@ -1107,11 +1122,6 @@ impl Store {
         if let Some(limit) = policy.bytes_at_most {
             swept.over_bytes = self.evict_until_under(limit, now)?;
         }
-        if let Some(blobs) = &self.blobs {
-            let referenced = self.referenced_blobs()?;
-            swept.orphans = blobs.sweep(&|digest| referenced.contains(digest))?;
-        }
-        swept.truncated = self.checkpoint()?;
         Ok(swept)
     }
 
@@ -1379,6 +1389,26 @@ fn on_disk() -> (tempfile::TempDir, Store) {
     let dir = tempfile::tempdir().expect("a folder");
     let store = Store::open(&dir.path().join("history.db")).expect("opened");
     (dir, store)
+}
+
+#[cfg(test)]
+fn big_image(byte: u8) -> Item {
+    Item {
+        kind: Some(Kind::Image),
+        formats: vec![cp_core::item::Format {
+            id: "public.png".into(),
+            payload: Payload::Blob(vec![byte; 200_000]),
+        }],
+    }
+}
+
+#[cfg(test)]
+fn aged(path: &std::path::Path) {
+    let file = std::fs::File::options()
+        .write(true)
+        .open(path)
+        .expect("opened");
+    file.set_modified(std::time::UNIX_EPOCH).expect("aged");
 }
 
 #[cfg(test)]
