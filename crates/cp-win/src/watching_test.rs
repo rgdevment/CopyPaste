@@ -1,45 +1,23 @@
 use super::*;
 
 #[test]
-fn the_period_keeps_up_with_a_person_without_spinning() {
-    assert!(
-        EVERY <= Duration::from_millis(250),
-        "una copia no puede tardar en verse"
+fn the_windows_counter_is_read_as_opaque_so_losses_are_not_invented() {
+    let watching = every(cp_core::watching::EVERY, || {});
+    assert_eq!(
+        watching.missed(),
+        None,
+        "el contador de Windows salta varios por copia"
     );
-    assert!(
-        EVERY >= Duration::from_millis(16),
-        "ni sondear mas rapido que la pantalla"
-    );
-}
-
-#[test]
-fn stopping_is_what_drop_does_and_it_waits_for_the_thread() {
-    let watching = Watching::every(Duration::from_millis(5), || {});
-    assert!(watching.close(), "the thread ended in time");
-    assert!(
-        watching.close(),
-        "and closing what is already closed is no error"
-    );
-    drop(watching);
-}
-
-#[test]
-fn a_long_period_does_not_make_stopping_take_that_long() {
-    let watching = Watching::every(Duration::from_secs(3600), || {});
-    let started = std::time::Instant::now();
-    drop(watching);
-    assert!(
-        started.elapsed() < Duration::from_secs(1),
-        "cerrar la aplicacion no puede esperar al siguiente sondeo"
-    );
+    assert!(watching.close());
 }
 
 #[test]
 fn both_ends_of_a_write_of_ours_read_the_same_counter() {
-    let watching = Watching::every(Duration::from_secs(3600), || {});
+    let watching = every(Duration::from_secs(3_600), || {});
     assert_eq!(
         watching.writing(),
         watching.ours(),
         "si uno de los dos extremos no se marca, el tramo queda abierto"
     );
+    assert!(watching.close());
 }

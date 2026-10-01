@@ -16,6 +16,7 @@ pub mod stamp;
 pub mod thumbnail;
 pub mod token;
 pub mod watch;
+pub mod watching;
 
 pub use capture::Captured;
 pub use formats::Family;

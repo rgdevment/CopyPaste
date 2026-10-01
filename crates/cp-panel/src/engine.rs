@@ -17,7 +17,7 @@ pub struct Engine {
 impl Engine {
     pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
-        let watching = here::Watching::start(move || {
+        let watching = here::watch_start(move || {
             if let Some(id) = kept(&store) {
                 fresh(id);
             }

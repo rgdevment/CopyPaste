@@ -8,7 +8,7 @@ use cp_win::paste::{Outcome, paste_into};
 use cp_win::restore::{Restored, to_clipboard};
 use cp_win::transfer::{self, Transfer};
 use cp_win::virtual_files::{self, DESCRIPTOR};
-use cp_win::watching::Watching;
+use cp_win::watching::every as watching_every;
 use cp_win_sys::clipboard::{self, Clipboard};
 use cp_win_sys::formats::{CF_DIB, CF_DIBV5, CF_HDROP, CF_UNICODETEXT, id_of, name_of};
 use cp_win_sys::frontmost::{self, Target};
@@ -794,7 +794,7 @@ fn main() -> std::process::ExitCode {
         use std::sync::atomic::{AtomicUsize, Ordering};
         let seen = Arc::new(AtomicUsize::new(0));
         let counter = seen.clone();
-        let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+        let watching = watching_every(std::time::Duration::from_millis(10), move || {
             counter.fetch_add(1, Ordering::Relaxed);
         });
         std::thread::sleep(std::time::Duration::from_millis(60));
@@ -823,7 +823,7 @@ fn main() -> std::process::ExitCode {
         std::thread::sleep(std::time::Duration::from_millis(60));
         let seen = Arc::new(AtomicUsize::new(0));
         let counter = seen.clone();
-        let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+        let watching = watching_every(std::time::Duration::from_millis(10), move || {
             counter.fetch_add(1, Ordering::Relaxed);
         });
         std::thread::sleep(std::time::Duration::from_millis(250));
@@ -839,7 +839,7 @@ fn main() -> std::process::ExitCode {
         use std::sync::atomic::{AtomicUsize, Ordering};
         let seen = Arc::new(AtomicUsize::new(0));
         let counter = seen.clone();
-        let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+        let watching = watching_every(std::time::Duration::from_millis(10), move || {
             counter.fetch_add(1, Ordering::Relaxed);
         });
         std::thread::sleep(std::time::Duration::from_millis(60));
@@ -882,7 +882,7 @@ fn main() -> std::process::ExitCode {
             use std::sync::atomic::{AtomicUsize, Ordering};
             let seen = Arc::new(AtomicUsize::new(0));
             let counter = seen.clone();
-            let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+            let watching = watching_every(std::time::Duration::from_millis(10), move || {
                 counter.fetch_add(1, Ordering::Relaxed);
             });
             std::thread::sleep(std::time::Duration::from_millis(60));

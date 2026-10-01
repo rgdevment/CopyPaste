@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 pub use platform::{
     THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir, dress, forward,
     in_front, media_of, ocr_available, paste_into, read_stuck, stay_out_of_the_dock,
-    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
+    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,7 +31,10 @@ mod platform {
     use cp_win_sys::clipboard::Clipboard;
 
     pub use cp_core::thumbnail::THUMBNAILS_FILES;
-    pub use cp_win::watching::Watching;
+    pub use cp_core::watching::Watching;
+    pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
+        cp_win::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
 
     pub fn data_dir() -> Option<PathBuf> {
         cp_win_sys::paths::data_dir()
@@ -149,7 +152,10 @@ mod platform {
     use cp_mac_sys::pasteboard::Pasteboard;
 
     pub use cp_core::thumbnail::THUMBNAILS_FILES;
-    pub use cp_mac::watching::Watching;
+    pub use cp_core::watching::Watching;
+    pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
+        cp_mac::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
 
     pub fn data_dir() -> Option<PathBuf> {
         cp_mac_sys::paths::data_dir()
