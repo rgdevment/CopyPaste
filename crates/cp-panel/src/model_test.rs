@@ -265,3 +265,62 @@ fn only_the_views_that_use_meta_ask_the_store_for_any() {
         "two kinds is the general view, which asks for nothing"
     );
 }
+
+fn grouped(group: &str) -> cp_store::Listed {
+    cp_store::Listed {
+        id: 1,
+        modified_at: 0,
+        created_at: 0,
+        kind: Some(cp_core::kind::Kind::Link),
+        preview: String::new(),
+        app: None,
+        label: None,
+        color: 0,
+        thumb_path: None,
+        paste_count: 0,
+        last_used_at: None,
+        broken_since: None,
+        pinned: false,
+        group: group.to_owned(),
+        snippet: None,
+    }
+}
+
+#[test]
+fn the_first_row_of_a_group_is_the_one_that_heads_it() {
+    let linked = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        ..Default::default()
+    };
+    let rows = [
+        grouped("docs.rs"),
+        grouped("docs.rs"),
+        grouped("github.com"),
+    ];
+    assert!(heads_group(&linked, &rows, 0), "the first row always heads");
+    assert!(
+        !heads_group(&linked, &rows, 1),
+        "same group as the one above"
+    );
+    assert!(heads_group(&linked, &rows, 2), "the group changed");
+    assert!(!heads_group(&linked, &rows, 9), "there is no row there");
+}
+
+#[test]
+fn a_view_that_does_not_group_draws_no_heading_at_all() {
+    let general = Filter::default();
+    let rows = [grouped("docs.rs"), grouped("github.com")];
+    assert!(!heads_group(&general, &rows, 0));
+    assert!(!heads_group(&general, &rows, 1));
+}
+
+#[test]
+fn a_group_nobody_could_name_heads_nothing() {
+    let linked = Filter {
+        kinds: vec![cp_core::kind::Kind::Link],
+        ..Default::default()
+    };
+    let rows = [grouped(crate::group::UNKNOWN), grouped("")];
+    assert!(!heads_group(&linked, &rows, 0));
+    assert!(!heads_group(&linked, &rows, 1));
+}

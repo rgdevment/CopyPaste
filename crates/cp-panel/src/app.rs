@@ -728,6 +728,9 @@ fn filter_of(state: &State) -> Filter {
     if state.pinned {
         filter.pinned_only = true;
     }
+    if crate::layout::layout_for(&filter.kinds).groups() {
+        filter.order = cp_store::Order::ByGroup;
+    }
     filter
 }
 

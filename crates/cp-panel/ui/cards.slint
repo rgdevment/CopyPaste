@@ -198,6 +198,26 @@ export component CardView inherits Rectangle {
         padding: 10px;
         spacing: 8px;
 
+        if card.heads-group : HorizontalLayout {
+            height: 15px;
+            spacing: 7px;
+            Text {
+                text: card.group-said;
+                color: Theme.title;
+                font-size: 11px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            Rectangle {
+                horizontal-stretch: 1;
+                Rectangle {
+                    y: (parent.height - 1px) / 2;
+                    height: 1px;
+                    background: Theme.panel-border;
+                }
+            }
+        }
+
         if card.has-thumb : Rectangle {
             height: 96px;
             border-radius: 8px;

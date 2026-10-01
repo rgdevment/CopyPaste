@@ -19,6 +19,7 @@ impl Store {
         let mut stmt = self.raw().prepare(
             "SELECT id, kind, SUBSTR(preview_text, 1, 400) FROM items
              WHERE group_key = '' AND deleted_at IS NULL
+               AND kind IN ('link', 'folder')
              ORDER BY id DESC LIMIT ?1",
         )?;
         let rows = stmt.query_map([i64::try_from(limit).unwrap_or(i64::MAX)], |row| {

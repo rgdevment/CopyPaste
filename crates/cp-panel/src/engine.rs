@@ -130,7 +130,7 @@ fn errand(store: &Store, thumbs: &Path) -> bool {
         walked(store, id, at);
         return true;
     }
-    false
+    grouped_some(store)
 }
 
 fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
@@ -180,6 +180,32 @@ fn measured(store: &Store, id: i64, at: i64) {
         }
     }
     done(store, id, "media");
+}
+
+fn grouped_some(store: &Store) -> bool {
+    let waiting = match store.ungrouped(crate::group::AT_A_TIME) {
+        Ok(waiting) => waiting,
+        Err(why) => {
+            note(&format!("what has no group could not be looked at: {why}"));
+            return false;
+        }
+    };
+    if waiting.is_empty() {
+        return false;
+    }
+    for (id, kind, preview) in &waiting {
+        let key = crate::group::key_of(*kind, preview);
+        let key = if key.is_empty() {
+            crate::group::UNKNOWN
+        } else {
+            key.as_str()
+        };
+        if let Err(why) = store.set_group(*id, key) {
+            note(&format!("{id} was left without a group: {why}"));
+            return false;
+        }
+    }
+    true
 }
 
 fn walked(store: &Store, id: i64, at: i64) {
@@ -332,6 +358,12 @@ fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> 
         note(&format!(
             "{id} was left not knowing where it came from: {why}"
         ));
+    }
+    let key = crate::group::key_of(item.kind, &preview_of(item));
+    if !key.is_empty()
+        && let Err(why) = store.set_group(id, &key)
+    {
+        note(&format!("{id} was left without a group: {why}"));
     }
     for job in jobs_for(item) {
         if let Err(why) = store.enqueue(id, job) {

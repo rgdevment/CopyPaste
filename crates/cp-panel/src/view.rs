@@ -142,6 +142,8 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
             .map(|one| one.domain.clone())
             .unwrap_or_default()
             .into(),
+        heads_group: false,
+        group_said: Default::default(),
         link_path: link
             .as_ref()
             .map(|one| one.path.clone())

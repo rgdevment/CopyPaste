@@ -20,6 +20,22 @@ pub struct Metrics {
 
 const EDGE: f32 = 8.0;
 
+pub fn heads_group(filter: &Filter, rows: &[Listed], index: usize) -> bool {
+    if !crate::layout::layout_for(&filter.kinds).groups() {
+        return false;
+    }
+    let Some(row) = rows.get(index) else {
+        return false;
+    };
+    if !crate::group::shown(&row.group) {
+        return false;
+    }
+    match index.checked_sub(1).and_then(|before| rows.get(before)) {
+        Some(before) => before.group != row.group,
+        None => true,
+    }
+}
+
 pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Video | crate::layout::Layout::Audio => &crate::media::KEYS,
@@ -261,6 +277,10 @@ impl Rows {
         let meta = self.meta.borrow();
         let mut card = card_of(row, self.now, meta.get(&row.id));
         drop(meta);
+        if heads_group(&self.filter, &rows, index) {
+            card.heads_group = true;
+            card.group_said = row.group.clone().into();
+        }
         if let Some(path) = &row.thumb_path
             && let Ok(image) = slint::Image::load_from_path(std::path::Path::new(path))
         {

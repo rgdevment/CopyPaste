@@ -99,3 +99,32 @@ fn counting_what_is_not_there_answers_nothing_instead_of_zero() {
     let nowhere = std::env::temp_dir().join("cp-folder-que-no-existe-jamas");
     assert_eq!(counted_in(&nowhere), None);
 }
+
+#[test]
+fn a_drive_letter_is_the_unit_a_folder_belongs_to() {
+    assert_eq!(unit_of(r"D:\Mario\Orca"), "D:");
+    assert_eq!(unit_of(r"c:\usuarios"), "C:", "the letter is folded up");
+}
+
+#[test]
+fn a_share_is_grouped_by_its_server_not_by_its_folders() {
+    assert_eq!(unit_of(r"\\servidor\legal\Contratos"), r"\\servidor");
+    assert_eq!(unit_of(r"\\servidor"), r"\\servidor");
+}
+
+#[test]
+fn a_unix_root_is_one_single_unit() {
+    assert_eq!(unit_of("/home/mario/Documentos"), "/");
+}
+
+#[test]
+fn what_has_no_unit_gets_no_group_instead_of_a_wrong_one() {
+    assert_eq!(unit_of(""), "");
+    assert_eq!(unit_of("Descargas"), "");
+    assert_eq!(unit_of(r"\\"), "");
+    assert_eq!(
+        unit_of("https://ejemplo.test/x"),
+        "",
+        "a scheme is not a drive"
+    );
+}

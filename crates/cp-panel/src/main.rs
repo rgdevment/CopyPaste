@@ -2,6 +2,7 @@ mod age;
 mod app;
 mod engine;
 mod folder;
+mod group;
 mod here;
 mod layout;
 mod link;

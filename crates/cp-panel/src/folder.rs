@@ -32,6 +32,28 @@ pub fn parts_of(preview: &str) -> Option<Parts> {
     })
 }
 
+pub fn unit_of(preview: &str) -> String {
+    let first = preview.lines().next().unwrap_or("").trim();
+    if let Some(rest) = first.strip_prefix(r"\\") {
+        let host = rest.split(['\\', '/']).next().unwrap_or("");
+        return if host.is_empty() {
+            String::new()
+        } else {
+            format!(r"\\{host}")
+        };
+    }
+    if let Some((drive, _)) = first.split_once(':')
+        && drive.len() == 1
+        && drive.chars().all(char::is_alphabetic)
+    {
+        return drive.to_uppercase() + ":";
+    }
+    if first.starts_with('/') {
+        return "/".to_owned();
+    }
+    String::new()
+}
+
 pub fn counted_in(path: &std::path::Path) -> Option<usize> {
     let reading = std::fs::read_dir(path).ok()?;
     let mut seen = 0;

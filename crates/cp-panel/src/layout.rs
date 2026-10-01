@@ -25,6 +25,10 @@ impl Layout {
         Layout::Papers,
     ];
 
+    pub fn groups(self) -> bool {
+        matches!(self, Layout::Link | Layout::Folder)
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Layout::Everything => "everything",
