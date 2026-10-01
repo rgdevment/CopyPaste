@@ -36,6 +36,31 @@ impl Store {
             .collect())
     }
 
+    pub fn missing_meta(&self, kinds: &[&str], key: &str, limit: usize) -> Result<Vec<i64>> {
+        if kinds.is_empty() {
+            return Ok(Vec::new());
+        }
+        let marks = vec!["?"; kinds.len()].join(", ");
+        let sql = format!(
+            "SELECT id FROM items
+             WHERE deleted_at IS NULL AND kind IN ({marks})
+               AND NOT EXISTS (
+                   SELECT 1 FROM item_meta
+                   WHERE item_id = items.id AND key = ?
+               )
+             ORDER BY modified_at DESC LIMIT ?"
+        );
+        let mut bound: Vec<Box<dyn ToSql>> = Vec::with_capacity(kinds.len() + 2);
+        for kind in kinds {
+            bound.push(Box::new((*kind).to_owned()));
+        }
+        bound.push(Box::new(key.to_owned()));
+        bound.push(Box::new(i64::try_from(limit).unwrap_or(i64::MAX)));
+        let mut stmt = self.raw().prepare(&sql)?;
+        let rows = stmt.query_map(params_from_iter(bound.iter()), |row| row.get(0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     pub fn set_meta(&self, id: i64, key: &str, value: &str) -> Result<()> {
         self.raw().execute(
             "INSERT INTO item_meta (item_id, key, value) VALUES (?1, ?2, ?3)

@@ -1043,3 +1043,61 @@ fn deleting_an_item_takes_its_meta_with_it() {
     let found = store.meta_for(&[rows[0].id], &["duration"]).expect("meta");
     assert!(found.is_empty(), "erasing a row leaves no meta behind");
 }
+
+#[test]
+fn what_is_missing_a_measurement_can_be_found_without_touching_the_rest() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    let kinds: Vec<&str> = vec!["text", "email", "color"];
+    let of_those = rows
+        .iter()
+        .filter(|row| {
+            row.kind
+                .map(|kind| kinds.contains(&kind.as_str()))
+                .unwrap_or(false)
+        })
+        .count();
+    assert!(of_those > 1, "the fixture has a few of those kinds");
+
+    let waiting = store
+        .missing_meta(&kinds, "pixels-wide", 100)
+        .expect("asked");
+    assert_eq!(waiting.len(), of_those, "nobody has been measured yet");
+
+    store
+        .set_meta(waiting[0], "pixels-wide", "1920")
+        .expect("measured");
+    let after = store
+        .missing_meta(&kinds, "pixels-wide", 100)
+        .expect("asked");
+    assert_eq!(after.len(), of_those - 1, "the measured one drops out");
+    assert!(!after.contains(&waiting[0]));
+}
+
+#[test]
+fn a_kind_nobody_asked_about_is_never_queued() {
+    let store = history();
+    let only_colour = store
+        .missing_meta(&["color"], "duration-ms", 100)
+        .expect("asked");
+    let every_row = all(&store, &Filter::default()).len();
+    assert!(only_colour.len() < every_row, "only the colours");
+    assert!(
+        store
+            .missing_meta(&[], "duration-ms", 100)
+            .expect("asked")
+            .is_empty(),
+        "asking about no kind at all reads nothing"
+    );
+}
+
+#[test]
+fn a_deleted_row_is_not_sent_back_to_be_measured() {
+    let store = history();
+    let rows = all(&store, &Filter::default());
+    store.mark_deleted(rows[0].id, 99).expect("deleted");
+    let waiting = store
+        .missing_meta(&["text", "email", "color"], "pixels-wide", 100)
+        .expect("asked");
+    assert!(!waiting.contains(&rows[0].id), "it is gone, not unmeasured");
+}

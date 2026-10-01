@@ -63,6 +63,7 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
         return None;
     };
     Some(std::thread::spawn(move || {
+        catch_up(&store);
         let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
         while !stop.load(Ordering::Relaxed) {
             if swept.elapsed() >= SWEEPS_EVERY {
@@ -74,6 +75,27 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
             }
         }
     }))
+}
+
+const CATCH_UP: usize = 500;
+
+fn catch_up(store: &Store) {
+    for (kinds, key, job) in [
+        (&["image"][..], crate::media::WIDTH, "thumb"),
+        (&["video", "audio"][..], crate::media::DURATION, "media"),
+    ] {
+        match store.missing_meta(kinds, key, CATCH_UP) {
+            Ok(waiting) => {
+                for id in waiting {
+                    if let Err(why) = store.enqueue(id, job) {
+                        note(&format!("{id} was left without {job} queued: {why}"));
+                        break;
+                    }
+                }
+            }
+            Err(why) => note(&format!("what is unmeasured could not be looked at: {why}")),
+        }
+    }
 }
 
 fn sweep(store: &Store) {
@@ -144,7 +166,15 @@ fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
 }
 
 fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
-    let Some(png) = store.item(id).ok().flatten().as_ref().and_then(thumb_of) else {
+    let item = store.item(id).ok().flatten();
+    if let Some(sides) = item.as_ref().and_then(|one| {
+        here::content_of(one, None)
+            .image
+            .and_then(cp_core::thumbnail::size_of)
+    }) {
+        measured_sides(store, id, sides.width, sides.height);
+    }
+    let Some(png) = item.as_ref().and_then(thumb_of) else {
         give_up(store, id, "thumb", "the thumbnail could not be drawn", at);
         return;
     };
@@ -286,6 +316,16 @@ fn thumb_of(item: &Item) -> Option<Vec<u8>> {
     here::thumb_of_file(Path::new(first), SIDE)
 }
 
+fn measured_sides(store: &Store, id: i64, width: u32, height: u32) {
+    for (key, value) in [(crate::media::WIDTH, width), (crate::media::HEIGHT, height)] {
+        if value > 0
+            && let Err(why) = store.set_meta(id, key, &value.to_string())
+        {
+            note(&format!("{id} has a {key} nobody wrote down: {why}"));
+        }
+    }
+}
+
 fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
     std::fs::create_dir_all(dir).ok()?;
     let _ = cp_store::restrict(dir, 0o700);
@@ -395,7 +435,7 @@ fn name_for(at: i64, _item: &Item) -> String {
 
 fn jobs_for(item: &Item) -> &'static [&'static str] {
     match item.kind {
-        Some(Kind::Image) => &["thumb", "ocr"],
+        Some(Kind::Image) => &["thumb", "ocr", "media"],
         Some(Kind::Video) => &["thumb", "media"],
         Some(Kind::Audio) => &["media"],
         Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb", "folder"],
