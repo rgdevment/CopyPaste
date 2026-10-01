@@ -18,7 +18,7 @@ use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{files, media, ocr, source, thumbnail};
 
-const CASES: u32 = 50;
+const CASES: u32 = 51;
 const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2", "Q1"];
 const SKIPPED: &str = "skipped: ";
 
@@ -844,6 +844,7 @@ fn main() -> std::process::ExitCode {
         });
         std::thread::sleep(std::time::Duration::from_millis(60));
 
+        watching.writing();
         {
             let clipboard = Clipboard::to_write().ok_or("did not open")?;
             clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j4-ours"))]);
@@ -872,6 +873,39 @@ fn main() -> std::process::ExitCode {
         println!("            ours 0 notices, foreign {after_theirs}");
         Ok(())
     });
+
+    b.case(
+        "J5",
+        "the pause between letting the clipboard go and marking it is not a copy",
+        || {
+            use std::sync::Arc;
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let seen = Arc::new(AtomicUsize::new(0));
+            let counter = seen.clone();
+            let watching = Watching::every(std::time::Duration::from_millis(10), move || {
+                counter.fetch_add(1, Ordering::Relaxed);
+            });
+            std::thread::sleep(std::time::Duration::from_millis(60));
+
+            watching.writing();
+            {
+                let clipboard = Clipboard::to_write().ok_or("did not open")?;
+                clipboard.replace(&[(CF_UNICODETEXT, &utf16_of("cp-j5-ours"))]);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            watching.ours();
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            let after_ours = seen.load(Ordering::Relaxed);
+            drop(watching);
+
+            if after_ours != 0 {
+                return Err(format!(
+                    "{after_ours} notice(s) for our own write: the stretch left a gap"
+                ));
+            }
+            Ok(())
+        },
+    );
 
     b.case("J3", "polling the counter is almost free", || {
         let rounds = 10_000;
@@ -1005,7 +1039,7 @@ fn main() -> std::process::ExitCode {
         let dir = std::env::temp_dir().join("cp-no-thumbnail");
         std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
         let path = dir.join("empty.bin");
-        std::fs::write(&path, b"   ").map_err(|why| why.to_string())?;
+        std::fs::write(&path, b"\0\0\0").map_err(|why| why.to_string())?;
         match thumbnail::dib_of_file(&path, thumbnail::SIDE) {
             None => Ok(()),
             Some(_) => Err("returned something for a file with no preview".into()),

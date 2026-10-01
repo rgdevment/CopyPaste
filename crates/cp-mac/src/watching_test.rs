@@ -35,3 +35,10 @@ fn the_pasteboard_counts_one_per_copy_so_a_miss_can_be_told() {
     let watching = Watching::every(Duration::from_secs(3600), || {});
     assert_eq!(watching.missed(), Some(0));
 }
+
+#[test]
+fn both_ends_of_a_write_of_ours_are_told_to_the_watcher() {
+    let watching = Watching::every(Duration::from_secs(3600), || {});
+    assert!(watching.writing());
+    assert!(watching.ours());
+}

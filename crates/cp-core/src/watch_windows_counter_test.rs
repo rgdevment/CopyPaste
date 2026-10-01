@@ -66,3 +66,52 @@ fn the_watcher_says_which_counter_it_is_reading() {
         Cadence::OnePerCopy
     );
 }
+
+#[test]
+fn the_whole_stretch_of_our_write_is_ours() {
+    let mut watcher = windows();
+    watcher.tick(32259);
+    watcher.writing(32259);
+    assert_eq!(watcher.tick(32260), Seen::Ours, "EmptyClipboard moved it");
+    assert_eq!(watcher.tick(32261), Seen::Ours, "SetClipboardData moved it");
+    watcher.wrote(32264);
+    assert_eq!(
+        watcher.tick(32264),
+        Seen::Ours,
+        "the three synthesized ones"
+    );
+    assert_eq!(watcher.tick(32267), Seen::Fresh { skipped: None });
+}
+
+#[test]
+fn a_poll_inside_the_closed_stretch_does_not_shut_it_early() {
+    let mut watcher = windows();
+    watcher.tick(32259);
+    watcher.writing(32259);
+    watcher.wrote(32264);
+    assert_eq!(watcher.tick(32262), Seen::Ours);
+    assert_eq!(watcher.tick(32264), Seen::Ours, "the end is still ours");
+    assert_eq!(watcher.tick(32267), Seen::Fresh { skipped: None });
+}
+
+#[test]
+fn a_write_that_never_landed_does_not_deafen_the_watcher() {
+    let mut watcher = windows();
+    watcher.tick(100);
+    watcher.writing(100);
+    watcher.wrote(100);
+    assert_eq!(
+        watcher.tick(103),
+        Seen::Fresh { skipped: None },
+        "the clipboard was never taken, so what follows is theirs"
+    );
+}
+
+#[test]
+fn a_counter_below_the_open_stretch_is_a_new_session() {
+    let mut watcher = windows();
+    watcher.tick(100);
+    watcher.writing(100);
+    assert_eq!(watcher.tick(60), Seen::Fresh { skipped: None });
+    assert_eq!(watcher.tick(61), Seen::Fresh { skipped: None });
+}

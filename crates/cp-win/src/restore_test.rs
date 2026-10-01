@@ -209,3 +209,23 @@ fn the_bitmap_we_publish_has_the_header_its_name_promises() {
         "CF_DIB means a 40 or 108 byte header; {declared} would be a different format"
     );
 }
+
+#[test]
+fn every_image_the_catalog_keeps_comes_back_as_a_bitmap_too() {
+    let png = image_bytes();
+    let jpeg = jpeg_bytes();
+    for id in crate::formats::CATALOG.images_by_preference {
+        let bytes = match *id {
+            "JFIF" => &jpeg,
+            _ => &png,
+        };
+        let written = writable(id, bytes);
+        assert!(
+            written.iter().any(|(kept, _)| *kept == CF_DIB)
+                || written
+                    .iter()
+                    .any(|(kept, _)| *kept == id_of(id).unwrap_or_default()),
+            "{id} is captured and comes back with nothing an app can read"
+        );
+    }
+}

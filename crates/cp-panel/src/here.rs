@@ -59,19 +59,19 @@ mod platform {
         cp_core::dib::to_png(&dib)
     }
 
-    pub fn to_clipboard(item: &Item, ours: impl FnOnce()) -> bool {
+    pub fn to_clipboard(item: &Item, starting: impl FnOnce(), ours: impl FnOnce()) -> bool {
         let ready = cp_win::restore::ready_for(item);
+        starting();
         let Some(clipboard) = Clipboard::to_write() else {
+            ours();
             return false;
         };
         let written = matches!(
             cp_win::restore::place(&clipboard, &ready),
             cp_win::restore::Restored::Written { .. }
         );
-        if written {
-            drop(clipboard);
-            ours();
-        }
+        drop(clipboard);
+        ours();
         written
     }
 
@@ -169,15 +169,14 @@ mod platform {
         None
     }
 
-    pub fn to_clipboard(item: &Item, ours: impl FnOnce()) -> bool {
+    pub fn to_clipboard(item: &Item, starting: impl FnOnce(), ours: impl FnOnce()) -> bool {
         let pb = Pasteboard::general_from_any_thread();
+        starting();
         let written = matches!(
             cp_mac::restore::to_pasteboard(&pb, item),
             cp_mac::restore::Restored::Written { .. }
         );
-        if written {
-            ours();
-        }
+        ours();
         written
     }
 

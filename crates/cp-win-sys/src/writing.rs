@@ -48,15 +48,11 @@ impl Clipboard<'_> {
 fn reserved(entries: &[(u32, &[u8])]) -> Option<Vec<(u32, HGLOBAL)>> {
     let mut ready = Vec::with_capacity(entries.len());
     for (id, bytes) in entries {
-        match block_of(bytes) {
-            Some(block) => ready.push((*id, block)),
-            None => {
-                release(&ready);
-                return None;
-            }
+        if let Some(block) = block_of(bytes) {
+            ready.push((*id, block));
         }
     }
-    Some(ready)
+    (!ready.is_empty()).then_some(ready)
 }
 
 fn release(blocks: &[(u32, HGLOBAL)]) {

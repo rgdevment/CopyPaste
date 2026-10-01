@@ -10,9 +10,10 @@ fn every_block_is_reserved_before_the_clipboard_is_emptied() {
 
 #[test]
 fn nothing_to_write_reserves_nothing() {
-    let ready = reserved(&[]).expect("vacio no es fallo");
-    assert!(ready.is_empty());
-    release(&ready);
+    assert!(
+        reserved(&[]).is_none(),
+        "there is nothing to hand over, and replace refuses an empty list before it ever asks"
+    );
 }
 
 #[test]

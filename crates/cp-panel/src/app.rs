@@ -855,7 +855,7 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
             return false;
         }
     };
-    let written = here::to_clipboard(&item, || mark(engine));
+    let written = here::to_clipboard(&item, || starting(engine), || mark(engine));
     if written {
         if let Err(why) = store.record_paste(id, now_ms()) {
             note(&format!("{id} was pasted and nobody wrote it down: {why}"));
@@ -1036,7 +1036,7 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
         return false;
     };
     let made = rendered.into_item();
-    let written = here::to_clipboard(&made, || mark(engine));
+    let written = here::to_clipboard(&made, || starting(engine), || mark(engine));
     if written && let Err(why) = store.record_paste(id, now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
@@ -1048,6 +1048,15 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+fn starting(engine: Option<&crate::engine::Engine>) {
+    let Some(engine) = engine else {
+        return;
+    };
+    if !engine.writing() {
+        note("the start of the clipboard write could not be marked as ours");
+    }
 }
 
 fn mark(engine: Option<&crate::engine::Engine>) {

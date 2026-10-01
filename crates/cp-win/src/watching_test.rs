@@ -29,3 +29,13 @@ fn a_long_period_does_not_make_stopping_take_that_long() {
         "cerrar la aplicacion no puede esperar al siguiente sondeo"
     );
 }
+
+#[test]
+fn both_ends_of_a_write_of_ours_read_the_same_counter() {
+    let watching = Watching::every(Duration::from_secs(3600), || {});
+    assert_eq!(
+        watching.writing(),
+        watching.ours(),
+        "si uno de los dos extremos no se marca, el tramo queda abierto"
+    );
+}
