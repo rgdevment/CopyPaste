@@ -15,6 +15,7 @@ mod papers;
 mod say;
 mod shape;
 mod view;
+mod wave;
 
 slint::include_modules!();
 

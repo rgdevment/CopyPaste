@@ -116,8 +116,8 @@ fn only_what_can_be_enriched_is_queued() {
     assert_eq!(jobs_for(&of_kind(Kind::Video)), ["thumb", "media"]);
     assert_eq!(
         jobs_for(&of_kind(Kind::Audio)),
-        ["media"],
-        "sound has no cover to draw"
+        ["thumb", "media"],
+        "sound has no cover, so its thumbnail is its own waveform"
     );
     assert!(jobs_for(&text("nothing to do here")).is_empty());
 }

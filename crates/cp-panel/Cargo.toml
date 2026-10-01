@@ -12,6 +12,7 @@ cp-config.workspace = true
 cp-core.workspace = true
 cp-store.workspace = true
 slint.workspace = true
+symphonia.workspace = true
 sys-locale.workspace = true
 raw-window-handle.workspace = true
 

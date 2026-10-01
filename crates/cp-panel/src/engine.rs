@@ -46,6 +46,8 @@ impl Drop for Engine {
 }
 
 const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
+const WAVE_WIDE: u32 = 384;
+const WAVE_HIGH: u32 = 64;
 const NAP: std::time::Duration = std::time::Duration::from_millis(400);
 const LATER: i64 = 60_000;
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
@@ -313,6 +315,10 @@ fn thumb_of(item: &Item) -> Option<Vec<u8>> {
         return cp_core::thumbnail::of_image(image, cp_core::thumbnail::MAX_SIDE);
     }
     let first = content.paths.first()?;
+    if item.kind == Some(Kind::Audio) {
+        let bars = crate::wave::bars_of(Path::new(first))?;
+        return cp_core::thumbnail::of_wave(&bars, crate::wave::TALLEST, WAVE_WIDE, WAVE_HIGH);
+    }
     here::thumb_of_file(Path::new(first), SIDE)
 }
 
@@ -437,7 +443,7 @@ fn jobs_for(item: &Item) -> &'static [&'static str] {
     match item.kind {
         Some(Kind::Image) => &["thumb", "ocr", "media"],
         Some(Kind::Video) => &["thumb", "media"],
-        Some(Kind::Audio) => &["media"],
+        Some(Kind::Audio) => &["thumb", "media"],
         Some(Kind::Folder) if here::THUMBNAILS_FILES => &["thumb", "folder"],
         Some(Kind::Folder) => &["folder"],
         Some(Kind::File) if here::THUMBNAILS_FILES => &["thumb"],
