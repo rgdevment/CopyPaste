@@ -14,11 +14,21 @@ pub fn spanish(locale: Option<&str>) -> bool {
     !asked.to_lowercase().starts_with("en")
 }
 
-fn worded(spanish: bool) -> [&'static str; 3] {
+fn worded(spanish: bool) -> [&'static str; 4] {
     if spanish {
-        ["Mostrar el panel", "Ajustes…", "Salir de CopyPaste"]
+        [
+            "Mostrar el panel",
+            "Ajustes…",
+            "Reiniciar el panel",
+            "Salir de CopyPaste",
+        ]
     } else {
-        ["Show the panel", "Settings…", "Quit CopyPaste"]
+        [
+            "Show the panel",
+            "Settings…",
+            "Restart the panel",
+            "Quit CopyPaste",
+        ]
     }
 }
 
@@ -38,12 +48,20 @@ fn leave<R: Runtime>(app: &AppHandle<R>) {
     app.exit(0);
 }
 
+fn revive<R: Runtime>(app: &AppHandle<R>) {
+    crate::panel::quit(app);
+    if let Err(why) = crate::panel::relight(app) {
+        crate::note::note(&format!("the panel would not come back: {why}"));
+    }
+}
+
 pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
-    let [shows, asks, leaves] = worded(spanish);
+    let [shows, asks, again, leaves] = worded(spanish);
     let panel = MenuItem::with_id(app, "panel", shows, true, None::<&str>).ok()?;
     let settings = MenuItem::with_id(app, "settings", asks, true, None::<&str>).ok()?;
+    let restart = MenuItem::with_id(app, "restart", again, true, None::<&str>).ok()?;
     let quit = MenuItem::with_id(app, "quit", leaves, true, None::<&str>).ok()?;
-    let menu = Menu::with_items(app, &[&panel, &settings, &quit]).ok()?;
+    let menu = Menu::with_items(app, &[&panel, &settings, &restart, &quit]).ok()?;
 
     let tray = TrayIconBuilder::with_id("copypaste")
         .icon(Image::from_bytes(BAR).ok()?)
@@ -53,6 +71,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
         .on_menu_event(|app, event| match event.id.as_ref() {
             "panel" => crate::panel::show(app),
             "settings" => surface(app),
+            "restart" => revive(app),
             "quit" => leave(app),
             _ => {}
         })
@@ -74,7 +93,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
     #[cfg(not(target_os = "macos"))]
     let _ = &tray;
 
-    app.manage(Said(Mutex::new(vec![panel, settings, quit])));
+    app.manage(Said(Mutex::new(vec![panel, settings, restart, quit])));
 
     Some(())
 }

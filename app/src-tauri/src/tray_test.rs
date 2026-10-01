@@ -1,4 +1,4 @@
-use super::spanish;
+use super::{spanish, worded};
 use tauri::image::Image;
 
 const WINDOWS: &[u8] = include_bytes!("../icons/tray/windows-32.png");
@@ -43,4 +43,36 @@ fn the_windows_icon_is_dark_enough_for_a_light_bar() {
     let (grey, seen) = ink(WINDOWS);
     assert!(seen > 64, "the Windows icon has hardly any ink: {seen}");
     assert!(grey < 200, "on a light bar it would not show: {grey}");
+}
+
+#[test]
+fn the_words_come_in_the_order_the_menu_was_built() {
+    for spanish in [true, false] {
+        let said = worded(spanish);
+        assert_eq!(said.len(), 4, "reword zips these against the live items");
+        assert!(
+            said[0].to_lowercase().contains("panel"),
+            "the first item shows the panel: {}",
+            said[0]
+        );
+        assert!(
+            said[2].to_lowercase().contains("panel"),
+            "the third item restarts it: {}",
+            said[2]
+        );
+        assert!(
+            said[3].to_lowercase().contains("copypaste"),
+            "the last one leaves: {}",
+            said[3]
+        );
+    }
+}
+
+#[test]
+fn the_two_tongues_say_different_things_item_by_item() {
+    let es = worded(true);
+    let en = worded(false);
+    for (one, other) in es.iter().zip(en.iter()) {
+        assert_ne!(one, other, "«{one}» was left untranslated");
+    }
 }
