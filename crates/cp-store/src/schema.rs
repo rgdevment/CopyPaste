@@ -14,21 +14,16 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
         return Ok(false);
     }
     db.execute_batch("BEGIN IMMEDIATE;")?;
+    added_columns(db)?;
     if ordering_indexes_are_stale(db)? {
-        db.execute_batch(&format!(
+        db.execute_batch(
             "DROP INDEX IF EXISTS items_by_recency;
-             DROP INDEX IF EXISTS items_by_kind;
-             {ORDERING_INDEXES}"
-        ))?;
+             DROP INDEX IF EXISTS items_by_kind;",
+        )?;
     }
+    db.execute_batch(ORDERING_INDEXES)?;
     if found < 3 {
         db.execute_batch("INSERT INTO items_fts(items_fts) VALUES ('optimize');")?;
-    }
-    if ocr_text_is_missing(db)? {
-        db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
-    }
-    if column_is_missing(db, "group_key")? {
-        db.execute_batch("ALTER TABLE items ADD COLUMN group_key TEXT NOT NULL DEFAULT '';")?;
     }
     if found < 5 {
         db.execute_batch(&format!(
@@ -74,8 +69,14 @@ fn search_trigger_is_broad(db: &Connection) -> Result<bool> {
     Ok(said.is_some_and(|one| !one.contains("UPDATE OF")))
 }
 
-fn ocr_text_is_missing(db: &Connection) -> Result<bool> {
-    column_is_missing(db, "ocr_text")
+fn added_columns(db: &Connection) -> Result<()> {
+    if column_is_missing(db, "ocr_text")? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN ocr_text TEXT;")?;
+    }
+    if column_is_missing(db, "group_key")? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN group_key TEXT NOT NULL DEFAULT '';")?;
+    }
+    Ok(())
 }
 
 fn column_is_missing(db: &Connection, wanted: &str) -> Result<bool> {
@@ -113,6 +114,7 @@ pub fn configure(db: &Connection) -> Result<()> {
 pub fn create(db: &Connection) -> Result<()> {
     configure(db)?;
     db.execute_batch(TABLES)?;
+    added_columns(db)?;
     db.execute_batch(ORDERING_INDEXES)?;
     if search_trigger_is_broad(db)? {
         db.execute_batch(&format!(

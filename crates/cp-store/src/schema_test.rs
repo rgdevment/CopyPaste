@@ -275,11 +275,14 @@ fn a_version_three_database_gains_the_column_for_the_text_as_read() {
              PRAGMA user_version = 3;",
     )
     .expect("a database as version 3 left it");
-    create(&db).expect("opening does not add columns to a table that already exists");
-    assert!(ocr_text_is_missing(&db).expect("looked"));
+    assert!(column_is_missing(&db, "ocr_text").expect("looked"));
+    create(&db).expect("opening adds the columns its own indexes and queries name");
+    assert!(
+        !column_is_missing(&db, "ocr_text").expect("looked"),
+        "opening cannot leave a column missing: the indexes right below name it"
+    );
 
     assert!(migrate(&db).expect("migrated"));
-    assert!(!ocr_text_is_missing(&db).expect("looked"));
     db.execute(
         "INSERT INTO items (uuid, created_at, modified_at, updated_at, content_hash, ocr_text)
              VALUES ('u', 1, 1, 1, 0, 'Raw')",
@@ -319,4 +322,65 @@ fn a_version_one_database_gets_its_ordering_indexes_rebuilt() {
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .expect("queried");
     assert_eq!(version, SCHEMA_VERSION);
+}
+
+#[test]
+fn a_database_without_the_group_column_gets_it_before_anything_indexes_it() {
+    let db = Connection::open_in_memory().expect("opened");
+    create(&db).expect("schema");
+    db.execute_batch(
+        "DROP INDEX IF EXISTS items_by_group;
+         ALTER TABLE items DROP COLUMN group_key;
+         PRAGMA user_version = 4;",
+    )
+    .expect("wound back to before the column existed");
+
+    migrate(&db).expect("the migration adds the column before the index names it");
+
+    let has: i64 = db
+        .query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('items') WHERE name = 'group_key'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("asked");
+    assert_eq!(has, 1, "the column is there");
+    let indexed: i64 = db
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'items_by_group'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("asked");
+    assert_eq!(indexed, 1, "and so is its index");
+}
+
+#[test]
+fn a_row_that_predates_the_group_column_reads_as_having_no_group() {
+    let db = Connection::open_in_memory().expect("opened");
+    create(&db).expect("schema");
+    db.execute_batch(
+        "DROP INDEX IF EXISTS items_by_group;
+         ALTER TABLE items DROP COLUMN group_key;",
+    )
+    .expect("wound back");
+    db.execute_batch(
+        "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
+                            content_hash)
+         VALUES ('antes', 'link', 'https://ejemplo.test/x', 1, 1, 1, 7);",
+    )
+    .expect("a row from before");
+    db.execute_batch("PRAGMA user_version = 4;")
+        .expect("stamped");
+
+    migrate(&db).expect("migrated");
+
+    let group: String = db
+        .query_row(
+            "SELECT group_key FROM items WHERE uuid = 'antes'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("read");
+    assert_eq!(group, "", "empty means «nobody has grouped it yet»");
 }
