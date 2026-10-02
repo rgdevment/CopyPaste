@@ -316,9 +316,11 @@ export component CardView inherits Rectangle {
                 }
             }
 
-            VerticalLayout {
+            lines := VerticalLayout {
+                property <string> second: card.name != "" || being-named ? card.under-named : card.under;
                 spacing: 3px;
                 horizontal-stretch: 1;
+                alignment: center;
 
                 HorizontalLayout {
                     height: 18px;
@@ -360,7 +362,7 @@ export component CardView inherits Rectangle {
                     }
                 }
 
-                HorizontalLayout {
+                if lines.second != "" || card.alert != "" : HorizontalLayout {
                     height: 15px;
                     spacing: 5px;
                     if card.alert != "" : Rectangle {
@@ -376,7 +378,7 @@ export component CardView inherits Rectangle {
                         }
                     }
                     Text {
-                        text: card.name != "" || being-named ? card.under-named : card.under;
+                        text: lines.second;
                         color: Theme.muted;
                         font-size: 11px;
                         overflow: elide;
