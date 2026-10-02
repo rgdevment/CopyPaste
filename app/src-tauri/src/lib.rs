@@ -1,5 +1,6 @@
 mod backup;
 mod keys;
+mod links;
 mod note;
 mod panel;
 mod reviving;
@@ -25,6 +26,8 @@ pub fn run() {
             settings::keep,
             settings::where_it_lives,
             settings::former,
+            links::open_web,
+            links::linkunbound_here,
             waking::waking,
             waking::wake,
             keys::keys,

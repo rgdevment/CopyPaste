@@ -113,7 +113,25 @@ pub struct Former {
     labelled: i64,
     with_styles: i64,
     beyond_keep: i64,
+    came: Option<i64>,
+    came_at: Option<i64>,
     unreadable: Option<String>,
+}
+
+fn came_over() -> Option<cp_store::legacy::Came> {
+    let at = folder()?.join("history.db");
+    for wait in [0u64, 150, 400] {
+        if wait > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(wait));
+        }
+        if let Ok(store) = cp_store::Store::open(&at)
+            && let Ok(came) = store.came_from_the_former()
+        {
+            return Some(came);
+        }
+    }
+    crate::note::note("the history was busy, so whether the 2.x ever crossed is unknown");
+    None
 }
 
 #[tauri::command(async)]
@@ -134,8 +152,14 @@ pub fn former(at: i64) -> Result<Option<Former>, String> {
         labelled: 0,
         with_styles: 0,
         beyond_keep: 0,
+        came: None,
+        came_at: None,
         unreadable: None,
     };
+    if let Some(came) = came_over() {
+        former.came = Some(came.count);
+        former.came_at = came.when;
+    }
     match cp_store::legacy::look(&db, at, policy().keep_for) {
         Ok(looked) => {
             former.items = looked.items;

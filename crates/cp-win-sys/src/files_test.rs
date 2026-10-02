@@ -44,3 +44,34 @@ fn the_wide_path_is_absolute_and_ends_in_a_terminator() {
         "{text} lleva el prefijo que el shell no entiende"
     );
 }
+
+#[test]
+fn a_scheme_nobody_registered_is_known_to_be_missing_without_asking_the_user() {
+    assert!(
+        !super::scheme_here("cp-no-hay-nada-asi-9f3a"),
+        "an unregistered scheme must be answered here, or Windows shows the «look for an app» dialog"
+    );
+}
+
+#[test]
+fn a_scheme_the_machine_does_have_is_found() {
+    assert!(
+        super::scheme_here("https"),
+        "every Windows opens the web, so a check that never says yes would be a check that does nothing"
+    );
+}
+
+#[test]
+fn each_way_of_asking_agrees_about_a_scheme_that_is_not_there() {
+    assert!(!super::asked_of_the_shell("cp-no-hay-nada-asi-9f3a"));
+    assert!(!super::written_as_a_protocol("cp-no-hay-nada-asi-9f3a"));
+}
+
+#[test]
+fn the_registry_alone_can_answer_for_a_scheme_the_shell_resolves() {
+    assert!(
+        super::written_as_a_protocol("https"),
+        "an app from the Store registers no plain executable, so the key that makes a scheme a \
+         scheme is what has to be looked at when the shell does not answer"
+    );
+}

@@ -78,6 +78,7 @@ impl App {
             head: theme.get_row_head(),
             tall: theme.get_row_thumb(),
             plain: theme.get_row_plain(),
+            mixed: theme.get_row_mixed(),
             json: theme.get_row_json(),
             found: theme.get_row_found(),
             frame: theme.get_row_frame(),
@@ -582,7 +583,56 @@ impl App {
                 let _ = ui.hide();
             }
         });
-        panel.on_edit(|_| {});
+        self.wire_opening(panel);
+        self.wire_naming(panel);
+    }
+
+    fn wire_opening(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_open_asked(move |id| {
+            let store = state.borrow().store.clone();
+            let said = reach_for(&store, i64::from(id));
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            match said {
+                Reached::Opened => {}
+                Reached::Working => note(&format!("{id} is being opened, slowly")),
+                Reached::NoLink => complain(&ui, cannot_open_link()),
+                Reached::Missing => {
+                    let now = now_ms();
+                    if let Err(why) = state.borrow().store.mark_broken(i64::from(id), now) {
+                        note(&format!("{id} could not be marked as gone: {why}"));
+                    }
+                    keeping_place(&ui, &state);
+                    complain(&ui, cannot_open());
+                }
+                Reached::Refused => complain(&ui, cannot_open()),
+            }
+        });
+    }
+
+    fn wire_naming(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_named(move |id, said| {
+            let name = crate::view::name_worth_keeping(&said);
+            let kept = state
+                .borrow()
+                .store
+                .set_label(i64::from(id), name.as_deref(), now_ms());
+            if let Err(why) = &kept {
+                note(&format!("{id} could not be named: {why}"));
+            }
+            if let Some(ui) = ui.upgrade() {
+                ui.set_naming(-1);
+                if kept.is_err() {
+                    complain(&ui, cannot_name());
+                }
+                keeping_place(&ui, &state);
+            }
+        });
     }
 
     fn refresh(&self) {
@@ -1058,6 +1108,116 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+enum Reached {
+    Opened,
+    Working,
+    Refused,
+    NoLink,
+    Missing,
+}
+
+fn reach_for(store: &Store, id: i64) -> Reached {
+    let Ok(Some(item)) = store.item(id) else {
+        note(&format!("{id} could not be looked up to open it"));
+        return Reached::Refused;
+    };
+    let content = here::content_of(&item, None);
+    if let Some(said) = content.text.as_deref()
+        && let Some(url) = crate::opening::a_link_worth_opening(said.lines().next().unwrap_or(""))
+    {
+        let url = url.to_owned();
+        let asking = cp_core::reading::begin(move || here::open_link(&url));
+        return match answered(asking.waited(crate::opening::PATIENCE)) {
+            Reached::Refused => Reached::NoLink,
+            other => other,
+        };
+    }
+    let said_path = crate::opening::first_of(&content.paths)
+        .map(str::to_owned)
+        .or_else(|| {
+            content
+                .text
+                .as_deref()
+                .map(|said| said.lines().next().unwrap_or("").trim().to_owned())
+                .filter(|said| crate::opening::looks_like_a_path(said))
+        });
+    let on_disk = said_path.is_some();
+    let path = match said_path {
+        Some(said) => std::path::PathBuf::from(said),
+        None => {
+            let Some(bytes) = content.image else {
+                note(&format!("{id} has nothing a viewer could be given"));
+                return Reached::Refused;
+            };
+            let seen = crate::opening::where_previews_go();
+            crate::opening::sweep_seen(&seen, std::time::SystemTime::now());
+            let Some(spilled) = crate::opening::spilled(&seen, bytes) else {
+                note(&format!("{id} could not be written out to be seen"));
+                return Reached::Refused;
+            };
+            spilled
+        }
+    };
+    let asking = cp_core::reading::begin(move || {
+        let opened = here::open_path(&path);
+        landing_of(opened, on_disk, path.exists())
+    });
+    match asking.waited(crate::opening::PATIENCE) {
+        cp_core::reading::Waited::Answered(Landing::Opened) => Reached::Opened,
+        cp_core::reading::Waited::Answered(Landing::Gone) => Reached::Missing,
+        cp_core::reading::Waited::Answered(Landing::Refused) => Reached::Refused,
+        cp_core::reading::Waited::StillRunning => Reached::Working,
+        cp_core::reading::Waited::Gone => Reached::Refused,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Landing {
+    Opened,
+    Refused,
+    Gone,
+}
+
+fn landing_of(opened: bool, on_disk: bool, still_there: bool) -> Landing {
+    if opened {
+        return Landing::Opened;
+    }
+    if on_disk && !still_there {
+        return Landing::Gone;
+    }
+    Landing::Refused
+}
+
+fn answered(said: cp_core::reading::Waited<bool>) -> Reached {
+    match said {
+        cp_core::reading::Waited::Answered(true) => Reached::Opened,
+        cp_core::reading::Waited::Answered(false) => Reached::Refused,
+        cp_core::reading::Waited::StillRunning => Reached::Working,
+        cp_core::reading::Waited::Gone => Reached::Refused,
+    }
+}
+
+fn cannot_open() -> &'static str {
+    crate::say::pick(
+        "no se pudo abrir: puede que ya no esté ahí",
+        "could not open it: it may not be there any more",
+    )
+}
+
+fn cannot_open_link() -> &'static str {
+    crate::say::pick(
+        "no se pudo abrir el enlace",
+        "that link could not be opened",
+    )
+}
+
+fn cannot_name() -> &'static str {
+    crate::say::pick(
+        "no se pudo guardar el nombre",
+        "that name could not be kept",
+    )
 }
 
 fn short_of(id: i64, landed: here::Landed) -> bool {

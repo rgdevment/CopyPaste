@@ -4,6 +4,7 @@ import { FolderBody } from "bodies_folder.slint";
 import { PapersBody } from "bodies_papers.slint";
 import { MediaBody } from "bodies_media.slint";
 import { JsonBody } from "bodies.slint";
+import { TokenBody } from "bodies_token.slint";
 import { Theme } from "theme.slint";
 import { Words } from "words.slint";
 
@@ -186,25 +187,80 @@ export component Tag inherits Rectangle {
     }
 }
 
+component NameField inherits Rectangle {
+    in property <string> seed;
+    in property <length> words-size: 12px;
+    property <bool> settled;
+    callback done(string);
+    callback gave-up();
+    border-radius: 5px;
+    background: Theme.tile;
+    border-width: 1px;
+    border-color: Theme.accent;
+    field := TextInput {
+        x: 6px;
+        width: parent.width - 12px;
+        height: parent.height;
+        text: root.seed;
+        color: Theme.body;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.panel;
+        font-size: root.words-size;
+        single-line: true;
+        vertical-alignment: center;
+        init => {
+            self.focus();
+            self.select-all();
+        }
+        accepted => {
+            root.settled = true;
+            root.done(self.text);
+        }
+        key-pressed(event) => {
+            if event.text == Key.Escape {
+                root.settled = true;
+                root.gave-up();
+                return accept;
+            }
+            return reject;
+        }
+        changed has-focus => {
+            if (!self.has-focus && !root.settled) {
+                root.settled = true;
+                root.done(self.text);
+            }
+        }
+    }
+}
+
 export component CardView inherits Rectangle {
     in property <Card> card;
     in property <string> layout;
     in property <bool> plain-way;
-    property <bool> special: !plain-way && (layout == "json" || layout == "video"
-        || layout == "audio" || layout == "papers" || layout == "folder" || layout == "link");
+    property <bool> mixed: layout == "everything" && !plain-way;
+    property <string> shown-as: mixed ? card.kind : layout;
+    property <bool> unfolded: mixed && open;
+    property <bool> type-body: !mixed && !open;
+    property <bool> special: card.paints || (!plain-way && (layout == "json" || layout == "video"
+        || layout == "audio" || layout == "papers" || layout == "folder" || layout == "link"));
     in property <bool> current;
+    in property <int> naming: -1;
+    property <bool> being-named: root.naming == card.id;
     in property <bool> open;
     in property <bool> shown-here;
     callback paste(int);
+    callback open-asked(int);
     callback forms(int);
     callback edit(int);
+    callback named(int, string);
+    callback naming-dropped();
     callback pin(int, bool);
     callback remove(int);
     callback chosen(int);
     callback stirred();
     property <bool> lit: shown-here;
     accessible-role: AccessibleRole.list-item;
-    accessible-label: card.title + ", " + card.body;
+    accessible-label: (card.name != "" ? card.name + ", " : "") + card.title + ", " + card.body;
     border-radius: 12px;
     background: lit ? Theme.card-hover : Theme.card;
     border-width: current ? 1px : 0px;
@@ -224,15 +280,144 @@ export component CardView inherits Rectangle {
         padding: 10px;
         spacing: 8px;
 
-        if card.has-thumb : Rectangle {
+        if mixed && !open : HorizontalLayout {
+            spacing: 10px;
+
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                y: 0;
+                border-radius: 6px;
+                clip: true;
+                background: card.has-thumb ? Theme.tile : transparent;
+                if card.has-thumb : Image {
+                    source: card.thumb;
+                    width: parent.width;
+                    height: parent.height;
+                    image-fit: fill;
+                }
+                if !card.has-thumb && card.paints : Rectangle {
+                    width: 18px;
+                    height: 18px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 4px;
+                    background: card.paint;
+                    border-width: 1px;
+                    border-color: Theme.selected-edge;
+                }
+                if !card.has-thumb && !card.paints : KindIcon {
+                    kind: card.kind;
+                    width: 17px;
+                    height: 17px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    tint: Hue.of(card.kind);
+                }
+            }
+
+            lines := VerticalLayout {
+                property <string> second: card.name != "" || being-named ? card.under-named : card.under;
+                spacing: 3px;
+                horizontal-stretch: 1;
+                alignment: center;
+
+                HorizontalLayout {
+                    height: 18px;
+                    spacing: 6px;
+                    if being-named : NameField {
+                        seed: card.name;
+                        horizontal-stretch: 1;
+                        done(said) => { root.named(card.id, said); }
+                        gave-up => { root.naming-dropped(); }
+                    }
+                    if !being-named && card.found : Text { text: card.lead; color: Theme.muted; font-size: 13px; vertical-alignment: center; }
+                    if !being-named && card.found : Text { text: card.hit; color: Theme.accent; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+                    if !being-named && card.found : Text { text: card.tail; color: Theme.body; font-size: 13px; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
+                    if !being-named && !card.found && card.name != "" : Text {
+                        text: card.name;
+                        color: Theme.body;
+                        font-size: 13px;
+                        font-weight: 600;
+                        overflow: elide;
+                        wrap: no-wrap;
+                        horizontal-stretch: 1;
+                        vertical-alignment: center;
+                    }
+                    if !being-named && !card.found && card.name == "" : Text {
+                        text: card.headline;
+                        color: card.broken ? Theme.danger : Theme.body;
+                        font-size: card.mono ? 12px : 13px;
+                        font-family: card.mono ? "Cascadia Mono" : "Segoe UI";
+                        overflow: elide;
+                        wrap: no-wrap;
+                        horizontal-stretch: 1;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: card.age;
+                        color: Theme.muted;
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if lines.second != "" || card.alert != "" : HorizontalLayout {
+                    height: 15px;
+                    spacing: 5px;
+                    if card.alert != "" : Rectangle {
+                        width: alert-small.preferred-width;
+                        height: 14px;
+                        border-radius: 4px;
+                        background: #46351C;
+                        y: (parent.height - 14px) / 2;
+                        alert-small := HorizontalLayout {
+                            padding-left: 4px;
+                            padding-right: 4px;
+                            Text { text: card.alert; color: #FCD34D; font-size: 9px; font-weight: 600; vertical-alignment: center; }
+                        }
+                    }
+                    Text {
+                        text: lines.second;
+                        color: Theme.muted;
+                        font-size: 11px;
+                        overflow: elide;
+                        wrap: no-wrap;
+                        horizontal-stretch: 1;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        if (!mixed || unfolded) && card.has-thumb : Rectangle {
             height: 96px;
             border-radius: 8px;
             clip: true;
-            background: #12141c;
+            background: transparent;
             Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: contain; }
+
+            if card.media-clock != "" : Rectangle {
+                x: parent.width - self.width - 6px;
+                y: parent.height - self.height - 6px;
+                width: clock-row.preferred-width;
+                height: 18px;
+                border-radius: 4px;
+                background: #000000.with-alpha(0.66);
+                clock-row := HorizontalLayout {
+                    padding-left: 6px;
+                    padding-right: 6px;
+                    Text {
+                        text: card.media-clock;
+                        color: #FFFFFF;
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
         }
 
-        if !card.has-thumb && card.found && !open : HorizontalLayout {
+        if !mixed && !card.has-thumb && card.found && !open : HorizontalLayout {
             height: 18px;
             spacing: 0px;
             alignment: start;
@@ -241,37 +426,62 @@ export component CardView inherits Rectangle {
             Text { text: card.tail; color: Theme.body; font-size: 12.5px; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
         }
 
-        if !card.has-thumb && !open && !plain-way && layout == "json" : JsonBody {
+        if !mixed && card.paints && !card.has-thumb && !open : HorizontalLayout {
+            spacing: 9px;
+            Rectangle {
+                width: 34px;
+                height: 34px;
+                border-radius: 7px;
+                background: card.paint;
+                border-width: 1px;
+                border-color: Theme.selected-edge;
+                y: 0;
+            }
+            Text {
+                text: card.squeezed;
+                color: Theme.body;
+                font-size: 12.5px;
+                font-family: "Cascadia Mono";
+                horizontal-stretch: 1;
+                overflow: elide;
+                wrap: no-wrap;
+                vertical-alignment: center;
+            }
+        }
+
+        if !card.has-thumb && type-body && !plain-way && shown-as == "json" : JsonBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && !plain-way && (layout == "video" || layout == "audio") : MediaBody {
+        if !card.has-thumb && type-body && !plain-way && (shown-as == "video" || shown-as == "audio") : MediaBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && !plain-way && layout == "papers" : PapersBody {
+        if !card.has-thumb && type-body && !plain-way && (shown-as == "papers" || shown-as == "file") : PapersBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && !plain-way && layout == "folder" : FolderBody {
+        if !card.has-thumb && type-body && !plain-way && shown-as == "folder" : FolderBody {
             card: card;
         }
 
-        if !card.has-thumb && !open && !plain-way && layout == "link" : LinkBody {
+        if !card.has-thumb && type-body && !plain-way && shown-as == "link" : LinkBody {
             card: card;
         }
 
-        if !card.has-thumb && (!card.found || open) && !(special && !open) : Text {
+        if (!mixed || open) && !card.has-thumb && (!card.found || open) && !(special && !open) : Text {
             text: open ? card.body : card.squeezed;
             color: card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? 12px : 13px;
             font-family: card.mono ? "Cascadia Mono" : "Segoe UI";
             wrap: card.mono ? char-wrap : word-wrap;
             overflow: elide;
-            height: open ? card.lines * Theme.line : 36px;
+            height: open ? card.body-lines * Theme.line : 36px;
         }
 
-        HorizontalLayout {
+        if card.claims && open : TokenBody { card: card; }
+
+        if !mixed || open : HorizontalLayout {
             height: 16px;
             spacing: 6px;
             alignment: stretch;
@@ -306,8 +516,23 @@ export component CardView inherits Rectangle {
                 background: Hue.of(card.kind);
                 y: (parent.height - 7px) / 2;
             }
-            Text { text: card.title; color: card.broken ? Theme.danger : Theme.title; font-size: 11px; font-weight: 600; vertical-alignment: center; }
-            Text { text: "· " + card.source; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+            if being-named : NameField {
+                seed: card.name;
+                words-size: 11px;
+                width: 160px;
+                done(said) => { root.named(card.id, said); }
+                gave-up => { root.naming-dropped(); }
+            }
+            if !being-named : Text {
+                text: card.name != "" ? card.name : card.title;
+                color: card.broken ? Theme.danger : Theme.title;
+                font-size: 11px;
+                font-weight: 600;
+                overflow: elide;
+                wrap: no-wrap;
+                vertical-alignment: center;
+            }
+            if card.source != "" : Text { text: "· " + card.source; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
             if card.times != "" : Text { text: "×" + card.times; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
             if card.pinned : Icon { source: @image-url("../assets/icons/pin.svg"); width: 10px; height: 10px; tint: Theme.accent-dim; y: (parent.height - 10px) / 2; }
             Rectangle { horizontal-stretch: 1; }
@@ -316,11 +541,33 @@ export component CardView inherits Rectangle {
                 alignment: center;
                 opacity: lit ? 1.0 : 0.0;
                 animate opacity { duration: 120ms; easing: ease-out; }
+                if card.can-open : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: lit; pressed => { root.open-asked(card.id); } }
+                Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: lit; pressed => { root.edit(card.id); } }
                 Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; pressed => { root.forms(card.id); } }
                 Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
                 Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
             }
             Text { text: card.age; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+        }
+    }
+
+    if mixed && !open && lit : Rectangle {
+        x: parent.width - self.width - 10px;
+        y: (parent.height - self.height) / 2;
+        width: doing.preferred-width;
+        height: 26px;
+        border-radius: 8px;
+        background: Theme.field;
+        doing := HorizontalLayout {
+            spacing: 2px;
+            padding-left: 6px;
+            padding-right: 6px;
+            alignment: center;
+            if card.can-open : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: true; pressed => { root.open-asked(card.id); } }
+            Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: true; pressed => { root.edit(card.id); } }
+            Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: true; pressed => { root.forms(card.id); } }
+            Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: true; pressed => { root.pin(card.id, !card.pinned); } }
+            Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: true; pressed => { root.remove(card.id); } }
         }
     }
 }

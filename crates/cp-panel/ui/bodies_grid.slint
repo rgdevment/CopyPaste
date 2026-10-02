@@ -1,11 +1,14 @@
 import { Card } from "types.slint";
 import { Theme } from "theme.slint";
+import { Action } from "cards.slint";
+import { Words } from "words.slint";
 
 export component GridCell inherits Rectangle {
     in property <Card> card;
     in property <bool> current;
     callback chosen();
     callback paste();
+    callback open-asked();
     callback stirred();
     border-radius: 10px;
     background: current ? Theme.card-hover : Theme.card;
@@ -29,15 +32,34 @@ export component GridCell inherits Rectangle {
         padding: 0px;
         spacing: 0px;
 
-        Rectangle {
+        box := Rectangle {
             vertical-stretch: 1;
             clip: true;
-            background: #12141c;
-            if card.has-thumb : Image {
+            background: transparent;
+            property <float> shape: card.thumb.height > 0
+                ? card.thumb.width * 1.0 / card.thumb.height
+                : 1.0;
+            if card.has-thumb && (box.shape > 3.0 || box.shape < 0.34) : Image {
                 source: card.thumb;
-                width: parent.width;
-                height: parent.height;
+                width: box.width;
+                height: box.height;
                 image-fit: contain;
+            }
+            if card.has-thumb && box.shape <= 3.0 && box.shape >= 1.0 : Image {
+                source: card.thumb;
+                height: parent.height;
+                width: parent.height * box.shape;
+                x: (box.width - self.width) / 2;
+                y: 0;
+                image-fit: fill;
+            }
+            if card.has-thumb && box.shape < 1.0 && box.shape >= 0.34 : Image {
+                source: card.thumb;
+                width: box.width;
+                height: box.width / box.shape;
+                x: 0;
+                y: 0;
+                image-fit: fill;
             }
             if !card.has-thumb : VerticalLayout {
                 alignment: center;
@@ -76,6 +98,12 @@ export component GridCell inherits Rectangle {
                     overflow: elide;
                 }
                 Rectangle { horizontal-stretch: 1; }
+                if card.can-open && (touch.has-hover || root.current) : Action {
+                    icon: @image-url("../assets/icons/external-link.svg");
+                    says: Words.open-it;
+                    awake: true;
+                    pressed => { root.open-asked(); }
+                }
                 Text {
                     text: card.source;
                     color: Theme.muted;
