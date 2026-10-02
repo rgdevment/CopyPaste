@@ -660,3 +660,18 @@ fn a_row_whose_thumbnail_will_not_draw_carries_the_height_it_really_takes() {
          trusted"
     );
 }
+
+#[test]
+fn a_card_used_again_is_found_where_it_went_and_not_where_it_was() {
+    let store = store_with(5);
+    let before = open(store.clone(), 100);
+    let used = before.rows.borrow()[3].id;
+    let neighbour = before.rows.borrow()[2].id;
+    store.record_paste(used, 50).expect("used");
+
+    let after = open(store, 100);
+
+    assert_eq!(after.index_of(used), Some(0));
+    assert_eq!(after.index_of(neighbour), Some(3));
+    assert_eq!(after.index_of(-1), None);
+}
