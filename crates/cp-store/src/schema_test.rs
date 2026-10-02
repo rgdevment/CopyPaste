@@ -577,3 +577,27 @@ fn a_history_from_before_the_column_keeps_the_day_the_2x_crossed() {
         .expect("asked");
     assert_eq!(mine, None, "what was copied here never crossed anything");
 }
+
+#[test]
+fn a_history_from_before_the_column_still_opens_the_way_the_store_opens_it() {
+    let db = Connection::open_in_memory().expect("memory");
+    create(&db).expect("schema");
+    db.execute_batch(
+        "DROP INDEX IF EXISTS items_came_from_the_2x;
+         ALTER TABLE items DROP COLUMN came_at;
+         PRAGMA user_version = 6;",
+    )
+    .expect("as it was before");
+
+    create(&db).expect("the tables are created over a history that lacks the column");
+    migrate(&db).expect("migrated");
+
+    let indexed: i64 = db
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE name = 'items_came_from_the_2x'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("asked");
+    assert_eq!(indexed, 1);
+}

@@ -424,7 +424,7 @@ impl App {
             let handed = hand_over(&store, engine.as_deref(), i64::from(id));
             if let Some(ui) = ui.upgrade() {
                 if handed {
-                    keeping_place(&ui, &state);
+                    following(&ui, &state, i64::from(id));
                     complain(&ui, crate::say::pick("copiado", "copied"));
                 } else {
                     complain(&ui, busy());
@@ -711,6 +711,21 @@ fn back_to_the_newest(ui: &Panel, state: &Rc<RefCell<State>>) {
         -1
     });
     ui.invoke_to_the_top();
+}
+
+fn following(ui: &Panel, state: &Rc<RefCell<State>>, id: i64) {
+    refresh(ui, state);
+    let Some(at) = state
+        .borrow()
+        .rows
+        .as_ref()
+        .and_then(|rows| rows.index_of(id))
+        .and_then(|at| i32::try_from(at).ok())
+    else {
+        return;
+    };
+    ui.set_current(at);
+    ui.invoke_moved(at);
 }
 
 fn keeping_place(ui: &Panel, state: &Rc<RefCell<State>>) {

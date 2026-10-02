@@ -146,6 +146,8 @@ const ORDERING_INDEXES: &str = "
             ON items(MAX(modified_at, COALESCE(last_used_at, 0)) DESC, id DESC);
         CREATE INDEX IF NOT EXISTS items_by_kind ON items(kind, modified_at DESC, id DESC);
         CREATE INDEX IF NOT EXISTS items_by_group ON items(group_key DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS items_came_from_the_2x ON items(came_at)
+            WHERE came_at IS NOT NULL;
 ";
 
 pub fn configure(db: &Connection) -> Result<()> {
@@ -216,8 +218,6 @@ const TABLES: &str = r#"
             deleted_at         INTEGER
         );
 
-        CREATE INDEX IF NOT EXISTS items_came_from_the_2x ON items(came_at)
-            WHERE came_at IS NOT NULL;
         CREATE INDEX IF NOT EXISTS items_by_creation ON items(created_at);
         CREATE INDEX IF NOT EXISTS items_by_hash ON items(content_hash);
         CREATE INDEX IF NOT EXISTS items_by_color ON items(card_color);

@@ -142,6 +142,10 @@ impl Rows {
         self.rows.borrow().len()
     }
 
+    pub fn index_of(&self, id: i64) -> Option<usize> {
+        self.rows.borrow().iter().position(|row| row.id == id)
+    }
+
     pub fn open_at(&self, index: Option<usize>) {
         if self.open.get() == index {
             return;
