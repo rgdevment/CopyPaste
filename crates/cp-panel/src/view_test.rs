@@ -557,8 +557,8 @@ fn a_text_of_one_line_says_nothing_more_and_a_long_one_says_how_much_more() {
     one.preview = "just one line".into();
     assert_eq!(
         card_of(&one, 1_000_000, None).under.as_str(),
-        "Mail",
-        "there is nothing the card is hiding, so only where it came from is left"
+        "Mail · ×3",
+        "there is nothing the card is hiding, so only where it came from and how often it was used"
     );
     let mut many = row(Some(Kind::Text));
     many.preview = "first\nsecond\nthird".into();
@@ -573,8 +573,8 @@ fn what_needs_no_second_line_gets_none() {
         said.preview = "something".into();
         assert_eq!(
             card_of(&said, 1_000_000, None).under.as_str(),
-            "Mail",
-            "{kind:?}: the glyph already says what it is, so nothing but the app is left"
+            "Mail · ×3",
+            "{kind:?}: the glyph already says what it is, so only the app and the count are left"
         );
     }
 }
@@ -672,23 +672,23 @@ fn the_card_asks_for_the_same_lines_the_model_reserves() {
 
 #[test]
 fn the_second_line_keeps_the_app_and_what_the_card_says() {
-    assert_eq!(super::under_line("476×576", "Orca"), "476×576 · Orca");
+    assert_eq!(super::under_line("476×576", "Orca", ""), "476×576 · Orca");
 }
 
 #[test]
 fn a_card_from_nowhere_does_not_drag_a_dangling_separator() {
     assert_eq!(
-        super::under_line("476×576", ""),
+        super::under_line("476×576", "", ""),
         "476×576",
         "a card with no application behind it used to read «476×576 · —», and a dash is not a name"
     );
-    assert_eq!(super::under_line("", "Orca"), "Orca");
-    assert_eq!(super::under_line("  ", "  "), "");
+    assert_eq!(super::under_line("", "Orca", ""), "Orca");
+    assert_eq!(super::under_line("  ", "  ", ""), "");
 }
 
 #[test]
 fn a_named_card_still_says_what_it_holds() {
-    let under = super::under_line("cargo build --workspace", "Orca");
+    let under = super::under_line("cargo build --workspace", "Orca", "");
     assert!(
         under.starts_with("cargo build --workspace"),
         "naming a card must not hide what is in it: {under}"
@@ -803,5 +803,35 @@ fn each_type_puts_its_own_fact_on_the_second_line() {
     assert!(
         said.contains("rodrigo") && said.contains("cloudflare"),
         "a token says who it is for and who signed it: «{said}»"
+    );
+}
+
+#[test]
+fn a_card_pasted_more_than_once_carries_its_count_on_the_second_line() {
+    assert_eq!(
+        super::under_line("476×576", "Orca", "3"),
+        "476×576 · Orca · ×3",
+        "the count only shows for what was pasted again, so it earns its place"
+    );
+    assert_eq!(super::under_line("", "", "7"), "×7");
+    assert_eq!(
+        super::under_line("476×576", "Orca", ""),
+        "476×576 · Orca",
+        "pasted once or never says nothing"
+    );
+}
+
+#[test]
+fn the_count_reaches_the_general_list_and_not_only_the_views_by_kind() {
+    let mut said = row(Some(Kind::Text));
+    said.preview = "algo que pegas mucho".into();
+    said.paste_count = 4;
+    let card = card_of(&said, 1_000_000, None);
+    assert_eq!(card.times.as_str(), "4");
+    assert!(
+        card.under.as_str().contains("×4"),
+        "the general list has no head row, so a count that lives only there is a count nobody \
+         sees: «{}»",
+        card.under
     );
 }

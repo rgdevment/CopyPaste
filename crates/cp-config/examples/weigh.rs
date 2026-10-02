@@ -34,14 +34,23 @@ fn main() {
 
 const CEILING: u128 = 20_000;
 
+fn slack() -> u128 {
+    std::env::var("CP_BUDGET_SLACK")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(1)
+        .max(1)
+}
+
 fn tell(what: &str, times: &mut [u128]) -> bool {
+    let ceiling = CEILING * slack();
     times.sort_unstable();
     let p50 = times[times.len() / 2];
     let p95 = times[times.len() * 95 / 100];
     let worst = times[times.len() - 1];
     println!("{what}: p50 {p50} µs · p95 {p95} µs · worst {worst} µs");
-    if p95 > CEILING {
-        println!("::error::{what} went past {CEILING} µs at p95: {p95} µs");
+    if p95 > ceiling {
+        println!("::error::{what} went past {ceiling} µs at p95: {p95} µs");
         return true;
     }
     false

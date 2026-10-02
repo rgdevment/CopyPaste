@@ -118,11 +118,16 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     );
     let (headline, aside) = top_line(headline, aside, label_of(row.kind));
     let source = row.app.clone().unwrap_or_default();
+    let times = if row.paste_count > 1 {
+        row.paste_count.to_string()
+    } else {
+        String::new()
+    };
     Card {
         id: row.id as i32,
         kind: kind.into(),
-        under: under_line(&aside, &source).into(),
-        under_named: under_line(&headline, &source).into(),
+        under: under_line(&aside, &source, &times).into(),
+        under_named: under_line(&headline, &source, &times).into(),
         headline: headline.into(),
         name: row.label.clone().unwrap_or_default().into(),
         claims: !token.names.is_empty(),
@@ -130,11 +135,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         claim_values: token.values.into(),
         title: label_of(row.kind).into(),
         source: source.into(),
-        times: if row.paste_count > 1 {
-            row.paste_count.to_string().into()
-        } else {
-            "".into()
-        },
+        times: times.clone().into(),
         age: age_text(now, touched_of(row)).into(),
         lines: open_lines_of(row, &body),
         body_lines: lines_of(&body),
@@ -216,15 +217,19 @@ pub fn touched_of(row: &Listed) -> i64 {
     row.last_used_at.unwrap_or(0).max(row.modified_at)
 }
 
-pub fn under_line(said: &str, source: &str) -> String {
-    let said = said.trim();
-    let source = source.trim();
-    match (said.is_empty(), source.is_empty()) {
-        (true, true) => String::new(),
-        (true, false) => source.to_owned(),
-        (false, true) => said.to_owned(),
-        (false, false) => format!("{said} · {source}"),
+pub fn under_line(said: &str, source: &str, times: &str) -> String {
+    [said.trim(), source.trim(), &used_text(times)]
+        .into_iter()
+        .filter(|one| !one.is_empty())
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
+fn used_text(times: &str) -> String {
+    if times.trim().is_empty() {
+        return String::new();
     }
+    format!("×{}", times.trim())
 }
 
 pub fn top_line(headline: String, aside: String, label: &str) -> (String, String) {
