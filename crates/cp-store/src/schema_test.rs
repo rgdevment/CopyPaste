@@ -531,3 +531,46 @@ fn the_indexes_on_formats_are_there_after_a_migration_and_after_a_fresh_start() 
         }
     }
 }
+
+#[test]
+fn a_history_from_before_the_column_keeps_the_day_the_2x_crossed() {
+    let db = Connection::open_in_memory().expect("memory");
+    create(&db).expect("schema");
+    db.execute_batch("ALTER TABLE items DROP COLUMN came_at;")
+        .expect("as it was before");
+    db.execute(
+        "INSERT INTO items (uuid, created_at, modified_at, updated_at, content_hash)
+         VALUES ('2x-abc', 100, 100, 4_000, 7)",
+        [],
+    )
+    .expect("a row that crossed");
+    db.execute(
+        "INSERT INTO items (uuid, created_at, modified_at, updated_at, content_hash)
+         VALUES ('mine', 200, 200, 5_000, 8)",
+        [],
+    )
+    .expect("a row of this machine");
+    db.execute_batch("PRAGMA user_version = 6;").expect("older");
+
+    migrate(&db).expect("migrated");
+
+    let came: Option<i64> = db
+        .query_row(
+            "SELECT came_at FROM items WHERE uuid = '2x-abc'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("asked");
+    assert_eq!(
+        came,
+        Some(4_000),
+        "what already crossed keeps the best moment we have for it instead of looking like it \
+         never did"
+    );
+    let mine: Option<i64> = db
+        .query_row("SELECT came_at FROM items WHERE uuid = 'mine'", [], |row| {
+            row.get(0)
+        })
+        .expect("asked");
+    assert_eq!(mine, None, "what was copied here never crossed anything");
+}

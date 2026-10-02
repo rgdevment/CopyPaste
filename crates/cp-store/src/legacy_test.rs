@@ -1121,8 +1121,47 @@ fn deleting_everything_that_crossed_does_not_make_it_look_like_it_never_did() {
         "it crossed, and deleting is not undoing that"
     );
     assert_eq!(came.still, 0, "none of them are here any more");
-    assert!(
-        came.when.is_some(),
-        "there is still a moment to show, even if no row of it is left"
+    assert_eq!(
+        came.when,
+        Some(7_000),
+        "the day it crossed is written once and nothing else writes it, so deleting the rows          cannot move it"
+    );
+}
+
+#[test]
+fn naming_a_row_that_crossed_does_not_move_the_day_it_crossed() {
+    let there = tempfile::tempdir().expect("a folder");
+    let picture = there.path().join("shot.png");
+    std::fs::write(&picture, b"png").expect("written");
+    let former = a_former_history(there.path(), &picture);
+
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    bring(&former, &into, 7_000).expect("brought");
+    let page = into
+        .list(&crate::Filter::default(), 10, None)
+        .expect("listed");
+    for row in &page.rows {
+        into.set_label(row.id, Some("un nombre"), 9_000)
+            .expect("labelled");
+        into.set_pinned(row.id, true, 9_500).expect("pinned");
+    }
+    assert_eq!(
+        into.came_from_the_former().expect("asked").when,
+        Some(7_000),
+        "everything that touches a row writes updated_at, which is why the day it crossed needed \
+         a column nobody else writes"
+    );
+}
+
+#[test]
+fn what_a_backup_brings_is_not_counted_as_the_2x_crossing() {
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    into.insert_text("mine", "copiado hoy", 1).expect("insert");
+    assert_eq!(
+        into.came_from_the_former().expect("asked").count,
+        0,
+        "only the crossing writes that moment, so nothing else can look like it"
     );
 }

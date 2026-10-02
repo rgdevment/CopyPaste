@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
 
-pub const SCHEMA_VERSION: u32 = 6;
+pub const SCHEMA_VERSION: u32 = 7;
 
 const FORMAT_INDEXES: &str = "
         CREATE INDEX IF NOT EXISTS formats_by_digest ON item_formats(digest)
@@ -118,6 +118,13 @@ fn added_columns(db: &Connection) -> Result<()> {
     if column_is_missing(db, "group_key")? {
         db.execute_batch("ALTER TABLE items ADD COLUMN group_key TEXT NOT NULL DEFAULT '';")?;
     }
+    if column_is_missing(db, "came_at")? {
+        db.execute_batch("ALTER TABLE items ADD COLUMN came_at INTEGER;")?;
+        db.execute_batch(
+            "UPDATE items SET came_at = updated_at
+             WHERE came_at IS NULL AND uuid >= '2x-' AND uuid < '2x.';",
+        )?;
+    }
     Ok(())
 }
 
@@ -204,6 +211,7 @@ const TABLES: &str = r#"
             search_ocr         TEXT    NOT NULL DEFAULT '',
             ocr_text           TEXT,
             updated_at         INTEGER NOT NULL,
+            came_at            INTEGER,
             deleted_at         INTEGER
         );
 
