@@ -661,7 +661,7 @@ fn the_card_asks_for_the_same_lines_the_model_reserves() {
     let card = super::card_of(row, 2, None);
     assert_eq!(
         card.lines,
-        super::open_lines_of(row, &body),
+        super::open_lines_of(row, &body, 1_000_000),
         "el delegado dibuja con card.lines y el modelo reserva con la misma cuenta: si se separan, la tarjeta se corta"
     );
     assert!(
@@ -724,7 +724,7 @@ fn the_lines_an_open_card_asks_for_are_its_body_plus_its_table_and_a_gap() {
     text.preview = "una sola linea".into();
     let body = super::body_of(&text);
     assert_eq!(
-        super::open_lines_of(&text, &body),
+        super::open_lines_of(&text, &body, 1_000_000),
         super::lines_of(&body),
         "with no table there is nothing to add"
     );
@@ -732,12 +732,12 @@ fn the_lines_an_open_card_asks_for_are_its_body_plus_its_table_and_a_gap() {
     let mut token = row(Some(Kind::Token));
     token.preview = TOKEN.into();
     let body = super::body_of(&token);
-    let rows = i32::try_from(crate::token::rows_in(TOKEN)).expect("a few");
+    let rows = i32::try_from(crate::token::rows_in(TOKEN, 1_000_000, false)).expect("a few");
     assert!(rows > 0);
     assert_eq!(
-        super::open_lines_of(&token, &body),
-        super::lines_of(&body) + rows + 1,
-        "the table takes a line per claim and one more for the gap above it"
+        super::open_lines_of(&token, &body, 1_000_000),
+        1 + rows + 1,
+        "with a table to read, the token itself is folded to one elided line: that line, the gap,          and a line per claim"
     );
 }
 
@@ -833,5 +833,77 @@ fn the_count_reaches_the_general_list_and_not_only_the_views_by_kind() {
         "the general list has no head row, so a count that lives only there is a count nobody \
          sees: «{}»",
         card.under
+    );
+}
+
+#[test]
+fn choosing_a_chip_does_not_move_it() {
+    let facets = [
+        Facet {
+            kind: Kind::Text,
+            count: 30,
+        },
+        Facet {
+            kind: Kind::Image,
+            count: 20,
+        },
+        Facet {
+            kind: Kind::Json,
+            count: 2,
+        },
+    ];
+    let loose: Vec<String> = chips_of(&facets, &[])
+        .iter()
+        .map(|one| one.key.to_string())
+        .collect();
+    let picked: Vec<String> = chips_of(&facets, &["json".to_owned()])
+        .iter()
+        .map(|one| one.key.to_string())
+        .collect();
+    assert_eq!(
+        loose, picked,
+        "a strip that rearranges itself under the cursor is a strip you have to read again every \
+         time you touch it"
+    );
+    assert_eq!(loose, ["text", "image", "json"]);
+}
+
+#[test]
+fn a_folder_says_how_many_things_are_in_it() {
+    let mut said = row(Some(Kind::Folder));
+    said.preview = r"D:\Mario\Downloads".into();
+    let meta = [(crate::folder::ENTRIES.to_owned(), "12".to_owned())]
+        .into_iter()
+        .collect::<super::MetaOfOne>();
+    let under = card_of(&said, 1_000_000, Some(&meta)).under.to_string();
+    assert!(
+        under.contains("12"),
+        "the general list asks for this number on every page, so throwing it away was paying for \
+         nothing: «{under}»"
+    );
+
+    let without = card_of(&said, 1_000_000, None).under.to_string();
+    assert!(
+        !without.contains("12"),
+        "a folder nobody counted says nothing about its contents: «{without}»"
+    );
+}
+
+#[test]
+fn a_name_is_cut_where_a_letter_ends_and_not_where_a_byte_does() {
+    let family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}";
+    let said = family.repeat(super::NAME_ROOM + 5);
+    let kept = super::name_worth_keeping(&said).expect("a name");
+    assert!(
+        kept.ends_with(family),
+        "cutting between the people of a family leaves half a person on the card: {kept:?}"
+    );
+    assert!(!kept.ends_with('\u{200D}'), "no joiner left hanging");
+
+    let flag = "\u{1F1E8}\u{1F1F1}";
+    let kept = super::name_worth_keeping(&flag.repeat(super::NAME_ROOM + 2)).expect("a name");
+    assert!(
+        kept.ends_with(flag),
+        "half a flag is two stray letters: {kept:?}"
     );
 }

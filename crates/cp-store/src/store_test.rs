@@ -1832,3 +1832,15 @@ fn a_capture_that_was_read_is_still_found_by_what_it_holds() {
         .expect("insert");
     assert_eq!(store.find_by_hash(&item).expect("queried"), Some(id));
 }
+
+#[test]
+fn naming_something_that_is_no_longer_there_says_it_did_not_land() {
+    let store = Store::in_memory().expect("schema");
+    let id = store.insert_text("one", "algo", 1).expect("insert");
+    assert!(store.set_label(id, Some("un nombre"), 2).expect("labelled"));
+    assert!(
+        !store.set_label(id + 500, Some("otro"), 3).expect("asked"),
+        "a name written over a row that is gone reaches nobody, and saying Ok about it loses it \
+         in silence"
+    );
+}

@@ -1,6 +1,8 @@
 export global Theme {
     in-out property <bool> light: false;
     in-out property <color> panel: light ? #F7F8FB : #1A1D2B;
+    out property <color> alert-back: light ? #FDE9B5 : #46351C;
+    out property <color> alert-ink: light ? #7A4E07 : #FCD34D;
     out property <color> panel-border: light ? #DCDEE8 : #262A3C;
     out property <color> field: light ? #FFFFFF : #1F2234;
     out property <color> field-border: light ? #D0D3E0 : #2A2E44;
@@ -25,6 +27,11 @@ export global Theme {
     out property <length> row-thumb: 146px;
     out property <length> row-plain: 86px;
     out property <length> row-mixed: 60px;
+    out property <length> body-json: 59px;
+    out property <length> body-link: 36px;
+    out property <length> body-folder: 36px;
+    out property <length> body-papers: 40px;
+    out property <length> body-media: 36px;
     out property <length> row-json: 112px;
     out property <length> row-head: 23px;
     out property <length> cell: 150px;

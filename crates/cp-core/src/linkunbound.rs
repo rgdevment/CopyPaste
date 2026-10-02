@@ -39,11 +39,18 @@ pub fn asked_for(url: &str, here: bool) -> Option<String> {
     Some(format!("{SCHEME}://open?url={}", encoded(url.trim_start())))
 }
 
+pub const SHELL_TAKES: usize = 2000;
+
+pub fn too_long_for_the_shell(form: &str) -> bool {
+    form.len() > SHELL_TAKES
+}
+
 pub fn opened_by<F>(url: &str, here: bool, mut open: F) -> bool
 where
     F: FnMut(&str) -> bool,
 {
     if let Some(through) = asked_for(url, here)
+        && !too_long_for_the_shell(&through)
         && open(&through)
     {
         return true;

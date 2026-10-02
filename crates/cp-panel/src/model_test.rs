@@ -1,6 +1,11 @@
 use super::*;
 
 const SIZES: Metrics = Metrics {
+    body_json: 59.0,
+    body_link: 36.0,
+    body_folder: 36.0,
+    body_papers: 40.0,
+    body_media: 36.0,
     head: 23.0,
     tall: 146.0,
     json: 112.0,
@@ -595,5 +600,63 @@ fn a_thumbnail_opened_in_the_mixed_list_grows_like_everything_else_there() {
     assert_eq!(
         open, SIZES.tall,
         "opening a picture is for looking at it, so the row makes room for the thumbnail the          card draws, and the scrolling follows this number"
+    );
+}
+
+#[test]
+fn a_json_opened_in_the_mixed_list_reserves_the_body_it_draws() {
+    let store = Store::in_memory().expect("esquema");
+    store
+        .insert_text("j", r#"{"a": 1, "b": {"c": 2}}"#, 1)
+        .expect("insert");
+    let rows = open(Rc::new(store), 2);
+    let shut = rows.span_of(0).expect("la fila").1;
+    assert_eq!(shut, SIZES.mixed);
+    rows.open_at(Some(0));
+    let open = rows.span_of(0).expect("la fila").1;
+    assert!(
+        open >= shut + SIZES.body_json,
+        "unfolded in the general list the card draws its own body, and a height that does not \
+         count it cuts the card: {open} against {shut}"
+    );
+}
+
+#[test]
+fn a_card_carries_the_two_heights_the_model_believes() {
+    let rows = open(store_with(3), 0);
+    let card = rows.row_data(0).expect("una tarjeta");
+    assert_eq!(
+        card.shut_px,
+        rows.span_of(0).expect("la fila").1,
+        "the delegate draws with this number, so it has to be the one the model reserved"
+    );
+    assert!(card.open_px > 0.0);
+}
+
+#[test]
+fn a_row_whose_thumbnail_will_not_draw_carries_the_height_it_really_takes() {
+    let store = store_with(2);
+    store
+        .set_thumb(2, Some("no-existe-esta-miniatura.png"), 1)
+        .expect("thumb");
+    let rows = only_images(store.clone(), 0);
+    let _ = rows.row_data(0);
+
+    let rows = Rows::open(store, Filter::default(), 0, SIZES, true);
+    let card = rows.row_data(0).expect("una tarjeta");
+    assert!(
+        !card.has_thumb,
+        "el archivo no esta, asi que no hay miniatura"
+    );
+    assert_ne!(
+        card.shut_px, SIZES.tall,
+        "the delegate draws with this number: promising the height of a picture that never \
+         appears leaves a hole and throws the scrolling off by sixty pixels on every such row"
+    );
+    assert_eq!(
+        card.shut_px,
+        rows.span_of(0).expect("la fila").1,
+        "what the card carries and what the model reserved are the same number or neither can be \
+         trusted"
     );
 }

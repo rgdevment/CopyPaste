@@ -84,6 +84,23 @@ pub fn ways_of(layout: Layout) -> &'static [Way] {
     }
 }
 
+pub fn remember(
+    ways: &mut std::collections::HashMap<&'static str, String>,
+    layout: Layout,
+    key: &str,
+) {
+    if ways_of(layout).iter().any(|one| one.key == key) {
+        ways.insert(layout.as_str(), key.to_owned());
+    }
+}
+
+pub fn recalled<'a>(
+    ways: &'a std::collections::HashMap<&'static str, String>,
+    layout: Layout,
+) -> &'a str {
+    ways.get(layout.as_str()).map_or("", String::as_str)
+}
+
 pub fn chosen(layout: Layout, key: &str) -> Way {
     let ways = ways_of(layout);
     ways.iter()

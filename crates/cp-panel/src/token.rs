@@ -25,9 +25,9 @@ pub fn said_of(text: &str, now: i64, english: bool) -> Option<Said> {
     })
 }
 
-pub fn rows_in(text: &str) -> usize {
-    cp_core::token::claims_of(text)
-        .map(|claims| table_of(&claims, 0, false).0.len())
+pub fn rows_in(text: &str, now: i64, english: bool) -> usize {
+    said_of(text, now, english)
+        .map(|said| said.names.lines().count())
         .unwrap_or(0)
 }
 

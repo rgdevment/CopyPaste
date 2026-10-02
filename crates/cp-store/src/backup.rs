@@ -209,6 +209,7 @@ fn carry(source: &Store, into: &Store, row: &crate::Listed, at: i64) -> Result<b
     let meta = source.all_meta(row.id)?;
     let nothing: &[&str] = &[];
     let more = crate::More {
+        came_at: None,
         modified_at: Some(row.modified_at),
         touched_at: Some(at),
         used_at: row.last_used_at,

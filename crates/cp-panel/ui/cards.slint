@@ -197,9 +197,17 @@ component NameField inherits Rectangle {
     background: Theme.tile;
     border-width: 1px;
     border-color: Theme.accent;
+    in property <int> room;
+    if root.room > 0 && field.text.character-count > root.room - 12 : Text {
+        x: parent.width - self.width - 6px;
+        y: (parent.height - self.height) / 2;
+        text: root.room - field.text.character-count;
+        color: field.text.character-count > root.room ? Theme.danger : Theme.muted;
+        font-size: 10px;
+    }
     field := TextInput {
         x: 6px;
-        width: parent.width - 12px;
+        width: parent.width - 34px;
         height: parent.height;
         text: root.seed;
         color: Theme.body;
@@ -240,7 +248,7 @@ export component CardView inherits Rectangle {
     property <bool> mixed: layout == "everything" && !plain-way;
     property <string> shown-as: mixed ? card.kind : layout;
     property <bool> unfolded: mixed && open;
-    property <bool> type-body: !mixed && !open;
+    property <bool> type-body: mixed ? unfolded : !open;
     property <bool> special: card.paints || (!plain-way && (layout == "json" || layout == "video"
         || layout == "audio" || layout == "papers" || layout == "folder" || layout == "link"));
     in property <bool> current;
@@ -249,6 +257,7 @@ export component CardView inherits Rectangle {
     in property <bool> open;
     in property <bool> shown-here;
     callback paste(int);
+    callback copy(int);
     callback open-asked(int);
     callback forms(int);
     callback edit(int);
@@ -327,6 +336,7 @@ export component CardView inherits Rectangle {
                     spacing: 6px;
                     if being-named : NameField {
                         seed: card.name;
+                        room: Words.name-room;
                         horizontal-stretch: 1;
                         done(said) => { root.named(card.id, said); }
                         gave-up => { root.naming-dropped(); }
@@ -369,12 +379,12 @@ export component CardView inherits Rectangle {
                         width: alert-small.preferred-width;
                         height: 14px;
                         border-radius: 4px;
-                        background: #46351C;
+                        background: Theme.alert-back;
                         y: (parent.height - 14px) / 2;
                         alert-small := HorizontalLayout {
                             padding-left: 4px;
                             padding-right: 4px;
-                            Text { text: card.alert; color: #FCD34D; font-size: 9px; font-weight: 600; vertical-alignment: center; }
+                            Text { text: card.alert; color: Theme.alert-ink; font-size: 9px; font-weight: 600; vertical-alignment: center; }
                         }
                     }
                     Text {
@@ -474,9 +484,9 @@ export component CardView inherits Rectangle {
             color: card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? 12px : 13px;
             font-family: card.mono ? "Cascadia Mono" : "Segoe UI";
-            wrap: card.mono ? char-wrap : word-wrap;
             overflow: elide;
-            height: open ? card.body-lines * Theme.line : 36px;
+            height: open ? (card.claims ? Theme.line : card.body-lines * Theme.line) : 36px;
+            wrap: card.claims && open ? no-wrap : (card.mono ? char-wrap : word-wrap);
         }
 
         if card.claims && open : TokenBody { card: card; }
@@ -501,12 +511,12 @@ export component CardView inherits Rectangle {
                 width: alert-row.preferred-width;
                 height: 15px;
                 border-radius: 4px;
-                background: #46351C;
+                background: Theme.alert-back;
                 y: (parent.height - 15px) / 2;
                 alert-row := HorizontalLayout {
                     padding-left: 5px;
                     padding-right: 5px;
-                    Text { text: card.alert; color: #FCD34D; font-size: 9.5px; font-weight: 600; vertical-alignment: center; }
+                    Text { text: card.alert; color: Theme.alert-ink; font-size: 9.5px; font-weight: 600; vertical-alignment: center; }
                 }
             }
             Rectangle {
@@ -518,6 +528,7 @@ export component CardView inherits Rectangle {
             }
             if being-named : NameField {
                 seed: card.name;
+                room: Words.name-room;
                 words-size: 11px;
                 width: 160px;
                 done(said) => { root.named(card.id, said); }
@@ -543,6 +554,7 @@ export component CardView inherits Rectangle {
                 animate opacity { duration: 120ms; easing: ease-out; }
                 if card.can-open : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: lit; pressed => { root.open-asked(card.id); } }
                 Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: lit; pressed => { root.edit(card.id); } }
+                Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: lit; pressed => { root.copy(card.id); } }
                 Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; pressed => { root.forms(card.id); } }
                 Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
                 Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
@@ -565,6 +577,7 @@ export component CardView inherits Rectangle {
             alignment: center;
             if card.can-open : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: true; pressed => { root.open-asked(card.id); } }
             Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: true; pressed => { root.edit(card.id); } }
+            Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: true; pressed => { root.copy(card.id); } }
             Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: true; pressed => { root.forms(card.id); } }
             Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: true; pressed => { root.pin(card.id, !card.pinned); } }
             Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: true; pressed => { root.remove(card.id); } }

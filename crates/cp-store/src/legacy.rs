@@ -21,6 +21,7 @@ pub const PAST_THEIR_MARK: &str = "2x.";
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Came {
     pub count: i64,
+    pub still: i64,
     pub when: Option<i64>,
 }
 
@@ -286,6 +287,7 @@ fn carry(into: &Store, row: &Row, at: i64, root: Option<&Path>) -> Result<Landed
     };
     let meta = meta_in(row.meta.as_deref());
     let more = More {
+        came_at: Some(at),
         modified_at: (row.modified_at > row.created_at).then(|| in_millis(row.modified_at)),
         touched_at: Some(at),
         used_at: None,

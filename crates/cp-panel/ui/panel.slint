@@ -78,6 +78,11 @@ export component Panel inherits Window {
     callback ask-settings();
     callback nudge(length, length);
     callback reopened();
+    callback to-the-top();
+    to-the-top => {
+        list.content-y = 0px;
+        grid.content-y = 0px;
+    }
     callback fresh-start();
     callback emptied();
     callback arrived();
@@ -85,6 +90,7 @@ export component Panel inherits Window {
     callback paste-as(int, string);
     callback cycle(int);
     callback paste(int);
+    callback copy(int);
     callback named(int, string);
     callback pin(int, bool);
     callback remove(int);
@@ -239,6 +245,10 @@ export component Panel inherits Window {
                                         root.pin(root.cards[root.current].id, !root.cards[root.current].pinned);
                                         return accept;
                                     }
+                                    if event.text == "o" && event.modifiers.control && root.current >= 0 {
+                                        root.open-asked(root.cards[root.current].id);
+                                        return accept;
+                                    }
                                     if (event.text == Key.F2 || (event.text == "e" && event.modifiers.control))
                                         && root.current >= 0
                                         && (root.layout != "image" || root.way == "rows") {
@@ -259,6 +269,7 @@ export component Panel inherits Window {
                                     }
                                     if event.text == Key.RightArrow && root.current >= 0 {
                                         root.opened = !root.opened;
+                                        root.moved(root.current);
                                         return accept;
                                     }
                                     if event.text == Key.Escape {
@@ -555,19 +566,20 @@ export component Panel inherits Window {
                         changed height => {
                             if (self.mine) {
                                 root.sheet-span = self.height;
+                                if (self.y + self.height > -list.content-y + list.visible-height) {
+                                    list.content-y = min(
+                                        0px,
+                                        max(
+                                            list.visible-height - self.y - self.height - 8px,
+                                            -self.y
+                                        )
+                                    );
+                                }
                             }
                         }
-                        property <bool> mixed-here: root.layout == "everything" && !root.plain-way;
                         property <bool> open-here: index == root.current && root.opened;
-                        property <length> grown: Theme.row-frame + card.lines * Theme.line;
-                        height: (card.heads-group ? Theme.row-head : 0px) + (
-                            open-here
-                            ? (card.has-thumb ? Theme.row-thumb : grown)
-                            : mixed-here
-                                ? root.shut
-                                : card.has-thumb
-                                    ? Theme.row-thumb
-                                    : card.found ? Theme.row-found : root.shut);
+                        height: (card.heads-group ? Theme.row-head : 0px)
+                            + (open-here ? card.open-px : card.shut-px);
                         animate height { duration: root.gliding ? Theme.settle : 0ms; easing: ease-out; }
                         VerticalLayout {
                         if card.heads-group : Rectangle {
@@ -622,6 +634,7 @@ export component Panel inherits Window {
                             }
                             layout: root.layout;
                             paste(id) => { root.paste(id); }
+                            copy(id) => { root.copy(id); }
                             forms(id) => {
                                 root.current = index;
                                 root.opened = false;

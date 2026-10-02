@@ -76,7 +76,16 @@ pub fn peek_backup(path: String) -> Result<Saved, String> {
 }
 
 #[tauri::command(async)]
-pub fn load_backup(app: tauri::AppHandle, path: String, at: i64) -> Result<Brought, String> {
+pub fn load_backup(
+    app: tauri::AppHandle,
+    alone: tauri::State<'_, Crossing>,
+    path: String,
+    at: i64,
+) -> Result<Brought, String> {
+    let _busy = alone
+        .inner()
+        .claim()
+        .ok_or_else(|| "the history is already being written to".to_owned())?;
     let from = PathBuf::from(&path);
     cp_store::backup::read(&from).map_err(|why| why.to_string())?;
     crate::panel::quit(&app);

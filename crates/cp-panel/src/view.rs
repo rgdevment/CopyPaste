@@ -107,15 +107,15 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         None => (String::new(), String::new(), String::new()),
     };
     let headline = headline_of(row, &body, folder.as_ref());
-    let aside = aside_of(
-        row,
-        &shape,
-        &token,
-        folder.as_ref(),
-        papers.as_ref(),
-        &clock,
-        &measures,
-    );
+    let knows = Knows {
+        shape: &shape,
+        token: &token,
+        folder: folder.as_ref(),
+        papers: papers.as_ref(),
+        clock: &clock,
+        measures: &measures,
+    };
+    let aside = aside_of(row, &knows, meta);
     let (headline, aside) = top_line(headline, aside, label_of(row.kind));
     let source = row.app.clone().unwrap_or_default();
     let times = if row.paste_count > 1 {
@@ -137,7 +137,9 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         source: source.into(),
         times: times.clone().into(),
         age: age_text(now, touched_of(row)).into(),
-        lines: open_lines_of(row, &body),
+        lines: open_lines_of(row, &body, now),
+        shut_px: Default::default(),
+        open_px: Default::default(),
         body_lines: lines_of(&body),
         squeezed: squeezed_of(&body).into(),
         shape_root: shape.root.into(),
@@ -203,14 +205,17 @@ pub fn headline_of(row: &Listed, body: &str, folder: Option<&crate::folder::Part
     }
 }
 
-pub fn open_lines_of(row: &Listed, body: &str) -> i32 {
+pub fn open_lines_of(row: &Listed, body: &str, now: i64) -> i32 {
     let claims = if row.kind == Some(Kind::Token) {
-        i32::try_from(crate::token::rows_in(&row.preview)).unwrap_or(0)
+        let seen = crate::token::rows_in(&row.preview, now, crate::say::in_english());
+        i32::try_from(seen).unwrap_or(0)
     } else {
         0
     };
-    let table = if claims > 0 { claims + 1 } else { 0 };
-    lines_of(body) + table
+    if claims > 0 {
+        return 1 + claims + 1;
+    }
+    lines_of(body)
 }
 
 pub fn touched_of(row: &Listed) -> i64 {
@@ -242,15 +247,24 @@ pub fn top_line(headline: String, aside: String, label: &str) -> (String, String
     (label.to_owned(), String::new())
 }
 
-pub fn aside_of(
-    row: &Listed,
-    shape: &crate::shape::Said,
-    token: &crate::token::Said,
-    folder: Option<&crate::folder::Parts>,
-    papers: Option<&crate::papers::Papers>,
-    clock: &str,
-    measures: &str,
-) -> String {
+pub struct Knows<'a> {
+    pub shape: &'a crate::shape::Said,
+    pub token: &'a crate::token::Said,
+    pub folder: Option<&'a crate::folder::Parts>,
+    pub papers: Option<&'a crate::papers::Papers>,
+    pub clock: &'a str,
+    pub measures: &'a str,
+}
+
+pub fn aside_of(row: &Listed, knows: &Knows<'_>, meta: Option<&MetaOfOne>) -> String {
+    let Knows {
+        shape,
+        token,
+        folder,
+        papers,
+        clock,
+        measures,
+    } = knows;
     let joined = |parts: &[&str]| -> String {
         parts
             .iter()
@@ -272,7 +286,7 @@ pub fn aside_of(
             let parent = folder.map(|one| one.parent.as_str()).unwrap_or_default();
             joined(&[
                 parent.trim_end_matches(['\\', '/']),
-                &crate::folder::said_in(None, crate::say::in_english()),
+                &crate::folder::said_in(meta, crate::say::in_english()),
             ])
         }
         Some(Kind::Token) => joined(&[&token.who, &token.life]),
@@ -297,13 +311,9 @@ fn more_than_shown(row: &Listed) -> String {
 pub const NAME_ROOM: usize = 80;
 
 pub fn name_worth_keeping(said: &str) -> Option<String> {
-    let name: String = said
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
-        .take(NAME_ROOM)
-        .collect();
+    use unicode_segmentation::UnicodeSegmentation;
+    let whole = said.split_whitespace().collect::<Vec<_>>().join(" ");
+    let name: String = whole.graphemes(true).take(NAME_ROOM).collect();
     (!name.is_empty()).then_some(name)
 }
 
@@ -507,12 +517,10 @@ pub fn form_of(key: &str) -> Option<Form> {
 }
 
 pub fn chips_of(facets: &[Facet], selected: &[String]) -> Vec<Chip> {
-    let chosen = |facet: &Facet| selected.iter().any(|one| one == facet.kind.as_str());
     let mut kinds: Vec<&Facet> = facets.iter().filter(|facet| facet.count > 0).collect();
     kinds.sort_by(|a, b| {
-        chosen(b)
-            .cmp(&chosen(a))
-            .then(b.count.cmp(&a.count))
+        b.count
+            .cmp(&a.count)
             .then(a.kind.as_str().cmp(b.kind.as_str()))
     });
     kinds
@@ -645,6 +653,8 @@ pub fn dress_words(ui: &crate::Panel) {
     words.set_paste_as(crate::say::pick("pegar como", "paste as").into());
     words.set_open_it(crate::say::pick("abrir", "open").into());
     words.set_name_it(crate::say::pick("poner nombre", "give it a name").into());
+    words.set_name_room(i32::try_from(NAME_ROOM).unwrap_or(i32::MAX));
+    words.set_copy_it(crate::say::pick("copiar sin pegar", "copy without pasting").into());
     words.set_pin(crate::say::pick("anclar", "pin").into());
     words.set_unpin(crate::say::pick("desanclar", "unpin").into());
     words.set_remove(crate::say::pick("borrar", "delete").into());

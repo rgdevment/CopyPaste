@@ -23,17 +23,19 @@ pub fn papers_of(preview: &str) -> Option<Papers> {
     })
 }
 
+pub const FAMILIES: [&str; 5] = ["sheets", "words", "slides", "pages", "plain"];
+
 fn family_of(folded: &str) -> &'static str {
     if SHEETS.contains(&folded) {
-        "sheets"
+        FAMILIES[0]
     } else if WORDS.contains(&folded) {
-        "words"
+        FAMILIES[1]
     } else if SLIDES.contains(&folded) {
-        "slides"
+        FAMILIES[2]
     } else if PAGES.contains(&folded) {
-        "pages"
+        FAMILIES[3]
     } else {
-        "plain"
+        FAMILIES[4]
     }
 }
 

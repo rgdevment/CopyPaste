@@ -105,3 +105,54 @@ fn only_the_views_the_maquette_grouped_ask_for_grouping() {
         assert!(!one.groups(), "{one:?} was drawn as one flat list");
     }
 }
+
+#[test]
+fn every_name_slint_compares_against_is_a_name_rust_still_writes() {
+    let ui = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("ui");
+    let known: Vec<String> = Layout::ALL
+        .iter()
+        .map(|one| one.as_str().to_owned())
+        .chain(
+            cp_core::kind::Kind::ALL
+                .iter()
+                .map(|one| one.as_str().to_owned()),
+        )
+        .chain(crate::papers::FAMILIES.iter().map(|one| (*one).to_owned()))
+        .chain(
+            Layout::ALL
+                .iter()
+                .flat_map(|one| crate::ways::ways_of(*one))
+                .map(|one| one.key.to_owned()),
+        )
+        .collect();
+
+    let named = ["layout", "shown-as", "kind", "way", "family"];
+    let mut looked = 0;
+    for entry in std::fs::read_dir(&ui).expect("the ui folder") {
+        let path = entry.expect("an entry").path();
+        if path.extension().and_then(|one| one.to_str()) != Some("slint") {
+            continue;
+        }
+        let said = std::fs::read_to_string(&path).expect("read");
+        for (at, _) in said.match_indices("== \"") {
+            let before = said[..at].trim_end();
+            if !named.iter().any(|one| before.ends_with(one)) {
+                continue;
+            }
+            let rest = &said[at + 4..];
+            let Some(end) = rest.find('"') else { continue };
+            let name = &rest[..end];
+            looked += 1;
+            assert!(
+                known.iter().any(|one| one == name),
+                "{}: «{name}» is compared against but Rust writes no such name, so that branch is \
+                 dead and nothing says so",
+                path.display()
+            );
+        }
+    }
+    assert!(
+        looked > 5,
+        "the guard found nothing to guard, so it guards nothing: {looked}"
+    );
+}

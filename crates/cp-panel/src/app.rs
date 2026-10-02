@@ -38,7 +38,7 @@ struct State {
     tags: Vec<String>,
     pinned: bool,
     keeping: bool,
-    way: String,
+    ways: std::collections::HashMap<&'static str, String>,
     rows: Option<Rc<Rows>>,
     options: Options,
     metrics: Metrics,
@@ -77,6 +77,11 @@ impl App {
         let metrics = Metrics {
             head: theme.get_row_head(),
             tall: theme.get_row_thumb(),
+            body_json: theme.get_body_json(),
+            body_link: theme.get_body_link(),
+            body_folder: theme.get_body_folder(),
+            body_papers: theme.get_body_papers(),
+            body_media: theme.get_body_media(),
             plain: theme.get_row_plain(),
             mixed: theme.get_row_mixed(),
             json: theme.get_row_json(),
@@ -94,7 +99,7 @@ impl App {
             tags: Vec::new(),
             pinned: false,
             keeping: false,
-            way: String::new(),
+            ways: std::collections::HashMap::new(),
             rows: None,
             options,
             metrics,
@@ -215,7 +220,11 @@ impl App {
                     refresh(&ui, &state);
                 }
                 Asking::Ways => {
-                    state.borrow_mut().way = key.to_string();
+                    {
+                        let mut state = state.borrow_mut();
+                        let layout = crate::layout::layout_for(&filter_of(&state).kinds);
+                        crate::ways::remember(&mut state.ways, layout, key.as_str());
+                    }
                     refresh(&ui, &state);
                 }
             }
@@ -407,6 +416,23 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
+        panel.on_copy(move |id| {
+            let (store, engine) = {
+                let state = state.borrow();
+                (state.store.clone(), state.engine.clone())
+            };
+            let handed = hand_over(&store, engine.as_deref(), i64::from(id));
+            if let Some(ui) = ui.upgrade() {
+                if handed {
+                    keeping_place(&ui, &state);
+                    complain(&ui, crate::say::pick("copiado", "copied"));
+                } else {
+                    complain(&ui, busy());
+                }
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
         panel.on_moved(move |index| {
             if index < 0 {
                 return;
@@ -517,7 +543,7 @@ impl App {
         let state = self.state.clone();
         panel.on_reopened(move || {
             if let Some(ui) = ui.upgrade() {
-                refresh(&ui, &state);
+                keeping_place(&ui, &state);
             }
         });
         let ui = self.ui.clone();
@@ -532,8 +558,10 @@ impl App {
             if let Some(ui) = ui.upgrade() {
                 ui.set_query(Default::default());
                 ui.set_sheet_open(false);
+                ui.set_chips_scroll(0.0);
                 dress_theme(&ui);
                 refresh(&ui, &state);
+                back_to_the_newest(&ui, &state);
                 watch_leaving(&ui, &state);
             }
         });
@@ -597,8 +625,13 @@ impl App {
                 return;
             };
             match said {
-                Reached::Opened => {}
-                Reached::Working => note(&format!("{id} is being opened, slowly")),
+                Reached::Opened | Reached::Working => {
+                    if said == Reached::Working {
+                        note(&format!("{id} is being opened, slowly"));
+                    }
+                    ui.set_sheet_open(false);
+                    let _ = ui.hide();
+                }
                 Reached::NoLink => complain(&ui, cannot_open_link()),
                 Reached::Missing => {
                     let now = now_ms();
@@ -622,12 +655,19 @@ impl App {
                 .borrow()
                 .store
                 .set_label(i64::from(id), name.as_deref(), now_ms());
-            if let Err(why) = &kept {
-                note(&format!("{id} could not be named: {why}"));
+            let landed = match &kept {
+                Ok(landed) => *landed,
+                Err(why) => {
+                    note(&format!("{id} could not be named: {why}"));
+                    false
+                }
+            };
+            if kept.is_ok() && !landed {
+                note(&format!("{id} was named but it is no longer in the store"));
             }
             if let Some(ui) = ui.upgrade() {
                 ui.set_naming(-1);
-                if kept.is_err() {
+                if !landed {
                     complain(&ui, cannot_name());
                 }
                 keeping_place(&ui, &state);
@@ -660,6 +700,19 @@ fn dress(panel: &Panel, wanted: &str) {
     }
 }
 
+fn back_to_the_newest(ui: &Panel, state: &Rc<RefCell<State>>) {
+    if let Some(rows) = state.borrow().rows.as_ref() {
+        rows.open_at(None);
+    }
+    ui.set_opened(false);
+    ui.set_current(if ui.get_cards().row_count() > 0 {
+        0
+    } else {
+        -1
+    });
+    ui.invoke_to_the_top();
+}
+
 fn keeping_place(ui: &Panel, state: &Rc<RefCell<State>>) {
     let was = ui.get_current();
     refresh(ui, state);
@@ -675,7 +728,6 @@ fn keeping_place(ui: &Panel, state: &Rc<RefCell<State>>) {
 fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     let started = Instant::now();
     ui.set_sheet_open(false);
-    ui.set_chips_scroll(0.0);
     let now = now_ms();
     let (store, filter, base, metrics) = {
         let state = state.borrow();
@@ -688,8 +740,8 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     };
     let keys = keys_of(&filter);
     let full = filter.clone();
-    let way = state.borrow().way.clone();
     let layout = crate::layout::layout_for(&filter.kinds);
+    let way = crate::ways::recalled(&state.borrow().ways, layout).to_owned();
     let here = crate::ways::chosen(layout, &way);
     ui.set_way(here.key.into());
     ui.set_way_said(if crate::ways::ways_of(layout).is_empty() {
@@ -697,6 +749,7 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     } else {
         crate::ways::label_of(here, crate::say::in_english()).into()
     });
+    ui.set_layout(layout.as_str().into());
     ui.set_plain_way(here.plain);
     ui.set_shut(crate::model::shut_height_for(&filter, &metrics, here.plain));
     let rows = Rows::open(store, filter, now, metrics, here.plain);
@@ -775,7 +828,6 @@ fn spawn_counter(
             let footer = count_text(shown);
             let anchored = compact(pinned);
             let only_anchored = request.full.pinned_only;
-            let asked = crate::layout::layout_for(&request.full.kinds);
             let mine = request.generation;
             let clock = generation.clone();
             let _ = ui.upgrade_in_event_loop(move |panel| {
@@ -787,7 +839,6 @@ fn spawn_counter(
                 panel.set_complaining(false);
                 panel.set_pinned_count(anchored.into());
                 panel.set_pinned_on(only_anchored);
-                panel.set_layout(asked.as_str().into());
             });
         }
     });
@@ -824,7 +875,9 @@ fn filter_of(state: &State) -> Filter {
         filter.pinned_only = true;
     }
     let layout = crate::layout::layout_for(&filter.kinds);
-    if layout.groups() && !crate::ways::chosen(layout, &state.way).recent {
+    if layout.groups()
+        && !crate::ways::chosen(layout, crate::ways::recalled(&state.ways, layout)).recent
+    {
         filter.order = cp_store::Order::ByGroup;
     }
     filter
@@ -833,7 +886,14 @@ fn filter_of(state: &State) -> Filter {
 fn ask_ways(ui: &Panel, state: &Rc<RefCell<State>>) {
     let (keeping, way) = {
         let state = state.borrow();
-        (state.keeping, state.way.clone())
+        (
+            state.keeping,
+            crate::ways::recalled(
+                &state.ways,
+                crate::layout::layout_for(&filter_of(&state).kinds),
+            )
+            .to_owned(),
+        )
     };
     if keeping {
         return;
@@ -1110,6 +1170,7 @@ pub fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Reached {
     Opened,
     Working,
@@ -1398,7 +1459,7 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
                             let _ = ui.show();
-                            ui.invoke_reopened();
+                            ui.invoke_fresh_start();
                             appear(&ui);
                             ui.invoke_focus_search();
                         } else {

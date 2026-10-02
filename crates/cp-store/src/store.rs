@@ -448,12 +448,12 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<()> {
-        self.db.execute(
+    pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<bool> {
+        let rows = self.db.execute(
             "UPDATE items SET label = ?2, search_label = ?3, updated_at = ?4 WHERE id = ?1",
             params![id, label, label.map(fold).unwrap_or_default(), at],
         )?;
-        Ok(())
+        Ok(rows > 0)
     }
 
     pub fn set_source(&self, id: i64, app: &str, at: i64) -> Result<()> {
@@ -655,8 +655,9 @@ impl Store {
             "INSERT INTO items (uuid, kind, preview_text, created_at, modified_at, updated_at,
                                 content_hash, search_text, app_source, search_app,
                                 label, search_label, card_color, pinned, paste_count,
-                                broken_since, last_used_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?17)",
+                                broken_since, last_used_at, came_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?16, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?17,
+                     ?18)",
             params![
                 uuid,
                 kind,
@@ -674,7 +675,8 @@ impl Store {
                 more.pastes.max(0),
                 more.broken,
                 touched,
-                more.used_at
+                more.used_at,
+                more.came_at
             ],
         )?;
         let id = self.db.last_insert_rowid();
@@ -920,13 +922,19 @@ impl Store {
     }
 
     pub fn came_from_the_former(&self) -> Result<crate::legacy::Came> {
-        let (count, when) = self.db.query_row(
-            "SELECT COUNT(*), MIN(updated_at) FROM items
-             WHERE uuid >= ?1 AND uuid < ?2 AND deleted_at IS NULL",
-            [crate::legacy::THEIR_MARK, crate::legacy::PAST_THEIR_MARK],
-            |row| Ok((row.get(0)?, row.get::<_, Option<i64>>(1)?)),
+        let (count, still, when) = self.db.query_row(
+            "SELECT COUNT(*), SUM(deleted_at IS NULL), MIN(came_at) FROM items
+             WHERE came_at IS NOT NULL",
+            [],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get::<_, Option<i64>>(1)?.unwrap_or(0),
+                    row.get::<_, Option<i64>>(2)?,
+                ))
+            },
         )?;
-        Ok(crate::legacy::Came { count, when })
+        Ok(crate::legacy::Came { count, still, when })
     }
 
     pub fn count(&self) -> Result<i64> {
@@ -1132,6 +1140,7 @@ struct FormatRow {
 
 #[derive(Debug, Default)]
 pub struct More<'a> {
+    pub came_at: Option<i64>,
     pub modified_at: Option<i64>,
     pub touched_at: Option<i64>,
     pub used_at: Option<i64>,

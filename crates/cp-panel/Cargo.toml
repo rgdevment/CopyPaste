@@ -13,6 +13,7 @@ cp-core.workspace = true
 cp-store.workspace = true
 slint.workspace = true
 serde_json.workspace = true
+unicode-segmentation.workspace = true
 symphonia.workspace = true
 sys-locale.workspace = true
 raw-window-handle.workspace = true

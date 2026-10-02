@@ -3,6 +3,11 @@ use crate::model::Metrics;
 use cp_store::{Filter, Store};
 
 const SIZES: Metrics = Metrics {
+    body_json: 59.0,
+    body_link: 36.0,
+    body_folder: 36.0,
+    body_papers: 40.0,
+    body_media: 36.0,
     head: 23.0,
     tall: 146.0,
     json: 112.0,
