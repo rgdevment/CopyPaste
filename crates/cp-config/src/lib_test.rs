@@ -32,6 +32,7 @@ fn what_goes_in_comes_back() {
         hides_when_left: false,
         keeps_days: None,
         images_quota_mb: Some(512),
+        welcomed: Some("3.0.0".into()),
     };
     write(&path, &mine).expect("writes");
     assert_eq!(read(&path).expect("reads"), mine);
@@ -314,4 +315,20 @@ fn the_largest_representable_counts_round_trip() {
     };
     write(&path, &mine).expect("writes");
     assert_eq!(read(&path).expect("reads"), mine);
+}
+
+#[test]
+fn a_blank_welcome_is_no_welcome() {
+    let asked = Config {
+        welcomed: Some("  ".into()),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.welcomed, None);
+    let kept = Config {
+        welcomed: Some(" 3.0.1 ".into()),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(kept.welcomed.as_deref(), Some("3.0.1"));
 }

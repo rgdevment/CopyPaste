@@ -48,16 +48,20 @@ pub fn nowhere() -> String {
     "the folder where CopyPaste keeps its own was not found".to_owned()
 }
 
-pub fn settle() {
+pub fn settle() -> bool {
     let Some(dir) = folder() else {
-        return;
+        return false;
     };
     let path = cp_config::at(&dir);
     if path.exists() {
-        return;
+        return false;
     }
-    if let Err(why) = cp_config::write(&path, &Config::default()) {
-        crate::note::note(&format!("the settings could not be started off: {why}"));
+    match cp_config::write(&path, &Config::default()) {
+        Ok(()) => true,
+        Err(why) => {
+            crate::note::note(&format!("the settings could not be started off: {why}"));
+            false
+        }
     }
 }
 
@@ -69,15 +73,28 @@ pub fn settings() -> Result<Config, String> {
 
 #[tauri::command]
 pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
+    let said = written(&app, config);
+    if let Ok(now) = settings() {
+        let _ = tauri::Emitter::emit(&app, "kept", now);
+    }
+    said
+}
+
+fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
     let path = cp_config::at(&dir);
-    let before = cp_config::read(&path).ok().map(|one| one.shortcut);
+    let was = cp_config::read(&path).ok();
+    let before = was.as_ref().map(|one| one.shortcut.clone());
+    let config = Config {
+        welcomed: was.and_then(|one| one.welcomed),
+        ..config
+    };
     cp_config::write(&path, &config).map_err(|why| why.to_string())?;
     let landed = cp_config::read(&path).map_err(|why| why.to_string())?;
     if before.as_deref() == Some(landed.shortcut.as_str()) {
         return Ok(landed);
     }
-    let Err(why) = crate::keys::bind(&app, &landed.shortcut) else {
+    let Err(why) = crate::keys::bind(app, &landed.shortcut) else {
         return Ok(landed);
     };
     crate::note::note(&format!("the new shortcut could not be taken: {why}"));
@@ -87,7 +104,7 @@ pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
         ..landed
     };
     let _ = cp_config::write(&path, &back);
-    if let Err(twice) = crate::keys::bind(&app, &was) {
+    if let Err(twice) = crate::keys::bind(app, &was) {
         crate::note::note(&format!(
             "and the one before it did not come back either: {twice}"
         ));

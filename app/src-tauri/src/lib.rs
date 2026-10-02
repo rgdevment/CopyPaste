@@ -9,6 +9,7 @@ mod tray;
 mod trust;
 mod update;
 mod waking;
+mod welcome;
 
 pub fn run() {
     note::catch_panics();
@@ -43,14 +44,17 @@ pub fn run() {
             update::update_install,
             empty,
             trouble,
-            relabel
+            relabel,
+            welcome::greeting,
+            welcome::tour,
+            welcome::open_settings
         ])
         .manage(update::Installing::default())
         .manage(backup::Crossing::default())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-            settings::settle();
+            let fresh = settings::settle();
             let kept = settings::settings().ok();
             let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));
             if tray::raise(app.handle(), spanish).is_none() {
@@ -61,6 +65,7 @@ pub fn run() {
                 .as_ref()
                 .map_or(cp_config::SHORTCUT, |one| one.shortcut.as_str());
             keys::raise(app.handle(), wanted);
+            welcome::raise(app.handle(), fresh);
             Ok(())
         })
         .build(tauri::generate_context!())

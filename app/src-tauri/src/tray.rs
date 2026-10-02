@@ -2,7 +2,7 @@ use std::sync::Mutex;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 pub struct Said<R: Runtime>(Mutex<Vec<MenuItem<R>>>);
 
@@ -118,15 +118,25 @@ pub fn reword<R: Runtime>(app: &AppHandle<R>, spanish: bool) {
 }
 
 pub fn surface<R: Runtime>(app: &AppHandle<R>) {
+    surface_at(app, None);
+}
+
+pub fn surface_at<R: Runtime>(app: &AppHandle<R>, rail: Option<&str>) {
     crate::panel::hide(app);
     if let Some(window) = app.get_webview_window("main") {
+        if let Some(rail) = rail {
+            let _ = app.emit("rail", rail);
+        }
         let _ = window.show();
         let _ = window.unminimize();
         ahead(&window);
         return;
     }
 
-    let built = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+    let page = rail.map_or(WebviewUrl::default(), |rail| {
+        WebviewUrl::App(format!("index.html#{rail}").into())
+    });
+    let built = WebviewWindowBuilder::new(app, "main", page)
         .title("CopyPaste")
         .inner_size(780.0, 580.0)
         .min_inner_size(620.0, 460.0)

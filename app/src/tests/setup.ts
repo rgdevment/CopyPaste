@@ -2,6 +2,12 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+const asked = vi.hoisted(() => ({
+  greeting: { kind: "tour", former: true } as unknown,
+  bound: true,
+  locale: "es",
+}));
+
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   save: vi.fn(() => Promise.resolve("/donde/quiera/CopyPaste.cpbackup")),
   open: vi.fn(() => Promise.resolve("/donde/quiera/CopyPaste.cpbackup")),
@@ -20,7 +26,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn((what: string, args?: { config?: unknown; wanted?: boolean }) => {
     if (what === "settings") {
       return Promise.resolve({
-        locale: "es",
+        locale: asked.locale,
         theme: "system",
         shortcut: "Ctrl+Alt+V",
         "hides-when-left": true,
@@ -41,7 +47,7 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (what === "empty") return Promise.resolve(null);
     if (what === "trouble") return Promise.resolve(null);
     if (what === "keys") {
-      return Promise.resolve({ wanted: "Ctrl+Alt+V", bound: true });
+      return Promise.resolve({ wanted: "Ctrl+Alt+V", bound: asked.bound });
     }
     if (what === "waking") {
       return Promise.resolve({ offered: true, wakes: false, theirs: false });
@@ -105,6 +111,8 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (what === "open_web") {
       return Promise.resolve();
     }
+    if (what === "greeting") return Promise.resolve(asked.greeting);
+    if (what === "open_settings" || what === "tour") return Promise.resolve(null);
     return Promise.reject(new Error(`sin simular: ${what}`));
   }),
 }));
@@ -112,6 +120,8 @@ vi.mock("@tauri-apps/api/core", () => ({
 vi.mock("@tauri-apps/api/app", () => ({
   getVersion: vi.fn(() => Promise.resolve("3.0.0")),
 }));
+
+export const scene = asked;
 
 export const theWindow = {
   minimize: vi.fn(() => Promise.resolve()),
@@ -122,4 +132,9 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => theWindow,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  asked.greeting = { kind: "tour", former: true };
+  asked.bound = true;
+  asked.locale = "es";
+});

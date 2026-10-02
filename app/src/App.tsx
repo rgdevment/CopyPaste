@@ -19,8 +19,13 @@ const WHERE = [
 
 type Where = (typeof WHERE)[number]["key"] | "about";
 
+export function landing(hash: string): Where {
+  const asked = hash.replace(/^#/, "");
+  return WHERE.some((one) => one.key === asked) || asked === "about" ? (asked as Where) : "general";
+}
+
 export default function App() {
-  const [where, setWhere] = useState<Where>("general");
+  const [where, setWhere] = useState<Where>(() => landing(window.location.hash));
   const { kept, trouble, change, look } = useKept();
   const panelTrouble = useTrouble();
 

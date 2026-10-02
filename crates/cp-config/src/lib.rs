@@ -42,6 +42,7 @@ pub struct Config {
     pub keeps_days: Option<u16>,
     #[serde(with = "count")]
     pub images_quota_mb: Option<u32>,
+    pub welcomed: Option<String>,
 }
 
 mod count {
@@ -77,6 +78,7 @@ impl Default for Config {
             hides_when_left: true,
             keeps_days: Some(KEEPS_DAYS),
             images_quota_mb: None,
+            welcomed: None,
         }
     }
 }
@@ -96,6 +98,11 @@ impl Config {
         }
         self.locale = self
             .locale
+            .take()
+            .map(|one| one.trim().to_owned())
+            .filter(|one| !one.is_empty());
+        self.welcomed = self
+            .welcomed
             .take()
             .map(|one| one.trim().to_owned())
             .filter(|one| !one.is_empty());

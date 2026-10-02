@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adopt } from "./locales";
 
@@ -45,6 +46,13 @@ export function useKept() {
   }, [land]);
 
   useEffect(look, [look]);
+
+  useEffect(() => {
+    const heard = listen<Kept>("kept", (event) => land(event.payload));
+    return () => {
+      void heard.then((drop) => drop());
+    };
+  }, [land]);
 
   const change = useCallback(
     (what: Partial<Kept>) => {

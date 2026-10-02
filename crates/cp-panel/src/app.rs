@@ -1049,6 +1049,7 @@ thread_local! {
 }
 
 fn appear(ui: &Panel) {
+    crate::note::tell("shown");
     ui.set_shown(0.0);
     let weak = ui.as_weak();
     CURTAIN.with(|timer| {
