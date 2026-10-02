@@ -177,6 +177,88 @@ const ES = {
   busy: "Un momento…",
   itemOne: "1 elemento",
   itemMany: "{one} elementos",
+
+  welcomeHello: "Tu portapapeles, con memoria",
+  welcomeHelloWhy:
+    "CopyPaste guarda lo que copias (textos, imágenes, enlaces y archivos) para que lo tengas a mano cuando lo necesites. Te mostramos lo básico en un minuto.",
+  welcomeLocal: "Todo queda en tu equipo",
+  welcomeNoAccount: "Sin cuenta",
+  welcomeNoTracking: "Sin rastreo",
+  welcomeSkip: "Omitir",
+  welcomeStart: "Comenzar",
+  welcomeNext: "Siguiente",
+  welcomeSkipStep: "Omitir este paso",
+  welcomeTryAgain: "Probar de nuevo",
+  welcomeStep: "Paso {one}",
+  welcomeKeysOver: "1 · El atajo",
+  welcomeKeysTitle: "Pruébalo ahora",
+  welcomeKeysWhy: "Desde cualquier app, esta combinación abre tu historial.",
+  welcomeKeysWaiting: "Esperando que lo pruebes…",
+  welcomeKeysWaitingWhy:
+    "Cuando se abra el panel, seguimos. Para cerrarlo, presiona Esc o haz clic afuera.",
+  welcomeKeysDone: "¡Listo! Así se abre",
+  welcomeKeysDoneWhy: "Puedes cambiarlo cuando quieras en Ajustes › Atajos de teclado.",
+  welcomeKeysTaken: "Ese atajo ya está en uso",
+  welcomeKeysTakenWhy:
+    "Otra app usa {one} en este equipo. Elige uno de estos, que están libres, y lo probamos.",
+  welcomeKeysTakenAlone:
+    "Otra app usa {one} en este equipo. Elige otro en Ajustes › Atajos de teclado.",
+  welcomeKeysOwn: "También puedes definir el tuyo en Ajustes › Atajos de teclado.",
+  welcomeWhereOver: "2 · Dónde encontrarlo",
+  welcomeWhereTitle: "Junto al reloj",
+  welcomeWhereWhy:
+    "CopyPaste vive en la bandeja del sistema, abajo a la derecha. Si no lo ves, revisa la flecha de íconos ocultos; puedes arrastrarlo a la barra para tenerlo siempre visible.",
+  welcomeWhereTitleMac: "En la barra de menús",
+  welcomeWhereWhyMac:
+    "CopyPaste vive en la barra de menús, arriba a la derecha. Si tienes muchos íconos, puede quedar oculto detrás de la muesca de la pantalla.",
+  welcomeClick: "Clic",
+  welcomeClickDoes: "abre el panel",
+  welcomeRightClick: "Clic derecho",
+  welcomeRightClickDoes: "Ajustes y salir",
+  welcomeUseOver: "3 · Cómo usarlo",
+  welcomeUseTitle: "Lo esencial",
+  welcomeUseWhy: "Con esto tienes casi todo. El resto está en Ajustes.",
+  welcomeUseType: "Escribe",
+  welcomeUseTypeDoes: "busca en tu historial al instante",
+  welcomeUseEnterDoes: "pega lo que elegiste",
+  welcomeUsePlainDoes: "pega solo el texto, sin formato",
+  welcomeUseSettingsDoes: "abre Ajustes",
+  welcomeAllKeys: "Ver todos los atajos",
+  welcomeOpenSettings: "Abrir Ajustes",
+  welcomeDone: "Listo",
+  welcomeFormerOver: "Ya estás en la 3.0",
+  welcomeFormerTitle: "Tu historial anterior te espera",
+  welcomeFormerWhy:
+    "Encontramos lo que guardaste en la versión 2. Lo importamos una sola vez y la versión anterior queda intacta.",
+  welcomeFormerItems: "elementos",
+  welcomeFormerLabelled: "con nombre o color",
+  welcomeFormerPictures: "imágenes",
+  welcomeFormerLater:
+    "Si prefieres empezar de cero, puedes importarlo después desde Ajustes › Copia de seguridad.",
+  welcomeFormerNotNow: "Ahora no",
+  welcomeFormerBring: "Importar historial",
+  welcomeFormerBringing: "Importando…",
+  welcomeFormerCame: "Listo: {one} ya están en tu historial.",
+  welcomeFormerFailed: "No se pudo importar. Puedes intentarlo desde Ajustes › Copia de seguridad.",
+  welcomeTrustOver: "Antes de comenzar",
+  welcomeTrustTitle: "Un permiso para poder pegar",
+  welcomeTrustWhy:
+    "Para pegar en la app donde estabas, macOS necesita que autorices a CopyPaste. No lee lo que escribes: solo envía ⌘V cuando eliges algo.",
+  welcomeTrustStepOne:
+    "1 · Abrimos Configuración del Sistema › Privacidad y seguridad › Accesibilidad",
+  welcomeTrustStepTwo: "2 · Activa CopyPaste en la lista",
+  welcomeTrustStepThree: "3 · Vuelve aquí: seguimos automáticamente",
+  welcomeTrustWaiting: "Esperando el permiso…",
+  welcomeTrustWaitingWhy:
+    "Activa CopyPaste en Accesibilidad. Si ya aparecía activado y no responde, quítalo con − y agrégalo de nuevo.",
+  welcomeTrustDone: "Listo, ya puede pegar",
+  welcomeTrustAsk: "Dar permiso",
+  welcomeTrustLater: "Ahora no",
+  welcomeNewsOver: "Novedades",
+  welcomeNewsTitle: "Hay novedades en CopyPaste",
+  welcomeNewsAll: "Ver todas las versiones",
+  welcomeNewsOk: "Entendido",
+  welcomeShowAgain: "Ver la bienvenida de nuevo",
 } as const;
 
 type Said = typeof ES;
@@ -361,6 +443,87 @@ const EN: Record<keyof Said, string> = {
   busy: "One moment…",
   itemOne: "1 item",
   itemMany: "{one} items",
+
+  welcomeHello: "Your clipboard, with a memory",
+  welcomeHelloWhy:
+    "CopyPaste keeps what you copy (text, images, links and files) so it is within reach when you need it. Here are the basics in a minute.",
+  welcomeLocal: "Stays on your computer",
+  welcomeNoAccount: "No account",
+  welcomeNoTracking: "No tracking",
+  welcomeSkip: "Skip",
+  welcomeStart: "Get started",
+  welcomeNext: "Next",
+  welcomeSkipStep: "Skip this step",
+  welcomeTryAgain: "Try again",
+  welcomeStep: "Step {one}",
+  welcomeKeysOver: "1 · The shortcut",
+  welcomeKeysTitle: "Try it now",
+  welcomeKeysWhy: "From any app, this combination opens your history.",
+  welcomeKeysWaiting: "Waiting for you to try it…",
+  welcomeKeysWaitingWhy:
+    "Once the panel opens, we move on. To close it, press Esc or click outside.",
+  welcomeKeysDone: "That is how it opens",
+  welcomeKeysDoneWhy: "You can change it any time in Settings › Keyboard shortcuts.",
+  welcomeKeysTaken: "That shortcut is taken",
+  welcomeKeysTakenWhy:
+    "Another app uses {one} on this computer. Pick one of these, which are free, and we will try it.",
+  welcomeKeysTakenAlone:
+    "Another app uses {one} on this computer. Pick another one in Settings › Keyboard shortcuts.",
+  welcomeKeysOwn: "You can also set your own in Settings › Keyboard shortcuts.",
+  welcomeWhereOver: "2 · Where to find it",
+  welcomeWhereTitle: "Next to the clock",
+  welcomeWhereWhy:
+    "CopyPaste lives in the system tray, bottom right. If you do not see it, check the hidden icons arrow; drag it onto the taskbar to keep it in sight.",
+  welcomeWhereTitleMac: "In the menu bar",
+  welcomeWhereWhyMac:
+    "CopyPaste lives in the menu bar, top right. With many icons, it may hide behind the notch.",
+  welcomeClick: "Click",
+  welcomeClickDoes: "opens the panel",
+  welcomeRightClick: "Right-click",
+  welcomeRightClickDoes: "Settings and quit",
+  welcomeUseOver: "3 · How to use it",
+  welcomeUseTitle: "The essentials",
+  welcomeUseWhy: "That covers almost everything. The rest is in Settings.",
+  welcomeUseType: "Type",
+  welcomeUseTypeDoes: "searches your history instantly",
+  welcomeUseEnterDoes: "pastes what you picked",
+  welcomeUsePlainDoes: "pastes just the text, no formatting",
+  welcomeUseSettingsDoes: "opens Settings",
+  welcomeAllKeys: "See all shortcuts",
+  welcomeOpenSettings: "Open Settings",
+  welcomeDone: "Done",
+  welcomeFormerOver: "You are on 3.0",
+  welcomeFormerTitle: "Your previous history is waiting",
+  welcomeFormerWhy:
+    "We found what you saved with version 2. We import it once, and the previous version stays untouched.",
+  welcomeFormerItems: "items",
+  welcomeFormerLabelled: "with a name or colour",
+  welcomeFormerPictures: "images",
+  welcomeFormerLater:
+    "If you would rather start fresh, you can import it later from Settings › Backup.",
+  welcomeFormerNotNow: "Not now",
+  welcomeFormerBring: "Import history",
+  welcomeFormerBringing: "Importing…",
+  welcomeFormerCame: "Done: {one} are now in your history.",
+  welcomeFormerFailed: "It could not be imported. You can try again from Settings › Backup.",
+  welcomeTrustOver: "Before you start",
+  welcomeTrustTitle: "One permission, so it can paste",
+  welcomeTrustWhy:
+    "To paste into the app you were using, macOS needs you to allow CopyPaste. It does not read what you type: it only sends ⌘V when you pick something.",
+  welcomeTrustStepOne: "1 · We open System Settings › Privacy & Security › Accessibility",
+  welcomeTrustStepTwo: "2 · Turn on CopyPaste in the list",
+  welcomeTrustStepThree: "3 · Come back here: we carry on by ourselves",
+  welcomeTrustWaiting: "Waiting for the permission…",
+  welcomeTrustWaitingWhy:
+    "Turn on CopyPaste in Accessibility. If it was already on and does not respond, remove it with − and add it again.",
+  welcomeTrustDone: "All set, it can paste now",
+  welcomeTrustAsk: "Allow",
+  welcomeTrustLater: "Not now",
+  welcomeNewsOver: "What is new",
+  welcomeNewsTitle: "CopyPaste has been updated",
+  welcomeNewsAll: "See all versions",
+  welcomeNewsOk: "Got it",
+  welcomeShowAgain: "Show the welcome again",
 };
 
 export type Binding = { keys: string; does: string };
@@ -414,6 +577,10 @@ export function adopt(locale: string | null) {
   const english = asked.toLowerCase().startsWith("en");
   now = english ? EN : ES;
   document.documentElement.lang = english ? "en" : "es";
+}
+
+export function inEnglish() {
+  return now === EN;
 }
 
 export function t(key: keyof Said) {

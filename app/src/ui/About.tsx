@@ -127,6 +127,15 @@ export default function About() {
         </p>
         <p>{t("aboutWhat")}</p>
         <p>{t("aboutPrivacy")}</p>
+        <button
+          type="button"
+          className="welcome-link"
+          onClick={() => {
+            invoke("tour").catch(() => {});
+          }}
+        >
+          {t("welcomeShowAgain")}
+        </button>
         <div className="badges">
           <span className="badge">
             <Key />

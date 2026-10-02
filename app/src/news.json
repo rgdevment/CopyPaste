@@ -1,0 +1,30 @@
+[
+  {
+    "version": "3.0.0",
+    "es": [
+      {
+        "title": "Copiar sin pegar",
+        "said": "lleva una tarjeta al portapapeles sin pegarla todavía."
+      },
+      {
+        "title": "Nombres para tus tarjetas",
+        "said": "presiona F2 y búscalas después por ese nombre."
+      },
+      {
+        "title": "Enlaces con LinkUnbound",
+        "said": "si lo tienes instalado, los enlaces se abren con él; si no, en tu navegador."
+      }
+    ],
+    "en": [
+      {
+        "title": "Copy without pasting",
+        "said": "put a card on the clipboard without pasting it yet."
+      },
+      { "title": "Names for your cards", "said": "press F2, then find them later by that name." },
+      {
+        "title": "Links through LinkUnbound",
+        "said": "if you have it installed, links open with it; otherwise in your browser."
+      }
+    ]
+  }
+]
