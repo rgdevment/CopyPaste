@@ -1,5 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { useUpdate } from "../core";
 import { fill, t } from "../locales";
@@ -94,7 +95,11 @@ export default function About() {
 
   const go = (where: string) => {
     setTrouble(null);
-    invoke("open_web", { url: where }).catch(() => setTrouble(fill("linkRefused", where)));
+    const asked =
+      where.startsWith("http://") || where.startsWith("https://")
+        ? invoke("open_web", { url: where })
+        : openUrl(where);
+    asked.catch(() => setTrouble(fill("linkRefused", where)));
   };
 
   return (

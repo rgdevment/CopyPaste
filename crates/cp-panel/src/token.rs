@@ -47,15 +47,15 @@ fn table_of(claims: &Claims, now: i64, english: bool) -> (Vec<String>, Vec<Strin
         );
     let mut over = 0usize;
     for name in ordered {
-        if names.len() == ROWS_AT_MOST {
-            over += 1;
-            continue;
-        }
         let Some(value) = claims.payload.get(name) else {
             continue;
         };
         let said = said_as(name, value, now, english);
         if said.is_empty() {
+            continue;
+        }
+        if names.len() == ROWS_AT_MOST {
+            over += 1;
             continue;
         }
         names.push(name.to_owned());

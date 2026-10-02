@@ -168,6 +168,9 @@ impl Rows {
     }
 
     fn open_of_row(&self, row: &Listed) -> f32 {
+        if row.thumb_path.is_some() {
+            return self.metrics.tall;
+        }
         let lines = crate::view::open_lines_of(row, &body_of(row));
         self.metrics.frame + lines as f32 * self.metrics.line
     }

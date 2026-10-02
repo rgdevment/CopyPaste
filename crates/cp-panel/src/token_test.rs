@@ -203,3 +203,23 @@ fn a_claim_with_an_absurd_moment_does_not_bring_the_panel_down() {
         assert!(!said.values.is_empty());
     }
 }
+
+#[test]
+fn the_claims_that_did_not_fit_are_counted_only_if_they_had_something_to_say() {
+    let mut payload = String::from("{");
+    for one in 0..14 {
+        payload.push_str(&format!("\"k{one:02}\":\"v\","));
+    }
+    for one in 0..6 {
+        payload.push_str(&format!("\"z{one:02}\":\"\","));
+    }
+    payload.push_str("\"sub\":\"rodrigo\"}");
+    let said = said_of(&jwt(&payload), 0, false).expect("un jwt");
+    assert_eq!(said.names.lines().count(), ROWS_AT_MOST + 1);
+    assert!(
+        said.values.ends_with("+3"),
+        "fifteen claims carry something and twelve fit, so three are waiting: the six empty ones \
+         would show nothing and must not be counted. Said: {}",
+        said.values
+    );
+}

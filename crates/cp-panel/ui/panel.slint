@@ -562,7 +562,7 @@ export component Panel inherits Window {
                         property <length> grown: Theme.row-frame + card.lines * Theme.line;
                         height: (card.heads-group ? Theme.row-head : 0px) + (
                             open-here
-                            ? (mixed-here || !card.has-thumb ? grown : Theme.row-thumb)
+                            ? (card.has-thumb ? Theme.row-thumb : grown)
                             : mixed-here
                                 ? root.shut
                                 : card.has-thumb

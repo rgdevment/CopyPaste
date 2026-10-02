@@ -592,8 +592,8 @@ fn a_thumbnail_opened_in_the_mixed_list_grows_like_everything_else_there() {
         "in the mixed list a thumbnail row is not tall, so opening it must move the rows below: \
          the model said {open} and the delegate draws it grown"
     );
-    assert_ne!(
+    assert_eq!(
         open, SIZES.tall,
-        "the own-view height has no business here, and the scrolling follows this number"
+        "opening a picture is for looking at it, so the row makes room for the thumbnail the          card draws, and the scrolling follows this number"
     );
 }

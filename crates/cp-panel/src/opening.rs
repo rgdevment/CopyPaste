@@ -81,7 +81,9 @@ pub fn spilled(dir: &std::path::Path, bytes: &[u8]) -> Option<std::path::PathBuf
         return Some(at);
     }
     std::fs::create_dir_all(dir).ok()?;
+    let _ = cp_store::restrict(dir, 0o700);
     std::fs::write(&at, bytes).ok()?;
+    let _ = cp_store::restrict(&at, 0o600);
     Some(at)
 }
 
