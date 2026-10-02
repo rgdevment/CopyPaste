@@ -29,6 +29,7 @@ export function useKept() {
   const held = useRef<Kept | null>(null);
   const turn = useRef(0);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const pending = useRef(0);
 
   const land = useCallback((one: Kept) => {
     held.current = one;
@@ -48,7 +49,11 @@ export function useKept() {
   useEffect(look, [look]);
 
   useEffect(() => {
-    const heard = listen<Kept>("kept", (event) => land(event.payload));
+    const heard = listen<Kept>("kept", (event) => {
+      if (pending.current === 0) {
+        land(event.payload);
+      }
+    });
     return () => {
       void heard.then((drop) => drop());
     };
@@ -71,6 +76,7 @@ export function useKept() {
       }
 
       const mine = ++turn.current;
+      pending.current += 1;
       queue.current = queue.current
         .then(() => invoke<Kept>("keep", { config: next }))
         .then((landed) => {
@@ -82,6 +88,9 @@ export function useKept() {
         .catch((why) => {
           look();
           setTrouble(String(why));
+        })
+        .finally(() => {
+          pending.current -= 1;
         });
       return queue.current.then(() => undefined);
     },
