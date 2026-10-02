@@ -632,3 +632,31 @@ fn a_card_carries_the_two_heights_the_model_believes() {
     );
     assert!(card.open_px > 0.0);
 }
+
+#[test]
+fn a_row_whose_thumbnail_will_not_draw_carries_the_height_it_really_takes() {
+    let store = store_with(2);
+    store
+        .set_thumb(2, Some("no-existe-esta-miniatura.png"), 1)
+        .expect("thumb");
+    let rows = only_images(store.clone(), 0);
+    let _ = rows.row_data(0);
+
+    let rows = Rows::open(store, Filter::default(), 0, SIZES, true);
+    let card = rows.row_data(0).expect("una tarjeta");
+    assert!(
+        !card.has_thumb,
+        "el archivo no esta, asi que no hay miniatura"
+    );
+    assert_ne!(
+        card.shut_px, SIZES.tall,
+        "the delegate draws with this number: promising the height of a picture that never \
+         appears leaves a hole and throws the scrolling off by sixty pixels on every such row"
+    );
+    assert_eq!(
+        card.shut_px,
+        rows.span_of(0).expect("la fila").1,
+        "what the card carries and what the model reserved are the same number or neither can be \
+         trusted"
+    );
+}

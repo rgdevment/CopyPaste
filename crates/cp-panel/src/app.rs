@@ -543,8 +543,7 @@ impl App {
         let state = self.state.clone();
         panel.on_reopened(move || {
             if let Some(ui) = ui.upgrade() {
-                refresh(&ui, &state);
-                back_to_the_newest(&ui, &state);
+                keeping_place(&ui, &state);
             }
         });
         let ui = self.ui.clone();
@@ -1460,7 +1459,7 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
                             let _ = ui.show();
-                            ui.invoke_reopened();
+                            ui.invoke_fresh_start();
                             appear(&ui);
                             ui.invoke_focus_search();
                         } else {

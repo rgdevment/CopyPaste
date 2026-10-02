@@ -222,17 +222,8 @@ impl Rows {
     }
 
     fn height_at(&self, index: usize, row: &Listed) -> f32 {
-        let shut = if one_height_for_all(&self.filter, self.plain_way) {
-            self.metrics.mixed
-        } else if self.thumbless.borrow().contains(&index) {
-            if was_found(row) {
-                self.metrics.found
-            } else {
-                self.shut_height()
-            }
-        } else {
-            self.height_of(row)
-        };
+        let alive = row.thumb_path.is_some() && !self.thumbless.borrow().contains(&index);
+        let shut = self.shut_of(index, alive);
         let rows = self.rows.borrow();
         if heads_group(&self.filter, &rows, index) {
             shut + self.metrics.head
@@ -241,30 +232,38 @@ impl Rows {
         }
     }
 
-    fn shut_of(&self, index: usize, row: &Listed) -> f32 {
+    fn shut_of(&self, index: usize, has_thumb: bool) -> f32 {
+        let rows = self.rows.borrow();
+        let Some(row) = rows.get(index) else {
+            return self.metrics.plain;
+        };
         if one_height_for_all(&self.filter, self.plain_way) {
             return self.metrics.mixed;
         }
-        if self.thumbless.borrow().contains(&index) {
-            if was_found(row) {
-                return self.metrics.found;
-            }
-            return self.shut_height();
+        if has_thumb {
+            return self.metrics.tall;
         }
-        self.height_of(row)
+        if was_found(row) {
+            return self.metrics.found;
+        }
+        self.shut_height()
     }
 
-    fn height_of(&self, row: &Listed) -> f32 {
-        if one_height_for_all(&self.filter, self.plain_way) {
-            return self.metrics.mixed;
+    fn open_of_row_with(&self, index: usize, has_thumb: bool) -> f32 {
+        if has_thumb {
+            return self.metrics.tall;
         }
-        if row.thumb_path.is_some() {
-            self.metrics.tall
-        } else if was_found(row) {
-            self.metrics.found
+        let rows = self.rows.borrow();
+        let Some(row) = rows.get(index) else {
+            return self.metrics.plain;
+        };
+        let lines = crate::view::open_lines_of(row, &body_of(row), self.now);
+        let own = if one_height_for_all(&self.filter, self.plain_way) {
+            self.body_room(row)
         } else {
-            self.shut_height()
-        }
+            0.0
+        };
+        self.metrics.frame + lines as f32 * self.metrics.line + own
     }
 
     fn shut_height(&self) -> f32 {
@@ -368,8 +367,6 @@ impl Rows {
             card.heads_group = true;
             card.group_said = row.group.clone().into();
         }
-        card.shut_px = self.shut_of(index, row);
-        card.open_px = self.open_of_row(row);
         if let Some(path) = &row.thumb_path
             && let Ok(image) = slint::Image::load_from_path(std::path::Path::new(path))
         {
@@ -384,6 +381,8 @@ impl Rows {
             }
             self.resize(index, without_thumb);
         }
+        card.shut_px = self.shut_of(index, card.has_thumb);
+        card.open_px = self.open_of_row_with(index, card.has_thumb);
         if let Some(slot) = self.cards.borrow_mut().get_mut(index) {
             *slot = Some(card.clone());
         }

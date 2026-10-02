@@ -536,8 +536,11 @@ fn the_indexes_on_formats_are_there_after_a_migration_and_after_a_fresh_start() 
 fn a_history_from_before_the_column_keeps_the_day_the_2x_crossed() {
     let db = Connection::open_in_memory().expect("memory");
     create(&db).expect("schema");
-    db.execute_batch("ALTER TABLE items DROP COLUMN came_at;")
-        .expect("as it was before");
+    db.execute_batch(
+        "DROP INDEX IF EXISTS items_came_from_the_2x;
+         ALTER TABLE items DROP COLUMN came_at;",
+    )
+    .expect("as it was before");
     db.execute(
         "INSERT INTO items (uuid, created_at, modified_at, updated_at, content_hash)
          VALUES ('2x-abc', 100, 100, 4_000, 7)",

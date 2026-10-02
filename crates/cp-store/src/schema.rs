@@ -120,9 +120,10 @@ fn added_columns(db: &Connection) -> Result<()> {
     }
     if column_is_missing(db, "came_at")? {
         db.execute_batch("ALTER TABLE items ADD COLUMN came_at INTEGER;")?;
-        db.execute_batch(
+        db.execute(
             "UPDATE items SET came_at = updated_at
-             WHERE came_at IS NULL AND uuid >= '2x-' AND uuid < '2x.';",
+             WHERE came_at IS NULL AND uuid >= ?1 AND uuid < ?2",
+            [crate::legacy::THEIR_MARK, crate::legacy::PAST_THEIR_MARK],
         )?;
     }
     Ok(())
@@ -215,6 +216,8 @@ const TABLES: &str = r#"
             deleted_at         INTEGER
         );
 
+        CREATE INDEX IF NOT EXISTS items_came_from_the_2x ON items(came_at)
+            WHERE came_at IS NOT NULL;
         CREATE INDEX IF NOT EXISTS items_by_creation ON items(created_at);
         CREATE INDEX IF NOT EXISTS items_by_hash ON items(content_hash);
         CREATE INDEX IF NOT EXISTS items_by_color ON items(card_color);
