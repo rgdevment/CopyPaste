@@ -38,7 +38,7 @@ struct State {
     tags: Vec<String>,
     pinned: bool,
     keeping: bool,
-    way: String,
+    ways: std::collections::HashMap<&'static str, String>,
     rows: Option<Rc<Rows>>,
     options: Options,
     metrics: Metrics,
@@ -99,7 +99,7 @@ impl App {
             tags: Vec::new(),
             pinned: false,
             keeping: false,
-            way: String::new(),
+            ways: std::collections::HashMap::new(),
             rows: None,
             options,
             metrics,
@@ -220,7 +220,11 @@ impl App {
                     refresh(&ui, &state);
                 }
                 Asking::Ways => {
-                    state.borrow_mut().way = key.to_string();
+                    {
+                        let mut state = state.borrow_mut();
+                        let layout = crate::layout::layout_for(&filter_of(&state).kinds);
+                        crate::ways::remember(&mut state.ways, layout, key.as_str());
+                    }
                     refresh(&ui, &state);
                 }
             }
@@ -737,8 +741,8 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     };
     let keys = keys_of(&filter);
     let full = filter.clone();
-    let way = state.borrow().way.clone();
     let layout = crate::layout::layout_for(&filter.kinds);
+    let way = crate::ways::recalled(&state.borrow().ways, layout).to_owned();
     let here = crate::ways::chosen(layout, &way);
     ui.set_way(here.key.into());
     ui.set_way_said(if crate::ways::ways_of(layout).is_empty() {
@@ -872,7 +876,9 @@ fn filter_of(state: &State) -> Filter {
         filter.pinned_only = true;
     }
     let layout = crate::layout::layout_for(&filter.kinds);
-    if layout.groups() && !crate::ways::chosen(layout, &state.way).recent {
+    if layout.groups()
+        && !crate::ways::chosen(layout, crate::ways::recalled(&state.ways, layout)).recent
+    {
         filter.order = cp_store::Order::ByGroup;
     }
     filter
@@ -881,7 +887,14 @@ fn filter_of(state: &State) -> Filter {
 fn ask_ways(ui: &Panel, state: &Rc<RefCell<State>>) {
     let (keeping, way) = {
         let state = state.borrow();
-        (state.keeping, state.way.clone())
+        (
+            state.keeping,
+            crate::ways::recalled(
+                &state.ways,
+                crate::layout::layout_for(&filter_of(&state).kinds),
+            )
+            .to_owned(),
+        )
     };
     if keeping {
         return;

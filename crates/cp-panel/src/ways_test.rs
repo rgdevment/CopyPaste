@@ -122,3 +122,34 @@ fn no_view_offers_the_same_way_twice() {
         }
     }
 }
+
+#[test]
+fn each_view_keeps_the_shape_you_chose_for_it() {
+    let mut ways = std::collections::HashMap::new();
+    super::remember(&mut ways, Layout::Image, "rows");
+    super::remember(&mut ways, Layout::Json, "raw");
+
+    assert_eq!(super::recalled(&ways, Layout::Image), "rows");
+    assert_eq!(
+        super::recalled(&ways, Layout::Json),
+        "raw",
+        "one view's shape is not the other's, and a single setting made each visit undo the last"
+    );
+    assert_eq!(
+        super::recalled(&ways, Layout::Link),
+        "",
+        "a view nobody chose for falls back to what it offers first"
+    );
+}
+
+#[test]
+fn a_shape_a_view_does_not_offer_is_not_remembered_for_it() {
+    let mut ways = std::collections::HashMap::new();
+    super::remember(&mut ways, Layout::Image, "raw");
+    assert_eq!(
+        super::recalled(&ways, Layout::Image),
+        "",
+        "«raw» belongs to JSON, and keeping it here would send the image view to a shape it has no \
+         way to draw"
+    );
+}
