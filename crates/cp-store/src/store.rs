@@ -911,6 +911,24 @@ impl Store {
         Ok(())
     }
 
+    pub fn knows_name(&self, uuid: &str) -> Result<bool> {
+        Ok(self
+            .db
+            .query_row("SELECT 1 FROM items WHERE uuid = ?1", [uuid], |_| Ok(()))
+            .optional()?
+            .is_some())
+    }
+
+    pub fn came_from_the_former(&self) -> Result<crate::legacy::Came> {
+        let (count, when) = self.db.query_row(
+            "SELECT COUNT(*), MIN(updated_at) FROM items
+             WHERE uuid >= ?1 AND uuid < ?2 AND deleted_at IS NULL",
+            [crate::legacy::THEIR_MARK, crate::legacy::PAST_THEIR_MARK],
+            |row| Ok((row.get(0)?, row.get::<_, Option<i64>>(1)?)),
+        )?;
+        Ok(crate::legacy::Came { count, when })
+    }
+
     pub fn count(&self) -> Result<i64> {
         Ok(self.db.query_row(
             "SELECT (SELECT COUNT(*) FROM items)

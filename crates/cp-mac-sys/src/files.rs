@@ -50,6 +50,14 @@ pub fn open(path: &Path) -> bool {
     path.exists() && NSWorkspace::sharedWorkspace().openURL(&url_of(path))
 }
 
+pub fn open_link(url: &str) -> bool {
+    let said = NSString::from_str(url);
+    match NSURL::URLWithString(&said) {
+        Some(url) => NSWorkspace::sharedWorkspace().openURL(&url),
+        None => false,
+    }
+}
+
 pub fn reveal(path: &Path) -> bool {
     if !path.exists() {
         return false;

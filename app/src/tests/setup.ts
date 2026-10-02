@@ -60,6 +60,8 @@ vi.mock("@tauri-apps/api/core", () => ({
         labelled: 5,
         withStyles: 260,
         beyondKeep: 860,
+        came: 0,
+        cameAt: null,
         unreadable: null,
       });
     }

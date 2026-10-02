@@ -1064,6 +1064,7 @@ dependencies = [
  "cp-win-sys",
  "image",
  "raw-window-handle",
+ "serde_json",
  "slint",
  "slint-build",
  "symphonia",

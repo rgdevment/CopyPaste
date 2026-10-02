@@ -40,6 +40,22 @@ pub fn open(path: &Path) -> bool {
     instance.0 as usize > LAUNCHED
 }
 
+pub fn open_link(url: &str) -> bool {
+    let wide: Vec<u16> = url.encode_utf16().chain(std::iter::once(0)).collect();
+    let _apartment = Apartment::enter();
+    let instance = unsafe {
+        ShellExecuteW(
+            None,
+            w!("open"),
+            PCWSTR(wide.as_ptr()),
+            None,
+            None,
+            SW_SHOWNORMAL,
+        )
+    };
+    instance.0 as usize > LAUNCHED
+}
+
 pub fn reveal(path: &Path) -> bool {
     let Some(wide) = wide_of(path) else {
         return false;

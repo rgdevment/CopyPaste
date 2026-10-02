@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
 import { fill, items, t } from "../locales";
-import { Band, Line } from "./Bits";
+import { asProse, Band, Line } from "./Bits";
 
 type Former = {
   path: string;
@@ -15,6 +15,8 @@ type Former = {
   labelled: number;
   withStyles: number;
   beyondKeep: number;
+  came: number;
+  cameAt: number | null;
   unreadable: string | null;
 };
 
@@ -36,6 +38,10 @@ const EXTENSION = "cpbackup";
 function weighed(bytes: number) {
   const mb = bytes / (1024 * 1024);
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+}
+
+function onDay(at: number | null) {
+  return at === null ? "" : new Date(at).toLocaleDateString();
 }
 
 function named() {
@@ -207,6 +213,7 @@ export default function Backup() {
 
       {former ? (
         <Line
+          stacked
           says={t("former")}
           why={
             crossed ?? <span className="path">{`${former.path} · ${weighed(former.bytes)}`}</span>
@@ -214,22 +221,35 @@ export default function Backup() {
           more={
             former.unreadable ? (
               <div className="alarm">{fill("formerUnreadable", former.unreadable)}</div>
+            ) : former.came > 0 ? (
+              <>
+                <p className="done">
+                  <strong>{fill("formerCameOn", onDay(former.cameAt))}</strong>
+                  {` · ${fill("formerStillHere", items(former.came))}`}
+                </p>
+                <p className="aside">{asProse([t("formerGoneStays"), t("formerAgainWhy")])}</p>
+                {sure && <div className="alarm">{t("formerDropWhy")}</div>}
+              </>
             ) : (
               <>
                 <ul className="facts">
                   <li>{fill("formerHas", items(former.items))}</li>
-                  <li>{t("formerKeeps")}</li>
                   {former.withStyles > 0 ? (
                     <li>{fill("formerKeepsStyles", String(former.withStyles))}</li>
                   ) : null}
-                  <li>{t("formerLosesPlain")}</li>
                   {former.picturesGone > 0 && (
                     <li>{fill("formerLosesPictures", String(former.picturesGone))}</li>
                   )}
-                  <li>{t("formerKeepsSecrets")}</li>
-                  <li>{t("formerPanelRests")}</li>
-                  <li>{t("formerStays")}</li>
                 </ul>
+                <p className="aside">
+                  {asProse([
+                    t("formerKeeps"),
+                    t("formerLosesPlain"),
+                    t("formerKeepsSecrets"),
+                    t("formerPanelRests"),
+                    t("formerStays"),
+                  ])}
+                </p>
                 {former.beyondKeep > 0 && (
                   <div className="alarm">{fill("formerLosesKept", items(former.beyondKeep))}</div>
                 )}
@@ -240,17 +260,22 @@ export default function Backup() {
         >
           <button
             type="button"
-            className="strong"
+            className={former.came > 0 ? "mild" : "strong"}
             disabled={busy !== null || former.unreadable !== null || former.items === 0}
             onClick={cross}
           >
             {busy !== "former"
-              ? t("formerDo")
+              ? t(former.came > 0 ? "formerAgain" : "formerDo")
               : crossing && crossing.total > 0
                 ? fill("formerCrossing", `${crossing.done}/${crossing.total}`)
                 : t("formerBringing")}
           </button>
-          <button type="button" className="grave" disabled={busy !== null} onClick={drop}>
+          <button
+            type="button"
+            className={sure ? "grave" : "grave quiet"}
+            disabled={busy !== null}
+            onClick={drop}
+          >
             {sure ? t("formerDropSure") : t("formerDrop")}
           </button>
         </Line>

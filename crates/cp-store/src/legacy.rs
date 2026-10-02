@@ -15,6 +15,15 @@ pub struct Former {
     pub beyond_keep: i64,
 }
 
+pub const THEIR_MARK: &str = "2x-";
+pub const PAST_THEIR_MARK: &str = "2x.";
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Came {
+    pub count: i64,
+    pub when: Option<i64>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Brought {
     pub added: i64,
@@ -266,6 +275,10 @@ fn carry(into: &Store, row: &Row, at: i64, root: Option<&Path>) -> Result<Landed
     if into.find_by_hash(&item)?.is_some() {
         return Ok(Landed::Already);
     }
+    let name = named(row, at);
+    if into.knows_name(&name)? {
+        return Ok(Landed::Already);
+    }
     let when = if row.created_at > 0 {
         in_millis(row.created_at)
     } else {
@@ -285,13 +298,7 @@ fn carry(into: &Store, row: &Row, at: i64, root: Option<&Path>) -> Result<Landed
         meta: &meta,
         jobs: jobs_for(row.kind, !without_picture),
     };
-    into.insert_full(
-        &named(row, at),
-        &item,
-        &preview_of(row, without_picture),
-        when,
-        &more,
-    )?;
+    into.insert_full(&name, &item, &preview_of(row, without_picture), when, &more)?;
     Ok(Landed::Added { without_picture })
 }
 
@@ -355,7 +362,7 @@ fn named(row: &Row, at: i64) -> String {
     if row.uuid.is_empty() {
         format!("{at:x}-{:016x}", row.modified_at)
     } else {
-        format!("2x-{}", row.uuid)
+        format!("{THEIR_MARK}{}", row.uuid)
     }
 }
 

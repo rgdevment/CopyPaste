@@ -14,6 +14,7 @@ export component Panel inherits Window {
     always-on-top: true;
     background: transparent;
     title: "CopyPaste";
+    icon: @image-url("../../../app/src-tauri/icons/128x128.png");
 
     in property <[Card]> cards;
     in property <[int]> grid-lines;
@@ -43,6 +44,12 @@ export component Panel inherits Window {
     in property <bool> filtered;
     in-out property <string> query;
     in-out property <int> current: -1;
+    in-out property <int> naming: -1;
+    changed naming => {
+        if (root.naming == -1) {
+            input.focus();
+        }
+    }
     in-out property <bool> opened: false;
     in-out property <int> hovered: -1;
     in-out property <bool> pointer-hidden: false;
@@ -57,6 +64,8 @@ export component Panel inherits Window {
     in-out property <bool> sheet-armed: false;
     out property <length> viewport-height: list.visible-height;
     out property <length> list-top: list.absolute-position.y - panel.absolute-position.y;
+    out property <length> chips-bottom: strip.absolute-position.y - panel.absolute-position.y
+        + strip.height;
 
     callback search(string);
     callback chip-chosen(string, bool);
@@ -76,9 +85,10 @@ export component Panel inherits Window {
     callback paste-as(int, string);
     callback cycle(int);
     callback paste(int);
-    callback edit(int);
+    callback named(int, string);
     callback pin(int, bool);
     callback remove(int);
+    callback open-asked(int);
     callback dismiss();
     callback focus-search();
     callback moved(int);
@@ -229,8 +239,9 @@ export component Panel inherits Window {
                                         root.pin(root.cards[root.current].id, !root.cards[root.current].pinned);
                                         return accept;
                                     }
-                                    if event.text == "e" && event.modifiers.control && root.current >= 0 {
-                                        root.edit(root.cards[root.current].id);
+                                    if (event.text == Key.F2 || (event.text == "e" && event.modifiers.control))
+                                        && root.current >= 0 {
+                                        root.naming = root.cards[root.current].id;
                                         return accept;
                                     }
                                     if (event.text == "g" || event.text == "t") && event.modifiers.alt {
@@ -308,10 +319,10 @@ export component Panel inherits Window {
                             border-radius: 12px;
                             y: (parent.height - 24px) / 2;
                             background: root.keeping
-                                ? Theme.selected
+                                ? Theme.accent
                                 : keep-touch.has-hover ? #242840 : Theme.field;
                             border-width: 1px;
-                            border-color: root.keeping ? Theme.selected-edge : Theme.field-border;
+                            border-color: root.keeping ? Theme.accent : Theme.field-border;
                             accessible-role: AccessibleRole.button;
                             accessible-label: root.keeping ? Words.many-kinds : Words.one-kind;
                             accessible-checked: root.keeping;
@@ -320,7 +331,7 @@ export component Panel inherits Window {
                                 source: @image-url("../assets/icons/layers.svg");
                                 width: 13px;
                                 height: 13px;
-                                tint: root.keeping ? Theme.accent : Theme.muted;
+                                tint: root.keeping ? Theme.panel : Theme.muted;
                             }
                             keep-touch := TouchArea {
                                 clicked => { root.keep-toggled(); }
@@ -405,6 +416,7 @@ export component Panel inherits Window {
                                 row := HorizontalLayout {
                                     spacing: 6px;
                                     alignment: start;
+                                    padding-right: 20px;
                                     for chip in root.chips : Pill {
                                         chip: chip;
                                         chosen(key, adding) => {
@@ -418,7 +430,8 @@ export component Panel inherits Window {
                                 }
                             }
                         }
-                        Rectangle {
+                        if strip.content-width > strip.width
+                            && strip.content-x > strip.width - strip.content-width : Rectangle {
                             x: parent.width - 20px;
                             width: 20px;
                             background: @linear-gradient(90deg, Theme.panel.transparentize(1.0) 0%, Theme.panel 100%);
@@ -494,6 +507,7 @@ export component Panel inherits Window {
                                 root.moved(line * 2);
                             }
                             paste => { root.paste(root.cards[line * 2].id); }
+                            open-asked => { root.open-asked(root.cards[line * 2].id); }
                             stirred => { root.stirred(line * 2); }
                         }
                         if line * 2 + 1 < root.cards.length : GridCell {
@@ -504,6 +518,7 @@ export component Panel inherits Window {
                                 root.moved(line * 2 + 1);
                             }
                             paste => { root.paste(root.cards[line * 2 + 1].id); }
+                            open-asked => { root.open-asked(root.cards[line * 2 + 1].id); }
                             stirred => { root.stirred(line * 2 + 1); }
                         }
                         if line * 2 + 1 >= root.cards.length : Rectangle {
@@ -541,11 +556,15 @@ export component Panel inherits Window {
                                 root.sheet-span = self.height;
                             }
                         }
-                        height: (card.heads-group ? Theme.row-head : 0px) + (card.has-thumb
-                            ? Theme.row-thumb
-                            : index == root.current && root.opened
-                                ? Theme.row-frame + card.lines * Theme.line
-                                : card.found ? Theme.row-found : root.shut);
+                        height: (card.heads-group ? Theme.row-head : 0px) + (
+                            root.layout == "everything" && !root.plain-way
+                                && !(index == root.current && root.opened)
+                            ? root.shut
+                            : card.has-thumb
+                                ? Theme.row-thumb
+                                : index == root.current && root.opened
+                                    ? Theme.row-frame + card.lines * Theme.line
+                                    : card.found ? Theme.row-found : root.shut);
                         animate height { duration: root.gliding ? Theme.settle : 0ms; easing: ease-out; }
                         VerticalLayout {
                         if card.heads-group : Rectangle {
@@ -586,7 +605,7 @@ export component Panel inherits Window {
                             }
                             x: 10px;
                             width: parent.width - 20px;
-                            height: parent.height - 6px;
+                            height: parent.height - (card.heads-group ? Theme.row-head : 0px) - 6px;
                             chosen(id) => {
                                 if (root.sheet-open) {
                                     root.sheet-open = false;
@@ -606,9 +625,17 @@ export component Panel inherits Window {
                                 root.moved(index);
                                 root.ask-forms(id);
                             }
-                            edit(id) => { root.edit(id); }
+                            naming: root.naming;
+                            edit(id) => {
+                                root.current = index;
+                                root.moved(index);
+                                root.naming = id;
+                            }
+                            named(id, said) => { root.named(id, said); }
+                            naming-dropped => { root.naming = -1; }
                             pin(id, on) => { root.pin(id, on); }
                             remove(id) => { root.remove(id); }
+                            open-asked(id) => { root.open-asked(id); }
                         }
                         }
                     }
@@ -727,7 +754,7 @@ export component Panel inherits Window {
                 ? clamp(root.chip-x, 10px, max(10px, parent.width - self.width - 10px))
                 : 10px;
             y: clamp(
-                root.sheet-narrow ? root.list-top + 4px : panel.sheet-top,
+                root.sheet-narrow ? root.chips-bottom + 6px : panel.sheet-top,
                 10px,
                 max(10px, parent.height - self.height - 10px)
             );

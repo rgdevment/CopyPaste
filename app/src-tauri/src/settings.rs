@@ -113,7 +113,19 @@ pub struct Former {
     labelled: i64,
     with_styles: i64,
     beyond_keep: i64,
+    came: i64,
+    came_at: Option<i64>,
     unreadable: Option<String>,
+}
+
+fn came_over() -> cp_store::legacy::Came {
+    let Some(dir) = folder() else {
+        return cp_store::legacy::Came::default();
+    };
+    match cp_store::Store::open(&dir.join("history.db")) {
+        Ok(store) => store.came_from_the_former().unwrap_or_default(),
+        Err(_) => cp_store::legacy::Came::default(),
+    }
 }
 
 #[tauri::command(async)]
@@ -134,8 +146,13 @@ pub fn former(at: i64) -> Result<Option<Former>, String> {
         labelled: 0,
         with_styles: 0,
         beyond_keep: 0,
+        came: 0,
+        came_at: None,
         unreadable: None,
     };
+    let came = came_over();
+    former.came = came.count;
+    former.came_at = came.when;
     match cp_store::legacy::look(&db, at, policy().keep_for) {
         Ok(looked) => {
             former.items = looked.items;

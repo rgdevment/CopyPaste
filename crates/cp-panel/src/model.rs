@@ -1,5 +1,5 @@
 use crate::Card;
-use crate::view::{body_of, card_of, lines_of, was_found};
+use crate::view::{body_of, card_of, was_found};
 use cp_store::{Cursor, Filter, Listed, Store};
 use slint::{Model, ModelNotify, ModelTracker};
 use std::cell::{Cell, RefCell};
@@ -13,6 +13,7 @@ pub struct Metrics {
     pub head: f32,
     pub tall: f32,
     pub plain: f32,
+    pub mixed: f32,
     pub json: f32,
     pub found: f32,
     pub frame: f32,
@@ -37,10 +38,18 @@ pub fn heads_group(filter: &Filter, rows: &[Listed], index: usize) -> bool {
     }
 }
 
+pub const MIXED_KEYS: [&str; 4] = [
+    crate::media::DURATION,
+    crate::media::WIDTH,
+    crate::media::HEIGHT,
+    crate::folder::ENTRIES,
+];
+
 pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Video | crate::layout::Layout::Audio => &crate::media::KEYS,
         crate::layout::Layout::Folder => &crate::folder::KEYS,
+        crate::layout::Layout::Everything => &MIXED_KEYS,
         _ => &[],
     }
 }
@@ -51,8 +60,13 @@ pub fn shut_height_for(filter: &Filter, metrics: &Metrics, plain_way: bool) -> f
     }
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Json => metrics.json,
+        crate::layout::Layout::Everything => metrics.mixed,
         _ => metrics.plain,
     }
+}
+
+pub fn one_height_for_all(filter: &Filter, plain_way: bool) -> bool {
+    !plain_way && crate::layout::layout_for(&filter.kinds) == crate::layout::Layout::Everything
 }
 
 pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
@@ -154,7 +168,8 @@ impl Rows {
     }
 
     fn open_of_row(&self, row: &Listed) -> f32 {
-        self.metrics.frame + lines_of(&body_of(row)) as f32 * self.metrics.line
+        let lines = crate::view::open_lines_of(row, &body_of(row));
+        self.metrics.frame + lines as f32 * self.metrics.line
     }
 
     fn tall_at(&self, index: usize) -> bool {
@@ -180,7 +195,9 @@ impl Rows {
     }
 
     fn height_at(&self, index: usize, row: &Listed) -> f32 {
-        let shut = if self.thumbless.borrow().contains(&index) {
+        let shut = if one_height_for_all(&self.filter, self.plain_way) {
+            self.metrics.mixed
+        } else if self.thumbless.borrow().contains(&index) {
             if was_found(row) {
                 self.metrics.found
             } else {
@@ -198,6 +215,9 @@ impl Rows {
     }
 
     fn height_of(&self, row: &Listed) -> f32 {
+        if one_height_for_all(&self.filter, self.plain_way) {
+            return self.metrics.mixed;
+        }
         if row.thumb_path.is_some() {
             self.metrics.tall
         } else if was_found(row) {

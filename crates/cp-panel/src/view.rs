@@ -79,11 +79,15 @@ fn claims_in(row: &Listed) -> Option<Claims> {
 pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
+    let token = (row.kind == Some(Kind::Token))
+        .then(|| crate::token::said_of(&row.preview, now, crate::say::in_english()))
+        .flatten()
+        .unwrap_or_default();
     let (clock, measures) = crate::media::said_in(meta);
     let link = (row.kind == Some(Kind::Link))
         .then(|| crate::link::parts_of(&row.preview))
         .flatten();
-    let folder = (row.kind == Some(Kind::Folder))
+    let folder = matches!(row.kind, Some(Kind::Folder | Kind::File))
         .then(|| crate::folder::parts_of(&row.preview))
         .flatten();
     let papers = (row.kind == Some(Kind::File))
@@ -102,9 +106,26 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         Some(snippet) => parts_of(&snippet.excerpt),
         None => (String::new(), String::new(), String::new()),
     };
+    let headline = headline_of(row, &body, folder.as_ref());
+    let aside = aside_of(
+        row,
+        &shape,
+        &token,
+        folder.as_ref(),
+        papers.as_ref(),
+        &clock,
+        &measures,
+    );
+    let (headline, aside) = top_line(headline, aside);
     Card {
         id: row.id as i32,
         kind: kind.into(),
+        headline: headline.into(),
+        aside: aside.into(),
+        name: row.label.clone().unwrap_or_default().into(),
+        claims: !token.names.is_empty(),
+        claim_names: token.names.into(),
+        claim_values: token.values.into(),
         title: label_of(row.kind).into(),
         source: row.app.clone().unwrap_or_else(|| "—".into()).into(),
         times: if row.paste_count > 1 {
@@ -113,7 +134,8 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
             "".into()
         },
         age: age_text(now, row.modified_at).into(),
-        lines: lines_of(&body),
+        lines: open_lines_of(row, &body),
+        body_lines: lines_of(&body),
         squeezed: squeezed_of(&body).into(),
         shape_root: shape.root.into(),
         shape_said: shape.counted.into(),
@@ -157,11 +179,125 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         hit: hit.into(),
         tail: tail.into(),
         mono: matches!(row.kind, Some(Kind::Json | Kind::Code | Kind::Token)),
+        can_open: crate::opening::can_open(row.kind, &paths_of(row))
+            || crate::opening::can_open_link(row.kind, &row.preview),
+        paint: shown_as_colour(row).unwrap_or_default(),
+        paints: shown_as_colour(row).is_some(),
         thumb: slint::Image::default(),
         has_thumb: row.thumb_path.is_some(),
         pinned: row.pinned,
         broken: row.broken_since.is_some(),
     }
+}
+
+pub fn headline_of(row: &Listed, body: &str, folder: Option<&crate::folder::Parts>) -> String {
+    match row.kind {
+        Some(Kind::File | Kind::Folder) => match folder {
+            Some(parts) => parts.name.clone(),
+            None => squeezed_of(body),
+        },
+        _ => squeezed_of(body),
+    }
+}
+
+pub fn open_lines_of(row: &Listed, body: &str) -> i32 {
+    let claims = if row.kind == Some(Kind::Token) {
+        i32::try_from(crate::token::rows_in(&row.preview)).unwrap_or(0)
+    } else {
+        0
+    };
+    let table = if claims > 0 { claims + 1 } else { 0 };
+    lines_of(body) + table
+}
+
+pub fn top_line(headline: String, aside: String) -> (String, String) {
+    if headline.trim().is_empty() {
+        return (aside, String::new());
+    }
+    (headline, aside)
+}
+
+pub fn aside_of(
+    row: &Listed,
+    shape: &crate::shape::Said,
+    token: &crate::token::Said,
+    folder: Option<&crate::folder::Parts>,
+    papers: Option<&crate::papers::Papers>,
+    clock: &str,
+    measures: &str,
+) -> String {
+    let joined = |parts: &[&str]| -> String {
+        parts
+            .iter()
+            .map(|one| one.trim())
+            .filter(|one| !one.is_empty())
+            .collect::<Vec<_>>()
+            .join(" · ")
+    };
+    match row.kind {
+        Some(Kind::Json) => joined(&[&shape.root, &shape.counted]),
+        Some(Kind::Video | Kind::Audio) => joined(&[clock, measures]),
+        Some(Kind::Image) => joined(&[measures]),
+        Some(Kind::File) => {
+            let format = papers.map(|one| one.format.as_str()).unwrap_or_default();
+            let parent = folder.map(|one| one.parent.as_str()).unwrap_or_default();
+            joined(&[format, parent.trim_end_matches(['\\', '/'])])
+        }
+        Some(Kind::Folder) => {
+            let parent = folder.map(|one| one.parent.as_str()).unwrap_or_default();
+            joined(&[
+                parent.trim_end_matches(['\\', '/']),
+                &crate::folder::said_in(None, crate::say::in_english()),
+            ])
+        }
+        Some(Kind::Token) => joined(&[&token.who, &token.life]),
+        Some(Kind::Text | Kind::Code) => more_than_shown(row),
+        _ => String::new(),
+    }
+}
+
+fn more_than_shown(row: &Listed) -> String {
+    let lines = row.preview.lines().count();
+    if lines <= 1 {
+        return String::new();
+    }
+    let rest = lines - 1;
+    if crate::say::in_english() {
+        format!("+{rest} more lines")
+    } else {
+        format!("+{rest} lineas mas")
+    }
+}
+
+pub const NAME_ROOM: usize = 80;
+
+pub fn name_worth_keeping(said: &str) -> Option<String> {
+    let name: String = said
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(NAME_ROOM)
+        .collect();
+    (!name.is_empty()).then_some(name)
+}
+
+pub fn paths_of(row: &Listed) -> Vec<String> {
+    row.preview
+        .lines()
+        .next()
+        .map(|one| vec![one.to_owned()])
+        .unwrap_or_default()
+}
+
+pub fn shown_as_colour(row: &Listed) -> Option<slint::Color> {
+    if row.kind != Some(Kind::Color) {
+        return None;
+    }
+    let said = cp_core::paint::rgba_of(row.preview.lines().next()?)?;
+    Some(slint::Color::from_argb_u8(
+        said.alpha, said.red, said.green, said.blue,
+    ))
 }
 
 pub fn squeezed_of(text: &str) -> String {
@@ -482,6 +618,8 @@ pub fn dress_words(ui: &crate::Panel) {
         .into(),
     );
     words.set_paste_as(crate::say::pick("pegar como", "paste as").into());
+    words.set_open_it(crate::say::pick("abrir", "open").into());
+    words.set_name_it(crate::say::pick("poner nombre", "give it a name").into());
     words.set_pin(crate::say::pick("anclar", "pin").into());
     words.set_unpin(crate::say::pick("desanclar", "unpin").into());
     words.set_remove(crate::say::pick("borrar", "delete").into());

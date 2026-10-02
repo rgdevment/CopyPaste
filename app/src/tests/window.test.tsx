@@ -249,6 +249,29 @@ describe("la ventana", () => {
     ).toBeDefined();
   });
 
+  it("una vez cruzada, la 2 deja de ofrecerse y dice cuándo fue", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(async (what: string, args?: unknown) => {
+      const said = await (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+      if (what !== "former") return said;
+      return { ...(said as object), came: 1180, cameAt: Date.UTC(2026, 9, 2, 12) };
+    });
+    try {
+      const who = userEvent.setup();
+      render(<App />);
+      await who.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
+
+      expect(await screen.findByText(/Ya lo trajiste el/)).toBeDefined();
+      expect(screen.getByText(/1180 elementos de CopyPaste 2 siguen aquí/)).toBeDefined();
+      expect(screen.getByText(/Lo que borraste desde entonces no vuelve/)).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Traer el historial" })).toBeNull();
+      expect(await screen.findByRole("button", { name: "Volver a revisar" })).toBeDefined();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
   it("borrar los datos de la 2 pide confirmación antes de tocar nada", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();

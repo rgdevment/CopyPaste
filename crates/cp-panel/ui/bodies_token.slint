@@ -1,0 +1,26 @@
+import { Card } from "types.slint";
+import { Theme } from "theme.slint";
+
+export component TokenBody inherits HorizontalLayout {
+    in property <Card> card;
+    spacing: 12px;
+    alignment: start;
+
+    Text {
+        text: card.claim-names;
+        color: Theme.muted;
+        font-family: "Cascadia Mono";
+        font-size: 11.5px;
+        wrap: no-wrap;
+    }
+
+    Text {
+        text: card.claim-values;
+        color: Theme.body;
+        font-family: "Cascadia Mono";
+        font-size: 11.5px;
+        wrap: no-wrap;
+        overflow: elide;
+        horizontal-stretch: 1;
+    }
+}

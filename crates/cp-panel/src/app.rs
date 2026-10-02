@@ -78,6 +78,7 @@ impl App {
             head: theme.get_row_head(),
             tall: theme.get_row_thumb(),
             plain: theme.get_row_plain(),
+            mixed: theme.get_row_mixed(),
             json: theme.get_row_json(),
             found: theme.get_row_found(),
             frame: theme.get_row_frame(),
@@ -380,6 +381,20 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
+        panel.on_open_asked(move |id| {
+            let store = state.borrow().store.clone();
+            let said = reach_for(&store, i64::from(id));
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            match said {
+                Reached::Opened => {}
+                Reached::Working => note(&format!("{id} is being opened, slowly")),
+                Reached::Refused => complain(&ui, cannot_open()),
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
         panel.on_remove(move |id| {
             if let Err(why) = state.borrow().store.mark_deleted(i64::from(id), now_ms()) {
                 note(&format!("{id} could not be deleted: {why}"));
@@ -582,7 +597,27 @@ impl App {
                 let _ = ui.hide();
             }
         });
-        panel.on_edit(|_| {});
+        self.wire_naming(panel);
+    }
+
+    fn wire_naming(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_named(move |id, said| {
+            let name = crate::view::name_worth_keeping(&said);
+            if let Err(why) =
+                state
+                    .borrow()
+                    .store
+                    .set_label(i64::from(id), name.as_deref(), now_ms())
+            {
+                note(&format!("{id} could not be named: {why}"));
+            }
+            if let Some(ui) = ui.upgrade() {
+                ui.set_naming(-1);
+                keeping_place(&ui, &state);
+            }
+        });
     }
 
     fn refresh(&self) {
@@ -1058,6 +1093,61 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+enum Reached {
+    Opened,
+    Working,
+    Refused,
+}
+
+fn reach_for(store: &Store, id: i64) -> Reached {
+    let Ok(Some(item)) = store.item(id) else {
+        note(&format!("{id} could not be looked up to open it"));
+        return Reached::Refused;
+    };
+    let content = here::content_of(&item, None);
+    if let Some(said) = content.text.as_deref()
+        && let Some(url) = crate::opening::a_link_worth_opening(said.lines().next().unwrap_or(""))
+    {
+        let url = url.to_owned();
+        let asking = cp_core::reading::begin(move || here::open_link(&url));
+        return answered(asking.waited(crate::opening::PATIENCE));
+    }
+    let path = match crate::opening::first_of(&content.paths) {
+        Some(said) => std::path::PathBuf::from(said),
+        None => {
+            let Some(bytes) = content.image else {
+                note(&format!("{id} has nothing a viewer could be given"));
+                return Reached::Refused;
+            };
+            let Some(spilled) =
+                crate::opening::spilled(&crate::opening::where_previews_go(), id, bytes)
+            else {
+                note(&format!("{id} could not be written out to be seen"));
+                return Reached::Refused;
+            };
+            spilled
+        }
+    };
+    let asking = cp_core::reading::begin(move || here::open_path(&path));
+    answered(asking.waited(crate::opening::PATIENCE))
+}
+
+fn answered(said: cp_core::reading::Waited<bool>) -> Reached {
+    match said {
+        cp_core::reading::Waited::Answered(true) => Reached::Opened,
+        cp_core::reading::Waited::Answered(false) => Reached::Refused,
+        cp_core::reading::Waited::StillRunning => Reached::Working,
+        cp_core::reading::Waited::Gone => Reached::Refused,
+    }
+}
+
+fn cannot_open() -> &'static str {
+    crate::say::pick(
+        "no se pudo abrir: puede que ya no esté ahí",
+        "could not open it: it may not be there any more",
+    )
 }
 
 fn short_of(id: i64, landed: here::Landed) -> bool {

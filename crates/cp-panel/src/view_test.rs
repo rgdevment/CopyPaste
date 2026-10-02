@@ -424,3 +424,239 @@ fn squeezing_keeps_the_words_and_their_order() {
     let said = "primero\n\n\tsegundo   tercero\r\ncuarto ";
     assert_eq!(squeezed_of(said), "primero segundo tercero cuarto");
 }
+
+#[test]
+fn a_colour_card_carries_the_colour_it_is() {
+    let mut said = row(Some(Kind::Color));
+    said.preview = "#FF8800".into();
+    let card = card_of(&said, 1_000_000, None);
+    assert!(card.paints, "the only type whose content is its appearance");
+    assert_eq!(card.paint.red(), 0xFF);
+    assert_eq!(card.paint.green(), 0x88);
+    assert_eq!(card.paint.blue(), 0x00);
+    assert_eq!(card.paint.alpha(), 0xFF);
+}
+
+#[test]
+fn the_colour_is_read_from_the_first_line_whatever_shape_it_has() {
+    for (said, red, green, blue) in [
+        ("#F80", 0xFF, 0x88, 0x00),
+        ("rgb(1, 2, 3)", 1, 2, 3),
+        ("hsl(120, 100%, 50%)", 0, 255, 0),
+        ("#FF8800\ntrailing noise", 0xFF, 0x88, 0x00),
+    ] {
+        let mut one = row(Some(Kind::Color));
+        one.preview = said.into();
+        let card = card_of(&one, 1_000_000, None);
+        assert!(card.paints, "«{said}»");
+        assert_eq!(
+            (card.paint.red(), card.paint.green(), card.paint.blue()),
+            (red, green, blue),
+            "«{said}»"
+        );
+    }
+}
+
+#[test]
+fn nothing_else_pretends_to_be_a_colour() {
+    for kind in [Kind::Text, Kind::Json, Kind::Link, Kind::File, Kind::Token] {
+        let mut said = row(Some(kind));
+        said.preview = "#FF8800".into();
+        assert!(
+            !card_of(&said, 1_000_000, None).paints,
+            "{kind:?} holds text that looks like a colour, and is not one"
+        );
+    }
+    let mut unreadable = row(Some(Kind::Color));
+    unreadable.preview = "not a colour at all".into();
+    assert!(
+        !card_of(&unreadable, 1_000_000, None).paints,
+        "and a colour nobody can parse draws no swatch"
+    );
+}
+
+#[test]
+fn a_file_card_knows_its_name_apart_from_its_folder() {
+    let mut said = row(Some(Kind::File));
+    said.preview = r"D:\Mario\Downloads\b774f629-9376-419f-9a7b-d390e7f775c2.pdf".into();
+    let card = card_of(&said, 1_000_000, None);
+    assert_eq!(
+        card.folder_name.as_str(),
+        "b774f629-9376-419f-9a7b-d390e7f775c2.pdf",
+        "the name is what says which file it is, so it cannot be the part that gets cut"
+    );
+    assert_eq!(card.folder_parent.as_str(), r"D:\Mario\Downloads\");
+    assert_eq!(card.papers_format.as_str(), "PDF");
+}
+
+#[test]
+fn a_file_with_no_extension_still_says_which_file_it_is() {
+    let mut said = row(Some(Kind::File));
+    said.preview = r"D:\Mario\LICENSE".into();
+    let card = card_of(&said, 1_000_000, None);
+    assert_eq!(card.folder_name.as_str(), "LICENSE");
+    assert_eq!(
+        card.papers_format.as_str(),
+        "",
+        "there is no format to show, so the card draws a glyph instead of an empty box"
+    );
+}
+
+#[test]
+fn the_second_line_says_what_each_type_already_knows() {
+    let mut json = row(Some(Kind::Json));
+    json.preview = r#"{"a": 1, "b": {"c": 2}}"#.into();
+    let said = card_of(&json, 1_000_000, None).aside.to_string();
+    assert!(
+        !said.is_empty(),
+        "JSON knows its keys and its depth: «{said}»"
+    );
+
+    let mut file = row(Some(Kind::File));
+    file.preview = r"D:\Mario\Downloads\one.yml".into();
+    let said = card_of(&file, 1_000_000, None).aside.to_string();
+    assert!(said.contains("YML"), "«{said}»");
+    assert!(said.contains("Downloads"), "«{said}»");
+    assert!(
+        !said.ends_with('\\') && !said.ends_with('/'),
+        "the trailing separator is noise: «{said}»"
+    );
+
+    let mut folder = row(Some(Kind::Folder));
+    folder.preview = r"D:\Mario\Downloads".into();
+    let said = card_of(&folder, 1_000_000, None).aside.to_string();
+    assert!(said.contains("Mario"), "the folder it lives in: «{said}»");
+}
+
+#[test]
+fn the_first_line_of_a_file_is_its_name_not_its_path() {
+    let mut said = row(Some(Kind::File));
+    said.preview = r"D:\Mario\Downloads\a-very-long-name.yml".into();
+    assert_eq!(
+        card_of(&said, 1_000_000, None).headline.as_str(),
+        "a-very-long-name.yml"
+    );
+    let mut folder = row(Some(Kind::Folder));
+    folder.preview = r"D:\Mario\Downloads".into();
+    assert_eq!(
+        card_of(&folder, 1_000_000, None).headline.as_str(),
+        "Downloads"
+    );
+}
+
+#[test]
+fn a_text_of_one_line_says_nothing_more_and_a_long_one_says_how_much_more() {
+    let mut one = row(Some(Kind::Text));
+    one.preview = "just one line".into();
+    assert_eq!(
+        card_of(&one, 1_000_000, None).aside.as_str(),
+        "",
+        "there is nothing the card is hiding"
+    );
+    let mut many = row(Some(Kind::Text));
+    many.preview = "first\nsecond\nthird".into();
+    let said = card_of(&many, 1_000_000, None).aside.to_string();
+    assert!(said.contains('2'), "two more lines are waiting: «{said}»");
+}
+
+#[test]
+fn what_needs_no_second_line_gets_none() {
+    for kind in [Kind::Uuid, Kind::Ip, Kind::Email, Kind::Phone, Kind::Color] {
+        let mut said = row(Some(kind));
+        said.preview = "something".into();
+        assert_eq!(
+            card_of(&said, 1_000_000, None).aside.as_str(),
+            "",
+            "{kind:?}: the glyph already says what it is"
+        );
+    }
+}
+
+#[test]
+fn a_name_of_only_spaces_clears_the_name() {
+    assert_eq!(super::name_worth_keeping("   	  "), None);
+    assert_eq!(super::name_worth_keeping(""), None);
+}
+
+#[test]
+fn a_name_is_one_line_however_it_was_pasted() {
+    assert_eq!(
+        super::name_worth_keeping(
+            "  claves   de
+  produccion 
+"
+        ),
+        Some("claves de produccion".to_owned()),
+        "a label reads on one line, so the line breaks of a paste do not survive it"
+    );
+}
+
+#[test]
+fn a_name_longer_than_the_row_is_cut_to_the_room_there_is() {
+    let said = "a".repeat(super::NAME_ROOM + 40);
+    let kept = super::name_worth_keeping(&said).expect("a name");
+    assert_eq!(kept.chars().count(), super::NAME_ROOM);
+}
+
+#[test]
+fn a_name_is_cut_by_letters_and_not_by_bytes() {
+    let said = "ñ".repeat(super::NAME_ROOM + 5);
+    let kept = super::name_worth_keeping(&said).expect("a name");
+    assert_eq!(
+        kept.chars().count(),
+        super::NAME_ROOM,
+        "cutting a two byte letter in half would not even be text"
+    );
+}
+
+#[test]
+fn a_card_with_nothing_to_quote_puts_what_it_knows_on_the_first_line() {
+    let (first, second) = super::top_line(String::new(), "476×576".to_owned());
+    assert_eq!(first, "476×576");
+    assert_eq!(
+        second, "",
+        "una captura no tiene texto que citar, y una primera linea vacia se lee como una tarjeta rota"
+    );
+}
+
+#[test]
+fn a_card_with_something_to_quote_keeps_both_lines_where_they_were() {
+    let (first, second) = super::top_line("git add -A".to_owned(), "+3 lineas mas".to_owned());
+    assert_eq!(first, "git add -A");
+    assert_eq!(second, "+3 lineas mas");
+}
+
+#[test]
+fn a_first_line_of_only_spaces_counts_as_empty() {
+    let (first, second) = super::top_line(
+        "   
+ "
+        .to_owned(),
+        "2 claves".to_owned(),
+    );
+    assert_eq!(first, "2 claves");
+    assert_eq!(second, "");
+}
+
+#[test]
+fn the_card_asks_for_the_same_lines_the_model_reserves() {
+    let store = cp_store::Store::in_memory().expect("esquema");
+    let token =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhIiwic3ViIjoiYiIsImV4cCI6MX0.firma";
+    store.insert_text("t", token, 1).expect("insert");
+    let page = store
+        .list(&cp_store::Filter::default(), 10, None)
+        .expect("pagina");
+    let row = page.rows.first().expect("una fila");
+    let body = super::body_of(row);
+    let card = super::card_of(row, 2, None);
+    assert_eq!(
+        card.lines,
+        super::open_lines_of(row, &body),
+        "el delegado dibuja con card.lines y el modelo reserva con la misma cuenta: si se separan, la tarjeta se corta"
+    );
+    assert!(
+        card.lines > super::lines_of(&body),
+        "un token con claves pide mas alto que su texto suelto"
+    );
+}

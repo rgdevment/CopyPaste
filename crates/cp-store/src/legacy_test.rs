@@ -291,6 +291,69 @@ fn bringing_the_same_history_twice_adds_nothing_the_second_time() {
 }
 
 #[test]
+fn what_was_deleted_here_does_not_come_back_when_the_2x_is_brought_again() {
+    let there = tempfile::tempdir().expect("a folder");
+    let picture = there.path().join("shot.png");
+    std::fs::write(&picture, b"png").expect("written");
+    let former = a_former_history(there.path(), &picture);
+
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    bring(&former, &into, 1).expect("brought");
+    let page = into
+        .list(&crate::Filter::default(), 10, None)
+        .expect("listed");
+    let first = page.rows.first().expect("a row").id;
+    into.mark_deleted(first, 2).expect("deleted");
+
+    let again = bring(&former, &into, 3).expect("brought again");
+    assert_eq!(again.added, 0);
+    assert_eq!(
+        into.count().expect("counted"),
+        4,
+        "deleting something is a decision, and bringing the 2x again must not undo it"
+    );
+    assert_eq!(
+        again.refused, 0,
+        "what was deleted on purpose already crossed once, and the page must not call that a failure"
+    );
+    assert_eq!(again.already, 5);
+}
+
+#[test]
+fn the_store_says_when_the_2x_crossed_and_how_much_of_it_is_still_here() {
+    let there = tempfile::tempdir().expect("a folder");
+    let picture = there.path().join("shot.png");
+    std::fs::write(&picture, b"png").expect("written");
+    let former = a_former_history(there.path(), &picture);
+
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    assert_eq!(
+        into.came_from_the_former().expect("asked").count,
+        0,
+        "nothing crossed yet, so the page may still offer to bring it"
+    );
+
+    bring(&former, &into, 7_000).expect("brought");
+    let came = into.came_from_the_former().expect("asked");
+    assert_eq!(came.count, 5);
+    assert_eq!(came.when, Some(7_000));
+}
+
+#[test]
+fn what_this_machine_copied_is_not_counted_as_coming_from_the_2x() {
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    into.insert_text("mine", "copiado hoy", 1).expect("insert");
+    assert_eq!(
+        into.came_from_the_former().expect("asked").count,
+        0,
+        "only the names the crossing writes count, or the page would say it crossed when it did not"
+    );
+}
+
+#[test]
 fn what_the_2x_left_behind_is_never_written_to() {
     let there = tempfile::tempdir().expect("a folder");
     let picture = there.path().join("shot.png");

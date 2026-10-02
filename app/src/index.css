@@ -314,6 +314,26 @@ h1 {
   border-bottom: 0;
 }
 
+.line.stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.line.stacked .does {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.quiet {
+  background: transparent;
+  border-color: transparent;
+}
+
+.quiet:hover {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 38%, transparent);
+}
+
 .line .what {
   flex: 1 1 auto;
   min-width: 0;
@@ -518,6 +538,20 @@ select {
   color: var(--muted);
   font-size: 12.5px;
   line-height: 1.55;
+}
+
+.done {
+  margin: 2px 2px 0;
+  color: var(--body);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.aside {
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .facts li {

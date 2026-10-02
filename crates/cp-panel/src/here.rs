@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir, dress, forward,
-    in_front, media_of, ocr_available, paste_into, read_stuck, stay_out_of_the_dock,
-    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, watch_start,
+    in_front, media_of, ocr_available, open_link, open_path, paste_into, read_stuck,
+    stay_out_of_the_dock, system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
+    watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +51,14 @@ mod platform {
 
     pub fn in_front() -> Option<String> {
         cp_win_sys::source::in_front()
+    }
+
+    pub fn open_path(path: &Path) -> bool {
+        cp_win_sys::files::open(path)
+    }
+
+    pub fn open_link(url: &str) -> bool {
+        cp_win_sys::files::open_link(url)
     }
 
     pub fn content_of<'a>(item: &'a Item, ocr: Option<&'a str>) -> Content<'a> {
@@ -171,6 +180,14 @@ mod platform {
 
     pub fn in_front() -> Option<String> {
         cp_mac_sys::frontmost::in_front()
+    }
+
+    pub fn open_path(path: &Path) -> bool {
+        cp_mac_sys::files::open(path)
+    }
+
+    pub fn open_link(url: &str) -> bool {
+        cp_mac_sys::files::open_link(url)
     }
 
     pub fn content_of<'a>(item: &'a Item, ocr: Option<&'a str>) -> Content<'a> {

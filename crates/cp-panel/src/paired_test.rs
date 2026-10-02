@@ -7,6 +7,7 @@ const SIZES: Metrics = Metrics {
     tall: 146.0,
     json: 112.0,
     plain: 86.0,
+    mixed: 60.0,
     found: 68.0,
     frame: 50.0,
     line: 18.0,

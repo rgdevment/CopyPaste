@@ -26,7 +26,7 @@ export component PapersBody inherits HorizontalLayout {
         border-radius: 7px;
         background: Paper.of(card.papers-family).transparentize(0.86);
         y: 0;
-        Text {
+        if card.papers-format != "" : Text {
             text: card.papers-format;
             color: Paper.of(card.papers-family);
             font-size: 9.5px;
@@ -34,15 +34,36 @@ export component PapersBody inherits HorizontalLayout {
             horizontal-alignment: center;
             vertical-alignment: center;
         }
+        if card.papers-format == "" : Image {
+            source: @image-url("../assets/icons/file.svg");
+            width: 16px;
+            height: 16px;
+            colorize: Paper.plain;
+        }
     }
 
-    Text {
-        text: card.squeezed;
-        color: Theme.body;
-        font-size: 12.5px;
+    HorizontalLayout {
+        spacing: 6px;
         horizontal-stretch: 1;
-        overflow: elide;
-        wrap: no-wrap;
-        vertical-alignment: center;
+        alignment: start;
+
+        Text {
+            text: card.folder-name != "" ? card.folder-name : card.squeezed;
+            color: Theme.body;
+            font-size: 12.5px;
+            overflow: elide;
+            wrap: no-wrap;
+            vertical-alignment: center;
+        }
+
+        if card.folder-parent != "" : Text {
+            text: card.folder-parent;
+            color: Theme.placeholder;
+            font-size: 10.5px;
+            horizontal-stretch: 1;
+            overflow: elide;
+            wrap: no-wrap;
+            vertical-alignment: center;
+        }
     }
 }
