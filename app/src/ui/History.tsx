@@ -2,7 +2,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { empty, type Kept, whereItLives } from "../core";
 import { fill, t } from "../locales";
-import { Band, Line } from "./Bits";
+import { Band, Line, wentWrong } from "./Bits";
 
 const KEPT = [7, 30, 90];
 const QUOTA = [0, 256, 512, 1024];
@@ -98,7 +98,7 @@ export default function History({
             setSure(false);
             empty()
               .then(() => setSaid(t("emptyGone")))
-              .catch((why) => setSaid(String(why)));
+              .catch((why) => setSaid(wentWrong("failedEmpty", why)));
           }}
         >
           {sure ? t("emptySure") : t("emptyDo")}

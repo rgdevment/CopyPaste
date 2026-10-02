@@ -10,6 +10,11 @@ const AHEAD: usize = 40;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Metrics {
+    pub body_json: f32,
+    pub body_link: f32,
+    pub body_folder: f32,
+    pub body_papers: f32,
+    pub body_media: f32,
     pub head: f32,
     pub tall: f32,
     pub plain: f32,
@@ -171,8 +176,26 @@ impl Rows {
         if row.thumb_path.is_some() {
             return self.metrics.tall;
         }
-        let lines = crate::view::open_lines_of(row, &body_of(row));
-        self.metrics.frame + lines as f32 * self.metrics.line
+        let lines = crate::view::open_lines_of(row, &body_of(row), self.now);
+        let own = if one_height_for_all(&self.filter, self.plain_way) {
+            self.body_room(row)
+        } else {
+            0.0
+        };
+        self.metrics.frame + lines as f32 * self.metrics.line + own
+    }
+
+    fn body_room(&self, row: &Listed) -> f32 {
+        use cp_core::kind::Kind;
+        let tall = match row.kind {
+            Some(Kind::Json) => self.metrics.body_json,
+            Some(Kind::Link) => self.metrics.body_link,
+            Some(Kind::Folder) => self.metrics.body_folder,
+            Some(Kind::File) => self.metrics.body_papers,
+            Some(Kind::Video | Kind::Audio) => self.metrics.body_media,
+            _ => 0.0,
+        };
+        if tall > 0.0 { tall + EDGE } else { 0.0 }
     }
 
     fn tall_at(&self, index: usize) -> bool {
@@ -216,6 +239,19 @@ impl Rows {
         } else {
             shut
         }
+    }
+
+    fn shut_of(&self, index: usize, row: &Listed) -> f32 {
+        if one_height_for_all(&self.filter, self.plain_way) {
+            return self.metrics.mixed;
+        }
+        if self.thumbless.borrow().contains(&index) {
+            if was_found(row) {
+                return self.metrics.found;
+            }
+            return self.shut_height();
+        }
+        self.height_of(row)
     }
 
     fn height_of(&self, row: &Listed) -> f32 {
@@ -332,6 +368,8 @@ impl Rows {
             card.heads_group = true;
             card.group_said = row.group.clone().into();
         }
+        card.shut_px = self.shut_of(index, row);
+        card.open_px = self.open_of_row(row);
         if let Some(path) = &row.thumb_path
             && let Ok(image) = slint::Image::load_from_path(std::path::Path::new(path))
         {

@@ -1071,6 +1071,7 @@ dependencies = [
  "symphonia",
  "sys-locale",
  "tempfile",
+ "unicode-segmentation",
 ]
 
 [[package]]

@@ -21,6 +21,7 @@ pub const PAST_THEIR_MARK: &str = "2x.";
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Came {
     pub count: i64,
+    pub still: i64,
     pub when: Option<i64>,
 }
 

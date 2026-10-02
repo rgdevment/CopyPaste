@@ -61,6 +61,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         withStyles: 260,
         beyondKeep: 860,
         came: 0,
+        cameStill: 0,
         cameAt: null,
         unreadable: null,
       });

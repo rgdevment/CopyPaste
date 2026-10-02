@@ -448,12 +448,12 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<()> {
-        self.db.execute(
+    pub fn set_label(&self, id: i64, label: Option<&str>, at: i64) -> Result<bool> {
+        let rows = self.db.execute(
             "UPDATE items SET label = ?2, search_label = ?3, updated_at = ?4 WHERE id = ?1",
             params![id, label, label.map(fold).unwrap_or_default(), at],
         )?;
-        Ok(())
+        Ok(rows > 0)
     }
 
     pub fn set_source(&self, id: i64, app: &str, at: i64) -> Result<()> {
@@ -920,13 +920,19 @@ impl Store {
     }
 
     pub fn came_from_the_former(&self) -> Result<crate::legacy::Came> {
-        let (count, when) = self.db.query_row(
-            "SELECT COUNT(*), MIN(updated_at) FROM items
-             WHERE uuid >= ?1 AND uuid < ?2 AND deleted_at IS NULL",
+        let (count, still, when) = self.db.query_row(
+            "SELECT COUNT(*), SUM(deleted_at IS NULL), MIN(updated_at) FROM items
+             WHERE uuid >= ?1 AND uuid < ?2",
             [crate::legacy::THEIR_MARK, crate::legacy::PAST_THEIR_MARK],
-            |row| Ok((row.get(0)?, row.get::<_, Option<i64>>(1)?)),
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get::<_, Option<i64>>(1)?.unwrap_or(0),
+                    row.get::<_, Option<i64>>(2)?,
+                ))
+            },
         )?;
-        Ok(crate::legacy::Came { count, when })
+        Ok(crate::legacy::Came { count, still, when })
     }
 
     pub fn count(&self) -> Result<i64> {

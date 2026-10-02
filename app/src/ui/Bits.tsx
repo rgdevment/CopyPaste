@@ -1,4 +1,13 @@
 import { Children, cloneElement, isValidElement, type ReactNode } from "react";
+import { t } from "../locales";
+
+export function wentWrong(
+  key: "failedLook" | "failedOut" | "failedIn" | "failedCross" | "failedDrop" | "failedEmpty",
+  why: unknown,
+): string {
+  console.error(key, why);
+  return `${t(key)} · ${t("inTheLog")}`;
+}
 
 export function asProse(parts: string[]): string {
   return parts

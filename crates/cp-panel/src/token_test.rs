@@ -33,7 +33,7 @@ fn something_that_is_not_a_token_has_nothing_to_show() {
     assert_eq!(said_of("sk-ant-api03-no-soy-un-jwt", 0, false), None);
     assert_eq!(said_of("", 0, false), None);
     assert_eq!(
-        rows_in("sk-ant-api03-no-soy-un-jwt"),
+        rows_in("sk-ant-api03-no-soy-un-jwt", 0, false),
         0,
         "una clave de API no tiene nada que descifrar, asi que no pide ni una fila"
     );
@@ -142,7 +142,7 @@ fn the_row_count_matches_the_table_the_card_will_draw() {
     let payload = r#"{"iss":"a","sub":"b","exp":1,"scope":"read"}"#;
     let said = said_of(&jwt(payload), 0, false).expect("un jwt");
     assert_eq!(
-        rows_in(&jwt(payload)),
+        rows_in(&jwt(payload), 0, false),
         said.names.lines().count(),
         "el modelo reserva alto por esta cuenta, asi que si miente la tarjeta se corta"
     );

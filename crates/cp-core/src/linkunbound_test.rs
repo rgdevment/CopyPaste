@@ -142,3 +142,24 @@ fn a_link_that_is_not_the_web_goes_straight_out_even_with_linkunbound_here() {
     let (_, asked) = tried("mailto:yo@ejemplo.cl", true, true);
     assert_eq!(asked, vec!["mailto:yo@ejemplo.cl".to_owned()]);
 }
+
+#[test]
+fn a_link_too_long_for_the_shell_is_not_even_tried_through_linkunbound() {
+    let long = format!("https://ejemplo.cl/{}", "a".repeat(super::SHELL_TAKES));
+    let (done, asked) = tried(&long, true, true);
+    assert!(done);
+    assert_eq!(
+        asked,
+        vec![long.clone()],
+        "the shell drops a url past its limit, and the encoded form is up to three times longer, \
+         so trying it first only wastes the attempt"
+    );
+}
+
+#[test]
+fn a_link_that_still_fits_encoded_goes_through_linkunbound() {
+    let short = format!("https://ejemplo.cl/{}", "a".repeat(100));
+    let (_, asked) = tried(&short, true, true);
+    assert_eq!(asked.len(), 1);
+    assert!(asked[0].starts_with(SCHEME));
+}

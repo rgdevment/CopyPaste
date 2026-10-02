@@ -255,7 +255,12 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(async (what: string, args?: unknown) => {
       const said = await (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
       if (what !== "former") return said;
-      return { ...(said as object), came: 1180, cameAt: Date.UTC(2026, 9, 2, 12) };
+      return {
+        ...(said as object),
+        came: 1180,
+        cameStill: 1180,
+        cameAt: Date.UTC(2026, 9, 2, 12),
+      };
     });
     try {
       const who = userEvent.setup();

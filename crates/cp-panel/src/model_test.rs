@@ -1,6 +1,11 @@
 use super::*;
 
 const SIZES: Metrics = Metrics {
+    body_json: 59.0,
+    body_link: 36.0,
+    body_folder: 36.0,
+    body_papers: 40.0,
+    body_media: 36.0,
     head: 23.0,
     tall: 146.0,
     json: 112.0,
@@ -596,4 +601,34 @@ fn a_thumbnail_opened_in_the_mixed_list_grows_like_everything_else_there() {
         open, SIZES.tall,
         "opening a picture is for looking at it, so the row makes room for the thumbnail the          card draws, and the scrolling follows this number"
     );
+}
+
+#[test]
+fn a_json_opened_in_the_mixed_list_reserves_the_body_it_draws() {
+    let store = Store::in_memory().expect("esquema");
+    store
+        .insert_text("j", r#"{"a": 1, "b": {"c": 2}}"#, 1)
+        .expect("insert");
+    let rows = open(Rc::new(store), 2);
+    let shut = rows.span_of(0).expect("la fila").1;
+    assert_eq!(shut, SIZES.mixed);
+    rows.open_at(Some(0));
+    let open = rows.span_of(0).expect("la fila").1;
+    assert!(
+        open >= shut + SIZES.body_json,
+        "unfolded in the general list the card draws its own body, and a height that does not \
+         count it cuts the card: {open} against {shut}"
+    );
+}
+
+#[test]
+fn a_card_carries_the_two_heights_the_model_believes() {
+    let rows = open(store_with(3), 0);
+    let card = rows.row_data(0).expect("una tarjeta");
+    assert_eq!(
+        card.shut_px,
+        rows.span_of(0).expect("la fila").1,
+        "the delegate draws with this number, so it has to be the one the model reserved"
+    );
+    assert!(card.open_px > 0.0);
 }

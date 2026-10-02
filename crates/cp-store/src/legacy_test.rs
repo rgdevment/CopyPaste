@@ -1094,3 +1094,35 @@ fn a_row_the_2x_left_unreadable_is_counted_and_the_rest_still_crosses() {
         "a row that cannot be read is counted, not swallowed, and does not stop the others"
     );
 }
+
+#[test]
+fn deleting_everything_that_crossed_does_not_make_it_look_like_it_never_did() {
+    let there = tempfile::tempdir().expect("a folder");
+    let picture = there.path().join("shot.png");
+    std::fs::write(&picture, b"png").expect("written");
+    let former = a_former_history(there.path(), &picture);
+
+    let here = tempfile::tempdir().expect("a folder");
+    let into = Store::open(&here.path().join("history.db")).expect("opened");
+    bring(&former, &into, 7_000).expect("brought");
+    let every = crate::Filter {
+        broken: crate::Broken::Shown,
+        ..Default::default()
+    };
+    let page = into.list(&every, 10, None).expect("listed");
+    assert_eq!(page.rows.len(), 5);
+    for row in &page.rows {
+        into.mark_deleted(row.id, 8_000).expect("deleted");
+    }
+
+    let came = into.came_from_the_former().expect("asked");
+    assert_eq!(
+        came.count, 5,
+        "it crossed, and deleting is not undoing that"
+    );
+    assert_eq!(came.still, 0, "none of them are here any more");
+    assert!(
+        came.when.is_some(),
+        "there is still a moment to show, even if no row of it is left"
+    );
+}

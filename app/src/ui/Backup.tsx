@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
 import { fill, items, t } from "../locales";
-import { asProse, Band, Line } from "./Bits";
+import { asProse, Band, Line, wentWrong } from "./Bits";
 
 type Former = {
   path: string;
@@ -16,6 +16,7 @@ type Former = {
   withStyles: number;
   beyondKeep: number;
   came: number | null;
+  cameStill: number;
   cameAt: number | null;
   unreadable: string | null;
 };
@@ -69,7 +70,7 @@ export default function Backup() {
   useEffect(() => {
     invoke<Former | null>("former", { at: Date.now() })
       .then(setFormer)
-      .catch((why) => setTrouble(String(why)));
+      .catch((why) => setTrouble(wentWrong("failedLook", why)));
   }, []);
 
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function Backup() {
       const lost = kept.missing > 0 ? ` · ${fill("outMissing", items(kept.missing))}` : "";
       setSaid(`${fill("outDone", items(kept.items))}${lost}`);
     } catch (why) {
-      setSaid(String(why));
+      setSaid(wentWrong("failedOut", why));
     } finally {
       setBusy(null);
     }
@@ -137,7 +138,7 @@ export default function Backup() {
           : `${brought.added === 0 ? t("inNothing") : fill("inDone", items(brought.added))}${tail}`,
       );
     } catch (why) {
-      setCame(String(why));
+      setCame(wentWrong("failedIn", why));
     } finally {
       setBusy(null);
     }
@@ -164,7 +165,7 @@ export default function Backup() {
       setCrossed(fill("formerDropGone", fill("formerDropFiles", String(swept.files))));
       setFormer(null);
     } catch (why) {
-      setCrossed(String(why));
+      setCrossed(wentWrong("failedDrop", why));
     } finally {
       setBusy(null);
     }
@@ -187,7 +188,7 @@ export default function Backup() {
       const tail = notes.length > 0 ? ` · ${notes.join(" · ")}` : "";
       setCrossed(`${fill("formerCame", items(said.added))}${tail}`);
     } catch (why) {
-      setCrossed(String(why));
+      setCrossed(wentWrong("failedCross", why));
     } finally {
       setCrossing(null);
       setBusy(null);
@@ -232,7 +233,7 @@ export default function Backup() {
               <>
                 <p className="done">
                   <strong>{fill("formerCameOn", onDay(former.cameAt))}</strong>
-                  {` · ${fill("formerStillHere", items(former.came ?? 0))}`}
+                  {` · ${fill("formerStillHere", items(former.cameStill))}`}
                 </p>
                 <p className="aside">{asProse([t("formerGoneStays"), t("formerAgainWhy")])}</p>
                 {sure && <div className="alarm">{t("formerDropWhy")}</div>}

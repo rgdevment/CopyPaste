@@ -3,6 +3,7 @@ import { Theme } from "theme.slint";
 
 export component MediaBody inherits HorizontalLayout {
     in property <Card> card;
+    height: Theme.body-media;
     spacing: 9px;
 
     if card.media-clock != "" : Rectangle {

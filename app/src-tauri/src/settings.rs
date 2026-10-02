@@ -114,6 +114,7 @@ pub struct Former {
     with_styles: i64,
     beyond_keep: i64,
     came: Option<i64>,
+    came_still: i64,
     came_at: Option<i64>,
     unreadable: Option<String>,
 }
@@ -153,11 +154,13 @@ pub fn former(at: i64) -> Result<Option<Former>, String> {
         with_styles: 0,
         beyond_keep: 0,
         came: None,
+        came_still: 0,
         came_at: None,
         unreadable: None,
     };
     if let Some(came) = came_over() {
         former.came = Some(came.count);
+        former.came_still = came.still;
         former.came_at = came.when;
     }
     match cp_store::legacy::look(&db, at, policy().keep_for) {
