@@ -44,3 +44,19 @@ fn the_wide_path_is_absolute_and_ends_in_a_terminator() {
         "{text} lleva el prefijo que el shell no entiende"
     );
 }
+
+#[test]
+fn a_scheme_nobody_registered_is_known_to_be_missing_without_asking_the_user() {
+    assert!(
+        !super::scheme_here("cp-no-hay-nada-asi-9f3a"),
+        "an unregistered scheme must be answered here, or Windows shows the «look for an app» dialog"
+    );
+}
+
+#[test]
+fn a_scheme_the_machine_does_have_is_found() {
+    assert!(
+        super::scheme_here("https"),
+        "every Windows opens the web, so a check that never says yes would be a check that does nothing"
+    );
+}

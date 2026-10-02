@@ -98,6 +98,12 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (what === "load_backup") {
       return Promise.resolve({ added: 2, already: 1 });
     }
+    if (what === "linkunbound_here") {
+      return Promise.resolve(false);
+    }
+    if (what === "open_web") {
+      return Promise.resolve();
+    }
     return Promise.reject(new Error(`sin simular: ${what}`));
   }),
 }));

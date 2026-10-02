@@ -1041,6 +1041,7 @@ dependencies = [
 name = "cp-mac-sys"
 version = "3.0.0"
 dependencies = [
+ "cp-core",
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
  "objc2-application-services",
@@ -1101,6 +1102,7 @@ dependencies = [
 name = "cp-win-sys"
 version = "3.0.0"
 dependencies = [
+ "cp-core",
  "image",
  "windows 0.62.2",
  "windows-future 0.3.2",

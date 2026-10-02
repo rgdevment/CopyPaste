@@ -1,10 +1,11 @@
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 use windows::Win32::UI::Shell::{
-    ILCreateFromPathW, ILFree, SHOpenFolderAndSelectItems, ShellExecuteW,
+    ASSOCF_NONE, ASSOCSTR_EXECUTABLE, AssocQueryStringW, ILCreateFromPathW, ILFree,
+    SHOpenFolderAndSelectItems, ShellExecuteW,
 };
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
-use windows::core::{PCWSTR, w};
+use windows::core::{PCWSTR, PWSTR, w};
 
 use crate::com::{Apartment, shell_path};
 
@@ -40,7 +41,45 @@ pub fn open(path: &Path) -> bool {
     instance.0 as usize > LAUNCHED
 }
 
+pub fn linkunbound_here() -> bool {
+    scheme_here(cp_core::linkunbound::SCHEME)
+}
+
+fn scheme_here(scheme: &str) -> bool {
+    let scheme: Vec<u16> = scheme.encode_utf16().chain(std::iter::once(0)).collect();
+    let mut room: u32 = 0;
+    let asked = unsafe {
+        AssocQueryStringW(
+            ASSOCF_NONE,
+            ASSOCSTR_EXECUTABLE,
+            PCWSTR(scheme.as_ptr()),
+            PCWSTR::null(),
+            None,
+            &raw mut room,
+        )
+    };
+    if asked.is_err() || room == 0 {
+        return false;
+    }
+    let mut said = vec![0u16; room as usize];
+    let read = unsafe {
+        AssocQueryStringW(
+            ASSOCF_NONE,
+            ASSOCSTR_EXECUTABLE,
+            PCWSTR(scheme.as_ptr()),
+            PCWSTR::null(),
+            Some(PWSTR(said.as_mut_ptr())),
+            &raw mut room,
+        )
+    };
+    read.is_ok() && said.first().is_some_and(|first| *first != 0)
+}
+
 pub fn open_link(url: &str) -> bool {
+    cp_core::linkunbound::opened_by(url, linkunbound_here(), shown)
+}
+
+fn shown(url: &str) -> bool {
     let wide: Vec<u16> = url.encode_utf16().chain(std::iter::once(0)).collect();
     let _apartment = Apartment::enter();
     let instance = unsafe {

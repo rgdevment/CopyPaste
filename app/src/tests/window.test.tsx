@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
@@ -477,12 +477,56 @@ describe("la ventana", () => {
 
   it("un enlace que no se puede abrir se dice, no se traga", async () => {
     const who = userEvent.setup();
-    const { openUrl } = await import("@tauri-apps/plugin-opener");
-    vi.mocked(openUrl).mockRejectedValueOnce(new Error("forbidden"));
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "open_web") return Promise.reject(new Error("forbidden"));
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      render(<App />);
+      await who.click(screen.getByRole("button", { name: "Acerca de" }));
+      await who.click(await screen.findByRole("button", { name: /Dale una estrella/ }));
+      expect(await screen.findByText(/No se pudo abrir/)).toBeDefined();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
+  it("los enlaces salen por la misma puerta, la que sabe de LinkUnbound", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));
     await who.click(await screen.findByRole("button", { name: /Dale una estrella/ }));
-    expect(await screen.findByText(/No se pudo abrir/)).toBeDefined();
+    expect(invoke).toHaveBeenCalledWith(
+      "open_web",
+      expect.objectContaining({ url: "https://github.com/rgdevment/CopyPaste" }),
+    );
+  });
+
+  it("sin LinkUnbound se le recomienda, y con él solo se dice que ya abre por ahí", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Acerca de" }));
+    expect(await screen.findByText(/Elige con qué navegador se abre cada enlace/)).toBeDefined();
+    expect(screen.queryByText(/tus enlaces se abren por aquí/)).toBeNull();
+
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "linkunbound_here") return Promise.resolve(true);
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      cleanup();
+      render(<App />);
+      await who.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText(/tus enlaces se abren por aquí/)).toBeDefined();
+      expect(screen.queryByText(/Elige con qué navegador se abre cada enlace/)).toBeNull();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
   });
 
   it("la copia de seguridad avisa de la 2 y de lo que se pierde al traerla", async () => {

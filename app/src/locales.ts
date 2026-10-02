@@ -124,6 +124,7 @@ const ES = {
   otherTools: "Otras herramientas",
   toolTisty: "Notas, documentos y tareas, todo local y en archivos que puedes leer sin él",
   toolLinkUnbound: "Elige con qué navegador se abre cada enlace, en el momento de abrirlo",
+  toolLinkUnboundHere: "Instalado · tus enlaces se abren por aquí",
   troubleTitle: "Si algo va mal",
   troubleWhat:
     "El informe junta en un archivo el registro de CopyPaste, su versión y qué Windows o macOS usas.",
@@ -300,6 +301,7 @@ const EN: Record<keyof Said, string> = {
   otherTools: "Other tools",
   toolTisty: "Notes, documents and tasks, all local and in files you can read without it",
   toolLinkUnbound: "Choose which browser opens each link, at the moment you open it",
+  toolLinkUnboundHere: "Installed · your links open through it",
   troubleTitle: "If something goes wrong",
   troubleWhat:
     "The report puts CopyPaste's log, its version and which Windows or macOS you use into one file.",

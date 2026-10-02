@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+cp-core.workspace = true
+
 [target.'cfg(target_os = "windows")'.dependencies]
 windows.workspace = true
 windows-future.workspace = true

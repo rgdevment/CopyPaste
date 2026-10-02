@@ -1,5 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useUpdate } from "../core";
 import { fill, t } from "../locales";
@@ -78,6 +78,7 @@ export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY, NOTI
 export default function About() {
   const [trouble, setTrouble] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
+  const [unbound, setUnbound] = useState(false);
 
   useEffect(() => {
     getVersion()
@@ -85,9 +86,15 @@ export default function About() {
       .catch(() => setVersion(null));
   }, []);
 
+  useEffect(() => {
+    invoke<boolean>("linkunbound_here")
+      .then(setUnbound)
+      .catch(() => setUnbound(false));
+  }, []);
+
   const go = (where: string) => {
     setTrouble(null);
-    openUrl(where).catch(() => setTrouble(fill("linkRefused", where)));
+    invoke("open_web", { url: where }).catch(() => setTrouble(fill("linkRefused", where)));
   };
 
   return (
@@ -200,7 +207,11 @@ export default function About() {
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <b>{tool.name}</b>
-            <span>{t(tool.says as "toolTisty")}</span>
+            <span>
+              {unbound && tool.name === "LinkUnbound"
+                ? t("toolLinkUnboundHere")
+                : t(tool.says as "toolTisty")}
+            </span>
           </span>
         </button>
       ))}
