@@ -55,3 +55,32 @@ fn nothing_is_stuck_when_no_read_is_counted() {
 fn a_clock_that_went_backwards_is_not_read_as_an_eternity() {
     assert_eq!(stuck_for(1, 9_000, 1_000), None);
 }
+
+#[test]
+fn a_second_read_waits_for_the_first_to_close_instead_of_sharing_it() {
+    let (opened, heard) = std::sync::mpsc::channel();
+    let first = std::thread::spawn(move || {
+        let held = loop {
+            if let Some(held) = Clipboard::open() {
+                break held;
+            }
+        };
+        opened.send(()).expect("the test is listening");
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let closing = std::time::Instant::now();
+        drop(held);
+        closing
+    });
+    heard.recv().expect("the first read opened");
+    let second = loop {
+        if Clipboard::open().is_some() {
+            break std::time::Instant::now();
+        }
+    };
+    let closed = first.join().expect("the first read finished");
+    assert!(
+        second >= closed,
+        "the second read opened {:?} before the first one closed",
+        closed - second
+    );
+}

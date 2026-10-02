@@ -32,6 +32,17 @@ const _: () = {
 };
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::{Mutex, MutexGuard, TryLockError};
+
+static SESSION: Mutex<()> = Mutex::new(());
+
+fn session() -> Option<MutexGuard<'static, ()>> {
+    match SESSION.try_lock() {
+        Ok(held) => Some(held),
+        Err(TryLockError::Poisoned(held)) => Some(held.into_inner()),
+        Err(TryLockError::WouldBlock) => None,
+    }
+}
 
 static READERS: AtomicUsize = AtomicUsize::new(0);
 static WRITES_COMING: AtomicUsize = AtomicUsize::new(0);
@@ -104,6 +115,7 @@ enum For {
 }
 
 pub struct Clipboard<'a> {
+    _session: MutexGuard<'static, ()>,
     _counted: Option<Reading>,
     _borrowed: Option<&'a Reading>,
     opened_for: For,
@@ -116,9 +128,11 @@ impl Clipboard<'static> {
             if WRITES_COMING.load(Ordering::SeqCst) == 0 {
                 let counted = reading();
                 if WRITES_COMING.load(Ordering::SeqCst) == 0
+                    && let Some(held) = session()
                     && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
                 {
                     return Some(Self {
+                        _session: held,
                         _counted: Some(counted),
                         _borrowed: None,
                         opened_for: For::Reading,
@@ -136,9 +150,11 @@ impl Clipboard<'static> {
         for (turn, wait) in CLEARING_MS.iter().enumerate() {
             std::thread::sleep(std::time::Duration::from_millis(*wait));
             if READERS.load(Ordering::SeqCst) == 0
+                && let Some(held) = session()
                 && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
             {
                 return Some(Self {
+                    _session: held,
                     _counted: None,
                     _borrowed: None,
                     opened_for: For::Writing,
@@ -157,9 +173,11 @@ impl<'a> Clipboard<'a> {
     pub fn within(counted: &'a Reading) -> Option<Self> {
         for wait in BACKOFF_MS {
             if WRITES_COMING.load(Ordering::SeqCst) == 0
+                && let Some(held) = session()
                 && unsafe { OpenClipboard(Some(HWND::default())) }.is_ok()
             {
                 return Some(Self {
+                    _session: held,
                     _counted: None,
                     _borrowed: Some(counted),
                     opened_for: For::Reading,
