@@ -269,6 +269,7 @@ export component Panel inherits Window {
                                     }
                                     if event.text == Key.RightArrow && root.current >= 0 {
                                         root.opened = !root.opened;
+                                        root.moved(root.current);
                                         return accept;
                                     }
                                     if event.text == Key.Escape {
