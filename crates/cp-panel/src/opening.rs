@@ -65,14 +65,43 @@ pub fn extension_of(bytes: &[u8]) -> Option<&'static str> {
     None
 }
 
-pub fn spilled(dir: &std::path::Path, id: i64, bytes: &[u8]) -> Option<std::path::PathBuf> {
-    let at = dir.join(format!("{id}.{}", extension_of(bytes)?));
+pub const SEEN_KEPT_FOR: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+pub fn named_for(bytes: &[u8]) -> Option<String> {
+    Some(format!(
+        "{:016x}.{}",
+        cp_core::hash::content_hash(bytes),
+        extension_of(bytes)?
+    ))
+}
+
+pub fn spilled(dir: &std::path::Path, bytes: &[u8]) -> Option<std::path::PathBuf> {
+    let at = dir.join(named_for(bytes)?);
     if std::fs::metadata(&at).is_ok_and(|one| one.len() == bytes.len() as u64) {
         return Some(at);
     }
     std::fs::create_dir_all(dir).ok()?;
     std::fs::write(&at, bytes).ok()?;
     Some(at)
+}
+
+pub fn sweep_seen(dir: &std::path::Path, now: std::time::SystemTime) -> usize {
+    let Ok(read) = std::fs::read_dir(dir) else {
+        return 0;
+    };
+    let mut gone = 0;
+    for one in read.flatten() {
+        let old = one
+            .metadata()
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|at| now.duration_since(at).ok())
+            .is_some_and(|since| since > SEEN_KEPT_FOR);
+        if old && std::fs::remove_file(one.path()).is_ok() {
+            gone += 1;
+        }
+    }
+    gone
 }
 
 pub fn where_previews_go() -> std::path::PathBuf {

@@ -16,6 +16,9 @@ fn opened(url: &str) -> bool {
 
 #[tauri::command(async)]
 pub fn open_web(url: String) -> Result<(), String> {
+    if !cp_core::linkunbound::opens_the_web(&url) {
+        return Err(url);
+    }
     if opened(&url) {
         return Ok(());
     }

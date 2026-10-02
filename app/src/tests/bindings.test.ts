@@ -16,6 +16,7 @@ const LOOKED_FOR: Record<string, string> = {
   supr: "event.text == Key.Delete",
   delete: "event.text == Key.Delete",
   tab: "event.text == Key.Tab",
+  f2: "event.text == Key.F2",
   "flecha derecha": "event.text == Key.RightArrow",
   "right arrow": "event.text == Key.RightArrow",
 };

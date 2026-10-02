@@ -15,7 +15,7 @@ type Former = {
   labelled: number;
   withStyles: number;
   beyondKeep: number;
-  came: number;
+  came: number | null;
   cameAt: number | null;
   unreadable: string | null;
 };
@@ -41,7 +41,14 @@ function weighed(bytes: number) {
 }
 
 function onDay(at: number | null) {
-  return at === null ? "" : new Date(at).toLocaleDateString();
+  if (at === null) {
+    return "";
+  }
+  return new Date(at).toLocaleDateString(document.documentElement.lang || undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 function named() {
@@ -221,11 +228,11 @@ export default function Backup() {
           more={
             former.unreadable ? (
               <div className="alarm">{fill("formerUnreadable", former.unreadable)}</div>
-            ) : former.came > 0 ? (
+            ) : (former.came ?? 0) > 0 ? (
               <>
                 <p className="done">
                   <strong>{fill("formerCameOn", onDay(former.cameAt))}</strong>
-                  {` · ${fill("formerStillHere", items(former.came))}`}
+                  {` · ${fill("formerStillHere", items(former.came ?? 0))}`}
                 </p>
                 <p className="aside">{asProse([t("formerGoneStays"), t("formerAgainWhy")])}</p>
                 {sure && <div className="alarm">{t("formerDropWhy")}</div>}
@@ -260,12 +267,12 @@ export default function Backup() {
         >
           <button
             type="button"
-            className={former.came > 0 ? "mild" : "strong"}
+            className={(former.came ?? 0) > 0 ? "mild" : "strong"}
             disabled={busy !== null || former.unreadable !== null || former.items === 0}
             onClick={cross}
           >
             {busy !== "former"
-              ? t(former.came > 0 ? "formerAgain" : "formerDo")
+              ? t((former.came ?? 0) > 0 ? "formerAgain" : "formerDo")
               : crossing && crossing.total > 0
                 ? fill("formerCrossing", `${crossing.done}/${crossing.total}`)
                 : t("formerBringing")}

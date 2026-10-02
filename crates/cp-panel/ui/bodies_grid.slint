@@ -98,7 +98,7 @@ export component GridCell inherits Rectangle {
                     overflow: elide;
                 }
                 Rectangle { horizontal-stretch: 1; }
-                if card.can-open : Action {
+                if card.can-open && (touch.has-hover || root.current) : Action {
                     icon: @image-url("../assets/icons/external-link.svg");
                     says: Words.open-it;
                     awake: true;

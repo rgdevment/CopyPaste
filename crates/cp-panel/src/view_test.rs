@@ -1,4 +1,6 @@
 use super::*;
+
+const TOKEN: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjbG91ZGZsYXJlIiwic3ViIjoicm9kcmlnbyIsImV4cCI6MTc5MDk1MjkxNn0.firma";
 use cp_core::search::{Excerpt, Segment};
 use cp_store::{FoundIn, Snippet};
 
@@ -72,7 +74,12 @@ fn what_was_pasted_once_or_never_carries_no_count() {
     once.app = None;
     let card = card_of(&once, 1_000_000, None);
     assert_eq!(card.times.as_str(), "");
-    assert_eq!(card.source.as_str(), "—");
+    assert_eq!(
+        card.source.as_str(),
+        "",
+        "a card from nowhere says nothing, because a dash beside a separator reads as noise"
+    );
+    assert_eq!(card.under.as_str(), "");
     assert_eq!(card.title.as_str(), "Texto");
 }
 
@@ -506,7 +513,7 @@ fn a_file_with_no_extension_still_says_which_file_it_is() {
 fn the_second_line_says_what_each_type_already_knows() {
     let mut json = row(Some(Kind::Json));
     json.preview = r#"{"a": 1, "b": {"c": 2}}"#.into();
-    let said = card_of(&json, 1_000_000, None).aside.to_string();
+    let said = card_of(&json, 1_000_000, None).under.to_string();
     assert!(
         !said.is_empty(),
         "JSON knows its keys and its depth: «{said}»"
@@ -514,7 +521,7 @@ fn the_second_line_says_what_each_type_already_knows() {
 
     let mut file = row(Some(Kind::File));
     file.preview = r"D:\Mario\Downloads\one.yml".into();
-    let said = card_of(&file, 1_000_000, None).aside.to_string();
+    let said = card_of(&file, 1_000_000, None).under.to_string();
     assert!(said.contains("YML"), "«{said}»");
     assert!(said.contains("Downloads"), "«{said}»");
     assert!(
@@ -524,7 +531,7 @@ fn the_second_line_says_what_each_type_already_knows() {
 
     let mut folder = row(Some(Kind::Folder));
     folder.preview = r"D:\Mario\Downloads".into();
-    let said = card_of(&folder, 1_000_000, None).aside.to_string();
+    let said = card_of(&folder, 1_000_000, None).under.to_string();
     assert!(said.contains("Mario"), "the folder it lives in: «{said}»");
 }
 
@@ -549,13 +556,13 @@ fn a_text_of_one_line_says_nothing_more_and_a_long_one_says_how_much_more() {
     let mut one = row(Some(Kind::Text));
     one.preview = "just one line".into();
     assert_eq!(
-        card_of(&one, 1_000_000, None).aside.as_str(),
-        "",
-        "there is nothing the card is hiding"
+        card_of(&one, 1_000_000, None).under.as_str(),
+        "Mail",
+        "there is nothing the card is hiding, so only where it came from is left"
     );
     let mut many = row(Some(Kind::Text));
     many.preview = "first\nsecond\nthird".into();
-    let said = card_of(&many, 1_000_000, None).aside.to_string();
+    let said = card_of(&many, 1_000_000, None).under.to_string();
     assert!(said.contains('2'), "two more lines are waiting: «{said}»");
 }
 
@@ -565,9 +572,9 @@ fn what_needs_no_second_line_gets_none() {
         let mut said = row(Some(kind));
         said.preview = "something".into();
         assert_eq!(
-            card_of(&said, 1_000_000, None).aside.as_str(),
-            "",
-            "{kind:?}: the glyph already says what it is"
+            card_of(&said, 1_000_000, None).under.as_str(),
+            "Mail",
+            "{kind:?}: the glyph already says what it is, so nothing but the app is left"
         );
     }
 }
@@ -611,7 +618,7 @@ fn a_name_is_cut_by_letters_and_not_by_bytes() {
 
 #[test]
 fn a_card_with_nothing_to_quote_puts_what_it_knows_on_the_first_line() {
-    let (first, second) = super::top_line(String::new(), "476×576".to_owned());
+    let (first, second) = super::top_line(String::new(), "476×576".to_owned(), "Imagen");
     assert_eq!(first, "476×576");
     assert_eq!(
         second, "",
@@ -621,9 +628,10 @@ fn a_card_with_nothing_to_quote_puts_what_it_knows_on_the_first_line() {
 
 #[test]
 fn a_card_with_something_to_quote_keeps_both_lines_where_they_were() {
-    let (first, second) = super::top_line("git add -A".to_owned(), "+3 lineas mas".to_owned());
+    let (first, second) =
+        super::top_line("git add -A".to_owned(), "+3 líneas más".to_owned(), "Texto");
     assert_eq!(first, "git add -A");
-    assert_eq!(second, "+3 lineas mas");
+    assert_eq!(second, "+3 líneas más");
 }
 
 #[test]
@@ -633,6 +641,7 @@ fn a_first_line_of_only_spaces_counts_as_empty() {
  "
         .to_owned(),
         "2 claves".to_owned(),
+        "JSON",
     );
     assert_eq!(first, "2 claves");
     assert_eq!(second, "");
@@ -658,5 +667,141 @@ fn the_card_asks_for_the_same_lines_the_model_reserves() {
     assert!(
         card.lines > super::lines_of(&body),
         "un token con claves pide mas alto que su texto suelto"
+    );
+}
+
+#[test]
+fn the_second_line_keeps_the_app_and_what_the_card_says() {
+    assert_eq!(super::under_line("476×576", "Orca"), "476×576 · Orca");
+}
+
+#[test]
+fn a_card_from_nowhere_does_not_drag_a_dangling_separator() {
+    assert_eq!(
+        super::under_line("476×576", ""),
+        "476×576",
+        "a card with no application behind it used to read «476×576 · —», and a dash is not a name"
+    );
+    assert_eq!(super::under_line("", "Orca"), "Orca");
+    assert_eq!(super::under_line("  ", "  "), "");
+}
+
+#[test]
+fn a_named_card_still_says_what_it_holds() {
+    let under = super::under_line("cargo build --workspace", "Orca");
+    assert!(
+        under.starts_with("cargo build --workspace"),
+        "naming a card must not hide what is in it: {under}"
+    );
+}
+
+#[test]
+fn the_age_a_card_shows_is_the_one_the_list_is_sorted_by() {
+    let mut said = row(Some(Kind::Image));
+    said.modified_at = 1_000;
+    said.last_used_at = Some(500_000);
+    assert_eq!(
+        super::touched_of(&said),
+        500_000,
+        "the list orders by MAX(modified_at, last_used_at), so a card that shows only modified_at \
+         sits above one that reads newer and the order looks made up"
+    );
+
+    said.last_used_at = None;
+    assert_eq!(super::touched_of(&said), 1_000);
+
+    said.last_used_at = Some(1);
+    assert_eq!(
+        super::touched_of(&said),
+        1_000,
+        "pasting something long after copying it must not make it look older"
+    );
+}
+
+#[test]
+fn the_lines_an_open_card_asks_for_are_its_body_plus_its_table_and_a_gap() {
+    let mut text = row(Some(Kind::Text));
+    text.preview = "una sola linea".into();
+    let body = super::body_of(&text);
+    assert_eq!(
+        super::open_lines_of(&text, &body),
+        super::lines_of(&body),
+        "with no table there is nothing to add"
+    );
+
+    let mut token = row(Some(Kind::Token));
+    token.preview = TOKEN.into();
+    let body = super::body_of(&token);
+    let rows = i32::try_from(crate::token::rows_in(TOKEN)).expect("a few");
+    assert!(rows > 0);
+    assert_eq!(
+        super::open_lines_of(&token, &body),
+        super::lines_of(&body) + rows + 1,
+        "the table takes a line per claim and one more for the gap above it"
+    );
+}
+
+#[test]
+fn only_a_token_is_read_as_a_token() {
+    let mut said = row(Some(Kind::Text));
+    said.preview = TOKEN.into();
+    let card = card_of(&said, 1_000_000, None);
+    assert!(
+        !card.claims,
+        "a text that happens to look like a JWT is still a text, and must not grow a table"
+    );
+    said.kind = Some(Kind::Token);
+    assert!(card_of(&said, 1_000_000, None).claims);
+}
+
+#[test]
+fn what_can_be_opened_is_a_path_or_a_link_and_not_everything_else() {
+    let mut file = row(Some(Kind::File));
+    file.preview = r"D:\Mario\uno.yml".into();
+    assert!(card_of(&file, 1_000_000, None).can_open);
+
+    let mut link = row(Some(Kind::Link));
+    link.preview = "https://ejemplo.cl/a".into();
+    assert!(card_of(&link, 1_000_000, None).can_open);
+
+    let mut plain = row(Some(Kind::Text));
+    plain.preview = "nada que abrir".into();
+    assert!(
+        !card_of(&plain, 1_000_000, None).can_open,
+        "a button that cannot do anything is worse than no button"
+    );
+}
+
+#[test]
+fn each_type_puts_its_own_fact_on_the_second_line() {
+    let mut video = row(Some(Kind::Video));
+    video.preview = "clip.mp4".into();
+    let meta = [(crate::media::DURATION.to_owned(), "90000".to_owned())]
+        .into_iter()
+        .collect::<super::MetaOfOne>();
+    let said = card_of(&video, 1_000_000, Some(&meta)).under.to_string();
+    assert!(said.contains("1:30"), "a video says its clock: «{said}»");
+
+    let mut image = row(Some(Kind::Image));
+    image.preview = String::new();
+    let meta = [
+        (crate::media::WIDTH.to_owned(), "800".to_owned()),
+        (crate::media::HEIGHT.to_owned(), "600".to_owned()),
+    ]
+    .into_iter()
+    .collect::<super::MetaOfOne>();
+    let said = card_of(&image, 1_000_000, Some(&meta));
+    assert!(
+        said.headline.as_str().contains("800"),
+        "an image has nothing to quote, so its measures take the first line: «{}»",
+        said.headline
+    );
+
+    let mut token = row(Some(Kind::Token));
+    token.preview = TOKEN.into();
+    let said = card_of(&token, 1_000_000, None).under.to_string();
+    assert!(
+        said.contains("rodrigo") && said.contains("cloudflare"),
+        "a token says who it is for and who signed it: «{said}»"
     );
 }

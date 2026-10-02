@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { type Kept, type Look, onMac, PRIVACY_PANE, useTrust, useWaking } from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
@@ -79,7 +79,7 @@ export default function General({
               type="button"
               className="strong"
               onClick={() => {
-                void invoke("open_web", { url: PRIVACY_PANE }).catch(() => {});
+                void openUrl(PRIVACY_PANE).catch(() => {});
               }}
             >
               {t("trustOpen")}

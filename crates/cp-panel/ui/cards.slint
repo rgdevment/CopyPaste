@@ -203,6 +203,8 @@ component NameField inherits Rectangle {
         height: parent.height;
         text: root.seed;
         color: Theme.body;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.panel;
         font-size: root.words-size;
         single-line: true;
         vertical-alignment: center;
@@ -238,6 +240,7 @@ export component CardView inherits Rectangle {
     property <bool> mixed: layout == "everything" && !plain-way;
     property <string> shown-as: mixed ? card.kind : layout;
     property <bool> unfolded: mixed && open;
+    property <bool> type-body: !mixed && !open;
     property <bool> special: card.paints || (!plain-way && (layout == "json" || layout == "video"
         || layout == "audio" || layout == "papers" || layout == "folder" || layout == "link"));
     in property <bool> current;
@@ -373,23 +376,14 @@ export component CardView inherits Rectangle {
                         }
                     }
                     Text {
-                        text: card.aside != "" ? card.aside : (card.name != "" ? card.headline : "");
+                        text: card.name != "" || being-named ? card.under-named : card.under;
                         color: Theme.muted;
                         font-size: 11px;
                         overflow: elide;
                         wrap: no-wrap;
-                        horizontal-stretch: 0;
+                        horizontal-stretch: 1;
                         vertical-alignment: center;
                     }
-                    Text {
-                        text: (card.aside != "" || card.name != "" ? "· " : "") + card.source;
-                        color: Theme.muted;
-                        font-size: 11px;
-                        wrap: no-wrap;
-                        horizontal-stretch: 0;
-                        vertical-alignment: center;
-                    }
-                    Rectangle { horizontal-stretch: 1; }
                 }
             }
         }
@@ -453,23 +447,23 @@ export component CardView inherits Rectangle {
             }
         }
 
-        if !card.has-thumb && (!open || unfolded) && !plain-way && shown-as == "json" : JsonBody {
+        if !card.has-thumb && type-body && !plain-way && shown-as == "json" : JsonBody {
             card: card;
         }
 
-        if !card.has-thumb && (!open || unfolded) && !plain-way && (shown-as == "video" || shown-as == "audio") : MediaBody {
+        if !card.has-thumb && type-body && !plain-way && (shown-as == "video" || shown-as == "audio") : MediaBody {
             card: card;
         }
 
-        if !card.has-thumb && (!open || unfolded) && !plain-way && (shown-as == "papers" || shown-as == "file") : PapersBody {
+        if !card.has-thumb && type-body && !plain-way && (shown-as == "papers" || shown-as == "file") : PapersBody {
             card: card;
         }
 
-        if !card.has-thumb && (!open || unfolded) && !plain-way && shown-as == "folder" : FolderBody {
+        if !card.has-thumb && type-body && !plain-way && shown-as == "folder" : FolderBody {
             card: card;
         }
 
-        if !card.has-thumb && (!open || unfolded) && !plain-way && shown-as == "link" : LinkBody {
+        if !card.has-thumb && type-body && !plain-way && shown-as == "link" : LinkBody {
             card: card;
         }
 
@@ -536,7 +530,7 @@ export component CardView inherits Rectangle {
                 wrap: no-wrap;
                 vertical-alignment: center;
             }
-            Text { text: "· " + card.source; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+            if card.source != "" : Text { text: "· " + card.source; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
             if card.times != "" : Text { text: "×" + card.times; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
             if card.pinned : Icon { source: @image-url("../assets/icons/pin.svg"); width: 10px; height: 10px; tint: Theme.accent-dim; y: (parent.height - 10px) / 2; }
             Rectangle { horizontal-stretch: 1; }

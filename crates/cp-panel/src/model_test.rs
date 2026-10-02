@@ -577,3 +577,23 @@ fn the_room_a_heading_row_gets_is_the_card_plus_the_heading() {
         "the row that carries the heading gets exactly one heading more of room"
     );
 }
+
+#[test]
+fn a_thumbnail_opened_in_the_mixed_list_grows_like_everything_else_there() {
+    let store = store_with(2);
+    store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
+    let rows = open(store, 0);
+    let shut = rows.span_of(0).expect("la fila").1;
+    assert_eq!(shut, SIZES.mixed);
+    rows.open_at(Some(0));
+    let open = rows.span_of(0).expect("la fila").1;
+    assert!(
+        open > shut,
+        "in the mixed list a thumbnail row is not tall, so opening it must move the rows below: \
+         the model said {open} and the delegate draws it grown"
+    );
+    assert_ne!(
+        open, SIZES.tall,
+        "the own-view height has no business here, and the scrolling follows this number"
+    );
+}

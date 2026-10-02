@@ -83,9 +83,13 @@ fn said_as(name: &str, value: &serde_json::Value, now: i64, english: bool) -> St
     })
 }
 
+fn gap_between(at: i64, now: i64) -> i64 {
+    i64::try_from(at.saturating_sub(now).unsigned_abs()).unwrap_or(i64::MAX)
+}
+
 fn moment_of(seconds: i64, now: i64, english: bool) -> String {
     let at = seconds.saturating_mul(1_000);
-    let span = crate::age::span_in(english, (at - now).abs());
+    let span = crate::age::span_in(english, gap_between(at, now));
     match (at <= now, english) {
         (true, true) => format!("{span} ago"),
         (true, false) => format!("hace {span}"),
@@ -99,10 +103,10 @@ fn life_of(claims: &Claims, now: i64, english: bool) -> String {
         return String::new();
     };
     let at = seconds.saturating_mul(1_000);
-    let span = crate::age::span_in(english, (at - now).abs());
+    let span = crate::age::span_in(english, gap_between(at, now));
     match (at <= now, english) {
-        (true, true) => format!("expired {span} ago"),
-        (true, false) => format!("caducó hace {span}"),
+        (true, true) => format!("{span} ago"),
+        (true, false) => format!("hace {span}"),
         (false, true) => format!("expires in {span}"),
         (false, false) => format!("caduca en {span}"),
     }

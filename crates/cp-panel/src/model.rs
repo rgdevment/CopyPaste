@@ -173,7 +173,8 @@ impl Rows {
     }
 
     fn tall_at(&self, index: usize) -> bool {
-        !self.thumbless.borrow().contains(&index)
+        !one_height_for_all(&self.filter, self.plain_way)
+            && !self.thumbless.borrow().contains(&index)
             && self
                 .rows
                 .borrow()

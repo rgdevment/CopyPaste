@@ -511,7 +511,7 @@ describe("la ventana", () => {
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));
     expect(await screen.findByText(/Elige con qué navegador se abre cada enlace/)).toBeDefined();
-    expect(screen.queryByText(/tus enlaces se abren por aquí/)).toBeNull();
+    expect(screen.queryByText(/tus enlaces salen por él/)).toBeNull();
 
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -522,7 +522,7 @@ describe("la ventana", () => {
       cleanup();
       render(<App />);
       await who.click(screen.getByRole("button", { name: "Acerca de" }));
-      expect(await screen.findByText(/tus enlaces se abren por aquí/)).toBeDefined();
+      expect(await screen.findByText(/tus enlaces salen por él/)).toBeDefined();
       expect(screen.queryByText(/Elige con qué navegador se abre cada enlace/)).toBeNull();
     } finally {
       vi.mocked(invoke).mockImplementation(real as never);

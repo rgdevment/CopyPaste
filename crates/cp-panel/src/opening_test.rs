@@ -137,16 +137,16 @@ fn a_capture_is_written_once_and_found_again() {
     let dir = std::env::temp_dir().join(format!("cp-seen-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let bytes = [0x89, b'P', b'N', b'G', 1, 2, 3, 4];
-    let first = spilled(&dir, 7, &bytes).expect("written");
+    let first = spilled(&dir, &bytes).expect("written");
     assert_eq!(
         first.extension().and_then(|one| one.to_str()),
         Some("png"),
         "the viewer picks its application by the extension"
     );
     assert_eq!(std::fs::read(&first).expect("read"), bytes);
-    let again = spilled(&dir, 7, &bytes).expect("found");
+    let again = spilled(&dir, &bytes).expect("found");
     assert_eq!(again, first, "the same capture is not written twice");
-    assert_eq!(spilled(&dir, 7, b"not an image"), None);
+    assert_eq!(spilled(&dir, b"not an image"), None);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -202,4 +202,91 @@ fn a_link_card_offers_to_open_and_a_plain_one_does_not() {
     assert!(!can_open_link(Some(Kind::Link), "not a url at all"));
     assert!(!can_open_link(Some(Kind::Link), "file:///C:/secret.txt"));
     assert!(!can_open_link(Some(Kind::Text), "https://example.com/one"));
+}
+
+#[test]
+fn two_pictures_that_share_an_id_do_not_share_a_preview() {
+    let dir = tempfile::tempdir().expect("a folder");
+    let one = [b"\x89PNG\r\n\x1a\n".to_vec(), vec![1u8; 40]].concat();
+    let other = [b"\x89PNG\r\n\x1a\n".to_vec(), vec![2u8; 40]].concat();
+    assert_eq!(one.len(), other.len());
+    let first = spilled(dir.path(), &one).expect("written");
+    let second = spilled(dir.path(), &other).expect("written");
+    assert_ne!(
+        first, second,
+        "ids come back around when rows are deleted, so naming by id and length would show the \
+         picture somebody already deleted"
+    );
+    assert_eq!(std::fs::read(&first).expect("read"), one);
+    assert_eq!(std::fs::read(&second).expect("read"), other);
+}
+
+#[test]
+fn what_was_spilled_long_ago_is_swept_and_what_is_fresh_stays() {
+    let dir = tempfile::tempdir().expect("a folder");
+    let bytes = [b"\x89PNG\r\n\x1a\n".to_vec(), vec![3u8; 16]].concat();
+    let at = spilled(dir.path(), &bytes).expect("written");
+    assert_eq!(
+        super::sweep_seen(dir.path(), std::time::SystemTime::now()),
+        0
+    );
+    assert!(at.exists(), "what was just opened is still being looked at");
+
+    let later =
+        std::time::SystemTime::now() + super::SEEN_KEPT_FOR + std::time::Duration::from_secs(60);
+    assert_eq!(super::sweep_seen(dir.path(), later), 1);
+    assert!(
+        !at.exists(),
+        "clipboard content written out in the clear must not outlive the look at it"
+    );
+}
+
+#[test]
+fn spilling_the_same_picture_twice_writes_it_once() {
+    let dir = tempfile::tempdir().expect("a folder");
+    let bytes = [b"\x89PNG\r\n\x1a\n".to_vec(), vec![9u8; 24]].concat();
+    let at = spilled(dir.path(), &bytes).expect("written");
+    let first = std::fs::metadata(&at)
+        .expect("there")
+        .modified()
+        .expect("when");
+    std::thread::sleep(std::time::Duration::from_millis(40));
+    let again = spilled(dir.path(), &bytes).expect("found");
+    assert_eq!(at, again);
+    assert_eq!(
+        std::fs::metadata(&again)
+            .expect("there")
+            .modified()
+            .expect("when"),
+        first,
+        "a picture already written out is handed over as it is, not written again"
+    );
+}
+
+#[test]
+fn where_previews_go_is_a_folder_of_ours_inside_the_temporary_one() {
+    let at = super::where_previews_go();
+    assert!(at.starts_with(std::env::temp_dir()));
+    assert!(at.ends_with("seen"));
+    assert!(
+        at.parent().is_some_and(|one| one.ends_with("CopyPaste")),
+        "what is written out in the clear lives under our own name: {at:?}"
+    );
+}
+
+#[test]
+fn what_is_and_is_not_a_path_is_decided_by_the_separator_and_the_drive() {
+    assert!(super::looks_like_a_path(r"C:\Users\Mario"));
+    assert!(super::looks_like_a_path(r"c:/Users/Mario"));
+    assert!(super::looks_like_a_path(r"\\servidor\share"));
+    assert!(super::looks_like_a_path(r"/home/mario"));
+    assert!(super::looks_like_a_path(r"carpeta/archivo.txt"));
+    assert!(!super::looks_like_a_path(r"C:"));
+    assert!(!super::looks_like_a_path(r"a:b"));
+    assert!(
+        super::looks_like_a_path(r"1:\no-es-unidad"),
+        "a separator is enough: what is not a drive may still be a relative path"
+    );
+    assert!(!super::looks_like_a_path("solo texto"));
+    assert!(!super::looks_like_a_path(""));
 }

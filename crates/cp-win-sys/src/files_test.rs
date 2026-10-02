@@ -60,3 +60,18 @@ fn a_scheme_the_machine_does_have_is_found() {
         "every Windows opens the web, so a check that never says yes would be a check that does nothing"
     );
 }
+
+#[test]
+fn each_way_of_asking_agrees_about_a_scheme_that_is_not_there() {
+    assert!(!super::asked_of_the_shell("cp-no-hay-nada-asi-9f3a"));
+    assert!(!super::written_as_a_protocol("cp-no-hay-nada-asi-9f3a"));
+}
+
+#[test]
+fn the_registry_alone_can_answer_for_a_scheme_the_shell_resolves() {
+    assert!(
+        super::written_as_a_protocol("https"),
+        "an app from the Store registers no plain executable, so the key that makes a scheme a \
+         scheme is what has to be looked at when the shell does not answer"
+    );
+}

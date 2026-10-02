@@ -381,20 +381,6 @@ impl App {
         });
         let ui = self.ui.clone();
         let state = self.state.clone();
-        panel.on_open_asked(move |id| {
-            let store = state.borrow().store.clone();
-            let said = reach_for(&store, i64::from(id));
-            let Some(ui) = ui.upgrade() else {
-                return;
-            };
-            match said {
-                Reached::Opened => {}
-                Reached::Working => note(&format!("{id} is being opened, slowly")),
-                Reached::Refused => complain(&ui, cannot_open()),
-            }
-        });
-        let ui = self.ui.clone();
-        let state = self.state.clone();
         panel.on_remove(move |id| {
             if let Err(why) = state.borrow().store.mark_deleted(i64::from(id), now_ms()) {
                 note(&format!("{id} could not be deleted: {why}"));
@@ -597,7 +583,34 @@ impl App {
                 let _ = ui.hide();
             }
         });
+        self.wire_opening(panel);
         self.wire_naming(panel);
+    }
+
+    fn wire_opening(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_open_asked(move |id| {
+            let store = state.borrow().store.clone();
+            let said = reach_for(&store, i64::from(id));
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            match said {
+                Reached::Opened => {}
+                Reached::Working => note(&format!("{id} is being opened, slowly")),
+                Reached::NoLink => complain(&ui, cannot_open_link()),
+                Reached::Missing => {
+                    let now = now_ms();
+                    if let Err(why) = state.borrow().store.mark_broken(i64::from(id), now) {
+                        note(&format!("{id} could not be marked as gone: {why}"));
+                    }
+                    keeping_place(&ui, &state);
+                    complain(&ui, cannot_open());
+                }
+                Reached::Refused => complain(&ui, cannot_open()),
+            }
+        });
     }
 
     fn wire_naming(&self, panel: &Panel) {
@@ -605,16 +618,18 @@ impl App {
         let state = self.state.clone();
         panel.on_named(move |id, said| {
             let name = crate::view::name_worth_keeping(&said);
-            if let Err(why) =
-                state
-                    .borrow()
-                    .store
-                    .set_label(i64::from(id), name.as_deref(), now_ms())
-            {
+            let kept = state
+                .borrow()
+                .store
+                .set_label(i64::from(id), name.as_deref(), now_ms());
+            if let Err(why) = &kept {
                 note(&format!("{id} could not be named: {why}"));
             }
             if let Some(ui) = ui.upgrade() {
                 ui.set_naming(-1);
+                if kept.is_err() {
+                    complain(&ui, cannot_name());
+                }
                 keeping_place(&ui, &state);
             }
         });
@@ -1099,6 +1114,8 @@ enum Reached {
     Opened,
     Working,
     Refused,
+    NoLink,
+    Missing,
 }
 
 fn reach_for(store: &Store, id: i64) -> Reached {
@@ -1112,18 +1129,31 @@ fn reach_for(store: &Store, id: i64) -> Reached {
     {
         let url = url.to_owned();
         let asking = cp_core::reading::begin(move || here::open_link(&url));
-        return answered(asking.waited(crate::opening::PATIENCE));
+        return match answered(asking.waited(crate::opening::PATIENCE)) {
+            Reached::Refused => Reached::NoLink,
+            other => other,
+        };
     }
-    let path = match crate::opening::first_of(&content.paths) {
+    let said_path = crate::opening::first_of(&content.paths)
+        .map(str::to_owned)
+        .or_else(|| {
+            content
+                .text
+                .as_deref()
+                .map(|said| said.lines().next().unwrap_or("").trim().to_owned())
+                .filter(|said| crate::opening::looks_like_a_path(said))
+        });
+    let on_disk = said_path.is_some();
+    let path = match said_path {
         Some(said) => std::path::PathBuf::from(said),
         None => {
             let Some(bytes) = content.image else {
                 note(&format!("{id} has nothing a viewer could be given"));
                 return Reached::Refused;
             };
-            let Some(spilled) =
-                crate::opening::spilled(&crate::opening::where_previews_go(), id, bytes)
-            else {
+            let seen = crate::opening::where_previews_go();
+            crate::opening::sweep_seen(&seen, std::time::SystemTime::now());
+            let Some(spilled) = crate::opening::spilled(&seen, bytes) else {
                 note(&format!("{id} could not be written out to be seen"));
                 return Reached::Refused;
             };
@@ -1131,7 +1161,10 @@ fn reach_for(store: &Store, id: i64) -> Reached {
         }
     };
     let asking = cp_core::reading::begin(move || here::open_path(&path));
-    answered(asking.waited(crate::opening::PATIENCE))
+    match answered(asking.waited(crate::opening::PATIENCE)) {
+        Reached::Refused if on_disk => Reached::Missing,
+        other => other,
+    }
 }
 
 fn answered(said: cp_core::reading::Waited<bool>) -> Reached {
@@ -1147,6 +1180,20 @@ fn cannot_open() -> &'static str {
     crate::say::pick(
         "no se pudo abrir: puede que ya no esté ahí",
         "could not open it: it may not be there any more",
+    )
+}
+
+fn cannot_open_link() -> &'static str {
+    crate::say::pick(
+        "no se pudo abrir el enlace",
+        "that link could not be opened",
+    )
+}
+
+fn cannot_name() -> &'static str {
+    crate::say::pick(
+        "no se pudo guardar el nombre",
+        "that name could not be kept",
     )
 }
 

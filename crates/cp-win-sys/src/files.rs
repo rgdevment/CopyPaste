@@ -1,7 +1,7 @@
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 use windows::Win32::UI::Shell::{
-    ASSOCF_NONE, ASSOCSTR_EXECUTABLE, AssocQueryStringW, ILCreateFromPathW, ILFree,
+    ASSOCF_IS_PROTOCOL, ASSOCSTR_COMMAND, AssocQueryStringW, ILCreateFromPathW, ILFree,
     SHOpenFolderAndSelectItems, ShellExecuteW,
 };
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
@@ -46,13 +46,17 @@ pub fn linkunbound_here() -> bool {
 }
 
 fn scheme_here(scheme: &str) -> bool {
-    let scheme: Vec<u16> = scheme.encode_utf16().chain(std::iter::once(0)).collect();
+    asked_of_the_shell(scheme) || written_as_a_protocol(scheme)
+}
+
+fn asked_of_the_shell(scheme: &str) -> bool {
+    let wide: Vec<u16> = scheme.encode_utf16().chain(std::iter::once(0)).collect();
     let mut room: u32 = 0;
     let asked = unsafe {
         AssocQueryStringW(
-            ASSOCF_NONE,
-            ASSOCSTR_EXECUTABLE,
-            PCWSTR(scheme.as_ptr()),
+            ASSOCF_IS_PROTOCOL,
+            ASSOCSTR_COMMAND,
+            PCWSTR(wide.as_ptr()),
             PCWSTR::null(),
             None,
             &raw mut room,
@@ -64,15 +68,23 @@ fn scheme_here(scheme: &str) -> bool {
     let mut said = vec![0u16; room as usize];
     let read = unsafe {
         AssocQueryStringW(
-            ASSOCF_NONE,
-            ASSOCSTR_EXECUTABLE,
-            PCWSTR(scheme.as_ptr()),
+            ASSOCF_IS_PROTOCOL,
+            ASSOCSTR_COMMAND,
+            PCWSTR(wide.as_ptr()),
             PCWSTR::null(),
             Some(PWSTR(said.as_mut_ptr())),
             &raw mut room,
         )
     };
     read.is_ok() && said.first().is_some_and(|first| *first != 0)
+}
+
+fn written_as_a_protocol(scheme: &str) -> bool {
+    use winreg::RegKey;
+    use winreg::enums::{HKEY_CLASSES_ROOT, KEY_READ};
+    RegKey::predef(HKEY_CLASSES_ROOT)
+        .open_subkey_with_flags(scheme, KEY_READ)
+        .is_ok_and(|key| key.get_raw_value("URL Protocol").is_ok())
 }
 
 pub fn open_link(url: &str) -> bool {

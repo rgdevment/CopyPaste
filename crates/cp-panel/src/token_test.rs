@@ -61,7 +61,10 @@ fn a_live_token_says_how_long_it_has_left() {
 #[test]
 fn a_dead_token_says_how_long_ago_it_died() {
     let said = said_of(&jwt(r#"{"exp":3600}"#), 3 * HOUR, false).expect("un jwt");
-    assert_eq!(said.life, "caducó hace 2 h");
+    assert_eq!(
+        said.life, "hace 2 h",
+        "the badge already shouts CADUCADO, so the line says only how long ago"
+    );
 }
 
 #[test]
@@ -183,4 +186,20 @@ fn a_claim_with_nothing_in_it_does_not_take_a_line() {
         "una clave vacia ocupa una linea para no decir nada, y la tarjeta se mide por lineas"
     );
     assert_eq!(said.values, "rodrigo");
+}
+
+#[test]
+fn a_claim_with_an_absurd_moment_does_not_bring_the_panel_down() {
+    for seconds in [
+        i64::MIN,
+        i64::MAX,
+        -9_223_372_036_854_775,
+        9_223_372_036_854_775,
+    ] {
+        let payload = format!(r#"{{"exp":{seconds},"iat":{seconds}}}"#);
+        let said = said_of(&jwt(&payload), 1_760_000_000_000, false)
+            .expect("a token with a number nobody meant is still a token");
+        assert!(!said.life.is_empty());
+        assert!(!said.values.is_empty());
+    }
 }

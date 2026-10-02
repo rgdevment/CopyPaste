@@ -240,7 +240,8 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if (event.text == Key.F2 || (event.text == "e" && event.modifiers.control))
-                                        && root.current >= 0 {
+                                        && root.current >= 0
+                                        && (root.layout != "image" || root.way == "rows") {
                                         root.naming = root.cards[root.current].id;
                                         return accept;
                                     }
@@ -556,14 +557,16 @@ export component Panel inherits Window {
                                 root.sheet-span = self.height;
                             }
                         }
+                        property <bool> mixed-here: root.layout == "everything" && !root.plain-way;
+                        property <bool> open-here: index == root.current && root.opened;
+                        property <length> grown: Theme.row-frame + card.lines * Theme.line;
                         height: (card.heads-group ? Theme.row-head : 0px) + (
-                            root.layout == "everything" && !root.plain-way
-                                && !(index == root.current && root.opened)
-                            ? root.shut
-                            : card.has-thumb
-                                ? Theme.row-thumb
-                                : index == root.current && root.opened
-                                    ? Theme.row-frame + card.lines * Theme.line
+                            open-here
+                            ? (mixed-here || !card.has-thumb ? grown : Theme.row-thumb)
+                            : mixed-here
+                                ? root.shut
+                                : card.has-thumb
+                                    ? Theme.row-thumb
                                     : card.found ? Theme.row-found : root.shut);
                         animate height { duration: root.gliding ? Theme.settle : 0ms; easing: ease-out; }
                         VerticalLayout {

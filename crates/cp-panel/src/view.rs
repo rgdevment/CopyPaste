@@ -116,24 +116,26 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         &clock,
         &measures,
     );
-    let (headline, aside) = top_line(headline, aside);
+    let (headline, aside) = top_line(headline, aside, label_of(row.kind));
+    let source = row.app.clone().unwrap_or_default();
     Card {
         id: row.id as i32,
         kind: kind.into(),
+        under: under_line(&aside, &source).into(),
+        under_named: under_line(&headline, &source).into(),
         headline: headline.into(),
-        aside: aside.into(),
         name: row.label.clone().unwrap_or_default().into(),
         claims: !token.names.is_empty(),
         claim_names: token.names.into(),
         claim_values: token.values.into(),
         title: label_of(row.kind).into(),
-        source: row.app.clone().unwrap_or_else(|| "—".into()).into(),
+        source: source.into(),
         times: if row.paste_count > 1 {
             row.paste_count.to_string().into()
         } else {
             "".into()
         },
-        age: age_text(now, row.modified_at).into(),
+        age: age_text(now, touched_of(row)).into(),
         lines: open_lines_of(row, &body),
         body_lines: lines_of(&body),
         squeezed: squeezed_of(&body).into(),
@@ -210,11 +212,29 @@ pub fn open_lines_of(row: &Listed, body: &str) -> i32 {
     lines_of(body) + table
 }
 
-pub fn top_line(headline: String, aside: String) -> (String, String) {
-    if headline.trim().is_empty() {
+pub fn touched_of(row: &Listed) -> i64 {
+    row.last_used_at.unwrap_or(0).max(row.modified_at)
+}
+
+pub fn under_line(said: &str, source: &str) -> String {
+    let said = said.trim();
+    let source = source.trim();
+    match (said.is_empty(), source.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => source.to_owned(),
+        (false, true) => said.to_owned(),
+        (false, false) => format!("{said} · {source}"),
+    }
+}
+
+pub fn top_line(headline: String, aside: String, label: &str) -> (String, String) {
+    if !headline.trim().is_empty() {
+        return (headline, aside);
+    }
+    if !aside.trim().is_empty() {
         return (aside, String::new());
     }
-    (headline, aside)
+    (label.to_owned(), String::new())
 }
 
 pub fn aside_of(
@@ -265,7 +285,7 @@ fn more_than_shown(row: &Listed) -> String {
     if crate::say::in_english() {
         format!("+{rest} more lines")
     } else {
-        format!("+{rest} lineas mas")
+        format!("+{rest} líneas más")
     }
 }
 
