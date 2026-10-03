@@ -1,7 +1,8 @@
 use crate::here;
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
-use crate::opening::{Reached, reach_for};
+use crate::opening::Reached;
+use crate::reaching::reach_for;
 use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
 use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};

@@ -20,3 +20,22 @@ fn nothing_to_drag_is_answered_before_the_view_is_read() {
     }
     assert_eq!(from_view(nowhere(), &[]), Dragged::Nothing);
 }
+
+#[test]
+fn a_file_becomes_something_a_drag_can_carry_with_its_icon_on_it() {
+    let at = NSPoint::new(0.0, 0.0);
+    let item = item_for(Path::new("/etc/hosts"), at).expect("a file that is always there");
+    let frame = item.draggingFrame();
+    assert_eq!(frame.size.width, ICON_SIDE);
+    assert_eq!(frame.size.height, ICON_SIDE);
+}
+
+#[test]
+fn a_path_macos_cannot_spell_is_nothing_to_drag() {
+    use std::os::unix::ffi::OsStrExt;
+    let bad = std::ffi::OsStr::from_bytes(&[0xff, 0xfe]);
+    assert!(
+        item_for(Path::new(bad), NSPoint::new(0.0, 0.0)).is_none(),
+        "a path that is not text cannot become an NSURL, and half a drag is worse than none"
+    );
+}

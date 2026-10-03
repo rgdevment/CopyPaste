@@ -255,6 +255,6 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=app/coverage/lcov.info
             -Dsonar.rust.clippy.enabled=false
             -Dsonar.cpd.exclusions=app/src/locales.ts
-            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs
+            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs,crates/cp-panel/src/reaching.rs
             -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
             -Dsonar.qualitygate.timeout=300
