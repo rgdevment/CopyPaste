@@ -566,6 +566,38 @@ fn removing_a_label_takes_it_out_of_the_index() {
 }
 
 #[test]
+fn the_name_a_card_was_given_can_be_read_back_on_its_own() {
+    let store = Store::in_memory().expect("schema");
+    let id = store
+        .insert_text("uuid-nombre", "content", 1)
+        .expect("insert");
+    assert_eq!(store.label_of(id).expect("asked"), None);
+    store.set_label(id, Some("logo final"), 2).expect("set");
+    assert_eq!(
+        store.label_of(id).expect("asked").as_deref(),
+        Some("logo final")
+    );
+    store.set_label(id, None, 3).expect("cleared");
+    assert_eq!(store.label_of(id).expect("asked"), None);
+}
+
+#[test]
+fn an_item_that_is_gone_has_no_name_to_read() {
+    let store = Store::in_memory().expect("schema");
+    let id = store
+        .insert_text("uuid-borrado", "content", 1)
+        .expect("insert");
+    store.set_label(id, Some("named"), 2).expect("set");
+    store.mark_deleted(id, 3).expect("deleted");
+    assert_eq!(
+        store.label_of(id).expect("asked"),
+        None,
+        "a deleted card is not there to be dragged, so neither is its name"
+    );
+    assert_eq!(store.label_of(i64::MAX).expect("asked"), None);
+}
+
+#[test]
 fn deleting_hides_the_item_from_everything_the_user_can_see() {
     let store = seeded();
     let id = store

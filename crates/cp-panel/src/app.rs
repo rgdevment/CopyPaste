@@ -660,10 +660,13 @@ impl App {
                 note(&format!("{id} could not be looked up to drag it"));
                 return;
             };
+            let label = store.label_of(i64::from(id)).unwrap_or_default();
             let content = here::content_of(&item, None);
             let files = crate::dragging::files_for(
+                item.kind,
                 &content.paths,
                 content.image,
+                label.as_deref(),
                 std::time::SystemTime::now(),
             );
             if files.is_empty() {
