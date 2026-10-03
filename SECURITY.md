@@ -23,12 +23,13 @@ I'm not protecting a brand or business. I'm protecting _you_ and everyone using 
 - **Local SQLite Database** — Your clipboard history is stored in a local database on your machine, not in the cloud.
 - **Configurable Retention** — Automatically delete old clipboard items based on your retention settings.
 - **Open Source** — Every line of code is public. You can inspect, audit, and verify what we're doing.
-- **Signed Release Manifest** — The update notifier fetches a small JSON file signed with an Ed25519 key. The signature is verified locally before the file is trusted, so a compromised mirror cannot inject a fake "latest version" or a malicious install URL. If the signature fails, the manifest is discarded.
-- **Minimum Supported Version Enforcement** — When a release contains a critical fix (e.g. a data-corruption or security issue), the signed manifest can mark older versions as blocked. Standalone builds (Windows / macOS) then show a full-screen prompt with direct install instructions. **Microsoft Store builds are never blocked** — updates on that platform are delivered on Microsoft's review schedule, which is outside our control, so blocking would leave users without a path forward.
+- **Signed Updates** — Every installer the updater offers is signed with minisign, and the public key is compiled into the application. The signature is checked before anything is installed, so a compromised mirror cannot hand you a different binary: an update that does not verify is refused rather than installed.
+- **Nothing That Locks You Out** — CopyPaste never blocks a version you already have. An update is an offer; your history is yours and stays reachable whether you take it or not.
 
 ### Development Practices
 
-- **Modern Flutter Stack** — Built with Flutter and Dart, with dependencies regularly audited and updated.
+- **Written in Rust** — One workspace, with `unsafe` confined to the two crates that talk to the operating system and denied everywhere else by the compiler.
+- **Dependencies Audited on Every Change** — `cargo-deny` checks advisories and licences in CI, and the build fails on a warning.
 - **Dependency Updates** — We regularly update dependencies to patch known vulnerabilities.
 - **Code Reviews** — All contributions go through review before merging.
 
