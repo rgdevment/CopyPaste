@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Ask a question, or say how you use it
+    url: https://github.com/rgdevment/CopyPaste/discussions
+    about: Anything that is not yet a bug or a request belongs here.
+  - name: 🔒 Report a security issue
+    url: https://github.com/rgdevment/CopyPaste/security/policy
+    about: A vulnerability goes through a private advisory, never a public issue.
+  - name: 📖 Read the manual first
+    url: https://github.com/rgdevment/CopyPaste#table-of-contents
+    about: Shortcuts, storage, privacy, and what the panel does with what you copied.
