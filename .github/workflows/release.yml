@@ -137,6 +137,8 @@ jobs:
       HAS_BRIDGE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY != '' }}
       WANTS_BRIDGE: ${{ vars.BRIDGE_MANIFEST == 'true' }}
     steps:
+      - uses: actions/checkout@v7
+
       - name: Signing secrets come in pairs
         run: |
           fail() { echo "::error::$1"; exit 1; }
@@ -212,6 +214,12 @@ jobs:
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
           echo "macos=${BUILD_MACOS}" >> "$GITHUB_OUTPUT"
           echo "version $version (pre-release: $prerelease)"
+
+      # The hook that asks this before a tag leaves a machine can be skipped with --no-verify,
+      # and nothing downstream would notice a stable release whose what-is-new screen still
+      # describes the one before it.
+      - name: The window has something to say about this version
+        run: bash scripts/news.sh "${{ steps.resolve.outputs.version }}"
 
   bundle-windows:
     name: copypaste-windows-installer
