@@ -111,10 +111,34 @@ We keep the code simple and consistent:
 
 - **Rust 2024, and the toolchain the repository pins** — `rust-toolchain.toml` decides, not your machine
 - **Descriptive names** — Code should read like prose
-- **Almost no comments** — the name says the what; a comment is for a why that surprises
+- **No comments in the Rust** — the name says the what, and CI rejects any `//` under `crates` and `app/src-tauri/src`: whatever needs explaining goes on the record
 - **`cargo fmt`, `cargo clippy` and `biome` all clean** — CI runs them on macOS and on Windows
 - **KISS** — Keep It Simple, Stupid
 - **DRY** — Don't Repeat Yourself
+
+### Run the conventions before CI does
+
+`scripts/rules.sh` holds the conventions a person can break in a second: a
+comment where the code should speak for itself, `unsafe` outside the `-sys`
+crates, the core printing to a terminal or reaching for a platform, Spanish in
+an identifier, voseo or peninsular words in what a person reads, two crates
+naming an example the same, and a file grown past what anybody reads through.
+`scripts/commits.sh` holds the shape and the length of a subject. Both answer
+the same whether you run them or CI does, and they say every rule that broke
+rather than stopping at the first. Run either whenever you like, and if you want
+them run for you:
+
+```sh
+git config core.hooksPath hooks
+```
+
+That gives you three. `pre-commit` runs the conventions, `cargo fmt --all
+--check` and biome — a couple of seconds, and between them they are most of what
+turns CI red. `commit-msg` weighs the subject while the fix is still an
+`--amend` rather than a rebase. `pre-push` runs the conventions again and the
+subjects of everything you are about to send. Nothing slower goes in any of
+them: the suite, the build and the markdown lint are minutes, and they belong to
+CI.
 
 **UI/UX:**
 

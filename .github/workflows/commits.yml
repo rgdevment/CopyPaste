@@ -25,34 +25,12 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._-]+\))?!?: .+'
-          failed=0
+        run: bash scripts/commits.sh "$BASE..$HEAD"
 
-          while read -r sha; do
-            subject=$(git log -1 --format=%s "$sha" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-            if ! printf '%s' "$subject" | grep -qE "$pattern"; then
-              echo "::error::${sha:0:8} does not follow the convention"
-              printf '  %s\n' "$subject"
-              failed=1
-              continue
-            fi
-
-            if [ "${#subject}" -gt 90 ]; then
-              echo "::error::${sha:0:8} tiene ${#subject} caracteres; el asunto va bajo 90"
-              printf '  %s\n' "$subject"
-              failed=1
-            fi
-          done < <(git rev-list --no-merges "$BASE".."$HEAD")
-
-          if [ "$failed" -eq 1 ]; then
-            echo ""
-            echo "Expected: type(optional scope): description"
-            echo "Tipos:     feat fix docs style refactor perf test build ci chore revert"
-            echo "Ejemplo:   fix(panel): the menu yields to the wheel"
-            exit 1
-          fi
-
-          echo "every subject is well formed"
+      # the squash keeps the pull request's title and throws every subject above it away, so the
+      # one that lands on main is this one
+      - name: And so does the title that the squash will keep
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: bash scripts/commits.sh --subject "$TITLE (#$NUMBER)"
