@@ -7,9 +7,19 @@ bash scripts/rules.sh || exit 1
 
 nothing=0000000000000000000000000000000000000000
 status=0
-while read -r _ mine _ theirs; do
+while read -r ref mine _ theirs; do
   [ -n "${mine:-}" ] || continue
   [ "$mine" != "$nothing" ] || continue
+
+  # a tag carries no subjects of its own, and it is the last moment to notice that the version
+  # it names has nothing to tell the person who installs it
+  case ${ref:-} in
+    refs/tags/v*)
+      bash scripts/news.sh "${ref#refs/tags/v}" || status=1
+      continue
+      ;;
+  esac
+
   if [ "${theirs:-$nothing}" != "$nothing" ]; then
     range="$theirs..$mine"
   elif base=$(git merge-base "$mine" origin/main 2> /dev/null) && [ -n "$base" ]; then
