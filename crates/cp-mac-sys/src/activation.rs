@@ -9,8 +9,6 @@ pub fn as_accessory() -> bool {
         .setActivationPolicy(NSApplicationActivationPolicy::Accessory)
 }
 
-// an accessory app never shows up as NSWorkspace's frontmost one, so «are we in front»
-// has to be asked of the application itself
 pub fn is_ours_up_front() -> bool {
     MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).isActive())
 }
