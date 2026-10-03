@@ -7,7 +7,7 @@ body:
         ### Share your idea! 🚀
         CopyPaste is a community project—your feedback helps us grow.
         We value simplicity and minimalism. Before suggesting, consider:
-        Does this idea maintain the clean, native Windows 11 experience?
+        Does this idea still feel native on Windows and on a Mac?
   - type: textarea
     id: feature-description
     attributes:

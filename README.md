@@ -5,12 +5,6 @@
   <p><strong>A local-first clipboard history and copy paste tool for Windows and macOS.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
 
   <p>
-    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci.yml">
-      <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build Status"/>
-    </a>
-    <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/mutants-sweep.yml">
-      <img src="https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fraw.githubusercontent.com%2Frgdevment%2FCopyPaste%2Fscore%2Fmutants.json" alt="Mutation score"/>
-    </a>
     <a href="https://github.com/rgdevment/CopyPaste/releases">
       <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
@@ -86,13 +80,16 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Getting Started](#getting-started)
 - [FAQ](#faq)
-- [Support and Bug Reporting](#support-and-bug-reporting)
 - [Starting Over, and Taking It With You](#starting-over-and-taking-it-with-you)
 - [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
+- [What's Coming and What's Changed](#whats-coming-and-whats-changed)
 - [Localization](#localization-help-translate-copypaste)
 - [Want to Help?](#want-to-help)
 - [Tech Stack](#tech-stack-for-developers)
+- [Themes](#themes)
+- [Alternatives](#alternatives)
 - [Other Tools by the Same Author](#other-tools-by-the-same-author)
+- [Project health](#project-health)
 - [License and Spirit](#license-and-spirit)
 
 ## See CopyPaste in Action
@@ -436,45 +433,30 @@ CopyPaste is a personal project, not a company product. There are no ads, no tel
 
 ---
 
-## Support and Bug Reporting
+## Found a Bug? Have Feedback?
 
-### Exporting Logs
+**Your feedback shapes what gets built next.** Here's how to reach me:
 
-If CopyPaste is misbehaving, you can export a diagnostic log bundle directly from the app.
+| What you need | How |
+| :------------ | :-- |
+| **Report a bug** | [Open an issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what happened and how to reproduce it |
+| **Suggest a feature** | [Open an issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what you'd like to see |
+| **Ask a question** | [Start a discussion](https://github.com/rgdevment/CopyPaste/discussions) — ask anything, or just say hi |
+| **Show support** | Star the repo — it is how other people find this clipboard manager |
+| **Contribute code** | [Read CONTRIBUTING.md](CONTRIBUTING.md) — pull requests welcome |
 
-**Steps:**
+**When reporting a bug, include** your system and its version, what you were
+doing, what you expected, and the version shown in **Settings → About**.
 
-1. Open CopyPaste → **Settings** (gear icon)
-2. Go to the **About** tab
-3. Under **Support**, click **"Export Logs"**
-4. Save the .zip file to a location of your choice
-5. Attach the zip to your [GitHub issue](https://github.com/rgdevment/CopyPaste/issues/new)
+### The logs, if they help
 
-The zip includes:
+CopyPaste writes two plain-text log files beside your history —
+`logs/cp-gui.log` for the settings window and `logs/cp-panel.log` for the panel.
+**Settings → History → Data folder → Open folder** takes you there.
 
-- Recent application log files (.log)
-- The `crash.log` file if one exists (created when the app fails to start or crashes during initialization)
-- A `device_info.txt` with your OS version and app version — no personal data
-
-**Privacy guarantee:** Logs and the crash file contain only application events, errors and stack traces. **Your clipboard content is never written to any of them.** Before zipping, an automatic redaction pass replaces your user name, home folder path and any email addresses with `<USER>`, `<HOME>` and `<EMAIL>` placeholders. The exported file stays on your machine until you explicitly share it. Nothing is sent automatically.
-
-### Opening the Logs Folder
-
-If you prefer to inspect log files directly:
-
-1. Settings → About → Support → **"Open Logs Folder"**
-2. Your file manager opens at the logs directory
-
-Logs are plain text — you can review them before deciding what to share.
-
-### Reporting on GitHub
-
-1. [Open a new issue](https://github.com/rgdevment/CopyPaste/issues/new)
-2. Describe what happened and steps to reproduce
-3. Attach the exported log zip (optional but very helpful)
-4. Include your OS version and CopyPaste version (shown in Settings → About)
-
-You decide exactly what you share. The reporting process is fully manual and private.
+They hold application events and errors, never what you copied, and nothing in
+them is sent anywhere: attaching one to an issue is a file you choose and drag
+in yourself, after reading it if you want to.
 
 ---
 
@@ -506,28 +488,6 @@ Quit CopyPaste from the tray (Windows) or the menu bar (macOS) and delete the
 data folder listed above. **Settings → History → Data folder → Open folder**
 takes you to it. Starting it again is a fresh installation, welcome tour
 included.
-
----
-
-## Found a Bug? Have Feedback?
-
-**Your feedback shapes what gets built next.** Here's how to reach me:
-
-| What you need                          | How                                                                                                                |
-| :------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| **Report a bug**                       | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what happened and how to reproduce it |
-| **Suggest a feature**                  | [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — tell me what you'd like to see                |
-| **Ask a question**                     | [Start a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — ask anything or just say hi             |
-| **Show support**                       | Star the repo — helps other people find this clipboard manager                                                     |
-| **Contribute code**                    | [Check CONTRIBUTING.md](CONTRIBUTING.md) — PRs welcome                                                             |
-
-**When reporting bugs, include:**
-
-- OS and version (e.g., Windows 11 24H2, macOS Sequoia 15.3)
-- What you were doing
-- Any error messages
-- CopyPaste version (check Settings → About)
-- Exported log zip if available (Settings → About → Support → Export Logs) — it now also bundles `crash.log` if the app failed to start, with personal info redacted automatically
 
 ---
 
@@ -634,6 +594,38 @@ CopyPaste follows your system theme automatically — no configuration needed.
 
 ---
 
+## Alternatives
+
+Other clipboard managers, so you can pick the one that fits. Platform, where
+your data lives and licence were checked against each project in October 2026;
+everything else changes, so go and look.
+
+| Project | Platform | Where your data lives | Licence |
+| :-- | :-- | :-- | :-- |
+| **CopyPaste** | Windows, macOS | Your disk, no account | GPL-3.0 |
+| [Ditto](https://github.com/sabrogden/Ditto) | Windows | Your disk; can sync between your own machines | GPL-3.0 |
+| [CopyQ](https://github.com/hluk/CopyQ) | Windows, macOS, Linux | Your disk | GPL-3.0 |
+| [Maccy](https://github.com/p0deje/Maccy) | macOS | Your disk | MIT |
+| [Clipy](https://github.com/Clipy/Clipy) | macOS | Your disk | MIT |
+| [Flycut](https://github.com/TermiT/Flycut) | macOS | Your disk | MIT |
+| [Paste](https://pasteapp.io) | macOS, iOS | Their cloud to sync | Paid, closed source |
+| [Raycast](https://www.raycast.com) | macOS | Your disk, with their service behind other features | Freemium, closed source |
+| Clipboard history | Windows, built in | Your disk; Microsoft's cloud if you turn syncing on | Part of Windows |
+
+What CopyPaste does that most of these do not: **one application on Windows and
+macOS** rather than one per system, **text read out of your screenshots** so a
+picture is searchable by what it says, **fifteen kinds recognised on their own**
+with a view that suits each, and **pasting the same card in another form**
+without touching what is stored.
+
+Each of them is better than CopyPaste at something. CopyQ is scriptable to a
+degree nothing here matches and runs on Linux too. Maccy is smaller and faster
+to reach for. Ditto has years of Windows polish and syncing between machines.
+Raycast is a whole launcher that happens to keep a clipboard. Pick what fits the
+way you work.
+
+---
+
 ## Other Tools by the Same Author
 
 I build free, open source tools focused on privacy and productivity. If you like CopyPaste, you might also find these useful:
@@ -654,6 +646,26 @@ No ads. No telemetry. No accounts. Everything local.
 
 Notes, documents and tasks that stay on your machine, in plain files you can read
 without it. Same rules as everything else here: no accounts, no telemetry, no cloud.
+
+---
+
+## Project health
+
+<p>
+  <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/ci.yml?style=flat-square&logo=github-actions&label=Build" alt="Build status"/>
+  </a>
+  <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/mutants-sweep.yml">
+    <img src="https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fraw.githubusercontent.com%2Frgdevment%2FCopyPaste%2Fscore%2Fmutants.json" alt="Mutation score"/>
+  </a>
+  <a href="https://github.com/rgdevment/CopyPaste/actions/workflows/rules.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/rgdevment/CopyPaste/rules.yml?style=flat-square&logo=github-actions&label=Conventions" alt="Project conventions"/>
+  </a>
+</p>
+
+The build runs on macOS and on Windows, the tests are run four times over on
+both to catch anything that only passes once, and the mutation score measures
+whether those tests would notice a change rather than merely cover the line.
 
 ---
 

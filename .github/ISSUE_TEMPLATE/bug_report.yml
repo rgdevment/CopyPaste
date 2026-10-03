@@ -11,8 +11,8 @@ body:
     id: version
     attributes:
       label: "CopyPaste Version"
-      description: "Check the version in Settings or the installer name."
-      placeholder: "e.g., v1.0.0-beta.1"
+      description: "Settings → About shows it, and so does the installer name."
+      placeholder: "e.g., v3.0.0-rc1"
     validations:
       required: true
   - type: dropdown
@@ -40,7 +40,7 @@ body:
     attributes:
       label: "Steps to Reproduce"
       description: "How can we make this happen again?"
-      placeholder: "1. Copy a high-resolution image\n2. Open CopyPaste with Win+Alt+V\n3. Click on the item..."
+      placeholder: "1. Copy a high-resolution image\n2. Open the panel with Ctrl+Alt+V, or ⌥⌘V on a Mac\n3. Click on the item..."
     validations:
       required: true
   - type: textarea
@@ -48,9 +48,13 @@ body:
     attributes:
       label: "Application Logs (optional)"
       description: |
-        If you have logs, paste them here. You can find them at:
-        `%LocalAppData%\CopyPaste\logs`
-      placeholder: "Paste logs from the .txt files here..."
+        CopyPaste writes two plain-text logs beside your history: `cp-gui.log`
+        for the settings window and `cp-panel.log` for the panel.
+        **Settings → History → Data folder → Open folder** takes you to them,
+        or look in `%LocalAppData%\CopyPaste\logs` on Windows and
+        `~/Library/Application Support/CopyPaste/logs` on a Mac.
+        They hold events and errors, never what you copied.
+      placeholder: "Paste the lines around the moment it happened..."
   - type: checkboxes
     id: checks
     attributes:
@@ -58,7 +62,7 @@ body:
       options:
         - label: "The issue persists after restarting the app"
           required: false
-        - label: "I've checked the data folder at %LocalAppData%\\CopyPaste"
+        - label: "I've looked in the data folder (Settings → History → Data folder)"
           required: false
   - type: textarea
     id: extra
