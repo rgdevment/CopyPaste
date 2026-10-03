@@ -290,3 +290,21 @@ fn what_is_and_is_not_a_path_is_decided_by_the_separator_and_the_drive() {
     assert!(!super::looks_like_a_path("solo texto"));
     assert!(!super::looks_like_a_path(""));
 }
+
+#[test]
+fn only_a_file_that_is_really_gone_is_marked_as_gone() {
+    assert_eq!(landing_of(true, true, true), Landing::Opened);
+    assert_eq!(landing_of(false, true, false), Landing::Gone);
+    assert_eq!(
+        landing_of(false, true, true),
+        Landing::Refused,
+        "the system refuses to open plenty of files that are right there: no application for the \
+         extension, a share violation, SmartScreen. Marking those as gone hides them and the \
+         housekeeping deletes them later"
+    );
+    assert_eq!(
+        landing_of(false, false, false),
+        Landing::Refused,
+        "what was written out to be looked at has no path of its own to be missing from"
+    );
+}

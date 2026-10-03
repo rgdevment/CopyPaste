@@ -10,6 +10,8 @@ export component GridCell inherits Rectangle {
     callback paste();
     callback open-asked();
     callback stirred();
+    callback dragged();
+    property <bool> dragging;
     border-radius: 10px;
     background: current ? Theme.card-hover : Theme.card;
     border-width: 1px;
@@ -19,11 +21,20 @@ export component GridCell inherits Rectangle {
     accessible-label: card.title + ", " + card.body;
 
     touch := TouchArea {
-        clicked => { root.chosen(); }
+        clicked => { if (!root.dragging) { root.chosen(); } }
         double-clicked => { root.paste(); }
         pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.dragging = false;
+            }
             if (event.kind == PointerEventKind.move) {
                 root.stirred();
+                if (touch.pressed && !root.dragging && card.can-drag
+                    && (abs(touch.mouse-x - touch.pressed-x) > Theme.drag-start
+                        || abs(touch.mouse-y - touch.pressed-y) > Theme.drag-start)) {
+                    root.dragging = true;
+                    root.dragged();
+                }
             }
         }
     }

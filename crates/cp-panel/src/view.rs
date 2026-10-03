@@ -186,6 +186,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         mono: matches!(row.kind, Some(Kind::Json | Kind::Code | Kind::Token)),
         can_open: crate::opening::can_open(row.kind, &paths_of(row))
             || crate::opening::can_open_link(row.kind, &row.preview),
+        can_drag: crate::dragging::can_drag(row.kind, &paths_of(row)),
         paint: shown_as_colour(row).unwrap_or_default(),
         paints: shown_as_colour(row).is_some(),
         thumb: slint::Image::default(),

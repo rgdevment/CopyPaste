@@ -1,6 +1,7 @@
 use crate::here;
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
+use crate::opening::{Reached, reach_for};
 use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
 use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
@@ -612,6 +613,7 @@ impl App {
             }
         });
         self.wire_opening(panel);
+        self.wire_dragging(panel);
         self.wire_naming(panel);
     }
 
@@ -642,6 +644,42 @@ impl App {
                     complain(&ui, cannot_open());
                 }
                 Reached::Refused => complain(&ui, cannot_open()),
+            }
+        });
+    }
+
+    fn wire_dragging(&self, panel: &Panel) {
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_dragged(move |id| {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            let store = state.borrow().store.clone();
+            let Ok(Some(item)) = store.item(i64::from(id)) else {
+                note(&format!("{id} could not be looked up to drag it"));
+                return;
+            };
+            let content = here::content_of(&item, None);
+            let files = crate::dragging::files_for(
+                &content.paths,
+                content.image,
+                std::time::SystemTime::now(),
+            );
+            if files.is_empty() {
+                note(&format!("{id} has no file another application could take"));
+                return;
+            }
+            let Some(handle) = handle_of(&ui) else {
+                note(&format!(
+                    "{id} cannot be dragged: the panel has no native window"
+                ));
+                return;
+            };
+            let carried: Vec<&std::path::Path> = files.iter().map(|one| one.as_path()).collect();
+            let went = here::drag_out(handle, &carried);
+            if went != here::Dragged::Started {
+                note(&format!("{id} was not dragged: {went:?}"));
             }
         });
     }
@@ -1184,96 +1222,6 @@ pub fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Reached {
-    Opened,
-    Working,
-    Refused,
-    NoLink,
-    Missing,
-}
-
-fn reach_for(store: &Store, id: i64) -> Reached {
-    let Ok(Some(item)) = store.item(id) else {
-        note(&format!("{id} could not be looked up to open it"));
-        return Reached::Refused;
-    };
-    let content = here::content_of(&item, None);
-    if let Some(said) = content.text.as_deref()
-        && let Some(url) = crate::opening::a_link_worth_opening(said.lines().next().unwrap_or(""))
-    {
-        let url = url.to_owned();
-        let asking = cp_core::reading::begin(move || here::open_link(&url));
-        return match answered(asking.waited(crate::opening::PATIENCE)) {
-            Reached::Refused => Reached::NoLink,
-            other => other,
-        };
-    }
-    let said_path = crate::opening::first_of(&content.paths)
-        .map(str::to_owned)
-        .or_else(|| {
-            content
-                .text
-                .as_deref()
-                .map(|said| said.lines().next().unwrap_or("").trim().to_owned())
-                .filter(|said| crate::opening::looks_like_a_path(said))
-        });
-    let on_disk = said_path.is_some();
-    let path = match said_path {
-        Some(said) => std::path::PathBuf::from(said),
-        None => {
-            let Some(bytes) = content.image else {
-                note(&format!("{id} has nothing a viewer could be given"));
-                return Reached::Refused;
-            };
-            let seen = crate::opening::where_previews_go();
-            crate::opening::sweep_seen(&seen, std::time::SystemTime::now());
-            let Some(spilled) = crate::opening::spilled(&seen, bytes) else {
-                note(&format!("{id} could not be written out to be seen"));
-                return Reached::Refused;
-            };
-            spilled
-        }
-    };
-    let asking = cp_core::reading::begin(move || {
-        let opened = here::open_path(&path);
-        landing_of(opened, on_disk, path.exists())
-    });
-    match asking.waited(crate::opening::PATIENCE) {
-        cp_core::reading::Waited::Answered(Landing::Opened) => Reached::Opened,
-        cp_core::reading::Waited::Answered(Landing::Gone) => Reached::Missing,
-        cp_core::reading::Waited::Answered(Landing::Refused) => Reached::Refused,
-        cp_core::reading::Waited::StillRunning => Reached::Working,
-        cp_core::reading::Waited::Gone => Reached::Refused,
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Landing {
-    Opened,
-    Refused,
-    Gone,
-}
-
-fn landing_of(opened: bool, on_disk: bool, still_there: bool) -> Landing {
-    if opened {
-        return Landing::Opened;
-    }
-    if on_disk && !still_there {
-        return Landing::Gone;
-    }
-    Landing::Refused
-}
-
-fn answered(said: cp_core::reading::Waited<bool>) -> Reached {
-    match said {
-        cp_core::reading::Waited::Answered(true) => Reached::Opened,
-        cp_core::reading::Waited::Answered(false) => Reached::Refused,
-        cp_core::reading::Waited::StillRunning => Reached::Working,
-        cp_core::reading::Waited::Gone => Reached::Refused,
-    }
 }
 
 fn cannot_open() -> &'static str {

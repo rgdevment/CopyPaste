@@ -267,6 +267,8 @@ export component CardView inherits Rectangle {
     callback remove(int);
     callback chosen(int);
     callback stirred();
+    callback dragged(int);
+    property <bool> dragging;
     property <bool> lit: shown-here;
     accessible-role: AccessibleRole.list-item;
     accessible-label: (card.name != "" ? card.name + ", " : "") + card.title + ", " + card.body;
@@ -276,11 +278,20 @@ export component CardView inherits Rectangle {
     border-color: Theme.selected-edge;
     animate background { duration: 140ms; easing: ease-out; }
     touch := TouchArea {
-        clicked => { root.chosen(card.id); }
+        clicked => { if (!root.dragging) { root.chosen(card.id); } }
         double-clicked => { root.paste(card.id); }
         pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.dragging = false;
+            }
             if (event.kind == PointerEventKind.move) {
                 root.stirred();
+                if (touch.pressed && !root.dragging && card.can-drag
+                    && (abs(touch.mouse-x - touch.pressed-x) > Theme.drag-start
+                        || abs(touch.mouse-y - touch.pressed-y) > Theme.drag-start)) {
+                    root.dragging = true;
+                    root.dragged(card.id);
+                }
             }
         }
     }

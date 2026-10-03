@@ -3,6 +3,7 @@
 pub mod backdrop;
 pub mod clipboard;
 pub mod com;
+pub mod dragging;
 pub mod files;
 pub mod formats;
 pub mod frontmost;
