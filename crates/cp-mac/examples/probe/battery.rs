@@ -1127,6 +1127,49 @@ fn main() -> std::process::ExitCode {
         opened
     });
 
+    b.group("N · LinkUnbound");
+
+    b.case_or_skip(
+        "N1",
+        "what answers the scheme is a bundle that is really on disk",
+        || {
+            let app = cp_mac_sys::files::app_for_link("linkunbound:")
+                .ok_or(format!("{SKIPPED}LinkUnbound is not installed here"))?;
+            if !std::path::Path::new(&app).is_dir() {
+                return Err(format!("{app} is not a directory on disk"));
+            }
+            if !app.ends_with(".app") {
+                return Err(format!("{app} is not an application bundle"));
+            }
+            Ok(())
+        },
+    );
+
+    b.case_or_skip(
+        "N2",
+        "the link handed over is escaped whole and lands there",
+        || {
+            let holder = cp_mac_sys::files::app_for_link("linkunbound:")
+                .ok_or(format!("{SKIPPED}LinkUnbound is not installed here"))?;
+            let asked =
+                cp_core::linkunbound::asked_for("https://example.com/a path?x=1&y=ñ#top", true)
+                    .ok_or("no link was built for it")?;
+            let payload = asked
+                .strip_prefix("linkunbound://open?url=")
+                .ok_or_else(|| format!("{asked} is not the form LinkUnbound reads"))?;
+            if let Some(loose) = payload
+                .chars()
+                .find(|one| !one.is_ascii_alphanumeric() && *one != '%')
+            {
+                return Err(format!("{loose:?} went through unescaped in {payload}"));
+            }
+            match cp_mac_sys::files::app_for_link(&asked) {
+                Some(app) if app == holder => Ok(()),
+                other => Err(format!("{other:?} would open it instead of {holder}")),
+            }
+        },
+    );
+
     println!();
     println!(
         "  {} pass · {} fail · {} skipped",

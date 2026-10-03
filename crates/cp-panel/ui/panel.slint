@@ -12,7 +12,7 @@ export component Panel inherits Window {
     height: Theme.height + Theme.margin * 2;
     no-frame: true;
     always-on-top: true;
-    background: transparent;
+    background: Theme.apple ? Theme.panel : transparent;
     title: "CopyPaste";
     icon: @image-url("../../../app/src-tauri/icons/128x128.png");
 
@@ -113,17 +113,17 @@ export component Panel inherits Window {
     panel := Rectangle {
         property <length> sheet-top: root.list-top + root.sheet-anchor + root.sheet-span + list.content-y + 4px;
         x: Theme.margin;
-        y: Theme.margin + (1.0 - root.shown) * 8px;
+        y: Theme.margin + (1.0 - root.shown) * (Theme.apple ? 0px : 8px);
         width: Theme.width;
         height: Theme.height;
         border-radius: Theme.radius;
         border-width: 1px;
         border-color: Theme.panel-border;
         background: Theme.panel;
-        opacity: root.shown;
+        opacity: Theme.apple ? 1.0 : root.shown;
         drop-shadow-blur: Theme.shadow-blur;
         drop-shadow-color: Theme.shadow;
-        drop-shadow-offset-y: 10px;
+        drop-shadow-offset-y: Theme.apple ? 0px : 10px;
         clip: true;
         animate opacity { duration: Theme.appear; easing: ease-out; }
         animate y { duration: Theme.appear; easing: ease-out; }
@@ -190,6 +190,8 @@ export component Panel inherits Window {
                                 font-size: 13px;
                                 single-line: true;
                                 edited => { root.search(self.text); }
+                                // Slint swaps the modifiers on macOS: modifiers.control is the
+                                // Command key there, and modifiers.meta the Control one
                                 key-pressed(event) => {
                                     if root.sheet-open {
                                         if event.text == Key.Escape {
@@ -219,7 +221,8 @@ export component Panel inherits Window {
                                         root.sheet-open = false;
                                         return reject;
                                     }
-                                    if event.text == Key.F1 {
+                                    if event.text == Key.F1
+                                        || (Theme.apple && event.text == "," && event.modifiers.control) {
                                         root.ask-settings();
                                         return accept;
                                     }
@@ -233,11 +236,17 @@ export component Panel inherits Window {
                                         root.paste-as(root.cards[root.current].id, "plain-text");
                                         return accept;
                                     }
-                                    if event.text == Key.Backspace && root.query == "" && root.tags.length > 0 {
+                                    if event.text == Key.Backspace
+                                        && !(Theme.apple && event.modifiers.control)
+                                        && root.query == ""
+                                        && root.tags.length > 0 {
                                         root.drop-tag("");
                                         return accept;
                                     }
-                                    if event.text == Key.Delete && root.query == "" && root.current >= 0 {
+                                    if ((!Theme.apple && event.text == Key.Delete)
+                                            || (Theme.apple && event.text == Key.Backspace && event.modifiers.control))
+                                        && root.query == ""
+                                        && root.current >= 0 {
                                         root.remove(root.cards[root.current].id);
                                         return accept;
                                     }
@@ -255,7 +264,8 @@ export component Panel inherits Window {
                                         root.naming = root.cards[root.current].id;
                                         return accept;
                                     }
-                                    if (event.text == "g" || event.text == "t") && event.modifiers.alt {
+                                    if (event.text == "g" || event.text == "t")
+                                        && (event.modifiers.alt || (Theme.apple && event.modifiers.control)) {
                                         root.ask-kinds();
                                         return accept;
                                     }

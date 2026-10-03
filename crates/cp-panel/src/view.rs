@@ -639,17 +639,22 @@ fn count_in(english: bool, count: i64) -> String {
     }
 }
 
+const FOOTER_ES: &str = if cfg!(target_os = "macos") {
+    "pegar · ⌥⏎: más formas"
+} else {
+    "pegar · alt+enter: más formas"
+};
+const FOOTER_EN: &str = if cfg!(target_os = "macos") {
+    "paste · ⌥⏎: more forms"
+} else {
+    "paste · alt+enter: more forms"
+};
+
 pub fn dress_words(ui: &crate::Panel) {
     use slint::ComponentHandle;
     let words = ui.global::<crate::Words>();
     words.set_hint(crate::say::pick("Busca o filtra con #", "Search, or filter with #").into());
-    words.set_footer(
-        crate::say::pick(
-            "pegar · alt+enter: más formas",
-            "paste · alt+enter: more forms",
-        )
-        .into(),
-    );
+    words.set_footer(crate::say::pick(FOOTER_ES, FOOTER_EN).into());
     words.set_paste_as(crate::say::pick("pegar como", "paste as").into());
     words.set_open_it(crate::say::pick("abrir", "open").into());
     words.set_name_it(crate::say::pick("poner nombre", "give it a name").into());

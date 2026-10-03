@@ -54,14 +54,19 @@ pub fn linkunbound_here() -> bool {
     scheme_here(cp_core::linkunbound::SCHEME)
 }
 
+fn url_of_text(said: &str) -> Option<Retained<NSURL>> {
+    let url = NSURL::URLWithString(&NSString::from_str(said))?;
+    url.scheme().is_some().then_some(url)
+}
+
+pub fn app_for_link(url: &str) -> Option<String> {
+    let asked = url_of_text(url)?;
+    let app = NSWorkspace::sharedWorkspace().URLForApplicationToOpenURL(&asked)?;
+    app.path().map(|path| path.to_string())
+}
+
 fn scheme_here(scheme: &str) -> bool {
-    let asked = NSString::from_str(&format!("{scheme}:"));
-    let Some(url) = NSURL::URLWithString(&asked) else {
-        return false;
-    };
-    NSWorkspace::sharedWorkspace()
-        .URLForApplicationToOpenURL(&url)
-        .is_some()
+    app_for_link(&format!("{scheme}:")).is_some()
 }
 
 pub fn open_link(url: &str) -> bool {
@@ -69,8 +74,7 @@ pub fn open_link(url: &str) -> bool {
 }
 
 fn shown(url: &str) -> bool {
-    let said = NSString::from_str(url);
-    match NSURL::URLWithString(&said) {
+    match url_of_text(url) {
         Some(url) => NSWorkspace::sharedWorkspace().openURL(&url),
         None => false,
     }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { combination, type Kept, useKeys } from "../core";
+import { asKeys, combination, type Kept, onMac, useKeys } from "../core";
 import { panelKeys, t } from "../locales";
 import { Band, Line } from "./Bits";
 
@@ -12,6 +12,7 @@ export default function Keys({
 }) {
   const { keys, spare, recheck } = useKeys(kept.shortcut);
   const [asking, setAsking] = useState(false);
+  const mac = onMac();
 
   return (
     <>
@@ -33,7 +34,7 @@ export default function Keys({
                   className="keys spare-one"
                   onClick={() => void change({ shortcut: one }).finally(() => recheck(one))}
                 >
-                  {one.replaceAll("+", " + ")}
+                  {asKeys(one, mac)}
                 </button>
               ))}
             </div>
@@ -41,7 +42,7 @@ export default function Keys({
         }
       >
         <span className={keys && !keys.bound && !asking ? "keys taken" : "keys"}>
-          {kept.shortcut.replaceAll("+", " + ")}
+          {asKeys(kept.shortcut, mac)}
         </span>
         <button
           type="button"
@@ -73,9 +74,11 @@ export default function Keys({
 
       <table className="bindings">
         <tbody>
-          {panelKeys().map((one) => (
-            <tr key={one.keys}>
-              <th scope="row">{one.keys}</th>
+          {panelKeys(mac).map((one) => (
+            <tr key={one.id}>
+              <th scope="row" aria-label={one.said}>
+                {one.keys}
+              </th>
               <td>{one.does}</td>
             </tr>
           ))}

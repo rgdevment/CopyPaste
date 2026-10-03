@@ -526,49 +526,139 @@ const EN: Record<keyof Said, string> = {
   welcomeShowAgain: "Show the welcome again",
 };
 
-export type Binding = { keys: string; does: string };
+export type Binding = { id: string; keys: string; said: string; does: string };
 
-const PANEL_KEYS_ES: Binding[] = [
-  { keys: "Enter", does: "pegar lo seleccionado" },
-  { keys: "Shift + Enter", does: "pegar en plano" },
-  { keys: "Alt + Enter  ·  Ctrl + Enter", does: "pegar como…" },
-  { keys: "Flechas", does: "moverse por la lista" },
-  { keys: "Clic", does: "abrir la tarjeta; otro clic la cierra" },
-  { keys: "Doble clic", does: "pegar esa tarjeta" },
-  { keys: "Tab  ·  Shift + Tab", does: "recorrer los filtros" },
-  { keys: "Varios", does: "el botón de capas: los clics suman tipos en vez de cambiarlos" },
-  { keys: "#imagen  ·  #carpeta", does: "filtrar por tipo desde el buscador" },
-  { keys: "Retroceso", does: "quitar la última etiqueta" },
-  { keys: "Supr", does: "borrar la seleccionada" },
-  { keys: "Ctrl + P", does: "anclar o desanclar" },
-  { keys: "F2  ·  Ctrl + E", does: "ponerle nombre a la seleccionada" },
-  { keys: "Ctrl + O", does: "abrir la seleccionada fuera" },
-  { keys: "Flecha derecha", does: "abrir o cerrar la tarjeta" },
-  { keys: "Ctrl + 1  ·  Ctrl + 2", does: "todo  ·  solo lo anclado" },
-  { keys: "Alt + G  ·  Alt + T", does: "elegir el tipo" },
-  { keys: "Esc", does: "cerrar el panel" },
-];
+type Row = {
+  id: string;
+  keys: string;
+  keysEn?: string;
+  mac?: string;
+  es: string;
+  en: string;
+};
 
-const PANEL_KEYS_EN: Binding[] = [
-  { keys: "Enter", does: "paste what is selected" },
-  { keys: "Shift + Enter", does: "paste as plain text" },
-  { keys: "Alt + Enter  ·  Ctrl + Enter", does: "paste as…" },
-  { keys: "Arrows", does: "move through the list" },
-  { keys: "Click", does: "open the card; another click closes it" },
-  { keys: "Double click", does: "paste that card" },
-  { keys: "Tab  ·  Shift + Tab", does: "step through the filters" },
-  { keys: "Many", does: "the layers button: clicks add kinds instead of swapping them" },
-  { keys: "#image  ·  #folder", does: "filter by kind from the search box" },
-  { keys: "Backspace", does: "drop the last tag" },
-  { keys: "Delete", does: "delete the selected one" },
-  { keys: "Ctrl + P", does: "pin or unpin" },
-  { keys: "F2  ·  Ctrl + E", does: "give the selected one a name" },
-  { keys: "Ctrl + O", does: "open the selected one outside" },
-  { keys: "Right arrow", does: "open or close the card" },
-  { keys: "Ctrl + 1  ·  Ctrl + 2", does: "everything  ·  only what is pinned" },
-  { keys: "Alt + G  ·  Alt + T", does: "choose the kind" },
-  { keys: "Esc", does: "close the panel" },
-];
+const PANEL_ROWS = [
+  {
+    id: "paste",
+    keys: "Enter",
+    mac: "⏎",
+    es: "pegar lo seleccionado",
+    en: "paste what is selected",
+  },
+  {
+    id: "plain",
+    keys: "Shift + Enter",
+    mac: "⇧⏎",
+    es: "pegar en plano",
+    en: "paste as plain text",
+  },
+  {
+    id: "forms",
+    keys: "Alt + Enter  ·  Ctrl + Enter",
+    mac: "⌥⏎  ·  ⌘⏎",
+    es: "pegar como…",
+    en: "paste as…",
+  },
+  {
+    id: "move",
+    keys: "Flechas",
+    keysEn: "Arrows",
+    es: "moverse por la lista",
+    en: "move through the list",
+  },
+  {
+    id: "open-card",
+    keys: "Clic",
+    keysEn: "Click",
+    es: "abrir la tarjeta; otro clic la cierra",
+    en: "open the card; another click closes it",
+  },
+  {
+    id: "paste-card",
+    keys: "Doble clic",
+    keysEn: "Double click",
+    es: "pegar esa tarjeta",
+    en: "paste that card",
+  },
+  {
+    id: "cycle",
+    keys: "Tab  ·  Shift + Tab",
+    mac: "⇥  ·  ⇧⇥",
+    es: "recorrer los filtros",
+    en: "step through the filters",
+  },
+  {
+    id: "layers",
+    keys: "Varios",
+    keysEn: "Many",
+    es: "el botón de capas: los clics suman tipos en vez de cambiarlos",
+    en: "the layers button: clicks add kinds instead of swapping them",
+  },
+  {
+    id: "tags",
+    keys: "#imagen  ·  #carpeta",
+    keysEn: "#image  ·  #folder",
+    es: "filtrar por tipo desde el buscador",
+    en: "filter by kind from the search box",
+  },
+  {
+    id: "drop-tag",
+    keys: "Retroceso",
+    keysEn: "Backspace",
+    mac: "⌫",
+    es: "quitar la última etiqueta",
+    en: "drop the last tag",
+  },
+  {
+    id: "remove",
+    keys: "Supr",
+    keysEn: "Delete",
+    mac: "⌘⌫",
+    es: "borrar la seleccionada",
+    en: "delete the selected one",
+  },
+  { id: "pin", keys: "Ctrl + P", mac: "⌘P", es: "anclar o desanclar", en: "pin or unpin" },
+  {
+    id: "name",
+    keys: "F2  ·  Ctrl + E",
+    mac: "⌘E",
+    es: "ponerle nombre a la seleccionada",
+    en: "give the selected one a name",
+  },
+  {
+    id: "open-out",
+    keys: "Ctrl + O",
+    mac: "⌘O",
+    es: "abrir la seleccionada fuera",
+    en: "open the selected one outside",
+  },
+  {
+    id: "unfold",
+    keys: "Flecha derecha",
+    keysEn: "Right arrow",
+    mac: "→",
+    es: "abrir o cerrar la tarjeta",
+    en: "open or close the card",
+  },
+  {
+    id: "views",
+    keys: "Ctrl + 1  ·  Ctrl + 2",
+    mac: "⌘1  ·  ⌘2",
+    es: "todo  ·  solo lo anclado",
+    en: "everything  ·  only what is pinned",
+  },
+  {
+    id: "kinds",
+    keys: "Alt + G  ·  Alt + T",
+    mac: "⌘G  ·  ⌘T",
+    es: "elegir el tipo",
+    en: "choose the kind",
+  },
+  { id: "settings", keys: "F1", mac: "⌘,", es: "abrir Ajustes", en: "open Settings" },
+  { id: "dismiss", keys: "Esc", es: "cerrar el panel", en: "close the panel" },
+] as const satisfies readonly Row[];
+
+type Which = (typeof PANEL_ROWS)[number]["id"];
 
 let now: Record<keyof Said, string> = ES;
 
@@ -595,6 +685,58 @@ export function items(count: number) {
   return count === 1 ? t("itemOne") : fill("itemMany", String(count));
 }
 
-export function panelKeys(): Binding[] {
-  return now === EN ? PANEL_KEYS_EN : PANEL_KEYS_ES;
+const SPOKEN_ES: Record<string, string> = {
+  "⌘": "Comando",
+  "⌥": "Opción",
+  "⇧": "Mayúsculas",
+  "⌃": "Control",
+  "⏎": "Enter",
+  "⌫": "Retroceso",
+  "⇥": "Tabulador",
+  "→": "Flecha derecha",
+};
+
+const SPOKEN_EN: Record<string, string> = {
+  "⌘": "Command",
+  "⌥": "Option",
+  "⇧": "Shift",
+  "⌃": "Control",
+  "⏎": "Enter",
+  "⌫": "Backspace",
+  "⇥": "Tab",
+  "→": "Right arrow",
+};
+
+// a screen reader says nothing at all for a cell that holds only glyphs
+export function spoken(keys: string): string {
+  const words = now === EN ? SPOKEN_EN : SPOKEN_ES;
+  return [...keys]
+    .map((one) => (words[one] ? ` ${words[one]} ` : one))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function spelling(row: Row, mac: boolean): string {
+  if (mac && row.mac) {
+    return row.mac;
+  }
+  return now === EN && row.keysEn ? row.keysEn : row.keys;
+}
+
+export function panelKeys(mac: boolean): Binding[] {
+  return PANEL_ROWS.map((row) => {
+    const keys = spelling(row, mac);
+    return { id: row.id, keys, said: spoken(keys), does: now === EN ? row.en : row.es };
+  });
+}
+
+export function panelKey(id: Which, mac: boolean): string {
+  const [row] = PANEL_ROWS.filter((one) => one.id === id);
+  return spelling(row, mac);
+}
+
+// prose needs one way to do it, not the two the table offers
+export function oneKey(id: Which, mac: boolean): string {
+  return panelKey(id, mac).split("·")[0].trim();
 }

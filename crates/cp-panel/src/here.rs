@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir, dress, forward,
-    in_front, media_of, ocr_available, open_link, open_path, paste_into, read_stuck,
+    in_front, media_of, ocr_available, open_link, open_path, ours_up_front, paste_into, read_stuck,
     stay_out_of_the_dock, system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
     watch_start,
 };
@@ -121,6 +121,10 @@ mod platform {
 
     pub fn ahead_now() -> isize {
         cp_win_sys::frontmost::ahead()
+    }
+
+    pub fn ours_up_front() -> Option<bool> {
+        Some(ahead_now() == 0)
     }
 
     pub fn stay_out_of_the_dock() {}
@@ -244,6 +248,10 @@ mod platform {
 
     pub fn ahead_now() -> isize {
         cp_mac_sys::frontmost::ahead() as isize
+    }
+
+    pub fn ours_up_front() -> Option<bool> {
+        cp_mac_sys::activation::is_ours_up_front()
     }
 
     pub fn stay_out_of_the_dock() {

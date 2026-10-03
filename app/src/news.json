@@ -8,7 +8,7 @@
       },
       {
         "title": "Nombres para tus tarjetas",
-        "said": "presiona F2 y búscalas después por ese nombre."
+        "said": "presiona {name} y búscalas después por ese nombre."
       },
       {
         "title": "Enlaces con LinkUnbound",
@@ -20,7 +20,10 @@
         "title": "Copy without pasting",
         "said": "put a card on the clipboard without pasting it yet."
       },
-      { "title": "Names for your cards", "said": "press F2, then find them later by that name." },
+      {
+        "title": "Names for your cards",
+        "said": "press {name}, then find them later by that name."
+      },
       {
         "title": "Links through LinkUnbound",
         "said": "if you have it installed, links open with it; otherwise in your browser."

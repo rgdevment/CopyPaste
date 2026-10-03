@@ -161,6 +161,11 @@ body {
   padding-right: 13px;
 }
 
+/* on a Mac the left inset comes from the knobs, so a window without them needs its own */
+.chrome.mac.bare {
+  padding-left: 13px;
+}
+
 .chrome.mac .chrome-does {
   order: -1;
   flex-direction: row-reverse;
