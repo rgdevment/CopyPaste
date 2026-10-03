@@ -123,8 +123,8 @@ mod platform {
         cp_win_sys::frontmost::ahead()
     }
 
-    pub fn ours_up_front() -> bool {
-        ahead_now() == 0
+    pub fn ours_up_front() -> Option<bool> {
+        Some(ahead_now() == 0)
     }
 
     pub fn stay_out_of_the_dock() {}
@@ -250,7 +250,7 @@ mod platform {
         cp_mac_sys::frontmost::ahead() as isize
     }
 
-    pub fn ours_up_front() -> bool {
+    pub fn ours_up_front() -> Option<bool> {
         cp_mac_sys::activation::is_ours_up_front()
     }
 

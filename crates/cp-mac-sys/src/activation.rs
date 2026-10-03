@@ -9,8 +9,9 @@ pub fn as_accessory() -> bool {
         .setActivationPolicy(NSApplicationActivationPolicy::Accessory)
 }
 
-pub fn is_ours_up_front() -> bool {
-    MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).isActive())
+pub fn is_ours_up_front() -> Option<bool> {
+    let mtm = MainThreadMarker::new()?;
+    Some(NSApplication::sharedApplication(mtm).isActive())
 }
 
 pub fn is_accessory() -> Option<bool> {

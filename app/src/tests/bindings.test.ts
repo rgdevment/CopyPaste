@@ -242,8 +242,11 @@ describe("la tabla de atajos", () => {
 
   it("un clic con modificador lo lee de verdad lo que se pincha", () => {
     const cards = ui("cards.slint");
-    let found = 0;
-    for (const row of rowsOn(false)) {
+    // the layers row tells this one in words instead of naming a key, so nothing above reaches it
+    expect(cards, "no clic suma tipos en vez de cambiarlos").toContain(
+      "self.adding = event.modifiers.control",
+    );
+    for (const row of rowsOn(true)) {
       for (const combination of row.keys.split("·")) {
         const parts = pieces(combination).map((one) => one.toLowerCase());
         const last = parts.at(-1);
@@ -257,11 +260,9 @@ describe("la tabla de atajos", () => {
             cards,
             `«${row.keys}» promises ${looked} and nothing that is clicked reads it`,
           ).toContain(looked);
-          found += 1;
         }
       }
     }
-    expect(found).toBeLessThan(8);
   });
 
   it("el botón que promete sumar tipos existe en el panel", () => {
