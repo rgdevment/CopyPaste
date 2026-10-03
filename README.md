@@ -82,10 +82,14 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [FAQ](#faq)
 - [Starting Over, and Taking It With You](#starting-over-and-taking-it-with-you)
 - [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
+- [What's Coming and What's Changed](#whats-coming-and-whats-changed)
 - [Localization](#localization-help-translate-copypaste)
 - [Want to Help?](#want-to-help)
 - [Tech Stack](#tech-stack-for-developers)
+- [Themes](#themes)
+- [Alternatives](#alternatives)
 - [Other Tools by the Same Author](#other-tools-by-the-same-author)
+- [Project health](#project-health)
 - [License and Spirit](#license-and-spirit)
 
 ## See CopyPaste in Action
