@@ -317,7 +317,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p stage
-          cp target/release/CopyPaste.exe stage/
+          cp target/release/cp-gui.exe stage/CopyPaste.exe
           cp target/release/cp-panel.exe stage/
 
       - name: Sign what the MSIX will carry
@@ -538,7 +538,7 @@ jobs:
       - name: Sign the settings binary
         if: env.HAS_P12 == 'true'
         run: |
-          bin="target/$TARGET/release/CopyPaste"
+          bin="target/$TARGET/release/cp-gui"
           codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$bin"
           codesign --verify --strict --verbose "$bin"
 
@@ -564,11 +564,11 @@ jobs:
               status=1
             fi
           }
-          want CFBundleExecutable CopyPaste
+          want CFBundleExecutable cp-gui
           want CFBundleIdentifier com.rgdevment.copypaste
           want CFBundleShortVersionString "${{ needs.version.outputs.version }}"
           chip=x86_64; [ "$ARCH" = aarch64 ] && chip=arm64
-          for one in cp-panel CopyPaste; do
+          for one in cp-panel cp-gui; do
             bin="$app/Contents/MacOS/$one"
             test -x "$bin" || { echo "::error::$one is not in the bundle"; status=1; continue; }
             archs=$(lipo -archs "$bin")
@@ -1443,18 +1443,11 @@ jobs:
 
           	  app "CopyPaste.app"
 
-          	  uninstall script: {
-          	              executable:   "#{appdir}/CopyPaste.app/Contents/MacOS/CopyPaste",
-          	              args:         ["--unregister"],
-          	              must_succeed: false,
-          	            },
-          	            quit:   "com.rgdevment.copypaste"
+          	  uninstall quit: "com.rgdevment.copypaste"
 
           	  zap trash: [
           	    "~/Library/Application Support/CopyPaste",
           	    "~/Library/Preferences/com.rgdevment.copypaste.plist",
-          	    "~/Library/Preferences/com.rgdevment.copypaste.plist",
-          	    "~/Library/Saved Application State/com.rgdevment.copypaste.savedState",
           	    "~/Library/Saved Application State/com.rgdevment.copypaste.savedState",
           	  ]
           	end
