@@ -229,3 +229,10 @@ fn a_card_whose_kind_is_not_draggable_is_refused_on_the_real_item_too() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn sweeping_a_folder_that_was_never_made_takes_nothing_and_says_so() {
+    let nowhere = std::env::temp_dir().join("cp-drag-never-made-this-one");
+    let _ = std::fs::remove_dir_all(&nowhere);
+    assert_eq!(sweep_dragged(&nowhere, now()), 0);
+}

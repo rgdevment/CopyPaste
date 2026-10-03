@@ -308,3 +308,23 @@ fn only_a_file_that_is_really_gone_is_marked_as_gone() {
         "what was written out to be looked at has no path of its own to be missing from"
     );
 }
+
+#[test]
+fn sweeping_previews_that_were_never_written_takes_nothing_and_says_so() {
+    let nowhere = std::env::temp_dir().join("cp-seen-never-written-here");
+    let _ = std::fs::remove_dir_all(&nowhere);
+    assert_eq!(sweep_seen(&nowhere, std::time::SystemTime::now()), 0);
+}
+
+#[test]
+fn what_the_system_said_about_opening_it_is_read_the_same_way_every_time() {
+    use cp_core::reading::Waited;
+    assert_eq!(answered(Waited::Answered(true)), Reached::Opened);
+    assert_eq!(answered(Waited::Answered(false)), Reached::Refused);
+    assert_eq!(
+        answered(Waited::StillRunning),
+        Reached::Working,
+        "a viewer that is slow to open has not refused, and the panel waits for it"
+    );
+    assert_eq!(answered(Waited::Gone), Reached::Refused);
+}

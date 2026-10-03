@@ -2,9 +2,9 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{AllocAnyThread, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession,
-    NSDraggingSource, NSEvent, NSEventModifierFlags, NSEventType, NSImage, NSPasteboardWriting,
-    NSView, NSWorkspace,
+    NSApplication, NSBackingStoreType, NSDragOperation, NSDraggingContext, NSDraggingItem,
+    NSDraggingSession, NSDraggingSource, NSEvent, NSEventModifierFlags, NSEventType, NSImage,
+    NSPasteboardWriting, NSView, NSWindow, NSWindowStyleMask, NSWorkspace,
 };
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSObject, NSObjectProtocol, NSPoint, NSProcessInfo, NSRect, NSSize,
@@ -57,6 +57,22 @@ impl Source {
 
 thread_local! {
     static SOURCE: OnceCell<Retained<Source>> = const { OnceCell::new() };
+}
+
+pub fn a_drag_would_start(paths: &[&Path]) -> Option<Dragged> {
+    let mtm = MainThreadMarker::new()?;
+    let side = ICON_SIDE * 4.0;
+    let window = unsafe {
+        NSWindow::initWithContentRect_styleMask_backing_defer(
+            NSWindow::alloc(mtm),
+            NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(side, side)),
+            NSWindowStyleMask::Borderless,
+            NSBackingStoreType::Buffered,
+            false,
+        )
+    };
+    let view = window.contentView()?;
+    Some(from_view(NonNull::from(&*view).cast(), paths))
 }
 
 pub fn source_answers() -> bool {

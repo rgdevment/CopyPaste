@@ -39,3 +39,14 @@ fn a_path_macos_cannot_spell_is_nothing_to_drag() {
         "a path that is not text cannot become an NSURL, and half a drag is worse than none"
     );
 }
+
+#[test]
+fn off_the_main_thread_there_is_no_drag_source_to_ask() {
+    if MainThreadMarker::new().is_some() {
+        return;
+    }
+    assert!(
+        !source_answers(),
+        "AppKit is not to be asked from another thread, and silence is not a yes"
+    );
+}
