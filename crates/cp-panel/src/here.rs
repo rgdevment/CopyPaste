@@ -6,10 +6,10 @@ use raw_window_handle::RawWindowHandle;
 use std::path::{Path, PathBuf};
 
 pub use platform::{
-    THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir, dress, forward,
-    in_front, media_of, ocr_available, open_link, open_path, ours_up_front, paste_into, read_stuck,
-    stay_out_of_the_dock, system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
-    watch_start,
+    Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
+    drag_out, dress, forward, in_front, media_of, ocr_available, open_link, open_path,
+    ours_up_front, paste_into, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
+    thumb_of_file, thumbs_dir, to_clipboard, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -147,6 +147,15 @@ mod platform {
         }
     }
 
+    pub use cp_win_sys::dragging::Dragged;
+
+    pub fn drag_out(handle: RawWindowHandle, paths: &[&Path]) -> Dragged {
+        let RawWindowHandle::Win32(win32) = handle else {
+            return Dragged::Elsewhere;
+        };
+        cp_win_sys::dragging::from_window(win32.hwnd.get(), paths)
+    }
+
     pub fn paste_into(ahead: isize, hide: impl FnOnce()) -> Sent {
         let Some(target) = cp_win_sys::frontmost::target_at(ahead) else {
             return Sent::Nobody;
@@ -262,6 +271,15 @@ mod platform {
 
     pub fn forward(_handle: RawWindowHandle) {
         cp_mac_sys::frontmost::bring_to_front(cp_mac_sys::frontmost::our_pid());
+    }
+
+    pub use cp_mac_sys::dragging::Dragged;
+
+    pub fn drag_out(handle: RawWindowHandle, paths: &[&Path]) -> Dragged {
+        let RawWindowHandle::AppKit(appkit) = handle else {
+            return Dragged::Elsewhere;
+        };
+        cp_mac_sys::dragging::from_view(appkit.ns_view, paths)
     }
 
     pub fn paste_into(ahead: isize, hide: impl FnOnce()) -> Sent {

@@ -99,6 +99,7 @@ export component Panel inherits Window {
     callback focus-search();
     callback moved(int);
     callback stirred(int);
+    callback dragged(int);
 
     forward-focus: input;
 
@@ -531,6 +532,7 @@ export component Panel inherits Window {
                             paste => { root.paste(root.cards[line * 2].id); }
                             open-asked => { root.open-asked(root.cards[line * 2].id); }
                             stirred => { root.stirred(line * 2); }
+                            dragged => { root.dragged(root.cards[line * 2].id); }
                         }
                         if line * 2 + 1 < root.cards.length : GridCell {
                             card: root.cards[line * 2 + 1];
@@ -542,6 +544,7 @@ export component Panel inherits Window {
                             paste => { root.paste(root.cards[line * 2 + 1].id); }
                             open-asked => { root.open-asked(root.cards[line * 2 + 1].id); }
                             stirred => { root.stirred(line * 2 + 1); }
+                            dragged => { root.dragged(root.cards[line * 2 + 1].id); }
                         }
                         if line * 2 + 1 >= root.cards.length : Rectangle {
                             horizontal-stretch: 1;
@@ -628,6 +631,7 @@ export component Panel inherits Window {
                                     root.stirred(index);
                                 }
                             }
+                            dragged(id) => { root.dragged(id); }
                             x: 10px;
                             width: parent.width - 20px;
                             height: parent.height - (card.heads-group ? Theme.row-head : 0px) - 6px;

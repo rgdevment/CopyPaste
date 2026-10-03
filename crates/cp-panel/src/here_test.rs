@@ -27,3 +27,32 @@ fn asking_the_system_for_its_theme_answers_the_same_twice() {
 fn nobody_in_front_reads_as_zero_and_pasting_there_reaches_nobody() {
     assert_eq!(paste_into(0, || {}), Sent::Nobody);
 }
+
+#[test]
+fn a_handle_from_a_system_this_one_is_not_is_no_window_to_drag_from() {
+    use raw_window_handle::XlibWindowHandle;
+    assert_eq!(
+        drag_out(
+            RawWindowHandle::Xlib(XlibWindowHandle::new(1)),
+            &[Path::new("/etc/hosts")]
+        ),
+        Dragged::Elsewhere
+    );
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn nothing_to_drag_never_starts_a_drag() {
+    use raw_window_handle::AppKitWindowHandle;
+    let handle = RawWindowHandle::AppKit(AppKitWindowHandle::new(std::ptr::NonNull::dangling()));
+    assert_ne!(drag_out(handle, &[]), Dragged::Started);
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn nothing_to_drag_never_starts_a_drag() {
+    use raw_window_handle::Win32WindowHandle;
+    let hwnd = std::num::NonZeroIsize::new(1).expect("one is not zero");
+    let handle = RawWindowHandle::Win32(Win32WindowHandle::new(hwnd));
+    assert_ne!(drag_out(handle, &[]), Dragged::Started);
+}

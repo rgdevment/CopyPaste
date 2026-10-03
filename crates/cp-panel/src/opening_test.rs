@@ -290,3 +290,41 @@ fn what_is_and_is_not_a_path_is_decided_by_the_separator_and_the_drive() {
     assert!(!super::looks_like_a_path("solo texto"));
     assert!(!super::looks_like_a_path(""));
 }
+
+#[test]
+fn only_a_file_that_is_really_gone_is_marked_as_gone() {
+    assert_eq!(landing_of(true, true, true), Landing::Opened);
+    assert_eq!(landing_of(false, true, false), Landing::Gone);
+    assert_eq!(
+        landing_of(false, true, true),
+        Landing::Refused,
+        "the system refuses to open plenty of files that are right there: no application for the \
+         extension, a share violation, SmartScreen. Marking those as gone hides them and the \
+         housekeeping deletes them later"
+    );
+    assert_eq!(
+        landing_of(false, false, false),
+        Landing::Refused,
+        "what was written out to be looked at has no path of its own to be missing from"
+    );
+}
+
+#[test]
+fn sweeping_previews_that_were_never_written_takes_nothing_and_says_so() {
+    let nowhere = std::env::temp_dir().join("cp-seen-never-written-here");
+    let _ = std::fs::remove_dir_all(&nowhere);
+    assert_eq!(sweep_seen(&nowhere, std::time::SystemTime::now()), 0);
+}
+
+#[test]
+fn what_the_system_said_about_opening_it_is_read_the_same_way_every_time() {
+    use cp_core::reading::Waited;
+    assert_eq!(answered(Waited::Answered(true)), Reached::Opened);
+    assert_eq!(answered(Waited::Answered(false)), Reached::Refused);
+    assert_eq!(
+        answered(Waited::StillRunning),
+        Reached::Working,
+        "a viewer that is slow to open has not refused, and the panel waits for it"
+    );
+    assert_eq!(answered(Waited::Gone), Reached::Refused);
+}

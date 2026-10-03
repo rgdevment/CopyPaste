@@ -456,6 +456,18 @@ impl Store {
         Ok(rows > 0)
     }
 
+    pub fn label_of(&self, id: i64) -> Result<Option<String>> {
+        let said: Option<Option<String>> = self
+            .db
+            .query_row(
+                "SELECT label FROM items WHERE id = ?1 AND deleted_at IS NULL",
+                [id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(said.flatten())
+    }
+
     pub fn set_source(&self, id: i64, app: &str, at: i64) -> Result<()> {
         self.db.execute(
             "UPDATE items SET app_source = ?2, search_app = ?3, updated_at = ?4 WHERE id = ?1",
