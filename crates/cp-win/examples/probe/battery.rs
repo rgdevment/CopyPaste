@@ -1202,19 +1202,29 @@ fn main() -> std::process::ExitCode {
 
     b.case(
         "R1",
-        "what a drop would carry is the file that was asked for, by its own name",
+        "what a drop would carry is the file that was asked for, spaces in its name and all",
         || {
             let scratch = Scratch::new("cp-r1")?;
             let file = scratch.file("dragged by its name.txt", b"cp-r1")?;
             let bytes = dragging::offered_for(&[file.as_path()], BLOB_UP_TO)
                 .ok_or("the shell handed over nothing for a file that is right there")?;
-            match cp_win::drop::paths_in(&bytes).as_slice() {
-                [one] if std::path::Path::new(one) == file => Ok(()),
-                other => Err(format!(
-                    "a drop would land {other:?}, not {}",
-                    file.display()
-                )),
+            let said = cp_win::drop::paths_in(&bytes);
+            let [one] = said.as_slice() else {
+                return Err(format!("a drop would land {said:?}, and not one file"));
+            };
+            let asked = std::fs::canonicalize(&file).map_err(|why| why.to_string())?;
+            let landed = std::fs::canonicalize(one).map_err(|why| why.to_string())?;
+            if landed != asked {
+                return Err(format!("a drop would land {landed:?}, not {asked:?}"));
             }
+            if landed.file_name() != file.file_name() {
+                return Err(format!(
+                    "the name went from {:?} to {:?} on the way",
+                    file.file_name(),
+                    landed.file_name()
+                ));
+            }
+            Ok(())
         },
     );
 
