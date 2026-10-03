@@ -10,7 +10,7 @@ export default function Chrome({ knobs = true }: { knobs?: boolean }) {
   const mac = onMac();
 
   return (
-    <div className={mac ? "chrome mac" : "chrome"} data-tauri-drag-region>
+    <div className={`chrome${mac ? " mac" : ""}${knobs ? "" : " bare"}`} data-tauri-drag-region>
       <span className="chrome-who" data-tauri-drag-region>
         CopyPaste
       </span>
