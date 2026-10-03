@@ -20,8 +20,9 @@
     </a>
   </p>
 
-  <p><strong>CopyPaste 3.0 is on the way</strong> — a rewrite of the core in Rust, starting with macOS.<br/>
-  What you see below is 2.x, which stays supported on the <a href="https://github.com/rgdevment/CopyPaste/tree/v2-stable"><code>v2-stable</code></a> branch.</p>
+  <p><strong>CopyPaste 3.0 is here as a release candidate</strong> — the whole application rewritten in Rust, for Windows and macOS.<br/>
+  Try it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>. The 2.x stays supported on the <a href="https://github.com/rgdevment/CopyPaste/tree/v2-stable"><code>v2-stable</code></a> branch until the final release, and it is what the Store and Homebrew still install.<br/>
+  <sub>Much of what follows still describes the 2.x and is being rewritten alongside the 3.0.</sub></p>
 
   <h4>Download CopyPaste</h4>
 
@@ -36,10 +37,17 @@
   </p>
 
   <p align="center">
+    <a href="https://rgdevment.com/copypaste/"><b>rgdevment.com/copypaste</b></a>
+  </p>
+
+  <p align="center">
     <sub>Prefer a direct download? <a href="https://github.com/rgdevment/CopyPaste/releases/latest">GitHub Releases</a> has standalone installers — Windows (.exe) · macOS (.dmg)</sub>
   </p>
 
   <p>
+    <a href="https://github.com/sponsors/rgdevment">
+      <img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"/>
+    </a>
     <a href="https://buymeacoffee.com/rgdevment">
       <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"/>
     </a>
@@ -79,7 +87,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Getting Started](#getting-started)
 - [FAQ](#faq)
 - [Support and Bug Reporting](#support-and-bug-reporting)
-- [Clean Install and Reset](#clean-install-and-reset)
+- [Starting Over, and Taking It With You](#starting-over-and-taking-it-with-you)
 - [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
 - [Localization](#localization-help-translate-copypaste)
 - [Want to Help?](#want-to-help)
@@ -93,12 +101,13 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
     <img src="resources/demo.gif" alt="CopyPaste clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
 </div>
 <div align="center"><em>Fast search, clean cards, and a native feel across Windows and macOS.</em></div>
+<div align="center"><sub>These show CopyPaste 2. New ones are being taken for the 3.0.</sub></div>
 
 <br/>
 
 <div align="center">
     <img src="resources/copypaste_v2_en_1_panel.png" alt="CopyPaste clipboard history — main panel showing copied text, images, files and links with previews" width="49%"/>
-    <img src="resources/copypaste_v2_en_2_categories.png" alt="CopyPaste copy tool — category filters and color labels for organizing clipboard items" width="49%"/>
+    <img src="resources/copypaste_v2_en_2_categories.png" alt="CopyPaste copy tool — filtering clipboard history by kind to find an item quickly" width="49%"/>
     <br/><br/>
     <img src="resources/copypaste_v2_en_3_settings.png" alt="CopyPaste settings — configure clipboard manager privacy, shortcuts and appearance" width="49%"/>
     <img src="resources/copypaste_v2_en_4_multiplatform.png" alt="CopyPaste multiplatform clipboard manager — running natively on Windows and macOS side by side" width="49%"/>
@@ -172,19 +181,24 @@ For responsible disclosure and security contact info, see [SECURITY.md](SECURITY
 <details>
 <summary><strong>Where is my clipboard data stored?</strong></summary>
 
-CopyPaste stores all data locally under your user profile:
+CopyPaste stores everything locally under your user profile. The 3.0 keeps one
+folder with the history, the files behind it and its settings:
 
-**Windows:**
+**Windows** — `%LOCALAPPDATA%\CopyPaste\`
 
-- **Database:** `%LOCALAPPDATA%\CopyPaste\clipboard.db`
-- **Images:** `%LOCALAPPDATA%\CopyPaste\images`
-- **Config:** `%LOCALAPPDATA%\CopyPaste\config`
+**macOS** — `~/Library/Application Support/CopyPaste/`
 
-**macOS:**
+| What | Where |
+| :--- | :---- |
+| History | `history.db` |
+| Images and files | `blobs/` |
+| Previews | `thumbs/` |
+| Settings | `config.toml` |
+| Logs | `logs/` |
 
-- **Database:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/clipboard.db`
-- **Images:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/images`
-- **Config:** `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/config`
+The 2.x kept its own `clipboard.db` beside it on Windows, and under
+`~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` on a Mac. The
+3.0 reads it only to offer bringing your history over, and never writes to it.
 
 </details>
 
@@ -201,154 +215,97 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 ### Design and Experience
 
-- **Adapts to Your System:** Follows your OS light or dark theme automatically — Mica on Windows, Sidebar material on macOS.
+- **Native where it matters:** The panel answers the keys of the system it runs on — Ctrl on Windows, ⌘ on a Mac — and lives in the tray or in the menu bar, where you expect to find it.
+- **Follows your theme:** Light or dark, whichever your system is using, or the one you pick in Settings.
 - **Fast and Lightweight:** Starts quickly and doesn't hog resources. Lightweight enough to forget it's running.
-- **Multiplatform:** The same native look, feel, and functionality across Windows and macOS.
 
 ### Smart Clipboard Management
 
-- **Handles Everything:** Text, images, files, folders, links, audio, and video — with content-aware previews. A copy tool that actually understands what you copy.
-- **Smart Content Detection:** Automatically recognizes and categorizes content — emails, phone numbers (with country), colors (HEX/RGB/HSL with swatch), IP addresses, UUIDs, and JSON. Each type gets its own icon, badge, and filter.
-- **Open with Default App:** Files, images, links, emails, and phone numbers open directly in your OS's default app — the copy-paste manager stays out of the way.
-- **Drag to Other Apps (Windows):** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor. Dragged files keep their real, unique name, so web uploaders no longer reject a second image as a duplicate `image.png`. macOS support is on the way.
-- **Formatting Is Never Lost:** Copying text that is already in the history again, this time without styles, no longer discards the formatting stored for it. Rich text contains the plain text, not the other way around: _Paste as plain text_ already serves the unstyled version at paste time, without touching what is saved. Stored styles are replaced only when a new copy brings its own.
+- **Handles Everything:** Text, images, files, folders, links, audio and video — with previews that understand what they are showing.
+- **Knows What You Copied:** Fifteen kinds recognised on their own — code, JSON, links, emails, phone numbers, colours, IP addresses, UUIDs and tokens among them. Each gets its own icon and its own filter, and a JSON or a token opens already readable.
+- **Finds Text Inside Images:** A screenshot is searchable by what it says, read on your machine by the system itself — Vision on macOS, `Windows.Media.Ocr` on Windows. Nothing is uploaded to read it.
+- **Paste It as Something Else:** The same card pasted as plain text, or in another of the forms it carries, without touching what is stored.
+- **Copy Without Pasting:** Put a card back on the clipboard and paste it yourself, later, wherever you want.
+- **Open with Default App:** Files, images, links, emails and phone numbers open in whatever your system already uses. Links go through [LinkUnbound](https://github.com/rgdevment/LinkUnbound) when you have it installed, and to your browser when you do not.
+- **Drag to Other Apps (Windows, 2.x only):** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor. The 3.0 does not carry this yet, on either platform.
 
 ### Workflow and Productivity
 
-- **Full Keyboard Navigation:** Navigate, search, and paste your copy history using only your keyboard — a clipboard utility built for speed.
-- **Smart Search:** Diacritic-insensitive full-text search (handles é, ñ, ø, ß, æ and more) across content and labels.
-- **Card Labels and Colors:** Personalize your copy-paste items with custom labels (up to 50 characters) and 7 color options to identify your snippets at a glance.
-- **Advanced Filters:** Three filter modes — Content (text search), Category (color selection), and Type (item type) — with dropdown multi-selection.
-- **Pin Important Items:** Keep your most-used copy-paste fragments always accessible at the top.
-- **Backup and Restore:** Export and import your clipboard history, images, and settings as `.cpbackup` files.
-- **Start with Windows:** Optionally launch at login — works natively on both the Microsoft Store (MSIX) and standalone installer versions, no admin rights required.
-- **Guided Onboarding (Windows):** First-launch walkthrough on Windows — pick your preferences for thumbnails, broken-item retention and image quota before you start using the app. macOS opens straight to the main panel.
-- **Live Settings (autosave):** The Settings panel is organized in 6 tabs (General · Shortcuts · Performance · Cleanup & Privacy · Backup & Support · About) and saves automatically as you tweak — no Save / Cancel buttons.
+- **Full Keyboard Navigation:** Search, move, pin, rename and paste without the mouse. The search box has the focus the moment the panel opens.
+- **Smart Search:** Accent-insensitive full-text search across what you copied, the names you gave it, and the text read out of images.
+- **A Name for Any Card:** Give a card a name and find it later by that name.
+- **Filter by Kind:** Pick a kind from the strip, hold the modifier to add kinds instead of swapping them, or type `#image` straight into the search box.
+- **Pin Important Items:** What you pin stays at the top, and nothing sweeps it away — not age, not the quota, not emptying the history.
+- **Backup and Restore:** Export everything to a single `.cpbackup` file and import it anywhere, without losing what is already there.
+- **Start with Your Session:** Optionally launch at login, on Windows and on macOS, without admin rights.
+- **A Welcome That Teaches:** First run walks through the shortcut, where the app lives and how the panel works — and on a Mac, through the one permission it needs to paste for you.
+- **Settings That Save Themselves:** Five sections — General, Keyboard shortcuts, History, Backup, About — with no Save or Cancel buttons.
 
 ### Storage Control
 
-- **Image Quota (MB):** Cap how much disk space copied images can use. When the cap is reached, oldest non-pinned images are evicted (LRU). Pinned items and external file references are never touched. Set to `0` (default) for unlimited.
-- **Broken-Item Retention:** When a copied file or image disappears from disk (moved, deleted, external drive disconnected) the entry is kept for `keepBrokenItemsDays` (default 30) before being purged — so reconnecting an external drive restores the previews instead of losing them.
-- **Native Thumbnails:** Image, video and audio previews are generated through the OS shell (QuickLook on macOS, `IShellItemImageFactory` on Windows).
+- **Keep for as Long as You Want:** Anything older than the window you choose goes on its own. Pinned items never do.
+- **Image Quota (MB):** Cap how much disk space copied images can use. When the cap is reached the oldest unpinned ones are evicted. Set to `0` (default) for unlimited.
+- **Native Thumbnails:** Previews for images, video and audio are generated by the system itself, not by a bundled decoder.
 
 ---
 
 ## Keyboard Shortcuts
 
 CopyPaste keeps `Ctrl+V` under the active application's control and uses one
-global shortcut of its own to open the history panel.
+global shortcut of its own to open the history panel. On a Mac the panel answers
+the keys of the system it runs on: ⌘ where Windows uses Ctrl, and the keys a Mac
+keyboard does not have are replaced by the ones it does.
 
-| Scope | Shortcut | Action |
-| :---- | :------- | :----- |
-| Active application | Ctrl+V (Windows) / Cmd+V (macOS) | Paste the current system clipboard normally. CopyPaste does not intercept it. |
-| CopyPaste global | Ctrl+Alt+V (Windows) / Cmd+Alt+V (macOS) | Open the panel where you were typing. Customizable in Settings → General. |
-| Panel open | ↑ / ↓ | Move through the history. |
-| Panel open | Tab / Shift+Tab | Move forward and back through the same list. |
-| Panel open | Enter | Paste what is selected, in the app you came from. |
-| Panel open | Shift+Enter | Paste it as plain text. |
-| Panel open | Alt+Enter or Ctrl+Enter | Open «paste as» and choose a form for it. |
-| Panel open | Ctrl+P | Pin or unpin what is selected. |
-| Panel open | Delete | Delete what is selected (with the search box empty). |
-| Panel open | Backspace | Drop the last filter (with the search box empty). |
-| Panel open | F1 | Show this list inside the panel. |
-| Panel open | Esc | Close the panel. |
-| «Paste as» open | ↑ / ↓ | Move through the forms. |
-| «Paste as» open | Enter | Paste in the form that is selected. |
-| «Paste as» open | Esc or Tab | Go back to the list. |
+| Scope | Windows | macOS | Action |
+| :---- | :------ | :---- | :----- |
+| Active application | Ctrl+V | ⌘V | Paste the current system clipboard normally. CopyPaste does not intercept it. |
+| CopyPaste global | Ctrl+Alt+V | ⌥⌘V | Open the panel where you were typing. Customizable in Settings → Keyboard shortcuts. |
+| Panel open | Enter | ⏎ | Paste what is selected. |
+| Panel open | Shift + Enter | ⇧⏎ | Paste as plain text. |
+| Panel open | Alt + Enter  ·  Ctrl + Enter | ⌥⏎  ·  ⌘⏎ | Paste as… |
+| Panel open | Arrows | Arrows | Move through the list. |
+| Panel open | Click | Click | Open the card; another click closes it. |
+| Panel open | Double click | Double click | Paste that card. |
+| Panel open | Tab  ·  Shift + Tab | ⇥  ·  ⇧⇥ | Step through the filters. |
+| Panel open | Many | Many | The layers button: clicks add kinds instead of swapping them. |
+| Panel open | #image  ·  #folder | #image  ·  #folder | Filter by kind from the search box. |
+| Panel open | Backspace | ⌫ | Drop the last tag. |
+| Panel open | Delete | ⌘⌫ | Delete the selected one. |
+| Panel open | Ctrl + P | ⌘P | Pin or unpin. |
+| Panel open | F2  ·  Ctrl + E | ⌘E | Give the selected one a name. |
+| Panel open | Ctrl + O | ⌘O | Open the selected one outside. |
+| Panel open | Right arrow | → | Open or close the card. |
+| Panel open | Ctrl + 1  ·  Ctrl + 2 | ⌘1  ·  ⌘2 | Everything  ·  only what is pinned. |
+| Panel open | Alt + G  ·  Alt + T | ⌘G  ·  ⌘T | Choose the kind. |
+| Panel open | F1 | ⌘, | Open Settings. |
+| Panel open | Esc | Esc | Close the panel. |
 
 The search box always has the focus, so you type to search the moment the panel
 opens. A word starting with `#` filters by kind (`#image`, `#link`, `#imagen`)
 instead of searching for it.
 
-### Card Customization
+### What the panel does with what you copied
 
-Each clipboard card can be personalized with:
+**It opens where you left off and pastes back where you were.** The shortcut
+brings it up over whatever you were writing in, and what you choose goes into
+that application, not into a window you then have to leave.
 
-- **Custom Label:** Add a descriptive name (up to 50 characters) to identify your items quickly
-- **Color Indicator:** Choose from 6 colors (Red, Green, Purple, Yellow, Blue, Orange) or None to visually categorize your items
+**You type to find things.** The search box has the focus the moment the panel
+appears, and it searches what you copied, the names you gave it and the text
+read out of your screenshots. A word starting with `#` filters by kind instead
+of searching for it, and the strip above the list does the same with a click —
+hold the modifier and the clicks add kinds rather than swapping them.
 
-To edit a card:
+**Each kind is shown the way that kind deserves.** Images as a grid or as rows,
+a video by its cover, audio as a waveform, a JSON by its keys or raw, links and
+folders grouped or by age. The panel remembers which way you chose for each.
 
-- **Right-click** on any card → Select "Edit"
-- **Press E** with a card selected
-- **Click the ... menu** on hover → Select "Edit" _(Default theme only)_
+**A card takes a name, and keeps it.** Give one a name and it is searchable by
+that name afterwards, which is how a snippet you reach for every day stops being
+something you scroll for.
 
-### Advanced Filters
-
-CopyPaste includes three filter modes to help you find items in your clipboard history quickly:
-
-| Mode         | Description           | How to Use                                                                                   |
-| :----------- | :-------------------- | :------------------------------------------------------------------------------------------- |
-| **Content**  | Text search (default) | Type in the search box to filter by content or label                                         |
-| **Category** | Filter by color       | Select colors from the dropdown to show only items with selected colors                      |
-| **Type**     | Filter by item type   | Select from the dropdown to filter by content type                                           |
-
-**Switching Filter Modes:**
-
-- Click the filter icon next to the search box and select a mode from the flyout
-- Use keyboard shortcuts: Alt+C (Content), Alt+G (Category), Alt+T (Type)
-
-**How Filters Work:**
-
-- Each mode applies only its relevant filter — text search in Content mode, colors in Category mode, types in Type mode
-- Switching modes automatically uses the appropriate filter without mixing criteria
-- In Category and Type modes, select multiple options from the dropdown for precise filtering
-- Press Esc to clear the current filter
-- When filtering, pinned items show a pin icon in the footer to help identify them
-
-**Clearing Filters:** Press Esc to clear the current filter (search text, colors, or types depending on the active mode).
-
-**Configurable Reset Behavior:** In Settings, you can configure whether filters reset when the window opens:
-
-- Reset to Content mode on open
-- Clear text search on open
-- Clear category (color) filter on open
-- Clear type filter on open
-
-### Card Expansion
-
-Clipboard items (cards) can be expanded to show more text content:
-
-**With Mouse:**
-
-- **Single click** on a card → Expand to see full text (click again to collapse)
-- **Double click** on a card → Paste the item immediately to your previous app
-- Only one card can be expanded at a time
-- All cards collapse when the window is hidden
-- In **Default** theme, hovering a card reveals quick action buttons
-- In **Compact** theme, cards have no hover effect (use right-click instead)
-
-Double-click always collapses the card before pasting, so your last click state is always clean.
-
-**With Keyboard:**
-
-- **Right arrow →** → Expand/collapse the selected card
-- Cards automatically collapse when you navigate to a different item with ↑/↓
-- Only one card can be expanded at a time
-
-### Keyboard-Only Workflow
-
-1. **Press Ctrl+Alt+C** on Windows or **Control+Shift+V** on macOS (customizable in Settings) → Window opens with focus on search box
-2. **Type to filter** (optional) → Results update in real-time (searches content and labels)
-3. **Press Esc** (optional) → Clear search to see all items again
-4. **Press ↓** → Navigate to first clipboard item
-5. **Use ↑/↓** → Select the desired item
-6. **Press →** (optional) → Expand card to see full text
-7. **Press E** (optional) → Edit card to add label/color
-8. **Press Enter** → Item is pasted to your previous application
-
-This copy-paste workflow matches the efficiency of double-clicking with your mouse but keeps your hands on the keyboard.
-
-### Filter Configuration
-
-In the **Settings** window, you can customize filter behavior:
-
-- **Return to Content mode on open:** When enabled, always starts in Content mode (text search) when opening CopyPaste
-- **Clear search on open:** Automatically clears the search text when opening the window
-- **Clear category filter on open:** Resets color selections when opening (only applies if not returning to Content mode)
-- **Clear type filter on open:** Resets type selections when opening (only applies if not returning to Content mode)
-
-If "Return to Content mode on open" is enabled, the other clear options are automatically disabled since returning to Content mode achieves the same result.
+**What you pin stays.** Nothing sweeps it away: not age, not the quota, not
+emptying the history.
 
 ---
 
@@ -356,10 +313,12 @@ If "Return to Content mode on open" is enabled, the other clear options are auto
 
 | OS          | Recommended                       | Alternatives                                       |
 | :---------- | :-------------------------------- | :------------------------------------------------- |
-| **Windows** | Microsoft Store                   | Scoop · standalone `.exe`                          |
+| **Windows** | Microsoft Store                   | winget · standalone `.exe`                         |
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 
-After installing, open CopyPaste with **Ctrl+Alt+C** on Windows or **Control+Shift+V** on macOS. Both are customizable in Settings → Shortcuts.
+After installing, open the panel with **Ctrl+Alt+V** on Windows or **⌥⌘V** on a
+Mac. Both are customizable in Settings → Keyboard shortcuts, and the first run
+walks you through it.
 
 ### Windows
 
@@ -367,12 +326,14 @@ After installing, open CopyPaste with **Ctrl+Alt+C** on Windows or **Control+Shi
 
 > [Install from the Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856)
 
-**Scoop** — for command-line installs, tracked with `scoop update`:
+**winget** — for command-line installs, tracked with `winget upgrade`:
 
 ```sh
-scoop bucket add rgdevment https://github.com/rgdevment/scoop-bucket
-scoop install copypaste
+winget install rgdevment.CopyPaste
 ```
+
+> The [Scoop bucket](https://github.com/rgdevment/scoop-bucket) carries CopyPaste
+> 2 and is not fed by the 3.0 release.
 
 **Standalone `.exe`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). The installer is self-signed; see the [security note](#standalone-downloads) below.
 
@@ -380,13 +341,13 @@ scoop install copypaste
 
 ### macOS
 
-**Homebrew** (recommended) — installs the universal binary (Apple Silicon + Intel) and tracks updates with `brew upgrade`:
+**Homebrew** (recommended) — picks the build for your chip, Apple Silicon or Intel, and tracks updates with `brew upgrade`:
 
 ```sh
 brew tap rgdevment/tap && brew install --cask copypaste
 ```
 
-**Standalone `.dmg`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). Same universal binary, manual updates.
+**Standalone `.dmg`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest), one per chip, with manual updates.
 
 ---
 
@@ -464,11 +425,11 @@ Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/c
 **What platforms does this copy-paste tool support?**
 Windows 10/11 and macOS (Ventura+). Linux support was discontinued — see [Linux support (discontinued)](#linux-support-discontinued).
 
-**Does it start automatically with Windows?**
-Optionally, yes. Enable it in Settings → General → Start with Windows. On the Microsoft Store version it uses the Windows StartupTask system; on the standalone installer it registers through the standard Windows startup mechanism. No administrator rights are required for either.
+**Does it start with my session?**
+Optionally, yes, on both systems. Enable it in Settings → General. On Windows it registers through the standard startup mechanism, and on macOS through a login item of its own. No administrator rights are required.
 
 **Does the macOS version work on Intel Macs?**
-Yes. The DMG contains a universal binary that runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
+Yes. There is a build for each chip, Apple Silicon and Intel. Homebrew picks the right one for you, and the Releases page carries both.
 
 **How is CopyPaste different from other clipboard managers?**
 CopyPaste is a personal project, not a company product. There are no ads, no telemetry, no accounts, and no data collection. Unlike most copy paste tools, it's built to feel native on each platform (Mica on Windows, Sidebar material on macOS), it's fully keyboard-driven, and it respects your privacy completely. It's an open source clipboard utility focused on productivity — you can verify every line of code yourself.
@@ -517,35 +478,34 @@ You decide exactly what you share. The reporting process is fully manual and pri
 
 ---
 
-## Clean Install and Reset
+## Starting Over, and Taking It With You
 
-Sometimes you need a fresh start — for troubleshooting, transferring to a new machine, or just cleaning up.
+Everything here is in **Settings**, and nothing of it reaches the network.
 
-**Where to find it:** Settings → About → **Reset & Clean Install**
+### Emptying the history
 
-### Soft Reset
+**Settings → History → Empty the history** deletes everything you copied and
+**keeps what you pinned**. It cannot be undone.
 
-Resets all settings to defaults and marks the app as a new installation. **Your clipboard history is preserved.**
+### Taking it to another machine
 
-Use this when:
+**Settings → Backup → Export** writes a single `.cpbackup` file with everything:
+text, images and what you pinned. **Import** adds what the file holds to the
+history you already have, without losing any of it, so the same file can be
+restored twice without making a mess.
 
-- Settings became corrupted or something isn't behaving correctly
-- You want to start fresh with default configuration without losing history
+### Coming from CopyPaste 2
 
-### Hard Reset
+The first run offers to bring the 2.x history over, and **Settings → Backup**
+offers it again later. Your 2.x data is only read, never written, and the old
+application keeps working.
 
-Deletes everything — clipboard history, images, settings, and logs — then restarts the app. **This action cannot be undone.**
+### A completely clean slate
 
-Use this when:
-
-- You want a completely clean slate
-- You're transferring to someone else or decommissioning the app
-
-### Microsoft Store Users
-
-Both reset options work identically on the Microsoft Store version. MSIX packaging uses filesystem virtualization, so the app's data folder is the real package data path — CopyPaste can find and wipe it without needing elevated permissions.
-
-The Windows Settings "Reset app" button does the same thing as Hard Reset. Both are safe to use.
+Quit CopyPaste from the tray (Windows) or the menu bar (macOS) and delete the
+data folder listed above. **Settings → History → Data folder → Open folder**
+takes you to it. Starting it again is a fresh installation, welcome tour
+included.
 
 ---
 
