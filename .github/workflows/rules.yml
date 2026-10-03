@@ -66,87 +66,8 @@ jobs:
           sys.exit(bad)
           PY
 
-      - name: Unsafe lives only in the -sys crates
-        run: |
-          expected="crates/cp-mac-sys crates/cp-win-sys"
-          found=$(grep -rl 'unsafe_code = "allow"' crates/*/Cargo.toml | xargs -n1 dirname | sort | tr '\n' ' ')
-          for dir in $found; do
-            case " $expected " in
-              *" $dir "*) ;;
-              *) echo "::error::unsafe declarado fuera de los crates -sys: $dir"; exit 1 ;;
-            esac
-          done
-
-      - name: The core produces no terminal output
-        run: |
-          if grep -rnE '^[^"]*(^|[ \t{;(=>|&])(e?print(ln)?!)' crates/cp-core/src --include='*.rs'; then
-            echo "::error::cp-core no imprime: usa tracing"; exit 1
-          fi
-
-      - name: The core touches neither platform nor interface
-        run: |
-          if grep -rn 'use tauri\|use windows\|use objc2' crates/cp-core/src --include='*.rs'; then
-            echo "::error::cp-core depends on neither platform nor interface"; exit 1
-          fi
-
-      - name: No Spanish identifiers
-        run: |
-          if grep -rnE '\b(fecha|limite|prioridad|filtro|tarea|titulo|etiqueta|imagen|archivo) *:' \
-               crates/*/src --include='*.rs' | grep -v '"' | grep -vE ':[0-9]+: *///?!?'; then
-            echo "::error::identifiers are written in English"; exit 1
-          fi
-
-      - name: No voseo in the Spanish anywhere
-        run: |
-          if grep -rniE '\b(v[o]s|ten[é]s|quer[é]s|pod[é]s|and[á]|mir[á]|hac[é]|ch[e])\b' \
-               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
-            echo "::error::neutral Spanish, no voseo"; exit 1
-          fi
-
-      - name: No peninsular Spanish in what a person reads
-        run: |
-          if grep -rniE '\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b' \
-               crates docs README.md --include='*.rs' --include='*.md' 2>/dev/null | grep -q .; then
-            echo "::error::neutral Spanish: archivo, computador, presiona"; exit 1
-          fi
-
-      - name: The code carries no comments
-        run: |
-          if grep -rnE '[/]{2}' crates app/src-tauri/src --include='*.rs' \
-               | grep -vE '[a-z]+:[/][/]' | grep -vE '"[^"]*[/]{2}' | grep -q .; then
-            echo "::error::the code carries no comments; whatever needs explaining goes on the record"; exit 1
-          fi
-          if grep -rnE '[/][*]' crates app/src-tauri/src --include='*.rs' | grep -q .; then
-            echo "::error::no block comments either"; exit 1
-          fi
-
-      - name: The tests live beside the file, not inside it
-        run: python3 scripts/oversized.py --inline
-
-      - name: No two crates name an example the same
-        run: |
-          set -euo pipefail
-          dirs=$(find . -type d -name examples -not -path './target/*' \
-            -not -path '*/node_modules/*' | sort)
-          said=$(for one in $dirs; do
-            find "$one" -mindepth 1 -maxdepth 1 -name '*.rs' -exec basename {} .rs \;
-            find "$one" -mindepth 2 -maxdepth 2 -name 'main.rs' -printf '%h\n' \
-              | xargs -r -n1 basename
-          done | sort)
-          twice=$(printf '%s\n' "$said" | uniq -d)
-          if [ -n "$twice" ]; then
-            echo "::error::two crates name an example the same, and cargo links every example to \
-                  target/<profile>/examples/<name>, so they are one binary and the two link steps \
-                  race: $(echo "$twice" | tr '\n' ' ')"
-            exit 1
-          fi
-          echo "every example has a name of its own: $(echo "$said" | tr '\n' ' ')"
-
-      - name: No file or function grows past what a person can hold
-        run: python3 scripts/oversized.py
-
-      - name: No crate slips out of mutation
-        run: python3 scripts/mutants_cover.py
+      - name: Project conventions
+        run: bash scripts/rules.sh
 
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})

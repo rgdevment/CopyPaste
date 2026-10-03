@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)" || exit 0
+status=0
+
+bash scripts/rules.sh || status=1
+
+quietly() {
+  local said
+  said=$(eval "$1" 2>&1) || {
+    printf '%s\n' "$said"
+    printf 'x  %s\n' "$2"
+    status=1
+  }
+}
+
+if command -v cargo > /dev/null; then
+  quietly "cargo fmt --all --check" "cargo fmt --all would change files"
+else
+  echo "x  cargo is not here, so the formatting was not looked at"
+fi
+
+if [ -d app/node_modules ]; then
+  quietly "cd app && npx --no-install biome check src" \
+    "biome would change files, or is not installed; it is the first thing CI runs"
+else
+  echo "x  app/node_modules is not here, so biome did not look at the window"
+fi
+
+exit $status
