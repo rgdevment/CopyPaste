@@ -704,3 +704,8 @@ export function panelKey(id: Which, mac: boolean): string {
   const [row] = PANEL_ROWS.filter((one) => one.id === id);
   return spelling(row, mac);
 }
+
+// prose needs one way to do it, not the two the table offers
+export function oneKey(id: Which, mac: boolean): string {
+  return panelKey(id, mac).split("\u00b7")[0].trim();
+}

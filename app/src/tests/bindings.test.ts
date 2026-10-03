@@ -12,7 +12,7 @@ const PANEL = ui("panel.slint");
 // every binding ends its branch with one, so each piece holds a single condition
 const BRANCHES = PANEL.split("return accept;");
 
-const APPLE = "root.apple";
+const APPLE = "Theme.apple";
 
 const LOOKED_FOR: Record<string, string> = {
   enter: "event.text == Key.Return",
@@ -162,7 +162,7 @@ describe("la tabla de atajos", () => {
       expect(branch, `${one} answers on Windows too`).toContain(APPLE);
     }
     expect(PANEL, "the kinds sheet ignores Command on a Mac").toContain(
-      "(event.modifiers.alt || (root.apple && event.modifiers.control))",
+      "(event.modifiers.alt || (Theme.apple && event.modifiers.control))",
     );
   });
 

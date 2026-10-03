@@ -1398,7 +1398,7 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
             if !ui.window().is_visible() {
                 return;
             }
-            if ahead_now() == 0 {
+            if here::ours_up_front() {
                 was_ours = true;
                 return;
             }

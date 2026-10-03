@@ -4,7 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { asKeys, caps, type Kept, onMac, type Trust, useKept, useKeys } from "../core";
-import { fill, inEnglish, items, panelKey, t } from "../locales";
+import { fill, inEnglish, items, oneKey, panelKey, t } from "../locales";
 import news from "../news.json";
 import Chrome from "./Chrome";
 
@@ -38,10 +38,21 @@ export function steps(former: boolean, asksTrust: boolean): Step[] {
   ];
 }
 
-export function toldFor(versions: string[], english: boolean): { version: string; told: Told[] }[] {
+export function toldFor(
+  versions: string[],
+  english: boolean,
+  mac: boolean,
+): { version: string; told: Told[] }[] {
   return versions.flatMap((version) => {
     const found = news.find((one) => one.version === version);
-    return found ? [{ version, told: english ? found.en : found.es }] : [];
+    if (!found) {
+      return [];
+    }
+    const told = (english ? found.en : found.es).map((one) => ({
+      ...one,
+      said: one.said.replace("{name}", oneKey("name", mac)),
+    }));
+    return [{ version, told }];
   });
 }
 
@@ -446,7 +457,7 @@ function Bring({ old, dots, next }: { old: Former | null; dots: ReactNode; next:
 }
 
 function News({ versions }: { versions: string[] }) {
-  const told = toldFor(versions, inEnglish());
+  const told = toldFor(versions, inEnglish(), onMac());
 
   return (
     <main className="welcome">

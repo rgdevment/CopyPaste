@@ -12,12 +12,9 @@ export component Panel inherits Window {
     height: Theme.height + Theme.margin * 2;
     no-frame: true;
     always-on-top: true;
-    background: transparent;
+    background: Theme.apple ? Theme.panel : transparent;
     title: "CopyPaste";
     icon: @image-url("../../../app/src-tauri/icons/128x128.png");
-
-    // Slint swaps the modifiers on macOS: modifiers.control is Command, modifiers.meta is Control
-    property <bool> apple: Platform.os == OperatingSystemType.macos;
 
     in property <[Card]> cards;
     in property <[int]> grid-lines;
@@ -126,7 +123,7 @@ export component Panel inherits Window {
         opacity: root.shown;
         drop-shadow-blur: Theme.shadow-blur;
         drop-shadow-color: Theme.shadow;
-        drop-shadow-offset-y: 10px;
+        drop-shadow-offset-y: Theme.apple ? 0px : 10px;
         clip: true;
         animate opacity { duration: Theme.appear; easing: ease-out; }
         animate y { duration: Theme.appear; easing: ease-out; }
@@ -193,6 +190,8 @@ export component Panel inherits Window {
                                 font-size: 13px;
                                 single-line: true;
                                 edited => { root.search(self.text); }
+                                // Slint swaps the modifiers on macOS: modifiers.control is the
+                                // Command key there, and modifiers.meta the Control one
                                 key-pressed(event) => {
                                     if root.sheet-open {
                                         if event.text == Key.Escape {
@@ -223,7 +222,7 @@ export component Panel inherits Window {
                                         return reject;
                                     }
                                     if event.text == Key.F1
-                                        || (root.apple && event.text == "," && event.modifiers.control) {
+                                        || (Theme.apple && event.text == "," && event.modifiers.control) {
                                         root.ask-settings();
                                         return accept;
                                     }
@@ -238,14 +237,14 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.Backspace
-                                        && !(root.apple && event.modifiers.control)
+                                        && !(Theme.apple && event.modifiers.control)
                                         && root.query == ""
                                         && root.tags.length > 0 {
                                         root.drop-tag("");
                                         return accept;
                                     }
                                     if (event.text == Key.Delete
-                                            || (root.apple && event.text == Key.Backspace && event.modifiers.control))
+                                            || (Theme.apple && event.text == Key.Backspace && event.modifiers.control))
                                         && root.query == ""
                                         && root.current >= 0 {
                                         root.remove(root.cards[root.current].id);
@@ -266,7 +265,7 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if (event.text == "g" || event.text == "t")
-                                        && (event.modifiers.alt || (root.apple && event.modifiers.control)) {
+                                        && (event.modifiers.alt || (Theme.apple && event.modifiers.control)) {
                                         root.ask-kinds();
                                         return accept;
                                     }

@@ -21,9 +21,12 @@ export global Theme {
     out property <color> footer: light ? #EEF0F5 : #1B1E2C;
     out property <color> danger: light ? #C0392B : #F28B82;
     out property <color> shadow: light ? #0000002E : #00000099;
-    in-out property <length> shadow-blur: 22px;
-    out property <length> radius: 16px;
-    out property <length> margin: 18px;
+    // the window surface on macOS discards the scene's alpha, so the margin would be a black
+    // frame around the panel: there it fills its window instead, square and without a shadow
+    out property <bool> apple: Platform.os == OperatingSystemType.macos;
+    in-out property <length> shadow-blur: apple ? 0px : 22px;
+    out property <length> radius: apple ? 0px : 16px;
+    out property <length> margin: apple ? 0px : 18px;
     out property <length> row-thumb: 146px;
     out property <length> row-plain: 86px;
     out property <length> row-mixed: 60px;

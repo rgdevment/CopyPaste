@@ -19,9 +19,30 @@ describe("la bienvenida", () => {
 
   it("cuenta solo las novedades de las versiones pedidas, en el idioma de la ventana", () => {
     const [first] = news;
-    expect(toldFor([first.version], false)[0].told).toBe(first.es);
-    expect(toldFor([first.version], true)[0].told).toBe(first.en);
-    expect(toldFor(["0.0.1"], false)).toEqual([]);
+    expect(toldFor([first.version], false, false)[0].told.map((one) => one.title)).toEqual(
+      first.es.map((one) => one.title),
+    );
+    expect(toldFor([first.version], true, false)[0].told.map((one) => one.title)).toEqual(
+      first.en.map((one) => one.title),
+    );
+    expect(toldFor(["0.0.1"], false, false)).toEqual([]);
+  });
+
+  it("nombra la tecla de cada plataforma, y no deja un hueco sin rellenar", () => {
+    for (const one of news) {
+      for (const mac of [false, true]) {
+        for (const english of [false, true]) {
+          const [told] = toldFor([one.version], english, mac);
+          for (const said of told.told) {
+            expect(said.said, `${one.version} ${said.title}`).not.toMatch(/\{[a-z-]+\}/);
+          }
+        }
+      }
+    }
+    const [told] = toldFor(["3.0.0"], false, true);
+    expect(told.told.some((one) => one.said.includes("\u2318E"))).toBe(true);
+    const [onWindows] = toldFor(["3.0.0"], false, false);
+    expect(onWindows.told.some((one) => one.said.includes("F2"))).toBe(true);
   });
 
   it("dice lo mismo en español y en inglés para cada versión", () => {
