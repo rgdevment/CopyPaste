@@ -29,11 +29,14 @@ if [ ! -f "$news" ]; then
 fi
 
 if ! command -v python3 > /dev/null; then
-  printf 'x  python3 is not here, so %s was not looked up in %s\n' "$version" "$news"
+  # a gate that cannot look has to say so: in CI that is a failure, on a machine it is a warning,
+  # because a hook that blocks over a missing tool is a hook somebody uninstalls
+  amiss "python3 is not here, so nobody looked at what $news says about $version"
+  [ -n "${GITHUB_ACTIONS:-}" ] && exit 1
   exit 0
 fi
 
-if python3 - "$version" "$news" <<'PY'; then
+reads='
 import json
 import sys
 
@@ -44,21 +47,37 @@ except (OSError, ValueError) as why:
     print(f"{news} could not be read: {why}")
     sys.exit(2)
 
+if not isinstance(told, list):
+    print(f"{news} is not the list of versions the window reads")
+    sys.exit(2)
+
 for one in told:
-    if one.get("version") != version:
+    if not isinstance(one, dict) or one.get("version") != version:
         continue
     for tongue in ("es", "en"):
         said = one.get(tongue) or []
         if not said:
-            print(f"the {tongue} notes for {version} are empty")
+            print(f"{version} is in {news} with nothing written in {tongue}")
             sys.exit(2)
     sys.exit(0)
 sys.exit(1)
-PY
-  printf 'ok %s is in %s, in both languages\n' "$version" "$news"
-  exit 0
-fi
+'
 
-amiss "nothing in $news tells a person what changed in $version, and that screen is the only \
-place the app says it: add the entry, in Spanish and in English, before the tag goes out"
-exit 1
+said=$(python3 -c "$reads" "$version" "$news" 2>&1)
+looked=$?
+
+case $looked in
+  0)
+    printf 'ok %s is in %s, in both languages\n' "$version" "$news"
+    exit 0
+    ;;
+  1)
+    amiss "nothing in $news tells a person what changed in $version, and that screen is the \
+only place the app says it: add the entry, in Spanish and in English, before the tag goes out"
+    exit 1
+    ;;
+  *)
+    amiss "${said:-$news could not be looked through for $version}"
+    exit 1
+    ;;
+esac
