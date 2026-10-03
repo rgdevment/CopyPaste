@@ -1,4 +1,5 @@
 use cp_core::formats::{Family, Take};
+use cp_core::item::BLOB_UP_TO;
 use cp_core::paste_as::{Form, forms_for, render};
 use cp_core::watch::{Cadence, Seen, Watcher};
 use cp_win::capture::{self, Captured, capture};
@@ -10,6 +11,7 @@ use cp_win::transfer::{self, Transfer};
 use cp_win::virtual_files::{self, DESCRIPTOR};
 use cp_win::watching::every as watching_every;
 use cp_win_sys::clipboard::{self, Clipboard};
+use cp_win_sys::dragging;
 use cp_win_sys::formats::{CF_DIB, CF_DIBV5, CF_HDROP, CF_UNICODETEXT, id_of, name_of};
 use cp_win_sys::frontmost::{self, Target};
 use cp_win_sys::permissions::Readiness;
@@ -18,7 +20,7 @@ use cp_win_sys::window::EditWindow;
 use cp_win_sys::writing::{Written, text_of, utf16_of};
 use cp_win_sys::{files, media, ocr, source, thumbnail};
 
-const CASES: u32 = 51;
+const CASES: u32 = 52;
 const MAY_SKIP: &[&str] = &["B2", "B4", "E1", "E2", "L1", "P1", "P2", "Q1"];
 const SKIPPED: &str = "skipped: ";
 
@@ -1195,6 +1197,26 @@ fn main() -> std::process::ExitCode {
     what_the_shell_knows_about_a_document(&mut b);
 
     what_hangs_is_never_asked_for(&mut b);
+
+    b.group("R · Dragging out");
+
+    b.case(
+        "R1",
+        "what a drop would carry is the file that was asked for, by its own name",
+        || {
+            let scratch = Scratch::new("cp-r1")?;
+            let file = scratch.file("dragged by its name.txt", b"cp-r1")?;
+            let bytes = dragging::offered_for(&[file.as_path()], BLOB_UP_TO)
+                .ok_or("the shell handed over nothing for a file that is right there")?;
+            match cp_win::drop::paths_in(&bytes).as_slice() {
+                [one] if std::path::Path::new(one) == file => Ok(()),
+                other => Err(format!(
+                    "a drop would land {other:?}, not {}",
+                    file.display()
+                )),
+            }
+        },
+    );
 
     b.group("D · El vigilante");
 

@@ -42,6 +42,12 @@ fn data_object_of(paths: &[&Path]) -> Option<IDataObject> {
     unsafe { made.ok()?.BindToHandler(None, &BHID_DataObject) }.ok()
 }
 
+pub fn offered_for(paths: &[&Path], up_to: usize) -> Option<Vec<u8>> {
+    let _ole = Ole::enter();
+    let data = data_object_of(paths)?;
+    crate::ole::one_of(&data, crate::formats::CF_HDROP, -1, up_to)
+}
+
 pub fn from_window(window: isize, paths: &[&Path]) -> Dragged {
     if paths.is_empty() {
         return Dragged::Nothing;

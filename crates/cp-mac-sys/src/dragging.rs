@@ -1,6 +1,6 @@
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{AllocAnyThread, MainThreadOnly, define_class, msg_send};
+use objc2::{AllocAnyThread, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession,
     NSDraggingSource, NSEvent, NSEventModifierFlags, NSEventType, NSImage, NSPasteboardWriting,
@@ -57,6 +57,16 @@ impl Source {
 
 thread_local! {
     static SOURCE: OnceCell<Retained<Source>> = const { OnceCell::new() };
+}
+
+pub fn source_answers() -> bool {
+    let Some(mtm) = MainThreadMarker::new() else {
+        return false;
+    };
+    let source = SOURCE.with(|once| once.get_or_init(|| Source::new(mtm)).clone());
+    source.respondsToSelector(sel!(
+        draggingSession:sourceOperationMaskForDraggingContext:
+    ))
 }
 
 fn in_hand(mtm: MainThreadMarker) -> Option<Retained<NSEvent>> {

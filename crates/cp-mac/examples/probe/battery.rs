@@ -1170,6 +1170,22 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    b.group("R · Dragging out");
+
+    b.case(
+        "R1",
+        "the only Objective-C class this panel defines answers what a drag asks of it",
+        || {
+            if !cp_mac_sys::dragging::source_answers() {
+                return Err(
+                    "CopyPasteDragSource does not answer                      draggingSession:sourceOperationMaskForDraggingContext:, so AppKit would                      refuse every drag out of the panel"
+                        .into(),
+                );
+            }
+            Ok(())
+        },
+    );
+
     println!();
     println!(
         "  {} pass · {} fail · {} skipped",

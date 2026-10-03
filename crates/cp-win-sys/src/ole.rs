@@ -51,7 +51,12 @@ pub fn indexed_contents(format: u32, count: usize, up_to: usize) -> Vec<Option<V
         .collect()
 }
 
-fn one_of(data: &IDataObject, format: u32, lindex: i32, up_to: usize) -> Option<Vec<u8>> {
+pub(crate) fn one_of(
+    data: &IDataObject,
+    format: u32,
+    lindex: i32,
+    up_to: usize,
+) -> Option<Vec<u8>> {
     let asked = FORMATETC {
         cfFormat: u16::try_from(format).ok()?,
         ptd: std::ptr::null_mut(),
