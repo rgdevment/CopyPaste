@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { landing } from "../App";
+import { caps } from "../core";
 import news from "../news.json";
-import { caps, steps, toldFor } from "../ui/Welcome";
+import { steps, toldFor } from "../ui/Welcome";
 
 describe("la bienvenida", () => {
   it("lleva el historial de la 2.x antes de todo y el permiso antes del atajo", () => {

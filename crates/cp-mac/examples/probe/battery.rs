@@ -1127,6 +1127,48 @@ fn main() -> std::process::ExitCode {
         opened
     });
 
+    b.group("N · LinkUnbound");
+
+    b.case_or_skip(
+        "N1",
+        "when LinkUnbound is installed the panel sees it",
+        || {
+            let app = cp_mac_sys::files::app_for_link("linkunbound:")
+                .ok_or(format!("{SKIPPED}LinkUnbound is not installed here"))?;
+            if cp_mac_sys::files::linkunbound_here() {
+                return Ok(());
+            }
+            Err(format!(
+                "{app} answers the scheme and the panel still says no"
+            ))
+        },
+    );
+
+    b.case_or_skip(
+        "N2",
+        "the link handed over is escaped whole and lands there",
+        || {
+            let holder = cp_mac_sys::files::app_for_link("linkunbound:")
+                .ok_or(format!("{SKIPPED}LinkUnbound is not installed here"))?;
+            let asked =
+                cp_core::linkunbound::asked_for("https://example.com/a path?x=1&y=ñ#top", true)
+                    .ok_or("no link was built for it")?;
+            let payload = asked
+                .strip_prefix("linkunbound://open?url=")
+                .ok_or_else(|| format!("{asked} is not the form LinkUnbound reads"))?;
+            if let Some(loose) = payload
+                .chars()
+                .find(|one| !one.is_ascii_alphanumeric() && *one != '%')
+            {
+                return Err(format!("{loose:?} went through unescaped in {payload}"));
+            }
+            match cp_mac_sys::files::app_for_link(&asked) {
+                Some(app) if app == holder => Ok(()),
+                other => Err(format!("{other:?} would open it instead of {holder}")),
+            }
+        },
+    );
+
     println!();
     println!(
         "  {} pass · {} fail · {} skipped",

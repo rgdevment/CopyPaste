@@ -6,6 +6,7 @@ const asked = vi.hoisted(() => ({
   greeting: { kind: "tour", former: true } as unknown,
   bound: true,
   locale: "es",
+  trust: { offered: false, pastes: false, secureInput: false },
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -83,12 +84,8 @@ vi.mock("@tauri-apps/api/core", () => ({
       });
     }
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");
-    if (what === "trust") {
-      return Promise.resolve({
-        offered: false,
-        pastes: false,
-        secureInput: false,
-      });
+    if (what === "trust" || what === "ask_trust") {
+      return Promise.resolve(asked.trust);
     }
     if (what === "update_ready") {
       return Promise.resolve({ route: "download", looked: true, ready: null });
@@ -137,4 +134,5 @@ afterEach(() => {
   asked.greeting = { kind: "tour", former: true };
   asked.bound = true;
   asked.locale = "es";
+  asked.trust = { offered: false, pastes: false, secureInput: false };
 });

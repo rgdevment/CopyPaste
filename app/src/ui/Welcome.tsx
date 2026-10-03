@@ -3,8 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { type Kept, onMac, type Trust, useKept, useKeys } from "../core";
-import { fill, inEnglish, items, t } from "../locales";
+import { asKeys, caps, type Kept, onMac, type Trust, useKept, useKeys } from "../core";
+import { fill, inEnglish, items, panelKey, t } from "../locales";
 import news from "../news.json";
 import Chrome from "./Chrome";
 
@@ -26,16 +26,6 @@ type Former = {
 };
 
 type Told = { title: string; said: string };
-
-const MAC_KEYS: Record<string, string> = { Cmd: "⌘", Alt: "⌥", Shift: "⇧", Ctrl: "⌃" };
-
-export function caps(shortcut: string, mac: boolean): string[] {
-  return shortcut
-    .split("+")
-    .map((one) => one.trim())
-    .filter((one) => one.length > 0)
-    .map((one) => (mac ? (MAC_KEYS[one] ?? one) : one));
-}
 
 export function steps(former: boolean, asksTrust: boolean): Step[] {
   return [
@@ -219,9 +209,9 @@ function Tour({
           <dl className="welcome-use">
             {[
               [t("welcomeUseType"), t("welcomeUseTypeDoes")],
-              ["Enter", t("welcomeUseEnterDoes")],
-              ["Shift + Enter", t("welcomeUsePlainDoes")],
-              ["F1", t("welcomeUseSettingsDoes")],
+              [panelKey("paste", mac), t("welcomeUseEnterDoes")],
+              [panelKey("plain", mac), t("welcomeUsePlainDoes")],
+              [panelKey("settings", mac), t("welcomeUseSettingsDoes")],
             ].map(([keys, does]) => (
               <div key={keys}>
                 <dt>{keys}</dt>
@@ -279,7 +269,7 @@ function TryIt({
                 type="button"
                 onClick={() => void change({ shortcut: one }).finally(() => recheck(one))}
               >
-                {caps(one, mac).join(mac ? " " : " + ")}
+                {asKeys(one, mac)}
               </button>
             ))}
           </div>

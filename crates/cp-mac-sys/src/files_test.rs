@@ -73,8 +73,15 @@ fn a_scheme_nobody_registered_is_known_to_be_missing_without_asking_the_user() {
 
 #[test]
 fn a_scheme_the_machine_does_have_is_found() {
-    assert!(
-        super::scheme_here("https"),
-        "every Mac opens the web, so a check that never says yes would be a check that does nothing"
+    let app = app_for_link("https://example.com").expect(
+        "every Mac opens the web, so a check that never says yes would be a check that does nothing",
     );
+    assert!(app.ends_with(".app"), "{app} is not an application bundle");
+    assert!(super::scheme_here("https"));
+}
+
+#[test]
+fn what_is_not_a_url_at_all_opens_nothing() {
+    assert_eq!(app_for_link(""), None);
+    assert_eq!(app_for_link("no scheme, no host"), None);
 }

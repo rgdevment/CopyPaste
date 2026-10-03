@@ -104,6 +104,20 @@ export function onMac() {
   return /Mac|iPhone|iPad/.test(navigator.userAgent);
 }
 
+const MAC_KEYS: Record<string, string> = { Cmd: "⌘", Alt: "⌥", Shift: "⇧", Ctrl: "⌃" };
+
+export function caps(shortcut: string, mac: boolean): string[] {
+  return shortcut
+    .split("+")
+    .map((one) => one.trim())
+    .filter((one) => one.length > 0)
+    .map((one) => (mac ? (MAC_KEYS[one] ?? one) : one));
+}
+
+export function asKeys(shortcut: string, mac: boolean): string {
+  return caps(shortcut, mac).join(mac ? "" : " + ");
+}
+
 export function whereItLives() {
   return invoke<string>("where_it_lives");
 }

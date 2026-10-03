@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Welcome from "../ui/Welcome";
 import { scene as asked, theWindow } from "./setup";
 
@@ -84,6 +84,89 @@ describe("la bienvenida de una instalación nueva", () => {
     await screen.findByText("Tu portapapeles, con memoria");
     expect(screen.queryByRole("button", { name: "Minimizar" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Cerrar" })).toBeNull();
+  });
+});
+
+const MAC =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)";
+
+function asAMac() {
+  const was = Object.getOwnPropertyDescriptor(Navigator.prototype, "userAgent");
+  Object.defineProperty(navigator, "userAgent", { value: MAC, configurable: true });
+  return () => {
+    if (was) {
+      Object.defineProperty(Navigator.prototype, "userAgent", was);
+    }
+  };
+}
+
+describe("la bienvenida en un Mac", () => {
+  let back = () => {};
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    asked.greeting = { kind: "tour", former: false };
+    asked.trust = { offered: true, pastes: false, secureInput: false };
+    back = asAMac();
+  });
+
+  afterEach(() => back());
+
+  it("pide el permiso antes del atajo y sigue sola cuando se concede", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    render(<Welcome />);
+
+    await press("Comenzar");
+    expect(await screen.findByText("Un permiso para poder pegar")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "1 · Abrimos Configuración del Sistema › Privacidad y seguridad › Accesibilidad",
+      ),
+    ).toBeInTheDocument();
+
+    await press("Dar permiso");
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith("ask_trust");
+    expect(await screen.findByText("Esperando el permiso…")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Activa CopyPaste en Accesibilidad. Si ya aparecía activado y no responde, quítalo con − y agrégalo de nuevo.",
+      ),
+    ).toBeInTheDocument();
+
+    asked.trust = { offered: true, pastes: true, secureInput: false };
+    expect(
+      await screen.findByText("Listo, ya puede pegar", {}, { timeout: 4_000 }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Pruébalo ahora", {}, { timeout: 4_000 })).toBeInTheDocument();
+  }, 20_000);
+
+  it("enseña la barra de menús y lo esencial con las teclas del Mac", async () => {
+    asked.trust = { offered: true, pastes: true, secureInput: false };
+    render(<Welcome />);
+
+    await press("Comenzar");
+    expect(await screen.findByText("Pruébalo ahora")).toBeInTheDocument();
+    const shown = await heardOn("panel-shown");
+    act(() => shown({ payload: null }));
+    await press("Siguiente");
+
+    expect(await screen.findByText("En la barra de menús")).toBeInTheDocument();
+    await press("Siguiente");
+
+    expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
+    expect(screen.getByText("↩")).toBeInTheDocument();
+    expect(screen.getByText("⇧↩")).toBeInTheDocument();
+    expect(screen.getByText("⌘,")).toBeInTheDocument();
+    expect(screen.queryByText("F1")).toBeNull();
+  });
+
+  it("con el permiso ya concedido el paso no aparece", async () => {
+    asked.trust = { offered: true, pastes: true, secureInput: false };
+    render(<Welcome />);
+
+    await press("Comenzar");
+    expect(await screen.findByText("Pruébalo ahora")).toBeInTheDocument();
+    expect(screen.queryByText("Un permiso para poder pegar")).toBeNull();
   });
 });
 
