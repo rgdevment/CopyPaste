@@ -104,18 +104,34 @@ export function onMac() {
   return /Mac|iPhone|iPad/.test(navigator.userAgent);
 }
 
-const MAC_KEYS: Record<string, string> = { Cmd: "⌘", Alt: "⌥", Shift: "⇧", Ctrl: "⌃" };
+const MAC_KEYS: Record<string, string> = { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Cmd: "⌘" };
+
+// Apple lists them Control, Option, Shift, Command, whatever order the combination was stored in
+const MAC_ORDER = Object.values(MAC_KEYS);
 
 export function caps(shortcut: string, mac: boolean): string[] {
-  return shortcut
+  const keys = shortcut
     .split("+")
     .map((one) => one.trim())
     .filter((one) => one.length > 0)
     .map((one) => (mac ? (MAC_KEYS[one] ?? one) : one));
+  if (!mac) {
+    return keys;
+  }
+  const held = MAC_ORDER.filter((one) => keys.includes(one));
+  return [...held, ...keys.filter((one) => !MAC_ORDER.includes(one))];
 }
 
 export function asKeys(shortcut: string, mac: boolean): string {
-  return caps(shortcut, mac).join(mac ? "" : " + ");
+  const keys = caps(shortcut, mac);
+  if (!mac) {
+    return keys.join(" + ");
+  }
+  // the glyphs sit against each other, but anything spelled out would weld into its neighbour
+  return keys.reduce((said, one, at) => {
+    const apart = at > 0 && (keys[at - 1].length > 1 || one.length > 1);
+    return said + (apart ? " " : "") + one;
+  }, "");
 }
 
 export function whereItLives() {

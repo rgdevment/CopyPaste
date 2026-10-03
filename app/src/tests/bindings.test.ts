@@ -9,10 +9,44 @@ function ui(name: string) {
 
 const PANEL = ui("panel.slint");
 
-// every binding ends its branch with one, so each piece holds a single condition
-const BRANCHES = PANEL.split("return accept;");
+// the sheet answers first and bails out with a reject, so the table's keys are read after it
+const AFTER_THE_SHEET = PANEL.slice(PANEL.indexOf("return reject;"));
+
+// past that point every binding closes its branch with one, so each piece is a single condition
+const BRANCHES = AFTER_THE_SHEET.split("return accept;").slice(0, -1);
 
 const APPLE = "Theme.apple";
+
+// what the branch asks for before it runs, which is where a modifier is required rather than read
+function conditionOf(branch: string) {
+  const at = branch.lastIndexOf("if ");
+  const said = at === -1 ? branch : branch.slice(at);
+  const opens = said.indexOf("{");
+  return opens === -1 ? said : said.slice(0, opens);
+}
+
+// a condition that refuses a chord reads the same as one that answers it, so drop what it negates,
+// and on Windows drop the alternatives that only a Mac ever reaches
+function liveOn(said: string, mac: boolean) {
+  const kept = said.replaceAll(/![(][^)]*[)]/g, "");
+  return mac ? kept : kept.replaceAll(/[(]Theme[.]apple[^)]*[)]/g, "");
+}
+
+// a key promised alone has to be read alone: a branch that demands a modifier alongside it
+// answers a different chord, which is how Enter kept its promise from the «paste as» branch
+function readsItAlone(branch: string, key: string, mac: boolean) {
+  return liveOn(conditionOf(branch), mac)
+    .split("||")
+    .filter((one) => one.includes(key))
+    .some((one) => !one.includes("modifiers."));
+}
+
+function answers(branch: string, needs: string[], mac: boolean) {
+  if (!needs.every((one) => liveOn(branch, mac).includes(one))) {
+    return false;
+  }
+  return needs.length > 1 || readsItAlone(branch, needs[0], mac);
+}
 
 const LOOKED_FOR: Record<string, string> = {
   enter: "event.text == Key.Return",
@@ -133,7 +167,7 @@ describe("la tabla de atajos", () => {
           if (!needs) {
             continue;
           }
-          const found = BRANCHES.some((branch) => needs.every((one) => branch.includes(one)));
+          const found = BRANCHES.some((branch) => answers(branch, needs, mac));
           expect(
             found,
             `on ${where} «${row.keys}» promises ${needs.join(" + ")} and no branch reads it`,
@@ -141,6 +175,26 @@ describe("la tabla de atajos", () => {
         }
       }
     }
+  });
+
+  it("dice en voz alta lo que en un Mac solo se dibuja", () => {
+    for (const tongue of ["es", "en"] as const) {
+      adopt(tongue);
+      for (const row of panelKeys(true)) {
+        expect(row.said.length, `${tongue} «${row.keys}»`).toBeGreaterThan(0);
+        for (const one of [...row.keys]) {
+          expect(
+            row.said.includes(one) || /[\p{L}\p{N}]/u.test(one) === false || one === " ",
+            `«${row.keys}» leaves ${one} unsaid`,
+          ).toBe(true);
+        }
+      }
+    }
+    adopt("es");
+    const [remove] = panelKeys(true).filter((one) => one.id === "remove");
+    expect(remove.said).toBe("Comando Retroceso");
+    adopt("en");
+    expect(panelKeys(true).filter((one) => one.id === "remove")[0].said).toBe("Command Backspace");
   });
 
   it("no ofrece en un Mac teclas que su teclado no tiene", () => {
@@ -161,6 +215,10 @@ describe("la tabla de atajos", () => {
       expect(branch, `nothing in the panel reads ${one}`).toBeTruthy();
       expect(branch, `${one} answers on Windows too`).toContain(APPLE);
     }
+    expect(
+      BRANCHES.find((one) => one.includes("root.remove(")),
+      "a bare forward delete still destroys a card on a Mac, and no table offers it",
+    ).toContain("!Theme.apple && event.text == Key.Delete");
     expect(PANEL, "the kinds sheet ignores Command on a Mac").toContain(
       "(event.modifiers.alt || (Theme.apple && event.modifiers.control))",
     );

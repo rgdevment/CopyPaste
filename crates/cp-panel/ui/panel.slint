@@ -113,14 +113,14 @@ export component Panel inherits Window {
     panel := Rectangle {
         property <length> sheet-top: root.list-top + root.sheet-anchor + root.sheet-span + list.content-y + 4px;
         x: Theme.margin;
-        y: Theme.margin + (1.0 - root.shown) * 8px;
+        y: Theme.margin + (1.0 - root.shown) * (Theme.apple ? 0px : 8px);
         width: Theme.width;
         height: Theme.height;
         border-radius: Theme.radius;
         border-width: 1px;
         border-color: Theme.panel-border;
         background: Theme.panel;
-        opacity: root.shown;
+        opacity: Theme.apple ? 1.0 : root.shown;
         drop-shadow-blur: Theme.shadow-blur;
         drop-shadow-color: Theme.shadow;
         drop-shadow-offset-y: Theme.apple ? 0px : 10px;
@@ -243,7 +243,7 @@ export component Panel inherits Window {
                                         root.drop-tag("");
                                         return accept;
                                     }
-                                    if (event.text == Key.Delete
+                                    if ((!Theme.apple && event.text == Key.Delete)
                                             || (Theme.apple && event.text == Key.Backspace && event.modifiers.control))
                                         && root.query == ""
                                         && root.current >= 0 {

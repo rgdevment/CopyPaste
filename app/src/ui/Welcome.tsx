@@ -262,7 +262,7 @@ function TryIt({
   }, []);
 
   const taken = keys !== null && !keys.bound;
-  const shown = kept.shortcut.replaceAll("+", " + ");
+  const shown = asKeys(kept.shortcut, mac);
 
   if (taken) {
     return (

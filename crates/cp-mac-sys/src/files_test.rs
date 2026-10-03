@@ -81,7 +81,12 @@ fn a_scheme_the_machine_does_have_is_found() {
 }
 
 #[test]
-fn what_is_not_a_url_at_all_opens_nothing() {
+fn what_is_not_a_url_at_all_is_turned_away_before_the_system_sees_it() {
+    assert!(url_of_text("").is_none());
+    assert!(
+        url_of_text("no scheme, no host").is_none(),
+        "NSURL builds a relative URL out of this, and the system logs a complaint about it"
+    );
     assert_eq!(app_for_link(""), None);
     assert_eq!(app_for_link("no scheme, no host"), None);
 }

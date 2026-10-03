@@ -85,7 +85,7 @@ vi.mock("@tauri-apps/api/core", () => ({
     }
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");
     if (what === "trust" || what === "ask_trust") {
-      return Promise.resolve(asked.trust);
+      return Promise.resolve({ ...asked.trust });
     }
     if (what === "update_ready") {
       return Promise.resolve({ route: "download", looked: true, ready: null });

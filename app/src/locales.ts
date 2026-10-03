@@ -526,7 +526,7 @@ const EN: Record<keyof Said, string> = {
   welcomeShowAgain: "Show the welcome again",
 };
 
-export type Binding = { id: string; keys: string; does: string };
+export type Binding = { id: string; keys: string; said: string; does: string };
 
 type Row = {
   id: string;
@@ -685,6 +685,38 @@ export function items(count: number) {
   return count === 1 ? t("itemOne") : fill("itemMany", String(count));
 }
 
+const SPOKEN_ES: Record<string, string> = {
+  "⌘": "Comando",
+  "⌥": "Opción",
+  "⇧": "Mayúsculas",
+  "⌃": "Control",
+  "⏎": "Enter",
+  "⌫": "Retroceso",
+  "⇥": "Tabulador",
+  "→": "Flecha derecha",
+};
+
+const SPOKEN_EN: Record<string, string> = {
+  "⌘": "Command",
+  "⌥": "Option",
+  "⇧": "Shift",
+  "⌃": "Control",
+  "⏎": "Enter",
+  "⌫": "Backspace",
+  "⇥": "Tab",
+  "→": "Right arrow",
+};
+
+// a screen reader says nothing at all for a cell that holds only glyphs
+export function spoken(keys: string): string {
+  const words = now === EN ? SPOKEN_EN : SPOKEN_ES;
+  return [...keys]
+    .map((one) => (words[one] ? ` ${words[one]} ` : one))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function spelling(row: Row, mac: boolean): string {
   if (mac && row.mac) {
     return row.mac;
@@ -693,11 +725,10 @@ function spelling(row: Row, mac: boolean): string {
 }
 
 export function panelKeys(mac: boolean): Binding[] {
-  return PANEL_ROWS.map((row) => ({
-    id: row.id,
-    keys: spelling(row, mac),
-    does: now === EN ? row.en : row.es,
-  }));
+  return PANEL_ROWS.map((row) => {
+    const keys = spelling(row, mac);
+    return { id: row.id, keys, said: spoken(keys), does: now === EN ? row.en : row.es };
+  });
 }
 
 export function panelKey(id: Which, mac: boolean): string {
@@ -707,5 +738,5 @@ export function panelKey(id: Which, mac: boolean): string {
 
 // prose needs one way to do it, not the two the table offers
 export function oneKey(id: Which, mac: boolean): string {
-  return panelKey(id, mac).split("\u00b7")[0].trim();
+  return panelKey(id, mac).split("·")[0].trim();
 }

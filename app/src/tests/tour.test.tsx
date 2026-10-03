@@ -91,12 +91,10 @@ const MAC =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)";
 
 function asAMac() {
-  const was = Object.getOwnPropertyDescriptor(Navigator.prototype, "userAgent");
+  // the own property shadows the prototype's getter, so putting the getter back leaves it standing
   Object.defineProperty(navigator, "userAgent", { value: MAC, configurable: true });
   return () => {
-    if (was) {
-      Object.defineProperty(Navigator.prototype, "userAgent", was);
-    }
+    Reflect.deleteProperty(navigator, "userAgent");
   };
 }
 

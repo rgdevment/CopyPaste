@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { landing } from "../App";
-import { caps } from "../core";
+import { asKeys, caps } from "../core";
 import news from "../news.json";
 import { steps, toldFor } from "../ui/Welcome";
 
@@ -10,11 +10,19 @@ describe("la bienvenida", () => {
     expect(steps(false, false)).toEqual(["hello", "keys", "where", "use"]);
   });
 
-  it("dibuja el atajo tecla a tecla, con símbolos en el Mac", () => {
+  it("dibuja el atajo tecla a tecla, con símbolos y en el orden del Mac", () => {
     expect(caps("Ctrl+Alt+V", false)).toEqual(["Ctrl", "Alt", "V"]);
-    expect(caps("Cmd+Alt+V", true)).toEqual(["⌘", "⌥", "V"]);
-    expect(caps("Shift+Ctrl+Space", true)).toEqual(["⇧", "⌃", "Space"]);
+    expect(caps("Cmd+Alt+V", true)).toEqual(["⌥", "⌘", "V"]);
+    expect(caps("Shift+Ctrl+Space", true)).toEqual(["⌃", "⇧", "Space"]);
     expect(caps("", false)).toEqual([]);
+  });
+
+  it("junta las teclas sin pegar una palabra a un símbolo", () => {
+    expect(asKeys("Ctrl+Alt+V", false)).toBe("Ctrl + Alt + V");
+    expect(asKeys("Cmd+Alt+V", true)).toBe("⌥⌘V");
+    expect(asKeys("Shift+Cmd+Space", true)).toBe("⇧⌘ Space");
+    expect(asKeys("Ctrl+Alt+F9", true)).toBe("⌃⌥ F9");
+    expect(asKeys("Super+V", true), "what nothing maps is left as it was stored").toBe("Super V");
   });
 
   it("cuenta solo las novedades de las versiones pedidas, en el idioma de la ventana", () => {
@@ -39,9 +47,10 @@ describe("la bienvenida", () => {
         }
       }
     }
-    const [told] = toldFor(["3.0.0"], false, true);
-    expect(told.told.some((one) => one.said.includes("\u2318E"))).toBe(true);
-    const [onWindows] = toldFor(["3.0.0"], false, false);
+    const [first] = news;
+    const [onAMac] = toldFor([first.version], false, true);
+    expect(onAMac.told.some((one) => one.said.includes("⌘E"))).toBe(true);
+    const [onWindows] = toldFor([first.version], false, false);
     expect(onWindows.told.some((one) => one.said.includes("F2"))).toBe(true);
   });
 

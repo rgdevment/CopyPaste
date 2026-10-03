@@ -1131,16 +1131,17 @@ fn main() -> std::process::ExitCode {
 
     b.case_or_skip(
         "N1",
-        "when LinkUnbound is installed the panel sees it",
+        "what answers the scheme is a bundle that is really on disk",
         || {
             let app = cp_mac_sys::files::app_for_link("linkunbound:")
                 .ok_or(format!("{SKIPPED}LinkUnbound is not installed here"))?;
-            if cp_mac_sys::files::linkunbound_here() {
-                return Ok(());
+            if !std::path::Path::new(&app).is_dir() {
+                return Err(format!("{app} is not a directory on disk"));
             }
-            Err(format!(
-                "{app} answers the scheme and the panel still says no"
-            ))
+            if !app.ends_with(".app") {
+                return Err(format!("{app} is not an application bundle"));
+            }
+            Ok(())
         },
     );
 

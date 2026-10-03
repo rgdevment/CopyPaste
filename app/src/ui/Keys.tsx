@@ -76,7 +76,9 @@ export default function Keys({
         <tbody>
           {panelKeys(mac).map((one) => (
             <tr key={one.id}>
-              <th scope="row">{one.keys}</th>
+              <th scope="row" aria-label={one.said}>
+                {one.keys}
+              </th>
               <td>{one.does}</td>
             </tr>
           ))}
