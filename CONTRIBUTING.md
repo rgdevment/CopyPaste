@@ -136,7 +136,12 @@ That gives you three. `pre-commit` runs the conventions, `cargo fmt --all
 --check` and biome — a couple of seconds, and between them they are most of what
 turns CI red. `commit-msg` weighs the subject while the fix is still an
 `--amend` rather than a rebase. `pre-push` runs the conventions again and the
-subjects of everything you are about to send. Nothing slower goes in any of
+subjects of everything you are about to send, and when what you are sending is a
+tag it asks `scripts/news.sh` whether `app/src/news.json` says what changed in
+that version — the screen that tells a person what is new is the only place the
+app says it, and a tag is the last moment to notice it is empty. A candidate is
+exempt: the screen only shows versions at or below the one running, and `3.0.0`
+is above `3.0.0-rc1`. Nothing slower goes in any of
 them: the suite, the build and the markdown lint are minutes, and they belong to
 CI.
 
