@@ -1196,7 +1196,9 @@ fn main() -> std::process::ExitCode {
                 .ok_or("this needs the main thread and a window of its own")?;
             let _ = std::fs::remove_file(&at);
             if said != cp_mac_sys::dragging::Dragged::Started {
-                return Err(format!("no drag would start from a window of ours: {said:?}"));
+                return Err(format!(
+                    "no drag would start from a window of ours: {said:?}"
+                ));
             }
             Ok(())
         },
