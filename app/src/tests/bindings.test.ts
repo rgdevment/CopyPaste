@@ -16,7 +16,7 @@ const APPLE = "root.apple";
 
 const LOOKED_FOR: Record<string, string> = {
   enter: "event.text == Key.Return",
-  "↩": "event.text == Key.Return",
+  "⏎": "event.text == Key.Return",
   esc: "event.text == Key.Escape",
   retroceso: "event.text == Key.Backspace",
   backspace: "event.text == Key.Backspace",

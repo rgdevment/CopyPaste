@@ -154,8 +154,8 @@ describe("la bienvenida en un Mac", () => {
     await press("Siguiente");
 
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
-    expect(screen.getByText("↩")).toBeInTheDocument();
-    expect(screen.getByText("⇧↩")).toBeInTheDocument();
+    expect(screen.getByText("⏎")).toBeInTheDocument();
+    expect(screen.getByText("⇧⏎")).toBeInTheDocument();
     expect(screen.getByText("⌘,")).toBeInTheDocument();
     expect(screen.queryByText("F1")).toBeNull();
   });
