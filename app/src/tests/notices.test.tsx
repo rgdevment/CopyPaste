@@ -125,6 +125,64 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(screen.queryByText("No se pudieron leer los avisos de terceros")).toBeNull();
   });
 
+  it("los textos de las licencias tienen su propio botón, y solo se piden al abrirlo", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation() as Invoke;
+    let asked = 0;
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) => {
+      if (what === "notices") return Promise.resolve("Avisos de la ventana");
+      if (what !== "licences") return real(what, args);
+      asked += 1;
+      return Promise.resolve(
+        "## Text 1\n\nCarried by `serde` 1.0.\n\n```text\nApache License\n```",
+      );
+    }) as never);
+    undo.push(() => vi.mocked(invoke).mockImplementation(real as never));
+    render(<About />);
+
+    const button = await screen.findByRole("button", { name: "Textos de las licencias" });
+    expect(asked).toBe(0);
+
+    await who.click(button);
+    expect(await screen.findByRole("region", { name: "Textos de las licencias" })).toBeDefined();
+    expect(screen.getByText("Apache License")).toBeDefined();
+    expect(screen.queryByText("Avisos de la ventana")).toBeNull();
+    expect(asked).toBe(1);
+
+    await who.click(button);
+    await waitFor(() => {
+      expect(screen.queryByText("Apache License")).toBeNull();
+    });
+  });
+
+  it("si los textos no se pueden leer, lo dice", async () => {
+    const who = userEvent.setup();
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation() as Invoke;
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "licences" ? Promise.reject(new Error("no")) : real(what, args)) as never);
+    undo.push(() => vi.mocked(invoke).mockImplementation(real as never));
+    render(<About />);
+
+    await who.click(await screen.findByRole("button", { name: "Textos de las licencias" }));
+
+    expect(
+      await screen.findByText("No se pudieron leer los textos de las licencias"),
+    ).toBeDefined();
+  });
+
+  it("todo enlace de los textos de verdad lleva su sitio", () => {
+    const holder = document.createElement("div");
+    holder.innerHTML = composed(readFileSync("../THIRD-PARTY-LICENSES.md", "utf8"));
+    for (const href of Array.from(holder.querySelectorAll("a")).map((one) =>
+      one.getAttribute("href"),
+    )) {
+      expect(href, `${href} no sale de la ventana`).toMatch(/^https?:\/\//);
+    }
+    expect(holder.querySelectorAll("pre").length).toBeGreaterThan(100);
+  });
+
   it("si no se pueden leer, lo dice en vez de quedarse callado", async () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.reject(new Error("no")));

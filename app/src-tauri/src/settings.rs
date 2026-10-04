@@ -3,9 +3,16 @@ use std::path::PathBuf;
 
 pub const NOTICES: &str = include_str!("../../../THIRD-PARTY-BUNDLED.md");
 
+pub const LICENCES: &str = include_str!("../../../THIRD-PARTY-LICENSES.md");
+
 #[tauri::command]
 pub fn notices() -> &'static str {
     NOTICES
+}
+
+#[tauri::command]
+pub fn licences() -> &'static str {
+    LICENCES
 }
 
 pub fn former_folder() -> Option<PathBuf> {

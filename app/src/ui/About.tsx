@@ -2,7 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
-import { notices, useUpdate } from "../core";
+import { licences, notices, useUpdate } from "../core";
 import { fill, t } from "../locales";
 import { composed } from "../markdown";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
@@ -73,7 +73,15 @@ const TOOLS = [
   },
 ];
 
-function Notices({ text, onLink }: { text: string; onLink: (url: string) => void }) {
+function Notices({
+  text,
+  label,
+  onLink,
+}: {
+  text: string;
+  label: string;
+  onLink: (url: string) => void;
+}) {
   const box = useRef<HTMLElement>(null);
   const follow = useRef(onLink);
   follow.current = onLink;
@@ -92,7 +100,7 @@ function Notices({ text, onLink }: { text: string; onLink: (url: string) => void
     return () => holder.removeEventListener("click", clicked);
   }, [text]);
 
-  return <section ref={box} className="notices" aria-label={t("aboutNotices")} />;
+  return <section ref={box} className="notices" aria-label={label} />;
 }
 
 export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY];
@@ -102,6 +110,7 @@ export default function About() {
   const [version, setVersion] = useState<string | null>(null);
   const [unbound, setUnbound] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
+  const [texts, setTexts] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion()
@@ -295,8 +304,22 @@ export default function About() {
         >
           {t("aboutNotices")}
         </button>
+        <button
+          type="button"
+          aria-expanded={texts !== null}
+          onClick={() => {
+            if (texts !== null) return setTexts(null);
+            setTrouble(null);
+            licences()
+              .then(setTexts)
+              .catch(() => setTrouble(t("licencesRefused")));
+          }}
+        >
+          {t("aboutLicences")}
+        </button>
       </div>
-      {said !== null && <Notices text={said} onLink={go} />}
+      {said !== null && <Notices text={said} label={t("aboutNotices")} onLink={go} />}
+      {texts !== null && <Notices text={texts} label={t("aboutLicences")} onLink={go} />}
     </>
   );
 }

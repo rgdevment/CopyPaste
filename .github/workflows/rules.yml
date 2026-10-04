@@ -39,7 +39,6 @@ jobs:
           tool: zizmor@1.30.1
       - name: The workflows mean what they say
         env:
-          # without a token zizmor skips the audits that reach the network, and artipacked reads differently
           GH_TOKEN: ${{ github.token }}
           SHELLCHECK_OPTS: --severity=warning
         run: |
@@ -65,7 +64,6 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      # the notices are read out of app/node_modules, and the generator refuses to write without them
       - name: The window the notices read
         working-directory: app
         run: npm ci
@@ -73,8 +71,11 @@ jobs:
       - name: Written again, and unchanged
         run: |
           npm run notices
-          if ! git diff --exit-code -- THIRD-PARTY-BUNDLED.md; then
-            echo "::error::THIRD-PARTY-BUNDLED.md is behind the lockfiles. Run «npm run notices» \
+          moved=$(git status --porcelain -- THIRD-PARTY-BUNDLED.md THIRD-PARTY-LICENSES.md)
+          if [ -n "$moved" ]; then
+            echo "$moved"
+            git diff -- THIRD-PARTY-BUNDLED.md THIRD-PARTY-LICENSES.md | head -200
+            echo "::error::THIRD-PARTY-BUNDLED.md or THIRD-PARTY-LICENSES.md is behind the lockfiles. Run «npm run notices» \
           and commit what it writes."
             exit 1
           fi
