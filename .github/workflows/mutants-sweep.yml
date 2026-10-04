@@ -25,14 +25,21 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: mutants
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@cargo-mutants
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-mutants
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: nextest
 
       - name: Half of every mutant the pure crates carry
         id: run
@@ -48,7 +55,7 @@ jobs:
           TITLE: the crates macOS can build, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
           name: mutants-core-${{ matrix.shard }}
@@ -64,14 +71,21 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: mutants
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@cargo-mutants
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-mutants
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: nextest
 
       - name: Half of every mutant the Windows crate carries
         id: run
@@ -89,7 +103,7 @@ jobs:
           TITLE: the crates Windows can build, shard ${{ matrix.shard }} of 2
         run: bash scripts/mutants-report.sh
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
           name: mutants-windows-${{ matrix.shard }}
@@ -108,9 +122,11 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
@@ -141,7 +157,7 @@ jobs:
           npx stryker run --mutate "$list" --concurrency 4 \
             --reporters progress-append-only,clear-text,json
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
           name: mutants-window-${{ matrix.shard }}
@@ -158,9 +174,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: mutants-*
           path: outcomes
@@ -171,7 +187,11 @@ jobs:
           WANT_WINDOW: 2
         run: python3 scripts/mutants_score.py
 
+      # a dispatch can be launched from any branch, and the badge must only ever say what main
+      # measures. The number is still computed above, so a branch can be looked at without
+      # publishing anything.
       - name: The number, on the branch that holds nothing else
+        if: github.ref == 'refs/heads/main'
         run: |
           mv mutants.json "$RUNNER_TEMP/mutants.json"
           git config user.name "github-actions[bot]"

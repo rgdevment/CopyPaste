@@ -14,35 +14,86 @@ amiss() {
   status=1
 }
 
+# Strict is for a title, which reaches main: only a revert keeps its shape there, and it is measured.
 weighed() {
-  local who=$1 said=$2
+  local who=$1 said=$2 strict=${3:-}
   said=$(printf '%s' "$said" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  if ! printf '%s' "$said" | grep -qE "$shape"; then
-    amiss "$who does not follow the convention"
-    printf '  %s\n' "$said"
-    return
+  if [ -z "$strict" ]; then
+    # every shape git writes by itself. A human writing «Merge the two panels» is not one of
+    # them, and commit-msg runs on git merge too: a refusal here leaves the merge half done.
+    case $said in
+      "Merge branch '"* | "Merge branches "* | "Merge pull request #"* | \
+        "Merge remote-tracking branch '"* | "Merge commit '"* | "Merge tag '"* | \
+        "Merge http://"* | "Merge https://"* | "Merge git://"* | "Merge ssh://"* | \
+        "Squashed commit of the following:"* | 'Revert "'* | 'Reapply "'* | \
+        "fixup! "* | "squash! "* | "amend! "*)
+        return
+        ;;
+    esac
   fi
-  if [ "${#said}" -gt "$most" ]; then
-    amiss "$who is ${#said} characters, and the subject goes under $most"
+  case $said in
+    'Revert "'*) ;;
+    *)
+      if ! printf '%s' "$said" | grep -qE "$shape"; then
+        amiss "$who does not follow the convention"
+        printf '  %s\n' "$said"
+        return
+      fi
+      ;;
+  esac
+  # Bytes minus UTF-8 continuation bytes: ${#said} counts bytes when a GUI client spawns git
+  # without a locale, and an accented subject would then be measured as longer than it reads.
+  local long
+  long=$(printf '%s' "$said" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' ')
+  if [ "$long" -gt "$most" ]; then
+    amiss "$who is $long characters, and the subject goes under $most"
     printf '  %s\n' "$said"
   fi
 }
 
 how_it_reads() {
-  printf '\n'
-  printf 'Expected: type(optional scope): description\n'
-  printf 'Types:    feat fix docs style refactor perf test build ci chore revert\n'
-  printf 'Example:  fix(panel): the menu yields to the wheel\n'
+  if [ "$status" -eq 1 ]; then
+    printf '\n'
+    printf 'Expected: type(optional scope): description\n'
+    printf 'Types:    feat fix docs style refactor perf test build ci chore revert\n'
+    printf 'Example:  fix(panel): the menu yields to the wheel\n'
+  fi
+  exit $status
 }
 
-if [ "${1:-}" = "--subject" ]; then
-  weighed "the subject" "${2:-}"
-else
-  while read -r sha; do
-    [ -n "$sha" ] || continue
-    weighed "${sha:0:8}" "$(git log -1 --format=%s "$sha")"
-  done < <(git rev-list --no-merges "${1:?a range or --subject is needed}")
+if [ "${1:-}" = "--subject" ] || [ "${1:-}" = "--title" ]; then
+  [ -n "${2:-}" ] || {
+    echo "usage: commits.sh --subject|--title <text>"
+    exit 2
+  }
+  weighed "the subject" "$2" "$([ "$1" = "--title" ] && echo strict)"
+  [ "$status" -eq 0 ] && [ -z "${GITHUB_ACTIONS:-}" ] && printf 'ok the subject is well formed\n'
+  how_it_reads
 fi
 
-[ "$status" -eq 0 ] || how_it_reads
-exit $status
+range=${1:-}
+[ -n "$range" ] || {
+  echo "usage: commits.sh <range> | --subject <text> | --title <text>"
+  exit 2
+}
+
+# git prints hints and warnings on stderr while still exiting 0, and folding those into the list
+# would weigh them as though they were subjects
+trouble=$(mktemp)
+if ! listed=$(git rev-list --no-merges "$range" 2> "$trouble"); then
+  cat "$trouble" >&2
+  rm -f "$trouble"
+  amiss "the commits between $range could not be listed, so no subject was looked at"
+  exit 1
+fi
+rm -f "$trouble"
+
+seen=0
+while read -r sha; do
+  [ -n "$sha" ] || continue
+  seen=$((seen + 1))
+  weighed "${sha:0:8}" "$(git log -1 --format=%s "$sha")"
+done <<< "$listed"
+
+[ "$status" -eq 0 ] && [ -z "${GITHUB_ACTIONS:-}" ] && printf 'ok %s commit subject(s) well formed\n' "$seen"
+how_it_reads

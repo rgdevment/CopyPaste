@@ -144,4 +144,5 @@ every_example_has_its_own_name
 what_python_measures "the tests live beside the file, not inside it" oversized.py --inline
 what_python_measures "no file or function grows past what a person can hold" oversized.py
 what_python_measures "no crate slips out of mutation" mutants_cover.py
+what_python_measures "the workflows parse and name no key twice" workflows_parse.py
 exit $status

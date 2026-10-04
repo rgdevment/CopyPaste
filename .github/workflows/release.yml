@@ -27,16 +27,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            app/package-lock.json
+          package-manager-cache: false
       - run: npm ci
       - run: npm run lint:md
+
+      # one of the rules parses the workflows, and that is all it needs
+      - name: The library the rules need
+        run: |
+          python3 -c "import yaml" 2>/dev/null \
+            || python3 -m pip install --quiet --break-system-packages pyyaml
 
       # CI guards main with two workflows and this gate only ever asked after one of them, so a
       # convention broken on main would still cut a tag
@@ -103,14 +108,11 @@ jobs:
     env:
       RUSTFLAGS: -D warnings
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
-        with:
-          shared-key: workspace
-          save-if: false
+          persist-credentials: false
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
       - uses: ./.github/actions/sidecar
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets
@@ -137,7 +139,9 @@ jobs:
       HAS_BRIDGE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY != '' }}
       WANTS_BRIDGE: ${{ vars.BRIDGE_MANIFEST == 'true' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Signing secrets come in pairs
         run: |
@@ -233,18 +237,19 @@ jobs:
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
       HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/prepare
         with:
           version: ${{ needs.version.outputs.version }}
           targets: ${{ env.TARGET }}
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: app/package-lock.json
+          package-manager-cache: false
 
       - name: Frontend
         working-directory: app
@@ -386,7 +391,7 @@ jobs:
         run: |
           echo "sha=$(cat stage/CopyPaste.exe stage/cp-panel.exe | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: stage-windows
           path: stage
@@ -447,7 +452,7 @@ jobs:
           npm run tauri -- signer sign "$exe"
           test -s "$exe.sig" || { echo "::error::no updater signature was written"; exit 1; }
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: bundle-windows
           path: dist/*
@@ -475,19 +480,19 @@ jobs:
       HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
       HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/prepare
         with:
           version: ${{ needs.version.outputs.version }}
           targets: ${{ matrix.target }}
-          cache-key: ${{ matrix.target }}
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: app/package-lock.json
+          package-manager-cache: false
 
       - name: Frontend
         working-directory: app
@@ -602,6 +607,7 @@ jobs:
             --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" --wait --timeout 900
           xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
 
       - name: Staple the app itself, and tar it again
         if: env.HAS_APPLE_ID == 'true' && env.HAS_P12 == 'true'
@@ -661,7 +667,7 @@ jobs:
           cp "$dmg" "dist/copypaste-installer-$v-macos-$ARCH.dmg"
           ls -l dist
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: bundle-macos-${{ matrix.arch }}
           path: dist/*
@@ -696,10 +702,12 @@ jobs:
             echo "go=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
         if: steps.gate.outputs.go == 'yes'
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         if: steps.gate.outputs.go == 'yes'
         with:
           name: stage-windows
@@ -780,7 +788,7 @@ jobs:
             Write-Host "::error::the package launches $exe, which is not what the shell runs for a link"; exit 1
           }
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: steps.gate.outputs.go == 'yes'
         with:
           name: bundle-msix
@@ -808,11 +816,11 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: bundle-*
           path: dist
@@ -1022,8 +1030,7 @@ jobs:
           tag="$GITHUB_REF_NAME"
           printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
 
-          tags=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
-          if ! grep -qx "$tag" <<< "$tags"; then
+          if ! gh release view "$tag" > /dev/null 2>&1; then
             gh release create "$tag" --draft --verify-tag --title "$tag" \
               --prerelease="$PRERELEASE" --generate-notes --notes-file "$RUNNER_TEMP/notes.md"
           fi
@@ -1185,7 +1192,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Take the update the way an installed copy would
         run: |
@@ -1299,13 +1308,14 @@ jobs:
             echo "go=no" >> "$GITHUB_OUTPUT"
           elif [ -z "$STORE_APP_ID" ] || [ -z "$STORE_TENANT_ID" ] || [ -z "$STORE_SELLER_ID" ] \
             || [ -z "$STORE_CLIENT_ID" ] || [ -z "$STORE_CLIENT_SECRET" ]; then
-            echo "::notice::the Store credentials are not all here; nothing to submit"
-            echo "go=no" >> "$GITHUB_OUTPUT"
+            echo "::error::STORE_PUBLISH is on and the Store credentials are not all here, so \
+          this release would quietly never reach the Store. Set them or turn the switch off."
+            exit 1
           else
             echo "go=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         if: steps.gate.outputs.go == 'yes'
         with:
           name: bundle-msix
@@ -1371,8 +1381,16 @@ jobs:
     env:
       GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
     steps:
+      - name: The tap cannot be written without its token
+        run: |
+          if [ -z "${GIST_TOKEN}" ]; then
+            echo "::error::this release reached the point of writing the Homebrew tap and \
+          GIST_TOKEN is not set, so nobody on a Mac would ever be offered it. Set the secret, or \
+          take macOS out of this release."
+            exit 1
+          fi
+
       - name: Update the tap
-        if: env.GIST_TOKEN != ''
         run: |
           set -euo pipefail
 
@@ -1511,8 +1529,9 @@ jobs:
             echo "::notice::WINGET_PUBLISH is not true; winget-pkgs gets nothing until it is"
             echo "go=no" >> "$GITHUB_OUTPUT"
           elif [ -z "$WINGET_TOKEN" ]; then
-            echo "::notice::no winget token; skipping"
-            echo "go=no" >> "$GITHUB_OUTPUT"
+            echo "::error::WINGET_PUBLISH is on and there is no winget token, so this release \
+          would quietly never reach winget-pkgs. Set the secret or turn the switch off."
+            exit 1
           else
             echo "go=yes" >> "$GITHUB_OUTPUT"
           fi

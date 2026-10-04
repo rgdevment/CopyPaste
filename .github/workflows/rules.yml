@@ -25,49 +25,65 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      - name: The workflows parse
+      # rules.sh does the parsing now, so the hook catches it before a push does. What it needs
+      # is only the library.
+      - name: The library that rule needs
         run: |
-          set -euo pipefail
           python3 -c "import yaml" 2>/dev/null \
             || python3 -m pip install --quiet --break-system-packages pyyaml
-          python3 - <<'PY'
-          import pathlib
-          import sys
 
-          import yaml
-
-
-          class Strict(yaml.SafeLoader):
-              pass
-
-
-          def no_twice(loader, node, deep=False):
-              seen = set()
-              for key, _ in node.value:
-                  name = loader.construct_object(key, deep=deep)
-                  if name in seen:
-                      raise yaml.YAMLError(f"the «{name}» key is repeated")
-                  seen.add(name)
-              return yaml.SafeLoader.construct_mapping(loader, node, deep)
-
-
-          Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, no_twice)
-
-          bad = 0
-          for one in sorted(pathlib.Path(".github").rglob("*.yml")):
-              try:
-                  yaml.load(one.read_text(encoding="utf-8"), Strict)
-              except yaml.YAMLError as why:
-                  print(f"::error::{one} is not valid YAML, so what it launches will not launch")
-                  print(why)
-                  bad = 1
-          sys.exit(bad)
-          PY
+      # Parsing says nothing of a needs that names a job that is gone, or of input expanded
+      # into a shell.
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: zizmor@1.30.1
+      - name: The workflows mean what they say
+        env:
+          # without a token zizmor skips the audits that reach the network, and those are the ones
+          # that catch a pin whose commit no longer exists in the repository it names
+          GH_TOKEN: ${{ github.token }}
+          SHELLCHECK_OPTS: --severity=warning
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint"
+          zizmor --min-severity medium .github
 
       - name: Project conventions
         run: bash scripts/rules.sh
+
+  notices:
+    name: The notices match the lockfiles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # the licence texts come out of app/node_modules, so without them the file would be written
+      # short and the comparison would fail for the wrong reason
+      - name: The window the notices read
+        working-directory: app
+        run: npm ci
+
+      - name: Written again, and unchanged
+        run: |
+          npm run notices
+          if ! git diff --exit-code -- THIRD-PARTY-BUNDLED.md; then
+            echo "::error::THIRD-PARTY-BUNDLED.md is behind the lockfiles. Run «npm run notices» \
+          and commit what it writes."
+            exit 1
+          fi
 
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
@@ -81,20 +97,25 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: workspace
           save-if: false
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: nextest
       - name: The core, over and over
         run: |
           turns=4
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             turns=20
           fi
-          for i in $(seq 1 "$turns"); do
+          for _ in $(seq 1 "$turns"); do
             cargo nextest run -p cp-core --no-tests=pass || exit 1
           done
 
@@ -105,8 +126,11 @@ jobs:
     env:
       CP_BUDGET_SLACK: "4"
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: budget

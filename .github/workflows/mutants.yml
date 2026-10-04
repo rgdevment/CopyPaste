@@ -21,8 +21,9 @@ jobs:
     outputs:
       mutable: ${{ steps.look.outputs.mutable }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0
       - id: look
         env:
@@ -63,8 +64,9 @@ jobs:
             crates: -p cp-core -p cp-store -p cp-config -p cp-mac
             shard: ""
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: What the branch changed in the crates
@@ -77,17 +79,22 @@ jobs:
           git diff "$from" -- crates > branch.diff
           if [ -s branch.diff ]; then echo "any=yes" >> "$GITHUB_OUTPUT"; fi
 
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - name: Rust, from rust-toolchain.toml
         if: steps.touched.outputs.any == 'yes'
+        run: rustup toolchain install --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: mutants
           save-if: false
         if: steps.touched.outputs.any == 'yes'
-      - uses: taiki-e/install-action@cargo-mutants
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         if: steps.touched.outputs.any == 'yes'
-      - uses: taiki-e/install-action@nextest
+        with:
+          tool: cargo-mutants
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         if: steps.touched.outputs.any == 'yes'
+        with:
+          tool: nextest
 
       - name: A mutant that lives on a line this branch wrote
         id: run
@@ -106,7 +113,7 @@ jobs:
           TITLE: ${{ matrix.name }}, the lines this branch changed
         run: bash scripts/mutants-report.sh
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always() && steps.touched.outputs.any == 'yes'
         with:
           name: mutants-branch-${{ matrix.os }}-${{ strategy.job-index }}

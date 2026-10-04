@@ -4,6 +4,14 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 0
 status=0
 
+# every tool below reads the working tree, not the index, so with anything unstaged what passes
+# here is not what is about to be committed. Checking the index would mean a throwaway worktree
+# per commit; saying so costs nothing.
+if ! git diff --quiet; then
+  printf '!  tracked files differ from what is staged: these checks describe your working tree,\n'
+  printf '!  not the commit you are making\n'
+fi
+
 bash scripts/rules.sh || status=1
 
 quietly() {

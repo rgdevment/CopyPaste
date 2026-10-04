@@ -1,6 +1,6 @@
 name: Caches
 
-on:
+on: # zizmor: ignore[dangerous-triggers] neither job checks out the pull request; they only delete caches through the API
   pull_request_target:
     types: [closed]
   workflow_run:
@@ -16,11 +16,13 @@ on:
         default: true
 
 permissions:
-  actions: write
+  contents: read
 
 jobs:
   sweep:
     name: a closed pull request takes its caches with it
+    permissions:
+      actions: write
     if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -50,7 +52,7 @@ jobs:
       group: cache-generations
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: What no build will ask for again
