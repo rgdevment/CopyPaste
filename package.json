@@ -8,6 +8,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath hooks || echo the hooks are not set: this is not a git clone",
     "lint:md": "markdownlint-cli2",
-    "format:md": "markdownlint-cli2 --fix"
+    "format:md": "markdownlint-cli2 --fix",
+    "notices": "node scripts/third-party.mjs"
   }
 }

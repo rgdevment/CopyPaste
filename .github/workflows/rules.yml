@@ -48,6 +48,35 @@ jobs:
       - name: Project conventions
         run: bash scripts/rules.sh
 
+  notices:
+    name: The notices match the lockfiles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # the licence texts come out of app/node_modules, so without them the file would be written
+      # short and the comparison would fail for the wrong reason
+      - name: The window the notices read
+        working-directory: app
+        run: npm ci
+
+      - name: Written again, and unchanged
+        run: |
+          npm run notices
+          if ! git diff --exit-code -- THIRD-PARTY-BUNDLED.md; then
+            echo "::error::THIRD-PARTY-BUNDLED.md is behind the lockfiles. Run «npm run notices» \
+          and commit what it writes."
+            exit 1
+          fi
+
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

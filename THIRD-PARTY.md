@@ -12,8 +12,11 @@ that do the heavy lifting are [Slint](https://slint.dev) with
 [xxHash](https://github.com/Cyan4973/xxHash) for the fingerprints, and the
 [windows](https://github.com/microsoft/windows-rs) and
 [objc2](https://github.com/madsmtm/objc2) crates for the two platforms. Each
-one is permissively licensed, and `Cargo.lock` names every last transitive one
-with its version.
+one is permissively licensed, and
+[THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) names every last one of them
+with its version, its licence and which of the two systems it ships on. That
+file is written by `npm run notices` and CI refuses a change that leaves it
+behind the lockfiles.
 
 ## Lucide Icons
 
