@@ -705,10 +705,7 @@ in the app under **About → Third-party notices**. The panel is drawn with
 
 <p align="center">
   <a href="https://slint.dev">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-light.png">
-      <img src="https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-whitebg.png" alt="Made with Slint" height="60"/>
-    </picture>
+    <img src="https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-whitebg.png" alt="Made with Slint" height="60"/>
   </a>
 </p>
 
