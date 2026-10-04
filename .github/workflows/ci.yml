@@ -145,8 +145,8 @@ jobs:
 
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example mac_probe
-      - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
-      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
 
       - uses: actions/setup-node@v7
         with:
@@ -193,8 +193,8 @@ jobs:
         shell: pwsh
         run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example win_probe
-      - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
-      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
+      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
       - name: Every path is relative to the repository, which is what Sonar reads
         if: always()
         shell: bash
@@ -255,6 +255,6 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=app/coverage/lcov.info
             -Dsonar.rust.clippy.enabled=false
             -Dsonar.cpd.exclusions=app/src/locales.ts
-            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs
+            -Dsonar.coverage.exclusions=app/src/main.tsx,app/src-tauri/src/**,crates/cp-panel/src/main.rs,crates/cp-panel/src/app.rs,crates/cp-panel/src/measure.rs,crates/cp-panel/src/reaching.rs
             -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
             -Dsonar.qualitygate.timeout=300

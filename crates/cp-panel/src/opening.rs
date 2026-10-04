@@ -132,6 +132,41 @@ pub fn first_of(paths: &[String]) -> Option<&str> {
         .find(|one| !one.is_empty())
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reached {
+    Opened,
+    Working,
+    Refused,
+    NoLink,
+    Missing,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Landing {
+    Opened,
+    Refused,
+    Gone,
+}
+
+pub(crate) fn landing_of(opened: bool, on_disk: bool, still_there: bool) -> Landing {
+    if opened {
+        return Landing::Opened;
+    }
+    if on_disk && !still_there {
+        return Landing::Gone;
+    }
+    Landing::Refused
+}
+
+pub(crate) fn answered(said: cp_core::reading::Waited<bool>) -> Reached {
+    match said {
+        cp_core::reading::Waited::Answered(true) => Reached::Opened,
+        cp_core::reading::Waited::Answered(false) => Reached::Refused,
+        cp_core::reading::Waited::StillRunning => Reached::Working,
+        cp_core::reading::Waited::Gone => Reached::Refused,
+    }
+}
+
 #[cfg(test)]
 #[path = "opening_test.rs"]
 mod tests;

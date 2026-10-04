@@ -1170,6 +1170,60 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    b.group("R · Dragging out");
+
+    b.case(
+        "R1",
+        "the only Objective-C class this panel defines answers what a drag asks of it",
+        || {
+            if !cp_mac_sys::dragging::source_answers() {
+                return Err(
+                    "CopyPasteDragSource does not answer                      draggingSession:sourceOperationMaskForDraggingContext:, so AppKit would                      refuse every drag out of the panel"
+                        .into(),
+                );
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
+        "R2",
+        "a drag really starts, from a window of our own, carrying a name with spaces in it",
+        || {
+            let at = std::env::temp_dir().join("cp-r2 dragged by its name.txt");
+            std::fs::write(&at, b"cp-r2").map_err(|why| why.to_string())?;
+            let said = cp_mac_sys::dragging::a_drag_would_start(&[at.as_path()])
+                .ok_or("this needs the main thread and a window of its own")?;
+            let _ = std::fs::remove_file(&at);
+            if said != cp_mac_sys::dragging::Dragged::Started {
+                return Err(format!(
+                    "no drag would start from a window of ours: {said:?}"
+                ));
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
+        "R3",
+        "a drag of nothing, and of a path macOS cannot spell, never leaves the window",
+        || {
+            let empty = cp_mac_sys::dragging::a_drag_would_start(&[])
+                .ok_or("this needs the main thread and a window of its own")?;
+            if empty != cp_mac_sys::dragging::Dragged::Nothing {
+                return Err(format!("a drag of nothing answered {empty:?}"));
+            }
+            use std::os::unix::ffi::OsStrExt;
+            let bad = std::ffi::OsStr::from_bytes(&[0xff, 0xfe]);
+            let said = cp_mac_sys::dragging::a_drag_would_start(&[std::path::Path::new(bad)])
+                .ok_or("this needs the main thread and a window of its own")?;
+            if said != cp_mac_sys::dragging::Dragged::Nothing {
+                return Err(format!("a path that is not text answered {said:?}"));
+            }
+            Ok(())
+        },
+    );
+
     println!();
     println!(
         "  {} pass · {} fail · {} skipped",

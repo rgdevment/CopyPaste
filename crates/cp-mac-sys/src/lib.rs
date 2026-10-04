@@ -1,6 +1,7 @@
 #![cfg(target_os = "macos")]
 
 pub mod activation;
+pub mod dragging;
 pub mod files;
 pub mod frontmost;
 pub mod keyboard;
