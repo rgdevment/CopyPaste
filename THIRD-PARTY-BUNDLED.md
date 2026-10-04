@@ -606,8 +606,8 @@ whichever machine wrote it.
 | `tempfile` | 3.27.0 | MIT OR Apache-2.0 |
 | `tendril` | 0.5.1 | MIT OR Apache-2.0 |
 | `text-size` | 1.1.1 | MIT OR Apache-2.0 |
-| `thiserror` | 2.0.20 | MIT OR Apache-2.0 |
-| `thiserror-impl` | 2.0.20 | MIT OR Apache-2.0 |
+| `thiserror` | 2.0.21 | MIT OR Apache-2.0 |
+| `thiserror-impl` | 2.0.21 | MIT OR Apache-2.0 |
 | `tiff` | 0.11.3 | MIT |
 | `time` | 0.3.55 | MIT OR Apache-2.0 |
 | `time-core` | 0.1.9 | MIT OR Apache-2.0 |
