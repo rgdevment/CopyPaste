@@ -313,6 +313,13 @@ jobs:
             exit 1
           fi
           echo "the installer lays down the panel"
+          for notice in LICENSE.txt THIRD-PARTY.md THIRD-PARTY-BUNDLED.md; do
+            if ! grep -q "oname=$notice" "$script"; then
+              echo "::error::the generated installer script does not lay down $notice"
+              exit 1
+            fi
+          done
+          echo "the installer lays down the licence and the third-party notices"
 
       - name: Set the binaries aside for the MSIX
         shell: bash
@@ -725,6 +732,8 @@ jobs:
           for logo in StoreLogo Square44x44Logo Square71x71Logo Square150x150Logo; do
             cp "app/src-tauri/icons/$logo.png" "msix/Assets/$logo.png"
           done
+          cp LICENSE msix/LICENSE.txt
+          cp THIRD-PARTY.md THIRD-PARTY-BUNDLED.md msix/
 
           python scripts/fill_manifest.py app/src-tauri/msix/AppxManifest.xml.in msix/AppxManifest.xml
 

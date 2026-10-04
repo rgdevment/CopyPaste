@@ -35,6 +35,11 @@
     "shortDescription": "Clipboard history that stays on your machine. No ads, no telemetry, no account",
     "longDescription": "CopyPaste keeps what you copy within reach of a shortcut: text, images, files, links and colours, searchable in milliseconds and stored only on your own machine. No account, no subscription, no telemetry and no server.",
     "licenseFile": "../../LICENSE",
+    "resources": {
+      "../../LICENSE": "LICENSE.txt",
+      "../../THIRD-PARTY.md": "THIRD-PARTY.md",
+      "../../THIRD-PARTY-BUNDLED.md": "THIRD-PARTY-BUNDLED.md"
+    },
     "windows": {
       "minimumWebview2Version": "111.0.0.0",
       "nsis": {

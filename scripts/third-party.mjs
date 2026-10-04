@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,13 +50,46 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.`;
 
+const BSD3 = (who) => `BSD 3-Clause License
+
+Copyright (c) ${who}
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`;
+
+const asWritten = (text) => text.replace(/\r\n/g, "\n");
+
+const canonical = (spdx) =>
+  asWritten(readFileSync(join(root, "scripts", "licences", `${spdx}.txt`), "utf8")).trim();
+
 const offered = (licence) =>
   String(licence)
     .toUpperCase()
-    .split(/[()\s]+|\bOR\b|\bAND\b/)
+    .split(/[()\s/]+|\bOR\b|\bAND\b/)
     .filter(Boolean);
 
-// the .spdx is not a notice, but it names the holder, and a made-up one would be worse than none
 const held = (at, pkg) => {
   for (const one of readdirSync(at)
     .filter((name) => /\.spdx$/i.test(name))
@@ -76,16 +110,19 @@ const drafted = (at, pkg, licence) => {
   return null;
 };
 
+const licenceFiles = (at) =>
+  existsSync(at)
+    ? readdirSync(at)
+        .filter((one) => /^(licen[cs]e|copying)/i.test(one))
+        .filter((one) => !/\.spdx$/i.test(one))
+        .filter((one) => statSync(join(at, one)).isFile())
+        .sort()
+    : [];
+
 const noticed = (at) => {
   if (!existsSync(at)) return null;
-  // readdir promises no order, and picking one licence file by luck writes a different file per filesystem
-  const named = readdirSync(at)
-    .filter((one) => /^(licen[cs]e|copying)/i.test(one))
-    .filter((one) => !/\.spdx$/i.test(one))
-    .filter((one) => statSync(join(at, one)).isFile())
-    .sort();
+  const named = licenceFiles(at);
   if (named.length > 0) {
-    // no truncation: Apache-2.0 section 4(a) asks for a complete copy
     return named
       .map((one) => `${one}\n\n${readFileSync(join(at, one), "utf8").trim()}`)
       .join("\n\n");
@@ -116,8 +153,41 @@ const shipped = () => {
   return seen;
 };
 
-// no platform is named: --filter-platform resolves against the host and writes a different file per OS
+const carried = (one) => {
+  const at = dirname(one.manifest_path);
+  const found = new Set(licenceFiles(at).map((name) => join(at, name)));
+  const reuse = join(at, "LICENSES");
+  if (existsSync(reuse) && statSync(reuse).isDirectory()) {
+    for (const name of readdirSync(reuse).sort()) {
+      if (statSync(join(reuse, name)).isFile()) found.add(join(reuse, name));
+    }
+  }
+  if (one.license_file && existsSync(join(at, one.license_file))) found.add(join(at, one.license_file));
+  for (const name of readdirSync(at).sort()) {
+    if (/^notice/i.test(name) && statSync(join(at, name)).isFile()) found.add(join(at, name));
+  }
+  return [...found].sort().map((path) => asWritten(readFileSync(path, "utf8")).trim());
+};
+
+const holderOf = (one) => {
+  if (one.authors?.length) return one.authors.join(", ");
+  return `the ${one.name} authors (${one.repository ?? `https://crates.io/crates/${one.name}`})`;
+};
+
+const draftedFor = (one) => {
+  const parts = offered(one.license ?? "");
+  if (parts.includes("APACHE-2.0")) return canonical("Apache-2.0");
+  if (parts.includes("MPL-2.0")) return canonical("MPL-2.0");
+  if (parts.includes("BSL-1.0")) return canonical("BSL-1.0");
+  const who = holderOf(one);
+  if (parts.includes("MIT")) return MIT(who);
+  if (parts.includes("BSD-3-CLAUSE")) return BSD3(who);
+  if (parts.includes("ISC")) return ISC(who);
+  return null;
+};
+
 const crates = () => {
+  execFileSync("cargo", ["fetch", "--locked"], { cwd: root, stdio: ["ignore", "ignore", "inherit"] });
   const said = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked"], {
     cwd: root,
     encoding: "utf8",
@@ -147,12 +217,19 @@ const crates = () => {
     if (!one) continue;
     const key = `${one.name}@${one.version}`;
     if (seen.has(key)) continue;
-    seen.set(key, { name: one.name, version: one.version, licence: one.license ?? "see the crate" });
+    const texts = carried(one);
+    const draft = texts.length > 0 ? null : draftedFor(one);
+    seen.set(key, {
+      name: one.name,
+      version: one.version,
+      licence: one.license ?? "see the crate",
+      texts: draft ? [draft] : texts,
+      drafted: Boolean(draft),
+    });
   }
   return seen;
 };
 
-// by field, not by the «name@version» key, where a sibling's «-» sorts ahead of the «@»
 const inOrder = (a, b) =>
   a.name < b.name
     ? -1
@@ -170,6 +247,38 @@ const listed = (seen) =>
     .map((one) => `| \`${one.name}\` | ${one.version} | ${one.licence} |`)
     .join("\n");
 
+const fenced = (text) => {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return `${fence}text\n${text}\n${fence}`;
+};
+
+const named = (all) => all.map((one) => `\`${one.name}\` ${one.version}`).join(", ");
+
+const grouped = (seen) => {
+  const byText = new Map();
+  for (const one of [...seen.values()].sort(inOrder)) {
+    for (const text of one.texts) {
+      const key = createHash("sha256").update(text).digest("hex");
+      if (!byText.has(key)) byText.set(key, { text, carriedBy: [], draftedFor: [] });
+      const entry = byText.get(key);
+      const list = one.drafted ? entry.draftedFor : entry.carriedBy;
+      if (!list.includes(one)) list.push(one);
+    }
+  }
+  return [...byText.values()];
+};
+
+const credited = (entry) =>
+  [
+    entry.carriedBy.length > 0 ? `Carried by ${named(entry.carriedBy)}.` : null,
+    entry.draftedFor.length > 0
+      ? `Written out for ${named(entry.draftedFor)}, from the licence the manifest declares: the crate ships no licence file.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
 if (!existsSync(join(root, "app", "node_modules"))) {
   console.error("app/node_modules is not here, so not one notice could be read: run npm ci in app");
   process.exit(1);
@@ -185,12 +294,23 @@ if (unread.length > 0) {
   process.exit(1);
 }
 
+const bare = [...rs.values()].filter((one) => one.texts.length === 0);
+if (bare.length > 0) {
+  const said = bare.map((one) => `${one.name}@${one.version} (${one.licence})`).join(", ");
+  console.error(`no licence text could be read or written out for ${said}`);
+  process.exit(1);
+}
+
 const kept = [...js.values()]
   .sort(inOrder)
-  .map((one) => `### \`${one.name}\` ${one.version} — ${one.licence}\n\n\`\`\`text\n${one.notice}\n\`\`\``)
+  .map((one) => `### \`${one.name}\` ${one.version} — ${one.licence}\n\n${fenced(asWritten(one.notice))}`)
   .join("\n\n");
 
-const asWritten = (text) => text.replace(/\r\n/g, "\n");
+const texts = grouped(rs);
+
+const crateTexts = texts
+  .map((entry, at) => `### Text ${at + 1}\n\n${credited(entry)}\n\n${fenced(entry.text)}`)
+  .join("\n\n");
 
 writeFileSync(
   out,
@@ -209,9 +329,10 @@ wrote it: no platform is named, the order is by name and version compared by cod
 point, and the licence files
 of a package are read in full and in a fixed order.
 
-Every package in the window has its notice reproduced below, in full; the crates
-are named with the licence each one declares, and their texts travel with the
-crate in the registry rather than being copied here.
+Every package in the window has its notice reproduced below, in full. The crates'
+licence texts follow them, each one written once with the crates that carry it.
+Where a crate offers a choice, the text is the one it ships; a crate that ships
+none gets the licence its manifest declares, Apache-2.0 first where it is offered.
 
 ## In the window (${js.size} packages)
 
@@ -228,7 +349,11 @@ ${listed(rs)}
 ## The notices themselves
 
 ${kept}
+
+## The crates' licence texts (${texts.length} texts)
+
+${crateTexts}
 `),
 );
 
-console.log(`${js.size} packages, ${rs.size} crates -> ${out}`);
+console.log(`${js.size} packages, ${rs.size} crates, ${texts.length} crate texts -> ${out}`);

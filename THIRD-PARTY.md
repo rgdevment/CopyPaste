@@ -14,8 +14,14 @@ that do the heavy lifting are [Slint](https://slint.dev) with
 [objc2](https://github.com/madsmtm/objc2) crates for the two platforms. Each
 one is permissively licensed, and
 [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) names every last one of them
-with its version and its licence. That file is written by `npm run notices` and
-CI refuses a change that leaves it behind the lockfiles.
+with its version and its licence, and reproduces each licence text once with the
+crates that carry it. That file is written by `npm run notices` and CI refuses a
+change that leaves it behind the lockfiles.
+
+Every installer carries both files and the GPL beside the application: the
+Windows installer and the MSIX in the installation folder, as `LICENSE.txt`,
+`THIRD-PARTY.md` and `THIRD-PARTY-BUNDLED.md`, and the macOS app in
+`CopyPaste.app/Contents/Resources`.
 
 ## Lucide Icons
 

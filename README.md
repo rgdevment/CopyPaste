@@ -689,6 +689,11 @@ redistribution and needs no permission from anyone.
 Contributions require a one-time [CLA](CLA.md); you keep the copyright on your
 work.
 
+CopyPaste is built on other people's open source work. Every package and crate
+that ships inside it, with its licence text, is listed in
+[THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md), and every installer puts that
+file next to the application.
+
 ---
 
 I built CopyPaste because I was tired of the alternatives — bloated, resource-hungry, or disrespectful of my privacy. This is a personal copy paste productivity tool, built from a real need, shared because others might need a better clipboard manager too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell.

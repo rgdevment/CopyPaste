@@ -191,7 +191,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 ### For Developers
 
 - **Read the Code** — The entire codebase is open source: [CopyPaste Repository](https://github.com/rgdevment/CopyPaste)
-- **Review Dependencies** — Check `pubspec.yaml` for third-party packages we use
+- **Review Dependencies** — Every package and crate that ships is listed in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md), pinned by `Cargo.lock` and `app/package-lock.json`
 - **Security Best Practices** — Follow secure coding guidelines when contributing
 
 ---
