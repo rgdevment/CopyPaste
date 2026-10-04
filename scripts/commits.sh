@@ -14,9 +14,19 @@ amiss() {
   status=1
 }
 
+spared() {
+  case $1 in
+    Merge\ * | Revert\ * | fixup!\ * | squash!\ * | amend!\ *) return 0 ;;
+  esac
+  return 1
+}
+
 weighed() {
   local who=$1 said=$2
   said=$(printf '%s' "$said" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  if spared "$said"; then
+    return
+  fi
   if ! printf '%s' "$said" | grep -qE "$shape"; then
     amiss "$who does not follow the convention"
     printf '  %s\n' "$said"
