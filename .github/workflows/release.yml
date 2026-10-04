@@ -602,6 +602,7 @@ jobs:
             --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" --wait --timeout 900
           xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
 
       - name: Staple the app itself, and tar it again
         if: env.HAS_APPLE_ID == 'true' && env.HAS_P12 == 'true'
@@ -1024,8 +1025,7 @@ jobs:
           tag="$GITHUB_REF_NAME"
           printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
 
-          tags=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
-          if ! grep -qx "$tag" <<< "$tags"; then
+          if ! gh release view "$tag" > /dev/null 2>&1; then
             gh release create "$tag" --draft --verify-tag --title "$tag" \
               --prerelease="$PRERELEASE" --generate-notes --notes-file "$RUNNER_TEMP/notes.md"
           fi
@@ -1524,8 +1524,9 @@ jobs:
             echo "::notice::WINGET_PUBLISH is not true; winget-pkgs gets nothing until it is"
             echo "go=no" >> "$GITHUB_OUTPUT"
           elif [ -z "$WINGET_TOKEN" ]; then
-            echo "::notice::no winget token; skipping"
-            echo "go=no" >> "$GITHUB_OUTPUT"
+            echo "::error::WINGET_PUBLISH is on and there is no winget token, so this release \
+          would quietly never reach winget-pkgs. Set the secret or turn the switch off."
+            exit 1
           else
             echo "go=yes" >> "$GITHUB_OUTPUT"
           fi

@@ -3,7 +3,9 @@ set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)" || exit 0
 
-said=$(git stripspace --strip-comments < "$1" | head -1)
+# Git folds the whole first paragraph into the subject, so a wrapped one is measured as one line,
+# and everything past the scissors of --verbose is the diff and not the message.
+said=$(sed '/^# -* >8 -*$/,$d' "$1" | git stripspace --strip-comments | sed -n '1,/^$/p' | paste -sd' ' -)
 [ -n "$said" ] || exit 0
 
 exec bash scripts/commits.sh --subject "$said"

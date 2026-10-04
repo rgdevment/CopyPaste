@@ -34,4 +34,4 @@ jobs:
         env:
           TITLE: ${{ github.event.pull_request.title }}
           NUMBER: ${{ github.event.pull_request.number }}
-        run: bash scripts/commits.sh --subject "$TITLE (#$NUMBER)"
+        run: bash scripts/commits.sh --title "$TITLE (#$NUMBER)"
