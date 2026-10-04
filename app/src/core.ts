@@ -5,6 +5,8 @@ import { adopt } from "./locales";
 
 export const notices = (): Promise<string> => invoke<string>("notices");
 
+export const licences = (): Promise<string> => invoke<string>("licences");
+
 export type Look = "system" | "light" | "dark";
 
 export type Kept = {

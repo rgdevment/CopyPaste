@@ -15,9 +15,11 @@ three systems are always the same, the order is by name and version compared by
 code point, and the licence files of a package are read in full and in a fixed
 order.
 
-Every package in the window has its notice reproduced below, in full; the crates
-are named with the licence each one declares, and their texts travel with the
-crate in the registry rather than being copied here.
+Every package in the window has its notice reproduced below, in full. The crates
+are named with the licence each one declares, and the licence texts they carry
+are in
+[THIRD-PARTY-LICENSES.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY-LICENSES.md), each written once
+with the crates that carry it.
 
 ## In the window (13 packages)
 

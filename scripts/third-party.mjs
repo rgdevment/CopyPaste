@@ -1,10 +1,13 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "THIRD-PARTY-BUNDLED.md");
+const texts = join(root, "THIRD-PARTY-LICENSES.md");
+const REPO = "https://github.com/rgdevment/CopyPaste/blob/main";
 
 const told = (pkg) =>
   typeof pkg.license === "string"
@@ -52,7 +55,7 @@ PERFORMANCE OF THIS SOFTWARE.`;
 const offered = (licence) =>
   String(licence)
     .toUpperCase()
-    .split(/[()\s]+|\bOR\b|\bAND\b/)
+    .split(/[()\s/]+|\bOR\b|\bAND\b/)
     .filter(Boolean);
 
 const held = (at, pkg) => {
@@ -83,7 +86,7 @@ const noticed = (at) => {
     .filter((one) => statSync(join(at, one)).isFile())
     .sort();
   if (named.length > 0) {
-      return named
+    return named
       .map((one) => `${one}\n\n${readFileSync(join(at, one), "utf8").trim()}`)
       .join("\n\n");
   }
@@ -147,6 +150,92 @@ const crates = () => {
   return seen;
 };
 
+const BSD3 = (who) => `BSD 3-Clause License
+
+Copyright (c) ${who}
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`;
+
+const asWritten = (text) => text.replace(/\r\n/g, "\n");
+
+const canonical = (spdx) =>
+  asWritten(readFileSync(join(root, "scripts", "licences", `${spdx}.txt`), "utf8")).trim();
+
+const manifests = () => {
+  const said = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked"], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return new Map(JSON.parse(said).packages.map((one) => [`${one.name}@${one.version}`, one]));
+};
+
+const filesIn = (at, pattern) =>
+  existsSync(at) && statSync(at).isDirectory()
+    ? readdirSync(at)
+        .filter((one) => pattern.test(one) && statSync(join(at, one)).isFile())
+        .map((one) => join(at, one))
+    : [];
+
+const carried = (pkg) => {
+  const at = dirname(pkg.manifest_path);
+  const found = new Set([
+    ...filesIn(at, /^(licen[cs]e|copying|notice)/i).filter((one) => !/\.spdx$/i.test(one)),
+    ...filesIn(join(at, "LICENSES"), /./),
+  ]);
+  if (pkg.license_file && existsSync(join(at, pkg.license_file))) {
+    found.add(join(at, pkg.license_file));
+  }
+  return [...found]
+    .map((one) => [one.slice(at.length), one])
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([, one]) => asWritten(readFileSync(one, "utf8")).trim());
+};
+
+const holderOf = (pkg) =>
+  pkg.authors?.length
+    ? pkg.authors.join(", ")
+    : `the ${pkg.name} authors (${pkg.repository ?? `https://crates.io/crates/${pkg.name}`})`;
+
+const draftedFor = (pkg) => {
+  const parts = offered(pkg.license ?? "");
+  if (parts.includes("APACHE-2.0")) return canonical("Apache-2.0");
+  if (parts.includes("BSL-1.0")) return canonical("BSL-1.0");
+  if (parts.includes("MIT")) return MIT(holderOf(pkg));
+  if (parts.includes("BSD-3-CLAUSE")) return BSD3(holderOf(pkg));
+  if (parts.includes("ISC")) return ISC(holderOf(pkg));
+  return null;
+};
+
+const fenced = (text) => {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return `${fence}text\n${text}\n${fence}`;
+};
+
 const inOrder = (a, b) =>
   a.name < b.name
     ? -1
@@ -184,7 +273,44 @@ const kept = [...js.values()]
   .map((one) => `### \`${one.name}\` ${one.version} — ${one.licence}\n\n\`\`\`text\n${one.notice}\n\`\`\``)
   .join("\n\n");
 
-const asWritten = (text) => text.replace(/\r\n/g, "\n");
+const named = (all) => all.map((one) => `\`${one.name}\` ${one.version}`).join(", ");
+
+const known = manifests();
+const byText = new Map();
+const bare = [];
+for (const one of [...rs.values()].sort(inOrder)) {
+  const pkg = known.get(`${one.name}@${one.version}`);
+  const read = pkg ? carried(pkg) : [];
+  const draft = pkg && read.length === 0 ? draftedFor(pkg) : null;
+  const all = read.length > 0 ? read : draft ? [draft] : [];
+  if (all.length === 0) bare.push(`${one.name}@${one.version} (${one.licence})`);
+  for (const text of all) {
+    const key = createHash("sha256").update(text).digest("hex");
+    if (!byText.has(key)) byText.set(key, { text, carriedBy: [], writtenFor: [] });
+    const entry = byText.get(key);
+    const list = draft ? entry.writtenFor : entry.carriedBy;
+    if (!list.includes(one)) list.push(one);
+  }
+}
+
+if (bare.length > 0) {
+  console.error(`no licence text could be read or written out for ${bare.join(", ")}`);
+  process.exit(1);
+}
+
+const credited = (entry) =>
+  [
+    entry.carriedBy.length > 0 ? `Carried by ${named(entry.carriedBy)}.` : null,
+    entry.writtenFor.length > 0
+      ? `Written out for ${named(entry.writtenFor)}, from the licence the manifest declares: the crate ships no licence file.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+const written = [...byText.values()]
+  .map((entry, at) => `## Text ${at + 1}\n\n${credited(entry)}\n\n${fenced(entry.text)}`)
+  .join("\n\n");
 
 writeFileSync(
   out,
@@ -195,7 +321,7 @@ writeFileSync(
 CopyPaste is GPL-3.0-only. The binaries carry the work below, each under its own
 licence. Nothing of it was copied into CopyPaste's own source; what was copied in
 is in
-[THIRD-PARTY.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md).
+[THIRD-PARTY.md](${REPO}/THIRD-PARTY.md).
 
 The crates are the ones linked into the binaries for the three systems that are
 published, Windows on x86-64 and macOS on Apple silicon and Intel: what only
@@ -205,9 +331,11 @@ three systems are always the same, the order is by name and version compared by
 code point, and the licence files of a package are read in full and in a fixed
 order.
 
-Every package in the window has its notice reproduced below, in full; the crates
-are named with the licence each one declares, and their texts travel with the
-crate in the registry rather than being copied here.
+Every package in the window has its notice reproduced below, in full. The crates
+are named with the licence each one declares, and the licence texts they carry
+are in
+[THIRD-PARTY-LICENSES.md](${REPO}/THIRD-PARTY-LICENSES.md), each written once
+with the crates that carry it.
 
 ## In the window (${js.size} packages)
 
@@ -227,4 +355,22 @@ ${kept}
 `),
 );
 
-console.log(`${js.size} packages, ${rs.size} crates -> ${out}`);
+writeFileSync(
+  texts,
+  asWritten(`# Licence texts — what the crates inside CopyPaste carry
+
+<!-- Written by \`npm run notices\`. Do not edit by hand. -->
+
+The licence texts of the ${rs.size} crates named in
+[THIRD-PARTY-BUNDLED.md](${REPO}/THIRD-PARTY-BUNDLED.md), each written once with
+the crates that carry it: ${byText.size} texts. A text is read in full from the
+crate as it is published, from its licence, copying and notice files and its
+LICENSES folder. A crate that publishes none gets the licence its manifest
+declares, Apache-2.0 first where it is offered, with the holders its manifest
+names.
+
+${written}
+`),
+);
+
+console.log(`${js.size} packages, ${rs.size} crates, ${byText.size} licence texts -> ${out}, ${texts}`);

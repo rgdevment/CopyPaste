@@ -79,8 +79,8 @@ whichever licence you hold for CopyPaste itself.
   exception), BSD-2-Clause, BSD-3-Clause, 0BSD, ISC, Zlib, BSL-1.0,
   Unicode-3.0, PSF-2.0, CC0-1.0 and the Unlicense, which is nearly all of it.
   They allow a closed product, and they ask for their notices to ship with it.
-  CopyPaste already shows them under **About → Third-party notices**; keep
-  that, or carry the file another way.
+  CopyPaste already shows them, with their full texts, under **About**; keep
+  that, or carry both files another way.
 - **MPL-2.0** — thirteen crates in the binaries: `symphonia` and its codec and
   format crates, which decode audio for the waveform in the panel, and
   `option-ext`, through the updater. Their copyleft stops at their own files:

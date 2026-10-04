@@ -699,8 +699,9 @@ If you find it useful, I'm glad. If you want to help make it better, even better
 ## Acknowledgements
 
 CopyPaste stands on other people's open source work, every piece of it listed
-with its licence in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) and shown
-in the app under **About → Third-party notices**. The panel is drawn with
+with its licence in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md), with the
+licence texts in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md), and both
+shown in the app under **About**. The panel is drawn with
 [Slint](https://slint.dev).
 
 <p align="center">

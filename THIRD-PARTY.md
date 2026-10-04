@@ -14,10 +14,13 @@ that do the heavy lifting are [Slint](https://slint.dev) with
 [objc2](https://github.com/madsmtm/objc2) crates for the two platforms. Each
 one is permissively licensed, and
 [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) names every last one of them
-with its version and its licence. That file is written by `npm run notices` and
-CI refuses a change that leaves it behind the lockfiles. The application carries
-it inside its own binary, so every copy shows it under **About → Third-party
-notices**, wherever it was installed from and with no network.
+with its version and its licence, and
+[THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md) reproduces the licence texts
+the crates carry, each written once with the crates that carry it. Both files
+are written by `npm run notices` and CI refuses a change that leaves them behind
+the lockfiles. The application carries both inside its own binary, so every copy
+shows them under **About → Third-party notices** and **About → Licence texts**,
+wherever it was installed from and with no network.
 
 ## Lucide Icons
 
