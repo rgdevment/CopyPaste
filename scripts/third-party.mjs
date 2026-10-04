@@ -55,7 +55,6 @@ const offered = (licence) =>
     .split(/[()\s]+|\bOR\b|\bAND\b/)
     .filter(Boolean);
 
-// the .spdx is not a notice, but it names the holder, and a made-up one would be worse than none
 const held = (at, pkg) => {
   for (const one of readdirSync(at)
     .filter((name) => /\.spdx$/i.test(name))
@@ -78,15 +77,13 @@ const drafted = (at, pkg, licence) => {
 
 const noticed = (at) => {
   if (!existsSync(at)) return null;
-  // readdir promises no order, and picking one licence file by luck writes a different file per filesystem
   const named = readdirSync(at)
     .filter((one) => /^(licen[cs]e|copying)/i.test(one))
     .filter((one) => !/\.spdx$/i.test(one))
     .filter((one) => statSync(join(at, one)).isFile())
     .sort();
   if (named.length > 0) {
-    // no truncation: Apache-2.0 section 4(a) asks for a complete copy
-    return named
+      return named
       .map((one) => `${one}\n\n${readFileSync(join(at, one), "utf8").trim()}`)
       .join("\n\n");
   }
@@ -116,43 +113,40 @@ const shipped = () => {
   return seen;
 };
 
-// no platform is named: --filter-platform resolves against the host and writes a different file per OS
+const SHIPPED = ["x86_64-pc-windows-msvc", "aarch64-apple-darwin", "x86_64-apple-darwin"];
+
 const crates = () => {
-  const said = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked"], {
-    cwd: root,
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  const meta = JSON.parse(said);
-  const byId = new Map(meta.packages.map((one) => [one.id, one]));
-  const nodes = new Map((meta.resolve?.nodes ?? []).map((one) => [one.id, one]));
-  const ours = new Set(meta.workspace_members);
-
-  const walked = new Set(ours);
-  const queue = [...ours];
-  while (queue.length) {
-    for (const dep of nodes.get(queue.shift())?.deps ?? []) {
-      const kinds = dep.dep_kinds ?? [];
-      if (kinds.length > 0 && kinds.every((one) => one.kind === "dev")) continue;
-      if (walked.has(dep.pkg)) continue;
-      walked.add(dep.pkg);
-      queue.push(dep.pkg);
-    }
-  }
-
   const seen = new Map();
-  for (const id of walked) {
-    if (ours.has(id)) continue;
-    const one = byId.get(id);
-    if (!one) continue;
-    const key = `${one.name}@${one.version}`;
-    if (seen.has(key)) continue;
-    seen.set(key, { name: one.name, version: one.version, licence: one.license ?? "see the crate" });
+  for (const triple of SHIPPED) {
+    const said = execFileSync(
+      "cargo",
+      [
+        "tree",
+        "--locked",
+        "--workspace",
+        "--edges",
+        "normal,no-proc-macro",
+        "--target",
+        triple,
+        "--prefix",
+        "none",
+        "--format",
+        "{p}|{l}",
+      ],
+      { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    );
+    for (const line of said.split(/\r?\n/)) {
+      const one = /^(\S+) v(\S+)(?: \((.+?)\))?\|(.*?)(?: \(\*\))?$/.exec(line);
+      if (!one) continue;
+      const [, name, version, from, licence] = one;
+      const key = `${name}@${version}`;
+      if ((from && existsSync(from)) || seen.has(key)) continue;
+      seen.set(key, { name, version, licence: licence || "see the crate" });
+    }
   }
   return seen;
 };
 
-// by field, not by the «name@version» key, where a sibling's «-» sorts ahead of the «@»
 const inOrder = (a, b) =>
   a.name < b.name
     ? -1
@@ -203,12 +197,13 @@ licence. Nothing of it was copied into CopyPaste's own source; what was copied i
 is in
 [THIRD-PARTY.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md).
 
-The crates are every one the build resolves on any system, which is what
-Cargo.lock holds; what only the tests use is left out, and a crate resolved at
-two versions is named once per version. Nothing here depends on the machine that
-wrote it: no platform is named, the order is by name and version compared by code
-point, and the licence files
-of a package are read in full and in a fixed order.
+The crates are the ones linked into the binaries for the three systems that are
+published, Windows on x86-64 and macOS on Apple silicon and Intel: what only
+builds, tests or generates code is left out, and a crate linked at two versions
+is named once per version. Nothing here depends on the machine that wrote it: the
+three systems are always the same, the order is by name and version compared by
+code point, and the licence files of a package are read in full and in a fixed
+order.
 
 Every package in the window has its notice reproduced below, in full; the crates
 are named with the licence each one declares, and their texts travel with the
