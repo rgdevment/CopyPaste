@@ -19,7 +19,6 @@ jobs:
     with:
       project: copypaste
       document-url: https://github.com/rgdevment/CopyPaste/blob/main/CLA.md
-      allowlist: dependabot[bot],github-actions[bot]
       not-signed-message: >-
         Thanks for the pull request. CopyPaste is released under the GPL-3.0 and offered under
         separate commercial terms, which requires a signature from whoever opened it and every
