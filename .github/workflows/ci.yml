@@ -88,8 +88,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
-      # the only other run of the suite sits behind a Rust coverage gate in a 45-minute macOS job,
-      # and that gate aborts before it: a broken assertion here would be reported by nobody
+      # the other run of the suite sits behind a coverage gate, and an assertion broken here must still be told
       - run: npm test
 
   prose:
@@ -166,7 +165,6 @@ jobs:
       - run: cargo llvm-cov --no-report --workspace
       - run: cargo llvm-cov --no-report run -p cp-mac --example mac_probe
       - run: cargo llvm-cov report --lcov --output-path lcov-rust.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
-      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -193,6 +191,9 @@ jobs:
             app/coverage/lcov.info
           if-no-files-found: error
           retention-days: 1
+      - name: The threshold is asked after the measuring, so a dip still ships the report
+        if: always()
+        run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
 
   coverage-windows:
     name: coverage / the Windows crates
@@ -203,6 +204,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Rust, from rust-toolchain.toml
+        shell: bash
         run: |
           rustup toolchain install --no-self-update
           rustup component add llvm-tools-preview
@@ -219,7 +221,6 @@ jobs:
         run: Set-Clipboard -Value "cp-probe"
       - run: cargo llvm-cov --no-report run -p cp-win --example win_probe
       - run: cargo llvm-cov report --lcov --output-path lcov-win.info --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
-      - run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
       - name: Every path is relative to the repository, which is what Sonar reads
         if: always()
         shell: bash
@@ -231,6 +232,9 @@ jobs:
           path: lcov-win.info
           if-no-files-found: error
           retention-days: 1
+      - name: The threshold is asked after the measuring, so a dip still ships the report
+        if: always()
+        run: cargo llvm-cov report --fail-under-lines 85 --summary-only --ignore-filename-regex 'cp-panel[/\]src[/\](app|main|measure|reaching)\.rs|_test\.rs$|src-tauri[/\]src[/\]'
 
   sonar:
     name: sonarcloud

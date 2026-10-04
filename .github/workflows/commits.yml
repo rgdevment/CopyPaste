@@ -28,8 +28,7 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/commits.sh "$BASE..$HEAD"
 
-      # the squash keeps the pull request's title and throws every subject above it away, so the
-      # one that lands on main is this one
+      # a squash keeps the pull request's title and drops every subject above it
       - name: And so does the title that the squash will keep
         env:
           TITLE: ${{ github.event.pull_request.title }}

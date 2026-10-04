@@ -9,8 +9,13 @@ is in [THIRD-PARTY.md](THIRD-PARTY.md).
 The crates are every one the build resolves on any system, which is what
 Cargo.lock holds; what only the tests use is left out, and a crate resolved at
 two versions is named once per version. Nothing here depends on the machine that
-wrote it: no platform is named, the order is by code point, and the licence files
+wrote it: no platform is named, the order is by name and version compared by code
+point, and the licence files
 of a package are read in full and in a fixed order.
+
+Every package in the window has its notice reproduced below, in full; the crates
+are named with the licence each one declares, and their texts travel with the
+crate in the registry rather than being copied here.
 
 ## In the window (6 packages)
 
@@ -57,8 +62,8 @@ of a package are read in full and in a fixed order.
 | `async-signal` | 0.2.14 | Apache-2.0 OR MIT |
 | `async-task` | 4.7.1 | Apache-2.0 OR MIT |
 | `async-trait` | 0.1.92 | MIT OR Apache-2.0 |
-| `atk-sys` | 0.18.2 | MIT |
 | `atk` | 0.18.2 | MIT |
+| `atk-sys` | 0.18.2 | MIT |
 | `atomic-waker` | 1.1.2 | Apache-2.0 OR MIT |
 | `autocfg` | 1.5.1 | Apache-2.0 OR MIT |
 | `base64` | 0.21.7 | MIT OR Apache-2.0 |
@@ -78,21 +83,21 @@ of a package are read in full and in a fixed order.
 | `block2` | 0.6.2 | MIT |
 | `blocking` | 1.7.0 | Apache-2.0 OR MIT |
 | `borsh` | 1.8.1 | MIT OR Apache-2.0 |
-| `brotli-decompressor` | 6.0.1 | BSD-3-Clause/MIT |
 | `brotli` | 9.0.0 | BSD-3-Clause AND MIT |
+| `brotli-decompressor` | 6.0.1 | BSD-3-Clause/MIT |
 | `bs58` | 0.5.1 | MIT/Apache-2.0 |
 | `bumpalo` | 3.20.3 | MIT OR Apache-2.0 |
 | `by_address` | 1.2.1 | MIT OR Apache-2.0 |
 | `bytemuck` | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
 | `bytemuck_derive` | 1.12.1 | Zlib OR Apache-2.0 OR MIT |
-| `byteorder-lite` | 0.1.0 | Unlicense OR MIT |
 | `byteorder` | 1.5.0 | Unlicense OR MIT |
+| `byteorder-lite` | 0.1.0 | Unlicense OR MIT |
 | `bytes` | 1.12.1 | MIT |
 | `cairo-rs` | 0.18.5 | MIT |
 | `cairo-sys-rs` | 0.18.2 | MIT |
-| `calloop-wayland-source` | 0.3.0 | MIT |
 | `calloop` | 0.13.0 | MIT |
 | `calloop` | 0.14.4 | MIT |
+| `calloop-wayland-source` | 0.3.0 | MIT |
 | `camino` | 1.2.6 | MIT OR Apache-2.0 |
 | `cargo-platform` | 0.1.9 | MIT OR Apache-2.0 |
 | `cargo_metadata` | 0.19.2 | MIT |
@@ -114,18 +119,18 @@ of a package are read in full and in a fixed order.
 | `color_quant` | 1.1.0 | MIT |
 | `combine` | 4.6.8 | MIT |
 | `concurrent-queue` | 2.5.0 | Apache-2.0 OR MIT |
-| `const-field-offset-macro` | 0.2.1 | MIT OR Apache-2.0 |
 | `const-field-offset` | 0.2.1 | MIT OR Apache-2.0 |
+| `const-field-offset-macro` | 0.2.1 | MIT OR Apache-2.0 |
 | `constant_time_eq` | 0.4.2 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
 | `convert_case` | 0.10.0 | MIT |
 | `cookie` | 0.18.2 | MIT OR Apache-2.0 |
-| `core-foundation-sys` | 0.8.7 | MIT OR Apache-2.0 |
 | `core-foundation` | 0.10.1 | MIT OR Apache-2.0 |
 | `core-foundation` | 0.9.4 | MIT OR Apache-2.0 |
-| `core-graphics-types` | 0.1.3 | MIT OR Apache-2.0 |
-| `core-graphics-types` | 0.2.0 | MIT OR Apache-2.0 |
+| `core-foundation-sys` | 0.8.7 | MIT OR Apache-2.0 |
 | `core-graphics` | 0.23.2 | MIT OR Apache-2.0 |
 | `core-graphics` | 0.25.0 | MIT OR Apache-2.0 |
+| `core-graphics-types` | 0.1.3 | MIT OR Apache-2.0 |
+| `core-graphics-types` | 0.2.0 | MIT OR Apache-2.0 |
 | `core_detect` | 1.0.0 | MIT/Apache-2.0 |
 | `countme` | 3.0.1 | MIT OR Apache-2.0 |
 | `cpufeatures` | 0.2.17 | MIT OR Apache-2.0 |
@@ -138,8 +143,8 @@ of a package are read in full and in a fixed order.
 | `crossbeam-utils` | 0.8.23 | MIT OR Apache-2.0 |
 | `crunchy` | 0.2.4 | MIT |
 | `crypto-common` | 0.1.7 | MIT OR Apache-2.0 |
-| `cssparser-macros` | 0.7.1 | MPL-2.0 |
 | `cssparser` | 0.37.0 | MPL-2.0 |
+| `cssparser-macros` | 0.7.1 | MPL-2.0 |
 | `ctor` | 0.10.1 | Apache-2.0 OR MIT |
 | `ctor` | 1.0.13 | Apache-2.0 OR MIT |
 | `cursor-icon` | 1.2.0 | MIT OR Apache-2.0 OR Zlib |
@@ -148,19 +153,19 @@ of a package are read in full and in a fixed order.
 | `darling_macro` | 0.24.1 | MIT |
 | `data-url` | 0.3.2 | MIT OR Apache-2.0 |
 | `dbus` | 0.9.12 | Apache-2.0/MIT |
+| `defmt` | 1.1.1 | MIT OR Apache-2.0 |
 | `defmt-macros` | 1.1.1 | MIT OR Apache-2.0 |
 | `defmt-parser` | 1.0.0 | MIT OR Apache-2.0 |
-| `defmt` | 1.1.1 | MIT OR Apache-2.0 |
 | `deranged` | 0.5.8 | MIT OR Apache-2.0 |
 | `derive_arbitrary` | 1.4.2 | MIT OR Apache-2.0 |
-| `derive_more-impl` | 2.1.1 | MIT |
 | `derive_more` | 2.1.1 | MIT |
+| `derive_more-impl` | 2.1.1 | MIT |
 | `digest` | 0.10.7 | MIT OR Apache-2.0 |
-| `dirs-sys` | 0.5.0 | MIT OR Apache-2.0 |
 | `dirs` | 6.0.0 | MIT OR Apache-2.0 |
 | `dirs` | 7.0.0 | MIT OR Apache-2.0 |
-| `dispatch2` | 0.3.1 | Zlib OR Apache-2.0 OR MIT |
+| `dirs-sys` | 0.5.0 | MIT OR Apache-2.0 |
 | `dispatch` | 0.2.0 | MIT |
+| `dispatch2` | 0.3.1 | Zlib OR Apache-2.0 OR MIT |
 | `displaydoc` | 0.2.7 | MIT OR Apache-2.0 |
 | `dlib` | 0.5.3 | MIT |
 | `dlopen2` | 0.8.2 | MIT |
@@ -169,12 +174,12 @@ of a package are read in full and in a fixed order.
 | `dom_query` | 0.28.0 | MIT |
 | `downcast-rs` | 1.2.1 | MIT/Apache-2.0 |
 | `dpi` | 0.1.2 | Apache-2.0 AND MIT |
+| `drm` | 0.14.1 | MIT |
 | `drm-ffi` | 0.9.1 | MIT |
 | `drm-fourcc` | 2.2.0 | MIT |
 | `drm-sys` | 0.8.1 | MIT |
-| `drm` | 0.14.1 | MIT |
-| `dtoa-short` | 0.3.5 | MPL-2.0 |
 | `dtoa` | 1.0.11 | MIT OR Apache-2.0 |
+| `dtoa-short` | 0.3.5 | MPL-2.0 |
 | `dtor` | 0.8.1 | Apache-2.0 OR MIT |
 | `dunce` | 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
 | `dyn-clone` | 1.0.20 | MIT OR Apache-2.0 |
@@ -190,8 +195,8 @@ of a package are read in full and in a fixed order.
 | `errno` | 0.3.14 | MIT OR Apache-2.0 |
 | `error-code` | 3.4.0 | BSL-1.0 |
 | `euclid` | 0.22.14 | MIT OR Apache-2.0 |
-| `event-listener-strategy` | 0.5.4 | Apache-2.0 OR MIT |
 | `event-listener` | 5.4.2 | Apache-2.0 OR MIT |
+| `event-listener-strategy` | 0.5.4 | Apache-2.0 OR MIT |
 | `extended` | 0.1.0 | MIT |
 | `fallible-iterator` | 0.3.0 | MIT/Apache-2.0 |
 | `fallible-streaming-iterator` | 0.1.9 | MIT/Apache-2.0 |
@@ -211,10 +216,11 @@ of a package are read in full and in a fixed order.
 | `font-types` | 0.12.5 | MIT OR Apache-2.0 |
 | `fontdb` | 0.24.0 | MIT |
 | `fontique` | 0.11.1 | Apache-2.0 OR MIT |
+| `foreign-types` | 0.5.0 | MIT/Apache-2.0 |
 | `foreign-types-macros` | 0.2.4 | MIT/Apache-2.0 |
 | `foreign-types-shared` | 0.3.1 | MIT/Apache-2.0 |
-| `foreign-types` | 0.5.0 | MIT/Apache-2.0 |
 | `form_urlencoded` | 1.2.2 | MIT OR Apache-2.0 |
+| `futures` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-channel` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-core` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-executor` | 0.3.34 | MIT OR Apache-2.0 |
@@ -224,42 +230,41 @@ of a package are read in full and in a fixed order.
 | `futures-sink` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-task` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-util` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures` | 0.3.34 | MIT OR Apache-2.0 |
-| `gbm-sys` | 0.4.0 | MIT |
 | `gbm` | 0.18.0 | MIT |
-| `gdk-pixbuf-sys` | 0.18.0 | MIT |
-| `gdk-pixbuf` | 0.18.5 | MIT |
-| `gdk-sys` | 0.18.2 | MIT |
+| `gbm-sys` | 0.4.0 | MIT |
 | `gdk` | 0.18.2 | MIT |
+| `gdk-pixbuf` | 0.18.5 | MIT |
+| `gdk-pixbuf-sys` | 0.18.0 | MIT |
+| `gdk-sys` | 0.18.2 | MIT |
 | `gdkwayland-sys` | 0.18.2 | MIT |
-| `gdkx11-sys` | 0.18.2 | MIT |
 | `gdkx11` | 0.18.2 | MIT |
+| `gdkx11-sys` | 0.18.2 | MIT |
 | `generic-array` | 0.14.7 | MIT |
 | `gethostname` | 1.1.0 | Apache-2.0 |
 | `getrandom` | 0.2.17 | MIT OR Apache-2.0 |
 | `getrandom` | 0.3.4 | MIT OR Apache-2.0 |
 | `getrandom` | 0.4.3 | MIT OR Apache-2.0 |
 | `gif` | 0.14.2 | MIT OR Apache-2.0 |
-| `gio-sys` | 0.18.1 | MIT |
 | `gio` | 0.18.4 | MIT |
+| `gio-sys` | 0.18.1 | MIT |
 | `gl_generator` | 0.14.0 | Apache-2.0 |
+| `glib` | 0.18.5 | MIT |
 | `glib-macros` | 0.18.5 | MIT |
 | `glib-sys` | 0.18.1 | MIT |
-| `glib` | 0.18.5 | MIT |
 | `glob` | 0.3.4 | MIT OR Apache-2.0 |
 | `global-hotkey` | 0.8.0 | Apache-2.0 OR MIT |
 | `glow` | 0.18.0 | MIT OR Apache-2.0 OR Zlib |
-| `glutin-winit` | 0.5.0 | MIT |
 | `glutin` | 0.32.3 | Apache-2.0 |
+| `glutin-winit` | 0.5.0 | MIT |
 | `glutin_egl_sys` | 0.7.1 | Apache-2.0 |
 | `glutin_glx_sys` | 0.6.1 | Apache-2.0 |
 | `glutin_wgl_sys` | 0.6.1 | Apache-2.0 |
 | `gobject-sys` | 0.18.0 | MIT |
 | `gpu-allocator` | 0.28.0 | MIT OR Apache-2.0 |
 | `grid` | 1.0.1 | MIT |
+| `gtk` | 0.18.2 | MIT |
 | `gtk-sys` | 0.18.2 | MIT |
 | `gtk3-macros` | 0.18.2 | MIT |
-| `gtk` | 0.18.2 | MIT |
 | `half` | 2.7.1 | MIT OR Apache-2.0 |
 | `harfrust` | 0.12.0 | MIT |
 | `hashbrown` | 0.12.3 | MIT OR Apache-2.0 |
@@ -275,25 +280,25 @@ of a package are read in full and in a fixed order.
 | `hex` | 0.4.3 | MIT OR Apache-2.0 |
 | `html5ever` | 0.39.0 | MIT OR Apache-2.0 |
 | `htmlparser` | 0.2.1 | MIT OR Apache-2.0 |
-| `http-body-util` | 0.1.5 | MIT |
-| `http-body` | 1.1.0 | MIT |
 | `http` | 1.5.0 | MIT OR Apache-2.0 |
+| `http-body` | 1.1.0 | MIT |
+| `http-body-util` | 0.1.5 | MIT |
 | `httparse` | 1.10.1 | MIT OR Apache-2.0 |
+| `hyper` | 1.11.1 | MIT |
 | `hyper-rustls` | 0.27.10 | Apache-2.0 OR ISC OR MIT |
 | `hyper-util` | 0.1.20 | MIT |
-| `hyper` | 1.11.1 | MIT |
 | `i-slint-backend-linuxkms` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-backend-selector` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-backend-testing` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-backend-winit` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-common` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-compiler` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `i-slint-core-macros` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-core` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `i-slint-core-macros` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-renderer-skia` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `i-slint-renderer-software` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `iana-time-zone-haiku` | 0.1.2 | MIT OR Apache-2.0 |
 | `iana-time-zone` | 0.1.65 | MIT OR Apache-2.0 |
+| `iana-time-zone-haiku` | 0.1.2 | MIT OR Apache-2.0 |
 | `ico` | 0.5.0 | MIT |
 | `icu_collections` | 2.3.0 | Unicode-3.0 |
 | `icu_decimal` | 2.3.0 | Unicode-3.0 |
@@ -313,15 +318,15 @@ of a package are read in full and in a fixed order.
 | `ident_case` | 1.0.1 | MIT/Apache-2.0 |
 | `idna` | 1.1.0 | MIT OR Apache-2.0 |
 | `idna_adapter` | 1.2.2 | Apache-2.0 OR MIT |
-| `image-webp` | 0.2.4 | MIT OR Apache-2.0 |
 | `image` | 0.25.10 | MIT OR Apache-2.0 |
+| `image-webp` | 0.2.4 | MIT OR Apache-2.0 |
 | `imagesize` | 0.15.0 | MIT |
 | `indexmap` | 1.9.3 | Apache-2.0 OR MIT |
 | `indexmap` | 2.14.2 | Apache-2.0 OR MIT |
 | `infer` | 0.19.0 | MIT |
 | `infer` | 0.22.0 | MIT |
-| `input-sys` | 1.19.0 | MIT |
 | `input` | 0.10.0 | MIT |
+| `input-sys` | 1.19.0 | MIT |
 | `io-lifetimes` | 1.0.11 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | `ipnet` | 2.12.2 | MIT OR Apache-2.0 |
 | `is-docker` | 0.2.0 | MIT |
@@ -329,19 +334,19 @@ of a package are read in full and in a fixed order.
 | `itertools` | 0.13.0 | MIT OR Apache-2.0 |
 | `itertools` | 0.15.0 | MIT OR Apache-2.0 |
 | `itoa` | 1.0.18 | MIT OR Apache-2.0 |
-| `javascriptcore-rs-sys` | 1.1.1 | MIT |
 | `javascriptcore-rs` | 1.1.2 | MIT |
+| `javascriptcore-rs-sys` | 1.1.1 | MIT |
+| `jiff` | 0.2.37 | Unlicense OR MIT |
 | `jiff-core` | 0.1.1 | Unlicense OR MIT |
 | `jiff-static` | 0.2.37 | Unlicense OR MIT |
-| `jiff-tzdb-platform` | 0.1.3 | Unlicense OR MIT |
 | `jiff-tzdb` | 0.1.8 | Unlicense OR MIT |
-| `jiff` | 0.2.37 | Unlicense OR MIT |
-| `jni-macros` | 0.22.4 | MIT OR Apache-2.0 |
-| `jni-sys-macros` | 0.4.1 | MIT OR Apache-2.0 |
-| `jni-sys` | 0.3.1 | MIT OR Apache-2.0 |
-| `jni-sys` | 0.4.1 | MIT OR Apache-2.0 |
+| `jiff-tzdb-platform` | 0.1.3 | Unlicense OR MIT |
 | `jni` | 0.21.1 | MIT/Apache-2.0 |
 | `jni` | 0.22.4 | MIT OR Apache-2.0 |
+| `jni-macros` | 0.22.4 | MIT OR Apache-2.0 |
+| `jni-sys` | 0.3.1 | MIT OR Apache-2.0 |
+| `jni-sys` | 0.4.1 | MIT OR Apache-2.0 |
+| `jni-sys-macros` | 0.4.1 | MIT OR Apache-2.0 |
 | `jobserver` | 0.1.35 | MIT OR Apache-2.0 |
 | `js-sys` | 0.3.105 | MIT OR Apache-2.0 |
 | `json-patch` | 4.2.0 | MIT/Apache-2.0 |
@@ -351,16 +356,16 @@ of a package are read in full and in a fixed order.
 | `khronos_api` | 3.1.0 | Apache-2.0 |
 | `kurbo` | 0.13.1 | Apache-2.0 OR MIT |
 | `lazy_static` | 1.5.0 | MIT OR Apache-2.0 |
-| `libappindicator-sys` | 0.9.0 | Apache-2.0 OR MIT |
 | `libappindicator` | 0.9.0 | Apache-2.0 OR MIT |
+| `libappindicator-sys` | 0.9.0 | Apache-2.0 OR MIT |
 | `libc` | 0.2.189 | MIT OR Apache-2.0 |
 | `libdbus-sys` | 0.2.7 | Apache-2.0/MIT |
 | `libloading` | 0.7.4 | ISC |
 | `libloading` | 0.8.9 | ISC |
 | `libm` | 0.2.16 | MIT |
 | `libredox` | 0.1.25 | MIT |
-| `libseat-sys` | 0.2.0 | MIT |
 | `libseat` | 0.2.4 | MIT |
+| `libseat-sys` | 0.2.0 | MIT |
 | `libsqlite3-sys` | 0.38.2 | MIT |
 | `libudev-sys` | 0.1.4 | MIT |
 | `linebender_resource_handle` | 0.1.1 | Apache-2.0 OR MIT |
@@ -388,15 +393,15 @@ of a package are read in full and in a fixed order.
 | `moxcms` | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
 | `muda` | 0.19.3 | Apache-2.0 OR MIT |
 | `muda` | 0.20.0 | Apache-2.0 OR MIT |
-| `multiversion-macros` | 0.9.0 | MIT OR Apache-2.0 |
 | `multiversion` | 0.9.0 | MIT OR Apache-2.0 |
+| `multiversion-macros` | 0.9.0 | MIT OR Apache-2.0 |
 | `multiversion_no_op` | 1.0.0 | Apache-2.0 OR MIT |
-| `naga-types` | 30.0.1 | MIT OR Apache-2.0 |
 | `naga` | 30.0.1 | MIT OR Apache-2.0 |
+| `naga-types` | 30.0.1 | MIT OR Apache-2.0 |
 | `natord` | 1.0.9 | MIT |
+| `ndk` | 0.9.0 | MIT OR Apache-2.0 |
 | `ndk-context` | 0.1.1 | MIT OR Apache-2.0 |
 | `ndk-sys` | 0.6.0+11769913 | MIT OR Apache-2.0 |
-| `ndk` | 0.9.0 | MIT OR Apache-2.0 |
 | `new_debug_unreachable` | 1.0.6 | MIT |
 | `nix` | 0.31.3 | MIT |
 | `nom` | 7.1.3 | MIT |
@@ -407,6 +412,8 @@ of a package are read in full and in a fixed order.
 | `num_enum` | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
 | `num_enum_derive` | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
 | `objc-sys` | 0.3.5 | MIT |
+| `objc2` | 0.5.2 | MIT |
+| `objc2` | 0.6.4 | MIT |
 | `objc2-app-kit` | 0.2.2 | MIT |
 | `objc2-app-kit` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-application-services` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
@@ -415,8 +422,8 @@ of a package are read in full and in a fixed order.
 | `objc2-cloud-kit` | 0.2.2 | MIT |
 | `objc2-cloud-kit` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-contacts` | 0.2.2 | MIT |
-| `objc2-core-audio-types` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-core-audio` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
+| `objc2-core-audio-types` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-core-data` | 0.2.2 | MIT |
 | `objc2-core-data` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-core-foundation` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
@@ -452,8 +459,6 @@ of a package are read in full and in a fixed order.
 | `objc2-user-notifications` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-vision` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-web-kit` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
-| `objc2` | 0.5.2 | MIT |
-| `objc2` | 0.6.4 | MIT |
 | `once_cell` | 1.21.4 | MIT OR Apache-2.0 |
 | `open` | 5.4.4 | MIT |
 | `openssl-probe` | 0.2.1 | MIT OR Apache-2.0 |
@@ -464,8 +469,8 @@ of a package are read in full and in a fixed order.
 | `os_pipe` | 1.2.3 | MIT |
 | `osakit` | 0.3.1 | MIT OR Apache-2.0 |
 | `owned_ttf_parser` | 0.25.1 | Apache-2.0 |
-| `pango-sys` | 0.18.0 | MIT |
 | `pango` | 0.18.3 | MIT |
+| `pango-sys` | 0.18.0 | MIT |
 | `parking` | 2.2.1 | Apache-2.0 OR MIT |
 | `parking_lot` | 0.12.5 | MIT OR Apache-2.0 |
 | `parking_lot_core` | 0.9.12 | MIT OR Apache-2.0 |
@@ -480,9 +485,9 @@ of a package are read in full and in a fixed order.
 | `phf_macros` | 0.13.1 | MIT |
 | `phf_shared` | 0.13.1 | MIT |
 | `pico-args` | 0.5.0 | MIT |
+| `pin-project` | 1.1.13 | Apache-2.0 OR MIT |
 | `pin-project-internal` | 1.1.13 | Apache-2.0 OR MIT |
 | `pin-project-lite` | 0.2.17 | Apache-2.0 OR MIT |
-| `pin-project` | 1.1.13 | Apache-2.0 OR MIT |
 | `pin-utils` | 0.1.0 | MIT OR Apache-2.0 |
 | `pin-weak` | 1.1.0 | MIT |
 | `piper` | 0.2.5 | MIT OR Apache-2.0 |
@@ -493,8 +498,8 @@ of a package are read in full and in a fixed order.
 | `png` | 0.18.1 | MIT OR Apache-2.0 |
 | `polling` | 3.11.0 | Apache-2.0 OR MIT |
 | `polycool` | 0.4.0 | MIT OR Apache-2.0 |
-| `portable-atomic-util` | 0.2.8 | Apache-2.0 OR MIT |
 | `portable-atomic` | 1.15.0 | Apache-2.0 OR MIT |
+| `portable-atomic-util` | 0.2.8 | Apache-2.0 OR MIT |
 | `potential_utf` | 0.1.6 | Unicode-3.0 |
 | `powerfmt` | 0.2.0 | MIT OR Apache-2.0 |
 | `precomputed-hash` | 0.1.1 | MIT |
@@ -503,8 +508,8 @@ of a package are read in full and in a fixed order.
 | `proc-macro-crate` | 1.3.1 | MIT OR Apache-2.0 |
 | `proc-macro-crate` | 2.0.2 | MIT OR Apache-2.0 |
 | `proc-macro-crate` | 3.5.0 | MIT OR Apache-2.0 |
-| `proc-macro-error-attr` | 1.0.4 | MIT OR Apache-2.0 |
 | `proc-macro-error` | 1.0.4 | MIT OR Apache-2.0 |
+| `proc-macro-error-attr` | 1.0.4 | MIT OR Apache-2.0 |
 | `proc-macro2` | 1.0.107 | MIT OR Apache-2.0 |
 | `profiling` | 1.0.18 | MIT OR Apache-2.0 |
 | `pulldown-cmark` | 0.13.4 | MIT |
@@ -518,19 +523,19 @@ of a package are read in full and in a fixed order.
 | `range-alloc` | 0.1.5 | MIT OR Apache-2.0 |
 | `raw-window-handle` | 0.6.2 | MIT OR Apache-2.0 OR Zlib |
 | `raw-window-metal` | 1.1.0 | MIT OR Apache-2.0 |
-| `rayon-core` | 1.13.0 | MIT OR Apache-2.0 |
 | `rayon` | 1.12.0 | MIT OR Apache-2.0 |
+| `rayon-core` | 1.13.0 | MIT OR Apache-2.0 |
 | `read-fonts` | 0.41.0 | MIT OR Apache-2.0 |
 | `redox_syscall` | 0.4.1 | MIT |
 | `redox_syscall` | 0.5.18 | MIT |
 | `redox_syscall` | 0.9.4 | MIT |
 | `redox_users` | 0.5.3 | MIT |
-| `ref-cast-impl` | 1.0.27 | MIT OR Apache-2.0 |
 | `ref-cast` | 1.0.27 | MIT OR Apache-2.0 |
+| `ref-cast-impl` | 1.0.27 | MIT OR Apache-2.0 |
+| `regex` | 1.13.1 | MIT OR Apache-2.0 |
 | `regex-automata` | 0.4.18 | MIT OR Apache-2.0 |
 | `regex-lite` | 0.1.9 | MIT OR Apache-2.0 |
 | `regex-syntax` | 0.8.11 | MIT OR Apache-2.0 |
-| `regex` | 1.13.1 | MIT OR Apache-2.0 |
 | `renderdoc-sys` | 1.1.0 | MIT OR Apache-2.0 |
 | `reqwest` | 0.13.5 | MIT OR Apache-2.0 |
 | `resvg` | 0.48.1 | Apache-2.0 OR MIT |
@@ -547,12 +552,12 @@ of a package are read in full and in a fixed order.
 | `rustc_version` | 0.4.1 | MIT OR Apache-2.0 |
 | `rustix` | 0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | `rustix` | 1.1.4 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| `rustls` | 0.23.45 | Apache-2.0 OR ISC OR MIT |
 | `rustls-native-certs` | 0.8.4 | Apache-2.0 OR ISC OR MIT |
 | `rustls-pki-types` | 1.15.1 | MIT OR Apache-2.0 |
-| `rustls-platform-verifier-android` | 0.2.0 | MIT OR Apache-2.0 |
 | `rustls-platform-verifier` | 0.7.1 | MIT OR Apache-2.0 |
+| `rustls-platform-verifier-android` | 0.2.0 | MIT OR Apache-2.0 |
 | `rustls-webpki` | 0.103.15 | ISC |
-| `rustls` | 0.23.45 | Apache-2.0 OR ISC OR MIT |
 | `rustversion` | 1.0.23 | MIT OR Apache-2.0 |
 | `same-file` | 1.0.6 | Unlicense/MIT |
 | `schannel` | 0.1.29 | MIT |
@@ -560,16 +565,16 @@ of a package are read in full and in a fixed order.
 | `schemars` | 0.9.0 | MIT |
 | `schemars` | 1.2.2 | MIT |
 | `schemars_derive` | 0.8.22 | MIT |
-| `scoped-tls-hkt` | 0.1.5 | MIT/Apache-2.0 |
 | `scoped-tls` | 1.0.1 | MIT/Apache-2.0 |
+| `scoped-tls-hkt` | 0.1.5 | MIT/Apache-2.0 |
 | `scopeguard` | 1.2.0 | MIT OR Apache-2.0 |
 | `sctk-adwaita` | 0.10.1 | MIT |
-| `security-framework-sys` | 2.17.0 | MIT OR Apache-2.0 |
 | `security-framework` | 3.7.0 | MIT OR Apache-2.0 |
+| `security-framework-sys` | 2.17.0 | MIT OR Apache-2.0 |
 | `selectors` | 0.38.0 | MPL-2.0 |
 | `semver` | 1.0.28 | MIT OR Apache-2.0 |
-| `serde-untagged` | 0.1.9 | MIT OR Apache-2.0 |
 | `serde` | 1.0.229 | MIT OR Apache-2.0 |
+| `serde-untagged` | 0.1.9 | MIT OR Apache-2.0 |
 | `serde_core` | 1.0.229 | MIT OR Apache-2.0 |
 | `serde_derive` | 1.0.229 | MIT OR Apache-2.0 |
 | `serde_derive_internals` | 0.29.1 | MIT OR Apache-2.0 |
@@ -579,16 +584,16 @@ of a package are read in full and in a fixed order.
 | `serde_spanned` | 1.1.1 | MIT OR Apache-2.0 |
 | `serde_with` | 3.23.0 | MIT OR Apache-2.0 |
 | `serde_with_macros` | 3.23.0 | MIT OR Apache-2.0 |
-| `serialize-to-javascript-impl` | 0.1.2 | MIT OR Apache-2.0 |
 | `serialize-to-javascript` | 0.1.2 | MIT OR Apache-2.0 |
+| `serialize-to-javascript-impl` | 0.1.2 | MIT OR Apache-2.0 |
 | `servo_arc` | 0.4.3 | MIT OR Apache-2.0 |
 | `sha2` | 0.10.9 | MIT OR Apache-2.0 |
 | `shared_child` | 1.1.2 | MIT |
 | `shlex` | 1.3.0 | MIT OR Apache-2.0 |
 | `shlex` | 2.0.1 | MIT OR Apache-2.0 |
 | `sigchld` | 0.2.5 | MIT |
-| `signal-hook-registry` | 1.4.8 | MIT OR Apache-2.0 |
 | `signal-hook` | 0.4.4 | MIT OR Apache-2.0 |
+| `signal-hook-registry` | 1.4.8 | MIT OR Apache-2.0 |
 | `simd-adler32` | 0.3.10 | MIT |
 | `simd_cesu8` | 1.2.0 | Apache-2.0 OR MIT |
 | `simdutf8` | 0.1.5 | MIT OR Apache-2.0 |
@@ -598,20 +603,20 @@ of a package are read in full and in a fixed order.
 | `skia-safe` | 0.153.3 | MIT |
 | `skrifa` | 0.44.0 | MIT OR Apache-2.0 |
 | `slab` | 0.4.12 | MIT |
+| `slint` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `slint-build` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `slint-macros` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `slint` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `slotmap` | 1.1.1 | Zlib |
 | `smallvec` | 1.16.1 | MIT OR Apache-2.0 |
 | `smithay-client-toolkit` | 0.19.2 | MIT |
 | `smol_str` | 0.2.2 | MIT OR Apache-2.0 |
 | `smol_str` | 0.3.6 | MIT OR Apache-2.0 |
-| `snafu-derive` | 0.8.9 | MIT OR Apache-2.0 |
 | `snafu` | 0.8.9 | MIT OR Apache-2.0 |
+| `snafu-derive` | 0.8.9 | MIT OR Apache-2.0 |
 | `socket2` | 0.6.5 | MIT OR Apache-2.0 |
 | `softbuffer` | 0.4.8 | MIT OR Apache-2.0 |
-| `soup3-sys` | 0.5.0 | MIT |
 | `soup3` | 0.5.0 | MIT |
+| `soup3-sys` | 0.5.0 | MIT |
 | `spin_on` | 0.1.1 | Apache-2.0 OR MIT |
 | `spirv` | 0.4.0+sdk-1.4.341.0 | Apache-2.0 |
 | `sqlite-wasm-rs` | 0.5.5 | MIT |
@@ -627,6 +632,7 @@ of a package are read in full and in a fixed order.
 | `svgtypes` | 0.16.1 | Apache-2.0 OR MIT |
 | `swash` | 0.2.10 | Apache-2.0 OR MIT |
 | `swift-rs` | 1.0.8 | MIT OR Apache-2.0 |
+| `symphonia` | 0.6.1 | MPL-2.0 |
 | `symphonia-bundle-flac` | 0.6.1 | MPL-2.0 |
 | `symphonia-bundle-mp3` | 0.6.1 | MPL-2.0 |
 | `symphonia-codec-aac` | 0.6.1 | MPL-2.0 |
@@ -638,24 +644,25 @@ of a package are read in full and in a fixed order.
 | `symphonia-format-ogg` | 0.6.1 | MPL-2.0 |
 | `symphonia-format-riff` | 0.6.1 | MPL-2.0 |
 | `symphonia-metadata` | 0.6.1 | MPL-2.0 |
-| `symphonia` | 0.6.1 | MPL-2.0 |
 | `syn` | 1.0.109 | MIT OR Apache-2.0 |
 | `syn` | 2.0.119 | MIT OR Apache-2.0 |
 | `syn` | 3.0.5 | MIT OR Apache-2.0 |
 | `sync_wrapper` | 1.0.2 | Apache-2.0 |
 | `synstructure` | 0.14.0 | MIT |
 | `sys-locale` | 0.3.2 | MIT OR Apache-2.0 |
-| `system-configuration-sys` | 0.6.0 | MIT OR Apache-2.0 |
 | `system-configuration` | 0.7.0 | MIT OR Apache-2.0 |
+| `system-configuration-sys` | 0.6.0 | MIT OR Apache-2.0 |
 | `system-deps` | 6.2.2 | MIT OR Apache-2.0 |
 | `taffy` | 0.10.1 | MIT |
-| `tao-macros` | 0.1.4 | MIT OR Apache-2.0 |
 | `tao` | 0.37.1 | Apache-2.0 |
+| `tao-macros` | 0.1.4 | MIT OR Apache-2.0 |
 | `tar` | 0.4.46 | MIT OR Apache-2.0 |
 | `target-lexicon` | 0.12.16 | Apache-2.0 WITH LLVM-exception |
+| `tauri` | 2.12.0 | Apache-2.0 OR MIT |
 | `tauri-build` | 2.7.0 | Apache-2.0 OR MIT |
 | `tauri-codegen` | 2.7.0 | Apache-2.0 OR MIT |
 | `tauri-macros` | 2.7.0 | Apache-2.0 OR MIT |
+| `tauri-plugin` | 2.7.0 | Apache-2.0 OR MIT |
 | `tauri-plugin-dialog` | 2.8.0 | Apache-2.0 OR MIT |
 | `tauri-plugin-fs` | 2.6.0 | Apache-2.0 OR MIT |
 | `tauri-plugin-global-shortcut` | 2.4.0 | Apache-2.0 OR MIT |
@@ -663,34 +670,32 @@ of a package are read in full and in a fixed order.
 | `tauri-plugin-shell` | 2.4.0 | Apache-2.0 OR MIT |
 | `tauri-plugin-single-instance` | 2.5.0 | Apache-2.0 OR MIT |
 | `tauri-plugin-updater` | 2.13.0 | Apache-2.0 OR MIT |
-| `tauri-plugin` | 2.7.0 | Apache-2.0 OR MIT |
-| `tauri-runtime-wry` | 2.12.0 | Apache-2.0 OR MIT |
 | `tauri-runtime` | 2.12.0 | Apache-2.0 OR MIT |
+| `tauri-runtime-wry` | 2.12.0 | Apache-2.0 OR MIT |
 | `tauri-utils` | 2.10.0 | Apache-2.0 OR MIT |
 | `tauri-winres` | 0.3.6 | MIT |
-| `tauri` | 2.12.0 | Apache-2.0 OR MIT |
 | `tempfile` | 3.27.0 | MIT OR Apache-2.0 |
 | `tendril` | 0.5.1 | MIT OR Apache-2.0 |
 | `text-size` | 1.1.1 | MIT OR Apache-2.0 |
-| `thiserror-impl` | 1.0.69 | MIT OR Apache-2.0 |
-| `thiserror-impl` | 2.0.21 | MIT OR Apache-2.0 |
 | `thiserror` | 1.0.69 | MIT OR Apache-2.0 |
 | `thiserror` | 2.0.21 | MIT OR Apache-2.0 |
+| `thiserror-impl` | 1.0.69 | MIT OR Apache-2.0 |
+| `thiserror-impl` | 2.0.21 | MIT OR Apache-2.0 |
 | `tiff` | 0.11.3 | MIT |
+| `time` | 0.3.55 | MIT OR Apache-2.0 |
 | `time-core` | 0.1.9 | MIT OR Apache-2.0 |
 | `time-macros` | 0.2.32 | MIT OR Apache-2.0 |
-| `time` | 0.3.55 | MIT OR Apache-2.0 |
-| `tiny-skia-path` | 0.11.4 | BSD-3-Clause |
-| `tiny-skia-path` | 0.12.0 | BSD-3-Clause |
 | `tiny-skia` | 0.11.4 | BSD-3-Clause |
 | `tiny-skia` | 0.12.0 | BSD-3-Clause |
+| `tiny-skia-path` | 0.11.4 | BSD-3-Clause |
+| `tiny-skia-path` | 0.12.0 | BSD-3-Clause |
 | `tiny-xlib` | 0.2.5 | MIT OR Apache-2.0 OR Zlib |
 | `tinystr` | 0.8.4 | Unicode-3.0 |
 | `tinyvec` | 1.13.2 | Zlib OR Apache-2.0 OR MIT |
 | `tinyvec_macros` | 0.1.1 | MIT OR Apache-2.0 OR Zlib |
+| `tokio` | 1.53.1 | MIT |
 | `tokio-rustls` | 0.26.5 | MIT OR Apache-2.0 |
 | `tokio-util` | 0.7.19 | MIT |
-| `tokio` | 1.53.1 | MIT |
 | `toml` | 0.8.2 | MIT OR Apache-2.0 |
 | `toml` | 1.1.6+spec-1.1.0 | MIT OR Apache-2.0 |
 | `toml_datetime` | 0.6.3 | MIT OR Apache-2.0 |
@@ -700,13 +705,13 @@ of a package are read in full and in a fixed order.
 | `toml_edit` | 0.25.15+spec-1.1.0 | MIT OR Apache-2.0 |
 | `toml_parser` | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
 | `toml_writer` | 1.1.2+spec-1.1.0 | MIT OR Apache-2.0 |
+| `tower` | 0.5.3 | MIT |
 | `tower-http` | 0.6.11 | MIT |
 | `tower-layer` | 0.3.3 | MIT |
 | `tower-service` | 0.3.3 | MIT |
-| `tower` | 0.5.3 | MIT |
+| `tracing` | 0.1.44 | MIT |
 | `tracing-attributes` | 0.1.31 | MIT |
 | `tracing-core` | 0.1.36 | MIT |
-| `tracing` | 0.1.44 | MIT |
 | `tray-icon` | 0.25.1 | MIT OR Apache-2.0 |
 | `tree_magic_mini` | 3.2.2 | MIT |
 | `try-lock` | 0.2.5 | MIT |
@@ -736,52 +741,54 @@ of a package are read in full and in a fixed order.
 | `vcpkg` | 0.2.15 | MIT/Apache-2.0 |
 | `version-compare` | 0.2.1 | MIT |
 | `version_check` | 0.9.5 | MIT/Apache-2.0 |
-| `vswhom-sys` | 0.1.3 | MIT |
 | `vswhom` | 0.1.0 | MIT |
-| `vtable-macro` | 0.5.0 | MIT OR Apache-2.0 |
+| `vswhom-sys` | 0.1.3 | MIT |
 | `vtable` | 0.5.0 | MIT OR Apache-2.0 |
+| `vtable-macro` | 0.5.0 | MIT OR Apache-2.0 |
 | `walkdir` | 2.5.0 | Unlicense/MIT |
 | `want` | 0.3.1 | MIT |
 | `wasi` | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | `wasip2` | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
-| `wasm-bindgen-futures` | 0.4.78 | MIT OR Apache-2.0 |
-| `wasm-bindgen-macro-support` | 0.2.128 | MIT OR Apache-2.0 |
-| `wasm-bindgen-macro` | 0.2.128 | MIT OR Apache-2.0 |
-| `wasm-bindgen-shared` | 0.2.128 | MIT OR Apache-2.0 |
 | `wasm-bindgen` | 0.2.128 | MIT OR Apache-2.0 |
+| `wasm-bindgen-futures` | 0.4.78 | MIT OR Apache-2.0 |
+| `wasm-bindgen-macro` | 0.2.128 | MIT OR Apache-2.0 |
+| `wasm-bindgen-macro-support` | 0.2.128 | MIT OR Apache-2.0 |
+| `wasm-bindgen-shared` | 0.2.128 | MIT OR Apache-2.0 |
 | `wasm-streams` | 0.5.0 | MIT OR Apache-2.0 |
 | `wayland-backend` | 0.3.17 | MIT |
 | `wayland-client` | 0.31.15 | MIT |
 | `wayland-csd-frame` | 0.3.0 | MIT |
 | `wayland-cursor` | 0.31.14 | MIT |
+| `wayland-protocols` | 0.32.13 | MIT |
 | `wayland-protocols-plasma` | 0.3.12 | MIT |
 | `wayland-protocols-wlr` | 0.3.12 | MIT |
-| `wayland-protocols` | 0.32.13 | MIT |
 | `wayland-scanner` | 0.31.11 | MIT |
 | `wayland-sys` | 0.31.11 | MIT |
 | `web-sys` | 0.3.105 | MIT OR Apache-2.0 |
 | `web-time` | 1.1.0 | MIT OR Apache-2.0 |
 | `web_atoms` | 0.2.6 | MIT OR Apache-2.0 |
 | `webbrowser` | 1.2.4 | MIT OR Apache-2.0 |
-| `webkit2gtk-sys` | 2.0.2 | MIT |
 | `webkit2gtk` | 2.0.2 | MIT |
+| `webkit2gtk-sys` | 2.0.2 | MIT |
 | `webpki-root-certs` | 1.0.9 | CDLA-Permissive-2.0 |
+| `webview2-com` | 0.39.1 | MIT |
 | `webview2-com-macros` | 0.8.1 | MIT |
 | `webview2-com-sys` | 0.39.1 | MIT |
-| `webview2-com` | 0.39.1 | MIT |
 | `weezl` | 0.1.12 | MIT OR Apache-2.0 |
+| `wgpu` | 30.0.1 | MIT OR Apache-2.0 |
+| `wgpu-core` | 30.0.1 | MIT OR Apache-2.0 |
 | `wgpu-core-deps-apple` | 30.0.1 | MIT OR Apache-2.0 |
 | `wgpu-core-deps-windows-linux-android` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-core` | 30.0.1 | MIT OR Apache-2.0 |
 | `wgpu-hal` | 30.0.1 | MIT OR Apache-2.0 |
 | `wgpu-naga-bridge` | 30.0.1 | MIT OR Apache-2.0 |
 | `wgpu-types` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu` | 30.0.1 | MIT OR Apache-2.0 |
+| `winapi` | 0.3.9 | MIT/Apache-2.0 |
 | `winapi-i686-pc-windows-gnu` | 0.4.0 | MIT/Apache-2.0 |
 | `winapi-util` | 0.1.11 | Unlicense OR MIT |
 | `winapi-x86_64-pc-windows-gnu` | 0.4.0 | MIT/Apache-2.0 |
-| `winapi` | 0.3.9 | MIT/Apache-2.0 |
 | `window-vibrancy` | 0.8.1 | Apache-2.0 OR MIT |
+| `windows` | 0.61.3 | MIT OR Apache-2.0 |
+| `windows` | 0.62.2 | MIT OR Apache-2.0 |
 | `windows-collections` | 0.2.0 | MIT OR Apache-2.0 |
 | `windows-collections` | 0.3.2 | MIT OR Apache-2.0 |
 | `windows-core` | 0.61.2 | MIT OR Apache-2.0 |
@@ -812,8 +819,6 @@ of a package are read in full and in a fixed order.
 | `windows-threading` | 0.1.0 | MIT OR Apache-2.0 |
 | `windows-threading` | 0.2.1 | MIT OR Apache-2.0 |
 | `windows-version` | 0.1.7 | MIT OR Apache-2.0 |
-| `windows` | 0.61.3 | MIT OR Apache-2.0 |
-| `windows` | 0.62.2 | MIT OR Apache-2.0 |
 | `windows_aarch64_gnullvm` | 0.42.2 | MIT OR Apache-2.0 |
 | `windows_aarch64_gnullvm` | 0.48.5 | MIT OR Apache-2.0 |
 | `windows_aarch64_gnullvm` | 0.52.6 | MIT OR Apache-2.0 |
@@ -854,35 +859,35 @@ of a package are read in full and in a fixed order.
 | `write-fonts` | 0.50.0 | MIT OR Apache-2.0 |
 | `writeable` | 0.6.4 | Unicode-3.0 |
 | `wry` | 0.57.0 | Apache-2.0 OR MIT |
-| `x11-dl` | 2.21.0 | MIT |
 | `x11` | 2.21.0 | MIT |
-| `x11rb-protocol` | 0.13.2 | MIT OR Apache-2.0 |
+| `x11-dl` | 2.21.0 | MIT |
 | `x11rb` | 0.13.2 | MIT OR Apache-2.0 |
+| `x11rb-protocol` | 0.13.2 | MIT OR Apache-2.0 |
 | `xattr` | 1.6.1 | MIT OR Apache-2.0 |
 | `xcursor` | 0.3.11 | MIT |
-| `xkbcommon-dl` | 0.4.2 | MIT |
 | `xkbcommon` | 0.9.0 | MIT |
+| `xkbcommon-dl` | 0.4.2 | MIT |
 | `xkeysym` | 0.2.1 | MIT OR Apache-2.0 OR Zlib |
 | `xml-rs` | 0.8.29 | MIT |
 | `xmlwriter` | 0.1.0 | MIT |
 | `xxhash-rust` | 0.8.18 | BSL-1.0 |
 | `yazi` | 0.2.1 | Apache-2.0 OR MIT |
 | `yeslogic-fontconfig-sys` | 6.0.1 | MIT |
-| `yoke-derive` | 0.8.4 | Unicode-3.0 |
 | `yoke` | 0.8.3 | Unicode-3.0 |
+| `yoke-derive` | 0.8.4 | Unicode-3.0 |
 | `zbus` | 5.19.0 | MIT |
 | `zbus_macros` | 5.19.0 | MIT |
 | `zbus_names` | 4.3.4 | MIT |
 | `zcheapstr` | 1.1.0 | MIT |
 | `zeno` | 0.3.3 | Apache-2.0 OR MIT |
-| `zerocopy-derive` | 0.8.57 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | `zerocopy` | 0.8.57 | BSD-2-Clause OR Apache-2.0 OR MIT |
-| `zerofrom-derive` | 0.1.8 | Unicode-3.0 |
+| `zerocopy-derive` | 0.8.57 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | `zerofrom` | 0.1.8 | Unicode-3.0 |
+| `zerofrom-derive` | 0.1.8 | Unicode-3.0 |
 | `zeroize` | 1.9.0 | Apache-2.0 OR MIT |
 | `zerotrie` | 0.2.5 | Unicode-3.0 |
-| `zerovec-derive` | 0.11.6 | Unicode-3.0 |
 | `zerovec` | 0.11.8 | Unicode-3.0 |
+| `zerovec-derive` | 0.11.6 | Unicode-3.0 |
 | `zip` | 4.6.1 | MIT |
 | `zlib-rs` | 0.6.7 | Zlib |
 | `zmij` | 1.0.23 | MIT |
@@ -894,7 +899,7 @@ of a package are read in full and in a fixed order.
 
 ## The notices themselves
 
-### `@tauri-apps/api` — Apache-2.0 OR MIT
+### `@tauri-apps/api` 2.12.0 — Apache-2.0 OR MIT
 
 ```text
 LICENSE-APACHE-2.0
@@ -1101,7 +1106,59 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### `react` — MIT
+### `@tauri-apps/plugin-dialog` 2.8.0 — MIT OR Apache-2.0
+
+```text
+MIT License
+
+Copyright (c) 2019-2022, The Tauri Programme in the Commons Conservancy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### `@tauri-apps/plugin-opener` 2.6.0 — MIT OR Apache-2.0
+
+```text
+MIT License
+
+Copyright (c) 2019-2022, The Tauri Programme in the Commons Conservancy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### `react` 19.3.0 — MIT
 
 ```text
 LICENSE
@@ -1129,7 +1186,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### `react-dom` — MIT
+### `react-dom` 19.3.0 — MIT
 
 ```text
 LICENSE
@@ -1157,7 +1214,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### `scheduler` — MIT
+### `scheduler` 0.28.0 — MIT
 
 ```text
 LICENSE

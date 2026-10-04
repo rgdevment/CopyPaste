@@ -65,7 +65,7 @@ jobs:
           said=$(jq -r '.latest // ""' manifest.json)
 
           if [ -z "$newest" ] && [ "$said" != "0.0.0" ]; then
-            echo "::error::the feed announces «$said» and no release of that series is published"
+            echo "::error::the feed announces «${said}» and no release of that series is published"
             exit 1
           fi
 
@@ -88,7 +88,7 @@ jobs:
           if [ "$seeded" = 0 ]; then
             echo "the feed says $said; the highest release is $newest"
             if [ "$said" != "$newest" ]; then
-              echo "::error::the feed says «$said» and the highest release is «$newest». Every copy \
+              echo "::error::the feed says «${said}» and the highest release is «${newest}». Every copy \
                     out there is being told about a version that is not the one being published."
               exit 1
             fi
@@ -109,7 +109,7 @@ jobs:
             local version
             version=$(jq -r '.version // ""' channel.json)
             if [ "$version" != "$expected" ]; then
-              echo "::error::$what offers «$version» and the feed announces «$expected»"
+              echo "::error::$what offers «${version}» and the feed announces «${expected}»"
               return 1
             fi
 
@@ -230,12 +230,12 @@ jobs:
           newest=$(printf '%s\n' "$published" | sed 's/^v//' \
             | grep -E '^([3-9]|[1-9][0-9]+)\.' | sort -V | tail -1 || true)
           if [ -z "$newest" ]; then
-            echo "the 2.x is being told «$said», and no stable 3.x is out for it to be told about"
+            echo "the 2.x is being told «${said}», and no stable 3.x is out for it to be told about"
             exit 0
           fi
           if [ "$said" != "$newest" ]; then
-            echo "::error::the 2.x is being told «$said» and the highest stable release is \
-                  «$newest». Either the bridge was left off the release that went out, or it \
+            echo "::error::the 2.x is being told «${said}» and the highest stable release is \
+                  «${newest}». Either the bridge was left off the release that went out, or it \
                   carries a version nobody is publishing."
             exit 1
           fi

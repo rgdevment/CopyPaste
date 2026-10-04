@@ -29,22 +29,17 @@ jobs:
         with:
           persist-credentials: false
 
-      # rules.sh does the parsing now, so the hook catches it before a push does. What it needs
-      # is only the library.
       - name: The library that rule needs
         run: |
           python3 -c "import yaml" 2>/dev/null \
             || python3 -m pip install --quiet --break-system-packages pyyaml
 
-      # Parsing says nothing of a needs that names a job that is gone, or of input expanded
-      # into a shell.
       - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         with:
           tool: zizmor@1.30.1
       - name: The workflows mean what they say
         env:
-          # without a token zizmor skips the audits that reach the network, and those are the ones
-          # that catch a pin whose commit no longer exists in the repository it names
+          # without a token zizmor skips the audits that reach the network, and artipacked reads differently
           GH_TOKEN: ${{ github.token }}
           SHELLCHECK_OPTS: --severity=warning
         run: |
@@ -70,8 +65,7 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      # the licence texts come out of app/node_modules, so without them the file would be written
-      # short and the comparison would fail for the wrong reason
+      # the notices are read out of app/node_modules, and the generator refuses to write without them
       - name: The window the notices read
         working-directory: app
         run: npm ci

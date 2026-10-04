@@ -14,13 +14,12 @@ amiss() {
   status=1
 }
 
-# Strict is for a title, which reaches main: only a revert keeps its shape there, and it is measured.
+# strict is for a title, which reaches main: only what git writes itself keeps its shape there
 weighed() {
   local who=$1 said=$2 strict=${3:-}
-  said=$(printf '%s' "$said" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  said=$(printf '%s' "$said" | LC_ALL=C sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
   if [ -z "$strict" ]; then
-    # every shape git writes by itself. A human writing «Merge the two panels» is not one of
-    # them, and commit-msg runs on git merge too: a refusal here leaves the merge half done.
+    # every shape git writes itself, and commit-msg runs on git merge, where a refusal leaves it half done
     case $said in
       "Merge branch '"* | "Merge branches "* | "Merge pull request #"* | \
         "Merge remote-tracking branch '"* | "Merge commit '"* | "Merge tag '"* | \
@@ -32,7 +31,7 @@ weighed() {
     esac
   fi
   case $said in
-    'Revert "'*) ;;
+    'Revert "'* | 'Reapply "'*) ;;
     *)
       if ! printf '%s' "$said" | grep -qE "$shape"; then
         amiss "$who does not follow the convention"
@@ -41,8 +40,7 @@ weighed() {
       fi
       ;;
   esac
-  # Bytes minus UTF-8 continuation bytes: ${#said} counts bytes when a GUI client spawns git
-  # without a locale, and an accented subject would then be measured as longer than it reads.
+  # bytes minus UTF-8 continuation bytes: ${#said} counts bytes when a client spawns git with no locale
   local long
   long=$(printf '%s' "$said" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' ')
   if [ "$long" -gt "$most" ]; then
@@ -77,8 +75,7 @@ range=${1:-}
   exit 2
 }
 
-# git prints hints and warnings on stderr while still exiting 0, and folding those into the list
-# would weigh them as though they were subjects
+# git prints hints on stderr while exiting 0, and folding them in would weigh them as subjects
 trouble=$(mktemp)
 if ! listed=$(git rev-list --no-merges "$range" 2> "$trouble"); then
   cat "$trouble" >&2

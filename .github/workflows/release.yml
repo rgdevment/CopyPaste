@@ -37,14 +37,12 @@ jobs:
       - run: npm ci
       - run: npm run lint:md
 
-      # one of the rules parses the workflows, and that is all it needs
       - name: The library the rules need
         run: |
           python3 -c "import yaml" 2>/dev/null \
             || python3 -m pip install --quiet --break-system-packages pyyaml
 
-      # CI guards main with two workflows and this gate only ever asked after one of them, so a
-      # convention broken on main would still cut a tag
+      # two workflows guard main, and asking only one would cut a tag over a broken convention
       - name: Project conventions
         run: bash scripts/rules.sh
 
@@ -104,7 +102,7 @@ jobs:
   rust:
     name: fmt + clippy
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       RUSTFLAGS: -D warnings
     steps:
@@ -199,12 +197,12 @@ jobs:
           strict+='(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
           strict+='(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?$'
           if [[ ! "$version" =~ $strict ]]; then
-            echo "::error::«$version» is not a version semver reads (1.2.3 or 1.2.3-rc.1)"
+            echo "::error::«${version}» is not a version semver reads (1.2.3 or 1.2.3-rc.1)"
             exit 1
           fi
 
           if [[ "$version" =~ -rc[0-9]{2,} ]]; then
-            echo "::error::«$version» has to be written rc.${BASH_REMATCH[0]#-rc}: past rc9, \
+            echo "::error::«${version}» has to be written rc.${BASH_REMATCH[0]#-rc}: past rc9, \
           semver reads rc10 as older than rc2"
             exit 1
           fi
@@ -219,9 +217,7 @@ jobs:
           echo "macos=${BUILD_MACOS}" >> "$GITHUB_OUTPUT"
           echo "version $version (pre-release: $prerelease)"
 
-      # The hook that asks this before a tag leaves a machine can be skipped with --no-verify,
-      # and nothing downstream would notice a stable release whose what-is-new screen still
-      # describes the one before it.
+      # the hook that asks this before a tag can be skipped with --no-verify
       - name: The window has something to say about this version
         run: bash scripts/news.sh "${{ steps.resolve.outputs.version }}"
 
@@ -578,7 +574,7 @@ jobs:
             test -x "$bin" || { echo "::error::$one is not in the bundle"; status=1; continue; }
             archs=$(lipo -archs "$bin")
             if [ "$archs" != "$chip" ]; then
-              echo "::error::$one is «$archs», not $chip alone"
+              echo "::error::$one is «${archs}», not $chip alone"
               status=1
             fi
             echo "$one: $archs"
@@ -816,7 +812,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 # zizmor: ignore[artipacked] the credential is what pushes the manifest branch below
         with:
           fetch-depth: 0
 
@@ -913,7 +909,7 @@ jobs:
             else
               said=$(jq -r '.latest // ""' "$RUNNER_TEMP/live.json" 2>/dev/null || echo "")
               if ! printf '%s' "$said" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-                echo "::error::the manifest a 2.x reads answered 200 and says «$said», which is \
+                echo "::error::the manifest a 2.x reads answered 200 and says «${said}», which is \
           no version at all. Nothing was written."
                 exit 1
               fi
@@ -1030,12 +1026,17 @@ jobs:
           tag="$GITHUB_REF_NAME"
           printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
 
-          if ! gh release view "$tag" > /dev/null 2>&1; then
+          if state=$(gh release view "$tag" --json isDraft,assets 2> "$RUNNER_TEMP/view.err"); then
+            :
+          elif grep -q 'release not found' "$RUNNER_TEMP/view.err"; then
             gh release create "$tag" --draft --verify-tag --title "$tag" \
               --prerelease="$PRERELEASE" --generate-notes --notes-file "$RUNNER_TEMP/notes.md"
+            state=$(gh release view "$tag" --json isDraft,assets)
+          else
+            echo "::error::the $tag release could not be read, and not because it is missing"
+            cat "$RUNNER_TEMP/view.err"
+            exit 1
           fi
-
-          state=$(gh release view "$tag" --json isDraft,assets)
           draft=$(jq -r .isDraft <<< "$state")
           for f in dist/*; do
             name=$(basename "$f")
@@ -1379,18 +1380,27 @@ jobs:
       group: release-homebrew-${{ github.ref }}
       cancel-in-progress: false
     env:
+      HOMEBREW_PUBLISH: ${{ vars.HOMEBREW_PUBLISH }}
       GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
     steps:
       - name: The tap cannot be written without its token
+        id: gate
+        shell: bash
         run: |
-          if [ -z "${GIST_TOKEN}" ]; then
+          if [ "$HOMEBREW_PUBLISH" = "false" ]; then
+            echo "::notice::HOMEBREW_PUBLISH is false; the tap keeps the formula it has"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          elif [ -z "${GIST_TOKEN}" ]; then
             echo "::error::this release reached the point of writing the Homebrew tap and \
           GIST_TOKEN is not set, so nobody on a Mac would ever be offered it. Set the secret, or \
-          take macOS out of this release."
+          set the HOMEBREW_PUBLISH variable to false."
             exit 1
+          else
+            echo "go=yes" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Update the tap
+        if: steps.gate.outputs.go == 'yes'
         run: |
           set -euo pipefail
 

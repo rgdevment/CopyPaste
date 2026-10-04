@@ -16,8 +16,7 @@ went_well() {
   [ -n "${GITHUB_ACTIONS:-}" ] || printf 'ok %s\n' "$1"
 }
 
-# grep answers 1 when it found nothing, which is what every rule here hopes for, and 2 when it
-# could not look: a rule that cannot look has to shout, not pass
+# grep answers 1 on nothing found and 2 when it could not look: a rule that cannot look must shout
 found_nothing() {
   case $2 in
     0) amiss "$1"; return 1 ;;
@@ -66,8 +65,7 @@ written_in_english() {
 neutral_spanish() {
   local voseo='\b(v[o]s|ten[é]s|quer[é]s|pod[é]s|and[á]|mir[á]|hac[é]|ch[e])\b'
   local peninsular='\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b'
-  # a path that is not there is an error to grep, and an error has to read as one, so only what
-  # exists is handed over
+  # a path that is not there is an error to grep, so only what exists is handed over
   local -a where=(crates README.md)
   [ -d docs ] && where+=(docs)
   grep -rniE "$voseo" "${where[@]}" --include='*.rs' --include='*.md'
@@ -96,8 +94,7 @@ no_comments_in_the_code() {
     && went_well "no block comments either"
 }
 
-# cargo links every example to target/<profile>/examples/<name>, so two of a name are one binary
-# and the two link steps race
+# cargo links every example to target/<profile>/examples/<name>, so two of a name race
 every_example_has_its_own_name() {
   local dirs said twice one
   dirs=$(find . -type d -name examples -not -path './target/*' -not -path '*/node_modules/*' | sort)
@@ -122,7 +119,7 @@ what_python_measures() {
   local why=$1 said
   shift
   if ! command -v python3 > /dev/null; then
-    printf 'x  python3 is not here, so %s was not measured\n' "$why"
+    amiss "python3 is not here, so «${why}» was not measured"
     return
   fi
   if said=$(python3 "scripts/$1" "${@:2}" 2>&1); then

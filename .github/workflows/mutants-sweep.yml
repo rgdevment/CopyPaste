@@ -174,7 +174,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 # zizmor: ignore[artipacked] the credential is what writes the score branch below
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -187,9 +187,7 @@ jobs:
           WANT_WINDOW: 2
         run: python3 scripts/mutants_score.py
 
-      # a dispatch can be launched from any branch, and the badge must only ever say what main
-      # measures. The number is still computed above, so a branch can be looked at without
-      # publishing anything.
+      # a dispatch runs from any branch, and the badge must only ever say what main measures
       - name: The number, on the branch that holds nothing else
         if: github.ref == 'refs/heads/main'
         run: |
