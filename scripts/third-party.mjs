@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,10 +58,19 @@ const drafted = (pkg, licence) => {
 
 const noticed = (at) => {
   if (!existsSync(at)) return null;
-  const named = readdirSync(at).find((one) => /^(licen[cs]e|copying)/i.test(one));
-  if (named) {
-    const said = readFileSync(join(at, named), "utf8").trim();
-    return said.length > 4000 ? `${said.slice(0, 4000)}\n…` : said;
+  // readdir promises no order, and picking one of LICENSE-APACHE-2.0 and LICENSE-MIT by luck
+  // writes a different file on every filesystem. A .spdx is metadata, not a notice.
+  const named = readdirSync(at)
+    .filter((one) => /^(licen[cs]e|copying)/i.test(one))
+    .filter((one) => !/\.spdx$/i.test(one))
+    .filter((one) => statSync(join(at, one)).isFile())
+    .sort();
+  if (named.length > 0) {
+    // no truncation: Apache-2.0 section 4(a) asks for a complete copy, and cutting it at four
+    // thousand characters severed the patent grant
+    return named
+      .map((one) => `${one}\n\n${readFileSync(join(at, one), "utf8").trim()}`)
+      .join("\n\n");
   }
   const where = join(at, "package.json");
   if (!existsSync(where)) return null;
@@ -90,7 +99,7 @@ const shipped = () => {
 // different file on a Mac than on Linux; this reads only what Cargo.lock already holds, and a dev
 // dependency is dropped by walking the graph rather than by trusting a flag.
 const crates = () => {
-  const said = execFileSync("cargo", ["metadata", "--format-version", "1"], {
+  const said = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked"], {
     cwd: root,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
@@ -116,16 +125,18 @@ const crates = () => {
   for (const id of walked) {
     if (ours.has(id)) continue;
     const one = byId.get(id);
-    if (!one || seen.has(one.name)) continue;
-    seen.set(one.name, { version: one.version, licence: one.license ?? "see the crate" });
+    if (!one) continue;
+    const key = `${one.name}@${one.version}`;
+    if (seen.has(key)) continue;
+    seen.set(key, { name: one.name, version: one.version, licence: one.license ?? "see the crate" });
   }
   return seen;
 };
 
 const listed = (seen) =>
   [...seen.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, one]) => `| \`${name}\` | ${one.version} | ${one.licence} |`)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, one]) => `| \`${one.name ?? key}\` | ${one.version} | ${one.licence} |`)
     .join("\n");
 
 const js = shipped();
@@ -133,7 +144,7 @@ const rs = crates();
 
 const kept = [...js.entries()]
   .filter(([, one]) => one.notice)
-  .sort(([a], [b]) => a.localeCompare(b))
+  .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
   .map(([name, one]) => `### \`${name}\` — ${one.licence}\n\n\`\`\`text\n${one.notice}\n\`\`\``)
   .join("\n\n");
 
@@ -150,8 +161,10 @@ licence. Nothing of it was copied into CopyPaste's own source; what was copied i
 is in [THIRD-PARTY.md](THIRD-PARTY.md).
 
 The crates are every one the build resolves on any system, which is what
-Cargo.lock holds; what only the tests use is left out. It reads the same
-whichever machine wrote it.
+Cargo.lock holds; what only the tests use is left out, and a crate resolved at
+two versions is named once per version. Nothing here depends on the machine that
+wrote it: no platform is named, the order is by code point, and the licence files
+of a package are read in full and in a fixed order.
 
 ## In the window (${js.size} packages)
 

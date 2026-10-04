@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Every workflow is valid YAML and names no key twice."""
 
-import os
 import pathlib
 import sys
 
 try:
     import yaml
 except ImportError:
-    # a rule that cannot look has to shout in CI and step aside on a machine, or it is a rule
-    # somebody uninstalls
+    # rules.sh reads an exit of 0 as «this rule passed» and throws the output away, so a rule
+    # that cannot look has to fail. Install it with: python3 -m pip install pyyaml
     print("pyyaml is not here, so the workflows were not parsed")
-    sys.exit(1 if os.environ.get("GITHUB_ACTIONS") else 0)
+    sys.exit(1)
 
 
 class Strict(yaml.SafeLoader):
@@ -19,6 +18,9 @@ class Strict(yaml.SafeLoader):
 
 
 def no_twice(loader, node, deep=False):
+    # a merge key is resolved into the mapping before the keys are read, the way SafeConstructor
+    # does it; without this an anchor merged with << is reported as an unparseable document
+    loader.flatten_mapping(node)
     seen = set()
     for key, _ in node.value:
         name = loader.construct_object(key, deep=deep)

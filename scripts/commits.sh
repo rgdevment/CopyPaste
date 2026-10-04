@@ -19,9 +19,14 @@ weighed() {
   local who=$1 said=$2 strict=${3:-}
   said=$(printf '%s' "$said" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
   if [ -z "$strict" ]; then
+    # every shape git writes by itself. A human writing «Merge the two panels» is not one of
+    # them, and commit-msg runs on git merge too: a refusal here leaves the merge half done.
     case $said in
-      "Merge branch '"* | "Merge pull request #"* | "Merge remote-tracking branch '"* | \
-        "Merge commit '"* | "Merge tag '"* | 'Revert "'* | "fixup! "* | "squash! "* | "amend! "*)
+      "Merge branch '"* | "Merge branches "* | "Merge pull request #"* | \
+        "Merge remote-tracking branch '"* | "Merge commit '"* | "Merge tag '"* | \
+        "Merge http://"* | "Merge https://"* | "Merge git://"* | "Merge ssh://"* | \
+        "Squashed commit of the following:"* | 'Revert "'* | 'Reapply "'* | \
+        "fixup! "* | "squash! "* | "amend! "*)
         return
         ;;
     esac
@@ -72,11 +77,16 @@ range=${1:-}
   exit 2
 }
 
-listed=$(git rev-list --no-merges "$range" 2>&1) || {
-  printf '%s\n' "$listed"
+# git prints hints and warnings on stderr while still exiting 0, and folding those into the list
+# would weigh them as though they were subjects
+trouble=$(mktemp)
+if ! listed=$(git rev-list --no-merges "$range" 2> "$trouble"); then
+  cat "$trouble" >&2
+  rm -f "$trouble"
   amiss "the commits between $range could not be listed, so no subject was looked at"
   exit 1
-}
+fi
+rm -f "$trouble"
 
 seen=0
 while read -r sha; do

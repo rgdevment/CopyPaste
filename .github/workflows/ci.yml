@@ -88,6 +88,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      # the only other run of the suite sits behind a Rust coverage gate in a 45-minute macOS job,
+      # and that gate aborts before it: a broken assertion here would be reported by nobody
+      - run: npm test
 
   prose:
     name: markdown
