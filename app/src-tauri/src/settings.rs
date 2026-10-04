@@ -1,6 +1,13 @@
 use cp_config::Config;
 use std::path::PathBuf;
 
+pub const NOTICES: &str = include_str!("../../../THIRD-PARTY-BUNDLED.md");
+
+#[tauri::command]
+pub fn notices() -> &'static str {
+    NOTICES
+}
+
 pub fn former_folder() -> Option<PathBuf> {
     #[cfg(windows)]
     {

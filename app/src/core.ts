@@ -3,6 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adopt } from "./locales";
 
+export const notices = (): Promise<string> => invoke<string>("notices");
+
 export type Look = "system" | "light" | "dark";
 
 export type Kept = {

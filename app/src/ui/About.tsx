@@ -1,9 +1,10 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useState } from "react";
-import { useUpdate } from "../core";
+import { useEffect, useRef, useState } from "react";
+import { notices, useUpdate } from "../core";
 import { fill, t } from "../locales";
+import { composed } from "../markdown";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
@@ -12,7 +13,6 @@ const COFFEE = "https://buymeacoffee.com/rgdevment";
 const ALTERNATIVE = "https://alternativeto.net/software/copypaste/about/";
 const RATING = "ms-windows-store://review/?ProductId=9NBJRZF3K856";
 const PRIVACY = "https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md";
-const NOTICES = "https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md";
 const onMac = navigator.userAgent.includes("Macintosh");
 
 function Newer() {
@@ -20,7 +20,6 @@ function Newer() {
   const store = seen?.route === "store";
   const brew = seen?.route === "brew";
   const ready = seen?.ready ?? null;
-  // a look that failed says nothing about being up to date
   const looked = !trouble && (seen?.looked ?? false);
 
   const says = ready
@@ -74,12 +73,35 @@ const TOOLS = [
   },
 ];
 
-export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY, NOTICES];
+function Notices({ text, onLink }: { text: string; onLink: (url: string) => void }) {
+  const box = useRef<HTMLElement>(null);
+  const follow = useRef(onLink);
+  follow.current = onLink;
+
+  useEffect(() => {
+    const holder = box.current;
+    if (!holder) return;
+    holder.innerHTML = composed(text);
+    const clicked = (event: Event) => {
+      const link = (event.target as HTMLElement).closest("a");
+      if (!link) return;
+      event.preventDefault();
+      follow.current(link.href);
+    };
+    holder.addEventListener("click", clicked);
+    return () => holder.removeEventListener("click", clicked);
+  }, [text]);
+
+  return <section ref={box} className="notices" aria-label={t("aboutNotices")} />;
+}
+
+export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY];
 
 export default function About() {
   const [trouble, setTrouble] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
   const [unbound, setUnbound] = useState(false);
+  const [said, setSaid] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion()
@@ -260,10 +282,20 @@ export default function About() {
         <button type="button" onClick={() => go(PRIVACY)}>
           {t("aboutPrivacyLink")}
         </button>
-        <button type="button" onClick={() => go(NOTICES)}>
+        <button
+          type="button"
+          aria-expanded={said !== null}
+          onClick={() => {
+            if (said !== null) return setSaid(null);
+            notices()
+              .then(setSaid)
+              .catch(() => setTrouble(t("noticesRefused")));
+          }}
+        >
           {t("aboutNotices")}
         </button>
       </div>
+      {said !== null && <Notices text={said} onLink={go} />}
     </>
   );
 }
