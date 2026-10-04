@@ -49,25 +49,43 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.`;
 
-const drafted = (pkg, licence) => {
-  const who = pkg.author?.name ?? pkg.author ?? pkg.name;
-  if (licence === "MIT") return MIT(who);
-  if (licence === "ISC") return ISC(who);
+const offered = (licence) =>
+  String(licence)
+    .toUpperCase()
+    .split(/[()\s]+|\bOR\b|\bAND\b/)
+    .filter(Boolean);
+
+// the .spdx is not a notice, but it names the holder, and a made-up one would be worse than none
+const held = (at, pkg) => {
+  for (const one of readdirSync(at)
+    .filter((name) => /\.spdx$/i.test(name))
+    .sort()) {
+    const said = readFileSync(join(at, one), "utf8").match(/^PackageCopyrightText:\s*(.+)$/m);
+    if (said) return said[1].trim();
+  }
+  if (typeof pkg.author === "string") return pkg.author;
+  return pkg.author?.name ?? null;
+};
+
+const drafted = (at, pkg, licence) => {
+  const who = held(at, pkg);
+  if (!who) return null;
+  const parts = offered(licence);
+  if (parts.includes("MIT")) return MIT(who);
+  if (parts.includes("ISC")) return ISC(who);
   return null;
 };
 
 const noticed = (at) => {
   if (!existsSync(at)) return null;
-  // readdir promises no order, and picking one of LICENSE-APACHE-2.0 and LICENSE-MIT by luck
-  // writes a different file on every filesystem. A .spdx is metadata, not a notice.
+  // readdir promises no order, and picking one licence file by luck writes a different file per filesystem
   const named = readdirSync(at)
     .filter((one) => /^(licen[cs]e|copying)/i.test(one))
     .filter((one) => !/\.spdx$/i.test(one))
     .filter((one) => statSync(join(at, one)).isFile())
     .sort();
   if (named.length > 0) {
-    // no truncation: Apache-2.0 section 4(a) asks for a complete copy, and cutting it at four
-    // thousand characters severed the patent grant
+    // no truncation: Apache-2.0 section 4(a) asks for a complete copy
     return named
       .map((one) => `${one}\n\n${readFileSync(join(at, one), "utf8").trim()}`)
       .join("\n\n");
@@ -75,7 +93,7 @@ const noticed = (at) => {
   const where = join(at, "package.json");
   if (!existsSync(where)) return null;
   const pkg = JSON.parse(readFileSync(where, "utf8"));
-  return drafted(pkg, told(pkg));
+  return drafted(at, pkg, told(pkg));
 };
 
 const shipped = () => {
@@ -84,9 +102,13 @@ const shipped = () => {
   for (const [at, one] of Object.entries(lock.packages ?? {})) {
     if (!at || one.dev || one.devOptional || one.extraneous) continue;
     const name = one.name ?? at.slice(at.lastIndexOf("node_modules/") + 13);
-    if (!name || seen.has(name)) continue;
-    seen.set(name, {
-      version: one.version ?? "?",
+    if (!name) continue;
+    const version = one.version ?? "?";
+    const key = `${name}@${version}`;
+    if (seen.has(key)) continue;
+    seen.set(key, {
+      name,
+      version,
       licence: one.license ?? "see the package",
       notice: noticed(join(root, "app", at)),
     });
@@ -94,10 +116,7 @@ const shipped = () => {
   return seen;
 };
 
-// cargo metadata is asked for the whole graph and no platform is named. --filter-platform would
-// have been narrower, but it resolves against the host as well, so the same command writes a
-// different file on a Mac than on Linux; this reads only what Cargo.lock already holds, and a dev
-// dependency is dropped by walking the graph rather than by trusting a flag.
+// no platform is named: --filter-platform resolves against the host and writes a different file per OS
 const crates = () => {
   const said = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked"], {
     cwd: root,
@@ -133,19 +152,42 @@ const crates = () => {
   return seen;
 };
 
+// by field, not by the «name@version» key, where a sibling's «-» sorts ahead of the «@»
+const inOrder = (a, b) =>
+  a.name < b.name
+    ? -1
+    : a.name > b.name
+      ? 1
+      : a.version < b.version
+        ? -1
+        : a.version > b.version
+          ? 1
+          : 0;
+
 const listed = (seen) =>
-  [...seen.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([key, one]) => `| \`${one.name ?? key}\` | ${one.version} | ${one.licence} |`)
+  [...seen.values()]
+    .sort(inOrder)
+    .map((one) => `| \`${one.name}\` | ${one.version} | ${one.licence} |`)
     .join("\n");
+
+if (!existsSync(join(root, "app", "node_modules"))) {
+  console.error("app/node_modules is not here, so not one notice could be read: run npm ci in app");
+  process.exit(1);
+}
 
 const js = shipped();
 const rs = crates();
 
-const kept = [...js.entries()]
-  .filter(([, one]) => one.notice)
-  .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-  .map(([name, one]) => `### \`${name}\` — ${one.licence}\n\n\`\`\`text\n${one.notice}\n\`\`\``)
+const unread = [...js.values()].filter((one) => !one.notice);
+if (unread.length > 0) {
+  const said = unread.map((one) => `${one.name}@${one.version} (${one.licence})`).join(", ");
+  console.error(`no notice could be read or drafted for ${said}`);
+  process.exit(1);
+}
+
+const kept = [...js.values()]
+  .sort(inOrder)
+  .map((one) => `### \`${one.name}\` ${one.version} — ${one.licence}\n\n\`\`\`text\n${one.notice}\n\`\`\``)
   .join("\n\n");
 
 const asWritten = (text) => text.replace(/\r\n/g, "\n");
@@ -163,8 +205,13 @@ is in [THIRD-PARTY.md](THIRD-PARTY.md).
 The crates are every one the build resolves on any system, which is what
 Cargo.lock holds; what only the tests use is left out, and a crate resolved at
 two versions is named once per version. Nothing here depends on the machine that
-wrote it: no platform is named, the order is by code point, and the licence files
+wrote it: no platform is named, the order is by name and version compared by code
+point, and the licence files
 of a package are read in full and in a fixed order.
+
+Every package in the window has its notice reproduced below, in full; the crates
+are named with the licence each one declares, and their texts travel with the
+crate in the registry rather than being copied here.
 
 ## In the window (${js.size} packages)
 

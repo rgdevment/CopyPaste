@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-code=${CODE:-0}
+code=${CODE:-}
 title=${TITLE:-mutants}
 out=${OUT:-mutants.out}
+
+# the run step answers with set +e and always writes code, so an empty one never ran
+if [ -z "$code" ]; then
+  echo "::error::cargo mutants never reported an exit, so it did not run"
+  exit 1
+fi
 
 count() {
   if [ -s "$1" ]; then grep -c . "$1"; else echo 0; fi
@@ -37,11 +43,7 @@ unviable=$(count "$out/unviable.txt")
   fi
 } >> "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 
-# Decided 2026-10-04: a survivor (2) and a timeout (3) are reported, not blocking. A mutation
-# score is a trend, and one survivor in an unrelated crate should not hold a pull request. What
-# must never happen is green being read as «nothing survived», which the summary above now says
-# outright. A suite that fails unmutated (4) or a diff that does not describe the tree (5, 6) are
-# different: those mean the measurement is worthless, and they fail.
+# a survivor (2) and a timeout (3) are a trend, not a blocker; 4 to 6 mean the measurement is worthless
 case "$code" in
   0 | 2 | 3)
     exit 0

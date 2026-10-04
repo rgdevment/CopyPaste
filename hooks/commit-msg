@@ -3,16 +3,7 @@ set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)" || exit 0
 
-# Git keeps #commentary when the message came from -m or -F (cleanup=whitespace) and strips it
-# when it was edited (cleanup=strip), so stripping it unconditionally would measure a line git
-# throws away — or skip the check entirely on a subject that begins with #. The second argument
-# says which happened. Everything past the scissors of --verbose is the diff, and git folds the
-# whole first paragraph into %s.
-said=$(sed '/^# -* >8 -*$/,$d' "$1")
-if [ "${2:-}" != "message" ]; then
-  said=$(printf '%s\n' "$said" | git stripspace --strip-comments)
-fi
-said=$(printf '%s\n' "$said" | git stripspace | sed -n '1,/^$/p' | paste -sd' ' -)
+said=$(sed '/^# -* >8 -*$/,$d' "$1" | git stripspace | sed -n '1,/^$/p' | paste -sd' ' -)
 [ -n "$said" ] || exit 0
 
 exec bash scripts/commits.sh --subject "$said"

@@ -7,10 +7,12 @@ import sys
 try:
     import yaml
 except ImportError:
-    # rules.sh reads an exit of 0 as «this rule passed» and throws the output away, so a rule
-    # that cannot look has to fail. Install it with: python3 -m pip install pyyaml
     print("pyyaml is not here, so the workflows were not parsed")
+    print("install it with: python3 -m pip install pyyaml")
     sys.exit(1)
+
+MERGE = "tag:yaml.org,2002:merge"
+UNDER = pathlib.Path(".github")
 
 
 class Strict(yaml.SafeLoader):
@@ -18,22 +20,32 @@ class Strict(yaml.SafeLoader):
 
 
 def no_twice(loader, node, deep=False):
-    # a merge key is resolved into the mapping before the keys are read, the way SafeConstructor
-    # does it; without this an anchor merged with << is reported as an unparseable document
-    loader.flatten_mapping(node)
     seen = set()
+    # compared as written: a 1.1 loader reads «on» as True and would name a key no file wrote
     for key, _ in node.value:
-        name = loader.construct_object(key, deep=deep)
-        if name in seen:
-            raise yaml.YAMLError(f"the «{name}» key is repeated")
-        seen.add(name)
+        if key.tag == MERGE or not isinstance(key, yaml.ScalarNode):
+            continue
+        if key.value in seen:
+            raise yaml.YAMLError(f"the «{key.value}» key is repeated")
+        seen.add(key.value)
+    # merged after the comparison, like SafeConstructor: a key overriding an anchor's is legal
+    loader.flatten_mapping(node)
     return yaml.SafeLoader.construct_mapping(loader, node, deep)
 
 
 Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, no_twice)
 
+found = sorted(
+    one
+    for one in UNDER.rglob("*")
+    if one.is_file() and one.suffix in (".yml", ".yaml")
+)
+if not found:
+    print(f"no .yml or .yaml lives under {UNDER}, so nothing was parsed")
+    sys.exit(1)
+
 bad = 0
-for one in sorted(pathlib.Path(".github").rglob("*.yml")):
+for one in found:
     try:
         yaml.load(one.read_text(encoding="utf-8"), Strict)
     except yaml.YAMLError as why:
