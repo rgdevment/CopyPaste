@@ -14,9 +14,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-      with:
-        targets: ${{ inputs.targets }}
+    - name: Rust, from rust-toolchain.toml
+      shell: bash
+      env:
+        TARGETS: ${{ inputs.targets }}
+      run: |
+        rustup toolchain install --no-self-update
+        IFS=',' read -ra wanted <<< "$TARGETS"
+        rustup target add "${wanted[@]}"
 
     - name: Stamp the version
       shell: bash

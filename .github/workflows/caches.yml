@@ -1,6 +1,6 @@
 name: Caches
 
-on:
+on: # zizmor: ignore[dangerous-triggers] neither job checks out the pull request; they only delete caches through the API
   pull_request_target:
     types: [closed]
   workflow_run:

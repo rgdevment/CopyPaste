@@ -14,9 +14,8 @@ that do the heavy lifting are [Slint](https://slint.dev) with
 [objc2](https://github.com/madsmtm/objc2) crates for the two platforms. Each
 one is permissively licensed, and
 [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) names every last one of them
-with its version, its licence and which of the two systems it ships on. That
-file is written by `npm run notices` and CI refuses a change that leaves it
-behind the lockfiles.
+with its version and its licence. That file is written by `npm run notices` and
+CI refuses a change that leaves it behind the lockfiles.
 
 ## Lucide Icons
 

@@ -37,6 +37,12 @@ jobs:
       - run: npm ci
       - run: npm run lint:md
 
+      # one of the rules parses the workflows, and that is all it needs
+      - name: The library the rules need
+        run: |
+          python3 -c "import yaml" 2>/dev/null \
+            || python3 -m pip install --quiet --break-system-packages pyyaml
+
       # CI guards main with two workflows and this gate only ever asked after one of them, so a
       # convention broken on main would still cut a tag
       - name: Project conventions
@@ -105,9 +111,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          components: rustfmt, clippy
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
       - uses: ./.github/actions/sidecar
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets

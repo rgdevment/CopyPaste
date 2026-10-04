@@ -1,43 +1,29 @@
 name: CLA
 
-on:
+on: # zizmor: ignore[dangerous-triggers] the called workflow reads the pull request through the API and never checks it out
   issue_comment:
     types: [created]
   pull_request_target:
     types: [opened, synchronize, reopened]
 
-permissions:
-  actions: write
-  contents: read
-  pull-requests: write
+permissions: {}
 
 jobs:
+  # The ruleset requires this as «Check CLA signature / signature»: a called job is named after both.
   cla:
     name: Check CLA signature
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: >
-      (github.event_name == 'issue_comment' &&
-       github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') ||
-      github.event_name == 'pull_request_target'
-    steps:
-      - name: CLA Assistant
-        uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_SIGNATURES_TOKEN }}
-        with:
-          path-to-signatures: "signatures/copypaste/v1/cla.json"
-          path-to-document: "https://github.com/rgdevment/CopyPaste/blob/main/CLA.md"
-          branch: "main"
-          allowlist: rgdevment,dependabot[bot]
-          remote-organization-name: rgdevment
-          remote-repository-name: cla-signatures
-          custom-notsigned-prcomment: >
-            Thanks for the pull request. CopyPaste is released under the GPL-3.0
-            and offered under separate commercial terms, which requires a signature
-            from every contributor before code can be merged. You keep the copyright
-            on your work — see [CLA.md](https://github.com/rgdevment/CopyPaste/blob/main/CLA.md).
-            To sign, post a comment on this pull request with exactly:
-          custom-pr-sign-comment: "I have read the CLA Document and I hereby sign the CLA"
-          custom-allsigned-prcomment: "All contributors have signed the CLA. Thanks!"
+    permissions:
+      actions: write
+      pull-requests: write
+    uses: rgdevment/cla-signatures/.github/workflows/cla.yml@0b313d465bc0edf42dc592d5f782434e108564f3 # v1.0.0
+    with:
+      project: copypaste
+      document-url: https://github.com/rgdevment/CopyPaste/blob/main/CLA.md
+      allowlist: dependabot[bot],github-actions[bot]
+      not-signed-message: >-
+        Thanks for the pull request. CopyPaste is released under the GPL-3.0 and offered under
+        separate commercial terms, which requires a signature from whoever opened it and every
+        author and co-author of its commits before it can be merged. You keep the copyright on
+        your work. To sign, post a comment on this pull request with:
+    secrets:
+      signatures-token: ${{ secrets.CLA_SIGNATURES_TOKEN }}
