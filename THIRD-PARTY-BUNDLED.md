@@ -4,7 +4,8 @@
 
 CopyPaste is GPL-3.0-only. The binaries carry the work below, each under its own
 licence. Nothing of it was copied into CopyPaste's own source; what was copied in
-is in [THIRD-PARTY.md](THIRD-PARTY.md).
+is in
+[THIRD-PARTY.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md).
 
 The crates are every one the build resolves on any system, which is what
 Cargo.lock holds; what only the tests use is left out, and a crate resolved at

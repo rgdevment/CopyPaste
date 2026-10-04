@@ -287,6 +287,7 @@ export default function About() {
           aria-expanded={said !== null}
           onClick={() => {
             if (said !== null) return setSaid(null);
+            setTrouble(null);
             notices()
               .then(setSaid)
               .catch(() => setTrouble(t("noticesRefused")));

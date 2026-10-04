@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { composed } from "../markdown";
 import About from "../ui/About";
 
 type Invoke = (what: string, args?: never) => Promise<unknown>;
@@ -92,6 +94,35 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     await who.click(await screen.findByRole("link", { name: "https://crates.io/crates/slint" }));
 
     expect(invoke).toHaveBeenCalledWith("open_web", { url: "https://crates.io/crates/slint" });
+  });
+
+  it("todo enlace del archivo de verdad lleva su sitio, porque uno relativo apunta a la ventana", () => {
+    const holder = document.createElement("div");
+    holder.innerHTML = composed(readFileSync("../THIRD-PARTY-BUNDLED.md", "utf8"));
+    const hrefs = Array.from(holder.querySelectorAll("a")).map((one) => one.getAttribute("href"));
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) {
+      expect(href, `${href} no sale de la ventana`).toMatch(/^https?:\/\//);
+    }
+  });
+
+  it("un reintento que sale bien se lleva el aviso del fallo anterior", async () => {
+    const who = userEvent.setup();
+    let tries = 0;
+    const said = await answering(() => {
+      tries += 1;
+      return tries === 1 ? Promise.reject(new Error("no")) : Promise.resolve("MIT License");
+    });
+    undo.push(said.undo);
+    render(<About />);
+
+    const button = await screen.findByRole("button", { name: "Avisos de terceros" });
+    await who.click(button);
+    expect(await screen.findByText("No se pudieron leer los avisos de terceros")).toBeDefined();
+
+    await who.click(button);
+    expect(await screen.findByText("MIT License")).toBeDefined();
+    expect(screen.queryByText("No se pudieron leer los avisos de terceros")).toBeNull();
   });
 
   it("si no se pueden leer, lo dice en vez de quedarse callado", async () => {
