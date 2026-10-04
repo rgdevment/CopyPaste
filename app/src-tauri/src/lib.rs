@@ -27,6 +27,7 @@ pub fn run() {
             settings::keep,
             settings::where_it_lives,
             settings::former,
+            settings::notices,
             links::open_web,
             links::linkunbound_here,
             waking::waking,

@@ -15,7 +15,9 @@ that do the heavy lifting are [Slint](https://slint.dev) with
 one is permissively licensed, and
 [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) names every last one of them
 with its version and its licence. That file is written by `npm run notices` and
-CI refuses a change that leaves it behind the lockfiles.
+CI refuses a change that leaves it behind the lockfiles. The application carries
+it inside its own binary, so every copy shows it under **About → Third-party
+notices**, wherever it was installed from and with no network.
 
 ## Lucide Icons
 

@@ -934,6 +934,49 @@ button:disabled {
   color: var(--accent);
 }
 
+.notices {
+  display: block;
+  max-height: 380px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  overflow: auto;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.notices h1,
+.notices h2,
+.notices h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.notices table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.notices th,
+.notices td {
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--hair);
+  text-align: left;
+}
+
+.notices pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11.5px;
+}
+
+.notices a {
+  color: var(--accent);
+}
+
 .quiet {
   margin: 0;
   font-size: 12.5px;
