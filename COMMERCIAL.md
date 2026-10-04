@@ -43,8 +43,11 @@ harder, open an issue — that is a bug worth fixing.
 - Ship CopyPaste, or code derived from it, inside a **product you distribute
   to others**, without licensing that product under the GPL.
 - Redistribute it under **your own brand** without the GPL's source disclosure
-  and licence-notice requirements.
-- Bundle it with hardware or preinstall it on machines you sell.
+  requirement. The notices of the third-party work inside it still go with it;
+  see [Third-party components](#third-party-components).
+- Preinstall it on computers you sell. A dedicated device — a kiosk, a
+  terminal, a machine built for one job — also needs a licence for Slint; see
+  below.
 - Satisfy a policy or contract that **forbids copyleft** dependencies in what
   you ship.
 
@@ -59,17 +62,60 @@ fine, carry on".
   license your own product under the GPL.
 - Written permission you can hand to your legal or procurement team.
 
+It covers the code the project owns, which is all of CopyPaste's own source.
+It cannot cover the work of others that CopyPaste is built on.
+
 Terms, scope, and price are agreed per case rather than published, because a
 single-seat integration and an OEM redistribution are not the same deal.
 Contact <github@apirest.cl> with what you want to do and the scale of it.
+
+## Third-party components
+
+CopyPaste is built on other people's open source work, listed with its licence
+in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md). Those licences come with it
+whichever licence you hold for CopyPaste itself.
+
+- **Permissive licences** — MIT, MIT-0, Apache-2.0 (with or without the LLVM
+  exception), BSD-2-Clause, BSD-3-Clause, 0BSD, ISC, Zlib, BSL-1.0,
+  Unicode-3.0, PSF-2.0, CDLA-Permissive-2.0, CC0-1.0 and the Unlicense, which
+  is nearly all of it. Where a package offers a choice that includes
+  LGPL-2.1-or-later, the choice is one of its permissive options. They allow a
+  closed product, and they ask for their notices to ship with it. CopyPaste
+  already shows them under **About → Third-party notices**; keep that, or carry
+  the file another way.
+- **MPL-2.0** — seventeen crates: `symphonia` and its codec and format crates,
+  which decode audio for the waveform in the panel; `selectors`, `cssparser`,
+  `cssparser-macros` and `dtoa-short`, which Tauri brings in; and `option-ext`,
+  through the updater. Their copyleft stops at their own files: change any of
+  them and you publish those files under the MPL, and either way you tell
+  recipients where their source is.
+- **Slint** — the toolkit the panel is drawn with. CopyPaste uses it under
+  GPL-3.0 and cannot pass it on under other terms. A closed desktop product can
+  use it at no cost under the
+  [Slint Royalty-free Desktop, Mobile, and Web Applications License 2.0](https://github.com/slint-ui/slint/blob/master/LICENSES/LicenseRef-Slint-Royalty-free-2.0.md),
+  which asks for attribution in your product: the `AboutSlint` widget in its
+  About screen, or the Made with Slint badge on the page it is downloaded from.
+  That licence does not cover embedded systems, an application that exposes
+  Slint's APIs, or Slint on its own; those need a licence from SixtyFPS GmbH,
+  who make Slint.
+
+Every commercial agreement for CopyPaste says this in writing: the licensee
+distributes Slint under the Slint Royalty-free License 2.0 and meets its
+attribution, or holds a Slint licence of their own; keeps the MPL-2.0 files
+available in source form, with any changes made to them; and ships the
+third-party notices with the product.
 
 ## Store distribution
 
 The GPL's section 10 forbids imposing further restrictions on recipients,
 which conflicts with the terms of some application stores — Apple's App Store
-being the well-known case. That conflict binds **licensees**, not the
-copyright holder: a third party cannot publish CopyPaste there, and the
-project itself can, under separate terms it grants to itself.
+being the well-known case. For the code the project owns, that conflict binds
+**licensees**, not the copyright holder: a third party cannot publish CopyPaste
+there, and the project itself can, under separate terms it grants to itself.
+
+That reaches only the project's own code. Slint comes to CopyPaste under the
+GPL as well, so a build for such a store takes Slint under its royalty-free
+licence instead, whose attribution the README already carries.
 
 Third-party package repositories and the Microsoft Store are unaffected: both
 defer to the software's own licence.
