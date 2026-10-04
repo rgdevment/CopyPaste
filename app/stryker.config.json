@@ -5,6 +5,7 @@
   "vitest": {
     "configFile": "vite.config.ts"
   },
+  "tsconfigFile": "",
   "coverageAnalysis": "perTest",
   "reporters": [
     "progress",

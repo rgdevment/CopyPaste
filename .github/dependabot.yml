@@ -32,6 +32,11 @@ updates:
     open-pull-requests-limit: 3
     commit-message:
       prefix: "chore"
+    ignore:
+      # the newest windows crate still depends on windows-future 0.3; with 0.100 two versions of
+      # the same types coexist and the Windows build stops compiling.
+      - dependency-name: "windows-future"
+        versions: [">= 0.4"]
     groups:
       # windows-rs crates share a windows-core: one moving alone breaks the OCR.
       windows-rs:
@@ -59,6 +64,14 @@ updates:
     open-pull-requests-limit: 3
     commit-message:
       prefix: "chore"
+    ignore:
+      # with vitest 5 the mutation runner reports 0.00 tests per mutant and kills nothing, so the
+      # gate measures nothing while answering green. Measured on 2026-10-04: vitest 4.1.11 kills
+      # 19 of 22 mutants in core.ts where vitest 5.0.2 killed none.
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/coverage-v8"
+        update-types: ["version-update:semver-major"]
     groups:
       window:
         patterns:
