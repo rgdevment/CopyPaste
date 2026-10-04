@@ -77,18 +77,15 @@ whichever licence you hold for CopyPaste itself.
 
 - **Permissive licences** — MIT, MIT-0, Apache-2.0 (with or without the LLVM
   exception), BSD-2-Clause, BSD-3-Clause, 0BSD, ISC, Zlib, BSL-1.0,
-  Unicode-3.0, PSF-2.0, CDLA-Permissive-2.0, CC0-1.0 and the Unlicense, which
-  is nearly all of it. Where a package offers a choice that includes
-  LGPL-2.1-or-later, the choice is one of its permissive options. They allow a
-  closed product, and they ask for their notices to ship with it. CopyPaste
-  already shows them under **About → Third-party notices**; keep that, or carry
-  the file another way.
-- **MPL-2.0** — seventeen crates: `symphonia` and its codec and format crates,
-  which decode audio for the waveform in the panel; `selectors`, `cssparser`,
-  `cssparser-macros` and `dtoa-short`, which Tauri brings in; and `option-ext`,
-  through the updater. Their copyleft stops at their own files: change any of
-  them and you publish those files under the MPL, and either way you tell
-  recipients where their source is.
+  Unicode-3.0, PSF-2.0, CC0-1.0 and the Unlicense, which is nearly all of it.
+  They allow a closed product, and they ask for their notices to ship with it.
+  CopyPaste already shows them under **About → Third-party notices**; keep
+  that, or carry the file another way.
+- **MPL-2.0** — thirteen crates in the binaries: `symphonia` and its codec and
+  format crates, which decode audio for the waveform in the panel, and
+  `option-ext`, through the updater. Their copyleft stops at their own files:
+  change any of them and you publish those files under the MPL, and either way
+  you tell recipients where their source is.
 - **Slint** — the toolkit the panel is drawn with. CopyPaste uses it under
   GPL-3.0 and cannot pass it on under other terms. A closed desktop product can
   use it at no cost under the
