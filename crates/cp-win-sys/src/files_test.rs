@@ -62,16 +62,49 @@ fn a_scheme_the_machine_does_have_is_found() {
 }
 
 #[test]
-fn each_way_of_asking_agrees_about_a_scheme_that_is_not_there() {
-    assert!(!super::asked_of_the_shell("cp-no-hay-nada-asi-9f3a"));
-    assert!(!super::written_as_a_protocol("cp-no-hay-nada-asi-9f3a"));
+fn an_app_from_the_store_is_found_by_its_package_not_by_an_executable() {
+    assert!(
+        super::associated(
+            "ms-windows-store",
+            windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE
+        )
+        .is_none(),
+        "the Store registers no plain executable for its scheme, which is why asking for one alone          missed every app installed from it"
+    );
+    assert!(
+        super::scheme_here("ms-windows-store"),
+        "every Windows carries the Store, so a packaged scheme it cannot find is a check that          misses LinkUnbound from the Store"
+    );
 }
 
 #[test]
-fn the_registry_alone_can_answer_for_a_scheme_the_shell_resolves() {
+fn nothing_answers_for_a_scheme_that_is_not_there() {
+    for asked in [
+        windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE,
+        windows::Win32::UI::Shell::ASSOCSTR_APPID,
+    ] {
+        assert!(super::associated("cp-no-hay-nada-asi-9f3a", asked).is_none());
+    }
+}
+
+#[test]
+fn the_open_with_picker_is_not_a_handler() {
+    assert!(super::answered_by(
+        Some(r"C:\Program Files\LinkUnbound\linkunbound-shell.exe"),
+        None
+    ));
+    assert!(super::answered_by(
+        None,
+        Some("rgdevment.LinkUnbound-BrowserPicker_kdjgfdc2rb3gc!LinkUnbound")
+    ));
     assert!(
-        super::written_as_a_protocol("https"),
-        "an app from the Store registers no plain executable, so the key that makes a scheme a \
-         scheme is what has to be looked at when the shell does not answer"
+        !super::answered_by(Some(r"C:\WINDOWS\system32\OpenWith.exe"), None),
+        "the picker Windows offers when nothing answers was taken for an app"
     );
+    assert!(!super::answered_by(
+        Some(r"c:\windows\SYSTEM32\openwith.EXE"),
+        None
+    ));
+    assert!(!super::answered_by(Some(""), Some("")));
+    assert!(!super::answered_by(None, None));
 }

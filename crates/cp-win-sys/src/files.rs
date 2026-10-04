@@ -1,8 +1,8 @@
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 use windows::Win32::UI::Shell::{
-    ASSOCF_IS_PROTOCOL, ASSOCSTR_COMMAND, AssocQueryStringW, ILCreateFromPathW, ILFree,
-    SHOpenFolderAndSelectItems, ShellExecuteW,
+    ASSOCF_INIT_IGNOREUNKNOWN, ASSOCF_IS_PROTOCOL, ASSOCSTR, ASSOCSTR_APPID, ASSOCSTR_EXECUTABLE,
+    AssocQueryStringW, ILCreateFromPathW, ILFree, SHOpenFolderAndSelectItems, ShellExecuteW,
 };
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 use windows::core::{PCWSTR, PWSTR, w};
@@ -46,45 +46,56 @@ pub fn linkunbound_here() -> bool {
 }
 
 fn scheme_here(scheme: &str) -> bool {
-    asked_of_the_shell(scheme) || written_as_a_protocol(scheme)
+    answered_by(
+        associated(scheme, ASSOCSTR_EXECUTABLE).as_deref(),
+        associated(scheme, ASSOCSTR_APPID).as_deref(),
+    )
 }
 
-fn asked_of_the_shell(scheme: &str) -> bool {
+fn associated(scheme: &str, asked: ASSOCSTR) -> Option<String> {
     let wide: Vec<u16> = scheme.encode_utf16().chain(std::iter::once(0)).collect();
+    let flags = ASSOCF_IS_PROTOCOL | ASSOCF_INIT_IGNOREUNKNOWN;
     let mut room: u32 = 0;
-    let asked = unsafe {
+    let sized = unsafe {
         AssocQueryStringW(
-            ASSOCF_IS_PROTOCOL,
-            ASSOCSTR_COMMAND,
+            flags,
+            asked,
             PCWSTR(wide.as_ptr()),
-            PCWSTR::null(),
+            w!("open"),
             None,
             &raw mut room,
         )
     };
-    if asked.is_err() || room == 0 {
-        return false;
+    if sized.is_err() || room <= 1 {
+        return None;
     }
     let mut said = vec![0u16; room as usize];
     let read = unsafe {
         AssocQueryStringW(
-            ASSOCF_IS_PROTOCOL,
-            ASSOCSTR_COMMAND,
+            flags,
+            asked,
             PCWSTR(wide.as_ptr()),
-            PCWSTR::null(),
+            w!("open"),
             Some(PWSTR(said.as_mut_ptr())),
             &raw mut room,
         )
     };
-    read.is_ok() && said.first().is_some_and(|first| *first != 0)
+    if read.is_err() {
+        return None;
+    }
+    let end = said.iter().position(|one| *one == 0).unwrap_or(said.len());
+    Some(String::from_utf16_lossy(&said[..end]))
 }
 
-fn written_as_a_protocol(scheme: &str) -> bool {
-    use winreg::RegKey;
-    use winreg::enums::{HKEY_CLASSES_ROOT, KEY_READ};
-    RegKey::predef(HKEY_CLASSES_ROOT)
-        .open_subkey_with_flags(scheme, KEY_READ)
-        .is_ok_and(|key| key.get_raw_value("URL Protocol").is_ok())
+fn answered_by(executable: Option<&str>, packaged: Option<&str>) -> bool {
+    let picker = executable.is_some_and(|one| {
+        Path::new(one)
+            .file_name()
+            .and_then(|leaf| leaf.to_str())
+            .is_some_and(|leaf| leaf.eq_ignore_ascii_case("OpenWith.exe"))
+    });
+    (executable.is_some_and(|one| !one.is_empty()) && !picker)
+        || packaged.is_some_and(|one| !one.is_empty())
 }
 
 pub fn open_link(url: &str) -> bool {
