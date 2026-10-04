@@ -91,6 +91,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Other Tools by the Same Author](#other-tools-by-the-same-author)
 - [Project health](#project-health)
 - [License and Spirit](#license-and-spirit)
+- [Acknowledgements](#acknowledgements)
 
 ## See CopyPaste in Action
 
@@ -694,6 +695,22 @@ work.
 I built CopyPaste because I was tired of the alternatives — bloated, resource-hungry, or disrespectful of my privacy. This is a personal copy paste productivity tool, built from a real need, shared because others might need a better clipboard manager too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell.
 
 If you find it useful, I'm glad. If you want to help make it better, even better.
+
+## Acknowledgements
+
+CopyPaste stands on other people's open source work, every piece of it listed
+with its licence in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md) and shown
+in the app under **About → Third-party notices**. The panel is drawn with
+[Slint](https://slint.dev).
+
+<p align="center">
+  <a href="https://slint.dev">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-light.png">
+      <img src="https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-whitebg.png" alt="Made with Slint" height="60"/>
+    </picture>
+  </a>
+</p>
 
 <div align="center">
   <p>Built with care and too much coffee.</p>
