@@ -1,10 +1,11 @@
 use std::path::Path;
-use symphonia::core::audio::AudioBufferRef;
-use symphonia::core::codecs::DecoderOptions;
+use symphonia::core::audio::{Audio, GenericAudioBufferRef};
+use symphonia::core::codecs::CodecParameters;
+use symphonia::core::codecs::audio::AudioDecoderOptions;
 use symphonia::core::formats::FormatOptions;
+use symphonia::core::formats::probe::Hint;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
-use symphonia::core::probe::Hint;
 
 pub const BARS: usize = 48;
 pub const LISTEN_FOR: std::time::Duration = std::time::Duration::from_secs(30);
@@ -20,34 +21,36 @@ pub fn bars_of(path: &Path) -> Option<Vec<u8>> {
     if let Some(after) = path.extension().and_then(|one| one.to_str()) {
         hint.with_extension(after);
     }
-    let probed = symphonia::default::get_probe()
-        .format(
+    let mut reader = symphonia::default::get_probe()
+        .probe(
             &hint,
             stream,
-            &FormatOptions::default(),
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         )
         .ok()?;
-    let mut reader = probed.format;
-    let track = reader
+    let (wanted, params) = reader
         .tracks()
         .iter()
-        .find(|one| one.codec_params.channels.is_some())?;
-    let wanted = track.id;
-    let rate = track.codec_params.sample_rate.unwrap_or(44_100);
+        .find_map(|one| match one.codec_params {
+            Some(CodecParameters::Audio(ref audio)) if audio.channels.is_some() => {
+                Some((one.id, audio.clone()))
+            }
+            _ => None,
+        })?;
+    let rate = params.sample_rate.unwrap_or(44_100);
     let mut decoder = symphonia::default::get_codecs()
-        .make(&track.codec_params, &DecoderOptions::default())
+        .make_audio_decoder(&params, &AudioDecoderOptions::default())
         .ok()?;
 
     let ceiling = u64::from(rate) * LISTEN_FOR.as_secs();
     let mut heard = 0u64;
     let mut peaks: Vec<f32> = Vec::new();
     while heard < ceiling {
-        let packet = match reader.next_packet() {
-            Ok(packet) => packet,
-            Err(_) => break,
+        let Ok(Some(packet)) = reader.next_packet() else {
+            break;
         };
-        if packet.track_id() != wanted {
+        if packet.track_id != wanted {
             continue;
         }
         let Ok(decoded) = decoder.decode(&packet) else {
@@ -59,30 +62,27 @@ pub fn bars_of(path: &Path) -> Option<Vec<u8>> {
     (!peaks.is_empty()).then(|| shrunk(&peaks))
 }
 
-fn loudest(decoded: &AudioBufferRef<'_>) -> f32 {
-    use symphonia::core::audio::Signal;
+fn peak_of<S: Copy>(plane: Option<&[S]>, into: impl Fn(S) -> f32) -> f32 {
+    plane
+        .map(|one| one.iter().fold(0.0f32, |most, s| most.max(into(*s).abs())))
+        .unwrap_or(0.0)
+}
+
+fn loudest(decoded: &GenericAudioBufferRef<'_>) -> f32 {
     match decoded {
-        AudioBufferRef::F32(buffer) => buffer
-            .chan(0)
-            .iter()
-            .fold(0.0f32, |most, one| most.max(one.abs())),
-        AudioBufferRef::S32(buffer) => {
-            let scale = i32::MAX as f32;
-            buffer
-                .chan(0)
-                .iter()
-                .fold(0.0f32, |most, one| most.max((*one as f32 / scale).abs()))
+        GenericAudioBufferRef::F32(one) => peak_of(one.plane(0), |s| s),
+        GenericAudioBufferRef::F64(one) => peak_of(one.plane(0), |s| s as f32),
+        GenericAudioBufferRef::S32(one) => peak_of(one.plane(0), |s| s as f32 / i32::MAX as f32),
+        GenericAudioBufferRef::S16(one) => {
+            peak_of(one.plane(0), |s| f32::from(s) / f32::from(i16::MAX))
         }
-        AudioBufferRef::S16(buffer) => {
-            let scale = i16::MAX as f32;
-            buffer
-                .chan(0)
-                .iter()
-                .fold(0.0f32, |most, one| most.max((*one as f32 / scale).abs()))
+        GenericAudioBufferRef::S8(one) => {
+            peak_of(one.plane(0), |s| f32::from(s) / f32::from(i8::MAX))
         }
-        AudioBufferRef::U8(buffer) => buffer.chan(0).iter().fold(0.0f32, |most, one| {
-            most.max(((f32::from(*one) - 128.0) / 128.0).abs())
-        }),
+        GenericAudioBufferRef::U8(one) => peak_of(one.plane(0), |s| (f32::from(s) - 128.0) / 128.0),
+        GenericAudioBufferRef::U16(one) => {
+            peak_of(one.plane(0), |s| (f32::from(s) - 32_768.0) / 32_768.0)
+        }
         _ => 0.0,
     }
 }

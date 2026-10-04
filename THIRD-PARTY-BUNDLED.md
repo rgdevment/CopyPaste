@@ -23,7 +23,7 @@ of a package are read in full and in a fixed order.
 | `react-dom` | 19.3.0 | MIT |
 | `scheduler` | 0.28.0 | MIT |
 
-## In the core (862 crates)
+## In the core (864 crates)
 
 | Crate | Version | Licence |
 | --- | --- | --- |
@@ -401,6 +401,7 @@ of a package are read in full and in a fixed order.
 | `nix` | 0.31.3 | MIT |
 | `nom` | 7.1.3 | MIT |
 | `nom` | 8.0.0 | MIT |
+| `num-complex` | 0.4.6 | MIT OR Apache-2.0 |
 | `num-conv` | 0.2.2 | MIT OR Apache-2.0 |
 | `num-traits` | 0.2.19 | MIT OR Apache-2.0 |
 | `num_enum` | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
@@ -527,6 +528,7 @@ of a package are read in full and in a fixed order.
 | `ref-cast-impl` | 1.0.27 | MIT OR Apache-2.0 |
 | `ref-cast` | 1.0.27 | MIT OR Apache-2.0 |
 | `regex-automata` | 0.4.18 | MIT OR Apache-2.0 |
+| `regex-lite` | 0.1.9 | MIT OR Apache-2.0 |
 | `regex-syntax` | 0.8.11 | MIT OR Apache-2.0 |
 | `regex` | 1.13.1 | MIT OR Apache-2.0 |
 | `renderdoc-sys` | 1.1.0 | MIT OR Apache-2.0 |
@@ -625,18 +627,18 @@ of a package are read in full and in a fixed order.
 | `svgtypes` | 0.16.1 | Apache-2.0 OR MIT |
 | `swash` | 0.2.10 | Apache-2.0 OR MIT |
 | `swift-rs` | 1.0.8 | MIT OR Apache-2.0 |
-| `symphonia-bundle-flac` | 0.5.5 | MPL-2.0 |
-| `symphonia-bundle-mp3` | 0.5.5 | MPL-2.0 |
-| `symphonia-codec-aac` | 0.5.5 | MPL-2.0 |
-| `symphonia-codec-pcm` | 0.5.5 | MPL-2.0 |
-| `symphonia-codec-vorbis` | 0.5.5 | MPL-2.0 |
-| `symphonia-core` | 0.5.5 | MPL-2.0 |
-| `symphonia-format-isomp4` | 0.5.5 | MPL-2.0 |
-| `symphonia-format-ogg` | 0.5.5 | MPL-2.0 |
-| `symphonia-format-riff` | 0.5.5 | MPL-2.0 |
-| `symphonia-metadata` | 0.5.5 | MPL-2.0 |
-| `symphonia-utils-xiph` | 0.5.5 | MPL-2.0 |
-| `symphonia` | 0.5.5 | MPL-2.0 |
+| `symphonia-bundle-flac` | 0.6.1 | MPL-2.0 |
+| `symphonia-bundle-mp3` | 0.6.1 | MPL-2.0 |
+| `symphonia-codec-aac` | 0.6.1 | MPL-2.0 |
+| `symphonia-codec-pcm` | 0.6.1 | MPL-2.0 |
+| `symphonia-codec-vorbis` | 0.6.1 | MPL-2.0 |
+| `symphonia-common` | 0.6.1 | MPL-2.0 |
+| `symphonia-core` | 0.6.1 | MPL-2.0 |
+| `symphonia-format-isomp4` | 0.6.1 | MPL-2.0 |
+| `symphonia-format-ogg` | 0.6.1 | MPL-2.0 |
+| `symphonia-format-riff` | 0.6.1 | MPL-2.0 |
+| `symphonia-metadata` | 0.6.1 | MPL-2.0 |
+| `symphonia` | 0.6.1 | MPL-2.0 |
 | `syn` | 1.0.109 | MIT OR Apache-2.0 |
 | `syn` | 2.0.119 | MIT OR Apache-2.0 |
 | `syn` | 3.0.5 | MIT OR Apache-2.0 |
