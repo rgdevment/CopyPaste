@@ -18,11 +18,11 @@ before it:
 | `bundle-windows`     | `cp-panel` sidecar + the Tauri app, signed with the PFX, as an NSIS installer. |
 | `bundle-macos`       | The same, per architecture, signed and notarised, as a `.dmg`.          |
 | `bundle-msix`        | MSIX for the Microsoft Store.                                           |
-| `publish`            | The GitHub Release with every artifact and the update manifest.         |
+| `publish`            | The GitHub Release with every artifact, and the `manifest` branch.      |
 | `verify`             | Installs what was just published and checks the update feed answers.    |
 | `msstore`            | Submits the MSIX (stable tags only).                                    |
 | `winget`             | Opens the pull request that adds this version to `winget-pkgs`.         |
-| `homebrew`           | Rewrites the cask in `rgdevment/homebrew-tap`.                          |
+| `homebrew`           | Rewrites `copypaste` (stable) or `copypaste-beta` (candidate) in the tap. |
 
 `feed.yml` then watches the published manifest daily: a deleted asset, a
 retired release or a force-pushed branch breaks the update feed silently, and
@@ -32,10 +32,10 @@ nothing else would notice.
 
 `BUILD_MACOS` at the top of `release.yml` gates `bundle-macos` and is set to
 `"true"`: the Apple secrets are the ones the 2.x already used. With it on, the
-`version` job demands all six (`MACOS_CERTIFICATE_P12`,
-`MACOS_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
-`APPLE_APP_PASSWORD`, `APPLE_TEAM_ID`) and fails the tag before anything is
-built if one is missing. That is the point: an unsigned, un-notarised `.dmg` is
+`version` job demands all five (`MACOS_CERTIFICATE_P12`,
+`MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_PASSWORD`,
+`APPLE_TEAM_ID`) and fails the tag before anything is built if one is missing.
+The signing identity is read off the imported certificate, not a secret. That is the point: an unsigned, un-notarised `.dmg` is
 worse than no `.dmg`.
 
 The job has never run yet, so the first tag is also the first proof that the
@@ -54,16 +54,25 @@ variable and a stable tag.
 
 ### The app does check for updates
 
-`app/src-tauri/src/update.rs` reads the feed the `publish` job writes, once a
-day and whenever the person asks. What it does then depends on where the copy
-came from, which it reads off its own path: a copy under `WindowsApps` is the
-Store's to update and is never offered anything; one under a `Caskroom` is
-told the `brew` command rather than handed an installer; anything else
-installs its own update.
+`app/src-tauri/src/update.rs` works as Tisty's does, once a day and whenever
+the person asks. The `publish` job keeps three files on the `manifest` branch:
+`release-manifest.json` (`latest`, `latestPrerelease`), and two channels signed
+with the updater's minisign key, `latest.json` for stable and `candidate.json`
+for candidates. A copy reads the manifest to decide what to offer — a stable
+copy only ever a stable version, a candidate the newest of either — and then
+downloads from the channels, a candidate trying `candidate.json` first. Until
+the first stable exists, `latest.json` carries the newest candidate too, so a
+copy that only knew that channel is not left behind.
+
+What it does with an offer depends on where the copy came from, which it reads
+off its own path: a copy under `WindowsApps` is the Store's to update and is
+never offered anything; one under `Caskroom/copypaste-beta` or
+`Caskroom/copypaste` is told its own `brew` command rather than handed an
+installer; anything else installs its own update.
 
 Three things guard the install, all of them borrowed from Tisty: the download
-address must be on `github.com` or `objects.githubusercontent.com` before a
-byte is fetched, the version is pinned to the one the person was shown so a
+address must be this repository's releases on `github.com` (or
+`objects.githubusercontent.com`) before a byte is fetched, the version is pinned to the one the person was shown so a
 feed that moves cannot hand over another, and a copy running from the mounted
 `.dmg` refuses rather than failing after the whole download. The panel is
 stopped first, because on Windows an installer cannot replace a binary that is
@@ -121,8 +130,11 @@ git push origin "$TAG"
 Nothing to bump by hand: the version travels from the tag name into the
 binaries and the manifest.
 
-Pre-releases (`v3.1.0-rc1`, `-beta1`) publish the GitHub Release and skip the
-Store, winget and Homebrew.
+A candidate is tagged `vX.Y.Z-rcN` with N from 1 to 9 and nothing else: semver
+orders `rc.3` and `rc10` below `rc2`, so either would never be offered. The
+tag is refused when X.Y.Z is not above the stable already out. Candidates
+publish the GitHub Release and the `copypaste-beta` cask, and skip the Store
+and winget.
 
 ## Crossing from the 2.x — decided 2026-09-29
 

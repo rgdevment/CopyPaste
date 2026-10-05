@@ -30,7 +30,7 @@ pub fn was_found(row: &Listed) -> bool {
 pub fn parts_of(excerpt: &Excerpt) -> (String, String, String) {
     let at = excerpt.segments.iter().position(|one| one.matched);
     let Some(at) = at else {
-        return (excerpt.plain(), String::new(), String::new());
+        return (flat(&excerpt.plain()), String::new(), String::new());
     };
     let lead: String = excerpt.segments[..at]
         .iter()
@@ -40,7 +40,28 @@ pub fn parts_of(excerpt: &Excerpt) -> (String, String, String) {
         .iter()
         .map(|one| one.text.as_str())
         .collect();
-    (trim_left(&lead), excerpt.segments[at].text.clone(), tail)
+    (
+        trim_left(&flat(&lead)),
+        flat(&excerpt.segments[at].text),
+        flat(&tail),
+    )
+}
+
+fn flat(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut spaced = false;
+    for one in text.chars() {
+        if one.is_whitespace() {
+            if !spaced {
+                out.push(' ');
+                spaced = true;
+            }
+            continue;
+        }
+        out.push(one);
+        spaced = false;
+    }
+    out
 }
 
 fn trim_left(lead: &str) -> String {

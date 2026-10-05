@@ -1,14 +1,10 @@
 name: Feed
 
-# What a release checks the moment it publishes, checked again every day and again whenever a
-# release is touched by hand. A feed breaks between releases — an asset deleted, one replaced with
-# other bytes, a release retired, a branch force-pushed — and nothing else would notice until
-# somebody wondered why their CopyPaste had not changed in a month.
 on:
   schedule:
     - cron: "41 7 * * *"
   release:
-    types: [unpublished, deleted]
+    types: [unpublished, deleted, edited]
   workflow_dispatch:
 
 permissions:
@@ -38,17 +34,11 @@ jobs:
           command -v minisign
           feed="https://raw.githubusercontent.com/${{ github.repository }}/manifest"
 
-          # The key every installed copy carries. Verifying against anything else would be
-          # verifying that the release signs itself, which it always does.
           jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
 
-          # What GitHub calls the latest release is the one published most recently, which is not
-          # the highest version: a fix published for an older series after a newer one is out would
-          # be it. The feed follows the versions, so this has to as well.
-          # Only the series this feed answers for: 1.x asks GitHub directly and never reads it.
           newest=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
             -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' \
-            | sed 's/^v//' | grep -E '^[3-9][0-9]*\.' | sort -V | tail -1 || true)
+            | sed 's/^v//' | grep -E '^([3-9]|[1-9][0-9]+)\.' | sort -V | tail -1 || true)
 
           if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
             -H "Cache-Control: no-cache" -o manifest.json "$feed/release-manifest.json"; then
@@ -69,11 +59,6 @@ jobs:
             exit 1
           fi
 
-          # The seed, and only while nothing it answers for has been published. Tied to the
-          # releases rather than to the string, because a release that went out and failed to
-          # write the feed leaves it saying 0.0.0 too — which is the one moment this has to
-          # speak. The 1.x releases are not on this feed at all: that series asks GitHub
-          # directly and never reads this branch.
           seeded=0
           if [ "$said" = "0.0.0" ]; then
             if [ -n "$newest" ]; then
@@ -94,10 +79,6 @@ jobs:
             fi
           fi
 
-          # A channel is more than a version: it carries the address and the signature, and those
-          # are what decide whether an update announced can actually be taken. Checking that the
-          # installer answers 200 is not enough — an asset can be deleted and put back with other
-          # bytes, which answers 200 and fails on every machine in the world.
           takes() {
             local what="$1" expected="$2"
             if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
@@ -140,11 +121,11 @@ jobs:
           if [ "$seeded" = 0 ]; then
             echo "the stable channel:"
             takes latest.json "$said"
+          elif curl -fsSL -H "Cache-Control: no-cache" -o /dev/null "$feed/latest.json" 2>/dev/null; then
+            echo "the stable channel, carrying the newest candidate until a stable one is out:"
+            takes latest.json "$(jq -r '.latestPrerelease // ""' manifest.json)"
           fi
 
-          # The candidates' channel exists only between a candidate and the stable release that
-          # retires it, and that release deletes the evidence along with the file. Unwatched,
-          # anything that happens to a candidate is invisible for its whole life.
           ahead=$(jq -r '.latestPrerelease // ""' manifest.json)
           if [ -n "$ahead" ]; then
             echo "the candidates' channel, announcing $ahead:"
@@ -159,8 +140,6 @@ jobs:
             echo "no candidate is announced, and none is served"
           fi
 
-      # The branch is the feed and nothing else. Cut with `checkout -B` instead of `--orphan` it
-      # carries a copy of the whole source, and that copy would sit there ageing unnoticed.
       - name: The branch holds only the feed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

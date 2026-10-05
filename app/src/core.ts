@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { adopt } from "./locales";
+import { adopt, t } from "./locales";
 
 export const notices = (): Promise<string> => invoke<string>("notices");
 
@@ -289,11 +289,29 @@ export function useTrust() {
   return { trust, asked, ask };
 }
 
-export type Route = "store" | "brew" | "download";
+export type Route = "store" | "brew" | "brewBeta" | "download";
 
 export type Ready = { version: string; installs: boolean };
 
 export type Looked = { route: Route; looked: boolean; ready: Ready | null };
+
+export function troubleSaid(why: unknown): string {
+  switch (String(why)) {
+    case "offline":
+      return t("updateOffline");
+    case "unreadable":
+      return t("updateUnreadable");
+    case "publishing":
+      return t("updatePublishing");
+    case "gone":
+    case "nothing":
+      return t("updateGone");
+    case "busy":
+      return t("updateBusy");
+    default:
+      return t("updateFailed");
+  }
+}
 
 export function useUpdate() {
   const [seen, setSeen] = useState<Looked | null>(null);
@@ -321,7 +339,7 @@ export function useUpdate() {
         if (alive.current) setSeen(one);
       })
       .catch((why) => {
-        if (alive.current) setTrouble(String(why));
+        if (alive.current) setTrouble(troubleSaid(why));
       })
       .finally(() => {
         inFlight.current = false;
@@ -335,11 +353,12 @@ export function useUpdate() {
     setTrouble(null);
     setBusy(true);
     invoke<void>("update_install").catch((why) => {
-      setTrouble(String(why));
+      const said = String(why);
+      setTrouble(troubleSaid(said));
       setBusy(false);
-      // the backend forgets what it could not install, so the offer goes with it — and looking
-      // again here would wipe the reason before anyone could read it
-      setSeen((was) => (was ? { ...was, ready: null } : was));
+      if (said === "gone" || said === "nothing") {
+        setSeen((was) => (was ? { ...was, ready: null } : was));
+      }
     });
   }, []);
 

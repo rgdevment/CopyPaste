@@ -41,6 +41,8 @@ tauri-plugin-single-instance = "2.5"
 tauri-plugin-shell = "2.4"
 tauri-plugin-dialog = "2.8"
 tauri-plugin-updater = "2.13"
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "system-proxy"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 tauri-plugin-global-shortcut = "2.4"
 symphonia = { version = "0.6", default-features = false, features = ["mp3", "aac", "isomp4", "flac", "vorbis", "ogg", "wav", "pcm"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "gif", "bmp", "webp"] }
