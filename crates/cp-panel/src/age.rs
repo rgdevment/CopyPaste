@@ -76,11 +76,11 @@ pub fn day_of(at: i64, offset: i64) -> i64 {
     (at + offset * 1_000).div_euclid(DAY)
 }
 
-pub fn when_of(now: i64, at: i64, offset: i64) -> When {
+pub fn when_of(now: i64, at: i64, now_offset: i64, at_offset: i64) -> When {
     if (0..JUST_NOW).contains(&(now - at)) {
         return When::Now;
     }
-    match day_of(now, offset) - day_of(at, offset) {
+    match day_of(now, now_offset) - day_of(at, at_offset) {
         i64::MIN..=0 => When::Today,
         1 => When::Yesterday,
         _ => When::Before,
@@ -126,9 +126,9 @@ pub fn civil_of(day: i64) -> (i64, usize, i64) {
     (year, usize::try_from(month - 1).unwrap_or(0), day_of_month)
 }
 
-pub fn date_of(now: i64, at: i64, offset: i64, english: bool) -> String {
-    let (year, month, day) = civil_of(day_of(at, offset));
-    let (this_year, _, _) = civil_of(day_of(now, offset));
+pub fn date_of(now: i64, at: i64, now_offset: i64, at_offset: i64, english: bool) -> String {
+    let (year, month, day) = civil_of(day_of(at, at_offset));
+    let (this_year, _, _) = civil_of(day_of(now, now_offset));
     let named = if english {
         MONTHS_EN[month]
     } else {
@@ -141,11 +141,11 @@ pub fn date_of(now: i64, at: i64, offset: i64, english: bool) -> String {
     }
 }
 
-pub fn age_in_group(now: i64, at: i64, offset: i64, english: bool) -> String {
-    match when_of(now, at, offset) {
+pub fn age_in_group(now: i64, at: i64, now_offset: i64, at_offset: i64, english: bool) -> String {
+    match when_of(now, at, now_offset, at_offset) {
         When::Now => age_in(english, now, at),
-        When::Today | When::Yesterday => clock_of(at, offset),
-        When::Before => date_of(now, at, offset, english),
+        When::Today | When::Yesterday => clock_of(at, at_offset),
+        When::Before => date_of(now, at, now_offset, at_offset, english),
     }
 }
 

@@ -99,13 +99,15 @@ pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
     }
 }
 
+pub type Clock = Rc<dyn Fn(i64) -> i64>;
+
 pub struct Rows {
     store: Rc<Store>,
     filter: Filter,
     now: i64,
     metrics: Metrics,
     plain_way: bool,
-    clock: Option<i64>,
+    clock: Option<Clock>,
     rows: RefCell<Vec<Listed>>,
     meta: RefCell<cp_store::MetaByItem>,
     cards: RefCell<Vec<Option<Card>>>,
@@ -126,7 +128,7 @@ impl Rows {
         now: i64,
         metrics: Metrics,
         plain_way: bool,
-        clock: Option<i64>,
+        clock: Option<Clock>,
     ) -> Rc<Self> {
         let rows = Rc::new(Self {
             store,
@@ -152,12 +154,15 @@ impl Rows {
         rows
     }
 
-    fn time_offset(&self) -> Option<i64> {
-        self.clock.filter(|_| by_time(&self.filter, self.plain_way))
+    fn time_offset(&self) -> Option<&Clock> {
+        self.clock
+            .as_ref()
+            .filter(|_| by_time(&self.filter, self.plain_way))
     }
 
-    fn when(&self, row: &Listed, offset: i64) -> crate::age::When {
-        crate::age::when_of(self.now, crate::view::touched_of(row), offset)
+    fn when(&self, row: &Listed, offset: &Clock) -> crate::age::When {
+        let touched = crate::view::touched_of(row);
+        crate::age::when_of(self.now, touched, offset(self.now), offset(touched))
     }
 
     fn heads(&self, rows: &[Listed], index: usize) -> bool {
@@ -428,7 +433,14 @@ impl Rows {
         let english = crate::say::in_english();
         if let Some(offset) = self.time_offset() {
             let touched = crate::view::touched_of(row);
-            card.age = crate::age::age_in_group(self.now, touched, offset, english).into();
+            card.age = crate::age::age_in_group(
+                self.now,
+                touched,
+                offset(self.now),
+                offset(touched),
+                english,
+            )
+            .into();
             if heads {
                 card.heads_group = true;
                 card.group_said = crate::age::when_said(self.when(row, offset), english).into();

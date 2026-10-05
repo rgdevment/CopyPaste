@@ -702,7 +702,7 @@ fn the_general_list_is_grouped_by_when_it_was_copied() {
         noon,
         SIZES,
         false,
-        Some(0),
+        Some(Rc::new(|_| 0)),
     );
     let cards: Vec<_> = (0..rows.row_count())
         .map(|at| rows.row_data(at).expect("card"))

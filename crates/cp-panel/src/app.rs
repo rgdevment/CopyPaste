@@ -806,7 +806,7 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
         now,
         metrics,
         here.plain,
-        Some(here::utc_offset()),
+        Some(Rc::new(here::utc_offset_at)),
     );
     ui.set_opened(false);
     {
