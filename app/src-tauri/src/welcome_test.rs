@@ -67,13 +67,18 @@ fn a_candidate_counts_as_its_own_version() {
 }
 
 #[test]
-fn a_copy_from_before_the_welcome_existed_sees_what_is_written_up_to_now() {
-    let all = said(&["3.0.0", "3.1.0"]);
+fn a_first_run_cut_short_before_the_welcome_closed_takes_the_tour_again() {
     assert_eq!(
-        decide(false, false, None, "3.0.0", &all),
-        Greeting::News {
-            versions: said(&["3.0.0"])
-        }
+        decide(false, true, None, "3.0.0-rc1", &said(&["3.0.0"])),
+        Greeting::Tour { former: true }
+    );
+}
+
+#[test]
+fn a_candidate_never_welcomed_is_not_left_with_nothing_because_the_news_is_ahead() {
+    assert_eq!(
+        decide(false, false, None, "3.0.0-rc2", &said(&["3.0.0"])),
+        Greeting::Tour { former: false }
     );
 }
 
@@ -81,16 +86,14 @@ fn a_copy_from_before_the_welcome_existed_sees_what_is_written_up_to_now() {
 fn a_welcome_nobody_can_read_is_treated_as_never_given() {
     assert_eq!(
         decide(false, false, Some("ayer"), "3.0.0", &said(&["3.0.0"])),
-        Greeting::News {
-            versions: said(&["3.0.0"])
-        }
+        Greeting::Tour { former: false }
     );
 }
 
 #[test]
 fn a_running_version_that_is_not_semver_says_nothing() {
     assert_eq!(
-        decide(false, false, None, "dev", &said(&["3.0.0"])),
+        decide(false, false, Some("3.0.0"), "dev", &said(&["3.0.0"])),
         Greeting::Nothing
     );
 }

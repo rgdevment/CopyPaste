@@ -35,20 +35,20 @@ pub fn decide(
     running: &str,
     told: &[String],
 ) -> Greeting {
-    if fresh {
+    let since = welcomed.and_then(|one| semver::Version::parse(one).ok());
+    let Some(since) = since.filter(|_| !fresh) else {
         return Greeting::Tour { former };
-    }
+    };
     let Ok(now) = semver::Version::parse(running) else {
         return Greeting::Nothing;
     };
-    let since = welcomed.and_then(|one| semver::Version::parse(one).ok());
-    if since.as_ref().is_some_and(|since| *since >= now) {
+    if since >= now {
         return Greeting::Nothing;
     }
     let mut fresh_news: Vec<(semver::Version, &String)> = told
         .iter()
         .filter_map(|said| semver::Version::parse(said).ok().map(|one| (one, said)))
-        .filter(|(one, _)| *one <= now && since.as_ref().is_none_or(|since| one > since))
+        .filter(|(one, _)| *one <= now && *one > since)
         .collect();
     fresh_news.sort_by(|a, b| b.0.cmp(&a.0));
     fresh_news.dedup_by(|a, b| a.0 == b.0);
