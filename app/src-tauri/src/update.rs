@@ -6,6 +6,13 @@ const APART: u64 = 24 * 60 * 60;
 
 const FROM: [&str; 2] = ["github.com", "objects.githubusercontent.com"];
 
+const MANIFEST: &str =
+    "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/release-manifest.json";
+const LATEST: &str = "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json";
+const CANDIDATE: &str =
+    "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/candidate.json";
+const PATIENCE: std::time::Duration = std::time::Duration::from_secs(10);
+
 #[derive(Default)]
 pub struct Installing(AtomicBool);
 
@@ -77,6 +84,66 @@ pub fn worth_offering(found: &str, here: &str) -> bool {
         return false;
     };
     found > here
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Manifest {
+    latest: String,
+    #[serde(default)]
+    latest_prerelease: Option<String>,
+}
+
+pub fn tracks_candidates(here: &str) -> bool {
+    here.parse::<semver::Version>()
+        .is_ok_and(|version| !version.pre.is_empty())
+}
+
+pub fn newer(here: &str, manifest: &str) -> Option<String> {
+    let running: semver::Version = here.parse().ok()?;
+    let read: Manifest = serde_json::from_str(manifest).ok()?;
+    let candidates = tracks_candidates(here);
+    let mut best = read
+        .latest
+        .parse::<semver::Version>()
+        .ok()
+        .filter(|stable| candidates || stable.pre.is_empty());
+    if candidates
+        && let Some(said) = read.latest_prerelease.as_deref()
+        && let Ok(candidate) = said.parse::<semver::Version>()
+        && best.as_ref().is_none_or(|stable| candidate > *stable)
+    {
+        best = Some(candidate);
+    }
+    best.filter(|best| *best > running)
+        .map(|best| best.to_string())
+}
+
+pub fn feeds_for(version: &str) -> Vec<&'static str> {
+    if tracks_candidates(version) {
+        vec![CANDIDATE, LATEST]
+    } else {
+        vec![LATEST]
+    }
+}
+
+async fn fetched() -> Result<String, String> {
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    }
+    let answer = reqwest::Client::builder()
+        .timeout(PATIENCE)
+        .user_agent(concat!("copypaste/", env!("CARGO_PKG_VERSION")))
+        .build()
+        .map_err(|why| why.to_string())?
+        .get(MANIFEST)
+        .send()
+        .await
+        .map_err(|why| why.to_string())?;
+    if !answer.status().is_success() {
+        return Err(format!("the release manifest answered {}", answer.status()));
+    }
+    answer.text().await.map_err(|why| why.to_string())
 }
 
 pub fn mounted(running: Option<&Path>) -> bool {
@@ -176,10 +243,7 @@ fn offered(version: &str, route: Route) -> Option<Ready> {
 }
 
 #[tauri::command(async)]
-pub async fn update_ready(
-    app: tauri::AppHandle,
-    now_please: Option<bool>,
-) -> Result<Looked, String> {
+pub async fn update_ready(now_please: Option<bool>) -> Result<Looked, String> {
     let route = route();
     if route == Route::Store {
         return Ok(Looked {
@@ -198,17 +262,8 @@ pub async fn update_ready(
         });
     }
 
-    use tauri_plugin_updater::UpdaterExt;
-    let found = app
-        .updater_builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|why| why.to_string())?
-        .check()
-        .await
-        .map_err(|why| why.to_string())?;
-
-    let seen = found.map(|one| one.version.clone());
+    let manifest = fetched().await?;
+    let seen = newer(env!("CARGO_PKG_VERSION"), &manifest);
     keep(&Kept {
         checked_at: Some(now()),
         found: seen.clone(),
@@ -247,8 +302,14 @@ pub async fn update_install(
 
     use tauri_plugin_updater::UpdaterExt;
     let asked = want.clone();
+    let feeds = feeds_for(&want)
+        .into_iter()
+        .map(|one| one.parse::<tauri::Url>().map_err(|why| why.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
     let update = app
         .updater_builder()
+        .endpoints(feeds)
+        .map_err(|why| why.to_string())?
         .version_comparator(move |_, release| release.version.to_string() == asked)
         .timeout(std::time::Duration::from_secs(30))
         .build()

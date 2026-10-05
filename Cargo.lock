@@ -1011,6 +1011,8 @@ dependencies = [
  "cp-mac-sys",
  "cp-store",
  "cp-win-sys",
+ "reqwest",
+ "rustls",
  "semver",
  "serde",
  "serde_json",

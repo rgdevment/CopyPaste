@@ -31,6 +31,8 @@ tauri-plugin-single-instance.workspace = true
 tauri-plugin-shell.workspace = true
 tauri-plugin-dialog.workspace = true
 tauri-plugin-updater.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
 tauri-plugin-global-shortcut.workspace = true
 
 [target."cfg(windows)".dependencies]

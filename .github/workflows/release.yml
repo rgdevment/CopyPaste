@@ -1145,6 +1145,9 @@ jobs:
             jq -n --arg l "${latest:-0.0.0}" --arg c "$v" \
               '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
             cp "$RUNNER_TEMP/channel.json" candidate.json
+            if [ "${latest:-0.0.0}" = "0.0.0" ]; then
+              cp "$RUNNER_TEMP/channel.json" latest.json
+            fi
           else
             keep=""
             if [ -n "$ahead" ] \

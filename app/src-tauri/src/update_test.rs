@@ -153,3 +153,65 @@ fn a_store_copy_never_claims_to_have_looked() {
         "saying nothing is not saying it is up to date"
     );
 }
+
+const TODAY: &str = r#"{"schema":1,"latest":"0.0.0","latestPrerelease":"3.0.0-rc2"}"#;
+
+#[test]
+fn a_candidate_is_offered_the_next_candidate_while_no_stable_exists() {
+    assert_eq!(newer("3.0.0-rc1", TODAY).as_deref(), Some("3.0.0-rc2"));
+    assert_eq!(newer("3.0.0-rc2", TODAY), None, "it is already there");
+}
+
+#[test]
+fn a_stable_copy_is_never_walked_onto_a_candidate() {
+    assert_eq!(newer("3.0.0", TODAY), None);
+    let hostile = r#"{"schema":1,"latest":"3.1.0-rc1"}"#;
+    assert_eq!(
+        newer("3.0.0", hostile),
+        None,
+        "a candidate written into the stable field is still a candidate"
+    );
+}
+
+#[test]
+fn a_candidate_takes_the_stable_release_that_passes_it() {
+    let shipped = r#"{"schema":1,"latest":"3.0.0","latestPrerelease":"3.0.0-rc2"}"#;
+    assert_eq!(newer("3.0.0-rc2", shipped).as_deref(), Some("3.0.0"));
+    let both = r#"{"schema":1,"latest":"3.0.0","latestPrerelease":"3.1.0-rc1"}"#;
+    assert_eq!(newer("3.0.0-rc2", both).as_deref(), Some("3.1.0-rc1"));
+    assert_eq!(
+        newer("3.0.0", both),
+        None,
+        "the stable copy stays on its track"
+    );
+}
+
+#[test]
+fn a_stable_copy_is_offered_the_next_stable() {
+    let next = r#"{"schema":1,"latest":"3.0.1"}"#;
+    assert_eq!(newer("3.0.0", next).as_deref(), Some("3.0.1"));
+    assert_eq!(newer("3.0.1", next), None);
+    assert_eq!(
+        newer("3.1.0", next),
+        None,
+        "an older number is never offered"
+    );
+}
+
+#[test]
+fn a_manifest_that_does_not_read_offers_nothing() {
+    assert_eq!(newer("3.0.0-rc1", "not json"), None);
+    assert_eq!(newer("3.0.0-rc1", r#"{"schema":1}"#), None);
+    assert_eq!(newer("dev", TODAY), None);
+    assert_eq!(newer("3.0.0-rc1", r#"{"latest":"three"}"#), None);
+}
+
+#[test]
+fn a_candidate_downloads_from_the_candidates_first_and_a_stable_only_from_the_stable() {
+    assert_eq!(feeds_for("3.0.0-rc2"), vec![CANDIDATE, LATEST]);
+    assert_eq!(feeds_for("3.0.0"), vec![LATEST]);
+    assert_eq!(feeds_for("nonsense"), vec![LATEST]);
+    for one in [MANIFEST, LATEST, CANDIDATE] {
+        assert!(one.starts_with("https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/"));
+    }
+}
