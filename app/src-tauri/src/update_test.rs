@@ -90,6 +90,29 @@ fn a_download_that_does_not_come_from_our_releases_is_refused() {
     assert!(!ours("https://github.com.evil.example.com/x"));
     assert!(!ours("github.com/rgdevment"));
     assert!(!ours(""));
+    assert!(
+        !ours("https://github.com/someone-else/tool/releases/download/v1/x.exe"),
+        "github.com alone is not enough: it has to be this project's releases"
+    );
+}
+
+#[test]
+fn a_copy_from_the_beta_cask_is_told_its_own_command() {
+    assert_eq!(
+        chosen(
+            Some(Path::new(
+                "/opt/homebrew/Caskroom/copypaste-beta/3.0.0-rc2/CopyPaste.app/Contents/MacOS/CopyPaste"
+            )),
+            UNBREWED
+        ),
+        Route::BrewBeta
+    );
+    let beta: fn(&Path) -> bool = |at| at == Path::new("/usr/local/Caskroom/copypaste-beta");
+    let at = Path::new("/Applications/CopyPaste.app/Contents/MacOS/CopyPaste");
+    if cfg!(target_os = "macos") {
+        assert_eq!(chosen(Some(at), beta), Route::BrewBeta);
+    }
+    assert!(!self_installs(Route::BrewBeta));
 }
 
 #[test]
@@ -131,6 +154,7 @@ fn what_is_kept_survives_being_written_and_read_again() {
     let one = Kept {
         checked_at: Some(1_700_000_000),
         found: Some("3.0.1".to_owned()),
+        from: Some("3.0.0".to_owned()),
     };
     let said = serde_json::to_string(&one).expect("written");
     let back: Kept = serde_json::from_str(&said).expect("read");
@@ -156,18 +180,22 @@ fn a_store_copy_never_claims_to_have_looked() {
 
 const TODAY: &str = r#"{"schema":1,"latest":"0.0.0","latestPrerelease":"3.0.0-rc2"}"#;
 
+fn offer(here: &str, manifest: &str) -> Option<String> {
+    newer(here, manifest).expect("a manifest that reads")
+}
+
 #[test]
 fn a_candidate_is_offered_the_next_candidate_while_no_stable_exists() {
-    assert_eq!(newer("3.0.0-rc1", TODAY).as_deref(), Some("3.0.0-rc2"));
-    assert_eq!(newer("3.0.0-rc2", TODAY), None, "it is already there");
+    assert_eq!(offer("3.0.0-rc1", TODAY).as_deref(), Some("3.0.0-rc2"));
+    assert_eq!(offer("3.0.0-rc2", TODAY), None, "it is already there");
 }
 
 #[test]
 fn a_stable_copy_is_never_walked_onto_a_candidate() {
-    assert_eq!(newer("3.0.0", TODAY), None);
+    assert_eq!(offer("3.0.0", TODAY), None);
     let hostile = r#"{"schema":1,"latest":"3.1.0-rc1"}"#;
     assert_eq!(
-        newer("3.0.0", hostile),
+        offer("3.0.0", hostile),
         None,
         "a candidate written into the stable field is still a candidate"
     );
@@ -176,34 +204,66 @@ fn a_stable_copy_is_never_walked_onto_a_candidate() {
 #[test]
 fn a_candidate_takes_the_stable_release_that_passes_it() {
     let shipped = r#"{"schema":1,"latest":"3.0.0","latestPrerelease":"3.0.0-rc2"}"#;
-    assert_eq!(newer("3.0.0-rc2", shipped).as_deref(), Some("3.0.0"));
+    assert_eq!(offer("3.0.0-rc2", shipped).as_deref(), Some("3.0.0"));
     let both = r#"{"schema":1,"latest":"3.0.0","latestPrerelease":"3.1.0-rc1"}"#;
-    assert_eq!(newer("3.0.0-rc2", both).as_deref(), Some("3.1.0-rc1"));
+    assert_eq!(offer("3.0.0-rc2", both).as_deref(), Some("3.1.0-rc1"));
     assert_eq!(
-        newer("3.0.0", both),
+        offer("3.0.0", both),
         None,
         "the stable copy stays on its track"
+    );
+    let behind = r#"{"schema":1,"latest":"3.0.1","latestPrerelease":"3.0.1-rc1"}"#;
+    assert_eq!(
+        offer("3.0.0-rc2", behind).as_deref(),
+        Some("3.0.1"),
+        "a candidate older than the stable one is passed over"
     );
 }
 
 #[test]
 fn a_stable_copy_is_offered_the_next_stable() {
     let next = r#"{"schema":1,"latest":"3.0.1"}"#;
-    assert_eq!(newer("3.0.0", next).as_deref(), Some("3.0.1"));
-    assert_eq!(newer("3.0.1", next), None);
+    assert_eq!(offer("3.0.0", next).as_deref(), Some("3.0.1"));
+    assert_eq!(offer("3.0.1", next), None);
     assert_eq!(
-        newer("3.1.0", next),
+        offer("3.1.0", next),
         None,
         "an older number is never offered"
     );
 }
 
 #[test]
-fn a_manifest_that_does_not_read_offers_nothing() {
-    assert_eq!(newer("3.0.0-rc1", "not json"), None);
-    assert_eq!(newer("3.0.0-rc1", r#"{"schema":1}"#), None);
-    assert_eq!(newer("dev", TODAY), None);
-    assert_eq!(newer("3.0.0-rc1", r#"{"latest":"three"}"#), None);
+fn semver_reads_a_dotted_or_two_digit_candidate_as_older_which_is_why_tags_stop_at_rc9() {
+    let dotted = r#"{"schema":1,"latest":"0.0.0","latestPrerelease":"3.0.0-rc.3"}"#;
+    assert_eq!(offer("3.0.0-rc2", dotted), None);
+    let ten = r#"{"schema":1,"latest":"0.0.0","latestPrerelease":"3.0.0-rc10"}"#;
+    assert_eq!(offer("3.0.0-rc2", ten), None);
+}
+
+#[test]
+fn a_manifest_that_does_not_read_is_an_error_and_not_an_answer() {
+    for broken in [
+        "not json",
+        r#"{"schema":1}"#,
+        r#"{"schema":2,"latest":"3.0.0"}"#,
+        r#"{"schema":1,"latest":"three"}"#,
+        r#"{"latest":"3.0.0"}"#,
+    ] {
+        assert_eq!(newer("3.0.0-rc1", broken), Err(UNREADABLE), "{broken}");
+    }
+    assert_eq!(newer("dev", TODAY), Ok(None));
+}
+
+#[test]
+fn what_was_kept_is_offered_again_only_under_the_same_rule() {
+    assert!(allowed("3.0.0-rc3", "3.0.0-rc2"));
+    assert!(allowed("3.0.1", "3.0.0"));
+    assert!(
+        !allowed("3.1.0-rc1", "3.0.1"),
+        "a candidate a former candidate found is not offered to the stable copy that replaced it"
+    );
+    assert!(!allowed("3.0.0", "3.0.0"));
+    assert!(!allowed("2.9.0", "3.0.0"));
 }
 
 #[test]

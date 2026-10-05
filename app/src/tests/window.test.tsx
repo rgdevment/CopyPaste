@@ -404,7 +404,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("si la instalación falla, se ve por qué y deja de ofrecerla", async () => {
+  it("si la versión ya no está, se dice y deja de ofrecerla", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -416,7 +416,7 @@ describe("la ventana", () => {
         });
       }
       if (what === "update_install") {
-        return Promise.reject(new Error("3.1.0 is not on the feed any more"));
+        return Promise.reject("gone");
       }
       return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
     });
@@ -425,7 +425,7 @@ describe("la ventana", () => {
       render(<App />);
       await who.click(screen.getByRole("button", { name: "Acerca de" }));
       await who.click(await screen.findByRole("button", { name: "Actualizar" }));
-      expect(await screen.findByText(/is not on the feed any more/)).toBeDefined();
+      expect(await screen.findByText(/ya no está disponible/)).toBeDefined();
       expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
     } finally {
       vi.mocked(invoke).mockImplementation(real as never);
@@ -436,13 +436,13 @@ describe("la ventana", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
-      if (what === "update_ready") return Promise.reject(new Error("no hay red"));
+      if (what === "update_ready") return Promise.reject("offline");
       return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
     });
     try {
       render(<App />);
       await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
-      expect(await screen.findByText(/no hay red/)).toBeDefined();
+      expect(await screen.findByText(/Revisa tu conexión/)).toBeDefined();
       expect(screen.queryByText("Estás en la última versión")).toBeNull();
       expect(document.querySelector(".pip.ok")).toBeNull();
     } finally {
