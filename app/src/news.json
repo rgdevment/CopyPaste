@@ -1,5 +1,36 @@
 [
   {
+    "version": "3.0.0-rc2",
+    "es": [
+      {
+        "title": "Una vista general más clara",
+        "said": "cada tarjeta muestra lo que guarda, y la lista se agrupa en Ahora, Hoy, Ayer y Antes."
+      },
+      {
+        "title": "Pegar como, con números",
+        "said": "en el menú de formas eliges cada una con su número, del 1 al 9."
+      },
+      {
+        "title": "Imágenes en cualquier terminal",
+        "said": "al pegar una imagen en un terminal, llega su ruta lista para usar."
+      }
+    ],
+    "en": [
+      {
+        "title": "A clearer general view",
+        "said": "each card shows what it holds, and the list is grouped into Now, Today, Yesterday and Earlier."
+      },
+      {
+        "title": "Paste as, by number",
+        "said": "in the menu of forms, pick each one by its number, from 1 to 9."
+      },
+      {
+        "title": "Pictures in any terminal",
+        "said": "paste a picture into a terminal and its path arrives, ready to use."
+      }
+    ]
+  },
+  {
     "version": "3.0.0",
     "es": [
       {

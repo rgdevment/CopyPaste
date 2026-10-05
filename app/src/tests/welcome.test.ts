@@ -47,7 +47,8 @@ describe("la bienvenida", () => {
         }
       }
     }
-    const [first] = news;
+    const first = news.find((one) => one.es.some((said) => said.said.includes("{name}")));
+    if (!first) throw new Error("una novedad nombra la tecla del nombre");
     const [onAMac] = toldFor([first.version], false, true);
     expect(onAMac.told.some((one) => one.said.includes("⌘E"))).toBe(true);
     const [onWindows] = toldFor([first.version], false, false);
