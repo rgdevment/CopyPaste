@@ -61,3 +61,9 @@ fn nothing_to_drag_never_starts_a_drag() {
 fn no_window_is_aimed_at_nowhere_in_particular() {
     assert_eq!(super::towards(0), crate::landing::Towards::Elsewhere);
 }
+
+#[test]
+fn nobody_in_front_is_pasted_to_as_anywhere_else() {
+    assert_eq!(towards(0), crate::landing::Towards::Elsewhere);
+    assert_eq!(towards(-1), crate::landing::Towards::Elsewhere);
+}

@@ -87,3 +87,58 @@ fn this_very_process_has_a_command_line() {
     let line = command_line_of(std::process::id()).expect("readable");
     assert!(!line.is_empty());
 }
+
+#[test]
+fn a_process_that_opens_a_pseudoconsole_is_found_hosting_one() {
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::System::Console::{COORD, ClosePseudoConsole, CreatePseudoConsole};
+    use windows::Win32::System::Pipes::CreatePipe;
+
+    let mine = std::process::id();
+    assert!(
+        !process_hosts_a_pseudoconsole(mine),
+        "nothing is hosted before the pseudoconsole opens"
+    );
+
+    let (mut input_read, mut input_write) = (HANDLE::default(), HANDLE::default());
+    let (mut output_read, mut output_write) = (HANDLE::default(), HANDLE::default());
+    unsafe { CreatePipe(&mut input_read, &mut input_write, None, 0) }.expect("an input pipe");
+    unsafe { CreatePipe(&mut output_read, &mut output_write, None, 0) }.expect("an output pipe");
+    let console =
+        unsafe { CreatePseudoConsole(COORD { X: 80, Y: 25 }, input_read, output_write, 0) }
+            .expect("a pseudoconsole");
+
+    let hosted = (0..50).any(|_| {
+        let found = process_hosts_a_pseudoconsole(mine);
+        if !found {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        found
+    });
+
+    unsafe { ClosePseudoConsole(console) };
+    for pipe in [input_read, input_write, output_read, output_write] {
+        let _ = unsafe { CloseHandle(pipe) };
+    }
+    assert!(
+        hosted,
+        "Windows starts a headless console host as a child of whoever asked"
+    );
+}
+
+#[test]
+fn a_child_just_started_is_listed_with_its_name() {
+    let mut child = std::process::Command::new("cmd.exe")
+        .args(["/c", "ping", "-n", "3", "127.0.0.1"])
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .expect("cmd starts");
+    let found = children_of(std::process::id());
+    let _ = child.kill();
+    let _ = child.wait();
+    assert!(
+        found
+            .iter()
+            .any(|(pid, exe)| *pid == child.id() && exe.eq_ignore_ascii_case("cmd.exe"))
+    );
+}

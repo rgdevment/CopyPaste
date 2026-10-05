@@ -35,3 +35,11 @@ fn missing_paths_reports_what_is_gone_and_only_that() {
     assert!(missing[0].ends_with("/does-not-exist.txt"));
     assert!(missing_paths("").is_empty());
 }
+
+#[test]
+fn the_bundle_of_a_pid_is_the_one_its_app_answers_with() {
+    assert_eq!(bundle_of(-1), None);
+    if let Some((pid, bundle)) = frontmost() {
+        assert_eq!(bundle_of(pid), bundle);
+    }
+}

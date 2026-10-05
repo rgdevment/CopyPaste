@@ -55,9 +55,10 @@ pub fn hosts_a_pseudoconsole(handle: isize) -> bool {
         return false;
     }
     let window = HWND(handle as *mut std::ffi::c_void);
-    let Some(parent) = process_of(window) else {
-        return false;
-    };
+    process_of(window).is_some_and(process_hosts_a_pseudoconsole)
+}
+
+pub fn process_hosts_a_pseudoconsole(parent: u32) -> bool {
     children_of(parent).into_iter().any(|(child, exe)| {
         is_console_host(&exe) && command_line_of(child).is_some_and(|line| is_headless(&line))
     })
