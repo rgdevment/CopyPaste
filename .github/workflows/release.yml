@@ -445,8 +445,13 @@ jobs:
           v="${{ needs.version.outputs.version }}"
           exe="../dist/copypaste-installer-$v-windows-x86_64.exe"
           rm -f "$exe.sig"
-          npm run tauri -- signer sign "$exe"
+          npm run tauri -- signer sign --app-version "$v" "$exe"
           test -s "$exe.sig" || { echo "::error::no updater signature was written"; exit 1; }
+          base64 -d < "$exe.sig" > "$RUNNER_TEMP/one.minisig"
+          if ! bash ../scripts/signed_for.sh "$RUNNER_TEMP/one.minisig" "$v"; then
+            echo "::error::the updater signature is not bound to $v"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -637,9 +642,15 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
+          v="${{ needs.version.outputs.version }}"
           out="../target/$TARGET/release/bundle/macos"
-          npm run tauri -- signer sign "$out/CopyPaste.app.tar.gz"
+          npm run tauri -- signer sign --app-version "$v" "$out/CopyPaste.app.tar.gz"
           test -s "$out/CopyPaste.app.tar.gz.sig"
+          base64 -d < "$out/CopyPaste.app.tar.gz.sig" > "$RUNNER_TEMP/one.minisig"
+          if ! bash ../scripts/signed_for.sh "$RUNNER_TEMP/one.minisig" "$v"; then
+            echo "::error::the updater signature is not bound to $v"
+            exit 1
+          fi
 
       - name: Name it after the release
         run: |
@@ -886,9 +897,14 @@ jobs:
           could ever verify this update. Nothing was published."
               exit 1
             fi
+            if ! bash scripts/signed_for.sh one.minisig "$v"; then
+              echo "::error::$one is not signed for $v, and every copy refuses an update whose \
+          signature does not name it. Nothing was published."
+              exit 1
+            fi
           done
           rm -f feed.pub one.minisig
-          echo "the signatures and the shipped key are halves of the same pair"
+          echo "the signatures and the shipped key are halves of the same pair, bound to $v"
 
       - name: The manifest a 2.x can read
         if: vars.BRIDGE_MANIFEST == 'true'
@@ -1303,6 +1319,10 @@ jobs:
               echo "$os verifies"
             else
               echo "::error::$os does not verify against the key this build ships"
+              exit 1
+            fi
+            if ! bash scripts/signed_for.sh one.sig "$v"; then
+              echo "::error::$os is not signed for $v, and every copy from here on refuses it"
               exit 1
             fi
           done

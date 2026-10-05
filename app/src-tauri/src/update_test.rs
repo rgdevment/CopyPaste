@@ -275,3 +275,13 @@ fn a_candidate_downloads_from_the_candidates_first_and_a_stable_only_from_the_st
         assert!(one.starts_with("https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/"));
     }
 }
+
+#[test]
+fn a_copy_refuses_an_update_not_signed_for_its_version() {
+    let conf: serde_json::Value =
+        serde_json::from_str(include_str!("../tauri.conf.json")).expect("tauri.conf.json reads");
+    assert_eq!(
+        conf["plugins"]["updater"]["requireSignedVersion"],
+        serde_json::Value::Bool(true)
+    );
+}

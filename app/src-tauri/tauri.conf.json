@@ -60,6 +60,7 @@
       "endpoints": [
         "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json"
       ],
+      "requireSignedVersion": true,
       "windows": {
         "installMode": "passive"
       }

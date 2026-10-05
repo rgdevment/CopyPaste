@@ -114,6 +114,16 @@ jobs:
                       every installed copy carries. It answers, and it cannot be installed: $url"
                 return 1
               fi
+              local bound=0
+              bash scripts/signed_for.sh one.sig "$expected" || bound=$?
+              case $bound in
+                0) ;;
+                2) echo "::warning::the installer for $os in $what is signed for no version; \
+                         copies that require one will not take it" ;;
+                *) echo "::error::the installer for $os in $what is signed for another version \
+                         than the «${expected}» it is offered as: $url"
+                   return 1 ;;
+              esac
               echo "  $os verifies"
             done
           }
