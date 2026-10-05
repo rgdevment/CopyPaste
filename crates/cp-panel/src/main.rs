@@ -6,6 +6,7 @@ mod excuse;
 mod folder;
 mod group;
 mod here;
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 mod landing;
 mod layout;
 mod link;
