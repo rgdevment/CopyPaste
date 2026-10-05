@@ -1026,7 +1026,9 @@ fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towa
     if towards == Towards::Elsewhere {
         return Landing::anywhere();
     }
-    let label = store.label_of(id).unwrap_or_default();
+    let label = (towards == Towards::Browser)
+        .then(|| store.label_of(id).ok().flatten())
+        .flatten();
     let content = here::content_of(item, None);
     let files = crate::dragging::files_for(
         item.kind,

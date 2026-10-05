@@ -44,14 +44,65 @@ fn a_terminal_wins_over_a_browser_and_anything_else_is_left_alone() {
 }
 
 #[test]
-fn a_path_is_quoted_only_when_a_space_would_split_it() {
-    assert_eq!(quoted(&[r"C:\a\b.png"]), r"C:\a\b.png");
+fn a_path_whose_backslashes_bash_would_read_inside_quotes_is_not_safe() {
+    assert!(
+        !shell_safe(r"D:\"),
+        "a drive's root ends in a backslash, and bash reads it as escaping the closing quote"
+    );
+    assert!(
+        !shell_safe(r"\\server\share\a.png"),
+        "bash folds the two leading backslashes of a network path into one"
+    );
+    assert!(
+        shell_safe(r"C:\Temp\a.png"),
+        "one backslash before a letter stays one"
+    );
+}
+
+#[test]
+fn a_typographic_quote_is_a_quote_to_powershell() {
+    for bad in ['\u{201C}', '\u{201D}', '\u{201E}'] {
+        assert!(!shell_safe(&format!(r"C:\informe {bad}final.pdf")));
+    }
+}
+
+#[test]
+fn a_path_is_always_quoted() {
+    assert_eq!(quoted(&[r"C:\a\b.png"]), r#""C:\a\b.png""#);
     assert_eq!(quoted(&[r"C:\a b\c.png"]), r#""C:\a b\c.png""#);
     assert_eq!(
         quoted(&[r"C:\x.png", r"C:\y z.png"]),
-        r#"C:\x.png "C:\y z.png""#
+        r#""C:\x.png" "C:\y z.png""#
     );
     assert_eq!(quoted::<&str>(&[]), "");
+}
+
+#[test]
+fn a_path_a_shell_would_expand_even_inside_quotes_is_not_safe() {
+    assert!(shell_safe(r"C:\Temp\CopyPaste\dragged\a3f1\a3f1.png"));
+    assert!(
+        shell_safe(r"C:\a b\c&d;e(f).png"),
+        "inside double quotes these are only letters"
+    );
+    for bad in ["$", "`", "%", "!", "\""] {
+        assert!(
+            !shell_safe(&format!(r"C:\cost {bad}5.png")),
+            "{bad} is read by some shell inside quotes"
+        );
+    }
+}
+
+#[test]
+fn a_terminal_is_offered_nothing_rather_than_a_path_a_shell_would_expand() {
+    assert_eq!(
+        landing(Towards::Terminal, &[r"C:\Users\x$y\a.png"]).offer(),
+        Offer::Nothing
+    );
+    assert_eq!(
+        landing(Towards::Browser, &[r"C:\Users\x$y\a.png"]).offer(),
+        Offer::Files(vec![r"C:\Users\x$y\a.png".to_owned()]),
+        "a browser reads the file list, not a command line"
+    );
 }
 
 fn landing(towards: Towards, files: &[&str]) -> Landing {

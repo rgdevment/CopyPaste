@@ -36,7 +36,10 @@ impl Landing {
         }
         match self.towards {
             Towards::Browser => Offer::Files(named),
-            Towards::Terminal => Offer::Text(quoted(&named)),
+            Towards::Terminal if named.iter().all(|one| shell_safe(one)) => {
+                Offer::Text(quoted(&named))
+            }
+            Towards::Terminal => Offer::Nothing,
             Towards::Elsewhere => Offer::Nothing,
         }
     }
@@ -86,17 +89,17 @@ pub fn towards_of(process: &str, class: &str) -> Towards {
     Towards::Elsewhere
 }
 
+const EXPANDED_INSIDE_QUOTES: [char; 8] =
+    ['$', '`', '%', '!', '"', '\u{201C}', '\u{201D}', '\u{201E}'];
+
+pub fn shell_safe(path: &str) -> bool {
+    !path.contains(EXPANDED_INSIDE_QUOTES) && !path.contains(r"\\") && !path.ends_with('\\')
+}
+
 pub fn quoted<S: AsRef<str>>(paths: &[S]) -> String {
     paths
         .iter()
-        .map(|one| {
-            let one = one.as_ref();
-            if one.chars().any(char::is_whitespace) {
-                format!("\"{one}\"")
-            } else {
-                one.to_owned()
-            }
-        })
+        .map(|one| format!("\"{}\"", one.as_ref()))
         .collect::<Vec<_>>()
         .join(" ")
 }
