@@ -106,10 +106,10 @@ mod platform {
             cp_win::restore::Restored::Written {
                 formats,
                 incomplete: true,
-            } => Landed::Short {
-                placed: formats,
-                wanted: ready.wanted(),
-            },
+            } => {
+                let (placed, wanted) = ready.fitted(formats);
+                Landed::Short { placed, wanted }
+            }
             cp_win::restore::Restored::Written { .. } => Landed::Whole,
             _ => Landed::Nothing,
         };
