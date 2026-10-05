@@ -1026,6 +1026,12 @@ jobs:
                   a version they left behind"
             exit 1
           fi
+          stable=$(jq -r '.latest // ""' <<< "$feed")
+          if [ "$track" = "candidates" ] && [ -n "$stable" ] && [ "$stable" != "0.0.0" ] \
+             && [ "$(printf '%s\n%s\n' "$stable" "${v%%-*}" | sort -V | tail -1)" = "$stable" ]; then
+            echo "::error::$v is a candidate for $stable or older, which is already out"
+            exit 1
+          fi
           echo "the $track feed says «${was:-nothing}»; $v may follow"
 
       - name: Publish
