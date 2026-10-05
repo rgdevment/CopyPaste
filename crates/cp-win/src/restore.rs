@@ -29,6 +29,31 @@ impl Ready {
     pub fn wanted(&self) -> usize {
         self.owned.len()
     }
+
+    pub fn offer_files<S: AsRef<str>>(&mut self, paths: &[S]) {
+        if paths.is_empty() {
+            return;
+        }
+        let effect = id_of(DROP_EFFECT);
+        self.owned
+            .retain(|(id, _)| *id != CF_HDROP && Some(*id) != effect);
+        self.owned.push((CF_HDROP, drop_of(paths)));
+        if let Some(effect) = effect {
+            self.owned.push((effect, COPY.to_le_bytes().to_vec()));
+        }
+    }
+
+    pub fn offer_text(&mut self, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        self.owned.retain(|(id, _)| *id != CF_UNICODETEXT);
+        self.owned.push((CF_UNICODETEXT, utf16_of(text)));
+    }
+
+    pub fn offers(&self, id: u32) -> bool {
+        self.owned.iter().any(|(kept, _)| *kept == id)
+    }
 }
 
 pub fn ready_for(item: &Item) -> Ready {

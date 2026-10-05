@@ -56,3 +56,8 @@ fn nothing_to_drag_never_starts_a_drag() {
     let handle = RawWindowHandle::Win32(Win32WindowHandle::new(hwnd));
     assert_ne!(drag_out(handle, &[]), Dragged::Started);
 }
+
+#[test]
+fn no_window_is_aimed_at_nowhere_in_particular() {
+    assert_eq!(super::towards(0), crate::landing::Towards::Elsewhere);
+}

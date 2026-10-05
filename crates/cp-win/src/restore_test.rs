@@ -229,3 +229,72 @@ fn every_image_the_catalog_keeps_comes_back_as_a_bitmap_too() {
         );
     }
 }
+
+fn an_image() -> Ready {
+    ready_for(&Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![inline(SYNTHETIC_IMAGE, &image_bytes())],
+    })
+}
+
+#[test]
+fn a_browser_is_handed_the_image_and_a_file_it_can_name() {
+    let mut ready = an_image();
+    let before = ready.wanted();
+    ready.offer_files(&[r"C:\Temp\CopyPaste\dragged\a3f1\logo final.png"]);
+    assert!(
+        ready.offers(CF_HDROP),
+        "the file is what gives the upload its own name"
+    );
+    assert!(
+        ready.offers(CF_DIB),
+        "the image stays for whatever reads the bitmap"
+    );
+    let effect = id_of(DROP_EFFECT).expect("the system names its drop effect");
+    assert!(
+        ready.offers(effect),
+        "a paste of a file says it is a copy, not a move"
+    );
+    assert_eq!(ready.wanted(), before + 2);
+}
+
+#[test]
+fn offering_the_files_twice_leaves_one_list_of_them() {
+    let mut ready = an_image();
+    ready.offer_files(&[r"C:\a.png"]);
+    ready.offer_files(&[r"C:\b.png"]);
+    let lists = ready.owned.iter().filter(|(id, _)| *id == CF_HDROP).count();
+    assert_eq!(lists, 1);
+    assert!(
+        ready
+            .owned
+            .iter()
+            .any(|(id, bytes)| *id == CF_HDROP && *bytes == drop_of(&[r"C:\b.png"]))
+    );
+}
+
+#[test]
+fn a_terminal_is_handed_the_path_as_text_beside_the_image() {
+    let mut ready = an_image();
+    ready.offer_text(r#""C:\Temp\logo final.png""#);
+    assert!(
+        ready.owned.iter().any(|(id, bytes)| *id == CF_UNICODETEXT
+            && *bytes == utf16_of(r#""C:\Temp\logo final.png""#))
+    );
+    assert!(ready.offers(CF_DIB));
+    assert!(
+        !ready.offers(CF_HDROP),
+        "a terminal reads text first, and a file list would not help"
+    );
+}
+
+#[test]
+fn nothing_offered_changes_nothing() {
+    let mut ready = an_image();
+    let before = ready.wanted();
+    ready.offer_files::<&str>(&[]);
+    ready.offer_text("");
+    assert_eq!(ready.wanted(), before);
+    assert!(!ready.offers(CF_HDROP));
+    assert!(!ready.offers(CF_UNICODETEXT));
+}

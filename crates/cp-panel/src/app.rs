@@ -1,4 +1,5 @@
 use crate::here;
+use crate::landing::{Landing, Towards};
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
 use crate::opening::Reached;
@@ -206,11 +207,8 @@ impl App {
             let asking = state.borrow().asking;
             match asking {
                 Asking::Forms(id) => {
-                    let (store, engine) = {
-                        let state = state.borrow();
-                        (state.store.clone(), state.engine.clone())
-                    };
-                    if paste_as(&store, engine.as_deref(), id, key.as_str()) {
+                    let (store, engine, towards) = aimed(&state);
+                    if paste_as(&store, engine.as_deref(), id, key.as_str(), towards) {
                         deliver(&ui, &state);
                     } else {
                         complain(&ui, busy());
@@ -403,11 +401,8 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste(move |id| {
-            let (store, engine) = {
-                let state = state.borrow();
-                (state.store.clone(), state.engine.clone())
-            };
-            let handed = hand_over(&store, engine.as_deref(), i64::from(id));
+            let (store, engine, towards) = aimed(&state);
+            let handed = hand_over(&store, engine.as_deref(), i64::from(id), towards);
             if let Some(ui) = ui.upgrade() {
                 if handed {
                     deliver(&ui, &state);
@@ -423,7 +418,7 @@ impl App {
                 let state = state.borrow();
                 (state.store.clone(), state.engine.clone())
             };
-            let handed = hand_over(&store, engine.as_deref(), i64::from(id));
+            let handed = hand_over(&store, engine.as_deref(), i64::from(id), Towards::Elsewhere);
             if let Some(ui) = ui.upgrade() {
                 if handed {
                     following(&ui, &state, i64::from(id));
@@ -593,11 +588,14 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste_as(move |id, key| {
-            let (store, engine) = {
-                let state = state.borrow();
-                (state.store.clone(), state.engine.clone())
-            };
-            let done = paste_as(&store, engine.as_deref(), i64::from(id), key.as_str());
+            let (store, engine, towards) = aimed(&state);
+            let done = paste_as(
+                &store,
+                engine.as_deref(),
+                i64::from(id),
+                key.as_str(),
+                towards,
+            );
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
                 if done {
@@ -1016,7 +1014,36 @@ fn keys_of(filter: &Filter) -> Vec<String> {
         .collect()
 }
 
-fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> bool {
+type Aimed = (Rc<Store>, Option<Rc<crate::engine::Engine>>, Towards);
+
+fn aimed(state: &Rc<RefCell<State>>) -> Aimed {
+    let state = state.borrow();
+    let towards = here::towards(state.ahead.load(Ordering::Relaxed));
+    (state.store.clone(), state.engine.clone(), towards)
+}
+
+fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towards) -> Landing {
+    if towards == Towards::Elsewhere {
+        return Landing::anywhere();
+    }
+    let label = store.label_of(id).unwrap_or_default();
+    let content = here::content_of(item, None);
+    let files = crate::dragging::files_for(
+        item.kind,
+        &content.paths,
+        content.image,
+        label.as_deref(),
+        std::time::SystemTime::now(),
+    );
+    Landing { towards, files }
+}
+
+fn hand_over(
+    store: &Store,
+    engine: Option<&crate::engine::Engine>,
+    id: i64,
+    towards: Towards,
+) -> bool {
     let item = match store.item(id) {
         Ok(Some(item)) => item,
         Ok(None) => {
@@ -1028,7 +1055,8 @@ fn hand_over(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> 
             return false;
         }
     };
-    let landed = here::to_clipboard(&item, || starting(engine), || mark(engine));
+    let landing = landing_for(store, &item, id, towards);
+    let landed = here::to_clipboard(&item, &landing, || starting(engine), || mark(engine));
     let written = short_of(id, landed);
     if written {
         if let Err(why) = store.record_paste(id, now_ms()) {
@@ -1191,9 +1219,15 @@ fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
     rows
 }
 
-fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key: &str) -> bool {
+fn paste_as(
+    store: &Store,
+    engine: Option<&crate::engine::Engine>,
+    id: i64,
+    key: &str,
+    towards: Towards,
+) -> bool {
     if key == AS_IS {
-        return hand_over(store, engine, id);
+        return hand_over(store, engine, id, towards);
     }
     let Some(form) = form_of(key) else {
         note(&format!("a form nobody knows: {key}"));
@@ -1213,7 +1247,12 @@ fn paste_as(store: &Store, engine: Option<&crate::engine::Engine>, id: i64, key:
     let made = rendered.into_item();
     let written = short_of(
         id,
-        here::to_clipboard(&made, || starting(engine), || mark(engine)),
+        here::to_clipboard(
+            &made,
+            &Landing::anywhere(),
+            || starting(engine),
+            || mark(engine),
+        ),
     );
     if written && let Err(why) = store.record_paste(id, now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
