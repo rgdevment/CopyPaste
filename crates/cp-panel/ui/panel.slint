@@ -53,6 +53,9 @@ export component Panel inherits Window {
     in-out property <bool> opened: false;
     in-out property <int> hovered: -1;
     in-out property <bool> pointer-hidden: false;
+    in-out property <bool> quiet: false;
+    in-out property <length> rest-x: -1px;
+    in-out property <length> rest-y: -1px;
     in-out property <bool> gliding: true;
     in-out property <bool> sheet-open: false;
     in-out property <int> sheet-current: 0;
@@ -302,6 +305,8 @@ export component Panel inherits Window {
                                         }
                                         root.hovered = -1;
                                         root.pointer-hidden = true;
+                                        root.quiet = true;
+                                        root.rest-x = -1px;
                                         root.gliding = false;
                                         root.opened = false;
                                         root.sheet-open = false;
@@ -315,6 +320,8 @@ export component Panel inherits Window {
                                         }
                                         root.hovered = -1;
                                         root.pointer-hidden = true;
+                                        root.quiet = true;
+                                        root.rest-x = -1px;
                                         root.gliding = false;
                                         root.opened = false;
                                         root.sheet-open = false;
@@ -500,6 +507,8 @@ export component Panel inherits Window {
                     mouse-cursor: root.pointer-hidden ? MouseCursor.none : MouseCursor.default;
                     scroll-event(event) => {
                         root.pointer-hidden = false;
+                        root.quiet = true;
+                        root.rest-x = -1px;
                         root.gliding = true;
                         root.sheet-open = false;
                         root.hovered = -1;
@@ -625,10 +634,18 @@ export component Panel inherits Window {
                             open: index == root.current && root.opened;
                             shown-here: root.hovered >= 0 ? index == root.hovered : index == root.current;
                             plain-way: root.plain-way;
-                            stirred => {
-                                root.pointer-hidden = false;
-                                if (!root.sheet-open) {
-                                    root.stirred(index);
+                            quiet: root.quiet;
+                            stirred(ax, ay) => {
+                                if (root.quiet && root.rest-x < 0px) {
+                                    root.rest-x = ax;
+                                    root.rest-y = ay;
+                                } else if (!root.quiet || abs(ax - root.rest-x) >= Theme.stir || abs(ay - root.rest-y) >= Theme.stir) {
+                                    root.quiet = false;
+                                    root.rest-x = -1px;
+                                    root.pointer-hidden = false;
+                                    if (!root.sheet-open) {
+                                        root.stirred(index);
+                                    }
                                 }
                             }
                             dragged(id) => { root.dragged(id); }

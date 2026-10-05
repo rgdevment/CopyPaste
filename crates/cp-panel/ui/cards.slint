@@ -256,6 +256,7 @@ export component CardView inherits Rectangle {
     property <bool> being-named: root.naming == card.id;
     in property <bool> open;
     in property <bool> shown-here;
+    in property <bool> quiet;
     callback paste(int);
     callback copy(int);
     callback open-asked(int);
@@ -266,17 +267,16 @@ export component CardView inherits Rectangle {
     callback pin(int, bool);
     callback remove(int);
     callback chosen(int);
-    callback stirred();
+    callback stirred(length, length);
     callback dragged(int);
     property <bool> dragging;
     property <bool> lit: shown-here;
+    property <bool> hovering: touch.has-hover && !quiet;
     accessible-role: AccessibleRole.list-item;
     accessible-label: (card.name != "" ? card.name + ", " : "") + card.title + ", " + card.body;
     border-radius: 12px;
-    background: lit ? Theme.card-hover : Theme.card;
-    border-width: current ? 1px : 0px;
-    border-color: Theme.selected-edge;
-    animate background { duration: 140ms; easing: ease-out; }
+    background: lit ? Theme.selected : hovering ? Theme.row-hover : Theme.card;
+    animate background { duration: lit || hovering ? 0ms : Theme.let-go; easing: ease-out; }
     touch := TouchArea {
         clicked => { if (!root.dragging) { root.chosen(card.id); } }
         double-clicked => { root.paste(card.id); }
@@ -285,7 +285,7 @@ export component CardView inherits Rectangle {
                 root.dragging = false;
             }
             if (event.kind == PointerEventKind.move) {
-                root.stirred();
+                root.stirred(self.absolute-position.x + self.mouse-x, self.absolute-position.y + self.mouse-y);
                 if (touch.pressed && !root.dragging && card.can-drag
                     && (abs(touch.mouse-x - touch.pressed-x) > Theme.drag-start
                         || abs(touch.mouse-y - touch.pressed-y) > Theme.drag-start)) {
@@ -294,6 +294,15 @@ export component CardView inherits Rectangle {
                 }
             }
         }
+    }
+
+    if lit : Rectangle {
+        x: 0px;
+        y: 8px;
+        width: 3px;
+        height: parent.height - 16px;
+        border-radius: 1.5px;
+        background: Theme.accent;
     }
 
     VerticalLayout {

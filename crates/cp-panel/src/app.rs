@@ -21,11 +21,9 @@ const KEPT_IN_VIEW: usize = 2;
 const OUT: Duration = Duration::from_millis(130);
 const NEXT_FRAME: Duration = Duration::from_millis(16);
 const SETTLES: Duration = Duration::from_millis(70);
-const HOVERS: Duration = Duration::from_millis(55);
+const RESTS: Duration = Duration::from_millis(110);
 const LOOKS: Duration = Duration::from_millis(250);
 const SETTLES_SHEET: Duration = Duration::from_millis(260);
-const AFTER_ROLLING: Duration = Duration::from_millis(220);
-const JUST_ROLLED: Duration = Duration::from_millis(260);
 
 #[derive(Clone)]
 pub struct App {
@@ -50,7 +48,6 @@ struct State {
     leaving: slint::Timer,
     pointing: slint::Timer,
     arming: slint::Timer,
-    rolled: Instant,
     last_refresh: Duration,
     generation: Arc<AtomicU64>,
     counter: mpsc::Sender<Request>,
@@ -111,7 +108,6 @@ impl App {
             leaving: slint::Timer::default(),
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
-            rolled: Instant::now() - JUST_ROLLED,
             last_refresh: Duration::ZERO,
             generation,
             counter,
@@ -517,20 +513,14 @@ impl App {
             };
             if index < 0 {
                 state.borrow().pointing.stop();
-                state.borrow_mut().rolled = Instant::now();
                 ui.set_hovered(-1);
                 return;
             }
-            let waits = if state.borrow().rolled.elapsed() < JUST_ROLLED {
-                AFTER_ROLLING
-            } else {
-                HOVERS
-            };
             let later = ui.as_weak();
             state
                 .borrow()
                 .pointing
-                .start(slint::TimerMode::SingleShot, waits, move || {
+                .start(slint::TimerMode::SingleShot, RESTS, move || {
                     if let Some(ui) = later.upgrade() {
                         ui.set_hovered(index);
                     }
