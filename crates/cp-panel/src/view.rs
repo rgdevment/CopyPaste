@@ -144,7 +144,9 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         crate::face::aside_said(&[&mixed_aside, &source, &used_text(&times), &lines_said]);
     let opened = opened_for(row, face);
     let claim_rows = i32::try_from(token.names.lines().count()).unwrap_or(0);
+    let claims_spoken = crate::token::spoken(&token);
     Card {
+        claims_spoken: claims_spoken.into(),
         opened: opened.text.into(),
         open_lines: opened.lines,
         more_said: opened.more.into(),

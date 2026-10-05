@@ -206,6 +206,8 @@ component NameField inherits Rectangle {
         font-size: 10px;
     }
     field := TextInput {
+        accessible-role: AccessibleRole.text-input;
+        accessible-label: Words.name-it;
         x: 6px;
         width: parent.width - 34px;
         height: parent.height;
