@@ -15,8 +15,7 @@
   </p>
 
   <p><strong>CopyPaste 3.0 is here as a release candidate</strong> — the whole application rewritten in Rust, for Windows and macOS.<br/>
-  Try it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>. The 2.x stays supported on the <a href="https://github.com/rgdevment/CopyPaste/tree/v2-stable"><code>v2-stable</code></a> branch until the final release, and it is what the Store and Homebrew still install.<br/>
-  <sub>Much of what follows still describes the 2.x and is being rewritten alongside the 3.0.</sub></p>
+  Try it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>.</p>
 
   <h4>Download CopyPaste</h4>
 
@@ -97,7 +96,6 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
     <img src="resources/demo.gif" alt="CopyPaste clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
 </div>
 <div align="center"><em>Fast search, clean cards, and a native feel across Windows and macOS.</em></div>
-<div align="center"><sub>These show CopyPaste 2. New ones are being taken for the 3.0.</sub></div>
 
 <br/>
 
@@ -192,10 +190,6 @@ folder with the history, the files behind it and its settings:
 | Settings | `config.toml` |
 | Logs | `logs/` |
 
-The 2.x kept its own `clipboard.db` beside it on Windows, and under
-`~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/` on a Mac. The
-3.0 reads it only to offer bringing your history over, and never writes to it.
-
 </details>
 
 If you care about privacy and control, this clipboard manager is made for you. Read the full [Privacy Policy](PRIVACY.md) for complete details.
@@ -223,7 +217,8 @@ If you care about privacy and control, this clipboard manager is made for you. R
 - **Paste It as Something Else:** The same card pasted as plain text, or in another of the forms it carries, without touching what is stored.
 - **Copy Without Pasting:** Put a card back on the clipboard and paste it yourself, later, wherever you want.
 - **Open with Default App:** Files, images, links, emails and phone numbers open in whatever your system already uses. Links go through [LinkUnbound](https://github.com/rgdevment/LinkUnbound) when you have it installed, and to your browser when you do not.
-- **Drag to Other Apps (Windows, 2.x only):** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor. The 3.0 does not carry this yet, on either platform.
+- **Drag to Other Apps:** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor, a folder. An image keeps the name you gave its card, or a unique one, so an upload form never turns down a second one as a duplicate `image.png`.
+- **Images Land the Way the App Expects (Windows):** Paste an image into a browser and it arrives with its own name, the same as a drag; paste it into a terminal and it arrives as the path to the image.
 
 ### Workflow and Productivity
 
@@ -452,12 +447,6 @@ Everything here is in **Settings**, and nothing of it reaches the network.
 text, images and what you pinned. **Import** adds what the file holds to the
 history you already have, without losing any of it, so the same file can be
 restored twice without making a mess.
-
-### Coming from CopyPaste 2
-
-The first run offers to bring the 2.x history over, and **Settings → Backup**
-offers it again later. Your 2.x data is only read, never written, and the old
-application keeps working.
 
 ### A completely clean slate
 
