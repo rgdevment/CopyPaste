@@ -79,10 +79,13 @@ mod platform {
     }
 
     pub fn towards(ahead: isize) -> crate::landing::Towards {
-        cp_win_sys::source::described(ahead)
-            .map_or(crate::landing::Towards::Elsewhere, |(process, class)| {
-                crate::landing::towards_of(&process, &class)
-            })
+        cp_win_sys::source::described(ahead).map_or(
+            crate::landing::Towards::Elsewhere,
+            |(process, class)| {
+                let hosts = cp_win_sys::source::hosts_a_pseudoconsole(ahead);
+                crate::landing::towards_of(&process, &class, hosts)
+            },
+        )
     }
 
     pub fn to_clipboard(

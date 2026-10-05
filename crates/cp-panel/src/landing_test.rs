@@ -3,17 +3,23 @@ use super::*;
 #[test]
 fn a_browser_is_known_by_its_process_whatever_its_case() {
     assert_eq!(
-        towards_of("firefox", "MozillaWindowClass"),
+        towards_of("firefox", "MozillaWindowClass", false),
         Towards::Browser
     );
-    assert_eq!(towards_of("Chrome", "Chrome_WidgetWin_1"), Towards::Browser);
-    assert_eq!(towards_of("msedge", "Chrome_WidgetWin_1"), Towards::Browser);
+    assert_eq!(
+        towards_of("Chrome", "Chrome_WidgetWin_1", false),
+        Towards::Browser
+    );
+    assert_eq!(
+        towards_of("msedge", "Chrome_WidgetWin_1", false),
+        Towards::Browser
+    );
 }
 
 #[test]
 fn an_electron_app_is_not_taken_for_a_browser_by_its_window_class() {
     assert_eq!(
-        towards_of("slack", "Chrome_WidgetWin_1"),
+        towards_of("slack", "Chrome_WidgetWin_1", false),
         Towards::Elsewhere,
         "Slack, Teams and VS Code draw with Chromium too, but a pasted image there is an image"
     );
@@ -22,25 +28,66 @@ fn an_electron_app_is_not_taken_for_a_browser_by_its_window_class() {
 #[test]
 fn a_terminal_is_known_by_its_window_class_or_its_process() {
     assert_eq!(
-        towards_of("WindowsTerminal", "CASCADIA_HOSTING_WINDOW_CLASS"),
+        towards_of("WindowsTerminal", "CASCADIA_HOSTING_WINDOW_CLASS", false),
         Towards::Terminal
     );
-    assert_eq!(towards_of("cmd", "ConsoleWindowClass"), Towards::Terminal);
     assert_eq!(
-        towards_of("wezterm-gui", "org.wezfurlong.wezterm"),
+        towards_of("cmd", "ConsoleWindowClass", false),
         Towards::Terminal
     );
-    assert_eq!(towards_of("alacritty", "Window Class"), Towards::Terminal);
+    assert_eq!(
+        towards_of("wezterm-gui", "org.wezfurlong.wezterm", false),
+        Towards::Terminal
+    );
+    assert_eq!(
+        towards_of("alacritty", "Window Class", false),
+        Towards::Terminal
+    );
+}
+
+#[test]
+fn any_window_that_hosts_a_pseudoconsole_is_a_terminal_whatever_it_is_called() {
+    assert_eq!(towards_of("rio", "Window Class", true), Towards::Terminal);
+    assert_eq!(
+        towards_of("a-terminal-nobody-listed", "", true),
+        Towards::Terminal
+    );
+    assert_eq!(
+        towards_of("rio", "Window Class", false),
+        Towards::Elsewhere,
+        "without the pseudoconsole a name nobody listed stays an ordinary window"
+    );
+}
+
+#[test]
+fn an_editor_with_a_terminal_inside_keeps_its_pasted_images() {
+    assert_eq!(
+        towards_of("Code", "Chrome_WidgetWin_1", true),
+        Towards::Elsewhere,
+        "VS Code hosts a pseudoconsole for its terminal, but its chat and its Markdown take an image"
+    );
+    assert_eq!(
+        towards_of("idea64", "SunAwtFrame", true),
+        Towards::Elsewhere
+    );
+}
+
+#[test]
+fn a_browser_stays_a_browser_even_if_it_hosts_a_console() {
+    assert_eq!(
+        towards_of("vivaldi", "Chrome_WidgetWin_1", true),
+        Towards::Browser
+    );
 }
 
 #[test]
 fn a_terminal_wins_over_a_browser_and_anything_else_is_left_alone() {
     assert_eq!(
-        towards_of("firefox", "ConsoleWindowClass"),
+        towards_of("firefox", "ConsoleWindowClass", false),
         Towards::Terminal
     );
-    assert_eq!(towards_of("WINWORD", "OpusApp"), Towards::Elsewhere);
-    assert_eq!(towards_of("", ""), Towards::Elsewhere);
+    assert_eq!(towards_of("WINWORD", "OpusApp", false), Towards::Elsewhere);
+    assert_eq!(towards_of("", "", false), Towards::Elsewhere);
 }
 
 #[test]

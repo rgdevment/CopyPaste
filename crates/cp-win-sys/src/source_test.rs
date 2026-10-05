@@ -51,3 +51,39 @@ fn the_desktop_window_has_the_class_windows_gives_it() {
     let desktop = unsafe { windows::Win32::UI::WindowsAndMessaging::GetDesktopWindow() };
     assert_eq!(class_of(desktop).as_deref(), Some("#32769"));
 }
+
+#[test]
+fn a_console_host_is_known_by_either_of_its_two_names() {
+    assert!(is_console_host("conhost.exe"));
+    assert!(is_console_host("OpenConsole.exe"));
+    assert!(!is_console_host("cmd.exe"));
+    assert!(!is_console_host("conhost"));
+}
+
+#[test]
+fn only_a_headless_console_host_is_a_pseudoconsole() {
+    assert!(is_headless(
+        r#""C:\Program Files\WezTerm\OpenConsole.exe" --headless --width 72 --height 19 --signal 0x9e8"#
+    ));
+    assert!(
+        !is_headless(r"\??\C:\WINDOWS\system32\conhost.exe 0x4"),
+        "the console a console program is given is not one a terminal draws"
+    );
+    assert!(!is_headless("conhost.exe --headlessly"));
+}
+
+#[test]
+fn no_window_hosts_a_pseudoconsole() {
+    assert!(!hosts_a_pseudoconsole(0));
+}
+
+#[test]
+fn a_process_with_no_children_hosts_nothing() {
+    assert!(children_of(u32::MAX).is_empty());
+}
+
+#[test]
+fn this_very_process_has_a_command_line() {
+    let line = command_line_of(std::process::id()).expect("readable");
+    assert!(!line.is_empty());
+}

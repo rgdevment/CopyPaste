@@ -61,7 +61,7 @@ const BROWSERS: [&str; 13] = [
     "chromium",
 ];
 
-const TERMINALS: [&str; 8] = [
+const TERMINALS: [&str; 12] = [
     "windowsterminal",
     "openconsole",
     "wezterm-gui",
@@ -70,6 +70,10 @@ const TERMINALS: [&str; 8] = [
     "tabby",
     "hyper",
     "conemu64",
+    "conemu",
+    "putty",
+    "kitty",
+    "mobaxterm",
 ];
 
 const TERMINAL_CLASSES: [&str; 3] = [
@@ -78,13 +82,37 @@ const TERMINAL_CLASSES: [&str; 3] = [
     "org.wezfurlong.wezterm",
 ];
 
-pub fn towards_of(process: &str, class: &str) -> Towards {
+const EDITORS: [&str; 18] = [
+    "code",
+    "code - insiders",
+    "cursor",
+    "windsurf",
+    "zed",
+    "devenv",
+    "fleet",
+    "idea64",
+    "pycharm64",
+    "webstorm64",
+    "rider64",
+    "clion64",
+    "goland64",
+    "phpstorm64",
+    "rubymine64",
+    "datagrip64",
+    "rustrover64",
+    "studio64",
+];
+
+pub fn towards_of(process: &str, class: &str, hosts_a_pseudoconsole: bool) -> Towards {
     let process = process.to_ascii_lowercase();
     if TERMINAL_CLASSES.contains(&class) || TERMINALS.contains(&process.as_str()) {
         return Towards::Terminal;
     }
     if BROWSERS.contains(&process.as_str()) {
         return Towards::Browser;
+    }
+    if hosts_a_pseudoconsole && !EDITORS.contains(&process.as_str()) {
+        return Towards::Terminal;
     }
     Towards::Elsewhere
 }
