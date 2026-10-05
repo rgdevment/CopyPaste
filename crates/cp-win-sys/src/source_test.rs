@@ -40,3 +40,14 @@ fn this_very_process_can_be_named() {
     let mine = std::process::id();
     assert!(name_of(mine).is_some());
 }
+
+#[test]
+fn a_window_that_is_not_there_describes_nothing() {
+    assert_eq!(described(0), None);
+}
+
+#[test]
+fn the_desktop_window_has_the_class_windows_gives_it() {
+    let desktop = unsafe { windows::Win32::UI::WindowsAndMessaging::GetDesktopWindow() };
+    assert_eq!(class_of(desktop).as_deref(), Some("#32769"));
+}

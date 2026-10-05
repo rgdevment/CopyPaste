@@ -69,10 +69,7 @@ pub fn sweep_dragged(dir: &Path, now: SystemTime) -> usize {
     };
     let mut gone = 0;
     for one in read.flatten() {
-        let old = one
-            .metadata()
-            .and_then(|meta| meta.modified())
-            .ok()
+        let old = last_touched(&one.path())
             .and_then(|at| now.duration_since(at).ok())
             .is_some_and(|since| since > KEPT_FOR);
         if old && std::fs::remove_dir_all(one.path()).is_ok() {
@@ -82,9 +79,24 @@ pub fn sweep_dragged(dir: &Path, now: SystemTime) -> usize {
     gone
 }
 
-fn written(dir: &Path, bytes: &[u8], name: &str) -> Option<PathBuf> {
+fn last_touched(dir: &Path) -> Option<SystemTime> {
+    let own = std::fs::metadata(dir).and_then(|meta| meta.modified()).ok();
+    let held = std::fs::read_dir(dir)
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|one| one.metadata().and_then(|meta| meta.modified()).ok());
+    own.into_iter().chain(held).max()
+}
+
+fn written(dir: &Path, bytes: &[u8], name: &str, now: SystemTime) -> Option<PathBuf> {
     let at = dir.join(name);
     if std::fs::metadata(&at).is_ok_and(|one| one.len() == bytes.len() as u64) {
+        let _ = std::fs::File::options()
+            .append(true)
+            .open(&at)
+            .and_then(|file| file.set_modified(now));
         return Some(at);
     }
     std::fs::create_dir_all(dir).ok()?;
@@ -127,7 +139,7 @@ pub fn files_for(
     let dragged = where_dragged_go();
     sweep_dragged(&dragged, now);
     let own = dragged.join(format!("{:016x}", cp_core::hash::content_hash(bytes)));
-    written(&own, bytes, &name).into_iter().collect()
+    written(&own, bytes, &name, now).into_iter().collect()
 }
 
 #[cfg(test)]

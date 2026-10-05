@@ -236,3 +236,43 @@ fn sweeping_a_folder_that_was_never_made_takes_nothing_and_says_so() {
     let _ = std::fs::remove_dir_all(&nowhere);
     assert_eq!(sweep_dragged(&nowhere, now()), 0);
 }
+
+#[test]
+fn a_folder_whose_file_was_used_lately_outlives_the_hour_since_it_was_made() {
+    let dir = std::env::temp_dir().join("cp-drag-touched");
+    let _ = std::fs::remove_dir_all(&dir);
+    let kept = dir.join("2222222222222222");
+    std::fs::create_dir_all(&kept).expect("the directory has to exist");
+    let file = kept.join("kept.png");
+    std::fs::write(&file, a_png(40)).expect("the file has to exist");
+    let later = SystemTime::now() + KEPT_FOR + Duration::from_secs(60);
+    std::fs::File::options()
+        .append(true)
+        .open(&file)
+        .and_then(|one| one.set_modified(later))
+        .expect("the file takes a later date");
+    assert_eq!(
+        sweep_dragged(&dir, later + Duration::from_secs(60)),
+        0,
+        "a path still pasted somewhere points at a file used a minute ago, whatever the folder's age"
+    );
+    assert!(file.exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn handing_the_same_image_over_again_renews_its_hour() {
+    let bytes = a_png(21);
+    let first = files_for(Some(Kind::Image), &[], Some(&bytes), None, now());
+    let later = SystemTime::now() + Duration::from_secs(1800);
+    let again = files_for(Some(Kind::Image), &[], Some(&bytes), None, later);
+    assert_eq!(first, again);
+    let touched = std::fs::metadata(&again[0])
+        .and_then(|meta| meta.modified())
+        .expect("the file is there");
+    assert!(
+        touched >= later,
+        "reusing the file moves its date to the last use"
+    );
+    let _ = std::fs::remove_dir_all(again[0].parent().expect("it lives under its content"));
+}

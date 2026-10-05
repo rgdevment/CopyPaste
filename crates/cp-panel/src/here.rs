@@ -9,7 +9,7 @@ pub use platform::{
     Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
     drag_out, dress, forward, in_front, media_of, ocr_available, open_link, open_path,
     ours_up_front, paste_into, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard, watch_start,
+    thumb_of_file, thumbs_dir, to_clipboard, towards, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,8 +78,25 @@ mod platform {
         cp_core::dib::to_png(&dib)
     }
 
-    pub fn to_clipboard(item: &Item, starting: impl FnOnce(), ours: impl FnOnce()) -> Landed {
-        let ready = cp_win::restore::ready_for(item);
+    pub fn towards(ahead: isize) -> crate::landing::Towards {
+        cp_win_sys::source::described(ahead)
+            .map_or(crate::landing::Towards::Elsewhere, |(process, class)| {
+                crate::landing::towards_of(&process, &class)
+            })
+    }
+
+    pub fn to_clipboard(
+        item: &Item,
+        landing: &crate::landing::Landing,
+        starting: impl FnOnce(),
+        ours: impl FnOnce(),
+    ) -> Landed {
+        let mut ready = cp_win::restore::ready_for(item);
+        match landing.offer() {
+            crate::landing::Offer::Files(paths) => ready.offer_files(&paths),
+            crate::landing::Offer::Text(text) => ready.offer_text(&text),
+            crate::landing::Offer::Nothing => {}
+        }
         starting();
         let Some(clipboard) = Clipboard::to_write() else {
             ours();
@@ -219,7 +236,16 @@ mod platform {
         None
     }
 
-    pub fn to_clipboard(item: &Item, starting: impl FnOnce(), ours: impl FnOnce()) -> Landed {
+    pub fn towards(_ahead: isize) -> crate::landing::Towards {
+        crate::landing::Towards::Elsewhere
+    }
+
+    pub fn to_clipboard(
+        item: &Item,
+        _landing: &crate::landing::Landing,
+        starting: impl FnOnce(),
+        ours: impl FnOnce(),
+    ) -> Landed {
         let pb = Pasteboard::general_from_any_thread();
         starting();
         let landed = match cp_mac::restore::to_pasteboard(&pb, item) {
