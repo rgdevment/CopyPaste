@@ -1,0 +1,18 @@
+{
+  "version": "3.0.0-rc1",
+  "notes": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.0.0-rc1",
+  "platforms": {
+    "windows-x86_64": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.0.0-rc1/copypaste-installer-3.0.0-rc1-windows-x86_64.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzhSR0cyM25JbDFNelIrQmg5UiszWTljWEIvVWRFb20veUJCaTFHbUtPdGo3ZUxtR01kQVdYMXAxTDdyUlk2RlZmbVRCNk5yQk9MbmU0TDNhU2trc2dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMTcxMDgzCWZpbGU6Y29weXBhc3RlLWluc3RhbGxlci0zLjAuMC1yYzEtd2luZG93cy14ODZfNjQuZXhlCmxDRDkwdG54YjZEM1p0K0tuVko0dGM0b1ljZG1VMHV4MEFUOFZjVVpOVHlzbVFCd2g5RVh3WnY0bFpQVEtJU2Y0bE45ZDdBZFJrdVQvck5rYkNOekF3PT0K"
+    },
+    "darwin-aarch64": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.0.0-rc1/copypaste-3.0.0-rc1-macos-aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzdLM2RiYWVpRjJlaHgvYlNpeUJhRHA5eWxDTUpsTEs4L2t1S0ZwU0pSYUlmVno2dFFkYUNHMklyOXpCN3F2Z3lWMEROdjlBd05aVlhGYUpGV3FpQ2dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMTcwMjE3CWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oKNXJzN2tnMGJkMG5uMW1lV2I4Z3o2TjVkQkdiKzZWb3p3SWtBQWJraGorWnI5Q3dQMFF6d3FTN2tXWDAvQXZTd2RhWWFLclFWeG5Oems1WFdwaFFWREE9PQo="
+    },
+    "darwin-x86_64": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.0.0-rc1/copypaste-3.0.0-rc1-macos-x86_64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzT3lHN3l1S0dxcWJuZXVlTkM0Q1BkYUlHQmV6RTQvU0V4UnpRMzRaQWRWNHhmSGJrOUE3N1pvSUE1MUJtenh5NWg2b3BPbC9sMDJyNEtxRFoyRjZZVVFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMTcwNzEyCWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oKSEFNK2NVeVpUdmZ5S0dpOVI0TURoWFVCV3Z0T2VGS3l3b3pnRjJGUEtlUXE2MEFteDlJUDg5SDUxb1pjYU1BQzcwaWFOeEV5Tk1RT2hPMnBiVWZVQnc9PQo="
+    }
+  }
+}
