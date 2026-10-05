@@ -71,9 +71,10 @@ fn an_open_token_gets_room_for_the_table_of_claims_it_draws() {
     rows.open_at(Some(0));
     let open = rows.span_of(0).expect("la fila").1;
     let claims = 7.0;
-    assert!(
-        open >= shut + (claims + 1.0) * SIZES.line,
-        "abierta debe caber la tabla entera y su hueco, y midio {open} contra {shut} cerrada"
+    assert_eq!(
+        open,
+        crate::face::open_px(crate::face::BLOCK_PAD + claims * crate::face::MONO_LINE),
+        "abierta debe caber la tabla entera, y midio {open} contra {shut} cerrada"
     );
 }
 
@@ -178,6 +179,7 @@ fn a_thumbnail_that_does_not_load_gives_its_height_back_to_the_rows_below() {
 
 #[test]
 fn the_open_row_grows_what_its_text_asks_and_nobody_else_pays() {
+    use crate::face::{Face, LINE, open_px};
     let store = Store::in_memory().expect("esquema");
     store.insert_text("u0", "corto", 0).expect("insert");
     store
@@ -185,41 +187,39 @@ fn the_open_row_grows_what_its_text_asks_and_nobody_else_pays() {
         .expect("insert");
     store.insert_text("u2", "otro corto", 2).expect("insert");
     let rows = open(Rc::new(store), 0);
-    let long = SIZES.frame + 6.0 * SIZES.line;
+    let short = Face::Words(1).shut_px();
+    let two = Face::Words(2).shut_px();
+    let long = open_px(6.0 * LINE);
 
-    assert_eq!(rows.span_of(1), Some((SIZES.mixed, SIZES.mixed)));
+    assert_eq!(rows.span_of(1), Some((short, two)));
 
     rows.open_at(Some(1));
     assert_eq!(
         rows.span_of(0),
-        Some((0.0, SIZES.mixed)),
+        Some((0.0, short)),
         "la de arriba no se mueve"
     );
     assert_eq!(
         rows.span_of(1),
-        Some((SIZES.mixed, long)),
+        Some((short, long)),
         "crece lo que pide su texto"
     );
     assert_eq!(
         rows.span_of(2),
-        Some((SIZES.mixed + long, SIZES.mixed)),
+        Some((short + long, short)),
         "the one below drops by what the open one grew"
     );
 
     rows.open_at(Some(2));
-    assert_eq!(
-        rows.span_of(1),
-        Some((SIZES.mixed, SIZES.mixed)),
-        "la anterior vuelve"
-    );
+    assert_eq!(rows.span_of(1), Some((short, two)), "la anterior vuelve");
     assert_eq!(
         rows.span_of(2),
-        Some((2.0 * SIZES.mixed, SIZES.frame + 2.0 * SIZES.line)),
-        "incluso un texto corto gana sitio al abrirse, porque cerrado solo ensena una linea"
+        Some((short + two, open_px(LINE))),
+        "incluso un texto corto gana la fila de atajos al abrirse"
     );
 
     rows.open_at(None);
-    assert_eq!(rows.span_of(1), Some((SIZES.mixed, SIZES.mixed)));
+    assert_eq!(rows.span_of(1), Some((short, two)));
 }
 
 #[test]
@@ -254,14 +254,19 @@ fn a_row_with_a_thumbnail_does_not_open_in_its_own_view() {
 }
 
 #[test]
-fn a_thumbnail_in_the_mixed_list_is_as_tall_as_everything_else() {
+fn a_row_in_the_mixed_list_is_as_tall_as_its_face() {
     let store = store_with(2);
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
     let rows = open(store, 0);
     assert_eq!(
         rows.span_of(0),
-        Some((0.0, SIZES.mixed)),
-        "no kind gets to be taller than the text in a list where the kinds are mixed"
+        Some((0.0, crate::face::Face::Thumb.shut_px())),
+        "the row with a thumbnail makes room for the strip it draws"
+    );
+    assert_eq!(
+        rows.span_of(1).map(|(_, span)| span),
+        Some(crate::face::Face::Words(1).shut_px()),
+        "a short text takes the one line it needs"
     );
 }
 
@@ -454,9 +459,9 @@ fn the_row_that_heads_a_group_is_taller_by_exactly_its_heading() {
         let span = rows.span_of(at).expect("a row").1;
         let wanted = if card.heads_group {
             heading += 1;
-            SIZES.mixed + SIZES.head
+            crate::face::Face::Link.shut_px() + SIZES.head
         } else {
-            SIZES.mixed
+            crate::face::Face::Link.shut_px()
         };
         assert_eq!(
             span, wanted,
@@ -589,17 +594,19 @@ fn a_thumbnail_opened_in_the_mixed_list_grows_like_everything_else_there() {
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
     let rows = open(store, 0);
     let shut = rows.span_of(0).expect("la fila").1;
-    assert_eq!(shut, SIZES.mixed);
+    assert_eq!(shut, crate::face::Face::Thumb.shut_px());
     rows.open_at(Some(0));
     let open = rows.span_of(0).expect("la fila").1;
     assert!(
         open > shut,
-        "in the mixed list a thumbnail row is not tall, so opening it must move the rows below: \
+        "opening a thumbnail must move the rows below: \
          the model said {open} and the delegate draws it grown"
     );
     assert_eq!(
-        open, SIZES.tall,
-        "opening a picture is for looking at it, so the row makes room for the thumbnail the          card draws, and the scrolling follows this number"
+        open,
+        crate::face::open_px(crate::face::OPEN_THUMB + crate::face::GAP + crate::face::NOTE),
+        "opening a picture is for looking at it, so the row makes room for the picture the \
+         card draws, and the scrolling follows this number"
     );
 }
 
@@ -611,11 +618,11 @@ fn a_json_opened_in_the_mixed_list_reserves_the_body_it_draws() {
         .expect("insert");
     let rows = open(Rc::new(store), 2);
     let shut = rows.span_of(0).expect("la fila").1;
-    assert_eq!(shut, SIZES.mixed);
+    assert_eq!(shut, crate::face::Face::Keys(1).shut_px());
     rows.open_at(Some(0));
     let open = rows.span_of(0).expect("la fila").1;
     assert!(
-        open >= shut + SIZES.body_json,
+        open > shut + crate::face::KEYS_ROW,
         "unfolded in the general list the card draws its own body, and a height that does not \
          count it cuts the card: {open} against {shut}"
     );

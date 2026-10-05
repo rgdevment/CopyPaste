@@ -3,6 +3,7 @@ mod app;
 mod dragging;
 mod engine;
 mod excuse;
+mod face;
 mod folder;
 mod group;
 mod here;

@@ -173,10 +173,28 @@ impl Rows {
         } else {
             0.0
         };
+        let thumb = row.thumb_path.is_some() && !self.thumbless.borrow().contains(&index);
+        if one_height_for_all(&self.filter, self.plain_way) {
+            return self.mixed_open(row, thumb) + head;
+        }
         self.open_of_row(row) + head
     }
 
+    fn mixed_open(&self, row: &Listed, thumb: bool) -> f32 {
+        use cp_core::kind::Kind;
+        let room = match row.kind {
+            Some(Kind::Folder) => self.metrics.body_folder,
+            Some(Kind::File) => self.metrics.body_papers,
+            Some(Kind::Video | Kind::Audio) => self.metrics.body_media,
+            _ => 0.0,
+        };
+        crate::view::mixed_open_px(row, thumb, self.now, room)
+    }
+
     fn open_of_row(&self, row: &Listed) -> f32 {
+        if one_height_for_all(&self.filter, self.plain_way) {
+            return self.mixed_open(row, false);
+        }
         if row.thumb_path.is_some() {
             return self.metrics.tall;
         }
@@ -242,7 +260,7 @@ impl Rows {
             return self.metrics.plain;
         };
         if one_height_for_all(&self.filter, self.plain_way) {
-            return self.metrics.mixed;
+            return crate::view::face_for(row, has_thumb).shut_px();
         }
         if has_thumb {
             return self.metrics.tall;
@@ -254,13 +272,16 @@ impl Rows {
     }
 
     fn open_of_row_with(&self, index: usize, has_thumb: bool) -> f32 {
-        if has_thumb {
-            return self.metrics.tall;
-        }
         let rows = self.rows.borrow();
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
+        if one_height_for_all(&self.filter, self.plain_way) {
+            return self.mixed_open(row, has_thumb);
+        }
+        if has_thumb {
+            return self.metrics.tall;
+        }
         let lines = crate::view::open_lines_of(row, &body_of(row), self.now);
         let own = if one_height_for_all(&self.filter, self.plain_way) {
             self.body_room(row)
@@ -359,6 +380,8 @@ impl Rows {
         let without_thumb = if heads { self.metrics.head } else { 0.0 }
             + if self.open.get() == Some(index) {
                 self.open_of_row(row)
+            } else if one_height_for_all(&self.filter, self.plain_way) {
+                crate::view::face_for(row, false).shut_px()
             } else if was_found(row) {
                 self.metrics.found
             } else {
@@ -377,6 +400,9 @@ impl Rows {
             card.thumb = image;
         } else {
             card.has_thumb = false;
+            let face = crate::view::face_for(row, false);
+            card.face = face.as_str().into();
+            card.shut_lines = face.lines();
         }
         drop(rows);
         if !card.has_thumb {
