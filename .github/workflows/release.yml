@@ -772,16 +772,27 @@ jobs:
           $quad = ($v -split '-')[0] + '.0'
           Write-Host "identity: $said   version: $($m.Package.Identity.Version)"
 
-          $was = "rgdevment.CopyPaste-BrowserPicker"
+          $was = "rgdevment.CopyPaste-ClipboardManager"
           if ($said -ne $was) {
-            Write-Host "::error::the package went in as $said. 1.x shipped as $was, and under any other name nobody who has it installed is offered this."; exit 1
+            Write-Host "::error::the package went in as $said. 2.x shipped as $was, and under any other name nobody who has it installed is offered this."; exit 1
+          }
+          if ($m.Package.Identity.Publisher -ne "CN=AC154EDC-DBFC-482B-AF3B-A1A6FF12DA84") {
+            Write-Host "::error::the package names $($m.Package.Identity.Publisher) as its publisher, not the one 2.x shipped under"; exit 1
+          }
+          $app = $m.Package.Applications.Application
+          if ($app.Id -ne "copypaste") {
+            Write-Host "::error::the application is $($app.Id); 2.x was copypaste, and pinned tiles and the startup task hang from that name"; exit 1
+          }
+          $task = $app.Extensions.Extension.StartupTask.TaskId
+          if ($task -ne "CopyPasteStartup") {
+            Write-Host "::error::the startup task is $task; whoever turned it off in 2.x did so against CopyPasteStartup"; exit 1
           }
           if ($m.Package.Identity.Version -ne $quad) {
             Write-Host "::error::the package says $($m.Package.Identity.Version) and the tag says $quad"; exit 1
           }
           $exe = $m.Package.Applications.Application.Executable
-          if ($exe -ne "cp-panel.exe") {
-            Write-Host "::error::the package launches $exe, which is not what the shell runs for a link"; exit 1
+          if ($exe -ne "CopyPaste.exe") {
+            Write-Host "::error::the package launches $exe, not the resident CopyPaste.exe"; exit 1
           }
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
