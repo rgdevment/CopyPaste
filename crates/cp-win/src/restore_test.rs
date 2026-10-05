@@ -298,3 +298,35 @@ fn nothing_offered_changes_nothing() {
     assert!(!ready.offers(CF_HDROP));
     assert!(!ready.offers(CF_UNICODETEXT));
 }
+
+#[test]
+fn a_format_with_no_way_back_is_counted_among_the_items_formats_not_the_clipboards() {
+    let item = Item {
+        kind: None,
+        formats: vec![
+            inline(SYNTHETIC_TEXT, b"hello"),
+            Format {
+                id: "Embed Source".into(),
+                payload: Payload::Announced { size: Some(9) },
+            },
+        ],
+    };
+    let ready = ready_for(&item);
+    assert_eq!(ready.wanted(), 1);
+    assert_eq!(
+        ready.fitted(1),
+        (1, 2),
+        "the clipboard took all it was given; what fell short is one of the item's two formats"
+    );
+}
+
+#[test]
+fn ids_the_clipboard_refused_are_counted_against_what_it_was_given() {
+    let item = Item {
+        kind: None,
+        formats: vec![inline(SYNTHETIC_IMAGE, &image_bytes())],
+    };
+    let ready = ready_for(&item);
+    assert_eq!(ready.wanted(), 2);
+    assert_eq!(ready.fitted(1), (1, 2));
+}

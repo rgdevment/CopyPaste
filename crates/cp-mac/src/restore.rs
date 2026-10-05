@@ -66,32 +66,47 @@ fn one_item_per_file<'a>(writable: &[Entry<'a>]) -> Option<Vec<Vec<Entry<'a>>>> 
 }
 
 pub fn to_pasteboard(pb: &Pasteboard, item: &Item) -> Restored {
+    to_pasteboard_offering(pb, item, None)
+}
+
+pub fn to_pasteboard_offering(pb: &Pasteboard, item: &Item, text: Option<&str>) -> Restored {
     let writable = writable_of(item);
 
     if writable.is_empty() {
         return Restored::NothingToWrite;
     }
 
+    let carried = writable.len();
+    let incomplete = carried != item.formats.len();
+    let writable = offering(writable, text);
+
     if let Some(per_file) = one_item_per_file(&writable) {
         return if pb.write_items_data(&per_file) {
             Restored::Written {
-                formats: writable.len(),
-                incomplete: writable.len() != item.formats.len(),
+                formats: carried,
+                incomplete,
             }
         } else {
             Restored::Failed
         };
     }
 
-    let entries: Vec<(&str, &[u8])> = writable.clone();
-    if pb.write_all(&entries) {
+    if pb.write_all(&writable) {
         Restored::Written {
-            formats: writable.len(),
-            incomplete: writable.len() != item.formats.len(),
+            formats: carried,
+            incomplete,
         }
     } else {
         Restored::Failed
     }
+}
+
+fn offering<'a>(mut writable: Vec<Entry<'a>>, text: Option<&'a str>) -> Vec<Entry<'a>> {
+    if let Some(text) = text.filter(|text| !text.is_empty()) {
+        writable.retain(|(uti, _)| *uti != PLAIN_TEXT);
+        writable.push((PLAIN_TEXT, text.as_bytes()));
+    }
+    writable
 }
 
 const PLAIN_TEXT: &str = "public.utf8-plain-text";

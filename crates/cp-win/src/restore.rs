@@ -30,6 +30,14 @@ impl Ready {
         self.owned.len()
     }
 
+    pub fn fitted(&self, placed: usize) -> (usize, usize) {
+        if placed == self.owned.len() {
+            (self.returned, self.had)
+        } else {
+            (placed, self.owned.len())
+        }
+    }
+
     pub fn offer_files<S: AsRef<str>>(&mut self, paths: &[S]) {
         if paths.is_empty() {
             return;

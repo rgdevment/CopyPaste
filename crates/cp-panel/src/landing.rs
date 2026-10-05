@@ -61,7 +61,7 @@ const BROWSERS: [&str; 13] = [
     "chromium",
 ];
 
-const TERMINALS: [&str; 8] = [
+const TERMINALS: [&str; 12] = [
     "windowsterminal",
     "openconsole",
     "wezterm-gui",
@@ -70,6 +70,10 @@ const TERMINALS: [&str; 8] = [
     "tabby",
     "hyper",
     "conemu64",
+    "conemu",
+    "putty",
+    "kitty",
+    "mobaxterm",
 ];
 
 const TERMINAL_CLASSES: [&str; 3] = [
@@ -78,13 +82,75 @@ const TERMINAL_CLASSES: [&str; 3] = [
     "org.wezfurlong.wezterm",
 ];
 
-pub fn towards_of(process: &str, class: &str) -> Towards {
+const EDITORS: [&str; 18] = [
+    "code",
+    "code - insiders",
+    "cursor",
+    "windsurf",
+    "zed",
+    "devenv",
+    "fleet",
+    "idea64",
+    "pycharm64",
+    "webstorm64",
+    "rider64",
+    "clion64",
+    "goland64",
+    "phpstorm64",
+    "rubymine64",
+    "datagrip64",
+    "rustrover64",
+    "studio64",
+];
+
+pub fn towards_of(process: &str, class: &str, hosts_a_pseudoconsole: bool) -> Towards {
     let process = process.to_ascii_lowercase();
     if TERMINAL_CLASSES.contains(&class) || TERMINALS.contains(&process.as_str()) {
         return Towards::Terminal;
     }
     if BROWSERS.contains(&process.as_str()) {
         return Towards::Browser;
+    }
+    if hosts_a_pseudoconsole && !EDITORS.contains(&process.as_str()) {
+        return Towards::Terminal;
+    }
+    Towards::Elsewhere
+}
+
+#[cfg(any(target_os = "macos", test))]
+const MAC_TERMINALS: [&str; 10] = [
+    "com.apple.Terminal",
+    "com.googlecode.iterm2",
+    "com.mitchellh.ghostty",
+    "net.kovidgoyal.kitty",
+    "org.alacritty",
+    "com.github.wez.wezterm",
+    "dev.warp.Warp-Stable",
+    "co.zeit.hyper",
+    "org.tabby",
+    "com.raphaelamorim.rio",
+];
+
+#[cfg(any(target_os = "macos", test))]
+const MAC_EDITORS: [&str; 7] = [
+    "com.microsoft.VSCode",
+    "com.todesktop.230313mzl4w4u92",
+    "com.exafunction.windsurf",
+    "dev.zed.Zed",
+    "com.jetbrains.",
+    "com.google.android.studio",
+    "com.apple.dt.Xcode",
+];
+
+#[cfg(any(target_os = "macos", test))]
+pub fn towards_by_bundle(bundle: Option<&str>, hosts_a_terminal: bool) -> Towards {
+    let bundle = bundle.unwrap_or_default();
+    if MAC_TERMINALS.contains(&bundle) {
+        return Towards::Terminal;
+    }
+    let editor = !bundle.is_empty() && MAC_EDITORS.iter().any(|one| bundle.starts_with(one));
+    if hosts_a_terminal && !editor {
+        return Towards::Terminal;
     }
     Towards::Elsewhere
 }

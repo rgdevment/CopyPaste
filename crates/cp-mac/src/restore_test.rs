@@ -191,3 +191,34 @@ file:///a/two.txt
         "the blank lines do not become empty items"
     );
 }
+
+#[test]
+fn a_path_offered_to_a_terminal_rides_along_as_the_plain_text() {
+    let item = Item {
+        kind: None,
+        formats: vec![inline(SYNTHETIC_IMAGE, &[137, 80, 78, 71])],
+    };
+    let written = offering(writable_of(&item), Some("\"/tmp/a b.png\""));
+    assert_eq!(
+        written,
+        vec![
+            (PNG, &[137u8, 80, 78, 71][..]),
+            (PLAIN_TEXT, &b"\"/tmp/a b.png\""[..])
+        ]
+    );
+}
+
+#[test]
+fn an_offered_text_replaces_the_one_the_item_had_and_nothing_offered_changes_nothing() {
+    let item = Item {
+        kind: None,
+        formats: vec![inline(PLAIN_TEXT, b"old"), inline("public.rtf", b"{\rtf1}")],
+    };
+    let written = offering(writable_of(&item), Some("new"));
+    assert_eq!(
+        written,
+        vec![("public.rtf", &b"{\rtf1}"[..]), (PLAIN_TEXT, &b"new"[..])]
+    );
+    assert_eq!(offering(writable_of(&item), None), writable_of(&item));
+    assert_eq!(offering(writable_of(&item), Some("")), writable_of(&item));
+}
