@@ -214,6 +214,20 @@ On Windows the 3.0 installer:
   owns one by one — `history.db`, `blobs`, `thumbs`, `config.toml`,
   `update.json`, its two logs — and then tries `RmDir` without `/r`, so the
   shared folder survives for as long as anything of the 2.x is still in it.
+- **Finds the 2.x however it was installed.** The Inno setup answers to
+  `HKCU\…\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1`; the Store
+  copy is the `rgdevment.CopyPaste-ClipboardManager` package below 3.0, asked
+  of `Get-AppxPackage`. Either way the installer closes `CopyPaste.exe` before
+  it removes anything, since the 2.x left running holds the shortcut the 3.0
+  needs.
+- **Never removes a Store copy that keeps its history inside its package.** A
+  packaged app's writes to a `LocalAppData` folder it created itself land in
+  `Packages\rgdevment.CopyPaste-ClipboardManager_kdjgfdc2rb3gc\LocalCache\Local\CopyPaste`,
+  and `Remove-AppxPackage` deletes that folder with the package. When a
+  `clipboard.db` is there, the installer only offers to close the 2.x.
+- **Puts back the 3.0's own start with the session.** The Inno uninstaller
+  deletes the `CopyPaste` value under `HKCU\…\Run`, which is the name the 3.0
+  uses too; if it pointed at `cp-gui.exe` before, it is written again.
 - **Recommends starting fresh.** That is the default; bringing the history over
   is there for whoever asks.
 
