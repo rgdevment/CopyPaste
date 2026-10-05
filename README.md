@@ -394,7 +394,7 @@ No. CopyPaste works fully offline. The standalone version makes a lightweight ch
 No. There's intentionally no cloud sync. Your copy history stays on the device where you copied it. This is a local-first copy tool, not a cloud service.
 
 **Where is my clipboard history stored?**
-Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
+Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
 **What platforms does this copy-paste tool support?**
 Windows 10/11 and macOS (Ventura+).
