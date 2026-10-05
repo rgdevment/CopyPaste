@@ -58,17 +58,22 @@ fn a_process_that_gives_its_child_a_pseudoterminal_hosts_a_terminal() {
 }
 
 #[test]
-fn a_process_whose_children_have_no_terminal_hosts_none() {
+fn a_child_started_without_a_terminal_has_none() {
     if has_a_terminal(std::process::id() as i32) {
         return;
     }
     let mut child = Command::new("/bin/sleep")
         .arg("5")
         .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
         .expect("sleep starts");
-    let hosts = hosts_a_terminal(std::process::id() as i32);
+    let pid = child.id() as i32;
+    let has = has_a_terminal(pid);
+    let hosts = hosts_a_terminal(pid);
     let _ = child.kill();
     let _ = child.wait();
-    assert!(!hosts);
+    assert!(!has, "sleep was given no terminal");
+    assert!(!hosts, "and it starts nothing that could have one");
 }
