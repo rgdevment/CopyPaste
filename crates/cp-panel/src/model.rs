@@ -65,7 +65,7 @@ pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Video | crate::layout::Layout::Audio => &crate::media::KEYS,
         crate::layout::Layout::Folder => &crate::folder::KEYS,
-        crate::layout::Layout::Everything => &MIXED_KEYS,
+        crate::layout::Layout::Everything | crate::layout::Layout::Image => &MIXED_KEYS,
         _ => &[],
     }
 }
@@ -82,7 +82,7 @@ pub fn shut_height_for(filter: &Filter, metrics: &Metrics, plain_way: bool) -> f
 }
 
 pub fn one_height_for_all(filter: &Filter, plain_way: bool) -> bool {
-    !plain_way && crate::layout::layout_for(&filter.kinds) == crate::layout::Layout::Everything
+    !plain_way && crate::layout::layout_for(&filter.kinds).shows_cards()
 }
 
 pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {

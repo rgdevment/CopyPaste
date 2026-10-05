@@ -30,13 +30,13 @@ fn open(store: Rc<Store>, now: i64) -> Rc<Rows> {
     Rows::open(store, Filter::default(), now, SIZES, false, None)
 }
 
-fn store_of_images(count: usize) -> Rc<Store> {
+fn store_of_videos(count: usize) -> Rc<Store> {
     let store = Store::in_memory().expect("esquema");
     for at in 0..count {
         let item = cp_core::item::Item {
-            kind: Some(cp_core::kind::Kind::Image),
+            kind: Some(cp_core::kind::Kind::Video),
             formats: vec![cp_core::item::Format {
-                id: "public.png".into(),
+                id: "public.mpeg-4".into(),
                 payload: cp_core::item::Payload::Inline(vec![at as u8; 8]),
             }],
         };
@@ -78,9 +78,9 @@ fn an_open_token_gets_room_for_the_table_of_claims_it_draws() {
     );
 }
 
-fn only_images(store: Rc<Store>, now: i64) -> Rc<Rows> {
+fn only_tall(store: Rc<Store>, now: i64) -> Rc<Rows> {
     let filter = Filter {
-        kinds: vec![cp_core::kind::Kind::Image],
+        kinds: vec![cp_core::kind::Kind::Video],
         ..Default::default()
     };
     Rows::open(store, filter, now, SIZES, false, None)
@@ -153,9 +153,9 @@ fn a_query_that_matches_nothing_is_an_empty_model_not_an_error() {
 
 #[test]
 fn every_row_knows_where_it_starts_and_a_thumbnail_makes_it_taller() {
-    let store = store_of_images(3);
+    let store = store_of_videos(3);
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
     assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.tall)));
     assert_eq!(
@@ -167,9 +167,9 @@ fn every_row_knows_where_it_starts_and_a_thumbnail_makes_it_taller() {
 
 #[test]
 fn a_thumbnail_that_does_not_load_gives_its_height_back_to_the_rows_below() {
-    let store = store_of_images(3);
+    let store = store_of_videos(3);
     store.set_thumb(3, Some("no-existe.png"), 2).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     assert_eq!(rows.span_of(0), Some((0.0, SIZES.tall)));
     let card = rows.row_data(0).expect("fila");
     assert!(!card.has_thumb, "the thumbnail is not on disk");
@@ -224,9 +224,9 @@ fn the_open_row_grows_what_its_text_asks_and_nobody_else_pays() {
 
 #[test]
 fn a_thumbnail_that_failed_does_not_get_its_height_back() {
-    let store = store_of_images(3);
+    let store = store_of_videos(3);
     store.set_thumb(3, Some("no-existe.png"), 2).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     assert!(rows.row_data(0).is_some_and(|card| !card.has_thumb));
     assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
 
@@ -242,9 +242,9 @@ fn a_thumbnail_that_failed_does_not_get_its_height_back() {
 
 #[test]
 fn a_row_with_a_thumbnail_does_not_open_in_its_own_view() {
-    let store = store_of_images(2);
+    let store = store_of_videos(2);
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     rows.open_at(Some(0));
     assert_eq!(
         rows.span_of(0),
@@ -646,7 +646,7 @@ fn a_row_whose_thumbnail_will_not_draw_carries_the_height_it_really_takes() {
     store
         .set_thumb(2, Some("no-existe-esta-miniatura.png"), 1)
         .expect("thumb");
-    let rows = only_images(store.clone(), 0);
+    let rows = only_tall(store.clone(), 0);
     let _ = rows.row_data(0);
 
     let rows = Rows::open(store, Filter::default(), 0, SIZES, true, None);
@@ -751,5 +751,28 @@ fn a_search_or_the_pinned_list_is_not_grouped_by_time() {
     assert!(
         !rows.row_data(0).expect("card").heads_group,
         "without a clock there is nothing to group by"
+    );
+}
+
+#[test]
+fn a_list_of_pictures_wears_the_card_of_the_general_view() {
+    let store = Store::in_memory().expect("esquema");
+    let item = cp_core::item::Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![cp_core::item::Format {
+            id: "public.png".into(),
+            payload: cp_core::item::Payload::Inline(vec![1; 8]),
+        }],
+    };
+    store.insert_item("u0", &item, "", 1).expect("insert");
+    store.set_thumb(1, Some("miniatura.png"), 1).expect("thumb");
+    let filter = Filter {
+        kinds: vec![cp_core::kind::Kind::Image],
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), filter, 2, SIZES, false, None);
+    assert_eq!(
+        rows.span_of(0),
+        Some((0.0, crate::face::Face::Thumb.shut_px()))
     );
 }

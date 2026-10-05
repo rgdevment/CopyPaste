@@ -29,6 +29,7 @@ export component Panel inherits Window {
     in property <string> layout: "everything";
     in property <length> shut: Theme.row-plain;
     in property <bool> plain-way;
+    in property <bool> one-kind;
     in-out property <bool> keeping;
     callback keep-toggled();
     in property <string> way;
@@ -668,6 +669,7 @@ export component Panel inherits Window {
                             open: index == root.current && root.opened;
                             shown-here: root.hovered >= 0 ? index == root.hovered : index == root.current;
                             plain-way: root.plain-way;
+                            one-kind: root.one-kind;
                             quiet: root.quiet;
                             stirred(ax, ay) => {
                                 if (root.quiet && root.rest-x < 0px) {

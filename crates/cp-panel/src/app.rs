@@ -795,6 +795,9 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
         crate::ways::label_of(here, crate::say::in_english()).into()
     });
     ui.set_layout(layout.as_str().into());
+    let mut kinds = filter.kinds.clone();
+    kinds.dedup();
+    ui.set_one_kind(kinds.len() == 1);
     ui.set_plain_way(here.plain);
     ui.set_shut(crate::model::shut_height_for(&filter, &metrics, here.plain));
     let rows = Rows::open(
