@@ -83,7 +83,7 @@ fn only_tall(store: Rc<Store>, now: i64) -> Rc<Rows> {
         kinds: vec![cp_core::kind::Kind::Video],
         ..Default::default()
     };
-    Rows::open(store, filter, now, SIZES, false, None)
+    Rows::open(store, filter, now, SIZES, true, None)
 }
 
 #[test]

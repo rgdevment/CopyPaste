@@ -267,7 +267,7 @@ export component CardView inherits Rectangle {
     in property <string> layout;
     in property <bool> plain-way;
     in property <bool> one-kind;
-    property <bool> mixed: (layout == "everything" || layout == "json" || layout == "link" || layout == "image") && !plain-way;
+    property <bool> mixed: !plain-way;
     property <string> shown-as: mixed ? card.kind : layout;
     property <bool> unfolded: mixed && open;
     property <bool> type-body: !mixed && !open;

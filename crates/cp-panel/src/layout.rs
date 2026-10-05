@@ -25,13 +25,6 @@ impl Layout {
         Layout::Papers,
     ];
 
-    pub fn shows_cards(self) -> bool {
-        matches!(
-            self,
-            Layout::Everything | Layout::Json | Layout::Link | Layout::Image
-        )
-    }
-
     pub fn groups(self) -> bool {
         matches!(self, Layout::Link | Layout::Folder | Layout::Papers)
     }

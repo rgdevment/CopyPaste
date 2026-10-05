@@ -156,14 +156,3 @@ fn every_name_slint_compares_against_is_a_name_rust_still_writes() {
         "the guard found nothing to guard, so it guards nothing: {looked}"
     );
 }
-
-#[test]
-fn the_general_view_json_links_and_pictures_wear_the_same_card() {
-    for layout in Layout::ALL {
-        let expected = matches!(
-            layout,
-            Layout::Everything | Layout::Json | Layout::Link | Layout::Image
-        );
-        assert_eq!(layout.shows_cards(), expected, "{}", layout.as_str());
-    }
-}
