@@ -142,12 +142,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     };
     let aside_said =
         crate::face::aside_said(&[&mixed_aside, &source, &used_text(&times), &lines_said]);
-    let opened = crate::face::opened_of(
-        face,
-        row.kind == Some(Kind::Json),
-        &body,
-        crate::say::in_english(),
-    );
+    let opened = opened_for(row, face);
     let claim_rows = i32::try_from(token.names.lines().count()).unwrap_or(0);
     Card {
         opened: opened.text.into(),
@@ -260,14 +255,18 @@ pub fn face_for(row: &Listed, thumb: bool) -> crate::face::Face {
     })
 }
 
-pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32) -> f32 {
-    let face = face_for(row, thumb);
-    let opened = crate::face::opened_of(
+pub fn opened_for(row: &Listed, face: crate::face::Face) -> crate::face::Opened {
+    crate::face::opened_of(
         face,
         row.kind == Some(Kind::Json),
         &body_of(row),
         crate::say::in_english(),
-    );
+    )
+}
+
+pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32) -> f32 {
+    let face = face_for(row, thumb);
+    let opened = opened_for(row, face);
     let claims = if row.kind == Some(Kind::Token) {
         i32::try_from(crate::token::rows_in(
             &row.preview,

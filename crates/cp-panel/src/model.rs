@@ -444,8 +444,12 @@ impl Rows {
         } else {
             card.has_thumb = false;
             let face = crate::view::face_for(row, false);
+            let opened = crate::view::opened_for(row, face);
             card.face = face.as_str().into();
             card.shut_lines = face.lines();
+            card.opened = opened.text.into();
+            card.open_lines = opened.lines;
+            card.more_said = opened.more.into();
         }
         drop(rows);
         if !card.has_thumb {

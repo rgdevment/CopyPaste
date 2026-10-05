@@ -776,3 +776,17 @@ fn a_list_of_pictures_wears_the_card_of_the_general_view() {
         Some((0.0, crate::face::Face::Thumb.shut_px()))
     );
 }
+
+#[test]
+fn a_card_whose_thumbnail_will_not_load_opens_with_the_text_it_falls_back_to() {
+    let store = store_with(1);
+    store.set_thumb(1, Some("no-existe.png"), 1).expect("thumb");
+    let rows = open(store, 0);
+    let card = rows.row_data(0).expect("card");
+    assert!(!card.has_thumb);
+    assert_eq!(card.face, "words");
+    assert!(
+        card.open_lines > 0 && !card.opened.is_empty(),
+        "the open card draws its text, not an empty box of the height the model kept"
+    );
+}
