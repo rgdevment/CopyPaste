@@ -729,6 +729,13 @@ pub fn dress_words(ui: &crate::Panel) {
     let words = ui.global::<crate::Words>();
     words.set_hint(crate::say::pick("Busca o filtra con #", "Search, or filter with #").into());
     words.set_footer(crate::say::pick(FOOTER_ES, FOOTER_EN).into());
+    words.set_sheet_footer(
+        crate::say::pick(
+            "↑↓ elegir · 1-9 · ⏎ pegar · esc",
+            "↑↓ choose · 1-9 · ⏎ paste · esc",
+        )
+        .into(),
+    );
     words.set_paste_as(crate::say::pick("pegar como", "paste as").into());
     words.set_paste_it(crate::say::pick("Pegar", "Paste").into());
     words.set_paste_plain(crate::say::pick("Plano", "Plain").into());
