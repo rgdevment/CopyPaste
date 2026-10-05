@@ -637,18 +637,74 @@ Section WebView2
 SectionEnd
 
 !macro NSIS_HOOK_PREINSTALL
+  IfSilent former_stays
   ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1" "UninstallString"
-  ${If} $R0 != ""
-    IfSilent former_stays
+  nsExec::ExecToStack `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$p = Get-AppxPackage -Name rgdevment.CopyPaste-ClipboardManager; if ($$p -and $$p.Version.Major -lt 3) { [Console]::Out.Write($$p.PackageFullName) }"`
+  Pop $R3
+  Pop $R2
+  ${If} $R3 != 0
+    StrCpy $R2 ""
+  ${EndIf}
+  ${If} $R0 == ""
+  ${AndIf} $R2 == ""
+    Goto former_stays
+  ${EndIf}
+
+  StrCpy $R5 "0"
+  ${If} $R2 != ""
+    ReadEnvStr $R4 LOCALAPPDATA
+    ${If} ${FileExists} "$R4\Packages\rgdevment.CopyPaste-ClipboardManager_kdjgfdc2rb3gc\LocalCache\Local\CopyPaste\clipboard.db"
+      StrCpy $R5 "1"
+    ${EndIf}
+  ${EndIf}
+
+  ${If} $R5 == "1"
+  ${AndIf} $R0 == ""
     ${If} $LANGUAGE == ${LANG_SPANISH}
-      StrCpy $R1 "CopyPaste 2 sigue instalado. Si se queda, las dos versiones se pelearán por el mismo atajo.$\n$\n¿Quitarlo ahora? Tu historial no se toca."
+      StrCpy $R1 "CopyPaste 2 de Microsoft Store guarda tu historial dentro de su paquete, y quitarlo lo borraría, así que se queda instalado. Si sigue abierto, las dos versiones se pelearán por el mismo atajo.$\n$\n¿Cerrarlo ahora?"
     ${Else}
-      StrCpy $R1 "CopyPaste 2 is still installed. If it stays, both versions will fight over the same shortcut.$\n$\nRemove it now? Your history is left untouched."
+      StrCpy $R1 "CopyPaste 2 from the Microsoft Store keeps your history inside its package, and removing it would delete it, so it stays installed. If it keeps running, both versions will fight over the same shortcut.$\n$\nClose it now?"
     ${EndIf}
     MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON1 "$R1" IDNO former_stays
-      ExecWait '$R0 /VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
-    former_stays:
+    nsExec::Exec 'taskkill.exe /F /T /IM CopyPaste.exe'
+    Goto former_stays
   ${EndIf}
+
+  ${If} $LANGUAGE == ${LANG_SPANISH}
+    StrCpy $R1 "CopyPaste 2 sigue instalado. Si se queda, las dos versiones se pelearán por el mismo atajo.$\n$\n¿Cerrarlo y quitarlo ahora? Tu historial no se toca."
+  ${Else}
+    StrCpy $R1 "CopyPaste 2 is still installed. If it stays, both versions will fight over the same shortcut.$\n$\nClose and remove it now? Your history is left untouched."
+  ${EndIf}
+  MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON1 "$R1" IDNO former_stays
+
+  ReadRegStr $R6 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "CopyPaste"
+  nsExec::Exec 'taskkill.exe /F /T /IM CopyPaste.exe'
+  ${If} $R0 != ""
+    ExecWait '$R0 /VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+  ${EndIf}
+  ${If} $R2 != ""
+  ${AndIf} $R5 == "0"
+    nsExec::ExecToStack `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Remove-AppxPackage -Package '$R2'"`
+    Pop $R3
+    Pop $R7
+    ${If} $R3 != 0
+      ${If} $LANGUAGE == ${LANG_SPANISH}
+        StrCpy $R1 "CopyPaste 2 de Microsoft Store no se pudo quitar. Puedes hacerlo desde Configuración › Aplicaciones; tu historial no se toca."
+      ${Else}
+        StrCpy $R1 "CopyPaste 2 from the Microsoft Store could not be removed. You can do it from Settings › Apps; your history is left untouched."
+      ${EndIf}
+      MessageBox MB_OK|MB_ICONEXCLAMATION "$R1"
+    ${EndIf}
+  ${EndIf}
+
+  ${StrLoc} $R8 "$R6" "cp-gui.exe" ">"
+  ${If} $R8 != ""
+    ReadRegStr $R7 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "CopyPaste"
+    ${If} $R7 == ""
+      WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "CopyPaste" "$R6"
+    ${EndIf}
+  ${EndIf}
+  former_stays:
 !macroend
 
 Section Install
