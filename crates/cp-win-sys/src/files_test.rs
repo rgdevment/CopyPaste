@@ -62,16 +62,96 @@ fn a_scheme_the_machine_does_have_is_found() {
 }
 
 #[test]
-fn each_way_of_asking_agrees_about_a_scheme_that_is_not_there() {
-    assert!(!super::asked_of_the_shell("cp-no-hay-nada-asi-9f3a"));
-    assert!(!super::written_as_a_protocol("cp-no-hay-nada-asi-9f3a"));
+fn a_scheme_the_shell_names_a_package_for_is_found() {
+    let packaged = super::associated(
+        "ms-windows-store",
+        windows::Win32::UI::Shell::ASSOCSTR_APPID,
+    );
+    let executable = super::associated(
+        "ms-windows-store",
+        windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE,
+    );
+    if packaged.is_some() {
+        assert!(
+            super::scheme_here("ms-windows-store"),
+            "a scheme the shell names a package for, as LinkUnbound from the Store is, has to be \
+             found through its AppID whatever the executable says; packaged {packaged:?}, \
+             executable {executable:?}"
+        );
+    }
 }
 
 #[test]
-fn the_registry_alone_can_answer_for_a_scheme_the_shell_resolves() {
+fn nothing_answers_for_a_scheme_that_is_not_there() {
+    for asked in [
+        windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE,
+        windows::Win32::UI::Shell::ASSOCSTR_APPID,
+    ] {
+        assert!(super::associated("cp-no-hay-nada-asi-9f3a", asked).is_none());
+    }
+}
+
+#[test]
+fn the_open_with_picker_is_not_a_handler() {
+    assert!(super::answered_by(
+        Some(r"C:\Program Files\LinkUnbound\linkunbound-shell.exe"),
+        None
+    ));
+    assert!(super::answered_by(
+        None,
+        Some("rgdevment.LinkUnbound-BrowserPicker_kdjgfdc2rb3gc!LinkUnbound")
+    ));
     assert!(
-        super::written_as_a_protocol("https"),
-        "an app from the Store registers no plain executable, so the key that makes a scheme a \
-         scheme is what has to be looked at when the shell does not answer"
+        !super::answered_by(Some(r"C:\WINDOWS\system32\OpenWith.exe"), None),
+        "the picker Windows offers when nothing answers was taken for an app"
     );
+    assert!(!super::answered_by(
+        Some(r"c:\windows\SYSTEM32\openwith.EXE"),
+        None
+    ));
+    assert!(!super::answered_by(Some(""), Some("")));
+    assert!(!super::answered_by(None, None));
+}
+
+#[test]
+fn a_scheme_left_undecided_is_not_taken_for_one_that_has_an_app() {
+    assert!(
+        !super::answered_by(Some(r"C:\WINDOWS\system32\OpenWith.exe"), Some("Undecided")),
+        "mailto and tel on a machine with no default answer exactly this, and wrapping a link for \
+         them shows the «look for an app» dialog the probe exists to avoid"
+    );
+}
+
+#[test]
+fn only_a_package_counts_where_no_executable_answers() {
+    assert!(super::answered_by(
+        None,
+        Some("AppX1h1kv4gmb0dpfenf5p98f1a1d3btwnwj")
+    ));
+    assert!(super::answered_by(
+        None,
+        Some("appxfvdy2xs18pcp2dv99rrcxe3kqmx56dq6")
+    ));
+    assert!(
+        !super::answered_by(None, Some("linkunbound")),
+        "a protocol key left with no command answers with its own name, and that is no app"
+    );
+    assert!(!super::answered_by(None, Some("Undecided")));
+    assert!(!super::answered_by(None, Some("App")));
+}
+
+#[test]
+fn the_machine_never_takes_the_picker_for_a_handler() {
+    let executable = super::associated("mailto", windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE);
+    let picked = executable
+        .as_deref()
+        .and_then(|one| std::path::Path::new(one).file_name())
+        .and_then(|leaf| leaf.to_str())
+        .is_some_and(|leaf| leaf.eq_ignore_ascii_case("OpenWith.exe"));
+    if picked {
+        assert!(
+            !super::scheme_here("mailto"),
+            "the shell sends mailto to the picker here, so nothing answers it"
+        );
+    }
 }

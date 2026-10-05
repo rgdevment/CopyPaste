@@ -64,8 +64,6 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
 
 > I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
->
-> **Linux support has been discontinued.** See [Linux support (discontinued)](#linux-support-discontinued).
 
 ---
 
@@ -349,28 +347,6 @@ brew tap rgdevment/tap && brew install --cask copypaste
 
 ---
 
-### Linux support (discontinued)
-
-> **Linux was maintained through v2.11.0 and is discontinued from there on.** Keeping the X11 shell
-> (global hotkey, XTest paste-back, AppIndicator tray) and the AppImage / `.deb` / `.rpm` pipeline
-> alive was beyond the resources of a single-maintainer project, so the platform was retired rather
-> than left to rot half-working.
-
-- **v2.11.0 is the last release with Linux builds, and it stays available.** Its artifacts remain on
-  [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/tag/v2.11.0) and keep working;
-  installed copies point there instead of at a version they cannot install. They receive no fixes,
-  no security updates and no new features.
-- **No new Linux packages are published.** The openSUSE Build Service repositories, the Homebrew
-  `copypaste-linux` formula and the self-updating AppImage are frozen at v2.11.0 so reinstalling
-  still works, but nothing new lands there.
-- **Your data is untouched.** History, images and settings stay in
-  `~/.local/share/com.rgdevment.copypaste/CopyPaste/` — back that folder up before uninstalling if
-  you want to keep it.
-- **Bug reports for Linux are not accepted.** The last state with full Linux support is archived on
-  the [`v2-linux-archive`](https://github.com/rgdevment/CopyPaste/tree/v2-linux-archive) branch —
-  code, packaging and CI included — for anyone who wants to fork and continue it. The GPL v3
-  licence covers exactly that.
-
 ### Compatibility
 
 | Platform    | Versions                                     | Architecture                      |
@@ -418,10 +394,10 @@ No. CopyPaste works fully offline. The standalone version makes a lightweight ch
 No. There's intentionally no cloud sync. Your copy history stays on the device where you copied it. This is a local-first copy tool, not a cloud service.
 
 **Where is my clipboard history stored?**
-Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/com.rgdevment.copypaste/CopyPaste/`. Each folder contains the database, images, config, and logs.
+Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
 **What platforms does this copy-paste tool support?**
-Windows 10/11 and macOS (Ventura+). Linux support was discontinued — see [Linux support (discontinued)](#linux-support-discontinued).
+Windows 10/11 and macOS (Ventura+).
 
 **Does it start with my session?**
 Optionally, yes, on both systems. Enable it in Settings → General. On Windows it registers through the standard startup mechanism, and on macOS through a login item of its own. No administrator rights are required.

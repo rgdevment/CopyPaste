@@ -1,72 +1,93 @@
-name: "🐛 Bug Report"
-description: "Report a technical issue or unexpected behavior"
+name: "🐛 Bug report"
+description: "Something in CopyPaste does not work the way it should"
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        ### Thanks for helping us improve CopyPaste! 🙏
-        Your report makes the app better for everyone.
-        Before reporting, please make sure you're using the latest version.
+        Thanks for taking the time. A report that can be reproduced gets fixed first, so the
+        steps below matter more than anything else here.
+
+        Before you start: check that you are on the latest version (**Settings → About**), and
+        search the [open issues](https://github.com/rgdevment/CopyPaste/issues) in case it is
+        already known. A security problem goes through a
+        [private advisory](https://github.com/rgdevment/CopyPaste/security/policy), never here.
   - type: input
     id: version
     attributes:
-      label: "CopyPaste Version"
-      description: "Settings → About shows it, and so does the installer name."
-      placeholder: "e.g., v3.0.0-rc1"
+      label: "CopyPaste version"
+      description: "Shown under **Settings → About**."
+      placeholder: "3.0.0"
     validations:
       required: true
   - type: dropdown
     id: os
     attributes:
-      label: "Operating System"
+      label: "System"
       options:
-        - "Windows 11 (23H2 or newer)"
-        - "Windows 11 (Older version)"
-        - "Windows 10 (1809+)"
-        - "macOS 15 (Sequoia) or newer"
-        - "macOS 13–14 (Ventura / Sonoma)"
-        - "Other / unsupported (Linux ≤ v2.11.0 — reports not accepted)"
+        - "Windows 11"
+        - "Windows 10 (1809 or newer)"
+        - "macOS 15 Sequoia or newer"
+        - "macOS 13 Ventura or macOS 14 Sonoma"
+    validations:
+      required: true
+  - type: dropdown
+    id: channel
+    attributes:
+      label: "Installed from"
+      options:
+        - "Microsoft Store"
+        - "Windows installer (.exe from GitHub Releases)"
+        - "Homebrew"
+        - "macOS disk image (.dmg from GitHub Releases)"
+        - "Built from source"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: "Where it happens"
+      options:
+        - "The panel (the history window that opens with the shortcut)"
+        - "Copying: something is not captured, or captured wrong"
+        - "Pasting: something does not land, or lands wrong"
+        - "The settings window"
+        - "Installing, updating or starting with the system"
+        - "Somewhere else"
     validations:
       required: true
   - type: textarea
-    id: description
+    id: happened
     attributes:
-      label: "What happened?"
-      description: "A clear and concise description of the bug."
+      label: "What happened, and what you expected instead"
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: "Steps to Reproduce"
-      description: "How can we make this happen again?"
-      placeholder: "1. Copy a high-resolution image\n2. Open the panel with Ctrl+Alt+V, or ⌥⌘V on a Mac\n3. Click on the item..."
+      label: "Steps to reproduce"
+      description: "Name the application you copied from or pasted into: most clipboard bugs belong to one pair of them."
+      placeholder: |
+        1. Copy an image from Firefox
+        2. Open the panel with Ctrl+Alt+V (⌥⌘V on a Mac)
+        3. Press Enter on the image
+        4. It pastes as text in Word
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
-      label: "Application Logs (optional)"
+      label: "Logs (optional)"
       description: |
-        CopyPaste writes two plain-text logs beside your history: `cp-gui.log`
-        for the settings window and `cp-panel.log` for the panel.
-        **Settings → History → Data folder → Open folder** takes you to them,
-        or look in `%LocalAppData%\CopyPaste\logs` on Windows and
-        `~/Library/Application Support/CopyPaste/logs` on a Mac.
-        They hold events and errors, never what you copied.
-      placeholder: "Paste the lines around the moment it happened..."
-  - type: checkboxes
-    id: checks
-    attributes:
-      label: "Technical Context"
-      options:
-        - label: "The issue persists after restarting the app"
-          required: false
-        - label: "I've looked in the data folder (Settings → History → Data folder)"
-          required: false
+        CopyPaste keeps two plain-text logs, `cp-gui.log` for the settings window and
+        `cp-panel.log` for the panel. **Settings → History → Data folder → Open folder** takes
+        you there, or look in `%LocalAppData%\CopyPaste\logs` on Windows and
+        `~/Library/Application Support/CopyPaste/logs` on a Mac. They record events and errors,
+        never what you copied.
+      placeholder: "Paste the lines around the moment it happened."
+      render: text
   - type: textarea
     id: extra
     attributes:
-      label: "Screenshots or Extra Info (optional)"
-      description: "Screenshots help us understand the problem better."
-      placeholder: "Drag and drop images here..."
+      label: "Screenshots or anything else (optional)"
+      description: "Drag images here. Leave out anything private you may have copied."

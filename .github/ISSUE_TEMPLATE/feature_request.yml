@@ -1,45 +1,43 @@
-name: "💡 Feature Request"
-description: "Suggest an idea or improvement for CopyPaste"
+name: "💡 Feature request"
+description: "Something CopyPaste could do, or do better"
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        ### Share your idea! 🚀
-        CopyPaste is a community project—your feedback helps us grow.
-        We value simplicity and minimalism. Before suggesting, consider:
-        Does this idea still feel native on Windows and on a Mac?
+        Ideas are welcome. CopyPaste tries to stay small, fast and private: everything stays on
+        your machine, nothing needs an account, and the panel should feel native on Windows and
+        on a Mac. A request that keeps to that has the best chance.
+
+        Not sure it is a feature yet? [Discussions](https://github.com/rgdevment/CopyPaste/discussions)
+        is the place to think it through first.
   - type: textarea
-    id: feature-description
+    id: problem
     attributes:
-      label: "What's your idea?"
-      description: "A clear and concise description of what you'd like to see."
-      placeholder: "e.g., I'd love a smoother transition when pinning items..."
+      label: "What are you trying to do?"
+      description: "The situation, not the solution: what you were doing when CopyPaste fell short."
+      placeholder: "I copy the same three addresses every day and have to search for them each time."
     validations:
       required: true
   - type: textarea
-    id: motivation
+    id: idea
     attributes:
-      label: "How does this improve your experience?"
-      description: "How would this make using CopyPaste more pleasant or efficient for you?"
+      label: "What would help"
+      description: "How you picture it working. A sketch or a screenshot of another app is welcome."
     validations:
       required: true
-  - type: textarea
-    id: design-impact
+  - type: dropdown
+    id: platform
     attributes:
-      label: "Visual Proposal (optional)"
-      description: "How should this look? We prioritize clean, modern, and fluid aesthetics."
-      placeholder: "Describe icons, animations, or where this fits in the UI..."
-  - type: checkboxes
-    id: philosophy-check
-    attributes:
-      label: "Philosophy Checklist"
+      label: "Which systems"
       options:
-        - label: "This idea maintains the modern UI and avoids 'heavy' designs."
-          required: true
-        - label: "It contributes to a simple and intuitive experience."
-          required: true
+        - "Windows and macOS"
+        - "Windows only"
+        - "macOS only"
+    validations:
+      required: true
   - type: textarea
-    id: alternatives
+    id: today
     attributes:
-      label: "Inspiration (optional)"
-      description: "Have you seen something similar in other modern apps that you liked?"
+      label: "How you get by today (optional)"
+      description: "A workaround, or another app that does it well."
