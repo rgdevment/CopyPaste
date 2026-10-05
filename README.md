@@ -12,6 +12,12 @@
     <a href="#license-and-spirit">
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License GPL-3.0"/>
     </a>
+    <a href="https://github.com/sponsors/rgdevment">
+      <img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor CopyPaste on GitHub"/>
+    </a>
+    <a href="https://buymeacoffee.com/rgdevment">
+      <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy me a coffee"/>
+    </a>
   </p>
 
   <p><strong>CopyPaste 3.0 is here as a release candidate</strong> — the whole application rewritten in Rust, for Windows and macOS.<br/>
@@ -36,15 +42,6 @@
   <p align="center">
     <sub>Prefer a direct download? <a href="https://github.com/rgdevment/CopyPaste/releases/latest">GitHub Releases</a> has standalone installers — Windows (.exe) · macOS (.dmg)</sub>
   </p>
-
-  <p>
-    <a href="https://github.com/sponsors/rgdevment">
-      <img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"/>
-    </a>
-    <a href="https://buymeacoffee.com/rgdevment">
-      <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"/>
-    </a>
-  </p>
 </div>
 
 ---
@@ -60,7 +57,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
   Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
 - **Cross-platform** — same native copy-paste experience on Windows and macOS.
 - **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
-- **Beautiful** — follows your OS theme (light/dark), with Mica effect on Windows and native materials on macOS.
+- **Easy to read** — a clean, opaque panel that follows your system theme, light or dark, so what you copied is the first thing you see.
 
 > I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
 
@@ -73,7 +70,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [What It Is / What It Isn't](#what-it-is--what-it-isnt)
 - [Who Is This For?](#who-is-this-for)
 - [Privacy and Security](#privacy-and-security)
-- [Key Features](#key-features)
+- [Clipboard Manager Features](#clipboard-manager-features)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Getting Started](#getting-started)
 - [FAQ](#faq)
@@ -194,7 +191,7 @@ folder with the history, the files behind it and its settings:
 
 If you care about privacy and control, this clipboard manager is made for you. Read the full [Privacy Policy](PRIVACY.md) for complete details.
 
-## Key Features
+## Clipboard Manager Features
 
 **Latest Release** — See all features and improvements in the [Release Notes](https://github.com/rgdevment/CopyPaste/releases/latest).
 
@@ -400,8 +397,20 @@ Optionally, yes, on both systems. Enable it in Settings → General. On Windows 
 **Does the macOS version work on Intel Macs?**
 Yes. There is a build for each chip, Apple Silicon and Intel. Homebrew picks the right one for you, and the Releases page carries both.
 
+**Can it replace the Windows clipboard history (Win+V)?**
+Yes. Win+V keeps your last 25 items and forgets the unpinned ones when Windows restarts. CopyPaste keeps what you copy for as long as you choose, searchable in milliseconds, with images, files, links and colours as cards you can pin, name and paste in another form. It opens with its own shortcut, so Win+V stays where it is.
+
+**How do I paste as plain text?**
+Open the panel and press **Shift+Enter** (⇧⏎ on a Mac). **Alt+Enter** (⌥⏎) offers the other forms a card carries, such as Markdown, formatted JSON or a colour in another notation.
+
+**Can I drag an image or a file from the history into another app?**
+Yes, on Windows and macOS. Drag a card into a browser upload, a chat or a folder. An image arrives with the name you gave its card, or a unique one, so an upload form never rejects a second image as a duplicate `image.png`.
+
+**Is it an alternative to Ditto, Maccy or CopyQ?**
+Yes. The [Alternatives](#alternatives) section compares them honestly, including where each of them is the better choice.
+
 **How is CopyPaste different from other clipboard managers?**
-CopyPaste is a personal project, not a company product. There are no ads, no telemetry, no accounts, and no data collection. Unlike most copy paste tools, it's built to feel native on each platform (Mica on Windows, Sidebar material on macOS), it's fully keyboard-driven, and it respects your privacy completely. It's an open source clipboard utility focused on productivity — you can verify every line of code yourself.
+CopyPaste is a personal project, not a company product. There are no ads, no telemetry, no accounts, and no data collection. Unlike most copy paste tools, it's built to feel native on each platform, it's fully keyboard-driven, and it respects your privacy completely. It's an open source clipboard utility focused on productivity — you can verify every line of code yourself.
 
 ---
 
