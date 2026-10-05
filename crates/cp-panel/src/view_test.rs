@@ -907,3 +907,16 @@ fn a_name_is_cut_where_a_letter_ends_and_not_where_a_byte_does() {
         "half a flag is two stray letters: {kept:?}"
     );
 }
+
+#[test]
+fn a_hit_inside_a_text_of_many_lines_is_shown_on_one() {
+    let (lead, hit, tail) = parts_of(&excerpt_of(&[
+        ("barra lateral\n  del Finder: el ", false),
+        ("mismo", true),
+        (" gesto que en o…\n</article>\n", false),
+    ]));
+    assert_eq!(lead, "barra lateral del Finder: el ");
+    assert_eq!(hit, "mismo");
+    assert_eq!(tail, " gesto que en o… </article> ");
+    assert!(![lead, hit, tail].concat().contains('\n'));
+}
