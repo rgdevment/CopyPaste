@@ -816,7 +816,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     concurrency:
-      group: release-publish
+      group: release-publish-${{ github.ref }}
       cancel-in-progress: false
     permissions:
       contents: write
@@ -1134,81 +1134,83 @@ jobs:
             exit 1
           fi
 
-          if git ls-remote --exit-code --heads origin manifest > /dev/null 2>&1; then
-            if ! git fetch origin manifest --depth 1; then
-              echo "::error::the manifest branch is there and would not come down; nothing was written"
-              exit 1
-            fi
-            git checkout -B manifest FETCH_HEAD
-          else
-            git checkout --orphan manifest
-            git rm -rq --cached . 2>/dev/null || true
-            rm -f release-manifest.json latest.json candidate.json
-          fi
-
-          if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
-            was=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
-            track="candidates"
-          else
-            was=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
-            track="stable"
-          fi
-          if [ -n "$was" ] && [ "$was" != "$v" ] \
-             && [ "$(printf '%s\n%s\n' "$was" "$v" | sort -V | tail -1)" != "$v" ]; then
-            echo "::error::the $track feed already says $was, and this run would set it back to \
-                  $v. Nothing was written."
-            exit 1
-          fi
-
-          latest=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
-          ahead=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
-          if [ "${{ needs.version.outputs.prerelease }}" = "true" ] \
-             && [ -n "$latest" ] && [ "$latest" != "0.0.0" ] \
-             && [ "$(printf '%s\n%s\n' "$latest" "${v%%-*}" | sort -V | tail -1)" = "$latest" ]; then
-            echo "::error::$v is a candidate for $latest or older, which is already out. Nothing was written."
-            exit 1
-          fi
-          if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
-            jq -n --arg l "${latest:-0.0.0}" --arg c "$v" \
-              '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
-            cp "$RUNNER_TEMP/channel.json" candidate.json
-            if [ "${latest:-0.0.0}" = "0.0.0" ]; then
-              cp "$RUNNER_TEMP/channel.json" latest.json
-            fi
-          else
-            keep=""
-            if [ -n "$ahead" ] \
-               && [ "$(printf '%s\n%s\n' "${ahead%%-*}" "$v" | sort -V | tail -1)" != "$v" ]; then
-              keep="$ahead"
-            fi
-            if [ -n "$keep" ]; then
-              jq -n --arg l "$v" --arg c "$keep" \
-                '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
-            else
-              jq -n --arg l "$v" '{schema: 1, latest: $l}' > release-manifest.json
-              rm -f candidate.json
-            fi
-            cp "$RUNNER_TEMP/channel.json" latest.json
-          fi
-          cat release-manifest.json
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for one in release-manifest.json latest.json candidate.json; do
-            git add -A -- "$one" 2>/dev/null || true
-          done
-          if git diff --cached --quiet; then
-            echo "already says $v"
-            exit 0
-          fi
-          git commit -m "chore: release manifest for $v"
+          write() {
+            if git ls-remote --exit-code --heads origin manifest > /dev/null 2>&1; then
+              if ! git fetch origin manifest --depth 1; then
+                echo "::error::the manifest branch is there and would not come down; nothing was written"
+                exit 1
+              fi
+              git checkout -B manifest FETCH_HEAD
+            else
+              git checkout --orphan manifest
+              git rm -rq --cached . 2>/dev/null || true
+              rm -f release-manifest.json latest.json candidate.json
+            fi
+
+            if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
+              was=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
+              track="candidates"
+            else
+              was=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
+              track="stable"
+            fi
+            if [ -n "$was" ] && [ "$was" != "$v" ] \
+               && [ "$(printf '%s\n%s\n' "$was" "$v" | sort -V | tail -1)" != "$v" ]; then
+              echo "::error::the $track feed already says $was, and this run would set it back to \
+                    $v. Nothing was written."
+              exit 1
+            fi
+
+            latest=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
+            ahead=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
+            if [ "${{ needs.version.outputs.prerelease }}" = "true" ] \
+               && [ -n "$latest" ] && [ "$latest" != "0.0.0" ] \
+               && [ "$(printf '%s\n%s\n' "$latest" "${v%%-*}" | sort -V | tail -1)" = "$latest" ]; then
+              echo "::error::$v is a candidate for $latest or older, which is already out. Nothing was written."
+              exit 1
+            fi
+            if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
+              jq -n --arg l "${latest:-0.0.0}" --arg c "$v" \
+                '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
+              cp "$RUNNER_TEMP/channel.json" candidate.json
+              if [ "${latest:-0.0.0}" = "0.0.0" ]; then
+                cp "$RUNNER_TEMP/channel.json" latest.json
+              fi
+            else
+              keep=""
+              if [ -n "$ahead" ] \
+                 && [ "$(printf '%s\n%s\n' "${ahead%%-*}" "$v" | sort -V | tail -1)" != "$v" ]; then
+                keep="$ahead"
+              fi
+              if [ -n "$keep" ]; then
+                jq -n --arg l "$v" --arg c "$keep" \
+                  '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
+              else
+                jq -n --arg l "$v" '{schema: 1, latest: $l}' > release-manifest.json
+                rm -f candidate.json
+              fi
+              cp "$RUNNER_TEMP/channel.json" latest.json
+            fi
+            cat release-manifest.json
+
+            for one in release-manifest.json latest.json candidate.json; do
+              git add -A -- "$one" 2>/dev/null || true
+            done
+            if git diff --cached --quiet; then
+              echo "already says $v"
+              exit 0
+            fi
+            git commit -m "chore: release manifest for $v"
+          }
+
           for attempt in 1 2 3 4 5; do
+            write
             if git push origin manifest; then
               exit 0
             fi
-            echo "the feed would not push (${attempt}/5)"
-            git fetch origin manifest || true
-            git rebase FETCH_HEAD || git rebase --abort || true
+            echo "the feed moved while this run wrote it (${attempt}/5); writing it again on top"
             sleep $((attempt * 5))
           done
           echo "::error::the feed could not be pushed; the release is out and nothing announces it"
@@ -1407,7 +1409,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: release-homebrew
+      group: release-homebrew-${{ github.ref }}
       cancel-in-progress: false
     env:
       HOMEBREW_PUBLISH: ${{ vars.HOMEBREW_PUBLISH }}
