@@ -62,18 +62,20 @@ fn a_scheme_the_machine_does_have_is_found() {
 }
 
 #[test]
-fn an_app_from_the_store_is_found_by_its_package_not_by_an_executable() {
-    assert!(
-        super::associated(
-            "ms-windows-store",
-            windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE
-        )
-        .is_none(),
-        "the Store registers no plain executable for its scheme, which is why asking for one alone          missed every app installed from it"
+fn a_scheme_the_shell_names_a_package_for_is_found() {
+    let packaged = super::associated(
+        "ms-windows-store",
+        windows::Win32::UI::Shell::ASSOCSTR_APPID,
     );
-    assert!(
+    let executable = super::associated(
+        "ms-windows-store",
+        windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE,
+    );
+    assert_eq!(
         super::scheme_here("ms-windows-store"),
-        "every Windows carries the Store, so a packaged scheme it cannot find is a check that          misses LinkUnbound from the Store"
+        packaged.is_some() || executable.is_some(),
+        "a scheme answered by a package and by no executable, as LinkUnbound from the Store is, \
+         has to be found through its AppID; packaged {packaged:?}, executable {executable:?}"
     );
 }
 
