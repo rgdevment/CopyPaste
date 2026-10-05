@@ -42,7 +42,6 @@ jobs:
           python3 -c "import yaml" 2>/dev/null \
             || python3 -m pip install --quiet --break-system-packages pyyaml
 
-      # two workflows guard main, and asking only one would cut a tag over a broken convention
       - name: Project conventions
         run: bash scripts/rules.sh
 
@@ -197,13 +196,15 @@ jobs:
           strict+='(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
           strict+='(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?$'
           if [[ ! "$version" =~ $strict ]]; then
-            echo "::error::«${version}» is not a version semver reads (1.2.3 or 1.2.3-rc.1)"
+            echo "::error::«${version}» is not a version semver reads (1.2.3 or 1.2.3-rc1)"
             exit 1
           fi
 
-          if [[ "$version" =~ -rc[0-9]{2,} ]]; then
-            echo "::error::«${version}» has to be written rc.${BASH_REMATCH[0]#-rc}: past rc9, \
-          semver reads rc10 as older than rc2"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$version" == *-* \
+                && ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc[1-9]$ ]]; then
+            echo "::error::«${version}» is not rc1 to rc9. Semver reads rc10, rc.3 and rc.10 as older \
+          than rc2, so every copy on an earlier candidate would never be offered it. Past rc9, the \
+          next tag is the stable one or the first candidate of a new version."
             exit 1
           fi
 
@@ -217,7 +218,6 @@ jobs:
           echo "macos=${BUILD_MACOS}" >> "$GITHUB_OUTPUT"
           echo "version $version (pre-release: $prerelease)"
 
-      # the hook that asks this before a tag can be skipped with --no-verify
       - name: The window has something to say about this version
         run: bash scripts/news.sh "${{ steps.resolve.outputs.version }}"
 
@@ -816,7 +816,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     concurrency:
-      group: release-publish-${{ github.ref }}
+      group: release-publish
       cancel-in-progress: false
     permissions:
       contents: write
@@ -1128,7 +1128,11 @@ jobs:
             exit 1
           fi
 
-          if git fetch origin manifest --depth 1 2>/dev/null; then
+          if git ls-remote --exit-code --heads origin manifest > /dev/null 2>&1; then
+            if ! git fetch origin manifest --depth 1; then
+              echo "::error::the manifest branch is there and would not come down; nothing was written"
+              exit 1
+            fi
             git checkout -B manifest FETCH_HEAD
           else
             git checkout --orphan manifest
@@ -1152,6 +1156,12 @@ jobs:
 
           latest=$(jq -r '.latest // ""' release-manifest.json 2>/dev/null || echo "")
           ahead=$(jq -r '.latestPrerelease // ""' release-manifest.json 2>/dev/null || echo "")
+          if [ "${{ needs.version.outputs.prerelease }}" = "true" ] \
+             && [ -n "$latest" ] && [ "$latest" != "0.0.0" ] \
+             && [ "$(printf '%s\n%s\n' "$latest" "${v%%-*}" | sort -V | tail -1)" = "$latest" ]; then
+            echo "::error::$v is a candidate for $latest or older, which is already out. Nothing was written."
+            exit 1
+          fi
           if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
             jq -n --arg l "${latest:-0.0.0}" --arg c "$v" \
               '{schema: 1, latest: $l, latestPrerelease: $c}' > release-manifest.json
@@ -1391,7 +1401,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: release-homebrew-${{ github.ref }}
+      group: release-homebrew
       cancel-in-progress: false
     env:
       HOMEBREW_PUBLISH: ${{ vars.HOMEBREW_PUBLISH }}
