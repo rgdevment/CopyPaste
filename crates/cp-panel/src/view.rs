@@ -100,6 +100,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
             root: String::new(),
             counted: String::new(),
             keys: String::new(),
+            pairs: String::new(),
         });
     let body = body_of(row);
     let (lead, hit, tail) = match &row.snippet {
@@ -126,7 +127,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     let face = face_for(row, row.thumb_path.is_some());
     let (line_one, line_two) = crate::face::opening_of(&body);
     let mixed_aside = match row.kind {
-        Some(Kind::Json) => crate::face::aside_said(&[&shape.root, &shape.counted]),
+        Some(Kind::Json) => shape.counted.clone(),
         Some(Kind::Token) => crate::face::aside_said(&[&token.who, &token.life]),
         Some(Kind::Folder) => crate::folder::said_in(meta, crate::say::in_english()),
         _ => String::new(),
@@ -178,7 +179,12 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         squeezed: squeezed_of(&body).into(),
         shape_root: shape.root.into(),
         shape_said: shape.counted.into(),
-        shape_keys: shape.keys.into(),
+        shape_keys: if shape.pairs.is_empty() {
+            shape.keys
+        } else {
+            shape.pairs
+        }
+        .into(),
         media_clock: clock.into(),
         media_measures: measures.into(),
         papers_format: papers
@@ -233,7 +239,13 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
 pub fn face_for(row: &Listed, thumb: bool) -> crate::face::Face {
     let keys = if row.kind == Some(Kind::Json) {
         crate::shape::said_of(&row.preview, crate::say::in_english())
-            .map(|said| said.keys)
+            .map(|said| {
+                if said.pairs.is_empty() {
+                    said.keys
+                } else {
+                    said.pairs
+                }
+            })
             .unwrap_or_default()
     } else {
         String::new()
