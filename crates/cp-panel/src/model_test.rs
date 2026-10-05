@@ -27,16 +27,16 @@ fn store_with(count: usize) -> Rc<Store> {
 }
 
 fn open(store: Rc<Store>, now: i64) -> Rc<Rows> {
-    Rows::open(store, Filter::default(), now, SIZES, false)
+    Rows::open(store, Filter::default(), now, SIZES, false, None)
 }
 
-fn store_of_images(count: usize) -> Rc<Store> {
+fn store_of_videos(count: usize) -> Rc<Store> {
     let store = Store::in_memory().expect("esquema");
     for at in 0..count {
         let item = cp_core::item::Item {
-            kind: Some(cp_core::kind::Kind::Image),
+            kind: Some(cp_core::kind::Kind::Video),
             formats: vec![cp_core::item::Format {
-                id: "public.png".into(),
+                id: "public.mpeg-4".into(),
                 payload: cp_core::item::Payload::Inline(vec![at as u8; 8]),
             }],
         };
@@ -60,7 +60,7 @@ fn only_tokens(store: Rc<Store>, now: i64) -> Rc<Rows> {
         kinds: vec![cp_core::kind::Kind::Token],
         ..Default::default()
     };
-    Rows::open(store, filter, now, SIZES, false)
+    Rows::open(store, filter, now, SIZES, false, None)
 }
 
 #[test]
@@ -71,18 +71,19 @@ fn an_open_token_gets_room_for_the_table_of_claims_it_draws() {
     rows.open_at(Some(0));
     let open = rows.span_of(0).expect("la fila").1;
     let claims = 7.0;
-    assert!(
-        open >= shut + (claims + 1.0) * SIZES.line,
-        "abierta debe caber la tabla entera y su hueco, y midio {open} contra {shut} cerrada"
+    assert_eq!(
+        open,
+        crate::face::open_px(crate::face::BLOCK_PAD + claims * crate::face::MONO_LINE),
+        "abierta debe caber la tabla entera, y midio {open} contra {shut} cerrada"
     );
 }
 
-fn only_images(store: Rc<Store>, now: i64) -> Rc<Rows> {
+fn only_tall(store: Rc<Store>, now: i64) -> Rc<Rows> {
     let filter = Filter {
-        kinds: vec![cp_core::kind::Kind::Image],
+        kinds: vec![cp_core::kind::Kind::Video],
         ..Default::default()
     };
-    Rows::open(store, filter, now, SIZES, false)
+    Rows::open(store, filter, now, SIZES, true, None)
 }
 
 #[test]
@@ -145,16 +146,16 @@ fn a_query_that_matches_nothing_is_an_empty_model_not_an_error() {
         query: Some("nada-de-esto".into()),
         ..Default::default()
     };
-    let rows = Rows::open(store_with(10), filter, 0, SIZES, false);
+    let rows = Rows::open(store_with(10), filter, 0, SIZES, false, None);
     assert_eq!(rows.row_count(), 0);
     assert!(rows.exhausted.get());
 }
 
 #[test]
 fn every_row_knows_where_it_starts_and_a_thumbnail_makes_it_taller() {
-    let store = store_of_images(3);
+    let store = store_of_videos(3);
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
     assert_eq!(rows.span_of(1), Some((SIZES.plain, SIZES.tall)));
     assert_eq!(
@@ -166,9 +167,9 @@ fn every_row_knows_where_it_starts_and_a_thumbnail_makes_it_taller() {
 
 #[test]
 fn a_thumbnail_that_does_not_load_gives_its_height_back_to_the_rows_below() {
-    let store = store_of_images(3);
+    let store = store_of_videos(3);
     store.set_thumb(3, Some("no-existe.png"), 2).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     assert_eq!(rows.span_of(0), Some((0.0, SIZES.tall)));
     let card = rows.row_data(0).expect("fila");
     assert!(!card.has_thumb, "the thumbnail is not on disk");
@@ -178,6 +179,7 @@ fn a_thumbnail_that_does_not_load_gives_its_height_back_to_the_rows_below() {
 
 #[test]
 fn the_open_row_grows_what_its_text_asks_and_nobody_else_pays() {
+    use crate::face::{Face, LINE, open_px};
     let store = Store::in_memory().expect("esquema");
     store.insert_text("u0", "corto", 0).expect("insert");
     store
@@ -185,48 +187,46 @@ fn the_open_row_grows_what_its_text_asks_and_nobody_else_pays() {
         .expect("insert");
     store.insert_text("u2", "otro corto", 2).expect("insert");
     let rows = open(Rc::new(store), 0);
-    let long = SIZES.frame + 6.0 * SIZES.line;
+    let short = Face::Words(1).shut_px();
+    let two = Face::Words(2).shut_px();
+    let long = open_px(6.0 * LINE);
 
-    assert_eq!(rows.span_of(1), Some((SIZES.mixed, SIZES.mixed)));
+    assert_eq!(rows.span_of(1), Some((short, two)));
 
     rows.open_at(Some(1));
     assert_eq!(
         rows.span_of(0),
-        Some((0.0, SIZES.mixed)),
+        Some((0.0, short)),
         "la de arriba no se mueve"
     );
     assert_eq!(
         rows.span_of(1),
-        Some((SIZES.mixed, long)),
+        Some((short, long)),
         "crece lo que pide su texto"
     );
     assert_eq!(
         rows.span_of(2),
-        Some((SIZES.mixed + long, SIZES.mixed)),
+        Some((short + long, short)),
         "the one below drops by what the open one grew"
     );
 
     rows.open_at(Some(2));
-    assert_eq!(
-        rows.span_of(1),
-        Some((SIZES.mixed, SIZES.mixed)),
-        "la anterior vuelve"
-    );
+    assert_eq!(rows.span_of(1), Some((short, two)), "la anterior vuelve");
     assert_eq!(
         rows.span_of(2),
-        Some((2.0 * SIZES.mixed, SIZES.frame + 2.0 * SIZES.line)),
-        "incluso un texto corto gana sitio al abrirse, porque cerrado solo ensena una linea"
+        Some((short + two, open_px(LINE))),
+        "incluso un texto corto gana la fila de atajos al abrirse"
     );
 
     rows.open_at(None);
-    assert_eq!(rows.span_of(1), Some((SIZES.mixed, SIZES.mixed)));
+    assert_eq!(rows.span_of(1), Some((short, two)));
 }
 
 #[test]
 fn a_thumbnail_that_failed_does_not_get_its_height_back() {
-    let store = store_of_images(3);
+    let store = store_of_videos(3);
     store.set_thumb(3, Some("no-existe.png"), 2).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     assert!(rows.row_data(0).is_some_and(|card| !card.has_thumb));
     assert_eq!(rows.span_of(0), Some((0.0, SIZES.plain)));
 
@@ -242,9 +242,9 @@ fn a_thumbnail_that_failed_does_not_get_its_height_back() {
 
 #[test]
 fn a_row_with_a_thumbnail_does_not_open_in_its_own_view() {
-    let store = store_of_images(2);
+    let store = store_of_videos(2);
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
-    let rows = only_images(store, 0);
+    let rows = only_tall(store, 0);
     rows.open_at(Some(0));
     assert_eq!(
         rows.span_of(0),
@@ -254,14 +254,19 @@ fn a_row_with_a_thumbnail_does_not_open_in_its_own_view() {
 }
 
 #[test]
-fn a_thumbnail_in_the_mixed_list_is_as_tall_as_everything_else() {
+fn a_row_in_the_mixed_list_is_as_tall_as_its_face() {
     let store = store_with(2);
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
     let rows = open(store, 0);
     assert_eq!(
         rows.span_of(0),
-        Some((0.0, SIZES.mixed)),
-        "no kind gets to be taller than the text in a list where the kinds are mixed"
+        Some((0.0, crate::face::Face::Thumb.shut_px())),
+        "the row with a thumbnail makes room for the strip it draws"
+    );
+    assert_eq!(
+        rows.span_of(1).map(|(_, span)| span),
+        Some(crate::face::Face::Words(1).shut_px()),
+        "a short text takes the one line it needs"
     );
 }
 
@@ -446,7 +451,7 @@ fn the_row_that_heads_a_group_is_taller_by_exactly_its_heading() {
         order: cp_store::Order::ByGroup,
         ..Default::default()
     };
-    let rows = Rows::open(Rc::new(store), grouped, 1_000, SIZES, false);
+    let rows = Rows::open(Rc::new(store), grouped, 1_000, SIZES, false, None);
     assert_eq!(rows.row_count(), 3);
     let mut heading = 0;
     for at in 0..rows.row_count() {
@@ -454,9 +459,9 @@ fn the_row_that_heads_a_group_is_taller_by_exactly_its_heading() {
         let span = rows.span_of(at).expect("a row").1;
         let wanted = if card.heads_group {
             heading += 1;
-            SIZES.mixed + SIZES.head
+            crate::face::Face::Link.shut_px() + SIZES.head
         } else {
-            SIZES.mixed
+            crate::face::Face::Link.shut_px()
         };
         assert_eq!(
             span, wanted,
@@ -485,7 +490,7 @@ fn a_filter_on_one_kind_still_comes_back_grouped() {
         order: cp_store::Order::ByGroup,
         ..Default::default()
     };
-    let rows = Rows::open(Rc::new(store), linked, 1_000, SIZES, false);
+    let rows = Rows::open(Rc::new(store), linked, 1_000, SIZES, false, None);
     assert_eq!(rows.row_count(), 3, "the three links came back");
     let first = rows.row_data(0).expect("a card");
     assert!(first.heads_group, "the first link heads its domain");
@@ -519,7 +524,7 @@ fn by_group() -> Filter {
 #[test]
 fn the_heading_a_card_draws_is_the_one_its_row_was_given_room_for() {
     let store = grouped_store(&[("a.com", 3), ("b.com", 2), ("c.com", 4)]);
-    let rows = Rows::open(store, by_group(), 1_000, SIZES, false);
+    let rows = Rows::open(store, by_group(), 1_000, SIZES, false, None);
     let total = rows.row_count();
     assert!(total >= 9, "{total}");
 
@@ -543,7 +548,7 @@ fn the_heading_a_card_draws_is_the_one_its_row_was_given_room_for() {
 #[test]
 fn exactly_one_card_per_group_carries_the_heading() {
     let store = grouped_store(&[("a.com", 3), ("b.com", 2), ("c.com", 4)]);
-    let rows = Rows::open(store, by_group(), 1_000, SIZES, false);
+    let rows = Rows::open(store, by_group(), 1_000, SIZES, false, None);
     let mut heading_at = Vec::new();
     for index in 0..rows.row_count() {
         if rows.row_data(index).expect("a card").heads_group {
@@ -560,7 +565,7 @@ fn exactly_one_card_per_group_carries_the_heading() {
 #[test]
 fn the_room_a_heading_row_gets_is_the_card_plus_the_heading() {
     let store = grouped_store(&[("a.com", 2), ("b.com", 2)]);
-    let rows = Rows::open(store, by_group(), 1_000, SIZES, false);
+    let rows = Rows::open(store, by_group(), 1_000, SIZES, false, None);
     let mut with_heading = None;
     let mut without = None;
     for index in 0..rows.row_count() {
@@ -589,17 +594,19 @@ fn a_thumbnail_opened_in_the_mixed_list_grows_like_everything_else_there() {
     store.set_thumb(2, Some("miniatura.png"), 1).expect("thumb");
     let rows = open(store, 0);
     let shut = rows.span_of(0).expect("la fila").1;
-    assert_eq!(shut, SIZES.mixed);
+    assert_eq!(shut, crate::face::Face::Thumb.shut_px());
     rows.open_at(Some(0));
     let open = rows.span_of(0).expect("la fila").1;
     assert!(
         open > shut,
-        "in the mixed list a thumbnail row is not tall, so opening it must move the rows below: \
+        "opening a thumbnail must move the rows below: \
          the model said {open} and the delegate draws it grown"
     );
     assert_eq!(
-        open, SIZES.tall,
-        "opening a picture is for looking at it, so the row makes room for the thumbnail the          card draws, and the scrolling follows this number"
+        open,
+        crate::face::open_px(crate::face::OPEN_THUMB + crate::face::GAP + crate::face::NOTE),
+        "opening a picture is for looking at it, so the row makes room for the picture the \
+         card draws, and the scrolling follows this number"
     );
 }
 
@@ -611,11 +618,11 @@ fn a_json_opened_in_the_mixed_list_reserves_the_body_it_draws() {
         .expect("insert");
     let rows = open(Rc::new(store), 2);
     let shut = rows.span_of(0).expect("la fila").1;
-    assert_eq!(shut, SIZES.mixed);
+    assert_eq!(shut, crate::face::Face::Keys(1).shut_px());
     rows.open_at(Some(0));
     let open = rows.span_of(0).expect("la fila").1;
     assert!(
-        open >= shut + SIZES.body_json,
+        open > shut + crate::face::KEYS_ROW,
         "unfolded in the general list the card draws its own body, and a height that does not \
          count it cuts the card: {open} against {shut}"
     );
@@ -639,10 +646,10 @@ fn a_row_whose_thumbnail_will_not_draw_carries_the_height_it_really_takes() {
     store
         .set_thumb(2, Some("no-existe-esta-miniatura.png"), 1)
         .expect("thumb");
-    let rows = only_images(store.clone(), 0);
+    let rows = only_tall(store.clone(), 0);
     let _ = rows.row_data(0);
 
-    let rows = Rows::open(store, Filter::default(), 0, SIZES, true);
+    let rows = Rows::open(store, Filter::default(), 0, SIZES, true, None);
     let card = rows.row_data(0).expect("una tarjeta");
     assert!(
         !card.has_thumb,
@@ -674,4 +681,137 @@ fn a_card_used_again_is_found_where_it_went_and_not_where_it_was() {
     assert_eq!(after.index_of(used), Some(0));
     assert_eq!(after.index_of(neighbour), Some(3));
     assert_eq!(after.index_of(-1), None);
+}
+
+#[test]
+fn the_general_list_is_grouped_by_when_it_was_copied() {
+    let noon = 1_791_201_600_000;
+    let store = Store::in_memory().expect("esquema");
+    for (at, when) in [
+        ("u0", noon - 60_000),
+        ("u1", noon - 5 * 3_600_000),
+        ("u2", noon - 6 * 3_600_000),
+        ("u3", noon - 20 * 3_600_000),
+        ("u4", noon - 40 * 86_400_000),
+    ] {
+        store.insert_text(at, at, when).expect("insert");
+    }
+    let rows = Rows::open(
+        Rc::new(store),
+        Filter::default(),
+        noon,
+        SIZES,
+        false,
+        Some(Rc::new(|_| 0)),
+    );
+    let cards: Vec<_> = (0..rows.row_count())
+        .map(|at| rows.row_data(at).expect("card"))
+        .collect();
+    let heads: Vec<(bool, String)> = cards
+        .iter()
+        .map(|card| (card.heads_group, card.group_said.to_string()))
+        .collect();
+    assert_eq!(
+        heads,
+        vec![
+            (true, "Ahora".to_owned()),
+            (true, "Hoy".to_owned()),
+            (false, String::new()),
+            (true, "Ayer".to_owned()),
+            (true, "Antes".to_owned()),
+        ]
+    );
+    assert_eq!(cards[1].age, "07:00", "inside today the age is the clock");
+    assert_eq!(
+        rows.span_of(2).map(|(_, span)| span),
+        Some(crate::face::Face::Words(1).shut_px()),
+        "only the first of a group pays for the heading"
+    );
+}
+
+#[test]
+fn a_search_or_the_pinned_list_is_not_grouped_by_time() {
+    let store = store_with(3);
+    let searching = Filter {
+        query: Some("elemento".into()),
+        ..Default::default()
+    };
+    assert!(!by_time(&searching, false));
+    let pinned = Filter {
+        pinned_only: true,
+        ..Default::default()
+    };
+    assert!(!by_time(&pinned, false));
+    assert!(by_time(&Filter::default(), false));
+    assert!(
+        !by_time(&Filter::default(), true),
+        "the plain way has no groups"
+    );
+    let rows = Rows::open(store, Filter::default(), 10, SIZES, false, None);
+    assert!(
+        !rows.row_data(0).expect("card").heads_group,
+        "without a clock there is nothing to group by"
+    );
+}
+
+#[test]
+fn a_list_of_pictures_wears_the_card_of_the_general_view() {
+    let store = Store::in_memory().expect("esquema");
+    let item = cp_core::item::Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![cp_core::item::Format {
+            id: "public.png".into(),
+            payload: cp_core::item::Payload::Inline(vec![1; 8]),
+        }],
+    };
+    store.insert_item("u0", &item, "", 1).expect("insert");
+    store.set_thumb(1, Some("miniatura.png"), 1).expect("thumb");
+    let filter = Filter {
+        kinds: vec![cp_core::kind::Kind::Image],
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), filter, 2, SIZES, false, None);
+    assert_eq!(
+        rows.span_of(0),
+        Some((0.0, crate::face::Face::Thumb.shut_px()))
+    );
+}
+
+#[test]
+fn a_card_whose_thumbnail_will_not_load_opens_with_the_text_it_falls_back_to() {
+    let store = store_with(1);
+    store.set_thumb(1, Some("no-existe.png"), 1).expect("thumb");
+    let rows = open(store, 0);
+    let card = rows.row_data(0).expect("card");
+    assert!(!card.has_thumb);
+    assert_eq!(card.face, "words");
+    assert!(
+        card.open_lines > 0 && !card.opened.is_empty(),
+        "the open card draws its text, not an empty box of the height the model kept"
+    );
+}
+
+#[test]
+fn a_card_whose_file_is_gone_opens_without_the_keys_to_paste_it() {
+    let store = Store::in_memory().expect("esquema");
+    let id = store
+        .insert_text("u0", "/no/existe.txt", 1)
+        .expect("insert");
+    store.mark_broken(id, 1).expect("broken");
+    let shown = Filter {
+        broken: cp_store::Broken::Shown,
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), shown, 2, SIZES, false, None);
+    rows.open_at(Some(0));
+    let open = rows.span_of(0).expect("la fila").1;
+    let card = rows.row_data(0).expect("card");
+    assert!(card.broken);
+    let body = crate::face::LINE * card.open_lines as f32;
+    assert_eq!(open, crate::face::open_lost_px(body));
+    assert_eq!(
+        crate::face::open_px(body) - open,
+        crate::face::GAP + crate::face::KEYS_ROW,
+        "the row of paste keys is not drawn, so it is not kept either"
+    );
 }

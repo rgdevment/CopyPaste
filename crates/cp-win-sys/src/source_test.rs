@@ -128,17 +128,19 @@ fn a_process_that_opens_a_pseudoconsole_is_found_hosting_one() {
 
 #[test]
 fn a_child_just_started_is_listed_with_its_name() {
-    let mut child = std::process::Command::new("cmd.exe")
-        .args(["/c", "ping", "-n", "3", "127.0.0.1"])
+    let mut child = std::process::Command::new("ping.exe")
+        .args(["-n", "3", "127.0.0.1"])
+        .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
-        .expect("cmd starts");
+        .expect("ping starts");
     let found = children_of(std::process::id());
     let _ = child.kill();
     let _ = child.wait();
     assert!(
         found
             .iter()
-            .any(|(pid, exe)| *pid == child.id() && exe.eq_ignore_ascii_case("cmd.exe"))
+            .any(|(pid, exe)| *pid == child.id() && exe.eq_ignore_ascii_case("ping.exe"))
     );
 }

@@ -11,6 +11,15 @@ pub struct Said {
     pub values: String,
 }
 
+pub fn spoken(said: &Said) -> String {
+    said.names
+        .lines()
+        .zip(said.values.lines())
+        .map(|(name, value)| format!("{}: {}", name.trim(), value.trim()))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn said_of(text: &str, now: i64, english: bool) -> Option<Said> {
     let claims = cp_core::token::claims_of(text)?;
     let (names, values) = table_of(&claims, now, english);

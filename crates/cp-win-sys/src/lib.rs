@@ -2,6 +2,7 @@
 
 pub mod backdrop;
 pub mod clipboard;
+pub mod clock;
 pub mod com;
 pub mod dragging;
 pub mod files;

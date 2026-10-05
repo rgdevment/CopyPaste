@@ -8,12 +8,27 @@ pub enum Root {
 pub struct Shape {
     pub root: Root,
     pub named: Vec<String>,
+    pub pairs: Vec<String>,
     pub counted: usize,
     pub deep: usize,
     pub whole: bool,
 }
 
 const NAMES_UP_TO: usize = 8;
+const VALUE_ROOM: usize = 24;
+
+fn summary_of(raw: &str) -> String {
+    let raw = raw.trim();
+    match raw.chars().next() {
+        Some('{') => "{…}".to_owned(),
+        Some('[') => "[…]".to_owned(),
+        _ if raw.chars().count() > VALUE_ROOM => {
+            let kept: String = raw.chars().take(VALUE_ROOM).collect();
+            format!("{kept}…")
+        }
+        _ => raw.to_owned(),
+    }
+}
 
 pub fn shape_of(text: &str) -> Option<Shape> {
     let mut chars = text
@@ -29,6 +44,7 @@ pub fn shape_of(text: &str) -> Option<Shape> {
     let mut shape = Shape {
         root,
         named: Vec::new(),
+        pairs: Vec::new(),
         counted: 0,
         deep: 1,
         whole: false,
@@ -39,8 +55,28 @@ pub fn shape_of(text: &str) -> Option<Shape> {
     let mut word = String::new();
     let mut held: Option<String> = None;
     let mut body = false;
+    let mut taking: Option<(Option<String>, usize)> = match root {
+        Root::Array => Some((
+            None,
+            opened.len_utf8() + text.len() - text.trim_start().len(),
+        )),
+        Root::Object => None,
+    };
+    let take = |taking: &mut Option<(Option<String>, usize)>, until: usize, shape: &mut Shape| {
+        if let Some((name, from)) = taking.take() {
+            let raw = text.get(from..until).unwrap_or_default();
+            if raw.trim().is_empty() || shape.pairs.len() >= NAMES_UP_TO {
+                return;
+            }
+            let value = summary_of(raw);
+            shape.pairs.push(match name {
+                Some(name) => format!("{name}: {value}"),
+                None => value,
+            });
+        }
+    };
 
-    for (_, one) in chars {
+    for (at, one) in chars {
         if quoted {
             if escaped {
                 escaped = false;
@@ -73,6 +109,7 @@ pub fn shape_of(text: &str) -> Option<Shape> {
                 depth = depth.saturating_sub(1);
                 held = None;
                 if depth == 0 {
+                    take(&mut taking, at, &mut shape);
                     if root == Root::Array && body {
                         shape.counted += 1;
                     }
@@ -84,12 +121,17 @@ pub fn shape_of(text: &str) -> Option<Shape> {
                 if let Some(name) = held.take() {
                     shape.counted += 1;
                     if shape.named.len() < NAMES_UP_TO {
-                        shape.named.push(name);
+                        shape.named.push(name.clone());
                     }
+                    taking = Some((Some(name), at + 1));
                 }
             }
             ',' if depth == 1 => {
                 held = None;
+                take(&mut taking, at, &mut shape);
+                if root == Root::Array {
+                    taking = Some((None, at + 1));
+                }
                 if root == Root::Array {
                     shape.counted += 1;
                     body = false;
@@ -106,6 +148,25 @@ pub fn shape_of(text: &str) -> Option<Shape> {
     if !shape.whole && root == Root::Array && body {
         shape.counted += 1;
     }
+    if !shape.whole
+        && let Some((name, from)) = taking.take()
+    {
+        let raw = text.get(from..).unwrap_or_default().trim();
+        if !raw.is_empty() && shape.pairs.len() < NAMES_UP_TO {
+            let cut: String = raw.chars().take(VALUE_ROOM).collect();
+            let value = if raw.starts_with('{') {
+                "{…".to_owned()
+            } else if raw.starts_with('[') {
+                "[…".to_owned()
+            } else {
+                format!("{cut}…")
+            };
+            shape.pairs.push(match name {
+                Some(name) => format!("{name}: {value}"),
+                None => value,
+            });
+        }
+    }
     Some(shape)
 }
 
@@ -114,6 +175,7 @@ pub struct Said {
     pub root: String,
     pub counted: String,
     pub keys: String,
+    pub pairs: String,
 }
 
 pub fn said_of(text: &str, english: bool) -> Option<Said> {
@@ -125,6 +187,7 @@ pub fn said_of(text: &str, english: bool) -> Option<Said> {
         },
         counted: counted_text(&shape, english),
         keys: shape.named.join(" · "),
+        pairs: shape.pairs.join(", "),
     })
 }
 
@@ -133,20 +196,19 @@ fn counted_text(shape: &Shape, english: bool) -> String {
     let what = match (shape.root, shape.counted) {
         (Root::Object, 1) => say("clave", "key"),
         (Root::Object, _) => say("claves", "keys"),
-        (Root::Array, 1) => say("elemento", "element"),
-        (Root::Array, _) => say("elementos", "elements"),
+        (Root::Array, 1) => say("elemento", "item"),
+        (Root::Array, _) => say("elementos", "items"),
     };
-    let how_many = if shape.whole {
-        format!("{} {what}", shape.counted)
-    } else if english {
-        format!("more than {} {what}", shape.counted)
-    } else {
-        format!("más de {} {what}", shape.counted)
-    };
+    let plus = if shape.whole { "" } else { "+" };
+    let how_many = format!("{}{plus} {what}", shape.counted);
     if shape.deep <= 1 {
         return how_many;
     }
-    format!("{how_many} · {} {}", shape.deep, say("niveles", "levels"))
+    if english {
+        format!("{how_many}, {} levels deep", shape.deep)
+    } else {
+        format!("{how_many} en {} niveles", shape.deep)
+    }
 }
 
 #[cfg(test)]

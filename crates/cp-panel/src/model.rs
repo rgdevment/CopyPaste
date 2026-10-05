@@ -43,6 +43,17 @@ pub fn heads_group(filter: &Filter, rows: &[Listed], index: usize) -> bool {
     }
 }
 
+pub fn by_time(filter: &Filter, plain_way: bool) -> bool {
+    wears_cards(plain_way)
+        && filter.order == cp_store::Order::Recent
+        && filter
+            .query
+            .as_deref()
+            .is_none_or(|said| said.trim().is_empty())
+        && filter.label_query.is_none()
+        && !filter.pinned_only
+}
+
 pub const MIXED_KEYS: [&str; 4] = [
     crate::media::DURATION,
     crate::media::WIDTH,
@@ -54,7 +65,7 @@ pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
     match crate::layout::layout_for(&filter.kinds) {
         crate::layout::Layout::Video | crate::layout::Layout::Audio => &crate::media::KEYS,
         crate::layout::Layout::Folder => &crate::folder::KEYS,
-        crate::layout::Layout::Everything => &MIXED_KEYS,
+        crate::layout::Layout::Everything | crate::layout::Layout::Image => &MIXED_KEYS,
         _ => &[],
     }
 }
@@ -70,8 +81,8 @@ pub fn shut_height_for(filter: &Filter, metrics: &Metrics, plain_way: bool) -> f
     }
 }
 
-pub fn one_height_for_all(filter: &Filter, plain_way: bool) -> bool {
-    !plain_way && crate::layout::layout_for(&filter.kinds) == crate::layout::Layout::Everything
+pub fn wears_cards(plain_way: bool) -> bool {
+    !plain_way
 }
 
 pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
@@ -88,12 +99,15 @@ pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
     }
 }
 
+pub type Clock = Rc<dyn Fn(i64) -> i64>;
+
 pub struct Rows {
     store: Rc<Store>,
     filter: Filter,
     now: i64,
     metrics: Metrics,
     plain_way: bool,
+    clock: Option<Clock>,
     rows: RefCell<Vec<Listed>>,
     meta: RefCell<cp_store::MetaByItem>,
     cards: RefCell<Vec<Option<Card>>>,
@@ -114,6 +128,7 @@ impl Rows {
         now: i64,
         metrics: Metrics,
         plain_way: bool,
+        clock: Option<Clock>,
     ) -> Rc<Self> {
         let rows = Rc::new(Self {
             store,
@@ -121,6 +136,7 @@ impl Rows {
             now,
             metrics,
             plain_way,
+            clock,
             rows: RefCell::new(Vec::new()),
             meta: RefCell::new(cp_store::MetaByItem::new()),
             cards: RefCell::new(Vec::new()),
@@ -136,6 +152,30 @@ impl Rows {
         *rows.weak.borrow_mut() = Rc::downgrade(&rows);
         rows.load_page();
         rows
+    }
+
+    fn time_offset(&self) -> Option<&Clock> {
+        self.clock
+            .as_ref()
+            .filter(|_| by_time(&self.filter, self.plain_way))
+    }
+
+    fn when(&self, row: &Listed, offset: &Clock) -> crate::age::When {
+        let touched = crate::view::touched_of(row);
+        crate::age::when_of(self.now, touched, offset(self.now), offset(touched))
+    }
+
+    fn heads(&self, rows: &[Listed], index: usize) -> bool {
+        let Some(offset) = self.time_offset() else {
+            return heads_group(&self.filter, rows, index);
+        };
+        let Some(row) = rows.get(index) else {
+            return false;
+        };
+        match index.checked_sub(1).and_then(|before| rows.get(before)) {
+            Some(before) => self.when(before, offset) != self.when(row, offset),
+            None => true,
+        }
     }
 
     pub fn loaded(&self) -> usize {
@@ -168,20 +208,38 @@ impl Rows {
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
-        let head = if heads_group(&self.filter, &rows, index) {
+        let head = if self.heads(&rows, index) {
             self.metrics.head
         } else {
             0.0
         };
+        let thumb = row.thumb_path.is_some() && !self.thumbless.borrow().contains(&index);
+        if wears_cards(self.plain_way) {
+            return self.mixed_open(row, thumb) + head;
+        }
         self.open_of_row(row) + head
     }
 
+    fn mixed_open(&self, row: &Listed, thumb: bool) -> f32 {
+        use cp_core::kind::Kind;
+        let room = match row.kind {
+            Some(Kind::Folder) => self.metrics.body_folder,
+            Some(Kind::File) => self.metrics.body_papers,
+            Some(Kind::Video | Kind::Audio) => self.metrics.body_media,
+            _ => 0.0,
+        };
+        crate::view::mixed_open_px(row, thumb, self.now, room)
+    }
+
     fn open_of_row(&self, row: &Listed) -> f32 {
+        if wears_cards(self.plain_way) {
+            return self.mixed_open(row, false);
+        }
         if row.thumb_path.is_some() {
             return self.metrics.tall;
         }
         let lines = crate::view::open_lines_of(row, &body_of(row), self.now);
-        let own = if one_height_for_all(&self.filter, self.plain_way) {
+        let own = if wears_cards(self.plain_way) {
             self.body_room(row)
         } else {
             0.0
@@ -203,7 +261,7 @@ impl Rows {
     }
 
     fn tall_at(&self, index: usize) -> bool {
-        !one_height_for_all(&self.filter, self.plain_way)
+        !wears_cards(self.plain_way)
             && !self.thumbless.borrow().contains(&index)
             && self
                 .rows
@@ -229,7 +287,7 @@ impl Rows {
         let alive = row.thumb_path.is_some() && !self.thumbless.borrow().contains(&index);
         let shut = self.shut_of(index, alive);
         let rows = self.rows.borrow();
-        if heads_group(&self.filter, &rows, index) {
+        if self.heads(&rows, index) {
             shut + self.metrics.head
         } else {
             shut
@@ -241,8 +299,8 @@ impl Rows {
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
-        if one_height_for_all(&self.filter, self.plain_way) {
-            return self.metrics.mixed;
+        if wears_cards(self.plain_way) {
+            return crate::view::face_for(row, has_thumb).shut_px();
         }
         if has_thumb {
             return self.metrics.tall;
@@ -254,15 +312,18 @@ impl Rows {
     }
 
     fn open_of_row_with(&self, index: usize, has_thumb: bool) -> f32 {
-        if has_thumb {
-            return self.metrics.tall;
-        }
         let rows = self.rows.borrow();
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
+        if wears_cards(self.plain_way) {
+            return self.mixed_open(row, has_thumb);
+        }
+        if has_thumb {
+            return self.metrics.tall;
+        }
         let lines = crate::view::open_lines_of(row, &body_of(row), self.now);
-        let own = if one_height_for_all(&self.filter, self.plain_way) {
+        let own = if wears_cards(self.plain_way) {
             self.body_room(row)
         } else {
             0.0
@@ -355,10 +416,12 @@ impl Rows {
         let rows = self.rows.borrow();
         let row = rows.get(index)?;
         let row_wanted_a_thumb = row.thumb_path.is_some();
-        let heads = heads_group(&self.filter, &rows, index);
+        let heads = self.heads(&rows, index);
         let without_thumb = if heads { self.metrics.head } else { 0.0 }
             + if self.open.get() == Some(index) {
                 self.open_of_row(row)
+            } else if wears_cards(self.plain_way) {
+                crate::view::face_for(row, false).shut_px()
             } else if was_found(row) {
                 self.metrics.found
             } else {
@@ -367,7 +430,22 @@ impl Rows {
         let meta = self.meta.borrow();
         let mut card = card_of(row, self.now, meta.get(&row.id));
         drop(meta);
-        if heads {
+        let english = crate::say::in_english();
+        if let Some(offset) = self.time_offset() {
+            let touched = crate::view::touched_of(row);
+            card.age = crate::age::age_in_group(
+                self.now,
+                touched,
+                offset(self.now),
+                offset(touched),
+                english,
+            )
+            .into();
+            if heads {
+                card.heads_group = true;
+                card.group_said = crate::age::when_said(self.when(row, offset), english).into();
+            }
+        } else if heads {
             card.heads_group = true;
             card.group_said = row.group.clone().into();
         }
@@ -377,6 +455,13 @@ impl Rows {
             card.thumb = image;
         } else {
             card.has_thumb = false;
+            let face = crate::view::face_for(row, false);
+            let opened = crate::view::opened_for(row, face);
+            card.face = face.as_str().into();
+            card.shut_lines = face.lines();
+            card.opened = opened.text.into();
+            card.open_lines = opened.lines;
+            card.more_said = opened.more.into();
         }
         drop(rows);
         if !card.has_thumb {

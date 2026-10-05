@@ -1,4 +1,4 @@
-use super::{ROWS_AT_MOST, Said, rows_in, said_of};
+use super::{ROWS_AT_MOST, Said, rows_in, said_of, spoken};
 
 const SECOND: i64 = 1_000;
 const HOUR: i64 = 3_600 * SECOND;
@@ -222,4 +222,15 @@ fn the_claims_that_did_not_fit_are_counted_only_if_they_had_something_to_say() {
          would show nothing and must not be counted. Said: {}",
         said.values
     );
+}
+
+#[test]
+fn a_screen_reader_hears_each_claim_beside_its_value() {
+    let said = Said {
+        who: String::new(),
+        life: String::new(),
+        names: "alg\nsub\nexp".into(),
+        values: "HS256\ncp-3\n5 oct".into(),
+    };
+    assert_eq!(spoken(&said), "alg: HS256, sub: cp-3, exp: 5 oct");
 }

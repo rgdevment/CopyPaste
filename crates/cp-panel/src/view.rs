@@ -100,6 +100,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
             root: String::new(),
             counted: String::new(),
             keys: String::new(),
+            pairs: String::new(),
         });
     let body = body_of(row);
     let (lead, hit, tail) = match &row.snippet {
@@ -123,7 +124,38 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     } else {
         String::new()
     };
+    let face = face_for(row, row.thumb_path.is_some());
+    let (line_one, line_two) = crate::face::opening_of(&body);
+    let mixed_aside = match row.kind {
+        Some(Kind::Json) => shape.counted.clone(),
+        Some(Kind::Token) => crate::face::aside_said(&[&token.who, &token.life]),
+        Some(Kind::Folder) => crate::folder::said_in(meta, crate::say::in_english()),
+        _ => String::new(),
+    };
+    let lines_said = match row.kind {
+        Some(Kind::Text | Kind::Code) | None => crate::face::lines_said(
+            row.preview.lines().count(),
+            face.lines(),
+            crate::say::in_english(),
+        ),
+        _ => String::new(),
+    };
+    let aside_said =
+        crate::face::aside_said(&[&mixed_aside, &source, &used_text(&times), &lines_said]);
+    let opened = opened_for(row, face);
+    let claim_rows = i32::try_from(token.names.lines().count()).unwrap_or(0);
+    let claims_spoken = crate::token::spoken(&token);
     Card {
+        claims_spoken: claims_spoken.into(),
+        opened: opened.text.into(),
+        open_lines: opened.lines,
+        more_said: opened.more.into(),
+        claim_rows,
+        face: face.as_str().into(),
+        shut_lines: face.lines(),
+        line_one: line_one.into(),
+        line_two: line_two.into(),
+        aside_said: aside_said.into(),
         id: row.id as i32,
         kind: kind.into(),
         under: under_line(&aside, &source, &times).into(),
@@ -144,7 +176,12 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         squeezed: squeezed_of(&body).into(),
         shape_root: shape.root.into(),
         shape_said: shape.counted.into(),
-        shape_keys: shape.keys.into(),
+        shape_keys: if shape.pairs.is_empty() {
+            shape.keys
+        } else {
+            shape.pairs
+        }
+        .into(),
         media_clock: clock.into(),
         media_measures: measures.into(),
         papers_format: papers
@@ -193,6 +230,60 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         has_thumb: row.thumb_path.is_some(),
         pinned: row.pinned,
         broken: row.broken_since.is_some(),
+    }
+}
+
+pub fn face_for(row: &Listed, thumb: bool) -> crate::face::Face {
+    let keys = if row.kind == Some(Kind::Json) {
+        crate::shape::said_of(&row.preview, crate::say::in_english())
+            .map(|said| {
+                if said.pairs.is_empty() {
+                    said.keys
+                } else {
+                    said.pairs
+                }
+            })
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+    crate::face::Face::of(&crate::face::Seen {
+        kind: row.kind,
+        found: was_found(row),
+        thumb,
+        paints: shown_as_colour(row).is_some(),
+        body: &body_of(row),
+        keys: &keys,
+    })
+}
+
+pub fn opened_for(row: &Listed, face: crate::face::Face) -> crate::face::Opened {
+    crate::face::opened_of(
+        face,
+        row.kind == Some(Kind::Json),
+        &body_of(row),
+        crate::say::in_english(),
+    )
+}
+
+pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32) -> f32 {
+    let face = face_for(row, thumb);
+    let opened = opened_for(row, face);
+    let claims = if row.kind == Some(Kind::Token) {
+        i32::try_from(crate::token::rows_in(
+            &row.preview,
+            now,
+            crate::say::in_english(),
+        ))
+        .unwrap_or(0)
+    } else {
+        0
+    };
+    let body = crate::face::open_body_px(face, &opened, claims, room);
+    if row.broken_since.is_some() {
+        crate::face::open_lost_px(body)
+    } else {
+        crate::face::open_px(body)
     }
 }
 
@@ -656,7 +747,17 @@ pub fn dress_words(ui: &crate::Panel) {
     let words = ui.global::<crate::Words>();
     words.set_hint(crate::say::pick("Busca o filtra con #", "Search, or filter with #").into());
     words.set_footer(crate::say::pick(FOOTER_ES, FOOTER_EN).into());
+    words.set_sheet_footer(
+        crate::say::pick(
+            "↑↓ elegir · 1-9 · ⏎ pegar · esc",
+            "↑↓ choose · 1-9 · ⏎ paste · esc",
+        )
+        .into(),
+    );
     words.set_paste_as(crate::say::pick("pegar como", "paste as").into());
+    words.set_paste_it(crate::say::pick("Pegar", "Paste").into());
+    words.set_paste_plain(crate::say::pick("Plano", "Plain").into());
+    words.set_paste_as_short(crate::say::pick("Pegar como", "Paste as").into());
     words.set_open_it(crate::say::pick("abrir", "open").into());
     words.set_name_it(crate::say::pick("poner nombre", "give it a name").into());
     words.set_name_room(i32::try_from(NAME_ROOM).unwrap_or(i32::MAX));

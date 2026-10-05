@@ -1165,3 +1165,32 @@ fn what_a_backup_brings_is_not_counted_as_the_2x_crossing() {
         "only the crossing writes that moment, so nothing else can look like it"
     );
 }
+
+#[test]
+fn a_picture_the_store_kept_inside_its_package_is_found_by_its_name() {
+    let there = tempfile::tempdir().expect("a folder");
+    let root = std::fs::canonicalize(there.path()).expect("canonical");
+    std::fs::create_dir(root.join("images")).expect("images");
+    let kept = root.join("images").join("shot-1.png");
+    std::fs::write(&kept, b"png").expect("written");
+    let said = r"C:\Users\someone\AppData\Local\CopyPaste\images\shot-1.png";
+    assert_eq!(
+        picture_at(Some(&root), said),
+        Some(std::fs::canonicalize(&kept).expect("canonical")),
+        "a packaged 2.x wrote the logical path, and the file lives in its own folder"
+    );
+    assert_eq!(
+        picture_at(Some(&root), r"C:\nowhere\images\missing.png"),
+        None,
+        "a name that is not in the folder is still lost, and says so"
+    );
+}
+
+#[test]
+fn a_name_that_climbs_out_of_the_folder_is_never_looked_for() {
+    let there = tempfile::tempdir().expect("a folder");
+    let root = std::fs::canonicalize(there.path()).expect("canonical");
+    std::fs::create_dir(root.join("images")).expect("images");
+    assert_eq!(picture_at(Some(&root), r"C:\x\images\.."), None);
+    assert_eq!(picture_at(Some(&root), "/x/images/"), None);
+}

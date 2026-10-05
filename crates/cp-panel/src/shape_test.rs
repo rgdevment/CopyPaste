@@ -117,17 +117,19 @@ fn trailing_space_after_the_close_is_still_whole() {
 fn what_the_row_says_about_an_object_it_read_whole() {
     let said = said_of(r#"{"id":1,"cliente":{"plan":"pro"}}"#, false).expect("json");
     assert_eq!(said.root, "{ }");
-    assert_eq!(said.counted, "2 claves · 2 niveles");
+    assert_eq!(said.counted, "2 claves en 2 niveles");
     assert_eq!(said.keys, "id · cliente");
+    assert_eq!(said.pairs, "id: 1, cliente: {…}");
 }
 
 #[test]
 fn what_the_row_says_when_the_text_was_cut() {
     let said = said_of(r#"{"id":1,"cliente":{"plan":"pr"#, false).expect("json");
-    assert_eq!(said.counted, "más de 2 claves · 2 niveles");
+    assert_eq!(said.counted, "2+ claves en 2 niveles");
+    assert_eq!(said.pairs, "id: 1, cliente: {…");
     assert_eq!(
         said_of(r#"{"id":1,"c"#, true).expect("json").counted,
-        "more than 1 key"
+        "1+ key"
     );
 }
 
@@ -142,7 +144,7 @@ fn one_of_something_is_said_in_the_singular() {
         said_of(r#"{"solo":1}"#, true).expect("json").counted,
         "1 key"
     );
-    assert_eq!(said_of("[7]", true).expect("json").counted, "1 element");
+    assert_eq!(said_of("[7]", true).expect("json").counted, "1 item");
 }
 
 #[test]
@@ -155,11 +157,39 @@ fn a_flat_object_does_not_mention_levels() {
 fn an_array_is_counted_in_elements_and_shows_no_keys() {
     let said = said_of(r#"[{"at":1},{"at":2},{"at":3}]"#, false).expect("json");
     assert_eq!(said.root, "[ ]");
-    assert_eq!(said.counted, "3 elementos · 2 niveles");
+    assert_eq!(said.counted, "3 elementos en 2 niveles");
     assert_eq!(said.keys, "");
+    assert_eq!(said.pairs, "{…}, {…}, {…}");
 }
 
 #[test]
 fn what_is_not_json_says_nothing_at_all() {
     assert!(said_of("hola", false).is_none());
+}
+
+#[test]
+fn each_first_level_value_is_summed_up_beside_its_key() {
+    let said = said_of(
+        r#"{ "severity": "ERROR", "time": "2026-10-05T14:32:11.512Z", "req": {"ms": 41}, "ok": true, "n": null, "list": [1, 2] }"#,
+        false,
+    )
+    .expect("json");
+    assert_eq!(
+        said.pairs,
+        r#"severity: "ERROR", time: "2026-10-05T14:32:11.512…, req: {…}, ok: true, n: null, list: […]"#
+    );
+}
+
+#[test]
+fn an_array_of_plain_values_shows_them_in_order() {
+    let said = said_of(r#"[1, "dos", true]"#, false).expect("json");
+    assert_eq!(said.pairs, r#"1, "dos", true"#);
+    assert_eq!(said.counted, "3 elementos");
+    assert_eq!(said_of("  [ ]", false).expect("json").pairs, "");
+}
+
+#[test]
+fn a_brace_or_a_comma_inside_a_string_does_not_cut_its_value() {
+    let said = said_of(r#"{"a": "x, {y}", "b": 2}"#, false).expect("json");
+    assert_eq!(said.pairs, r#"a: "x, {y}", b: 2"#);
 }

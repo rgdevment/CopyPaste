@@ -5,8 +5,11 @@ export component TokenBody inherits HorizontalLayout {
     in property <Card> card;
     spacing: 12px;
     alignment: start;
+    accessible-role: AccessibleRole.text;
+    accessible-label: card.claims-spoken;
 
     Text {
+        accessible-role: AccessibleRole.none;
         text: card.claim-names;
         color: Theme.muted;
         font-family: "Cascadia Mono";
@@ -15,6 +18,7 @@ export component TokenBody inherits HorizontalLayout {
     }
 
     Text {
+        accessible-role: AccessibleRole.none;
         text: card.claim-values;
         color: Theme.body;
         font-family: "Cascadia Mono";

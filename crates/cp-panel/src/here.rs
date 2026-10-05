@@ -9,7 +9,7 @@ pub use platform::{
     Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
     drag_out, dress, forward, in_front, media_of, ocr_available, open_link, open_path,
     ours_up_front, paste_into, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard, towards, watch_start,
+    thumb_of_file, thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,6 +76,10 @@ mod platform {
     pub fn thumb_of_file(path: &Path, side: i32) -> Option<Vec<u8>> {
         let dib = cp_win_sys::thumbnail::dib_of_file(path, side)?;
         cp_core::dib::to_png(&dib)
+    }
+
+    pub fn utc_offset_at(millis: i64) -> i64 {
+        cp_win_sys::clock::utc_offset_at(millis)
     }
 
     pub fn towards(ahead: isize) -> crate::landing::Towards {
@@ -237,6 +241,10 @@ mod platform {
 
     pub fn thumb_of_file(_path: &Path, _side: i32) -> Option<Vec<u8>> {
         None
+    }
+
+    pub fn utc_offset_at(millis: i64) -> i64 {
+        cp_mac_sys::clock::utc_offset_at(millis)
     }
 
     pub fn towards(ahead: isize) -> crate::landing::Towards {
