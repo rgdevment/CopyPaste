@@ -76,8 +76,9 @@ address must be this repository's releases on `github.com` (or
 pinned to the one the person was shown, so a feed that moves cannot hand over
 another; every updater signature is bound to its version (`signer sign
 --app-version`, `requireSignedVersion`), so an older release cannot be served
-under a newer number, and `verify` refuses a release whose signatures do not
-say it; and a copy running from the mounted `.dmg` refuses rather than failing
+under a newer number, and a release whose signatures do not say it stops
+before anything is published (`scripts/signed_for.sh`, run where it is signed,
+before `publish`, in `verify` and every morning in `feed.yml`); and a copy running from the mounted `.dmg` refuses rather than failing
 after the whole download. The panel is
 stopped first, because on Windows an installer cannot replace a binary that is
 running, and it is brought back if the install does not go through.
