@@ -2,7 +2,7 @@
 set -uo pipefail
 
 shape='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._-]+\))?: .+'
-elsewhere='https?://|[[:alnum:]_.-]+/[[:alnum:]_.-]+#[0-9]+'
+elsewhere='https?://[^[:space:]/]+\.|(^|[[:space:](<])www\.|(^|[[:space:](<])([[:alnum:]-]+\.)+[[:alpha:]]{2,}/|[[:alnum:]._-]+@[[:alnum:].-]+:|[[:alnum:]_.-]+/[[:alnum:]_.-]+#[0-9]+'
 most=120
 status=0
 
@@ -40,27 +40,28 @@ weighed() {
   if [ -z "$strict" ] && git_wrote "$said"; then
     return
   fi
+  local broke=""
   case $said in
     'Revert "'* | 'Reapply "'*) ;;
     *)
       if ! printf '%s' "$said" | grep -qE "$shape"; then
+        broke=1
         amiss "$who does not follow the convention"
-        printf '  %s\n' "$said"
-        return
       fi
       ;;
   esac
-  if printf '%s' "${said% (#[0-9]*)}" | grep -qE "$elsewhere"; then
+  if printf '%s' "$said" | grep -qiE "$elsewhere"; then
+    broke=1
     amiss "$who links outside this repository; only #123 of this one"
-    printf '  %s\n' "$said"
   fi
   # bytes minus UTF-8 continuation bytes: ${#said} counts bytes when a client spawns git with no locale
   local long
   long=$(printf '%s' "$said" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' ')
   if [ "$long" -gt "$most" ]; then
+    broke=1
     amiss "$who is $long characters, and the subject goes under $most"
-    printf '  %s\n' "$said"
   fi
+  [ -z "$broke" ] || printf '  %s\n' "$said"
 }
 
 bodiless() {
@@ -68,7 +69,8 @@ bodiless() {
   subject=$(trimmed "$2")
   body=$(trimmed "$3")
   if [ -n "$body" ] && ! git_wrote "$subject"; then
-    amiss "$who carries a body or a trailer; a commit is its subject line alone"
+    amiss "$who carries more than its subject line: a body, a trailer or a wrapped subject"
+    printf '  %s\n' "$subject"
   fi
 }
 
@@ -83,13 +85,13 @@ how_it_reads() {
 }
 
 case ${1:-} in
-  --subject | --title)
+  --title)
     [ -n "${2:-}" ] || {
-      echo "usage: commits.sh --subject|--title <text>"
+      echo "usage: commits.sh --title <text>"
       exit 2
     }
-    weighed "the subject" "$2" "$([ "$1" = "--title" ] && echo strict)"
-    [ "$status" -eq 0 ] && [ -z "${GITHUB_ACTIONS:-}" ] && printf 'ok the subject is well formed\n'
+    weighed "the title" "$2" strict
+    [ "$status" -eq 0 ] && [ -z "${GITHUB_ACTIONS:-}" ] && printf 'ok the title is well formed\n'
     how_it_reads
     ;;
   --message)
@@ -97,7 +99,14 @@ case ${1:-} in
       echo "usage: commits.sh --message <file>"
       exit 2
     }
-    said=$(sed '/^# -* >8 -*$/,$d' "$2" | git stripspace --strip-comments)
+    # git strips its own comment lines after this hook runs, and only when an editor wrote them
+    mark=$(git config core.commentChar 2> /dev/null || echo '#')
+    case $mark in auto | "") mark='#' ;; esac
+    said=$(awk -v m="$mark" '
+      index($0, m " ") == 1 && $0 ~ / -+ >8 -+$/ { exit }
+      $0 == m || index($0, m " ") == 1 || index($0, m "\t") == 1 { next }
+      { print }
+    ' "$2" | git stripspace)
     [ -n "$said" ] || exit 0
     subject=$(printf '%s\n' "$said" | head -1)
     weighed "the subject" "$subject"
@@ -107,30 +116,34 @@ case ${1:-} in
     ;;
 esac
 
-range=${1:-}
-[ -n "$range" ] || {
-  echo "usage: commits.sh <range> | --subject <text> | --title <text> | --message <file>"
+[ $# -gt 0 ] || {
+  echo "usage: commits.sh <revisions…> | --title <text> | --message <file>"
   exit 2
 }
 
-# git prints hints on stderr while exiting 0, and folding them in would weigh them as subjects
+# git prints hints on stderr while exiting 0, and folding them in would weigh them as messages
 trouble=$(mktemp)
-if ! listed=$(git rev-list --no-merges "$range" 2> "$trouble"); then
+if ! listed=$(git log --no-merges --format='%h%x1f%an%x1f%B%x1e' "$@" 2> "$trouble"); then
   cat "$trouble" >&2
   rm -f "$trouble"
-  amiss "the commits between $range could not be listed, so no subject was looked at"
+  amiss "the commits in $* could not be listed, so no message was looked at"
   exit 1
 fi
 rm -f "$trouble"
 
 seen=0
-while read -r sha; do
+while IFS=$'\x1f' read -r -d $'\x1e' sha name message; do
+  sha=$(trimmed "$sha")
   [ -n "$sha" ] || continue
   seen=$((seen + 1))
-  subject=$(git log -1 --format=%s "$sha")
-  weighed "${sha:0:8}" "$subject"
-  bodiless "${sha:0:8}" "$subject" "$(git log -1 --format=%b "$sha")"
+  subject=$(printf '%s\n' "$message" | head -1)
+  weighed "$sha" "$subject"
+  # a bot writes its own body with no way to leave it out; its squash title is what reaches main
+  case $name in
+    *"[bot]") ;;
+    *) bodiless "$sha" "$subject" "$(printf '%s\n' "$message" | tail -n +2)" ;;
+  esac
 done <<< "$listed"
 
-[ "$status" -eq 0 ] && [ -z "${GITHUB_ACTIONS:-}" ] && printf 'ok %s commit subject(s) well formed\n' "$seen"
+[ "$status" -eq 0 ] && [ -z "${GITHUB_ACTIONS:-}" ] && printf 'ok %s commit message(s) well formed\n' "$seen"
 how_it_reads
