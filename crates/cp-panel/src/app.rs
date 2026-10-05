@@ -797,7 +797,14 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
     ui.set_layout(layout.as_str().into());
     ui.set_plain_way(here.plain);
     ui.set_shut(crate::model::shut_height_for(&filter, &metrics, here.plain));
-    let rows = Rows::open(store, filter, now, metrics, here.plain);
+    let rows = Rows::open(
+        store,
+        filter,
+        now,
+        metrics,
+        here.plain,
+        Some(here::utc_offset()),
+    );
     ui.set_opened(false);
     {
         let state = state.borrow();

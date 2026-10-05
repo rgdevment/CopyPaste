@@ -76,3 +76,55 @@ fn the_short_spans_read_the_same_in_both_tongues() {
     assert_eq!(super::span_in(true, 5 * 60_000), "5 min");
     assert_eq!(super::span_in(false, 3 * 3_600_000), "3 h");
 }
+
+const NOON_UTC: i64 = 1_791_201_600_000;
+const SANTIAGO: i64 = -3 * 3_600;
+
+#[test]
+fn the_calendar_day_is_counted_where_the_person_lives() {
+    assert_eq!(civil_of(0), (1970, 0, 1));
+    assert_eq!(civil_of(20_731), (2026, 9, 5));
+    assert_eq!(civil_of(11_016), (2000, 1, 29));
+    assert_eq!(day_of(1_791_167_400_000, 0), 20_731);
+    assert_eq!(
+        day_of(1_791_167_400_000, SANTIAGO),
+        20_730,
+        "02:30 in UTC is still the evening before in Santiago"
+    );
+}
+
+#[test]
+fn what_was_copied_falls_into_now_today_yesterday_or_before() {
+    assert_eq!(when_of(NOON_UTC, 1_791_201_300_000, 0), When::Now);
+    assert_eq!(when_of(NOON_UTC, 1_791_167_400_000, 0), When::Today);
+    assert_eq!(when_of(NOON_UTC, 1_791_155_400_000, 0), When::Yesterday);
+    assert_eq!(when_of(NOON_UTC, 1_788_426_000_000, 0), When::Before);
+    assert_eq!(
+        when_of(NOON_UTC, 1_791_167_400_000, SANTIAGO),
+        When::Yesterday,
+        "the same instant is yesterday for someone three hours behind"
+    );
+    assert_eq!(when_of(NOON_UTC, NOON_UTC + 60_000, 0), When::Today);
+}
+
+#[test]
+fn inside_a_group_the_age_is_a_clock_or_a_date() {
+    assert_eq!(age_in_group(NOON_UTC, 1_791_201_300_000, 0, false), "5 min");
+    assert_eq!(age_in_group(NOON_UTC, 1_791_167_400_000, 0, false), "02:30");
+    assert_eq!(age_in_group(NOON_UTC, 1_791_155_400_000, 0, true), "23:10");
+    assert_eq!(age_in_group(NOON_UTC, 1_788_426_000_000, 0, false), "3 sep");
+    assert_eq!(age_in_group(NOON_UTC, 1_788_426_000_000, 0, true), "3 Sep");
+    assert_eq!(
+        age_in_group(NOON_UTC, 1_767_222_000_000, 0, false),
+        "31 dic 2025"
+    );
+    assert_eq!(clock_of(1_791_167_400_000, SANTIAGO), "23:30");
+}
+
+#[test]
+fn every_group_has_a_name_in_both_languages() {
+    for when in [When::Now, When::Today, When::Yesterday, When::Before] {
+        assert!(!when_said(when, false).is_empty());
+        assert_ne!(when_said(when, false), when_said(when, true));
+    }
+}

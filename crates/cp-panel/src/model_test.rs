@@ -27,7 +27,7 @@ fn store_with(count: usize) -> Rc<Store> {
 }
 
 fn open(store: Rc<Store>, now: i64) -> Rc<Rows> {
-    Rows::open(store, Filter::default(), now, SIZES, false)
+    Rows::open(store, Filter::default(), now, SIZES, false, None)
 }
 
 fn store_of_images(count: usize) -> Rc<Store> {
@@ -60,7 +60,7 @@ fn only_tokens(store: Rc<Store>, now: i64) -> Rc<Rows> {
         kinds: vec![cp_core::kind::Kind::Token],
         ..Default::default()
     };
-    Rows::open(store, filter, now, SIZES, false)
+    Rows::open(store, filter, now, SIZES, false, None)
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn only_images(store: Rc<Store>, now: i64) -> Rc<Rows> {
         kinds: vec![cp_core::kind::Kind::Image],
         ..Default::default()
     };
-    Rows::open(store, filter, now, SIZES, false)
+    Rows::open(store, filter, now, SIZES, false, None)
 }
 
 #[test]
@@ -146,7 +146,7 @@ fn a_query_that_matches_nothing_is_an_empty_model_not_an_error() {
         query: Some("nada-de-esto".into()),
         ..Default::default()
     };
-    let rows = Rows::open(store_with(10), filter, 0, SIZES, false);
+    let rows = Rows::open(store_with(10), filter, 0, SIZES, false, None);
     assert_eq!(rows.row_count(), 0);
     assert!(rows.exhausted.get());
 }
@@ -451,7 +451,7 @@ fn the_row_that_heads_a_group_is_taller_by_exactly_its_heading() {
         order: cp_store::Order::ByGroup,
         ..Default::default()
     };
-    let rows = Rows::open(Rc::new(store), grouped, 1_000, SIZES, false);
+    let rows = Rows::open(Rc::new(store), grouped, 1_000, SIZES, false, None);
     assert_eq!(rows.row_count(), 3);
     let mut heading = 0;
     for at in 0..rows.row_count() {
@@ -490,7 +490,7 @@ fn a_filter_on_one_kind_still_comes_back_grouped() {
         order: cp_store::Order::ByGroup,
         ..Default::default()
     };
-    let rows = Rows::open(Rc::new(store), linked, 1_000, SIZES, false);
+    let rows = Rows::open(Rc::new(store), linked, 1_000, SIZES, false, None);
     assert_eq!(rows.row_count(), 3, "the three links came back");
     let first = rows.row_data(0).expect("a card");
     assert!(first.heads_group, "the first link heads its domain");
@@ -524,7 +524,7 @@ fn by_group() -> Filter {
 #[test]
 fn the_heading_a_card_draws_is_the_one_its_row_was_given_room_for() {
     let store = grouped_store(&[("a.com", 3), ("b.com", 2), ("c.com", 4)]);
-    let rows = Rows::open(store, by_group(), 1_000, SIZES, false);
+    let rows = Rows::open(store, by_group(), 1_000, SIZES, false, None);
     let total = rows.row_count();
     assert!(total >= 9, "{total}");
 
@@ -548,7 +548,7 @@ fn the_heading_a_card_draws_is_the_one_its_row_was_given_room_for() {
 #[test]
 fn exactly_one_card_per_group_carries_the_heading() {
     let store = grouped_store(&[("a.com", 3), ("b.com", 2), ("c.com", 4)]);
-    let rows = Rows::open(store, by_group(), 1_000, SIZES, false);
+    let rows = Rows::open(store, by_group(), 1_000, SIZES, false, None);
     let mut heading_at = Vec::new();
     for index in 0..rows.row_count() {
         if rows.row_data(index).expect("a card").heads_group {
@@ -565,7 +565,7 @@ fn exactly_one_card_per_group_carries_the_heading() {
 #[test]
 fn the_room_a_heading_row_gets_is_the_card_plus_the_heading() {
     let store = grouped_store(&[("a.com", 2), ("b.com", 2)]);
-    let rows = Rows::open(store, by_group(), 1_000, SIZES, false);
+    let rows = Rows::open(store, by_group(), 1_000, SIZES, false, None);
     let mut with_heading = None;
     let mut without = None;
     for index in 0..rows.row_count() {
@@ -649,7 +649,7 @@ fn a_row_whose_thumbnail_will_not_draw_carries_the_height_it_really_takes() {
     let rows = only_images(store.clone(), 0);
     let _ = rows.row_data(0);
 
-    let rows = Rows::open(store, Filter::default(), 0, SIZES, true);
+    let rows = Rows::open(store, Filter::default(), 0, SIZES, true, None);
     let card = rows.row_data(0).expect("una tarjeta");
     assert!(
         !card.has_thumb,
@@ -681,4 +681,75 @@ fn a_card_used_again_is_found_where_it_went_and_not_where_it_was() {
     assert_eq!(after.index_of(used), Some(0));
     assert_eq!(after.index_of(neighbour), Some(3));
     assert_eq!(after.index_of(-1), None);
+}
+
+#[test]
+fn the_general_list_is_grouped_by_when_it_was_copied() {
+    let noon = 1_791_201_600_000;
+    let store = Store::in_memory().expect("esquema");
+    for (at, when) in [
+        ("u0", noon - 60_000),
+        ("u1", noon - 5 * 3_600_000),
+        ("u2", noon - 6 * 3_600_000),
+        ("u3", noon - 20 * 3_600_000),
+        ("u4", noon - 40 * 86_400_000),
+    ] {
+        store.insert_text(at, at, when).expect("insert");
+    }
+    let rows = Rows::open(
+        Rc::new(store),
+        Filter::default(),
+        noon,
+        SIZES,
+        false,
+        Some(0),
+    );
+    let cards: Vec<_> = (0..rows.row_count())
+        .map(|at| rows.row_data(at).expect("card"))
+        .collect();
+    let heads: Vec<(bool, String)> = cards
+        .iter()
+        .map(|card| (card.heads_group, card.group_said.to_string()))
+        .collect();
+    assert_eq!(
+        heads,
+        vec![
+            (true, "Ahora".to_owned()),
+            (true, "Hoy".to_owned()),
+            (false, String::new()),
+            (true, "Ayer".to_owned()),
+            (true, "Antes".to_owned()),
+        ]
+    );
+    assert_eq!(cards[1].age, "07:00", "inside today the age is the clock");
+    assert_eq!(
+        rows.span_of(2).map(|(_, span)| span),
+        Some(crate::face::Face::Words(1).shut_px()),
+        "only the first of a group pays for the heading"
+    );
+}
+
+#[test]
+fn a_search_or_the_pinned_list_is_not_grouped_by_time() {
+    let store = store_with(3);
+    let searching = Filter {
+        query: Some("elemento".into()),
+        ..Default::default()
+    };
+    assert!(!by_time(&searching, false));
+    let pinned = Filter {
+        pinned_only: true,
+        ..Default::default()
+    };
+    assert!(!by_time(&pinned, false));
+    assert!(by_time(&Filter::default(), false));
+    assert!(
+        !by_time(&Filter::default(), true),
+        "the plain way has no groups"
+    );
+    let rows = Rows::open(store, Filter::default(), 10, SIZES, false, None);
+    assert!(
+        !rows.row_data(0).expect("card").heads_group,
+        "without a clock there is nothing to group by"
+    );
 }

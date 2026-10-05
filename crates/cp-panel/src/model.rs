@@ -43,6 +43,17 @@ pub fn heads_group(filter: &Filter, rows: &[Listed], index: usize) -> bool {
     }
 }
 
+pub fn by_time(filter: &Filter, plain_way: bool) -> bool {
+    one_height_for_all(filter, plain_way)
+        && filter.order == cp_store::Order::Recent
+        && filter
+            .query
+            .as_deref()
+            .is_none_or(|said| said.trim().is_empty())
+        && filter.label_query.is_none()
+        && !filter.pinned_only
+}
+
 pub const MIXED_KEYS: [&str; 4] = [
     crate::media::DURATION,
     crate::media::WIDTH,
@@ -94,6 +105,7 @@ pub struct Rows {
     now: i64,
     metrics: Metrics,
     plain_way: bool,
+    clock: Option<i64>,
     rows: RefCell<Vec<Listed>>,
     meta: RefCell<cp_store::MetaByItem>,
     cards: RefCell<Vec<Option<Card>>>,
@@ -114,6 +126,7 @@ impl Rows {
         now: i64,
         metrics: Metrics,
         plain_way: bool,
+        clock: Option<i64>,
     ) -> Rc<Self> {
         let rows = Rc::new(Self {
             store,
@@ -121,6 +134,7 @@ impl Rows {
             now,
             metrics,
             plain_way,
+            clock,
             rows: RefCell::new(Vec::new()),
             meta: RefCell::new(cp_store::MetaByItem::new()),
             cards: RefCell::new(Vec::new()),
@@ -136,6 +150,27 @@ impl Rows {
         *rows.weak.borrow_mut() = Rc::downgrade(&rows);
         rows.load_page();
         rows
+    }
+
+    fn time_offset(&self) -> Option<i64> {
+        self.clock.filter(|_| by_time(&self.filter, self.plain_way))
+    }
+
+    fn when(&self, row: &Listed, offset: i64) -> crate::age::When {
+        crate::age::when_of(self.now, crate::view::touched_of(row), offset)
+    }
+
+    fn heads(&self, rows: &[Listed], index: usize) -> bool {
+        let Some(offset) = self.time_offset() else {
+            return heads_group(&self.filter, rows, index);
+        };
+        let Some(row) = rows.get(index) else {
+            return false;
+        };
+        match index.checked_sub(1).and_then(|before| rows.get(before)) {
+            Some(before) => self.when(before, offset) != self.when(row, offset),
+            None => true,
+        }
     }
 
     pub fn loaded(&self) -> usize {
@@ -168,7 +203,7 @@ impl Rows {
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
-        let head = if heads_group(&self.filter, &rows, index) {
+        let head = if self.heads(&rows, index) {
             self.metrics.head
         } else {
             0.0
@@ -247,7 +282,7 @@ impl Rows {
         let alive = row.thumb_path.is_some() && !self.thumbless.borrow().contains(&index);
         let shut = self.shut_of(index, alive);
         let rows = self.rows.borrow();
-        if heads_group(&self.filter, &rows, index) {
+        if self.heads(&rows, index) {
             shut + self.metrics.head
         } else {
             shut
@@ -376,7 +411,7 @@ impl Rows {
         let rows = self.rows.borrow();
         let row = rows.get(index)?;
         let row_wanted_a_thumb = row.thumb_path.is_some();
-        let heads = heads_group(&self.filter, &rows, index);
+        let heads = self.heads(&rows, index);
         let without_thumb = if heads { self.metrics.head } else { 0.0 }
             + if self.open.get() == Some(index) {
                 self.open_of_row(row)
@@ -390,7 +425,15 @@ impl Rows {
         let meta = self.meta.borrow();
         let mut card = card_of(row, self.now, meta.get(&row.id));
         drop(meta);
-        if heads {
+        let english = crate::say::in_english();
+        if let Some(offset) = self.time_offset() {
+            let touched = crate::view::touched_of(row);
+            card.age = crate::age::age_in_group(self.now, touched, offset, english).into();
+            if heads {
+                card.heads_group = true;
+                card.group_said = crate::age::when_said(self.when(row, offset), english).into();
+            }
+        } else if heads {
             card.heads_group = true;
             card.group_said = row.group.clone().into();
         }
