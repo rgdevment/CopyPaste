@@ -16,7 +16,7 @@ env:
 jobs:
   changes:
     name: the crates this branch touched
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       mutable: ${{ steps.look.outputs.mutable }}
