@@ -21,14 +21,10 @@ while read -r ref mine _ theirs; do
   esac
 
   if [ "${theirs:-$nothing}" != "$nothing" ]; then
-    range="$theirs..$mine"
-  elif base=$(git merge-base "$mine" origin/main 2> /dev/null) && [ -n "$base" ]; then
-    range="$base..$mine"
+    bash scripts/commits.sh "$theirs..$mine" || status=1
   else
-    echo "!  origin/main is not here, so the subjects were not looked at"
-    continue
+    bash scripts/commits.sh "$mine" --not --remotes || status=1
   fi
-  bash scripts/commits.sh "$range" || status=1
 done
 
 exit $status

@@ -121,9 +121,9 @@ We keep the code simple and consistent:
 `scripts/rules.sh` holds the conventions a person can break in a second: a
 comment where the code should speak for itself, `unsafe` outside the `-sys`
 crates, the core printing to a terminal or reaching for a platform, Spanish in
-an identifier, voseo or peninsular words in what a person reads, two crates
-naming an example the same, and a file grown past what anybody reads through.
-`scripts/commits.sh` holds the shape and the length of a subject. Both answer
+an identifier, two crates naming an example the same, and a file grown past
+what anybody reads through. `scripts/commits.sh` holds the commit convention
+below. Both answer
 the same whether you run them or CI does, and they say every rule that broke
 rather than stopping at the first. Run either whenever you like, and if you want
 them run for you:
@@ -134,9 +134,9 @@ git config core.hooksPath hooks
 
 That gives you three. `pre-commit` runs the conventions, `cargo fmt --all
 --check` and biome — a couple of seconds, and between them they are most of what
-turns CI red. `commit-msg` weighs the subject while the fix is still an
+turns CI red. `commit-msg` weighs the message while the fix is still an
 `--amend` rather than a rebase. `pre-push` runs the conventions again and the
-subjects of everything you are about to send, and when what you are sending is a
+messages of everything you are about to send, and when what you are sending is a
 tag it asks `scripts/news.sh` whether `app/src/news.json` says what changed in
 that version — the screen that tells a person what is new is the only place the
 app says it, and a tag is the last moment to notice it is empty. A candidate is
@@ -144,6 +144,25 @@ exempt: the screen only shows versions at or below the one running, and `3.0.0`
 is above `3.0.0-rc1`. Nothing slower goes in any of
 them: the suite, the build and the markdown lint are minutes, and they belong to
 CI.
+
+### Commit messages
+
+One line, in English, and nothing else:
+
+```text
+type(scope): the concrete change
+```
+
+- **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
+  `build`, `ci`, `chore`, `revert`. The scope is optional.
+- **At most 120 characters.**
+- **No body and no trailers** — no `Co-authored-by`, no `Signed-off-by`. The
+  CLA below is signed once on the pull request, not on each commit.
+- **No links**, except `#123` for an issue or pull request of this repository.
+- Say what changed, not how it was found.
+
+A pull request's title follows the same rule, because the squash keeps it as
+the subject on `main`.
 
 **UI/UX:**
 
@@ -179,11 +198,9 @@ I have read the CLA Document and I hereby sign the CLA
 
 That is it — every later Pull Request from the same account is covered.
 
-**Please leave tool co-authorship out of your commits.** Assistants are welcome
-here — this project is built with them — but the credit line is for people. If
-your editor adds a trailer naming one, drop it before you push. It changes
-nothing about what you are allowed to submit; section 4 of the CLA already puts
-the responsibility for generated code on you, whichever tool helped write it.
+**Commits carry no trailers.** If your editor adds one, drop it before you
+push. Section 4 of the CLA already puts the responsibility for what you submit
+on you, whatever helped you write it.
 
 **In return, the project commits that:**
 

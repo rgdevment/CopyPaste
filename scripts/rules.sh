@@ -62,24 +62,6 @@ written_in_english() {
     && went_well "no Spanish identifiers"
 }
 
-neutral_spanish() {
-  local voseo='\b(v[o]s|ten[é]s|quer[é]s|pod[é]s|and[á]|mir[á]|hac[é]|ch[e])\b'
-  local peninsular='\b(fichero|ficheros|ordenador|pulsa|pulsar|pulsando)\b'
-  # a path that is not there is an error to grep, so only what exists is handed over
-  local -a where=(crates README.md)
-  [ -d docs ] && where+=(docs)
-  grep -rniE "$voseo" "${where[@]}" --include='*.rs' --include='*.md'
-  found_nothing \
-    "neutral Spanish, no voseo" $? \
-    "the Spanish could not be looked through for voseo" \
-    && went_well "no voseo anywhere"
-  grep -rniE "$peninsular" "${where[@]}" --include='*.rs' --include='*.md'
-  found_nothing \
-    "neutral Spanish: archivo, computador, presiona" $? \
-    "the Spanish could not be looked through for peninsular words" \
-    && went_well "no peninsular Spanish in what a person reads"
-}
-
 no_comments_in_the_code() {
   grep -rnE '[/]{2}' crates app/src-tauri/src --include='*.rs' \
     | grep -vE '[a-z]+:[/][/]' | grep -vE '"[^"]*[/]{2}'
@@ -135,7 +117,6 @@ unsafe_only_in_the_sys_crates
 nothing_the_core_prints
 nothing_the_core_depends_on
 written_in_english
-neutral_spanish
 no_comments_in_the_code
 every_example_has_its_own_name
 what_python_measures "the tests live beside the file, not inside it" oversized.py --inline
