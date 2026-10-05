@@ -77,7 +77,7 @@ pub fn day_of(at: i64, offset: i64) -> i64 {
 }
 
 pub fn when_of(now: i64, at: i64, now_offset: i64, at_offset: i64) -> When {
-    if (0..JUST_NOW).contains(&(now - at)) {
+    if now - at < JUST_NOW {
         return When::Now;
     }
     match day_of(now, now_offset) - day_of(at, at_offset) {

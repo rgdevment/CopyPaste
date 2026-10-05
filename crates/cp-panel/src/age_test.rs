@@ -104,7 +104,11 @@ fn what_was_copied_falls_into_now_today_yesterday_or_before() {
         When::Yesterday,
         "the same instant is yesterday for someone three hours behind"
     );
-    assert_eq!(when_of(NOON_UTC, NOON_UTC + 60_000, 0, 0), When::Today);
+    assert_eq!(
+        when_of(NOON_UTC, NOON_UTC + 60_000, 0, 0),
+        When::Now,
+        "a clock a little ahead does not open a second group above Now"
+    );
 }
 
 #[test]
