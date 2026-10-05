@@ -185,3 +185,45 @@ fn nothing_is_offered_elsewhere_or_without_a_file() {
     assert_eq!(landing(Towards::Terminal, &[]).offer(), Offer::Nothing);
     assert_eq!(Landing::anywhere().offer(), Offer::Nothing);
 }
+
+#[test]
+fn on_a_mac_any_app_that_hosts_a_terminal_is_one_whatever_its_bundle() {
+    assert_eq!(
+        towards_by_bundle(Some("com.example.orca"), true),
+        Towards::Terminal
+    );
+    assert_eq!(towards_by_bundle(None, true), Towards::Terminal);
+    assert_eq!(
+        towards_by_bundle(Some("com.example.orca"), false),
+        Towards::Elsewhere
+    );
+}
+
+#[test]
+fn on_a_mac_a_known_terminal_is_one_even_when_its_shells_live_elsewhere() {
+    assert_eq!(
+        towards_by_bundle(Some("com.googlecode.iterm2"), false),
+        Towards::Terminal,
+        "iTerm2 hands its shells to a server process of its own"
+    );
+    assert_eq!(
+        towards_by_bundle(Some("com.mitchellh.ghostty"), false),
+        Towards::Terminal
+    );
+}
+
+#[test]
+fn on_a_mac_an_editor_with_a_terminal_inside_keeps_its_pasted_images() {
+    assert_eq!(
+        towards_by_bundle(Some("com.microsoft.VSCodeInsiders"), true),
+        Towards::Elsewhere
+    );
+    assert_eq!(
+        towards_by_bundle(Some("com.jetbrains.intellij"), true),
+        Towards::Elsewhere
+    );
+    assert_eq!(
+        towards_by_bundle(Some("com.apple.Safari"), false),
+        Towards::Elsewhere
+    );
+}

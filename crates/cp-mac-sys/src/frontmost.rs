@@ -15,6 +15,11 @@ pub fn app_name(pid: i32) -> Option<String> {
     app.localizedName().map(|name| name.to_string())
 }
 
+pub fn bundle_of(pid: i32) -> Option<String> {
+    let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid)?;
+    app.bundleIdentifier().map(|id| id.to_string())
+}
+
 pub fn missing_paths(file_urls: &str) -> Vec<String> {
     file_urls
         .lines()

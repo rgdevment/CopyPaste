@@ -239,19 +239,31 @@ mod platform {
         None
     }
 
-    pub fn towards(_ahead: isize) -> crate::landing::Towards {
-        crate::landing::Towards::Elsewhere
+    pub fn towards(ahead: isize) -> crate::landing::Towards {
+        let Ok(pid) = i32::try_from(ahead) else {
+            return crate::landing::Towards::Elsewhere;
+        };
+        if pid <= 0 {
+            return crate::landing::Towards::Elsewhere;
+        }
+        let bundle = cp_mac_sys::frontmost::bundle_of(pid);
+        let hosts = cp_mac_sys::processes::hosts_a_terminal(pid);
+        crate::landing::towards_by_bundle(bundle.as_deref(), hosts)
     }
 
     pub fn to_clipboard(
         item: &Item,
-        _landing: &crate::landing::Landing,
+        landing: &crate::landing::Landing,
         starting: impl FnOnce(),
         ours: impl FnOnce(),
     ) -> Landed {
+        let offered = match landing.offer() {
+            crate::landing::Offer::Text(text) => Some(text),
+            _ => None,
+        };
         let pb = Pasteboard::general_from_any_thread();
         starting();
-        let landed = match cp_mac::restore::to_pasteboard(&pb, item) {
+        let landed = match cp_mac::restore::to_pasteboard_offering(&pb, item, offered.as_deref()) {
             cp_mac::restore::Restored::Written {
                 formats,
                 incomplete: true,

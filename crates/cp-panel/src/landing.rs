@@ -117,6 +117,44 @@ pub fn towards_of(process: &str, class: &str, hosts_a_pseudoconsole: bool) -> To
     Towards::Elsewhere
 }
 
+#[cfg(any(target_os = "macos", test))]
+const MAC_TERMINALS: [&str; 10] = [
+    "com.apple.Terminal",
+    "com.googlecode.iterm2",
+    "com.mitchellh.ghostty",
+    "net.kovidgoyal.kitty",
+    "org.alacritty",
+    "com.github.wez.wezterm",
+    "dev.warp.Warp-Stable",
+    "co.zeit.hyper",
+    "org.tabby",
+    "com.raphaelamorim.rio",
+];
+
+#[cfg(any(target_os = "macos", test))]
+const MAC_EDITORS: [&str; 7] = [
+    "com.microsoft.VSCode",
+    "com.todesktop.230313mzl4w4u92",
+    "com.exafunction.windsurf",
+    "dev.zed.Zed",
+    "com.jetbrains.",
+    "com.google.android.studio",
+    "com.apple.dt.Xcode",
+];
+
+#[cfg(any(target_os = "macos", test))]
+pub fn towards_by_bundle(bundle: Option<&str>, hosts_a_terminal: bool) -> Towards {
+    let bundle = bundle.unwrap_or_default();
+    if MAC_TERMINALS.contains(&bundle) {
+        return Towards::Terminal;
+    }
+    let editor = !bundle.is_empty() && MAC_EDITORS.iter().any(|one| bundle.starts_with(one));
+    if hosts_a_terminal && !editor {
+        return Towards::Terminal;
+    }
+    Towards::Elsewhere
+}
+
 const EXPANDED_INSIDE_QUOTES: [char; 8] =
     ['$', '`', '%', '!', '"', '\u{201C}', '\u{201D}', '\u{201E}'];
 
