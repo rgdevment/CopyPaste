@@ -94,8 +94,16 @@ fn answered_by(executable: Option<&str>, packaged: Option<&str>) -> bool {
             .and_then(|leaf| leaf.to_str())
             .is_some_and(|leaf| leaf.eq_ignore_ascii_case("OpenWith.exe"))
     });
-    (executable.is_some_and(|one| !one.is_empty()) && !picker)
-        || packaged.is_some_and(|one| !one.is_empty())
+    if picker {
+        return false;
+    }
+    executable.is_some_and(|one| !one.is_empty()) || packaged.is_some_and(a_package)
+}
+
+fn a_package(id: &str) -> bool {
+    id.get(..4)
+        .is_some_and(|head| head.eq_ignore_ascii_case("appx"))
+        || id.contains('!')
 }
 
 pub fn open_link(url: &str) -> bool {
