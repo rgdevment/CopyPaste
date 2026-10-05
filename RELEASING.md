@@ -224,7 +224,11 @@ On Windows the 3.0 installer:
   packaged app's writes to a `LocalAppData` folder it created itself land in
   `Packages\rgdevment.CopyPaste-ClipboardManager_kdjgfdc2rb3gc\LocalCache\Local\CopyPaste`,
   and `Remove-AppxPackage` deletes that folder with the package. When a
-  `clipboard.db` is there, the installer only offers to close the 2.x.
+  `clipboard.db` is there, the installer only offers to close the 2.x. The 3.0
+  looks for the 2.x history there too when the plain folder has none, and finds
+  each picture by its name under that folder's `images`, since the path the 2.x
+  wrote down is one only a packaged process could open. Not yet tried against a
+  machine that only ever had the Store copy.
 - **Puts back the 3.0's own start with the session.** The Inno uninstaller
   deletes the `CopyPaste` value under `HKCU\…\Run`, which is the name the 3.0
   uses too; if it pointed at `cp-gui.exe` before, it is written again.

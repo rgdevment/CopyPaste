@@ -171,7 +171,14 @@ fn picture_at(root: Option<&Path>, said: &str) -> Option<PathBuf> {
         return None;
     }
     let root = root?;
-    let real = std::fs::canonicalize(said).ok()?;
+    let real = std::fs::canonicalize(said)
+        .or_else(|_| {
+            let name = Path::new(said)
+                .file_name()
+                .ok_or(std::io::ErrorKind::NotFound)?;
+            std::fs::canonicalize(root.join("images").join(name))
+        })
+        .ok()?;
     if !real.starts_with(root) {
         return None;
     }
