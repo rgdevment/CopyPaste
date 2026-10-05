@@ -639,7 +639,7 @@ SectionEnd
 !macro NSIS_HOOK_PREINSTALL
   IfSilent former_stays
   ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1" "UninstallString"
-  nsExec::ExecToStack `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$p = Get-AppxPackage -Name rgdevment.CopyPaste-ClipboardManager; if ($$p -and $$p.Version.Major -lt 3) { [Console]::Out.Write($$p.PackageFullName) }"`
+  nsExec::ExecToStack `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$p = Get-AppxPackage -Name rgdevment.CopyPaste-ClipboardManager; if ($$p -and ([version]$$p.Version).Major -lt 3) { [Console]::Out.Write($$p.PackageFullName) }"`
   Pop $R3
   Pop $R2
   ${If} $R3 != 0
