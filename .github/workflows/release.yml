@@ -445,7 +445,7 @@ jobs:
           v="${{ needs.version.outputs.version }}"
           exe="../dist/copypaste-installer-$v-windows-x86_64.exe"
           rm -f "$exe.sig"
-          npm run tauri -- signer sign "$exe"
+          npm run tauri -- signer sign --app-version "$v" "$exe"
           test -s "$exe.sig" || { echo "::error::no updater signature was written"; exit 1; }
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -638,7 +638,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           out="../target/$TARGET/release/bundle/macos"
-          npm run tauri -- signer sign "$out/CopyPaste.app.tar.gz"
+          npm run tauri -- signer sign --app-version "${{ needs.version.outputs.version }}" \
+            "$out/CopyPaste.app.tar.gz"
           test -s "$out/CopyPaste.app.tar.gz.sig"
 
       - name: Name it after the release
@@ -1303,6 +1304,10 @@ jobs:
               echo "$os verifies"
             else
               echo "::error::$os does not verify against the key this build ships"
+              exit 1
+            fi
+            if ! sed -n 3p one.sig | tr '\t' '\n' | grep -qx "version:$v"; then
+              echo "::error::$os is not signed for $v, and every copy from here on refuses it"
               exit 1
             fi
           done

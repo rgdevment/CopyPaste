@@ -70,11 +70,15 @@ never offered anything; one under `Caskroom/copypaste-beta` or
 `Caskroom/copypaste` is told its own `brew` command rather than handed an
 installer; anything else installs its own update.
 
-Three things guard the install, all of them borrowed from Tisty: the download
+Four things guard the install, all of them borrowed from Tisty: the download
 address must be this repository's releases on `github.com` (or
-`objects.githubusercontent.com`) before a byte is fetched, the version is pinned to the one the person was shown so a
-feed that moves cannot hand over another, and a copy running from the mounted
-`.dmg` refuses rather than failing after the whole download. The panel is
+`objects.githubusercontent.com`) before a byte is fetched; the version is
+pinned to the one the person was shown, so a feed that moves cannot hand over
+another; every updater signature is bound to its version (`signer sign
+--app-version`, `requireSignedVersion`), so an older release cannot be served
+under a newer number, and `verify` refuses a release whose signatures do not
+say it; and a copy running from the mounted `.dmg` refuses rather than failing
+after the whole download. The panel is
 stopped first, because on Windows an installer cannot replace a binary that is
 running, and it is brought back if the install does not go through.
 
