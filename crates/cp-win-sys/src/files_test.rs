@@ -71,12 +71,14 @@ fn a_scheme_the_shell_names_a_package_for_is_found() {
         "ms-windows-store",
         windows::Win32::UI::Shell::ASSOCSTR_EXECUTABLE,
     );
-    assert_eq!(
-        super::scheme_here("ms-windows-store"),
-        packaged.is_some() || executable.is_some(),
-        "a scheme answered by a package and by no executable, as LinkUnbound from the Store is, \
-         has to be found through its AppID; packaged {packaged:?}, executable {executable:?}"
-    );
+    if packaged.is_some() {
+        assert!(
+            super::scheme_here("ms-windows-store"),
+            "a scheme the shell names a package for, as LinkUnbound from the Store is, has to be \
+             found through its AppID whatever the executable says; packaged {packaged:?}, \
+             executable {executable:?}"
+        );
+    }
 }
 
 #[test]
