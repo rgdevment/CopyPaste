@@ -415,10 +415,10 @@ export component CardView inherits Rectangle {
                 if lit || open : HorizontalLayout {
                     spacing: 2px;
                     alignment: center;
-                    if card.can-open : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; pressed => { root.open-asked(card.id); } }
+                    if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; pressed => { root.open-asked(card.id); } }
                     Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; pressed => { root.edit(card.id); } }
-                    Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; pressed => { root.copy(card.id); } }
-                    Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; pressed => { root.forms(card.id); } }
+                    if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; pressed => { root.copy(card.id); } }
+                    if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; pressed => { root.forms(card.id); } }
                     Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; pressed => { root.pin(card.id, !card.pinned); } }
                     Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; pressed => { root.remove(card.id); } }
                 }
@@ -663,7 +663,7 @@ export component CardView inherits Rectangle {
             if open && card.face == "file" && card.kind != "folder" : PapersBody { card: card; }
             if open && card.face == "media" : MediaBody { card: card; }
 
-            if open : HorizontalLayout {
+            if open && !card.broken : HorizontalLayout {
                 height: 22px;
                 spacing: 6px;
                 KeyChip { keys: "⏎"; says: Words.paste-it; on: true; }
@@ -825,10 +825,10 @@ export component CardView inherits Rectangle {
                 alignment: center;
                 opacity: lit ? 1.0 : 0.0;
                 animate opacity { duration: 120ms; easing: ease-out; }
-                if card.can-open : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: lit; pressed => { root.open-asked(card.id); } }
+                if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: lit; pressed => { root.open-asked(card.id); } }
                 Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: lit; pressed => { root.edit(card.id); } }
-                Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: lit; pressed => { root.copy(card.id); } }
-                Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; pressed => { root.forms(card.id); } }
+                if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: lit; pressed => { root.copy(card.id); } }
+                if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; pressed => { root.forms(card.id); } }
                 Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
                 Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
             }

@@ -279,7 +279,12 @@ pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32) -> f32 {
     } else {
         0
     };
-    crate::face::open_px(crate::face::open_body_px(face, &opened, claims, room))
+    let body = crate::face::open_body_px(face, &opened, claims, room);
+    if row.broken_since.is_some() {
+        crate::face::open_lost_px(body)
+    } else {
+        crate::face::open_px(body)
+    }
 }
 
 pub fn headline_of(row: &Listed, body: &str, folder: Option<&crate::folder::Parts>) -> String {

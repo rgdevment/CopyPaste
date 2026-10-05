@@ -217,6 +217,10 @@ pub fn open_px(body: f32) -> f32 {
     TOP + META + GAP + body + GAP + KEYS_ROW + BOTTOM + BETWEEN
 }
 
+pub fn open_lost_px(body: f32) -> f32 {
+    open_px(body) - GAP - KEYS_ROW
+}
+
 fn lines_for(text: &str, per_line: usize) -> i32 {
     if text.chars().count() <= per_line {
         1

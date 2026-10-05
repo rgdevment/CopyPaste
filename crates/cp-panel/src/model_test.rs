@@ -790,3 +790,28 @@ fn a_card_whose_thumbnail_will_not_load_opens_with_the_text_it_falls_back_to() {
         "the open card draws its text, not an empty box of the height the model kept"
     );
 }
+
+#[test]
+fn a_card_whose_file_is_gone_opens_without_the_keys_to_paste_it() {
+    let store = Store::in_memory().expect("esquema");
+    let id = store
+        .insert_text("u0", "/no/existe.txt", 1)
+        .expect("insert");
+    store.mark_broken(id, 1).expect("broken");
+    let shown = Filter {
+        broken: cp_store::Broken::Shown,
+        ..Default::default()
+    };
+    let rows = Rows::open(Rc::new(store), shown, 2, SIZES, false, None);
+    rows.open_at(Some(0));
+    let open = rows.span_of(0).expect("la fila").1;
+    let card = rows.row_data(0).expect("card");
+    assert!(card.broken);
+    let body = crate::face::LINE * card.open_lines as f32;
+    assert_eq!(open, crate::face::open_lost_px(body));
+    assert_eq!(
+        crate::face::open_px(body) - open,
+        crate::face::GAP + crate::face::KEYS_ROW,
+        "the row of paste keys is not drawn, so it is not kept either"
+    );
+}
