@@ -1185,3 +1185,12 @@ fn a_picture_the_store_kept_inside_its_package_is_found_by_its_name() {
         "a name that is not in the folder is still lost, and says so"
     );
 }
+
+#[test]
+fn a_name_that_climbs_out_of_the_folder_is_never_looked_for() {
+    let there = tempfile::tempdir().expect("a folder");
+    let root = std::fs::canonicalize(there.path()).expect("canonical");
+    std::fs::create_dir(root.join("images")).expect("images");
+    assert_eq!(picture_at(Some(&root), r"C:\x\images\.."), None);
+    assert_eq!(picture_at(Some(&root), "/x/images/"), None);
+}
