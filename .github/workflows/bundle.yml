@@ -31,7 +31,7 @@ jobs:
   # `paths` on the trigger leaves a required check unreported for good; a skipped job counts as met.
   changes:
     name: what the branch touched
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       packaging: ${{ steps.look.outputs.packaging }}
