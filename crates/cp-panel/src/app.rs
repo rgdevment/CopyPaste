@@ -1408,6 +1408,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                         if panel.show().is_err() {
                             return;
                         }
+                        place(&panel);
                         crate::view::dress_words(&panel);
                         dress(&panel, &dressed);
                         forward(&panel);

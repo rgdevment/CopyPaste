@@ -17,6 +17,7 @@ pub struct Pointer {
     pub at: (f64, f64),
     pub area: crate::placing::Area,
     pub physical: bool,
+    pub scale: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -214,6 +215,7 @@ mod platform {
                 bottom: f64::from(spot.bottom),
             },
             physical: true,
+            scale: spot.scale,
         })
     }
 }
@@ -419,6 +421,7 @@ mod platform {
                 bottom: spot.bottom,
             },
             physical: false,
+            scale: 1.0,
         })
     }
 

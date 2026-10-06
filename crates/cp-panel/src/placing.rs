@@ -42,24 +42,25 @@ pub fn place(panel: &Panel) {
     let Some(pointer) = crate::here::pointer() else {
         return;
     };
+    let theme = panel.global::<crate::Theme>();
+    let width = f64::from(theme.get_width() + theme.get_margin() * 2.0);
+    let height = f64::from(theme.get_height() + theme.get_margin() * 2.0);
     let window = panel.window();
-    let scale = f64::from(window.scale_factor());
-    let size = window.size();
-    let (width, height) = (f64::from(size.width), f64::from(size.height));
+    let scale = pointer.scale;
     if pointer.physical {
-        let (x, y) = beside(pointer.at, pointer.area, (width, height), scale);
+        let (x, y) = beside(
+            pointer.at,
+            pointer.area,
+            (width * scale, height * scale),
+            scale,
+        );
         #[allow(clippy::cast_possible_truncation)]
         window.set_position(slint::PhysicalPosition::new(
             x.round() as i32,
             y.round() as i32,
         ));
     } else {
-        let (x, y) = beside(
-            pointer.at,
-            pointer.area,
-            (width / scale, height / scale),
-            1.0,
-        );
+        let (x, y) = beside(pointer.at, pointer.area, (width, height), 1.0);
         #[allow(clippy::cast_possible_truncation)]
         window.set_position(slint::LogicalPosition::new(x as f32, y as f32));
     }
