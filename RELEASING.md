@@ -97,10 +97,14 @@ refuses a package the community repository has never seen. Today
 2. Submit the manifest by hand against that public URL:
    `wingetcreate new <url-of-the-installer>`.
 3. Wait for a `winget-pkgs` moderator to merge it (days, not hours).
-4. Only then set `vars.WINGET_PUBLISH=true` and `secrets.WINGET_TOKEN`.
+4. Replace `winget-releaser`: it pulls `cargo-bins/cargo-binstall@main`
+   unpinned, which this repository's pinning policy refuses when the job is set
+   up, so the job fails before any step runs. `wingetcreate update` on a
+   Windows runner does the same without third-party actions.
+5. Only then set `vars.WINGET_PUBLISH=true` and `secrets.WINGET_TOKEN`.
 
-The `winget` job starts disabled by that variable, so it is harmless to ship
-the workflow before the package exists: it logs a notice and does nothing.
+The `winget` job is skipped whole while that variable is off, so it is
+harmless to ship the workflow before the package exists.
 
 ### 2. Microsoft Store
 
