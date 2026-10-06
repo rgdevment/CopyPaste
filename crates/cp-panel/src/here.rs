@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
-    drag_out, dress, forward, in_front, media_of, ocr_available, open_link, open_path,
+    drag_out, dress, forward, ground, in_front, media_of, ocr_available, open_link, open_path,
     ours_up_front, paste_into, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
     thumb_of_file, thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
 };
@@ -180,7 +180,11 @@ mod platform {
         cp_win_sys::dragging::from_window(win32.hwnd.get(), paths)
     }
 
-    pub fn paste_into(ahead: isize, hide: impl FnOnce()) -> Sent {
+    pub fn paste_into(ahead: isize, hide: impl FnOnce(), finished: impl FnOnce(Sent) + 'static) {
+        finished(pasted(ahead, hide));
+    }
+
+    fn pasted(ahead: isize, hide: impl FnOnce()) -> Sent {
         let Some(target) = cp_win_sys::frontmost::target_at(ahead) else {
             return Sent::Nobody;
         };
@@ -189,6 +193,8 @@ mod platform {
             cp_win::paste::Outcome::Degraded(why) => Sent::Degraded(why),
         }
     }
+
+    pub fn ground(_handle: RawWindowHandle) {}
 }
 
 #[cfg(target_os = "macos")]
@@ -196,6 +202,7 @@ mod platform {
     use super::*;
     use cp_core::destination::Destination;
     use cp_mac_sys::pasteboard::Pasteboard;
+    use std::time::Duration;
 
     pub use cp_core::thumbnail::THUMBNAILS_FILES;
     pub use cp_core::watching::Watching;
@@ -336,12 +343,12 @@ mod platform {
         cp_mac_sys::dragging::from_view(appkit.ns_view, paths)
     }
 
-    pub fn paste_into(ahead: isize, hide: impl FnOnce()) -> Sent {
+    pub fn paste_into(ahead: isize, hide: impl FnOnce(), finished: impl FnOnce(Sent) + 'static) {
         let Ok(pid) = i32::try_from(ahead) else {
-            return Sent::Nobody;
+            return finished(Sent::Nobody);
         };
         if pid == 0 || !cp_mac_sys::frontmost::is_alive(pid) {
-            return Sent::Nobody;
+            return finished(Sent::Nobody);
         }
         let target = Destination {
             pid,
@@ -349,11 +356,40 @@ mod platform {
         };
         let Some(paster) = cp_mac::paste::Paster::new() else {
             hide();
-            return Sent::Degraded(Failure::SendDenied);
+            return finished(Sent::Degraded(Failure::SendDenied));
         };
-        match paster.paste_into(&target, hide) {
+        let route = cp_mac::paste::route_of(&cp_mac_sys::permissions::Readiness::probe());
+        match paster.start_via(route, target, hide) {
+            Ok(mut pasting) => keep_pasting(
+                move || paster.advance(&mut pasting),
+                finished,
+                Duration::ZERO,
+            ),
+            Err(outcome) => finished(sent_of(outcome)),
+        }
+    }
+
+    pub fn keep_pasting(
+        mut advance: impl FnMut() -> cp_mac::paste::Advance + 'static,
+        finished: impl FnOnce(Sent) + 'static,
+        after: Duration,
+    ) {
+        slint::Timer::single_shot(after, move || match advance() {
+            cp_mac::paste::Advance::Done(outcome) => finished(sent_of(outcome)),
+            cp_mac::paste::Advance::After(next) => keep_pasting(advance, finished, next),
+        });
+    }
+
+    pub fn sent_of(outcome: cp_mac::paste::Outcome) -> Sent {
+        match outcome {
             cp_mac::paste::Outcome::Sent { .. } => Sent::Done,
             cp_mac::paste::Outcome::Degraded(why) => Sent::Degraded(why),
+        }
+    }
+
+    pub fn ground(handle: RawWindowHandle) {
+        if let RawWindowHandle::AppKit(appkit) = handle {
+            cp_mac_sys::floating::grounded(appkit.ns_view);
         }
     }
 }

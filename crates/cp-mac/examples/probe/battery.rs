@@ -1224,6 +1224,8 @@ fn main() -> std::process::ExitCode {
         },
     );
 
+    the_panel_and_its_windows(&mut b);
+
     println!();
     println!(
         "  {} pass · {} fail · {} skipped",

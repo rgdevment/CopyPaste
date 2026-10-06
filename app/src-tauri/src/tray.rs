@@ -152,12 +152,8 @@ pub fn surface_at<R: Runtime>(app: &AppHandle<R>, rail: Option<&str>) {
 
 #[cfg(target_os = "macos")]
 fn unzoomed<R: Runtime>(window: &tauri::WebviewWindow<R>) {
-    let Ok(ns_window) = window.ns_window() else {
-        return;
-    };
-    let at = ns_window as usize;
-    let _ = window.run_on_main_thread(move || {
-        if let Some(ns_window) = std::ptr::NonNull::new(at as *mut std::ffi::c_void) {
+    let _ = window.with_webview(|webview| {
+        if let Some(ns_window) = std::ptr::NonNull::new(webview.ns_window()) {
             cp_mac_sys::titlebar::without_zoom(ns_window);
         }
     });
