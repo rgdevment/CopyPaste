@@ -10,15 +10,8 @@ pub fn english_for(locale: Option<&str>) -> bool {
     asked.to_lowercase().starts_with("en")
 }
 
-pub fn adopt(locale: Option<&str>) {
-    ENGLISH.store(english_for(locale), Ordering::Relaxed);
-}
-
-pub fn adopt_what_was_kept() {
-    let kept = crate::here::data_dir()
-        .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
-        .and_then(|kept| kept.locale);
-    adopt(kept.as_deref());
+pub fn adopt_english(english: bool) {
+    ENGLISH.store(english, Ordering::Relaxed);
 }
 
 pub fn in_english() -> bool {

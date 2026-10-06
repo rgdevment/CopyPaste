@@ -7,6 +7,7 @@ mod face;
 mod folder;
 mod group;
 mod here;
+mod kept;
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 mod landing;
 mod layout;
