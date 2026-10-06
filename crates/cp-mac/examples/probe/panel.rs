@@ -45,6 +45,21 @@ fn the_panel_and_its_windows(b: &mut Battery) {
         },
     );
 
+    b.case(
+        "S7",
+        "the panel stays put when the app loses focus and shows without an animation of its own",
+        || {
+            let floated = floated.ok_or("this needs the main thread and a window of its own")?;
+            if !floated.stays_when_left {
+                return Err("AppKit would hide the panel behind the app's back".into());
+            }
+            if !floated.appears_at_once {
+                return Err("AppKit would animate the panel in and out".into());
+            }
+            Ok(())
+        },
+    );
+
     b.case_or_skip("S4", "the panel takes the keys when it is put in front", || {
         let floated = floated.ok_or("this needs the main thread and a window of its own")?;
         if floated.took_the_keys {

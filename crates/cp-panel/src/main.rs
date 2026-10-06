@@ -33,6 +33,25 @@ slint::include_modules!();
 
 use std::path::PathBuf;
 
+fn stand_aside() -> Result<(), slint::PlatformError> {
+    let builder = i_slint_backend_winit::Backend::builder().with_renderer_name("skia-software");
+    #[cfg(target_os = "macos")]
+    let builder = {
+        use i_slint_backend_winit::winit::platform::macos::{
+            ActivationPolicy, EventLoopBuilderExtMacOS,
+        };
+        let mut quiet = i_slint_backend_winit::winit::event_loop::EventLoop::with_user_event();
+        quiet
+            .with_activation_policy(ActivationPolicy::Accessory)
+            .with_activate_ignoring_other_apps(false);
+        builder
+            .with_default_menu_bar(false)
+            .with_event_loop_builder(quiet)
+    };
+    slint::platform::set_platform(Box::new(builder.build()?))
+        .map_err(|why| slint::PlatformError::Other(why.to_string()))
+}
+
 fn fall(why: &str) {
     note::note(why);
     std::process::abort();
@@ -53,11 +72,10 @@ fn main() {
         "anything worth noting is written to {}",
         note::where_to().display()
     );
-    if std::env::var_os("SLINT_BACKEND").is_none() {
-        let _ = slint::BackendSelector::new()
-            .backend_name("winit".into())
-            .renderer_name("skia-software".into())
-            .select();
+    if std::env::var_os("SLINT_BACKEND").is_none()
+        && let Err(why) = stand_aside()
+    {
+        note::note(&format!("the panel kept the default window system: {why}"));
     }
     let store = match cp_store::Store::open(&options.db) {
         Ok(store) => store,

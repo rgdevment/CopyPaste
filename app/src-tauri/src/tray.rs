@@ -105,6 +105,49 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
     Some(())
 }
 
+#[cfg(target_os = "macos")]
+pub fn settle_menu<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> tauri::Result<()> {
+    use tauri::menu::{PredefinedMenuItem, Submenu};
+    let (closes, edits) = if spanish {
+        ("Cerrar la ventana", "Edición")
+    } else {
+        ("Close the window", "Edit")
+    };
+    let close = MenuItem::with_id(app, "close-window", closes, true, Some("CmdOrCtrl+Q"))?;
+    let ours = Submenu::with_items(
+        app,
+        "CopyPaste",
+        true,
+        &[&close, &PredefinedMenuItem::close_window(app, None)?],
+    )?;
+    let edit = Submenu::with_items(
+        app,
+        edits,
+        true,
+        &[
+            &PredefinedMenuItem::undo(app, None)?,
+            &PredefinedMenuItem::redo(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, None)?,
+            &PredefinedMenuItem::copy(app, None)?,
+            &PredefinedMenuItem::paste(app, None)?,
+            &PredefinedMenuItem::select_all(app, None)?,
+        ],
+    )?;
+    app.set_menu(Menu::with_items(app, &[&ours, &edit])?)?;
+    app.on_menu_event(|app, event| {
+        if event.id().as_ref() != "close-window" {
+            return;
+        }
+        for window in app.webview_windows().into_values() {
+            if window.is_focused().unwrap_or(false) {
+                let _ = window.close();
+            }
+        }
+    });
+    Ok(())
+}
+
 pub fn tell<R: Runtime>(app: &AppHandle<R>, trouble: Option<&str>) {
     let said = trouble.map_or_else(
         || "CopyPaste".to_owned(),
