@@ -61,3 +61,19 @@ fn the_shelf_hands_out_what_was_last_set_across_clones() {
     other.set(wanted);
     assert_eq!(one.get(), wanted);
 }
+
+#[test]
+fn renewing_reads_what_the_settings_say_now() {
+    let dir = tempfile::tempdir().expect("dir");
+    let shelf = Shelf::new(resolve(None));
+    let written = config(Some("en-GB"), cp_config::Theme::Dark, false);
+    cp_config::write(&cp_config::at(dir.path()), &written).expect("written");
+    let kept = shelf.renew_from(Some(dir.path()));
+    assert_eq!(kept, resolve(Some(&written)));
+    assert_eq!(shelf.get(), kept, "the shelf holds what was just read");
+}
+
+#[test]
+fn with_nowhere_to_read_from_the_defaults_rule() {
+    assert_eq!(read_from(None), resolve(None));
+}

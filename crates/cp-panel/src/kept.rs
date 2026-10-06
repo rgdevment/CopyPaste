@@ -30,7 +30,11 @@ impl Shelf {
     }
 
     pub fn renew(&self) -> Kept {
-        let kept = read();
+        self.renew_from(crate::here::data_dir().as_deref())
+    }
+
+    pub fn renew_from(&self, dir: Option<&std::path::Path>) -> Kept {
+        let kept = read_from(dir);
         self.set(kept);
         kept
     }
@@ -53,7 +57,11 @@ pub fn resolve(config: Option<&cp_config::Config>) -> Kept {
 }
 
 pub fn read() -> Kept {
-    let config = crate::here::data_dir().and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok());
+    read_from(crate::here::data_dir().as_deref())
+}
+
+pub fn read_from(dir: Option<&std::path::Path>) -> Kept {
+    let config = dir.and_then(|dir| cp_config::read(&cp_config::at(dir)).ok());
     resolve(config.as_ref())
 }
 
