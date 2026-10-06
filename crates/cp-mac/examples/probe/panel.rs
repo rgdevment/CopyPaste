@@ -100,4 +100,14 @@ fn the_panel_and_its_windows(b: &mut Battery) {
             Ok(())
         },
     );
+
+    b.case(
+        "S8",
+        "the theme is read from the appearance the app wears, on the main thread",
+        || {
+            cp_mac_sys::theme::wants_light()
+                .map(|_| ())
+                .ok_or_else(|| "the theme could not be read at all".into())
+        },
+    );
 }
