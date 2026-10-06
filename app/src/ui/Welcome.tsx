@@ -40,8 +40,8 @@ export function steps(former: boolean, asksTrust: boolean, tellsNews = false): S
   ];
 }
 
-export function newestStable(): string | null {
-  const stable = news.map((one) => one.version).filter((one) => !one.includes("-"));
+export function newestStable(versions: string[] = news.map((one) => one.version)): string | null {
+  const stable = versions.filter((one) => !one.includes("-"));
   const parts = (one: string) => one.split(".").map(Number);
   stable.sort((a, b) => {
     const [x, y] = [parts(a), parts(b)];
@@ -150,6 +150,7 @@ function Tour({
   const worthBringing = !!old && !old.unreadable && old.items > 0 && (old.came ?? 0) === 0;
   const asksTrust = !!trustAtStart?.offered && !trustAtStart.pastes;
   const newest = former ? newestStable() : null;
+  const told = newest === null ? [] : [newest];
   const all = useMemo(
     () => steps(worthBringing, asksTrust, newest !== null),
     [worthBringing, asksTrust, newest],
@@ -188,7 +189,7 @@ function Tour({
     case "trust":
       return <Permission dots={dots} next={next} />;
     case "news":
-      return newest ? <News versions={[newest]} /> : null;
+      return <News versions={told} />;
     case "keys":
       return <TryIt kept={kept} change={change} mac={mac} dots={dots} next={next} />;
     case "where":

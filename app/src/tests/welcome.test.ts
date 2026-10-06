@@ -80,5 +80,10 @@ describe("settings opened from the welcome", () => {
     expect(newest).not.toBeNull();
     expect(newest).not.toContain("-");
     expect(news.some((one) => one.version === newest)).toBe(true);
+    expect(newestStable(["3.0.0", "3.1.0-rc1", "2.9.9", "3.0.10", "3.0.2"])).toBe("3.0.10");
+    expect(newestStable(["3.2.0", "4.0.0", "3.10.0"])).toBe("4.0.0");
+    expect(newestStable(["3.1.0", "3.10.0", "3.9.0"])).toBe("3.10.0");
+    expect(newestStable(["3.1.0-rc1"])).toBeNull();
+    expect(newestStable([])).toBeNull();
   });
 });
