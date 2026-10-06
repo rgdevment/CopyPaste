@@ -34,14 +34,16 @@ pub fn spared(thread: Option<&str>) -> bool {
 
 pub fn catch_panics() {
     cp_core::note::catch_panics(note);
+}
+
+pub fn end_on_panic(end: fn(&str)) {
     let before = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         before(info);
         if spared(std::thread::current().name()) {
             return;
         }
-        note("a panic leaves the panel unsure of itself, so it ends to be started again");
-        std::process::abort();
+        end("a panic leaves the panel unsure of itself, so it ends to be started again");
     }));
 }
 

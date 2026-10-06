@@ -45,3 +45,29 @@ fn only_the_helpers_may_fall_without_taking_the_panel_down() {
         "the clipboard watcher and the orders reader have no name, and the panel is useless without them"
     );
 }
+
+static ENDED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+fn count_the_end(_: &str) {
+    ENDED.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+}
+
+#[test]
+fn a_panic_ends_the_panel_unless_a_helper_had_it() {
+    let before = std::panic::take_hook();
+    end_on_panic(count_the_end);
+    let _ = std::thread::spawn(|| panic!("the clipboard watcher broke")).join();
+    let after_the_watcher = ENDED.load(std::sync::atomic::Ordering::SeqCst);
+    let _ = std::thread::Builder::new()
+        .name(ERRANDS.to_owned())
+        .spawn(|| panic!("a thumbnail broke"))
+        .expect("a thread to break")
+        .join();
+    let after_the_errands = ENDED.load(std::sync::atomic::Ordering::SeqCst);
+    std::panic::set_hook(before);
+    assert_eq!(after_the_watcher, 1, "a watcher that broke ends the panel");
+    assert_eq!(
+        after_the_errands, 1,
+        "a thumbnail that broke only takes its own thread"
+    );
+}
