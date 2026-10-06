@@ -69,7 +69,7 @@ body:
       description: "Name the application you copied from or pasted into: most clipboard bugs belong to one pair of them."
       placeholder: |
         1. Copy an image from Firefox
-        2. Open the panel with Ctrl+Alt+V (⌥⌘V on a Mac)
+        2. Open the panel with Ctrl+Alt+V (⌃⌥V on a Mac)
         3. Press Enter on the image
         4. It pastes as text in Word
     validations:

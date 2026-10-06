@@ -248,7 +248,7 @@ keyboard does not have are replaced by the ones it does.
 | Where | Windows | macOS | Action |
 | :---- | :------ | :---- | :----- |
 | App you're in | Ctrl+V | ⌘V | Normal paste. CopyPaste does not intercept it. |
-| Anywhere | Ctrl+Alt+V | ⌥⌘V | Open the panel. Change it in Settings → Keyboard shortcuts; if another program already uses it, free alternatives are offered. |
+| Anywhere | Ctrl+Alt+V | ⌃⌥V | Open the panel. Change it in Settings → Keyboard shortcuts; if another program already uses it, free alternatives are offered. |
 | Panel | Enter | ⏎ | Paste the selected item. |
 | Panel | Shift + Enter | ⇧⏎ | Paste as plain text. |
 | Panel | Alt + Enter  ·  Ctrl + Enter | ⌥⏎  ·  ⌘⏎ | Open or close "Paste as…". |
@@ -339,7 +339,7 @@ emptying the history.
 | **Windows** | Microsoft Store                   | Standalone `.exe` · winget (coming soon)           |
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 
-After installing, open the panel with **Ctrl+Alt+V** on Windows or **⌥⌘V** on a
+After installing, open the panel with **Ctrl+Alt+V** on Windows or **⌃⌥V** on a
 Mac. Both are customizable in Settings → Keyboard shortcuts, and the first run
 walks you through it.
 

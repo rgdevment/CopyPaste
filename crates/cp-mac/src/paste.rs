@@ -3,8 +3,12 @@ use cp_core::paste::{Attempt, Failure, Focus, Next, ORDER, Phase, Route, SETTLE,
 use cp_mac_sys::frontmost;
 use cp_mac_sys::keyboard::{self, QWERTY_V};
 use cp_mac_sys::keystroke::{self, Keystroke};
+use cp_mac_sys::menu;
 use cp_mac_sys::permissions::Readiness;
-use cp_mac_sys::{menu, runloop};
+use std::time::{Duration, Instant};
+
+pub const KEYS_LET_GO: Duration = Duration::from_millis(120);
+pub const KEYS_LOOKED_AT: Duration = Duration::from_millis(4);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
@@ -41,84 +45,127 @@ impl Paster {
         keyboard::keycode_with_command('v').unwrap_or(QWERTY_V)
     }
 
-    pub fn paste_into(&self, target: &Destination, hide_panel: impl FnOnce()) -> Outcome {
-        self.paste_via(route_of(&Readiness::probe()), target, hide_panel)
-    }
-
-    pub fn paste_via(
+    pub fn start_via(
         &self,
         route: Option<Route>,
-        target: &Destination,
+        target: Destination,
         hide_panel: impl FnOnce(),
-    ) -> Outcome {
-        let started = std::time::Instant::now();
-        let mut attempt = Attempt::default();
-
+    ) -> Result<Pasting, Outcome> {
         let Some(route) = route else {
-            return Outcome::Degraded(Failure::SendDenied);
+            return Err(Outcome::Degraded(Failure::SendDenied));
         };
-
         hide_panel();
+        Ok(Pasting::new(route, target, Instant::now()))
+    }
 
-        if !frontmost::is_alive(target.pid) {
-            return Outcome::Degraded(Failure::TargetGone);
-        }
-
-        if self.focus_of(target) != Focus::OnTarget {
-            frontmost::bring_to_front(target.pid);
-        }
-
-        while self.focus_of(target) != Focus::OnTarget {
-            if !frontmost::is_alive(target.pid) {
-                return Outcome::Degraded(Failure::TargetGone);
+    pub fn advance(&self, pasting: &mut Pasting) -> Advance {
+        let pid = pasting.target.pid;
+        let front = frontmost::frontmost().map(|(front, _)| front);
+        let step = pasting.next(
+            frontmost::is_alive(pid),
+            focus_from(front, pid),
+            keystroke::modifiers_still_held(),
+            Instant::now(),
+        );
+        match step {
+            Step::Raise => {
+                frontmost::bring_to_front(pid);
+                Advance::After(SETTLE)
             }
-            if attempt.on_failure(Failure::NotForeground) != Next::Retry {
-                return Outcome::Degraded(Failure::ForegroundTimeout);
-            }
-            frontmost::bring_to_front(target.pid);
-            self.wait(SETTLE.as_secs_f64());
+            Step::Wait(pause) => Advance::After(pause),
+            Step::Stop(why) => Advance::Done(Outcome::Degraded(why)),
+            Step::Send => Advance::Done(self.send(pasting)),
         }
+    }
 
-        let waiting = std::time::Instant::now();
-        while keystroke::modifiers_still_held() && waiting.elapsed().as_millis() < 120 {
-            self.wait(0.004);
-        }
-
-        let now = Readiness::probe();
-        let route = if now.secure_input {
-            match around_protected_input(route, now.accessibility) {
-                Some(other) => other,
-                None => return Outcome::Degraded(Failure::InputProtected),
-            }
-        } else {
-            route
+    fn send(&self, pasting: &mut Pasting) -> Outcome {
+        let Some(route) = pasting.route_now(&Readiness::probe()) else {
+            return Outcome::Degraded(Failure::InputProtected);
         };
-
-        attempt.sending();
+        pasting.attempt.sending();
         let sent = match route {
             Route::Keystroke => self.keys.command(self.keycode()),
-            Route::Menu => menu::press_paste(target.pid).is_ok(),
+            Route::Menu => menu::press_paste(pasting.target.pid).is_ok(),
         };
         if sent {
             Outcome::Sent {
-                took: started.elapsed(),
+                took: pasting.started.elapsed(),
                 via: route,
             }
         } else {
             Outcome::Degraded(Failure::SendDenied)
         }
     }
+}
 
-    fn wait(&self, seconds: f64) {
-        runloop::pump(seconds);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Step {
+    Raise,
+    Wait(Duration),
+    Send,
+    Stop(Failure),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Advance {
+    After(Duration),
+    Done(Outcome),
+}
+
+#[derive(Debug)]
+pub struct Pasting {
+    route: Route,
+    target: Destination,
+    started: Instant,
+    attempt: Attempt,
+    raised: bool,
+    keys_since: Option<Instant>,
+}
+
+impl Pasting {
+    pub fn new(route: Route, target: Destination, now: Instant) -> Self {
+        Self {
+            route,
+            target,
+            started: now,
+            attempt: Attempt::default(),
+            raised: false,
+            keys_since: None,
+        }
     }
 
-    fn focus_of(&self, target: &Destination) -> Focus {
-        match frontmost::frontmost() {
-            Some((pid, _)) if pid == target.pid => Focus::OnTarget,
-            Some(_) => Focus::Elsewhere,
-            None => Focus::Unknown,
+    pub fn next(&mut self, alive: bool, focus: Focus, keys_held: bool, now: Instant) -> Step {
+        if !alive {
+            return Step::Stop(Failure::TargetGone);
         }
+        if focus != Focus::OnTarget {
+            if self.raised && self.attempt.on_failure(Failure::NotForeground) != Next::Retry {
+                return Step::Stop(Failure::ForegroundTimeout);
+            }
+            self.raised = true;
+            return Step::Raise;
+        }
+        let since = *self.keys_since.get_or_insert(now);
+        if keys_held && now.duration_since(since) < KEYS_LET_GO {
+            return Step::Wait(KEYS_LOOKED_AT);
+        }
+        Step::Send
+    }
+
+    pub fn route_now(&self, ready: &Readiness) -> Option<Route> {
+        if ready.secure_input {
+            around_protected_input(self.route, ready.accessibility)
+        } else {
+            Some(self.route)
+        }
+    }
+}
+
+pub fn focus_from(front: Option<i32>, target: i32) -> Focus {
+    match front {
+        Some(pid) if pid == target => Focus::OnTarget,
+        Some(_) => Focus::Elsewhere,
+        None => Focus::Unknown,
     }
 }
 

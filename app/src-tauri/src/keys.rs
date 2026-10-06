@@ -48,12 +48,10 @@ fn remember<R: Runtime>(app: &AppHandle<R>, said: Option<&str>) {
 
 #[cfg(target_os = "macos")]
 pub const SPARE: &[&str] = &[
-    "Alt+Cmd+V",
-    "Shift+Cmd+V",
-    "Alt+Cmd+C",
-    "Shift+Cmd+Space",
     "Ctrl+Alt+V",
-    "Alt+Cmd+Space",
+    "Shift+Cmd+V",
+    "Ctrl+Shift+V",
+    "Shift+Cmd+Space",
 ];
 #[cfg(not(target_os = "macos"))]
 pub const SPARE: &[&str] = &[

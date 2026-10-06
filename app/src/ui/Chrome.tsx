@@ -8,13 +8,14 @@ export default function Chrome({ knobs = true }: { knobs?: boolean }) {
   held.current ??= getCurrentWindow();
   const win = held.current;
   const mac = onMac();
+  const drawn = knobs && !mac;
 
   return (
     <div className={`chrome${mac ? " mac" : ""}${knobs ? "" : " bare"}`} data-tauri-drag-region>
       <span className="chrome-who" data-tauri-drag-region>
         CopyPaste
       </span>
-      {knobs && (
+      {drawn && (
         <div className="chrome-does">
           <button
             type="button"

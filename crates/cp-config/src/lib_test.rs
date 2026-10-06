@@ -332,3 +332,23 @@ fn a_blank_welcome_is_no_welcome() {
     .sane();
     assert_eq!(kept.welcomed.as_deref(), Some("3.0.1"));
 }
+
+#[cfg(target_os = "macos")]
+#[test]
+fn the_old_mac_default_moves_to_the_one_handed_one_when_read() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "shortcut = \"Cmd+Alt+V\"\n").expect("writes");
+    assert_eq!(read(&path).expect("reads").shortcut, SHORTCUT);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn a_command_option_v_picked_by_hand_is_left_alone() {
+    let asked = Config {
+        shortcut: "Alt+Cmd+V".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.shortcut, "Alt+Cmd+V");
+}

@@ -1319,28 +1319,39 @@ fn mark(engine: Option<&crate::engine::Engine>) {
 
 fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
     let ahead = state.borrow().ahead.swap(0, Ordering::Relaxed);
-    let weak = ui.as_weak();
-    match here::paste_into(ahead, move || {
+    let (weak, later, state) = (ui.as_weak(), ui.as_weak(), state.clone());
+    let hide = move || {
         if let Some(ui) = weak.upgrade() {
             ui.set_sheet_open(false);
             let _ = ui.hide();
         }
-    }) {
-        here::Sent::Nobody => vanish(ui),
-        here::Sent::Done => {}
-        here::Sent::Degraded(why) => {
-            state.borrow().ahead.store(ahead, Ordering::Relaxed);
-            let said = crate::excuse::why_not(why, crate::say::in_english());
-            note(&format!(
-                "it stays on the clipboard, unpasted: {why:?}: {said}"
-            ));
-            if ui.show().is_ok() {
-                forward(ui);
-                appear(ui);
-                complain(ui, said);
+    };
+    here::paste_into(ahead, hide, move |sent| {
+        let Some(ui) = later.upgrade() else {
+            return;
+        };
+        match sent {
+            here::Sent::Nobody => vanish(&ui),
+            here::Sent::Done => {}
+            here::Sent::Degraded(why) => {
+                let _ = state.borrow().ahead.compare_exchange(
+                    0,
+                    ahead,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                );
+                let said = crate::excuse::why_not(why, crate::say::in_english());
+                note(&format!(
+                    "it stays on the clipboard, unpasted: {why:?}: {said}"
+                ));
+                if ui.show().is_ok() {
+                    forward(&ui);
+                    appear(&ui);
+                    complain(&ui, said);
+                }
             }
         }
-    }
+    });
 }
 
 fn forward(panel: &Panel) {
@@ -1406,10 +1417,6 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
         });
 }
 
-fn ahead_now() -> isize {
-    here::ahead_now()
-}
-
 const ORDER_UP_TO: u64 = 64;
 
 fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
@@ -1426,7 +1433,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
             }
             match said.trim() {
                 "show" => {
-                    let in_front = ahead_now();
+                    let in_front = here::ahead_now();
                     if in_front != 0 {
                         ahead.store(in_front, Ordering::Relaxed);
                     }
@@ -1455,7 +1462,10 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                 _ => note("an order arrived that means nothing here"),
             }
         }
-        let _ = ui.upgrade_in_event_loop(|_| {
+        let _ = ui.upgrade_in_event_loop(|panel| {
+            if let Some(handle) = handle_of(&panel) {
+                here::ground(handle);
+            }
             let _ = slint::quit_event_loop();
         });
     });
