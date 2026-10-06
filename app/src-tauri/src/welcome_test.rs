@@ -138,3 +138,11 @@ fn a_build_made_by_hand_never_marks_a_published_version_as_seen() {
         "the real release still tells what it brings after a build made by hand"
     );
 }
+
+#[test]
+fn opening_it_again_asks_the_window_for_the_shortcut_alone() {
+    assert_eq!(
+        serde_json::to_value(Greeting::Keys).expect("it serializes"),
+        serde_json::json!({ "kind": "keys" })
+    );
+}

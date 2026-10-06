@@ -11,6 +11,7 @@ pub const LABEL: &str = "welcome";
 pub enum Greeting {
     Tour { former: bool },
     News { versions: Vec<String> },
+    Keys,
     Nothing,
 }
 
@@ -137,7 +138,7 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
         Ok(window) => {
             let handle = app.clone();
             window.on_window_event(move |event| {
-                if matches!(event, tauri::WindowEvent::Destroyed) {
+                if matches!(event, tauri::WindowEvent::Destroyed) && !only_keys(&handle) {
                     mark(&handle);
                 }
             });
@@ -145,6 +146,22 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
         }
         Err(why) => crate::note::note(&format!("the welcome would not open: {why}")),
     }
+}
+
+fn only_keys<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<Now>()
+        .and_then(|state| state.0.lock().ok().map(|held| held.clone()))
+        .is_some_and(|held| held == Some(Greeting::Keys))
+}
+
+pub fn reopened<R: Runtime>(app: &AppHandle<R>) {
+    if app.get_webview_window(LABEL).is_none()
+        && let Some(state) = app.try_state::<Now>()
+        && let Ok(mut held) = state.0.lock()
+    {
+        *held = Some(Greeting::Keys);
+    }
+    open(app);
 }
 
 #[tauri::command]

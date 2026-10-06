@@ -15,7 +15,7 @@ pub fn run() {
     note::catch_panics();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            panel::show(app);
+            welcome::reopened(app);
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
@@ -79,7 +79,7 @@ pub fn run() {
         } => api.prevent_exit(),
         tauri::RunEvent::Exit => panel::quit(app),
         #[cfg(target_os = "macos")]
-        tauri::RunEvent::Reopen { .. } => panel::show(app),
+        tauri::RunEvent::Reopen { .. } => welcome::reopened(app),
         _ => {}
     });
 }

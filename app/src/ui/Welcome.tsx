@@ -13,6 +13,7 @@ const RELEASES = "https://github.com/rgdevment/CopyPaste/releases";
 export type Greeting =
   | { kind: "tour"; former: boolean }
   | { kind: "news"; versions: string[] }
+  | { kind: "keys" }
   | { kind: "nothing" };
 
 type Step = "former" | "hello" | "trust" | "keys" | "where" | "use";
@@ -92,6 +93,9 @@ export default function Welcome() {
         <Tour kept={kept} change={change} former={greeting.former} />
       )}
       {kept && greeting?.kind === "news" && <News versions={greeting.versions} />}
+      {kept && greeting?.kind === "keys" && (
+        <TryIt kept={kept} change={change} mac={onMac()} dots={null} next={leave} alone />
+      )}
     </>
   );
 }
@@ -244,14 +248,18 @@ function TryIt({
   mac,
   dots,
   next,
+  alone = false,
 }: {
   kept: Kept;
   change: (what: Partial<Kept>) => Promise<void>;
   mac: boolean;
   dots: ReactNode;
   next: () => void;
+  alone?: boolean;
 }) {
   const { keys, spare, recheck } = useKeys(kept.shortcut);
+  const over = alone ? t("welcomeKeysAloneOver") : t("welcomeKeysOver");
+  const skip = alone ? t("chromeClose") : t("welcomeSkipStep");
   const [tried, setTried] = useState(false);
 
   useEffect(() => {
@@ -266,9 +274,9 @@ function TryIt({
 
   if (taken) {
     return (
-      <Screen dots={dots} left={<Quiet says={t("welcomeSkipStep")} onPress={next} />} right={null}>
+      <Screen dots={dots} left={<Quiet says={skip} onPress={next} />} right={null}>
         <Heading
-          over={t("welcomeKeysOver")}
+          over={over}
           title={t("welcomeKeysTaken")}
           said={fill(spare.length > 0 ? "welcomeKeysTakenWhy" : "welcomeKeysTakenAlone", shown)}
         />
@@ -297,16 +305,14 @@ function TryIt({
         tried ? (
           <Quiet says={t("welcomeTryAgain")} onPress={() => setTried(false)} />
         ) : (
-          <Quiet says={t("welcomeSkipStep")} onPress={next} />
+          <Quiet says={skip} onPress={next} />
         )
       }
-      right={tried ? <Strong says={t("welcomeNext")} onPress={next} /> : null}
+      right={
+        tried ? <Strong says={alone ? t("welcomeDone") : t("welcomeNext")} onPress={next} /> : null
+      }
     >
-      <Heading
-        over={t("welcomeKeysOver")}
-        title={t("welcomeKeysTitle")}
-        said={t("welcomeKeysWhy")}
-      />
+      <Heading over={over} title={t("welcomeKeysTitle")} said={t("welcomeKeysWhy")} />
       <div className="welcome-caps">
         {caps(kept.shortcut, mac).map((one, index) => (
           <span key={one} className="welcome-cap-pair">
