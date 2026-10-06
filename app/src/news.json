@@ -1,36 +1,5 @@
 [
   {
-    "version": "3.0.1",
-    "es": [
-      {
-        "title": "Abrir la app te recuerda el atajo",
-        "said": "si abres CopyPaste cuando ya está funcionando, te muestra cómo llamar al panel y te deja probarlo."
-      },
-      {
-        "title": "Mejor en Mac",
-        "said": "el panel se oculta al hacer clic fuera, Ajustes usa los botones de siempre de macOS y pegar es más fiable."
-      },
-      {
-        "title": "Un atajo nuevo en Mac",
-        "said": "ahora es ⌃⌥V, igual que en Windows; si usabas ⌥⌘V, cambia solo."
-      }
-    ],
-    "en": [
-      {
-        "title": "Opening the app reminds you of the shortcut",
-        "said": "open CopyPaste while it is already running and it shows you how to call the panel, and lets you try it."
-      },
-      {
-        "title": "Better on a Mac",
-        "said": "the panel hides when you click elsewhere, Settings uses the usual macOS buttons, and pasting is more reliable."
-      },
-      {
-        "title": "A new shortcut on a Mac",
-        "said": "it is now ⌃⌥V, the same as on Windows; if you used ⌥⌘V, it changes on its own."
-      }
-    ]
-  },
-  {
     "version": "3.0.0-rc2",
     "es": [
       {
