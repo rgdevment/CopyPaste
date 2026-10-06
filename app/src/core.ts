@@ -289,7 +289,7 @@ export function useTrust() {
   return { trust, asked, ask };
 }
 
-export type Route = "store" | "brew" | "brewBeta" | "download";
+export type Route = "store" | "download";
 
 export type Ready = { version: string; installs: boolean };
 

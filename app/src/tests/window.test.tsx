@@ -450,29 +450,6 @@ describe("the window", () => {
     }
   });
 
-  it("with brew it does not offer to install: it says the command", async () => {
-    const { invoke } = await import("@tauri-apps/api/core");
-    const real = vi.mocked(invoke).getMockImplementation();
-    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
-      if (what === "update_ready") {
-        return Promise.resolve({
-          route: "brew",
-          looked: true,
-          ready: { version: "3.1.0", installs: false },
-        });
-      }
-      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
-    });
-    try {
-      render(<App />);
-      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
-      expect(await screen.findByText(/brew upgrade --cask copypaste/)).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
-    } finally {
-      vi.mocked(invoke).mockImplementation(real as never);
-    }
-  });
-
   it("the version comes from the program itself, not from text written by hand", async () => {
     const who = userEvent.setup();
     render(<App />);

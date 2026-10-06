@@ -76,5 +76,20 @@
         "said": "if you have it installed, links open with it; otherwise in your browser."
       }
     ]
+  },
+  {
+    "version": "3.0.3",
+    "es": [
+      {
+        "title": "Actualiza con un clic en Homebrew",
+        "said": "si instalaste CopyPaste con Homebrew, ahora se actualiza solo con el botón de Acerca de, sin escribir comandos."
+      }
+    ],
+    "en": [
+      {
+        "title": "One-click updates on Homebrew",
+        "said": "if you installed CopyPaste with Homebrew, it now updates itself with the button in About, no commands needed."
+      }
+    ]
   }
 ]

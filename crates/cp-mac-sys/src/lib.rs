@@ -19,3 +19,4 @@ pub mod processes;
 pub mod runloop;
 pub mod theme;
 pub mod titlebar;
+pub mod translation;

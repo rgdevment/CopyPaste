@@ -18,7 +18,6 @@ const onMac = navigator.userAgent.includes("Macintosh");
 function Newer() {
   const { seen, busy, trouble, look, install } = useUpdate();
   const store = seen?.route === "store";
-  const brew = seen?.route === "brew" || seen?.route === "brewBeta";
   const ready = seen?.ready ?? null;
   const looked = !trouble && (seen?.looked ?? false);
 
@@ -30,13 +29,7 @@ function Newer() {
         ? t("updateNone")
         : t("updateLook");
 
-  const why = ready
-    ? ready.installs
-      ? t("updateTake")
-      : brew
-        ? t(seen?.route === "brewBeta" ? "updateBrewBeta" : "updateBrew")
-        : t("updateMove")
-    : t("updateWhen");
+  const why = ready ? (ready.installs ? t("updateTake") : t("updateMove")) : t("updateWhen");
 
   return (
     <div className="newer">
