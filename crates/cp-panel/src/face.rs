@@ -30,6 +30,7 @@ const KEYS_PER_LINE: usize = 56;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Face {
     Found,
+    FoundThumb,
     Thumb,
     Paint,
     Block(i32),
@@ -52,7 +53,11 @@ pub struct Seen<'a> {
 impl Face {
     pub fn of(seen: &Seen<'_>) -> Self {
         if seen.found {
-            return Self::Found;
+            return if seen.thumb {
+                Self::FoundThumb
+            } else {
+                Self::Found
+            };
         }
         if seen.thumb {
             return Self::Thumb;
@@ -79,6 +84,7 @@ impl Face {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Found => "found",
+            Self::FoundThumb => "found-thumb",
             Self::Thumb => "thumb",
             Self::Paint => "paint",
             Self::Block(_) => "block",
@@ -100,7 +106,7 @@ impl Face {
     pub fn body_px(self) -> f32 {
         match self {
             Self::Found | Self::Link => LINE,
-            Self::Thumb => THUMB,
+            Self::Thumb | Self::FoundThumb => THUMB,
             Self::Paint => PAINT,
             Self::Block(lines) => BLOCK_PAD + MONO_LINE * lines as f32,
             Self::Keys(lines) => KEYS_LINE * lines as f32,
@@ -110,7 +116,10 @@ impl Face {
     }
 
     pub fn shut_px(self) -> f32 {
-        TOP + META + GAP + self.body_px() + BOTTOM + BETWEEN
+        match self {
+            Self::Paint => TOP + META + BOTTOM + BETWEEN,
+            _ => TOP + META + GAP + self.body_px() + BOTTOM + BETWEEN,
+        }
     }
 }
 
@@ -200,7 +209,7 @@ pub fn open_body_px(face: Face, opened: &Opened, claims: i32, room: f32) -> f32 
         GAP + NOTE
     };
     match face {
-        Face::Thumb => OPEN_THUMB + GAP + NOTE,
+        Face::Thumb | Face::FoundThumb => OPEN_THUMB + GAP + NOTE,
         Face::Words(_) | Face::Found => LINE * opened.lines as f32 + note,
         Face::Block(_) | Face::Keys(_) | Face::Link if claims > 0 => {
             BLOCK_PAD + MONO_LINE * claims as f32

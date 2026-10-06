@@ -16,6 +16,13 @@ fn a_search_hit_a_picture_and_a_colour_win_over_the_kind() {
     let mut one = seen(Some(Kind::Code), "fn main() {}");
     one.found = true;
     assert_eq!(Face::of(&one), Face::Found);
+    one.thumb = true;
+    assert_eq!(
+        Face::of(&one),
+        Face::FoundThumb,
+        "a picture found by its words keeps its thumbnail"
+    );
+    one.found = false;
     one.found = false;
     one.thumb = true;
     assert_eq!(Face::of(&one), Face::Thumb);
@@ -165,4 +172,11 @@ fn an_open_card_is_as_tall_as_its_body_its_note_and_its_keys() {
         open_px(10.0) - 10.0,
         TOP + META + GAP + GAP + KEYS_ROW + BOTTOM + BETWEEN
     );
+}
+
+#[test]
+fn a_colour_sits_on_a_single_row_while_closed() {
+    assert_eq!(Face::Paint.shut_px(), TOP + META + BOTTOM + BETWEEN);
+    assert_eq!(Face::FoundThumb.body_px(), THUMB);
+    assert_eq!(Face::FoundThumb.as_str(), "found-thumb");
 }

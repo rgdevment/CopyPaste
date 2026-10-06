@@ -920,3 +920,13 @@ fn a_hit_inside_a_text_of_many_lines_is_shown_on_one() {
     assert_eq!(tail, " gesto que en o… </article> ");
     assert!(![lead, hit, tail].concat().contains('\n'));
 }
+
+#[test]
+fn a_colour_says_its_channels_and_anything_else_says_nothing() {
+    let mut colour = row(Some(Kind::Color));
+    colour.preview = "#FF8800".into();
+    assert_eq!(paint_said(&colour), "rgb(255, 136, 0)");
+    colour.preview = "#FF880080".into();
+    assert_eq!(paint_said(&colour), "rgba(255, 136, 0, 0.50)");
+    assert_eq!(paint_said(&row(Some(Kind::Text))), "");
+}
