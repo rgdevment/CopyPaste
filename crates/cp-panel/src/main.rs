@@ -33,8 +33,14 @@ slint::include_modules!();
 
 use std::path::PathBuf;
 
+fn fall(why: &str) {
+    note::note(why);
+    std::process::abort();
+}
+
 fn main() {
     note::catch_panics();
+    note::end_on_panic(fall);
     let options = match Options::from_args() {
         Ok(options) => options,
         Err(why) => {
