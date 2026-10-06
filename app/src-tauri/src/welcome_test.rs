@@ -118,3 +118,23 @@ fn every_version_in_the_news_is_one_semver_reads() {
         );
     }
 }
+
+#[test]
+fn a_build_made_by_hand_never_marks_a_published_version_as_seen() {
+    let all = said(&["3.0.0", "3.0.0-rc2"]);
+    for welcomed in ["3.0.0-rc1", "3.0.0-rc5", "3.0.0"] {
+        assert_eq!(
+            decide(false, false, Some(welcomed), "3.0.0-dev", &all),
+            Greeting::Nothing,
+            "{welcomed}"
+        );
+        assert!(!behind(Some(welcomed), "3.0.0-dev"), "{welcomed}");
+    }
+    assert_eq!(
+        decide(false, false, Some("3.0.0-dev"), "3.0.0", &all),
+        Greeting::News {
+            versions: said(&["3.0.0", "3.0.0-rc2"])
+        },
+        "the real release still tells what it brings after a build made by hand"
+    );
+}
