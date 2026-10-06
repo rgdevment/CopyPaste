@@ -53,6 +53,10 @@ export component Panel inherits Window {
     }
     in-out property <bool> opened: false;
     in-out property <int> hovered: -1;
+    property <int> last-chosen: -1;
+    property <duration> last-at;
+    property <length> last-x;
+    property <length> last-y;
     in-out property <bool> pointer-hidden: false;
     in-out property <bool> quiet: false;
     in-out property <length> rest-x: -1px;
@@ -623,15 +627,6 @@ export component Panel inherits Window {
                         changed height => {
                             if (self.mine) {
                                 root.sheet-span = self.height;
-                                if (self.y + self.height > -list.content-y + list.visible-height) {
-                                    list.content-y = min(
-                                        0px,
-                                        max(
-                                            list.visible-height - self.y - self.height - 8px,
-                                            -self.y
-                                        )
-                                    );
-                                }
                             }
                         }
                         property <bool> open-here: index == root.current && root.opened;
@@ -688,7 +683,17 @@ export component Panel inherits Window {
                             x: 10px;
                             width: parent.width - 20px;
                             height: parent.height - (card.heads-group ? Theme.row-head : 0px) - 6px;
-                            chosen(id) => {
+                            chosen(id, px, py) => {
+                                if (root.last-chosen >= 0 && animation-tick() - root.last-at < 500ms
+                                    && abs(px - root.last-x) < 10px && abs(py - root.last-y) < 10px) {
+                                    root.paste(root.last-chosen);
+                                    root.last-chosen = -1;
+                                    return;
+                                }
+                                root.last-chosen = id;
+                                root.last-at = animation-tick();
+                                root.last-x = px;
+                                root.last-y = py;
                                 if (root.sheet-open) {
                                     root.sheet-open = false;
                                 } else if (index == root.current) {
