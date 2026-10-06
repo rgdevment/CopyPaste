@@ -230,3 +230,20 @@ describe("las novedades tras una actualización", () => {
     expect(theWindow.close).toHaveBeenCalled();
   });
 });
+
+describe("abrir la app cuando ya está corriendo", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("enseña solo el atajo, sin el recorrido, y se cierra con un botón", async () => {
+    asked.greeting = { kind: "keys" };
+    asked.locale = "en";
+    render(<Welcome />);
+
+    expect(await screen.findByText("The shortcut")).toBeInTheDocument();
+    expect(screen.queryByText("1 · The shortcut")).toBeNull();
+    await press("Close");
+    expect(theWindow.close).toHaveBeenCalled();
+  });
+});
