@@ -78,24 +78,6 @@ impl Paster {
         }
     }
 
-    pub fn paste_via(
-        &self,
-        route: Option<Route>,
-        target: &Destination,
-        hide_panel: impl FnOnce(),
-    ) -> Outcome {
-        let mut pasting = match self.start_via(route, target.clone(), hide_panel) {
-            Ok(pasting) => pasting,
-            Err(outcome) => return outcome,
-        };
-        loop {
-            match self.advance(&mut pasting) {
-                Advance::Done(outcome) => return outcome,
-                Advance::After(pause) => std::thread::sleep(pause),
-            }
-        }
-    }
-
     fn send(&self, pasting: &mut Pasting) -> Outcome {
         let Some(route) = pasting.route_now(&Readiness::probe()) else {
             return Outcome::Degraded(Failure::InputProtected);

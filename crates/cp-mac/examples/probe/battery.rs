@@ -1344,7 +1344,7 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<()
     std::thread::sleep(Duration::from_millis(120));
 
     let started = Instant::now();
-    match paster.paste_via(Some(route), &target, || {}) {
+    match pasted_pumping(paster, route, &target)? {
         cp_mac::paste::Outcome::Degraded(why) => return Err(format!("it degraded: {why:?}")),
         cp_mac::paste::Outcome::Sent { via, .. } if via != route => {
             return Err(format!("it went by {via:?}"));
@@ -1372,6 +1372,25 @@ fn paste_round_trip(pb: &Pasteboard, paster: &Paster, route: Route) -> Result<()
             "«{}» came back, «{marca}» was expected",
             back.trim()
         ))
+    }
+}
+
+fn pasted_pumping(
+    paster: &Paster,
+    route: Route,
+    target: &cp_core::destination::Destination,
+) -> Result<cp_mac::paste::Outcome, String> {
+    let mut pasting = paster
+        .start_via(Some(route), target.clone(), || {})
+        .map_err(|outcome| format!("it never started: {outcome:?}"))?;
+    loop {
+        match paster.advance(&mut pasting) {
+            cp_mac::paste::Advance::Done(outcome) => return Ok(outcome),
+            cp_mac::paste::Advance::After(pause) => {
+                std::thread::sleep(pause);
+                cp_mac_sys::runloop::pump(0.0);
+            }
+        }
     }
 }
 

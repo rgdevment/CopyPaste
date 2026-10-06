@@ -1334,7 +1334,12 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
             here::Sent::Nobody => vanish(&ui),
             here::Sent::Done => {}
             here::Sent::Degraded(why) => {
-                state.borrow().ahead.store(ahead, Ordering::Relaxed);
+                let _ = state.borrow().ahead.compare_exchange(
+                    0,
+                    ahead,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                );
                 let said = crate::excuse::why_not(why, crate::say::in_english());
                 note(&format!(
                     "it stays on the clipboard, unpasted: {why:?}: {said}"
