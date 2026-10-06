@@ -87,3 +87,50 @@ fn a_path_that_cannot_be_opened_at_all_is_an_error_and_moves_nothing() {
     assert!(open_or_set_aside(&path, AT_MS).is_err());
     assert_eq!(std::fs::read(&blocker).expect("same"), b"x");
 }
+
+#[test]
+fn the_thumbnails_go_aside_with_the_history_they_belong_to() {
+    let dir = tempfile::tempdir().expect("dir");
+    let path = damaged(dir.path());
+    std::fs::create_dir(dir.path().join("thumbs")).expect("thumbs");
+    std::fs::write(dir.path().join("thumbs").join("one.png"), b"png").expect("thumb");
+    set_aside(&path, AT_MS).expect("set aside");
+    assert_eq!(
+        std::fs::read(
+            dir.path()
+                .join("thumbs.corrupt-1700000000000")
+                .join("one.png")
+        )
+        .expect("thumb kept"),
+        b"png"
+    );
+}
+
+#[test]
+fn a_move_that_fails_halfway_puts_back_what_had_moved_and_leaves_the_history_in_place() {
+    let dir = tempfile::tempdir().expect("dir");
+    let path = damaged(dir.path());
+    std::fs::write(dir.path().join("history.db-wal"), b"wal").expect("wal");
+    std::fs::create_dir(dir.path().join("blobs")).expect("blobs");
+    std::fs::write(dir.path().join("blobs").join("one"), b"bytes").expect("blob");
+    std::fs::create_dir(dir.path().join("thumbs")).expect("thumbs");
+    std::fs::create_dir(dir.path().join("thumbs.corrupt-1700000000000")).expect("in the way");
+    std::fs::write(
+        dir.path()
+            .join("thumbs.corrupt-1700000000000")
+            .join("taken"),
+        b"x",
+    )
+    .expect("a full folder blocks the move");
+    assert!(set_aside(&path, AT_MS).is_err());
+    assert!(path.exists(), "the history stays where it was");
+    assert_eq!(
+        std::fs::read(dir.path().join("history.db-wal")).expect("wal back"),
+        b"wal"
+    );
+    assert_eq!(
+        std::fs::read(dir.path().join("blobs").join("one")).expect("blob back"),
+        b"bytes",
+        "the pictures are back beside the history that names them"
+    );
+}

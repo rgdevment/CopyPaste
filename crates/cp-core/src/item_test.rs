@@ -652,17 +652,17 @@ fn what_was_never_read_cannot_be_compared_with_anything() {
 
 #[test]
 fn only_what_has_readable_bytes_is_worth_storing() {
-    assert!(Item::plain("something").is_storable());
-    assert!(one_format("public.png", Payload::Blob(vec![1, 2, 3])).is_storable());
-    assert!(!one_format("public.tiff", Payload::TooBig { size: 70_000_000 }).is_storable());
-    assert!(!one_format("com.vendor.private", Payload::Announced { size: None }).is_storable());
-    assert!(!one_format("public.png", Payload::Absent).is_storable());
+    assert!(Item::plain("something").is_comparable());
+    assert!(one_format("public.png", Payload::Blob(vec![1, 2, 3])).is_comparable());
+    assert!(!one_format("public.tiff", Payload::TooBig { size: 70_000_000 }).is_comparable());
+    assert!(!one_format("com.vendor.private", Payload::Announced { size: None }).is_comparable());
+    assert!(!one_format("public.png", Payload::Absent).is_comparable());
     assert!(
         !Item {
             kind: None,
             formats: Vec::new()
         }
-        .is_storable()
+        .is_comparable()
     );
     let mixed = Item {
         kind: None,
@@ -678,7 +678,7 @@ fn only_what_has_readable_bytes_is_worth_storing() {
         ],
     };
     assert!(
-        mixed.is_storable(),
+        mixed.is_comparable(),
         "one readable format is enough to keep it"
     );
 }

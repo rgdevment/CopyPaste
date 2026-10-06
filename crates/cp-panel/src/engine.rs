@@ -408,7 +408,7 @@ fn kept(store: &Store) -> Option<i64> {
 }
 
 fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> {
-    if !item.is_storable() {
+    if !item.is_comparable() {
         note("a copy with nothing readable in it was not stored, there was nothing to paste back");
         return None;
     }

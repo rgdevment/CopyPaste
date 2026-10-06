@@ -130,15 +130,23 @@ pub fn read(path: &Path) -> Result<Config, Error> {
 
 pub fn read_or_reset(path: &Path, at_ms: i64) -> Result<Config, Error> {
     match read(path) {
-        Err(Error::Malformed(_)) => {
-            let kept = path.with_file_name(format!("config.broken-{at_ms}.toml"));
-            std::fs::copy(path, kept)?;
-            let fresh = Config::default();
-            write(path, &fresh)?;
-            Ok(fresh)
+        Err(Error::Malformed(_)) => reset(path, at_ms),
+        Err(Error::File(why)) if why.kind() == std::io::ErrorKind::InvalidData => {
+            reset(path, at_ms)
         }
         other => other,
     }
+}
+
+fn reset(path: &Path, at_ms: i64) -> Result<Config, Error> {
+    let kept = path.with_file_name(format!("config.broken-{at_ms}.toml"));
+    std::fs::copy(path, kept)?;
+    let fresh = Config {
+        keeps_days: None,
+        ..Config::default()
+    };
+    write(path, &fresh)?;
+    Ok(fresh)
 }
 
 pub fn write(path: &Path, config: &Config) -> Result<(), Error> {

@@ -42,20 +42,33 @@ fn set_aside(path: &Path, at_ms: i64) -> Result<PathBuf> {
     let renamed =
         |suffix: &str| path.with_file_name(format!("{stem}.corrupt-{at_ms}.{extension}{suffix}"));
     let kept = renamed("");
-    std::fs::rename(path, &kept)?;
+    let mut moves = Vec::new();
     for suffix in ["-wal", "-shm"] {
         let mut side = path.as_os_str().to_os_string();
         side.push(suffix);
-        let side = PathBuf::from(side);
-        if side.exists() {
-            std::fs::rename(&side, renamed(suffix))?;
-        }
+        moves.push((PathBuf::from(side), renamed(suffix)));
     }
     if let Some(parent) = path.parent() {
-        let blobs = parent.join("blobs");
-        if blobs.exists() {
-            std::fs::rename(&blobs, parent.join(format!("blobs.corrupt-{at_ms}")))?;
+        for folder in ["blobs", "thumbs"] {
+            moves.push((
+                parent.join(folder),
+                parent.join(format!("{folder}.corrupt-{at_ms}")),
+            ));
         }
+    }
+    moves.push((path.to_path_buf(), kept.clone()));
+    let mut done: Vec<(PathBuf, PathBuf)> = Vec::new();
+    for (from, to) in moves {
+        if !from.exists() {
+            continue;
+        }
+        if let Err(why) = std::fs::rename(&from, &to) {
+            for (back, there) in done.iter().rev() {
+                let _ = std::fs::rename(there, back);
+            }
+            return Err(why.into());
+        }
+        done.push((from, to));
     }
     Ok(kept)
 }

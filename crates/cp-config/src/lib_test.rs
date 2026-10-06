@@ -361,13 +361,20 @@ fn a_broken_file_is_kept_aside_and_the_defaults_are_written_in_its_place() {
     let path = at(dir.path());
     std::fs::write(&path, "theme = = dark").expect("writes");
     let config = read_or_reset(&path, BROKEN_AT_MS).expect("carries on");
-    assert_eq!(config, Config::default());
+    let forgiving = Config {
+        keeps_days: None,
+        ..Config::default()
+    };
+    assert_eq!(
+        config, forgiving,
+        "a file nobody can read says nothing about how long to keep, so nothing is let go"
+    );
     let kept = dir.path().join("config.broken-1700000000000.toml");
     assert_eq!(
         std::fs::read_to_string(kept).expect("kept"),
         "theme = = dark"
     );
-    assert_eq!(read(&path).expect("now valid"), Config::default());
+    assert_eq!(read(&path).expect("now valid"), forgiving);
 }
 
 #[test]
@@ -397,4 +404,18 @@ fn a_file_that_cannot_be_read_at_all_is_not_replaced() {
         read_or_reset(&path, BROKEN_AT_MS),
         Err(Error::File(_))
     ));
+}
+
+#[test]
+fn a_file_cut_off_in_the_middle_of_a_letter_is_kept_aside_too() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, b"theme = \"dark\"\nshortcut = \"Ctrl+\xc3").expect("writes");
+    let config = read_or_reset(&path, BROKEN_AT_MS).expect("carries on");
+    assert_eq!(
+        config.keeps_days, None,
+        "nothing is let go after a broken file"
+    );
+    assert!(dir.path().join("config.broken-1700000000000.toml").exists());
+    assert_eq!(read(&path).expect("now valid"), config);
 }
