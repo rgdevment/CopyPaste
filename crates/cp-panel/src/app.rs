@@ -141,11 +141,11 @@ impl App {
         if !self.state.borrow().options.measure {
             self.keep_watch(panel.as_weak());
         }
-        leave_when_left(panel, hides_when_left);
         if let Some(dir) = self.state.borrow().options.signals.clone() {
             watch_signals(panel.as_weak(), dir);
         }
         if serving {
+            leave_when_left(panel, hides_when_left);
             let state = self.state.borrow();
             listen(
                 panel.as_weak(),
@@ -1369,7 +1369,6 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
                 return;
             };
             if !ui.window().is_visible() {
-                state.borrow().leaving.stop();
                 return;
             }
             match here::ours_up_front() {
@@ -1422,8 +1421,9 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                         forward(&panel);
                         appear(&panel);
                         panel.invoke_focus_search();
-                        if asked.elapsed() > SLOW {
-                            note(&format!("the panel took {:?} to show", asked.elapsed()));
+                        let took = asked.elapsed();
+                        if took > SLOW {
+                            note(&format!("the panel took {took:?} to show"));
                         }
                     });
                 }
@@ -1457,8 +1457,8 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                     let _ = std::fs::remove_file(&flag);
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
-                            let _ = ui.show();
                             ui.invoke_fresh_start();
+                            let _ = ui.show();
                             appear(&ui);
                             ui.invoke_focus_search();
                         } else {

@@ -90,7 +90,12 @@ pub fn leave_when_left(panel: &Panel, hides: fn() -> bool) {
             && ui.window().is_visible()
             && hides()
         {
-            vanish(&ui);
+            let later = ui.as_weak();
+            slint::Timer::single_shot(Duration::ZERO, move || {
+                if let Some(ui) = later.upgrade() {
+                    vanish(&ui);
+                }
+            });
         }
         EventResult::Propagate
     });
