@@ -1,6 +1,7 @@
 mod backup;
 mod keys;
 mod links;
+mod looks;
 mod note;
 mod panel;
 mod reviving;

@@ -2,11 +2,11 @@ import { Card } from "types.slint";
 import { Theme } from "theme.slint";
 
 export global Paper {
-    out property <color> sheets: #6FCF97;
-    out property <color> words: #7FA9F0;
-    out property <color> slides: #FCD34D;
-    out property <color> pages: #F28B82;
-    out property <color> plain: #83858E;
+    out property <color> sheets: Theme.light ? #137238 : #6FCF97;
+    out property <color> words: Theme.light ? #1D4ED8 : #7FA9F0;
+    out property <color> slides: Theme.light ? #A64D0A : #FCD34D;
+    out property <color> pages: Theme.light ? #B91C1C : #F28B82;
+    out property <color> plain: Theme.light ? #63636C : #9EA0A8;
     pure public function of(family: string) -> color {
         return family == "sheets" ? self.sheets
             : family == "words" ? self.words
@@ -30,8 +30,8 @@ export component PapersBody inherits HorizontalLayout {
         if card.papers-format != "" : Text {
             text: card.papers-format;
             color: Paper.of(card.papers-family);
-            font-size: 9.5px;
-            font-weight: 700;
+            font-size: Theme.fs-caption;
+            font-weight: 600;
             horizontal-alignment: center;
             vertical-alignment: center;
         }
@@ -51,7 +51,7 @@ export component PapersBody inherits HorizontalLayout {
         Text {
             text: card.folder-name != "" ? card.folder-name : card.squeezed;
             color: Theme.body;
-            font-size: 12.5px;
+            font-size: Theme.fs-body;
             overflow: elide;
             wrap: no-wrap;
             vertical-alignment: center;
@@ -59,8 +59,8 @@ export component PapersBody inherits HorizontalLayout {
 
         if card.folder-parent != "" : Text {
             text: card.folder-parent;
-            color: Theme.placeholder;
-            font-size: 10.5px;
+            color: Theme.muted;
+            font-size: Theme.fs-meta;
             horizontal-stretch: 1;
             overflow: elide;
             wrap: no-wrap;

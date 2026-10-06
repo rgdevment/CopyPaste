@@ -126,14 +126,18 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
         let _ = window.set_focus();
         return;
     }
-    let built = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html#welcome".into()))
-        .title("CopyPaste")
-        .inner_size(600.0, 460.0)
-        .resizable(false)
-        .maximizable(false)
-        .decorations(false)
-        .center()
-        .build();
+    let built = crate::looks::dressed(WebviewWindowBuilder::new(
+        app,
+        LABEL,
+        WebviewUrl::App("index.html#welcome".into()),
+    ))
+    .title("CopyPaste")
+    .inner_size(600.0, 460.0)
+    .resizable(false)
+    .maximizable(false)
+    .decorations(false)
+    .center()
+    .build();
     match built {
         Ok(window) => {
             let handle = app.clone();

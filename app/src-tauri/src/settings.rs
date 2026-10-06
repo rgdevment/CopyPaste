@@ -88,6 +88,7 @@ pub fn settings() -> Result<Config, String> {
 #[tauri::command]
 pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
     let said = written(&app, config);
+    crate::looks::wear(&app);
     if let Ok(now) = settings() {
         let _ = tauri::Emitter::emit(&app, "kept", now);
     }

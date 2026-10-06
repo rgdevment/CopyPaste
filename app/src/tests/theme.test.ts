@@ -6,7 +6,7 @@ const sheet = readFileSync("src/index.css", "utf8");
 describe("the three themes", () => {
   it("light is the base, so with no choice it does not fall to dark", () => {
     const root = sheet.slice(sheet.indexOf(":root {"), sheet.indexOf("}"));
-    expect(root).toContain("--panel: #f7f8fb");
+    expect(root).toContain("--panel: #f4f4f6");
     expect(root).toContain("color-scheme: light");
   });
 

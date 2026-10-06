@@ -12,8 +12,8 @@ export component TokenBody inherits HorizontalLayout {
         accessible-role: AccessibleRole.none;
         text: card.claim-names;
         color: Theme.muted;
-        font-family: "Cascadia Mono";
-        font-size: 11.5px;
+        font-family: Theme.mono-font;
+        font-size: Theme.fs-small;
         wrap: no-wrap;
     }
 
@@ -21,8 +21,8 @@ export component TokenBody inherits HorizontalLayout {
         accessible-role: AccessibleRole.none;
         text: card.claim-values;
         color: Theme.body;
-        font-family: "Cascadia Mono";
-        font-size: 11.5px;
+        font-family: Theme.mono-font;
+        font-size: Theme.fs-small;
         wrap: no-wrap;
         overflow: elide;
         horizontal-stretch: 1;
