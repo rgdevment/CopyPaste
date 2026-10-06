@@ -105,6 +105,17 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
     Some(())
 }
 
+pub fn tell<R: Runtime>(app: &AppHandle<R>, trouble: Option<&str>) {
+    let Some(tray) = app.tray_by_id("copypaste") else {
+        return;
+    };
+    let said = trouble.map_or_else(
+        || "CopyPaste".to_owned(),
+        |what| format!("CopyPaste: {what}"),
+    );
+    let _ = tray.set_tooltip(Some(said));
+}
+
 pub fn reword<R: Runtime>(app: &AppHandle<R>, spanish: bool) {
     let Some(items) = app.try_state::<Said<R>>() else {
         return;

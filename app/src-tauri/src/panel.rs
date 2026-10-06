@@ -1,5 +1,4 @@
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -14,7 +13,13 @@ pub struct Trouble(Mutex<Option<String>>);
 pub struct Relights(Mutex<Tries>);
 
 #[derive(Default)]
-pub struct Parting(AtomicBool);
+pub struct Parting(Mutex<Turn>);
+
+#[derive(Default)]
+struct Turn {
+    leaving: bool,
+    coming_back: bool,
+}
 
 #[derive(Default)]
 struct Tries {
@@ -53,6 +58,7 @@ fn all_is_well<R: Runtime>(app: &AppHandle<R>) {
     {
         held.take();
     }
+    crate::tray::tell(app, None);
 }
 
 pub fn raise<R: Runtime>(app: &AppHandle<R>) {
@@ -92,10 +98,11 @@ fn shown<R: Runtime>(app: &AppHandle<R>) -> Showing {
         return Showing::Done;
     }
     match asked_again(app) {
-        crate::reviving::Verdict::Wait => return Showing::Waiting,
-        crate::reviving::Verdict::Enough => return Showing::GaveUp,
+        crate::reviving::Verdict::Wait { .. } => return Showing::Waiting,
+        crate::reviving::Verdict::Enough { .. } => return Showing::GaveUp,
         crate::reviving::Verdict::Light { .. } => {}
     }
+    part(app, false);
     if light(app).is_err() {
         return Showing::Refused;
     }
@@ -124,10 +131,10 @@ fn asked_again<R: Runtime>(app: &AppHandle<R>) -> crate::reviving::Verdict {
             tries.last = Some(now);
             crate::note::note(&format!("the panel is being restarted, attempt {count}"));
         }
-        crate::reviving::Verdict::Wait => {
-            crate::note::note("the panel was just restarted, so this press waits its turn");
+        crate::reviving::Verdict::Wait { .. } => {
+            crate::note::note("the panel was just restarted, so this restart waits its turn");
         }
-        crate::reviving::Verdict::Enough => {
+        crate::reviving::Verdict::Enough { .. } => {
             crate::note::note(&format!(
                 "the panel was restarted {} times without holding, so it will not be again for {} seconds",
                 crate::reviving::AT_MOST,
@@ -138,58 +145,76 @@ fn asked_again<R: Runtime>(app: &AppHandle<R>) -> crate::reviving::Verdict {
     verdict
 }
 
-fn left_to_wait<R: Runtime>(app: &AppHandle<R>) -> std::time::Duration {
-    app.try_state::<Relights>()
-        .and_then(|state| {
-            state.0.lock().ok().map(|tries| {
-                let since = tries.last.map(|then| then.elapsed());
-                crate::reviving::left_to_wait(tries.count, since)
-            })
-        })
-        .unwrap_or_default()
+fn bring_back<R: Runtime>(app: &AppHandle<R>) {
+    let Some(state) = app.try_state::<Parting>() else {
+        return;
+    };
+    let Ok(mut turn) = state.0.lock() else {
+        return;
+    };
+    if turn.leaving || turn.coming_back {
+        return;
+    }
+    turn.coming_back = true;
+    drop(turn);
+    let reviving = app.clone();
+    std::thread::spawn(move || come_back(&reviving));
 }
 
 fn come_back<R: Runtime>(app: &AppHandle<R>) {
+    let Some(state) = app.try_state::<Parting>() else {
+        return;
+    };
+    let mut told = false;
     loop {
-        std::thread::sleep(left_to_wait(app));
-        if parting(app) || still_there(app) {
+        let Ok(mut turn) = state.0.lock() else {
+            return;
+        };
+        if turn.leaving || still_there(app) {
+            turn.coming_back = false;
             return;
         }
-        match asked_again(app) {
-            crate::reviving::Verdict::Wait => {}
+        let left = match asked_again(app) {
             crate::reviving::Verdict::Light { .. } => {
-                match light(app) {
-                    Ok(()) => {
-                        crate::note::note("the panel is back and watches the clipboard again")
-                    }
-                    Err(why) => {
-                        crate::note::note(&format!("the panel could not come back: {why}"));
-                        gave_up(app, "the panel stopped watching the clipboard");
-                    }
+                if let Err(why) = light(app) {
+                    crate::note::note(&format!("the panel could not come back: {why}"));
+                    gave_up(app, "the panel stopped watching the clipboard");
+                } else {
+                    crate::note::note("the panel is back and watches the clipboard again");
                 }
+                turn.coming_back = false;
                 return;
             }
-            crate::reviving::Verdict::Enough => {
-                gave_up(app, "the panel will not stay up; restart CopyPaste");
-                return;
+            crate::reviving::Verdict::Wait { left } => left,
+            crate::reviving::Verdict::Enough { left } => {
+                if !told {
+                    gave_up(app, "the panel will not stay up; restart CopyPaste");
+                    told = true;
+                }
+                left
             }
-        }
+        };
+        drop(turn);
+        std::thread::sleep(left);
     }
 }
 
 fn gave_up<R: Runtime>(app: &AppHandle<R>, what: &str) {
     trouble_is(app, what);
-    crate::tray::surface(app);
+    crate::tray::tell(app, Some(what));
 }
 
 fn parting<R: Runtime>(app: &AppHandle<R>) -> bool {
     app.try_state::<Parting>()
-        .is_some_and(|state| state.0.load(Ordering::Relaxed))
+        .and_then(|state| state.0.lock().ok().map(|turn| turn.leaving))
+        .unwrap_or(false)
 }
 
 fn part<R: Runtime>(app: &AppHandle<R>, leaving: bool) {
-    if let Some(state) = app.try_state::<Parting>() {
-        state.0.store(leaving, Ordering::Relaxed);
+    if let Some(state) = app.try_state::<Parting>()
+        && let Ok(mut turn) = state.0.lock()
+    {
+        turn.leaving = leaving;
     }
 }
 
@@ -223,11 +248,16 @@ fn allow<R: Runtime>(app: &AppHandle<R>) {
 }
 
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {
-    let _ = say(app, "hide");
+    if say(app, "hide").is_err() {
+        bring_back(app);
+    }
 }
 
 pub fn empty<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
-    say(app, "empty").map_err(|_| "the panel is not listening".to_owned())
+    say(app, "empty").map_err(|_| {
+        bring_back(app);
+        "the panel is not listening".to_owned()
+    })
 }
 
 const GOES_IN: std::time::Duration = std::time::Duration::from_millis(2_500);
@@ -262,13 +292,13 @@ fn still_there<R: Runtime>(app: &AppHandle<R>) -> bool {
 
 pub fn relight<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
     forgive(app);
+    part(app, false);
     light(app)
 }
 
 fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
     let (mut heard, child) = app.shell().sidecar("cp-panel")?.args(["--serve"]).spawn()?;
     let whose = child.pid();
-    part(app, false);
     if let Some(state) = app.try_state::<Sidecar>()
         && let Ok(mut held) = state.0.lock()
         && let Some(old) = held.replace(child)
@@ -292,15 +322,18 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
                     }
                 }
                 CommandEvent::Terminated(how) => {
+                    let leaving = parting(&handle);
                     let ours = forget(&handle, whose);
-                    if ours && !parting(&handle) {
+                    if ours && !leaving {
+                        let fell = crate::reviving::fell(how.code, how.signal);
                         crate::note::note(&format!(
-                            "the panel closed on its own, code {:?}, signal {:?}, so it is started again",
+                            "the panel closed on its own, code {:?}, signal {:?}, fell {fell}",
                             how.code, how.signal
                         ));
                         trouble_is(&handle, "the panel stopped watching the clipboard");
-                        let reviving = handle.clone();
-                        std::thread::spawn(move || come_back(&reviving));
+                        if fell {
+                            bring_back(&handle);
+                        }
                     }
                     break;
                 }
