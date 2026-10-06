@@ -1,5 +1,5 @@
 import { Card } from "types.slint";
-import { Theme } from "theme.slint";
+import { Theme, Hue } from "theme.slint";
 
 export component FolderBody inherits HorizontalLayout {
     in property <Card> card;
@@ -10,7 +10,7 @@ export component FolderBody inherits HorizontalLayout {
         source: @image-url("../assets/icons/folder.svg");
         width: 18px;
         height: 18px;
-        colorize: #FBBF24;
+        colorize: Hue.folder;
         y: 0;
     }
 
@@ -20,14 +20,14 @@ export component FolderBody inherits HorizontalLayout {
         Text {
             text: card.folder-name;
             color: Theme.body;
-            font-size: 12.5px;
+            font-size: Theme.fs-body;
             overflow: elide;
             wrap: no-wrap;
         }
         Text {
             text: card.folder-parent;
-            color: Theme.placeholder;
-            font-size: 10.5px;
+            color: Theme.muted;
+            font-size: Theme.fs-meta;
             overflow: elide;
             wrap: no-wrap;
         }
@@ -36,7 +36,7 @@ export component FolderBody inherits HorizontalLayout {
     if card.folder-said != "" : Text {
         text: card.folder-said;
         color: Theme.muted;
-        font-size: 10.5px;
+        font-size: Theme.fs-meta;
         vertical-alignment: center;
     }
 }

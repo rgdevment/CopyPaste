@@ -13,7 +13,7 @@ export component JsonBody inherits VerticalLayout {
         Rectangle {
             width: root-row.preferred-width;
             height: 16px;
-            border-radius: 4px;
+            border-radius: Theme.radius-badge;
             background: Theme.field;
             root-row := HorizontalLayout {
                 padding-left: 5px;
@@ -21,8 +21,8 @@ export component JsonBody inherits VerticalLayout {
                 Text {
                     text: card.shape-root;
                     color: Theme.accent;
-                    font-family: "Cascadia Mono";
-                    font-size: 10.5px;
+                    font-family: Theme.mono-font;
+                    font-size: Theme.fs-meta;
                     vertical-alignment: center;
                 }
             }
@@ -30,7 +30,7 @@ export component JsonBody inherits VerticalLayout {
         Text {
             text: card.shape-said;
             color: Theme.title;
-            font-size: 11.5px;
+            font-size: Theme.fs-meta;
             font-weight: 600;
             vertical-alignment: center;
             overflow: elide;
@@ -40,8 +40,8 @@ export component JsonBody inherits VerticalLayout {
     Text {
         text: card.shape-keys;
         color: Theme.muted;
-        font-family: "Cascadia Mono";
-        font-size: 11.5px;
+        font-family: Theme.mono-font;
+        font-size: Theme.fs-small;
         wrap: word-wrap;
         overflow: elide;
         height: 36px;

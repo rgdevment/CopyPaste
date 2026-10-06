@@ -199,13 +199,13 @@ pub fn surface_at<R: Runtime>(app: &AppHandle<R>, rail: Option<&str>) {
     let page = rail.map_or(WebviewUrl::default(), |rail| {
         WebviewUrl::App(format!("index.html#{rail}").into())
     });
-    let built = framed(
+    let built = framed(crate::looks::dressed(
         WebviewWindowBuilder::new(app, "main", page)
             .title("CopyPaste")
             .inner_size(780.0, 580.0)
             .min_inner_size(620.0, 460.0)
             .center(),
-    )
+    ))
     .build();
     if let Ok(window) = built {
         unzoomed(&window);

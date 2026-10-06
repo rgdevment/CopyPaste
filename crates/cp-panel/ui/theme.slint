@@ -1,31 +1,47 @@
 export global Theme {
     in-out property <bool> light: false;
-    in-out property <color> panel: light ? #F7F8FB : #1A1D2B;
-    out property <color> alert-back: light ? #FDE9B5 : #46351C;
-    out property <color> alert-ink: light ? #7A4E07 : #FCD34D;
-    out property <color> panel-border: light ? #DCDEE8 : #262A3C;
-    out property <color> field: light ? #FFFFFF : #1F2234;
-    out property <color> field-border: light ? #D0D3E0 : #2A2E44;
-    out property <color> card: light ? #FFFFFF : #1E2132;
-    out property <color> card-hover: light ? #F0F1F7 : #252940;
-    out property <color> row-hover: light ? #EEF0F6 : #242840;
-    out property <color> tile: light ? #EEF0F6 : #262A40;
-    out property <color> title: light ? #3A3D4A : #BCBDC2;
-    out property <color> body: light ? #21242E : #D6D7DA;
-    out property <color> mono: light ? #3A3D4A : #C3C5CC;
-    out property <color> muted: light ? #6B6D7A : #8E90A0;
-    out property <color> placeholder: light ? #8A8C99 : #6D6F7B;
-    out property <color> accent: light ? #4F46E5 : #A5B4FC;
-    out property <color> accent-dim: light ? #6B63EA : #7C86C9;
-    out property <color> selected: light ? #E9E9FB : #282C46;
-    out property <color> selected-edge: light ? #B4B1EC : #4A5085;
-    out property <color> footer: light ? #EEF0F5 : #1B1E2C;
-    out property <color> danger: light ? #C0392B : #F28B82;
-    out property <color> shadow: light ? #0000002E : #00000099;
     out property <bool> apple: Platform.os == OperatingSystemType.macos;
+    out property <string> font: apple ? "System Font" : "Segoe UI";
+    out property <string> mono-font: apple ? ".SF NS Mono" : "Cascadia Mono";
+    in-out property <color> panel: light ? #F4F4F6 : #1E1F23;
+    out property <color> panel-border: light ? #D4D4D9 : #3C3D44;
+    out property <color> footer: light ? #ECECEF : #1A1B1E;
+    out property <color> card: light ? #FFFFFF : #27282D;
+    out property <color> card-edge: light ? #E3E3E8 : #35363C;
+    out property <color> row-hover: light ? #F2F2F5 : #2D2E34;
+    out property <color> field: light ? #FFFFFF : #2A2B30;
+    out property <color> field-border: light ? #D2D2D8 : #3D3E45;
+    out property <color> tile: light ? #EFEFF3 : #313237;
+    out property <color> hover: light ? #0000000F : #FFFFFF14;
+    out property <color> pressed: light ? #0000001F : #FFFFFF24;
+    out property <color> grip: light ? #C2C2C8 : #4A4B52;
+    out property <color> grip-hover: light ? #A8A8B0 : #5E5F67;
+    out property <color> body: light ? #1D1D21 : #E7E7EA;
+    out property <color> title: light ? #48484F : #C7C7CD;
+    out property <color> mono: light ? #3B3B42 : #D0D0D6;
+    out property <color> muted: light ? #63636C : #9EA0A8;
+    out property <color> placeholder: light ? #86868E : #75757E;
+    out property <color> accent: light ? #4A4AD4 : #A3ADFC;
+    out property <color> accent-dim: light ? #5A5ADA : #8F99E3;
+    out property <color> focus: light ? #8E8EE6 : #7A84D8;
+    out property <color> selected: light ? #E9EBFA : #30324A;
+    out property <color> selected-edge: light ? #BFBFF0 : #585C80;
+    out property <color> danger: light ? #C4342A : #F2857B;
+    out property <color> alert-back: light ? #FBEFD2 : #3F3320;
+    out property <color> alert-ink: light ? #8A5400 : #F2C94C;
+    out property <color> scrim: light ? #00000033 : #00000099;
+    out property <color> shadow: light ? #00000030 : #00000099;
     in-out property <length> shadow-blur: apple ? 0px : 22px;
-    out property <length> radius: apple ? 0px : 16px;
+    out property <length> radius: apple ? 0px : 8px;
     out property <length> margin: apple ? 0px : 18px;
+    out property <length> radius-card: 10px;
+    out property <length> radius-control: 8px;
+    out property <length> radius-inset: 6px;
+    out property <length> radius-badge: 4px;
+    out property <length> fs-caption: 10px;
+    out property <length> fs-meta: 11px;
+    out property <length> fs-small: 12px;
+    out property <length> fs-body: 13px;
     out property <length> row-thumb: 146px;
     out property <length> row-plain: 86px;
     out property <length> row-mixed: 60px;
@@ -49,4 +65,37 @@ export global Theme {
     out property <duration> settle: 150ms;
     out property <duration> let-go: 90ms;
     out property <length> stir: 3px;
+}
+
+export global Hue {
+    out property <color> text: Theme.light ? #4A4AD4 : #A3ADFC;
+    out property <color> code: Theme.light ? #0369A1 : #7DD3FC;
+    out property <color> json: Theme.light ? #6D28D9 : #C4B5FD;
+    out property <color> link: Theme.light ? #1D4ED8 : #93C5FD;
+    out property <color> email: Theme.light ? #B91C1C : #FCA5A5;
+    out property <color> phone: Theme.light ? #92570A : #FCD34D;
+    out property <color> paint: Theme.light ? #A21CAF : #F0ABFC;
+    out property <color> plain: Theme.light ? #475569 : #A8B3C4;
+    out property <color> token: Theme.light ? #B83D0B : #FDBA74;
+    out property <color> image: Theme.light ? #137238 : #86EFAC;
+    out property <color> file: Theme.light ? #525252 : #B0B0B5;
+    out property <color> folder: Theme.light ? #A64D0A : #FBBF24;
+    out property <color> audio: Theme.light ? #BE185D : #F9A8D4;
+    out property <color> video: Theme.light ? #0E7490 : #67E8F9;
+    pure public function of(kind: string) -> color {
+        return kind == "code" ? self.code
+            : kind == "json" ? self.json
+            : kind == "link" ? self.link
+            : kind == "email" ? self.email
+            : kind == "phone" ? self.phone
+            : kind == "color" ? self.paint
+            : kind == "ip" || kind == "uuid" ? self.plain
+            : kind == "token" ? self.token
+            : kind == "image" ? self.image
+            : kind == "file" ? self.file
+            : kind == "folder" ? self.folder
+            : kind == "audio" ? self.audio
+            : kind == "video" ? self.video
+            : self.text;
+    }
 }

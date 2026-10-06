@@ -12,11 +12,11 @@ export component GridCell inherits Rectangle {
     callback stirred();
     callback dragged();
     property <bool> dragging;
-    border-radius: 10px;
+    border-radius: Theme.radius-card;
     background: current ? Theme.selected : touch.has-hover ? Theme.row-hover : Theme.card;
     animate background { duration: current || touch.has-hover ? 0ms : Theme.let-go; }
     border-width: current ? 2px : 1px;
-    border-color: current ? Theme.accent : Theme.panel-border;
+    border-color: current ? Theme.accent : Theme.card-edge;
     clip: true;
     accessible-role: AccessibleRole.list-item;
     accessible-label: card.title + ", " + card.body;
@@ -88,7 +88,7 @@ export component GridCell inherits Rectangle {
                 Text {
                     text: card.alert;
                     color: Theme.danger;
-                    font-size: 10px;
+                    font-size: Theme.fs-caption;
                     horizontal-alignment: center;
                     wrap: word-wrap;
                 }
@@ -105,7 +105,7 @@ export component GridCell inherits Rectangle {
                 Text {
                     text: card.media-measures;
                     color: Theme.title;
-                    font-size: 10.5px;
+                    font-size: Theme.fs-meta;
                     vertical-alignment: center;
                     overflow: elide;
                 }
@@ -119,7 +119,7 @@ export component GridCell inherits Rectangle {
                 Text {
                     text: card.source;
                     color: Theme.muted;
-                    font-size: 10.5px;
+                    font-size: Theme.fs-meta;
                     vertical-alignment: center;
                     overflow: elide;
                 }

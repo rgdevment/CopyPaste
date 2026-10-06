@@ -9,7 +9,7 @@ export component MediaBody inherits HorizontalLayout {
     if card.media-clock != "" : Rectangle {
         width: clock-row.preferred-width;
         height: 18px;
-        border-radius: 4px;
+        border-radius: Theme.radius-badge;
         background: Theme.field;
         y: 0;
         clock-row := HorizontalLayout {
@@ -18,7 +18,7 @@ export component MediaBody inherits HorizontalLayout {
             Text {
                 text: card.media-clock;
                 color: Theme.accent;
-                font-size: 11px;
+                font-size: Theme.fs-meta;
                 vertical-alignment: center;
             }
         }
@@ -30,14 +30,14 @@ export component MediaBody inherits HorizontalLayout {
         Text {
             text: card.squeezed;
             color: Theme.body;
-            font-size: 12.5px;
+            font-size: Theme.fs-body;
             overflow: elide;
             wrap: no-wrap;
         }
         if card.media-measures != "" : Text {
             text: card.media-measures;
             color: Theme.muted;
-            font-size: 10.5px;
+            font-size: Theme.fs-meta;
             overflow: elide;
         }
     }
