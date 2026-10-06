@@ -62,6 +62,15 @@ written_in_english() {
     && went_well "no Spanish identifiers"
 }
 
+tests_named_in_english() {
+  grep -rnE '\b(describe|it|test)\("[^"]*(á|é|í|ó|ú|ñ|¿|¡|\b(el|la|los|las|que|una|del|con|sin|cuando|para)\b)' \
+    app/src --include='*.test.ts' --include='*.test.tsx'
+  found_nothing \
+    "the window's tests are named in English" $? \
+    "the window's tests could not be looked through for their names" \
+    && went_well "the window's tests are named in English"
+}
+
 no_comments_in_the_code() {
   grep -rnE '[/]{2}' crates app/src-tauri/src --include='*.rs' \
     | grep -vE '[a-z]+:[/][/]' | grep -vE '"[^"]*[/]{2}'
@@ -117,6 +126,7 @@ unsafe_only_in_the_sys_crates
 nothing_the_core_prints
 nothing_the_core_depends_on
 written_in_english
+tests_named_in_english
 no_comments_in_the_code
 every_example_has_its_own_name
 what_python_measures "the tests live beside the file, not inside it" oversized.py --inline

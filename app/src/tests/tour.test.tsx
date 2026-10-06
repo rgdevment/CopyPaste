@@ -18,12 +18,12 @@ async function press(name: string) {
   fireEvent.click(await screen.findByRole("button", { name }));
 }
 
-describe("la bienvenida de una instalación nueva", () => {
+describe("the welcome of a fresh install", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("trae la 2.x, enseña el atajo hasta que se prueba y se cierra al final", async () => {
+  it("brings the 2.x over, teaches the shortcut until it is tried and closes at the end", async () => {
     render(<Welcome />);
 
     expect(await screen.findByText("Tu historial anterior te espera")).toBeInTheDocument();
@@ -48,11 +48,30 @@ describe("la bienvenida de una instalación nueva", () => {
     await press("Siguiente");
 
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
+    await press("Siguiente");
+
+    expect(await screen.findByText("Hay novedades en CopyPaste")).toBeInTheDocument();
+    await press("Entendido");
+    expect(theWindow.close).toHaveBeenCalled();
+  });
+
+  it("a fresh install ends on the essentials and closes with Done", async () => {
+    asked.greeting = { kind: "tour", former: false };
+    render(<Welcome />);
+
+    await press("Comenzar");
+    const shown = await heardOn("panel-shown");
+    act(() => shown({ payload: null }));
+    await press("Siguiente");
+    await press("Siguiente");
+
+    expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
+    expect(screen.queryByText("Hay novedades en CopyPaste")).toBeNull();
     await press("Listo");
     expect(theWindow.close).toHaveBeenCalled();
   });
 
-  it("ofrece los atajos libres cuando el suyo está ocupado", async () => {
+  it("offers the free shortcuts when its own is taken", async () => {
     asked.greeting = { kind: "tour", former: false };
     asked.bound = false;
     const { invoke } = await import("@tauri-apps/api/core");
@@ -69,7 +88,7 @@ describe("la bienvenida de una instalación nueva", () => {
     });
   });
 
-  it("omitir desde el principio cierra la ventana sin recorrer nada", async () => {
+  it("skipping from the start closes the window without going through anything", async () => {
     asked.greeting = { kind: "tour", former: false };
     render(<Welcome />);
 
@@ -77,7 +96,7 @@ describe("la bienvenida de una instalación nueva", () => {
     expect(theWindow.close).toHaveBeenCalled();
   });
 
-  it("no tiene botones de ventana: se sale con los suyos", async () => {
+  it("has no window buttons: you leave with its own", async () => {
     asked.greeting = { kind: "tour", former: false };
     render(<Welcome />);
 
@@ -98,7 +117,7 @@ function asAMac() {
   };
 }
 
-describe("la bienvenida en un Mac", () => {
+describe("the welcome on a Mac", () => {
   let back = () => {};
 
   beforeEach(() => {
@@ -110,7 +129,7 @@ describe("la bienvenida en un Mac", () => {
 
   afterEach(() => back());
 
-  it("pide el permiso antes del atajo y sigue sola cuando se concede", async () => {
+  it("asks for permission before the shortcut and moves on alone once it is granted", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<Welcome />);
 
@@ -138,7 +157,7 @@ describe("la bienvenida en un Mac", () => {
     expect(await screen.findByText("Pruébalo ahora", {}, { timeout: 4_000 })).toBeInTheDocument();
   }, 20_000);
 
-  it("enseña la barra de menús y lo esencial con las teclas del Mac", async () => {
+  it("shows the menu bar and the essentials with the Mac keys", async () => {
     asked.trust = { offered: true, pastes: true, secureInput: false };
     render(<Welcome />);
 
@@ -158,7 +177,7 @@ describe("la bienvenida en un Mac", () => {
     expect(screen.queryByText("F1")).toBeNull();
   });
 
-  it("con el permiso ya concedido el paso no aparece", async () => {
+  it("with permission already granted the step does not appear", async () => {
     asked.trust = { offered: true, pastes: true, secureInput: false };
     render(<Welcome />);
 
@@ -168,12 +187,12 @@ describe("la bienvenida en un Mac", () => {
   });
 });
 
-describe("lo que cambia con la ventana abierta", () => {
+describe("what changes while the window is open", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("sin nada que mostrar se cierra sola en vez de quedar en blanco", async () => {
+  it("with nothing to show it closes itself instead of staying blank", async () => {
     asked.greeting = { kind: "nothing" };
     render(<Welcome />);
 
@@ -182,7 +201,7 @@ describe("lo que cambia con la ventana abierta", () => {
     });
   });
 
-  it("pasa de las novedades al recorrido cuando se pide desde Acerca de", async () => {
+  it("goes from the news to the tour when asked from About", async () => {
     asked.greeting = { kind: "news", versions: ["3.0.0"] };
     render(<Welcome />);
 
@@ -192,7 +211,7 @@ describe("lo que cambia con la ventana abierta", () => {
     expect(await screen.findByText("Tu portapapeles, con memoria")).toBeInTheDocument();
   });
 
-  it("sigue lo que otra ventana guardó, para no pisarlo después", async () => {
+  it("follows what another window saved, so as not to overwrite it later", async () => {
     asked.greeting = { kind: "tour", former: false };
     render(<Welcome />);
 
@@ -214,12 +233,12 @@ describe("lo que cambia con la ventana abierta", () => {
   });
 });
 
-describe("las novedades tras una actualización", () => {
+describe("the news after an update", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("dicen lo nuevo en el idioma elegido y se cierran con un botón", async () => {
+  it("tells what is new in the chosen language and closes with a button", async () => {
     asked.greeting = { kind: "news", versions: ["3.0.0"] };
     asked.locale = "en";
     render(<Welcome />);
@@ -231,12 +250,12 @@ describe("las novedades tras una actualización", () => {
   });
 });
 
-describe("abrir la app cuando ya está corriendo", () => {
+describe("opening the app while it is already running", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("enseña solo el atajo, sin el recorrido, y se cierra con un botón", async () => {
+  it("teaches only the shortcut, without the tour, and closes with a button", async () => {
     asked.greeting = { kind: "keys" };
     asked.locale = "en";
     render(<Welcome />);

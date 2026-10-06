@@ -27,8 +27,8 @@ function covers(pattern: string, url: string): boolean {
   return url.startsWith(pattern.slice(0, star)) && url.endsWith(pattern.slice(star + 1));
 }
 
-describe("los enlaces del acerca de", () => {
-  it("todos están permitidos, así que ninguno nace muerto", () => {
+describe("the links in About", () => {
+  it("are all allowed, so none is born dead", () => {
     const patterns = allowed();
     for (const url of [...LINKS, ...TOOLS]) {
       expect(
@@ -38,7 +38,7 @@ describe("los enlaces del acerca de", () => {
     }
   });
 
-  it("las otras herramientas llevan a su propia página, no al repositorio", () => {
+  it("the other tools lead to their own page, not to the repository", () => {
     for (const url of TOOLS) {
       expect(url.startsWith("https://rgdevment.com/")).toBe(true);
     }

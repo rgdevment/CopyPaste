@@ -66,6 +66,15 @@ sys.exit(1)
 said=$(python3 -c "$reads" "$version" "$news" 2>&1)
 looked=$?
 
+# a patch fixes what its minor release shipped, and the window already told that release's news
+minor="${version%.*}.0"
+if [ "$looked" = 1 ] && [ "$minor" != "$version" ] \
+  && python3 -c "$reads" "$minor" "$news" > /dev/null 2>&1; then
+  printf 'ok %s is a patch of %s, whose entry in %s still says what it brings\n' \
+    "$version" "$minor" "$news"
+  exit 0
+fi
+
 case $looked in
   0)
     printf 'ok %s is in %s, in both languages\n' "$version" "$news"

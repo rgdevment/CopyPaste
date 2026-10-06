@@ -22,7 +22,7 @@ async function answering(notices: () => Promise<string>) {
   };
 }
 
-describe("los avisos que cada licencia empaquetada pide", () => {
+describe("the notices each bundled licence asks for", () => {
   const undo: (() => void)[] = [];
 
   afterEach(() => {
@@ -31,7 +31,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     }
   });
 
-  it("se muestran desde la ventana, y solo se piden cuando se abren", async () => {
+  it("are shown from the window, and only fetched when opened", async () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.resolve("MIT License\n\nCopyright (c) alguien"));
     undo.push(said.undo);
@@ -52,7 +52,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("se dibujan como texto, no como el markdown en que están escritos", async () => {
+  it("are drawn as text, not as the markdown they are written in", async () => {
     const who = userEvent.setup();
     const said = await answering(() =>
       Promise.resolve(
@@ -71,7 +71,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(screen.queryByText(/Do not edit by hand/)).toBeNull();
   });
 
-  it("no ejecutan lo que traigan escrito como html", async () => {
+  it("do not run whatever html they carry", async () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.resolve("<img src=x onerror=alert(1)> y nada más"));
     undo.push(said.undo);
@@ -83,7 +83,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(container.querySelector(".notices img")).toBeNull();
   });
 
-  it("un enlace de dentro se abre fuera, sin llevarse la ventana", async () => {
+  it("a link inside opens outside, without taking the window with it", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     const said = await answering(() => Promise.resolve("Ver https://crates.io/crates/slint"));
@@ -96,7 +96,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(invoke).toHaveBeenCalledWith("open_web", { url: "https://crates.io/crates/slint" });
   });
 
-  it("todo enlace del archivo de verdad lleva su sitio, porque uno relativo apunta a la ventana", () => {
+  it("every link in the real file names its site, because a relative one points at the window", () => {
     const holder = document.createElement("div");
     holder.innerHTML = composed(readFileSync("../THIRD-PARTY-BUNDLED.md", "utf8"));
     const hrefs = Array.from(holder.querySelectorAll("a")).map((one) => one.getAttribute("href"));
@@ -106,7 +106,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     }
   });
 
-  it("un reintento que sale bien se lleva el aviso del fallo anterior", async () => {
+  it("a retry that works clears the notice of the earlier failure", async () => {
     const who = userEvent.setup();
     let tries = 0;
     const said = await answering(() => {
@@ -125,7 +125,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(screen.queryByText("No se pudieron leer los avisos de terceros")).toBeNull();
   });
 
-  it("los textos de las licencias tienen su propio botón, y solo se piden al abrirlo", async () => {
+  it("the licence texts have their own button, and are only fetched when it opens", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation() as Invoke;
@@ -156,7 +156,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     });
   });
 
-  it("si los textos no se pueden leer, lo dice", async () => {
+  it("says so when the texts cannot be read", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation() as Invoke;
@@ -172,7 +172,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     ).toBeDefined();
   });
 
-  it("todo enlace de los textos de verdad lleva su sitio", () => {
+  it("every link in the real texts names its site", () => {
     const holder = document.createElement("div");
     holder.innerHTML = composed(readFileSync("../THIRD-PARTY-LICENSES.md", "utf8"));
     for (const href of Array.from(holder.querySelectorAll("a")).map((one) =>
@@ -183,7 +183,7 @@ describe("los avisos que cada licencia empaquetada pide", () => {
     expect(holder.querySelectorAll("pre").length).toBeGreaterThan(100);
   });
 
-  it("si no se pueden leer, lo dice en vez de quedarse callado", async () => {
+  it("says so when they cannot be read instead of staying silent", async () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.reject(new Error("no")));
     undo.push(said.undo);

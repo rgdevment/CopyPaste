@@ -13,12 +13,12 @@ async function heardOn(name: string): Promise<Heard> {
   return (call as [string, Heard])[1];
 }
 
-describe("la ventana", () => {
+describe("the window", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("aterriza en los atajos cuando el panel pide los ajustes", async () => {
+  it("lands on the shortcuts when the panel asks for settings", async () => {
     render(<App />);
     await screen.findByLabelText("Idioma");
 
@@ -30,7 +30,7 @@ describe("la ventana", () => {
     expect(await screen.findByText("Atajo del panel")).toBeDefined();
   });
 
-  it("no se mueve si le piden una sección que no existe", async () => {
+  it("does not move when asked for a section that does not exist", async () => {
     render(<App />);
     await screen.findByLabelText("Idioma");
 

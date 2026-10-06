@@ -157,8 +157,8 @@ function rowsOn(mac: boolean): Binding[] {
   });
 }
 
-describe("la tabla de atajos", () => {
-  it("promete solo teclas que el panel mira de verdad, en Windows y en un Mac", () => {
+describe("the shortcut table", () => {
+  it("promises only keys the panel really watches, on Windows and on a Mac", () => {
     for (const mac of [false, true]) {
       const where = mac ? "macOS" : "Windows";
       for (const row of rowsOn(mac)) {
@@ -177,7 +177,7 @@ describe("la tabla de atajos", () => {
     }
   });
 
-  it("dice en voz alta lo que en un Mac solo se dibuja", () => {
+  it("says out loud what a Mac only draws", () => {
     for (const tongue of ["es", "en"] as const) {
       adopt(tongue);
       for (const row of panelKeys(true)) {
@@ -197,7 +197,7 @@ describe("la tabla de atajos", () => {
     expect(panelKeys(true).filter((one) => one.id === "remove")[0].said).toBe("Command Backspace");
   });
 
-  it("no ofrece en un Mac teclas que su teclado no tiene", () => {
+  it("does not offer a Mac keys its keyboard lacks", () => {
     const forbidden = [/\bF\d/, /\bSupr\b/, /\bDelete\b/, /\bCtrl\b/, /\bAlt\b/, /\bShift\b/];
     for (const row of rowsOn(true)) {
       for (const one of forbidden) {
@@ -208,7 +208,7 @@ describe("la tabla de atajos", () => {
     }
   });
 
-  it("lo que solo responde en un Mac va detrás de la plataforma", () => {
+  it("what only answers on a Mac sits behind the platform", () => {
     const only = ['event.text == ","', "event.text == Key.Backspace && event.modifiers.control"];
     for (const one of only) {
       const branch = BRANCHES.find((said) => said.includes(one));
@@ -224,7 +224,7 @@ describe("la tabla de atajos", () => {
     );
   });
 
-  it("dice lo mismo en los dos idiomas, fila por fila", () => {
+  it("says the same in both languages, row by row", () => {
     for (const mac of [false, true]) {
       adopt("es");
       const es = panelKeys(mac);
@@ -240,7 +240,7 @@ describe("la tabla de atajos", () => {
     }
   });
 
-  it("un clic con modificador lo lee de verdad lo que se pincha", () => {
+  it("a click with a modifier really reads what is clicked", () => {
     const cards = ui("cards.slint");
     // the layers row tells this one in words instead of naming a key, so nothing above reaches it
     expect(cards, "no clic suma tipos en vez de cambiarlos").toContain(
@@ -265,7 +265,7 @@ describe("la tabla de atajos", () => {
     }
   });
 
-  it("el botón que promete sumar tipos existe en el panel", () => {
+  it("the button that promises to add kinds exists in the panel", () => {
     for (const tongue of ["es", "en"] as const) {
       adopt(tongue);
       const row = panelKeys(false).find((one) =>
@@ -276,7 +276,7 @@ describe("la tabla de atajos", () => {
     expect(PANEL, "nothing in the panel toggles the mode").toContain("keep-toggled");
   });
 
-  it("filtra por tipos que el buscador conoce", () => {
+  it("filters by kinds the search box knows", () => {
     const view = readFileSync(
       join(__dirname, "..", "..", "..", "crates", "cp-panel", "src", "view.rs"),
       "utf8",

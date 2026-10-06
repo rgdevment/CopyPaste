@@ -121,7 +121,7 @@ We keep the code simple and consistent:
 `scripts/rules.sh` holds the conventions a person can break in a second: a
 comment where the code should speak for itself, `unsafe` outside the `-sys`
 crates, the core printing to a terminal or reaching for a platform, Spanish in
-an identifier, two crates naming an example the same, and a file grown past
+an identifier or in the name of a test of the window, two crates naming an example the same, and a file grown past
 what anybody reads through. `scripts/commits.sh` holds the commit convention
 below. Both answer
 the same whether you run them or CI does, and they say every rule that broke
@@ -141,7 +141,8 @@ tag it asks `scripts/news.sh` whether `app/src/news.json` says what changed in
 that version — the screen that tells a person what is new is the only place the
 app says it, and a tag is the last moment to notice it is empty. A candidate is
 exempt: the screen only shows versions at or below the one running, and `3.0.0`
-is above `3.0.0-rc1`. Nothing slower goes in any of
+is above `3.0.0-rc1`. So is a patch whose minor release already has its entry:
+`3.0.1` fixes what `3.0.0` shipped, and the window keeps telling `3.0.0`'s news. Nothing slower goes in any of
 them: the suite, the build and the markdown lint are minutes, and they belong to
 CI.
 

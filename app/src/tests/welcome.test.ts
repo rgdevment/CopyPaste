@@ -2,22 +2,23 @@ import { describe, expect, it } from "vitest";
 import { landing } from "../App";
 import { asKeys, caps } from "../core";
 import news from "../news.json";
-import { steps, toldFor } from "../ui/Welcome";
+import { newestStable, steps, toldFor } from "../ui/Welcome";
 
-describe("la bienvenida", () => {
-  it("lleva el historial de la 2.x antes de todo y el permiso antes del atajo", () => {
+describe("the welcome", () => {
+  it("brings the 2.x history before anything else and the permission before the shortcut", () => {
     expect(steps(true, true)).toEqual(["former", "hello", "trust", "keys", "where", "use"]);
     expect(steps(false, false)).toEqual(["hello", "keys", "where", "use"]);
+    expect(steps(true, false, true)).toEqual(["former", "hello", "keys", "where", "use", "news"]);
   });
 
-  it("dibuja el atajo tecla a tecla, con símbolos y en el orden del Mac", () => {
+  it("draws the shortcut key by key, with symbols and in the Mac order", () => {
     expect(caps("Ctrl+Alt+V", false)).toEqual(["Ctrl", "Alt", "V"]);
     expect(caps("Cmd+Alt+V", true)).toEqual(["⌥", "⌘", "V"]);
     expect(caps("Shift+Ctrl+Space", true)).toEqual(["⌃", "⇧", "Space"]);
     expect(caps("", false)).toEqual([]);
   });
 
-  it("junta las teclas sin pegar una palabra a un símbolo", () => {
+  it("joins the keys without gluing a word to a symbol", () => {
     expect(asKeys("Ctrl+Alt+V", false)).toBe("Ctrl + Alt + V");
     expect(asKeys("Cmd+Alt+V", true)).toBe("⌥⌘V");
     expect(asKeys("Shift+Cmd+Space", true)).toBe("⇧⌘ Space");
@@ -25,7 +26,7 @@ describe("la bienvenida", () => {
     expect(asKeys("Super+V", true), "what nothing maps is left as it was stored").toBe("Super V");
   });
 
-  it("cuenta solo las novedades de las versiones pedidas, en el idioma de la ventana", () => {
+  it("tells only the news of the versions asked for, in the window's language", () => {
     const [first] = news;
     expect(toldFor([first.version], false, false)[0].told.map((one) => one.title)).toEqual(
       first.es.map((one) => one.title),
@@ -36,7 +37,7 @@ describe("la bienvenida", () => {
     expect(toldFor(["0.0.1"], false, false)).toEqual([]);
   });
 
-  it("nombra la tecla de cada plataforma, y no deja un hueco sin rellenar", () => {
+  it("names each platform's key, and leaves no gap unfilled", () => {
     for (const one of news) {
       for (const mac of [false, true]) {
         for (const english of [false, true]) {
@@ -55,7 +56,7 @@ describe("la bienvenida", () => {
     expect(onWindows.told.some((one) => one.said.includes("F2"))).toBe(true);
   });
 
-  it("dice lo mismo en español y en inglés para cada versión", () => {
+  it("says the same in Spanish and in English for every version", () => {
     for (const one of news) {
       expect(one.es.length, one.version).toBe(one.en.length);
       for (const said of [...one.es, ...one.en]) {
@@ -66,11 +67,23 @@ describe("la bienvenida", () => {
   });
 });
 
-describe("los ajustes abiertos desde la bienvenida", () => {
-  it("aterrizan en la sección pedida, y en General si no existe", () => {
+describe("settings opened from the welcome", () => {
+  it("land on the section asked for, and on General if it does not exist", () => {
     expect(landing("#keys")).toBe("keys");
     expect(landing("#about")).toBe("about");
     expect(landing("#welcome")).toBe("general");
     expect(landing("")).toBe("general");
+  });
+
+  it("tells someone coming from 2.x what the newest stable release brings", () => {
+    const newest = newestStable();
+    expect(newest).not.toBeNull();
+    expect(newest).not.toContain("-");
+    expect(news.some((one) => one.version === newest)).toBe(true);
+    expect(newestStable(["3.0.0", "3.1.0-rc1", "2.9.9", "3.0.10", "3.0.2"])).toBe("3.0.10");
+    expect(newestStable(["3.2.0", "4.0.0", "3.10.0"])).toBe("4.0.0");
+    expect(newestStable(["3.1.0", "3.10.0", "3.9.0"])).toBe("3.10.0");
+    expect(newestStable(["3.1.0-rc1"])).toBeNull();
+    expect(newestStable([])).toBeNull();
   });
 });
