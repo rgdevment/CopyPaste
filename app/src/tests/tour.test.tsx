@@ -225,7 +225,7 @@ describe("las novedades tras una actualización", () => {
     render(<Welcome />);
 
     expect(await screen.findByText("CopyPaste has been updated")).toBeInTheDocument();
-    expect(screen.getByText("Copy without pasting")).toBeInTheDocument();
+    expect(screen.getByText("Copy without pasting, and names")).toBeInTheDocument();
     await press("Got it");
     expect(theWindow.close).toHaveBeenCalled();
   });
