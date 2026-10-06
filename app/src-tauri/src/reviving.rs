@@ -30,6 +30,13 @@ fn forgotten(since: Option<Duration>) -> bool {
     since.is_some_and(|gap| gap > FORGETS_AFTER)
 }
 
+pub fn left_to_wait(tries: u32, since: Option<Duration>) -> Duration {
+    match since {
+        Some(gap) if !forgotten(since) => waits_after(tries).saturating_sub(gap),
+        _ => Duration::ZERO,
+    }
+}
+
 pub fn waits_after(tries: u32) -> Duration {
     FIRST_WAIT * 2_u32.pow(tries.min(4))
 }

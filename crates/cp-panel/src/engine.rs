@@ -18,8 +18,13 @@ impl Engine {
     pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
         let watching = here::watch_start(move || {
-            if let Some(id) = kept(&store) {
-                fresh(id);
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kept(&store))) {
+                Ok(Some(id)) => fresh(id),
+                Ok(None) => {}
+                Err(_) => {
+                    note("the clipboard watcher broke, so the panel leaves to be started again");
+                    std::process::exit(BROKE);
+                }
             }
         });
         let stop = Arc::new(AtomicBool::new(false));
@@ -62,6 +67,7 @@ impl Drop for Engine {
     }
 }
 
+const BROKE: i32 = 70;
 const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
 const WAVE_WIDE: u32 = 384;
 const WAVE_HIGH: u32 = 64;

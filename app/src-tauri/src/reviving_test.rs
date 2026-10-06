@@ -55,3 +55,31 @@ fn a_quiet_minute_forgives_the_whole_count() {
         "a panel that failed an hour ago says nothing about this press"
     );
 }
+
+#[test]
+fn a_panel_that_never_restarted_comes_back_at_once() {
+    assert_eq!(left_to_wait(0, None), Duration::ZERO);
+}
+
+#[test]
+fn coming_back_waits_only_what_is_left_of_the_turn() {
+    let gap = Duration::from_millis(100);
+    assert_eq!(left_to_wait(2, Some(gap)), waits_after(2) - gap);
+    assert_eq!(
+        asked_again(2, Some(gap + left_to_wait(2, Some(gap)))),
+        Verdict::Light { tries: 3 },
+        "once the wait is served the restart is granted"
+    );
+}
+
+#[test]
+fn a_turn_already_served_or_forgotten_waits_nothing() {
+    assert_eq!(
+        left_to_wait(1, Some(Duration::from_secs(10))),
+        Duration::ZERO
+    );
+    assert_eq!(
+        left_to_wait(AT_MOST, Some(FORGETS_AFTER + Duration::from_secs(1))),
+        Duration::ZERO
+    );
+}

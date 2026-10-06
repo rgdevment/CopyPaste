@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -11,6 +12,9 @@ pub struct Trouble(Mutex<Option<String>>);
 
 #[derive(Default)]
 pub struct Relights(Mutex<Tries>);
+
+#[derive(Default)]
+pub struct Parting(AtomicBool);
 
 #[derive(Default)]
 struct Tries {
@@ -55,6 +59,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>) {
     app.manage(Sidecar::default());
     app.manage(Trouble::default());
     app.manage(Relights::default());
+    app.manage(Parting::default());
     match light(app) {
         Ok(()) => crate::note::note("the panel waits in the background"),
         Err(why) => crate::note::note(&format!("the panel did not start: {why}")),
@@ -133,6 +138,61 @@ fn asked_again<R: Runtime>(app: &AppHandle<R>) -> crate::reviving::Verdict {
     verdict
 }
 
+fn left_to_wait<R: Runtime>(app: &AppHandle<R>) -> std::time::Duration {
+    app.try_state::<Relights>()
+        .and_then(|state| {
+            state.0.lock().ok().map(|tries| {
+                let since = tries.last.map(|then| then.elapsed());
+                crate::reviving::left_to_wait(tries.count, since)
+            })
+        })
+        .unwrap_or_default()
+}
+
+fn come_back<R: Runtime>(app: &AppHandle<R>) {
+    loop {
+        std::thread::sleep(left_to_wait(app));
+        if parting(app) || still_there(app) {
+            return;
+        }
+        match asked_again(app) {
+            crate::reviving::Verdict::Wait => {}
+            crate::reviving::Verdict::Light { .. } => {
+                match light(app) {
+                    Ok(()) => {
+                        crate::note::note("the panel is back and watches the clipboard again")
+                    }
+                    Err(why) => {
+                        crate::note::note(&format!("the panel could not come back: {why}"));
+                        gave_up(app, "the panel stopped watching the clipboard");
+                    }
+                }
+                return;
+            }
+            crate::reviving::Verdict::Enough => {
+                gave_up(app, "the panel will not stay up; restart CopyPaste");
+                return;
+            }
+        }
+    }
+}
+
+fn gave_up<R: Runtime>(app: &AppHandle<R>, what: &str) {
+    trouble_is(app, what);
+    crate::tray::surface(app);
+}
+
+fn parting<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<Parting>()
+        .is_some_and(|state| state.0.load(Ordering::Relaxed))
+}
+
+fn part<R: Runtime>(app: &AppHandle<R>, leaving: bool) {
+    if let Some(state) = app.try_state::<Parting>() {
+        state.0.store(leaving, Ordering::Relaxed);
+    }
+}
+
 fn forgive<R: Runtime>(app: &AppHandle<R>) {
     if let Some(state) = app.try_state::<Relights>()
         && let Ok(mut tries) = state.0.lock()
@@ -179,6 +239,7 @@ const _: () = assert!(
 const LOOKS_EVERY: std::time::Duration = std::time::Duration::from_millis(15);
 
 pub fn quit<R: Runtime>(app: &AppHandle<R>) {
+    part(app, true);
     let _ = say(app, "quit");
     let until = std::time::Instant::now() + GOES_IN;
     while std::time::Instant::now() < until && still_there(app) {
@@ -207,6 +268,7 @@ pub fn relight<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell:
 fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error> {
     let (mut heard, child) = app.shell().sidecar("cp-panel")?.args(["--serve"]).spawn()?;
     let whose = child.pid();
+    part(app, false);
     if let Some(state) = app.try_state::<Sidecar>()
         && let Ok(mut held) = state.0.lock()
         && let Some(old) = held.replace(child)
@@ -231,12 +293,14 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
                 }
                 CommandEvent::Terminated(how) => {
                     let ours = forget(&handle, whose);
-                    if ours {
+                    if ours && !parting(&handle) {
                         crate::note::note(&format!(
-                            "the panel closed on its own, code {:?}, signal {:?}",
+                            "the panel closed on its own, code {:?}, signal {:?}, so it is started again",
                             how.code, how.signal
                         ));
                         trouble_is(&handle, "the panel stopped watching the clipboard");
+                        let reviving = handle.clone();
+                        std::thread::spawn(move || come_back(&reviving));
                     }
                     break;
                 }
