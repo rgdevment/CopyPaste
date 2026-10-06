@@ -5,11 +5,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-const HEAD: f32 = 24.0;
+const HEAD: f32 = 23.0;
 const GAP: f32 = 6.0;
 const SHUT: f32 = 58.0;
 const OPEN: f32 = 190.0;
-const BIG: f32 = 420.0;
+const BIG: f32 = 340.0;
 
 static PLATFORM: std::sync::Once = std::sync::Once::new();
 
@@ -24,7 +24,7 @@ fn card(id: i32) -> Card {
         shut_lines: 1,
         open_lines: 3,
         shut_px: SHUT,
-        open_px: if id == 0 { BIG } else { OPEN },
+        open_px: if id == 1 { BIG } else { OPEN },
         heads_group: id == 0,
         group_said: "Hoy".into(),
         can_drag: true,
@@ -137,8 +137,8 @@ fn a_double_click_pastes_the_card_under_it_whatever_was_open_and_however_slow() 
             (Some(0usize), 3),
             (Some(6), 2),
             (Some(2), 2),
-            (Some(0), 1),
-            (Some(0), 2),
+            (Some(1), 2),
+            (Some(1), 1),
         ] {
             let bench = bench(12);
             if let Some(first) = open_first {
@@ -147,9 +147,10 @@ fn a_double_click_pastes_the_card_under_it_whatever_was_open_and_however_slow() 
             }
             bench.moved.borrow_mut().clear();
             let at = centre_of(&bench, target);
-            if at.y > 610.0 {
-                continue;
-            }
+            let floor = bench.panel.global::<Theme>().get_margin()
+                + bench.panel.get_list_top()
+                + bench.panel.get_viewport_height();
+            assert!(at.y < floor, "card {target} is out of sight at {}", at.y);
             click(&bench.panel, at, 90);
             tick(gap);
             click(&bench.panel, at, 90);
