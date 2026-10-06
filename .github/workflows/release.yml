@@ -1574,23 +1574,20 @@ jobs:
       && needs.version.result == 'success' && needs.publish.result == 'success'
       && needs.verify.result == 'success'
       && needs.version.outputs.prerelease == 'false'
+      && vars.WINGET_PUBLISH == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
       group: release-winget-${{ github.ref }}
       cancel-in-progress: false
     env:
-      WINGET_PUBLISH: ${{ vars.WINGET_PUBLISH }}
       WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
     steps:
       - name: Is there anything to add a version to
         id: gate
         shell: bash
         run: |
-          if [ "$WINGET_PUBLISH" != "true" ]; then
-            echo "::notice::WINGET_PUBLISH is not true; winget-pkgs gets nothing until it is"
-            echo "go=no" >> "$GITHUB_OUTPUT"
-          elif [ -z "$WINGET_TOKEN" ]; then
+          if [ -z "$WINGET_TOKEN" ]; then
             echo "::error::WINGET_PUBLISH is on and there is no winget token, so this release \
           would quietly never reach winget-pkgs. Set the secret or turn the switch off."
             exit 1
