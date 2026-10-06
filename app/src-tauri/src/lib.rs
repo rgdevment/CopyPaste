@@ -83,6 +83,10 @@ pub fn run() {
             code: None, api, ..
         } => api.prevent_exit(),
         tauri::RunEvent::Exit => panel::quit(app),
+        tauri::RunEvent::WindowEvent {
+            event: tauri::WindowEvent::ThemeChanged(_),
+            ..
+        } => looks::wear(app),
         #[cfg(target_os = "macos")]
         tauri::RunEvent::Reopen {
             has_visible_windows: false,

@@ -12,6 +12,7 @@
   --muted: #63636c;
   --placeholder: #86868e;
   --accent: #4a4ad4;
+  --on-accent: #ffffff;
   --accent-dim: #5a5ada;
   --accent-soft: rgb(74 74 212 / 0.1);
   --selected: #e9ebfa;
@@ -59,6 +60,7 @@
     --muted: #9ea0a8;
     --placeholder: #75757e;
     --accent: #a3adfc;
+    --on-accent: #1e1f23;
     --accent-dim: #8f99e3;
     --accent-soft: rgb(163 173 252 / 0.14);
     --selected: #30324a;
@@ -88,6 +90,7 @@
   --muted: #9ea0a8;
   --placeholder: #75757e;
   --accent: #a3adfc;
+  --on-accent: #1e1f23;
   --accent-dim: #8f99e3;
   --accent-soft: rgb(163 173 252 / 0.14);
   --selected: #30324a;
@@ -420,7 +423,7 @@ select {
 
 .knob[aria-checked="true"]::after {
   transform: translateX(17px);
-  background: #ffffff;
+  background: var(--on-accent);
 }
 
 .mild,
@@ -463,6 +466,10 @@ select {
   color: var(--muted);
   background: transparent;
   border-color: transparent;
+}
+
+.grave.quiet {
+  font-size: var(--fs-body);
 }
 
 .quiet:hover {
