@@ -53,6 +53,10 @@ export component Panel inherits Window {
     }
     in-out property <bool> opened: false;
     in-out property <int> hovered: -1;
+    property <int> last-chosen: -1;
+    property <duration> last-at;
+    property <length> last-x;
+    property <length> last-y;
     in-out property <bool> pointer-hidden: false;
     in-out property <bool> quiet: false;
     in-out property <length> rest-x: -1px;
@@ -335,6 +339,7 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.DownArrow {
+                                        root.last-chosen = -1;
                                         if (root.hovered >= 0) {
                                             root.current = root.hovered;
                                         }
@@ -350,6 +355,7 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.UpArrow {
+                                        root.last-chosen = -1;
                                         if (root.hovered >= 0) {
                                             root.current = root.hovered;
                                         }
@@ -541,6 +547,7 @@ export component Panel inherits Window {
                 wheel := TouchArea {
                     mouse-cursor: root.pointer-hidden ? MouseCursor.none : MouseCursor.default;
                     scroll-event(event) => {
+                        root.last-chosen = -1;
                         root.pointer-hidden = false;
                         root.quiet = true;
                         root.rest-x = -1px;
@@ -623,15 +630,6 @@ export component Panel inherits Window {
                         changed height => {
                             if (self.mine) {
                                 root.sheet-span = self.height;
-                                if (self.y + self.height > -list.content-y + list.visible-height) {
-                                    list.content-y = min(
-                                        0px,
-                                        max(
-                                            list.visible-height - self.y - self.height - 8px,
-                                            -self.y
-                                        )
-                                    );
-                                }
                             }
                         }
                         property <bool> open-here: index == root.current && root.opened;
@@ -688,7 +686,18 @@ export component Panel inherits Window {
                             x: 10px;
                             width: parent.width - 20px;
                             height: parent.height - (card.heads-group ? Theme.row-head : 0px) - 6px;
-                            chosen(id) => {
+                            chosen(id, px, py) => {
+                                if (root.last-chosen >= 0 && animation-tick() - root.last-at < Theme.double-click
+                                    && (px - root.last-x) * (px - root.last-x) / 1px + (py - root.last-y) * (py - root.last-y) / 1px
+                                        < Theme.double-reach * Theme.double-reach / 1px) {
+                                    root.paste(root.last-chosen);
+                                    root.last-chosen = -1;
+                                    return;
+                                }
+                                root.last-chosen = id;
+                                root.last-at = animation-tick();
+                                root.last-x = px;
+                                root.last-y = py;
                                 if (root.sheet-open) {
                                     root.sheet-open = false;
                                 } else if (index == root.current) {
@@ -700,7 +709,6 @@ export component Panel inherits Window {
                                 root.moved(index);
                             }
                             layout: root.layout;
-                            paste(id) => { root.paste(id); }
                             copy(id) => { root.copy(id); }
                             forms(id) => {
                                 root.current = index;

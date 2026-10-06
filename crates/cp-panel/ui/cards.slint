@@ -279,7 +279,6 @@ export component CardView inherits Rectangle {
     in property <bool> open;
     in property <bool> shown-here;
     in property <bool> quiet;
-    callback paste(int);
     callback copy(int);
     callback open-asked(int);
     callback forms(int);
@@ -288,7 +287,7 @@ export component CardView inherits Rectangle {
     callback naming-dropped();
     callback pin(int, bool);
     callback remove(int);
-    callback chosen(int);
+    callback chosen(int, length, length);
     callback stirred(length, length);
     callback dragged(int);
     property <bool> dragging;
@@ -300,8 +299,11 @@ export component CardView inherits Rectangle {
     background: lit ? Theme.selected : hovering ? Theme.row-hover : Theme.card;
     animate background { duration: lit || hovering ? 0ms : Theme.let-go; easing: ease-out; }
     touch := TouchArea {
-        clicked => { if (!root.dragging) { root.chosen(card.id); } }
-        double-clicked => { root.paste(card.id); }
+        clicked => {
+            if (!root.dragging) {
+                root.chosen(card.id, self.absolute-position.x + self.mouse-x, self.absolute-position.y + self.mouse-y);
+            }
+        }
         pointer-event(event) => {
             if (event.kind == PointerEventKind.down) {
                 root.dragging = false;
