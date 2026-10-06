@@ -95,7 +95,7 @@ CopyPaste makes **one type of network request** for update checking:
 - Only when you press «Update» does the app also read `latest.json` (or `candidate.json` for test versions) from the same branch, which says where the installer lives and carries its signature
 - The installer is **cryptographically signed**, and the signature is verified against a public key built into the app before anything is installed. The download address is also checked against our own release hosts before a single byte is fetched
 - **Microsoft Store version:** nothing is checked and nothing is offered. The Store delivers its own updates
-- **Homebrew** (`copypaste`, or `copypaste-beta` for test versions): you are told the `brew upgrade` command for your cask. Nothing is downloaded or installed behind Homebrew's back
+- **Homebrew** (`copypaste`, or `copypaste-beta` for test versions): the same as a standalone build, «Update» downloads and installs it. The cask tells Homebrew that CopyPaste updates itself, so `brew upgrade --cask` keeps working too
 - **Standalone builds (Windows / macOS):** if you press «Update», and only then, the installer is downloaded and run, and CopyPaste restarts itself. Nothing is downloaded or installed without you asking for it
 
 ### User-Initiated Browser Navigation

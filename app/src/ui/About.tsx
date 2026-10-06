@@ -31,10 +31,10 @@ function Newer() {
         : t("updateLook");
 
   const why = ready
-    ? brew
-      ? t(seen?.route === "brewBeta" ? "updateBrewBeta" : "updateBrew")
-      : ready.installs
-        ? t("updateTake")
+    ? ready.installs
+      ? t("updateTake")
+      : brew
+        ? t(seen?.route === "brewBeta" ? "updateBrewBeta" : "updateBrew")
         : t("updateMove")
     : t("updateWhen");
 

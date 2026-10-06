@@ -69,7 +69,7 @@ struct Kept {
 }
 
 pub const fn self_installs(route: Route) -> bool {
-    matches!(route, Route::Download)
+    matches!(route, Route::Brew | Route::BrewBeta | Route::Download)
 }
 
 pub fn ours(url: &str) -> bool {

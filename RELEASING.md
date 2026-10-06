@@ -66,9 +66,10 @@ copy that only knew that channel is not left behind.
 
 What it does with an offer depends on where the copy came from, which it reads
 off its own path: a copy under `WindowsApps` is the Store's to update and is
-never offered anything; one under `Caskroom/copypaste-beta` or
-`Caskroom/copypaste` is told its own `brew` command rather than handed an
-installer; anything else installs its own update.
+never offered anything; anything else, a Homebrew copy included, installs its
+own update with one click, as Tisty does. The casks say `auto_updates true`, so
+Homebrew expects that; its own `brew` command is shown only when the copy cannot
+replace itself, such as when it runs from the mounted `.dmg`.
 
 Four things guard the install, all of them borrowed from Tisty: the download
 address must be this repository's releases on `github.com` (or

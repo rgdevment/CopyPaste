@@ -14,6 +14,7 @@ pub mod ocr;
 pub mod ole;
 pub mod paths;
 pub mod permissions;
+pub mod pointer;
 pub mod reading;
 pub mod source;
 pub mod theme;

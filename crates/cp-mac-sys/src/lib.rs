@@ -14,6 +14,7 @@ pub mod ocr;
 pub mod pasteboard;
 pub mod paths;
 pub mod permissions;
+pub mod pointer;
 pub mod processes;
 pub mod runloop;
 pub mod theme;

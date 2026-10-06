@@ -32,7 +32,10 @@ fn the_cask_moves_the_bundle_out_of_the_caskroom_and_the_receipt_still_tells() {
         Route::Download,
         "no receipt, no brew"
     );
-    assert!(!self_installs(Route::Brew));
+    assert!(
+        self_installs(Route::Brew),
+        "the cask says auto_updates, so a brewed copy replaces itself like Tisty does"
+    );
 }
 
 #[test]
@@ -112,7 +115,7 @@ fn a_copy_from_the_beta_cask_is_told_its_own_command() {
     if cfg!(target_os = "macos") {
         assert_eq!(chosen(Some(at), beta), Route::BrewBeta);
     }
-    assert!(!self_installs(Route::BrewBeta));
+    assert!(self_installs(Route::BrewBeta));
 }
 
 #[test]
