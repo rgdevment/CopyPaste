@@ -106,7 +106,7 @@ fn centre_of(bench: &Bench, index: usize) -> LogicalPosition {
     } else {
         0.0
     };
-    let list_top = 620.0 - panel.get_viewport_height();
+    let list_top = panel.global::<Theme>().get_margin() + panel.get_list_top();
     let y = list_top + panel.get_scroll_y() + top + head + (span - head - GAP) / 2.0;
     LogicalPosition::new(200.0, y)
 }
