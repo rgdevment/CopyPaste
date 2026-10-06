@@ -157,6 +157,26 @@ fn newer_in(here: &str, read: &Manifest) -> Option<String> {
         .map(|best| best.to_string())
 }
 
+async fn looked(
+    app: &tauri::AppHandle,
+    feeds: Vec<tauri::Url>,
+    asked: String,
+    target: Option<&'static str>,
+) -> Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> {
+    use tauri_plugin_updater::UpdaterExt;
+    let mut builder = app.updater_builder();
+    if let Some(target) = target {
+        builder = builder.target(target);
+    }
+    builder
+        .endpoints(feeds)?
+        .version_comparator(move |_, release| release.version.to_string() == asked)
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?
+        .check()
+        .await
+}
+
 pub fn target_for(arch: &str, translated: bool) -> Option<&'static str> {
     (arch == "x86_64" && translated).then_some("darwin-aarch64")
 }
@@ -345,7 +365,6 @@ pub async fn update_install(
         return Err(NOTHING.to_owned());
     }
 
-    use tauri_plugin_updater::UpdaterExt;
     let asked = want.clone();
     let feeds = feeds_for(&want)
         .into_iter()
@@ -355,20 +374,14 @@ pub async fn update_install(
         crate::note::note(&format!("the update to {want} did not go through: {why}"));
         FAILED.to_owned()
     };
-    let mut builder = app.updater_builder();
-    if let Some(target) = target_for(std::env::consts::ARCH, translated()) {
-        builder = builder.target(target);
+    let native = target_for(std::env::consts::ARCH, translated());
+    let update = match looked(&app, feeds.clone(), asked.clone(), native).await {
+        Err(tauri_plugin_updater::Error::TargetNotFound(_)) if native.is_some() => {
+            looked(&app, feeds, asked, None).await
+        }
+        other => other,
     }
-    let update = builder
-        .endpoints(feeds)
-        .map_err(|why| failed(&why))?
-        .version_comparator(move |_, release| release.version.to_string() == asked)
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|why| failed(&why))?
-        .check()
-        .await
-        .map_err(|why| failed(&why))?;
+    .map_err(|why| failed(&why))?;
 
     let Some(mut update) = update else {
         let still = fetched()

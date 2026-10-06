@@ -183,7 +183,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 
 ### For Users
 
-- **Keep CopyPaste Updated** — Nothing updates automatically: Settings → About offers a new version and installs it when you press Update. The Microsoft Store and Homebrew copies update through their own channels
+- **Keep CopyPaste Updated** — Nothing updates automatically: Settings → About offers a new version and installs it when you press Update. The Microsoft Store copy updates through the Store; a Homebrew copy updates itself with the same button
 - **Review Clipboard History** — Periodically check what's being stored and delete sensitive items
 - **Configure Retention** — Set shorter retention periods if you handle highly sensitive data
 - **Use Password Managers** — Most mark what they copy as secret, and CopyPaste never reads content marked that way. Check yours once: copy a credential and make sure no entry appears

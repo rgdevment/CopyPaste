@@ -12,7 +12,7 @@ unsafe extern "C" {
     ) -> c_int;
 }
 
-pub fn is_translated(status: i32, value: i32) -> bool {
+fn is_translated(status: i32, value: i32) -> bool {
     status == 0 && value == 1
 }
 
