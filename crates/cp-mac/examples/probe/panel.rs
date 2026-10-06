@@ -85,4 +85,19 @@ fn the_panel_and_its_windows(b: &mut Battery) {
             Ok(())
         },
     );
+
+    b.case(
+        "S7",
+        "the panel stays put when the app loses focus and shows without an animation of its own",
+        || {
+            let floated = floated.ok_or("this needs the main thread and a window of its own")?;
+            if !floated.stays_when_left {
+                return Err("AppKit would hide the panel behind the app's back".into());
+            }
+            if !floated.appears_at_once {
+                return Err("AppKit would animate the panel in and out".into());
+            }
+            Ok(())
+        },
+    );
 }

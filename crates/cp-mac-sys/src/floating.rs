@@ -2,8 +2,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2::{ClassType, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSBackingStoreType, NSPanel, NSResponder, NSView, NSWindow, NSWindowCollectionBehavior,
-    NSWindowStyleMask,
+    NSBackingStoreType, NSPanel, NSResponder, NSView, NSWindow, NSWindowAnimationBehavior,
+    NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_foundation::{
     MainThreadMarker, NSKeyValueObservingOptions, NSObject, NSObjectNSKeyValueObserverRegistration,
@@ -52,6 +52,8 @@ pub struct Floated {
     pub never_activates: bool,
     pub joins_full_screen: bool,
     pub follows_the_space: bool,
+    pub stays_when_left: bool,
+    pub appears_at_once: bool,
     pub took_the_keys: bool,
     pub counts_as_ours: bool,
     pub back_as_it_was: bool,
@@ -89,6 +91,8 @@ fn floats(window: &NSWindow) -> bool {
             | NSWindowCollectionBehavior::MoveToActiveSpace
             | NSWindowCollectionBehavior::FullScreenAuxiliary,
     );
+    window.setHidesOnDeactivate(false);
+    window.setAnimationBehavior(NSWindowAnimationBehavior::None);
     true
 }
 
@@ -127,6 +131,7 @@ pub fn a_panel_would_float() -> Option<Floated> {
         )
     };
     unsafe { window.setReleasedWhenClosed(false) };
+    window.setHidesOnDeactivate(true);
     let looker: Retained<Looker> = unsafe { msg_send![Looker::alloc(mtm), init] };
     let looked = NSString::from_str("effectiveAppearance");
     unsafe {
@@ -148,6 +153,8 @@ pub fn a_panel_would_float() -> Option<Floated> {
             .contains(NSWindowStyleMask::NonactivatingPanel),
         joins_full_screen: behaviour.contains(NSWindowCollectionBehavior::FullScreenAuxiliary),
         follows_the_space: behaviour.contains(NSWindowCollectionBehavior::MoveToActiveSpace),
+        stays_when_left: !window.hidesOnDeactivate(),
+        appears_at_once: window.animationBehavior() == NSWindowAnimationBehavior::None,
         took_the_keys,
         counts_as_ours: crate::activation::is_ours_up_front() == Some(true),
         back_as_it_was: grounded(at) && !window.isKindOfClass(Floating::class()),

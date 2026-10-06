@@ -59,6 +59,10 @@ pub fn run() {
             let fresh = settings::settle();
             let kept = settings::settings().ok();
             let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));
+            #[cfg(target_os = "macos")]
+            if let Err(why) = tray::settle_menu(app.handle()) {
+                note::note(&format!("the menu kept its quit key: {why}"));
+            }
             if tray::raise(app.handle(), spanish).is_none() {
                 tray::surface(app.handle());
             }

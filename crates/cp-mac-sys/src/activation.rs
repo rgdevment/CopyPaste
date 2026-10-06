@@ -1,26 +1,10 @@
-use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
+use objc2_app_kit::NSApplication;
 use objc2_foundation::MainThreadMarker;
-
-pub fn as_accessory() -> bool {
-    let Some(mtm) = MainThreadMarker::new() else {
-        return false;
-    };
-    NSApplication::sharedApplication(mtm)
-        .setActivationPolicy(NSApplicationActivationPolicy::Accessory)
-}
 
 pub fn is_ours_up_front() -> Option<bool> {
     let mtm = MainThreadMarker::new()?;
     let app = NSApplication::sharedApplication(mtm);
     Some(app.isActive() || app.keyWindow().is_some())
-}
-
-pub fn is_accessory() -> Option<bool> {
-    let mtm = MainThreadMarker::new()?;
-    Some(
-        NSApplication::sharedApplication(mtm).activationPolicy()
-            == NSApplicationActivationPolicy::Accessory,
-    )
 }
 
 #[cfg(test)]

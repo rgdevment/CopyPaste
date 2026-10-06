@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 pub use platform::{
     Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
     drag_out, dress, forward, ground, in_front, media_of, ocr_available, open_link, open_path,
-    ours_up_front, paste_into, pointer, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
+    ours_up_front, paste_into, pointer, read_stuck, system_is_light, text_in, thumb_of_file,
+    thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -158,8 +158,6 @@ mod platform {
     pub fn ours_up_front() -> Option<bool> {
         Some(ahead_now() == 0)
     }
-
-    pub fn stay_out_of_the_dock() {}
 
     pub fn dress(handle: RawWindowHandle, wanted: &str, light: bool) {
         let RawWindowHandle::Win32(win32) = handle else {
@@ -340,10 +338,6 @@ mod platform {
 
     pub fn ours_up_front() -> Option<bool> {
         cp_mac_sys::activation::is_ours_up_front()
-    }
-
-    pub fn stay_out_of_the_dock() {
-        cp_mac_sys::activation::as_accessory();
     }
 
     pub fn dress(_handle: RawWindowHandle, _wanted: &str, _light: bool) {}

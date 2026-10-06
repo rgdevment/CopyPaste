@@ -69,7 +69,6 @@ struct Request {
 impl App {
     pub fn start(store: Store, options: Options) -> Result<(Panel, Self), slint::PlatformError> {
         let panel = Panel::new()?;
-        here::stay_out_of_the_dock();
         crate::say::adopt_what_was_kept();
         crate::view::dress_words(&panel);
         let theme = panel.global::<crate::Theme>();
