@@ -981,7 +981,7 @@ checksum = "7704b5fdd17b18ae31c4c1da5a2e0305a2bf17b5249300a9ee9ed7b72114c636"
 
 [[package]]
 name = "cp-config"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "serde",
  "serde_json",
@@ -992,7 +992,7 @@ dependencies = [
 
 [[package]]
 name = "cp-core"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "image",
  "proptest",
@@ -1004,7 +1004,7 @@ dependencies = [
 
 [[package]]
 name = "cp-gui"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "cp-config",
  "cp-core",
@@ -1030,7 +1030,7 @@ dependencies = [
 
 [[package]]
 name = "cp-mac"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "cp-core",
  "cp-mac-sys",
@@ -1041,7 +1041,7 @@ dependencies = [
 
 [[package]]
 name = "cp-mac-sys"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "cp-core",
  "objc2 0.6.4",
@@ -1056,7 +1056,7 @@ dependencies = [
 
 [[package]]
 name = "cp-panel"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "cp-config",
  "cp-core",
@@ -1079,7 +1079,7 @@ dependencies = [
 
 [[package]]
 name = "cp-store"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "blake3",
  "cp-core",
@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "cp-win"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "cp-core",
  "cp-store",
@@ -1104,7 +1104,7 @@ dependencies = [
 
 [[package]]
 name = "cp-win-sys"
-version = "3.0.0"
+version = "3.0.0-dev"
 dependencies = [
  "cp-core",
  "image",
