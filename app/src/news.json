@@ -34,12 +34,20 @@
     "version": "3.0.0",
     "es": [
       {
-        "title": "Copiar sin pegar",
-        "said": "lleva una tarjeta al portapapeles sin pegarla todavía."
+        "title": "Una vista más clara",
+        "said": "cada tarjeta muestra lo que guarda, y la lista se agrupa en Ahora, Hoy, Ayer y Antes."
       },
       {
-        "title": "Nombres para tus tarjetas",
-        "said": "presiona {name} y búscalas después por ese nombre."
+        "title": "Pegar como, a tu manera",
+        "said": "cada tipo tiene sus formas: texto plano, mayúsculas o minúsculas, JSON ordenado o minificado, un color en HEX, RGB o HSL, el texto de una imagen y más. Elige con un número del 1 al 9 o con un clic."
+      },
+      {
+        "title": "Copiar sin pegar y nombres",
+        "said": "lleva una tarjeta al portapapeles sin pegarla, o presiona {name} para nombrarla y encontrarla después."
+      },
+      {
+        "title": "Imágenes donde las necesitas",
+        "said": "en un terminal llega la ruta del archivo; en las búsquedas, la imagen se ve junto al texto encontrado."
       },
       {
         "title": "Enlaces con LinkUnbound",
@@ -48,12 +56,20 @@
     ],
     "en": [
       {
-        "title": "Copy without pasting",
-        "said": "put a card on the clipboard without pasting it yet."
+        "title": "A clearer view",
+        "said": "each card shows what it holds, and the list is grouped into Now, Today, Yesterday and Earlier."
       },
       {
-        "title": "Names for your cards",
-        "said": "press {name}, then find them later by that name."
+        "title": "Paste as, your way",
+        "said": "every kind has its own forms: plain text, upper or lower case, JSON pretty or minified, a colour in HEX, RGB or HSL, the text inside a picture and more. Pick one with a number from 1 to 9 or a click."
+      },
+      {
+        "title": "Copy without pasting, and names",
+        "said": "put a card on the clipboard without pasting it, or press {name} to name it and find it later."
+      },
+      {
+        "title": "Pictures where you need them",
+        "said": "a terminal gets the file path; in a search, the picture shows beside the words found."
       },
       {
         "title": "Links through LinkUnbound",
