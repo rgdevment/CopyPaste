@@ -29,7 +29,10 @@ function Newer() {
         ? t("updateNone")
         : t("updateLook");
 
-  const why = ready ? (ready.installs ? t("updateTake") : t("updateMove")) : t("updateWhen");
+  let why = t("updateWhen");
+  if (ready) {
+    why = ready.installs ? t("updateTake") : t("updateMove");
+  }
 
   return (
     <div className="newer">
