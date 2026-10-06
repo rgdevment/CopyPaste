@@ -22,6 +22,7 @@ mod placing;
 mod reaching;
 mod say;
 mod shape;
+mod showing;
 mod tags;
 mod token;
 mod view;

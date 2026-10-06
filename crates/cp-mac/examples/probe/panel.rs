@@ -73,4 +73,16 @@ fn the_panel_and_its_windows(b: &mut Battery) {
             Ok(())
         },
     );
+
+    b.case(
+        "S6",
+        "the pointer sits on a screen whose visible part holds it",
+        || {
+            let spot = cp_mac_sys::pointer::spot().ok_or("this needs the main thread and a screen")?;
+            if spot.right <= spot.left || spot.bottom <= spot.top {
+                return Err(format!("the visible part of the screen is empty: {spot:?}"));
+            }
+            Ok(())
+        },
+    );
 }

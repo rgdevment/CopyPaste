@@ -209,3 +209,16 @@ fn a_paste_that_fails_tells_the_panel_why_exactly_once() {
     );
     assert_eq!(asked.get(), 3, "once it is done nothing is asked again");
 }
+
+#[test]
+fn the_pointer_lands_on_a_work_area_that_holds_it() {
+    let Some(pointer) = pointer() else {
+        return;
+    };
+    let area = pointer.area;
+    assert!(
+        area.right > area.left && area.bottom > area.top,
+        "{pointer:?}"
+    );
+    assert!(pointer.scale >= 1.0, "{pointer:?}");
+}

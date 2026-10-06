@@ -3,8 +3,8 @@ use crate::landing::{Landing, Towards};
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
 use crate::opening::Reached;
-use crate::placing::{NEXT_FRAME, appear, place, vanish};
 use crate::reaching::reach_for;
+use crate::showing::{NEXT_FRAME, appear, place, vanish};
 use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
 use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
@@ -245,7 +245,7 @@ impl App {
         let ui = self.ui.clone();
         panel.on_nudge(move |dx, dy| {
             if let Some(ui) = ui.upgrade() {
-                crate::placing::nudge(&ui, dx, dy);
+                crate::showing::nudge(&ui, dx, dy);
             }
         });
     }
