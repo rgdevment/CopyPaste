@@ -55,6 +55,22 @@ describe("la bienvenida de una instalación nueva", () => {
     expect(theWindow.close).toHaveBeenCalled();
   });
 
+  it("una instalación nueva termina en lo esencial y se cierra con Listo", async () => {
+    asked.greeting = { kind: "tour", former: false };
+    render(<Welcome />);
+
+    await press("Comenzar");
+    const shown = await heardOn("panel-shown");
+    act(() => shown({ payload: null }));
+    await press("Siguiente");
+    await press("Siguiente");
+
+    expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
+    expect(screen.queryByText("Hay novedades en CopyPaste")).toBeNull();
+    await press("Listo");
+    expect(theWindow.close).toHaveBeenCalled();
+  });
+
   it("ofrece los atajos libres cuando el suyo está ocupado", async () => {
     asked.greeting = { kind: "tour", former: false };
     asked.bound = false;
