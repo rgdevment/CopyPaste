@@ -8,9 +8,16 @@ use std::path::{Path, PathBuf};
 pub use platform::{
     Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
     drag_out, dress, forward, ground, in_front, media_of, ocr_available, open_link, open_path,
-    ours_up_front, paste_into, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
+    ours_up_front, paste_into, pointer, read_stuck, stay_out_of_the_dock, system_is_light, text_in,
     thumb_of_file, thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Pointer {
+    pub at: (f64, f64),
+    pub area: crate::placing::Area,
+    pub physical: bool,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Landed {
@@ -195,6 +202,20 @@ mod platform {
     }
 
     pub fn ground(_handle: RawWindowHandle) {}
+
+    pub fn pointer() -> Option<super::Pointer> {
+        let spot = cp_win_sys::pointer::spot()?;
+        Some(super::Pointer {
+            at: (f64::from(spot.x), f64::from(spot.y)),
+            area: crate::placing::Area {
+                left: f64::from(spot.left),
+                top: f64::from(spot.top),
+                right: f64::from(spot.right),
+                bottom: f64::from(spot.bottom),
+            },
+            physical: true,
+        })
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -385,6 +406,20 @@ mod platform {
             cp_mac::paste::Outcome::Sent { .. } => Sent::Done,
             cp_mac::paste::Outcome::Degraded(why) => Sent::Degraded(why),
         }
+    }
+
+    pub fn pointer() -> Option<super::Pointer> {
+        let spot = cp_mac_sys::pointer::spot()?;
+        Some(super::Pointer {
+            at: (spot.x, spot.y),
+            area: crate::placing::Area {
+                left: spot.left,
+                top: spot.top,
+                right: spot.right,
+                bottom: spot.bottom,
+            },
+            physical: false,
+        })
     }
 
     pub fn ground(handle: RawWindowHandle) {

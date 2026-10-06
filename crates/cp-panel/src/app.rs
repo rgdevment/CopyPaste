@@ -3,6 +3,7 @@ use crate::landing::{Landing, Towards};
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
 use crate::opening::Reached;
+use crate::placing::{NEXT_FRAME, appear, place, vanish};
 use crate::reaching::reach_for;
 use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
 use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
@@ -18,8 +19,6 @@ use std::time::{Duration, Instant};
 
 const CHIP_STEP: f32 = 78.0;
 const KEPT_IN_VIEW: usize = 2;
-const OUT: Duration = Duration::from_millis(130);
-const NEXT_FRAME: Duration = Duration::from_millis(16);
 const SETTLES: Duration = Duration::from_millis(70);
 const RESTS: Duration = Duration::from_millis(110);
 const LOOKS: Duration = Duration::from_millis(250);
@@ -245,12 +244,9 @@ impl App {
         });
         let ui = self.ui.clone();
         panel.on_nudge(move |dx, dy| {
-            let Some(ui) = ui.upgrade() else {
-                return;
-            };
-            let window = ui.window();
-            let at = window.position().to_logical(window.scale_factor());
-            window.set_position(slint::LogicalPosition::new(at.x + dx, at.y + dy));
+            if let Some(ui) = ui.upgrade() {
+                crate::placing::nudge(&ui, dx, dy);
+            }
         });
     }
 
@@ -1116,38 +1112,6 @@ fn arm_sheet(state: &Rc<RefCell<State>>, ui: &Panel) {
         });
 }
 
-thread_local! {
-    static CURTAIN: slint::Timer = slint::Timer::default();
-}
-
-fn appear(ui: &Panel) {
-    crate::note::tell("shown");
-    ui.set_shown(0.0);
-    let weak = ui.as_weak();
-    CURTAIN.with(|timer| {
-        timer.stop();
-        timer.start(slint::TimerMode::SingleShot, NEXT_FRAME, move || {
-            if let Some(ui) = weak.upgrade() {
-                ui.set_shown(1.0);
-            }
-        });
-    });
-}
-
-fn vanish(ui: &Panel) {
-    ui.set_sheet_open(false);
-    ui.set_shown(0.0);
-    let weak = ui.as_weak();
-    CURTAIN.with(|timer| {
-        timer.stop();
-        timer.start(slint::TimerMode::SingleShot, OUT, move || {
-            if let Some(ui) = weak.upgrade() {
-                let _ = ui.hide();
-            }
-        });
-    });
-}
-
 fn busy() -> &'static str {
     if crate::here::read_stuck() {
         return crate::say::pick(
@@ -1440,6 +1404,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                     crate::say::adopt_what_was_kept();
                     let dressed = backdrop.clone();
                     let _ = ui.upgrade_in_event_loop(move |panel| {
+                        place(&panel);
                         if panel.show().is_err() {
                             return;
                         }

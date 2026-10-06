@@ -18,6 +18,7 @@ mod note;
 mod opening;
 mod paired;
 mod papers;
+mod placing;
 mod reaching;
 mod say;
 mod shape;
