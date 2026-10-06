@@ -68,8 +68,9 @@ What it does with an offer depends on where the copy came from, which it reads
 off its own path: a copy under `WindowsApps` is the Store's to update and is
 never offered anything; anything else, a Homebrew copy included, installs its
 own update with one click, as Tisty does. The casks say `auto_updates true`, so
-Homebrew expects that; its own `brew` command is shown only when the copy cannot
-replace itself, such as when it runs from the mounted `.dmg`.
+Homebrew expects that, and a Homebrew copy updates itself with the button. A copy
+that cannot replace itself, such as one running from the mounted `.dmg`, is told
+to move to Applications first.
 
 Four things guard the install, all of them borrowed from Tisty: the download
 address must be this repository's releases on `github.com` (or

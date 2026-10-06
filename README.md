@@ -360,7 +360,7 @@ walks you through it.
 
 ### macOS
 
-**Homebrew** (recommended) — picks the build for your chip, Apple Silicon or Intel, and tracks updates with `brew upgrade`:
+**Homebrew** (recommended) — picks the build for your chip, Apple Silicon or Intel; afterwards CopyPaste updates itself from Settings → About:
 
 ```sh
 brew tap rgdevment/tap && brew install --cask copypaste

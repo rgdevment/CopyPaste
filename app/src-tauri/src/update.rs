@@ -40,8 +40,6 @@ impl Drop for Alone<'_> {
 #[serde(rename_all = "camelCase")]
 pub enum Route {
     Store,
-    Brew,
-    BrewBeta,
     Download,
 }
 
@@ -69,7 +67,7 @@ struct Kept {
 }
 
 pub const fn self_installs(route: Route) -> bool {
-    matches!(route, Route::Brew | Route::BrewBeta | Route::Download)
+    matches!(route, Route::Download)
 }
 
 pub fn ours(url: &str) -> bool {
@@ -159,6 +157,41 @@ fn newer_in(here: &str, read: &Manifest) -> Option<String> {
         .map(|best| best.to_string())
 }
 
+async fn looked(
+    app: &tauri::AppHandle,
+    feeds: Vec<tauri::Url>,
+    asked: String,
+    target: Option<&'static str>,
+) -> Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> {
+    use tauri_plugin_updater::UpdaterExt;
+    let mut builder = app.updater_builder();
+    if let Some(target) = target {
+        builder = builder.target(target);
+    }
+    builder
+        .endpoints(feeds)?
+        .version_comparator(move |_, release| release.version.to_string() == asked)
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?
+        .check()
+        .await
+}
+
+pub fn target_for(arch: &str, translated: bool) -> Option<&'static str> {
+    (arch == "x86_64" && translated).then_some("darwin-aarch64")
+}
+
+fn translated() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        cp_mac_sys::translation::translated()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
 pub fn feeds_for(version: &str) -> Vec<&'static str> {
     if tracks_candidates(version) {
         vec![CANDIDATE, LATEST]
@@ -211,42 +244,14 @@ fn parted(at: &Path) -> impl Iterator<Item = &str> {
         .split(['/', '\\'])
 }
 
-const CASKROOMS: [&str; 2] = ["/opt/homebrew/Caskroom/", "/usr/local/Caskroom/"];
-const CASKS: [(&str, Route); 2] = [
-    ("copypaste-beta", Route::BrewBeta),
-    ("copypaste", Route::Brew),
-];
-const APPDIR: &str = "/Applications/";
-
-fn chosen(running: Option<&Path>, there: impl Fn(&Path) -> bool) -> Route {
-    let named = |what: &str| {
-        running.is_some_and(|at| parted(at).any(|part| part.eq_ignore_ascii_case(what)))
-    };
-    if named("WindowsApps") {
-        return Route::Store;
-    }
-    if named("Caskroom") {
-        return CASKS
-            .iter()
-            .find(|(cask, _)| named(cask))
-            .map_or(Route::Brew, |(_, route)| *route);
-    }
-    let where_brew_puts_it = running.is_some_and(|at| at.starts_with(APPDIR));
-    if cfg!(target_os = "macos") && where_brew_puts_it {
-        for (cask, route) in CASKS {
-            if CASKROOMS
-                .iter()
-                .any(|room| there(&Path::new(room).join(cask)))
-            {
-                return route;
-            }
-        }
-    }
-    Route::Download
+fn chosen(running: Option<&Path>) -> Route {
+    let store =
+        running.is_some_and(|at| parted(at).any(|part| part.eq_ignore_ascii_case("WindowsApps")));
+    if store { Route::Store } else { Route::Download }
 }
 
 pub fn route() -> Route {
-    chosen(std::env::current_exe().ok().as_deref(), |at| at.is_dir())
+    chosen(std::env::current_exe().ok().as_deref())
 }
 
 fn now() -> u64 {
@@ -360,7 +365,6 @@ pub async fn update_install(
         return Err(NOTHING.to_owned());
     }
 
-    use tauri_plugin_updater::UpdaterExt;
     let asked = want.clone();
     let feeds = feeds_for(&want)
         .into_iter()
@@ -370,17 +374,14 @@ pub async fn update_install(
         crate::note::note(&format!("the update to {want} did not go through: {why}"));
         FAILED.to_owned()
     };
-    let update = app
-        .updater_builder()
-        .endpoints(feeds)
-        .map_err(|why| failed(&why))?
-        .version_comparator(move |_, release| release.version.to_string() == asked)
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|why| failed(&why))?
-        .check()
-        .await
-        .map_err(|why| failed(&why))?;
+    let native = target_for(std::env::consts::ARCH, translated());
+    let update = match looked(&app, feeds.clone(), asked.clone(), native).await {
+        Err(tauri_plugin_updater::Error::TargetNotFound(_)) if native.is_some() => {
+            looked(&app, feeds, asked, None).await
+        }
+        other => other,
+    }
+    .map_err(|why| failed(&why))?;
 
     let Some(mut update) = update else {
         let still = fetched()

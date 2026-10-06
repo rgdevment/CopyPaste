@@ -3,68 +3,26 @@ use super::*;
 #[test]
 fn a_copy_the_store_keeps_is_updated_by_the_store() {
     assert_eq!(
-        chosen(
-            Some(Path::new(
-                r"C:\Program Files\WindowsApps\CopyPaste\cp-gui.exe"
-            )),
-            UNBREWED
-        ),
+        chosen(Some(Path::new(
+            r"C:\Program Files\WindowsApps\CopyPaste\cp-gui.exe"
+        ))),
         Route::Store
     );
     assert!(!self_installs(Route::Store));
 }
 
-const BREWED: fn(&Path) -> bool = |at| at == Path::new("/opt/homebrew/Caskroom/copypaste");
-const UNBREWED: fn(&Path) -> bool = |_| false;
-
 #[test]
-fn the_cask_moves_the_bundle_out_of_the_caskroom_and_the_receipt_still_tells() {
-    let at = Path::new("/Applications/CopyPaste.app/Contents/MacOS/CopyPaste");
-    if cfg!(target_os = "macos") {
-        assert_eq!(
-            chosen(Some(at), BREWED),
-            Route::Brew,
-            "the running path says Applications, the receipt says brew"
-        );
+fn any_copy_outside_the_store_replaces_itself_whatever_put_it_there() {
+    for at in [
+        "/Applications/CopyPaste.app/Contents/MacOS/CopyPaste",
+        "/opt/homebrew/Caskroom/copypaste/3.0.0/CopyPaste.app/Contents/MacOS/CopyPaste",
+        "/Users/quien/Downloads/CopyPaste.app/Contents/MacOS/CopyPaste",
+    ] {
+        let route = chosen(Some(Path::new(at)));
+        assert_eq!(route, Route::Download, "{at}");
+        assert!(self_installs(route), "{at}");
     }
-    assert_eq!(
-        chosen(Some(at), UNBREWED),
-        Route::Download,
-        "no receipt, no brew"
-    );
-    assert!(
-        self_installs(Route::Brew),
-        "the cask says auto_updates, so a brewed copy replaces itself like Tisty does"
-    );
-}
-
-#[test]
-fn a_copy_running_from_the_caskroom_itself_is_brew_too() {
-    assert_eq!(
-        chosen(
-            Some(Path::new(
-                "/opt/homebrew/Caskroom/copypaste/3.0.0/CopyPaste.app/Contents/MacOS/CopyPaste"
-            )),
-            UNBREWED
-        ),
-        Route::Brew
-    );
-}
-
-#[test]
-fn a_copy_somewhere_else_is_not_brew_however_many_casks_are_installed() {
-    assert_eq!(
-        chosen(
-            Some(Path::new(
-                "/Users/quien/Downloads/CopyPaste.app/Contents/MacOS/CopyPaste"
-            )),
-            BREWED
-        ),
-        Route::Download,
-        "another copy being brewed says nothing about the one running"
-    );
-    assert_eq!(chosen(None, BREWED), Route::Download);
-    assert!(self_installs(Route::Download));
+    assert_eq!(chosen(None), Route::Download);
 }
 
 #[test]
@@ -100,22 +58,11 @@ fn a_download_that_does_not_come_from_our_releases_is_refused() {
 }
 
 #[test]
-fn a_copy_from_the_beta_cask_is_told_its_own_command() {
-    assert_eq!(
-        chosen(
-            Some(Path::new(
-                "/opt/homebrew/Caskroom/copypaste-beta/3.0.0-rc2/CopyPaste.app/Contents/MacOS/CopyPaste"
-            )),
-            UNBREWED
-        ),
-        Route::BrewBeta
-    );
-    let beta: fn(&Path) -> bool = |at| at == Path::new("/usr/local/Caskroom/copypaste-beta");
-    let at = Path::new("/Applications/CopyPaste.app/Contents/MacOS/CopyPaste");
-    if cfg!(target_os = "macos") {
-        assert_eq!(chosen(Some(at), beta), Route::BrewBeta);
-    }
-    assert!(self_installs(Route::BrewBeta));
+fn only_an_intel_build_running_translated_asks_for_the_native_one() {
+    assert_eq!(target_for("x86_64", true), Some("darwin-aarch64"));
+    assert_eq!(target_for("x86_64", false), None);
+    assert_eq!(target_for("aarch64", false), None);
+    assert_eq!(target_for("aarch64", true), None);
 }
 
 #[test]
