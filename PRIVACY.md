@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** August 4, 2026
+**Last updated:** October 6, 2026
 
 ---
 
@@ -34,8 +34,24 @@ CopyPaste monitors your system clipboard to maintain a local history. The follow
 
 ### Clipboard Content
 
-| Type | What's Stored | Where |
-| :These folders are protected by your operating system's user account permissions. Other users on the same computer cannot access them under normal conditions.
+| What | What's Stored | Where |
+| :--- | :--- | :--- |
+| Content | The text you copied, its kind, and the formats it came with (small ones inline, larger ones as files) | `history.db`, `blobs/` |
+| Images and other large data | The bytes of what you copied, stored once per distinct content | `blobs/` |
+| Files and folders | Their paths; the files themselves stay where they are | `history.db` |
+| Name and colour | What you named a card and the colour you gave it | `history.db` |
+| Source app | The application the copy came from | `history.db` |
+| Usage | When you copied it, when you last used it, how many times you pasted it, and whether it is pinned | `history.db` |
+| Details | Dimensions, duration, size and similar facts read from what you copied | `history.db` |
+| Text in pictures | The text the system read out of an image, so it can be searched | `history.db` |
+| Thumbnails | Previews of images, video and audio | `thumbs/` |
+| Settings | Your preferences | `config.toml` |
+| Logs | Application events and errors, never what you copied | `logs/` |
+
+Everything lives in one folder: `%LOCALAPPDATA%\CopyPaste\` on Windows and
+`~/Library/Application Support/CopyPaste/` on macOS.
+
+These folders are protected by your operating system's user account permissions. Other users on the same computer cannot access them under normal conditions.
 
 ---
 
@@ -48,7 +64,7 @@ To be absolutely clear:
 - ❌ **Does not create user accounts or profiles**
 - ❌ **Does not share data with third parties**
 - ❌ **Does not use advertising or ad networks**
-- ❌ **Does not use AI or machine learning** on your data
+- ❌ **Does not send your data to any cloud AI** — The text in your pictures is read on your machine, by the operating system itself (Windows OCR on Windows, Apple Vision on macOS)
 - ❌ **Does not sync across devices**
 - ❌ **Does not upload crash reports** — A crash is written to the local log beside the history, and sharing it is a file you attach yourself
 - ❌ **Does not phone home** — No background network calls except the update checker described below (all platforms)
@@ -64,28 +80,37 @@ CopyPaste makes **one type of network request** for update checking:
 | Detail | Value |
 | :--- | :--- |
 | **Purpose** | Check whether a newer version of CopyPaste is available |
-| **URL** | `https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json` |
+| **URL** | `https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/release-manifest.json` |
 | **Method** | `GET` (read-only) |
 | **Data sent** | Standard HTTP headers only — **no user data** |
-| **Data received** | A small JSON file naming the latest version and, per platform, where its installer lives and the signature for it |
-| **Frequency** | At most once a day, when you open the Settings window, plus whenever you press «Check now» |
+| **Data received** | A small JSON file naming the latest version (and the latest test version) |
+| **Frequency** | At most once a day, when you open Settings → About, plus whenever you press «Check now» |
 | **Cached locally** | Yes — the last answer is kept in `update.json`, next to your settings, so the app does not ask again within the day |
 
 **Important notes:**
 
 - This request is **read-only** — it downloads one small public file; no data is ever uploaded
 - **No clipboard content, no usage data, no personal information** is ever sent
-- There is **no background polling**: nothing is asked while you are not looking at the Settings window
+- There is **no background polling**: nothing is asked while you are not looking at Settings → About
+- Only when you press «Update» does the app also read `latest.json` (or `candidate.json` for test versions) from the same branch, which says where the installer lives and carries its signature
 - The installer is **cryptographically signed**, and the signature is verified against a public key built into the app before anything is installed. The download address is also checked against our own release hosts before a single byte is fetched
 - **Microsoft Store version:** nothing is checked and nothing is offered. The Store delivers its own updates
-- **Homebrew:** you are told the `brew upgrade` command. Nothing is downloaded or installed behind Homebrew's back
+- **Homebrew** (`copypaste`, or `copypaste-beta` for test versions): you are told the `brew upgrade` command for your cask. Nothing is downloaded or installed behind Homebrew's back
 - **Standalone builds (Windows / macOS):** if you press «Update», and only then, the installer is downloaded and run, and CopyPaste restarts itself. Nothing is downloaded or installed without you asking for it
 
 ### User-Initiated Browser Navigation
 
-When you explicitly click certain UI buttons, CopyPaste opens URLs in your default browser:
+When you explicitly click one of the links in **Settings → About**, CopyPaste opens it in your default browser:
 
-- **"Report issue"** button → Opens `https://github.com/rgdevment/CopyPaste/issues`
+- **Repository** and **Give it a star** → `https://github.com/rgdevment/CopyPaste`
+- **AlternativeTo** → `https://alternativeto.net/software/copypaste/about/`
+- **Privacy** → `https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md`
+- **Sponsor the project** → `https://github.com/sponsors/rgdevment`
+- **Buy me a coffee** → `https://buymeacoffee.com/rgdevment`
+- **Rate it on the Store** (Windows only) → opens the Microsoft Store app on CopyPaste's review page
+- **Other tools** → `https://rgdevment.com/tisty/` and `https://rgdevment.com/linkunbound/`
+
+The same goes for a link you open from a card in the panel. If [LinkUnbound](https://github.com/rgdevment/LinkUnbound) is installed, these web links go through it so it can pick the browser; otherwise they go straight to your default browser.
 
 These are standard browser navigations initiated by your action — CopyPaste does not make these requests itself.
 
@@ -124,25 +149,39 @@ CopyPaste operates independently from Windows' built-in clipboard history (`Win+
 
 ---
 
+## Other Things Read on Your Machine
+
+A few features read something else on your computer. All of it stays local:
+
+- **Importing CopyPaste 2's history** (Settings → Backup, or the welcome tour) reads the 2.x database and pictures from disk, only when you ask. Nothing of the 2.x is changed or uploaded.
+- **Pasting a picture into a terminal** works by checking which application is in front when you paste, so the picture can arrive as its file path. That check is a local look at the foreground process; nothing about it is stored or sent.
+- **Opening a web link** goes through [LinkUnbound](https://github.com/rgdevment/LinkUnbound) if it is installed. CopyPaste only checks whether it is there.
+
+---
+
 ## Backup and Restore
 
 CopyPaste can export a backup and restore from one. Both are **manual actions you start yourself** — nothing is backed up automatically, and no backup ever leaves your machine on its own.
 
 ### What the Backup Contains
 
-A backup is a ZIP file, and it holds **everything**:
+A backup is a single `.cpbackup` file: a SQLite database copied from your history, with the images and other stored data inside it.
 
 | Content | Included |
 | :--- | :--- |
-| `history.db` — your entire clipboard history | Yes |
-| Stored images | Yes |
-| Settings and configuration | Yes |
+| Your entire clipboard history, pinned items included | Yes |
+| Stored images and other data | Yes |
+| Settings and configuration | No |
 
-This is deliberate — a backup that dropped your history would not be a backup. But it means the file is as sensitive as the history itself. You choose where it is written; treat it accordingly, and think twice before putting it in cloud storage or attaching it to a bug report.
+This is deliberate — a backup that dropped your history would not be a backup. But it means the file is as sensitive as the history itself. On macOS the file is made readable and writable by your user only. You choose where it is written; treat it accordingly, and think twice before putting it in cloud storage or attaching it to a bug report.
 
-### Restore Snapshots
+### Importing
 
-Before overwriting your data during a restore, CopyPaste copies the current database into a `.pre-restore-<timestamp>` folder inside the data directory, so a failed restore can be rolled back. It is deleted when the restore succeeds. If a restore is interrupted, the folder may remain — it contains a full copy of your history, and you can delete it safely at any time.
+Importing **adds** what the file holds to the history you already have. It never overwrites or deletes anything, and importing the same file twice does not duplicate anything.
+
+### Leftovers from CopyPaste 2
+
+CopyPaste 2 could leave `.pre-restore-<timestamp>` folders in its data directory after an interrupted restore. CopyPaste 3 never creates them. If you find one, it is a copy of your old history, and **Delete CopyPaste 2's data** in Settings → Backup removes it along with the rest of the 2.x data.
 
 ---
 
@@ -150,7 +189,8 @@ Before overwriting your data during a restore, CopyPaste copies the current data
 
 ### Automatic Cleanup
 
-- CopyPaste automatically deletes unpinned items older than your configured retention period (default: **30 days**)
+- CopyPaste automatically deletes unpinned items older than your configured retention period: 7, 30 or 90 days, or Forever (default: **30 days**)
+- If you set a history size (256 MB, 512 MB or 1 GB), the oldest unpinned items go first once it is exceeded
 - Cleanup runs periodically in the background
 - **Pinned items are preserved** regardless of the retention setting
 
@@ -194,7 +234,7 @@ CopyPaste does not knowingly collect any personal information from anyone, inclu
 CopyPaste is available through the [Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856). The Store version:
 
 - **Follows the same privacy principles** as the standalone version
-- **Makes one read-only network request** — downloads the same signed release manifest described above, every 24 hours, to check if a newer version exists. If found, a non-invasive indicator appears in the footer bar. No download link is shown and nothing is installed automatically — updates are delivered through the Microsoft Store
+- **Makes no update check at all** — updates are delivered through the Microsoft Store
 - **Uses MSIX packaging** — installs/uninstalls cleanly with Windows standard mechanisms
 - **Microsoft Store policies** apply to distribution, but CopyPaste itself does not share any data with Microsoft beyond what the Store platform requires for installation and updates
 

@@ -6,7 +6,7 @@
 
   <p>
     <a href="https://github.com/rgdevment/CopyPaste/releases">
-      <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?include_prereleases&style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
+      <img src="https://img.shields.io/github/v/release/rgdevment/CopyPaste?style=flat-square&label=Latest&color=0078D4" alt="Latest Release"/>
     </a>
     <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-0078D4?style=flat-square" alt="Platform: Windows, macOS"/>
     <a href="#license-and-spirit">
@@ -20,8 +20,8 @@
     </a>
   </p>
 
-  <p><strong>CopyPaste 3.0 is here as a release candidate</strong> — the whole application rewritten in Rust, for Windows and macOS.<br/>
-  Try it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>.</p>
+  <p><strong>CopyPaste 3.0 is here</strong> — rewritten in Rust, for Windows and macOS.<br/>
+  Get it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>.</p>
 
   <h4>Download CopyPaste</h4>
 
@@ -75,6 +75,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Getting Started](#getting-started)
 - [FAQ](#faq)
 - [Starting Over, and Taking It With You](#starting-over-and-taking-it-with-you)
+- [Coming from CopyPaste 2](#coming-from-copypaste-2)
 - [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
 - [What's Coming and What's Changed](#whats-coming-and-whats-changed)
 - [Localization](#localization-help-translate-copypaste)
@@ -162,7 +163,7 @@ If you copy and paste throughout your day, this **clipboard manager** is for you
 - **Local-only storage** — no cloud, no servers, no data syncing
 - **No tracking** — no telemetry, no analytics, no hidden collection of any kind
 - **No automatic reporting** — errors are logged locally; nothing is sent without your explicit action
-- **Sensitive content is ignored** — passwords and password-manager copies (1Password, Bitwarden, etc.) aren't saved
+- **Secrets marked as secret are never read** — what an app marks as secret or concealed when it copies, as most password managers (1Password, Bitwarden, etc.) do, never reaches the history
 - **Log export is voluntary** — you choose when and what to share; logs never contain clipboard content
 
 **By design, CopyPaste will never have:** accounts, subscriptions, ads, cloud sync, or "AI analysis" of your clipboard.
@@ -198,7 +199,7 @@ If you care about privacy and control, this clipboard manager is made for you. R
 ### Privacy and Security
 
 - **Private by Default:** All clipboard history stays on your computer. No cloud, no sync, no servers.
-- **Respects Sensitive Data:** Passwords and API keys aren't stored. Password managers (1Password, Bitwarden, etc.) are ignored — their clipboard content never gets saved.
+- **Respects Sensitive Data:** What an app marks as secret or concealed when it copies — most password managers (1Password, Bitwarden, etc.) do — is never read, so it never gets saved. A password or API key copied from anywhere else carries no such mark and is kept like any other copy; tokens get a kind of their own, so they are easy to find and delete.
 
 ### Design and Experience
 
@@ -215,7 +216,7 @@ If you care about privacy and control, this clipboard manager is made for you. R
 - **Copy Without Pasting:** Put a card back on the clipboard and paste it yourself, later, wherever you want.
 - **Open with Default App:** Files, images, links, emails and phone numbers open in whatever your system already uses. Links go through [LinkUnbound](https://github.com/rgdevment/LinkUnbound) when you have it installed, and to your browser when you do not.
 - **Drag to Other Apps:** Drag any image, file, folder, audio or video card straight into another app — a browser upload zone, a chat, an editor, a folder. An image keeps the name you gave its card, or a unique one, so an upload form never turns down a second one as a duplicate `image.png`.
-- **Images Land the Way the App Expects (Windows):** Paste an image into a browser and it arrives with its own name, the same as a drag; paste it into a terminal and it arrives as the path to the image.
+- **Images Land the Way the App Expects:** Paste a picture into a terminal and it arrives as the path to its file, on Windows and on macOS; editors with a terminal of their own (VS Code and the like) keep receiving the image. On Windows, an image pasted into a browser arrives with its own name, the same as a drag.
 
 ### Workflow and Productivity
 
@@ -231,8 +232,8 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 ### Storage Control
 
-- **Keep for as Long as You Want:** Anything older than the window you choose goes on its own. Pinned items never do.
-- **Image Quota (MB):** Cap how much disk space copied images can use. When the cap is reached the oldest unpinned ones are evicted. Set to `0` (default) for unlimited.
+- **Keep for as Long as You Want:** 7, 30 (default) or 90 days, or Forever. Anything older than the window you choose goes on its own. Pinned items never do.
+- **History Size:** No limit (default), 256 MB, 512 MB or 1 GB, in Settings → History. When the history outgrows it, the oldest unpinned item goes first, whatever its kind.
 - **Native Thumbnails:** Previews for images, video and audio are generated by the system itself, not by a bundled decoder.
 
 ---
@@ -244,29 +245,31 @@ global shortcut of its own to open the history panel. On a Mac the panel answers
 the keys of the system it runs on: ⌘ where Windows uses Ctrl, and the keys a Mac
 keyboard does not have are replaced by the ones it does.
 
-| Scope | Windows | macOS | Action |
+| Where | Windows | macOS | Action |
 | :---- | :------ | :---- | :----- |
-| Active application | Ctrl+V | ⌘V | Paste the current system clipboard normally. CopyPaste does not intercept it. |
-| CopyPaste global | Ctrl+Alt+V | ⌥⌘V | Open the panel where you were typing. Customizable in Settings → Keyboard shortcuts. |
-| Panel open | Enter | ⏎ | Paste what is selected. |
-| Panel open | Shift + Enter | ⇧⏎ | Paste as plain text. |
-| Panel open | Alt + Enter  ·  Ctrl + Enter | ⌥⏎  ·  ⌘⏎ | Paste as… |
-| Panel open | Arrows | Arrows | Move through the list. |
-| Panel open | Click | Click | Open the card; another click closes it. |
-| Panel open | Double click | Double click | Paste that card. |
-| Panel open | Tab  ·  Shift + Tab | ⇥  ·  ⇧⇥ | Step through the filters. |
-| Panel open | Many | Many | The layers button: clicks add kinds instead of swapping them. |
-| Panel open | #image  ·  #folder | #image  ·  #folder | Filter by kind from the search box. |
-| Panel open | Backspace | ⌫ | Drop the last tag. |
-| Panel open | Delete | ⌘⌫ | Delete the selected one. |
-| Panel open | Ctrl + P | ⌘P | Pin or unpin. |
-| Panel open | F2  ·  Ctrl + E | ⌘E | Give the selected one a name. |
-| Panel open | Ctrl + O | ⌘O | Open the selected one outside. |
-| Panel open | Right arrow | → | Open or close the card. |
-| Panel open | Ctrl + 1  ·  Ctrl + 2 | ⌘1  ·  ⌘2 | Everything  ·  only what is pinned. |
-| Panel open | Alt + G  ·  Alt + T | ⌘G  ·  ⌘T | Choose the kind. |
-| Panel open | F1 | ⌘, | Open Settings. |
-| Panel open | Esc | Esc | Close the panel. |
+| App you're in | Ctrl+V | ⌘V | Normal paste. CopyPaste does not intercept it. |
+| Anywhere | Ctrl+Alt+V | ⌥⌘V | Open the panel. Change it in Settings → Keyboard shortcuts; if another program already uses it, free alternatives are offered. |
+| Panel | Enter | ⏎ | Paste the selected item. |
+| Panel | Shift + Enter | ⇧⏎ | Paste as plain text. |
+| Panel | Alt + Enter  ·  Ctrl + Enter | ⌥⏎  ·  ⌘⏎ | Open or close "Paste as…". |
+| Paste as | ↑ ↓  ·  1–9  ·  Enter | ↑ ↓  ·  1–9  ·  ⏎ | Pick a form; a number pastes that form directly. |
+| Paste as | Esc  ·  Tab | Esc  ·  ⇥ | Close the sheet. |
+| Panel | ↑ ↓ | ↑ ↓ | Move through the list. |
+| Panel | Right arrow | → | Open or close the card. |
+| Panel | Click  ·  Double click | Click  ·  Double click | Open or close the card  ·  paste it. |
+| Open card | Click the ⏎ / ⇧⏎ / Alt ⏎ chips | Click the ⏎ / ⇧⏎ / ⌥⏎ chips | Paste  ·  plain text  ·  paste as. |
+| Panel | Tab  ·  Shift + Tab | ⇥  ·  ⇧⇥ | Cycle through the filters. |
+| Panel | Ctrl + click a kind | ⌘ + click a kind | Add kinds instead of switching. |
+| Panel | #image  ·  #folder | #image  ·  #folder | Filter by kind from the search box. |
+| Panel (empty search) | Backspace | ⌫ | Remove the last tag. |
+| Panel (empty search) | Delete | ⌘⌫ | Delete the selected item. |
+| Panel | Ctrl + P | ⌘P | Pin or unpin. |
+| Panel | F2  ·  Ctrl + E | F2  ·  ⌘E | Give it a name. |
+| Panel | Ctrl + O | ⌘O | Open it outside. |
+| Panel | Ctrl + 1  ·  Ctrl + 2 | ⌘1  ·  ⌘2 | Everything  ·  pinned only. |
+| Panel | Alt + G  ·  Alt + T | ⌘G  ·  ⌘T | Open "Filter by kind" and pick one. |
+| Panel | F1 | ⌘, (also F1) | Open Settings. |
+| Panel | Esc | Esc | Close the panel. |
 
 The search box always has the focus, so you type to search the moment the panel
 opens. A word starting with `#` filters by kind (`#image`, `#link`, `#imagen`)
@@ -285,8 +288,40 @@ of searching for it, and the strip above the list does the same with a click —
 hold the modifier and the clicks add kinds rather than swapping them.
 
 **Each kind is shown the way that kind deserves.** Images as a grid or as rows,
-a video by its cover, audio as a waveform, a JSON by its keys or raw, links and
-folders grouped or by age. The panel remembers which way you chose for each.
+video by its cover or compact, audio as a waveform or compact, a JSON by its
+keys or raw, and files, links and folders by group or newest first. The panel
+remembers which way you chose for each.
+
+**A card opens where it is.** Click it and it unfolds in place with a preview
+of what it holds; click again and it folds back. The list is grouped into Now,
+Today, Yesterday and Earlier, each card with the time you copied it. A colour
+sits on one row with its swatch and its `rgb()`, and a picture found by a search
+shows its thumbnail right in the results.
+
+**The actions are on the card.** Hover over one, or select it, and it offers to
+open it, name it, copy it without pasting, paste it as something else (the
+highlighted one), pin it and delete it. An open card adds clickable key chips:
+⏎ to paste, ⇧⏎ for plain text, Alt ⏎ (⌥⏎ on a Mac) for "Paste as…". When the
+file behind a card is gone, the card says **Not found** and only offers to
+name, pin or delete it.
+
+**"Paste as…" knows the kind.** Each card offers the forms it can take, without
+touching what is stored:
+
+| Kind | Forms |
+| :--- | :---- |
+| Formatted text | Plain text, Markdown |
+| JSON | Formatted, minified, keys only, as a table |
+| Colour | Hex, `rgb()`, `hsl()`, by its name |
+| Link | Markdown, domain only, with its title |
+| Code | Without line breaks, Markdown block, without indentation |
+| Token | As a header, its contents (claims), as curl |
+| Image | JPEG, the text read inside it |
+| File or folder | Its path, its name |
+| Text | As a quote, ALL CAPS, all lowercase |
+
+A form appears only when it makes sense for that card: a colour with no common
+name offers no name, and an image with no text in it offers no text.
 
 **A card takes a name, and keeps it.** Give one a name and it is searchable by
 that name afterwards, which is how a snippet you reach for every day stops being
@@ -301,7 +336,7 @@ emptying the history.
 
 | OS          | Recommended                       | Alternatives                                       |
 | :---------- | :-------------------------------- | :------------------------------------------------- |
-| **Windows** | Microsoft Store                   | winget · standalone `.exe`                         |
+| **Windows** | Microsoft Store                   | Standalone `.exe` · winget (coming soon)           |
 | **macOS**   | Homebrew                          | Standalone `.dmg`                                  |
 
 After installing, open the panel with **Ctrl+Alt+V** on Windows or **⌥⌘V** on a
@@ -314,11 +349,7 @@ walks you through it.
 
 > [Install from the Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856)
 
-**winget** — for command-line installs, tracked with `winget upgrade`:
-
-```sh
-winget install rgdevment.CopyPaste
-```
+**winget** — coming soon. CopyPaste is not in the winget catalogue yet.
 
 > The [Scoop bucket](https://github.com/rgdevment/scoop-bucket) carries CopyPaste
 > 2 and is not fed by the 3.0 release.
@@ -335,6 +366,13 @@ winget install rgdevment.CopyPaste
 brew tap rgdevment/tap && brew install --cask copypaste
 ```
 
+Test versions, which arrive before anyone else's and can break, have a cask of
+their own:
+
+```sh
+brew tap rgdevment/tap && brew install --cask copypaste-beta
+```
+
 **Standalone `.dmg`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest), one per chip, with manual updates.
 
 ---
@@ -344,7 +382,7 @@ brew tap rgdevment/tap && brew install --cask copypaste
 | Platform    | Versions                                     | Architecture                      |
 | :---------- | :------------------------------------------- | :-------------------------------- |
 | **Windows** | Windows 10 (1809+), Windows 11               | x64                               |
-| **macOS**   | Ventura (13.0+)                              | Universal (Apple Silicon + Intel) |
+| **macOS**   | Ventura (13.3+)                              | Apple Silicon or Intel, one build each |
 
 ### Standalone Downloads
 
@@ -352,8 +390,12 @@ Direct packages live on [GitHub Releases](https://github.com/rgdevment/CopyPaste
 
 | Platform    | File                       | Notes                                                                       |
 | :---------- | :------------------------- | :-------------------------------------------------------------------------- |
-| **Windows** | `*_Setup.exe`              | Self-signed installer — see security note below                             |
-| **macOS**   | `*.dmg`                    | Universal binary (Apple Silicon + Intel)                                    |
+| **Windows** | `copypaste-installer-<version>-windows-x86_64.exe` | Self-signed installer — see security note below     |
+| **macOS**   | `copypaste-installer-<version>-macos-aarch64.dmg` · `copypaste-installer-<version>-macos-x86_64.dmg` | One per chip: Apple Silicon (`aarch64`) or Intel (`x86_64`) |
+
+Each release also carries a `SHA256SUMS` file with the checksum of every
+download, and a build attestation from GitHub that ties each file to the
+workflow run in this repository that built it.
 
 <details>
 <summary><strong>Windows standalone: security warnings</strong></summary>
@@ -377,10 +419,10 @@ Yes. Completely free and open source. No premium tiers, no subscriptions, no pay
 No. Everything stays on your machine. There is no cloud, no server, no sync. CopyPaste is a local-first clipboard manager by design — your copy paste data never leaves your computer.
 
 **Does it store passwords?**
-No. Passwords and clipboard content from password managers are automatically ignored.
+Not what an app marks as secret. Most password managers mark what they copy as secret or concealed, and CopyPaste never reads it. A password copied from an ordinary place, such as a text file, carries no mark and is kept like any other text. The [Privacy Policy](PRIVACY.md#sensitive-data-protection) explains the limits.
 
 **Do I need internet to use it?**
-No. CopyPaste works fully offline. The standalone version makes a lightweight check for updates (no user data sent), but works perfectly without a connection.
+No. CopyPaste works fully offline. Outside the Microsoft Store it makes a lightweight check for updates when you open Settings → About, at most once a day (no user data sent), but works perfectly without a connection.
 
 **Does it sync clipboard history between devices?**
 No. There's intentionally no cloud sync. Your copy history stays on the device where you copied it. This is a local-first copy tool, not a cloud service.
@@ -389,7 +431,7 @@ No. There's intentionally no cloud sync. Your copy history stays on the device w
 Windows: `%LOCALAPPDATA%\CopyPaste\` — macOS: `~/Library/Application Support/CopyPaste/`. Each folder contains the database, images, config, and logs.
 
 **What platforms does this copy-paste tool support?**
-Windows 10/11 and macOS (Ventura+).
+Windows 10/11 and macOS (Ventura 13.3+).
 
 **Does it start with my session?**
 Optionally, yes, on both systems. Enable it in Settings → General. On Windows it registers through the standard startup mechanism, and on macOS through a login item of its own. No administrator rights are required.
@@ -466,6 +508,25 @@ included.
 
 ---
 
+## Coming from CopyPaste 2
+
+Nothing of CopyPaste 2 moves unless you ask.
+
+- **Bring your history over.** **Settings → Backup → Bring the history over**
+  reads the CopyPaste 2 history on this computer — on Windows also the one the
+  Microsoft Store version keeps inside its package — and says what will not
+  cross before it starts. The welcome tour offers the same the first time you
+  open 3.0.
+- **CopyPaste 2 is only read.** Its files stay where they are. When you no
+  longer want them, **Delete CopyPaste 2's data**, in the same place and behind
+  a confirmation, removes them. The files you copied are never touched.
+- **The Windows installer notices CopyPaste 2** and offers to close and remove
+  it, so the two do not fight over the same shortcut. Your history is left
+  untouched either way. A Microsoft Store copy that keeps its history inside
+  its package is only closed, never removed.
+
+---
+
 ## What's Coming and What's Changed
 
 I keep a clear record of what's been added, fixed, and planned:
@@ -488,7 +549,7 @@ CopyPaste should speak your language. Currently it supports English and Spanish,
 ### How It Works
 
 - **Automatic Detection:** The app detects your system language and applies the appropriate translation.
-- **Regional Fallback:** If your exact region isn't available (e.g., es-MX), it falls back to the base language (e.g., es-CL).
+- **Fallback:** Any system language that starts with `en` gets English; every other language, and every other region (e.g., es-MX), gets Spanish.
 - **Manual Override:** You can force a specific language in the Settings panel.
 
 ### Help Add a New Language
@@ -502,11 +563,14 @@ twin. There is no translation file format to learn: the pairs live in the code.
 | :------------------------------- | :------------------------------------------------------ |
 | `app/src/locales.ts`             | The settings window. One `ES` object and one `EN` object. |
 | `crates/cp-panel/src/view.rs`    | The panel: kinds, paste-as forms, empty states, counts.  |
-| `crates/cp-panel/src/age.rs`     | How old a copy reads on its card.                        |
-| `app/src-tauri/src/tray.rs`      | The three entries in the tray menu.                      |
+| `crates/cp-panel/src/age.rs`     | How old a copy reads on its card, and the day groups.    |
+| `crates/cp-panel/src/ways.rs`, `excuse.rs`, `folder.rs`, `shape.rs`, `token.rs`, `app.rs` | The rest of the panel's words: the views, why a paste did not go through, sheet titles and smaller pieces. |
+| `app/src-tauri/src/tray.rs`      | The four entries in the tray menu.                       |
+| `app/src-tauri/installer.nsi`    | The Windows installer's own messages.                    |
 
 In Rust the pairs are written `("español", "english")` and picked by
-`say::pick`. In TypeScript they are two objects with the same keys.
+`say::pick`. In TypeScript they are two objects with the same keys. The
+installer template picks its messages with `$LANGUAGE`.
 
 #### Steps to add a language
 
@@ -555,7 +619,7 @@ If you're curious about what's under the hood of this open source clipboard mana
 | **Win32 / AppKit, direct**        | `cp-win-sys` and `cp-mac-sys` call the system themselves: clipboard, keystrokes, thumbnails, OCR.       |
 | **Windows OCR / Apple Vision**    | Text inside an image is read on the machine, by the system, and becomes searchable.                     |
 | **blake3 + xxHash**               | What identifies a copy and what recognises it again, so the same thing twice is one row that rises.     |
-| **Auto-update (Standalone)**      | Ed25519-signed feed published to the `manifest` branch. The app does not read it yet — see RELEASING.md. |
+| **Updates (outside the Store)**   | The app reads `release-manifest.json` on the `manifest` branch, then downloads from `latest.json` or `candidate.json`, with minisign signatures bound to their version — see RELEASING.md. |
 
 ---
 

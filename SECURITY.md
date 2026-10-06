@@ -15,7 +15,7 @@ I'm not protecting a brand or business. I'm protecting _you_ and everyone using 
 ### Privacy by Design
 
 - **100% Local Storage** — Your clipboard history never leaves your machine. No cloud sync, no telemetry, no remote servers.
-- **Sensitive Data Exclusion** — Password manager content (1Password, Bitwarden, etc.) is automatically excluded from history.
+- **Sensitive Data Exclusion** — Content the source app marks as secret or concealed is never read, so it never reaches the history. Most password managers (1Password, Bitwarden, etc.) mark what they copy; content without that mark is stored like any other copy.
 - **No Tracking** — I don't collect anything. No analytics, no usage data, nothing.
 
 ### Security Features
@@ -23,7 +23,7 @@ I'm not protecting a brand or business. I'm protecting _you_ and everyone using 
 - **Local SQLite Database** — Your clipboard history is stored in a local database on your machine, not in the cloud.
 - **Configurable Retention** — Automatically delete old clipboard items based on your retention settings.
 - **Open Source** — Every line of code is public. You can inspect, audit, and verify what we're doing.
-- **Signed Updates** — Every installer the updater offers is signed with minisign, and the public key is compiled into the application. The signature is checked before anything is installed, so a compromised mirror cannot hand you a different binary: an update that does not verify is refused rather than installed.
+- **Signed Updates** — Every installer the updater offers is signed with minisign, and the public key is compiled into the application. The signature is checked before anything is installed, so a compromised mirror cannot hand you a different binary: an update that does not verify is refused rather than installed. Each signature is bound to its exact version, so an older release cannot be served under a newer number, and the download address is checked against this repository's releases before a single byte is downloaded.
 - **Nothing That Locks You Out** — CopyPaste never blocks a version you already have. An update is an offer; your history is yours and stays reachable whether you take it or not.
 
 ### Development Practices
@@ -41,9 +41,9 @@ Security updates are provided for:
 
 | Version | Supported |
 | :--- | :--- |
-| Latest Release | ✅ Actively Supported |
+| 3.0.x (latest release) | ✅ Actively Supported |
 | Pre-releases (`-rc`, `-beta`) | ✅ Actively Supported |
-| Older Releases | ❌ Not Supported (please update) |
+| Older Releases, 2.x included | ❌ Not Supported (please update) |
 
 **We strongly recommend always using the latest version** from the [Releases Page](https://github.com/rgdevment/CopyPaste/releases/latest).
 
@@ -183,10 +183,10 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 
 ### For Users
 
-- **Keep CopyPaste Updated** — Enable automatic updates or check for new releases regularly
+- **Keep CopyPaste Updated** — Nothing updates automatically: Settings → About offers a new version and installs it when you press Update. The Microsoft Store and Homebrew copies update through their own channels
 - **Review Clipboard History** — Periodically check what's being stored and delete sensitive items
 - **Configure Retention** — Set shorter retention periods if you handle highly sensitive data
-- **Use Password Managers** — Their clipboard content is automatically excluded from history
+- **Use Password Managers** — Most mark what they copy as secret, and CopyPaste never reads content marked that way. Check yours once: copy a credential and make sure no entry appears
 
 ### For Developers
 
