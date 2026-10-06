@@ -9,7 +9,6 @@ const OUT: Duration = if cfg!(target_os = "macos") {
     Duration::from_millis(130)
 };
 pub const SLOW: Duration = Duration::from_millis(100);
-const FIRST_FRAME: f32 = if cfg!(target_os = "macos") { 0.0 } else { 0.85 };
 
 thread_local! {
     static CURTAIN: slint::Timer = slint::Timer::default();
@@ -51,7 +50,7 @@ pub fn nudge(panel: &Panel, dx: f32, dy: f32) {
 
 pub fn appear(ui: &Panel) {
     crate::note::tell("shown");
-    ui.set_shown(FIRST_FRAME);
+    ui.set_shown(0.0);
     let weak = ui.as_weak();
     CURTAIN.with(|timer| {
         timer.stop();
@@ -70,20 +69,15 @@ pub fn vanish(ui: &Panel) {
     CURTAIN.with(|timer| {
         timer.stop();
         if OUT.is_zero() {
-            rest(ui);
+            let _ = ui.hide();
             return;
         }
         timer.start(slint::TimerMode::SingleShot, OUT, move || {
             if let Some(ui) = weak.upgrade() {
-                rest(&ui);
+                let _ = ui.hide();
             }
         });
     });
-}
-
-fn rest(ui: &Panel) {
-    let _ = ui.hide();
-    ui.set_shown(FIRST_FRAME);
 }
 
 pub fn leave_when_left(panel: &Panel, hides: impl Fn() -> bool + 'static) {
