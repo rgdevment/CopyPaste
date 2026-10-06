@@ -573,6 +573,7 @@ jobs:
           want CFBundleExecutable cp-gui
           want CFBundleIdentifier com.rgdevment.copypaste
           want CFBundleShortVersionString "${{ needs.version.outputs.version }}"
+          want LSUIElement true
           chip=x86_64; [ "$ARCH" = aarch64 ] && chip=arm64
           for one in cp-panel cp-gui; do
             bin="$app/Contents/MacOS/$one"

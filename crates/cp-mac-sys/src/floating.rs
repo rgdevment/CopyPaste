@@ -131,6 +131,7 @@ pub fn a_panel_would_float() -> Option<Floated> {
         )
     };
     unsafe { window.setReleasedWhenClosed(false) };
+    window.setHidesOnDeactivate(true);
     let looker: Retained<Looker> = unsafe { msg_send![Looker::alloc(mtm), init] };
     let looked = NSString::from_str("effectiveAppearance");
     unsafe {
