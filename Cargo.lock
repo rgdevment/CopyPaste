@@ -1065,6 +1065,7 @@ dependencies = [
  "cp-store",
  "cp-win",
  "cp-win-sys",
+ "i-slint-backend-testing",
  "image",
  "raw-window-handle",
  "serde_json",
