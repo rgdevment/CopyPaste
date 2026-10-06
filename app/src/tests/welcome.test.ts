@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { landing } from "../App";
 import { asKeys, caps } from "../core";
 import news from "../news.json";
-import { steps, toldFor } from "../ui/Welcome";
+import { newestStable, steps, toldFor } from "../ui/Welcome";
 
 describe("la bienvenida", () => {
   it("lleva el historial de la 2.x antes de todo y el permiso antes del atajo", () => {
     expect(steps(true, true)).toEqual(["former", "hello", "trust", "keys", "where", "use"]);
     expect(steps(false, false)).toEqual(["hello", "keys", "where", "use"]);
+    expect(steps(true, false, true)).toEqual(["former", "hello", "keys", "where", "use", "news"]);
   });
 
   it("dibuja el atajo tecla a tecla, con símbolos y en el orden del Mac", () => {
@@ -72,5 +73,12 @@ describe("los ajustes abiertos desde la bienvenida", () => {
     expect(landing("#about")).toBe("about");
     expect(landing("#welcome")).toBe("general");
     expect(landing("")).toBe("general");
+  });
+
+  it("a quien viene de la 2.x le cuenta lo nuevo de la última versión estable", () => {
+    const newest = newestStable();
+    expect(newest).not.toBeNull();
+    expect(newest).not.toContain("-");
+    expect(news.some((one) => one.version === newest)).toBe(true);
   });
 });

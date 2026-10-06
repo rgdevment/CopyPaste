@@ -16,7 +16,7 @@ export type Greeting =
   | { kind: "keys" }
   | { kind: "nothing" };
 
-type Step = "former" | "hello" | "trust" | "keys" | "where" | "use";
+type Step = "former" | "hello" | "trust" | "keys" | "where" | "use" | "news";
 
 type Former = {
   items: number;
@@ -28,7 +28,7 @@ type Former = {
 
 type Told = { title: string; said: string };
 
-export function steps(former: boolean, asksTrust: boolean): Step[] {
+export function steps(former: boolean, asksTrust: boolean, tellsNews = false): Step[] {
   return [
     ...(former ? (["former"] as const) : []),
     "hello",
@@ -36,7 +36,18 @@ export function steps(former: boolean, asksTrust: boolean): Step[] {
     "keys",
     "where",
     "use",
+    ...(tellsNews ? (["news"] as const) : []),
   ];
+}
+
+export function newestStable(): string | null {
+  const stable = news.map((one) => one.version).filter((one) => !one.includes("-"));
+  const parts = (one: string) => one.split(".").map(Number);
+  stable.sort((a, b) => {
+    const [x, y] = [parts(a), parts(b)];
+    return y[0] - x[0] || y[1] - x[1] || y[2] - x[2];
+  });
+  return stable[0] ?? null;
 }
 
 export function toldFor(
@@ -138,7 +149,11 @@ function Tour({
 
   const worthBringing = !!old && !old.unreadable && old.items > 0 && (old.came ?? 0) === 0;
   const asksTrust = !!trustAtStart?.offered && !trustAtStart.pastes;
-  const all = useMemo(() => steps(worthBringing, asksTrust), [worthBringing, asksTrust]);
+  const newest = former ? newestStable() : null;
+  const all = useMemo(
+    () => steps(worthBringing, asksTrust, newest !== null),
+    [worthBringing, asksTrust, newest],
+  );
 
   if (!looked || !trustLooked) {
     return null;
@@ -172,6 +187,8 @@ function Tour({
       );
     case "trust":
       return <Permission dots={dots} next={next} />;
+    case "news":
+      return newest ? <News versions={[newest]} /> : null;
     case "keys":
       return <TryIt kept={kept} change={change} mac={mac} dots={dots} next={next} />;
     case "where":
@@ -214,7 +231,12 @@ function Tour({
               }}
             />
           }
-          right={<Strong says={t("welcomeDone")} onPress={leave} />}
+          right={
+            <Strong
+              says={at + 1 < all.length ? t("welcomeNext") : t("welcomeDone")}
+              onPress={next}
+            />
+          }
         >
           <Heading
             over={t("welcomeUseOver")}

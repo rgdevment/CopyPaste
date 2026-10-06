@@ -48,7 +48,10 @@ describe("la bienvenida de una instalación nueva", () => {
     await press("Siguiente");
 
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
-    await press("Listo");
+    await press("Siguiente");
+
+    expect(await screen.findByText("Hay novedades en CopyPaste")).toBeInTheDocument();
+    await press("Entendido");
     expect(theWindow.close).toHaveBeenCalled();
   });
 
