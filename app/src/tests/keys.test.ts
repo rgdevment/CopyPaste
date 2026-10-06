@@ -11,20 +11,20 @@ function press(code: string, held: Partial<Record<"ctrl" | "alt" | "shift" | "me
   };
 }
 
-describe("la combinación que el usuario presiona", () => {
-  it("se escribe como el sistema la espera", () => {
+describe("the combination the user presses", () => {
+  it("is written the way the system expects it", () => {
     expect(combination(press("KeyV", { ctrl: true, alt: true }))).toBe("Ctrl+Alt+V");
     expect(combination(press("F9", { ctrl: true, alt: true }))).toBe("Ctrl+Alt+F9");
     expect(combination(press("Digit1", { ctrl: true, shift: true }))).toBe("Ctrl+Shift+1");
     expect(combination(press("Space", { meta: true, alt: true }))).toBe("Alt+Cmd+Space");
   });
 
-  it("no acepta una tecla suelta, que secuestraría el teclado entero", () => {
+  it("refuses a lone key, which would hijack the whole keyboard", () => {
     expect(combination(press("KeyV", {}))).toBeNull();
     expect(combination(press("F9", {}))).toBeNull();
   });
 
-  it("no acepta modificadores sin una tecla de verdad", () => {
+  it("refuses modifiers without a real key", () => {
     expect(combination(press("ControlLeft", { ctrl: true }))).toBeNull();
     expect(combination(press("AltLeft", { ctrl: true, alt: true }))).toBeNull();
   });

@@ -4,19 +4,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { adopt } from "../locales";
 
-describe("la ventana", () => {
+describe("the window", () => {
   beforeEach(() => {
     adopt("es");
     document.documentElement.removeAttribute("data-theme");
   });
 
-  it("abre en General, que es donde está lo que se toca una vez", async () => {
+  it("opens on General, which is where the things touched once live", async () => {
     render(<App />);
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("General");
     expect(await screen.findByLabelText("Idioma")).toBeDefined();
   });
 
-  it("el atajo y lo que responde el panel viven en su propia sección", async () => {
+  it("the shortcut and what the panel answers live in their own section", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
@@ -25,7 +25,7 @@ describe("la ventana", () => {
     expect(screen.getByText("Doble clic")).toBeDefined();
   });
 
-  it("ofrece cuatro secciones y el acerca de, y nada más", () => {
+  it("offers four sections and About, and nothing else", () => {
     render(<App />);
     const rail = screen.getByRole("navigation", { name: "Secciones" });
     const says = buttonsIn(rail).map((one) => one.textContent);
@@ -38,7 +38,7 @@ describe("la ventana", () => {
     ]);
   });
 
-  it("cambia de sección al elegirla", async () => {
+  it("switches section when one is chosen", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Historial" }));
@@ -46,7 +46,7 @@ describe("la ventana", () => {
     expect(await screen.findByLabelText("Conservar")).toHaveValue("30");
   });
 
-  it("el tema elegido se escribe en la raíz, que es lo que lo pinta", async () => {
+  it("the chosen theme is written on the root, which is what paints it", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.selectOptions(await screen.findByLabelText("Tema"), "light");
@@ -55,7 +55,7 @@ describe("la ventana", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
-  it("lo que se cambia se manda a guardar, no se queda en la ventana", async () => {
+  it("what changes is sent to be saved, it does not stay in the window", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
@@ -65,7 +65,7 @@ describe("la ventana", () => {
     });
   });
 
-  it("la barra propia minimiza y cierra de verdad, no solo lo dibuja", async () => {
+  it("its own title bar really minimizes and closes, it does not just draw them", async () => {
     const who = userEvent.setup();
     const { theWindow } = await import("./setup");
     render(<App />);
@@ -75,7 +75,7 @@ describe("la ventana", () => {
     expect(theWindow.close).toHaveBeenCalled();
   });
 
-  it("elegir «Siempre» se guarda como cero, que es lo que el archivo entiende", async () => {
+  it("choosing «Forever» is saved as zero, which is what the file understands", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
@@ -87,7 +87,7 @@ describe("la ventana", () => {
     expect(screen.queryByText(/invalid type/)).toBeNull();
   });
 
-  it("el arranque con la sesión lo decide el sistema, no el archivo", async () => {
+  it("starting with the session is decided by the system, not by the file", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
@@ -101,7 +101,7 @@ describe("la ventana", () => {
     );
   });
 
-  it("avisa cuando el panel no está funcionando, en vez de callarlo", async () => {
+  it("warns when the panel is not working, instead of hiding it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
@@ -114,13 +114,13 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
-  it("no inventa problemas del panel cuando todo va bien", async () => {
+  it("does not invent panel problems when all is well", async () => {
     render(<App />);
     await screen.findByRole("button", { name: "General" });
     expect(screen.queryByText(/no se está guardando/)).toBeNull();
   });
 
-  it("dice que el atajo no responde cuando otro programa lo tiene tomado", async () => {
+  it("says the shortcut does not answer when another program has taken it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
@@ -134,7 +134,7 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
-  it("ofrece las combinaciones libres y adopta la que se pulsa", async () => {
+  it("offers the free combinations and adopts the one pressed", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
@@ -157,7 +157,7 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
-  it("calla sobre el atajo cuando el sistema sí lo cedió", async () => {
+  it("says nothing about the shortcut when the system did give it up", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
@@ -165,7 +165,7 @@ describe("la ventana", () => {
     expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
   });
 
-  it("un tope de imágenes que no está en la lista se muestra tal cual", async () => {
+  it("an image cap that is not in the list is shown as it is", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
@@ -187,7 +187,7 @@ describe("la ventana", () => {
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
-  it("exportar escribe el archivo que se elija y dice cuánto guardó", async () => {
+  it("exporting writes the chosen file and says how much it kept", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const { save } = await import("@tauri-apps/plugin-dialog");
     render(<App />);
@@ -201,7 +201,7 @@ describe("la ventana", () => {
     expect(await screen.findByText("Guardado: 3 elementos")).toBeDefined();
   });
 
-  it("importar trae lo que falta y no duplica lo que ya estaba", async () => {
+  it("importing brings what is missing and does not duplicate what was there", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
@@ -215,7 +215,7 @@ describe("la ventana", () => {
     ).toBeDefined();
   });
 
-  it("dice lo que se pierde antes de traer el historial de la 2", async () => {
+  it("says what is lost before bringing the 2.x history over", async () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
     expect(await screen.findByText("1200 elementos guardados en CopyPaste 2")).toBeDefined();
@@ -225,7 +225,7 @@ describe("la ventana", () => {
     expect(screen.getByText(/Nada de CopyPaste 2 se toca ni se borra/)).toBeDefined();
   });
 
-  it("avisa de lo que el tiempo que guardas se llevará apenas llegue", async () => {
+  it("warns about what the time you keep will take as soon as it arrives", async () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Copia de seguridad" }));
     expect(
@@ -235,7 +235,7 @@ describe("la ventana", () => {
     expect(screen.getByText(/El panel se detiene mientras cruza/)).toBeDefined();
   });
 
-  it("trae el historial y cuenta lo que llegó y lo que no", async () => {
+  it("brings the history over and tells what arrived and what did not", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const who = userEvent.setup();
     render(<App />);
@@ -249,7 +249,7 @@ describe("la ventana", () => {
     ).toBeDefined();
   });
 
-  it("una vez cruzada, la 2 deja de ofrecerse y dice cuándo fue", async () => {
+  it("once crossed, the 2.x stops being offered and says when it was", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(async (what: string, args?: unknown) => {
@@ -277,7 +277,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("borrar los datos de la 2 pide confirmación antes de tocar nada", async () => {
+  it("deleting the 2.x data asks for confirmation before touching anything", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -303,7 +303,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("cambiar el atajo guarda la combinación que se presiona", async () => {
+  it("changing the shortcut saves the combination pressed", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
     await userEvent.click(screen.getByRole("button", { name: "Atajos de teclado" }));
@@ -319,7 +319,7 @@ describe("la ventana", () => {
     expect(said?.config.shortcut).toBe("Ctrl+Alt+F9");
   });
 
-  it("vaciar el historial pide confirmación antes de hacerlo", async () => {
+  it("emptying the history asks for confirmation before doing it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Historial" }));
@@ -330,7 +330,7 @@ describe("la ventana", () => {
     expect(vi.mocked(invoke).mock.calls.some(([what]) => what === "empty")).toBe(true);
   });
 
-  it("no afirma que está actualizada mientras nadie lo ha comprobado", async () => {
+  it("does not claim to be up to date while nobody has checked", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -350,7 +350,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("una copia de la Store no afirma nada: la Store se encarga", async () => {
+  it("a Store copy claims nothing: the Store takes care of it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -371,7 +371,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("dice que estás al día solo después de haber mirado", async () => {
+  it("says you are up to date only after having looked", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));
@@ -379,7 +379,7 @@ describe("la ventana", () => {
     expect(document.querySelector(".pip.ok")).not.toBeNull();
   });
 
-  it("ofrece instalar la versión que encontró, y la instala", async () => {
+  it("offers to install the version it found, and installs it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -404,7 +404,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("si la versión ya no está, se dice y deja de ofrecerla", async () => {
+  it("if the version is gone, it says so and stops offering it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -432,7 +432,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("una comprobación que falla no deja el punto en verde", async () => {
+  it("a check that fails does not leave the dot green", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -450,7 +450,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("con brew no ofrece instalar: dice el comando", async () => {
+  it("with brew it does not offer to install: it says the command", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -473,14 +473,14 @@ describe("la ventana", () => {
     }
   });
 
-  it("la versión sale del propio programa, no de un texto escrito a mano", async () => {
+  it("the version comes from the program itself, not from text written by hand", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));
     expect(await screen.findByText("3.0.0")).toBeDefined();
   });
 
-  it("un enlace que no se puede abrir se dice, no se traga", async () => {
+  it("a link that cannot be opened is said, not swallowed", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
@@ -498,7 +498,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("los enlaces salen por la misma puerta, la que sabe de LinkUnbound", async () => {
+  it("links go out through the same door, the one that knows about LinkUnbound", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
@@ -510,7 +510,7 @@ describe("la ventana", () => {
     );
   });
 
-  it("sin LinkUnbound se le recomienda, y con él solo se dice que ya abre por ahí", async () => {
+  it("without LinkUnbound it is recommended, and with it it only says links already open through it", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
@@ -534,7 +534,7 @@ describe("la ventana", () => {
     }
   });
 
-  it("la copia de seguridad avisa de la 2 y de lo que se pierde al traerla", async () => {
+  it("the backup warns about the 2.x and what is lost by bringing it over", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Copia de seguridad" }));
@@ -542,7 +542,7 @@ describe("la ventana", () => {
     expect(screen.getByText(/El resto llega en plano/)).toBeDefined();
   });
 
-  it("elegir English cambia la ventana entera, no solo la fila del idioma", async () => {
+  it("choosing English changes the whole window, not just the language row", async () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
@@ -554,7 +554,7 @@ describe("la ventana", () => {
     expect(invoke).toHaveBeenCalledWith("relabel", { locale: "en" });
   });
 
-  it("el acerca de dice qué es y que no sale de aquí", async () => {
+  it("About says what it is and that nothing leaves this machine", async () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Acerca de" }));

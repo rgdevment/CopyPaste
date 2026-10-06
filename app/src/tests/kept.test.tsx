@@ -22,12 +22,12 @@ async function heardOn(name: string): Promise<Heard> {
   return call[1];
 }
 
-describe("los ajustes guardados desde otra ventana", () => {
+describe("settings saved from another window", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("se adoptan cuando esta ventana no tiene nada por guardar", async () => {
+  it("are adopted when this window has nothing left to save", async () => {
     const { result } = renderHook(() => useKept());
     await waitFor(() => expect(result.current.kept).not.toBeNull());
 
@@ -36,7 +36,7 @@ describe("los ajustes guardados desde otra ventana", () => {
     expect(result.current.kept?.["keeps-days"]).toBe(7);
   });
 
-  it("no pisan un cambio de esta ventana que todavía se está guardando", async () => {
+  it("do not overwrite a change of this window that is still being saved", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     let release: () => void = () => {};

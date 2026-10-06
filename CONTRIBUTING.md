@@ -121,7 +121,7 @@ We keep the code simple and consistent:
 `scripts/rules.sh` holds the conventions a person can break in a second: a
 comment where the code should speak for itself, `unsafe` outside the `-sys`
 crates, the core printing to a terminal or reaching for a platform, Spanish in
-an identifier, two crates naming an example the same, and a file grown past
+an identifier or in the name of a test of the window, two crates naming an example the same, and a file grown past
 what anybody reads through. `scripts/commits.sh` holds the commit convention
 below. Both answer
 the same whether you run them or CI does, and they say every rule that broke

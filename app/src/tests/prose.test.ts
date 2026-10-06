@@ -3,24 +3,24 @@ import { t } from "../locales";
 import { asProse } from "../ui/Bits";
 
 describe("asProse", () => {
-  it("cierra cada frase, que sueltas se leen pegadas", () => {
+  it("closes every sentence, since loose ones read glued together", () => {
     expect(asProse(["una cosa", "otra cosa"])).toBe("una cosa. otra cosa.");
   });
 
-  it("no dobla el punto de una frase que ya lo trae", () => {
+  it("does not double the full stop of a sentence that already has one", () => {
     expect(asProse(["ya termina.", "y esta no"])).toBe("ya termina. y esta no.");
   });
 
-  it("respeta los dos puntos y los signos de cierre", () => {
+  it("respects colons and closing marks", () => {
     expect(asProse(["mira esto:", "¿seguro?", "¡claro!"])).toBe("mira esto: ¿seguro? ¡claro!");
   });
 
-  it("descarta lo vacio en vez de dejar un punto suelto", () => {
+  it("drops what is empty instead of leaving a stray full stop", () => {
     expect(asProse(["", "   ", "solo esto"])).toBe("solo esto.");
     expect(asProse([])).toBe("");
   });
 
-  it("deja el resumen de CopyPaste 2 como un parrafo con puntos", () => {
+  it("leaves the CopyPaste 2 summary as one paragraph with full stops", () => {
     const said = asProse([
       t("formerKeeps"),
       t("formerLosesPlain"),

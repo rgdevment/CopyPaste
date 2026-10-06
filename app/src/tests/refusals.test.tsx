@@ -15,7 +15,7 @@ async function insteadOf(handle: (what: string, real?: Invoke) => Promise<unknow
   return () => vi.mocked(invoke).mockImplementation(real as never);
 }
 
-describe("cuando el backend dice que no", () => {
+describe("when the backend says no", () => {
   const undo: (() => void)[] = [];
 
   afterEach(() => {
@@ -24,7 +24,7 @@ describe("cuando el backend dice que no", () => {
     }
   });
 
-  it("muestra el motivo y vuelve a leer lo que quedó guardado", async () => {
+  it("shows the reason and reads back what was saved", async () => {
     const who = userEvent.setup();
     undo.push(
       await insteadOf((what) =>
@@ -46,7 +46,7 @@ describe("cuando el backend dice que no", () => {
     });
   });
 
-  it("calla sobre el atajo si ni siquiera puede preguntar", async () => {
+  it("says nothing about the shortcut if it cannot even ask", async () => {
     undo.push(
       await insteadOf((what) => (what === "keys" ? Promise.reject(new Error("no answer")) : null)),
     );
@@ -57,7 +57,7 @@ describe("cuando el backend dice que no", () => {
     expect(screen.queryByText(/Otro programa ya usa/)).toBeNull();
   });
 
-  it("avisa del atajo tomado aunque no consiga proponer otros", async () => {
+  it("warns the shortcut is taken even when it cannot offer others", async () => {
     undo.push(
       await insteadOf((what) => {
         if (what === "keys") {
