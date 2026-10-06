@@ -815,3 +815,53 @@ fn a_card_whose_file_is_gone_opens_without_the_keys_to_paste_it() {
         "the row of paste keys is not drawn, so it is not kept either"
     );
 }
+
+static ASKED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+fn shifting_clock(millis: i64) -> i64 {
+    if millis < 0 {
+        -3 * 3_600_000
+    } else {
+        -4 * 3_600_000
+    }
+}
+
+fn counted_clock(millis: i64) -> i64 {
+    ASKED.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    shifting_clock(millis)
+}
+
+#[test]
+fn the_offset_is_asked_once_per_quarter_of_an_hour() {
+    let clock = by_the_quarter(counted_clock);
+    let start = ASKED.load(std::sync::atomic::Ordering::SeqCst);
+    for minute in 0..15 {
+        assert_eq!(clock(1_000 + minute * 60_000), -4 * 3_600_000);
+    }
+    assert_eq!(
+        ASKED.load(std::sync::atomic::Ordering::SeqCst) - start,
+        1,
+        "fifteen rows in one quarter ask once"
+    );
+    assert_eq!(clock(15 * 60_000 + 1), -4 * 3_600_000);
+    assert_eq!(
+        ASKED.load(std::sync::atomic::Ordering::SeqCst) - start,
+        2,
+        "the next quarter asks again"
+    );
+}
+
+#[test]
+fn a_change_of_offset_on_the_quarter_is_never_blurred() {
+    let clock = by_the_quarter(shifting_clock);
+    assert_eq!(
+        clock(-1),
+        -3 * 3_600_000,
+        "the instant before keeps the old offset"
+    );
+    assert_eq!(
+        clock(0),
+        -4 * 3_600_000,
+        "the instant of the change takes the new one"
+    );
+}
