@@ -89,7 +89,14 @@ fn a_quiet_minute_forgives_the_whole_count() {
 fn a_panel_that_fell_is_told_from_one_that_was_asked_to_end() {
     assert!(fell(None, Some(6)), "an abort is a fall");
     assert!(fell(None, Some(9)), "a kill nobody here sent is a fall");
-    assert!(fell(Some(1), None), "a panel that could not start fell");
+    assert!(
+        fell(Some(101), None),
+        "a panic that could not abort is a fall"
+    );
+    assert!(
+        !fell(Some(1), None),
+        "a panel that says it cannot start would only fail again"
+    );
     assert!(
         fell(None, None),
         "an end nobody can read is taken as a fall"

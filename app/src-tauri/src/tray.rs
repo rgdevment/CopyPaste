@@ -106,14 +106,16 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
 }
 
 pub fn tell<R: Runtime>(app: &AppHandle<R>, trouble: Option<&str>) {
-    let Some(tray) = app.tray_by_id("copypaste") else {
-        return;
-    };
     let said = trouble.map_or_else(
         || "CopyPaste".to_owned(),
         |what| format!("CopyPaste: {what}"),
     );
-    let _ = tray.set_tooltip(Some(said));
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(tray) = handle.tray_by_id("copypaste") {
+            let _ = tray.set_tooltip(Some(said));
+        }
+    });
 }
 
 pub fn reword<R: Runtime>(app: &AppHandle<R>, spanish: bool) {

@@ -31,3 +31,17 @@ fn what_the_log_holds_is_only_readable_by_whoever_copied_it() {
     assert!(path.exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn only_the_helpers_may_fall_without_taking_the_panel_down() {
+    assert!(spared(Some(ERRANDS)));
+    assert!(spared(Some(COUNTER)));
+    assert!(
+        !spared(Some("main")),
+        "the window cannot go on without its loop"
+    );
+    assert!(
+        !spared(None),
+        "the clipboard watcher and the orders reader have no name, and the panel is useless without them"
+    );
+}

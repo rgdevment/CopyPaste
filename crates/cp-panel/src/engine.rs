@@ -81,19 +81,25 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
         note("there is nowhere to leave the thumbnails");
         return None;
     };
-    Some(std::thread::spawn(move || {
-        catch_up(&store);
-        let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
-        while !stop.load(Ordering::Relaxed) {
-            if swept.elapsed() >= SWEEPS_EVERY {
-                sweep(&store, &thumbs);
-                swept = std::time::Instant::now();
+    let spawned = std::thread::Builder::new()
+        .name(crate::note::ERRANDS.to_owned())
+        .spawn(move || {
+            catch_up(&store);
+            let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
+            while !stop.load(Ordering::Relaxed) {
+                if swept.elapsed() >= SWEEPS_EVERY {
+                    sweep(&store, &thumbs);
+                    swept = std::time::Instant::now();
+                }
+                if !errand(&store, &thumbs) {
+                    std::thread::sleep(NAP);
+                }
             }
-            if !errand(&store, &thumbs) {
-                std::thread::sleep(NAP);
-            }
-        }
-    }))
+        });
+    if let Err(why) = &spawned {
+        note(&format!("nobody enriches what was copied: {why}"));
+    }
+    spawned.ok()
 }
 
 const CATCH_UP: usize = 500;

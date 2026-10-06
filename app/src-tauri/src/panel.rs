@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Condvar, Mutex};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -13,7 +13,10 @@ pub struct Trouble(Mutex<Option<String>>);
 pub struct Relights(Mutex<Tries>);
 
 #[derive(Default)]
-pub struct Parting(Mutex<Turn>);
+pub struct Parting {
+    turn: Mutex<Turn>,
+    nudge: Condvar,
+}
 
 #[derive(Default)]
 struct Turn {
@@ -76,11 +79,11 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
     match shown(app) {
         Showing::Done | Showing::Waiting => {}
         Showing::GaveUp => {
-            trouble_is(app, "the panel will not stay up; restart CopyPaste");
+            gave_up(app, "the panel will not stay up; restart CopyPaste");
         }
         Showing::Refused => {
             crate::note::note("the panel would not show itself, not even freshly started");
-            trouble_is(app, "the panel is not answering");
+            gave_up(app, "the panel is not answering");
         }
     }
 }
@@ -149,7 +152,7 @@ fn bring_back<R: Runtime>(app: &AppHandle<R>) {
     let Some(state) = app.try_state::<Parting>() else {
         return;
     };
-    let Ok(mut turn) = state.0.lock() else {
+    let Ok(mut turn) = state.turn.lock() else {
         return;
     };
     if turn.leaving || turn.coming_back {
@@ -165,25 +168,18 @@ fn come_back<R: Runtime>(app: &AppHandle<R>) {
     let Some(state) = app.try_state::<Parting>() else {
         return;
     };
+    let Ok(mut turn) = state.turn.lock() else {
+        return;
+    };
     let mut told = false;
     loop {
-        let Ok(mut turn) = state.0.lock() else {
-            return;
-        };
         if turn.leaving || still_there(app) {
-            turn.coming_back = false;
-            return;
+            break;
         }
         let left = match asked_again(app) {
             crate::reviving::Verdict::Light { .. } => {
-                if let Err(why) = light(app) {
-                    crate::note::note(&format!("the panel could not come back: {why}"));
-                    gave_up(app, "the panel stopped watching the clipboard");
-                } else {
-                    crate::note::note("the panel is back and watches the clipboard again");
-                }
-                turn.coming_back = false;
-                return;
+                back(app);
+                break;
             }
             crate::reviving::Verdict::Wait { left } => left,
             crate::reviving::Verdict::Enough { left } => {
@@ -194,8 +190,21 @@ fn come_back<R: Runtime>(app: &AppHandle<R>) {
                 left
             }
         };
-        drop(turn);
-        std::thread::sleep(left);
+        turn = match state.nudge.wait_timeout(turn, left) {
+            Ok((turn, _)) => turn,
+            Err(_) => return,
+        };
+    }
+    turn.coming_back = false;
+}
+
+fn back<R: Runtime>(app: &AppHandle<R>) {
+    match light(app) {
+        Ok(()) => crate::note::note("the panel is back and watches the clipboard again"),
+        Err(why) => {
+            crate::note::note(&format!("the panel could not come back: {why}"));
+            gave_up(app, "the panel stopped watching the clipboard");
+        }
     }
 }
 
@@ -206,15 +215,16 @@ fn gave_up<R: Runtime>(app: &AppHandle<R>, what: &str) {
 
 fn parting<R: Runtime>(app: &AppHandle<R>) -> bool {
     app.try_state::<Parting>()
-        .and_then(|state| state.0.lock().ok().map(|turn| turn.leaving))
+        .and_then(|state| state.turn.lock().ok().map(|turn| turn.leaving))
         .unwrap_or(false)
 }
 
 fn part<R: Runtime>(app: &AppHandle<R>, leaving: bool) {
     if let Some(state) = app.try_state::<Parting>()
-        && let Ok(mut turn) = state.0.lock()
+        && let Ok(mut turn) = state.turn.lock()
     {
         turn.leaving = leaving;
+        state.nudge.notify_all();
     }
 }
 
@@ -248,14 +258,16 @@ fn allow<R: Runtime>(app: &AppHandle<R>) {
 }
 
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {
-    if say(app, "hide").is_err() {
+    if let Err(Said::Broken) = say(app, "hide") {
         bring_back(app);
     }
 }
 
 pub fn empty<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
-    say(app, "empty").map_err(|_| {
-        bring_back(app);
+    say(app, "empty").map_err(|said| {
+        if let Said::Broken = said {
+            bring_back(app);
+        }
         "the panel is not listening".to_owned()
     })
 }
@@ -330,9 +342,11 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
                             "the panel closed on its own, code {:?}, signal {:?}, fell {fell}",
                             how.code, how.signal
                         ));
-                        trouble_is(&handle, "the panel stopped watching the clipboard");
                         if fell {
+                            trouble_is(&handle, "the panel stopped watching the clipboard");
                             bring_back(&handle);
+                        } else if trouble(&handle).is_none() {
+                            trouble_is(&handle, "the panel stopped watching the clipboard");
                         }
                     }
                     break;
@@ -353,7 +367,7 @@ fn say<R: Runtime>(app: &AppHandle<R>, what: &str) -> Result<(), Said> {
             crate::note::note("the panel stopped listening, so it was closed");
             let _ = child.kill();
         }
-        return Err(Said::Gone);
+        return Err(Said::Broken);
     }
     Ok(())
 }
@@ -372,6 +386,7 @@ fn forget<R: Runtime>(app: &AppHandle<R>, whose: u32) -> bool {
 #[derive(Debug)]
 pub enum Said {
     Gone,
+    Broken,
 }
 
 #[cfg(test)]

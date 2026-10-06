@@ -849,50 +849,55 @@ fn spawn_counter(
     generation: Arc<AtomicU64>,
 ) -> mpsc::Sender<Request> {
     let (tx, rx) = mpsc::channel::<Request>();
-    std::thread::spawn(move || {
-        let store = match Store::open(&db) {
-            Ok(store) => store,
-            Err(why) => {
-                note(&format!("the counter could not open the store: {why}"));
-                return;
-            }
-        };
-        while let Ok(mut request) = rx.recv() {
-            while let Ok(newer) = rx.try_recv() {
-                request = newer;
-            }
-            if request.generation != generation.load(Ordering::SeqCst) {
-                continue;
-            }
-            let pinned = store
-                .count_matching(&Filter {
-                    pinned_only: true,
-                    ..request.base.clone()
-                })
-                .unwrap_or(0);
-            let facets = store.facets(&request.base).unwrap_or_default();
-            let shown = store.count_matching(&request.full).unwrap_or(0);
-            if request.generation != generation.load(Ordering::SeqCst) {
-                continue;
-            }
-            let chips = chips_of(&facets, &request.keys);
-            let footer = count_text(shown);
-            let anchored = compact(pinned);
-            let only_anchored = request.full.pinned_only;
-            let mine = request.generation;
-            let clock = generation.clone();
-            let _ = ui.upgrade_in_event_loop(move |panel| {
-                if mine != clock.load(Ordering::SeqCst) {
+    let spawned = std::thread::Builder::new()
+        .name(crate::note::COUNTER.to_owned())
+        .spawn(move || {
+            let store = match Store::open(&db) {
+                Ok(store) => store,
+                Err(why) => {
+                    note(&format!("the counter could not open the store: {why}"));
                     return;
                 }
-                panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
-                panel.set_count_text(footer.into());
-                panel.set_complaining(false);
-                panel.set_pinned_count(anchored.into());
-                panel.set_pinned_on(only_anchored);
-            });
-        }
-    });
+            };
+            while let Ok(mut request) = rx.recv() {
+                while let Ok(newer) = rx.try_recv() {
+                    request = newer;
+                }
+                if request.generation != generation.load(Ordering::SeqCst) {
+                    continue;
+                }
+                let pinned = store
+                    .count_matching(&Filter {
+                        pinned_only: true,
+                        ..request.base.clone()
+                    })
+                    .unwrap_or(0);
+                let facets = store.facets(&request.base).unwrap_or_default();
+                let shown = store.count_matching(&request.full).unwrap_or(0);
+                if request.generation != generation.load(Ordering::SeqCst) {
+                    continue;
+                }
+                let chips = chips_of(&facets, &request.keys);
+                let footer = count_text(shown);
+                let anchored = compact(pinned);
+                let only_anchored = request.full.pinned_only;
+                let mine = request.generation;
+                let clock = generation.clone();
+                let _ = ui.upgrade_in_event_loop(move |panel| {
+                    if mine != clock.load(Ordering::SeqCst) {
+                        return;
+                    }
+                    panel.set_chips(ModelRc::from(Rc::new(slint::VecModel::from(chips))));
+                    panel.set_count_text(footer.into());
+                    panel.set_complaining(false);
+                    panel.set_pinned_count(anchored.into());
+                    panel.set_pinned_on(only_anchored);
+                });
+            }
+        });
+    if let Err(why) = spawned {
+        note(&format!("nobody counts what the history holds: {why}"));
+    }
     tx
 }
 
