@@ -466,3 +466,83 @@ fn done_and_giving_up_say_whether_they_were_written() {
     assert!(!give_up(&store, id, "thumb", "no luck", 1_000));
     assert!(!done(&store, id, "thumb"));
 }
+
+fn waiting(store: &Store, job: &str) -> Vec<i64> {
+    store
+        .take_pending(job, crate::app::now_ms() + LATER * 1_000, 10)
+        .expect("the queue")
+}
+
+#[test]
+fn each_kind_of_errand_is_taken_and_leaves_its_queue() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    let id = keep(&store, &text("nothing to measure"), 1_000, None).expect("stored");
+    for job in ["ocr", "media", "folder"] {
+        store.enqueue(id, job).expect("queued");
+        assert!(errand(&store, &thumbs), "the {job} errand was taken");
+        assert!(waiting(&store, job).is_empty(), "the {job} errand is over");
+    }
+}
+
+#[test]
+fn a_real_folder_is_counted_and_a_missing_one_waits_for_later() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    let folder = dir.path().join("a folder");
+    std::fs::create_dir(&folder).expect("folder");
+    std::fs::write(folder.join("one"), b"1").expect("one");
+    let here = folder.to_string_lossy().into_owned();
+    let id = keep(&store, &files(&[&here]), 1_000, None).expect("stored");
+    store.enqueue(id, "folder").expect("queued");
+    assert!(errand(&store, &thumbs));
+    assert!(waiting(&store, "folder").is_empty());
+    std::fs::remove_dir_all(&folder).expect("gone");
+    store.enqueue(id, "folder").expect("queued again");
+    assert!(errand(&store, &thumbs), "it gave it a try");
+    assert_eq!(
+        waiting(&store, "folder"),
+        [id],
+        "a folder that is not there is tried later"
+    );
+}
+
+#[test]
+fn a_file_the_system_knows_nothing_about_is_measured_later() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    let plain = dir.path().join("notes.txt");
+    std::fs::write(&plain, b"just words").expect("file");
+    let here = plain.to_string_lossy().into_owned();
+    let id = keep(&store, &files(&[&here]), 1_000, None).expect("stored");
+    store.enqueue(id, "media").expect("queued");
+    assert!(errand(&store, &thumbs));
+}
+
+#[test]
+fn an_errand_that_keeps_failing_is_let_go_and_still_counts_as_written() {
+    let (_dir, store) = somewhere();
+    let id = keep(&store, &image(), 1_000, None).expect("stored");
+    for _ in 0..12 {
+        assert!(give_up(&store, id, "thumb", "never", 1_000));
+    }
+    assert!(
+        waiting(&store, "thumb").is_empty(),
+        "it is not tried for ever"
+    );
+}
+
+#[test]
+fn every_kind_of_errand_naps_when_its_outcome_cannot_be_written() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    let id = keep(&store, &text("nothing to measure"), 1_000, None).expect("stored");
+    for job in ["ocr", "media", "folder"] {
+        store.enqueue(id, job).expect("queued");
+    }
+    refuse_writes_to_the_queue(&store);
+    assert!(
+        !errand(&store, &thumbs),
+        "the loop naps instead of spinning"
+    );
+}
