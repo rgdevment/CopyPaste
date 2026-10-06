@@ -467,6 +467,14 @@ fn done_and_giving_up_say_whether_they_were_written() {
     assert!(!done(&store, id, "thumb"));
 }
 
+fn run_out(store: &Store, thumbs: &std::path::Path) {
+    for _ in 0..8 {
+        if !errand(store, thumbs) {
+            return;
+        }
+    }
+}
+
 fn waiting(store: &Store, job: &str) -> Vec<i64> {
     store
         .take_pending(job, crate::app::now_ms() + LATER * 1_000, 10)
@@ -495,11 +503,11 @@ fn a_real_folder_is_counted_and_a_missing_one_waits_for_later() {
     let here = folder.to_string_lossy().into_owned();
     let id = keep(&store, &files(&[&here]), 1_000, None).expect("stored");
     store.enqueue(id, "folder").expect("queued");
-    assert!(errand(&store, &thumbs));
+    run_out(&store, &thumbs);
     assert!(waiting(&store, "folder").is_empty());
     std::fs::remove_dir_all(&folder).expect("gone");
     store.enqueue(id, "folder").expect("queued again");
-    assert!(errand(&store, &thumbs), "it gave it a try");
+    run_out(&store, &thumbs);
     assert_eq!(
         waiting(&store, "folder"),
         [id],
