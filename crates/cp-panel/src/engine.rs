@@ -174,20 +174,16 @@ fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
 fn errand(store: &Store, thumbs: &Path) -> bool {
     let at = crate::app::now_ms();
     if let Some(id) = first_waiting(store, "thumb", at) {
-        thumbed(store, id, at, thumbs);
-        return true;
+        return thumbed(store, id, at, thumbs);
     }
     if let Some(id) = first_waiting(store, "ocr", at) {
-        read_out(store, id, at);
-        return true;
+        return read_out(store, id, at);
     }
     if let Some(id) = first_waiting(store, "media", at) {
-        measured(store, id, at);
-        return true;
+        return measured(store, id, at);
     }
     if let Some(id) = first_waiting(store, "folder", at) {
-        walked(store, id, at);
-        return true;
+        return walked(store, id, at);
     }
     grouped_some(store)
 }
@@ -202,7 +198,7 @@ fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
     }
 }
 
-fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
+fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) -> bool {
     let item = store.item(id).ok().flatten();
     if let Some(sides) = item.as_ref().and_then(|one| {
         here::content_of(one, None)
@@ -212,20 +208,18 @@ fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) {
         measured_sides(store, id, sides.width, sides.height);
     }
     let Some(png) = item.as_ref().and_then(thumb_of) else {
-        give_up(store, id, "thumb", "the thumbnail could not be drawn", at);
-        return;
+        return give_up(store, id, "thumb", "the thumbnail could not be drawn", at);
     };
     let Some(landed) = written(thumbs, id, &png) else {
-        give_up(store, id, "thumb", "the thumbnail could not be stored", at);
-        return;
+        return give_up(store, id, "thumb", "the thumbnail could not be stored", at);
     };
     if let Err(why) = store.set_thumb(id, Some(&landed), at) {
         note(&format!("{id} has a thumbnail nobody wrote down: {why}"));
     }
-    done(store, id, "thumb");
+    done(store, id, "thumb")
 }
 
-fn measured(store: &Store, id: i64, at: i64) {
+fn measured(store: &Store, id: i64, at: i64) -> bool {
     let Some(path) = store
         .item(id)
         .ok()
@@ -233,20 +227,18 @@ fn measured(store: &Store, id: i64, at: i64) {
         .as_ref()
         .and_then(crate::media::first_path_of)
     else {
-        done(store, id, "media");
-        return;
+        return done(store, id, "media");
     };
     let said = here::media_of(std::path::Path::new(&path));
     if said.is_empty() {
-        give_up(store, id, "media", "the shell knows nothing about it", at);
-        return;
+        return give_up(store, id, "media", "the shell knows nothing about it", at);
     }
     for (key, value) in said {
         if let Err(why) = store.set_meta(id, key, &value) {
             note(&format!("{id} has a {key} nobody wrote down: {why}"));
         }
     }
-    done(store, id, "media");
+    done(store, id, "media")
 }
 
 fn grouped_some(store: &Store) -> bool {
@@ -275,7 +267,7 @@ fn grouped_some(store: &Store) -> bool {
     true
 }
 
-fn walked(store: &Store, id: i64, at: i64) {
+fn walked(store: &Store, id: i64, at: i64) -> bool {
     let Some(path) = store
         .item(id)
         .ok()
@@ -283,8 +275,7 @@ fn walked(store: &Store, id: i64, at: i64) {
         .as_ref()
         .and_then(crate::media::first_path_of)
     else {
-        done(store, id, "folder");
-        return;
+        return done(store, id, "folder");
     };
     let counting =
         cp_core::reading::begin(move || crate::folder::counted_in(std::path::Path::new(&path)));
@@ -293,46 +284,39 @@ fn walked(store: &Store, id: i64, at: i64) {
             if let Err(why) = store.set_meta(id, crate::folder::ENTRIES, &seen.to_string()) {
                 note(&format!("{id} was counted and nobody wrote it down: {why}"));
             }
-            done(store, id, "folder");
+            done(store, id, "folder")
         }
         cp_core::reading::Waited::Answered(None) => {
-            give_up(store, id, "folder", "the folder could not be read", at);
+            give_up(store, id, "folder", "the folder could not be read", at)
         }
         cp_core::reading::Waited::StillRunning => {
-            give_up(store, id, "folder", "the folder did not answer in time", at);
+            give_up(store, id, "folder", "the folder did not answer in time", at)
         }
-        cp_core::reading::Waited::Gone => {
-            give_up(
-                store,
-                id,
-                "folder",
-                "counting the folder did not survive",
-                at,
-            );
-        }
+        cp_core::reading::Waited::Gone => give_up(
+            store,
+            id,
+            "folder",
+            "counting the folder did not survive",
+            at,
+        ),
     }
 }
 
-fn read_out(store: &Store, id: i64, at: i64) {
+fn read_out(store: &Store, id: i64, at: i64) -> bool {
     if !here::ocr_available() {
-        done(store, id, "ocr");
-        return;
+        return done(store, id, "ocr");
     }
     let item = match store.item(id) {
         Ok(Some(item)) => item,
-        Ok(None) => {
-            done(store, id, "ocr");
-            return;
-        }
+        Ok(None) => return done(store, id, "ocr"),
         Err(why) => {
-            give_up(
+            return give_up(
                 store,
                 id,
                 "ocr",
                 &format!("it could not be read in order to read it: {why}"),
                 at,
             );
-            return;
         }
     };
     let found = here::content_of(&item, None).image.and_then(here::text_in);
@@ -341,7 +325,7 @@ fn read_out(store: &Store, id: i64, at: i64) {
     {
         note(&format!("{id} was read and nobody wrote it down: {why}"));
     }
-    done(store, id, "ocr");
+    done(store, id, "ocr")
 }
 
 fn thumb_of(item: &Item) -> Option<Vec<u8>> {
@@ -376,19 +360,29 @@ fn written(dir: &Path, id: i64, png: &[u8]) -> Option<String> {
     Some(landed.to_string_lossy().into_owned())
 }
 
-fn done(store: &Store, id: i64, job: &str) {
-    if let Err(why) = store.work_done(id, job) {
-        note(&format!("{id} is still in the {job} queue: {why}"));
+fn done(store: &Store, id: i64, job: &str) -> bool {
+    match store.work_done(id, job) {
+        Ok(()) => true,
+        Err(why) => {
+            note(&format!("{id} is still in the {job} queue: {why}"));
+            false
+        }
     }
 }
 
-fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) {
+fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) -> bool {
     match store.work_failed(id, job, why, at + LATER) {
-        Ok(true) => {}
-        Ok(false) => note(&format!("{id} goes without {job} for good: {why}")),
-        Err(trouble) => note(&format!(
-            "the {job} failure of {id} went unwritten: {trouble}"
-        )),
+        Ok(true) => true,
+        Ok(false) => {
+            note(&format!("{id} goes without {job} for good: {why}"));
+            true
+        }
+        Err(trouble) => {
+            note(&format!(
+                "the {job} failure of {id} went unwritten: {trouble}"
+            ));
+            false
+        }
     }
 }
 
@@ -414,6 +408,10 @@ fn kept(store: &Store) -> Option<i64> {
 }
 
 fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> {
+    if !item.is_storable() {
+        note("a copy with nothing readable in it was not stored, there was nothing to paste back");
+        return None;
+    }
     match store.find_by_hash(item) {
         Ok(Some(id)) => {
             if let Err(why) = store.reactivate(id, at) {

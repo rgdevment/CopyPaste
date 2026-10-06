@@ -128,6 +128,19 @@ pub fn read(path: &Path) -> Result<Config, Error> {
     Ok(toml::from_str::<Config>(&said)?.sane())
 }
 
+pub fn read_or_reset(path: &Path, at_ms: i64) -> Result<Config, Error> {
+    match read(path) {
+        Err(Error::Malformed(_)) => {
+            let kept = path.with_file_name(format!("config.broken-{at_ms}.toml"));
+            std::fs::copy(path, kept)?;
+            let fresh = Config::default();
+            write(path, &fresh)?;
+            Ok(fresh)
+        }
+        other => other,
+    }
+}
+
 pub fn write(path: &Path, config: &Config) -> Result<(), Error> {
     let said = toml::to_string_pretty(&config.clone().sane())?;
     if let Some(dir) = path.parent() {

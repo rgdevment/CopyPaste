@@ -125,6 +125,10 @@ impl Item {
             .any(|format| matches!(format.payload, Payload::Inline(_) | Payload::Blob(_)))
     }
 
+    pub fn is_storable(&self) -> bool {
+        self.is_comparable()
+    }
+
     pub fn needs_blob_store(&self) -> bool {
         self.oversized_format().is_some()
     }

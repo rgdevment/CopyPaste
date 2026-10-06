@@ -649,3 +649,36 @@ fn what_was_never_read_cannot_be_compared_with_anything() {
     assert!(Item::plain("something").is_comparable());
     assert!(one_format("public.png", Payload::Blob(vec![1, 2, 3])).is_comparable());
 }
+
+#[test]
+fn only_what_has_readable_bytes_is_worth_storing() {
+    assert!(Item::plain("something").is_storable());
+    assert!(one_format("public.png", Payload::Blob(vec![1, 2, 3])).is_storable());
+    assert!(!one_format("public.tiff", Payload::TooBig { size: 70_000_000 }).is_storable());
+    assert!(!one_format("com.vendor.private", Payload::Announced { size: None }).is_storable());
+    assert!(!one_format("public.png", Payload::Absent).is_storable());
+    assert!(
+        !Item {
+            kind: None,
+            formats: Vec::new()
+        }
+        .is_storable()
+    );
+    let mixed = Item {
+        kind: None,
+        formats: vec![
+            Format {
+                id: "public.tiff".into(),
+                payload: Payload::TooBig { size: 70_000_000 },
+            },
+            Format {
+                id: "public.utf8-plain-text".into(),
+                payload: Payload::Inline(b"caption".to_vec()),
+            },
+        ],
+    };
+    assert!(
+        mixed.is_storable(),
+        "one readable format is enough to keep it"
+    );
+}

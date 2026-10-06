@@ -301,6 +301,7 @@ impl Store {
             restrict(parent, 0o700)?;
         }
         let db = Connection::open(path)?;
+        crate::schema::refuse_future(&db)?;
         crate::schema::create(&db)?;
         crate::schema::migrate(&db)?;
         let exposure = restrict(path, 0o600)?;
@@ -1097,7 +1098,7 @@ impl Store {
 
     fn expire(&self, cutoff: i64, at: i64) -> Result<usize> {
         let doomed = self.ids_where(
-            "modified_at < ?1 AND pinned = 0 AND deleted_at IS NULL",
+            "MAX(modified_at, COALESCE(last_used_at, 0)) < ?1 AND pinned = 0 AND deleted_at IS NULL",
             &[&cutoff],
         )?;
         self.erase_all(&doomed, at)

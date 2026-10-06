@@ -386,3 +386,83 @@ fn a_loose_blob_is_collected_even_when_the_user_keeps_everything_for_ever() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_copy_with_nothing_readable_is_not_stored_as_an_empty_card() {
+    let (_dir, store) = somewhere();
+    let unread = [
+        Payload::TooBig {
+            size: 70 * 1024 * 1024,
+        },
+        Payload::Announced { size: None },
+        Payload::Absent,
+    ];
+    for payload in unread {
+        let item = Item {
+            kind: None,
+            formats: vec![Format {
+                id: "public.tiff".into(),
+                payload,
+            }],
+        };
+        assert_eq!(keep(&store, &item, 1_000, None), None);
+    }
+    assert_eq!(keep(&store, &of_kind(Kind::Text), 1_000, None), None);
+    assert_eq!(store.count().expect("counted"), 0);
+}
+
+#[test]
+fn a_copy_with_one_readable_format_among_unread_ones_is_still_kept() {
+    let (_dir, store) = somewhere();
+    let item = Item {
+        kind: Some(Kind::Image),
+        formats: vec![
+            Format {
+                id: "public.tiff".into(),
+                payload: Payload::TooBig {
+                    size: 70 * 1024 * 1024,
+                },
+            },
+            Format {
+                id: SYNTHETIC_IMAGE.into(),
+                payload: Payload::Inline(vec![0x89, b'P', b'N', b'G']),
+            },
+        ],
+    };
+    assert!(keep(&store, &item, 1_000, None).is_some());
+    assert_eq!(store.count().expect("counted"), 1);
+}
+
+fn refuse_writes_to_the_queue(store: &Store) {
+    store
+        .raw()
+        .execute_batch(
+            "CREATE TRIGGER no_room_left BEFORE DELETE ON pending_work
+             BEGIN SELECT RAISE(ABORT, 'disk full'); END;
+             CREATE TRIGGER no_room_left_either BEFORE UPDATE ON pending_work
+             BEGIN SELECT RAISE(ABORT, 'disk full'); END;",
+        )
+        .expect("trigger");
+}
+
+#[test]
+fn an_errand_whose_outcome_cannot_be_written_backs_off_instead_of_spinning() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    keep(&store, &image(), 1_000, None).expect("stored");
+    refuse_writes_to_the_queue(&store);
+    assert!(
+        !errand(&store, &thumbs),
+        "the job is still waiting and the loop must nap"
+    );
+}
+
+#[test]
+fn done_and_giving_up_say_whether_they_were_written() {
+    let (_dir, store) = somewhere();
+    let id = keep(&store, &image(), 1_000, None).expect("stored");
+    assert!(give_up(&store, id, "thumb", "no luck", 1_000));
+    refuse_writes_to_the_queue(&store);
+    assert!(!give_up(&store, id, "thumb", "no luck", 1_000));
+    assert!(!done(&store, id, "thumb"));
+}

@@ -3,6 +3,7 @@ pub mod blobs;
 pub mod enrich;
 pub mod legacy;
 pub mod query;
+pub mod recover;
 pub mod schema;
 pub mod store;
 
@@ -10,6 +11,7 @@ pub use backup::{Brought, Made, Taken};
 pub use blobs::Blobs;
 pub use enrich::MetaByItem;
 pub use query::{Clock, parse};
+pub use recover::{Opened, open_or_set_aside};
 pub use schema::SCHEMA_VERSION;
 pub use store::restrict;
 pub use store::{
