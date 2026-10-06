@@ -82,7 +82,14 @@ pub fn settle() -> bool {
 #[tauri::command]
 pub fn settings() -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
-    cp_config::read(&cp_config::at(&dir)).map_err(|why| why.to_string())
+    read_or_reset(&cp_config::at(&dir)).map_err(|why| why.to_string())
+}
+
+fn read_or_reset(path: &std::path::Path) -> Result<Config, cp_config::Error> {
+    let at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_millis() as i64);
+    cp_config::read_or_reset(path, at_ms)
 }
 
 #[tauri::command]
@@ -98,7 +105,7 @@ pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
 fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
     let path = cp_config::at(&dir);
-    let was = cp_config::read(&path).ok();
+    let was = read_or_reset(&path).ok();
     let before = was.as_ref().map(|one| one.shortcut.clone());
     let config = Config {
         welcomed: was.and_then(|one| one.welcomed),

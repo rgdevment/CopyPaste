@@ -70,7 +70,7 @@ impl Store {
         if let Some(keep) = policy.keep_at_most {
             let excess = (self.count()? - keep).max(0);
             let doomed = self.ids_where(
-                "pinned = 0 AND deleted_at IS NULL ORDER BY modified_at, id LIMIT ?1",
+                "pinned = 0 AND deleted_at IS NULL ORDER BY MAX(modified_at, COALESCE(last_used_at, 0)), id LIMIT ?1",
                 &[&excess],
             )?;
             swept.over_count = self.erase_all(&doomed, now)?;
@@ -117,7 +117,7 @@ impl Store {
                ON f.item_id = items.id AND (f.inline_data IS NOT NULL OR f.digest IS NOT NULL)
              WHERE items.pinned = 0 AND items.deleted_at IS NULL
              GROUP BY items.id
-             ORDER BY items.modified_at, items.id",
+             ORDER BY MAX(items.modified_at, COALESCE(items.last_used_at, 0)), items.id",
         )?;
         let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)

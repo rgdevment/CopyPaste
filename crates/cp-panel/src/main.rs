@@ -78,8 +78,16 @@ fn main() {
     {
         note::note(&format!("the panel kept the default window system: {why}"));
     }
-    let store = match cp_store::Store::open(&options.db) {
-        Ok(store) => store,
+    let store = match cp_store::open_or_set_aside(&options.db, app::now_ms()) {
+        Ok(opened) => {
+            if let Some(kept) = opened.set_aside {
+                note::trouble(&format!(
+                    "the history was damaged and a new one was started; the old file was kept as {}",
+                    kept.display()
+                ));
+            }
+            opened.store
+        }
         Err(why) => {
             note::trouble(&format!("the history could not be opened: {why}"));
             std::process::exit(1);

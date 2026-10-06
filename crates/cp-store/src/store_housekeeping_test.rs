@@ -884,3 +884,77 @@ fn a_sweep_gives_the_freed_pages_back_and_does_not_wait_to_be_asked() {
         "after emptying two gigabytes the file cannot still weigh two gigabytes: before {before}, after {after}"
     );
 }
+
+#[test]
+fn what_was_pasted_recently_outlives_age_while_an_untouched_one_goes() {
+    let store = Store::in_memory().expect("schema");
+    let copied_ms = 1_000;
+    let pasted_ms = 40 * A_DAY;
+    let now_ms = 45 * A_DAY;
+    let used = store
+        .insert_text("uuid-used", "used", copied_ms)
+        .expect("used");
+    let idle = store
+        .insert_text("uuid-idle", "idle", copied_ms)
+        .expect("idle");
+    store.record_paste(used, pasted_ms).expect("pasted");
+    let policy = Policy {
+        keep_for: Some(30 * A_DAY),
+        ..Default::default()
+    };
+    let swept = store.sweep(&policy, now_ms).expect("swept");
+    assert_eq!(swept.expired, 1);
+    assert_eq!(alive(&store), vec![used]);
+    assert!(!alive(&store).contains(&idle));
+}
+
+#[test]
+fn an_old_paste_does_not_keep_an_item_past_its_age() {
+    let store = Store::in_memory().expect("schema");
+    let id = store.insert_text("uuid-a", "a", 1_000).expect("a");
+    store.record_paste(id, 2_000).expect("pasted");
+    let policy = Policy {
+        keep_for: Some(30 * A_DAY),
+        ..Default::default()
+    };
+    assert_eq!(store.sweep(&policy, 40 * A_DAY).expect("swept").expired, 1);
+}
+
+#[test]
+fn the_count_limit_spares_what_was_pasted_recently() {
+    let store = Store::in_memory().expect("schema");
+    let ids = fill(&store, 4);
+    store.record_paste(ids[0], 500).expect("pasted");
+    let policy = Policy {
+        keep_at_most: Some(2),
+        ..Default::default()
+    };
+    store.sweep(&policy, 1_000).expect("swept");
+    assert_eq!(alive(&store), vec![ids[0], ids[3]]);
+}
+
+#[test]
+fn the_byte_quota_spares_what_was_pasted_recently() {
+    let (dir, store) = on_disk();
+    let mut ids = Vec::new();
+    for at in 1..=3 {
+        let id = store
+            .insert_item(
+                &format!("uuid-{at}"),
+                &image(at as u8, 100_000),
+                "",
+                at as i64,
+            )
+            .expect("insert");
+        ids.push(id);
+    }
+    settle_blobs(dir.path());
+    store.record_paste(ids[0], 500).expect("pasted");
+    let policy = Policy {
+        bytes_at_most: Some(100_000),
+        ..Default::default()
+    };
+    let swept = store.sweep(&policy, 1_000).expect("swept");
+    assert_eq!(swept.over_bytes, 2);
+    assert_eq!(alive(&store), vec![ids[0]]);
+}

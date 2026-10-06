@@ -352,3 +352,70 @@ fn a_command_option_v_picked_by_hand_is_left_alone() {
     .sane();
     assert_eq!(asked.shortcut, "Alt+Cmd+V");
 }
+
+const BROKEN_AT_MS: i64 = 1_700_000_000_000;
+
+#[test]
+fn a_broken_file_is_kept_aside_and_the_defaults_are_written_in_its_place() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "theme = = dark").expect("writes");
+    let config = read_or_reset(&path, BROKEN_AT_MS).expect("carries on");
+    let forgiving = Config {
+        keeps_days: None,
+        ..Config::default()
+    };
+    assert_eq!(
+        config, forgiving,
+        "a file nobody can read says nothing about how long to keep, so nothing is let go"
+    );
+    let kept = dir.path().join("config.broken-1700000000000.toml");
+    assert_eq!(
+        std::fs::read_to_string(kept).expect("kept"),
+        "theme = = dark"
+    );
+    assert_eq!(read(&path).expect("now valid"), forgiving);
+}
+
+#[test]
+fn a_healthy_or_missing_file_leaves_no_backup() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    assert_eq!(
+        read_or_reset(&path, BROKEN_AT_MS).expect("missing"),
+        Config::default()
+    );
+    let mine = Config {
+        theme: Theme::Dark,
+        ..Config::default()
+    };
+    write(&path, &mine).expect("writes");
+    assert_eq!(read_or_reset(&path, BROKEN_AT_MS).expect("healthy"), mine);
+    let files = std::fs::read_dir(dir.path()).expect("listed").count();
+    assert_eq!(files, 1, "only config.toml");
+}
+
+#[test]
+fn a_file_that_cannot_be_read_at_all_is_not_replaced() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::create_dir(&path).expect("a folder where the file should be");
+    assert!(matches!(
+        read_or_reset(&path, BROKEN_AT_MS),
+        Err(Error::File(_))
+    ));
+}
+
+#[test]
+fn a_file_cut_off_in_the_middle_of_a_letter_is_kept_aside_too() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, b"theme = \"dark\"\nshortcut = \"Ctrl+\xc3").expect("writes");
+    let config = read_or_reset(&path, BROKEN_AT_MS).expect("carries on");
+    assert_eq!(
+        config.keeps_days, None,
+        "nothing is let go after a broken file"
+    );
+    assert!(dir.path().join("config.broken-1700000000000.toml").exists());
+    assert_eq!(read(&path).expect("now valid"), config);
+}

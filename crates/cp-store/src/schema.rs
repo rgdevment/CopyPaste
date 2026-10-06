@@ -9,7 +9,7 @@ const FORMAT_INDEXES: &str = "
             WHERE inline_data IS NOT NULL;
 ";
 
-pub fn migrate(db: &Connection) -> crate::Result<bool> {
+pub fn refuse_future(db: &Connection) -> crate::Result<u32> {
     let found: u32 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if found > SCHEMA_VERSION {
         return Err(crate::Error::FromTheFuture {
@@ -17,6 +17,11 @@ pub fn migrate(db: &Connection) -> crate::Result<bool> {
             supported: SCHEMA_VERSION,
         });
     }
+    Ok(found)
+}
+
+pub fn migrate(db: &Connection) -> crate::Result<bool> {
+    let found = refuse_future(db)?;
     if found == SCHEMA_VERSION {
         return Ok(false);
     }
