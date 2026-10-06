@@ -101,6 +101,18 @@ pub fn reveal(top: f32, span: f32, scroll: f32, viewport: f32) -> f32 {
 
 pub type Clock = Rc<dyn Fn(i64) -> i64>;
 
+const QUARTER: i64 = 15 * 60 * 1000;
+
+pub fn by_the_quarter(clock: fn(i64) -> i64) -> Clock {
+    let seen = std::cell::RefCell::new(std::collections::HashMap::new());
+    Rc::new(move |millis: i64| {
+        *seen
+            .borrow_mut()
+            .entry(millis.div_euclid(QUARTER))
+            .or_insert_with(|| clock(millis))
+    })
+}
+
 pub struct Rows {
     store: Rc<Store>,
     filter: Filter,

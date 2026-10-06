@@ -3,7 +3,12 @@ use slint::ComponentHandle;
 use std::time::Duration;
 
 pub const NEXT_FRAME: Duration = Duration::from_millis(16);
-const OUT: Duration = Duration::from_millis(130);
+const OUT: Duration = if cfg!(target_os = "macos") {
+    Duration::ZERO
+} else {
+    Duration::from_millis(130)
+};
+pub const SLOW: Duration = Duration::from_millis(100);
 
 thread_local! {
     static CURTAIN: slint::Timer = slint::Timer::default();
@@ -63,10 +68,35 @@ pub fn vanish(ui: &Panel) {
     let weak = ui.as_weak();
     CURTAIN.with(|timer| {
         timer.stop();
+        if OUT.is_zero() {
+            let _ = ui.hide();
+            return;
+        }
         timer.start(slint::TimerMode::SingleShot, OUT, move || {
             if let Some(ui) = weak.upgrade() {
                 let _ = ui.hide();
             }
         });
+    });
+}
+
+pub fn leave_when_left(panel: &Panel, hides: fn() -> bool) {
+    use i_slint_backend_winit::winit::event::WindowEvent;
+    use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
+    let weak = panel.as_weak();
+    panel.window().on_winit_window_event(move |_, event| {
+        if let WindowEvent::Focused(false) = event
+            && let Some(ui) = weak.upgrade()
+            && ui.window().is_visible()
+            && hides()
+        {
+            let later = ui.as_weak();
+            slint::Timer::single_shot(Duration::ZERO, move || {
+                if let Some(ui) = later.upgrade() {
+                    vanish(&ui);
+                }
+            });
+        }
+        EventResult::Propagate
     });
 }

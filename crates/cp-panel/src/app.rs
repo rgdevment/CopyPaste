@@ -4,7 +4,7 @@ use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
 use crate::opening::Reached;
 use crate::reaching::reach_for;
-use crate::showing::{NEXT_FRAME, appear, place, vanish};
+use crate::showing::{NEXT_FRAME, SLOW, appear, leave_when_left, place, vanish};
 use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
 use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
@@ -145,6 +145,7 @@ impl App {
             watch_signals(panel.as_weak(), dir);
         }
         if serving {
+            leave_when_left(panel, hides_when_left);
             let state = self.state.borrow();
             listen(
                 panel.as_weak(),
@@ -801,7 +802,7 @@ fn refresh(ui: &Panel, state: &Rc<RefCell<State>>) {
         now,
         metrics,
         here.plain,
-        Some(Rc::new(here::utc_offset_at)),
+        Some(crate::model::by_the_quarter(here::utc_offset_at)),
     );
     ui.set_opened(false);
     {
@@ -1401,6 +1402,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
             }
             match said.trim() {
                 "show" => {
+                    let asked = Instant::now();
                     let in_front = here::ahead_now();
                     if in_front != 0 {
                         ahead.store(in_front, Ordering::Relaxed);
@@ -1409,16 +1411,20 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                     let dressed = backdrop.clone();
                     let _ = ui.upgrade_in_event_loop(move |panel| {
                         place(&panel);
+                        crate::view::dress_words(&panel);
+                        panel.invoke_fresh_start();
                         if panel.show().is_err() {
                             return;
                         }
                         place(&panel);
-                        crate::view::dress_words(&panel);
                         dress(&panel, &dressed);
                         forward(&panel);
-                        panel.invoke_fresh_start();
                         appear(&panel);
                         panel.invoke_focus_search();
+                        let took = asked.elapsed();
+                        if took > SLOW {
+                            note(&format!("the panel took {took:?} to show"));
+                        }
                     });
                 }
                 "empty" => {
@@ -1451,8 +1457,8 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                     let _ = std::fs::remove_file(&flag);
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
-                            let _ = ui.show();
                             ui.invoke_fresh_start();
+                            let _ = ui.show();
                             appear(&ui);
                             ui.invoke_focus_search();
                         } else {
