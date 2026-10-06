@@ -7,9 +7,9 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
-    drag_out, dress, forward, ground, in_front, media_of, ocr_available, open_link, open_path,
-    ours_up_front, paste_into, pointer, read_stuck, system_is_light, text_in, thumb_of_file,
-    thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
+    drag_out, dress, forward, ground, in_front, keep_awake, media_of, ocr_available, open_link,
+    open_path, ours_up_front, paste_into, pointer, read_stuck, system_is_light, text_in,
+    thumb_of_file, thumbs_dir, to_clipboard, towards, utc_offset_at, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,6 +43,12 @@ mod platform {
     pub use cp_core::watching::Watching;
     pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
         cp_win::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
+
+    pub struct Awake;
+
+    pub fn keep_awake() -> Awake {
+        Awake
     }
 
     pub fn data_dir() -> Option<PathBuf> {
@@ -229,6 +235,10 @@ mod platform {
     pub use cp_core::watching::Watching;
     pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
         cp_mac::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
+
+    pub fn keep_awake() -> cp_mac_sys::awake::Awake {
+        cp_mac_sys::awake::keep_awake("copypaste panel waiting for its shortcut")
     }
 
     pub fn data_dir() -> Option<PathBuf> {

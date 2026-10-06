@@ -80,7 +80,7 @@ pub fn vanish(ui: &Panel) {
     });
 }
 
-pub fn leave_when_left(panel: &Panel, hides: fn() -> bool) {
+pub fn leave_when_left(panel: &Panel, hides: impl Fn() -> bool + 'static) {
     use i_slint_backend_winit::winit::event::WindowEvent;
     use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
     let weak = panel.as_weak();

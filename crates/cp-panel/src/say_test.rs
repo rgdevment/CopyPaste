@@ -23,3 +23,10 @@ fn the_panel_speaks_spanish_until_somebody_says_otherwise() {
         pick_in(in_english(), "hola", "hello")
     );
 }
+
+#[test]
+fn adopting_the_tongue_already_spoken_changes_nothing() {
+    let now = in_english();
+    adopt_english(now);
+    assert_eq!(in_english(), now);
+}

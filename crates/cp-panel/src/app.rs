@@ -48,6 +48,7 @@ struct State {
     pointing: slint::Timer,
     arming: slint::Timer,
     last_refresh: Duration,
+    kept: crate::kept::Shelf,
     generation: Arc<AtomicU64>,
     counter: mpsc::Sender<Request>,
 }
@@ -69,7 +70,8 @@ struct Request {
 impl App {
     pub fn start(store: Store, options: Options) -> Result<(Panel, Self), slint::PlatformError> {
         let panel = Panel::new()?;
-        crate::say::adopt_what_was_kept();
+        let kept = crate::kept::read();
+        crate::say::adopt_english(kept.english);
         crate::view::dress_words(&panel);
         let theme = panel.global::<crate::Theme>();
         let metrics = Metrics {
@@ -107,6 +109,7 @@ impl App {
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
             last_refresh: Duration::ZERO,
+            kept: crate::kept::Shelf::new(kept),
             generation,
             counter,
         }));
@@ -118,7 +121,7 @@ impl App {
             panel.global::<crate::Theme>().set_shadow_blur(0.0);
         }
         app.wire(&panel);
-        dress_theme(&panel);
+        dress_theme(&panel, kept.light(here::system_is_light()));
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
@@ -132,6 +135,7 @@ impl App {
 
     pub fn run(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
         let serving = self.state.borrow().options.serve;
+        let _awake = serving.then(here::keep_awake);
         if !serving {
             panel.show()?;
             self.dress(panel);
@@ -142,15 +146,17 @@ impl App {
             self.keep_watch(panel.as_weak());
         }
         if let Some(dir) = self.state.borrow().options.signals.clone() {
-            watch_signals(panel.as_weak(), dir);
+            watch_signals(panel.as_weak(), dir, self.state.borrow().kept.clone());
         }
         if serving {
-            leave_when_left(panel, hides_when_left);
             let state = self.state.borrow();
+            let shelf = state.kept.clone();
+            leave_when_left(panel, move || shelf.get().hides);
             listen(
                 panel.as_weak(),
                 state.ahead.clone(),
                 state.options.backdrop.clone(),
+                state.kept.clone(),
             );
         }
         if self.state.borrow().options.measure {
@@ -542,7 +548,10 @@ impl App {
                 ui.set_query(Default::default());
                 ui.set_sheet_open(false);
                 ui.set_chips_scroll(0.0);
-                dress_theme(&ui);
+                dress_theme(
+                    &ui,
+                    state.borrow().kept.get().light(here::system_is_light()),
+                );
                 refresh(&ui, &state);
                 back_to_the_newest(&ui, &state);
                 watch_leaving(&ui, &state);
@@ -708,7 +717,12 @@ impl App {
     }
 
     fn dress(&self, panel: &Panel) {
-        dress(panel, &self.state.borrow().options.backdrop);
+        let state = self.state.borrow();
+        dress(
+            panel,
+            &state.options.backdrop,
+            state.kept.get().light(here::system_is_light()),
+        );
     }
 }
 
@@ -720,9 +734,9 @@ fn handle_of(panel: &Panel) -> Option<raw_window_handle::RawWindowHandle> {
         .map(|raw| raw.as_raw())
 }
 
-fn dress(panel: &Panel, wanted: &str) {
+fn dress(panel: &Panel, wanted: &str, light: bool) {
     if let Some(handle) = handle_of(panel) {
-        here::dress(handle, wanted, wants_light());
+        here::dress(handle, wanted, light);
     }
 }
 
@@ -1316,6 +1330,7 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
                 if ui.show().is_ok() {
                     forward(&ui);
                     appear(&ui);
+                    watch_leaving(&ui, &state);
                     complain(&ui, said);
                 }
             }
@@ -1329,35 +1344,14 @@ fn forward(panel: &Panel) {
     }
 }
 
-fn light_for(asked: cp_config::Theme, the_system_is_light: bool) -> bool {
-    match asked {
-        cp_config::Theme::Light => true,
-        cp_config::Theme::Dark => false,
-        cp_config::Theme::System => the_system_is_light,
-    }
-}
-
-fn wants_light() -> bool {
-    let asked = here::data_dir()
-        .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
-        .map_or(cp_config::Theme::System, |kept| kept.theme);
-    light_for(asked, here::system_is_light())
-}
-
-fn dress_theme(ui: &Panel) {
-    ui.global::<crate::Theme>().set_light(wants_light());
-}
-
-fn hides_when_left() -> bool {
-    here::data_dir()
-        .and_then(|dir| cp_config::read(&cp_config::at(&dir)).ok())
-        .is_none_or(|kept| kept.hides_when_left)
+fn dress_theme(ui: &Panel, light: bool) {
+    ui.global::<crate::Theme>().set_light(light);
 }
 
 fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
     let held = state.borrow();
     held.leaving.stop();
-    if !hides_when_left() {
+    if !held.kept.get().hides {
         return;
     }
     let weak = ui.as_weak();
@@ -1369,6 +1363,7 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
                 return;
             };
             if !ui.window().is_visible() {
+                state.borrow().leaving.stop();
                 return;
             }
             match here::ours_up_front() {
@@ -1388,7 +1383,12 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
 
 const ORDER_UP_TO: u64 = 64;
 
-fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
+fn listen(
+    ui: slint::Weak<Panel>,
+    ahead: Arc<AtomicIsize>,
+    backdrop: String,
+    shelf: crate::kept::Shelf,
+) {
     std::thread::spawn(move || {
         use std::io::{BufRead, Read};
         let input = std::io::stdin();
@@ -1407,7 +1407,8 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                     if in_front != 0 {
                         ahead.store(in_front, Ordering::Relaxed);
                     }
-                    crate::say::adopt_what_was_kept();
+                    let kept = shelf.renew();
+                    crate::say::adopt_english(kept.english);
                     let dressed = backdrop.clone();
                     let _ = ui.upgrade_in_event_loop(move |panel| {
                         place(&panel);
@@ -1417,7 +1418,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
                             return;
                         }
                         place(&panel);
-                        dress(&panel, &dressed);
+                        dress(&panel, &dressed, kept.light(here::system_is_light()));
                         forward(&panel);
                         appear(&panel);
                         panel.invoke_focus_search();
@@ -1447,7 +1448,7 @@ fn listen(ui: slint::Weak<Panel>, ahead: Arc<AtomicIsize>, backdrop: String) {
     });
 }
 
-fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
+fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf, shelf: crate::kept::Shelf) {
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(Duration::from_millis(40));
@@ -1455,8 +1456,12 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
                 let flag = dir.join(name);
                 if flag.exists() {
                     let _ = std::fs::remove_file(&flag);
+                    if show {
+                        crate::say::adopt_english(shelf.renew().english);
+                    }
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
+                            crate::view::dress_words(&ui);
                             ui.invoke_fresh_start();
                             let _ = ui.show();
                             appear(&ui);
@@ -1470,7 +1475,3 @@ fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf) {
         }
     });
 }
-
-#[cfg(test)]
-#[path = "app_test.rs"]
-mod tests;
