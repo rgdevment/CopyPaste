@@ -106,11 +106,27 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
 }
 
 #[cfg(target_os = "macos")]
+const CLOSES: &str = "close-window";
+#[cfg(target_os = "macos")]
+const QUITS: &str = "close-window-on-quit";
+
+#[cfg(target_os = "macos")]
 pub fn settle_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     use tauri::menu::{PredefinedMenuItem, Submenu};
-    let closes = MenuItem::with_id(app, "close-window", "Close", true, Some("CmdOrCtrl+W"))?;
-    let quits = MenuItem::with_id(app, "close-window-too", "Close", true, Some("CmdOrCtrl+Q"))?;
-    let ours = Submenu::with_items(app, "CopyPaste", true, &[&closes, &quits])?;
+    let closes = MenuItem::with_id(app, CLOSES, "Close Window", true, Some("CmdOrCtrl+W"))?;
+    let quits = MenuItem::with_id(app, QUITS, "Close", true, Some("CmdOrCtrl+Q"))?;
+    let ours = Submenu::with_items(
+        app,
+        "CopyPaste",
+        true,
+        &[
+            &PredefinedMenuItem::hide(app, None)?,
+            &PredefinedMenuItem::minimize(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &closes,
+            &quits,
+        ],
+    )?;
     let edit = Submenu::with_items(
         app,
         "Edit",
@@ -127,7 +143,7 @@ pub fn settle_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     )?;
     app.set_menu(Menu::with_items(app, &[&ours, &edit])?)?;
     app.on_menu_event(|app, event| {
-        if !event.id().as_ref().starts_with("close-window") {
+        if ![CLOSES, QUITS].contains(&event.id().as_ref()) {
             return;
         }
         for window in app.webview_windows().into_values() {

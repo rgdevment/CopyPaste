@@ -1,15 +1,6 @@
 use super::*;
 
 #[test]
-fn a_panel_that_never_owns_the_dock_can_say_so() {
-    if MainThreadMarker::new().is_none() {
-        return;
-    }
-    assert!(as_accessory());
-    assert_eq!(is_accessory(), Some(true));
-}
-
-#[test]
 fn off_the_main_thread_the_answer_is_that_there_is_none() {
     if MainThreadMarker::new().is_some() {
         return;

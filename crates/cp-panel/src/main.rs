@@ -42,6 +42,7 @@ fn stand_aside() -> Result<(), slint::PlatformError> {
         };
         let mut quiet = i_slint_backend_winit::winit::event_loop::EventLoop::with_user_event();
         quiet
+            .with_default_menu(false)
             .with_activation_policy(ActivationPolicy::Accessory)
             .with_activate_ignoring_other_apps(false);
         builder
