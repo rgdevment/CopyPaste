@@ -339,6 +339,7 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.DownArrow {
+                                        root.last-chosen = -1;
                                         if (root.hovered >= 0) {
                                             root.current = root.hovered;
                                         }
@@ -354,6 +355,7 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.UpArrow {
+                                        root.last-chosen = -1;
                                         if (root.hovered >= 0) {
                                             root.current = root.hovered;
                                         }
@@ -545,6 +547,7 @@ export component Panel inherits Window {
                 wheel := TouchArea {
                     mouse-cursor: root.pointer-hidden ? MouseCursor.none : MouseCursor.default;
                     scroll-event(event) => {
+                        root.last-chosen = -1;
                         root.pointer-hidden = false;
                         root.quiet = true;
                         root.rest-x = -1px;
@@ -684,8 +687,9 @@ export component Panel inherits Window {
                             width: parent.width - 20px;
                             height: parent.height - (card.heads-group ? Theme.row-head : 0px) - 6px;
                             chosen(id, px, py) => {
-                                if (root.last-chosen >= 0 && animation-tick() - root.last-at < 500ms
-                                    && abs(px - root.last-x) < 10px && abs(py - root.last-y) < 10px) {
+                                if (root.last-chosen >= 0 && animation-tick() - root.last-at < Theme.double-click
+                                    && (px - root.last-x) * (px - root.last-x) / 1px + (py - root.last-y) * (py - root.last-y) / 1px
+                                        < Theme.double-reach * Theme.double-reach / 1px) {
                                     root.paste(root.last-chosen);
                                     root.last-chosen = -1;
                                     return;
@@ -705,7 +709,6 @@ export component Panel inherits Window {
                                 root.moved(index);
                             }
                             layout: root.layout;
-                            paste(id) => { root.paste(id); }
                             copy(id) => { root.copy(id); }
                             forms(id) => {
                                 root.current = index;

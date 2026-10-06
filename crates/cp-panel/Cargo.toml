@@ -29,7 +29,7 @@ cp-mac.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 image.workspace = true
-i-slint-backend-testing = "=1.18.1"
+i-slint-backend-testing.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true
