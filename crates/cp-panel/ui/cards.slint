@@ -22,13 +22,14 @@ export component Action inherits Rectangle {
     in property <image> icon;
     in property <color> hot: Theme.body;
     in property <bool> awake: true;
+    in property <bool> marked;
     callback pressed();
     width: 22px;
     height: 22px;
     border-radius: 6px;
-    background: touch.has-hover ? #333853 : transparent;
+    background: touch.has-hover ? #333853 : root.marked ? Theme.tile : transparent;
     animate background { duration: 100ms; }
-    Icon { source: root.icon; width: 14px; height: 14px; tint: touch.has-hover ? root.hot : Theme.muted; }
+    Icon { source: root.icon; width: 14px; height: 14px; tint: touch.has-hover ? root.hot : root.marked ? Theme.accent-dim : Theme.muted; }
     touch := TouchArea {
         enabled: root.awake;
         clicked => { root.pressed(); }
@@ -247,12 +248,20 @@ component KeyChip inherits Rectangle {
     in property <string> keys;
     in property <string> says;
     in property <bool> on;
+    callback pressed();
+    accessible-role: AccessibleRole.button;
+    accessible-label: root.says;
     height: 22px;
     width: chip-row.preferred-width;
     border-radius: 6px;
-    background: on ? Theme.selected : Theme.field;
+    background: touch.has-hover ? Theme.row-hover : on ? Theme.selected : Theme.field;
+    animate background { duration: 100ms; }
     border-width: 1px;
-    border-color: on ? Theme.selected-edge : Theme.field-border;
+    border-color: on || touch.has-hover ? Theme.selected-edge : Theme.field-border;
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.pressed(); }
+    }
     chip-row := HorizontalLayout {
         padding-left: 8px;
         padding-right: 8px;
@@ -282,6 +291,8 @@ export component CardView inherits Rectangle {
     callback copy(int);
     callback open-asked(int);
     callback forms(int);
+    callback paste(int);
+    callback plain(int);
     callback edit(int);
     callback named(int, string);
     callback naming-dropped();
@@ -438,7 +449,7 @@ export component CardView inherits Rectangle {
                     if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; pressed => { root.open-asked(card.id); } }
                     Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; pressed => { root.edit(card.id); } }
                     if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; pressed => { root.copy(card.id); } }
-                    if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; pressed => { root.forms(card.id); } }
+                    if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; marked: true; pressed => { root.forms(card.id); } }
                     Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; pressed => { root.pin(card.id, !card.pinned); } }
                     Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; pressed => { root.remove(card.id); } }
                 }
@@ -685,9 +696,9 @@ export component CardView inherits Rectangle {
             if open && !card.broken : HorizontalLayout {
                 height: 22px;
                 spacing: 6px;
-                KeyChip { keys: "⏎"; says: Words.paste-it; on: true; }
-                KeyChip { keys: "⇧⏎"; says: Words.paste-plain; }
-                KeyChip { keys: Theme.apple ? "⌥⏎" : "Alt ⏎"; says: Words.paste-as-short; }
+                KeyChip { keys: "⏎"; says: Words.paste-it; on: true; pressed => { root.paste(card.id); } }
+                KeyChip { keys: "⇧⏎"; says: Words.paste-plain; pressed => { root.plain(card.id); } }
+                KeyChip { keys: Theme.apple ? "⌥⏎" : "Alt ⏎"; says: Words.paste-as-short; pressed => { root.forms(card.id); } }
                 Rectangle { horizontal-stretch: 1; }
             }
         }
@@ -847,7 +858,7 @@ export component CardView inherits Rectangle {
                 if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: lit; pressed => { root.open-asked(card.id); } }
                 Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: lit; pressed => { root.edit(card.id); } }
                 if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: lit; pressed => { root.copy(card.id); } }
-                if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; pressed => { root.forms(card.id); } }
+                if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; marked: true; pressed => { root.forms(card.id); } }
                 Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
                 Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
             }
