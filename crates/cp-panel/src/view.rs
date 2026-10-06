@@ -246,6 +246,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
             || crate::opening::can_open_link(row.kind, &row.preview),
         can_drag: crate::dragging::can_drag(row.kind, &paths_of(row)),
         paint: shown_as_colour(row).unwrap_or_default(),
+        paint_said: paint_said(row).into(),
         paints: shown_as_colour(row).is_some(),
         thumb: slint::Image::default(),
         has_thumb: row.thumb_path.is_some(),
@@ -446,6 +447,27 @@ pub fn shown_as_colour(row: &Listed) -> Option<slint::Color> {
     Some(slint::Color::from_argb_u8(
         said.alpha, said.red, said.green, said.blue,
     ))
+}
+
+pub fn paint_said(row: &Listed) -> String {
+    let Some(said) = row
+        .kind
+        .filter(|kind| *kind == Kind::Color)
+        .and_then(|_| cp_core::paint::rgba_of(row.preview.lines().next()?))
+    else {
+        return String::new();
+    };
+    if said.alpha == 255 {
+        format!("rgb({}, {}, {})", said.red, said.green, said.blue)
+    } else {
+        format!(
+            "rgba({}, {}, {}, {:.2})",
+            said.red,
+            said.green,
+            said.blue,
+            f32::from(said.alpha) / 255.0
+        )
+    }
 }
 
 pub fn squeezed_of(text: &str) -> String {

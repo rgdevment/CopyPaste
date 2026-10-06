@@ -710,6 +710,8 @@ export component Panel inherits Window {
                             }
                             layout: root.layout;
                             copy(id) => { root.copy(id); }
+                            paste(id) => { root.paste(id); }
+                            plain(id) => { root.paste-as(id, "plain-text"); }
                             forms(id) => {
                                 root.current = index;
                                 root.opened = false;
