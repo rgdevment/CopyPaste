@@ -148,18 +148,27 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+pub fn remembers(greeting: Option<&Greeting>) -> bool {
+    !matches!(greeting, Some(Greeting::Keys))
+}
+
 fn only_keys<R: Runtime>(app: &AppHandle<R>) -> bool {
     app.try_state::<Now>()
-        .and_then(|state| state.0.lock().ok().map(|held| held.clone()))
-        .is_some_and(|held| held == Some(Greeting::Keys))
+        .and_then(|state| state.0.lock().ok().map(|held| !remembers(held.as_ref())))
+        .unwrap_or(false)
+}
+
+fn hold<R: Runtime>(app: &AppHandle<R>, greeting: Greeting) {
+    if let Some(state) = app.try_state::<Now>()
+        && let Ok(mut held) = state.0.lock()
+    {
+        *held = Some(greeting);
+    }
 }
 
 pub fn reopened<R: Runtime>(app: &AppHandle<R>) {
-    if app.get_webview_window(LABEL).is_none()
-        && let Some(state) = app.try_state::<Now>()
-        && let Ok(mut held) = state.0.lock()
-    {
-        *held = Some(Greeting::Keys);
+    if app.get_webview_window(LABEL).is_none() {
+        hold(app, Greeting::Keys);
     }
     open(app);
 }
@@ -177,11 +186,7 @@ pub fn greeting(state: tauri::State<'_, Now>) -> Greeting {
 #[tauri::command]
 pub async fn tour(app: AppHandle) {
     let wanted = Greeting::Tour { former: false };
-    if let Some(state) = app.try_state::<Now>()
-        && let Ok(mut held) = state.0.lock()
-    {
-        *held = Some(wanted.clone());
-    }
+    hold(&app, wanted.clone());
     if app.get_webview_window(LABEL).is_some() {
         let _ = app.emit_to(LABEL, "greeting", wanted);
     }

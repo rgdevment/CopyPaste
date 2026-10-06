@@ -79,7 +79,10 @@ pub fn run() {
         } => api.prevent_exit(),
         tauri::RunEvent::Exit => panel::quit(app),
         #[cfg(target_os = "macos")]
-        tauri::RunEvent::Reopen { .. } => welcome::reopened(app),
+        tauri::RunEvent::Reopen {
+            has_visible_windows: false,
+            ..
+        } => welcome::reopened(app),
         _ => {}
     });
 }

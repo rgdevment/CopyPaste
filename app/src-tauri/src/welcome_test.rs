@@ -1,4 +1,4 @@
-use super::{Greeting, behind, decide, told};
+use super::{Greeting, behind, decide, remembers, told};
 
 fn said(all: &[&str]) -> Vec<String> {
     all.iter().map(|one| (*one).to_owned()).collect()
@@ -145,4 +145,14 @@ fn opening_it_again_asks_the_window_for_the_shortcut_alone() {
         serde_json::to_value(Greeting::Keys).expect("it serializes"),
         serde_json::json!({ "kind": "keys" })
     );
+}
+
+#[test]
+fn closing_the_shortcut_alone_leaves_the_welcome_as_it_was() {
+    assert!(!remembers(Some(&Greeting::Keys)));
+    assert!(remembers(Some(&Greeting::Tour { former: false })));
+    assert!(remembers(Some(&Greeting::News {
+        versions: vec!["3.0.0".to_owned()]
+    })));
+    assert!(remembers(None));
 }
