@@ -11,7 +11,8 @@ pub fn as_accessory() -> bool {
 
 pub fn is_ours_up_front() -> Option<bool> {
     let mtm = MainThreadMarker::new()?;
-    Some(NSApplication::sharedApplication(mtm).isActive())
+    let app = NSApplication::sharedApplication(mtm);
+    Some(app.isActive() || app.keyWindow().is_some())
 }
 
 pub fn is_accessory() -> Option<bool> {

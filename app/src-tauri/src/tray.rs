@@ -136,16 +136,52 @@ pub fn surface_at<R: Runtime>(app: &AppHandle<R>, rail: Option<&str>) {
     let page = rail.map_or(WebviewUrl::default(), |rail| {
         WebviewUrl::App(format!("index.html#{rail}").into())
     });
-    let built = WebviewWindowBuilder::new(app, "main", page)
-        .title("CopyPaste")
-        .inner_size(780.0, 580.0)
-        .min_inner_size(620.0, 460.0)
-        .decorations(false)
-        .center()
-        .build();
+    let built = framed(
+        WebviewWindowBuilder::new(app, "main", page)
+            .title("CopyPaste")
+            .inner_size(780.0, 580.0)
+            .min_inner_size(620.0, 460.0)
+            .center(),
+    )
+    .build();
     if let Ok(window) = built {
+        unzoomed(&window);
         ahead(&window);
     }
+}
+
+#[cfg(target_os = "macos")]
+fn unzoomed<R: Runtime>(window: &tauri::WebviewWindow<R>) {
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
+    let at = ns_window as usize;
+    let _ = window.run_on_main_thread(move || {
+        if let Some(ns_window) = std::ptr::NonNull::new(at as *mut std::ffi::c_void) {
+            cp_mac_sys::titlebar::without_zoom(ns_window);
+        }
+    });
+}
+
+#[cfg(not(target_os = "macos"))]
+fn unzoomed<R: Runtime>(_window: &tauri::WebviewWindow<R>) {}
+
+#[cfg(target_os = "macos")]
+fn framed<'a, R: Runtime, M: Manager<R>>(
+    builder: WebviewWindowBuilder<'a, R, M>,
+) -> WebviewWindowBuilder<'a, R, M> {
+    builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .maximizable(false)
+        .traffic_light_position(tauri::LogicalPosition::new(14.0, 17.0))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn framed<'a, R: Runtime, M: Manager<R>>(
+    builder: WebviewWindowBuilder<'a, R, M>,
+) -> WebviewWindowBuilder<'a, R, M> {
+    builder.decorations(false)
 }
 
 fn ahead<R: Runtime>(window: &tauri::WebviewWindow<R>) {

@@ -157,59 +157,13 @@ body {
 }
 
 .chrome.mac {
-  padding-left: 0;
+  padding-left: 64px;
   padding-right: 13px;
 }
 
-/* on a Mac the left inset comes from the knobs, so a window without them needs its own */
+/* on a Mac the left inset leaves room for the system's traffic lights, so a window without them needs its own */
 .chrome.mac.bare {
   padding-left: 13px;
-}
-
-.chrome.mac .chrome-does {
-  order: -1;
-  flex-direction: row-reverse;
-  align-items: center;
-  gap: 8px;
-  height: auto;
-  padding: 0 8px 0 13px;
-}
-
-.chrome.mac .chrome-knob {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--hair);
-}
-
-.chrome.mac .chrome-knob svg {
-  width: 8px;
-  height: 8px;
-  opacity: 0;
-  stroke: rgba(0, 0, 0, 0.55);
-  stroke-width: 1.4;
-}
-
-.chrome.mac .chrome-knob.shut {
-  background: #ff5f57;
-}
-
-.chrome.mac .chrome-knob:not(.shut) {
-  background: #febc2e;
-}
-
-.chrome.mac .chrome-does:hover .chrome-knob svg {
-  opacity: 1;
-}
-
-.chrome.mac .chrome-knob:hover,
-.chrome.mac .chrome-knob.shut:hover {
-  background: inherit;
-}
-
-.chrome.mac .chrome-knob:hover svg,
-.chrome.mac .chrome-knob.shut:hover svg {
-  stroke: rgba(0, 0, 0, 0.55);
 }
 
 .shell {

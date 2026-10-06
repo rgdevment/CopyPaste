@@ -5,10 +5,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 pub const FILE: &str = "config.toml";
 
-#[cfg(target_os = "macos")]
-pub const SHORTCUT: &str = "Cmd+Alt+V";
-#[cfg(not(target_os = "macos"))]
 pub const SHORTCUT: &str = "Ctrl+Alt+V";
+
+#[cfg(target_os = "macos")]
+const FORMER_SHORTCUT: &str = "Cmd+Alt+V";
 
 pub const KEEPS_DAYS: u16 = 30;
 
@@ -90,6 +90,10 @@ impl Config {
             self.shortcut = SHORTCUT.to_owned();
         }
         self.shortcut = self.shortcut.trim().to_owned();
+        #[cfg(target_os = "macos")]
+        if self.shortcut == FORMER_SHORTCUT {
+            self.shortcut = SHORTCUT.to_owned();
+        }
         if self.keeps_days == Some(0) {
             self.keeps_days = None;
         }

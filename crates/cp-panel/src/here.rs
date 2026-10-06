@@ -318,8 +318,13 @@ mod platform {
 
     pub fn dress(_handle: RawWindowHandle, _wanted: &str, _light: bool) {}
 
-    pub fn forward(_handle: RawWindowHandle) {
-        cp_mac_sys::frontmost::bring_to_front(cp_mac_sys::frontmost::our_pid());
+    pub fn forward(handle: RawWindowHandle) {
+        let RawWindowHandle::AppKit(appkit) = handle else {
+            return;
+        };
+        if !cp_mac_sys::floating::keys_without_activating(appkit.ns_view) {
+            cp_mac_sys::frontmost::bring_to_front(cp_mac_sys::frontmost::our_pid());
+        }
     }
 
     pub use cp_mac_sys::dragging::Dragged;
