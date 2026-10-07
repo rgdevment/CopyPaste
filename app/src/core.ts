@@ -165,7 +165,9 @@ export function combination(press: {
   } else if (code === "Space") {
     key = "Space";
   }
-  if (key === null || held.length === 0) {
+  const steady = press.ctrlKey || press.altKey || press.metaKey;
+  const topRow = key !== null && /^F\d/.test(key) && press.shiftKey;
+  if (key === null || !(steady || topRow)) {
     return null;
   }
   held.push(key);

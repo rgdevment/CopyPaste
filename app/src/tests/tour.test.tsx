@@ -79,11 +79,11 @@ describe("the welcome of a fresh install", () => {
 
     await press("Comenzar");
     expect(await screen.findByText("Ese atajo ya está en uso")).toBeInTheDocument();
-    await press("Ctrl + Shift + V");
+    await press("Alt + Shift + V");
     await waitFor(() => {
       expect(vi.mocked(invoke)).toHaveBeenCalledWith(
         "keep",
-        expect.objectContaining({ config: expect.objectContaining({ shortcut: "Ctrl+Shift+V" }) }),
+        expect.objectContaining({ config: expect.objectContaining({ shortcut: "Alt+Shift+V" }) }),
       );
     });
   });

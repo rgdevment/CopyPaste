@@ -32,6 +32,18 @@ const ES = {
   keysStop: "Dejarlo como está",
   panelTrouble:
     "El panel no está funcionando: {one}. Lo copiado no se está guardando hasta que se resuelva",
+  panelNotice: "Aviso del panel: {one}. Lo que copias se sigue guardando",
+  panelUnstarted: "no pudo arrancar",
+  panelHistoryReplaced: "el historial estaba dañado y se empezó uno nuevo",
+  panelHistoryUnopened: "no se pudo abrir el historial",
+  panelUndrawn: "no se pudo dibujar",
+  panelUnwatched: "nada está vigilando el portapapeles",
+  panelUnemptied: "no se pudo vaciar el historial",
+  panelClipboardDenied: "el sistema no deja que CopyPaste lea el portapapeles",
+  panelStopped: "dejó de vigilar el portapapeles",
+  panelUnsteady: "no se mantiene abierto; reinicia CopyPaste",
+  panelUnanswering: "no responde",
+  panelUnknown: "algo salió mal",
   keysTaken:
     "Otro programa ya usa esa combinación, así que el panel no se abre con ella. Elige otra cuando puedas cambiarla",
   keysFree: "Estas están libres ahora mismo:",
@@ -312,6 +324,18 @@ const EN: Record<keyof Said, string> = {
   keysStop: "Leave it as it is",
   panelTrouble:
     "The panel is not working: {one}. Nothing you copy is being kept until this is fixed",
+  panelNotice: "A note from the panel: {one}. What you copy is still being kept",
+  panelUnstarted: "it could not start",
+  panelHistoryReplaced: "the history was damaged and a new one was started",
+  panelHistoryUnopened: "the history could not be opened",
+  panelUndrawn: "it could not be drawn",
+  panelUnwatched: "nothing is watching the clipboard",
+  panelUnemptied: "the history could not be emptied",
+  panelClipboardDenied: "the system does not let CopyPaste read the clipboard",
+  panelStopped: "it stopped watching the clipboard",
+  panelUnsteady: "it will not stay up; restart CopyPaste",
+  panelUnanswering: "it is not answering",
+  panelUnknown: "something went wrong",
   keysTaken:
     "Another program already uses that combination, so the panel will not open with it. Pick another one when you can change it",
   keysFree: "These are free right now:",
@@ -695,7 +719,7 @@ let now: Record<keyof Said, string> = ES;
 
 export function adopt(locale: string | null) {
   const asked = locale ?? navigator.language;
-  const english = asked.toLowerCase().startsWith("en");
+  const english = !asked.toLowerCase().startsWith("es");
   now = english ? EN : ES;
   document.documentElement.lang = english ? "en" : "es";
 }
@@ -710,6 +734,26 @@ export function t(key: keyof Said) {
 
 export function fill(key: keyof Said, one: string) {
   return now[key].replace("{one}", one);
+}
+
+const PANEL_TROUBLE: Record<string, keyof Said> = {
+  unstarted: "panelUnstarted",
+  "history-replaced": "panelHistoryReplaced",
+  "history-unopened": "panelHistoryUnopened",
+  undrawn: "panelUndrawn",
+  unwatched: "panelUnwatched",
+  unemptied: "panelUnemptied",
+  "clipboard-denied": "panelClipboardDenied",
+  stopped: "panelStopped",
+  unsteady: "panelUnsteady",
+  unanswering: "panelUnanswering",
+};
+
+const STILL_KEEPING = new Set(["history-replaced", "unemptied"]);
+
+export function panelTroubleSaid(key: string) {
+  const known = Object.hasOwn(PANEL_TROUBLE, key) ? PANEL_TROUBLE[key] : "panelUnknown";
+  return fill(STILL_KEEPING.has(key) ? "panelNotice" : "panelTrouble", t(known));
 }
 
 export function items(count: number) {

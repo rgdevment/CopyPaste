@@ -7,6 +7,7 @@ mod excuse;
 mod face;
 mod folder;
 mod group;
+mod handing;
 mod here;
 mod kept;
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
@@ -18,6 +19,7 @@ mod media;
 mod model;
 mod note;
 mod opening;
+mod orders;
 mod paired;
 mod papers;
 mod placing;
@@ -33,6 +35,7 @@ mod ways;
 
 slint::include_modules!();
 
+use cp_core::trouble::Trouble;
 use std::path::PathBuf;
 
 fn stand_aside() -> Result<(), slint::PlatformError> {
@@ -66,7 +69,7 @@ fn main() {
     let options = match Options::from_args() {
         Ok(options) => options,
         Err(why) => {
-            note::trouble(why);
+            note::trouble(Trouble::Unstarted, why);
             std::process::exit(1);
         }
     };
@@ -83,22 +86,31 @@ fn main() {
     let store = match cp_store::open_or_set_aside(&options.db, app::now_ms()) {
         Ok(opened) => {
             if let Some(kept) = opened.set_aside {
-                note::trouble(&format!(
-                    "the history was damaged and a new one was started; the old file was kept as {}",
-                    kept.display()
-                ));
+                note::trouble(
+                    Trouble::HistoryReplaced,
+                    &format!(
+                        "the history was damaged and a new one was started; the old file was kept as {}",
+                        kept.display()
+                    ),
+                );
             }
             opened.store
         }
         Err(why) => {
-            note::trouble(&format!("the history could not be opened: {why}"));
+            note::trouble(
+                Trouble::HistoryUnopened,
+                &format!("the history could not be opened: {why}"),
+            );
             std::process::exit(1);
         }
     };
     let (panel, app) = match app::App::start(store, options.clone()) {
         Ok(started) => started,
         Err(why) => {
-            note::trouble(&format!("the panel could not be drawn: {why}"));
+            note::trouble(
+                Trouble::Undrawn,
+                &format!("the panel could not be drawn: {why}"),
+            );
             std::process::exit(1);
         }
     };

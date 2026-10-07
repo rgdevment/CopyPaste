@@ -29,13 +29,15 @@ fn the_bar_icon_on_macos_is_pale_because_the_system_paints_it_itself() {
 }
 
 #[test]
-fn only_a_locale_that_starts_with_en_gets_english() {
+fn only_a_locale_that_starts_with_es_gets_spanish() {
     assert!(!spanish(Some("en")));
     assert!(!spanish(Some("en-GB")));
-    assert!(!spanish(Some("EN-us")));
     assert!(spanish(Some("es")));
     assert!(spanish(Some("es-CL")));
-    assert!(spanish(Some("pt-BR")));
+    assert!(spanish(Some("ES-mx")));
+    assert!(!spanish(Some("pt-BR")));
+    assert!(!spanish(Some("fr")));
+    assert!(!spanish(Some("de-DE")));
 }
 
 #[test]

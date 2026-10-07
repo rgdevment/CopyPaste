@@ -192,6 +192,8 @@ export component Panel inherits Window {
                         Rectangle {
                             horizontal-stretch: 1;
                             input := TextInput {
+                                accessible-role: AccessibleRole.text-input;
+                                accessible-label: Words.hint;
                                 height: parent.height;
                                 width: parent.width;
                                 vertical-alignment: center;

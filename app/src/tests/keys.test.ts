@@ -24,6 +24,22 @@ describe("the combination the user presses", () => {
     expect(combination(press("F9", {}))).toBeNull();
   });
 
+  it("refuses Shift alone, which would take a capital letter from every app", () => {
+    expect(combination(press("KeyV", { shift: true }))).toBeNull();
+    expect(combination(press("Digit1", { shift: true }))).toBeNull();
+    expect(combination(press("Space", { shift: true }))).toBeNull();
+  });
+
+  it("takes Shift alone with a function key, which types nothing", () => {
+    expect(combination(press("F9", { shift: true }))).toBe("Shift+F9");
+    expect(combination(press("F24", { shift: true }))).toBe("Shift+F24");
+  });
+
+  it("takes Shift beside a real modifier", () => {
+    expect(combination(press("KeyV", { shift: true, meta: true }))).toBe("Shift+Cmd+V");
+    expect(combination(press("KeyV", { shift: true, alt: true }))).toBe("Alt+Shift+V");
+  });
+
   it("refuses modifiers without a real key", () => {
     expect(combination(press("ControlLeft", { ctrl: true }))).toBeNull();
     expect(combination(press("AltLeft", { ctrl: true, alt: true }))).toBeNull();

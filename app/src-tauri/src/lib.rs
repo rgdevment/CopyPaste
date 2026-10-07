@@ -107,11 +107,13 @@ fn empty(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn trouble(app: tauri::AppHandle) -> Option<String> {
-    panel::trouble(&app)
+fn trouble(app: tauri::AppHandle) -> Option<&'static str> {
+    panel::trouble(&app).map(cp_core::trouble::Trouble::key)
 }
 
 #[tauri::command]
 fn relabel(app: tauri::AppHandle, locale: Option<String>) {
-    tray::reword(&app, tray::spanish(locale.as_deref()));
+    let spanish = tray::spanish(locale.as_deref());
+    tray::reword(&app, spanish);
+    tray::reword_tip(&app, spanish);
 }

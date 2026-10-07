@@ -1,11 +1,22 @@
+use cp_core::trouble::Trouble;
 use std::path::Path;
 
 pub fn where_to() -> std::path::PathBuf {
     folder().join("cp-panel.log")
 }
 
-fn folder() -> std::path::PathBuf {
+fn real_folder() -> std::path::PathBuf {
     crate::here::data_dir().map_or_else(std::env::temp_dir, |dir| dir.join("logs"))
+}
+
+#[cfg(not(test))]
+fn folder() -> std::path::PathBuf {
+    real_folder()
+}
+
+#[cfg(test)]
+fn folder() -> std::path::PathBuf {
+    std::env::temp_dir().join("cp-panel-tests")
 }
 
 fn guard(at: &Path, mode: u32) {
@@ -20,9 +31,13 @@ pub fn tell(what: &str) {
     cp_core::note::said_to(&mut std::io::stdout().lock(), what);
 }
 
-pub fn trouble(what: &str) {
-    note(what);
-    tell(&format!("trouble {what}"));
+pub fn trouble(trouble: Trouble, why: &str) {
+    note(why);
+    tell(&format!("trouble {}", trouble.key()));
+}
+
+pub fn well(trouble: Trouble) {
+    tell(&format!("well {}", trouble.key()));
 }
 
 pub const ERRANDS: &str = "errands";

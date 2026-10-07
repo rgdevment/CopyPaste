@@ -4,6 +4,7 @@ use cp_core::capture::{Captured, Unreadable};
 use cp_core::item::Item;
 use cp_core::kind::Kind;
 use cp_core::resting::Rest;
+use cp_core::trouble::Trouble;
 use cp_store::Store;
 use std::path::Path;
 use std::sync::Arc;
@@ -443,14 +444,14 @@ struct Notice {
 impl Notice {
     fn readable_again(&mut self) {
         if std::mem::take(&mut self.told) {
-            crate::note::tell(&format!("well {}", Unreadable::Denied.said()));
+            crate::note::well(Trouble::ClipboardDenied);
         }
     }
 
     fn unreadable(&mut self, blocked: Option<Unreadable>) {
         match blocked {
             Some(Unreadable::Denied) if !std::mem::replace(&mut self.told, true) => {
-                crate::note::trouble(Unreadable::Denied.said());
+                crate::note::trouble(Trouble::ClipboardDenied, Unreadable::Denied.said());
             }
             Some(Unreadable::Asks) if !std::mem::replace(&mut self.asked, true) => {
                 note(Unreadable::Asks.said());

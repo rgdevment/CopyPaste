@@ -132,9 +132,7 @@ describe("the window", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
-      what === "trouble"
-        ? Promise.resolve("no se pudo abrir el historial: base dañada")
-        : real?.(what, args)) as never);
+      what === "trouble" ? Promise.resolve("history-unopened") : real?.(what, args)) as never);
     render(<App />);
     expect(await screen.findByText(/no se pudo abrir el historial/)).toBeDefined();
     expect(screen.getByText(/no se está guardando/)).toBeDefined();
@@ -172,7 +170,7 @@ describe("the window", () => {
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     expect(await screen.findByText(/Estas están libres ahora mismo/)).toBeDefined();
-    const offered = await screen.findByRole("button", { name: "Ctrl + Shift + V" });
+    const offered = await screen.findByRole("button", { name: "Alt + Shift + V" });
     await who.click(offered);
     const asked = vi
       .mocked(invoke)
@@ -180,7 +178,7 @@ describe("the window", () => {
       .pop();
     expect(asked).toBeDefined();
     const sent = asked?.[1] as { config: { shortcut: string } } | undefined;
-    expect(sent?.config.shortcut).toBe("Ctrl+Shift+V");
+    expect(sent?.config.shortcut).toBe("Alt+Shift+V");
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
