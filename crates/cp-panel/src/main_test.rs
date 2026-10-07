@@ -11,7 +11,9 @@ const SHUT: f32 = 58.0;
 const OPEN: f32 = 190.0;
 const BIG: f32 = 340.0;
 
-static PLATFORM: std::sync::Once = std::sync::Once::new();
+thread_local! {
+    static PLATFORM: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 fn card(id: i32) -> Card {
     Card {
@@ -63,7 +65,9 @@ fn open_one(panel: &Panel) -> Option<usize> {
 }
 
 fn bench(count: i32) -> Bench {
-    PLATFORM.call_once(i_slint_backend_testing::init_no_event_loop);
+    if !PLATFORM.replace(true) {
+        i_slint_backend_testing::init_no_event_loop();
+    }
     let panel = Panel::new().expect("the panel builds");
     panel
         .window()
@@ -179,4 +183,31 @@ fn the_card_opened_at_the_bottom_ends_up_whole_on_screen() {
         "the open card ends at {bottom}, past {}",
         bench.panel.get_viewport_height()
     );
+}
+
+fn press(panel: &Panel, key: slint::platform::Key) {
+    let window = panel.window();
+    window.dispatch_event(WindowEvent::KeyPressed { text: key.into() });
+    window.dispatch_event(WindowEvent::KeyReleased { text: key.into() });
+}
+
+#[test]
+fn enter_pastes_the_card_under_the_pointer_not_the_one_chosen_by_keys() {
+    let bench = bench(6);
+    bench.panel.invoke_focus_search();
+    bench.panel.set_current(0);
+    bench.panel.set_hovered(3);
+    press(&bench.panel, slint::platform::Key::Return);
+    assert_eq!(*bench.pasted.borrow(), [3]);
+    assert_eq!(bench.panel.get_current(), 3);
+}
+
+#[test]
+fn enter_with_the_pointer_away_pastes_the_card_chosen_by_keys() {
+    let bench = bench(6);
+    bench.panel.invoke_focus_search();
+    bench.panel.set_current(2);
+    bench.panel.set_hovered(-1);
+    press(&bench.panel, slint::platform::Key::Return);
+    assert_eq!(*bench.pasted.borrow(), [2]);
 }

@@ -281,6 +281,10 @@ export component Panel inherits Window {
                                         root.ask-settings();
                                         return accept;
                                     }
+                                    if event.text == Key.Return && root.hovered >= 0 {
+                                        root.current = root.hovered;
+                                        root.hovered = -1;
+                                    }
                                     if event.text == Key.Return
                                         && root.current >= 0
                                         && (event.modifiers.alt || event.modifiers.control) {
