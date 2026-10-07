@@ -204,7 +204,7 @@ fn a_picture_ends_up_with_a_thumbnail_it_can_show() {
     let (dir, store) = somewhere();
     let thumbs = dir.path().join("thumbs");
     let id = keep(&store, &drawn(600), 1_000, None).expect("stored");
-    assert!(errand(&store, &thumbs), "there was work to do");
+    assert!(errand(&store, &thumbs, &unseen), "there was work to do");
     let page = store
         .list(&cp_store::Filter::default(), 10, None)
         .expect("listed");
@@ -277,7 +277,7 @@ fn what_is_older_than_the_setting_goes_and_what_is_pinned_stays() {
 #[test]
 fn nothing_waiting_means_nothing_to_do() {
     let (dir, store) = somewhere();
-    assert!(!errand(&store, &dir.path().join("thumbs")));
+    assert!(!errand(&store, &dir.path().join("thumbs"), &unseen));
 }
 
 #[test]
@@ -285,7 +285,7 @@ fn something_that_cannot_be_drawn_waits_instead_of_spinning() {
     let (dir, store) = somewhere();
     let thumbs = dir.path().join("thumbs");
     let id = keep(&store, &image(), 1_000, None).expect("stored");
-    assert!(errand(&store, &thumbs), "it gave it a try");
+    assert!(errand(&store, &thumbs, &unseen), "it gave it a try");
     let now = crate::app::now_ms();
     assert!(
         store
@@ -328,7 +328,7 @@ fn aside(name: &str) -> std::path::PathBuf {
 #[test]
 fn an_engine_that_started_closes_and_closing_it_twice_is_no_error() {
     let dir = aside("closing");
-    let engine = Engine::start(&dir.join("history.db"), |_| {}).expect("an engine");
+    let engine = Engine::start(&dir.join("history.db"), |_| {}, |_| {}).expect("an engine");
     let started = std::time::Instant::now();
     engine.close();
     engine.close();
@@ -343,7 +343,7 @@ fn an_engine_that_started_closes_and_closing_it_twice_is_no_error() {
 #[test]
 fn an_engine_nobody_closed_is_still_closed_by_dropping_it() {
     let dir = aside("dropping");
-    let engine = Engine::start(&dir.join("history.db"), |_| {}).expect("an engine");
+    let engine = Engine::start(&dir.join("history.db"), |_| {}, |_| {}).expect("an engine");
     let started = std::time::Instant::now();
     drop(engine);
     assert!(
@@ -453,7 +453,7 @@ fn an_errand_whose_outcome_cannot_be_written_backs_off_instead_of_spinning() {
     keep(&store, &image(), 1_000, None).expect("stored");
     refuse_writes_to_the_queue(&store);
     assert!(
-        !errand(&store, &thumbs),
+        !errand(&store, &thumbs, &unseen),
         "the job is still waiting and the loop must nap"
     );
 }
@@ -470,7 +470,7 @@ fn done_and_giving_up_say_whether_they_were_written() {
 
 fn run_out(store: &Store, thumbs: &std::path::Path) {
     for _ in 0..8 {
-        if !errand(store, thumbs) {
+        if !errand(store, thumbs, &unseen) {
             return;
         }
     }
@@ -489,7 +489,10 @@ fn each_kind_of_errand_is_taken_and_leaves_its_queue() {
     let id = keep(&store, &text("nothing to measure"), 1_000, None).expect("stored");
     for job in ["ocr", "media", "folder"] {
         store.enqueue(id, job).expect("queued");
-        assert!(errand(&store, &thumbs), "the {job} errand was taken");
+        assert!(
+            errand(&store, &thumbs, &unseen),
+            "the {job} errand was taken"
+        );
         assert!(waiting(&store, job).is_empty(), "the {job} errand is over");
     }
 }
@@ -525,7 +528,7 @@ fn a_file_the_system_knows_nothing_about_is_measured_later() {
     let here = plain.to_string_lossy().into_owned();
     let id = keep(&store, &files(&[&here]), 1_000, None).expect("stored");
     store.enqueue(id, "media").expect("queued");
-    assert!(errand(&store, &thumbs));
+    assert!(errand(&store, &thumbs, &unseen));
 }
 
 #[test]
@@ -551,7 +554,7 @@ fn every_kind_of_errand_naps_when_its_outcome_cannot_be_written() {
     }
     refuse_writes_to_the_queue(&store);
     assert!(
-        !errand(&store, &thumbs),
+        !errand(&store, &thumbs, &unseen),
         "the loop naps instead of spinning"
     );
 }
@@ -564,7 +567,7 @@ fn an_idle_engine_rests_instead_of_asking_the_store_over_and_over() {
     let closing = rest.clone();
     let thumbs = dir.join("thumbs");
     let serving =
-        std::thread::spawn(move || serve(&store, &thumbs, &rest, Duration::from_secs(60)));
+        std::thread::spawn(move || serve(&store, &thumbs, &rest, Duration::from_secs(60), &unseen));
     std::thread::sleep(Duration::from_millis(600));
     closing.close();
     let rounds = serving.join().expect("the loop ended");
@@ -580,7 +583,7 @@ fn work_that_arrives_wakes_an_engine_that_was_resting() {
     let closing = rest.clone();
     let thumbs = dir.join("thumbs");
     let serving =
-        std::thread::spawn(move || serve(&store, &thumbs, &rest, Duration::from_secs(60)));
+        std::thread::spawn(move || serve(&store, &thumbs, &rest, Duration::from_secs(60), &unseen));
     std::thread::sleep(Duration::from_millis(200));
     closing.wake();
     std::thread::sleep(Duration::from_millis(200));
@@ -633,4 +636,47 @@ fn a_refused_read_is_told_once_and_cleared_when_reading_comes_back() {
     assert!(!notice.told, "reading again clears it");
     assert_eq!(taken(Captured::Nothing, asking, &mut notice), None);
     assert!(notice.asked, "asking is noted once");
+}
+
+fn unseen(_: i64) {}
+
+fn told(store: &Store, thumbs: &std::path::Path) -> Vec<i64> {
+    let seen = std::cell::RefCell::new(Vec::new());
+    for _ in 0..8 {
+        if !errand(store, thumbs, &|id| seen.borrow_mut().push(id)) {
+            break;
+        }
+    }
+    seen.into_inner()
+}
+
+#[test]
+fn a_thumbnail_that_lands_is_told_so_its_card_can_be_drawn_again() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    let id = keep(&store, &drawn(600), 1_000, None).expect("stored");
+    assert_eq!(told(&store, &thumbs), [id]);
+}
+
+#[test]
+fn a_thumbnail_that_cannot_be_drawn_tells_nobody() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    keep(&store, &image(), 1_000, None).expect("stored");
+    assert!(told(&store, &thumbs).is_empty());
+}
+
+#[test]
+fn a_counted_folder_is_told_and_a_missing_one_is_not() {
+    let (dir, store) = somewhere();
+    let thumbs = dir.path().join("thumbs");
+    let folder = dir.path().join("counted");
+    std::fs::create_dir(&folder).expect("folder");
+    let here = folder.to_string_lossy().into_owned();
+    let id = keep(&store, &files(&[&here]), 1_000, None).expect("stored");
+    store.enqueue(id, "folder").expect("queued");
+    assert!(told(&store, &thumbs).contains(&id));
+    std::fs::remove_dir_all(&folder).expect("gone");
+    store.enqueue(id, "folder").expect("queued again");
+    assert!(told(&store, &thumbs).is_empty());
 }

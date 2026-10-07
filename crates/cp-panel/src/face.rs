@@ -52,14 +52,15 @@ pub struct Seen<'a> {
 
 impl Face {
     pub fn of(seen: &Seen<'_>) -> Self {
+        let pictured = seen.thumb || seen.kind == Some(Kind::Image);
         if seen.found {
-            return if seen.thumb {
+            return if pictured {
                 Self::FoundThumb
             } else {
                 Self::Found
             };
         }
-        if seen.thumb {
+        if pictured {
             return Self::Thumb;
         }
         if seen.paints {

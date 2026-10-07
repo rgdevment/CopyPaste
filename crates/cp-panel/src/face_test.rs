@@ -180,3 +180,13 @@ fn a_colour_sits_on_a_single_row_while_closed() {
     assert_eq!(Face::FoundThumb.body_px(), THUMB);
     assert_eq!(Face::FoundThumb.as_str(), "found-thumb");
 }
+
+#[test]
+fn a_picture_keeps_its_picture_face_while_the_thumbnail_is_on_its_way() {
+    let mut picture = seen(Some(Kind::Image), "");
+    assert_eq!(Face::of(&picture), Face::Thumb);
+    picture.found = true;
+    assert_eq!(Face::of(&picture), Face::FoundThumb);
+    assert_eq!(Face::of(&seen(Some(Kind::Text), "")), Face::Words(1));
+    assert_eq!(Face::of(&seen(Some(Kind::Video), "/a.mov")), Face::Media);
+}

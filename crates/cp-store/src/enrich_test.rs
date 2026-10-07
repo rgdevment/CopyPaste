@@ -134,3 +134,18 @@ fn setting_the_group_of_something_that_is_not_there_is_not_an_error() {
         .expect("no row, no change");
     assert!(store.ungrouped(10).expect("asked").is_empty());
 }
+
+#[test]
+fn the_thumbnail_of_one_item_is_read_once_it_is_written() {
+    let store = Store::in_memory().expect("schema");
+    let id = kept(&store, Kind::Image, "", 1);
+    let other = kept(&store, Kind::Image, "", 2);
+    assert_eq!(store.thumb_path(id).expect("read"), None);
+    store.set_thumb(id, Some("/thumbs/1.png"), 3).expect("set");
+    assert_eq!(
+        store.thumb_path(id).expect("read").as_deref(),
+        Some("/thumbs/1.png")
+    );
+    assert_eq!(store.thumb_path(other).expect("read"), None);
+    assert_eq!(store.thumb_path(9_999).expect("read"), None);
+}

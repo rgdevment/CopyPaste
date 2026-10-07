@@ -486,7 +486,7 @@ impl Store {
 
     fn erase(&self, id: i64, at: i64) -> Result<Gone> {
         let mut gone = Gone::default();
-        gone.thumbs.extend(self.thumb_of(id)?);
+        gone.thumbs.extend(self.thumb_path(id)?);
         self.db.execute(
             "UPDATE items
              SET deleted_at = ?2, updated_at = ?2,
@@ -500,7 +500,7 @@ impl Store {
         Ok(gone)
     }
 
-    fn thumb_of(&self, id: i64) -> Result<Option<String>> {
+    pub fn thumb_path(&self, id: i64) -> Result<Option<String>> {
         Ok(self
             .db
             .query_row("SELECT thumb_path FROM items WHERE id = ?1", [id], |row| {

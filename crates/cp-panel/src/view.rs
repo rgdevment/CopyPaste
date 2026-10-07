@@ -252,6 +252,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
         has_thumb: row.thumb_path.is_some(),
         pinned: row.pinned,
         broken: row.broken_since.is_some(),
+        blank: says_nothing(row),
     }
 }
 
@@ -411,7 +412,7 @@ pub fn aside_of(row: &Listed, knows: &Knows<'_>, meta: Option<&MetaOfOne>) -> St
 
 fn more_than_shown(row: &Listed) -> String {
     let lines = row.preview.lines().count();
-    if lines <= 1 {
+    if lines <= 1 || says_nothing(row) {
         return String::new();
     }
     let rest = lines - 1;
@@ -493,8 +494,40 @@ pub fn squeezed_of(text: &str) -> String {
 pub fn body_of(row: &Listed) -> String {
     match &row.snippet {
         Some(snippet) => snippet.excerpt.plain(),
+        None if says_nothing(row) => nothing_visible_in(crate::say::in_english()).to_owned(),
         None => row.preview.clone(),
     }
+}
+
+pub fn nothing_visible_in(english: bool) -> &'static str {
+    crate::say::pick_in(english, "Sin texto visible", "No visible text")
+}
+
+fn invisible(one: char) -> bool {
+    matches!(
+        one,
+        '\u{00AD}'
+            | '\u{200B}'..='\u{200F}'
+            | '\u{202A}'..='\u{202E}'
+            | '\u{2060}'..='\u{2064}'
+            | '\u{2066}'..='\u{2069}'
+            | '\u{FEFF}'
+    )
+}
+
+pub fn has_visible_text(text: &str) -> bool {
+    text.chars()
+        .any(|one| !one.is_whitespace() && !one.is_control() && !invisible(one))
+}
+
+pub fn says_nothing(row: &Listed) -> bool {
+    row.snippet.is_none()
+        && !matches!(
+            row.kind,
+            Some(Kind::Image | Kind::File | Kind::Folder | Kind::Audio | Kind::Video)
+        )
+        && row.preview.chars().count() < cp_store::PREVIEW_CHARS
+        && !has_visible_text(&row.preview)
 }
 
 pub fn label_of(kind: Option<Kind>) -> &'static str {

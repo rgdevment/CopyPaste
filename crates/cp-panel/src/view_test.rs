@@ -930,3 +930,113 @@ fn a_colour_says_its_channels_and_anything_else_says_nothing() {
     assert_eq!(paint_said(&colour), "rgba(255, 136, 0, 0.50)");
     assert_eq!(paint_said(&row(Some(Kind::Text))), "");
 }
+
+#[test]
+fn only_what_the_eye_can_see_counts_as_text() {
+    for blank in [
+        "",
+        " ",
+        "\n\t\r\n",
+        "\u{0}\u{7}",
+        "\u{200B}\u{FEFF}",
+        "\u{A0}\u{2060}",
+    ] {
+        assert!(!has_visible_text(blank), "{blank:?} shows nothing");
+    }
+    for seen in ["a", "  .  ", "\n1\n", "\u{200B}x", "—", "🙂"] {
+        assert!(has_visible_text(seen), "{seen:?} shows something");
+    }
+}
+
+#[test]
+fn a_text_with_nothing_to_see_says_so_instead_of_staying_blank() {
+    let mut empty = row(Some(Kind::Text));
+    empty.preview = " \n\t ".into();
+    assert!(says_nothing(&empty));
+    let said = nothing_visible_in(crate::say::in_english());
+    assert_eq!(body_of(&empty), said);
+    let card = card_of(&empty, 1_000_000, None);
+    assert!(card.blank);
+    assert_eq!(card.squeezed.as_str(), said);
+    assert_eq!(card.opened.as_str(), said);
+    assert_eq!(card.face.as_str(), "words");
+    let mut unknown = empty.clone();
+    unknown.kind = None;
+    assert!(says_nothing(&unknown));
+}
+
+#[test]
+fn a_text_with_words_or_a_thing_that_is_not_text_is_not_blank() {
+    let card = card_of(&row(Some(Kind::Text)), 1_000_000, None);
+    assert!(!card.blank);
+    assert_eq!(card.body.as_str(), "hola mundo");
+    for kind in [
+        Kind::Image,
+        Kind::File,
+        Kind::Folder,
+        Kind::Audio,
+        Kind::Video,
+    ] {
+        let mut quiet = row(Some(kind));
+        quiet.preview = String::new();
+        assert!(!says_nothing(&quiet), "{kind:?} shows itself another way");
+        assert_eq!(body_of(&quiet), "");
+    }
+    let mut found = row(Some(Kind::Text));
+    found.preview = String::new();
+    found.snippet = Some(Snippet {
+        found_in: FoundIn::Text,
+        excerpt: excerpt_of(&[("hit", true)]),
+    });
+    assert!(!says_nothing(&found));
+}
+
+#[test]
+fn the_blank_line_is_said_in_both_tongues() {
+    assert_eq!(nothing_visible_in(false), "Sin texto visible");
+    assert_eq!(nothing_visible_in(true), "No visible text");
+}
+
+#[test]
+fn a_picture_waiting_for_its_thumbnail_already_wears_the_picture_face() {
+    let mut picture = row(Some(Kind::Image));
+    picture.preview = String::new();
+    let card = card_of(&picture, 1_000_000, None);
+    assert!(!card.has_thumb);
+    assert_eq!(card.face.as_str(), "thumb");
+    assert_eq!(
+        face_for(&picture, false).shut_px(),
+        face_for(&picture, true).shut_px(),
+        "the card keeps its size when the thumbnail lands"
+    );
+}
+
+#[test]
+fn direction_marks_and_soft_hyphens_alone_show_nothing() {
+    for blank in [
+        "\u{200E}",
+        "\u{200F}\u{202B}",
+        "\u{00AD}",
+        "\u{2066}\u{2069}",
+        "\u{2061}",
+    ] {
+        assert!(!has_visible_text(blank), "{blank:?} shows nothing");
+    }
+}
+
+#[test]
+fn a_preview_cut_at_the_limit_is_never_called_empty() {
+    let mut long = row(Some(Kind::Text));
+    long.preview = " ".repeat(cp_store::PREVIEW_CHARS);
+    assert!(
+        !says_nothing(&long),
+        "the visible part may come after the cut"
+    );
+}
+
+#[test]
+fn empty_lines_alone_never_promise_more_lines() {
+    let mut blank = row(Some(Kind::Text));
+    blank.preview = "\n\n\n".into();
+    assert_eq!(more_than_shown(&blank), "");
+}

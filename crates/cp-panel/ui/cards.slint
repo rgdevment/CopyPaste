@@ -17,6 +17,13 @@ export component Icon inherits Image {
     colorize: tint;
 }
 
+component Unpictured inherits Icon {
+    source: @image-url("../assets/icons/image.svg");
+    tint: Theme.field-border;
+    width: 18px;
+    height: 18px;
+}
+
 export component Action inherits Rectangle {
     in property <string> says;
     accessible-role: AccessibleRole.button;
@@ -443,6 +450,7 @@ export component CardView inherits Rectangle {
                     clip: true;
                     background: Theme.tile;
                     Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: cover; }
+                    if !card.has-thumb : Unpictured { }
                     if card.media-clock != "" : Rectangle {
                         x: parent.width - self.width - 4px;
                         y: parent.height - self.height - 4px;
@@ -481,6 +489,7 @@ export component CardView inherits Rectangle {
                     clip: true;
                     background: Theme.tile;
                     Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: cover; }
+                    if !card.has-thumb : Unpictured { }
                 }
                 VerticalLayout {
                     alignment: center;
@@ -569,7 +578,7 @@ export component CardView inherits Rectangle {
             if !open && card.face == "words" : Text {
                 text: card.squeezed;
                 height: card.shut-lines * 19px;
-                color: card.broken ? Theme.danger : Theme.body;
+                color: card.broken ? Theme.danger : card.blank ? Theme.muted : Theme.body;
                 font-size: Theme.fs-body;
                 wrap: word-wrap;
                 overflow: elide;
@@ -581,6 +590,7 @@ export component CardView inherits Rectangle {
                 clip: true;
                 background: Theme.tile;
                 Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: contain; }
+                if !card.has-thumb : Unpictured { width: 26px; height: 26px; }
             }
             if open && (card.face == "thumb" || card.face == "found-thumb") : Text {
                 height: 15px;
@@ -594,7 +604,7 @@ export component CardView inherits Rectangle {
             if open && (card.face == "words" || card.face == "found") : Text {
                 text: card.opened;
                 height: card.open-lines * 19px;
-                color: card.broken ? Theme.danger : Theme.body;
+                color: card.broken ? Theme.danger : card.blank ? Theme.muted : Theme.body;
                 font-size: Theme.fs-body;
                 wrap: word-wrap;
                 overflow: elide;
@@ -755,7 +765,7 @@ export component CardView inherits Rectangle {
 
         if !mixed && !card.has-thumb && (!card.found || open) && !(special && !open) : Text {
             text: open ? card.body : card.squeezed;
-            color: card.mono ? Theme.mono : Theme.body;
+            color: card.blank ? Theme.muted : card.mono ? Theme.mono : Theme.body;
             font-size: card.mono ? Theme.fs-small : Theme.fs-body;
             font-family: card.mono ? Theme.mono-font : Theme.font;
             overflow: elide;
