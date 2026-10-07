@@ -300,7 +300,7 @@ fn nothing_offered_changes_nothing() {
 }
 
 #[test]
-fn a_format_with_no_way_back_is_counted_among_the_items_formats_not_the_clipboards() {
+fn a_format_announced_without_bytes_is_not_counted_as_one_that_fell_short() {
     let item = Item {
         kind: None,
         formats: vec![
@@ -315,8 +315,8 @@ fn a_format_with_no_way_back_is_counted_among_the_items_formats_not_the_clipboar
     assert_eq!(ready.wanted(), 1);
     assert_eq!(
         ready.fitted(1),
-        (1, 2),
-        "the clipboard took all it was given; what fell short is one of the item's two formats"
+        (1, 1),
+        "there were never bytes to give back, so nothing fell short"
     );
 }
 

@@ -377,6 +377,30 @@ describe("the window", () => {
     }
   });
 
+  it("only a copy installed from the Store asks to be rated there", async () => {
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+    expect(await screen.findByText("Dale una estrella")).toBeDefined();
+    expect(screen.queryByText("Valórala en la Store")).toBeNull();
+
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
+      if (what === "install_route") {
+        return Promise.resolve("store");
+      }
+      return (real as (a: string, b?: unknown) => Promise<unknown>)(what, args);
+    });
+    try {
+      cleanup();
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Acerca de" }));
+      expect(await screen.findByText("Valórala en la Store")).toBeDefined();
+    } finally {
+      vi.mocked(invoke).mockImplementation(real as never);
+    }
+  });
+
   it("a Store copy claims nothing: the Store takes care of it", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();

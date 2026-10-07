@@ -46,13 +46,21 @@ pub fn process_of_is_ours(window: HWND) -> bool {
 }
 
 pub fn ahead() -> isize {
+    ahead_besides(&[std::process::id()])
+}
+
+pub fn ahead_besides(ours: &[u32]) -> isize {
     let Some(window) = foreground() else {
         return 0;
     };
-    if process_of_is_ours(window) {
+    if is_one_of(process_of(window), ours) {
         return 0;
     }
     window.0 as isize
+}
+
+fn is_one_of(process: Option<u32>, ours: &[u32]) -> bool {
+    process.is_some_and(|pid| ours.contains(&pid))
 }
 
 pub fn target_at(handle: isize) -> Option<Target> {

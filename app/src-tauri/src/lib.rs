@@ -44,6 +44,7 @@ pub fn run() {
             backup::bring_former,
             backup::drop_former,
             update::update_ready,
+            update::install_route,
             update::update_install,
             empty,
             trouble,

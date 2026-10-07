@@ -76,29 +76,26 @@ pub fn to_pasteboard_offering(pb: &Pasteboard, item: &Item, text: Option<&str>) 
         return Restored::NothingToWrite;
     }
 
-    let carried = writable.len();
-    let incomplete = carried != item.formats.len();
     let writable = offering(writable, text);
+    let (wanted, refused) = match one_item_per_file(&writable) {
+        Some(per_file) => (
+            per_file.iter().map(Vec::len).sum(),
+            pb.write_items_data(&per_file),
+        ),
+        None => (writable.len(), Some(pb.write_all(&writable))),
+    };
+    restored_of(wanted, refused)
+}
 
-    if let Some(per_file) = one_item_per_file(&writable) {
-        return if pb.write_items_data(&per_file) {
-            Restored::Written {
-                formats: carried,
-                incomplete,
-            }
-        } else {
-            Restored::Failed
-        };
+fn restored_of(wanted: usize, refused: Option<usize>) -> Restored {
+    let Some(refused) = refused else {
+        return Restored::Failed;
+    };
+    let formats = wanted.saturating_sub(refused);
+    if formats == 0 {
+        return Restored::Failed;
     }
-
-    if pb.write_all(&writable) {
-        Restored::Written {
-            formats: carried,
-            incomplete,
-        }
-    } else {
-        Restored::Failed
-    }
+    Restored::Written { formats, wanted }
 }
 
 fn offering<'a>(mut writable: Vec<Entry<'a>>, text: Option<&'a str>) -> Vec<Entry<'a>> {
@@ -116,7 +113,7 @@ const FILE_URL: &str = "public.file-url";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
-    Written { formats: usize, incomplete: bool },
+    Written { formats: usize, wanted: usize },
     NothingToWrite,
     Failed,
 }

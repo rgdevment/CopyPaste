@@ -83,10 +83,15 @@ pub fn ready_for(item: &Item) -> Ready {
             }
         }
     }
+    let had = item
+        .formats
+        .iter()
+        .filter(|one| payload_of(one).is_some() || virtual_files::is_virtual(&one.id))
+        .count();
     Ready {
         owned,
         returned,
-        had: item.formats.len(),
+        had,
     }
 }
 

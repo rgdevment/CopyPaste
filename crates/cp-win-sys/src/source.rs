@@ -76,6 +76,25 @@ pub fn is_headless(command_line: &str) -> bool {
 }
 
 fn children_of(parent: u32) -> Vec<(u32, String)> {
+    every_process()
+        .into_iter()
+        .filter(|(_, above, _)| *above == parent)
+        .map(|(pid, _, name)| (pid, name))
+        .collect()
+}
+
+pub fn parent_of(pid: u32) -> Option<u32> {
+    parent_in(&every_process(), pid)
+}
+
+fn parent_in(processes: &[(u32, u32, String)], pid: u32) -> Option<u32> {
+    processes
+        .iter()
+        .find(|(one, above, _)| *one == pid && *above != 0)
+        .map(|(_, above, _)| *above)
+}
+
+fn every_process() -> Vec<(u32, u32, String)> {
     let Ok(snapshot) = (unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }) else {
         return Vec::new();
     };
@@ -86,17 +105,16 @@ fn children_of(parent: u32) -> Vec<(u32, String)> {
     let mut found = Vec::new();
     let mut more = unsafe { Process32FirstW(snapshot, &mut entry) }.is_ok();
     while more {
-        if entry.th32ParentProcessID == parent {
-            let end = entry
-                .szExeFile
-                .iter()
-                .position(|unit| *unit == 0)
-                .unwrap_or(entry.szExeFile.len());
-            found.push((
-                entry.th32ProcessID,
-                String::from_utf16_lossy(&entry.szExeFile[..end]),
-            ));
-        }
+        let end = entry
+            .szExeFile
+            .iter()
+            .position(|unit| *unit == 0)
+            .unwrap_or(entry.szExeFile.len());
+        found.push((
+            entry.th32ProcessID,
+            entry.th32ParentProcessID,
+            String::from_utf16_lossy(&entry.szExeFile[..end]),
+        ));
         more = unsafe { Process32NextW(snapshot, &mut entry) }.is_ok();
     }
     let _ = unsafe { CloseHandle(snapshot) };

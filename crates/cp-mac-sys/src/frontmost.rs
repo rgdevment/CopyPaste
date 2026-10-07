@@ -34,10 +34,22 @@ pub fn our_pid() -> i32 {
 }
 
 pub fn ahead() -> i32 {
-    let Some((pid, _)) = frontmost() else {
-        return 0;
-    };
-    if pid == our_pid() { 0 } else { pid }
+    ahead_besides(&[our_pid()])
+}
+
+pub fn ahead_besides(ours: &[i32]) -> i32 {
+    other_than(frontmost().map(|(pid, _)| pid), ours)
+}
+
+fn other_than(front: Option<i32>, ours: &[i32]) -> i32 {
+    match front {
+        Some(pid) if !ours.contains(&pid) => pid,
+        _ => 0,
+    }
+}
+
+pub fn is_ours_in_front() -> bool {
+    frontmost().is_some_and(|(pid, _)| pid == our_pid())
 }
 
 pub fn in_front() -> Option<String> {
