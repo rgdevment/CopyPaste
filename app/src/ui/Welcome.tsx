@@ -530,15 +530,20 @@ function News({ versions }: { versions: string[] }) {
           {versions[0] && <span className="welcome-version">{versions[0]}</span>}
         </div>
         <h1>{t("welcomeNewsTitle")}</h1>
-        <ul className="welcome-news">
-          {told.flatMap((one) =>
-            one.told.map((said) => (
-              <li key={`${one.version}-${said.title}`}>
-                <b>{said.title}</b>: {said.said}
-              </li>
-            )),
-          )}
-        </ul>
+        <div className="welcome-news-scroll">
+          {told.map((one, at) => (
+            <section key={one.version} aria-label={one.version}>
+              {at > 0 && <h2 className="welcome-news-older">{one.version}</h2>}
+              <ul className="welcome-news">
+                {one.told.map((said) => (
+                  <li key={`${one.version}-${said.title}`}>
+                    <b>{said.title}</b>: {said.said}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       </div>
       <footer className="welcome-foot news">
         <button type="button" className="welcome-link" onClick={() => void openUrl(RELEASES)}>
