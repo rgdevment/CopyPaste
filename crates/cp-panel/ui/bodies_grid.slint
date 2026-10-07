@@ -16,7 +16,7 @@ export component GridCell inherits Rectangle {
     background: current ? Theme.selected : touch.has-hover ? Theme.row-hover : Theme.card;
     animate background { duration: current || touch.has-hover ? 0ms : Theme.let-go; }
     border-width: current ? 2px : 1px;
-    border-color: current ? Theme.accent : Theme.card-edge;
+    border-color: current ? Theme.accent : Theme.panel-border;
     clip: true;
     accessible-role: AccessibleRole.list-item;
     accessible-label: card.title + ", " + card.body;

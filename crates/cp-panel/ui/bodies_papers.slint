@@ -6,7 +6,7 @@ export global Paper {
     out property <color> words: Theme.light ? #1D4ED8 : #7FA9F0;
     out property <color> slides: Theme.light ? #A64D0A : #FCD34D;
     out property <color> pages: Theme.light ? #B91C1C : #F28B82;
-    out property <color> plain: Theme.light ? #63636C : #9EA0A8;
+    out property <color> plain: Theme.light ? #475569 : #9EA0A8;
     pure public function of(family: string) -> color {
         return family == "sheets" ? self.sheets
             : family == "words" ? self.words
