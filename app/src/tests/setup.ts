@@ -45,6 +45,30 @@ vi.mock("@tauri-apps/api/core", () => ({
       }
       return Promise.resolve(config);
     }
+    if (what === "looks") {
+      return Promise.resolve({
+        text: { id: "", label: "SF Pro", css: "-apple-system" },
+        texts: [{ id: "avenir-next", label: "Avenir Next", css: '"Avenir Next"' }],
+        code: { id: "", label: "Menlo", css: "Menlo" },
+        codes: [{ id: "sf-mono", label: "SF Mono", css: "ui-monospace" }],
+        accents: [
+          {
+            id: "indigo",
+            light: "#4F46E5",
+            dark: "#A5B4FC",
+            lightSelected: "#E9E9FB",
+            darkSelected: "#282C46",
+          },
+          {
+            id: "teal",
+            light: "#0F766E",
+            dark: "#5EEAD4",
+            lightSelected: "#DFF3F0",
+            darkSelected: "#1E3639",
+          },
+        ],
+      });
+    }
     if (what === "relabel") return Promise.resolve(null);
     if (what === "empty") return Promise.resolve(null);
     if (what === "trouble") return Promise.resolve(null);

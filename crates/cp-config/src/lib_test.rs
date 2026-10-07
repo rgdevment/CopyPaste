@@ -33,6 +33,11 @@ fn what_goes_in_comes_back() {
         keeps_days: None,
         images_quota_mb: Some(512),
         welcomed: Some("3.0.0".into()),
+        text_size: TextSize::Large,
+        density: Density::Compact,
+        font: Some("avenir-next".into()),
+        code_font: Some("sf-mono".into()),
+        accent: Accent::Teal,
     };
     write(&path, &mine).expect("writes");
     assert_eq!(read(&path).expect("reads"), mine);
@@ -562,4 +567,60 @@ fn a_settings_file_that_cannot_be_read_is_not_put_back() {
         put_back_after_the_former(&path),
         Err(Error::File(_))
     ));
+}
+
+#[test]
+fn a_file_from_before_the_appearance_tab_keeps_today_s_look() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "theme = \"dark\"\n").expect("writes");
+    let kept = read(&path).expect("reads");
+    assert_eq!(kept.text_size, TextSize::Normal);
+    assert_eq!(kept.density, Density::Normal);
+    assert_eq!(kept.accent, Accent::Indigo);
+    assert_eq!((kept.font, kept.code_font), (None, None));
+}
+
+#[test]
+fn an_appearance_value_this_version_does_not_know_falls_back_alone() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "theme = \"dark\"\ntext-size = \"huge\"\ndensity = \"airy\"\naccent = \"gold\"\n",
+    )
+    .expect("writes");
+    let kept = read(&path).expect("reads");
+    assert_eq!(kept.theme, Theme::Dark);
+    assert_eq!(kept.text_size, TextSize::Normal);
+    assert_eq!(kept.density, Density::Normal);
+    assert_eq!(kept.accent, Accent::Indigo);
+}
+
+#[test]
+fn an_appearance_value_of_the_wrong_type_falls_back_alone_too() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "shortcut = \"Ctrl+Shift+V\"\ntext-size = 2\naccent = true\ndensity = [1]\n",
+    )
+    .expect("writes");
+    let kept = read(&path).expect("reads");
+    assert_eq!(kept.shortcut, "Ctrl+Shift+V");
+    assert_eq!(kept.text_size, TextSize::Normal);
+    assert_eq!(kept.accent, Accent::Indigo);
+    assert_eq!(kept.density, Density::Normal);
+}
+
+#[test]
+fn a_blank_font_means_the_system_one() {
+    let blank = Config {
+        font: Some("  ".into()),
+        code_font: Some(" sf-mono ".into()),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(blank.font, None);
+    assert_eq!(blank.code_font.as_deref(), Some("sf-mono"));
 }

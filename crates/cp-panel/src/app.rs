@@ -89,6 +89,7 @@ impl App {
             found: theme.get_row_found(),
             frame: theme.get_row_frame(),
             line: theme.get_line(),
+            shut_lines: kept.look.density.shut_lines(),
         };
         let generation = Arc::new(AtomicU64::new(0));
         let counter = spawn_counter(options.db.clone(), panel.as_weak(), generation.clone());
@@ -122,7 +123,7 @@ impl App {
             panel.global::<crate::Theme>().set_shadow_blur(0.0);
         }
         app.wire(&panel);
-        dress_theme(&panel, kept.light(here::system_is_light()));
+        dress_theme(&panel, kept.light(here::system_is_light()), kept.look);
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
@@ -139,6 +140,7 @@ impl App {
         let _awake = serving.then(here::keep_awake);
         if !serving {
             panel.show()?;
+            crate::showing::zoom(panel);
             self.dress(panel);
             appear(panel);
             panel.invoke_focus_search();
@@ -258,6 +260,28 @@ impl App {
             ui.set_sheet_open(false);
             step_aside(&ui, &state, Leaving::Away);
             crate::note::tell("settings");
+        });
+        let (ui, state) = (self.ui.clone(), self.state.clone());
+        panel.on_update_taken(move || {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            ui.set_sheet_open(false);
+            step_aside(&ui, &state, Leaving::Away);
+            crate::note::tell("update");
+        });
+        let ui = self.ui.clone();
+        panel.on_update_put_away(move || {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            if let Some(dir) = here::data_dir()
+                && let Some(version) = crate::newer::waiting_in(&dir, env!("CARGO_PKG_VERSION"))
+                && let Err(why) = crate::newer::put_away_in(&dir, &version)
+            {
+                note(&format!("the update could not be put away: {why}"));
+            }
+            ui.set_update_line(Default::default());
         });
         let ui = self.ui.clone();
         panel.on_nudge(move |dx, dy| {
@@ -559,10 +583,10 @@ impl App {
                 ui.set_query(Default::default());
                 ui.set_sheet_open(false);
                 ui.set_chips_scroll(0.0);
-                dress_theme(
-                    &ui,
-                    state.borrow().kept.get().light(here::system_is_light()),
-                );
+                let kept = state.borrow().kept.get();
+                state.borrow_mut().metrics.shut_lines = kept.look.density.shut_lines();
+                dress_theme(&ui, kept.light(here::system_is_light()), kept.look);
+                ui.set_update_line(newer_line().into());
                 refresh(&ui, &state);
                 back_to_the_newest(&ui, &state);
                 watch_leaving(&ui, &state);
@@ -1170,8 +1194,30 @@ pub fn forward(panel: &Panel) {
     }
 }
 
-fn dress_theme(ui: &Panel, light: bool) {
-    ui.global::<crate::Theme>().set_light(light);
+fn dress_theme(ui: &Panel, light: bool, look: crate::kept::Look) {
+    let theme = ui.global::<crate::Theme>();
+    theme.set_light(light);
+    let swatch = look.accent.swatch(light);
+    theme.set_accent(opaque(swatch.accent));
+    theme.set_accent_dim(opaque(swatch.dim));
+    theme.set_focus(opaque(swatch.dim));
+    theme.set_selected(opaque(swatch.selected));
+    theme.set_selected_edge(opaque(swatch.edge));
+    theme.set_grip(opaque(swatch.edge));
+    theme.set_font(look.font.into());
+    theme.set_mono_font(look.mono.into());
+    theme.set_zoom(look.size.zoom());
+}
+
+fn newer_line() -> String {
+    here::data_dir()
+        .and_then(|dir| crate::newer::waiting_in(&dir, env!("CARGO_PKG_VERSION")))
+        .map(|version| crate::newer::line_of(&version, crate::say::in_english()))
+        .unwrap_or_default()
+}
+
+fn opaque(rgb: u32) -> slint::Color {
+    slint::Color::from_argb_encoded(0xFF00_0000 | rgb)
 }
 
 fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {

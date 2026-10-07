@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const APART: u64 = 24 * 60 * 60;
@@ -14,7 +14,11 @@ const MANIFEST: &str =
 const LATEST: &str = "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json";
 const CANDIDATE: &str =
     "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/candidate.json";
+static TURN: AtomicU64 = AtomicU64::new(0);
+
 const PATIENCE: std::time::Duration = std::time::Duration::from_secs(10);
+const FIRST_LOOK: std::time::Duration = std::time::Duration::from_secs(20);
+const LOOKS_AGAIN: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
 #[derive(Default)]
 pub struct Installing(AtomicBool);
@@ -280,7 +284,8 @@ fn keep(one: &Kept) {
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let landing = path.with_extension(format!("{}.part", std::process::id()));
+    let turn = TURN.fetch_add(1, Ordering::Relaxed);
+    let landing = path.with_extension(format!("{}.{turn}.part", std::process::id()));
     if poured(&landing, said.as_bytes()).is_err() {
         let _ = std::fs::remove_file(&landing);
         return;
@@ -423,6 +428,21 @@ pub async fn update_install(
     let handle = app.clone();
     app.run_on_main_thread(move || handle.restart())
         .map_err(|why| why.to_string())
+}
+
+pub fn keep_looking() {
+    if route() == Route::Store {
+        return;
+    }
+    std::thread::spawn(|| {
+        std::thread::sleep(FIRST_LOOK);
+        loop {
+            if let Err(why) = tauri::async_runtime::block_on(update_ready(None)) {
+                crate::note::note(&format!("looking for an update on its own failed: {why}"));
+            }
+            std::thread::sleep(LOOKS_AGAIN);
+        }
+    });
 }
 
 fn forget() {

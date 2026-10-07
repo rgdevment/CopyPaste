@@ -256,6 +256,22 @@ body {
   min-height: 8px;
 }
 
+.rail button.waiting {
+  margin-bottom: 4px;
+  background: var(--selected);
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.rail button.waiting i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .pane {
   overflow-y: auto;
   padding: 10px 20px 24px;
@@ -826,6 +842,10 @@ button:disabled {
   cursor: pointer;
   font: inherit;
   color: var(--ink);
+}
+
+.give.wide {
+  grid-column: 1 / -1;
 }
 
 .give:hover {
@@ -1541,4 +1561,271 @@ button:disabled {
 .welcome-news b {
   color: var(--ink);
   font-weight: 600;
+}
+
+.preview {
+  --paint: var(--light);
+  --paint-selected: var(--light-selected, var(--selected));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .preview {
+    --paint: var(--dark);
+    --paint-selected: var(--dark-selected, var(--selected));
+  }
+}
+
+:root[data-theme="dark"] .preview {
+  --paint: var(--dark);
+  --paint-selected: var(--dark-selected, var(--selected));
+}
+
+.swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.swatch {
+  --paint: var(--light);
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .swatch {
+    --paint: var(--dark);
+  }
+}
+
+:root[data-theme="dark"] .swatch {
+  --paint: var(--dark);
+}
+
+.swatch input {
+  appearance: none;
+  display: block;
+  margin: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--paint);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--edge);
+  cursor: pointer;
+}
+
+.swatch input:checked {
+  box-shadow: 0 0 0 2px var(--paint);
+}
+
+.segments {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-control);
+  background: var(--field);
+}
+
+.segment {
+  position: relative;
+  padding: 4px 10px;
+  border-radius: var(--r-inset);
+  font-size: var(--fs-body);
+  color: var(--title);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segment:hover {
+  background: var(--hover);
+}
+
+.segment.on {
+  background: var(--selected);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.segment input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segment:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.preview {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  margin: 12px -20px 0;
+  padding: 10px 20px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--hair);
+}
+
+.mock {
+  --hue-code: #0369a1;
+  height: 250px;
+  overflow: hidden;
+  padding: calc(10px * var(--zoom));
+  border: 1px solid var(--hair);
+  border-radius: var(--r-card);
+  background: var(--panel);
+  font-family: var(--look-font, var(--ui));
+  font-size: calc(13px * var(--zoom));
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mock {
+    --hue-code: #7dd3fc;
+  }
+}
+
+:root[data-theme="dark"] .mock {
+  --hue-code: #7dd3fc;
+}
+
+.mock-search {
+  padding: calc(7px * var(--zoom)) calc(10px * var(--zoom));
+  border: 1px solid var(--paint);
+  border-radius: var(--r-control);
+  background: var(--field);
+  color: var(--placeholder);
+}
+
+.mock-chips {
+  display: flex;
+  gap: calc(6px * var(--zoom));
+  margin-top: calc(8px * var(--zoom));
+}
+
+.mock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(5px * var(--zoom));
+  padding: calc(3px * var(--zoom)) calc(9px * var(--zoom));
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  background: var(--field);
+  font-size: calc(11px * var(--zoom));
+  color: var(--title);
+}
+
+.mock-chip small {
+  color: var(--muted);
+  font-size: calc(10px * var(--zoom));
+}
+
+.dot {
+  width: calc(7px * var(--zoom));
+  height: calc(7px * var(--zoom));
+  border-radius: 2px;
+}
+
+.dot.text {
+  background: var(--accent);
+}
+
+.dot.code {
+  background: var(--hue-code);
+}
+
+.mock-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: calc(9px * var(--zoom)) 0 calc(6px * var(--zoom));
+  font-size: calc(11px * var(--zoom));
+  font-weight: 600;
+  color: var(--title);
+}
+
+.mock-day::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hair);
+}
+
+.mock-card {
+  position: relative;
+  margin-bottom: calc(6px * var(--zoom));
+  padding: calc(9px * var(--zoom)) calc(12px * var(--zoom)) calc(10px * var(--zoom));
+  border-radius: var(--r-card);
+  background: var(--card);
+}
+
+.mock-card.lit {
+  background: var(--paint-selected);
+}
+
+.mock-card.lit::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 1.5px;
+  background: var(--paint);
+}
+
+.mock-head {
+  display: flex;
+  gap: 4px;
+  font-size: calc(11px * var(--zoom));
+  color: var(--muted);
+}
+
+.mock-head b {
+  font-weight: 600;
+}
+
+.mock-head b.text {
+  color: var(--accent);
+}
+
+.mock-head b.code {
+  color: var(--hue-code);
+}
+
+.mock-head em {
+  margin-left: auto;
+  font-style: normal;
+}
+
+.mock-card p {
+  margin: calc(6px * var(--zoom)) 0 0;
+  line-height: calc(19px * var(--zoom));
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lines);
+  overflow: hidden;
+}
+
+.mock-card code {
+  display: block;
+  margin-top: calc(6px * var(--zoom));
+  padding: calc(6px * var(--zoom)) calc(8px * var(--zoom));
+  border-radius: var(--r-inset);
+  background: var(--tile);
+  font-family: var(--look-mono, var(--mono));
+  font-size: calc(12px * var(--zoom));
+  line-height: calc(17px * var(--zoom));
+  white-space: pre;
+  color: var(--ink);
+}
+
+.look-reset {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
 }

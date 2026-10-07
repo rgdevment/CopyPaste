@@ -1,5 +1,9 @@
 use cp_core::kind::Kind;
 
+pub fn shut_lines_within(lines: i32) -> i32 {
+    lines.clamp(1, 3)
+}
+
 pub const TOP: f32 = 9.0;
 pub const META: f32 = 22.0;
 pub const GAP: f32 = 6.0;
@@ -48,10 +52,12 @@ pub struct Seen<'a> {
     pub paints: bool,
     pub body: &'a str,
     pub keys: &'a str,
+    pub most: i32,
 }
 
 impl Face {
     pub fn of(seen: &Seen<'_>) -> Self {
+        let most = seen.most;
         let pictured = seen.thumb || seen.kind == Some(Kind::Image);
         if seen.found {
             return if pictured {
@@ -69,15 +75,16 @@ impl Face {
         match seen.kind {
             Some(Kind::Code | Kind::Token) => {
                 let (_, second) = opening_of(seen.body);
-                Self::Block(if second.is_empty() { 1 } else { 2 })
+                Self::Block(if second.is_empty() { 1 } else { most.min(2) })
             }
-            Some(Kind::Json) => Self::Keys(lines_for(seen.keys, KEYS_PER_LINE)),
+            Some(Kind::Json) => Self::Keys(lines_for(seen.keys, KEYS_PER_LINE, most)),
             Some(Kind::Link) => Self::Link,
             Some(Kind::File | Kind::Folder) => Self::File,
             Some(Kind::Audio | Kind::Video) => Self::Media,
             _ => Self::Words(lines_for(
                 &crate::view::squeezed_of(seen.body),
                 WORDS_PER_LINE,
+                most,
             )),
         }
     }
@@ -231,12 +238,11 @@ pub fn open_lost_px(body: f32) -> f32 {
     open_px(body) - GAP - KEYS_ROW
 }
 
-fn lines_for(text: &str, per_line: usize) -> i32 {
-    if text.chars().count() <= per_line {
-        1
-    } else {
-        2
-    }
+fn lines_for(text: &str, per_line: usize, most: i32) -> i32 {
+    let needed = text.chars().count().div_ceil(per_line);
+    i32::try_from(needed)
+        .unwrap_or(i32::MAX)
+        .clamp(1, shut_lines_within(most))
 }
 
 pub fn opening_of(body: &str) -> (String, String) {

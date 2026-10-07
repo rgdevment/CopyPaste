@@ -26,6 +26,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             settings::settings,
             settings::keep,
+            settings::looks,
             settings::where_it_lives,
             settings::storage_used,
             settings::former,
@@ -79,6 +80,7 @@ pub fn run() {
                 .map_or(cp_config::SHORTCUT, |one| one.shortcut.as_str());
             keys::raise(app.handle(), wanted);
             welcome::raise(app.handle(), fresh);
+            update::keep_looking();
             Ok(())
         })
         .build(tauri::generate_context!())

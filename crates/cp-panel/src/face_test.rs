@@ -8,6 +8,7 @@ fn seen<'a>(kind: Option<Kind>, body: &'a str) -> Seen<'a> {
         paints: false,
         body,
         keys: "",
+        most: 2,
     }
 }
 
@@ -189,4 +190,39 @@ fn a_picture_keeps_its_picture_face_while_the_thumbnail_is_on_its_way() {
     assert_eq!(Face::of(&picture), Face::FoundThumb);
     assert_eq!(Face::of(&seen(Some(Kind::Text), "")), Face::Words(1));
     assert_eq!(Face::of(&seen(Some(Kind::Video), "/a.mov")), Face::Media);
+}
+
+#[test]
+fn a_closed_text_shows_as_many_lines_as_the_chosen_height_allows() {
+    let long = "palabra ".repeat(40);
+    let text = seen(Some(Kind::Text), &long);
+    assert_eq!(Face::of(&Seen { most: 1, ..text }), Face::Words(1));
+    assert_eq!(Face::of(&Seen { most: 2, ..text }), Face::Words(2));
+    assert_eq!(Face::of(&Seen { most: 3, ..text }), Face::Words(3));
+    assert_eq!(Face::of(&Seen { most: 9, ..text }), Face::Words(3));
+    let short = seen(Some(Kind::Text), "git push");
+    assert_eq!(Face::of(&Seen { most: 3, ..short }), Face::Words(1));
+}
+
+#[test]
+fn code_never_shows_more_than_its_two_opening_lines() {
+    let code = seen(Some(Kind::Code), "fn main() {\n    run();\n    stop();\n}");
+    assert_eq!(Face::of(&Seen { most: 1, ..code }), Face::Block(1));
+    assert_eq!(Face::of(&Seen { most: 3, ..code }), Face::Block(2));
+}
+
+#[test]
+fn json_keys_follow_the_chosen_height_too() {
+    let mut json = seen(Some(Kind::Json), "{}");
+    let keys = "clave ".repeat(40);
+    json.keys = &keys;
+    assert_eq!(Face::of(&Seen { most: 1, ..json }), Face::Keys(1));
+    assert_eq!(Face::of(&Seen { most: 3, ..json }), Face::Keys(3));
+}
+
+#[test]
+fn the_chosen_height_is_kept_between_one_and_three_lines() {
+    assert_eq!(shut_lines_within(0), 1);
+    assert_eq!(shut_lines_within(2), 2);
+    assert_eq!(shut_lines_within(7), 3);
 }

@@ -97,7 +97,7 @@ fn claims_in(row: &Listed) -> Option<Claims> {
         .flatten()
 }
 
-pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
+pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>, most: i32) -> Card {
     let kind = row.kind.map(Kind::as_str).unwrap_or("text");
     let claims = claims_in(row);
     let token = (row.kind == Some(Kind::Token))
@@ -145,7 +145,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     } else {
         String::new()
     };
-    let face = face_for(row, row.thumb_path.is_some());
+    let face = face_for(row, row.thumb_path.is_some(), most);
     let (line_one, line_two) = crate::face::opening_of(&body);
     let mixed_aside = match row.kind {
         Some(Kind::Json) => shape.counted.clone(),
@@ -256,7 +256,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>) -> Card {
     }
 }
 
-pub fn face_for(row: &Listed, thumb: bool) -> crate::face::Face {
+pub fn face_for(row: &Listed, thumb: bool, most: i32) -> crate::face::Face {
     let keys = if row.kind == Some(Kind::Json) {
         crate::shape::said_of(&row.preview, crate::say::in_english())
             .map(|said| {
@@ -277,6 +277,7 @@ pub fn face_for(row: &Listed, thumb: bool) -> crate::face::Face {
         paints: shown_as_colour(row).is_some(),
         body: &body_of(row),
         keys: &keys,
+        most,
     })
 }
 
@@ -289,8 +290,8 @@ pub fn opened_for(row: &Listed, face: crate::face::Face) -> crate::face::Opened 
     )
 }
 
-pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32) -> f32 {
-    let face = face_for(row, thumb);
+pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32, most: i32) -> f32 {
+    let face = face_for(row, thumb, most);
     let opened = opened_for(row, face);
     let claims = if row.kind == Some(Kind::Token) {
         i32::try_from(crate::token::rows_in(
@@ -837,6 +838,8 @@ pub fn dress_words(ui: &crate::Panel) {
     words.set_open_it(crate::say::pick("abrir", "open").into());
     words.set_name_it(crate::say::pick("poner nombre", "give it a name").into());
     words.set_name_room(i32::try_from(NAME_ROOM).unwrap_or(i32::MAX));
+    words.set_update_take(crate::say::pick("Actualizar", "Update").into());
+    words.set_update_later(crate::say::pick("Ahora no", "Not now").into());
     words.set_copy_it(crate::say::pick("copiar sin pegar", "copy without pasting").into());
     words.set_pin(crate::say::pick("anclar", "pin").into());
     words.set_unpin(crate::say::pick("desanclar", "unpin").into());

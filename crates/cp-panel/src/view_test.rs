@@ -26,7 +26,7 @@ fn row(kind: Option<Kind>) -> Listed {
 
 #[test]
 fn a_row_becomes_the_card_the_panel_draws() {
-    let card = card_of(&row(Some(Kind::Json)), 1_000_000 + 9 * 60_000, None);
+    let card = card_of(&row(Some(Kind::Json)), 1_000_000 + 9 * 60_000, None, 2);
     assert_eq!(card.id, 7);
     assert_eq!(card.kind.as_str(), "json");
     assert_eq!(card.title.as_str(), "JSON");
@@ -61,7 +61,7 @@ fn a_search_hit_shows_its_excerpt_instead_of_the_preview() {
             ],
         },
     });
-    let card = card_of(&hit, 2_000_000, None);
+    let card = card_of(&hit, 2_000_000, None, 2);
     assert_eq!(card.body.as_str(), "…la reunión del jueves…");
     assert!(!card.mono);
     assert_eq!(card.times.as_str(), "3");
@@ -72,7 +72,7 @@ fn what_was_pasted_once_or_never_carries_no_count() {
     let mut once = row(None);
     once.paste_count = 1;
     once.app = None;
-    let card = card_of(&once, 1_000_000, None);
+    let card = card_of(&once, 1_000_000, None, 2);
     assert_eq!(card.times.as_str(), "");
     assert_eq!(
         card.source.as_str(),
@@ -184,7 +184,7 @@ fn a_row_that_matched_carries_its_three_parts() {
         found_in: FoundIn::Text,
         excerpt: excerpt_of(&[("antes de ", false), ("esto", true), (" y después", false)]),
     });
-    let card = card_of(&row, 1_000_000, None);
+    let card = card_of(&row, 1_000_000, None, 2);
     assert!(card.found);
     assert_eq!(card.lead.as_str(), "antes de ");
     assert_eq!(card.hit.as_str(), "esto");
@@ -436,7 +436,7 @@ fn squeezing_keeps_the_words_and_their_order() {
 fn a_colour_card_carries_the_colour_it_is() {
     let mut said = row(Some(Kind::Color));
     said.preview = "#FF8800".into();
-    let card = card_of(&said, 1_000_000, None);
+    let card = card_of(&said, 1_000_000, None, 2);
     assert!(card.paints, "the only type whose content is its appearance");
     assert_eq!(card.paint.red(), 0xFF);
     assert_eq!(card.paint.green(), 0x88);
@@ -454,7 +454,7 @@ fn the_colour_is_read_from_the_first_line_whatever_shape_it_has() {
     ] {
         let mut one = row(Some(Kind::Color));
         one.preview = said.into();
-        let card = card_of(&one, 1_000_000, None);
+        let card = card_of(&one, 1_000_000, None, 2);
         assert!(card.paints, "«{said}»");
         assert_eq!(
             (card.paint.red(), card.paint.green(), card.paint.blue()),
@@ -470,14 +470,14 @@ fn nothing_else_pretends_to_be_a_colour() {
         let mut said = row(Some(kind));
         said.preview = "#FF8800".into();
         assert!(
-            !card_of(&said, 1_000_000, None).paints,
+            !card_of(&said, 1_000_000, None, 2).paints,
             "{kind:?} holds text that looks like a colour, and is not one"
         );
     }
     let mut unreadable = row(Some(Kind::Color));
     unreadable.preview = "not a colour at all".into();
     assert!(
-        !card_of(&unreadable, 1_000_000, None).paints,
+        !card_of(&unreadable, 1_000_000, None, 2).paints,
         "and a colour nobody can parse draws no swatch"
     );
 }
@@ -486,7 +486,7 @@ fn nothing_else_pretends_to_be_a_colour() {
 fn a_file_card_knows_its_name_apart_from_its_folder() {
     let mut said = row(Some(Kind::File));
     said.preview = r"D:\Mario\Downloads\b774f629-9376-419f-9a7b-d390e7f775c2.pdf".into();
-    let card = card_of(&said, 1_000_000, None);
+    let card = card_of(&said, 1_000_000, None, 2);
     assert_eq!(
         card.folder_name.as_str(),
         "b774f629-9376-419f-9a7b-d390e7f775c2.pdf",
@@ -500,7 +500,7 @@ fn a_file_card_knows_its_name_apart_from_its_folder() {
 fn a_file_with_no_extension_still_says_which_file_it_is() {
     let mut said = row(Some(Kind::File));
     said.preview = r"D:\Mario\LICENSE".into();
-    let card = card_of(&said, 1_000_000, None);
+    let card = card_of(&said, 1_000_000, None, 2);
     assert_eq!(card.folder_name.as_str(), "LICENSE");
     assert_eq!(
         card.papers_format.as_str(),
@@ -513,7 +513,7 @@ fn a_file_with_no_extension_still_says_which_file_it_is() {
 fn the_second_line_says_what_each_type_already_knows() {
     let mut json = row(Some(Kind::Json));
     json.preview = r#"{"a": 1, "b": {"c": 2}}"#.into();
-    let said = card_of(&json, 1_000_000, None).under.to_string();
+    let said = card_of(&json, 1_000_000, None, 2).under.to_string();
     assert!(
         !said.is_empty(),
         "JSON knows its keys and its depth: «{said}»"
@@ -521,7 +521,7 @@ fn the_second_line_says_what_each_type_already_knows() {
 
     let mut file = row(Some(Kind::File));
     file.preview = r"D:\Mario\Downloads\one.yml".into();
-    let said = card_of(&file, 1_000_000, None).under.to_string();
+    let said = card_of(&file, 1_000_000, None, 2).under.to_string();
     assert!(said.contains("YML"), "«{said}»");
     assert!(said.contains("Downloads"), "«{said}»");
     assert!(
@@ -531,7 +531,7 @@ fn the_second_line_says_what_each_type_already_knows() {
 
     let mut folder = row(Some(Kind::Folder));
     folder.preview = r"D:\Mario\Downloads".into();
-    let said = card_of(&folder, 1_000_000, None).under.to_string();
+    let said = card_of(&folder, 1_000_000, None, 2).under.to_string();
     assert!(said.contains("Mario"), "the folder it lives in: «{said}»");
 }
 
@@ -540,13 +540,13 @@ fn the_first_line_of_a_file_is_its_name_not_its_path() {
     let mut said = row(Some(Kind::File));
     said.preview = r"D:\Mario\Downloads\a-very-long-name.yml".into();
     assert_eq!(
-        card_of(&said, 1_000_000, None).headline.as_str(),
+        card_of(&said, 1_000_000, None, 2).headline.as_str(),
         "a-very-long-name.yml"
     );
     let mut folder = row(Some(Kind::Folder));
     folder.preview = r"D:\Mario\Downloads".into();
     assert_eq!(
-        card_of(&folder, 1_000_000, None).headline.as_str(),
+        card_of(&folder, 1_000_000, None, 2).headline.as_str(),
         "Downloads"
     );
 }
@@ -556,13 +556,13 @@ fn a_text_of_one_line_says_nothing_more_and_a_long_one_says_how_much_more() {
     let mut one = row(Some(Kind::Text));
     one.preview = "just one line".into();
     assert_eq!(
-        card_of(&one, 1_000_000, None).under.as_str(),
+        card_of(&one, 1_000_000, None, 2).under.as_str(),
         "Mail · ×3",
         "there is nothing the card is hiding, so only where it came from and how often it was used"
     );
     let mut many = row(Some(Kind::Text));
     many.preview = "first\nsecond\nthird".into();
-    let said = card_of(&many, 1_000_000, None).under.to_string();
+    let said = card_of(&many, 1_000_000, None, 2).under.to_string();
     assert!(said.contains('2'), "two more lines are waiting: «{said}»");
 }
 
@@ -572,7 +572,7 @@ fn what_needs_no_second_line_gets_none() {
         let mut said = row(Some(kind));
         said.preview = "something".into();
         assert_eq!(
-            card_of(&said, 1_000_000, None).under.as_str(),
+            card_of(&said, 1_000_000, None, 2).under.as_str(),
             "Mail · ×3",
             "{kind:?}: the glyph already says what it is, so only the app and the count are left"
         );
@@ -658,7 +658,7 @@ fn the_card_asks_for_the_same_lines_the_model_reserves() {
         .expect("pagina");
     let row = page.rows.first().expect("una fila");
     let body = super::body_of(row);
-    let card = super::card_of(row, 2, None);
+    let card = super::card_of(row, 2, None, 2);
     assert_eq!(
         card.lines,
         super::open_lines_of(row, &body, 1_000_000),
@@ -745,29 +745,29 @@ fn the_lines_an_open_card_asks_for_are_its_body_plus_its_table_and_a_gap() {
 fn only_a_token_is_read_as_a_token() {
     let mut said = row(Some(Kind::Text));
     said.preview = TOKEN.into();
-    let card = card_of(&said, 1_000_000, None);
+    let card = card_of(&said, 1_000_000, None, 2);
     assert!(
         !card.claims,
         "a text that happens to look like a JWT is still a text, and must not grow a table"
     );
     said.kind = Some(Kind::Token);
-    assert!(card_of(&said, 1_000_000, None).claims);
+    assert!(card_of(&said, 1_000_000, None, 2).claims);
 }
 
 #[test]
 fn what_can_be_opened_is_a_path_or_a_link_and_not_everything_else() {
     let mut file = row(Some(Kind::File));
     file.preview = r"D:\Mario\uno.yml".into();
-    assert!(card_of(&file, 1_000_000, None).can_open);
+    assert!(card_of(&file, 1_000_000, None, 2).can_open);
 
     let mut link = row(Some(Kind::Link));
     link.preview = "https://ejemplo.cl/a".into();
-    assert!(card_of(&link, 1_000_000, None).can_open);
+    assert!(card_of(&link, 1_000_000, None, 2).can_open);
 
     let mut plain = row(Some(Kind::Text));
     plain.preview = "nada que abrir".into();
     assert!(
-        !card_of(&plain, 1_000_000, None).can_open,
+        !card_of(&plain, 1_000_000, None, 2).can_open,
         "a button that cannot do anything is worse than no button"
     );
 }
@@ -779,7 +779,7 @@ fn each_type_puts_its_own_fact_on_the_second_line() {
     let meta = [(crate::media::DURATION.to_owned(), "90000".to_owned())]
         .into_iter()
         .collect::<super::MetaOfOne>();
-    let said = card_of(&video, 1_000_000, Some(&meta)).under.to_string();
+    let said = card_of(&video, 1_000_000, Some(&meta), 2).under.to_string();
     assert!(said.contains("1:30"), "a video says its clock: «{said}»");
 
     let mut image = row(Some(Kind::Image));
@@ -790,7 +790,7 @@ fn each_type_puts_its_own_fact_on_the_second_line() {
     ]
     .into_iter()
     .collect::<super::MetaOfOne>();
-    let said = card_of(&image, 1_000_000, Some(&meta));
+    let said = card_of(&image, 1_000_000, Some(&meta), 2);
     assert!(
         said.headline.as_str().contains("800"),
         "an image has nothing to quote, so its measures take the first line: «{}»",
@@ -799,7 +799,7 @@ fn each_type_puts_its_own_fact_on_the_second_line() {
 
     let mut token = row(Some(Kind::Token));
     token.preview = TOKEN.into();
-    let said = card_of(&token, 1_000_000, None).under.to_string();
+    let said = card_of(&token, 1_000_000, None, 2).under.to_string();
     assert!(
         said.contains("rodrigo") && said.contains("cloudflare"),
         "a token says who it is for and who signed it: «{said}»"
@@ -826,7 +826,7 @@ fn the_count_reaches_the_general_list_and_not_only_the_views_by_kind() {
     let mut said = row(Some(Kind::Text));
     said.preview = "algo que pegas mucho".into();
     said.paste_count = 4;
-    let card = card_of(&said, 1_000_000, None);
+    let card = card_of(&said, 1_000_000, None, 2);
     assert_eq!(card.times.as_str(), "4");
     assert!(
         card.under.as_str().contains("×4"),
@@ -875,14 +875,14 @@ fn a_folder_says_how_many_things_are_in_it() {
     let meta = [(crate::folder::ENTRIES.to_owned(), "12".to_owned())]
         .into_iter()
         .collect::<super::MetaOfOne>();
-    let under = card_of(&said, 1_000_000, Some(&meta)).under.to_string();
+    let under = card_of(&said, 1_000_000, Some(&meta), 2).under.to_string();
     assert!(
         under.contains("12"),
         "the general list asks for this number on every page, so throwing it away was paying for \
          nothing: «{under}»"
     );
 
-    let without = card_of(&said, 1_000_000, None).under.to_string();
+    let without = card_of(&said, 1_000_000, None, 2).under.to_string();
     assert!(
         !without.contains("12"),
         "a folder nobody counted says nothing about its contents: «{without}»"
@@ -955,7 +955,7 @@ fn a_text_with_nothing_to_see_says_so_instead_of_staying_blank() {
     assert!(says_nothing(&empty));
     let said = nothing_visible_in(crate::say::in_english());
     assert_eq!(body_of(&empty), said);
-    let card = card_of(&empty, 1_000_000, None);
+    let card = card_of(&empty, 1_000_000, None, 2);
     assert!(card.blank);
     assert_eq!(card.squeezed.as_str(), said);
     assert_eq!(card.opened.as_str(), said);
@@ -967,7 +967,7 @@ fn a_text_with_nothing_to_see_says_so_instead_of_staying_blank() {
 
 #[test]
 fn a_text_with_words_or_a_thing_that_is_not_text_is_not_blank() {
-    let card = card_of(&row(Some(Kind::Text)), 1_000_000, None);
+    let card = card_of(&row(Some(Kind::Text)), 1_000_000, None, 2);
     assert!(!card.blank);
     assert_eq!(card.body.as_str(), "hola mundo");
     for kind in [
@@ -1001,12 +1001,12 @@ fn the_blank_line_is_said_in_both_tongues() {
 fn a_picture_waiting_for_its_thumbnail_already_wears_the_picture_face() {
     let mut picture = row(Some(Kind::Image));
     picture.preview = String::new();
-    let card = card_of(&picture, 1_000_000, None);
+    let card = card_of(&picture, 1_000_000, None, 2);
     assert!(!card.has_thumb);
     assert_eq!(card.face.as_str(), "thumb");
     assert_eq!(
-        face_for(&picture, false).shut_px(),
-        face_for(&picture, true).shut_px(),
+        face_for(&picture, false, 2).shut_px(),
+        face_for(&picture, true, 2).shut_px(),
         "the card keeps its size when the thumbnail lands"
     );
 }
@@ -1039,4 +1039,14 @@ fn empty_lines_alone_never_promise_more_lines() {
     let mut blank = row(Some(Kind::Text));
     blank.preview = "\n\n\n".into();
     assert_eq!(more_than_shown(&blank), "");
+}
+
+#[test]
+fn a_long_text_card_shows_the_lines_the_chosen_height_allows() {
+    let mut long = row(Some(Kind::Text));
+    long.preview = "palabra ".repeat(60);
+    assert_eq!(card_of(&long, 1_000_000, None, 1).shut_lines, 1);
+    assert_eq!(card_of(&long, 1_000_000, None, 3).shut_lines, 3);
+    let shut = |most| face_for(&long, false, most).shut_px();
+    assert!(shut(3) > shut(2) && shut(2) > shut(1));
 }

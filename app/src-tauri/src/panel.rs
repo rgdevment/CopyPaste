@@ -41,6 +41,10 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
         crate::tray::surface_at(app, Some("keys"));
         return;
     }
+    if said == "update" {
+        crate::tray::surface_at(app, Some("about"));
+        return;
+    }
     if let Some(what) = said.strip_prefix("well ") {
         if let Some(reason) = Reason::from_key(what) {
             settled(app, reason);

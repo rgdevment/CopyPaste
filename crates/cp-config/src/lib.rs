@@ -3,6 +3,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+pub mod look;
+
+pub use look::{Accent, Density, TextSize};
+
 pub const FILE: &str = "config.toml";
 
 pub const SHORTCUT: &str = "Ctrl+Alt+V";
@@ -45,6 +49,14 @@ pub struct Config {
     #[serde(with = "count", default)]
     pub images_quota_mb: Option<u32>,
     pub welcomed: Option<String>,
+    #[serde(with = "look::lenient")]
+    pub text_size: TextSize,
+    #[serde(with = "look::lenient")]
+    pub density: Density,
+    pub font: Option<String>,
+    pub code_font: Option<String>,
+    #[serde(with = "look::lenient")]
+    pub accent: Accent,
 }
 
 mod count {
@@ -81,6 +93,11 @@ impl Default for Config {
             keeps_days: Some(KEEPS_DAYS),
             images_quota_mb: Some(IMAGES_QUOTA_MB),
             welcomed: None,
+            text_size: TextSize::default(),
+            density: Density::default(),
+            font: None,
+            code_font: None,
+            accent: Accent::default(),
         }
     }
 }
@@ -102,18 +119,17 @@ impl Config {
         if self.images_quota_mb == Some(0) {
             self.images_quota_mb = None;
         }
-        self.locale = self
-            .locale
-            .take()
-            .map(|one| one.trim().to_owned())
-            .filter(|one| !one.is_empty());
-        self.welcomed = self
-            .welcomed
-            .take()
-            .map(|one| one.trim().to_owned())
-            .filter(|one| !one.is_empty());
+        self.locale = trimmed(self.locale.take());
+        self.welcomed = trimmed(self.welcomed.take());
+        self.font = trimmed(self.font.take());
+        self.code_font = trimmed(self.code_font.take());
         self
     }
+}
+
+fn trimmed(said: Option<String>) -> Option<String> {
+    said.map(|one| one.trim().to_owned())
+        .filter(|one| !one.is_empty())
 }
 
 #[must_use]
