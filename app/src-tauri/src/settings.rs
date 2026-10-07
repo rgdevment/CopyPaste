@@ -134,6 +134,16 @@ fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
     Err(why)
 }
 
+#[tauri::command(async)]
+pub fn storage_used() -> Result<i64, String> {
+    let at = folder().ok_or_else(nowhere)?.join("history.db");
+    if !at.exists() {
+        return Ok(0);
+    }
+    let store = cp_store::Store::open(&at).map_err(|why| why.to_string())?;
+    Ok(store.usage().map_err(|why| why.to_string())?.bytes)
+}
+
 #[tauri::command]
 pub fn where_it_lives() -> Result<String, String> {
     let dir = folder().ok_or_else(nowhere)?;

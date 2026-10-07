@@ -51,6 +51,10 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
         let _ = app.emit("panel-shown", ());
         return;
     }
+    if said.split_whitespace().next() == Some("emptied") {
+        let _ = app.emit("emptied", ());
+        return;
+    }
     let Some(what) = said.strip_prefix("trouble ") else {
         return;
     };
