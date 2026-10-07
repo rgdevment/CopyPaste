@@ -1155,7 +1155,7 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
             };
             match sent {
                 here::Sent::Nobody => {
-                    note("nothing was in front to paste into, it stays on the clipboard");
+                    note("no window was left to paste into, it stays on the clipboard");
                     vanish(&ui);
                 }
                 here::Sent::Done => {}

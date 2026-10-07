@@ -59,12 +59,22 @@ fn a_patch_tells_again_what_its_minor_brought() {
 }
 
 #[test]
-fn a_patch_over_an_older_minor_tells_each_minor_once() {
-    let all = said(&["3.0.0", "3.1.0"]);
+fn the_next_patch_without_its_own_entry_tells_its_minor_again() {
     assert_eq!(
-        decide(false, false, Some("3.0.4"), "3.1.2", &all),
+        decide(false, false, Some("3.1.1"), "3.1.2", &said(&["3.1.0"])),
         Greeting::News {
             versions: said(&["3.1.0"])
+        }
+    );
+}
+
+#[test]
+fn a_patch_with_its_own_entry_does_not_repeat_its_minor() {
+    let all = said(&["3.1.0", "3.1.2"]);
+    assert_eq!(
+        decide(false, false, Some("3.1.1"), "3.1.2", &all),
+        Greeting::News {
+            versions: said(&["3.1.2"])
         }
     );
 }

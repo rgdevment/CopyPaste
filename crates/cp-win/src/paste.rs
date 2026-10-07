@@ -51,6 +51,7 @@ pub struct Pasting {
     attempt: Attempt,
     stage: Stage,
     inner: Option<HWND>,
+    fronted: Option<Instant>,
     keys_since: Option<Instant>,
 }
 
@@ -80,6 +81,7 @@ impl Pasting {
             attempt: Attempt::default(),
             stage: Stage::Forward,
             inner: None,
+            fronted: None,
             keys_since: None,
         })
     }
@@ -103,6 +105,7 @@ impl Pasting {
             frontmost::bring_forward(self.target.window);
             return Advance::After(SETTLE);
         }
+        self.fronted.get_or_insert_with(Instant::now);
         self.inner = self.target.focus.filter(|inner| {
             frontmost::is_alive(*inner) && frontmost::answers(*inner, TARGET_ANSWERS_MS)
         });
@@ -132,10 +135,11 @@ impl Pasting {
         if let Some(waiting) = self.still_in_front() {
             return waiting;
         }
-        if let Some(pause) = focus_still_landing(self.started.elapsed()) {
+        let since = *self.keys_since.get_or_insert_with(Instant::now);
+        let fronted = self.fronted.unwrap_or(self.started);
+        if let Some(pause) = focus_still_landing(fronted.elapsed()) {
             return Advance::After(pause);
         }
-        let since = *self.keys_since.get_or_insert_with(Instant::now);
         if keystroke::modifiers_still_held() && since.elapsed() < MODIFIERS_GO {
             return Advance::After(KEYS_LOOKED_AT);
         }
@@ -164,10 +168,8 @@ impl Pasting {
     }
 }
 
-fn focus_still_landing(since_hidden: Duration) -> Option<Duration> {
-    FOCUS_LANDS
-        .checked_sub(since_hidden)
-        .filter(|left| !left.is_zero())
+fn focus_still_landing(since_fronted: Duration) -> Option<Duration> {
+    (since_fronted < FOCUS_LANDS).then(|| FOCUS_LANDS - since_fronted)
 }
 
 fn hold_of(focus: Focus) -> Hold {
