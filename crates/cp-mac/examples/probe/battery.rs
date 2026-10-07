@@ -1059,7 +1059,7 @@ fn main() -> std::process::ExitCode {
                 (
                     "F4",
                     Route::Keystroke,
-                    "pegado real en TextEdit",
+                    "a real paste into TextEdit",
                     ready.can_post,
                     "no permission to post events",
                 ),

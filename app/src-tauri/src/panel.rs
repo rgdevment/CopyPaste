@@ -1,3 +1,4 @@
+use cp_core::trouble::Trouble as Reason;
 use std::sync::{Condvar, Mutex};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_shell::ShellExt;
@@ -7,7 +8,7 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 pub struct Sidecar(Mutex<Option<CommandChild>>);
 
 #[derive(Default)]
-pub struct Trouble(Mutex<Option<String>>);
+pub struct Trouble(Mutex<Option<Reason>>);
 
 #[derive(Default)]
 pub struct Relights(Mutex<Tries>);
@@ -30,9 +31,9 @@ struct Tries {
     last: Option<std::time::Instant>,
 }
 
-pub fn trouble<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
+pub fn trouble<R: Runtime>(app: &AppHandle<R>) -> Option<Reason> {
     app.try_state::<Trouble>()
-        .and_then(|state| state.0.lock().ok().and_then(|held| held.clone()))
+        .and_then(|state| state.0.lock().ok().and_then(|held| *held))
 }
 
 fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
@@ -41,7 +42,9 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
         return;
     }
     if let Some(what) = said.strip_prefix("well ") {
-        settled(app, what);
+        if let Some(reason) = Reason::from_key(what) {
+            settled(app, reason);
+        }
         return;
     }
     if said == "shown" {
@@ -52,17 +55,15 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
         return;
     };
     crate::note::note(&format!("the panel says: {what}"));
-    if let Some(state) = app.try_state::<Trouble>()
-        && let Ok(mut held) = state.0.lock()
-    {
-        *held = Some(what.to_owned());
+    if let Some(reason) = Reason::from_key(what) {
+        trouble_is(app, reason);
     }
 }
 
-fn settled<R: Runtime>(app: &AppHandle<R>, what: &str) {
+fn settled<R: Runtime>(app: &AppHandle<R>, reason: Reason) {
     if let Some(state) = app.try_state::<Trouble>()
         && let Ok(mut held) = state.0.lock()
-        && held.as_deref() == Some(what)
+        && *held == Some(reason)
     {
         held.take();
         crate::tray::tell(app, None);
@@ -93,11 +94,11 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
     match shown(app) {
         Showing::Done | Showing::Waiting => {}
         Showing::GaveUp => {
-            gave_up(app, "the panel will not stay up; restart CopyPaste");
+            gave_up(app, Reason::Unsteady);
         }
         Showing::Refused => {
             crate::note::note("the panel would not show itself, not even freshly started");
-            gave_up(app, "the panel is not answering");
+            gave_up(app, Reason::Unanswering);
         }
     }
 }
@@ -198,7 +199,7 @@ fn come_back<R: Runtime>(app: &AppHandle<R>) {
             crate::reviving::Verdict::Wait { left } => left,
             crate::reviving::Verdict::Enough { left } => {
                 if !told {
-                    gave_up(app, "the panel will not stay up; restart CopyPaste");
+                    gave_up(app, Reason::Unsteady);
                     told = true;
                 }
                 left
@@ -217,14 +218,15 @@ fn back<R: Runtime>(app: &AppHandle<R>) {
         Ok(()) => crate::note::note("the panel is back and watches the clipboard again"),
         Err(why) => {
             crate::note::note(&format!("the panel could not come back: {why}"));
-            gave_up(app, "the panel stopped watching the clipboard");
+            gave_up(app, Reason::Stopped);
         }
     }
 }
 
-fn gave_up<R: Runtime>(app: &AppHandle<R>, what: &str) {
-    trouble_is(app, what);
-    crate::tray::tell(app, Some(what));
+fn gave_up<R: Runtime>(app: &AppHandle<R>, reason: Reason) {
+    crate::note::note(reason.worded(false));
+    trouble_is(app, reason);
+    crate::tray::tell(app, Some(reason));
 }
 
 fn parting<R: Runtime>(app: &AppHandle<R>) -> bool {
@@ -251,11 +253,11 @@ fn forgive<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-fn trouble_is<R: Runtime>(app: &AppHandle<R>, what: &str) {
+fn trouble_is<R: Runtime>(app: &AppHandle<R>, reason: Reason) {
     if let Some(state) = app.try_state::<Trouble>()
         && let Ok(mut held) = state.0.lock()
     {
-        *held = Some(what.to_owned());
+        *held = Some(reason);
     }
 }
 
@@ -357,10 +359,10 @@ fn light<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_shell::Error
                             how.code, how.signal
                         ));
                         if fell {
-                            trouble_is(&handle, "the panel stopped watching the clipboard");
+                            trouble_is(&handle, Reason::Stopped);
                             bring_back(&handle);
-                        } else if trouble(&handle).is_none() {
-                            trouble_is(&handle, "the panel stopped watching the clipboard");
+                        } else if trouble(&handle).is_none_or(Reason::still_keeping) {
+                            trouble_is(&handle, Reason::Stopped);
                         }
                     }
                     break;

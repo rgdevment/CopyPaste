@@ -1,13 +1,16 @@
 use super::*;
 
 #[test]
-fn only_a_locale_that_starts_with_en_gets_english() {
+fn only_a_locale_that_starts_with_es_gets_spanish() {
     assert!(english_for(Some("en")));
     assert!(english_for(Some("en-GB")));
-    assert!(english_for(Some("EN-us")));
     assert!(!english_for(Some("es")));
     assert!(!english_for(Some("es-CL")));
-    assert!(!english_for(Some("pt-BR")));
+    assert!(!english_for(Some("ES-mx")));
+    assert!(english_for(Some("pt-BR")));
+    assert!(english_for(Some("fr")));
+    assert!(english_for(Some("de-DE")));
+    assert!(english_for(Some("")));
 }
 
 #[test]

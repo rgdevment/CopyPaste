@@ -7,7 +7,7 @@ pub fn english_for(locale: Option<&str>) -> bool {
         .map(str::to_owned)
         .or_else(sys_locale::get_locale)
         .unwrap_or_default();
-    asked.to_lowercase().starts_with("en")
+    !asked.to_lowercase().starts_with("es")
 }
 
 pub fn adopt_english(english: bool) {

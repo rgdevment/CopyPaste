@@ -57,3 +57,36 @@ fn no_two_spare_entries_are_the_same_combination_spelled_differently() {
         }
     }
 }
+
+#[cfg(target_os = "macos")]
+const SPOKEN_FOR: &[&str] = &[
+    "Shift+Cmd+V",
+    "Alt+Shift+Cmd+V",
+    "Alt+Cmd+V",
+    "Cmd+Space",
+    "Alt+Cmd+Space",
+    "Ctrl+Space",
+    "Ctrl+Alt+Space",
+    "Ctrl+Cmd+Space",
+];
+#[cfg(not(target_os = "macos"))]
+const SPOKEN_FOR: &[&str] = &[
+    "Ctrl+Shift+V",
+    "Ctrl+Alt+C",
+    "Ctrl+Shift+C",
+    "Ctrl+Shift+Space",
+    "Ctrl+Alt+Space",
+    "Alt+Space",
+];
+
+#[test]
+fn no_spare_takes_a_combination_the_system_or_everyday_apps_already_use() {
+    let spoken: Vec<Shortcut> = SPOKEN_FOR
+        .iter()
+        .map(|said| said.parse::<Shortcut>().expect("a real combination"))
+        .collect();
+    for said in SPARE {
+        let one: Shortcut = said.parse().expect("a real combination");
+        assert!(!spoken.contains(&one), "«{said}» is already spoken for");
+    }
+}

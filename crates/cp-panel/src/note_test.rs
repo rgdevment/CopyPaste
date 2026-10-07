@@ -11,6 +11,18 @@ fn the_log_sits_where_the_privacy_note_says_it_does() {
 }
 
 #[test]
+fn what_the_tests_note_never_reaches_the_real_log() {
+    let where_it_is = where_to();
+    assert!(where_it_is.starts_with(std::env::temp_dir()));
+    if let Some(real) = crate::here::data_dir() {
+        assert!(
+            !where_it_is.starts_with(real),
+            "a test would leave its lines in the log of whoever runs it"
+        );
+    }
+}
+
+#[test]
 fn what_the_log_holds_is_only_readable_by_whoever_copied_it() {
     let dir = std::env::temp_dir().join(format!("cp-panel-guard-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
@@ -69,5 +81,17 @@ fn a_panic_ends_the_panel_unless_a_helper_had_it() {
     assert_eq!(
         after_the_errands, 1,
         "a thumbnail that broke only takes its own thread"
+    );
+}
+
+#[test]
+fn outside_the_tests_the_log_lives_in_the_logs_folder_of_the_data() {
+    if let Some(dir) = crate::here::data_dir() {
+        assert_eq!(real_folder(), dir.join("logs"));
+    }
+    assert_ne!(
+        real_folder(),
+        folder(),
+        "the tests never write where the user reads"
     );
 }

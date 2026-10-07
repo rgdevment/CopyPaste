@@ -1,13 +1,13 @@
-use crate::aside::{Leaving, aimed_at};
+use crate::aside::Leaving;
+use crate::handing::{forms_of, hand_over, paste_as};
 use crate::here;
-use crate::landing::{Landing, Towards};
+use crate::landing::Towards;
 use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
 use crate::opening::Reached;
 use crate::reaching::reach_for;
-use crate::showing::{NEXT_FRAME, SLOW, appear, leave_when_left, place, vanish};
-use crate::view::{AS_IS, as_is_label, label_of_form, shorthand_of};
-use crate::view::{chips_of, compact, count_text, empty_of, form_of, harvest, label_of, sweeten};
+use crate::showing::{NEXT_FRAME, appear, leave_when_left, vanish};
+use crate::view::{chips_of, compact, count_text, empty_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
 use cp_core::kind::Kind;
 use cp_store::{Clock, Filter, Store};
@@ -147,13 +147,13 @@ impl App {
             self.keep_watch(panel.as_weak());
         }
         if let Some(dir) = self.state.borrow().options.signals.clone() {
-            watch_signals(panel.as_weak(), dir, self.state.borrow().kept.clone());
+            crate::orders::watch_signals(panel.as_weak(), dir, self.state.borrow().kept.clone());
         }
         if serving {
             let state = self.state.borrow();
             let shelf = state.kept.clone();
             leave_when_left(panel, move || shelf.get().hides);
-            listen(
+            crate::orders::listen(
                 panel.as_weak(),
                 state.ahead.clone(),
                 state.options.backdrop.clone(),
@@ -176,7 +176,10 @@ impl App {
             });
         }) {
             Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
-            Err(why) => crate::note::trouble(&format!("nadie vigila el portapapeles: {why}")),
+            Err(why) => crate::note::trouble(
+                cp_core::trouble::Trouble::Unwatched,
+                &format!("nothing watches the clipboard: {why}"),
+            ),
         }
     }
 
@@ -567,7 +570,10 @@ impl App {
                     note(&format!("{gone} unpinned items were emptied out"));
                     crate::note::tell(&format!("emptied {gone}"));
                 }
-                Err(why) => crate::note::trouble(&format!("no se pudo vaciar: {why}")),
+                Err(why) => crate::note::trouble(
+                    cp_core::trouble::Trouble::Unemptied,
+                    &format!("the history could not be emptied: {why}"),
+                ),
             }
             if let Some(ui) = ui.upgrade() {
                 refresh(&ui, &state);
@@ -727,7 +733,7 @@ impl App {
     }
 }
 
-fn handle_of(panel: &Panel) -> Option<raw_window_handle::RawWindowHandle> {
+pub fn handle_of(panel: &Panel) -> Option<raw_window_handle::RawWindowHandle> {
     use raw_window_handle::HasWindowHandle;
     let handle = panel.window().window_handle();
     HasWindowHandle::window_handle(&handle)
@@ -735,7 +741,7 @@ fn handle_of(panel: &Panel) -> Option<raw_window_handle::RawWindowHandle> {
         .map(|raw| raw.as_raw())
 }
 
-fn dress(panel: &Panel, wanted: &str, light: bool) {
+pub fn dress(panel: &Panel, wanted: &str, light: bool) {
     if let Some(handle) = handle_of(panel) {
         here::dress(handle, wanted, light);
     }
@@ -1038,77 +1044,6 @@ fn aimed(state: &Rc<RefCell<State>>) -> Aimed {
     (state.store.clone(), state.engine.clone(), towards)
 }
 
-fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towards) -> Landing {
-    if towards == Towards::Elsewhere {
-        return Landing::anywhere();
-    }
-    let label = (towards == Towards::Browser)
-        .then(|| store.label_of(id).ok().flatten())
-        .flatten();
-    let content = here::content_of(item, None);
-    let files = crate::dragging::files_for(
-        item.kind,
-        &content.paths,
-        content.image,
-        label.as_deref(),
-        std::time::SystemTime::now(),
-    );
-    Landing { towards, files }
-}
-
-fn hand_over(
-    store: &Store,
-    engine: Option<&crate::engine::Engine>,
-    id: i64,
-    towards: Towards,
-) -> bool {
-    let item = match store.item(id) {
-        Ok(Some(item)) => item,
-        Ok(None) => {
-            note(&format!("pasting {id}: it is no longer in the store"));
-            return false;
-        }
-        Err(why) => {
-            note(&format!("pasting {id}: {why}"));
-            return false;
-        }
-    };
-    let landing = landing_for(store, &item, id, towards);
-    let landed = here::to_clipboard(&item, &landing, || starting(engine), || mark(engine));
-    let written = short_of(id, landed);
-    if written {
-        if let Err(why) = store.record_paste(id, now_ms()) {
-            note(&format!("{id} was pasted and nobody wrote it down: {why}"));
-        }
-    } else {
-        note(&format!(
-            "pasting {id}: the write never reached the clipboard"
-        ));
-    }
-    written
-}
-
-fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
-    const SHOWN: usize = 22;
-    let text = match rendered {
-        Some(cp_core::paste_as::Rendered::Text(text)) => text,
-        Some(cp_core::paste_as::Rendered::Jpeg(bytes)) => {
-            return format!("{} KB", bytes.len() / 1024);
-        }
-        None => return String::new(),
-    };
-    let flat: String = text
-        .chars()
-        .map(|one| if one.is_control() { ' ' } else { one })
-        .collect();
-    let trimmed = flat.split_whitespace().collect::<Vec<_>>().join(" ");
-    if trimmed.chars().count() <= SHOWN {
-        return trimmed;
-    }
-    let kept: String = trimmed.chars().take(SHOWN).collect();
-    format!("{}…", kept.trim_end())
-}
-
 fn open_sheet(ui: &Panel, title: &str, rows: Vec<FormRow>) {
     ui.set_sheet_narrow(false);
     ui.set_sheet_at(ui.get_scroll_y());
@@ -1166,118 +1101,11 @@ fn blink(ui: &Panel) {
     });
 }
 
-fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
-    let Ok(Some(item)) = store.item(id) else {
-        return Vec::new();
-    };
-    let ocr = store.ocr_text(id).ok().flatten();
-    let content = here::content_of(&item, ocr.as_deref());
-    let mut rows = vec![FormRow {
-        key: AS_IS.into(),
-        label: as_is_label(item.kind).into(),
-        preview: glimpse(
-            content
-                .text
-                .as_deref()
-                .map(|text| cp_core::paste_as::Rendered::Text(text.to_owned())),
-        )
-        .into(),
-    }];
-    rows.extend(
-        cp_core::paste_as::forms_for(&content)
-            .into_iter()
-            .map(|form| {
-                let shown = glimpse(cp_core::paste_as::render(form, &content));
-                match shorthand_of(form) {
-                    Some(short) => FormRow {
-                        key: form.as_str().into(),
-                        label: shown.into(),
-                        preview: short.into(),
-                    },
-                    None => FormRow {
-                        key: form.as_str().into(),
-                        label: label_of_form(form).into(),
-                        preview: shown.into(),
-                    },
-                }
-            }),
-    );
-    rows
-}
-
-fn paste_as(
-    store: &Store,
-    engine: Option<&crate::engine::Engine>,
-    id: i64,
-    key: &str,
-    towards: Towards,
-) -> bool {
-    if key == AS_IS {
-        return hand_over(store, engine, id, towards);
-    }
-    let Some(form) = form_of(key) else {
-        note(&format!("a form nobody knows: {key}"));
-        return false;
-    };
-    let Ok(Some(item)) = store.item(id) else {
-        return false;
-    };
-    let ocr = store.ocr_text(id).ok().flatten();
-    let content = here::content_of(&item, ocr.as_deref());
-    let Some(rendered) = cp_core::paste_as::render(form, &content) else {
-        note(&format!(
-            "pasting {id} as {key}: the form gave nothing back"
-        ));
-        return false;
-    };
-    let made = rendered.into_item();
-    let written = short_of(
-        id,
-        here::to_clipboard(
-            &made,
-            &Landing::anywhere(),
-            || starting(engine),
-            || mark(engine),
-        ),
-    );
-    if written && let Err(why) = store.record_paste(id, now_ms()) {
-        note(&format!("{id} was pasted and nobody wrote it down: {why}"));
-    }
-    written
-}
-
 pub fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
-}
-
-fn short_of(id: i64, landed: here::Landed) -> bool {
-    if let here::Landed::Short { placed, wanted } = landed {
-        note(&format!(
-            "pasting {id}: only {placed} of {wanted} formats fitted on the clipboard"
-        ));
-    }
-    landed != here::Landed::Nothing
-}
-
-fn starting(engine: Option<&crate::engine::Engine>) {
-    let Some(engine) = engine else {
-        return;
-    };
-    if !engine.writing() {
-        note("the start of the clipboard write could not be marked as ours");
-    }
-}
-
-fn mark(engine: Option<&crate::engine::Engine>) {
-    let Some(engine) = engine else {
-        return;
-    };
-    if !engine.ours() {
-        note("the clipboard write could not be marked as ours");
-    }
 }
 
 fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
@@ -1329,7 +1157,7 @@ fn step_aside(ui: &Panel, state: &Rc<RefCell<State>>, leaving: Leaving) {
     }
 }
 
-fn forward(panel: &Panel) {
+pub fn forward(panel: &Panel) {
     if let Some(handle) = handle_of(panel) {
         here::forward(handle);
     }
@@ -1370,100 +1198,4 @@ fn watch_leaving(ui: &Panel, state: &Rc<RefCell<State>>) {
                 vanish(&ui);
             }
         });
-}
-
-const ORDER_UP_TO: u64 = 64;
-
-fn listen(
-    ui: slint::Weak<Panel>,
-    ahead: Arc<AtomicIsize>,
-    backdrop: String,
-    shelf: crate::kept::Shelf,
-) {
-    std::thread::spawn(move || {
-        use std::io::{BufRead, Read};
-        let host = here::host();
-        let input = std::io::stdin();
-        let mut reader = std::io::BufReader::new(input.lock());
-        let mut said = String::new();
-        loop {
-            said.clear();
-            match (&mut reader).take(ORDER_UP_TO).read_line(&mut said) {
-                Ok(0) | Err(_) => break,
-                Ok(_) => {}
-            }
-            match said.trim() {
-                "show" => {
-                    let asked = Instant::now();
-                    let (in_front, aim) = (here::ahead_now(host), ahead.clone());
-                    let kept = shelf.renew();
-                    crate::say::adopt_english(kept.english);
-                    let dressed = backdrop.clone();
-                    let _ = ui.upgrade_in_event_loop(move |panel| {
-                        let before = aim.load(Ordering::Relaxed);
-                        let showing = panel.window().is_visible();
-                        aim.store(aimed_at(in_front, before, showing), Ordering::Relaxed);
-                        place(&panel);
-                        crate::view::dress_words(&panel);
-                        panel.invoke_fresh_start();
-                        if panel.show().is_err() {
-                            return;
-                        }
-                        place(&panel);
-                        dress(&panel, &dressed, kept.light(here::system_is_light()));
-                        forward(&panel);
-                        appear(&panel);
-                        panel.invoke_focus_search();
-                        let took = asked.elapsed();
-                        if took > SLOW {
-                            note(&format!("the panel took {took:?} to show"));
-                        }
-                    });
-                }
-                "empty" => {
-                    let _ = ui.upgrade_in_event_loop(|panel| panel.invoke_emptied());
-                }
-                "hide" => {
-                    ahead.store(0, Ordering::Relaxed);
-                    let _ = ui.upgrade_in_event_loop(|panel| vanish(&panel));
-                }
-                "quit" => break,
-                _ => note("an order arrived that means nothing here"),
-            }
-        }
-        let _ = ui.upgrade_in_event_loop(|panel| {
-            if let Some(handle) = handle_of(&panel) {
-                here::ground(handle);
-            }
-            let _ = slint::quit_event_loop();
-        });
-    });
-}
-
-fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf, shelf: crate::kept::Shelf) {
-    std::thread::spawn(move || {
-        loop {
-            std::thread::sleep(Duration::from_millis(40));
-            for (name, show) in [("show", true), ("hide", false)] {
-                let flag = dir.join(name);
-                if flag.exists() {
-                    let _ = std::fs::remove_file(&flag);
-                    if show {
-                        crate::say::adopt_english(shelf.renew().english);
-                    }
-                    let _ = ui.upgrade_in_event_loop(move |ui| {
-                        if show {
-                            crate::view::dress_words(&ui);
-                            ui.invoke_fresh_start();
-                            let _ = ui.show();
-                            appear(&ui);
-                            ui.invoke_focus_search();
-                        } else {
-                            vanish(&ui);
-                        }
-                    });
-                }
-            }
-        }
-    });
 }

@@ -6,12 +6,15 @@ use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuild
 
 pub struct Said<R: Runtime>(Mutex<Vec<MenuItem<R>>>);
 
+#[derive(Default)]
+pub struct Shown(Mutex<Option<cp_core::trouble::Trouble>>);
+
 pub fn spanish(locale: Option<&str>) -> bool {
     let asked = locale
         .map(str::to_owned)
         .or_else(sys_locale::get_locale)
         .unwrap_or_default();
-    !asked.to_lowercase().starts_with("en")
+    asked.to_lowercase().starts_with("es")
 }
 
 fn worded(spanish: bool) -> [&'static str; 4] {
@@ -101,6 +104,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
     let _ = &tray;
 
     app.manage(Said(Mutex::new(vec![panel, settings, restart, quit])));
+    app.manage(Shown::default());
 
     Some(())
 }
@@ -155,10 +159,31 @@ pub fn settle_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
-pub fn tell<R: Runtime>(app: &AppHandle<R>, trouble: Option<&str>) {
+pub fn reword_tip<R: Runtime>(app: &AppHandle<R>, spanish: bool) {
+    let shown = app
+        .try_state::<Shown>()
+        .and_then(|state| state.0.lock().ok().and_then(|shown| *shown));
+    tell_in(app, shown, spanish);
+}
+
+pub fn tell<R: Runtime>(app: &AppHandle<R>, trouble: Option<cp_core::trouble::Trouble>) {
+    let locale = crate::settings::settings().ok().and_then(|one| one.locale);
+    tell_in(app, trouble, spanish(locale.as_deref()));
+}
+
+pub fn tell_in<R: Runtime>(
+    app: &AppHandle<R>,
+    trouble: Option<cp_core::trouble::Trouble>,
+    spanish: bool,
+) {
+    if let Some(state) = app.try_state::<Shown>()
+        && let Ok(mut shown) = state.0.lock()
+    {
+        *shown = trouble;
+    }
     let said = trouble.map_or_else(
         || "CopyPaste".to_owned(),
-        |what| format!("CopyPaste: {what}"),
+        |what| format!("CopyPaste: {}", what.worded(spanish)),
     );
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {

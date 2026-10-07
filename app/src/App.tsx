@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useKept, useTrouble } from "./core";
-import { fill, t } from "./locales";
+import { panelTroubleSaid, t } from "./locales";
 import About from "./ui/About";
 import Backup from "./ui/Backup";
 import Chrome from "./ui/Chrome";
@@ -67,7 +67,7 @@ export default function App() {
         </nav>
 
         <main className="pane">
-          {panelTrouble && <p className="alarm">{fill("panelTrouble", panelTrouble)}</p>}
+          {panelTrouble && <p className="alarm">{panelTroubleSaid(panelTrouble)}</p>}
           {trouble && (
             <p className="alarm">
               {trouble}

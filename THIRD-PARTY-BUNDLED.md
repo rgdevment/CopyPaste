@@ -39,10 +39,15 @@ with the crates that carry it.
 | `scheduler` | 0.28.0 | MIT |
 | `uc.micro` | 3.0.0 | MIT |
 
-## In the core (438 crates)
+## In the core (443 crates)
 
 | Crate | Version | Licence |
 | --- | --- | --- |
+| `accesskit` | 0.24.1 | MIT OR Apache-2.0 |
+| `accesskit_consumer` | 0.38.0 | MIT OR Apache-2.0 |
+| `accesskit_macos` | 0.26.3 | MIT OR Apache-2.0 |
+| `accesskit_windows` | 0.34.0 | MIT OR Apache-2.0 |
+| `accesskit_winit` | 0.33.2 | Apache-2.0 |
 | `adler2` | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
 | `aho-corasick` | 1.1.5 | Unlicense OR MIT |
 | `alloc-no-stdlib` | 3.0.0 | BSD-3-Clause |

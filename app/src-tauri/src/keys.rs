@@ -47,21 +47,9 @@ fn remember<R: Runtime>(app: &AppHandle<R>, said: Option<&str>) {
 }
 
 #[cfg(target_os = "macos")]
-pub const SPARE: &[&str] = &[
-    "Ctrl+Alt+V",
-    "Shift+Cmd+V",
-    "Ctrl+Shift+V",
-    "Shift+Cmd+Space",
-];
+pub const SPARE: &[&str] = &["Ctrl+Alt+V", "Ctrl+Cmd+V", "Ctrl+Shift+V"];
 #[cfg(not(target_os = "macos"))]
-pub const SPARE: &[&str] = &[
-    "Ctrl+Alt+V",
-    "Ctrl+Shift+V",
-    "Ctrl+Alt+C",
-    "Ctrl+Shift+Space",
-    "Alt+Shift+V",
-    "Ctrl+Alt+Space",
-];
+pub const SPARE: &[&str] = &["Ctrl+Alt+V", "Alt+Shift+V", "Ctrl+Alt+Shift+V"];
 
 fn grantable<R: Runtime>(app: &AppHandle<R>, one: Shortcut) -> bool {
     let keys = app.global_shortcut();
