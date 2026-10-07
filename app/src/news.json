@@ -76,5 +76,83 @@
         "said": "if you have it installed, links open with it; otherwise in your browser."
       }
     ]
+  },
+  {
+    "version": "3.0.3",
+    "es": [
+      {
+        "title": "Un panel más rápido",
+        "said": "aparece con tus últimas copias ya en su lugar y se va apenas haces clic en otra parte."
+      },
+      {
+        "title": "Pegar donde esperas",
+        "said": "va a la app que estabas usando, el cursor vuelve a su sitio y el texto conserva su formato."
+      },
+      {
+        "title": "Capturas al instante",
+        "said": "una captura copiada directo al portapapeles ya no deja una tarjeta en blanco."
+      },
+      {
+        "title": "Listo al iniciar sesión",
+        "said": "CopyPaste arranca con tu equipo y el historial cuida su tamaño solo."
+      }
+    ],
+    "en": [
+      {
+        "title": "A quicker panel",
+        "said": "it opens with your latest copies already in place and goes away the moment you click elsewhere."
+      },
+      {
+        "title": "Pasting lands where you expect",
+        "said": "it goes into the app you were using, your cursor comes back, and text keeps its formatting."
+      },
+      {
+        "title": "Screenshots right away",
+        "said": "a screenshot copied straight to the clipboard no longer leaves a blank card behind."
+      },
+      {
+        "title": "Ready when you sign in",
+        "said": "CopyPaste starts with your computer, and the history looks after its own size."
+      }
+    ]
+  },
+  {
+    "version": "3.1.0",
+    "es": [
+      {
+        "title": "Hazlo tuyo",
+        "said": "en Ajustes › Apariencia eliges el tamaño del panel, la fuente del texto y la del código, cuántas líneas muestra cada tarjeta y un color de acento pensado para cada tema."
+      },
+      {
+        "title": "Mira antes de elegir",
+        "said": "una vista previa del panel cambia al instante con cada opción, y un botón vuelve al aspecto de siempre."
+      },
+      {
+        "title": "Te avisa cuando hay versión nueva",
+        "said": "el panel y Ajustes te lo dicen solos, sin tener que entrar a Acerca de."
+      },
+      {
+        "title": "Ajustes con el teclado",
+        "said": "en Mac, Tab llega a todos los botones y listas de Ajustes."
+      }
+    ],
+    "en": [
+      {
+        "title": "Make it yours",
+        "said": "in Settings › Appearance, choose the panel size, the text and code fonts, how many lines each card shows, and an accent colour made for each theme."
+      },
+      {
+        "title": "See before you choose",
+        "said": "a preview of the panel changes with every option, and one button brings back the usual look."
+      },
+      {
+        "title": "Told when a new version is out",
+        "said": "the panel and Settings say so on their own, without opening About."
+      },
+      {
+        "title": "Settings by keyboard",
+        "said": "on a Mac, Tab reaches every button and list in Settings."
+      }
+    ]
   }
 ]
