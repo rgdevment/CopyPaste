@@ -1154,7 +1154,10 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
                 return;
             };
             match sent {
-                here::Sent::Nobody => vanish(&ui),
+                here::Sent::Nobody => {
+                    note("nothing was in front to paste into, it stays on the clipboard");
+                    vanish(&ui);
+                }
                 here::Sent::Done => {}
                 here::Sent::Degraded(why) => {
                     let _ = state.borrow().ahead.compare_exchange(

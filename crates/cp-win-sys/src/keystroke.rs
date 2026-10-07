@@ -5,12 +5,20 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 
 pub const OURS: usize = 0x0C0B_9A57;
 
+const MODIFIERS: [VIRTUAL_KEY; 5] = [VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_CONTROL];
+
 const VK_V: VIRTUAL_KEY = VIRTUAL_KEY(b'V' as u16);
 
 pub fn paste_batch() -> Vec<INPUT> {
+    paste_batch_while(pressed)
+}
+
+fn paste_batch_while(held: impl Fn(VIRTUAL_KEY) -> bool) -> Vec<INPUT> {
     let mut batch = Vec::with_capacity(9);
-    for held in [VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_CONTROL] {
-        batch.push(key(held, true));
+    for modifier in MODIFIERS {
+        if held(modifier) {
+            batch.push(key(modifier, true));
+        }
     }
     batch.push(key(VK_CONTROL, false));
     batch.push(key(VK_V, false));
@@ -46,9 +54,7 @@ pub fn send(batch: &[INPUT]) -> bool {
 }
 
 pub fn modifiers_still_held() -> bool {
-    [VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN]
-        .into_iter()
-        .any(pressed)
+    MODIFIERS.into_iter().any(pressed)
 }
 
 fn pressed(code: VIRTUAL_KEY) -> bool {

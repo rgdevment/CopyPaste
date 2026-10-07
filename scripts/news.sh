@@ -66,7 +66,7 @@ sys.exit(1)
 said=$(python3 -c "$reads" "$version" "$news" 2>&1)
 looked=$?
 
-# a patch fixes what its minor release shipped, and the window already told that release's news
+# a patch fixes what its minor release shipped, and the window tells that release's news again
 minor="${version%.*}.0"
 if [ "$looked" = 1 ] && [ "$minor" != "$version" ] \
   && python3 -c "$reads" "$minor" "$news" > /dev/null 2>&1; then
