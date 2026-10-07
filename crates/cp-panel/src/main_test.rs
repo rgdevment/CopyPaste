@@ -11,7 +11,9 @@ const SHUT: f32 = 58.0;
 const OPEN: f32 = 190.0;
 const BIG: f32 = 340.0;
 
-static PLATFORM: std::sync::Once = std::sync::Once::new();
+thread_local! {
+    static PLATFORM: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 fn card(id: i32) -> Card {
     Card {
@@ -63,7 +65,9 @@ fn open_one(panel: &Panel) -> Option<usize> {
 }
 
 fn bench(count: i32) -> Bench {
-    PLATFORM.call_once(i_slint_backend_testing::init_no_event_loop);
+    if !PLATFORM.replace(true) {
+        i_slint_backend_testing::init_no_event_loop();
+    }
     let panel = Panel::new().expect("the panel builds");
     panel
         .window()
