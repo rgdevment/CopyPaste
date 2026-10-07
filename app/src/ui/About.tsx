@@ -194,7 +194,7 @@ export default function About() {
       <div className="rule">{t("supportTitle")}</div>
       <p className="quiet">{t("supportWhy")}</p>
       <div className="gives" style={{ marginTop: 10 }}>
-        <button type="button" className="give" onClick={() => go(STARS)}>
+        <button type="button" className="give wide" onClick={() => go(STARS)}>
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <path
               fill="#e3b341"
@@ -207,7 +207,7 @@ export default function About() {
           </span>
         </button>
         {fromStore && (
-          <button type="button" className="give" onClick={() => go(RATING)}>
+          <button type="button" className="give wide" onClick={() => go(RATING)}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path
                 fill="#0078d4"

@@ -32,6 +32,7 @@ describe("when the backend says no", () => {
       ),
     );
     render(<App />);
+    await who.click(await screen.findByRole("button", { name: "Apariencia" }));
     const look = await screen.findByLabelText("Tema");
     const { invoke } = await import("@tauri-apps/api/core");
     const asked = vi.mocked(invoke).mock.calls.filter(([what]) => what === "settings").length;

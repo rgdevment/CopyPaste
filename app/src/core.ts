@@ -9,6 +9,10 @@ export const licences = (): Promise<string> => invoke<string>("licences");
 
 export type Look = "system" | "light" | "dark";
 
+export type TextSize = "small" | "normal" | "large" | "larger";
+
+export type Density = "compact" | "normal" | "comfortable";
+
 export type Kept = {
   locale: string | null;
   theme: Look;
@@ -16,7 +20,66 @@ export type Kept = {
   "hides-when-left": boolean;
   "keeps-days": number;
   "images-quota-mb": number;
+  "text-size"?: TextSize;
+  density?: Density;
+  font?: string | null;
+  "code-font"?: string | null;
+  accent?: string;
 };
+
+export type Offered = { id: string; label: string; css: string };
+
+export type Paint = {
+  id: string;
+  light: string;
+  dark: string;
+  lightSelected: string;
+  darkSelected: string;
+};
+
+export type Choices = {
+  text: Offered;
+  texts: Offered[];
+  code: Offered;
+  codes: Offered[];
+  accents: Paint[];
+};
+
+export const SIZES: TextSize[] = ["small", "normal", "large", "larger"];
+
+export const DENSITIES: Density[] = ["compact", "normal", "comfortable"];
+
+export const ZOOM: Record<TextSize, number> = { small: 0.92, normal: 1, large: 1.08, larger: 1.16 };
+
+export const SHUT_LINES: Record<Density, number> = { compact: 1, normal: 2, comfortable: 3 };
+
+export const PLAIN_LOOK: Partial<Kept> = {
+  "text-size": "normal",
+  density: "normal",
+  font: null,
+  "code-font": null,
+  accent: "indigo",
+};
+
+export function useChoices() {
+  const [choices, setChoices] = useState<Choices | null>(null);
+  useEffect(() => {
+    invoke<Choices>("looks")
+      .then(setChoices)
+      .catch(() => setChoices(null));
+  }, []);
+  return choices;
+}
+
+const REACHABLE = "button, select, input, textarea, a[href], [role='switch']";
+
+export function reachable(root: ParentNode) {
+  for (const one of root.querySelectorAll(REACHABLE)) {
+    if (!one.hasAttribute("tabindex")) {
+      one.setAttribute("tabindex", "0");
+    }
+  }
+}
 
 export function wear(look: Look) {
   const root = document.documentElement;
@@ -376,4 +439,25 @@ export function useUpdate() {
   }, []);
 
   return { seen, busy, trouble, look, install };
+}
+
+const LOOKS_AGAIN = 60 * 60 * 1000;
+
+export function useWaiting() {
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    const ask = () => {
+      invoke<Looked>("update_ready", { nowPlease: false })
+        .then((one) => setVersion(one.ready?.version ?? null))
+        .catch(() => setVersion(null));
+    };
+    ask();
+    const again = setInterval(ask, LOOKS_AGAIN);
+    window.addEventListener("focus", ask);
+    return () => {
+      clearInterval(again);
+      window.removeEventListener("focus", ask);
+    };
+  }, []);
+  return version;
 }

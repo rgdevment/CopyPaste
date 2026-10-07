@@ -23,6 +23,7 @@ pub struct Metrics {
     pub found: f32,
     pub frame: f32,
     pub line: f32,
+    pub shut_lines: i32,
 }
 
 const EDGE: f32 = 8.0;
@@ -282,7 +283,7 @@ impl Rows {
             Some(Kind::Video | Kind::Audio) => self.metrics.body_media,
             _ => 0.0,
         };
-        crate::view::mixed_open_px(row, thumb, self.now, room)
+        crate::view::mixed_open_px(row, thumb, self.now, room, self.metrics.shut_lines)
     }
 
     fn open_of_row(&self, row: &Listed) -> f32 {
@@ -354,7 +355,7 @@ impl Rows {
             return self.metrics.plain;
         };
         if wears_cards(self.plain_way) {
-            return crate::view::face_for(row, has_thumb).shut_px();
+            return crate::view::face_for(row, has_thumb, self.metrics.shut_lines).shut_px();
         }
         if has_thumb {
             return self.metrics.tall;
@@ -475,14 +476,14 @@ impl Rows {
             + if self.open.get() == Some(index) {
                 self.open_of_row(row)
             } else if wears_cards(self.plain_way) {
-                crate::view::face_for(row, false).shut_px()
+                crate::view::face_for(row, false, self.metrics.shut_lines).shut_px()
             } else if was_found(row) {
                 self.metrics.found
             } else {
                 self.shut_height()
             };
         let meta = self.meta.borrow();
-        let mut card = card_of(row, self.now, meta.get(&row.id));
+        let mut card = card_of(row, self.now, meta.get(&row.id), self.metrics.shut_lines);
         drop(meta);
         let english = crate::say::in_english();
         if let Some(offset) = self.time_offset() {
@@ -509,7 +510,7 @@ impl Rows {
             card.thumb = image;
         } else {
             card.has_thumb = false;
-            let face = crate::view::face_for(row, false);
+            let face = crate::view::face_for(row, false, self.metrics.shut_lines);
             let opened = crate::view::opened_for(row, face);
             card.face = face.as_str().into();
             card.shut_lines = face.lines();

@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { type Kept, type Look, onMac, PRIVACY_PANE, useTrust, useWaking } from "../core";
+import { type Kept, onMac, PRIVACY_PANE, useTrust, useWaking } from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
@@ -17,7 +17,7 @@ export default function General({
     <>
       <h1>{t("railGeneral")}</h1>
 
-      <Band says={t("bandLook")} />
+      <Band says={t("bandTongue")} />
 
       <Line says={t("tongue")} why={t("tongueWhy")}>
         <select
@@ -28,18 +28,6 @@ export default function General({
           <option value="">{t("tongueTheirs")}</option>
           <option value="es">Español</option>
           <option value="en">English</option>
-        </select>
-      </Line>
-
-      <Line says={t("look")} why={t("lookWhy")}>
-        <select
-          aria-label={t("look")}
-          value={kept.theme}
-          onChange={(event) => change({ theme: event.target.value as Look })}
-        >
-          <option value="system">{t("lookTheirs")}</option>
-          <option value="light">{t("lookLight")}</option>
-          <option value="dark">{t("lookDark")}</option>
         </select>
       </Line>
 

@@ -1,17 +1,19 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
-import { useKept, useTrouble } from "./core";
-import { panelTroubleSaid, t } from "./locales";
+import { useKept, useTrouble, useWaiting } from "./core";
+import { fill, panelTroubleSaid, t } from "./locales";
 import About from "./ui/About";
+import Appearance from "./ui/Appearance";
 import Backup from "./ui/Backup";
 import Chrome from "./ui/Chrome";
 import General from "./ui/General";
 import History from "./ui/History";
-import { Clock, Gear, Info, Key, Vault } from "./ui/Icons";
+import { Brush, Clock, Gear, Info, Key, Vault } from "./ui/Icons";
 import Keys from "./ui/Keys";
 
 const WHERE = [
   { key: "general", says: "railGeneral", icon: Gear },
+  { key: "look", says: "railLook", icon: Brush },
   { key: "keys", says: "railKeys", icon: Key },
   { key: "history", says: "railHistory", icon: Clock },
   { key: "backup", says: "railBackup", icon: Vault },
@@ -28,10 +30,11 @@ export default function App() {
   const [where, setWhere] = useState<Where>(() => landing(window.location.hash));
   const { kept, trouble, change, look } = useKept();
   const panelTrouble = useTrouble();
+  const waiting = useWaiting();
 
   useEffect(() => {
     const asked = listen<string>("rail", (event) => {
-      if (WHERE.some((one) => one.key === event.payload)) {
+      if (WHERE.some((one) => one.key === event.payload) || event.payload === "about") {
         setWhere(event.payload as Where);
       }
     });
@@ -60,6 +63,17 @@ export default function App() {
             );
           })}
           <span className="spacer" />
+          {waiting && where !== "about" && (
+            <button
+              type="button"
+              className="waiting"
+              aria-label={`${t("railAbout")} · ${t("updateWaiting")}`}
+              onClick={() => setWhere("about")}
+            >
+              <i />
+              {fill("updateGoTo", waiting)}
+            </button>
+          )}
           <button type="button" aria-current={where === "about"} onClick={() => setWhere("about")}>
             <Info />
             {t("railAbout")}
@@ -77,6 +91,7 @@ export default function App() {
             </p>
           )}
           {kept && where === "general" && <General kept={kept} change={change} />}
+          {kept && where === "look" && <Appearance kept={kept} change={change} />}
           {kept && where === "keys" && <Keys kept={kept} change={change} />}
           {kept && where === "history" && <History kept={kept} change={change} />}
           {where === "backup" && <Backup />}

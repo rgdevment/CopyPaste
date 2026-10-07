@@ -1,0 +1,71 @@
+import { Theme } from "theme.slint";
+import { Words } from "words.slint";
+
+component StripButton inherits Rectangle {
+    in property <string> says;
+    in property <bool> strong;
+    callback pressed();
+    accessible-role: AccessibleRole.button;
+    accessible-label: says;
+    accessible-action-default => { root.pressed(); }
+    height: 24px;
+    width: label.preferred-width + 20px;
+    border-radius: Theme.radius-inset;
+    background: root.strong ? (touch.has-hover ? Theme.accent-dim : Theme.accent) : (touch.has-hover ? Theme.hover : transparent);
+    animate background { duration: 100ms; }
+    label := Text {
+        text: root.says;
+        color: root.strong ? Theme.panel : Theme.title;
+        font-size: Theme.fs-meta;
+        font-weight: 600;
+        vertical-alignment: center;
+        horizontal-alignment: center;
+    }
+    touch := TouchArea {
+        clicked => { root.pressed(); }
+    }
+}
+
+export component NewerStrip inherits Rectangle {
+    in property <string> line;
+    callback taken();
+    callback put-away();
+    height: 38px;
+    border-radius: Theme.radius-control;
+    background: Theme.selected;
+    border-width: 1px;
+    border-color: Theme.selected-edge;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 6px;
+        spacing: 6px;
+        alignment: stretch;
+        Rectangle {
+            width: 7px;
+            height: 7px;
+            y: (parent.height - 7px) / 2;
+            border-radius: 3.5px;
+            background: Theme.accent;
+        }
+        Text {
+            text: root.line;
+            color: Theme.body;
+            font-size: Theme.fs-small;
+            font-weight: 600;
+            overflow: elide;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        StripButton {
+            y: (parent.height - 24px) / 2;
+            says: Words.update-later;
+            pressed => { root.put-away(); }
+        }
+        StripButton {
+            y: (parent.height - 24px) / 2;
+            says: Words.update-take;
+            strong: true;
+            pressed => { root.taken(); }
+        }
+    }
+}

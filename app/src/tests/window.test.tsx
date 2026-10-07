@@ -39,12 +39,13 @@ describe("the window", () => {
     expect(screen.getByText("Doble clic")).toBeDefined();
   });
 
-  it("offers four sections and About, and nothing else", () => {
+  it("offers five sections and About, and nothing else", () => {
     render(<App />);
     const rail = screen.getByRole("navigation", { name: "Secciones" });
     const says = buttonsIn(rail).map((one) => one.textContent);
     expect(says).toEqual([
       "General",
+      "Apariencia",
       "Atajos de teclado",
       "Historial",
       "Copia de seguridad",
@@ -63,6 +64,7 @@ describe("the window", () => {
   it("the chosen theme is written on the root, which is what paints it", async () => {
     const who = userEvent.setup();
     render(<App />);
+    await who.click(await screen.findByRole("button", { name: "Apariencia" }));
     await who.selectOptions(await screen.findByLabelText("Tema"), "light");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     await who.selectOptions(screen.getByLabelText("Tema"), "system");
@@ -73,6 +75,7 @@ describe("the window", () => {
     const who = userEvent.setup();
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
+    await who.click(await screen.findByRole("button", { name: "Apariencia" }));
     await who.selectOptions(await screen.findByLabelText("Tema"), "dark");
     expect(invoke).toHaveBeenCalledWith("keep", {
       config: expect.objectContaining({ theme: "dark" }),
@@ -574,6 +577,7 @@ describe("the window", () => {
     render(<App />);
     await who.selectOptions(await screen.findByLabelText("Idioma"), "en");
     expect(await screen.findByRole("button", { name: "History" })).toBeDefined();
+    await who.click(screen.getByRole("button", { name: "Appearance" }));
     expect(screen.getByLabelText("Theme")).toBeDefined();
     await who.click(screen.getByRole("button", { name: "About" }));
     expect(screen.getByText("All local")).toBeDefined();

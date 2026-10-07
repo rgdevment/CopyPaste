@@ -93,6 +93,11 @@ fn read_or_reset(path: &std::path::Path) -> Result<Config, cp_config::Error> {
 }
 
 #[tauri::command]
+pub fn looks() -> cp_config::look::Choices {
+    cp_config::look::choices_here()
+}
+
+#[tauri::command]
 pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
     let said = written(&app, config);
     crate::looks::wear(&app);

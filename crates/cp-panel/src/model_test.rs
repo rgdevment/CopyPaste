@@ -14,6 +14,7 @@ const SIZES: Metrics = Metrics {
     found: 68.0,
     frame: 50.0,
     line: 18.0,
+    shut_lines: 2,
 };
 
 fn store_with(count: usize) -> Rc<Store> {

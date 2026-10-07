@@ -5,6 +5,51 @@ pub struct Kept {
     pub english: bool,
     pub theme: cp_config::Theme,
     pub hides: bool,
+    pub look: Look,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Look {
+    pub size: cp_config::TextSize,
+    pub density: cp_config::Density,
+    pub accent: cp_config::Accent,
+    pub font: &'static str,
+    pub mono: &'static str,
+}
+
+impl Default for Look {
+    fn default() -> Self {
+        let fonts = cp_config::look::fonts_here();
+        Self {
+            size: cp_config::TextSize::default(),
+            density: cp_config::Density::default(),
+            accent: cp_config::Accent::default(),
+            font: fonts.text.family,
+            mono: fonts.code.family,
+        }
+    }
+}
+
+pub fn look_of(
+    config: &cp_config::Config,
+    fonts: &cp_config::look::Fonts,
+    dir: &std::path::Path,
+    exists: &dyn Fn(&std::path::Path) -> bool,
+) -> Look {
+    use cp_config::look::family_of;
+    Look {
+        size: config.text_size,
+        density: config.density,
+        accent: config.accent,
+        font: family_of(config.font.as_deref(), fonts.text, fonts.texts, dir, exists),
+        mono: family_of(
+            config.code_font.as_deref(),
+            fonts.code,
+            fonts.codes,
+            dir,
+            exists,
+        ),
+    }
 }
 
 impl Kept {
@@ -53,6 +98,14 @@ pub fn resolve(config: Option<&cp_config::Config>) -> Kept {
         english: crate::say::english_for(config.and_then(|kept| kept.locale.as_deref())),
         theme: config.map_or(cp_config::Theme::System, |kept| kept.theme),
         hides: config.is_none_or(|kept| kept.hides_when_left),
+        look: config.map_or_else(Look::default, |kept| {
+            look_of(
+                kept,
+                &cp_config::look::fonts_here(),
+                &cp_config::look::fonts_dir_here(),
+                &|path: &std::path::Path| path.exists(),
+            )
+        }),
     }
 }
 
