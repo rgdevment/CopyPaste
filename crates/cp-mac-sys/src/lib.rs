@@ -1,7 +1,6 @@
 #![cfg(target_os = "macos")]
 
 pub mod activation;
-pub mod awake;
 pub mod clock;
 pub mod dragging;
 pub mod files;
@@ -9,6 +8,7 @@ pub mod floating;
 pub mod frontmost;
 pub mod keyboard;
 pub mod keystroke;
+pub mod login;
 pub mod media;
 pub mod menu;
 pub mod ocr;

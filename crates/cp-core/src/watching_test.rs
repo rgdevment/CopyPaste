@@ -1,5 +1,6 @@
 use super::*;
-use std::sync::atomic::{AtomicI64, AtomicUsize};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::time::Instant;
 
 const QUICK: Duration = Duration::from_millis(5);
 const NAP: Duration = Duration::from_millis(2);
@@ -184,4 +185,42 @@ fn the_period_keeps_up_with_a_person_without_spinning() {
         NAP <= EVERY,
         "the nap cannot outlast the period it shortens"
     );
+}
+
+#[test]
+fn the_counter_is_read_once_per_period_and_not_more() {
+    let reads = Arc::new(AtomicUsize::new(0));
+    let mine = reads.clone();
+    let watching = Watching::every(
+        Cadence::Opaque,
+        Duration::from_millis(60),
+        NAP,
+        Arc::new(move || {
+            mine.fetch_add(1, Ordering::Relaxed);
+            Some(1)
+        }),
+        never_busy(),
+        || {},
+    );
+    std::thread::sleep(Duration::from_millis(600));
+    assert!(watching.close());
+    let read = reads.load(Ordering::Relaxed);
+    assert!((2..=11).contains(&read), "{read} reads in 600 ms at 60 ms");
+}
+
+#[test]
+fn closing_in_the_middle_of_a_long_period_is_prompt() {
+    let count = Arc::new(AtomicI64::new(1));
+    let watching = Watching::every(
+        Cadence::Opaque,
+        Duration::from_secs(3_600),
+        NAP,
+        at(&count),
+        never_busy(),
+        || {},
+    );
+    std::thread::sleep(Duration::from_millis(50));
+    let started = Instant::now();
+    assert!(watching.close());
+    assert!(started.elapsed() < Duration::from_millis(400));
 }

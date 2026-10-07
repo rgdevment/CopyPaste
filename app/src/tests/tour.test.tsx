@@ -123,7 +123,7 @@ describe("the welcome on a Mac", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     asked.greeting = { kind: "tour", former: false };
-    asked.trust = { offered: true, pastes: false, secureInput: false };
+    asked.trust = { offered: true, pastes: false, secureInput: false, clipboard: "allowed" };
     back = asAMac();
   });
 
@@ -150,15 +150,44 @@ describe("the welcome on a Mac", () => {
       ),
     ).toBeInTheDocument();
 
-    asked.trust = { offered: true, pastes: true, secureInput: false };
+    asked.trust = { offered: true, pastes: true, secureInput: false, clipboard: "allowed" };
     expect(
       await screen.findByText("Listo, ya puede pegar", {}, { timeout: 4_000 }),
     ).toBeInTheDocument();
     expect(await screen.findByText("Pruébalo ahora", {}, { timeout: 4_000 })).toBeInTheDocument();
   }, 20_000);
 
+  it("tells how to let the clipboard be read when macOS refuses it", async () => {
+    asked.trust = { offered: true, pastes: false, secureInput: false, clipboard: "denied" };
+    render(<Welcome />);
+
+    await press("Comenzar");
+    expect(await screen.findByText("Un permiso para poder pegar")).toBeInTheDocument();
+    expect(screen.getByText(/Pegar desde otras apps/)).toBeInTheDocument();
+  });
+
+  it("still stops at the permission step when pasting is allowed but reading is refused", async () => {
+    asked.trust = { offered: true, pastes: true, secureInput: false, clipboard: "denied" };
+    render(<Welcome />);
+
+    await press("Comenzar");
+    expect(await screen.findByText("Un permiso para poder pegar")).toBeInTheDocument();
+    expect(screen.getByText(/Pegar desde otras apps/)).toBeInTheDocument();
+    expect(screen.getByText("Listo, ya puede pegar")).toBeInTheDocument();
+    await press("Siguiente");
+    expect(await screen.findByText("Pruébalo ahora", {}, { timeout: 4_000 })).toBeInTheDocument();
+  });
+
+  it("says nothing about reading while the clipboard is allowed", async () => {
+    render(<Welcome />);
+
+    await press("Comenzar");
+    expect(await screen.findByText("Un permiso para poder pegar")).toBeInTheDocument();
+    expect(screen.queryByText(/Pegar desde otras apps/)).toBeNull();
+  });
+
   it("shows the menu bar and the essentials with the Mac keys", async () => {
-    asked.trust = { offered: true, pastes: true, secureInput: false };
+    asked.trust = { offered: true, pastes: true, secureInput: false, clipboard: "allowed" };
     render(<Welcome />);
 
     await press("Comenzar");
@@ -178,7 +207,7 @@ describe("the welcome on a Mac", () => {
   });
 
   it("with permission already granted the step does not appear", async () => {
-    asked.trust = { offered: true, pastes: true, secureInput: false };
+    asked.trust = { offered: true, pastes: true, secureInput: false, clipboard: "allowed" };
     render(<Welcome />);
 
     await press("Comenzar");

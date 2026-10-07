@@ -17,3 +17,15 @@ fn a_capture_that_does_not_finish_in_time_is_abandoned() {
     });
     assert_eq!(seen, None, "the thread is abandoned and not waited for");
 }
+
+#[test]
+fn only_a_denied_or_asking_pasteboard_is_unreadable() {
+    assert_eq!(unreadable_under(None), None);
+    assert_eq!(unreadable_under(Some(Access::Default)), None);
+    assert_eq!(unreadable_under(Some(Access::AlwaysAllow)), None);
+    assert_eq!(unreadable_under(Some(Access::Ask)), Some(Unreadable::Asks));
+    assert_eq!(
+        unreadable_under(Some(Access::AlwaysDeny)),
+        Some(Unreadable::Denied)
+    );
+}

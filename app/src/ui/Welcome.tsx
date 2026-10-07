@@ -148,7 +148,9 @@ function Tour({
   }, [mac]);
 
   const worthBringing = !!old && !old.unreadable && old.items > 0 && (old.came ?? 0) === 0;
-  const asksTrust = !!trustAtStart?.offered && !trustAtStart.pastes;
+  const clipboardAtStart = trustAtStart?.clipboard ?? "allowed";
+  const asksTrust =
+    !!trustAtStart?.offered && (!trustAtStart.pastes || clipboardAtStart !== "allowed");
   const newest = former ? newestStable() : null;
   const told = newest === null ? [] : [newest];
   const all = useMemo(
@@ -187,7 +189,14 @@ function Tour({
         </Screen>
       );
     case "trust":
-      return <Permission dots={dots} next={next} />;
+      return (
+        <Permission
+          dots={dots}
+          next={next}
+          already={!!trustAtStart?.pastes}
+          clipboard={clipboardAtStart}
+        />
+      );
     case "news":
       return <News versions={told} />;
     case "keys":
@@ -353,38 +362,55 @@ function TryIt({
   );
 }
 
-function Permission({ dots, next }: { dots: ReactNode; next: () => void }) {
+function Permission({
+  dots,
+  next,
+  already,
+  clipboard,
+}: {
+  dots: ReactNode;
+  next: () => void;
+  already: boolean;
+  clipboard: Trust["clipboard"];
+}) {
   const [asked, setAsked] = useState(false);
-  const [granted, setGranted] = useState(false);
+  const [granted, setGranted] = useState(already);
+  const [reading, setReading] = useState(clipboard);
 
   const look = useCallback(() => {
     invoke<Trust>("trust")
-      .then((one) => setGranted(one.pastes))
+      .then((one) => {
+        setGranted(one.pastes);
+        setReading(one.clipboard);
+      })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!asked || granted) {
+    const waiting = (asked && !granted) || reading !== "allowed";
+    if (!waiting) {
       return;
     }
     const again = setInterval(look, 1_000);
     return () => clearInterval(again);
-  }, [asked, granted, look]);
+  }, [asked, granted, reading, look]);
 
   useEffect(() => {
-    if (!granted) {
+    if (!granted || reading !== "allowed") {
       return;
     }
     const onward = setTimeout(next, 1_200);
     return () => clearTimeout(onward);
-  }, [granted, next]);
+  }, [granted, next, reading]);
 
   return (
     <Screen
       dots={dots}
       left={<Quiet says={t("welcomeTrustLater")} onPress={next} />}
       right={
-        asked ? null : (
+        granted ? (
+          <Strong says={t("welcomeNext")} onPress={next} />
+        ) : asked ? null : (
           <Strong
             says={t("welcomeTrustAsk")}
             onPress={() => {
@@ -412,6 +438,11 @@ function Permission({ dots, next }: { dots: ReactNode; next: () => void }) {
           <li>{t("welcomeTrustStepTwo")}</li>
           <li>{t("welcomeTrustStepThree")}</li>
         </ol>
+      )}
+      {reading !== "allowed" && (
+        <p className="welcome-note">
+          {reading === "denied" ? t("clipboardDenied") : t("clipboardAsks")}
+        </p>
       )}
     </Screen>
   );

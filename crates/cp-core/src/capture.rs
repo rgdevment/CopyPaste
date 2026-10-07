@@ -13,6 +13,21 @@ pub enum Captured {
     Superseded,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Unreadable {
+    Asks,
+    Denied,
+}
+
+impl Unreadable {
+    pub fn said(self) -> &'static str {
+        match self {
+            Unreadable::Asks => "the system asks before CopyPaste may read the clipboard",
+            Unreadable::Denied => "the system does not let CopyPaste read the clipboard",
+        }
+    }
+}
+
 impl Captured {
     pub fn kept(self) -> Option<Item> {
         match self {
@@ -21,6 +36,8 @@ impl Captured {
         }
     }
 }
+
+pub const LATE: std::time::Duration = std::time::Duration::from_secs(15);
 
 pub fn insisting(
     retry: Retry,
@@ -41,6 +58,7 @@ pub fn insisting(
 pub fn insisting_afresh(
     retry: Retry,
     patience: std::time::Duration,
+    late: std::time::Duration,
     count: impl Fn() -> i64,
     mut afresh: impl FnMut() -> Pending<Captured>,
 ) -> Captured {
@@ -66,12 +84,44 @@ pub fn insisting_afresh(
         }
     });
     let got = match got {
+        Captured::TooSlow if matches!(last, Captured::TooSlow) => {
+            answered_late(&pending, patience, late, &count, started)
+        }
         Captured::TooSlow => last,
         other => other,
     };
     match got {
         Captured::Nothing | Captured::Busy if count() != started => Captured::Superseded,
         other => other,
+    }
+}
+
+fn answered_late(
+    pending: &Pending<Captured>,
+    patience: std::time::Duration,
+    late: std::time::Duration,
+    count: &impl Fn() -> i64,
+    started: i64,
+) -> Captured {
+    let deadline = std::time::Instant::now() + late;
+    while count() == started && std::time::Instant::now() < deadline {
+        match pending.waited(patience) {
+            Waited::StillRunning => {}
+            Waited::Answered(Captured::TooSlow | Captured::Busy) | Waited::Gone => {
+                return Captured::TooSlow;
+            }
+            Waited::Answered(answer) => {
+                return if count() == started {
+                    answer
+                } else {
+                    Captured::Superseded
+                };
+            }
+        }
+    }
+    match count() == started {
+        true => Captured::TooSlow,
+        false => Captured::Superseded,
     }
 }
 

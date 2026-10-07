@@ -3,14 +3,17 @@ pub struct Waking {
     pub offered: bool,
     pub wakes: bool,
     pub theirs: bool,
+    pub managed: bool,
 }
 
 impl Waking {
+    #[cfg(not(target_os = "macos"))]
     fn none() -> Self {
         Self {
             offered: false,
             wakes: false,
             theirs: false,
+            managed: false,
         }
     }
 }
@@ -41,17 +44,31 @@ mod there {
         let Ok(exe) = std::env::current_exe() else {
             return Waking::none();
         };
+        if packaged(&exe) {
+            return Waking {
+                offered: true,
+                wakes: false,
+                theirs: false,
+                managed: true,
+            };
+        }
         let ours = written().is_some_and(|said| ours(&said, &exe));
         let approved = approved();
         Waking {
             offered: true,
             wakes: ours && approved,
             theirs: ours && !approved,
+            managed: false,
         }
     }
 
     pub fn wake(wanted: bool) -> std::io::Result<()> {
         let exe = std::env::current_exe()?;
+        if packaged(&exe) {
+            return Err(std::io::Error::other(
+                "Windows manages the startup of the installed app in Settings > Apps > Startup",
+            ));
+        }
         if written().is_some_and(|said| !ours(&said, &exe)) {
             return Err(std::io::Error::other(
                 "another program holds the startup entry under CopyPaste's name",
@@ -97,6 +114,14 @@ mod there {
         read.is_none_or(|held| approves(&held.bytes))
     }
 
+    pub fn packaged(exe: &Path) -> bool {
+        exe.components().any(|part| {
+            part.as_os_str()
+                .to_str()
+                .is_some_and(|name| name.eq_ignore_ascii_case("WindowsApps"))
+        })
+    }
+
     pub fn approves(bytes: &[u8]) -> bool {
         !matches!(bytes.first(), Some(3 | 6))
     }
@@ -117,93 +142,89 @@ mod there {
 #[cfg(target_os = "macos")]
 mod there {
     use super::Waking;
+    use cp_mac_sys::login::{self, LoginState};
     use std::path::{Path, PathBuf};
 
     const LABEL: &str = "com.rgdevment.copypaste";
 
     pub fn waking() -> Waking {
-        let Ok(exe) = std::env::current_exe() else {
-            return Waking::none();
-        };
-        let Some(plist) = at() else {
-            return Waking::none();
-        };
-        let written = std::fs::read_to_string(&plist).ok();
+        migrate();
+        let state = login::state();
         Waking {
-            offered: true,
-            wakes: written
-                .as_deref()
-                .and_then(program_in)
-                .is_some_and(|said| ours(&said, &exe)),
-            theirs: false,
+            offered: state != LoginState::Missing,
+            wakes: state == LoginState::On,
+            theirs: state == LoginState::NeedsApproval,
+            managed: false,
         }
     }
 
     pub fn wake(wanted: bool) -> std::io::Result<()> {
         let exe = std::env::current_exe()?;
-        let plist = at().ok_or_else(|| std::io::Error::other("the home folder was not found"))?;
-        if !wanted {
-            return match std::fs::remove_file(&plist) {
-                Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(()),
-                other => other,
-            };
+        if wanted && crate::update::mounted(Some(&exe)) {
+            return Err(std::io::Error::other(
+                "move CopyPaste to the Applications folder before starting it with the session",
+            ));
         }
-        if let Some(dir) = plist.parent() {
-            std::fs::create_dir_all(dir)?;
+        if !wanted && let Some(old) = legacy() {
+            retire(&old)?;
         }
-        std::fs::write(&plist, agent_for(&exe))
+        let state = login::state();
+        let settled = if wanted {
+            state == LoginState::On
+        } else {
+            matches!(state, LoginState::Off | LoginState::Missing)
+        };
+        if !settled {
+            login::set(wanted).map_err(std::io::Error::other)?;
+        }
+        if wanted && login::state() == LoginState::NeedsApproval {
+            return Err(std::io::Error::other(
+                "allow CopyPaste in System Settings > General > Login Items",
+            ));
+        }
+        if wanted
+            && login::state() == LoginState::On
+            && let Some(old) = legacy()
+        {
+            retire(&old)?;
+        }
+        Ok(())
     }
 
-    fn at() -> Option<PathBuf> {
-        let home = std::env::var_os("HOME")?;
-        Some(
-            PathBuf::from(home)
-                .join("Library")
-                .join("LaunchAgents")
-                .join(format!("{LABEL}.plist")),
-        )
+    fn migrate() {
+        let Some(old) = legacy().filter(|old| old.exists()) else {
+            return;
+        };
+        let mounted = std::env::current_exe()
+            .ok()
+            .is_some_and(|exe| crate::update::mounted(Some(&exe)));
+        if mounted {
+            return;
+        }
+        if login::state() == LoginState::Off {
+            let _ = login::set(true);
+        }
+        if login::state() == LoginState::On {
+            let _ = retire(&old);
+        }
     }
 
-    pub fn agent_for(exe: &Path) -> String {
-        format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-             <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \
-             \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n\
-             <plist version=\"1.0\">\n\
-             <dict>\n\
-             \t<key>Label</key>\n\t<string>{LABEL}</string>\n\
-             \t<key>ProgramArguments</key>\n\t<array>\n\t\t<string>{}</string>\n\t</array>\n\
-             \t<key>RunAtLoad</key>\n\t<true/>\n\
-             \t<key>ProcessType</key>\n\t<string>Interactive</string>\n\
-             </dict>\n\
-             </plist>\n",
-            escaped(&exe.display().to_string())
-        )
+    pub fn legacy_in(home: &Path) -> PathBuf {
+        home.join("Library")
+            .join("LaunchAgents")
+            .join(format!("{LABEL}.plist"))
     }
 
-    fn escaped(said: &str) -> String {
-        said.replace('&', "&amp;")
-            .replace('<', "&lt;")
-            .replace('>', "&gt;")
+    fn legacy() -> Option<PathBuf> {
+        std::env::var_os("HOME").map(|home| legacy_in(Path::new(&home)))
     }
 
-    fn unescaped(said: &str) -> String {
-        said.replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&amp;", "&")
-    }
-
-    pub fn program_in(said: &str) -> Option<String> {
-        let after = said.split_once("<key>ProgramArguments</key>")?.1;
-        let array = after.split_once("<array>")?.1;
-        let (array, _) = array.split_once("</array>")?;
-        let value = array.split_once("<string>")?.1;
-        let (value, _) = value.split_once("</string>")?;
-        Some(unescaped(value.trim()))
-    }
-
-    pub fn ours(said: &str, exe: &Path) -> bool {
-        !said.is_empty() && Path::new(said) == exe
+    pub fn retire(plist: &Path) -> std::io::Result<bool> {
+        match std::fs::remove_file(plist) {
+            Ok(()) => Ok(true),
+            Err(why) if why.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(why) => Err(why),
+        }
     }
 }
 

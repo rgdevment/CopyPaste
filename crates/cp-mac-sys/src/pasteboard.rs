@@ -1,5 +1,33 @@
 use objc2_app_kit::{NSPasteboard, NSPasteboardItem, NSPasteboardWriting};
-use objc2_foundation::{MainThreadMarker, NSString, NSURL};
+use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSString, NSURL};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Access {
+    Default,
+    Ask,
+    AlwaysAllow,
+    AlwaysDeny,
+}
+
+impl Access {
+    pub fn from_raw(raw: isize) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Default),
+            1 => Some(Self::Ask),
+            2 => Some(Self::AlwaysAllow),
+            3 => Some(Self::AlwaysDeny),
+            _ => None,
+        }
+    }
+}
+
+pub fn access_from_any_thread() -> Option<Access> {
+    let general = NSPasteboard::generalPasteboard();
+    if !general.respondsToSelector(objc2::sel!(accessBehavior)) {
+        return None;
+    }
+    Access::from_raw(general.accessBehavior().0)
+}
 
 pub struct Pasteboard {
     inner: objc2::rc::Retained<NSPasteboard>,

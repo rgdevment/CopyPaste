@@ -2,6 +2,7 @@ const A_DAY: i64 = cp_store::A_DAY;
 
 use super::*;
 use cp_core::item::{Format, Payload, SYNTHETIC_IMAGE, SYNTHETIC_TEXT};
+use std::time::Duration;
 
 fn text(what: &str) -> Item {
     Item {
@@ -553,4 +554,41 @@ fn every_kind_of_errand_naps_when_its_outcome_cannot_be_written() {
         !errand(&store, &thumbs),
         "the loop naps instead of spinning"
     );
+}
+
+#[test]
+fn an_idle_engine_rests_instead_of_asking_the_store_over_and_over() {
+    let dir = aside("idle");
+    let store = Store::open(&dir.join("history.db")).expect("a store");
+    let rest = Arc::new(Rest::new());
+    let closing = rest.clone();
+    let thumbs = dir.join("thumbs");
+    let serving =
+        std::thread::spawn(move || serve(&store, &thumbs, &rest, Duration::from_secs(60)));
+    std::thread::sleep(Duration::from_millis(600));
+    closing.close();
+    let rounds = serving.join().expect("the loop ended");
+    assert!(rounds <= 2, "{rounds} rounds in 600 ms with nothing to do");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn work_that_arrives_wakes_an_engine_that_was_resting() {
+    let dir = aside("woken");
+    let store = Store::open(&dir.join("history.db")).expect("a store");
+    let rest = Arc::new(Rest::new());
+    let closing = rest.clone();
+    let thumbs = dir.join("thumbs");
+    let serving =
+        std::thread::spawn(move || serve(&store, &thumbs, &rest, Duration::from_secs(60)));
+    std::thread::sleep(Duration::from_millis(200));
+    closing.wake();
+    std::thread::sleep(Duration::from_millis(200));
+    closing.close();
+    let rounds = serving.join().expect("the loop ended");
+    assert!(
+        rounds >= 2,
+        "a wake has to make it look again, {rounds} rounds"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

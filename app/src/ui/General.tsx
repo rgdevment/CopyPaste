@@ -45,7 +45,9 @@ export default function General({
 
       <Band says={t("bandDoes")} />
 
-      {waking && (
+      {waking?.managed && <Line says={t("wake")} why={t("wakeManaged")} />}
+
+      {waking && !waking.managed && (
         <Line
           says={t("wake")}
           why={t("wakeWhy")}
@@ -70,7 +72,16 @@ export default function General({
         <Line
           says={t("trust")}
           why={trust.pastes ? t("trustGranted") : t("trustMissing")}
-          more={trust.secureInput ? <div className="said">{t("trustSecure")}</div> : null}
+          more={
+            <>
+              {trust.secureInput && <div className="said">{t("trustSecure")}</div>}
+              {trust.clipboard !== "allowed" && (
+                <div className="said">
+                  {trust.clipboard === "denied" ? t("clipboardDenied") : t("clipboardAsks")}
+                </div>
+              )}
+            </>
+          }
         >
           {trust.pastes ? (
             <Knob on says={t("trust")} asleep onPress={() => {}} />

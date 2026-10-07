@@ -40,6 +40,10 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
         crate::tray::surface_at(app, Some("keys"));
         return;
     }
+    if let Some(what) = said.strip_prefix("well ") {
+        settled(app, what);
+        return;
+    }
     if said == "shown" {
         let _ = app.emit("panel-shown", ());
         return;
@@ -52,6 +56,16 @@ fn heard_from_panel<R: Runtime>(app: &AppHandle<R>, said: &str) {
         && let Ok(mut held) = state.0.lock()
     {
         *held = Some(what.to_owned());
+    }
+}
+
+fn settled<R: Runtime>(app: &AppHandle<R>, what: &str) {
+    if let Some(state) = app.try_state::<Trouble>()
+        && let Ok(mut held) = state.0.lock()
+        && held.as_deref() == Some(what)
+    {
+        held.take();
+        crate::tray::tell(app, None);
     }
 }
 

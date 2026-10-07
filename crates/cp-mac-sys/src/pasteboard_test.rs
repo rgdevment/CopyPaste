@@ -50,3 +50,18 @@ fn a_dead_reference_has_no_path_either() {
     std::fs::remove_file(&file).unwrap();
     assert_eq!(resolved_file_url(&reference), None);
 }
+
+#[test]
+fn the_system_codes_become_the_access_they_name() {
+    assert_eq!(Access::from_raw(0), Some(Access::Default));
+    assert_eq!(Access::from_raw(1), Some(Access::Ask));
+    assert_eq!(Access::from_raw(2), Some(Access::AlwaysAllow));
+    assert_eq!(Access::from_raw(3), Some(Access::AlwaysDeny));
+    assert_eq!(Access::from_raw(4), None);
+    assert_eq!(Access::from_raw(-1), None);
+}
+
+#[test]
+fn asking_for_the_access_never_fails_even_on_a_mac_that_lacks_it() {
+    let _ = access_from_any_thread();
+}

@@ -229,7 +229,7 @@ export function useKeys(shortcut: string) {
   return { keys, spare, recheck: ask };
 }
 
-export type Waking = { offered: boolean; wakes: boolean; theirs: boolean };
+export type Waking = { offered: boolean; wakes: boolean; theirs: boolean; managed: boolean };
 
 export function useWaking() {
   const [waking, setWaking] = useState<Waking | null>(null);
@@ -257,6 +257,7 @@ export type Trust = {
   offered: boolean;
   pastes: boolean;
   secureInput: boolean;
+  clipboard: "allowed" | "asks" | "denied";
 };
 
 export const PRIVACY_PANE =

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { adopt } from "../locales";
+import { scene as asked } from "./setup";
 
 describe("the window", () => {
   beforeEach(() => {
@@ -14,6 +15,19 @@ describe("the window", () => {
     render(<App />);
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("General");
     expect(await screen.findByLabelText("Idioma")).toBeDefined();
+  });
+
+  it("tells in General how to allow reading the clipboard when macOS refuses it", async () => {
+    asked.trust = { offered: true, pastes: true, secureInput: false, clipboard: "denied" };
+    render(<App />);
+    expect(await screen.findByText(/Pegar desde otras apps/)).toBeInTheDocument();
+  });
+
+  it("stays quiet about reading the clipboard when it is allowed", async () => {
+    asked.trust = { offered: true, pastes: true, secureInput: false, clipboard: "allowed" };
+    render(<App />);
+    expect(await screen.findByText("Permiso para pegar")).toBeInTheDocument();
+    expect(screen.queryByText(/Pegar desde otras apps/)).toBeNull();
   });
 
   it("the shortcut and what the panel answers live in their own section", async () => {
@@ -99,6 +113,19 @@ describe("the window", () => {
       "aria-checked",
       "true",
     );
+  });
+
+  it("an installed Store copy shows who manages the startup instead of a switch", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const real = vi.mocked(invoke).getMockImplementation();
+    vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
+      what === "waking"
+        ? Promise.resolve({ offered: true, wakes: false, theirs: false, managed: true })
+        : real?.(what, args)) as never);
+    render(<App />);
+    expect(await screen.findByText(/Windows gestiona el arranque/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Arranca con la sesión")).toBeNull();
+    vi.mocked(invoke).mockImplementation(real as never);
   });
 
   it("warns when the panel is not working, instead of hiding it", async () => {
