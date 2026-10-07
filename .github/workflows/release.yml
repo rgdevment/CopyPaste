@@ -1598,7 +1598,7 @@ jobs:
 
       - name: Open the pull request that adds this version
         if: steps.gate.outputs.go == 'yes'
-        uses: vedantmgoyal9/winget-releaser@4ffc7888bffd451b357355dc214d43bb9f23917e # v2
+        uses: vedantmgoyal9/winget-releaser@c4f385af3b963eb724738ac0578b14eec7bebcc1 # v2
         with:
           identifier: rgdevment.CopyPaste
           version: ${{ needs.version.outputs.version }}
