@@ -425,6 +425,7 @@ fn kept(store: &Store) -> Option<i64> {
 }
 
 static TOLD: AtomicBool = AtomicBool::new(false);
+static ASKED: AtomicBool = AtomicBool::new(false);
 
 fn readable_again() {
     if TOLD.swap(false, Ordering::Relaxed) {
@@ -434,13 +435,13 @@ fn readable_again() {
 
 fn tell_if_unreadable(blocked: Option<Unreadable>) {
     match blocked {
-        Some(Unreadable::Denied) => {
-            if !TOLD.swap(true, Ordering::Relaxed) {
-                crate::note::trouble(Unreadable::Denied.said());
-            }
+        Some(Unreadable::Denied) if !TOLD.swap(true, Ordering::Relaxed) => {
+            crate::note::trouble(Unreadable::Denied.said());
         }
-        Some(Unreadable::Asks) => note(Unreadable::Asks.said()),
-        None => {}
+        Some(Unreadable::Asks) if !ASKED.swap(true, Ordering::Relaxed) => {
+            note(Unreadable::Asks.said());
+        }
+        _ => {}
     }
 }
 

@@ -244,7 +244,7 @@ fn parted(at: &Path) -> impl Iterator<Item = &str> {
         .split(['/', '\\'])
 }
 
-fn chosen(running: Option<&Path>) -> Route {
+pub fn chosen(running: Option<&Path>) -> Route {
     let store =
         running.is_some_and(|at| parted(at).any(|part| part.eq_ignore_ascii_case("WindowsApps")));
     if store { Route::Store } else { Route::Download }

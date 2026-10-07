@@ -37,7 +37,7 @@ mod there {
     pub fn reading(access: Option<Access>) -> &'static str {
         match access {
             Some(Access::AlwaysDeny) => "denied",
-            Some(Access::Ask) => "asks",
+            Some(Access::Ask | Access::Default) => "asks",
             _ => "allowed",
         }
     }

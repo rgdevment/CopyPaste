@@ -115,11 +115,7 @@ mod there {
     }
 
     pub fn packaged(exe: &Path) -> bool {
-        exe.components().any(|part| {
-            part.as_os_str()
-                .to_str()
-                .is_some_and(|name| name.eq_ignore_ascii_case("WindowsApps"))
-        })
+        crate::update::chosen(Some(exe)) == crate::update::Route::Store
     }
 
     pub fn approves(bytes: &[u8]) -> bool {
@@ -152,7 +148,7 @@ mod there {
         let state = login::state();
         Waking {
             offered: state != LoginState::Missing,
-            wakes: state == LoginState::On,
+            wakes: matches!(state, LoginState::On | LoginState::NeedsApproval),
             theirs: state == LoginState::NeedsApproval,
             managed: false,
         }
@@ -176,11 +172,6 @@ mod there {
         };
         if !settled {
             login::set(wanted).map_err(std::io::Error::other)?;
-        }
-        if wanted && login::state() == LoginState::NeedsApproval {
-            return Err(std::io::Error::other(
-                "allow CopyPaste in System Settings > General > Login Items",
-            ));
         }
         if wanted
             && login::state() == LoginState::On

@@ -21,7 +21,11 @@ fn a_capture_that_does_not_finish_in_time_is_abandoned() {
 #[test]
 fn only_a_denied_or_asking_pasteboard_is_unreadable() {
     assert_eq!(unreadable_under(None), None);
-    assert_eq!(unreadable_under(Some(Access::Default)), None);
+    assert_eq!(
+        unreadable_under(Some(Access::Default)),
+        Some(Unreadable::Asks),
+        "before its first alert macOS asks on programmatic access"
+    );
     assert_eq!(unreadable_under(Some(Access::AlwaysAllow)), None);
     assert_eq!(unreadable_under(Some(Access::Ask)), Some(Unreadable::Asks));
     assert_eq!(

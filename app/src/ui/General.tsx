@@ -47,7 +47,7 @@ export default function General({
 
       {waking?.managed && <Line says={t("wake")} why={t("wakeManaged")} />}
 
-      {waking && !waking.managed && (
+      {waking && !waking.managed && waking.offered && (
         <Line
           says={t("wake")}
           why={t("wakeWhy")}
@@ -62,7 +62,7 @@ export default function General({
           <Knob
             on={waking.wakes}
             says={t("wake")}
-            asleep={waking.theirs}
+            asleep={waking.theirs && !waking.wakes}
             onPress={() => ask(!waking.wakes)}
           />
         </Line>

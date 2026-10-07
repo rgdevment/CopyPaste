@@ -27,7 +27,11 @@ fn pasting_is_never_claimed_without_one_of_the_two_permissions() {
 fn only_a_refusing_or_asking_clipboard_is_reported() {
     use cp_mac_sys::pasteboard::Access;
     assert_eq!(there::reading(None), "allowed");
-    assert_eq!(there::reading(Some(Access::Default)), "allowed");
+    assert_eq!(
+        there::reading(Some(Access::Default)),
+        "asks",
+        "before its first alert macOS asks on programmatic access"
+    );
     assert_eq!(there::reading(Some(Access::AlwaysAllow)), "allowed");
     assert_eq!(there::reading(Some(Access::Ask)), "asks");
     assert_eq!(there::reading(Some(Access::AlwaysDeny)), "denied");
