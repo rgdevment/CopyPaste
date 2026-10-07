@@ -1,11 +1,11 @@
 use crate::formats::CATALOG;
 pub use cp_core::capture::Captured;
-use cp_core::capture::insisting_afresh;
+use cp_core::capture::{Unreadable, insisting_afresh};
 use cp_core::formats::{Family, Take};
 use cp_core::item::{Format, Item, Payload};
 use cp_core::kind::{self, Kind};
 use cp_core::reading;
-use cp_mac_sys::pasteboard::{self, Pasteboard};
+use cp_mac_sys::pasteboard::{self, Access, Pasteboard};
 
 pub const PATIENCE: std::time::Duration = std::time::Duration::from_millis(400);
 
@@ -20,9 +20,22 @@ pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::R
     insisting_afresh(
         retry,
         patience,
+        cp_core::capture::LATE,
         pasteboard::change_count_from_any_thread,
         || reading::begin(|| capture(&Pasteboard::general_from_any_thread())),
     )
+}
+
+pub fn unreadable() -> Option<Unreadable> {
+    unreadable_under(pasteboard::access_from_any_thread())
+}
+
+pub fn unreadable_under(access: Option<Access>) -> Option<Unreadable> {
+    match access? {
+        Access::AlwaysDeny => Some(Unreadable::Denied),
+        Access::Ask => Some(Unreadable::Asks),
+        Access::Default | Access::AlwaysAllow => None,
+    }
 }
 
 pub fn capture(pb: &Pasteboard) -> Captured {

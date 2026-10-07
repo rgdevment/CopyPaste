@@ -13,6 +13,7 @@ pub mod paint;
 pub mod paste;
 pub mod paste_as;
 pub mod reading;
+pub mod resting;
 pub mod search;
 pub mod stamp;
 pub mod thumbnail;

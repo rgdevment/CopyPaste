@@ -9,6 +9,7 @@ pub mod floating;
 pub mod frontmost;
 pub mod keyboard;
 pub mod keystroke;
+pub mod login;
 pub mod media;
 pub mod menu;
 pub mod ocr;

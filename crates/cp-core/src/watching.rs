@@ -1,7 +1,7 @@
+use crate::resting::Rest;
 use crate::watch::{Cadence, Seen, Watcher};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub const EVERY: Duration = Duration::from_millis(60);
 pub const NAP: Duration = Duration::from_millis(10);
@@ -14,7 +14,7 @@ pub type Counting = Arc<dyn Fn() -> Option<i64> + Send + Sync>;
 pub type Busy = Arc<dyn Fn() -> bool + Send + Sync>;
 
 pub struct Watching {
-    stop: Arc<AtomicBool>,
+    stop: Arc<Rest>,
     watcher: Arc<Mutex<Watcher>>,
     thread: Mutex<Option<std::thread::JoinHandle<()>>>,
     count: Counting,
@@ -29,15 +29,15 @@ impl Watching {
         busy: Busy,
         mut on_fresh: impl FnMut() + Send + 'static,
     ) -> Self {
-        let stop = Arc::new(AtomicBool::new(false));
+        let stop = Arc::new(Rest::new());
         let watcher = Arc::new(Mutex::new(Watcher::new(cadence)));
         let mine = stop.clone();
         let theirs = watcher.clone();
         let reading = count.clone();
         let thread = std::thread::spawn(move || {
-            while !mine.load(Ordering::Relaxed) {
+            while !mine.closed() {
                 if busy() {
-                    std::thread::sleep(nap);
+                    mine.rest(nap);
                     continue;
                 }
                 if let Some(now) = reading()
@@ -47,10 +47,7 @@ impl Watching {
                     drop(watcher);
                     on_fresh();
                 }
-                let until = Instant::now() + period;
-                while !mine.load(Ordering::Relaxed) && Instant::now() < until {
-                    std::thread::sleep(period.min(nap));
-                }
+                mine.rest(period);
             }
         });
         Self {
@@ -62,7 +59,7 @@ impl Watching {
     }
 
     pub fn close(&self) -> bool {
-        self.stop.store(true, Ordering::Relaxed);
+        self.stop.close();
         let Ok(mut held) = self.thread.lock() else {
             return false;
         };

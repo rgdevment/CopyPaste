@@ -1,38 +1,42 @@
 use crate::here;
 use crate::note::note;
-use cp_core::capture::Captured;
+use cp_core::capture::{Captured, Unreadable};
 use cp_core::item::Item;
 use cp_core::kind::Kind;
+use cp_core::resting::Rest;
 use cp_store::Store;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 
 pub struct Engine {
     watching: here::Watching,
-    stop: Arc<AtomicBool>,
+    rest: Arc<Rest>,
     errands: std::sync::Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 impl Engine {
     pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
+        let rest = Arc::new(Rest::new());
+        let waking = rest.clone();
+        let mut notice = Notice::default();
         let watching = here::watch_start(move || {
-            if let Some(id) = kept(&store) {
+            if let Some(id) = kept(&store, &mut notice) {
+                waking.wake();
                 fresh(id);
             }
         });
-        let stop = Arc::new(AtomicBool::new(false));
-        let errands = errands(db, stop.clone());
+        let errands = errands(db, rest.clone());
         Ok(Self {
             watching,
-            stop,
+            rest,
             errands: std::sync::Mutex::new(errands),
         })
     }
 
     pub fn close(&self) {
-        self.stop.store(true, Ordering::Relaxed);
+        self.rest.close();
         if !self.watching.close() {
             note("the clipboard watcher would not stop and was left behind");
         }
@@ -65,11 +69,11 @@ impl Drop for Engine {
 const SIDE: i32 = cp_core::thumbnail::MAX_SIDE as i32;
 const WAVE_WIDE: u32 = 384;
 const WAVE_HIGH: u32 = 64;
-const NAP: std::time::Duration = std::time::Duration::from_millis(400);
+const RECHECK: std::time::Duration = std::time::Duration::from_secs(5);
 const LATER: i64 = 60_000;
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
 
-fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<()>> {
+fn errands(db: &Path, rest: Arc<Rest>) -> Option<std::thread::JoinHandle<()>> {
     let store = match Store::open(db) {
         Ok(store) => store,
         Err(why) => {
@@ -85,21 +89,28 @@ fn errands(db: &Path, stop: Arc<AtomicBool>) -> Option<std::thread::JoinHandle<(
         .name(crate::note::ERRANDS.to_owned())
         .spawn(move || {
             catch_up(&store);
-            let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
-            while !stop.load(Ordering::Relaxed) {
-                if swept.elapsed() >= SWEEPS_EVERY {
-                    sweep(&store, &thumbs);
-                    swept = std::time::Instant::now();
-                }
-                if !errand(&store, &thumbs) {
-                    std::thread::sleep(NAP);
-                }
-            }
+            serve(&store, &thumbs, &rest, RECHECK);
         });
     if let Err(why) = &spawned {
         note(&format!("nobody enriches what was copied: {why}"));
     }
     spawned.ok()
+}
+
+fn serve(store: &Store, thumbs: &Path, rest: &Rest, recheck: std::time::Duration) -> usize {
+    let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
+    let mut rounds = 0;
+    while !rest.closed() {
+        rounds += 1;
+        if swept.elapsed() >= SWEEPS_EVERY {
+            sweep(store, thumbs);
+            swept = std::time::Instant::now();
+        }
+        if !errand(store, thumbs) {
+            rest.rest(recheck);
+        }
+    }
+    rounds
 }
 
 const CATCH_UP: usize = 500;
@@ -386,9 +397,22 @@ fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) -> bool {
     }
 }
 
-fn kept(store: &Store) -> Option<i64> {
-    let item = match here::capture_insisting() {
-        Captured::Kept(item) => item,
+fn kept(store: &Store, notice: &mut Notice) -> Option<i64> {
+    let item = taken(here::capture_insisting(), here::unreadable, notice)?;
+    let from = here::in_front();
+    keep(store, &item, crate::app::now_ms(), from.as_deref())
+}
+
+fn taken(
+    captured: Captured,
+    unreadable: fn() -> Option<Unreadable>,
+    notice: &mut Notice,
+) -> Option<Item> {
+    let item = match captured {
+        Captured::Kept(item) => {
+            notice.readable_again();
+            item
+        }
         Captured::Refused(_) => {
             note("a copy was dropped because the app it came from asked for that");
             return None;
@@ -401,10 +425,39 @@ fn kept(store: &Store) -> Option<i64> {
             note("the clipboard was held by another program every time we asked");
             return None;
         }
-        Captured::Nothing | Captured::Superseded => return None,
+        Captured::Nothing => {
+            notice.unreadable(unreadable());
+            return None;
+        }
+        Captured::Superseded => return None,
     };
-    let from = here::in_front();
-    keep(store, &item, crate::app::now_ms(), from.as_deref())
+    Some(item)
+}
+
+#[derive(Default)]
+struct Notice {
+    told: bool,
+    asked: bool,
+}
+
+impl Notice {
+    fn readable_again(&mut self) {
+        if std::mem::take(&mut self.told) {
+            crate::note::tell(&format!("well {}", Unreadable::Denied.said()));
+        }
+    }
+
+    fn unreadable(&mut self, blocked: Option<Unreadable>) {
+        match blocked {
+            Some(Unreadable::Denied) if !std::mem::replace(&mut self.told, true) => {
+                crate::note::trouble(Unreadable::Denied.said());
+            }
+            Some(Unreadable::Asks) if !std::mem::replace(&mut self.asked, true) => {
+                note(Unreadable::Asks.said());
+            }
+            _ => {}
+        }
+    }
 }
 
 fn keep(store: &Store, item: &Item, at: i64, from: Option<&str>) -> Option<i64> {

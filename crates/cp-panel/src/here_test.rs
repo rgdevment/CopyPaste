@@ -224,7 +224,11 @@ fn the_pointer_lands_on_a_work_area_that_holds_it() {
 }
 
 #[test]
-fn the_panel_can_stay_awake_while_it_waits_and_let_go() {
-    let awake = keep_awake();
-    drop(awake);
+fn the_reading_permission_always_has_an_answer_or_none() {
+    let _ = unreadable();
+}
+
+#[test]
+fn the_panel_can_stay_awake_while_it_watches() {
+    let _awake = keep_awake();
 }

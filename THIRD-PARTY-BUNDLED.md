@@ -39,7 +39,7 @@ with the crates that carry it.
 | `scheduler` | 0.28.0 | MIT |
 | `uc.micro` | 3.0.0 | MIT |
 
-## In the core (437 crates)
+## In the core (438 crates)
 
 | Crate | Version | Licence |
 | --- | --- | --- |
@@ -252,6 +252,7 @@ with the crates that carry it.
 | `objc2-metal` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-osa-kit` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-quartz-core` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
+| `objc2-service-management` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-vision` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-web-kit` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `once_cell` | 1.21.4 | MIT OR Apache-2.0 |

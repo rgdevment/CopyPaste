@@ -32,3 +32,16 @@ fn an_entry_with_arguments_is_not_taken_for_the_bare_path() {
     ));
     assert!(!ours(r#""C:\Programas\CopyPaste\cp-gui.exe"#, exe));
 }
+
+#[test]
+fn only_a_copy_running_from_windowsapps_counts_as_installed_from_the_store() {
+    use super::there::packaged;
+    assert!(packaged(Path::new(
+        r"C:\Program Files\WindowsApps\CopyPaste_3.0.0.0_x64__abc\CopyPaste.exe"
+    )));
+    assert!(packaged(Path::new(
+        r"C:\Program Files\windowsapps\CopyPaste\CopyPaste.exe"
+    )));
+    assert!(!packaged(Path::new(r"C:\Programas\CopyPaste\cp-gui.exe")));
+    assert!(!packaged(Path::new(r"C:\Users\a\WindowsAppsX\cp-gui.exe")));
+}

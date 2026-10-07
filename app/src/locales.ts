@@ -23,6 +23,8 @@ const ES = {
   wakeWhy: "CopyPaste se abre al iniciar sesión y espera en la bandeja",
   wakeTheirs:
     "Windows tiene el arranque de CopyPaste desactivado. Actívalo en Configuración › Aplicaciones › Inicio.",
+  wakeManaged:
+    "Windows gestiona el arranque de CopyPaste. Cámbialo en Configuración › Aplicaciones › Inicio.",
   keys: "Atajo del panel",
   keysWhy: "Presiónalo en cualquier parte: lo que elijas se pega donde estabas escribiendo",
   keysChange: "Cambiar",
@@ -166,13 +168,17 @@ const ES = {
   updateBusy: "Ya hay una actualización en marcha.",
   aboutPrivacyLink: "Privacidad",
   keysFormer: "En CopyPaste 2 era Ctrl + Alt + C",
-  wakeTheirsMac: "Otro programa ocupa el arranque con el nombre de CopyPaste",
+  wakeTheirsMac: "Aprueba CopyPaste en Ajustes del Sistema › General › Ítems de inicio",
   trust: "Permiso para pegar",
   trustWhy: "macOS pide tu permiso para que CopyPaste escriba en la ventana donde estabas",
   trustGranted: "Concedido: lo que elijas se pega solo",
   trustMissing: "Sin él, lo elegido queda en el portapapeles y lo pegas tú",
   trustAsk: "Conceder",
   trustOpen: "Abrir Ajustes del Sistema",
+  clipboardDenied:
+    "macOS no deja que CopyPaste lea el portapapeles: actívalo en Ajustes del Sistema › Privacidad y seguridad › Pegar desde otras apps",
+  clipboardAsks:
+    "macOS puede preguntarte si CopyPaste puede leer el portapapeles: responde «Permitir» para que guarde tus copias",
   trustSecure: "Hay un campo de contraseña abierto: mientras dure, nadie puede pegar por ti",
   outDone: "Guardado: {one}",
   outMissing: "faltaron {one} sin su contenido",
@@ -298,6 +304,7 @@ const EN: Record<keyof Said, string> = {
   wakeWhy: "CopyPaste opens when you log in and waits in the tray",
   wakeTheirs:
     "Windows has CopyPaste's startup turned off. Turn it on in Settings › Apps › Startup.",
+  wakeManaged: "Windows manages the startup of CopyPaste. Change it in Settings › Apps › Startup.",
   keys: "Panel shortcut",
   keysWhy: "Press it anywhere: what you pick is pasted where you were typing",
   keysChange: "Change",
@@ -442,13 +449,17 @@ const EN: Record<keyof Said, string> = {
   updateBusy: "An update is already on its way.",
   aboutPrivacyLink: "Privacy",
   keysFormer: "In CopyPaste 2 it was Ctrl + Alt + C",
-  wakeTheirsMac: "Another program holds the login entry under CopyPaste's name",
+  wakeTheirsMac: "Allow CopyPaste in System Settings › General › Login Items",
   trust: "Permission to paste",
   trustWhy: "macOS asks for your permission before CopyPaste types into the window you were in",
   trustGranted: "Granted: what you pick is pasted for you",
   trustMissing: "Without it, what you pick stays on the clipboard for you to paste",
   trustAsk: "Grant",
   trustOpen: "Open System Settings",
+  clipboardDenied:
+    "macOS does not let CopyPaste read the clipboard: allow it in System Settings › Privacy & Security › Paste from Other Apps",
+  clipboardAsks:
+    "macOS may ask whether CopyPaste can read the clipboard: answer “Allow” so it can keep your copies",
   trustSecure: "A password field is open: for as long as it is, nobody can paste for you",
   outDone: "Saved: {one}",
   outMissing: "{one} travelled without their contents",

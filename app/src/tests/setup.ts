@@ -6,7 +6,7 @@ const asked = vi.hoisted(() => ({
   greeting: { kind: "tour", former: true } as unknown,
   bound: true,
   locale: "es",
-  trust: { offered: false, pastes: false, secureInput: false },
+  trust: { offered: false, pastes: false, secureInput: false, clipboard: "allowed" },
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -51,10 +51,15 @@ vi.mock("@tauri-apps/api/core", () => ({
       return Promise.resolve({ wanted: "Ctrl+Alt+V", bound: asked.bound });
     }
     if (what === "waking") {
-      return Promise.resolve({ offered: true, wakes: false, theirs: false });
+      return Promise.resolve({ offered: true, wakes: false, theirs: false, managed: false });
     }
     if (what === "wake") {
-      return Promise.resolve({ offered: true, wakes: Boolean(args?.wanted), theirs: false });
+      return Promise.resolve({
+        offered: true,
+        wakes: Boolean(args?.wanted),
+        theirs: false,
+        managed: false,
+      });
     }
     if (what === "former") {
       return Promise.resolve({
@@ -134,5 +139,5 @@ afterEach(() => {
   asked.greeting = { kind: "tour", former: true };
   asked.bound = true;
   asked.locale = "es";
-  asked.trust = { offered: false, pastes: false, secureInput: false };
+  asked.trust = { offered: false, pastes: false, secureInput: false, clipboard: "allowed" };
 });

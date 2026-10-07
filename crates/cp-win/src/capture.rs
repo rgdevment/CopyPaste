@@ -25,7 +25,13 @@ pub fn capture_within(patience: std::time::Duration) -> Captured {
 }
 
 pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::Retry) -> Captured {
-    insisting_afresh(retry, patience, sequence_now, begin_counted)
+    insisting_afresh(
+        retry,
+        patience,
+        std::time::Duration::ZERO,
+        sequence_now,
+        begin_counted,
+    )
 }
 
 fn begin_counted() -> reading::Pending<Captured> {

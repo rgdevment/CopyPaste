@@ -1,6 +1,3 @@
-use objc2_application_services::{AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt};
-use objc2_core_foundation::{CFBoolean, CFDictionary};
-
 unsafe extern "C" {
     fn CGPreflightPostEventAccess() -> bool;
     fn CGRequestPostEventAccess() -> bool;
@@ -18,12 +15,6 @@ pub fn request_post_events() -> bool {
 
 pub fn is_accessibility_trusted() -> bool {
     unsafe { AXIsProcessTrusted() }
-}
-
-pub fn request_accessibility() -> bool {
-    let prompt = unsafe { kAXTrustedCheckOptionPrompt };
-    let options = CFDictionary::from_slices(&[prompt], &[CFBoolean::new(true)]);
-    unsafe { AXIsProcessTrustedWithOptions(Some(options.as_opaque())) }
 }
 
 pub fn is_secure_input_enabled() -> bool {

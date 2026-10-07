@@ -93,6 +93,7 @@ objc2-core-graphics = "0.3"
 objc2-core-foundation = "0.3"
 objc2-application-services = "0.3"
 objc2-vision = "0.3"
+objc2-service-management = { version = "0.3", default-features = false, features = ["std", "objc2", "objc2-foundation", "SMAppService"] }
 objc2-av-foundation = { version = "0.3", features = ["objc2-core-media", "AVAssetTrack"] }
 
 [workspace.lints.rust]
