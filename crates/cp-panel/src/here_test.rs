@@ -232,3 +232,15 @@ fn the_reading_permission_always_has_an_answer_or_none() {
 fn the_panel_can_stay_awake_while_it_watches() {
     let _awake = keep_awake();
 }
+
+#[test]
+fn the_host_and_what_is_ahead_can_always_be_asked() {
+    let host = host();
+    let _ = ahead_now(host);
+    let _ = activated();
+}
+
+#[test]
+fn handing_back_to_nobody_does_nothing() {
+    hand_back(0);
+}
