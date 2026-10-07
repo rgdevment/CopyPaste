@@ -592,3 +592,45 @@ fn work_that_arrives_wakes_an_engine_that_was_resting() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn denied() -> Option<Unreadable> {
+    Some(Unreadable::Denied)
+}
+
+fn asking() -> Option<Unreadable> {
+    Some(Unreadable::Asks)
+}
+
+fn readable() -> Option<Unreadable> {
+    None
+}
+
+#[test]
+fn only_a_kept_copy_goes_on_to_be_stored() {
+    let mut notice = Notice::default();
+    let item = text("kept");
+    assert_eq!(
+        taken(Captured::Kept(item.clone()), readable, &mut notice),
+        Some(item)
+    );
+    for lost in [
+        Captured::TooSlow,
+        Captured::Busy,
+        Captured::Superseded,
+        Captured::Nothing,
+    ] {
+        assert_eq!(taken(lost, readable, &mut notice), None);
+    }
+}
+
+#[test]
+fn a_refused_read_is_told_once_and_cleared_when_reading_comes_back() {
+    let mut notice = Notice::default();
+    assert_eq!(taken(Captured::Nothing, denied, &mut notice), None);
+    assert!(notice.told, "the refusal was told");
+    assert_eq!(taken(Captured::Nothing, denied, &mut notice), None);
+    assert!(taken(Captured::Kept(text("back")), readable, &mut notice).is_some());
+    assert!(!notice.told, "reading again clears it");
+    assert_eq!(taken(Captured::Nothing, asking, &mut notice), None);
+    assert!(notice.asked, "asking is noted once");
+}

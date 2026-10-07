@@ -23,8 +23,8 @@ fn only_a_denied_or_asking_pasteboard_is_unreadable() {
     assert_eq!(unreadable_under(None), None);
     assert_eq!(
         unreadable_under(Some(Access::Default)),
-        Some(Unreadable::Asks),
-        "before its first alert macOS asks on programmatic access"
+        None,
+        "the default is what nearly everyone has, and no reason to warn"
     );
     assert_eq!(unreadable_under(Some(Access::AlwaysAllow)), None);
     assert_eq!(unreadable_under(Some(Access::Ask)), Some(Unreadable::Asks));
@@ -32,4 +32,9 @@ fn only_a_denied_or_asking_pasteboard_is_unreadable() {
         unreadable_under(Some(Access::AlwaysDeny)),
         Some(Unreadable::Denied)
     );
+}
+
+#[test]
+fn asking_for_the_reading_permission_never_fails() {
+    let _ = unreadable();
 }

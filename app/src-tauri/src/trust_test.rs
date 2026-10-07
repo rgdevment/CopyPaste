@@ -29,8 +29,8 @@ fn only_a_refusing_or_asking_clipboard_is_reported() {
     assert_eq!(there::reading(None), "allowed");
     assert_eq!(
         there::reading(Some(Access::Default)),
-        "asks",
-        "before its first alert macOS asks on programmatic access"
+        "allowed",
+        "the default is what nearly everyone has, and no reason to warn"
     );
     assert_eq!(there::reading(Some(Access::AlwaysAllow)), "allowed");
     assert_eq!(there::reading(Some(Access::Ask)), "asks");

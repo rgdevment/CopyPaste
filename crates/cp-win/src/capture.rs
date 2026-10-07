@@ -28,7 +28,7 @@ pub fn capture_insisting(patience: std::time::Duration, retry: cp_core::watch::R
     insisting_afresh(
         retry,
         patience,
-        cp_core::capture::LATE,
+        std::time::Duration::ZERO,
         sequence_now,
         begin_counted,
     )

@@ -367,12 +367,12 @@ function Permission({
   next,
   already,
   clipboard,
-}: {
+}: Readonly<{
   dots: ReactNode;
   next: () => void;
   already: boolean;
   clipboard: Trust["clipboard"];
-}) {
+}>) {
   const [asked, setAsked] = useState(false);
   const [granted, setGranted] = useState(already);
   const [reading, setReading] = useState(clipboard);
@@ -403,25 +403,28 @@ function Permission({
     return () => clearTimeout(onward);
   }, [granted, next, reading]);
 
+  let onward: ReactNode = null;
+  if (granted) {
+    onward = <Strong says={t("welcomeNext")} onPress={next} />;
+  } else if (!asked) {
+    onward = (
+      <Strong
+        says={t("welcomeTrustAsk")}
+        onPress={() => {
+          setAsked(true);
+          invoke<Trust>("ask_trust")
+            .then((one) => setGranted(one.pastes))
+            .catch(() => {});
+        }}
+      />
+    );
+  }
+
   return (
     <Screen
       dots={dots}
       left={<Quiet says={t("welcomeTrustLater")} onPress={next} />}
-      right={
-        granted ? (
-          <Strong says={t("welcomeNext")} onPress={next} />
-        ) : asked ? null : (
-          <Strong
-            says={t("welcomeTrustAsk")}
-            onPress={() => {
-              setAsked(true);
-              invoke<Trust>("ask_trust")
-                .then((one) => setGranted(one.pastes))
-                .catch(() => {});
-            }}
-          />
-        )
-      }
+      right={onward}
     >
       <Heading
         over={t("welcomeTrustOver")}

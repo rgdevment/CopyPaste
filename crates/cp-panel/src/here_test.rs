@@ -222,3 +222,13 @@ fn the_pointer_lands_on_a_work_area_that_holds_it() {
     );
     assert!(pointer.scale >= 1.0, "{pointer:?}");
 }
+
+#[test]
+fn the_reading_permission_always_has_an_answer_or_none() {
+    let _ = unreadable();
+}
+
+#[test]
+fn the_panel_can_stay_awake_while_it_watches() {
+    let _awake = keep_awake();
+}

@@ -2,7 +2,7 @@
 
 <!-- Written by `npm run notices`. Do not edit by hand. -->
 
-The licence texts of the 437 crates named in
+The licence texts of the 438 crates named in
 [THIRD-PARTY-BUNDLED.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY-BUNDLED.md), each written once with
 the crates that carry it: 261 texts. A text is read in full from the
 crate as it is published, from its licence, copying and notice files and its
@@ -2843,7 +2843,7 @@ SOFTWARE.
 
 ## Text 40
 
-Carried by `const-field-offset` 0.2.1, `vtable` 0.5.0. Written out for `dispatch2` 0.3.1, `lyon_algorithms` 1.0.21, `lyon_extra` 1.1.0, `lyon_geom` 1.0.19, `lyon_path` 1.0.19, `objc2-app-kit` 0.3.2, `objc2-application-services` 0.3.2, `objc2-av-foundation` 0.3.2, `objc2-avf-audio` 0.3.2, `objc2-cloud-kit` 0.3.2, `objc2-core-audio-types` 0.3.2, `objc2-core-data` 0.3.2, `objc2-core-foundation` 0.3.2, `objc2-core-graphics` 0.3.2, `objc2-core-image` 0.3.2, `objc2-core-media` 0.3.2, `objc2-core-ml` 0.3.2, `objc2-core-services` 0.3.2, `objc2-core-text` 0.3.2, `objc2-core-video` 0.3.2, `objc2-exception-helper` 0.1.1, `objc2-image-io` 0.3.2, `objc2-media-toolbox` 0.3.2, `objc2-metal` 0.3.2, `objc2-osa-kit` 0.3.2, `objc2-quartz-core` 0.3.2, `objc2-vision` 0.3.2, `objc2-web-kit` 0.3.2, `profiling` 1.0.18, from the licence the manifest declares: the crate ships no licence file.
+Carried by `const-field-offset` 0.2.1, `vtable` 0.5.0. Written out for `dispatch2` 0.3.1, `lyon_algorithms` 1.0.21, `lyon_extra` 1.1.0, `lyon_geom` 1.0.19, `lyon_path` 1.0.19, `objc2-app-kit` 0.3.2, `objc2-application-services` 0.3.2, `objc2-av-foundation` 0.3.2, `objc2-avf-audio` 0.3.2, `objc2-cloud-kit` 0.3.2, `objc2-core-audio-types` 0.3.2, `objc2-core-data` 0.3.2, `objc2-core-foundation` 0.3.2, `objc2-core-graphics` 0.3.2, `objc2-core-image` 0.3.2, `objc2-core-media` 0.3.2, `objc2-core-ml` 0.3.2, `objc2-core-services` 0.3.2, `objc2-core-text` 0.3.2, `objc2-core-video` 0.3.2, `objc2-exception-helper` 0.1.1, `objc2-image-io` 0.3.2, `objc2-media-toolbox` 0.3.2, `objc2-metal` 0.3.2, `objc2-osa-kit` 0.3.2, `objc2-quartz-core` 0.3.2, `objc2-service-management` 0.3.2, `objc2-vision` 0.3.2, `objc2-web-kit` 0.3.2, `profiling` 1.0.18, from the licence the manifest declares: the crate ships no licence file.
 
 ```text
 Apache License

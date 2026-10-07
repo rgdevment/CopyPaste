@@ -23,6 +23,18 @@ pub fn waking() -> Waking {
     there::waking()
 }
 
+pub fn settle() {
+    there::settle();
+}
+
+pub fn on_first_run() {
+    if let Err(why) = there::wake(true) {
+        crate::note::note(&format!(
+            "starting with the session was left off on the first run: {why}"
+        ));
+    }
+}
+
 #[tauri::command]
 pub fn wake(wanted: bool) -> Result<Waking, String> {
     there::wake(wanted).map_err(|why| why.to_string())?;
@@ -39,6 +51,8 @@ mod there {
     const APPROVED: &str =
         r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     const NAME: &str = "CopyPaste";
+
+    pub fn settle() {}
 
     pub fn waking() -> Waking {
         let Ok(exe) = std::env::current_exe() else {
@@ -143,11 +157,14 @@ mod there {
 
     const LABEL: &str = "com.rgdevment.copypaste";
 
-    pub fn waking() -> Waking {
+    pub fn settle() {
         migrate();
+    }
+
+    pub fn waking() -> Waking {
         let state = login::state();
         Waking {
-            offered: state != LoginState::Missing,
+            offered: state != LoginState::Missing || legacy().is_some_and(|old| old.exists()),
             wakes: matches!(state, LoginState::On | LoginState::NeedsApproval),
             theirs: state == LoginState::NeedsApproval,
             managed: false,
@@ -222,6 +239,8 @@ mod there {
 #[cfg(not(any(windows, target_os = "macos")))]
 mod there {
     use super::Waking;
+
+    pub fn settle() {}
 
     pub fn waking() -> Waking {
         Waking::none()

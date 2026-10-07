@@ -67,6 +67,10 @@ pub fn run() {
             if tray::raise(app.handle(), spanish).is_none() {
                 tray::surface(app.handle());
             }
+            waking::settle();
+            if fresh {
+                waking::on_first_run();
+            }
             panel::raise(app.handle());
             let wanted = kept
                 .as_ref()

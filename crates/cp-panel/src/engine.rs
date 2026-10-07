@@ -7,7 +7,7 @@ use cp_core::resting::Rest;
 use cp_store::Store;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 
 pub struct Engine {
     watching: here::Watching,
@@ -20,8 +20,9 @@ impl Engine {
         let store = Store::open(db)?;
         let rest = Arc::new(Rest::new());
         let waking = rest.clone();
+        let mut notice = Notice::default();
         let watching = here::watch_start(move || {
-            if let Some(id) = kept(&store) {
+            if let Some(id) = kept(&store, &mut notice) {
                 waking.wake();
                 fresh(id);
             }
@@ -396,10 +397,20 @@ fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) -> bool {
     }
 }
 
-fn kept(store: &Store) -> Option<i64> {
-    let item = match here::capture_insisting() {
+fn kept(store: &Store, notice: &mut Notice) -> Option<i64> {
+    let item = taken(here::capture_insisting(), here::unreadable, notice)?;
+    let from = here::in_front();
+    keep(store, &item, crate::app::now_ms(), from.as_deref())
+}
+
+fn taken(
+    captured: Captured,
+    unreadable: fn() -> Option<Unreadable>,
+    notice: &mut Notice,
+) -> Option<Item> {
+    let item = match captured {
         Captured::Kept(item) => {
-            readable_again();
+            notice.readable_again();
             item
         }
         Captured::Refused(_) => {
@@ -415,33 +426,37 @@ fn kept(store: &Store) -> Option<i64> {
             return None;
         }
         Captured::Nothing => {
-            tell_if_unreadable(here::unreadable());
+            notice.unreadable(unreadable());
             return None;
         }
         Captured::Superseded => return None,
     };
-    let from = here::in_front();
-    keep(store, &item, crate::app::now_ms(), from.as_deref())
+    Some(item)
 }
 
-static TOLD: AtomicBool = AtomicBool::new(false);
-static ASKED: AtomicBool = AtomicBool::new(false);
+#[derive(Default)]
+struct Notice {
+    told: bool,
+    asked: bool,
+}
 
-fn readable_again() {
-    if TOLD.swap(false, Ordering::Relaxed) {
-        crate::note::tell(&format!("well {}", Unreadable::Denied.said()));
+impl Notice {
+    fn readable_again(&mut self) {
+        if std::mem::take(&mut self.told) {
+            crate::note::tell(&format!("well {}", Unreadable::Denied.said()));
+        }
     }
-}
 
-fn tell_if_unreadable(blocked: Option<Unreadable>) {
-    match blocked {
-        Some(Unreadable::Denied) if !TOLD.swap(true, Ordering::Relaxed) => {
-            crate::note::trouble(Unreadable::Denied.said());
+    fn unreadable(&mut self, blocked: Option<Unreadable>) {
+        match blocked {
+            Some(Unreadable::Denied) if !std::mem::replace(&mut self.told, true) => {
+                crate::note::trouble(Unreadable::Denied.said());
+            }
+            Some(Unreadable::Asks) if !std::mem::replace(&mut self.asked, true) => {
+                note(Unreadable::Asks.said());
+            }
+            _ => {}
         }
-        Some(Unreadable::Asks) if !ASKED.swap(true, Ordering::Relaxed) => {
-            note(Unreadable::Asks.said());
-        }
-        _ => {}
     }
 }
 

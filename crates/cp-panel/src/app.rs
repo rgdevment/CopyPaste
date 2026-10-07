@@ -135,6 +135,7 @@ impl App {
 
     pub fn run(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
         let serving = self.state.borrow().options.serve;
+        let _awake = serving.then(here::keep_awake);
         if !serving {
             panel.show()?;
             self.dress(panel);

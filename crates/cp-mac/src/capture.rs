@@ -33,8 +33,8 @@ pub fn unreadable() -> Option<Unreadable> {
 pub fn unreadable_under(access: Option<Access>) -> Option<Unreadable> {
     match access? {
         Access::AlwaysDeny => Some(Unreadable::Denied),
-        Access::Ask | Access::Default => Some(Unreadable::Asks),
-        Access::AlwaysAllow => None,
+        Access::Ask => Some(Unreadable::Asks),
+        Access::Default | Access::AlwaysAllow => None,
     }
 }
 

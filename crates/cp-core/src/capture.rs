@@ -107,9 +107,8 @@ fn answered_late(
     while count() == started && std::time::Instant::now() < deadline {
         match pending.waited(patience) {
             Waited::StillRunning => {}
-            Waited::Answered(Captured::TooSlow | Captured::Busy) | Waited::Gone => {
-                return Captured::TooSlow;
-            }
+            Waited::Answered(Captured::Busy) => return Captured::Busy,
+            Waited::Answered(Captured::TooSlow) | Waited::Gone => return Captured::TooSlow,
             Waited::Answered(answer) => {
                 return if count() == started {
                     answer

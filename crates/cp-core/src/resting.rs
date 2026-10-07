@@ -1,4 +1,4 @@
-use std::sync::{Condvar, Mutex, MutexGuard};
+use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 #[derive(Default)]
@@ -19,7 +19,7 @@ impl Rest {
     }
 
     fn held(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|gone| gone.into_inner())
+        self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     pub fn wake(&self) {
@@ -41,7 +41,7 @@ impl Rest {
         let (mut held, _) = self
             .signal
             .wait_timeout_while(held, most, |state| !state.woken && !state.closed)
-            .unwrap_or_else(|gone| gone.into_inner());
+            .unwrap_or_else(PoisonError::into_inner);
         held.woken = false;
         !held.closed
     }
