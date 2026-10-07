@@ -8,7 +8,7 @@ fn a_dir() -> tempfile::TempDir {
 fn a_fresh_install_keeps_a_month_and_answers_to_a_shortcut() {
     let config = Config::default();
     assert_eq!(config.keeps_days, Some(30));
-    assert_eq!(config.images_quota_mb, None);
+    assert_eq!(config.images_quota_mb, Some(5120));
     assert!(config.hides_when_left);
     assert_eq!(config.theme, Theme::System);
     assert_eq!(config.locale, None);
@@ -281,7 +281,53 @@ fn an_existing_but_empty_file_reads_as_the_defaults() {
     let dir = a_dir();
     let path = at(dir.path());
     std::fs::write(&path, "").expect("writes");
-    assert_eq!(read(&path).expect("reads"), Config::default());
+    let unlimited = Config {
+        images_quota_mb: None,
+        ..Config::default()
+    };
+    assert_eq!(read(&path).expect("reads"), unlimited);
+}
+
+#[test]
+fn a_fresh_install_writes_the_five_gigabyte_limit_down() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    write(&path, &Config::default()).expect("writes");
+    let said = std::fs::read_to_string(&path).expect("reads");
+    assert!(said.contains("images-quota-mb = 5120"), "{said}");
+    assert_eq!(read(&path).expect("reads").images_quota_mb, Some(5120));
+}
+
+#[test]
+fn a_file_written_before_the_limit_existed_stays_without_one() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "theme = \"dark\"\nkeeps-days = 30\n").expect("writes");
+    assert_eq!(read(&path).expect("reads").images_quota_mb, None);
+}
+
+#[test]
+fn a_file_that_said_no_limit_keeps_saying_it() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "images-quota-mb = 0\n").expect("writes");
+    assert_eq!(read(&path).expect("reads").images_quota_mb, None);
+    let unlimited = Config {
+        images_quota_mb: None,
+        ..Config::default()
+    };
+    write(&path, &unlimited).expect("writes");
+    let said = std::fs::read_to_string(&path).expect("reads");
+    assert!(said.contains("images-quota-mb = 0"), "{said}");
+    assert_eq!(read(&path).expect("reads").images_quota_mb, None);
+}
+
+#[test]
+fn a_limit_chosen_in_an_existing_file_is_kept() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "images-quota-mb = 512\n").expect("writes");
+    assert_eq!(read(&path).expect("reads").images_quota_mb, Some(512));
 }
 
 #[test]
@@ -363,6 +409,7 @@ fn a_broken_file_is_kept_aside_and_the_defaults_are_written_in_its_place() {
     let config = read_or_reset(&path, BROKEN_AT_MS).expect("carries on");
     let forgiving = Config {
         keeps_days: None,
+        images_quota_mb: None,
         ..Config::default()
     };
     assert_eq!(
@@ -416,6 +463,103 @@ fn a_file_cut_off_in_the_middle_of_a_letter_is_kept_aside_too() {
         config.keeps_days, None,
         "nothing is let go after a broken file"
     );
+    assert_eq!(config.images_quota_mb, None, "nor squeezed by a limit");
     assert!(dir.path().join("config.broken-1700000000000.toml").exists());
     assert_eq!(read(&path).expect("now valid"), config);
+}
+
+#[test]
+fn the_untouched_five_gigabyte_default_is_lifted_for_the_former_history() {
+    let lifted = unlimited_for_the_former(&Config::default()).expect("lifted");
+    assert_eq!(lifted.images_quota_mb, None);
+    assert_eq!(lifted.keeps_days, Config::default().keeps_days);
+}
+
+#[test]
+fn a_limit_other_than_the_default_is_not_lifted_for_the_former_history() {
+    for quota_mb in [None, Some(512), Some(2048)] {
+        let mine = Config {
+            images_quota_mb: quota_mb,
+            ..Config::default()
+        };
+        assert_eq!(unlimited_for_the_former(&mine), None, "{quota_mb:?}");
+    }
+}
+
+#[test]
+fn lifting_for_the_former_history_is_written_down() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    let mine = Config {
+        theme: Theme::Dark,
+        ..Config::default()
+    };
+    write(&path, &mine).expect("writes");
+    let lifted = lift_for_the_former(&path).expect("lifts").expect("changed");
+    assert_eq!(lifted.images_quota_mb, None);
+    let landed = read(&path).expect("reads");
+    assert_eq!(landed.images_quota_mb, None);
+    assert_eq!(landed.theme, Theme::Dark);
+    assert_eq!(lift_for_the_former(&path).expect("lifts"), None);
+}
+
+#[test]
+fn a_chosen_limit_is_left_in_the_file_when_the_former_history_comes() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "images-quota-mb = 512\n").expect("writes");
+    assert_eq!(lift_for_the_former(&path).expect("lifts"), None);
+    assert_eq!(read(&path).expect("reads").images_quota_mb, Some(512));
+}
+
+#[test]
+fn a_settings_file_that_cannot_be_read_is_not_lifted() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::create_dir(&path).expect("a folder where the file should be");
+    assert!(matches!(lift_for_the_former(&path), Err(Error::File(_))));
+}
+
+#[test]
+fn only_a_history_left_without_a_limit_gets_the_default_back() {
+    let unlimited = Config {
+        images_quota_mb: None,
+        theme: Theme::Dark,
+        ..Config::default()
+    };
+    let limited = limited_again(&unlimited).expect("limited again");
+    assert_eq!(limited.images_quota_mb, Some(5120));
+    assert_eq!(limited.theme, Theme::Dark);
+    for quota_mb in [Some(512), Some(5120)] {
+        let mine = Config {
+            images_quota_mb: quota_mb,
+            ..Config::default()
+        };
+        assert_eq!(limited_again(&mine), None, "{quota_mb:?}");
+    }
+}
+
+#[test]
+fn a_failed_crossing_writes_the_limit_it_lifted_back_down() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    write(&path, &Config::default()).expect("writes");
+    lift_for_the_former(&path).expect("lifts").expect("changed");
+    let back = put_back_after_the_former(&path)
+        .expect("puts back")
+        .expect("changed");
+    assert_eq!(back.images_quota_mb, Some(5120));
+    assert_eq!(read(&path).expect("reads"), Config::default());
+    assert_eq!(put_back_after_the_former(&path).expect("puts back"), None);
+}
+
+#[test]
+fn a_settings_file_that_cannot_be_read_is_not_put_back() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::create_dir(&path).expect("a folder where the file should be");
+    assert!(matches!(
+        put_back_after_the_former(&path),
+        Err(Error::File(_))
+    ));
 }

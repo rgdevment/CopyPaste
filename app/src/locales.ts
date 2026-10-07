@@ -61,6 +61,9 @@ const ES = {
   quota: "Espacio del historial",
   quotaWhy: "Al llegar al tope se borra lo más antiguo, sea lo que sea; lo anclado se queda",
   quotaNone: "Sin límite",
+  quotaUsed: "El historial ocupa {one} de {two}",
+  quotaNear:
+    "Al llegar al límite se quitan los elementos más antiguos sin anclar. Si quieres, sube el límite o ancla lo que te importa",
   bandWhere: "Tus datos",
   where: "Carpeta de datos",
   whereUnknown: "No se pudo averiguar",
@@ -353,6 +356,9 @@ const EN: Record<keyof Said, string> = {
   quota: "History size",
   quotaWhy: "When the limit is reached the oldest goes, whatever it is; pinned items stay",
   quotaNone: "No limit",
+  quotaUsed: "The history takes up {one} of {two}",
+  quotaNear:
+    "When the limit is reached the oldest unpinned items are removed. If you like, raise the limit or pin what matters to you",
   bandWhere: "Your data",
   where: "Data folder",
   whereUnknown: "Could not be found",
@@ -732,8 +738,15 @@ export function t(key: keyof Said) {
   return now[key];
 }
 
-export function fill(key: keyof Said, one: string) {
-  return now[key].replace("{one}", one);
+export function fill(key: keyof Said, one: string, two = "") {
+  return now[key].replace("{one}", one).replace("{two}", two);
+}
+
+export function sized(bytes: number) {
+  const gigabytes = bytes / 1024 ** 3;
+  const [count, unit] = gigabytes >= 1 ? [gigabytes, "GB"] : [bytes / 1024 ** 2, "MB"];
+  const said = count.toLocaleString(inEnglish() ? "en" : "es", { maximumFractionDigits: 1 });
+  return `${said} ${unit}`;
 }
 
 const PANEL_TROUBLE: Record<string, keyof Said> = {

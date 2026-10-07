@@ -7,6 +7,7 @@ const asked = vi.hoisted(() => ({
   bound: true,
   locale: "es",
   trust: { offered: false, pastes: false, secureInput: false, clipboard: "allowed" },
+  usedBytes: 0,
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -88,6 +89,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         crowded: 0,
       });
     }
+    if (what === "storage_used") return Promise.resolve(asked.usedBytes);
     if (what === "where_it_lives") return Promise.resolve("C:UsersquienAppDataLocalCopyPaste");
     if (what === "trust" || what === "ask_trust") {
       return Promise.resolve({ ...asked.trust });
@@ -143,4 +145,5 @@ afterEach(() => {
   asked.bound = true;
   asked.locale = "es";
   asked.trust = { offered: false, pastes: false, secureInput: false, clipboard: "allowed" };
+  asked.usedBytes = 0;
 });

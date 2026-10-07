@@ -1,11 +1,12 @@
+import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { useEffect, useState } from "react";
-import { empty, type Kept, whereItLives } from "../core";
-import { fill, t } from "../locales";
+import { useCallback, useEffect, useState } from "react";
+import { A_MEGABYTE, empty, type Kept, nearLimit, storageUsed, whereItLives } from "../core";
+import { fill, sized, t } from "../locales";
 import { Band, Line, wentWrong } from "./Bits";
 
 const KEPT = [7, 30, 90];
-const QUOTA = [0, 256, 512, 1024];
+const QUOTA = [0, 512, 1024, 2048, 5120, 10240];
 
 export default function History({
   kept,
@@ -17,16 +18,31 @@ export default function History({
   const [where, setWhere] = useState<string | null>(null);
   const [sure, setSure] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
+  const [used, setUsed] = useState<number | null>(null);
   const days = kept["keeps-days"];
   const DAYS = KEPT.includes(days) || days === 0 ? KEPT : [...KEPT, days].sort((a, b) => a - b);
   const mb = kept["images-quota-mb"];
   const QUOTAS = QUOTA.includes(mb) ? QUOTA : [...QUOTA, mb].sort((a, b) => a - b);
+
+  const weigh = useCallback(() => {
+    storageUsed()
+      .then(setUsed)
+      .catch(() => setUsed(null));
+  }, []);
 
   useEffect(() => {
     whereItLives()
       .then(setWhere)
       .catch(() => setWhere(null));
   }, []);
+
+  useEffect(() => {
+    weigh();
+    const heard = ["kept", "crossed", "emptied"].map((name) => listen(name, weigh));
+    return () => {
+      for (const one of heard) void one.then((drop) => drop());
+    };
+  }, [weigh]);
 
   useEffect(() => {
     if (!sure) {
@@ -57,7 +73,20 @@ export default function History({
         </select>
       </Line>
 
-      <Line says={t("quota")} why={t("quotaWhy")}>
+      <Line
+        says={t("quota")}
+        why={t("quotaWhy")}
+        more={
+          mb > 0 && used !== null ? (
+            <>
+              <div className="said-plain">
+                {fill("quotaUsed", sized(used), sized(mb * A_MEGABYTE))}
+              </div>
+              {nearLimit(used, mb) && <div className="said-plain">{t("quotaNear")}</div>}
+            </>
+          ) : null
+        }
+      >
         <select
           aria-label={t("quota")}
           value={String(kept["images-quota-mb"])}

@@ -12,6 +12,8 @@ const FORMER_SHORTCUT: &str = "Cmd+Alt+V";
 
 pub const KEEPS_DAYS: u16 = 30;
 
+pub const IMAGES_QUOTA_MB: u32 = 5120;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("the file: {0}")]
@@ -40,7 +42,7 @@ pub struct Config {
     pub hides_when_left: bool,
     #[serde(with = "count")]
     pub keeps_days: Option<u16>,
-    #[serde(with = "count")]
+    #[serde(with = "count", default)]
     pub images_quota_mb: Option<u32>,
     pub welcomed: Option<String>,
 }
@@ -77,7 +79,7 @@ impl Default for Config {
             shortcut: SHORTCUT.to_owned(),
             hides_when_left: true,
             keeps_days: Some(KEEPS_DAYS),
-            images_quota_mb: None,
+            images_quota_mb: Some(IMAGES_QUOTA_MB),
             welcomed: None,
         }
     }
@@ -115,6 +117,38 @@ impl Config {
 }
 
 #[must_use]
+pub fn unlimited_for_the_former(config: &Config) -> Option<Config> {
+    (config.images_quota_mb == Some(IMAGES_QUOTA_MB)).then(|| Config {
+        images_quota_mb: None,
+        ..config.clone()
+    })
+}
+
+pub fn lift_for_the_former(path: &Path) -> Result<Option<Config>, Error> {
+    let Some(lifted) = unlimited_for_the_former(&read(path)?) else {
+        return Ok(None);
+    };
+    write(path, &lifted)?;
+    Ok(Some(lifted))
+}
+
+#[must_use]
+pub fn limited_again(config: &Config) -> Option<Config> {
+    config.images_quota_mb.is_none().then(|| Config {
+        images_quota_mb: Some(IMAGES_QUOTA_MB),
+        ..config.clone()
+    })
+}
+
+pub fn put_back_after_the_former(path: &Path) -> Result<Option<Config>, Error> {
+    let Some(limited) = limited_again(&read(path)?) else {
+        return Ok(None);
+    };
+    write(path, &limited)?;
+    Ok(Some(limited))
+}
+
+#[must_use]
 pub fn at(dir: &Path) -> PathBuf {
     dir.join(FILE)
 }
@@ -143,6 +177,7 @@ fn reset(path: &Path, at_ms: i64) -> Result<Config, Error> {
     std::fs::copy(path, kept)?;
     let fresh = Config {
         keeps_days: None,
+        images_quota_mb: None,
         ..Config::default()
     };
     write(path, &fresh)?;

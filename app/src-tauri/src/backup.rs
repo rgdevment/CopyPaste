@@ -175,6 +175,7 @@ fn crossed(
     at: i64,
 ) -> Result<(cp_store::legacy::Brought, cp_store::Swept), String> {
     let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
+    let lifted = lift_the_limit(app)?;
     let policy = crate::settings::policy();
     let swept = |why: &str| match store.sweep(&policy, at) {
         Ok(swept) => swept,
@@ -186,12 +187,49 @@ fn crossed(
         }
     };
     swept("before");
+    let had = store.count().ok();
     let telling = app.clone();
     let brought = cp_store::legacy::bring_telling(from, &store, at, &move |done, total| {
         let _ = telling.emit("crossing", Underway { done, total });
     })
-    .map_err(|why| why.to_string())?;
+    .map_err(|why| {
+        if lifted && had.is_some() && store.count().ok() == had {
+            put_the_limit_back(app);
+        }
+        why.to_string()
+    })?;
     Ok((brought, swept("after")))
+}
+
+fn lift_the_limit(app: &tauri::AppHandle) -> Result<bool, String> {
+    let dir = crate::settings::folder().ok_or_else(crate::settings::nowhere)?;
+    match cp_config::lift_for_the_former(&cp_config::at(&dir)) {
+        Ok(Some(lifted)) => {
+            crate::note::note("the CopyPaste 2 history comes over with no limit on its size");
+            let _ = app.emit("kept", lifted);
+            Ok(true)
+        }
+        Ok(None) => Ok(false),
+        Err(why) => {
+            let said = format!("the size limit could not be lifted, so nothing was brought: {why}");
+            crate::note::note(&said);
+            Err(said)
+        }
+    }
+}
+
+fn put_the_limit_back(app: &tauri::AppHandle) {
+    let Some(dir) = crate::settings::folder() else {
+        return;
+    };
+    match cp_config::put_back_after_the_former(&cp_config::at(&dir)) {
+        Ok(Some(limited)) => {
+            crate::note::note("nothing came over, so the size limit is back as it was");
+            let _ = app.emit("kept", limited);
+        }
+        Ok(None) => {}
+        Err(why) => crate::note::note(&format!("the size limit could not be put back: {why}")),
+    }
 }
 
 #[derive(serde::Serialize)]

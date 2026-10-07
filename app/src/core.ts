@@ -142,6 +142,16 @@ export function whereItLives() {
   return invoke<string>("where_it_lives");
 }
 
+export function storageUsed() {
+  return invoke<number>("storage_used");
+}
+
+export const A_MEGABYTE = 1024 * 1024;
+
+export function nearLimit(usedBytes: number, quotaMb: number) {
+  return quotaMb > 0 && usedBytes * 10 >= quotaMb * A_MEGABYTE * 7;
+}
+
 export function combination(press: {
   ctrlKey: boolean;
   altKey: boolean;

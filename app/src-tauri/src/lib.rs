@@ -27,6 +27,7 @@ pub fn run() {
             settings::settings,
             settings::keep,
             settings::where_it_lives,
+            settings::storage_used,
             settings::former,
             settings::notices,
             settings::licences,
