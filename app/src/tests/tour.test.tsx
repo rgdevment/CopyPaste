@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Welcome from "../ui/Welcome";
 import { scene as asked, theWindow } from "./setup";
@@ -275,6 +275,28 @@ describe("the news after an update", () => {
     expect(await screen.findByText("CopyPaste has been updated")).toBeInTheDocument();
     expect(screen.getByText("Copy without pasting, and names")).toBeInTheDocument();
     await press("Got it");
+    expect(theWindow.close).toHaveBeenCalled();
+  });
+});
+
+describe("news from more than one version", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("puts the newest first, names the older one, and still closes with its button", async () => {
+    asked.greeting = { kind: "news", versions: ["3.1.0", "3.0.3"] };
+    render(<Welcome />);
+
+    expect(await screen.findByText("Hay novedades en CopyPaste")).toBeInTheDocument();
+    const [newest, older] = screen.getAllByRole("region");
+    expect(newest).toHaveAccessibleName("3.1.0");
+    expect(within(newest).getByText("Hazlo tuyo")).toBeInTheDocument();
+    expect(within(newest).queryByRole("heading", { level: 2 })).toBeNull();
+    expect(older).toHaveAccessibleName("3.0.3");
+    expect(within(older).getByRole("heading", { level: 2 })).toHaveTextContent("3.0.3");
+    expect(within(older).getByText("Un panel más rápido")).toBeInTheDocument();
+    await press("Entendido");
     expect(theWindow.close).toHaveBeenCalled();
   });
 });

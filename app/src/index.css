@@ -1532,6 +1532,24 @@ button:disabled {
   padding: 3px 9px;
 }
 
+.welcome-news-scroll {
+  flex: 1;
+  min-height: 0;
+  margin-right: -40px;
+  padding-right: 40px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent;
+}
+
+.welcome-news-older {
+  margin: 18px 0 2px;
+  font-family: var(--mono);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .welcome-news {
   margin: 0;
   padding: 0;
