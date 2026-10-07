@@ -145,9 +145,22 @@ fn safari_keeps_the_context_that_2x_threw_away() {
         .filter(|id| CATALOG.decide(id) == Take::Payload)
         .collect();
     assert_eq!(CATALOG.classify(SAFARI), Some(Family::Text));
-    assert!(kept.len() >= 5, "{} types were kept", kept.len());
+    assert!(kept.len() >= 4, "{} types were kept", kept.len());
     assert!(kept.iter().any(|id| **id == "com.apple.flat-rtfd"));
-    assert!(kept.iter().any(|id| **id == "com.apple.webarchive"));
+    assert!(kept.iter().any(|id| **id == "public.html"));
+}
+
+#[test]
+fn the_whole_web_archive_is_noted_never_read() {
+    for archive in ["com.apple.webarchive", "Apple Web Archive pasteboard type"] {
+        for family in [None, Some(Family::Text), Some(Family::Image)] {
+            assert_eq!(
+                CATALOG.decide_in(family, archive),
+                Take::Presence,
+                "{archive}"
+            );
+        }
+    }
 }
 
 #[test]
@@ -204,11 +217,6 @@ fn an_image_copied_from_safari_does_not_cost_the_whole_page() {
     assert_eq!(
         CATALOG.decide_in(image, "com.apple.flat-rtfd"),
         Take::Payload
-    );
-    assert_eq!(
-        CATALOG.decide_in(Some(Family::Text), "com.apple.webarchive"),
-        Take::Payload,
-        "Word still keeps its own"
     );
 }
 

@@ -173,6 +173,33 @@ fn two_copies_of_the_same_word_paragraph_are_one_item() {
 }
 
 #[test]
+fn a_page_kept_with_its_archive_is_the_same_page_kept_without_it() {
+    let page = |archive: Payload| Item {
+        kind: Some(crate::kind::Kind::Text),
+        formats: vec![
+            Format {
+                id: "public.utf8-plain-text".into(),
+                payload: Payload::Inline(b"hi".to_vec()),
+            },
+            Format {
+                id: "public.html".into(),
+                payload: Payload::Inline(b"<p>hi</p>".to_vec()),
+            },
+            Format {
+                id: "com.apple.webarchive".into(),
+                payload: archive,
+            },
+        ],
+    };
+    let before = page(Payload::Inline(b"bplist00 the whole page".to_vec()));
+    let now = page(Payload::Announced { size: None });
+    assert_eq!(before.fingerprint(), now.fingerprint());
+    let mut other = now.clone();
+    other.formats[1].payload = Payload::Inline(b"<p>bye</p>".to_vec());
+    assert_ne!(before.fingerprint(), other.fingerprint());
+}
+
+#[test]
 fn a_copy_that_is_only_a_rendering_still_has_an_identity_of_its_own() {
     let rtf = |body: &str| Item {
         kind: Some(crate::kind::Kind::Text),

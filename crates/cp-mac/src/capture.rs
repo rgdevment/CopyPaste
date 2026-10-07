@@ -60,24 +60,18 @@ pub fn capture(pb: &Pasteboard) -> Captured {
         if formats.iter().any(|kept| kept.id == canonical) {
             continue;
         }
-        let payload = match CATALOG.decide_in(family, canonical) {
-            Take::Never => Payload::Announced { size: None },
-            Take::Presence => Payload::Announced { size: None },
-            Take::Payload => {
-                if CATALOG.costlier_twin(canonical, &ids) {
-                    Payload::Announced { size: None }
-                } else if canonical == "public.file-url" {
-                    match gather_file_urls(pb) {
-                        Some(bytes) => Payload::stored(bytes),
-                        None => Payload::Absent,
-                    }
-                } else {
-                    match pb.data(canonical) {
-                        Some(bytes) if bytes.is_empty() && is_image(canonical) => Payload::Absent,
-                        Some(bytes) => Payload::stored(bytes),
-                        None => Payload::Absent,
-                    }
-                }
+        let payload = if !reads(family, canonical, &ids) {
+            Payload::Announced { size: None }
+        } else if canonical == "public.file-url" {
+            match gather_file_urls(pb) {
+                Some(bytes) => Payload::stored(bytes),
+                None => Payload::Absent,
+            }
+        } else {
+            match pb.data(canonical) {
+                Some(bytes) if bytes.is_empty() && is_image(canonical) => Payload::Absent,
+                Some(bytes) => Payload::stored(bytes),
+                None => Payload::Absent,
             }
         };
         formats.push(Format {
@@ -88,6 +82,11 @@ pub fn capture(pb: &Pasteboard) -> Captured {
 
     let kind = refine(family, &formats);
     Captured::Kept(Item { kind, formats })
+}
+
+pub fn reads(family: Option<Family>, canonical: &str, offered: &[&str]) -> bool {
+    CATALOG.decide_in(family, canonical) == Take::Payload
+        && !CATALOG.costlier_twin(canonical, offered)
 }
 
 fn gather_file_urls(pb: &Pasteboard) -> Option<Vec<u8>> {

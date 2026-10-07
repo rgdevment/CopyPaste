@@ -38,3 +38,29 @@ fn only_a_denied_or_asking_pasteboard_is_unreadable() {
 fn asking_for_the_reading_permission_never_fails() {
     let _ = unreadable();
 }
+
+#[test]
+fn a_web_page_keeps_its_text_and_html_but_never_the_whole_archive() {
+    let offered = [
+        "com.apple.webarchive",
+        "Apple Web Archive pasteboard type",
+        "public.html",
+        "public.utf8-plain-text",
+    ];
+    let family = CATALOG.classify(&offered);
+    assert_eq!(family, Some(Family::Text));
+    let read: Vec<&str> = offered
+        .iter()
+        .map(|id| CATALOG.canonical(id))
+        .filter(|id| reads(family, id, &offered))
+        .collect();
+    assert_eq!(read, ["public.html", "public.utf8-plain-text"]);
+}
+
+#[test]
+fn the_costlier_twin_of_an_image_is_only_announced() {
+    let offered = ["public.png", "public.tiff"];
+    let family = CATALOG.classify(&offered);
+    assert!(reads(family, "public.png", &offered));
+    assert!(!reads(family, "public.tiff", &offered));
+}

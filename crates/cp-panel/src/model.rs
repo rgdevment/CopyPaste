@@ -113,6 +113,13 @@ pub fn by_the_quarter(clock: fn(i64) -> i64) -> Clock {
     })
 }
 
+pub fn renew_in(cards: &slint::ModelRc<Card>, id: i64) -> bool {
+    cards
+        .as_any()
+        .downcast_ref::<Rows>()
+        .is_some_and(|rows| rows.renew(id))
+}
+
 pub struct Rows {
     store: Rc<Store>,
     filter: Filter,
@@ -196,6 +203,41 @@ impl Rows {
 
     pub fn index_of(&self, id: i64) -> Option<usize> {
         self.rows.borrow().iter().position(|row| row.id == id)
+    }
+
+    pub fn renew(&self, id: i64) -> bool {
+        let Some(index) = self.index_of(id) else {
+            return false;
+        };
+        let thumb = match self.store.thumb_path(id) {
+            Ok(thumb) => thumb,
+            Err(why) => {
+                crate::note::note(&format!("{id} could not be read again: {why}"));
+                return false;
+            }
+        };
+        let keys = meta_keys_for(&self.filter);
+        if !keys.is_empty() {
+            match self.store.meta_for(&[id], keys) {
+                Ok(found) => self.meta.borrow_mut().extend(found),
+                Err(why) => crate::note::note(&format!("{id} kept its old measures: {why}")),
+            }
+        }
+        if let Some(row) = self.rows.borrow_mut().get_mut(index) {
+            row.thumb_path = thumb;
+        }
+        self.thumbless.borrow_mut().remove(&index);
+        if let Some(slot) = self.cards.borrow_mut().get_mut(index) {
+            *slot = None;
+        }
+        let height = if self.open.get() == Some(index) {
+            self.open_of(index)
+        } else {
+            self.base_of(index)
+        };
+        self.resize(index, height);
+        self.notify.row_changed(index);
+        true
     }
 
     pub fn open_at(&self, index: Option<usize>) {

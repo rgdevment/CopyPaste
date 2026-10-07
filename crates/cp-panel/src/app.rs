@@ -168,13 +168,20 @@ impl App {
 
     fn keep_watch(&self, ui: slint::Weak<Panel>) {
         let db = self.state.borrow().options.db.clone();
-        match crate::engine::Engine::start(&db, move |_| {
+        let drawn = ui.clone();
+        let arrived = move |_| {
             let _ = ui.upgrade_in_event_loop(|panel| {
                 if panel.window().is_visible() && !panel.get_sheet_open() {
                     panel.invoke_arrived();
                 }
             });
-        }) {
+        };
+        let changed = move |id| {
+            let _ = drawn.upgrade_in_event_loop(move |panel| {
+                crate::model::renew_in(&panel.get_cards(), id);
+            });
+        };
+        match crate::engine::Engine::start(&db, arrived, changed) {
             Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
             Err(why) => crate::note::trouble(
                 cp_core::trouble::Trouble::Unwatched,

@@ -17,7 +17,11 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn start(db: &Path, fresh: impl Fn(i64) + Send + 'static) -> Result<Self, cp_store::Error> {
+    pub fn start(
+        db: &Path,
+        fresh: impl Fn(i64) + Send + 'static,
+        changed: impl Fn(i64) + Send + 'static,
+    ) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
         let rest = Arc::new(Rest::new());
         let waking = rest.clone();
@@ -28,7 +32,7 @@ impl Engine {
                 fresh(id);
             }
         });
-        let errands = errands(db, rest.clone());
+        let errands = errands(db, rest.clone(), Box::new(changed));
         Ok(Self {
             watching,
             rest,
@@ -74,7 +78,9 @@ const RECHECK: std::time::Duration = std::time::Duration::from_secs(5);
 const LATER: i64 = 60_000;
 const SWEEPS_EVERY: std::time::Duration = std::time::Duration::from_secs(3_600);
 
-fn errands(db: &Path, rest: Arc<Rest>) -> Option<std::thread::JoinHandle<()>> {
+type Changed = Box<dyn Fn(i64) + Send>;
+
+fn errands(db: &Path, rest: Arc<Rest>, changed: Changed) -> Option<std::thread::JoinHandle<()>> {
     let store = match Store::open(db) {
         Ok(store) => store,
         Err(why) => {
@@ -90,7 +96,7 @@ fn errands(db: &Path, rest: Arc<Rest>) -> Option<std::thread::JoinHandle<()>> {
         .name(crate::note::ERRANDS.to_owned())
         .spawn(move || {
             catch_up(&store);
-            serve(&store, &thumbs, &rest, RECHECK);
+            serve(&store, &thumbs, &rest, RECHECK, &changed);
         });
     if let Err(why) = &spawned {
         note(&format!("nobody enriches what was copied: {why}"));
@@ -98,7 +104,13 @@ fn errands(db: &Path, rest: Arc<Rest>) -> Option<std::thread::JoinHandle<()>> {
     spawned.ok()
 }
 
-fn serve(store: &Store, thumbs: &Path, rest: &Rest, recheck: std::time::Duration) -> usize {
+fn serve(
+    store: &Store,
+    thumbs: &Path,
+    rest: &Rest,
+    recheck: std::time::Duration,
+    changed: &dyn Fn(i64),
+) -> usize {
     let mut swept = std::time::Instant::now() - SWEEPS_EVERY;
     let mut rounds = 0;
     while !rest.closed() {
@@ -107,7 +119,7 @@ fn serve(store: &Store, thumbs: &Path, rest: &Rest, recheck: std::time::Duration
             sweep(store, thumbs);
             swept = std::time::Instant::now();
         }
-        if !errand(store, thumbs) {
+        if !errand(store, thumbs, changed) {
             rest.rest(recheck);
         }
     }
@@ -183,19 +195,19 @@ fn policy_of(kept: &cp_config::Config) -> cp_store::Policy {
     cp_store::Policy::keeping(kept.keeps_days, kept.images_quota_mb)
 }
 
-fn errand(store: &Store, thumbs: &Path) -> bool {
+fn errand(store: &Store, thumbs: &Path, changed: &dyn Fn(i64)) -> bool {
     let at = crate::app::now_ms();
     if let Some(id) = first_waiting(store, "thumb", at) {
-        return thumbed(store, id, at, thumbs);
+        return thumbed(store, id, at, thumbs, changed);
     }
     if let Some(id) = first_waiting(store, "ocr", at) {
         return read_out(store, id, at);
     }
     if let Some(id) = first_waiting(store, "media", at) {
-        return measured(store, id, at);
+        return measured(store, id, at, changed);
     }
     if let Some(id) = first_waiting(store, "folder", at) {
-        return walked(store, id, at);
+        return walked(store, id, at, changed);
     }
     grouped_some(store)
 }
@@ -210,7 +222,7 @@ fn first_waiting(store: &Store, job: &str, at: i64) -> Option<i64> {
     }
 }
 
-fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) -> bool {
+fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path, changed: &dyn Fn(i64)) -> bool {
     let item = store.item(id).ok().flatten();
     if let Some(sides) = item.as_ref().and_then(|one| {
         here::content_of(one, None)
@@ -225,13 +237,14 @@ fn thumbed(store: &Store, id: i64, at: i64, thumbs: &Path) -> bool {
     let Some(landed) = written(thumbs, id, &png) else {
         return give_up(store, id, "thumb", "the thumbnail could not be stored", at);
     };
-    if let Err(why) = store.set_thumb(id, Some(&landed), at) {
-        note(&format!("{id} has a thumbnail nobody wrote down: {why}"));
+    match store.set_thumb(id, Some(&landed), at) {
+        Ok(()) => changed(id),
+        Err(why) => note(&format!("{id} has a thumbnail nobody wrote down: {why}")),
     }
     done(store, id, "thumb")
 }
 
-fn measured(store: &Store, id: i64, at: i64) -> bool {
+fn measured(store: &Store, id: i64, at: i64, changed: &dyn Fn(i64)) -> bool {
     let Some(path) = store
         .item(id)
         .ok()
@@ -245,10 +258,15 @@ fn measured(store: &Store, id: i64, at: i64) -> bool {
     if said.is_empty() {
         return give_up(store, id, "media", "the shell knows nothing about it", at);
     }
+    let mut written = false;
     for (key, value) in said {
-        if let Err(why) = store.set_meta(id, key, &value) {
-            note(&format!("{id} has a {key} nobody wrote down: {why}"));
+        match store.set_meta(id, key, &value) {
+            Ok(()) => written = true,
+            Err(why) => note(&format!("{id} has a {key} nobody wrote down: {why}")),
         }
+    }
+    if written {
+        changed(id);
     }
     done(store, id, "media")
 }
@@ -279,7 +297,7 @@ fn grouped_some(store: &Store) -> bool {
     true
 }
 
-fn walked(store: &Store, id: i64, at: i64) -> bool {
+fn walked(store: &Store, id: i64, at: i64, changed: &dyn Fn(i64)) -> bool {
     let Some(path) = store
         .item(id)
         .ok()
@@ -293,8 +311,9 @@ fn walked(store: &Store, id: i64, at: i64) -> bool {
         cp_core::reading::begin(move || crate::folder::counted_in(std::path::Path::new(&path)));
     match counting.waited(crate::folder::PATIENCE) {
         cp_core::reading::Waited::Answered(Some(seen)) => {
-            if let Err(why) = store.set_meta(id, crate::folder::ENTRIES, &seen.to_string()) {
-                note(&format!("{id} was counted and nobody wrote it down: {why}"));
+            match store.set_meta(id, crate::folder::ENTRIES, &seen.to_string()) {
+                Ok(()) => changed(id),
+                Err(why) => note(&format!("{id} was counted and nobody wrote it down: {why}")),
             }
             done(store, id, "folder")
         }

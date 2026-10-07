@@ -865,3 +865,86 @@ fn a_change_of_offset_on_the_quarter_is_never_blurred() {
         "the instant of the change takes the new one"
     );
 }
+
+fn store_with_a_picture() -> (Rc<Store>, i64) {
+    let store = Store::in_memory().expect("esquema");
+    store
+        .insert_text("before", "words before", 1)
+        .expect("insert");
+    let item = cp_core::item::Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![cp_core::item::Format {
+            id: "public.png".into(),
+            payload: cp_core::item::Payload::Inline(vec![1, 2, 3]),
+        }],
+    };
+    let id = store.insert_item("picture", &item, "", 2).expect("insert");
+    (Rc::new(store), id)
+}
+
+fn png_in(dir: &std::path::Path) -> String {
+    let path = dir.join("drawn.png");
+    image::RgbaImage::from_pixel(8, 8, image::Rgba([12, 200, 140, 255]))
+        .save(&path)
+        .expect("drawn");
+    path.to_string_lossy().into_owned()
+}
+
+#[test]
+fn a_thumbnail_that_lands_after_the_card_redraws_that_card() {
+    let (store, id) = store_with_a_picture();
+    let rows = open(store.clone(), 10);
+    let at = rows.index_of(id).expect("the picture is listed");
+    let waiting = rows.row_data(at).expect("a card");
+    assert!(!waiting.has_thumb);
+    assert_eq!(waiting.face.as_str(), "thumb", "it already has the shape");
+    let before = rows.span_of(at).expect("a span");
+    let told = Rc::new(RefCell::new(Vec::new()));
+    let seen = told.clone();
+    let watched =
+        slint::FilterModel::new(slint::ModelRc::from(rows.clone()), move |card: &Card| {
+            seen.borrow_mut().push(card.has_thumb);
+            true
+        });
+    assert_eq!(watched.row_count(), rows.row_count());
+    told.borrow_mut().clear();
+    let dir = tempfile::tempdir().expect("a folder");
+    store
+        .set_thumb(id, Some(&png_in(dir.path())), 3)
+        .expect("thumb");
+    assert!(renew_in(&slint::ModelRc::from(rows.clone()), id));
+    assert_eq!(
+        *told.borrow(),
+        [true],
+        "the list was told and drew it again"
+    );
+    let drawn = rows.row_data(at).expect("a card");
+    assert!(drawn.has_thumb);
+    assert_eq!(drawn.face.as_str(), "thumb");
+    assert_eq!(rows.span_of(at), Some(before), "nothing below it moves");
+}
+
+#[test]
+fn renewing_what_is_not_listed_or_not_rows_changes_nothing() {
+    let (store, _) = store_with_a_picture();
+    let rows = open(store, 10);
+    assert!(!rows.renew(9_999));
+    let other: slint::ModelRc<Card> =
+        slint::ModelRc::new(slint::VecModel::from(vec![Card::default()]));
+    assert!(!renew_in(&other, 1));
+}
+
+#[test]
+fn an_open_card_that_is_renewed_keeps_its_open_height() {
+    let (store, id) = store_with_a_picture();
+    let rows = open(store.clone(), 10);
+    let at = rows.index_of(id).expect("listed");
+    rows.open_at(Some(at));
+    let opened = rows.span_of(at).expect("a span");
+    let dir = tempfile::tempdir().expect("a folder");
+    store
+        .set_thumb(id, Some(&png_in(dir.path())), 3)
+        .expect("thumb");
+    assert!(rows.renew(id));
+    assert_eq!(rows.span_of(at), Some(opened));
+}
