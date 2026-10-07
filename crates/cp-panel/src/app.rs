@@ -782,6 +782,8 @@ fn back_to_the_newest(ui: &Panel, state: &Rc<RefCell<State>>) {
     if let Some(rows) = state.borrow().rows.as_ref() {
         rows.open_at(None);
     }
+    state.borrow().pointing.stop();
+    ui.set_hovered(-1);
     ui.set_opened(false);
     ui.set_current(if ui.get_cards().row_count() > 0 {
         0
