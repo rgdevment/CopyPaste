@@ -80,3 +80,18 @@ fn a_target_that_lost_the_front_before_the_keystroke_is_never_typed_into() {
         "nobody in front is Windows switching, and it is waited out"
     );
 }
+
+#[test]
+fn the_keys_wait_until_the_target_has_put_its_focus_back() {
+    assert_eq!(
+        focus_still_landing(Duration::ZERO),
+        Some(FOCUS_LANDS),
+        "Electron apps such as Claude drop a Ctrl+V sent the moment they come forward"
+    );
+    assert_eq!(
+        focus_still_landing(Duration::from_millis(100)),
+        Some(FOCUS_LANDS - Duration::from_millis(100))
+    );
+    assert_eq!(focus_still_landing(FOCUS_LANDS), None);
+    assert_eq!(focus_still_landing(Duration::from_secs(1)), None);
+}

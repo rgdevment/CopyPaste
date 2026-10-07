@@ -7,6 +7,7 @@ use windows::Win32::Foundation::HWND;
 const MODIFIERS_GO: Duration = Duration::from_millis(120);
 const TARGET_ANSWERS_MS: u32 = 200;
 const KEYS_LOOKED_AT: Duration = Duration::from_millis(4);
+const FOCUS_LANDS: Duration = Duration::from_millis(150);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
@@ -131,6 +132,9 @@ impl Pasting {
         if let Some(waiting) = self.still_in_front() {
             return waiting;
         }
+        if let Some(pause) = focus_still_landing(self.started.elapsed()) {
+            return Advance::After(pause);
+        }
         let since = *self.keys_since.get_or_insert_with(Instant::now);
         if keystroke::modifiers_still_held() && since.elapsed() < MODIFIERS_GO {
             return Advance::After(KEYS_LOOKED_AT);
@@ -158,6 +162,12 @@ impl Pasting {
             Hold::Wait => Some(Advance::Done(Outcome::Degraded(Failure::ForegroundTimeout))),
         }
     }
+}
+
+fn focus_still_landing(since_hidden: Duration) -> Option<Duration> {
+    FOCUS_LANDS
+        .checked_sub(since_hidden)
+        .filter(|left| !left.is_zero())
 }
 
 fn hold_of(focus: Focus) -> Hold {
