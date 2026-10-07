@@ -434,7 +434,10 @@ fn taken(
             item
         }
         Captured::Refused(_) => {
-            note("a copy was dropped because the app it came from asked for that");
+            let from = here::in_front().unwrap_or_else(|| "an unknown app".to_owned());
+            note(&format!(
+                "a copy was dropped because the app it came from asked for that; in front was {from}"
+            ));
             return None;
         }
         Captured::TooSlow => {

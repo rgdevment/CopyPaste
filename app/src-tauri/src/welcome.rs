@@ -51,6 +51,13 @@ pub fn decide(
         .filter_map(|said| semver::Version::parse(said).ok().map(|one| (one, said)))
         .filter(|(one, _)| *one <= now && *one > since)
         .collect();
+    if fresh_news.is_empty() {
+        fresh_news = told
+            .iter()
+            .filter_map(|said| semver::Version::parse(said).ok().map(|one| (one, said)))
+            .filter(|(one, _)| is_minor_of(one, &now))
+            .collect();
+    }
     fresh_news.sort_by(|a, b| b.0.cmp(&a.0));
     fresh_news.dedup_by(|a, b| a.0 == b.0);
     if fresh_news.is_empty() {
@@ -62,6 +69,12 @@ pub fn decide(
             .map(|(_, said)| said.clone())
             .collect(),
     }
+}
+
+fn is_minor_of(one: &semver::Version, patch: &semver::Version) -> bool {
+    patch.patch > 0
+        && patch.pre.is_empty()
+        && *one == semver::Version::new(patch.major, patch.minor, 0)
 }
 
 pub fn behind(welcomed: Option<&str>, running: &str) -> bool {

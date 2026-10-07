@@ -1,9 +1,34 @@
 use super::*;
 use windows::Win32::UI::Input::KeyboardAndMouse::KEYEVENTF_SCANCODE;
 
+fn all_held() -> Vec<INPUT> {
+    paste_batch_while(|_| true)
+}
+
+#[test]
+fn a_modifier_nobody_holds_is_never_released() {
+    let codes: Vec<u16> = paste_batch_while(|_| false)
+        .iter()
+        .map(|one| unsafe { one.Anonymous.ki.wVk }.0)
+        .collect();
+    assert_eq!(
+        codes,
+        [VK_CONTROL.0, VK_V.0, VK_V.0, VK_CONTROL.0],
+        "un Alt suelto sin haberse pisado abre el menu de las apps Electron"
+    );
+}
+
+#[test]
+fn only_the_held_modifier_is_released() {
+    let batch = paste_batch_while(|code| code == VK_MENU);
+    assert_eq!(unsafe { batch[0].Anonymous.ki.wVk }, VK_MENU);
+    assert!(unsafe { batch[0].Anonymous.ki.dwFlags }.contains(KEYEVENTF_KEYUP));
+    assert_eq!(batch.len(), 5);
+}
+
 #[test]
 fn the_batch_releases_before_it_presses() {
-    let batch = paste_batch();
+    let batch = all_held();
     assert_eq!(batch.len(), 9);
     let ups: Vec<bool> = batch
         .iter()
@@ -15,7 +40,7 @@ fn the_batch_releases_before_it_presses() {
 
 #[test]
 fn both_windows_keys_are_released_because_there_is_no_generic_one() {
-    let batch = paste_batch();
+    let batch = all_held();
 
     let codes: Vec<u16> = batch
         .iter()
@@ -27,7 +52,7 @@ fn both_windows_keys_are_released_because_there_is_no_generic_one() {
 
 #[test]
 fn the_windows_key_is_released_before_the_v_is_pressed() {
-    let batch = paste_batch();
+    let batch = all_held();
 
     let codes: Vec<u16> = batch
         .iter()
@@ -46,7 +71,7 @@ fn the_windows_key_is_released_before_the_v_is_pressed() {
 
 #[test]
 fn every_event_carries_a_scan_code() {
-    for one in paste_batch() {
+    for one in all_held() {
         let scan = unsafe { one.Anonymous.ki.wScan };
         assert_ne!(scan, 0, "hay destinos que leen el scancode y no el virtual");
     }
@@ -54,14 +79,14 @@ fn every_event_carries_a_scan_code() {
 
 #[test]
 fn every_event_is_marked_as_ours() {
-    for one in paste_batch() {
+    for one in all_held() {
         assert_eq!(unsafe { one.Anonymous.ki.dwExtraInfo }, OURS);
     }
 }
 
 #[test]
 fn the_control_that_presses_is_not_the_one_that_releases() {
-    let batch = paste_batch();
+    let batch = all_held();
 
     let control: Vec<bool> = batch
         .iter()
@@ -78,7 +103,7 @@ fn the_control_that_presses_is_not_the_one_that_releases() {
 #[test]
 fn the_batch_is_not_sent_in_pieces() {
     assert_eq!(
-        paste_batch().len(),
+        all_held().len(),
         9,
         "partirlo deja que otro inyector se intercale"
     );
@@ -86,7 +111,7 @@ fn the_batch_is_not_sent_in_pieces() {
 
 #[test]
 fn nothing_is_flagged_as_a_bare_scan_code() {
-    for one in paste_batch() {
+    for one in all_held() {
         let flags = unsafe { one.Anonymous.ki.dwFlags };
         assert!(
             !flags.contains(KEYEVENTF_SCANCODE),

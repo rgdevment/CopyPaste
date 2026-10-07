@@ -48,9 +48,41 @@ fn going_back_a_version_says_nothing() {
 }
 
 #[test]
-fn an_update_with_nothing_written_for_it_says_nothing() {
+fn a_patch_tells_again_what_its_minor_brought() {
+    let all = said(&["3.0.3", "3.1.0"]);
     assert_eq!(
-        decide(false, false, Some("3.0.0"), "3.0.1", &said(&["3.0.0"])),
+        decide(false, false, Some("3.1.0"), "3.1.1", &all),
+        Greeting::News {
+            versions: said(&["3.1.0"])
+        }
+    );
+}
+
+#[test]
+fn the_next_patch_without_its_own_entry_tells_its_minor_again() {
+    assert_eq!(
+        decide(false, false, Some("3.1.1"), "3.1.2", &said(&["3.1.0"])),
+        Greeting::News {
+            versions: said(&["3.1.0"])
+        }
+    );
+}
+
+#[test]
+fn a_patch_with_its_own_entry_does_not_repeat_its_minor() {
+    let all = said(&["3.1.0", "3.1.2"]);
+    assert_eq!(
+        decide(false, false, Some("3.1.1"), "3.1.2", &all),
+        Greeting::News {
+            versions: said(&["3.1.2"])
+        }
+    );
+}
+
+#[test]
+fn an_update_with_nothing_written_for_it_nor_its_minor_says_nothing() {
+    assert_eq!(
+        decide(false, false, Some("3.1.0"), "3.2.1", &said(&["3.1.0"])),
         Greeting::Nothing
     );
 }

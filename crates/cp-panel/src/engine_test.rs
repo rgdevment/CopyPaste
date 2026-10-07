@@ -617,6 +617,7 @@ fn only_a_kept_copy_goes_on_to_be_stored() {
         Some(item)
     );
     for lost in [
+        Captured::Refused(cp_core::formats::Refusal::Marked("Clipboard Viewer Ignore")),
         Captured::TooSlow,
         Captured::Busy,
         Captured::Superseded,

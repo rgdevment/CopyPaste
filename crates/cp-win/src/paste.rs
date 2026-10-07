@@ -7,6 +7,7 @@ use windows::Win32::Foundation::HWND;
 const MODIFIERS_GO: Duration = Duration::from_millis(120);
 const TARGET_ANSWERS_MS: u32 = 200;
 const KEYS_LOOKED_AT: Duration = Duration::from_millis(4);
+const FOCUS_LANDS: Duration = Duration::from_millis(150);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
@@ -50,6 +51,7 @@ pub struct Pasting {
     attempt: Attempt,
     stage: Stage,
     inner: Option<HWND>,
+    fronted: Option<Instant>,
     keys_since: Option<Instant>,
 }
 
@@ -79,6 +81,7 @@ impl Pasting {
             attempt: Attempt::default(),
             stage: Stage::Forward,
             inner: None,
+            fronted: None,
             keys_since: None,
         })
     }
@@ -102,6 +105,7 @@ impl Pasting {
             frontmost::bring_forward(self.target.window);
             return Advance::After(SETTLE);
         }
+        self.fronted.get_or_insert_with(Instant::now);
         self.inner = self.target.focus.filter(|inner| {
             frontmost::is_alive(*inner) && frontmost::answers(*inner, TARGET_ANSWERS_MS)
         });
@@ -132,6 +136,10 @@ impl Pasting {
             return waiting;
         }
         let since = *self.keys_since.get_or_insert_with(Instant::now);
+        let fronted = self.fronted.unwrap_or(self.started);
+        if let Some(pause) = focus_still_landing(fronted.elapsed()) {
+            return Advance::After(pause);
+        }
         if keystroke::modifiers_still_held() && since.elapsed() < MODIFIERS_GO {
             return Advance::After(KEYS_LOOKED_AT);
         }
@@ -158,6 +166,10 @@ impl Pasting {
             Hold::Wait => Some(Advance::Done(Outcome::Degraded(Failure::ForegroundTimeout))),
         }
     }
+}
+
+fn focus_still_landing(since_fronted: Duration) -> Option<Duration> {
+    (since_fronted < FOCUS_LANDS).then(|| FOCUS_LANDS - since_fronted)
 }
 
 fn hold_of(focus: Focus) -> Hold {
