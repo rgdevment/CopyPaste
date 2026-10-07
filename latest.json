@@ -1,18 +1,18 @@
 {
-  "version": "3.1.0",
-  "notes": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.1.0",
+  "version": "3.1.1",
+  "notes": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.1.1",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.0/copypaste-installer-3.1.0-windows-x86_64.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTy9IQ0ZkNlU4V1hwS3lUZXNYWHV5VUJ0THdlblRZNnhHT2RZMHJ5bjgvNlYyVG1oVGRPL0VjMTFxeGdzK1FhM2c5cUlicWZsNitRajgzN2xwTW8wbUE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMzUzMjMwCWZpbGU6Y29weXBhc3RlLWluc3RhbGxlci0zLjEuMC13aW5kb3dzLXg4Nl82NC5leGUJdmVyc2lvbjozLjEuMApIYUxHeDN1UVZSdnM0Ym1ncnRIR29wZGVWVUpWcytCdW8rMkJ2VkcvK1ltaHdWVDVJMnh5YjJETXIzS1JZd0xIVms1MDhCcDZUZWFkRmlUZ0NEY0VCUT09Cg=="
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.1/copypaste-installer-3.1.1-windows-x86_64.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzT3dWaEpVZ1ZEVDB4WlB4QkFncnlYMEduc3RmbVFhRlJ3ZzFMMExLOVY3czE5ZklocG1hUEZJdjZKT1ZMYllXRVJJN09RckRqOENkejRYdnU4WFhRWHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMzU2MjcxCWZpbGU6Y29weXBhc3RlLWluc3RhbGxlci0zLjEuMS13aW5kb3dzLXg4Nl82NC5leGUJdmVyc2lvbjozLjEuMQpnaVYrRlpvZ3crYWIrNldvcDBZOG5PYTV5WEQzakg1amxxZkFlRlljbFdzbWdaUFdOM3NPQUpqZEE4RXdkU3piMVB1bDc0V1RncUptTGlCdHBTT3REUT09Cg=="
     },
     "darwin-aarch64": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.0/copypaste-3.1.0-macos-aarch64.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzT3luU1BpaEJxTnhQTDhTWXAvT0RORzllaTFGTjJQNC9MNXVoc1ZHSlZWSU8yTXRkc1JDaW10bExid2ZRL09LUHpzT0ZVZDIvaW5CWklUbWxjeHFDMVE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMzUzMzUwCWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oJdmVyc2lvbjozLjEuMApKeEVNSWNjUUFhSHNHYjdYSy9YN2JJeEYyUk9nUTRIY1IzVGo5TS9qK2NGMXl1TEtmSEk3T3Jrc1FVNUVuTXpUUXpESEtMNmtxblA3Zm5xZk5EdGFDZz09Cg=="
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.1/copypaste-3.1.1-macos-aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzYxK2crS3lKaU4zeDNNYmVPM3NmRUNFR041b1IxVklhcmE0bmM5NXNFN2ljV0dZUDk3bm5tNzgwbTBadHJtR0NNektoYzYwOExzZDl2SjBqTU9CWlFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMzU1NzE2CWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oJdmVyc2lvbjozLjEuMQpuYnUrR3A2cDJFVS8xZUlqeDJIQjdoQ2p3RzJjaUMxelFmRDdaUENBdE13RDNTcm5LQmUwOVRQOXR5MksxMm1wUjVyRERvWEpuRi9jcXBRQzBtRERCdz09Cg=="
     },
     "darwin-x86_64": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.0/copypaste-3.1.0-macos-x86_64.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzhOQmhtVFNaTFVvcnhabyt2T0psdUJvSzgvTmV3ZTlMVTlmNWF4ZXpzbjc1Z25hUXZQb2pqblY1enBSOFd3M3pkNlo2NnY5dkZBNm56cnk0YzBJTFFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMzUzMTAyCWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oJdmVyc2lvbjozLjEuMApVeDJUR0g2clBFVW9BbW9WV2xrUU04SlJBdW5qNFVhUThmMit0V1N5Q2g1WHcwcU1TQ0JYallxZlYyekJickJ0RjJUZGlPMlRPUDFmSVhsNVovN0NBQT09Cg=="
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.1/copypaste-3.1.1-macos-x86_64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzT3hMYjlJUDViZ1NLTjRmbW5GRExuSGx2cC9jZERLRzUzK1I2U0RoR2RISGNhd1hCdjVwdS9VSUd5SCtZNU9wbWZXTS9PUkJIWEYwTS9icEUweDdWd1FjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMzU2MDU0CWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oJdmVyc2lvbjozLjEuMQpaQUpJOWtzZDhXT3JWVXFJQXFPTzBtU1pJMTl3QzczZ3lTeWRIM1NIZUFwYlQ0amN2YWtoZWtrSkFMK2FWYlNIQ09SdHVQc0dGNE5EdW9ZTVVpc0NCUT09Cg=="
     }
   }
 }
