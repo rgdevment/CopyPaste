@@ -1,3 +1,4 @@
+use crate::aside::{Leaving, aimed_at};
 use crate::here;
 use crate::landing::{Landing, Towards};
 use crate::model::{Metrics, Rows, reveal};
@@ -239,13 +240,13 @@ impl App {
                 ui.set_keeping(now);
             }
         });
-        let ui = self.ui.clone();
+        let (ui, state) = (self.ui.clone(), self.state.clone());
         panel.on_ask_settings(move || {
             let Some(ui) = ui.upgrade() else {
                 return;
             };
             ui.set_sheet_open(false);
-            let _ = ui.hide();
+            step_aside(&ui, &state, Leaving::Away);
             crate::note::tell("settings");
         });
         let ui = self.ui.clone();
@@ -600,10 +601,10 @@ impl App {
                 }
             }
         });
-        let ui = self.ui.clone();
+        let (ui, state) = (self.ui.clone(), self.state.clone());
         panel.on_dismiss(move || {
             if let Some(ui) = ui.upgrade() {
-                let _ = ui.hide();
+                step_aside(&ui, &state, Leaving::Back);
             }
         });
         self.wire_opening(panel);
@@ -626,18 +627,18 @@ impl App {
                         note(&format!("{id} is being opened, slowly"));
                     }
                     ui.set_sheet_open(false);
-                    let _ = ui.hide();
+                    step_aside(&ui, &state, Leaving::Away);
                 }
-                Reached::NoLink => complain(&ui, cannot_open_link()),
+                Reached::NoLink => complain(&ui, crate::excuse::cannot_open_link()),
                 Reached::Missing => {
                     let now = now_ms();
                     if let Err(why) = state.borrow().store.mark_broken(i64::from(id), now) {
                         note(&format!("{id} could not be marked as gone: {why}"));
                     }
                     keeping_place(&ui, &state);
-                    complain(&ui, cannot_open());
+                    complain(&ui, crate::excuse::cannot_open());
                 }
-                Reached::Refused => complain(&ui, cannot_open()),
+                Reached::Refused => complain(&ui, crate::excuse::cannot_open()),
             }
         });
     }
@@ -703,7 +704,7 @@ impl App {
             if let Some(ui) = ui.upgrade() {
                 ui.set_naming(-1);
                 if !landed {
-                    complain(&ui, cannot_name());
+                    complain(&ui, crate::excuse::cannot_name());
                 }
                 keeping_place(&ui, &state);
             }
@@ -1252,27 +1253,6 @@ pub fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn cannot_open() -> &'static str {
-    crate::say::pick(
-        "no se pudo abrir: puede que ya no esté ahí",
-        "could not open it: it may not be there any more",
-    )
-}
-
-fn cannot_open_link() -> &'static str {
-    crate::say::pick(
-        "no se pudo abrir el enlace",
-        "that link could not be opened",
-    )
-}
-
-fn cannot_name() -> &'static str {
-    crate::say::pick(
-        "no se pudo guardar el nombre",
-        "that name could not be kept",
-    )
-}
-
 fn short_of(id: i64, landed: here::Landed) -> bool {
     if let here::Landed::Short { placed, wanted } = landed {
         note(&format!(
@@ -1309,33 +1289,44 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
             let _ = ui.hide();
         }
     };
-    here::paste_into(ahead, hide, move |sent| {
-        let Some(ui) = later.upgrade() else {
-            return;
-        };
-        match sent {
-            here::Sent::Nobody => vanish(&ui),
-            here::Sent::Done => {}
-            here::Sent::Degraded(why) => {
-                let _ = state.borrow().ahead.compare_exchange(
-                    0,
-                    ahead,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                );
-                let said = crate::excuse::why_not(why, crate::say::in_english());
-                note(&format!(
-                    "it stays on the clipboard, unpasted: {why:?}: {said}"
-                ));
-                if ui.show().is_ok() {
-                    forward(&ui);
-                    appear(&ui);
-                    watch_leaving(&ui, &state);
-                    complain(&ui, said);
+    let paste = move || {
+        here::paste_into(ahead, hide, move |sent| {
+            let Some(ui) = later.upgrade() else {
+                return;
+            };
+            match sent {
+                here::Sent::Nobody => vanish(&ui),
+                here::Sent::Done => {}
+                here::Sent::Degraded(why) => {
+                    let _ = state.borrow().ahead.compare_exchange(
+                        0,
+                        ahead,
+                        Ordering::Relaxed,
+                        Ordering::Relaxed,
+                    );
+                    let said = crate::excuse::why_not(why, crate::say::in_english());
+                    note(&format!(
+                        "it stays on the clipboard, unpasted: {why:?}: {said}"
+                    ));
+                    if ui.show().is_ok() {
+                        forward(&ui);
+                        appear(&ui);
+                        watch_leaving(&ui, &state);
+                        complain(&ui, said);
+                    }
                 }
             }
-        }
-    });
+        })
+    };
+    slint::Timer::single_shot(Duration::ZERO, paste);
+}
+
+fn step_aside(ui: &Panel, state: &Rc<RefCell<State>>, leaving: Leaving) {
+    let back = crate::aside::handed_back(&state.borrow().ahead, leaving, here::activated);
+    let _ = ui.hide();
+    if let Some(ahead) = back {
+        here::hand_back(ahead);
+    }
 }
 
 fn forward(panel: &Panel) {
@@ -1391,6 +1382,7 @@ fn listen(
 ) {
     std::thread::spawn(move || {
         use std::io::{BufRead, Read};
+        let host = here::host();
         let input = std::io::stdin();
         let mut reader = std::io::BufReader::new(input.lock());
         let mut said = String::new();
@@ -1403,14 +1395,14 @@ fn listen(
             match said.trim() {
                 "show" => {
                     let asked = Instant::now();
-                    let in_front = here::ahead_now();
-                    if in_front != 0 {
-                        ahead.store(in_front, Ordering::Relaxed);
-                    }
+                    let (in_front, aim) = (here::ahead_now(host), ahead.clone());
                     let kept = shelf.renew();
                     crate::say::adopt_english(kept.english);
                     let dressed = backdrop.clone();
                     let _ = ui.upgrade_in_event_loop(move |panel| {
+                        let before = aim.load(Ordering::Relaxed);
+                        let showing = panel.window().is_visible();
+                        aim.store(aimed_at(in_front, before, showing), Ordering::Relaxed);
                         place(&panel);
                         crate::view::dress_words(&panel);
                         panel.invoke_fresh_start();

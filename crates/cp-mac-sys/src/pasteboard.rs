@@ -100,30 +100,35 @@ impl Pasteboard {
         self.inner.writeObjects(&array)
     }
 
-    pub fn write_items_data(&self, items: &[Vec<(&str, &[u8])>]) -> bool {
+    pub fn write_items_data(&self, items: &[Vec<(&str, &[u8])>]) -> Option<usize> {
         self.inner.clearContents();
-        let mut every = true;
+        let mut refused = 0;
         let written: Vec<objc2::rc::Retained<NSPasteboardItem>> = items
             .iter()
-            .map(|entries| {
+            .filter_map(|entries| {
                 let item = NSPasteboardItem::new();
+                let mut took = false;
                 for (uti, bytes) in entries {
                     let name = NSString::from_str(uti);
                     let data = objc2_foundation::NSData::with_bytes(bytes);
-                    every &= item.setData_forType(&data, &name);
+                    if item.setData_forType(&data, &name) {
+                        took = true;
+                    } else {
+                        refused += 1;
+                    }
                 }
-                item
+                took.then_some(item)
             })
             .collect();
-        if !every {
-            return false;
+        if written.is_empty() {
+            return None;
         }
         let refs: Vec<&objc2::runtime::ProtocolObject<dyn NSPasteboardWriting>> = written
             .iter()
             .map(|item| objc2::runtime::ProtocolObject::from_ref(&**item))
             .collect();
         let array = objc2_foundation::NSArray::from_slice(&refs);
-        self.inner.writeObjects(&array)
+        self.inner.writeObjects(&array).then_some(refused)
     }
 
     pub fn write_data(&self, uti: &str, bytes: &[u8]) -> bool {
@@ -133,13 +138,16 @@ impl Pasteboard {
         self.inner.setData_forType(Some(&data), &name)
     }
 
-    pub fn write_all(&self, entries: &[(&str, &[u8])]) -> bool {
+    pub fn write_all(&self, entries: &[(&str, &[u8])]) -> usize {
         self.inner.clearContents();
-        entries.iter().all(|(uti, bytes)| {
-            let name = NSString::from_str(uti);
-            let data = objc2_foundation::NSData::with_bytes(bytes);
-            self.inner.setData_forType(Some(&data), &name)
-        })
+        entries
+            .iter()
+            .filter(|(uti, bytes)| {
+                let name = NSString::from_str(uti);
+                let data = objc2_foundation::NSData::with_bytes(bytes);
+                !self.inner.setData_forType(Some(&data), &name)
+            })
+            .count()
     }
 
     pub fn write_text(&self, text: &str) -> bool {

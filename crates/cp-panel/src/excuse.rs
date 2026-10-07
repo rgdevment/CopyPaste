@@ -31,6 +31,27 @@ pub fn why_not(failure: Failure, english: bool) -> &'static str {
     }
 }
 
+pub fn cannot_open() -> &'static str {
+    crate::say::pick(
+        "no se pudo abrir: puede que ya no esté ahí",
+        "could not open it: it may not be there any more",
+    )
+}
+
+pub fn cannot_open_link() -> &'static str {
+    crate::say::pick(
+        "no se pudo abrir el enlace",
+        "that link could not be opened",
+    )
+}
+
+pub fn cannot_name() -> &'static str {
+    crate::say::pick(
+        "no se pudo guardar el nombre",
+        "that name could not be kept",
+    )
+}
+
 #[cfg(target_os = "macos")]
 const fn denied_es() -> &'static str {
     "falta el permiso de accesibilidad; sigue copiado"

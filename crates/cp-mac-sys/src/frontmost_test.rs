@@ -43,3 +43,22 @@ fn the_bundle_of_a_pid_is_the_one_its_app_answers_with() {
         assert_eq!(bundle_of(pid), bundle);
     }
 }
+
+#[test]
+fn neither_the_panel_nor_its_host_is_ever_where_a_paste_goes() {
+    assert_eq!(other_than(Some(10), &[10, 20]), 0);
+    assert_eq!(
+        other_than(Some(20), &[10, 20]),
+        0,
+        "the settings window of the host is ours too"
+    );
+    assert_eq!(other_than(Some(30), &[10, 20]), 30);
+    assert_eq!(other_than(None, &[10, 20]), 0);
+}
+
+#[test]
+fn being_in_front_and_having_someone_ahead_never_happen_together() {
+    if is_ours_in_front() {
+        assert_eq!(ahead(), 0);
+    }
+}

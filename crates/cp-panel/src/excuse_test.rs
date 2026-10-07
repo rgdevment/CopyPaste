@@ -89,3 +89,14 @@ fn the_two_ways_of_losing_the_front_are_told_the_same() {
         "the difference between them is ours, not the person's"
     );
 }
+
+#[test]
+fn what_could_not_be_opened_or_named_is_told_apart() {
+    let said = [cannot_open(), cannot_open_link(), cannot_name()];
+    for one in said {
+        assert!(one.len() > 10, "{one}");
+    }
+    assert_ne!(said[0], said[1]);
+    assert_ne!(said[1], said[2]);
+    assert_ne!(said[0], said[2]);
+}

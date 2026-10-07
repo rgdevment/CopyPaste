@@ -2,7 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
-import { licences, notices, useUpdate } from "../core";
+import { licences, notices, type Route, useUpdate } from "../core";
 import { fill, t } from "../locales";
 import { composed } from "../markdown";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
@@ -13,7 +13,6 @@ const COFFEE = "https://buymeacoffee.com/rgdevment";
 const ALTERNATIVE = "https://alternativeto.net/software/copypaste/about/";
 const RATING = "ms-windows-store://review/?ProductId=9NBJRZF3K856";
 const PRIVACY = "https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md";
-const onMac = navigator.userAgent.includes("Macintosh");
 
 function Newer() {
   const { seen, busy, trouble, look, install } = useUpdate();
@@ -105,6 +104,7 @@ export default function About() {
   const [trouble, setTrouble] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
   const [unbound, setUnbound] = useState(false);
+  const [fromStore, setFromStore] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
   const [texts, setTexts] = useState<string | null>(null);
 
@@ -112,6 +112,12 @@ export default function About() {
     getVersion()
       .then(setVersion)
       .catch(() => setVersion(null));
+  }, []);
+
+  useEffect(() => {
+    invoke<Route>("install_route")
+      .then((route) => setFromStore(route === "store"))
+      .catch(() => setFromStore(false));
   }, []);
 
   useEffect(() => {
@@ -200,7 +206,7 @@ export default function About() {
             <span>github.com/rgdevment/CopyPaste</span>
           </span>
         </button>
-        {!onMac && (
+        {fromStore && (
           <button type="button" className="give" onClick={() => go(RATING)}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path

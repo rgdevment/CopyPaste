@@ -144,3 +144,20 @@ fn a_child_just_started_is_listed_with_its_name() {
             .any(|(pid, exe)| *pid == child.id() && exe.eq_ignore_ascii_case("ping.exe"))
     );
 }
+
+#[test]
+fn the_parent_is_read_from_the_process_list() {
+    let list = vec![
+        (10, 4, "host.exe".to_owned()),
+        (20, 10, "panel.exe".to_owned()),
+    ];
+    assert_eq!(parent_in(&list, 20), Some(10));
+    assert_eq!(parent_in(&list, 10), Some(4));
+    assert_eq!(parent_in(&list, 30), None);
+    assert_eq!(parent_in(&[(5, 0, "idle".to_owned())], 5), None);
+}
+
+#[test]
+fn this_very_process_has_a_parent() {
+    assert!(parent_of(std::process::id()).is_some());
+}

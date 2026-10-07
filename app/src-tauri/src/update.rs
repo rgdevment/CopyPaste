@@ -304,6 +304,11 @@ fn offered(version: &str, route: Route) -> Option<Ready> {
     })
 }
 
+#[tauri::command]
+pub fn install_route() -> Route {
+    route()
+}
+
 #[tauri::command(async)]
 pub async fn update_ready(now_please: Option<bool>) -> Result<Looked, String> {
     let route = route();

@@ -50,3 +50,33 @@ fn a_window_that_is_not_in_front_is_elsewhere() {
     assert_ne!(other.window, front);
     assert_eq!(focus_of(&other), Focus::Elsewhere);
 }
+
+#[test]
+fn a_window_that_is_gone_is_told_once_the_panel_has_hidden() {
+    let mut hidden = false;
+    let gone = Target {
+        window: HWND::default(),
+        focus: None,
+        thread: 0,
+    };
+    assert_eq!(
+        paste_into(&gone, || hidden = true),
+        Outcome::Degraded(Failure::TargetGone)
+    );
+    assert!(hidden);
+}
+
+#[test]
+fn a_target_that_lost_the_front_before_the_keystroke_is_never_typed_into() {
+    assert_eq!(hold_of(Focus::OnTarget), Hold::Go);
+    assert_eq!(
+        hold_of(Focus::Elsewhere),
+        Hold::Stop,
+        "another window took the front meanwhile: it stays on the clipboard"
+    );
+    assert_eq!(
+        hold_of(Focus::Unknown),
+        Hold::Wait,
+        "nobody in front is Windows switching, and it is waited out"
+    );
+}

@@ -61,3 +61,14 @@ fn attaching_to_our_own_thread_is_refused() {
     assert!(Attached::to(ours).is_none());
     assert!(Attached::to(0).is_none());
 }
+
+#[test]
+fn neither_the_panel_nor_its_host_is_ever_where_a_paste_goes() {
+    assert!(is_one_of(Some(10), &[10, 20]));
+    assert!(
+        is_one_of(Some(20), &[10, 20]),
+        "the settings window of the host is ours too"
+    );
+    assert!(!is_one_of(Some(30), &[10, 20]));
+    assert!(!is_one_of(None, &[10, 20]));
+}

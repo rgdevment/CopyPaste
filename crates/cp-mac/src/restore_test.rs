@@ -222,3 +222,52 @@ fn an_offered_text_replaces_the_one_the_item_had_and_nothing_offered_changes_not
     assert_eq!(offering(writable_of(&item), None), writable_of(&item));
     assert_eq!(offering(writable_of(&item), Some("")), writable_of(&item));
 }
+
+#[test]
+fn a_format_announced_without_bytes_is_not_counted_as_one_that_fell_short() {
+    let item = Item {
+        kind: None,
+        formats: vec![
+            inline(PLAIN_TEXT, b"hello"),
+            Format {
+                id: "public.tiff".into(),
+                payload: Payload::Announced { size: Some(9) },
+            },
+            Format {
+                id: "public.png".into(),
+                payload: Payload::TooBig { size: 1 << 30 },
+            },
+        ],
+    };
+    let writable = writable_of(&item);
+    assert_eq!(writable.len(), 1, "only what carries bytes is written");
+    assert_eq!(
+        restored_of(writable.len(), Some(0)),
+        Restored::Written {
+            formats: 1,
+            wanted: 1
+        }
+    );
+}
+
+#[test]
+fn one_refused_file_among_several_counts_as_one_and_not_as_all_of_them() {
+    let joined = &b"file:///a/one.txt
+file:///a/two.txt
+file:///a/three.txt"[..];
+    let per_file = one_item_per_file(&[(FILE_URL, joined)]).expect("three files");
+    let wanted = per_file.iter().map(Vec::len).sum();
+    assert_eq!(
+        restored_of(wanted, Some(1)),
+        Restored::Written {
+            formats: 2,
+            wanted: 3
+        }
+    );
+}
+
+#[test]
+fn nothing_landing_is_a_failure_and_not_a_short_write() {
+    assert_eq!(restored_of(1, Some(1)), Restored::Failed);
+    assert_eq!(restored_of(3, None), Restored::Failed);
+}

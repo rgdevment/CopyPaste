@@ -181,7 +181,7 @@ fn what_goes_back_to_the_pasteboard(b: &mut Battery, pb: &Pasteboard) {
 
     b.case(
         "I4",
-        "restoring says so when the item was incomplete",
+        "a format announced without bytes is not counted as one that fell short",
         || {
             let partial = cp_core::item::Item {
                 kind: Some(Kind::Text),
@@ -199,7 +199,7 @@ fn what_goes_back_to_the_pasteboard(b: &mut Battery, pb: &Pasteboard) {
             match cp_mac::restore::to_pasteboard(pb, &partial) {
                 cp_mac::restore::Restored::Written {
                     formats: 1,
-                    incomplete: true,
+                    wanted: 1,
                 } => Ok(()),
                 other => Err(format!("it gave back {other:?}")),
             }

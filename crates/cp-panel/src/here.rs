@@ -6,10 +6,11 @@ use raw_window_handle::RawWindowHandle;
 use std::path::{Path, PathBuf};
 
 pub use platform::{
-    Dragged, THUMBNAILS_FILES, Watching, ahead_now, capture_insisting, content_of, data_dir,
-    drag_out, dress, forward, ground, in_front, keep_awake, media_of, ocr_available, open_link,
-    open_path, ours_up_front, paste_into, pointer, read_stuck, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable, utc_offset_at, watch_start,
+    Dragged, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting, content_of,
+    data_dir, drag_out, dress, forward, ground, hand_back, host, in_front, keep_awake, media_of,
+    ocr_available, open_link, open_path, ours_up_front, paste_into, pointer, read_stuck,
+    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable,
+    utc_offset_at, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -38,6 +39,7 @@ pub enum Sent {
 mod platform {
     use super::*;
     use cp_win_sys::clipboard::Clipboard;
+    use std::time::Duration;
 
     pub use cp_core::thumbnail::THUMBNAILS_FILES;
     pub use cp_core::watching::Watching;
@@ -161,12 +163,17 @@ mod platform {
         cp_win_sys::theme::wants_light().unwrap_or(false)
     }
 
-    pub fn ahead_now() -> isize {
-        cp_win_sys::frontmost::ahead()
+    pub fn host() -> u32 {
+        let ours = std::process::id();
+        cp_win_sys::source::parent_of(ours).unwrap_or(ours)
+    }
+
+    pub fn ahead_now(host: u32) -> isize {
+        cp_win_sys::frontmost::ahead_besides(&[std::process::id(), host])
     }
 
     pub fn ours_up_front() -> Option<bool> {
-        Some(ahead_now() == 0)
+        cp_win_sys::frontmost::foreground().map(cp_win_sys::frontmost::process_of_is_ours)
     }
 
     pub fn dress(handle: RawWindowHandle, wanted: &str, light: bool) {
@@ -197,16 +204,40 @@ mod platform {
     }
 
     pub fn paste_into(ahead: isize, hide: impl FnOnce(), finished: impl FnOnce(Sent) + 'static) {
-        finished(pasted(ahead, hide));
+        let Some(target) = cp_win_sys::frontmost::target_at(ahead) else {
+            return finished(Sent::Nobody);
+        };
+        match cp_win::paste::Pasting::start(target, hide) {
+            Ok(mut pasting) => keep_pasting(move || pasting.advance(), finished, Duration::ZERO),
+            Err(outcome) => finished(sent_of(outcome)),
+        }
     }
 
-    fn pasted(ahead: isize, hide: impl FnOnce()) -> Sent {
-        let Some(target) = cp_win_sys::frontmost::target_at(ahead) else {
-            return Sent::Nobody;
-        };
-        match cp_win::paste::paste_into(&target, hide) {
+    pub fn keep_pasting(
+        mut advance: impl FnMut() -> cp_win::paste::Advance + 'static,
+        finished: impl FnOnce(Sent) + 'static,
+        after: Duration,
+    ) {
+        slint::Timer::single_shot(after, move || match advance() {
+            cp_win::paste::Advance::Done(outcome) => finished(sent_of(outcome)),
+            cp_win::paste::Advance::After(next) => keep_pasting(advance, finished, next),
+        });
+    }
+
+    pub fn sent_of(outcome: cp_win::paste::Outcome) -> Sent {
+        match outcome {
             cp_win::paste::Outcome::Sent { .. } => Sent::Done,
             cp_win::paste::Outcome::Degraded(why) => Sent::Degraded(why),
+        }
+    }
+
+    pub fn activated() -> bool {
+        ours_up_front() == Some(true)
+    }
+
+    pub fn hand_back(ahead: isize) {
+        if let Some(target) = cp_win_sys::frontmost::target_at(ahead) {
+            cp_win_sys::frontmost::bring_forward(target.window);
         }
     }
 
@@ -318,13 +349,12 @@ mod platform {
         let pb = Pasteboard::general_from_any_thread();
         starting();
         let landed = match cp_mac::restore::to_pasteboard_offering(&pb, item, offered.as_deref()) {
-            cp_mac::restore::Restored::Written {
-                formats,
-                incomplete: true,
-            } => Landed::Short {
-                placed: formats,
-                wanted: item.formats.len(),
-            },
+            cp_mac::restore::Restored::Written { formats, wanted } if formats < wanted => {
+                Landed::Short {
+                    placed: formats,
+                    wanted,
+                }
+            }
             cp_mac::restore::Restored::Written { .. } => Landed::Whole,
             _ => Landed::Nothing,
         };
@@ -350,8 +380,23 @@ mod platform {
         cp_mac_sys::theme::wants_light().unwrap_or(false)
     }
 
-    pub fn ahead_now() -> isize {
-        cp_mac_sys::frontmost::ahead() as isize
+    pub fn host() -> u32 {
+        std::os::unix::process::parent_id()
+    }
+
+    pub fn ahead_now(host: u32) -> isize {
+        let host = i32::try_from(host).unwrap_or(0);
+        cp_mac_sys::frontmost::ahead_besides(&[cp_mac_sys::frontmost::our_pid(), host]) as isize
+    }
+
+    pub fn activated() -> bool {
+        cp_mac_sys::frontmost::is_ours_in_front()
+    }
+
+    pub fn hand_back(ahead: isize) {
+        if let Ok(pid) = i32::try_from(ahead) {
+            cp_mac_sys::frontmost::bring_to_front(pid);
+        }
     }
 
     pub fn ours_up_front() -> Option<bool> {
