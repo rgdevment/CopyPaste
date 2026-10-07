@@ -164,9 +164,9 @@ component NameField inherits Rectangle {
     callback done(string);
     callback gave-up();
     border-radius: 5px;
-    background: Theme.field;
+    background: Theme.tile;
     border-width: 1px;
-    border-color: Theme.focus;
+    border-color: Theme.accent;
     in property <int> room;
     if root.room > 0 && field.text.character-count > root.room - 12 : Text {
         x: parent.width - self.width - 6px;
@@ -223,7 +223,7 @@ component KeyChip inherits Rectangle {
     height: 22px;
     width: chip-row.preferred-width;
     border-radius: Theme.radius-inset;
-    background: touch.has-hover ? Theme.row-hover : on ? Theme.selected : Theme.field;
+    background: touch.has-hover ? Theme.hover : on ? Theme.selected : Theme.field;
     animate background { duration: 100ms; }
     border-width: 1px;
     border-color: on || touch.has-hover ? Theme.selected-edge : Theme.field-border;
@@ -277,7 +277,7 @@ export component CardView inherits Rectangle {
     accessible-label: (card.name != "" ? card.name + ", " : "") + card.title + ", " + card.body;
     border-radius: Theme.radius-card;
     border-width: 1px;
-    border-color: lit ? Theme.selected-edge : Theme.card-edge;
+    border-color: Theme.card-edge;
     background: lit ? Theme.selected : hovering ? Theme.row-hover : Theme.card;
     animate background, border-color { duration: lit || hovering ? 0ms : Theme.let-go; easing: ease-out; }
     touch := TouchArea {
@@ -336,7 +336,7 @@ export component CardView inherits Rectangle {
                     text: card.name;
                     color: Theme.body;
                     font-size: Theme.fs-small;
-                    font-weight: 600;
+                    font-weight: Theme.fw-title;
                     overflow: elide;
                     wrap: no-wrap;
                     max-width: 180px;
@@ -364,7 +364,7 @@ export component CardView inherits Rectangle {
                     text: card.title;
                     color: Hue.of(card.kind);
                     font-size: Theme.fs-meta;
-                    font-weight: 600;
+                    font-weight: Theme.fw-title;
                     vertical-alignment: center;
                 }
                 if card.aside-said != "" : Text {
@@ -756,7 +756,7 @@ export component CardView inherits Rectangle {
         if !mixed && !card.has-thumb && (!card.found || open) && !(special && !open) : Text {
             text: open ? card.body : card.squeezed;
             color: card.mono ? Theme.mono : Theme.body;
-            font-size: card.mono ? 12px : 13px;
+            font-size: card.mono ? Theme.fs-small : Theme.fs-body;
             font-family: card.mono ? Theme.mono-font : Theme.font;
             overflow: elide;
             height: open ? (card.claims ? Theme.line : card.body-lines * Theme.line) : 36px;
@@ -812,7 +812,7 @@ export component CardView inherits Rectangle {
                 text: card.name != "" ? card.name : card.title;
                 color: card.broken ? Theme.danger : Theme.title;
                 font-size: Theme.fs-meta;
-                font-weight: 600;
+                font-weight: Theme.fw-title;
                 overflow: elide;
                 wrap: no-wrap;
                 vertical-alignment: center;

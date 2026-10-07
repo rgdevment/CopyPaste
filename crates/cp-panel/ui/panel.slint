@@ -156,7 +156,7 @@ export component Panel inherits Window {
                     width: 34px;
                     height: 3px;
                     border-radius: 2px;
-                    background: handle.has-hover ? Theme.grip-hover : Theme.grip;
+                    background: handle.has-hover ? Theme.muted : Theme.grip;
                     animate background { duration: 120ms; }
                 }
             }
@@ -794,11 +794,6 @@ export component Panel inherits Window {
             Rectangle {
                 height: 32px;
                 background: Theme.footer;
-                Rectangle {
-                    y: 0px;
-                    height: 1px;
-                    background: Theme.panel-border;
-                }
                 mover := TouchArea {
                     mouse-cursor: move;
                     moved => {
@@ -862,7 +857,7 @@ export component Panel inherits Window {
             background: Theme.field;
                 border-radius: Theme.radius-card;
                 border-width: 1px;
-                border-color: Theme.panel-border;
+                border-color: Theme.selected-edge;
             drop-shadow-blur: 20px;
             drop-shadow-color: Theme.scrim;
             drop-shadow-offset-y: 8px;
