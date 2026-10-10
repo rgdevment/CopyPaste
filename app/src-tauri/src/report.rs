@@ -23,9 +23,25 @@ fn logs() -> PathBuf {
 pub fn open_log(app: tauri::AppHandle) -> Result<(), String> {
     let dir = logs();
     std::fs::create_dir_all(&dir).map_err(|why| why.to_string())?;
+    let dir = seen_outside(dir);
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)
         .map_err(|why| why.to_string())
+}
+
+#[cfg(windows)]
+fn seen_outside(dir: PathBuf) -> PathBuf {
+    if crate::update::route() != crate::update::Route::Store {
+        return dir;
+    }
+    cp_win_sys::paths::in_package(&dir)
+        .filter(|it| it.exists())
+        .unwrap_or(dir)
+}
+
+#[cfg(not(windows))]
+fn seen_outside(dir: PathBuf) -> PathBuf {
+    dir
 }
 
 #[tauri::command(async)]
@@ -144,15 +160,15 @@ pub fn redact(text: &str, home: Option<&str>, user: Option<&str>) -> String {
 }
 
 fn swap(text: &str, needle: &str, with: &str, whole_word: bool) -> String {
-    let lower = text.to_ascii_lowercase();
-    let wanted = needle.to_ascii_lowercase();
     let mut out = String::with_capacity(text.len());
     let mut kept = 0;
-    let mut from = 0;
-    while let Some(found) = lower[from..].find(&wanted) {
-        let start = from + found;
-        let end = start + wanted.len();
-        from = end;
+    for (start, _) in text.char_indices() {
+        if start < kept {
+            continue;
+        }
+        let Some(end) = found_at(text, start, needle) else {
+            continue;
+        };
         if whole_word
             && !(bounded(text[..start].chars().next_back()) && bounded(text[end..].chars().next()))
         {
@@ -164,6 +180,19 @@ fn swap(text: &str, needle: &str, with: &str, whole_word: bool) -> String {
     }
     out.push_str(&text[kept..]);
     out
+}
+
+fn found_at(text: &str, start: usize, needle: &str) -> Option<usize> {
+    let mut there = text[start..].char_indices();
+    let mut end = start;
+    for wanted in needle.chars() {
+        let (at, got) = there.next()?;
+        if got != wanted && !got.to_lowercase().eq(wanted.to_lowercase()) {
+            return None;
+        }
+        end = start + at + got.len_utf8();
+    }
+    Some(end)
 }
 
 fn bounded(next: Option<char>) -> bool {

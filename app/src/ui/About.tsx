@@ -304,7 +304,7 @@ export default function About() {
               type="button"
               className="welcome-link"
               onClick={() => {
-                revealItemInDir(report).catch(() => setTrouble(t("logRefused")));
+                revealItemInDir(report).catch(() => setTrouble(t("reportShowRefused")));
               }}
             >
               {t("reportShow")}

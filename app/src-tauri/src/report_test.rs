@@ -81,3 +81,13 @@ fn a_line_said_over_and_over_is_written_once_with_its_count() {
 fn only_the_last_lines_are_kept() {
     assert_eq!(fold("a 1 1 x\nb 1 1 y\nc 1 1 z\n", 2), "b 1 1 y\nc 1 1 z\n");
 }
+
+#[test]
+fn a_name_with_accents_is_hidden_whatever_its_case() {
+    let said = redact(
+        r"C:\USERS\JOSÉ\x and müller and MÜLLER",
+        Some(r"C:\Users\José"),
+        Some("Müller"),
+    );
+    assert_eq!(said, r"~\x and <user> and <user>");
+}

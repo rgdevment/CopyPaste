@@ -21,16 +21,28 @@ pub fn legacy_in(local: &std::path::Path) -> PathBuf {
     if plain.join("clipboard.db").exists() {
         return plain;
     }
-    let packaged = local
-        .join("Packages")
-        .join(STORE_FAMILY)
-        .join("LocalCache")
-        .join("Local")
-        .join("CopyPaste");
+    let packaged = in_package_of(local, &plain).unwrap_or_else(|| plain.clone());
     if packaged.join("clipboard.db").exists() {
         return packaged;
     }
     plain
+}
+
+pub fn in_package(path: &std::path::Path) -> Option<PathBuf> {
+    let local = std::env::var_os("LOCALAPPDATA")?;
+    in_package_of(std::path::Path::new(&local), path)
+}
+
+pub fn in_package_of(local: &std::path::Path, path: &std::path::Path) -> Option<PathBuf> {
+    let rest = path.strip_prefix(local).ok()?;
+    Some(
+        local
+            .join("Packages")
+            .join(STORE_FAMILY)
+            .join("LocalCache")
+            .join("Local")
+            .join(rest),
+    )
 }
 
 pub fn legacy_database() -> Option<PathBuf> {

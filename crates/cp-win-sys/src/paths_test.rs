@@ -97,3 +97,16 @@ fn with_no_2x_anywhere_the_plain_folder_is_the_answer() {
     assert_eq!(legacy_in(&local), local.join("CopyPaste"));
     let _ = std::fs::remove_dir_all(&local);
 }
+
+#[test]
+fn a_folder_under_local_app_data_has_its_twin_inside_the_package() {
+    let local = std::path::Path::new(r"C:\Users\u\AppData\Local");
+    assert_eq!(
+        in_package_of(local, &local.join("CopyPaste").join("logs")),
+        Some(packaged_in(local).join("logs"))
+    );
+    assert_eq!(
+        in_package_of(local, std::path::Path::new(r"D:\elsewhere")),
+        None
+    );
+}
