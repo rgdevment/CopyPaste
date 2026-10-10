@@ -66,7 +66,7 @@ To be absolutely clear:
 - ❌ **Does not use advertising or ad networks**
 - ❌ **Does not send your data to any cloud AI** — The text in your pictures is read on your machine, by the operating system itself (Windows OCR on Windows, Apple Vision on macOS)
 - ❌ **Does not sync across devices**
-- ❌ **Does not upload crash reports** — A crash is written to the local log beside the history, and sharing it is a file you attach yourself
+- ❌ **Does not upload crash reports** — A crash is written to the local log beside the history, and sharing it is a file you attach yourself. **Save a report…** in About puts that log, the version and the system into one file, with your user name and home folder blanked out, wherever you choose
 - ❌ **Does not phone home** — No background network calls except the update checker described below (all platforms)
 
 ---

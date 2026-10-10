@@ -5,6 +5,10 @@
   "devDependencies": {
     "markdownlint-cli2": "^0.23.2"
   },
+  "overrides": {
+    "katex": "^0.18.2",
+    "smol-toml": "^1.9.0"
+  },
   "scripts": {
     "prepare": "git config core.hooksPath hooks || echo the hooks are not set: this is not a git clone",
     "lint:md": "markdownlint-cli2",

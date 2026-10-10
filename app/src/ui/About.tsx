@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 import { licences, notices, type Route, useUpdate } from "../core";
 import { fill, t } from "../locales";
@@ -107,6 +107,8 @@ export default function About() {
   const [fromStore, setFromStore] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
   const [texts, setTexts] = useState<string | null>(null);
+  const [report, setReport] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getVersion()
@@ -133,6 +135,22 @@ export default function About() {
         ? invoke("open_web", { url: where })
         : openUrl(where);
     asked.catch(() => setTrouble(fill("linkRefused", where)));
+  };
+
+  const saveReport = () => {
+    setTrouble(null);
+    setSaving(true);
+    invoke<string | null>("save_report")
+      .then((path) => {
+        if (path) setReport(path);
+      })
+      .catch(() => setTrouble(t("reportRefused")))
+      .finally(() => setSaving(false));
+  };
+
+  const openLog = () => {
+    setTrouble(null);
+    invoke("open_log").catch(() => setTrouble(t("logRefused")));
   };
 
   return (
@@ -272,15 +290,27 @@ export default function About() {
           {t("troubleYours")}
         </p>
         <div className="feet">
-          <button type="button" className="mild" disabled>
-            {t("troubleReport")}
-            <span className="soon">{t("soon")}</span>
+          <button type="button" className="mild" disabled={saving} onClick={saveReport}>
+            {saving ? t("busy") : t("troubleReport")}
           </button>
-          <button type="button" className="mild" disabled>
+          <button type="button" className="mild" onClick={openLog}>
             {t("troubleLog")}
-            <span className="soon">{t("soon")}</span>
           </button>
         </div>
+        {report && (
+          <p className="quiet">
+            {t("reportSaved")}{" "}
+            <button
+              type="button"
+              className="welcome-link"
+              onClick={() => {
+                revealItemInDir(report).catch(() => setTrouble(t("reportShowRefused")));
+              }}
+            >
+              {t("reportShow")}
+            </button>
+          </p>
+        )}
       </div>
 
       <div className="links">
