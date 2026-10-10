@@ -110,3 +110,13 @@ fn a_folder_under_local_app_data_has_its_twin_inside_the_package() {
         None
     );
 }
+
+#[test]
+fn the_package_twin_is_looked_for_under_this_machine_s_local_app_data() {
+    let Some(dir) = data_dir() else {
+        return;
+    };
+    let local = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").expect("local"));
+    assert_eq!(in_package(&dir), in_package_of(&local, &dir));
+    assert!(in_package(&dir).is_some_and(|it| it.ends_with("CopyPaste")));
+}
