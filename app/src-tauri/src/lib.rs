@@ -4,6 +4,7 @@ mod links;
 mod looks;
 mod note;
 mod panel;
+mod report;
 mod reviving;
 mod settings;
 mod tray;
@@ -45,6 +46,8 @@ pub fn run() {
             backup::load_backup,
             backup::bring_former,
             backup::drop_former,
+            report::save_report,
+            report::open_log,
             update::update_ready,
             update::install_route,
             update::update_install,

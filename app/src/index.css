@@ -607,17 +607,6 @@ button:disabled {
   background: var(--field);
 }
 
-.soon {
-  display: inline-block;
-  margin-left: 8px;
-  border: 1px solid var(--hair);
-  border-radius: var(--r-inset);
-  padding: 2px 7px;
-  font-size: var(--fs-caption);
-  color: var(--muted);
-  vertical-align: middle;
-}
-
 .brow {
   display: flex;
   align-items: center;
