@@ -20,8 +20,8 @@ pub fn place(panel: &Panel) {
     };
     let theme = panel.global::<crate::Theme>();
     let zoom = f64::from(theme.get_zoom());
-    let width = f64::from(theme.get_width() + theme.get_margin() * 2.0) * zoom;
-    let height = f64::from(theme.get_height() + theme.get_margin() * 2.0) * zoom;
+    let width = f64::from(theme.get_width()) * zoom;
+    let height = f64::from(theme.get_height()) * zoom;
     let window = panel.window();
     let scale = pointer.scale;
     if pointer.physical {
@@ -60,10 +60,7 @@ pub fn zoom(panel: &Panel) {
     });
     let side = |logical: f32| (logical * wanted).round().max(1.0) as u32;
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let size = slint::PhysicalSize::new(
-        side(theme.get_width() + theme.get_margin() * 2.0),
-        side(theme.get_height() + theme.get_margin() * 2.0),
-    );
+    let size = slint::PhysicalSize::new(side(theme.get_width()), side(theme.get_height()));
     let bound = i_slint_backend_winit::winit::dpi::PhysicalSize::new(size.width, size.height);
     window.with_winit_window(|winit| {
         winit.set_min_inner_size(Some(bound));

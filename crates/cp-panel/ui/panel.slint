@@ -9,8 +9,8 @@ import { NewerStrip } from "newer.slint";
 export { Card, Chip, FormRow, Theme, Words }
 
 export component Panel inherits Window {
-    width: Theme.width + Theme.margin * 2;
-    height: Theme.height + Theme.margin * 2;
+    width: Theme.width;
+    height: Theme.height;
     no-frame: true;
     always-on-top: true;
     background: Theme.apple ? Theme.panel : transparent;
@@ -126,8 +126,6 @@ export component Panel inherits Window {
 
     panel := Rectangle {
         property <length> sheet-top: root.list-top + root.sheet-anchor + root.sheet-span + list.content-y + 4px;
-        x: Theme.margin;
-        y: Theme.margin + (1.0 - root.shown) * (Theme.apple ? 0px : 8px);
         width: Theme.width;
         height: Theme.height;
         border-radius: Theme.radius;
@@ -135,12 +133,8 @@ export component Panel inherits Window {
         border-color: Theme.panel-border;
         background: Theme.panel;
         opacity: Theme.apple ? 1.0 : root.shown;
-        drop-shadow-blur: Theme.shadow-blur;
-        drop-shadow-color: Theme.shadow;
-        drop-shadow-offset-y: Theme.apple ? 0px : 10px;
         clip: true;
         animate opacity { duration: Theme.appear; easing: ease-out; }
-        animate y { duration: Theme.appear; easing: ease-out; }
 
         VerticalLayout {
             padding: 0px;

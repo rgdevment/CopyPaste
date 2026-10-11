@@ -119,9 +119,6 @@ impl App {
             ui: panel.as_weak(),
             state,
         };
-        if app.state.borrow().options.flat {
-            panel.global::<crate::Theme>().set_shadow_blur(0.0);
-        }
         app.wire(&panel);
         dress_theme(&panel, kept.light(here::system_is_light()), kept.look);
         refresh(&panel, &app.state);

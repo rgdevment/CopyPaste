@@ -132,7 +132,6 @@ pub struct Options {
     pub serve: bool,
     pub signals: Option<PathBuf>,
     pub backdrop: String,
-    pub flat: bool,
 }
 
 impl Options {
@@ -140,7 +139,6 @@ impl Options {
         let mut db = None;
         let mut measure = false;
         let mut serve = false;
-        let mut flat = false;
         let mut backdrop = "none".to_owned();
         let mut args = std::env::args().skip(1);
         while let Some(arg) = args.next() {
@@ -148,7 +146,6 @@ impl Options {
                 "--db" => db = args.next().map(PathBuf::from),
                 "--measure" => measure = true,
                 "--serve" => serve = true,
-                "--flat" => flat = true,
                 "--backdrop" => backdrop = args.next().unwrap_or_default(),
                 other => eprintln!("argument ignored: {other}"),
             }
@@ -164,7 +161,6 @@ impl Options {
             serve,
             signals: std::env::var_os("CP_PANEL_SIGNALS").map(PathBuf::from),
             backdrop,
-            flat,
         })
     }
 }
