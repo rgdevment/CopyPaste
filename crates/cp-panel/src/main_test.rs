@@ -110,7 +110,7 @@ fn centre_of(bench: &Bench, index: usize) -> LogicalPosition {
     } else {
         0.0
     };
-    let list_top = panel.global::<Theme>().get_margin() + panel.get_list_top();
+    let list_top = panel.get_list_top();
     let y = list_top + panel.get_scroll_y() + top + head + (span - head - GAP) / 2.0;
     LogicalPosition::new(200.0, y)
 }
@@ -151,9 +151,7 @@ fn a_double_click_pastes_the_card_under_it_whatever_was_open_and_however_slow() 
             }
             bench.moved.borrow_mut().clear();
             let at = centre_of(&bench, target);
-            let floor = bench.panel.global::<Theme>().get_margin()
-                + bench.panel.get_list_top()
-                + bench.panel.get_viewport_height();
+            let floor = bench.panel.get_list_top() + bench.panel.get_viewport_height();
             assert!(at.y < floor, "card {target} is out of sight at {}", at.y);
             click(&bench.panel, at, 90);
             tick(gap);
