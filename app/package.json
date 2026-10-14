@@ -2,7 +2,7 @@
   "name": "copypaste-window",
   "private": true,
   "version": "3.0.0",
-  "homepage": "https://rgdevment.com/copypaste/",
+  "homepage": "https://www.copanda.app/",
   "type": "module",
   "scripts": {
     "dev": "vite",

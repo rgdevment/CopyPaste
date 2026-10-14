@@ -37,7 +37,7 @@
   </p>
 
   <p align="center">
-    <a href="https://rgdevment.com/copypaste/"><b>rgdevment.com/copypaste</b></a>
+    <a href="https://www.copanda.app/"><b>www.copanda.app</b></a>
   </p>
 
   <p align="center">

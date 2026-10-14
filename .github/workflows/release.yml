@@ -1517,7 +1517,7 @@ jobs:
           	  name "CoPanda"
           	  name "CopyPaste"
           	  desc "Clipboard history that stays on your machine${SUFFIX}"
-          	  homepage "https://rgdevment.com/copypaste/"
+          	  homepage "https://www.copanda.app/"
 
           	  auto_updates true
 
