@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="resources/brand/copanda-head.svg" width="140" height="126" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
+  <img src="resources/brand/icon_app_256.png" width="140" height="140" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
 
   <h1>CoPanda (formerly CopyPaste) — Free Open Source Clipboard Manager</h1>
   <p><em>An extra thumb for your clipboard.</em></p>
@@ -675,16 +675,20 @@ way you work.
 
 I build free, open source tools focused on privacy and productivity. If you like CoPanda, you might also find these useful:
 
-### <img src="app/src/linkunbound.svg" width="28" height="28" alt=""/> [LinkUnbound](https://www.linkunbound.app/)
-
-A free, open source browser picker for Windows and Mac. Every link you click gets intercepted — domain rules open the assigned browser instantly, or a small picker appears near your cursor to let you choose. Resolves Microsoft SafeLinks and redirect wrappers before matching rules.
-
-No ads. No telemetry. No accounts. Everything local.
-
-### <img src="app/src/tisty.svg" width="28" height="28" alt=""/> [Tisty](https://www.tisty.app/)
-
-Notes, documents and tasks that stay on your machine, in plain files you can read
-without it. Same rules as everything else here: no accounts, no telemetry, no cloud.
+<table>
+  <tr>
+    <td width="96" align="center">
+      <a href="https://www.tisty.app/"><img src="app/src/tisty.svg" alt="Tisty the beaver" width="72"/></a>
+    </td>
+    <td><b><a href="https://www.tisty.app/">Tisty</a></b> — Notes, documents and tasks kept as plain files on your own disk, readable without the application. Windows and macOS.</td>
+  </tr>
+  <tr>
+    <td width="96" align="center">
+      <a href="https://www.linkunbound.app/"><img src="app/src/linkunbound.svg" alt="LinkUnbound the bear" width="72"/></a>
+    </td>
+    <td><b><a href="https://www.linkunbound.app/">LinkUnbound</a></b> — A browser picker that opens every link in the right browser, by your rules or from a small picker by the cursor. Windows and macOS.</td>
+  </tr>
+</table>
 
 ---
 
