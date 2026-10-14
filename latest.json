@@ -1,18 +1,18 @@
 {
-  "version": "3.1.5",
-  "notes": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.1.5",
+  "version": "3.2.0",
+  "notes": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.2.0",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.5/copypaste-installer-3.1.5-windows-x86_64.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzc5aEZ1aWw4bXZoQ1dlbzZhNmUxT3ord3E0YTdKUk5rUDE5SEF3SHg2VjQ0eEhyTWZ4OTcxcU82eFBCUk1lWjRSclJNK0xGWkxEMjFHSTZhelhxTkFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNzUwNzgyCWZpbGU6Y29weXBhc3RlLWluc3RhbGxlci0zLjEuNS13aW5kb3dzLXg4Nl82NC5leGUJdmVyc2lvbjozLjEuNQpCS04xSTNvTlJFZFhqNEhOMU5RbWlCYUN6L21PbW5BMEdzNldOQm5JQkk2bWZhRW9xMCt6U005MW5TakRlN1dzeGJ4VWFFV21iaGd4MXJGR1BUTmZDZz09Cg=="
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.2.0/copanda-installer-3.2.0-windows-x86_64.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzBwb0swMm9GUVZWTFVrdkNMaXFtWnR1VmdhQ2lpNktBM1d1bTkzNzYzbzdxdGIwN0UzUDNxOWRlMElBN1FubktwMzl2cTRjN1VWOGNaSXNma1hEMUFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTgwODY1CWZpbGU6Y29wYW5kYS1pbnN0YWxsZXItMy4yLjAtd2luZG93cy14ODZfNjQuZXhlCXZlcnNpb246My4yLjAKOVlvbGc4bE9PVDAybnhwVFBPd1RnSUNlb1VLeXVGR1Q3YnJmVVFTTkd1Mm5WRzRzS2dGcmFNUkh0SXQrSnlRZ1UzK24za1QvMFcwa1pYSXhrRXMyQXc9PQo="
     },
     "darwin-aarch64": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.5/copypaste-3.1.5-macos-aarch64.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzV6Z2lXaTJuRzJCWGxnNGsydS9TU3l6Zmk4VUV2MDhWMGVpZDVJeHM4ckZma2l6NTE1Tk9teVlVRjl3Tk5rcDNOVDcwUkpsRmhvZUxJK2lXVnNNb1FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNzUxMDU2CWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oJdmVyc2lvbjozLjEuNQo0aUtNZDd1MnNzR0lybzdOaEZXeVRpTEpEczZXZjBOMWNhN21MSHI0TTV0YVZFcXZuMGMwYjhvNktTeExGMzFFZ2dpaHBJWmROdGduMUZYY2xuTnNEZz09Cg=="
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.2.0/copanda-3.2.0-macos-aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzdtMmE5aVNVQWJ2dFhMUTBUVlc1L1NMam9MQmtENXpVZDdiczYyUUJFamt3ckYxVVBqcVhzUFZCMXoyOEZQdkNwNmZ4b0ttTzFiUDQ4UTJVdWI3VFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTgxMDQzCWZpbGU6Q29QYW5kYS5hcHAudGFyLmd6CXZlcnNpb246My4yLjAKVndvK0ZleDBmLzR3RVVtYkFjbzJiZThaM0RtOWVlaHMrb3ZDL20vMG9QWGcvOVpCTEs1YUVoWVZ5NGROeURySUEwcW5jakpiTDdvSjZ3bE5KM1IzQ2c9PQo="
     },
     "darwin-x86_64": {
-      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.1.5/copypaste-3.1.5-macos-x86_64.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzdFT3FmSWFuUFRoRFpFTS9vVWNXbkFZS2RoanpIajRRMHlHWUFESHhhUVAvTnNtWlVKdGFrM3JtaWRuKzVmUEFnWS9FMGZ6Ly9yNWlDVG1sL1NMcWdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNzUwOTMyCWZpbGU6Q29weVBhc3RlLmFwcC50YXIuZ3oJdmVyc2lvbjozLjEuNQpZSXorZXhpTmpveThnZDh1Y0MvWmxGQitGMm00enBFV0xvR0pZVjBNRDV4RHAzNGlLZm1RSG1ZejREWCtNbXV1d3FaNzd1VGlZUVJwTVBaM0lmMmRCUT09Cg=="
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.2.0/copanda-3.2.0-macos-x86_64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUdnU5elhBbVgzTzhOcEZhWnRlSWk2MWFpaWZHeW5vNjBnSjF3ZDlpbWpFVXhTTVl2RXJHcm1WL3JQVU5ZS01HNXRCbEdSeXFFYnFjbnpuNHE4eGF6UklUUUxqN2cvUXcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTgwNzY3CWZpbGU6Q29QYW5kYS5hcHAudGFyLmd6CXZlcnNpb246My4yLjAKL3Nub3ZkbzFrMC9qS1ZMRzVMQU9Ka3Yvckw2aytUZVhEaEJhM3cwRnNCKzRkTVBtZUtUWEJCZVdJc0thVUZDNHd2d3hQZTl3N1REUWN3dllxWHVvQkE9PQo="
     }
   }
 }
