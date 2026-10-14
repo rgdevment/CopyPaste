@@ -91,7 +91,7 @@ In many ways! Code is just one of them:
 
 ### Translate
 
-Do you speak another language? Help us bring CoPanda to more people. Check the [localization guide](README.md#localization-help-translate-copypaste) in the README.
+Do you speak another language? Help us bring CoPanda to more people. Check the [localization guide](README.md#localization-help-translate-copanda) in the README.
 
 ### Improve Documentation
 

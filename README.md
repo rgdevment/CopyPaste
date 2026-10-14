@@ -65,7 +65,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 
 ## Table of Contents
 
-- [See It in Action](#see-copypaste-in-action)
+- [See It in Action](#see-copanda-in-action)
 - [Why I Built This](#why-i-built-this)
 - [What It Is / What It Isn't](#what-it-is--what-it-isnt)
 - [Who Is This For?](#who-is-this-for)
@@ -78,7 +78,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Coming from CopyPaste 2](#coming-from-copypaste-2)
 - [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
 - [What's Coming and What's Changed](#whats-coming-and-whats-changed)
-- [Localization](#localization-help-translate-copypaste)
+- [Localization](#localization-help-translate-copanda)
 - [Want to Help?](#want-to-help)
 - [Tech Stack](#tech-stack-for-developers)
 - [Themes](#themes)
@@ -601,7 +601,7 @@ installer template picks its messages with `$LANGUAGE`.
 Contributions are always appreciated — whether that's a bug report, a translation, or a pull request:
 
 - **Write Code** — Fix bugs or add features. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup.
-- **Translate** — Add your language. [See guide](#localization-help-translate-copypaste).
+- **Translate** — Add your language. [See guide](#localization-help-translate-copanda).
 - **Report Bugs** — If something breaks, [open an issue](https://github.com/rgdevment/CopyPaste/issues/new).
 - **Share Ideas** — Tell me what you wish this clipboard manager could do.
 
