@@ -1,6 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CopyPaste",
+  "productName": "CoPanda",
+  "mainBinaryName": "CopyPaste",
   "identifier": "com.rgdevment.copypaste",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -33,7 +34,7 @@
     "copyright": "Copyright © 2026 rgdevment",
     "category": "Productivity",
     "shortDescription": "Clipboard history that stays on your machine. No ads, no telemetry, no account",
-    "longDescription": "CopyPaste keeps what you copy within reach of a shortcut: text, images, files, links and colours, searchable in milliseconds and stored only on your own machine. No account, no subscription, no telemetry and no server.",
+    "longDescription": "CoPanda keeps what you copy within reach of a shortcut: text, images, files, links and colours, searchable in milliseconds and stored only on your own machine. No account, no subscription, no telemetry and no server.",
     "licenseFile": "../../LICENSE",
     "windows": {
       "minimumWebview2Version": "111.0.0.0",

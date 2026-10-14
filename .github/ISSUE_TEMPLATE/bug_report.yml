@@ -1,5 +1,5 @@
 name: "🐛 Bug report"
-description: "Something in CopyPaste does not work the way it should"
+description: "Something in CoPanda does not work the way it should"
 labels: ["bug"]
 body:
   - type: markdown
@@ -15,7 +15,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: "CopyPaste version"
+      label: "CoPanda version"
       description: "Shown under **Settings → About**."
       placeholder: "3.0.0"
     validations:
@@ -79,7 +79,7 @@ body:
     attributes:
       label: "Logs (optional)"
       description: |
-        CopyPaste keeps two plain-text logs, `cp-gui.log` for the settings window and
+        CoPanda keeps two plain-text logs, `cp-gui.log` for the settings window and
         `cp-panel.log` for the panel. **Settings → History → Data folder → Open folder** takes
         you there, or look in `%LocalAppData%\CopyPaste\logs` on Windows and
         `~/Library/Application Support/CopyPaste/logs` on a Mac. They record events and errors,

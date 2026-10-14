@@ -54,7 +54,7 @@ function onDay(at: number | null) {
 
 function named() {
   const day = new Date().toISOString().slice(0, 10);
-  return `CopyPaste-${day}.${EXTENSION}`;
+  return `CoPanda-${day}.${EXTENSION}`;
 }
 
 export default function Backup() {
@@ -96,7 +96,7 @@ export default function Backup() {
     setBusy("out");
     const where = await save({
       defaultPath: named(),
-      filters: [{ name: "CopyPaste", extensions: [EXTENSION] }],
+      filters: [{ name: "CoPanda", extensions: [EXTENSION] }],
     }).catch(() => null);
     if (!where) {
       setBusy(null);
@@ -118,7 +118,7 @@ export default function Backup() {
     setBusy("in");
     const chosen = await open({
       multiple: false,
-      filters: [{ name: "CopyPaste", extensions: [EXTENSION] }],
+      filters: [{ name: "CoPanda", extensions: [EXTENSION] }],
     }).catch(() => null);
     if (typeof chosen !== "string") {
       setBusy(null);

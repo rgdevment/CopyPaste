@@ -162,7 +162,7 @@ export default function About() {
           C
         </span>
         <span>
-          <h1>CopyPaste</h1>
+          <h1>CoPanda</h1>
           <span className="line2">
             <span>{version ?? "—"}</span>
             <i />

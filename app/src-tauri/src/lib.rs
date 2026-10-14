@@ -87,7 +87,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("CopyPaste could not start");
+        .expect("CoPanda could not start");
 
     app.run(|app, event| match event {
         tauri::RunEvent::ExitRequested {

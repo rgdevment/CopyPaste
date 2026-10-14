@@ -59,7 +59,7 @@ pub fn policy() -> cp_store::Policy {
 }
 
 pub fn nowhere() -> String {
-    "the folder where CopyPaste keeps its own was not found".to_owned()
+    "the folder where CoPanda keeps its own was not found".to_owned()
 }
 
 pub fn settle() -> bool {

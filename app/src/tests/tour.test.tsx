@@ -50,7 +50,7 @@ describe("the welcome of a fresh install", () => {
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
     await press("Siguiente");
 
-    expect(await screen.findByText("Hay novedades en CopyPaste")).toBeInTheDocument();
+    expect(await screen.findByText("Hay novedades en CoPanda")).toBeInTheDocument();
     await press("Entendido");
     expect(theWindow.close).toHaveBeenCalled();
   });
@@ -66,7 +66,7 @@ describe("the welcome of a fresh install", () => {
     await press("Siguiente");
 
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
-    expect(screen.queryByText("Hay novedades en CopyPaste")).toBeNull();
+    expect(screen.queryByText("Hay novedades en CoPanda")).toBeNull();
     await press("Listo");
     expect(theWindow.close).toHaveBeenCalled();
   });
@@ -146,7 +146,7 @@ describe("the welcome on a Mac", () => {
     expect(await screen.findByText("Esperando el permiso…")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Activa CopyPaste en Accesibilidad. Si ya aparecía activado y no responde, quítalo con − y agrégalo de nuevo.",
+        "Activa CoPanda en Accesibilidad. Si ya aparecía activado y no responde, quítalo con − y agrégalo de nuevo.",
       ),
     ).toBeInTheDocument();
 
@@ -234,7 +234,7 @@ describe("what changes while the window is open", () => {
     asked.greeting = { kind: "news", versions: ["3.0.0"] };
     render(<Welcome />);
 
-    expect(await screen.findByText("Hay novedades en CopyPaste")).toBeInTheDocument();
+    expect(await screen.findByText("Hay novedades en CoPanda")).toBeInTheDocument();
     const greeting = await heardOn("greeting");
     act(() => greeting({ payload: { kind: "tour", former: false } }));
     expect(await screen.findByText("Tu portapapeles, con memoria")).toBeInTheDocument();
@@ -272,7 +272,7 @@ describe("the news after an update", () => {
     asked.locale = "en";
     render(<Welcome />);
 
-    expect(await screen.findByText("CopyPaste has been updated")).toBeInTheDocument();
+    expect(await screen.findByText("CoPanda has been updated")).toBeInTheDocument();
     expect(screen.getByText("Copy without pasting, and names")).toBeInTheDocument();
     await press("Got it");
     expect(theWindow.close).toHaveBeenCalled();
@@ -288,7 +288,7 @@ describe("news from more than one version", () => {
     asked.greeting = { kind: "news", versions: ["3.1.0", "3.0.3"] };
     render(<Welcome />);
 
-    expect(await screen.findByText("Hay novedades en CopyPaste")).toBeInTheDocument();
+    expect(await screen.findByText("Hay novedades en CoPanda")).toBeInTheDocument();
     const [newest, older] = screen.getAllByRole("region");
     expect(newest).toHaveAccessibleName("3.1.0");
     expect(within(newest).getByText("Hazlo tuyo")).toBeInTheDocument();

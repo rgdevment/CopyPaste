@@ -1,9 +1,9 @@
 # Third-party notices
 
-CopyPaste is GPL-3.0-only. What follows was copied into CopyPaste's own source
+CoPanda is GPL-3.0-only. What follows was copied into CoPanda's own source
 and carries its own licence, which allows that.
 
-CopyPaste also bundles other people's work rather than copying it. The parts
+CoPanda also bundles other people's work rather than copying it. The parts
 that do the heavy lifting are [Slint](https://slint.dev) with
 [Skia](https://skia.org) for the panel, [SQLite](https://sqlite.org) through
 [rusqlite](https://github.com/rusqlite/rusqlite) for the history,

@@ -74,7 +74,7 @@ fn the_english_words_are_the_ones_the_log_already_used() {
     );
     assert_eq!(
         Trouble::Unsteady.worded(true),
-        "el panel no se mantiene abierto; reinicia CopyPaste"
+        "el panel no se mantiene abierto; reinicia CoPanda"
     );
 }
 

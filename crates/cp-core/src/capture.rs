@@ -22,8 +22,8 @@ pub enum Unreadable {
 impl Unreadable {
     pub fn said(self) -> &'static str {
         match self {
-            Unreadable::Asks => "the system asks before CopyPaste may read the clipboard",
-            Unreadable::Denied => "the system does not let CopyPaste read the clipboard",
+            Unreadable::Asks => "the system asks before CoPanda may read the clipboard",
+            Unreadable::Denied => "the system does not let CoPanda read the clipboard",
         }
     }
 }

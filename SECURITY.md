@@ -2,7 +2,7 @@
 
 ## Security Matters
 
-**CopyPaste** handles your clipboard history—that can include sensitive stuff. I take security seriously because you're trusting this tool with content that might be personal or confidential.
+**CoPanda** handles your clipboard history—that can include sensitive stuff. I take security seriously because you're trusting this tool with content that might be personal or confidential.
 
 **This isn't corporate security theater.** This is a personal project shared with the community. It's built on trust—transparency in the code, responsibility when issues come up, and treating security researchers as partners.
 
@@ -24,7 +24,7 @@ I'm not protecting a brand or business. I'm protecting _you_ and everyone using 
 - **Configurable Retention** — Automatically delete old clipboard items based on your retention settings.
 - **Open Source** — Every line of code is public. You can inspect, audit, and verify what we're doing.
 - **Signed Updates** — Every installer the updater offers is signed with minisign, and the public key is compiled into the application. The signature is checked before anything is installed, so a compromised mirror cannot hand you a different binary: an update that does not verify is refused rather than installed. Each signature is bound to its exact version, so an older release cannot be served under a newer number, and the download address is checked against this repository's releases before a single byte is downloaded.
-- **Nothing That Locks You Out** — CopyPaste never blocks a version you already have. An update is an offer; your history is yours and stays reachable whether you take it or not.
+- **Nothing That Locks You Out** — CoPanda never blocks a version you already have. An update is an offer; your history is yours and stays reachable whether you take it or not.
 
 ### Development Practices
 
@@ -51,7 +51,7 @@ Security updates are provided for:
 
 ## 🐛 Reporting a Vulnerability
 
-If you discover a security vulnerability in **CopyPaste**, please help us protect our users by reporting it responsibly.
+If you discover a security vulnerability in **CoPanda**, please help us protect our users by reporting it responsibly.
 
 ### What Qualifies as a Security Vulnerability?
 
@@ -97,7 +97,7 @@ This is the fastest way to reach us. We check email daily and will respond withi
 - **Description** — Clear explanation of the vulnerability
 - **Impact** — What could an attacker do? Who is affected?
 - **Steps to Reproduce** — How can we reproduce the issue?
-- **CopyPaste Version** — Which version is affected?
+- **CoPanda Version** — Which version is affected?
 - **OS and version** — e.g., Windows 11 23H2, macOS Sequoia 15.1
 - **Proof of Concept** (optional) — Code or screenshots demonstrating the issue
 - **Suggested Fix** (optional) — If you have ideas on how to fix it
@@ -169,7 +169,7 @@ I believe in **coordinated disclosure** to protect users:
 
 ## 🏆 Security Researchers Hall of Fame
 
-We're grateful to the security researchers who help make **CopyPaste** safer:
+We're grateful to the security researchers who help make **CoPanda** safer:
 
 <!-- This section will be updated as we receive and resolve security reports -->
 
@@ -183,14 +183,14 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 
 ### For Users
 
-- **Keep CopyPaste Updated** — Nothing updates automatically: Settings → About offers a new version and installs it when you press Update. The Microsoft Store copy updates through the Store; a Homebrew copy updates itself with the same button
+- **Keep CoPanda Updated** — Nothing updates automatically: Settings → About offers a new version and installs it when you press Update. The Microsoft Store copy updates through the Store; a Homebrew copy updates itself with the same button
 - **Review Clipboard History** — Periodically check what's being stored and delete sensitive items
 - **Configure Retention** — Set shorter retention periods if you handle highly sensitive data
-- **Use Password Managers** — Most mark what they copy as secret, and CopyPaste never reads content marked that way. Check yours once: copy a credential and make sure no entry appears
+- **Use Password Managers** — Most mark what they copy as secret, and CoPanda never reads content marked that way. Check yours once: copy a credential and make sure no entry appears
 
 ### For Developers
 
-- **Read the Code** — The entire codebase is open source: [CopyPaste Repository](https://github.com/rgdevment/CopyPaste)
+- **Read the Code** — The entire codebase is open source: [CoPanda Repository](https://github.com/rgdevment/CopyPaste)
 - **Review Dependencies** — Every package and crate that ships is listed in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md), with its licence text in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md)
 - **Security Best Practices** — Follow secure coding guidelines when contributing
 
@@ -198,7 +198,7 @@ We're grateful to the security researchers who help make **CopyPaste** safer:
 
 ## 🔐 Cryptographic Disclosure
 
-**CopyPaste does not currently use cryptographic functions for data storage.**
+**CoPanda does not currently use cryptographic functions for data storage.**
 
 - Clipboard history is stored in **plaintext** in a local SQLite database
 - Database files are protected by **OS-level file system permissions** (Windows and macOS)
@@ -225,7 +225,7 @@ We're here to help and answer questions:
 - **Vulnerability Reports:** Use the private channels above — never post security issues publicly
 - **Policy Feedback:** [Open an Issue](https://github.com/rgdevment/CopyPaste/issues/new) — help us improve this policy
 
-**Security is everyone's responsibility.** Thank you for helping keep **CopyPaste** safe for everyone using it.
+**Security is everyone's responsibility.** Thank you for helping keep **CoPanda** safe for everyone using it.
 
 **Remember:** If you're unsure whether something is a security issue, reach out anyway. I'd rather have a conversation than miss a real problem.
 

@@ -13,7 +13,7 @@ export default function Chrome({ knobs = true }: { knobs?: boolean }) {
   return (
     <div className={`chrome${mac ? " mac" : ""}${knobs ? "" : " bare"}`} data-tauri-drag-region>
       <span className="chrome-who" data-tauri-drag-region>
-        CopyPaste
+        CoPanda
       </span>
       {drawn && (
         <div className="chrome-does">

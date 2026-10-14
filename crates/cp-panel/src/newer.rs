@@ -25,9 +25,9 @@ pub fn put_away_in(dir: &Path, version: &str) -> std::io::Result<()> {
 
 pub fn line_of(version: &str, english: bool) -> String {
     if english {
-        format!("CopyPaste {version} is ready")
+        format!("CoPanda {version} is ready")
     } else {
-        format!("CopyPaste {version} está lista")
+        format!("CoPanda {version} está lista")
     }
 }
 

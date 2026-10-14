@@ -6,7 +6,7 @@
 
 ## The Short Version
 
-**Everything stays on your computer.** CopyPaste does not collect, transmit, or share any of your data. There's no cloud, no accounts, no telemetry, no analytics, no tracking — nothing leaves your machine, ever.
+**Everything stays on your computer.** CoPanda does not collect, transmit, or share any of your data. There's no cloud, no accounts, no telemetry, no analytics, no tracking — nothing leaves your machine, ever.
 
 **"Everything local" is not a feature — it's the foundation.** It's a technical fact you can verify yourself: the entire source code is [open and public](https://github.com/rgdevment/CopyPaste). Read the code, run a network monitor, check for yourself.
 
@@ -14,7 +14,7 @@
 
 ## Our Privacy Philosophy: Everything Local
 
-CopyPaste was built with a **privacy-first** mindset from day one. This isn't an afterthought or a feature — it's a core design principle. **Everything stays on your machine.**
+CoPanda was built with a **privacy-first** mindset from day one. This isn't an afterthought or a feature — it's a core design principle. **Everything stays on your machine.**
 
 - 🔒 **Local-only by design** — Your data never leaves your computer
 - 🚫 **No telemetry** — We don't measure, track, or analyze your usage
@@ -24,13 +24,13 @@ CopyPaste was built with a **privacy-first** mindset from day one. This isn't an
 - 🚫 **No automatic reporting** — Errors are logged locally only; nothing is sent anywhere without your action
 - 🔍 **Fully auditable** — Every line of code is open source under [GPLv3](LICENSE)
 
-**The data on your computer is yours.** I built CopyPaste to respect that boundary completely — not just in policy, but in code.
+**The data on your computer is yours.** I built CoPanda to respect that boundary completely — not just in policy, but in code.
 
 ---
 
-## What Data Does CopyPaste Store?
+## What Data Does CoPanda Store?
 
-CopyPaste monitors your system clipboard to maintain a local history. The following data is stored **exclusively on your computer**:
+CoPanda monitors your system clipboard to maintain a local history. The following data is stored **exclusively on your computer**:
 
 ### Clipboard Content
 
@@ -55,7 +55,7 @@ These folders are protected by your operating system's user account permissions.
 
 ---
 
-## What CopyPaste Does NOT Do
+## What CoPanda Does NOT Do
 
 To be absolutely clear:
 
@@ -73,13 +73,13 @@ To be absolutely clear:
 
 ## Network Requests
 
-CopyPaste makes **one type of network request** for update checking:
+CoPanda makes **one type of network request** for update checking:
 
 ### Update Checker
 
 | Detail | Value |
 | :--- | :--- |
-| **Purpose** | Check whether a newer version of CopyPaste is available |
+| **Purpose** | Check whether a newer version of CoPanda is available |
 | **URL** | `https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/release-manifest.json` |
 | **Method** | `GET` (read-only) |
 | **Data sent** | Standard HTTP headers only — **no user data** |
@@ -95,38 +95,38 @@ CopyPaste makes **one type of network request** for update checking:
 - Only when you press «Update» does the app also read `latest.json` (or `candidate.json` for test versions) from the same branch, which says where the installer lives and carries its signature
 - The installer is **cryptographically signed**, and the signature is verified against a public key built into the app before anything is installed. The download address is also checked against our own release hosts before a single byte is fetched
 - **Microsoft Store version:** nothing is checked and nothing is offered. The Store delivers its own updates
-- **Homebrew** (`copypaste`, or `copypaste-beta` for test versions): the same as a standalone build, «Update» downloads and installs it. The cask tells Homebrew that CopyPaste updates itself, so `brew upgrade --cask` keeps working too
-- **Standalone builds (Windows / macOS):** if you press «Update», and only then, the installer is downloaded and run, and CopyPaste restarts itself. Nothing is downloaded or installed without you asking for it
+- **Homebrew** (`copypaste`, or `copypaste-beta` for test versions): the same as a standalone build, «Update» downloads and installs it. The cask tells Homebrew that CoPanda updates itself, so `brew upgrade --cask` keeps working too
+- **Standalone builds (Windows / macOS):** if you press «Update», and only then, the installer is downloaded and run, and CoPanda restarts itself. Nothing is downloaded or installed without you asking for it
 
 ### User-Initiated Browser Navigation
 
-When you explicitly click one of the links in **Settings → About**, CopyPaste opens it in your default browser:
+When you explicitly click one of the links in **Settings → About**, CoPanda opens it in your default browser:
 
 - **Repository** and **Give it a star** → `https://github.com/rgdevment/CopyPaste`
 - **AlternativeTo** → `https://alternativeto.net/software/copypaste/about/`
 - **Privacy** → `https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md`
 - **Sponsor the project** → `https://github.com/sponsors/rgdevment`
 - **Buy me a coffee** → `https://buymeacoffee.com/rgdevment`
-- **Rate it on the Store** (Windows only) → opens the Microsoft Store app on CopyPaste's review page
+- **Rate it on the Store** (Windows only) → opens the Microsoft Store app on CoPanda's review page
 - **Other tools** → `https://rgdevment.com/tisty/` and `https://rgdevment.com/linkunbound/`
 
 The same goes for a link you open from a card in the panel. If [LinkUnbound](https://github.com/rgdevment/LinkUnbound) is installed, these web links go through it so it can pick the browser; otherwise they go straight to your default browser.
 
-These are standard browser navigations initiated by your action — CopyPaste does not make these requests itself.
+These are standard browser navigations initiated by your action — CoPanda does not make these requests itself.
 
 ---
 
 ## Sensitive Data Protection
 
-CopyPaste includes built-in protections for sensitive content:
+CoPanda includes built-in protections for sensitive content:
 
 ### Concealed Content Exclusion
 
-When an application marks what it copies as secret, CopyPaste **skips it entirely** — the content is never hashed, never turned into an entry, never written to the database or to disk. This is how password managers keep their output out of clipboard history.
+When an application marks what it copies as secret, CoPanda **skips it entirely** — the content is never hashed, never turned into an entry, never written to the database or to disk. This is how password managers keep their output out of clipboard history.
 
 ### How It Works
 
-Each platform has a standard marker that the copying application sets, and CopyPaste checks for it before reading anything:
+Each platform has a standard marker that the copying application sets, and CoPanda checks for it before reading anything:
 
 | Platform | Marker it honours |
 | :--- | :--- |
@@ -139,13 +139,13 @@ The check asks only whether the marker is present, never for the secret's conten
 
 The limits matter more than the promise, so plainly:
 
-- **The marker is set by the other application, not by CopyPaste.** Whether a given password manager sets it depends on that application, its version and its own settings. Most major ones do. We do not publish a list of "supported" managers, because that would be a compatibility claim we cannot keep honest across every release of every one of them.
+- **The marker is set by the other application, not by CoPanda.** Whether a given password manager sets it depends on that application, its version and its own settings. Most major ones do. We do not publish a list of "supported" managers, because that would be a compatibility claim we cannot keep honest across every release of every one of them.
 - **Content that merely looks sensitive is not detected.** A password you type into a text file and copy carries no marker, so it is stored like any other text.
-- If you rely on this, verify it once with your own password manager: copy a credential and check that no entry appears in CopyPaste. Ten seconds, and it tells you more than any list we could publish.
+- If you rely on this, verify it once with your own password manager: copy a credential and check that no entry appears in CoPanda. Ten seconds, and it tells you more than any list we could publish.
 
 ### Windows Clipboard History
 
-CopyPaste operates independently from Windows' built-in clipboard history (`Win+V`). Your CopyPaste settings do not affect Windows clipboard behavior, and vice versa.
+CoPanda operates independently from Windows' built-in clipboard history (`Win+V`). Your CoPanda settings do not affect Windows clipboard behavior, and vice versa.
 
 ---
 
@@ -155,13 +155,13 @@ A few features read something else on your computer. All of it stays local:
 
 - **Importing CopyPaste 2's history** (Settings → Backup, or the welcome tour) reads the 2.x database and pictures from disk, only when you ask. Nothing of the 2.x is changed or uploaded.
 - **Pasting a picture into a terminal** works by checking which application is in front when you paste, so the picture can arrive as its file path. That check is a local look at the foreground process; nothing about it is stored or sent.
-- **Opening a web link** goes through [LinkUnbound](https://github.com/rgdevment/LinkUnbound) if it is installed. CopyPaste only checks whether it is there.
+- **Opening a web link** goes through [LinkUnbound](https://github.com/rgdevment/LinkUnbound) if it is installed. CoPanda only checks whether it is there.
 
 ---
 
 ## Backup and Restore
 
-CopyPaste can export a backup and restore from one. Both are **manual actions you start yourself** — nothing is backed up automatically, and no backup ever leaves your machine on its own.
+CoPanda can export a backup and restore from one. Both are **manual actions you start yourself** — nothing is backed up automatically, and no backup ever leaves your machine on its own.
 
 ### What the Backup Contains
 
@@ -181,7 +181,7 @@ Importing **adds** what the file holds to the history you already have. It never
 
 ### Leftovers from CopyPaste 2
 
-CopyPaste 2 could leave `.pre-restore-<timestamp>` folders in its data directory after an interrupted restore. CopyPaste 3 never creates them. If you find one, it is a copy of your old history, and **Delete CopyPaste 2's data** in Settings → Backup removes it along with the rest of the 2.x data.
+CopyPaste 2 could leave `.pre-restore-<timestamp>` folders in its data directory after an interrupted restore. CoPanda 3 never creates them. If you find one, it is a copy of your old history, and **Delete CopyPaste 2's data** in Settings → Backup removes it along with the rest of the 2.x data.
 
 ---
 
@@ -189,7 +189,7 @@ CopyPaste 2 could leave `.pre-restore-<timestamp>` folders in its data directory
 
 ### Automatic Cleanup
 
-- CopyPaste automatically deletes unpinned items older than your configured retention period: 7, 30 or 90 days, or Forever (default: **30 days**)
+- CoPanda automatically deletes unpinned items older than your configured retention period: 7, 30 or 90 days, or Forever (default: **30 days**)
 - If you set a history size (256 MB, 512 MB or 1 GB), the oldest unpinned items go first once it is exceeded
 - Cleanup runs periodically in the background
 - **Pinned items are preserved** regardless of the retention setting
@@ -207,36 +207,36 @@ either way.
 
 ### Complete Data Removal (Uninstall)
 
-To completely remove all CopyPaste data when uninstalling:
+To completely remove all CoPanda data when uninstalling:
 
 **Windows:**
 
-1. Uninstall CopyPaste (via Settings → Apps or the standalone uninstaller)
+1. Uninstall CoPanda (via Settings → Apps or the standalone uninstaller)
 2. Delete the data folder: `%LOCALAPPDATA%\CopyPaste\`
 
 **macOS:**
 
-1. Move CopyPaste to Trash from Applications
+1. Move CoPanda to Trash from Applications
 2. Delete the data folder: `~/Library/Application Support/CopyPaste/`
 
-After these steps, no CopyPaste data remains on your system.
+After these steps, no CoPanda data remains on your system.
 
 ---
 
 ## Children's Privacy
 
-CopyPaste does not knowingly collect any personal information from anyone, including children under 13. The application does not collect personal information from any user — it has no accounts, no registration, and no data transmission.
+CoPanda does not knowingly collect any personal information from anyone, including children under 13. The application does not collect personal information from any user — it has no accounts, no registration, and no data transmission.
 
 ---
 
 ## Microsoft Store Distribution
 
-CopyPaste is available through the [Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856). The Store version:
+CoPanda is available through the [Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856). The Store version:
 
 - **Follows the same privacy principles** as the standalone version
 - **Makes no update check at all** — updates are delivered through the Microsoft Store
 - **Uses MSIX packaging** — installs/uninstalls cleanly with Windows standard mechanisms
-- **Microsoft Store policies** apply to distribution, but CopyPaste itself does not share any data with Microsoft beyond what the Store platform requires for installation and updates
+- **Microsoft Store policies** apply to distribution, but CoPanda itself does not share any data with Microsoft beyond what the Store platform requires for installation and updates
 
 For Microsoft's own privacy practices regarding the Store, refer to [Microsoft's Privacy Statement](https://privacy.microsoft.com/privacystatement).
 
@@ -244,7 +244,7 @@ For Microsoft's own privacy practices regarding the Store, refer to [Microsoft's
 
 ## Open Source Transparency
 
-The best privacy policy is one you can verify. CopyPaste is **100% open source** under the [GNU General Public License v3.0](LICENSE):
+The best privacy policy is one you can verify. CoPanda is **100% open source** under the [GNU General Public License v3.0](LICENSE):
 
 - 📂 **Full source code:** [github.com/rgdevment/CopyPaste](https://github.com/rgdevment/CopyPaste)
 - 🔍 **Audit the code yourself** — every network request, every database write, every file operation
@@ -262,7 +262,7 @@ If we ever change this privacy policy, the changes will be:
 - Reflected in the "Last updated" date at the top
 - Documented in the release notes
 
-Since CopyPaste is open source, any change to privacy behavior would also be visible as a code change in the public repository before it reaches you.
+Since CoPanda is open source, any change to privacy behavior would also be visible as a code change in the public repository before it reaches you.
 
 ---
 
@@ -277,5 +277,5 @@ If you have questions or concerns about this privacy policy:
 ---
 
 <div align="center">
-  <p><em>Everything local. Your clipboard is yours — I built CopyPaste to keep it that way.</em></p>
+  <p><em>Everything local. Your clipboard is yours — I built CoPanda to keep it that way.</em></p>
 </div>

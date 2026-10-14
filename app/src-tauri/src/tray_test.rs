@@ -63,7 +63,7 @@ fn the_words_come_in_the_order_the_menu_was_built() {
             said[2]
         );
         assert!(
-            said[3].to_lowercase().contains("copypaste"),
+            said[3].to_lowercase().contains("copanda"),
             "the last one leaves: {}",
             said[3]
         );

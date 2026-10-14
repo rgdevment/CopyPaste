@@ -23,14 +23,14 @@ fn worded(spanish: bool) -> [&'static str; 4] {
             "Mostrar el panel",
             "Ajustes…",
             "Reiniciar el panel",
-            "Salir de CopyPaste",
+            "Salir de CoPanda",
         ]
     } else {
         [
             "Show the panel",
             "Settings…",
             "Restart the panel",
-            "Quit CopyPaste",
+            "Quit CoPanda",
         ]
     }
 }
@@ -75,7 +75,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, spanish: bool) -> Option<()> {
 
     let tray = TrayIconBuilder::with_id("copypaste")
         .icon(Image::from_bytes(BAR).ok()?)
-        .tooltip("CopyPaste")
+        .tooltip("CoPanda")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -121,7 +121,7 @@ pub fn settle_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let quits = MenuItem::with_id(app, QUITS, "Close", true, Some("CmdOrCtrl+Q"))?;
     let ours = Submenu::with_items(
         app,
-        "CopyPaste",
+        "CoPanda",
         true,
         &[
             &PredefinedMenuItem::hide(app, None)?,
@@ -182,8 +182,8 @@ pub fn tell_in<R: Runtime>(
         *shown = trouble;
     }
     let said = trouble.map_or_else(
-        || "CopyPaste".to_owned(),
-        |what| format!("CopyPaste: {}", what.worded(spanish)),
+        || "CoPanda".to_owned(),
+        |what| format!("CoPanda: {}", what.worded(spanish)),
     );
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
@@ -226,7 +226,7 @@ pub fn surface_at<R: Runtime>(app: &AppHandle<R>, rail: Option<&str>) {
     });
     let built = framed(crate::looks::dressed(
         WebviewWindowBuilder::new(app, "main", page)
-            .title("CopyPaste")
+            .title("CoPanda")
             .inner_size(780.0, 580.0)
             .min_inner_size(620.0, 460.0)
             .center(),

@@ -1,4 +1,4 @@
-# Releasing CopyPaste
+# Releasing CoPanda
 
 `.github/workflows/release.yml` builds, signs and publishes the 3.0 — modelled
 on the pipeline in [rgdevment/Tisty](https://github.com/rgdevment/Tisty), which
@@ -253,7 +253,7 @@ On Windows the 3.0 installer:
   wrote down is one only a packaged process could open. Not yet tried against a
   machine that only ever had the Store copy.
 - **Puts back the 3.0's own start with the session.** The Inno uninstaller
-  deletes the `CopyPaste` value under `HKCU\…\Run`, which is the name the 3.0
+  deletes the `CoPanda` value under `HKCU\…\Run`, which is the name the 3.0
   uses too; if it pointed at `cp-gui.exe` before, it is written again.
 - **Recommends starting fresh.** That is the default; bringing the history over
   is there for whoever asks.
