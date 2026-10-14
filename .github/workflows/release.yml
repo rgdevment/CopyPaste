@@ -1505,6 +1505,11 @@ jobs:
             fi
           done
 
+          CONFLICTS="\"${CASK_OTHER}\""
+          if [ -f "Casks/${FORMER_OTHER}.rb" ]; then
+            CONFLICTS="[\"${CASK_OTHER}\", \"${FORMER_OTHER}\"]"
+          fi
+
           cat > "Casks/${CASK}.rb" <<-CASK
           	cask "${CASK}" do
           	  arch arm: "aarch64", intel: "x86_64"
@@ -1521,7 +1526,7 @@ jobs:
 
           	  auto_updates true
 
-          	  conflicts_with cask: ["${CASK_OTHER}", "${FORMER_OTHER}"]
+          	  conflicts_with cask: ${CONFLICTS}
           	  depends_on macos: :ventura
 
           	  app "CoPanda.app"
@@ -1533,6 +1538,11 @@ jobs:
           	    "~/Library/Preferences/com.rgdevment.copypaste.plist",
           	    "~/Library/Saved Application State/com.rgdevment.copypaste.savedState",
           	  ]
+
+          	  caveats <<~EOS
+          	    CopyPaste is now CoPanda: the same app, with your history, settings and
+          	    shortcut. Look for CoPanda in your Applications folder.
+          	  EOS
           	end
           CASK
 
