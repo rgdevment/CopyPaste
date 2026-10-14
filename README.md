@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="resources/brand/copanda-head.svg" width="140" height="126" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
+  <img src="resources/brand/icon_app_256.png" width="140" height="140" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
 
   <h1>CoPanda (formerly CopyPaste) — Free Open Source Clipboard Manager</h1>
   <p><em>An extra thumb for your clipboard.</em></p>
@@ -23,6 +23,10 @@
 
   <p><strong>CopyPaste is now CoPanda</strong> — the same app, the same history, a name of its own.<br/>
   Get it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>.</p>
+
+  <p>
+    <img src="resources/screens/3.2/en-7-panda.png" width="92%" alt="CoPanda, an extra thumb for your clipboard: a free clipboard manager for Windows and macOS that keeps a searchable clipboard history, private and always on your machine"/>
+  </p>
 
   <h4>Download CoPanda</h4>
 
@@ -66,12 +70,12 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 
 ## Table of Contents
 
-- [See It in Action](#see-copanda-in-action)
 - [Why I Built This](#why-i-built-this)
 - [What It Is / What It Isn't](#what-it-is--what-it-isnt)
 - [Who Is This For?](#who-is-this-for)
 - [Privacy and Security](#privacy-and-security)
 - [Clipboard Manager Features](#clipboard-manager-features)
+- [Themes](#themes)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Getting Started](#getting-started)
 - [FAQ](#faq)
@@ -82,36 +86,11 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Localization](#localization-help-translate-copanda)
 - [Want to Help?](#want-to-help)
 - [Tech Stack](#tech-stack-for-developers)
-- [Themes](#themes)
 - [Alternatives](#alternatives)
 - [Other Tools by the Same Author](#other-tools-by-the-same-author)
 - [Project health](#project-health)
 - [License and Spirit](#license-and-spirit)
 - [Acknowledgements](#acknowledgements)
-
-## See CoPanda in Action
-
-<div align="center">
-    <img src="resources/screens/demo.gif" alt="CoPanda clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
-</div>
-<div align="center"><em>Fast search, clean cards, and a native feel across Windows and macOS.</em></div>
-
-<br/>
-
-<div align="center">
-    <img src="resources/screens/3.2/en-7-panda.png" alt="CoPanda, an extra thumb for your clipboard: searchable, private and always on your machine" width="98%"/>
-    <br/><br/>
-    <img src="resources/screens/3.2/en-1-hero.png" alt="CoPanda clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
-    <img src="resources/screens/3.2/en-2-filters.png" alt="CoPanda copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
-    <br/><br/>
-    <img src="resources/screens/3.2/en-3-paste-as.png" alt="CoPanda paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
-    <img src="resources/screens/3.2/en-4-privacy.png" alt="CoPanda privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
-    <br/><br/>
-    <img src="resources/screens/3.2/en-5-settings.png" alt="CoPanda settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
-    <img src="resources/screens/3.2/en-6-free.png" alt="CoPanda is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
-</div>
-
----
 
 ## Why I Built This
 
@@ -173,6 +152,8 @@ If you copy and paste throughout your day, this **clipboard manager** is for you
 - **Log export is voluntary** — you choose when and what to share; logs never contain clipboard content
 
 **By design, CoPanda will never have:** accounts, subscriptions, ads, cloud sync, or "AI analysis" of your clipboard.
+
+![CoPanda clipboard manager privacy: 100% local, no account and no telemetry, and passwords copied from 1Password or Bitwarden never reach the clipboard history](resources/screens/3.2/en-4-privacy.png)
 
 For responsible disclosure and security contact info, see [SECURITY.md](SECURITY.md).
 
@@ -244,6 +225,18 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 ---
 
+## Themes
+
+CoPanda follows your system theme automatically — no configuration needed.
+
+- **Light** — Clean and bright, matching a light OS theme.
+- **Dark** — Easy on the eyes, matching a dark OS theme.
+- You can override the automatic selection in **Settings → General → Theme**.
+
+![CoPanda settings: light, dark or system theme, six accent colours and a global shortcut of your own to open the clipboard history](resources/screens/3.2/en-5-settings.png)
+
+---
+
 ## Keyboard Shortcuts
 
 CoPanda keeps `Ctrl+V` under the active application's control and uses one
@@ -287,11 +280,15 @@ instead of searching for it.
 brings it up over whatever you were writing in, and what you choose goes into
 that application, not into a window you then have to leave.
 
+![The CoPanda panel: the whole clipboard history grouped by Now, Today and Earlier, opened over any app with Ctrl+Alt+V on Windows or ⌃⌥V on macOS](resources/screens/3.2/en-1-hero.png)
+
 **You type to find things.** The search box has the focus the moment the panel
 appears, and it searches what you copied, the names you gave it and the text
 read out of your screenshots. A word starting with `#` filters by kind instead
 of searching for it, and the strip above the list does the same with a click —
 hold the modifier and the clicks add kinds rather than swapping them.
+
+![Search the clipboard history by kind: type #image, #link or #token in CoPanda's search box, or pick a kind from the strip above the list](resources/screens/3.2/en-2-filters.png)
 
 **Each kind is shown the way that kind deserves.** Images as a grid or as rows,
 video by its cover or compact, audio as a waveform or compact, a JSON by its
@@ -328,6 +325,8 @@ touching what is stored:
 
 A form appears only when it makes sense for that card: a colour with no common
 name offers no name, and an image with no text in it offers no text.
+
+![Paste as in CoPanda: a token pasted as a header or as curl, a colour as rgb(), a JSON minified or a link as Markdown, without changing what was copied](resources/screens/3.2/en-3-paste-as.png)
 
 **A card takes a name, and keeps it.** Give one a name and it is searchable by
 that name afterwards, which is how a snippet you reach for every day stops being
@@ -629,16 +628,6 @@ If you're curious about what's under the hood of this open source clipboard mana
 
 ---
 
-## Themes
-
-CoPanda follows your system theme automatically — no configuration needed.
-
-- **Light** — Clean and bright, matching a light OS theme.
-- **Dark** — Easy on the eyes, matching a dark OS theme.
-- You can override the automatic selection in **Settings → General → Theme**.
-
----
-
 ## Alternatives
 
 Other clipboard managers, so you can pick the one that fits. Platform, where
@@ -675,16 +664,20 @@ way you work.
 
 I build free, open source tools focused on privacy and productivity. If you like CoPanda, you might also find these useful:
 
-### <img src="app/src/linkunbound.svg" width="28" height="28" alt=""/> [LinkUnbound](https://www.linkunbound.app/)
-
-A free, open source browser picker for Windows and Mac. Every link you click gets intercepted — domain rules open the assigned browser instantly, or a small picker appears near your cursor to let you choose. Resolves Microsoft SafeLinks and redirect wrappers before matching rules.
-
-No ads. No telemetry. No accounts. Everything local.
-
-### <img src="app/src/tisty.svg" width="28" height="28" alt=""/> [Tisty](https://www.tisty.app/)
-
-Notes, documents and tasks that stay on your machine, in plain files you can read
-without it. Same rules as everything else here: no accounts, no telemetry, no cloud.
+<table>
+  <tr>
+    <td width="96" align="center">
+      <a href="https://www.tisty.app/"><img src="app/src/tisty.svg" alt="Tisty the beaver" width="72"/></a>
+    </td>
+    <td><b><a href="https://www.tisty.app/">Tisty</a></b> — Notes, documents and tasks kept as plain files on your own disk, readable without the application. Windows and macOS.</td>
+  </tr>
+  <tr>
+    <td width="96" align="center">
+      <a href="https://www.linkunbound.app/"><img src="app/src/linkunbound.svg" alt="LinkUnbound the bear" width="72"/></a>
+    </td>
+    <td><b><a href="https://www.linkunbound.app/">LinkUnbound</a></b> — A browser picker that opens every link in the right browser, by your rules or from a small picker by the cursor. Windows and macOS.</td>
+  </tr>
+</table>
 
 ---
 
@@ -727,6 +720,8 @@ redistribution and needs no permission from anyone.
 
 Contributions require a one-time [CLA](CLA.md); you keep the copyright on your
 work.
+
+![CoPanda is a free and open source clipboard manager for Windows and macOS under the GPL-3.0: no ads, no subscription, no account](resources/screens/3.2/en-6-free.png)
 
 ---
 
