@@ -1464,9 +1464,9 @@ jobs:
           DMG_INTEL="copanda-installer-${VERSION}-macos-x86_64.dmg"
 
           if [[ "$VERSION" == *-* ]]; then
-            CASK="copypaste-beta"; CASK_OTHER="copypaste"; SUFFIX=" (beta)"
+            CASK="copanda-beta"; CASK_OTHER="copanda"; FORMER="copypaste-beta"; SUFFIX=" (beta)"
           else
-            CASK="copypaste"; CASK_OTHER="copypaste-beta"; SUFFIX=""
+            CASK="copanda"; CASK_OTHER="copanda-beta"; FORMER="copypaste"; SUFFIX=""
           fi
 
           fetch() {
@@ -1495,14 +1495,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           mkdir -p Casks
 
-          if [ -f "Casks/${CASK}.rb" ]; then
-            had=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${CASK}.rb" | head -1)
+          for one in "Casks/${CASK}.rb" "Casks/${FORMER}.rb"; do
+            [ -f "$one" ] || continue
+            had=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "$one" | head -1)
             if [ -n "$had" ] && [ "$had" != "$VERSION" ] \
                && [ "$(printf '%s\n%s\n' "$had" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
               echo "::warning::the tap already offers ${had}; writing ${VERSION} would downgrade every Mac that runs brew upgrade"
               exit 0
             fi
-          fi
+          done
 
           cat > "Casks/${CASK}.rb" <<-CASK
           	cask "${CASK}" do
@@ -1514,6 +1515,7 @@ jobs:
 
           	  url "${BASE}/copanda-installer-${VERSION}-macos-#{arch}.dmg"
           	  name "CoPanda"
+          	  name "CopyPaste"
           	  desc "Clipboard history that stays on your machine${SUFFIX}"
           	  homepage "https://rgdevment.com/copypaste/"
 
@@ -1534,23 +1536,32 @@ jobs:
           	end
           CASK
 
-          if [ "${{ needs.version.outputs.prerelease }}" = "false" ] \
-             && [ -f "Casks/${CASK_OTHER}.rb" ]; then
-            beta=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${CASK_OTHER}.rb" | head -1)
-            if [ -n "$beta" ] \
-               && [ "$(printf '%s\n%s\n' "${beta%%-*}" "$VERSION" | sort -V | tail -1)" \
-                    = "$VERSION" ]; then
-              git rm -q "Casks/${CASK_OTHER}.rb"
-              echo "retired Casks/${CASK_OTHER}.rb: it still offered $beta, and $VERSION passes it"
-            fi
+          if [ "${{ needs.version.outputs.prerelease }}" = "false" ]; then
+            for one in "${CASK_OTHER}" copypaste-beta; do
+              [ -f "Casks/${one}.rb" ] || continue
+              beta=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${one}.rb" | head -1)
+              if [ -n "$beta" ] \
+                 && [ "$(printf '%s\n%s\n' "${beta%%-*}" "$VERSION" | sort -V | tail -1)" \
+                      = "$VERSION" ]; then
+                git rm -q "Casks/${one}.rb"
+                echo "retired Casks/${one}.rb: it still offered $beta, and $VERSION passes it"
+              fi
+            done
           fi
 
-          git add Casks
+          if [ -f "Casks/${FORMER}.rb" ]; then
+            git rm -q "Casks/${FORMER}.rb"
+          fi
+          [ -s cask_renames.json ] || echo '{}' > cask_renames.json
+          jq --arg was "$FORMER" --arg now "$CASK" '.[$was] = $now' cask_renames.json > /tmp/renames.json
+          mv /tmp/renames.json cask_renames.json
+
+          git add Casks cask_renames.json
           if git diff --cached --quiet; then
             echo "tap already at ${VERSION}"
             exit 0
           fi
-          git commit -m "copypaste ${VERSION}"
+          git commit -m "copanda ${VERSION}"
 
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then

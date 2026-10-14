@@ -366,14 +366,14 @@ walks you through it.
 **Homebrew** (recommended) — picks the build for your chip, Apple Silicon or Intel; afterwards CoPanda updates itself from Settings → About:
 
 ```sh
-brew tap rgdevment/tap && brew install --cask copypaste
+brew tap rgdevment/tap && brew install --cask copanda
 ```
 
 Test versions, which arrive before anyone else's and can break, have a cask of
 their own:
 
 ```sh
-brew tap rgdevment/tap && brew install --cask copypaste-beta
+brew tap rgdevment/tap && brew install --cask copanda-beta
 ```
 
 **Standalone `.dmg`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest), one per chip, with manual updates.
