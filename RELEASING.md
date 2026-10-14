@@ -22,7 +22,7 @@ before it:
 | `verify`             | Installs what was just published and checks the update feed answers.    |
 | `msstore`            | Submits the MSIX (stable tags only).                                    |
 | `winget`             | Opens the pull request that adds this version to `winget-pkgs`.         |
-| `homebrew`           | Rewrites `copypaste` (stable) or `copypaste-beta` (candidate) in the tap. |
+| `homebrew`           | Rewrites `copanda` (stable) or `copanda-beta` (candidate) in the tap. |
 
 `feed.yml` then watches the published manifest daily: a deleted asset, a
 retired release or a force-pushed branch breaks the update feed silently, and
@@ -144,7 +144,7 @@ binaries and the manifest.
 A candidate is tagged `vX.Y.Z-rcN` with N from 1 to 9 and nothing else: semver
 orders `rc.3` and `rc10` below `rc2`, so either would never be offered. The
 tag is refused when X.Y.Z is not above the stable already out. Candidates
-publish the GitHub Release and the `copypaste-beta` cask, and skip the Store
+publish the GitHub Release and the `copanda-beta` cask, and skip the Store
 and winget.
 
 ## Crossing from the 2.x — decided 2026-09-29
@@ -253,7 +253,7 @@ On Windows the 3.0 installer:
   wrote down is one only a packaged process could open. Not yet tried against a
   machine that only ever had the Store copy.
 - **Puts back the 3.0's own start with the session.** The Inno uninstaller
-  deletes the `CoPanda` value under `HKCU\…\Run`, which is the name the 3.0
+  deletes the `CopyPaste` value under `HKCU\…\Run`, which is the name the 3.0
   uses too; if it pointed at `cp-gui.exe` before, it is written again.
 - **Recommends starting fresh.** That is the default; bringing the history over
   is there for whoever asks.

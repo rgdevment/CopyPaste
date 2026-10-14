@@ -175,7 +175,7 @@ mod there {
         let exe = std::env::current_exe()?;
         if wanted && crate::update::mounted(Some(&exe)) {
             return Err(std::io::Error::other(
-                "move CopyPaste to the Applications folder before starting it with the session",
+                "move CoPanda to the Applications folder before starting it with the session",
             ));
         }
         if !wanted && let Some(old) = legacy() {

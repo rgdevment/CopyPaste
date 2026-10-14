@@ -164,21 +164,21 @@
     "es": [
       {
         "title": "CopyPaste ahora se llama CoPanda",
-        "said": "es la misma app, con tu mismo historial y tus mismos atajos, ahora con un nombre propio que es más fácil de encontrar."
+        "said": "es la misma app, ahora con un nombre propio que es más fácil de encontrar."
       },
       {
-        "title": "No tienes que hacer nada",
-        "said": "tus copias, tus ajustes y el arranque al iniciar sesión siguen tal como estaban."
+        "title": "Todo sigue en tu equipo",
+        "said": "sin cuenta, sin anuncios y sin rastreo, como siempre."
       }
     ],
     "en": [
       {
         "title": "CopyPaste is now CoPanda",
-        "said": "the same app, with the same history and the same shortcuts, now under a name of its own that is easier to find."
+        "said": "the same app, now under a name of its own that is easier to find."
       },
       {
-        "title": "Nothing for you to do",
-        "said": "your copies, your settings and starting with your session stay just as they were."
+        "title": "Everything stays on your computer",
+        "said": "no account, no ads and no tracking, as always."
       }
     ]
   }
