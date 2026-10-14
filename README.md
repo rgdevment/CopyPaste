@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="resources/icon_app_256.png" width="140" height="140" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
+  <img src="resources/brand/copanda-head.svg" width="140" height="126" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
 
   <h1>CoPanda (formerly CopyPaste) — Free Open Source Clipboard Manager</h1>
   <p><em>An extra thumb for your clipboard.</em></p>
@@ -92,23 +92,23 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 ## See CoPanda in Action
 
 <div align="center">
-    <img src="resources/demo.gif" alt="CoPanda clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
+    <img src="resources/screens/demo.gif" alt="CoPanda clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
 </div>
 <div align="center"><em>Fast search, clean cards, and a native feel across Windows and macOS.</em></div>
 
 <br/>
 
 <div align="center">
-    <img src="resources/3.2/en-7-panda.png" alt="CoPanda, an extra thumb for your clipboard: searchable, private and always on your machine" width="98%"/>
+    <img src="resources/screens/3.2/en-7-panda.png" alt="CoPanda, an extra thumb for your clipboard: searchable, private and always on your machine" width="98%"/>
     <br/><br/>
-    <img src="resources/3.2/en-1-hero.png" alt="CoPanda clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
-    <img src="resources/3.2/en-2-filters.png" alt="CoPanda copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
+    <img src="resources/screens/3.2/en-1-hero.png" alt="CoPanda clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
+    <img src="resources/screens/3.2/en-2-filters.png" alt="CoPanda copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
     <br/><br/>
-    <img src="resources/3.2/en-3-paste-as.png" alt="CoPanda paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
-    <img src="resources/3.2/en-4-privacy.png" alt="CoPanda privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
+    <img src="resources/screens/3.2/en-3-paste-as.png" alt="CoPanda paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
+    <img src="resources/screens/3.2/en-4-privacy.png" alt="CoPanda privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
     <br/><br/>
-    <img src="resources/3.2/en-5-settings.png" alt="CoPanda settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
-    <img src="resources/3.2/en-6-free.png" alt="CoPanda is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
+    <img src="resources/screens/3.2/en-5-settings.png" alt="CoPanda settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
+    <img src="resources/screens/3.2/en-6-free.png" alt="CoPanda is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
 </div>
 
 ---
@@ -675,19 +675,13 @@ way you work.
 
 I build free, open source tools focused on privacy and productivity. If you like CoPanda, you might also find these useful:
 
-<p align="center">
-  <a href="https://rgdevment.com/linkunbound/">
-    <img src="https://raw.githubusercontent.com/rgdevment/LinkUnbound/main/resources/assets/icon_256.png" alt="LinkUnbound" width="72" height="72"/>
-  </a>
-</p>
-
-### [LinkUnbound](https://rgdevment.com/linkunbound/)
+### <img src="app/src/linkunbound.svg" width="28" height="28" alt=""/> [LinkUnbound](https://www.linkunbound.app/)
 
 A free, open source browser picker for Windows and Mac. Every link you click gets intercepted — domain rules open the assigned browser instantly, or a small picker appears near your cursor to let you choose. Resolves Microsoft SafeLinks and redirect wrappers before matching rules.
 
 No ads. No telemetry. No accounts. Everything local.
 
-### [Tisty](https://rgdevment.com/tisty/)
+### <img src="app/src/tisty.svg" width="28" height="28" alt=""/> [Tisty](https://www.tisty.app/)
 
 Notes, documents and tasks that stay on your machine, in plain files you can read
 without it. Same rules as everything else here: no accounts, no telemetry, no cloud.

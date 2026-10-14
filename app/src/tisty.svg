@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="44 34 312 292" width="312" height="292" role="img" aria-label="Mascota de Tisty: castor pícaro con un lápiz detrás de la oreja">
+<g transform="translate(292 150) rotate(26)">
+<rect x="-9" y="-96" width="18" height="104" rx="3" fill="#E3B459" stroke="#4A4640" stroke-width="4"/>
+<path d="M-9 -80 L9 -80" stroke="#4A4640" stroke-width="4"/>
+<path d="M-9 -96 L0 -118 L9 -96 Z" fill="#F5F0E8" stroke="#4A4640" stroke-width="4" stroke-linejoin="round"/>
+<path d="M-3.6 -109 L0 -118 L3.6 -109 Z" fill="#4A4640"/>
+</g>
+<circle cx="90" cy="108" r="24" fill="#9A6A1B" stroke="#4A4640" stroke-width="6"/>
+<circle cx="90" cy="108" r="10" fill="#F5F0E8"/>
+<circle cx="310" cy="108" r="24" fill="#9A6A1B" stroke="#4A4640" stroke-width="6"/>
+<circle cx="310" cy="108" r="10" fill="#F5F0E8"/>
+<path d="M200 90 C246 90 292 90 316 118 C344 150 346 212 326 250 C306 290 258 316 200 316 C142 316 94 290 74 250 C54 212 56 150 84 118 C108 90 154 90 200 90 Z" fill="#C8902F"/>
+<path d="M118 118 Q150 104 192 104" stroke="#E3B459" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M128 232 C128 204 162 194 200 194 C238 194 272 204 272 232 C272 268 240 292 200 292 C160 292 128 268 128 232 Z" fill="#F5F0E8"/>
+<path d="M182 250 H218 V280 Q218 290 208 290 H192 Q182 290 182 280 Z" fill="#F8E2A0" stroke="#4A4640" stroke-width="4" stroke-linejoin="round"/>
+<path d="M200 252 V289" stroke="#4A4640" stroke-width="3" stroke-linecap="round"/>
+<ellipse cx="200" cy="213" rx="17" ry="11" fill="#4A4640"/>
+<ellipse cx="195" cy="209" rx="5" ry="2.5" fill="#F5F0E8" opacity="0.8"/>
+<path d="M200 223 L200 248" stroke="#4A4640" stroke-width="4" stroke-linecap="round" fill="none"/>
+<path d="M160 238 Q180 258 200 248 Q224 262 246 228" stroke="#4A4640" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M248 238 L254 230" stroke="#4A4640" stroke-width="4" stroke-linecap="round" fill="none"/>
+<rect x="90" y="226" width="26" height="7" rx="3.5" fill="#F5F0E8"/>
+<rect x="94" y="240" width="20" height="7" rx="3.5" fill="#F5F0E8"/>
+<rect x="284" y="226" width="26" height="7" rx="3.5" fill="#F5F0E8"/>
+<rect x="286" y="240" width="20" height="7" rx="3.5" fill="#F5F0E8"/>
+<ellipse cx="146" cy="178" rx="17" ry="15" fill="#FFFFFF" stroke="#4A4640" stroke-width="4"/>
+<ellipse cx="254" cy="178" rx="17" ry="15" fill="#FFFFFF" stroke="#4A4640" stroke-width="4"/>
+<circle cx="154" cy="182" r="8.5" fill="#4A4640"/>
+<circle cx="262" cy="182" r="8.5" fill="#4A4640"/>
+<circle cx="157" cy="179" r="2.6" fill="#FFFFFF"/>
+<circle cx="265" cy="179" r="2.6" fill="#FFFFFF"/>
+<path d="M129 174 A17 15 0 0 1 163 174 Z" fill="#4A4640" stroke="#4A4640" stroke-width="4" stroke-linejoin="round"/>
+<path d="M237 172 A17 15 0 0 1 271 172 Z" fill="#4A4640" stroke="#4A4640" stroke-width="4" stroke-linejoin="round"/>
+<path d="M118 152 Q146 150 174 164" stroke="#4A4640" stroke-width="8" stroke-linecap="round" fill="none"/>
+<path d="M230 140 Q256 112 284 128" stroke="#4A4640" stroke-width="8" stroke-linecap="round" fill="none"/>
+<path d="M196 90 Q188 66 208 60 Q200 74 214 82" stroke="#4A4640" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M200 90 C246 90 292 90 316 118 C344 150 346 212 326 250 C306 290 258 316 200 316 C142 316 94 290 74 250 C54 212 56 150 84 118 C108 90 154 90 200 90 Z" fill="none" stroke="#4A4640" stroke-width="8" stroke-linejoin="round"/>
+</svg>

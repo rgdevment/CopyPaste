@@ -5,7 +5,7 @@ import { LINKS } from "../ui/About";
 type Allowed = { url: string };
 type Permission = string | { identifier: string; allow?: Allowed[] };
 
-const TOOLS = ["https://rgdevment.com/tisty/", "https://rgdevment.com/linkunbound/"];
+const TOOLS = ["https://www.tisty.app/", "https://www.linkunbound.app/"];
 
 function allowed(): string[] {
   const said = readFileSync("src-tauri/capabilities/default.json", "utf8");
@@ -40,7 +40,7 @@ describe("the links in About", () => {
 
   it("the other tools lead to their own page, not to the repository", () => {
     for (const url of TOOLS) {
-      expect(url.startsWith("https://rgdevment.com/")).toBe(true);
+      expect(url.startsWith("https://github.com/")).toBe(false);
     }
   });
 });

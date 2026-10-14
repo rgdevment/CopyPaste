@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="44 60 312 256" width="312" height="256" role="img" aria-label="Mascota de LinkUnbound: oso azul profundo de mirada firme y calmada">
+<circle cx="108" cy="98" r="26" fill="#0C2A7A" stroke="#0C2A7A" stroke-width="6"/>
+<circle cx="108" cy="100" r="11" fill="#A9C8FF"/>
+<circle cx="292" cy="98" r="26" fill="#0C2A7A" stroke="#0C2A7A" stroke-width="6"/>
+<circle cx="292" cy="100" r="11" fill="#A9C8FF"/>
+<path d="M200 72 C262 72 310 96 328 148 L348 172 L326 186 L346 214 L320 224 C316 276 272 304 200 304 C128 304 84 276 80 224 L54 214 L74 186 L52 172 L72 148 C90 96 138 72 200 72 Z" fill="#0C2A7A" stroke="#0C2A7A" stroke-width="8" stroke-linejoin="round"/>
+<path d="M130 100 Q200 84 270 100" stroke="#2D55C8" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M108 154 Q140 138 176 152 M292 154 Q260 138 224 152" stroke="#3E6BE0" stroke-width="11" stroke-linecap="round" fill="none"/>
+<circle cx="142" cy="178" r="10" fill="#FFFFFF"/>
+<circle cx="258" cy="178" r="10" fill="#FFFFFF"/>
+<circle cx="144" cy="180" r="5.5" fill="#0C2A7A"/>
+<circle cx="260" cy="180" r="5.5" fill="#0C2A7A"/>
+<ellipse cx="200" cy="246" rx="62" ry="50" fill="#DCE9FF"/>
+<path d="M174 214 Q200 202 226 214 Q228 234 200 244 Q172 234 174 214 Z" fill="#0C2A7A" stroke="#0C2A7A" stroke-width="6" stroke-linejoin="round"/>
+<path d="M200 244 L200 262 M176 270 Q200 286 224 270" stroke="#0C2A7A" stroke-width="5" stroke-linecap="round" fill="none"/>
+</svg>
