@@ -99,14 +99,16 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 <br/>
 
 <div align="center">
-    <img src="resources/3.0/en-1-hero.png" alt="CoPanda clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
-    <img src="resources/3.0/en-2-filters.png" alt="CoPanda copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
+    <img src="resources/3.2/en-7-panda.png" alt="CoPanda, an extra thumb for your clipboard: searchable, private and always on your machine" width="98%"/>
     <br/><br/>
-    <img src="resources/3.0/en-3-paste-as.png" alt="CoPanda paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
-    <img src="resources/3.0/en-4-privacy.png" alt="CoPanda privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
+    <img src="resources/3.2/en-1-hero.png" alt="CoPanda clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
+    <img src="resources/3.2/en-2-filters.png" alt="CoPanda copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
     <br/><br/>
-    <img src="resources/3.0/en-5-settings.png" alt="CoPanda settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
-    <img src="resources/3.0/en-6-free.png" alt="CoPanda is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
+    <img src="resources/3.2/en-3-paste-as.png" alt="CoPanda paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
+    <img src="resources/3.2/en-4-privacy.png" alt="CoPanda privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
+    <br/><br/>
+    <img src="resources/3.2/en-5-settings.png" alt="CoPanda settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
+    <img src="resources/3.2/en-6-free.png" alt="CoPanda is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
 </div>
 
 ---
