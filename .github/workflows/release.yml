@@ -1464,9 +1464,9 @@ jobs:
           DMG_INTEL="copanda-installer-${VERSION}-macos-x86_64.dmg"
 
           if [[ "$VERSION" == *-* ]]; then
-            CASK="copanda-beta"; CASK_OTHER="copanda"; FORMER="copypaste-beta"; SUFFIX=" (beta)"
+            CASK="copanda-beta"; CASK_OTHER="copanda"; FORMER="copypaste-beta"; FORMER_OTHER="copypaste"; SUFFIX=" (beta)"
           else
-            CASK="copanda"; CASK_OTHER="copanda-beta"; FORMER="copypaste"; SUFFIX=""
+            CASK="copanda"; CASK_OTHER="copanda-beta"; FORMER="copypaste"; FORMER_OTHER="copypaste-beta"; SUFFIX=""
           fi
 
           fetch() {
@@ -1521,7 +1521,7 @@ jobs:
 
           	  auto_updates true
 
-          	  conflicts_with cask: "${CASK_OTHER}"
+          	  conflicts_with cask: ["${CASK_OTHER}", "${FORMER_OTHER}"]
           	  depends_on macos: :ventura
 
           	  app "CoPanda.app"
@@ -1554,6 +1554,12 @@ jobs:
           fi
           [ -s cask_renames.json ] || echo '{}' > cask_renames.json
           jq --arg was "$FORMER" --arg now "$CASK" '.[$was] = $now' cask_renames.json > /tmp/renames.json
+          for gone in $(jq -r '.[]' /tmp/renames.json | sort -u); do
+            [ -f "Casks/${gone}.rb" ] && continue
+            jq --arg gone "$gone" --arg now "$CASK" 'map_values(if . == $gone then $now else . end)' \
+              /tmp/renames.json > /tmp/next.json
+            mv /tmp/next.json /tmp/renames.json
+          done
           mv /tmp/renames.json cask_renames.json
 
           git add Casks cask_renames.json
