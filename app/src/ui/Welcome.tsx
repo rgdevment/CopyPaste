@@ -48,7 +48,13 @@ export function newestStable(versions: string[] = news.map((one) => one.version)
     const [x, y] = [parts(a), parts(b)];
     return y[0] - x[0] || y[1] - x[1] || y[2] - x[2];
   });
-  return stable[0] ?? null;
+  const newest = stable[0];
+  if (newest === undefined) {
+    return null;
+  }
+  const [major, minor] = parts(newest);
+  const opening = `${major}.${minor}.0`;
+  return stable.includes(opening) ? opening : newest;
 }
 
 export function toldFor(
