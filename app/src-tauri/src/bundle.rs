@@ -5,9 +5,9 @@ const NAMED: &str = "CoPanda.app";
 const OURS: &str = "<string>com.rgdevment.copypaste</string>";
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Tidy {
-    Moved(PathBuf),
-    Binned(PathBuf),
+pub enum Plan {
+    Rename { from: PathBuf, to: PathBuf },
+    Bin(PathBuf),
     Stay,
 }
 
@@ -17,26 +17,25 @@ pub fn bundle_of(exe: &Path) -> Option<PathBuf> {
     named.then(|| bundle.to_path_buf())
 }
 
-pub fn tidy(bundle: &Path, trash: &Path) -> std::io::Result<Tidy> {
+pub fn plan(bundle: &Path) -> Plan {
     let name = bundle.file_name().and_then(|one| one.to_str());
     if name == Some(FORMER) {
-        let named = bundle.with_file_name(NAMED);
-        if named.exists() {
-            return Ok(Tidy::Stay);
+        let to = bundle.with_file_name(NAMED);
+        if to.exists() {
+            return Plan::Stay;
         }
-        std::fs::rename(bundle, &named)?;
-        return Ok(Tidy::Moved(named));
+        return Plan::Rename {
+            from: bundle.to_path_buf(),
+            to,
+        };
     }
     if name == Some(NAMED) {
         let former = bundle.with_file_name(FORMER);
-        if !ours(&former) {
-            return Ok(Tidy::Stay);
+        if ours(&former) {
+            return Plan::Bin(former);
         }
-        let binned = free_in(trash);
-        std::fs::rename(&former, &binned)?;
-        return Ok(Tidy::Binned(binned));
     }
-    Ok(Tidy::Stay)
+    Plan::Stay
 }
 
 fn ours(bundle: &Path) -> bool {
@@ -44,15 +43,12 @@ fn ours(bundle: &Path) -> bool {
         .is_ok_and(|plist| plist.contains(OURS))
 }
 
-fn free_in(trash: &Path) -> PathBuf {
-    let first = trash.join(FORMER);
-    if !first.exists() {
-        return first;
-    }
-    (2..)
-        .map(|n| trash.join(format!("CopyPaste {n}.app")))
-        .find(|one| !one.exists())
-        .unwrap_or(first)
+pub fn brewed(roots: &[&Path]) -> bool {
+    roots.iter().any(|root| {
+        ["copypaste", "copypaste-beta", "copanda", "copanda-beta"]
+            .iter()
+            .any(|cask| root.join(cask).exists())
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -60,29 +56,58 @@ pub fn settle() -> bool {
     let Ok(exe) = std::env::current_exe() else {
         return false;
     };
-    if crate::update::mounted(Some(&exe)) {
-        return false;
-    }
     let Some(bundle) = bundle_of(&exe) else {
         return false;
     };
-    let Some(home) = std::env::var_os("HOME") else {
+    let caskrooms = [
+        Path::new("/opt/homebrew/Caskroom"),
+        Path::new("/usr/local/Caskroom"),
+    ];
+    if crate::update::mounted(Some(&exe)) || brewed(&caskrooms) {
         return false;
-    };
-    match tidy(&bundle, &Path::new(&home).join(".Trash")) {
-        Ok(Tidy::Moved(named)) => {
-            crate::note::note(&format!("the app now lives at {}", named.display()));
-            reopen(&named)
-        }
-        Ok(Tidy::Binned(binned)) => {
-            crate::note::note(&format!("the older copy went to {}", binned.display()));
+    }
+    match plan(&bundle) {
+        Plan::Rename { from, to } => rename(&from, &to),
+        Plan::Bin(former) => {
+            bin(&former);
             false
         }
-        Ok(Tidy::Stay) => false,
-        Err(why) => {
-            crate::note::note(&format!("the app kept its folder name: {why}"));
-            false
-        }
+        Plan::Stay => false,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn rename(from: &Path, to: &Path) -> bool {
+    let agent = std::env::var_os("HOME").map(|home| {
+        Path::new(&home)
+            .join("Library/LaunchAgents")
+            .join("com.rgdevment.copypaste.plist")
+    });
+    if agent.is_some_and(|one| one.exists()) {
+        return false;
+    }
+    if let Err(why) = std::fs::rename(from, to) {
+        crate::note::note(&format!("the app could not take the name CoPanda: {why}"));
+        return false;
+    }
+    if reopen(to) {
+        crate::note::note(&format!("the app now lives at {}", to.display()));
+        return true;
+    }
+    if let Err(why) = std::fs::rename(to, from) {
+        crate::note::note(&format!("the app could not go back to its old name: {why}"));
+    }
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn bin(former: &Path) {
+    if cp_mac_sys::files::running_from(former) {
+        return;
+    }
+    match cp_mac_sys::files::trash(former) {
+        Ok(()) => crate::note::note(&format!("{} went to the Trash", former.display())),
+        Err(why) => crate::note::note(&format!("{} stayed: {why}", former.display())),
     }
 }
 
