@@ -154,5 +154,32 @@
         "said": "on a Mac, Tab reaches every button and list in Settings."
       }
     ]
+  },
+  {
+    "version": "3.2.0",
+    "headline": {
+      "es": "CopyPaste ahora es CoPanda",
+      "en": "CopyPaste is now CoPanda"
+    },
+    "es": [
+      {
+        "title": "CopyPaste ahora se llama CoPanda",
+        "said": "es la misma app, ahora con un nombre propio que es más fácil de encontrar."
+      },
+      {
+        "title": "Todo sigue en tu equipo",
+        "said": "sin cuenta, sin anuncios y sin rastreo, como siempre."
+      }
+    ],
+    "en": [
+      {
+        "title": "CopyPaste is now CoPanda",
+        "said": "the same app, now under a name of its own that is easier to find."
+      },
+      {
+        "title": "Everything stays on your computer",
+        "said": "no account, no ads and no tracking, as always."
+      }
+    ]
   }
 ]

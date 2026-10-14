@@ -1,4 +1,4 @@
-# Licence texts — what the crates inside CopyPaste carry
+# Licence texts — what the crates inside CoPanda carry
 
 <!-- Written by `npm run notices`. Do not edit by hand. -->
 

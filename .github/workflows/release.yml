@@ -431,7 +431,7 @@ jobs:
             echo "::error::the bundler produced no installer"
             exit 1
           fi
-          cp "$setup" "dist/copypaste-installer-$v-windows-x86_64.exe"
+          cp "$setup" "dist/copanda-installer-$v-windows-x86_64.exe"
           ls -l dist
 
       - name: Sign it for the updater
@@ -443,7 +443,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           v="${{ needs.version.outputs.version }}"
-          exe="../dist/copypaste-installer-$v-windows-x86_64.exe"
+          exe="../dist/copanda-installer-$v-windows-x86_64.exe"
           rm -f "$exe.sig"
           npm run tauri -- signer sign --app-version "$v" "$exe"
           test -s "$exe.sig" || { echo "::error::no updater signature was written"; exit 1; }
@@ -560,7 +560,7 @@ jobs:
 
       - name: It carries the panel, on one chip
         run: |
-          app="target/$TARGET/release/bundle/macos/CopyPaste.app"
+          app="target/$TARGET/release/bundle/macos/CoPanda.app"
           plist="$app/Contents/Info.plist"
           test -d "$app" || { echo "::error::the bundler produced no app"; exit 1; }
           status=0
@@ -590,7 +590,7 @@ jobs:
       - name: The app is really signed
         if: env.HAS_P12 == 'true'
         run: |
-          app="target/$TARGET/release/bundle/macos/CopyPaste.app"
+          app="target/$TARGET/release/bundle/macos/CoPanda.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           if codesign -dv "$app" 2>&1 | grep -q "Signature=adhoc"; then
             echo "::error::$app came out ad-hoc signed; notarisation would refuse it"
@@ -619,7 +619,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           out="target/$TARGET/release/bundle/macos"
-          app="$out/CopyPaste.app"
+          app="$out/CoPanda.app"
 
           ditto -c -k --keepParent "$app" "$RUNNER_TEMP/app.zip"
           xcrun notarytool submit "$RUNNER_TEMP/app.zip" \
@@ -629,12 +629,12 @@ jobs:
           xcrun stapler validate "$app"
 
           rm -f "$out"/*.app.tar.gz "$out"/*.app.tar.gz.sig
-          COPYFILE_DISABLE=1 tar --no-xattrs -czf "$out/CopyPaste.app.tar.gz" -C "$out" CopyPaste.app
+          COPYFILE_DISABLE=1 tar --no-xattrs -czf "$out/CoPanda.app.tar.gz" -C "$out" CoPanda.app
 
           rm -rf "$RUNNER_TEMP/rt" && mkdir -p "$RUNNER_TEMP/rt"
-          tar -xzf "$out/CopyPaste.app.tar.gz" -C "$RUNNER_TEMP/rt"
-          codesign --verify --deep --strict "$RUNNER_TEMP/rt/CopyPaste.app"
-          xcrun stapler validate "$RUNNER_TEMP/rt/CopyPaste.app"
+          tar -xzf "$out/CoPanda.app.tar.gz" -C "$RUNNER_TEMP/rt"
+          codesign --verify --deep --strict "$RUNNER_TEMP/rt/CoPanda.app"
+          xcrun stapler validate "$RUNNER_TEMP/rt/CoPanda.app"
 
       - name: Sign it for the updater
         if: env.HAS_UPDATER_KEY == 'true' && env.HAS_APPLE_ID == 'true'
@@ -645,9 +645,9 @@ jobs:
         run: |
           v="${{ needs.version.outputs.version }}"
           out="../target/$TARGET/release/bundle/macos"
-          npm run tauri -- signer sign --app-version "$v" "$out/CopyPaste.app.tar.gz"
-          test -s "$out/CopyPaste.app.tar.gz.sig"
-          base64 -d < "$out/CopyPaste.app.tar.gz.sig" > "$RUNNER_TEMP/one.minisig"
+          npm run tauri -- signer sign --app-version "$v" "$out/CoPanda.app.tar.gz"
+          test -s "$out/CoPanda.app.tar.gz.sig"
+          base64 -d < "$out/CoPanda.app.tar.gz.sig" > "$RUNNER_TEMP/one.minisig"
           if ! bash ../scripts/signed_for.sh "$RUNNER_TEMP/one.minisig" "$v"; then
             echo "::error::the updater signature is not bound to $v"
             exit 1
@@ -658,21 +658,21 @@ jobs:
           v="${{ needs.version.outputs.version }}"
           mkdir -p dist
           out="target/$TARGET/release/bundle/macos"
-          app="$out/CopyPaste.app"
+          app="$out/CoPanda.app"
           if xcrun stapler validate "$app" >/dev/null 2>&1 \
-            && [ -s "$out/CopyPaste.app.tar.gz.sig" ]; then
-            cp "$out/CopyPaste.app.tar.gz" "dist/copypaste-$v-macos-$ARCH.app.tar.gz"
-            cp "$out/CopyPaste.app.tar.gz.sig" "dist/copypaste-$v-macos-$ARCH.app.tar.gz.sig"
+            && [ -s "$out/CoPanda.app.tar.gz.sig" ]; then
+            cp "$out/CoPanda.app.tar.gz" "dist/copanda-$v-macos-$ARCH.app.tar.gz"
+            cp "$out/CoPanda.app.tar.gz.sig" "dist/copanda-$v-macos-$ARCH.app.tar.gz.sig"
           else
             echo "::warning::no stapled, signed tarball; macOS $ARCH gets no self-update this release"
-            rm -f "$out/CopyPaste.app.tar.gz" "$out/CopyPaste.app.tar.gz.sig"
+            rm -f "$out/CoPanda.app.tar.gz" "$out/CoPanda.app.tar.gz.sig"
           fi
           dmg=$(ls target/$TARGET/release/bundle/dmg/*.dmg 2>/dev/null | head -1) || true
           if [ -z "$dmg" ]; then
             echo "::error::the bundler produced no disk image"
             exit 1
           fi
-          cp "$dmg" "dist/copypaste-installer-$v-macos-$ARCH.dmg"
+          cp "$dmg" "dist/copanda-installer-$v-macos-$ARCH.dmg"
           ls -l dist
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -764,7 +764,7 @@ jobs:
           & "$($sdk.FullName)\x64\makepri.exe" new /pr msix /cf priconfig.xml /of msix/resources.pri /o
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::makepri would not index the package"; exit 1 }
 
-          & "$($sdk.FullName)\x64\makeappx.exe" pack /d msix /p "dist/copypaste-$v-windows-x64.msix" /o
+          & "$($sdk.FullName)\x64\makeappx.exe" pack /d msix /p "dist/copanda-$v-windows-x64.msix" /o
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::makeappx refused the package"; exit 1 }
           Get-ChildItem dist
 
@@ -777,7 +777,7 @@ jobs:
             Sort-Object Name -Descending | Select-Object -First 1
           $v = "${{ needs.version.outputs.version }}"
           $out = "$env:RUNNER_TEMP\unpacked"
-          & "$($sdk.FullName)\x64\makeappx.exe" unpack /p "dist/copypaste-$v-windows-x64.msix" /d $out /o | Out-Null
+          & "$($sdk.FullName)\x64\makeappx.exe" unpack /p "dist/copanda-$v-windows-x64.msix" /d $out /o | Out-Null
 
           [xml]$m = Get-Content "$out\AppxManifest.xml"
           $said = $m.Package.Identity.Name
@@ -854,11 +854,11 @@ jobs:
         run: |
           v="${{ needs.version.outputs.version }}"
           status=0
-          want="dist/copypaste-installer-$v-windows-x86_64.exe"
+          want="dist/copanda-installer-$v-windows-x86_64.exe"
           if [ "${BUILD_MACOS}" = "true" ]; then
             for arch in aarch64 x86_64; do
-              want="$want dist/copypaste-$v-macos-$arch.app.tar.gz"
-              if [ ! -s "dist/copypaste-installer-$v-macos-$arch.dmg" ]; then
+              want="$want dist/copanda-$v-macos-$arch.app.tar.gz"
+              if [ ! -s "dist/copanda-installer-$v-macos-$arch.dmg" ]; then
                 echo "::error::the macOS $arch disk image is missing"
                 status=1
               fi
@@ -887,9 +887,9 @@ jobs:
           v="${{ needs.version.outputs.version }}"
 
           jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
-          for one in "dist/copypaste-installer-$v-windows-x86_64.exe" \
-                     "dist/copypaste-$v-macos-aarch64.app.tar.gz" \
-                     "dist/copypaste-$v-macos-x86_64.app.tar.gz"; do
+          for one in "dist/copanda-installer-$v-windows-x86_64.exe" \
+                     "dist/copanda-$v-macos-aarch64.app.tar.gz" \
+                     "dist/copanda-$v-macos-x86_64.app.tar.gz"; do
             [ -s "$one" ] || continue
             base64 -d < "$one.sig" > one.minisig
             if ! minisign -Vm "$one" -p feed.pub -x one.minisig; then
@@ -1005,7 +1005,7 @@ jobs:
 
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
-          subject-path: dist/copypaste-*,dist/SHA256SUMS
+          subject-path: dist/copanda-*,dist/SHA256SUMS
 
       - name: Notes from the tag
         id: notes
@@ -1122,9 +1122,9 @@ jobs:
         run: |
           v="${{ needs.version.outputs.version }}"
           base="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
-          win="copypaste-installer-$v-windows-x86_64.exe"
-          arm="copypaste-$v-macos-aarch64.app.tar.gz"
-          intel="copypaste-$v-macos-x86_64.app.tar.gz"
+          win="copanda-installer-$v-windows-x86_64.exe"
+          arm="copanda-$v-macos-aarch64.app.tar.gz"
+          intel="copanda-$v-macos-x86_64.app.tar.gz"
 
           if [ -s "dist/$win.sig" ]; then
             ws=$(cat "dist/$win.sig")
@@ -1460,13 +1460,13 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${{ needs.version.outputs.version }}"
           BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
-          DMG_ARM="copypaste-installer-${VERSION}-macos-aarch64.dmg"
-          DMG_INTEL="copypaste-installer-${VERSION}-macos-x86_64.dmg"
+          DMG_ARM="copanda-installer-${VERSION}-macos-aarch64.dmg"
+          DMG_INTEL="copanda-installer-${VERSION}-macos-x86_64.dmg"
 
           if [[ "$VERSION" == *-* ]]; then
-            CASK="copypaste-beta"; CASK_OTHER="copypaste"; SUFFIX=" (beta)"
+            CASK="copanda-beta"; CASK_OTHER="copanda"; FORMER="copypaste-beta"; FORMER_OTHER="copypaste"; SUFFIX=" (beta)"
           else
-            CASK="copypaste"; CASK_OTHER="copypaste-beta"; SUFFIX=""
+            CASK="copanda"; CASK_OTHER="copanda-beta"; FORMER="copypaste"; FORMER_OTHER="copypaste-beta"; SUFFIX=""
           fi
 
           fetch() {
@@ -1495,14 +1495,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           mkdir -p Casks
 
-          if [ -f "Casks/${CASK}.rb" ]; then
-            had=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${CASK}.rb" | head -1)
+          for one in "Casks/${CASK}.rb" "Casks/${FORMER}.rb"; do
+            [ -f "$one" ] || continue
+            had=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "$one" | head -1)
             if [ -n "$had" ] && [ "$had" != "$VERSION" ] \
                && [ "$(printf '%s\n%s\n' "$had" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
               echo "::warning::the tap already offers ${had}; writing ${VERSION} would downgrade every Mac that runs brew upgrade"
               exit 0
             fi
-          fi
+          done
 
           cat > "Casks/${CASK}.rb" <<-CASK
           	cask "${CASK}" do
@@ -1512,17 +1513,18 @@ jobs:
           	  sha256 arm:   "${ARM_SHA}",
           	         intel: "${INTEL_SHA}"
 
-          	  url "${BASE}/copypaste-installer-${VERSION}-macos-#{arch}.dmg"
+          	  url "${BASE}/copanda-installer-${VERSION}-macos-#{arch}.dmg"
+          	  name "CoPanda"
           	  name "CopyPaste"
           	  desc "Clipboard history that stays on your machine${SUFFIX}"
-          	  homepage "https://rgdevment.com/copypaste/"
+          	  homepage "https://www.copanda.app/"
 
           	  auto_updates true
 
-          	  conflicts_with cask: "${CASK_OTHER}"
+          	  conflicts_with cask: ["${CASK_OTHER}", "${FORMER_OTHER}"]
           	  depends_on macos: :ventura
 
-          	  app "CopyPaste.app"
+          	  app "CoPanda.app"
 
           	  uninstall quit: "com.rgdevment.copypaste"
 
@@ -1534,23 +1536,38 @@ jobs:
           	end
           CASK
 
-          if [ "${{ needs.version.outputs.prerelease }}" = "false" ] \
-             && [ -f "Casks/${CASK_OTHER}.rb" ]; then
-            beta=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${CASK_OTHER}.rb" | head -1)
-            if [ -n "$beta" ] \
-               && [ "$(printf '%s\n%s\n' "${beta%%-*}" "$VERSION" | sort -V | tail -1)" \
-                    = "$VERSION" ]; then
-              git rm -q "Casks/${CASK_OTHER}.rb"
-              echo "retired Casks/${CASK_OTHER}.rb: it still offered $beta, and $VERSION passes it"
-            fi
+          if [ "${{ needs.version.outputs.prerelease }}" = "false" ]; then
+            for one in "${CASK_OTHER}" copypaste-beta; do
+              [ -f "Casks/${one}.rb" ] || continue
+              beta=$(sed -n 's/^[[:space:]]*version "\(.*\)"/\1/p' "Casks/${one}.rb" | head -1)
+              if [ -n "$beta" ] \
+                 && [ "$(printf '%s\n%s\n' "${beta%%-*}" "$VERSION" | sort -V | tail -1)" \
+                      = "$VERSION" ]; then
+                git rm -q "Casks/${one}.rb"
+                echo "retired Casks/${one}.rb: it still offered $beta, and $VERSION passes it"
+              fi
+            done
           fi
 
-          git add Casks
+          if [ -f "Casks/${FORMER}.rb" ]; then
+            git rm -q "Casks/${FORMER}.rb"
+          fi
+          [ -s cask_renames.json ] || echo '{}' > cask_renames.json
+          jq --arg was "$FORMER" --arg now "$CASK" '.[$was] = $now' cask_renames.json > /tmp/renames.json
+          for gone in $(jq -r '.[]' /tmp/renames.json | sort -u); do
+            [ -f "Casks/${gone}.rb" ] && continue
+            jq --arg gone "$gone" --arg now "$CASK" 'map_values(if . == $gone then $now else . end)' \
+              /tmp/renames.json > /tmp/next.json
+            mv /tmp/next.json /tmp/renames.json
+          done
+          mv /tmp/renames.json cask_renames.json
+
+          git add Casks cask_renames.json
           if git diff --cached --quiet; then
             echo "tap already at ${VERSION}"
             exit 0
           fi
-          git commit -m "copypaste ${VERSION}"
+          git commit -m "copanda ${VERSION}"
 
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
@@ -1620,10 +1637,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           KOMAC_FORK_OWNER: rgdevment-bot
           FORCE_HYPERLINK: "0"
-          PACKAGE: rgdevment.CopyPaste
+          PACKAGE: rgdevment.CoPanda
           VERSION: ${{ needs.version.outputs.version }}
           TAG: ${{ github.ref_name }}
-          INSTALLERS: '^copypaste-installer-.*-windows-x86_64\.exe$'
+          INSTALLERS: '^copanda-installer-.*-windows-x86_64\.exe$'
           KEEP: "5"
         run: |
           set -euo pipefail

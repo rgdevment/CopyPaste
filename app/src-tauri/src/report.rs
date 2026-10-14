@@ -68,7 +68,7 @@ pub fn save_report(
 
 pub fn named(stamp: &str) -> String {
     let day = stamp.get(..10).unwrap_or("today");
-    format!("copypaste-report-{day}.txt")
+    format!("copanda-report-{day}.txt")
 }
 
 fn report(version: &str) -> String {
@@ -77,7 +77,7 @@ fn report(version: &str) -> String {
         crate::update::Route::Download => "download",
     };
     let mut out = format!(
-        "CopyPaste {version}\n{}\n{} {}\ninstalled from: {route}\nwritten: {}\n",
+        "CoPanda {version}\n{}\n{} {}\ninstalled from: {route}\nwritten: {}\n",
         system(),
         std::env::consts::OS,
         std::env::consts::ARCH,

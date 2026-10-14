@@ -1,9 +1,9 @@
-# Third-party notices — what ships inside CopyPaste
+# Third-party notices — what ships inside CoPanda
 
 <!-- Written by `npm run notices`. Do not edit by hand. -->
 
-CopyPaste is GPL-3.0-only. The binaries carry the work below, each under its own
-licence. Nothing of it was copied into CopyPaste's own source; what was copied in
+CoPanda is GPL-3.0-only. The binaries carry the work below, each under its own
+licence. Nothing of it was copied into CoPanda's own source; what was copied in
 is in
 [THIRD-PARTY.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY.md).
 

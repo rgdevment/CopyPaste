@@ -2,15 +2,15 @@
 
 ## Our Pledge
 
-We as contributors and maintainers of **CopyPaste** pledge to make participation in our community a welcoming, respectful, and harassment-free experience for everyone—regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socioeconomic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
+We as contributors and maintainers of **CoPanda** pledge to make participation in our community a welcoming, respectful, and harassment-free experience for everyone—regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socioeconomic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
 
-**CopyPaste** is a community project—built by people, for people. This code of conduct reflects our core values: transparency, collaboration, and respect.
+**CoPanda** is a community project—built by people, for people. This code of conduct reflects our core values: transparency, collaboration, and respect.
 
 ---
 
 ## Our Philosophy
 
-**CopyPaste** is a community effort, not a corporate product. We believe:
+**CoPanda** is a community effort, not a corporate product. We believe:
 
 - **Collaboration over competition** — We're building _with_ you, not _for_ you.
 - **Respect over ego** — Good ideas can come from anywhere, regardless of experience level.
@@ -128,7 +128,7 @@ We follow these principles when enforcing the Code of Conduct:
 
 ## A Personal Project, Shared with the Community
 
-**CopyPaste** started as my personal project and grew into something bigger—a community effort. That means:
+**CoPanda** started as my personal project and grew into something bigger—a community effort. That means:
 
 - **We're all equals here** — Maintainer, contributors, and users build together.
 - **I respect your time** — If you report an issue, I'll respond. If you contribute code, I'll review it fairly.
@@ -141,7 +141,7 @@ This Code of Conduct isn't about creating a legal shield—it's about creating a
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), version 2.1, with modifications to reflect the values and spirit of the **CopyPaste** project.
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), version 2.1, with modifications to reflect the values and spirit of the **CoPanda** project.
 
 For answers to common questions about this code of conduct, see the FAQ at [https://www.contributor-covenant.org/faq](https://www.contributor-covenant.org/faq).
 
@@ -154,7 +154,7 @@ If you have questions about this Code of Conduct:
 - [Open a Discussion](https://github.com/rgdevment/CopyPaste/discussions) — Ask publicly, I'm happy to clarify.
 - [Email me](mailto:github@apirest.cl) — If it's sensitive, reach out privately.
 
-### Thank you for helping make CopyPaste a welcoming and inclusive project
+### Thank you for helping make CoPanda a welcoming and inclusive project
 
 ---
 

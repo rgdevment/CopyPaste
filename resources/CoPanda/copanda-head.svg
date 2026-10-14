@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="50 40 300 270" width="300" height="270" role="img" aria-label="Copanda, cabeza del panda guardián">
+<path d="M84 112 L98 54 L152 80 Z" fill="#231b8c" stroke="#231b8c" stroke-width="14" stroke-linejoin="round"/>
+<path d="M316 112 L302 54 L248 80 Z" fill="#231b8c" stroke="#231b8c" stroke-width="14" stroke-linejoin="round"/>
+<path d="M200 66 L292 86 L334 160 L320 238 L262 288 L200 302 L138 288 L80 238 L66 160 L108 86 Z" fill="#f8faff" stroke="#231b8c" stroke-width="8" stroke-linejoin="round"/>
+<path d="M90 150 L172 172 L160 224 L112 220 Q86 196 90 150 Z" fill="#231b8c" stroke="#231b8c" stroke-width="6" stroke-linejoin="round"/>
+<path d="M310 150 L228 172 L240 224 L288 220 Q314 196 310 150 Z" fill="#231b8c" stroke="#231b8c" stroke-width="6" stroke-linejoin="round"/>
+<ellipse cx="141" cy="196" rx="13" ry="7" transform="rotate(12 141 196)" fill="#8fe3ff"/>
+<ellipse cx="259" cy="196" rx="13" ry="7" transform="rotate(-12 259 196)" fill="#8fe3ff"/>
+<ellipse cx="143" cy="197" rx="3" ry="5.5" fill="#231b8c"/>
+<ellipse cx="257" cy="197" rx="3" ry="5.5" fill="#231b8c"/>
+<path d="M176 240 L224 240 L212 258 L188 258 Z" fill="#231b8c" stroke="#231b8c" stroke-width="8" stroke-linejoin="round"/>
+<path d="M200 266 L200 272 M174 278 Q200 290 226 278" stroke="#231b8c" stroke-width="5" stroke-linecap="round" fill="none"/>
+</svg>

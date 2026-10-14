@@ -1,6 +1,6 @@
-# Contributing to CopyPaste
+# Contributing to CoPanda
 
-Thank you for considering contributing to **CopyPaste**! 🎉
+Thank you for considering contributing to **CoPanda**! 🎉
 
 This project exists thanks to people like you. Whether it's your first open source contribution or you're an experienced developer—**everyone is welcome here**.
 
@@ -8,7 +8,7 @@ This project exists thanks to people like you. Whether it's your first open sour
 
 ## Our Philosophy
 
-**CopyPaste** is a personal project that grew into something bigger—a community effort. It was created by an individual developer ([@rgdevment](https://github.com/rgdevment)) with a simple idea: build the clipboard tool he always wanted to use.
+**CoPanda** is a personal project that grew into something bigger—a community effort. It was created by an individual developer ([@rgdevment](https://github.com/rgdevment)) with a simple idea: build the clipboard tool he always wanted to use.
 
 We believe in:
 
@@ -18,7 +18,7 @@ We believe in:
 - **Collaborative community** — We build together, not in silos
 - **Valuable feedback** — Your opinion matters as much as code
 
-**There is no premium version and no feature is ever held back** — what you install is the whole application. CopyPaste is free software, created by and for the community.
+**There is no premium version and no feature is ever held back** — what you install is the whole application. CoPanda is free software, created by and for the community.
 
 It is also dual licensed: anyone who wants to redistribute it inside a product of their own needs [separate terms](COMMERCIAL.md). Using it, deploying it across a company, or packaging it for a distribution never does.
 
@@ -43,7 +43,7 @@ In many ways! Code is just one of them:
 2. If it doesn't exist, open a new one with:
    - Clear description of the problem
    - Steps to reproduce
-   - CopyPaste version and OS (with version)
+   - CoPanda version and OS (with version)
    - Screenshots if applicable
 
 ### Contribute Code
@@ -91,7 +91,7 @@ In many ways! Code is just one of them:
 
 ### Translate
 
-Do you speak another language? Help us bring CopyPaste to more people. Check the [localization guide](README.md#localization-help-translate-copypaste) in the README.
+Do you speak another language? Help us bring CoPanda to more people. Check the [localization guide](README.md#localization-help-translate-copanda) in the README.
 
 ### Improve Documentation
 
@@ -176,7 +176,7 @@ the subject on `main`.
 
 ## License and Rights
 
-CopyPaste is released under the **GNU General Public License v3.0 (GPL-3.0)**
+CoPanda is released under the **GNU General Public License v3.0 (GPL-3.0)**
 and offered under separate [commercial terms](COMMERCIAL.md) to organisations
 that cannot comply with it. Your contributions are licensed the same way.
 
@@ -214,12 +214,12 @@ on you, whatever helped you write it.
 Read [CLA.md](CLA.md) for the full text — it is short, and worth the two
 minutes before you sign it.
 
-If you would rather not sign, you can still use CopyPaste, report bugs,
+If you would rather not sign, you can still use CoPanda, report bugs,
 request features, discuss design, package it for your distribution, and fork
 the project under the GPL-3.0. Only merging code into this repository requires
 the agreement.
 
-**Packaging CopyPaste for a distribution or package manager needs no agreement
+**Packaging CoPanda for a distribution or package manager needs no agreement
 and no commercial licence** — that is ordinary GPL redistribution, and
 packagers are welcome. See [COMMERCIAL.md](COMMERCIAL.md).
 
@@ -244,6 +244,6 @@ We want this to be a safe and welcoming space for everyone. Please read our [Cod
 ---
 
 <div align="center">
-  <p><strong>Thank you for being part of CopyPaste. 💙</strong></p>
+  <p><strong>Thank you for being part of CoPanda. 💙</strong></p>
   <p><em>— Mario (rgdevment)</em></p>
 </div>

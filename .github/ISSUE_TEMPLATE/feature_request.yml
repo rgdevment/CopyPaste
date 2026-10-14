@@ -1,11 +1,11 @@
 name: "💡 Feature request"
-description: "Something CopyPaste could do, or do better"
+description: "Something CoPanda could do, or do better"
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Ideas are welcome. CopyPaste tries to stay small, fast and private: everything stays on
+        Ideas are welcome. CoPanda tries to stay small, fast and private: everything stays on
         your machine, nothing needs an account, and the panel should feel native on Windows and
         on a Mac. A request that keeps to that has the best chance.
 
@@ -15,7 +15,7 @@ body:
     id: problem
     attributes:
       label: "What are you trying to do?"
-      description: "The situation, not the solution: what you were doing when CopyPaste fell short."
+      description: "The situation, not the solution: what you were doing when CoPanda fell short."
       placeholder: "I copy the same three addresses every day and have to search for them each time."
     validations:
       required: true

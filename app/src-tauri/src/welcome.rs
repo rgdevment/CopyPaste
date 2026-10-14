@@ -144,7 +144,7 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
         LABEL,
         WebviewUrl::App("index.html#welcome".into()),
     ))
-    .title("CopyPaste")
+    .title("CoPanda")
     .inner_size(600.0, 460.0)
     .resizable(false)
     .maximizable(false)

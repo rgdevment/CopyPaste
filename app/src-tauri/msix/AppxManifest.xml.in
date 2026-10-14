@@ -13,7 +13,7 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>CopyPaste - Clipboard Manager</DisplayName>
+    <DisplayName>CoPanda - Clipboard Manager</DisplayName>
     <PublisherDisplayName>@PUBLISHER_DISPLAY@</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>A clipboard history that stays on your computer</Description>
@@ -31,7 +31,7 @@
   <Applications>
     <Application Id="copypaste" Executable="CopyPaste.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="CopyPaste - Clipboard Manager"
+        DisplayName="CoPanda - Clipboard Manager"
         Description="A clipboard history that stays on your computer"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -41,7 +41,7 @@
 
       <Extensions>
         <desktop:Extension Category="windows.startupTask" Executable="CopyPaste.exe" EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="CopyPasteStartup" Enabled="true" DisplayName="CopyPaste - Clipboard Manager" />
+          <desktop:StartupTask TaskId="CopyPasteStartup" Enabled="true" DisplayName="CoPanda - Clipboard Manager" />
         </desktop:Extension>
       </Extensions>
     </Application>

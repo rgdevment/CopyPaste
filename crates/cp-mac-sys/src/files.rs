@@ -1,6 +1,6 @@
 use objc2::rc::Retained;
 use objc2_app_kit::NSWorkspace;
-use objc2_foundation::{NSArray, NSString, NSURL};
+use objc2_foundation::{NSArray, NSFileManager, NSString, NSURL};
 use std::path::Path;
 
 pub fn path_of(file_url: &str) -> String {
@@ -31,6 +31,21 @@ fn percent_decoded(text: &str) -> String {
 
 fn url_of(path: &Path) -> Retained<NSURL> {
     NSURL::fileURLWithPath(&NSString::from_str(&path.display().to_string()))
+}
+
+pub fn trash(path: &Path) -> Result<(), String> {
+    NSFileManager::defaultManager()
+        .trashItemAtURL_resultingItemURL_error(&url_of(path), None)
+        .map_err(|why| why.localizedDescription().to_string())
+}
+
+pub fn running_from(bundle: &Path) -> bool {
+    let wanted = bundle.display().to_string();
+    NSWorkspace::sharedWorkspace()
+        .runningApplications()
+        .iter()
+        .filter_map(|app| app.bundleURL()?.path())
+        .any(|at| at.to_string().trim_end_matches('/') == wanted.trim_end_matches('/'))
 }
 
 const RUNS_WHEN_OPENED: [&str; 8] = [

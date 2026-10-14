@@ -1,4 +1,4 @@
-# Releasing CopyPaste
+# Releasing CoPanda
 
 `.github/workflows/release.yml` builds, signs and publishes the 3.0 — modelled
 on the pipeline in [rgdevment/Tisty](https://github.com/rgdevment/Tisty), which
@@ -22,7 +22,7 @@ before it:
 | `verify`             | Installs what was just published and checks the update feed answers.    |
 | `msstore`            | Submits the MSIX (stable tags only).                                    |
 | `winget`             | Opens the pull request that adds this version to `winget-pkgs`.         |
-| `homebrew`           | Rewrites `copypaste` (stable) or `copypaste-beta` (candidate) in the tap. |
+| `homebrew`           | Rewrites `copanda` (stable) or `copanda-beta` (candidate) in the tap. |
 
 `feed.yml` then watches the published manifest daily: a deleted asset, a
 retired release or a force-pushed branch breaks the update feed silently, and
@@ -120,7 +120,7 @@ The tap repository already exists and the `homebrew` job rewrites the cask
 itself, so there is nothing to write by hand. Leave the frozen Linux formulae
 alone: the job must not sweep them.
 
-The cask's `homepage` is `https://rgdevment.com/copypaste/`, the product page —
+The cask's `homepage` is `https://www.copanda.app/`, the product page —
 not the repository. The same holds anywhere a store or a package manager asks
 for a website: the repository is where the code lives, not where a user is sent.
 
@@ -144,7 +144,7 @@ binaries and the manifest.
 A candidate is tagged `vX.Y.Z-rcN` with N from 1 to 9 and nothing else: semver
 orders `rc.3` and `rc10` below `rc2`, so either would never be offered. The
 tag is refused when X.Y.Z is not above the stable already out. Candidates
-publish the GitHub Release and the `copypaste-beta` cask, and skip the Store
+publish the GitHub Release and the `copanda-beta` cask, and skip the Store
 and winget.
 
 ## Crossing from the 2.x — decided 2026-09-29

@@ -1,6 +1,6 @@
 # Commercial licensing
 
-CopyPaste is dual licensed.
+CoPanda is dual licensed.
 
 - **GPL-3.0** — free for everyone, forever. See [LICENSE](LICENSE).
 - **Commercial licence** — for organisations that cannot accept the GPL's
@@ -17,7 +17,7 @@ matter how many people use it or for how long.
 
 **You do not need a commercial licence to:**
 
-- Install and use CopyPaste at home or at work, on any number of machines.
+- Install and use CoPanda at home or at work, on any number of machines.
 - Deploy it across an entire organisation, including internal IT rollouts.
 - Read, audit, or fork the source.
 - Modify it for your own internal use, without publishing those changes.
@@ -30,7 +30,7 @@ licence: it does not. Internal use is not distribution.
 ### Packaging it for a distribution or package manager
 
 **You do not need a commercial licence, and you never will.** Building
-CopyPaste for any distribution channel — a package manager, a software
+CoPanda for any distribution channel — a package manager, a software
 repository, or your own build pipeline — is exactly the redistribution the GPL
 is designed to permit. Ship the package, keep the licence notices and make the
 source available as the GPL requires, and you are done.
@@ -40,7 +40,7 @@ harder, open an issue — that is a bug worth fixing.
 
 **You likely do need one to:**
 
-- Ship CopyPaste, or code derived from it, inside a **product you distribute
+- Ship CoPanda, or code derived from it, inside a **product you distribute
   to others**, without licensing that product under the GPL.
 - Redistribute it under **your own brand** without the GPL's source disclosure
   requirement. The notices of the third-party work inside it still go with it;
@@ -57,13 +57,13 @@ fine, carry on".
 
 ## What a commercial licence gives you
 
-- The right to use, modify, and redistribute CopyPaste **without the GPL's
+- The right to use, modify, and redistribute CoPanda **without the GPL's
   copyleft obligations** — no requirement to publish your modifications or to
   license your own product under the GPL.
 - Written permission you can hand to your legal or procurement team.
 
-It covers the code the project owns, which is all of CopyPaste's own source.
-It cannot cover the work of others that CopyPaste is built on.
+It covers the code the project owns, which is all of CoPanda's own source.
+It cannot cover the work of others that CoPanda is built on.
 
 Terms, scope, and price are agreed per case rather than published, because a
 single-seat integration and an OEM redistribution are not the same deal.
@@ -71,22 +71,22 @@ Contact <github@apirest.cl> with what you want to do and the scale of it.
 
 ## Third-party components
 
-CopyPaste is built on other people's open source work, listed with its licence
+CoPanda is built on other people's open source work, listed with its licence
 in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md). Those licences come with it
-whichever licence you hold for CopyPaste itself.
+whichever licence you hold for CoPanda itself.
 
 - **Permissive licences** — MIT, MIT-0, Apache-2.0 (with or without the LLVM
   exception), BSD-2-Clause, BSD-3-Clause, 0BSD, ISC, Zlib, BSL-1.0,
   Unicode-3.0, PSF-2.0, CC0-1.0 and the Unlicense, which is nearly all of it.
   They allow a closed product, and they ask for their notices to ship with it.
-  CopyPaste already shows them, with their full texts, under **About**; keep
+  CoPanda already shows them, with their full texts, under **About**; keep
   that, or carry both files another way.
 - **MPL-2.0** — thirteen crates in the binaries: `symphonia` and its codec and
   format crates, which decode audio for the waveform in the panel, and
   `option-ext`, through the updater. Their copyleft stops at their own files:
   change any of them and you publish those files under the MPL, and either way
   you tell recipients where their source is.
-- **Slint** — the toolkit the panel is drawn with. CopyPaste uses it under
+- **Slint** — the toolkit the panel is drawn with. CoPanda uses it under
   GPL-3.0 and cannot pass it on under other terms. A closed desktop product can
   use it at no cost under the
   [Slint Royalty-free Desktop, Mobile, and Web Applications License 2.0](https://github.com/slint-ui/slint/blob/master/LICENSES/LicenseRef-Slint-Royalty-free-2.0.md),
@@ -96,7 +96,7 @@ whichever licence you hold for CopyPaste itself.
   Slint's APIs, or Slint on its own; those need a licence from SixtyFPS GmbH,
   who make Slint.
 
-Every commercial agreement for CopyPaste says this in writing: the licensee
+Every commercial agreement for CoPanda says this in writing: the licensee
 distributes Slint under the Slint Royalty-free License 2.0 and meets its
 attribution, or holds a Slint licence of their own; keeps the MPL-2.0 files
 available in source form, with any changes made to them; and ships the
@@ -107,10 +107,10 @@ third-party notices with the product.
 The GPL's section 10 forbids imposing further restrictions on recipients,
 which conflicts with the terms of some application stores — Apple's App Store
 being the well-known case. For the code the project owns, that conflict binds
-**licensees**, not the copyright holder: a third party cannot publish CopyPaste
+**licensees**, not the copyright holder: a third party cannot publish CoPanda
 there, and the project itself can, under separate terms it grants to itself.
 
-That reaches only the project's own code. Slint comes to CopyPaste under the
+That reaches only the project's own code. Slint comes to CoPanda under the
 GPL as well, so a build for such a store takes Slint under its royalty-free
 licence instead, whose attribution the README already carries.
 
@@ -119,7 +119,7 @@ defer to the software's own licence.
 
 ## Why the project is set up this way
 
-The dual model exists so CopyPaste can stay genuinely free for the people who
+The dual model exists so CoPanda can stay genuinely free for the people who
 use it, while commercial redistribution that would otherwise contribute
 nothing back has a way to support it. Whichever side you are on, the GPL
 edition is not a crippled version — it is the same application, and it stays

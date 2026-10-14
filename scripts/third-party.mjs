@@ -314,12 +314,12 @@ const written = [...byText.values()]
 
 writeFileSync(
   out,
-  asWritten(`# Third-party notices — what ships inside CopyPaste
+  asWritten(`# Third-party notices — what ships inside CoPanda
 
 <!-- Written by \`npm run notices\`. Do not edit by hand. -->
 
-CopyPaste is GPL-3.0-only. The binaries carry the work below, each under its own
-licence. Nothing of it was copied into CopyPaste's own source; what was copied in
+CoPanda is GPL-3.0-only. The binaries carry the work below, each under its own
+licence. Nothing of it was copied into CoPanda's own source; what was copied in
 is in
 [THIRD-PARTY.md](${REPO}/THIRD-PARTY.md).
 
@@ -357,7 +357,7 @@ ${kept}
 
 writeFileSync(
   texts,
-  asWritten(`# Licence texts — what the crates inside CopyPaste carry
+  asWritten(`# Licence texts — what the crates inside CoPanda carry
 
 <!-- Written by \`npm run notices\`. Do not edit by hand. -->
 

@@ -1100,8 +1100,8 @@ fn arm_sheet(state: &Rc<RefCell<State>>, ui: &Panel) {
 fn busy() -> &'static str {
     if crate::here::read_stuck() {
         return crate::say::pick(
-            "una app dejó de responder con lo copiado; reinicia CopyPaste",
-            "an app stopped answering about what it copied; restart CopyPaste",
+            "una app dejó de responder con lo copiado; reinicia CoPanda",
+            "an app stopped answering about what it copied; restart CoPanda",
         );
     }
     crate::say::pick(

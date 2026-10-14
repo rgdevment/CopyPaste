@@ -40,6 +40,7 @@ ${StrLoc}
 
 !define MANUFACTURER "{{manufacturer}}"
 !define PRODUCTNAME "{{product_name}}"
+!define HOMENAME "CopyPaste"
 !define VERSION "{{version}}"
 !define VERSIONWITHBUILD "{{version_with_build}}"
 !define HOMEPAGE "{{homepage}}"
@@ -64,9 +65,9 @@ ${StrLoc}
 !define WEBVIEW2BOOTSTRAPPERPATH "{{webview2_bootstrapper_path}}"
 !define WEBVIEW2INSTALLERPATH "{{webview2_installer_path}}"
 !define MINIMUMWEBVIEW2VERSION "{{minimum_webview2_version}}"
-!define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}"
+!define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${HOMENAME}"
 !define MANUKEY "Software\${MANUFACTURER}"
-!define MANUPRODUCTKEY "${MANUKEY}\${PRODUCTNAME}"
+!define MANUPRODUCTKEY "${MANUKEY}\${HOMENAME}"
 !define UNINSTALLERSIGNCOMMAND "{{uninstaller_sign_cmd}}"
 !define ESTIMATEDSIZE "{{estimated_size}}"
 !define STARTMENUFOLDER "{{start_menu_folder}}"
@@ -84,7 +85,7 @@ OutFile "${OUTFILE}"
 ; We don't actually use this value as default install path,
 ; it's just for nsis to append the product name folder in the directory selector
 ; https://nsis.sourceforge.io/Reference/InstallDir
-!define PLACEHOLDER_INSTALL_DIR "placeholder\${PRODUCTNAME}"
+!define PLACEHOLDER_INSTALL_DIR "placeholder\${HOMENAME}"
 InstallDir "${PLACEHOLDER_INSTALL_DIR}"
 
 VIProductVersion "${VERSIONWITHBUILD}"
@@ -113,7 +114,7 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 
 !if "${INSTALLMODE}" == "both"
   !define MULTIUSER_MUI
-  !define MULTIUSER_INSTALLMODE_INSTDIR "${PRODUCTNAME}"
+  !define MULTIUSER_INSTALLMODE_INSTDIR "${HOMENAME}"
   !define MULTIUSER_INSTALLMODE_COMMANDLINE
   !if "${ARCH}" == "x64"
     !define MULTIUSER_USE_PROGRAMFILES64
@@ -205,7 +206,7 @@ Function PageReinstall
     IntOp $0 $0 + 1
     ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "DisplayName"
     ReadRegStr $R1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "Publisher"
-    StrCmp "$R0$R1" "${PRODUCTNAME}${MANUFACTURER}" 0 wix_loop
+    StrCmp "$R0$R1" "${HOMENAME}${MANUFACTURER}" 0 wix_loop
     ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "UninstallString"
     ${StrCase} $R1 $R0 "L"
     ${StrLoc} $R0 $R1 "msiexec" ">"
@@ -502,17 +503,17 @@ Function .onInit
     !if "${INSTALLMODE}" == "perMachine"
       ${If} ${RunningX64}
         !if "${ARCH}" == "x64"
-          StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES64\${HOMENAME}"
         !else if "${ARCH}" == "arm64"
-          StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES64\${HOMENAME}"
         !else
-          StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES\${HOMENAME}"
         !endif
       ${Else}
-        StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCTNAME}"
+        StrCpy $INSTDIR "$PROGRAMFILES\${HOMENAME}"
       ${EndIf}
     !else if "${INSTALLMODE}" == "currentUser"
-      StrCpy $INSTDIR "$LOCALAPPDATA\Programs\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$LOCALAPPDATA\Programs\${HOMENAME}"
     !endif
 
     Call RestorePreviousInstallLocation
@@ -918,6 +919,18 @@ Section Uninstall
       !insertmacro UnpinShortcut "$DESKTOP\${PRODUCTNAME}.lnk"
       Delete "$DESKTOP\${PRODUCTNAME}.lnk"
     ${EndIf}
+    !insertmacro IsShortcutTarget "$DESKTOP\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$DESKTOP\${HOMENAME}.lnk"
+      Delete "$DESKTOP\${HOMENAME}.lnk"
+    ${EndIf}
+    !insertmacro IsShortcutTarget "$SMPROGRAMS\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$SMPROGRAMS\${HOMENAME}.lnk"
+      Delete "$SMPROGRAMS\${HOMENAME}.lnk"
+    ${EndIf}
   ${EndIf}
 
   ; Remove registry information for add/remove programs
@@ -934,7 +947,7 @@ Section Uninstall
   ; If it doesn't exist, it does nothing.
   ; We do this when not updating (to preserve the registry value on updates)
   ${If} $UpdateMode <> 1
-    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCTNAME}"
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${HOMENAME}"
   ${EndIf}
 
   ; Delete app data if the checkbox is selected
@@ -952,17 +965,17 @@ Section Uninstall
 
     SetShellVarContext current
     ; The 2.x keeps its history in this same folder, and it is not ours to delete.
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\history.db"
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\history.db-wal"
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\history.db-shm"
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\config.toml"
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\update.json"
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\logs\cp-gui.log"
-    Delete "$LOCALAPPDATA\${PRODUCTNAME}\logs\cp-panel.log"
-    RmDir /r "$LOCALAPPDATA\${PRODUCTNAME}\blobs"
-    RmDir /r "$LOCALAPPDATA\${PRODUCTNAME}\thumbs"
-    RmDir "$LOCALAPPDATA\${PRODUCTNAME}\logs"
-    RmDir "$LOCALAPPDATA\${PRODUCTNAME}"
+    Delete "$LOCALAPPDATA\${HOMENAME}\history.db"
+    Delete "$LOCALAPPDATA\${HOMENAME}\history.db-wal"
+    Delete "$LOCALAPPDATA\${HOMENAME}\history.db-shm"
+    Delete "$LOCALAPPDATA\${HOMENAME}\config.toml"
+    Delete "$LOCALAPPDATA\${HOMENAME}\update.json"
+    Delete "$LOCALAPPDATA\${HOMENAME}\logs\cp-gui.log"
+    Delete "$LOCALAPPDATA\${HOMENAME}\logs\cp-panel.log"
+    RmDir /r "$LOCALAPPDATA\${HOMENAME}\blobs"
+    RmDir /r "$LOCALAPPDATA\${HOMENAME}\thumbs"
+    RmDir "$LOCALAPPDATA\${HOMENAME}\logs"
+    RmDir "$LOCALAPPDATA\${HOMENAME}"
     RmDir /r "$LOCALAPPDATA\${BUNDLEID}"
   ${EndIf}
 
@@ -995,6 +1008,17 @@ Function un.SkipIfPassive
 FunctionEnd
 
 Function CreateOrUpdateStartMenuShortcut
+  !insertmacro IsShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+  Pop $0
+  ${If} $0 = 1
+    Rename "$SMPROGRAMS\$AppStartMenuFolder\${HOMENAME}.lnk" "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
+  ${EndIf}
+  !insertmacro IsShortcutTarget "$SMPROGRAMS\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+  Pop $0
+  ${If} $0 = 1
+    Rename "$SMPROGRAMS\${HOMENAME}.lnk" "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+  ${EndIf}
+
   ; We used to use product name as MAINBINARYNAME
   ; migrate old shortcuts to target the new MAINBINARYNAME
   StrCpy $R0 0
@@ -1037,6 +1061,12 @@ Function CreateOrUpdateStartMenuShortcut
 FunctionEnd
 
 Function CreateOrUpdateDesktopShortcut
+  !insertmacro IsShortcutTarget "$DESKTOP\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+  Pop $0
+  ${If} $0 = 1
+    Rename "$DESKTOP\${HOMENAME}.lnk" "$DESKTOP\${PRODUCTNAME}.lnk"
+  ${EndIf}
+
   ; We used to use product name as MAINBINARYNAME
   ; migrate old shortcuts to target the new MAINBINARYNAME
   !insertmacro IsShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"

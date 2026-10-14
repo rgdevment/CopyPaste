@@ -1,9 +1,9 @@
 # Contributor License Agreement
 
-CopyPaste Individual Contributor License Agreement, version 1.2.
+CoPanda Individual Contributor License Agreement, version 1.3.
 
-Thank you for contributing to CopyPaste. This agreement exists for one reason:
-CopyPaste is released under the GPL-3.0 **and** offered under separate
+Thank you for contributing to CoPanda. This agreement exists for one reason:
+CoPanda is released under the GPL-3.0 **and** offered under separate
 [commercial terms](COMMERCIAL.md) to organisations that cannot comply
 with the GPL. Offering those commercial terms requires the right to license
 the whole codebase that way — including your contribution. Without this
@@ -35,8 +35,15 @@ one You submitted before**. Code reaches a project by more routes than a Pull
 Request, and a signature that only looked forward would leave those earlier
 routes unaccounted for.
 
+**"Project"** means the software kept in the repository at
+<https://github.com/rgdevment/CopyPaste>, whatever name it is published under.
+It was released as CopyPaste up to version 3.1 and is released as CoPanda from
+version 3.2. A change of name, of repository address or of any other identifier
+is not a new project: this agreement, and every signature already given under
+it, carries over unchanged.
+
 **"Project Owner"** means Mario Hidalgo G. (rgdevment), the copyright holder
-and maintainer of CopyPaste, and whoever holds those rights after him — a
+and maintainer of CoPanda, and whoever holds those rights after him — a
 successor, or anyone the project is assigned or transferred to, in whole or in
 part. The licences You grant below run to them on the same terms, and to no
 wider ones.
@@ -108,7 +115,7 @@ provide support for your Contribution, though you may do so if you choose.
 These are the counterweights to the rights you grant, and they bind the
 Project Owner:
 
-- The community edition of CopyPaste stays available under the GPL-3.0.
+- The community edition of CoPanda stays available under the GPL-3.0.
 - Your Contribution is never removed from the open source project in order to
   make it exclusive to a commercial edition.
 - Your authorship is preserved. Git history is not rewritten to erase it.
@@ -156,13 +163,13 @@ I have read the CLA Document and I hereby sign the CLA
 You sign once. Every later Pull Request from the same GitHub account is
 covered automatically.
 
-This signature covers CopyPaste only. Other projects by the same owner have their
+This signature covers CoPanda only. Other projects by the same owner have their
 own agreement and their own signature record.
 
 ## If you would rather not sign
 
 That is a legitimate choice, and it costs you nothing else in this project.
-You can still use CopyPaste, report bugs, request features, discuss design,
+You can still use CoPanda, report bugs, request features, discuss design,
 package it for your distribution, help with translations, and fork the project
 under the GPL-3.0. Only merging code into this repository requires the
 agreement.

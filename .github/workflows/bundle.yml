@@ -124,23 +124,27 @@ jobs:
             "lay down the panel; the sidecar was not bundled"
           want 'StrCpy $INSTDIR "$LOCALAPPDATA\Programs' \
             "keep the binaries out of the data folder"
+          want '!define MAINBINARYNAME "cp-gui"' \
+            "keep cp-gui.exe, the program the startup entry and the shortcuts already point at"
+          want '!define HOMENAME "CopyPaste"' \
+            "keep the folders, keys and startup entry it has always had under CopyPaste"
           want '_is1" "UninstallString"' \
             "look for CopyPaste 2 before copying anything"
           for one in history.db history.db-wal history.db-shm config.toml update.json; do
-            want "Delete \"\$LOCALAPPDATA\\\${PRODUCTNAME}\\$one\"" \
+            want "Delete \"\$LOCALAPPDATA\\\${HOMENAME}\\$one\"" \
               "take the $one it owns when asked to delete its data"
           done
           for one in cp-gui.log cp-panel.log; do
-            want "Delete \"\$LOCALAPPDATA\\\${PRODUCTNAME}\\logs\\$one\"" \
+            want "Delete \"\$LOCALAPPDATA\\\${HOMENAME}\\logs\\$one\"" \
               "take its own $one"
           done
           for one in blobs thumbs; do
-            want "RmDir /r \"\$LOCALAPPDATA\\\${PRODUCTNAME}\\$one\"" \
+            want "RmDir /r \"\$LOCALAPPDATA\\\${HOMENAME}\\$one\"" \
               "take the $one it owns"
           done
-          want 'RmDir "$LOCALAPPDATA\${PRODUCTNAME}\logs"' \
+          want 'RmDir "$LOCALAPPDATA\${HOMENAME}\logs"' \
             "leave the log folder only once its own logs are gone"
-          want 'RmDir "$LOCALAPPDATA\${PRODUCTNAME}"' \
+          want 'RmDir "$LOCALAPPDATA\${HOMENAME}"' \
             "leave the shared folder standing unless it is already empty"
           stray=$(grep -oiE 'RmDir( /[A-Za-z]+)* /r "[^"]*"' "$flat" \
             | grep -viE '(\\blobs|\\thumbs|\$\{BUNDLEID\}|\$INSTDIR)"$' || true)

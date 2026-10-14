@@ -65,6 +65,6 @@ fn the_files_on_disk_are_read_and_putting_away_is_remembered() {
 
 #[test]
 fn the_line_names_the_version_in_either_language() {
-    assert_eq!(line_of("3.0.4", false), "CopyPaste 3.0.4 está lista");
-    assert_eq!(line_of("3.0.4", true), "CopyPaste 3.0.4 is ready");
+    assert_eq!(line_of("3.0.4", false), "CoPanda 3.0.4 está lista");
+    assert_eq!(line_of("3.0.4", true), "CoPanda 3.0.4 is ready");
 }

@@ -20,7 +20,7 @@ jobs:
       project: copypaste
       document-url: https://github.com/rgdevment/CopyPaste/blob/main/CLA.md
       not-signed-message: >-
-        Thanks for the pull request. CopyPaste is released under the GPL-3.0 and offered under
+        Thanks for the pull request. CoPanda is released under the GPL-3.0 and offered under
         separate commercial terms, which requires a signature from whoever opened it and every
         author and co-author of its commits before it can be merged. You keep the copyright on
         your work. To sign, post a comment on this pull request with:

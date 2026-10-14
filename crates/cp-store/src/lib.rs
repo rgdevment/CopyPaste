@@ -33,7 +33,7 @@ pub enum Error {
     TooBig { size: usize },
     #[error("there is no item {id}")]
     NoSuchItem { id: i64 },
-    #[error("the file is not a CopyPaste backup")]
+    #[error("the file is not a CoPanda backup")]
     NotABackup,
     #[error("a copy cannot be written over the history it is copying")]
     OntoItself,

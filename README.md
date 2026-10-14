@@ -1,7 +1,8 @@
 <div align="center">
-  <img src="resources/icon_app_256.png" width="140" height="140" alt="CopyPaste — Free Open Source Clipboard Manager for Windows and macOS"/>
+  <img src="resources/icon_app_256.png" width="140" height="140" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
 
-  <h1>CopyPaste — Free Open Source Clipboard Manager</h1>
+  <h1>CoPanda (formerly CopyPaste) — Free Open Source Clipboard Manager</h1>
+  <p><em>An extra thumb for your clipboard.</em></p>
   <p><strong>A local-first clipboard history and copy paste tool for Windows and macOS.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
 
   <p>
@@ -13,30 +14,30 @@
       <img src="https://img.shields.io/github/license/rgdevment/CopyPaste?style=flat-square&color=lightgrey" alt="License GPL-3.0"/>
     </a>
     <a href="https://github.com/sponsors/rgdevment">
-      <img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor CopyPaste on GitHub"/>
+      <img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor CoPanda on GitHub"/>
     </a>
     <a href="https://buymeacoffee.com/rgdevment">
       <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy me a coffee"/>
     </a>
   </p>
 
-  <p><strong>CopyPaste 3.0 is here</strong> — rewritten in Rust, for Windows and macOS.<br/>
+  <p><strong>CopyPaste is now CoPanda</strong> — the same app, the same history, a name of its own.<br/>
   Get it from <a href="https://github.com/rgdevment/CopyPaste/releases/latest">Releases</a>.</p>
 
-  <h4>Download CopyPaste</h4>
+  <h4>Download CoPanda</h4>
 
   <p align="center">
     <a href="https://apps.microsoft.com/detail/9NBJRZF3K856">
-      <img src="https://img.shields.io/badge/Windows-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get CopyPaste clipboard manager from Microsoft Store"/>
+      <img src="https://img.shields.io/badge/Windows-Microsoft_Store-0078D4?style=for-the-badge&logo=microsoft" alt="Get CoPanda clipboard manager from Microsoft Store"/>
     </a>
     &nbsp;
     <a href="#getting-started">
-      <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install CopyPaste clipboard manager via Homebrew on macOS"/>
+      <img src="https://img.shields.io/badge/macOS-Homebrew-FBB040?style=for-the-badge&logo=homebrew&logoColor=black" alt="Install CoPanda clipboard manager via Homebrew on macOS"/>
     </a>
   </p>
 
   <p align="center">
-    <a href="https://rgdevment.com/copypaste/"><b>rgdevment.com/copypaste</b></a>
+    <a href="https://www.copanda.app/"><b>www.copanda.app</b></a>
   </p>
 
   <p align="center">
@@ -46,11 +47,11 @@
 
 ---
 
-**CopyPaste** is a free, open source **clipboard manager** and **clipboard history** tool I built because the alternatives frustrated me. Most copy paste utilities are either bloated, ugly, or treat you as a product. I wanted a **copy tool** that felt native, respected my privacy, and just worked — so I built one and shared it.
+**CoPanda** is a free, open source **clipboard manager** and **clipboard history** tool I built because the alternatives frustrated me. Most copy paste utilities are either bloated, ugly, or treat you as a product. I wanted a **copy tool** that felt native, respected my privacy, and just worked — so I built one and shared it.
 
 This isn't a company product. I'm a developer who needed a better **copy paste** tool for my desktop, built it for myself, and decided to open source it for anyone who feels the same. No ads, no telemetry, no subscriptions, no data collection — just a lightweight **clipboard utility** that lives on your machine and nowhere else.
 
-**Why people choose CopyPaste over other clipboard managers:**
+**Why people choose CoPanda over other clipboard managers:**
 
 - **100% local** — your clipboard history never leaves your computer. No cloud, no servers, no accounts.
 - **Truly free** — no premium tiers, no feature gates, no "free trial" tricks. GPL v3, forever.
@@ -59,13 +60,13 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - **Fast and light** — starts in milliseconds, uses minimal resources. You'll forget it's running.
 - **Easy to read** — a clean, opaque panel that follows your system theme, light or dark, so what you copied is the first thing you see.
 
-> I use CopyPaste every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
+> I use CoPanda every day on Windows 11 and macOS. If something feels off, [let me know](#found-a-bug-have-feedback) — this project keeps improving because of real-world use.
 
 ---
 
 ## Table of Contents
 
-- [See It in Action](#see-copypaste-in-action)
+- [See It in Action](#see-copanda-in-action)
 - [Why I Built This](#why-i-built-this)
 - [What It Is / What It Isn't](#what-it-is--what-it-isnt)
 - [Who Is This For?](#who-is-this-for)
@@ -78,7 +79,7 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [Coming from CopyPaste 2](#coming-from-copypaste-2)
 - [Found a Bug? Have Feedback?](#found-a-bug-have-feedback)
 - [What's Coming and What's Changed](#whats-coming-and-whats-changed)
-- [Localization](#localization-help-translate-copypaste)
+- [Localization](#localization-help-translate-copanda)
 - [Want to Help?](#want-to-help)
 - [Tech Stack](#tech-stack-for-developers)
 - [Themes](#themes)
@@ -88,24 +89,26 @@ This isn't a company product. I'm a developer who needed a better **copy paste**
 - [License and Spirit](#license-and-spirit)
 - [Acknowledgements](#acknowledgements)
 
-## See CopyPaste in Action
+## See CoPanda in Action
 
 <div align="center">
-    <img src="resources/demo.gif" alt="CopyPaste clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
+    <img src="resources/demo.gif" alt="CoPanda clipboard manager demo — search clipboard history, paste with keyboard shortcuts, cross-platform on Windows and macOS"/>
 </div>
 <div align="center"><em>Fast search, clean cards, and a native feel across Windows and macOS.</em></div>
 
 <br/>
 
 <div align="center">
-    <img src="resources/3.0/en-1-hero.png" alt="CopyPaste clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
-    <img src="resources/3.0/en-2-filters.png" alt="CopyPaste copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
+    <img src="resources/3.2/en-7-panda.png" alt="CoPanda, an extra thumb for your clipboard: searchable, private and always on your machine" width="98%"/>
     <br/><br/>
-    <img src="resources/3.0/en-3-paste-as.png" alt="CopyPaste paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
-    <img src="resources/3.0/en-4-privacy.png" alt="CopyPaste privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
+    <img src="resources/3.2/en-1-hero.png" alt="CoPanda clipboard history — the panel with everything you copied, opened with Ctrl+Alt+V on Windows and macOS" width="49%"/>
+    <img src="resources/3.2/en-2-filters.png" alt="CoPanda copy tool — type #image, #link or #token to filter the clipboard history by kind" width="49%"/>
     <br/><br/>
-    <img src="resources/3.0/en-5-settings.png" alt="CopyPaste settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
-    <img src="resources/3.0/en-6-free.png" alt="CopyPaste is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
+    <img src="resources/3.2/en-3-paste-as.png" alt="CoPanda paste as — paste a token as a header or curl, a colour in rgb(), JSON minified or a link in Markdown" width="49%"/>
+    <img src="resources/3.2/en-4-privacy.png" alt="CoPanda privacy — 100% local, no account, no telemetry, passwords from 1Password or Bitwarden are ignored" width="49%"/>
+    <br/><br/>
+    <img src="resources/3.2/en-5-settings.png" alt="CoPanda settings — light, dark or system theme, six accent colours and your own shortcut" width="49%"/>
+    <img src="resources/3.2/en-6-free.png" alt="CoPanda is a free and open source clipboard manager for Windows and macOS under GPL-3.0" width="49%"/>
 </div>
 
 ---
@@ -116,7 +119,7 @@ I'm not a company. I'm a developer who copies and pastes things hundreds of time
 
 Most **clipboard managers** out there are either bloated, ugly, Windows-only, or silently collecting your data. In 2026, a **copy paste tool** should feel native, responsive, and beautiful on every platform. I couldn't find one that did, so I built my own.
 
-**CopyPaste started as a personal productivity tool.** I needed a lightweight **copy history** utility that:
+**CoPanda started as a personal productivity tool.** I needed a lightweight **copy history** utility that:
 
 - Didn't hog system resources
 - Looked and felt like part of my OS, not a widget dropped on top
@@ -132,13 +135,13 @@ Every line of code is public. You can read it, fork it, or learn from it. This i
 
 ## What It Is / What It Isn't
 
-**CopyPaste is:**
+**CoPanda is:**
 
 - A **local-first clipboard manager** and **clipboard history** app for Windows and macOS
 - A fast, keyboard-driven **copy-paste utility** for daily productivity and workflow efficiency
 - A **copy tool** you can trust — **open source** (GPL v3), inspect every line, fork it, contribute to it
 
-**CopyPaste is not:**
+**CoPanda is not:**
 
 - A cloud clipboard or sync service
 - A telemetry or analytics tool
@@ -161,7 +164,7 @@ If you copy and paste throughout your day, this **clipboard manager** is for you
 
 ## Privacy and Security
 
-**Everything stays local.** CopyPaste is built on a single, non-negotiable principle: your clipboard data never leaves your computer. This copy-paste tool was designed with privacy as the foundation, not an afterthought.
+**Everything stays local.** CoPanda is built on a single, non-negotiable principle: your clipboard data never leaves your computer. This copy-paste tool was designed with privacy as the foundation, not an afterthought.
 
 - **Local-only storage** — no cloud, no servers, no data syncing
 - **No tracking** — no telemetry, no analytics, no hidden collection of any kind
@@ -169,14 +172,14 @@ If you copy and paste throughout your day, this **clipboard manager** is for you
 - **Secrets marked as secret are never read** — what an app marks as secret or concealed when it copies, as most password managers (1Password, Bitwarden, etc.) do, never reaches the history
 - **Log export is voluntary** — you choose when and what to share; logs never contain clipboard content
 
-**By design, CopyPaste will never have:** accounts, subscriptions, ads, cloud sync, or "AI analysis" of your clipboard.
+**By design, CoPanda will never have:** accounts, subscriptions, ads, cloud sync, or "AI analysis" of your clipboard.
 
 For responsible disclosure and security contact info, see [SECURITY.md](SECURITY.md).
 
 <details>
 <summary><strong>Where is my clipboard data stored?</strong></summary>
 
-CopyPaste stores everything locally under your user profile. The 3.0 keeps one
+CoPanda stores everything locally under your user profile. The 3.0 keeps one
 folder with the history, the files behind it and its settings:
 
 **Windows** — `%LOCALAPPDATA%\CopyPaste\`
@@ -243,14 +246,14 @@ If you care about privacy and control, this clipboard manager is made for you. R
 
 ## Keyboard Shortcuts
 
-CopyPaste keeps `Ctrl+V` under the active application's control and uses one
+CoPanda keeps `Ctrl+V` under the active application's control and uses one
 global shortcut of its own to open the history panel. On a Mac the panel answers
 the keys of the system it runs on: ⌘ where Windows uses Ctrl, and the keys a Mac
 keyboard does not have are replaced by the ones it does.
 
 | Where | Windows | macOS | Action |
 | :---- | :------ | :---- | :----- |
-| App you're in | Ctrl+V | ⌘V | Normal paste. CopyPaste does not intercept it. |
+| App you're in | Ctrl+V | ⌘V | Normal paste. CoPanda does not intercept it. |
 | Anywhere | Ctrl+Alt+V | ⌃⌥V | Open the panel. Change it in Settings → Keyboard shortcuts; if another program already uses it, free alternatives are offered. |
 | Panel | Enter | ⏎ | Paste the selected item. |
 | Panel | Shift + Enter | ⇧⏎ | Paste as plain text. |
@@ -352,9 +355,9 @@ walks you through it.
 
 > [Install from the Microsoft Store](https://apps.microsoft.com/detail/9NBJRZF3K856)
 
-**winget** — coming soon. CopyPaste is not in the winget catalogue yet.
+**winget** — coming soon. CoPanda is not in the winget catalogue yet.
 
-> The [Scoop bucket](https://github.com/rgdevment/scoop-bucket) carries CopyPaste
+> The [Scoop bucket](https://github.com/rgdevment/scoop-bucket) carries CoPanda
 > 2 and is not fed by the 3.0 release.
 
 **Standalone `.exe`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest). The installer is self-signed; see the [security note](#standalone-downloads) below.
@@ -363,17 +366,17 @@ walks you through it.
 
 ### macOS
 
-**Homebrew** (recommended) — picks the build for your chip, Apple Silicon or Intel; afterwards CopyPaste updates itself from Settings → About:
+**Homebrew** (recommended) — picks the build for your chip, Apple Silicon or Intel; afterwards CoPanda updates itself from Settings → About:
 
 ```sh
-brew tap rgdevment/tap && brew install --cask copypaste
+brew tap rgdevment/tap && brew install --cask copanda
 ```
 
 Test versions, which arrive before anyone else's and can break, have a cask of
 their own:
 
 ```sh
-brew tap rgdevment/tap && brew install --cask copypaste-beta
+brew tap rgdevment/tap && brew install --cask copanda-beta
 ```
 
 **Standalone `.dmg`** — direct download from [GitHub Releases](https://github.com/rgdevment/CopyPaste/releases/latest), one per chip, with manual updates.
@@ -393,8 +396,8 @@ Direct packages live on [GitHub Releases](https://github.com/rgdevment/CopyPaste
 
 | Platform    | File                       | Notes                                                                       |
 | :---------- | :------------------------- | :-------------------------------------------------------------------------- |
-| **Windows** | `copypaste-installer-<version>-windows-x86_64.exe` | Self-signed installer — see security note below     |
-| **macOS**   | `copypaste-installer-<version>-macos-aarch64.dmg` · `copypaste-installer-<version>-macos-x86_64.dmg` | One per chip: Apple Silicon (`aarch64`) or Intel (`x86_64`) |
+| **Windows** | `copanda-installer-<version>-windows-x86_64.exe` | Self-signed installer — see security note below     |
+| **macOS**   | `copanda-installer-<version>-macos-aarch64.dmg` · `copanda-installer-<version>-macos-x86_64.dmg` | One per chip: Apple Silicon (`aarch64`) or Intel (`x86_64`) |
 
 Each release also carries a `SHA256SUMS` file with the checksum of every
 download, and a build attestation from GitHub that ties each file to the
@@ -403,7 +406,7 @@ workflow run in this repository that built it.
 <details>
 <summary><strong>Windows standalone: security warnings</strong></summary>
 
-Since CopyPaste is an independent open source project, the installer uses a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
+Since CoPanda is an independent open source project, the installer uses a self-signed certificate. Windows and your browser may show security warnings — **this is normal and expected.**
 
 - **Browser:** Chrome/Edge may block the download — click Keep or Keep anyway.
 - **SmartScreen:** Click More info → Run anyway (only happens once).
@@ -415,17 +418,17 @@ Since CopyPaste is an independent open source project, the installer uses a self
 
 ## FAQ
 
-**Is CopyPaste free?**
+**Is CoPanda free?**
 Yes. Completely free and open source. No premium tiers, no subscriptions, no paywalls — ever. That covers using it anywhere, including across a company, and packaging it for a distribution or package manager. Only redistributing it inside a product of your own needs [separate terms](COMMERCIAL.md).
 
 **Does it upload my clipboard data?**
-No. Everything stays on your machine. There is no cloud, no server, no sync. CopyPaste is a local-first clipboard manager by design — your copy paste data never leaves your computer.
+No. Everything stays on your machine. There is no cloud, no server, no sync. CoPanda is a local-first clipboard manager by design — your copy paste data never leaves your computer.
 
 **Does it store passwords?**
-Not what an app marks as secret. Most password managers mark what they copy as secret or concealed, and CopyPaste never reads it. A password copied from an ordinary place, such as a text file, carries no mark and is kept like any other text. The [Privacy Policy](PRIVACY.md#sensitive-data-protection) explains the limits.
+Not what an app marks as secret. Most password managers mark what they copy as secret or concealed, and CoPanda never reads it. A password copied from an ordinary place, such as a text file, carries no mark and is kept like any other text. The [Privacy Policy](PRIVACY.md#sensitive-data-protection) explains the limits.
 
 **Do I need internet to use it?**
-No. CopyPaste works fully offline. Outside the Microsoft Store it makes a lightweight check for updates when you open Settings → About, at most once a day (no user data sent), but works perfectly without a connection.
+No. CoPanda works fully offline. Outside the Microsoft Store it makes a lightweight check for updates when you open Settings → About, at most once a day (no user data sent), but works perfectly without a connection.
 
 **Does it sync clipboard history between devices?**
 No. There's intentionally no cloud sync. Your copy history stays on the device where you copied it. This is a local-first copy tool, not a cloud service.
@@ -443,7 +446,7 @@ Optionally, yes, on both systems. Enable it in Settings → General. On Windows 
 Yes. There is a build for each chip, Apple Silicon and Intel. Homebrew picks the right one for you, and the Releases page carries both.
 
 **Can it replace the Windows clipboard history (Win+V)?**
-Yes. Win+V keeps your last 25 items and forgets the unpinned ones when Windows restarts. CopyPaste keeps what you copy for as long as you choose, searchable in milliseconds, with images, files, links and colours as cards you can pin, name and paste in another form. It opens with its own shortcut, so Win+V stays where it is.
+Yes. Win+V keeps your last 25 items and forgets the unpinned ones when Windows restarts. CoPanda keeps what you copy for as long as you choose, searchable in milliseconds, with images, files, links and colours as cards you can pin, name and paste in another form. It opens with its own shortcut, so Win+V stays where it is.
 
 **How do I paste as plain text?**
 Open the panel and press **Shift+Enter** (⇧⏎ on a Mac). **Alt+Enter** (⌥⏎) offers the other forms a card carries, such as Markdown, formatted JSON or a colour in another notation.
@@ -454,8 +457,8 @@ Yes, on Windows and macOS. Drag a card into a browser upload, a chat or a folder
 **Is it an alternative to Ditto, Maccy or CopyQ?**
 Yes. The [Alternatives](#alternatives) section compares them honestly, including where each of them is the better choice.
 
-**How is CopyPaste different from other clipboard managers?**
-CopyPaste is a personal project, not a company product. There are no ads, no telemetry, no accounts, and no data collection. Unlike most copy paste tools, it's built to feel native on each platform, it's fully keyboard-driven, and it respects your privacy completely. It's an open source clipboard utility focused on productivity — you can verify every line of code yourself.
+**How is CoPanda different from other clipboard managers?**
+CoPanda is a personal project, not a company product. There are no ads, no telemetry, no accounts, and no data collection. Unlike most copy paste tools, it's built to feel native on each platform, it's fully keyboard-driven, and it respects your privacy completely. It's an open source clipboard utility focused on productivity — you can verify every line of code yourself.
 
 ---
 
@@ -476,7 +479,7 @@ doing, what you expected, and the version shown in **Settings → About**.
 
 ### The logs, if they help
 
-CopyPaste writes two plain-text log files beside your history —
+CoPanda writes two plain-text log files beside your history —
 `logs/cp-gui.log` for the settings window and `logs/cp-panel.log` for the panel.
 **Settings → History → Data folder → Open folder** takes you there.
 
@@ -504,7 +507,7 @@ restored twice without making a mess.
 
 ### A completely clean slate
 
-Quit CopyPaste from the tray (Windows) or the menu bar (macOS) and delete the
+Quit CoPanda from the tray (Windows) or the menu bar (macOS) and delete the
 data folder listed above. **Settings → History → Data folder → Open folder**
 takes you to it. Starting it again is a fresh installation, welcome tour
 included.
@@ -538,9 +541,9 @@ I keep a clear record of what's been added, fixed, and planned:
 
 ---
 
-## Localization: Help Translate CopyPaste
+## Localization: Help Translate CoPanda
 
-CopyPaste should speak your language. Currently it supports English and Spanish, but the goal is to reach people everywhere.
+CoPanda should speak your language. Currently it supports English and Spanish, but the goal is to reach people everywhere.
 
 ### Currently Supported Languages
 
@@ -557,7 +560,7 @@ CopyPaste should speak your language. Currently it supports English and Spanish,
 
 ### Help Add a New Language
 
-CopyPaste is written in two languages at once, and every string sits next to its
+CoPanda is written in two languages at once, and every string sits next to its
 twin. There is no translation file format to learn: the pairs live in the code.
 
 #### Where the words are
@@ -591,7 +594,7 @@ installer template picks its messages with `$LANGUAGE`.
 - Keep translations concise — UI space is limited
 - Use a neutral tone, and address the reader informally
 - Preserve placeholders like `{one}`
-- Don't translate brand names (CopyPaste, Windows, etc.)
+- Don't translate brand names (CoPanda, Windows, etc.)
 - Don't change the keys, only what they say
 
 ---
@@ -601,7 +604,7 @@ installer template picks its messages with `$LANGUAGE`.
 Contributions are always appreciated — whether that's a bug report, a translation, or a pull request:
 
 - **Write Code** — Fix bugs or add features. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup.
-- **Translate** — Add your language. [See guide](#localization-help-translate-copypaste).
+- **Translate** — Add your language. [See guide](#localization-help-translate-copanda).
 - **Report Bugs** — If something breaks, [open an issue](https://github.com/rgdevment/CopyPaste/issues/new).
 - **Share Ideas** — Tell me what you wish this clipboard manager could do.
 
@@ -628,7 +631,7 @@ If you're curious about what's under the hood of this open source clipboard mana
 
 ## Themes
 
-CopyPaste follows your system theme automatically — no configuration needed.
+CoPanda follows your system theme automatically — no configuration needed.
 
 - **Light** — Clean and bright, matching a light OS theme.
 - **Dark** — Easy on the eyes, matching a dark OS theme.
@@ -644,7 +647,7 @@ everything else changes, so go and look.
 
 | Project | Platform | Where your data lives | Licence |
 | :-- | :-- | :-- | :-- |
-| **CopyPaste** | Windows, macOS | Your disk, no account | GPL-3.0 |
+| **CoPanda** | Windows, macOS | Your disk, no account | GPL-3.0 |
 | [Ditto](https://github.com/sabrogden/Ditto) | Windows | Your disk; can sync between your own machines | GPL-3.0 |
 | [CopyQ](https://github.com/hluk/CopyQ) | Windows, macOS, Linux | Your disk | GPL-3.0 |
 | [Maccy](https://github.com/p0deje/Maccy) | macOS | Your disk | MIT |
@@ -654,13 +657,13 @@ everything else changes, so go and look.
 | [Raycast](https://www.raycast.com) | macOS | Your disk, with their service behind other features | Freemium, closed source |
 | Clipboard history | Windows, built in | Your disk; Microsoft's cloud if you turn syncing on | Part of Windows |
 
-What CopyPaste does that most of these do not: **one application on Windows and
+What CoPanda does that most of these do not: **one application on Windows and
 macOS** rather than one per system, **text read out of your screenshots** so a
 picture is searchable by what it says, **fifteen kinds recognised on their own**
 with a view that suits each, and **pasting the same card in another form**
 without touching what is stored.
 
-Each of them is better than CopyPaste at something. CopyQ is scriptable to a
+Each of them is better than CoPanda at something. CopyQ is scriptable to a
 degree nothing here matches and runs on Linux too. Maccy is smaller and faster
 to reach for. Ditto has years of Windows polish and syncing between machines.
 Raycast is a whole launcher that happens to keep a clipboard. Pick what fits the
@@ -670,7 +673,7 @@ way you work.
 
 ## Other Tools by the Same Author
 
-I build free, open source tools focused on privacy and productivity. If you like CopyPaste, you might also find these useful:
+I build free, open source tools focused on privacy and productivity. If you like CoPanda, you might also find these useful:
 
 <p align="center">
   <a href="https://rgdevment.com/linkunbound/">
@@ -713,14 +716,14 @@ whether those tests would notice a change rather than merely cover the line.
 
 ## License and Spirit
 
-**CopyPaste** — A modern, open source clipboard manager and copy-paste tool for Windows and macOS.
+**CoPanda** — A modern, open source clipboard manager and copy-paste tool for Windows and macOS.
 Copyright (C) 2026 Mario Hidalgo G. (rgdevment)
 
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
 Distributed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for more information.
 
-CopyPaste is dual licensed. The GPL-3.0 covers everyone using, deploying,
+CoPanda is dual licensed. The GPL-3.0 covers everyone using, deploying,
 auditing, packaging or forking it — which is almost everybody, and it costs
 nothing. Redistributing it inside a product of your own needs separate terms:
 see [COMMERCIAL.md](COMMERCIAL.md).
@@ -733,13 +736,13 @@ work.
 
 ---
 
-I built CopyPaste because I was tired of the alternatives — bloated, resource-hungry, or disrespectful of my privacy. This is a personal copy paste productivity tool, built from a real need, shared because others might need a better clipboard manager too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell.
+I built CoPanda because I was tired of the alternatives — bloated, resource-hungry, or disrespectful of my privacy. This is a personal copy paste productivity tool, built from a real need, shared because others might need a better clipboard manager too. Free to use, free to inspect, free forever. No analytics, no subscription, no upsell.
 
 If you find it useful, I'm glad. If you want to help make it better, even better.
 
 ## Acknowledgements
 
-CopyPaste stands on other people's open source work, every piece of it listed
+CoPanda stands on other people's open source work, every piece of it listed
 with its licence in [THIRD-PARTY-BUNDLED.md](THIRD-PARTY-BUNDLED.md), with the
 licence texts in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md), and both
 shown in the app under **About**. The panel is drawn with

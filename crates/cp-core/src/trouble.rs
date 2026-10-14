@@ -73,16 +73,16 @@ impl Trouble {
                 "the history could not be emptied",
             ],
             Trouble::ClipboardDenied => [
-                "el sistema no deja que CopyPaste lea el portapapeles",
-                "the system does not let CopyPaste read the clipboard",
+                "el sistema no deja que CoPanda lea el portapapeles",
+                "the system does not let CoPanda read the clipboard",
             ],
             Trouble::Stopped => [
                 "el panel dejó de vigilar el portapapeles",
                 "the panel stopped watching the clipboard",
             ],
             Trouble::Unsteady => [
-                "el panel no se mantiene abierto; reinicia CopyPaste",
-                "the panel will not stay up; restart CopyPaste",
+                "el panel no se mantiene abierto; reinicia CoPanda",
+                "the panel will not stay up; restart CoPanda",
             ],
             Trouble::Unanswering => ["el panel no responde", "the panel is not answering"],
         };

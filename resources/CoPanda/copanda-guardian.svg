@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" width="400" height="480" role="img" aria-label="Copanda, panda guardián sujetando una tarjeta del portapapeles">
+<defs>
+<linearGradient id="darkB" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="480"><stop offset="0" stop-color="#2b5fd8"/><stop offset="0.55" stop-color="#3e34c6"/><stop offset="1" stop-color="#6a20d2"/></linearGradient>
+<linearGradient id="tileGradB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#19a3dc"/><stop offset="0.5" stop-color="#4a46d4"/><stop offset="1" stop-color="#8a2be2"/></linearGradient>
+</defs>
+<path d="M14 480 L48 376 Q76 322 150 312 L200 338 L250 312 Q324 322 352 376 L386 480 Z" fill="url(#darkB)"/>
+<path d="M150 312 L200 338 L250 312 L266 480 L134 480 Z" fill="#f8faff"/>
+<path d="M84 112 L98 54 L152 80 Z" fill="url(#darkB)" stroke="url(#darkB)" stroke-width="14" stroke-linejoin="round"/>
+<path d="M316 112 L302 54 L248 80 Z" fill="url(#darkB)" stroke="url(#darkB)" stroke-width="14" stroke-linejoin="round"/>
+<path d="M200 66 L292 86 L334 160 L320 238 L262 288 L200 302 L138 288 L80 238 L66 160 L108 86 Z" fill="#f8faff" stroke="url(#darkB)" stroke-width="8" stroke-linejoin="round"/>
+<path d="M90 150 L172 172 L160 224 L112 220 Q86 196 90 150 Z" fill="url(#darkB)" stroke="url(#darkB)" stroke-width="6" stroke-linejoin="round"/>
+<path d="M310 150 L228 172 L240 224 L288 220 Q314 196 310 150 Z" fill="url(#darkB)" stroke="url(#darkB)" stroke-width="6" stroke-linejoin="round"/>
+<ellipse cx="141" cy="196" rx="13" ry="7" transform="rotate(12 141 196)" fill="#8fe3ff"/>
+<ellipse cx="259" cy="196" rx="13" ry="7" transform="rotate(-12 259 196)" fill="#8fe3ff"/>
+<ellipse cx="143" cy="197" rx="3" ry="5.5" fill="#1d1a6e"/>
+<ellipse cx="257" cy="197" rx="3" ry="5.5" fill="#1d1a6e"/>
+<path d="M176 240 L224 240 L212 258 L188 258 Z" fill="url(#darkB)" stroke="url(#darkB)" stroke-width="8" stroke-linejoin="round"/>
+<path d="M200 266 L200 272 M174 278 Q200 290 226 278" stroke="#3e34c6" stroke-width="5" stroke-linecap="round" fill="none"/>
+<rect x="146" y="344" width="140" height="104" rx="20" fill="#c9b8ee" opacity="0.75"/>
+<rect x="138" y="356" width="140" height="104" rx="20" fill="#a9c8ee" opacity="0.8"/>
+<rect x="130" y="368" width="140" height="104" rx="20" fill="url(#tileGradB)" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2"/>
+<rect x="172" y="394" width="56" height="8" rx="4" fill="#ffffff" opacity="0.9"/>
+<rect x="172" y="412" width="40" height="8" rx="4" fill="#ffffff" opacity="0.75"/>
+<rect x="172" y="430" width="48" height="8" rx="4" fill="#ffffff" opacity="0.6"/>
+<rect x="92" y="384" width="62" height="70" rx="26" fill="#5d66e6" stroke="#d6e6ff" stroke-width="3"/>
+<rect x="246" y="384" width="62" height="70" rx="26" fill="#5d66e6" stroke="#d6e6ff" stroke-width="3"/>
+<rect x="140" y="404" width="28" height="18" rx="9" fill="#6f78ec" stroke="#d6e6ff" stroke-width="3"/>
+<rect x="144" y="428" width="22" height="14" rx="7" fill="#7d86f0" stroke="#8fe3ff" stroke-width="3"/>
+<rect x="232" y="404" width="28" height="18" rx="9" fill="#6f78ec" stroke="#d6e6ff" stroke-width="3"/>
+<rect x="234" y="428" width="22" height="14" rx="7" fill="#7d86f0" stroke="#8fe3ff" stroke-width="3"/>
+</svg>
