@@ -157,6 +157,10 @@
   },
   {
     "version": "3.2.0",
+    "headline": {
+      "es": "CopyPaste ahora es CoPanda",
+      "en": "CopyPaste is now CoPanda"
+    },
     "es": [
       {
         "title": "CopyPaste ahora se llama CoPanda",

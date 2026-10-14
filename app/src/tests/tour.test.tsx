@@ -50,7 +50,7 @@ describe("the welcome of a fresh install", () => {
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
     await press("Siguiente");
 
-    expect(await screen.findByText("Hay novedades en CoPanda")).toBeInTheDocument();
+    expect(await screen.findByText("CopyPaste ahora es CoPanda")).toBeInTheDocument();
     await press("Entendido");
     expect(theWindow.close).toHaveBeenCalled();
   });
@@ -66,7 +66,7 @@ describe("the welcome of a fresh install", () => {
     await press("Siguiente");
 
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
-    expect(screen.queryByText("Hay novedades en CoPanda")).toBeNull();
+    expect(screen.queryByText("CopyPaste ahora es CoPanda")).toBeNull();
     await press("Listo");
     expect(theWindow.close).toHaveBeenCalled();
   });
@@ -282,6 +282,17 @@ describe("the news after an update", () => {
 describe("news from more than one version", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("names the new brand when 3.2.0 is the newest, under the panda and its line", async () => {
+    asked.greeting = { kind: "news", versions: ["3.2.0", "3.1.0"] };
+    render(<Welcome />);
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "CopyPaste ahora es CoPanda" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Un pulgar extra para tu portapapeles")).toBeInTheDocument();
+    expect(screen.queryByText("Hay novedades en CoPanda")).toBeNull();
   });
 
   it("puts the newest first, names the older one, and still closes with its button", async () => {

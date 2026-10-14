@@ -1057,15 +1057,8 @@ button:disabled {
 }
 
 .welcome-mark {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(150deg, var(--accent), var(--accent-dim));
-  color: var(--panel);
-  font-size: 26px;
-  font-weight: 600;
+  width: 64px;
+  height: auto;
 }
 
 .welcome-pills {
@@ -1504,6 +1497,26 @@ button:disabled {
 .welcome-stats span {
   font-size: var(--fs-small);
   color: var(--muted);
+}
+
+.welcome-news-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.welcome-panda {
+  width: 72px;
+  height: auto;
+}
+
+.welcome-line {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--accent);
 }
 
 .welcome-news-head {

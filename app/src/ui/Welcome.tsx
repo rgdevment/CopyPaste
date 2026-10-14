@@ -6,6 +6,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { asKeys, caps, type Kept, onMac, type Trust, useKept, useKeys } from "../core";
 import { fill, inEnglish, items, oneKey, panelKey, t } from "../locales";
 import news from "../news.json";
+import panda from "../panda.svg";
 import Chrome from "./Chrome";
 
 const RELEASES = "https://github.com/rgdevment/CopyPaste/releases";
@@ -66,6 +67,14 @@ export function toldFor(
     }));
     return [{ version, told }];
   });
+}
+
+export function headline(version: string | undefined, english: boolean): string {
+  const named = news.find((one) => one.version === version)?.headline;
+  if (named) {
+    return english ? named.en : named.es;
+  }
+  return t("welcomeNewsTitle");
 }
 
 function leave() {
@@ -177,7 +186,7 @@ function Tour({
           right={<Strong says={t("welcomeStart")} onPress={next} />}
         >
           <div className="welcome-hello">
-            <div className="welcome-mark">C</div>
+            <img className="welcome-mark" src={panda} alt="" />
             <h1>{t("welcomeHello")}</h1>
             <p>{t("welcomeHelloWhy")}</p>
             <div className="welcome-pills">
@@ -525,11 +534,15 @@ function News({ versions }: { versions: string[] }) {
   return (
     <main className="welcome">
       <div className="welcome-body">
-        <div className="welcome-news-head">
-          <span className="welcome-over">{t("welcomeNewsOver")}</span>
-          {versions[0] && <span className="welcome-version">{versions[0]}</span>}
+        <div className="welcome-news-top">
+          <img className="welcome-panda" src={panda} alt="" />
+          <div className="welcome-news-head">
+            <span className="welcome-over">{t("welcomeNewsOver")}</span>
+            {versions[0] && <span className="welcome-version">{versions[0]}</span>}
+          </div>
+          <h1>{headline(versions[0], inEnglish())}</h1>
+          <p className="welcome-line">{t("welcomeNewsLine")}</p>
         </div>
-        <h1>{t("welcomeNewsTitle")}</h1>
         <div className="welcome-news-scroll">
           {told.map((one, at) => (
             <section key={one.version} aria-label={one.version}>

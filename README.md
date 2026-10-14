@@ -2,6 +2,7 @@
   <img src="resources/icon_app_256.png" width="140" height="140" alt="CoPanda — Free Open Source Clipboard Manager for Windows and macOS"/>
 
   <h1>CoPanda (formerly CopyPaste) — Free Open Source Clipboard Manager</h1>
+  <p><em>An extra thumb for your clipboard.</em></p>
   <p><strong>A local-first clipboard history and copy paste tool for Windows and macOS.<br/>No ads. No telemetry. No accounts. Just a fast, private clipboard utility built for productivity.</strong></p>
 
   <p>
