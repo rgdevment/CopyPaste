@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CoPanda",
-  "mainBinaryName": "CopyPaste",
   "identifier": "com.rgdevment.copypaste",
   "build": {
     "beforeDevCommand": "npm run dev",
