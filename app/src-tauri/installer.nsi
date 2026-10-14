@@ -919,6 +919,18 @@ Section Uninstall
       !insertmacro UnpinShortcut "$DESKTOP\${PRODUCTNAME}.lnk"
       Delete "$DESKTOP\${PRODUCTNAME}.lnk"
     ${EndIf}
+    !insertmacro IsShortcutTarget "$DESKTOP\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$DESKTOP\${HOMENAME}.lnk"
+      Delete "$DESKTOP\${HOMENAME}.lnk"
+    ${EndIf}
+    !insertmacro IsShortcutTarget "$SMPROGRAMS\${HOMENAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$SMPROGRAMS\${HOMENAME}.lnk"
+      Delete "$SMPROGRAMS\${HOMENAME}.lnk"
+    ${EndIf}
   ${EndIf}
 
   ; Remove registry information for add/remove programs
