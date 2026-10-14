@@ -108,7 +108,7 @@ When you explicitly click one of the links in **Settings → About**, CoPanda op
 - **Sponsor the project** → `https://github.com/sponsors/rgdevment`
 - **Buy me a coffee** → `https://buymeacoffee.com/rgdevment`
 - **Rate it on the Store** (Windows only) → opens the Microsoft Store app on CoPanda's review page
-- **Other tools** → `https://rgdevment.com/tisty/` and `https://rgdevment.com/linkunbound/`
+- **Other tools** → `https://www.tisty.app/` and `https://www.linkunbound.app/`
 
 The same goes for a link you open from a card in the panel. If [LinkUnbound](https://github.com/rgdevment/LinkUnbound) is installed, these web links go through it so it can pick the browser; otherwise they go straight to your default browser.
 

@@ -61,13 +61,13 @@ const TOOLS = [
     name: "Tisty",
     icon: tisty,
     says: "toolTisty",
-    at: "https://rgdevment.com/tisty/",
+    at: "https://www.tisty.app/",
   },
   {
     name: "LinkUnbound",
     icon: linkunbound,
     says: "toolLinkUnbound",
-    at: "https://rgdevment.com/linkunbound/",
+    at: "https://www.linkunbound.app/",
   },
 ];
 
