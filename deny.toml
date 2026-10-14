@@ -7,13 +7,6 @@ targets = [
 
 [advisories]
 yanked = "deny"
-ignore = [
-  { id = "RUSTSEC-2025-0075", reason = "unic-char-range: unmaintained, not vulnerable; it arrives through urlpattern in tauri-utils and is not ours to replace" },
-  { id = "RUSTSEC-2025-0080", reason = "unic-common: as above, through the same Tauri chain" },
-  { id = "RUSTSEC-2025-0081", reason = "unic-char-property: as above, through the same Tauri chain" },
-  { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: as above, through the same Tauri chain" },
-  { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: as above, through the same Tauri chain" },
-]
 
 [licenses]
 allow = [
