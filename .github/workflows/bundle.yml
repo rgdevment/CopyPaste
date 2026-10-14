@@ -126,6 +126,8 @@ jobs:
             "keep the binaries out of the data folder"
           want '!define MAINBINARYNAME "cp-gui"' \
             "keep cp-gui.exe, the program the startup entry and the shortcuts already point at"
+          want '${OrIf} $R0 <> 0 StrCpy $R1 "$R1 /UPDATE"' \
+            "tell the old uninstaller it is an update, so an upgrade run by hand keeps the startup entry"
           want '!define HOMENAME "CopyPaste"' \
             "keep the folders, keys and startup entry it has always had under CopyPaste"
           want '_is1" "UninstallString"' \
