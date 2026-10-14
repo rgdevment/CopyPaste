@@ -39,7 +39,7 @@ with the crates that carry it.
 | `scheduler` | 0.28.0 | MIT |
 | `uc.micro` | 3.0.0 | MIT |
 
-## In the core (443 crates)
+## In the core (442 crates)
 
 | Crate | Version | Licence |
 | --- | --- | --- |
@@ -142,7 +142,6 @@ with the crates that carry it.
 | `futures-util` | 0.3.34 | MIT OR Apache-2.0 |
 | `getrandom` | 0.2.17 | MIT OR Apache-2.0 |
 | `getrandom` | 0.3.4 | MIT OR Apache-2.0 |
-| `getrandom` | 0.4.3 | MIT OR Apache-2.0 |
 | `gif` | 0.14.2 | MIT OR Apache-2.0 |
 | `glob` | 0.3.4 | MIT OR Apache-2.0 |
 | `global-hotkey` | 0.8.0 | Apache-2.0 OR MIT |
@@ -309,7 +308,7 @@ with the crates that carry it.
 | `rusqlite` | 0.40.2 | MIT |
 | `rustc-hash` | 1.1.0 | Apache-2.0/MIT |
 | `rustix` | 1.1.4 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
-| `rustls` | 0.23.45 | Apache-2.0 OR ISC OR MIT |
+| `rustls` | 0.23.46 | Apache-2.0 OR ISC OR MIT |
 | `rustls-pki-types` | 1.15.1 | MIT OR Apache-2.0 |
 | `rustls-platform-verifier` | 0.7.1 | MIT OR Apache-2.0 |
 | `rustls-webpki` | 0.103.15 | ISC |

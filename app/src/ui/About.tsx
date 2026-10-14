@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { licences, notices, type Route, useUpdate } from "../core";
 import { fill, t } from "../locales";
 import { composed } from "../markdown";
+import panda from "../panda.svg";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
@@ -158,9 +159,7 @@ export default function About() {
       {trouble && <p className="alarm">{trouble}</p>}
 
       <div className="brow">
-        <span className="mark" aria-hidden="true">
-          C
-        </span>
+        <img className="mark" src={panda} alt="" />
         <span>
           <h1>CoPanda</h1>
           <span className="line2">
