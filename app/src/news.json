@@ -181,5 +181,20 @@
         "said": "no account, no ads and no tracking, as always."
       }
     ]
+  },
+  {
+    "version": "3.2.2",
+    "es": [
+      {
+        "title": "Tisty y LinkUnbound con su mascota",
+        "said": "en Acerca de, las otras herramientas del mismo autor aparecen con su mascota y llevan a sus propios sitios."
+      }
+    ],
+    "en": [
+      {
+        "title": "Tisty and LinkUnbound with their mascots",
+        "said": "in About, the author's other tools show their mascots and take you to their own sites."
+      }
+    ]
   }
 ]
