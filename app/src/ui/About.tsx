@@ -3,9 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 import { licences, notices, type Route, useUpdate } from "../core";
+import linkunbound from "../linkunbound.svg";
 import { fill, t } from "../locales";
 import { composed } from "../markdown";
 import panda from "../panda.svg";
+import tisty from "../tisty.svg";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
@@ -57,13 +59,13 @@ function Newer() {
 const TOOLS = [
   {
     name: "Tisty",
-    hue: "#7c6cf0",
+    icon: tisty,
     says: "toolTisty",
     at: "https://rgdevment.com/tisty/",
   },
   {
     name: "LinkUnbound",
-    hue: "#3fbfa6",
+    icon: linkunbound,
     says: "toolLinkUnbound",
     at: "https://rgdevment.com/linkunbound/",
   },
@@ -266,9 +268,7 @@ export default function About() {
       <div className="rule">{t("otherTools")}</div>
       {TOOLS.map((tool) => (
         <button key={tool.name} type="button" className="tool" onClick={() => go(tool.at)}>
-          <span className="ico" style={{ background: tool.hue }}>
-            {tool.name.slice(0, 1)}
-          </span>
+          <img className="ico" src={tool.icon} alt="" />
           <span style={{ flex: 1, minWidth: 0 }}>
             <b>{tool.name}</b>
             <span>
