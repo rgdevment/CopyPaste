@@ -1505,11 +1505,6 @@ jobs:
             fi
           done
 
-          CONFLICTS="\"${CASK_OTHER}\""
-          if [ -f "Casks/${FORMER_OTHER}.rb" ]; then
-            CONFLICTS="[\"${CASK_OTHER}\", \"${FORMER_OTHER}\"]"
-          fi
-
           cat > "Casks/${CASK}.rb" <<-CASK
           	cask "${CASK}" do
           	  arch arm: "aarch64", intel: "x86_64"
@@ -1526,7 +1521,7 @@ jobs:
 
           	  auto_updates true
 
-          	  conflicts_with cask: ${CONFLICTS}
+          	  conflicts_with cask: [CONFLICTS]
           	  depends_on macos: :ventura
 
           	  app "CoPanda.app"
@@ -1540,8 +1535,8 @@ jobs:
           	  ]
 
           	  caveats <<~EOS
-          	    CopyPaste is now CoPanda: the same app, with your history, settings and
-          	    shortcut. Look for CoPanda in your Applications folder.
+          	    CoPanda was called CopyPaste until 3.2. Coming from it, your history,
+          	    settings and shortcut carry over, and the app is CoPanda in Applications.
           	  EOS
           	end
           CASK
@@ -1571,6 +1566,14 @@ jobs:
             mv /tmp/next.json /tmp/renames.json
           done
           mv /tmp/renames.json cask_renames.json
+
+          conflicts=""
+          for one in "${CASK_OTHER}" "${FORMER_OTHER}"; do
+            [ -n "$(jq -r --arg one "$one" '.[$one] // empty' cask_renames.json)" ] && continue
+            [ "$one" = "${CASK_OTHER}" ] || [ -f "Casks/${one}.rb" ] || continue
+            conflicts="${conflicts:+${conflicts}, }\"${one}\""
+          done
+          sed -i "s/\[CONFLICTS\]/[${conflicts}]/" "Casks/${CASK}.rb"
 
           git add Casks cask_renames.json
           if git diff --cached --quiet; then
