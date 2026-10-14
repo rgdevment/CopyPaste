@@ -1596,14 +1596,52 @@ jobs:
             echo "go=yes" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Komac, at the version and checksum written here
+        if: steps.gate.outputs.go == 'yes'
+        shell: bash
+        env:
+          KOMAC: 2.16.0
+          KOMAC_SHA256: 7d2707fa6210f2789a3702de49fbd150b736dbf426ee0b9bc8e098736f9fd82d
+        run: |
+          set -euo pipefail
+          tarball="komac-$KOMAC-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$tarball" \
+            "https://github.com/russellbanks/Komac/releases/download/v$KOMAC/$tarball"
+          echo "$KOMAC_SHA256  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/komac"
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP/komac" komac
+          echo "$RUNNER_TEMP/komac" >> "$GITHUB_PATH"
+
       - name: Open the pull request that adds this version
         if: steps.gate.outputs.go == 'yes'
-        uses: vedantmgoyal9/winget-releaser@f29ed1ffd34f91223a2aebaa71beaab0901ff9fd # v2
-        with:
-          identifier: rgdevment.CopyPaste
-          version: ${{ needs.version.outputs.version }}
-          release-tag: ${{ github.ref_name }}
-          installers-regex: 'copypaste-installer-.*-windows-x86_64\.exe$'
-          max-versions-to-keep: 5
-          fork-user: rgdevment-bot
-          token: ${{ secrets.WINGET_TOKEN }}
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          KOMAC_FORK_OWNER: rgdevment-bot
+          FORCE_HYPERLINK: "0"
+          PACKAGE: rgdevment.CopyPaste
+          VERSION: ${{ needs.version.outputs.version }}
+          TAG: ${{ github.ref_name }}
+          INSTALLERS: '^copypaste-installer-.*-windows-x86_64\.exe$'
+          KEEP: "5"
+        run: |
+          set -euo pipefail
+          if ! komac list-versions "$PACKAGE" > /dev/null; then
+            echo "::error::$PACKAGE is not in winget-pkgs, so there is nothing to add a version to"
+            exit 1
+          fi
+          mapfile -t urls < <(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+            --jq '.assets[] | select(.name | test(env.INSTALLERS)) | .browser_download_url')
+          if [ "${#urls[@]}" -eq 0 ]; then
+            echo "::error::no asset of $TAG matches $INSTALLERS"
+            exit 1
+          fi
+          komac sync-fork
+          komac update "$PACKAGE" --version "$VERSION" --urls "${urls[@]}" --submit
+          komac cleanup --only-merged
+          mapfile -t old < <(komac list-versions "$PACKAGE" --json | jq -r '.[]' | head -n "-$((KEEP - 1))")
+          for one in "${old[@]}"; do
+            komac remove "$PACKAGE" --version "$one" \
+              --reason "This version is older than the $KEEP the publisher keeps in winget." --submit
+          done
