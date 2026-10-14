@@ -1631,7 +1631,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           KOMAC_FORK_OWNER: rgdevment-bot
           FORCE_HYPERLINK: "0"
-          PACKAGE: rgdevment.CopyPaste
+          PACKAGE: rgdevment.CoPanda
           VERSION: ${{ needs.version.outputs.version }}
           TAG: ${{ github.ref_name }}
           INSTALLERS: '^copanda-installer-.*-windows-x86_64\.exe$'
