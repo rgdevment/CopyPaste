@@ -1,4 +1,6 @@
 mod backup;
+#[cfg(any(target_os = "macos", test))]
+mod bundle;
 mod keys;
 mod links;
 mod looks;
@@ -15,6 +17,10 @@ mod welcome;
 
 pub fn run() {
     note::catch_panics();
+    #[cfg(target_os = "macos")]
+    if bundle::settle() {
+        return;
+    }
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             welcome::reopened(app);
