@@ -27,7 +27,10 @@ pub fn parse(input: &str, clock: &Clock) -> Filter {
     let mut filter = Filter::default();
     let mut words: Vec<String> = Vec::new();
     let mut label: Vec<String> = Vec::new();
-    for token in tokens(input) {
+    let tokens = tokens(input);
+    let count = tokens.len();
+    let mut typing = false;
+    for (at, token) in tokens.into_iter().enumerate() {
         match operator(&token, clock) {
             Some(Op::Kinds(kinds, false)) => filter.kinds.extend(kinds),
             Some(Op::Kinds(kinds, true)) => filter.exclude_kinds.extend(kinds),
@@ -39,11 +42,20 @@ pub fn parse(input: &str, clock: &Clock) -> Filter {
             Some(Op::OnlyBroken) => filter.broken = Broken::Only,
             Some(Op::Label(text)) => label.push(text),
             Some(Op::Order(order)) => filter.order = order,
-            None if token.chars().any(char::is_alphanumeric) => words.push(token),
+            None if token.chars().any(char::is_alphanumeric) => {
+                typing = at + 1 == count && !input.ends_with(char::is_whitespace);
+                words.push(token);
+            }
             None => {}
         }
     }
-    filter.query = (!words.is_empty()).then(|| words.join(" "));
+    filter.query = (!words.is_empty()).then(|| {
+        let mut query = words.join(" ");
+        if !typing {
+            query.push(' ');
+        }
+        query
+    });
     filter.label_query = (!label.is_empty()).then(|| label.join(" "));
     filter
 }

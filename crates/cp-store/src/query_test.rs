@@ -222,7 +222,7 @@ fn a_word_with_nothing_to_search_for_does_not_blank_the_list() {
             "«{typed}» is the whole history"
         );
     }
-    assert_eq!(parsed("hello ...").query.as_deref(), Some("hello"));
+    assert_eq!(parsed("hello ...").query.as_deref(), Some("hello "));
 }
 
 #[test]
@@ -242,7 +242,7 @@ fn the_example_from_the_design_note() {
     assert_eq!(
         filter,
         Filter {
-            query: Some("token".into()),
+            query: Some("token ".into()),
             apps: vec!["code".into()],
             since: Some(CLOCK.now - HOUR),
             ..Default::default()
@@ -253,7 +253,7 @@ fn the_example_from_the_design_note() {
 #[test]
 fn everything_at_once() {
     let filter = parsed("  request  k:json,text -@safari #red ~7d is:pinned l:may sort:used ");
-    assert_eq!(filter.query.as_deref(), Some("request"));
+    assert_eq!(filter.query.as_deref(), Some("request "));
     assert_eq!(filter.kinds, vec![Kind::Json, Kind::Text]);
     assert_eq!(filter.exclude_apps, vec!["safari"]);
     assert_eq!(filter.colors, vec![1]);
@@ -338,5 +338,17 @@ fn a_quoted_app_with_a_comma_is_split_into_two_apps_not_kept_whole() {
         "quoting only protects the space from the tokenizer; the comma still splits the \
          value into a list, and the second half keeps its leading space, so neither piece \
          can ever match the real application name"
+    );
+}
+
+#[test]
+fn a_space_after_a_word_says_it_is_finished() {
+    assert_eq!(parsed("jira").query.as_deref(), Some("jira"));
+    assert_eq!(parsed("jira ").query.as_deref(), Some("jira "));
+    assert_eq!(parsed("jira abr").query.as_deref(), Some("jira abr"));
+    assert_eq!(
+        parsed("jira k:text").query.as_deref(),
+        Some("jira "),
+        "a word followed by a filter was finished too"
     );
 }
