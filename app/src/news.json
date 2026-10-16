@@ -196,5 +196,28 @@
         "said": "in About, the author's other tools show their mascots and take you to their own sites."
       }
     ]
+  },
+  {
+    "version": "3.3.0",
+    "es": [
+      {
+        "title": "Una búsqueda que entiende lo que escribes",
+        "said": "aparece primero lo que más se parece a lo que buscas, y te encuentra aunque te equivoques en una letra."
+      },
+      {
+        "title": "Palabras completas",
+        "said": "cuando escribes una palabra y dejas un espacio, se buscan solo las copias que la tienen completa."
+      }
+    ],
+    "en": [
+      {
+        "title": "A search that understands what you type",
+        "said": "what matches best comes first, and it finds your copy even when a letter is off."
+      },
+      {
+        "title": "Whole words",
+        "said": "type a word followed by a space and only the copies holding that whole word show up."
+      }
+    ]
   }
 ]
