@@ -531,8 +531,8 @@ fn no_order_sorts_the_history_in_memory() {
             ..Default::default()
         };
         let clauses =
-            Clauses::of(&filter, true, true).expect("with no term there are still clauses");
-        let sql = page_sql(&clauses, order.key(), None, false);
+            Clauses::of(&filter, &[], true, true).expect("with no term there are still clauses");
+        let sql = page_sql(&clauses, order.key());
         let plan: Vec<String> = store
             .db
             .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
@@ -1406,7 +1406,7 @@ fn what_matched_in_the_words_comes_before_what_was_read_in_an_image() {
     let store = jira_history();
     assert_eq!(
         searched(&store, "jira"),
-        vec![Some(Kind::Link), Some(Kind::Text), Some(Kind::Image)],
+        vec![Some(Kind::Text), Some(Kind::Link), Some(Kind::Image)],
         "the newest image still waits behind the texts"
     );
 }
@@ -1449,7 +1449,7 @@ fn paging_walks_from_the_words_into_the_images_without_repeating() {
     }
     assert_eq!(
         seen,
-        vec![Some(Kind::Link), Some(Kind::Text), Some(Kind::Image)]
+        vec![Some(Kind::Text), Some(Kind::Link), Some(Kind::Image)]
     );
 }
 
@@ -1462,4 +1462,162 @@ fn a_quote_in_the_query_does_not_break_the_ranking() {
         .expect("insert");
     assert_eq!(searched(&store, "it's"), vec![Some(Kind::Text)]);
     assert_eq!(searched(&store, "it's "), vec![Some(Kind::Text)]);
+}
+
+fn notes(rows: &[(&str, i64)]) -> Store {
+    let store = Store::in_memory().expect("schema");
+    for (at, (text, when)) in rows.iter().enumerate() {
+        store
+            .insert_item(
+                &format!("uuid-{at}"),
+                &text_item(text, Kind::Text),
+                text,
+                *when,
+            )
+            .expect("insert");
+    }
+    store
+}
+
+fn found(store: &Store, filter: &Filter) -> Vec<String> {
+    all(store, filter)
+        .into_iter()
+        .map(|one| one.preview)
+        .collect()
+}
+
+fn asked(query: &str) -> Filter {
+    Filter {
+        query: Some(query.into()),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn the_most_relevant_text_comes_first_and_the_date_only_breaks_ties() {
+    let store = notes(&[
+        ("sopa cormanilo, revisar", 1),
+        (
+            "entonces en la sopa, se activaran los pagos relacionados con vg team y meat, \
+             pero si es desde Porter sera cormanilo y lo demás queda igual que siempre",
+            5,
+        ),
+        ("algo sin nada que ver", 9),
+    ]);
+    assert_eq!(
+        found(&store, &asked("sopa cormanilo")),
+        vec![
+            "sopa cormanilo, revisar".to_owned(),
+            all(&store, &asked("porter"))[0].preview.clone()
+        ],
+        "the short note about both words beats the newer long text"
+    );
+}
+
+#[test]
+fn a_word_spelled_out_beats_a_word_that_only_starts_the_same() {
+    let store = notes(&[("reunión del lunes", 1), ("reuniones del lunes", 2)]);
+    assert_eq!(
+        found(&store, &asked("reunion")),
+        vec!["reunión del lunes", "reuniones del lunes"]
+    );
+}
+
+#[test]
+fn an_order_chosen_by_hand_is_kept_while_searching() {
+    let store = notes(&[
+        ("sopa", 1),
+        ("sopa y mucho más texto alrededor de la sopa", 2),
+    ]);
+    let mut filter = asked("sopa");
+    filter.order = Order::LastUsed;
+    let first = all(&store, &filter)[0].id;
+    store.record_paste(first, 50).expect("pasted");
+    assert_eq!(all(&store, &filter)[0].id, first);
+    filter.order = Order::MostPasted;
+    assert_eq!(all(&store, &filter)[0].id, first);
+}
+
+#[test]
+fn a_typo_finds_the_word_only_when_nothing_matches_exactly() {
+    let store = notes(&[
+        ("si es desde Porter sera cormanilo", 1),
+        ("la sopa de hoy", 2),
+    ]);
+    assert_eq!(
+        found(&store, &asked("cormanillo")),
+        vec!["si es desde Porter sera cormanilo"]
+    );
+    assert_eq!(
+        found(&store, &asked("cromanilo ")),
+        vec!["si es desde Porter sera cormanilo"]
+    );
+    assert_eq!(
+        found(&store, &asked("sopa cormanillo")),
+        Vec::<String>::new(),
+        "every word still has to be there"
+    );
+    assert_eq!(
+        store.count_matching(&asked("cormanillo")).expect("counted"),
+        1
+    );
+    let rows = all(&store, &asked("porter cormanillo"));
+    let marked: Vec<&str> = rows[0]
+        .snippet
+        .as_ref()
+        .expect("a snippet")
+        .excerpt
+        .segments
+        .iter()
+        .filter(|one| one.matched)
+        .map(|one| one.text.as_str())
+        .collect();
+    assert_eq!(
+        marked,
+        vec!["Porter", "cormanilo"],
+        "the guessed word is marked"
+    );
+}
+
+#[test]
+fn a_typo_is_not_guessed_when_the_word_exists() {
+    let store = notes(&[("la sopa de hoy", 1), ("la ropa de hoy", 2)]);
+    assert_eq!(found(&store, &asked("sopa")), vec!["la sopa de hoy"]);
+    assert!(found(&store, &asked("zzzz")).is_empty());
+    assert!(
+        found(&store, &asked("sop ")).is_empty(),
+        "three letters are too few to guess"
+    );
+}
+
+#[test]
+fn a_typo_while_still_typing_finds_the_word_it_starts() {
+    let store = notes(&[("si es desde Porter sera cormanilo", 1)]);
+    assert_eq!(
+        found(&store, &asked("cromani")),
+        vec!["si es desde Porter sera cormanilo"]
+    );
+}
+
+#[test]
+fn paging_by_relevance_neither_repeats_nor_skips() {
+    let rows: Vec<(String, i64)> = (0..25)
+        .map(|at| (format!("sopa {}", "y más ".repeat(at % 7)), at as i64))
+        .collect();
+    let borrowed: Vec<(&str, i64)> = rows.iter().map(|(t, at)| (t.as_str(), *at)).collect();
+    let store = notes(&borrowed);
+    let filter = asked("sopa");
+    let whole: Vec<i64> = all(&store, &filter).iter().map(|one| one.id).collect();
+    let mut walked = Vec::new();
+    let mut after = None;
+    loop {
+        let page = store.list(&filter, 4, after).expect("a page");
+        walked.extend(page.rows.iter().map(|one| one.id));
+        match page.next {
+            Some(next) => after = Some(next),
+            None => break,
+        }
+    }
+    assert_eq!(walked, whole);
+    assert_eq!(walked.len(), 25);
 }

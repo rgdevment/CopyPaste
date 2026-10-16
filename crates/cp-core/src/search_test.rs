@@ -19,7 +19,7 @@ fn terms(words: &[&str]) -> Vec<Term> {
         .iter()
         .map(|word| Term {
             text: (*word).to_owned(),
-            whole: false,
+            ..Term::default()
         })
         .collect()
 }
@@ -32,6 +32,7 @@ fn whole(word: &str) -> Term {
     Term {
         text: word.into(),
         whole: true,
+        ..Term::default()
     }
 }
 
@@ -74,7 +75,7 @@ fn every_term_must_hold() {
         whole("jira"),
         Term {
             text: "abr".into(),
-            whole: false,
+            ..Term::default()
         },
     ];
     assert!(holds("abrir jira hoy", &both));
@@ -388,4 +389,19 @@ fn a_term_longer_than_the_text_finds_nothing_and_does_not_panic() {
 fn a_width_of_zero_still_shows_something() {
     let found = excerpt("a match in here", &terms(&["match"]), 0).expect("a hit");
     assert!(found.segments.iter().any(|one| one.matched));
+}
+
+#[test]
+fn a_guessed_spelling_is_marked_and_found_like_the_typed_one() {
+    let guessed = [Term {
+        text: "cormanillo".into(),
+        whole: true,
+        alike: vec!["cormanilo".into()],
+    }];
+    assert!(holds("si es desde Porter sera cormanilo", &guessed));
+    let found = excerpt("sera cormanilo.", &guessed, 100).expect("a hit");
+    assert_eq!(
+        found.segments,
+        vec![plain("sera "), hit("cormanilo"), plain(".")]
+    );
 }

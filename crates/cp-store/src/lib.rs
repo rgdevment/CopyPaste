@@ -5,6 +5,7 @@ pub mod legacy;
 pub mod query;
 pub mod recover;
 pub mod schema;
+mod seek;
 pub mod store;
 
 pub use backup::{Brought, Made, Taken};

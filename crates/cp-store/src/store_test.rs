@@ -16,7 +16,8 @@ fn a_pinned_search_lets_the_index_drive_and_never_scans_the_fts_per_row() {
             ..Default::default()
         },
     ] {
-        let clauses = Clauses::of(&filter, true, true).expect("clauses");
+        let terms = terms_of("r");
+        let clauses = Clauses::of(&filter, &terms, true, true).expect("clauses");
         let sql = format!("EXPLAIN QUERY PLAN SELECT COUNT(*) {}", clauses.source());
         let mut stmt = store.db.prepare(&sql).expect("a plan");
         let steps: Vec<String> = stmt

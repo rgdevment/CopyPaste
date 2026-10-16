@@ -19,6 +19,7 @@ pub mod stamp;
 pub mod thumbnail;
 pub mod token;
 pub mod trouble;
+pub mod typo;
 pub mod watch;
 pub mod watching;
 

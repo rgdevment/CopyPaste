@@ -39,10 +39,11 @@ fn fold_each(input: &str, mut push: impl FnMut(char, usize)) {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Term {
     pub text: String,
     pub whole: bool,
+    pub alike: Vec<String>,
 }
 
 pub fn terms_of(query: &str) -> Vec<Term> {
@@ -57,6 +58,7 @@ pub fn terms_of(query: &str) -> Vec<Term> {
         .map(|(at, word)| Term {
             text: word.to_owned(),
             whole: at < last || !typing,
+            alike: Vec::new(),
         })
         .collect()
 }
@@ -193,11 +195,16 @@ fn tokens_of(chars: &[char]) -> Vec<(usize, usize)> {
 }
 
 fn spots_of(chars: &[char], tokens: &[(usize, usize)], term: &Term) -> Vec<(usize, usize)> {
-    if term.whole {
-        alone_of(chars, &term.text)
-    } else {
-        matches_of(chars, tokens, &term.text)
-    }
+    std::iter::once(&term.text)
+        .chain(&term.alike)
+        .flat_map(|word| {
+            if term.whole {
+                alone_of(chars, word)
+            } else {
+                matches_of(chars, tokens, word)
+            }
+        })
+        .collect()
 }
 
 fn alone_of(chars: &[char], word: &str) -> Vec<(usize, usize)> {

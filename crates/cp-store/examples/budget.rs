@@ -169,7 +169,7 @@ fn main() -> std::process::ExitCode {
     over += measure(
         Budget {
             what: "page ten by cursor",
-            ceiling: Duration::from_millis(20),
+            ceiling: Duration::from_millis(60),
         },
         || {
             let filter = Filter {

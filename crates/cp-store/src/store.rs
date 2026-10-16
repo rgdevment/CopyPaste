@@ -1,46 +1,10 @@
+use crate::seek::{EVERYWHERE, encode, fts_expression, rank_of, teach, terms_for};
 use crate::{Error, Result};
 use cp_core::item::{Item, Payload};
 use cp_core::kind::Kind;
-use cp_core::search::{EXCERPT_CHARS, Excerpt, Term, excerpt, fold, holds, terms_of};
-use rusqlite::functions::FunctionFlags;
+use cp_core::search::{EXCERPT_CHARS, Excerpt, Term, excerpt, fold, terms_of};
 use rusqlite::types::ToSql;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
-
-fn fts_expression(terms: &[Term]) -> Option<String> {
-    let words: Vec<String> = terms
-        .iter()
-        .map(|term| {
-            let quoted = format!("\"{}\"", term.text.replace('"', "\"\""));
-            if term.whole { quoted } else { quoted + "*" }
-        })
-        .collect();
-    (!words.is_empty()).then(|| words.join(" "))
-}
-
-const EVERYWHERE: &str = "items.search_text || ' ' || items.search_label || ' ' \
-                          || items.search_app || ' ' || items.search_ocr";
-
-fn teach(db: &Connection) -> Result<()> {
-    db.create_scalar_function(
-        "cp_holds",
-        2,
-        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
-        |ctx| {
-            let text = ctx.get::<String>(0)?;
-            let query = ctx.get::<String>(1)?;
-            Ok(holds(&text, &terms_of(&query)))
-        },
-    )?;
-    Ok(())
-}
-
-const WORDLESS: &str =
-    "(items.search_label = '' AND (items.kind IS 'image' OR items.search_text = ''))";
-
-fn rank_of(filter: &Filter) -> Option<&'static str> {
-    let query = filter.query.as_deref()?;
-    (!terms_of(query).is_empty()).then_some(WORDLESS)
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FoundIn {
@@ -78,7 +42,7 @@ pub struct Listed {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cursor {
     order: Order,
-    rank: i64,
+    rank: String,
     key: String,
     id: i64,
 }
@@ -98,14 +62,14 @@ impl Cursor {
         let (name, rest) = text.split_once(':')?;
         let order = Order::from_name(name)?;
         let (rank, rest) = rest.split_once(':')?;
-        let rank = rank.parse().ok()?;
+        rank.parse::<f64>().ok()?;
         let (key, id) = rest.rsplit_once(':')?;
         if order != Order::ByGroup && key.parse::<i64>().is_err() {
             return None;
         }
         Some(Cursor {
             order,
-            rank,
+            rank: rank.to_owned(),
             key: key.to_owned(),
             id: id.parse().ok()?,
         })
@@ -195,28 +159,32 @@ pub struct AppCount {
     pub count: i64,
 }
 
-struct Clauses {
+pub(crate) struct Clauses {
     joins_index: bool,
     conditions: Vec<String>,
-    bound: Vec<Box<dyn ToSql>>,
+    pub(crate) bound: Vec<Box<dyn ToSql>>,
 }
 
 impl Clauses {
-    fn of(filter: &Filter, with_kinds: bool, with_apps: bool) -> Option<Self> {
+    pub(crate) fn of(
+        filter: &Filter,
+        terms: &[Term],
+        with_kinds: bool,
+        with_apps: bool,
+    ) -> Option<Self> {
         let mut clauses = Self {
             joins_index: false,
             conditions: vec!["items.deleted_at IS NULL".into()],
             bound: Vec::new(),
         };
         let mut index = Vec::new();
-        if let Some(text) = &filter.query {
-            let terms = terms_of(text);
-            index.push(fts_expression(&terms)?);
+        if filter.query.is_some() {
+            index.push(fts_expression(terms)?);
             if terms.iter().any(|term| term.whole) {
                 clauses
                     .conditions
                     .push(format!("cp_holds({EVERYWHERE}, ?)"));
-                clauses.bound.push(Box::new(text.clone()));
+                clauses.bound.push(Box::new(encode(terms)));
             }
         }
         if let Some(label) = &filter.label_query {
@@ -298,7 +266,7 @@ impl Clauses {
         }
     }
 
-    fn source(&self) -> String {
+    pub(crate) fn source(&self) -> String {
         let conditions = self.conditions.join(" AND ");
         if self.joins_index {
             format!(
@@ -1015,7 +983,10 @@ impl Store {
     }
 
     pub fn count_matching(&self, filter: &Filter) -> Result<i64> {
-        let Some(clauses) = Clauses::of(filter, true, true) else {
+        let Some(terms) = terms_for(&self.db, filter)? else {
+            return Ok(0);
+        };
+        let Some(clauses) = Clauses::of(filter, &terms, true, true) else {
             return Ok(0);
         };
         let sql = format!("SELECT COUNT(*) {}", clauses.source());
@@ -1027,12 +998,15 @@ impl Store {
     }
 
     pub fn list(&self, filter: &Filter, limit: usize, after: Option<Cursor>) -> Result<Page> {
-        let Some(mut clauses) = Clauses::of(filter, true, true) else {
+        let Some(terms) = terms_for(&self.db, filter)? else {
+            return Ok(Page::default());
+        };
+        let Some(mut clauses) = Clauses::of(filter, &terms, true, true) else {
             return Ok(Page::default());
         };
         let key = filter.order.key();
-        let rank = rank_of(filter);
-        let terms = filter.query.as_deref().map(terms_of).unwrap_or_default();
+        let rank = rank_of(filter, &terms);
+        let resumed = after.is_some();
         if let Some(cursor) = after {
             if cursor.order != filter.order {
                 return Err(Error::WrongCursor {
@@ -1040,21 +1014,23 @@ impl Store {
                     order: filter.order.as_str(),
                 });
             }
-            let past = format!("({key} < ? OR ({key} = ? AND items.id < ?))");
-            if let Some(rank) = rank {
+            if rank.is_some() {
+                let at: f64 = cursor.rank.parse().unwrap_or(f64::MIN);
+                clauses.bound.push(Box::new(at));
+                clauses.bound.push(Box::new(at));
+            } else {
                 clauses
                     .conditions
-                    .push(format!("({rank} > ? OR ({rank} = ? AND {past}))"));
-                clauses.bound.push(Box::new(cursor.rank));
-                clauses.bound.push(Box::new(cursor.rank));
-            } else {
-                clauses.conditions.push(past);
+                    .push(format!("({key} < ? OR ({key} = ? AND items.id < ?))"));
             }
             clauses.bound.push(bound_key(filter.order, &cursor.key));
             clauses.bound.push(bound_key(filter.order, &cursor.key));
             clauses.bound.push(Box::new(cursor.id));
         }
-        let sql = page_sql(&clauses, key, rank, !terms.is_empty());
+        let sql = match &rank {
+            Some(rank) => ranked_sql(&clauses, key, rank, resumed),
+            None => page_sql(&clauses, key),
+        };
         let fetch = i64::try_from(limit).map_or(i64::MAX, |limit| limit.saturating_add(1));
         clauses.bound.push(Box::new(fetch));
 
@@ -1088,15 +1064,15 @@ impl Store {
                     row.get::<_, i64>(14)?.to_string()
                 }
             };
-            Ok((listed, row.get::<_, i64>(17)?, key))
+            Ok((listed, row.get::<_, f64>(17)?, key))
         })?;
-        let mut keyed: Vec<(Listed, i64, String)> = rows.collect::<rusqlite::Result<_>>()?;
+        let mut keyed: Vec<(Listed, f64, String)> = rows.collect::<rusqlite::Result<_>>()?;
         let more = keyed.len() > limit;
         keyed.truncate(limit);
         let next = match keyed.last() {
             Some((last, rank, key)) if more => Some(Cursor {
                 order: filter.order,
-                rank: *rank,
+                rank: rank.to_string(),
                 key: key.clone(),
                 id: last.id,
             }),
@@ -1109,7 +1085,10 @@ impl Store {
     }
 
     pub fn facets(&self, filter: &Filter) -> Result<Vec<Facet>> {
-        let Some(mut clauses) = Clauses::of(filter, false, true) else {
+        let Some(terms) = terms_for(&self.db, filter)? else {
+            return Ok(Vec::new());
+        };
+        let Some(mut clauses) = Clauses::of(filter, &terms, false, true) else {
             return Ok(Vec::new());
         };
         clauses.conditions.push("items.kind IS NOT NULL".into());
@@ -1133,7 +1112,10 @@ impl Store {
     }
 
     pub fn distinct_apps(&self, filter: &Filter) -> Result<Vec<AppCount>> {
-        let Some(mut clauses) = Clauses::of(filter, true, false) else {
+        let Some(terms) = terms_for(&self.db, filter)? else {
+            return Ok(Vec::new());
+        };
+        let Some(mut clauses) = Clauses::of(filter, &terms, true, false) else {
             return Ok(Vec::new());
         };
         clauses
@@ -1282,35 +1264,43 @@ fn bound_key(order: Order, key: &str) -> Box<dyn ToSql> {
     }
 }
 
-fn page_sql(clauses: &Clauses, key: &str, rank: Option<&str>, with_query: bool) -> String {
-    let (ranked, ranked_page) = if rank.is_some() {
-        ("rank, ", "page.rank, ")
-    } else {
-        ("", "")
-    };
-    let rank = rank.unwrap_or("0");
+fn page_columns() -> String {
     format!(
-        "SELECT items.id, items.modified_at, items.created_at, items.kind,
-                SUBSTR(items.preview_text, 1, {preview}), items.app_source, items.label,
-                items.card_color, items.thumb_path, items.paste_count, items.last_used_at,
-                items.broken_since, items.pinned, {ocr}, page.key, {whole},
-                items.group_key, page.rank
-         FROM (SELECT items.id AS id, {key} AS key, {rank} AS rank {}
-               ORDER BY {ranked}{key} DESC, items.id DESC LIMIT ?) AS page
+        "items.id, items.modified_at, items.created_at, items.kind,
+         SUBSTR(items.preview_text, 1, {PREVIEW_CHARS}), items.app_source, items.label,
+         items.card_color, items.thumb_path, items.paste_count, items.last_used_at,
+         items.broken_since, items.pinned"
+    )
+}
+
+fn page_sql(clauses: &Clauses, key: &str) -> String {
+    format!(
+        "SELECT {}, '', page.key, '', items.group_key, 0
+         FROM (SELECT items.id AS id, {key} AS key {}
+               ORDER BY {key} DESC, items.id DESC LIMIT ?) AS page
          JOIN items ON items.id = page.id
-         ORDER BY {ranked_page}page.key DESC, page.id DESC",
+         ORDER BY page.key DESC, page.id DESC",
+        page_columns(),
+        clauses.source()
+    )
+}
+
+fn ranked_sql(clauses: &Clauses, key: &str, rank: &str, resumed: bool) -> String {
+    let past = if resumed {
+        "WHERE rank > ? OR (rank = ? AND (key < ? OR (key = ? AND id < ?)))"
+    } else {
+        ""
+    };
+    format!(
+        "WITH found AS MATERIALIZED (SELECT items.id AS id, {key} AS key, {rank} AS rank {})
+         SELECT {}, COALESCE(items.ocr_text, items.search_ocr), page.key,
+                items.preview_text, items.group_key, page.rank
+         FROM (SELECT id, key, rank FROM found {past}
+               ORDER BY rank, key DESC, id DESC LIMIT ?) AS page
+         JOIN items ON items.id = page.id
+         ORDER BY page.rank, page.key DESC, page.id DESC",
         clauses.source(),
-        preview = PREVIEW_CHARS,
-        ocr = if with_query {
-            "COALESCE(items.ocr_text, items.search_ocr)"
-        } else {
-            "''"
-        },
-        whole = if with_query {
-            "items.preview_text"
-        } else {
-            "''"
-        }
+        page_columns()
     )
 }
 
