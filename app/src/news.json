@@ -219,5 +219,28 @@
         "said": "type a word followed by a space and only the copies holding that whole word show up."
       }
     ]
+  },
+  {
+    "version": "3.3.1",
+    "es": [
+      {
+        "title": "Sabes que se abrió",
+        "said": "al iniciar CoPanda, una tarjeta en la esquina avisa que está listo y muestra cuántas copias guardas, cuántas son de hoy, cuántas fijaste y cuánto espacio ocupan."
+      },
+      {
+        "title": "Una ayuda que no se pierde",
+        "said": "si abres CoPanda cuando ya está funcionando, su ayuda queda delante de tus otras ventanas."
+      }
+    ],
+    "en": [
+      {
+        "title": "You know it opened",
+        "said": "when you start CoPanda, a card in the corner says it is ready and shows how many copies you keep, how many are from today, how many you pinned and how much space they take."
+      },
+      {
+        "title": "Help you can't lose",
+        "said": "if you open CoPanda while it is already running, its help stays in front of your other windows."
+      }
+    ]
   }
 ]
