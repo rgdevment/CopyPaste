@@ -6,6 +6,7 @@ mod links;
 mod looks;
 mod note;
 mod panel;
+mod ready;
 mod report;
 mod reviving;
 mod settings;
@@ -62,7 +63,9 @@ pub fn run() {
             relabel,
             welcome::greeting,
             welcome::tour,
-            welcome::open_settings
+            welcome::open_settings,
+            ready::glance,
+            ready::show_panel
         ])
         .manage(update::Installing::default())
         .manage(backup::Crossing::default())

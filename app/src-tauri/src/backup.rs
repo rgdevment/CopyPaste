@@ -44,15 +44,9 @@ pub struct Brought {
     from_elsewhere: bool,
 }
 
-fn history() -> Result<PathBuf, String> {
-    Ok(crate::settings::folder()
-        .ok_or_else(crate::settings::nowhere)?
-        .join("history.db"))
-}
-
 #[tauri::command(async)]
 pub fn save_backup(path: String, at: i64) -> Result<Saved, String> {
-    let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
+    let store = crate::settings::open_history()?;
     let to = PathBuf::from(&path);
     let made = cp_store::backup::write(&store, &to, at).map_err(|why| why.to_string())?;
     crate::note::note(&format!("a copy written to {path}: {} items", made.items));
@@ -109,7 +103,7 @@ pub fn load_backup(
 }
 
 fn bring(from: &std::path::Path, at: i64) -> Result<cp_store::Brought, String> {
-    let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
+    let store = crate::settings::open_history()?;
     cp_store::backup::bring(from, &store, at, &|what| crate::note::note(what))
         .map_err(|why| why.to_string())
 }
@@ -174,7 +168,7 @@ fn crossed(
     from: &std::path::Path,
     at: i64,
 ) -> Result<(cp_store::legacy::Brought, cp_store::Swept), String> {
-    let store = cp_store::Store::open(&history()?).map_err(|why| why.to_string())?;
+    let store = crate::settings::open_history()?;
     let lifted = lift_the_limit(app)?;
     let policy = crate::settings::policy();
     let swept = |why: &str| match store.sweep(&policy, at) {

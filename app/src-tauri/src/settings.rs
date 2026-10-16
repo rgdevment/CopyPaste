@@ -62,6 +62,21 @@ pub fn nowhere() -> String {
     "the folder where CoPanda keeps its own was not found".to_owned()
 }
 
+pub fn history() -> Result<PathBuf, String> {
+    Ok(folder().ok_or_else(nowhere)?.join("history.db"))
+}
+
+pub fn open_history() -> Result<cp_store::Store, String> {
+    cp_store::Store::open(&history()?).map_err(|why| why.to_string())
+}
+
+pub fn history_if_any() -> Result<Option<cp_store::Store>, String> {
+    if !history()?.exists() {
+        return Ok(None);
+    }
+    open_history().map(Some)
+}
+
 pub fn settle() -> bool {
     let Some(dir) = folder() else {
         return false;
@@ -141,11 +156,9 @@ fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
 
 #[tauri::command(async)]
 pub fn storage_used() -> Result<i64, String> {
-    let at = folder().ok_or_else(nowhere)?.join("history.db");
-    if !at.exists() {
+    let Some(store) = history_if_any()? else {
         return Ok(0);
-    }
-    let store = cp_store::Store::open(&at).map_err(|why| why.to_string())?;
+    };
     Ok(store.usage().map_err(|why| why.to_string())?.bytes)
 }
 
@@ -174,7 +187,7 @@ pub struct Former {
 }
 
 fn came_over() -> Option<cp_store::legacy::Came> {
-    let at = folder()?.join("history.db");
+    let at = history().ok()?;
     for wait in [0u64, 150, 400] {
         if wait > 0 {
             std::thread::sleep(std::time::Duration::from_millis(wait));

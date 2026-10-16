@@ -1431,6 +1431,11 @@ mod upkeep;
 
 pub use upkeep::{A_DAY, Policy, Swept};
 
+#[path = "store_glance.rs"]
+mod glance;
+
+pub use glance::Glance;
+
 #[cfg(test)]
 #[path = "store_test.rs"]
 mod tests;
@@ -1446,3 +1451,7 @@ mod listing;
 #[cfg(test)]
 #[path = "store_housekeeping_test.rs"]
 mod housekeeping;
+
+#[cfg(test)]
+#[path = "store_glance_test.rs"]
+mod glancing;

@@ -48,6 +48,17 @@ const ES = {
   chromeMinimise: "Minimizar",
   chromeClose: "Cerrar",
 
+  readyTitle: "CoPanda está listo",
+  readyWatching: "Cuidando tu portapapeles",
+  readySaved: "guardados",
+  readyToday: "hoy",
+  readyPinned: "fijados",
+  readyOnDisk: "en disco",
+  readyEmpty: "Todavía no hay nada guardado. Copia algo y aparecerá aquí.",
+  readyOpenWith: "Ábrelo con",
+  readyShow: "Ver historial",
+  readySettings: "Ajustes",
+
   bandTongue: "Idioma",
   bandDoes: "Comportamiento",
   tongue: "Idioma",
@@ -387,6 +398,17 @@ const EN: Record<keyof Said, string> = {
 
   chromeMinimise: "Minimise",
   chromeClose: "Close",
+
+  readyTitle: "CoPanda is ready",
+  readyWatching: "Looking after your clipboard",
+  readySaved: "saved",
+  readyToday: "today",
+  readyPinned: "pinned",
+  readyOnDisk: "on disk",
+  readyEmpty: "Nothing saved yet. Copy something and it will show up here.",
+  readyOpenWith: "Open it with",
+  readyShow: "Show history",
+  readySettings: "Settings",
 
   bandTongue: "Language",
   bandDoes: "Behaviour",

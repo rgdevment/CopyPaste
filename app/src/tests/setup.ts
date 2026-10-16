@@ -8,6 +8,7 @@ const asked = vi.hoisted(() => ({
   locale: "es",
   trust: { offered: false, pastes: false, secureInput: false, clipboard: "allowed" },
   usedBytes: 0,
+  glance: { items: 0, today: 0, pinned: 0, bytes: 0 },
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -143,6 +144,8 @@ vi.mock("@tauri-apps/api/core", () => ({
       return Promise.resolve();
     }
     if (what === "greeting") return Promise.resolve(asked.greeting);
+    if (what === "glance") return Promise.resolve({ ...asked.glance });
+    if (what === "show_panel") return Promise.resolve(null);
     if (what === "open_settings" || what === "tour") return Promise.resolve(null);
     return Promise.reject(new Error(`sin simular: ${what}`));
   }),
@@ -170,4 +173,5 @@ afterEach(() => {
   asked.locale = "es";
   asked.trust = { offered: false, pastes: false, secureInput: false, clipboard: "allowed" };
   asked.usedBytes = 0;
+  asked.glance = { items: 0, today: 0, pinned: 0, bytes: 0 };
 });

@@ -1,4 +1,4 @@
-use super::*;
+use crate::settings::history;
 
 #[test]
 fn the_history_a_backup_speaks_for_is_the_one_the_panel_writes() {

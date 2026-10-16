@@ -211,6 +211,8 @@ pub fn surface<R: Runtime>(app: &AppHandle<R>) {
 
 pub fn surface_at<R: Runtime>(app: &AppHandle<R>, rail: Option<&str>) {
     crate::panel::hide(app);
+    crate::ready::close(app);
+    crate::welcome::unpin(app);
     if let Some(window) = app.get_webview_window("main") {
         if let Some(rail) = rail {
             let _ = app.emit("rail", rail);
