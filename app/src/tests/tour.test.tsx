@@ -1,9 +1,13 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import Welcome from "../ui/Welcome";
+import news from "../news.json";
+import Welcome, { newestStable } from "../ui/Welcome";
 import { scene as asked, theWindow } from "./setup";
 
 type Heard = (event: { payload: unknown }) => void;
+
+const newest = news.find((one) => one.version === newestStable());
+const toldFrom2x = newest?.headline?.es ?? newest?.es[0]?.title ?? "";
 
 async function heardOn(name: string): Promise<Heard> {
   const { listen } = await import("@tauri-apps/api/event");
@@ -50,7 +54,7 @@ describe("the welcome of a fresh install", () => {
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
     await press("Siguiente");
 
-    expect(await screen.findByText("CopyPaste ahora es CoPanda")).toBeInTheDocument();
+    expect(await screen.findByText(toldFrom2x)).toBeInTheDocument();
     await press("Entendido");
     expect(theWindow.close).toHaveBeenCalled();
   });
@@ -66,7 +70,7 @@ describe("the welcome of a fresh install", () => {
     await press("Siguiente");
 
     expect(await screen.findByText("Lo esencial")).toBeInTheDocument();
-    expect(screen.queryByText("CopyPaste ahora es CoPanda")).toBeNull();
+    expect(screen.queryByText(toldFrom2x)).toBeNull();
     await press("Listo");
     expect(theWindow.close).toHaveBeenCalled();
   });
