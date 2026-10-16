@@ -1854,3 +1854,168 @@ button:disabled {
   display: flex;
   justify-content: flex-end;
 }
+
+.ready {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  color: var(--ink);
+  overflow: hidden;
+  user-select: none;
+}
+
+.ready-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 10px 10px 14px;
+}
+
+.ready-mark {
+  width: 40px;
+  height: 36px;
+}
+
+.ready-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.ready-who b {
+  font-size: var(--fs-lead);
+}
+
+.ready-who span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.ready-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 0 3px var(--good-soft);
+}
+
+.ready-knob {
+  align-self: flex-start;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-inset);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ready-knob:hover {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+.ready-knob svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ready-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0 14px;
+}
+
+.ready-stats div {
+  background: var(--tile);
+  border-radius: var(--r-inset);
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.ready-stats dt {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ready-stats dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+
+.ready-empty {
+  margin: 0;
+  padding: 0 14px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.ready-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 0 14px 12px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.ready-cap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ready-cap kbd {
+  font: var(--fs-caption) var(--mono);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--hair);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+.ready-show {
+  margin-left: auto;
+}
+
+.ready-bar {
+  height: 3px;
+  background: var(--tile);
+}
+
+.ready-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  animation: ready-runs linear forwards;
+}
+
+.ready.held .ready-bar i {
+  animation-play-state: paused;
+}
+
+@keyframes ready-runs {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}

@@ -4,7 +4,8 @@
   "description": "Lo que la ventana de ajustes necesita y nada más",
   "windows": [
     "main",
-    "welcome"
+    "welcome",
+    "ready"
   ],
   "permissions": [
     "core:default",

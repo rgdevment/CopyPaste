@@ -16,8 +16,8 @@ pub use recover::{Opened, open_or_set_aside};
 pub use schema::SCHEMA_VERSION;
 pub use store::restrict;
 pub use store::{
-    A_DAY, AppCount, Broken, Cursor, Facet, Filter, FoundIn, Listed, More, Order, PREVIEW_CHARS,
-    PREVIEW_UP_TO, Page, Policy, Restricted, Snippet, Store, Swept, Usage,
+    A_DAY, AppCount, Broken, Cursor, Facet, Filter, FoundIn, Glance, Listed, More, Order,
+    PREVIEW_CHARS, PREVIEW_UP_TO, Page, Policy, Restricted, Snippet, Store, Swept, Usage,
 };
 
 #[derive(Debug, thiserror::Error)]

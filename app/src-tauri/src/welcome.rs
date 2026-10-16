@@ -106,6 +106,7 @@ pub fn raise<R: Runtime>(app: &AppHandle<R>, fresh: bool) {
     if behind(welcomed.as_deref(), &running) {
         mark(app);
     }
+    crate::ready::open(app);
 }
 
 fn mark<R: Runtime>(app: &AppHandle<R>) {
@@ -187,7 +188,11 @@ pub fn reopened<R: Runtime>(app: &AppHandle<R>) {
     if app.get_webview_window(LABEL).is_none() {
         hold(app, Greeting::Keys);
     }
+    crate::ready::close(app);
     open(app);
+    if let Some(window) = app.get_webview_window(LABEL) {
+        let _ = window.set_always_on_top(true);
+    }
 }
 
 #[tauri::command]
