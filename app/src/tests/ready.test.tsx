@@ -35,6 +35,19 @@ describe("the ready card", () => {
     expect(screen.queryByText("guardados")).toBeNull();
   });
 
+  it("says nothing about the history when it could not be read", async () => {
+    adopt("es");
+    const invoke = await asked();
+    const real = invoke.getMockImplementation() as (what: string, args?: never) => Promise<unknown>;
+    invoke.mockImplementation(((what: string, args?: never) =>
+      what === "glance" ? Promise.reject(new Error("locked")) : real(what, args)) as never);
+    render(<Ready />);
+    expect(await screen.findByText("CoPanda está listo")).toBeInTheDocument();
+    expect(screen.queryByText(/Todavía no hay nada guardado/)).toBeNull();
+    expect(screen.queryByText("guardados")).toBeNull();
+    invoke.mockImplementation(real as never);
+  });
+
   it("counts today from local midnight", async () => {
     adopt("es");
     render(<Ready />);

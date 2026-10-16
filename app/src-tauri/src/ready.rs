@@ -1,5 +1,5 @@
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, PhysicalRect, Runtime, WebviewUrl, WebviewWindowBuilder,
+    AppHandle, LogicalPosition, Manager, PhysicalRect, Runtime, WebviewUrl, WebviewWindowBuilder,
 };
 
 pub const LABEL: &str = "ready";
@@ -16,24 +16,30 @@ pub struct Glance {
     bytes: i64,
 }
 
-pub fn corner(area: PhysicalRect<i32, u32>, scale: f64, top: bool) -> PhysicalPosition<i32> {
-    let wide = (WIDE * scale).round() as i32;
-    let tall = (TALL * scale).round() as i32;
-    let margin = (MARGIN * scale).round() as i32;
-    let right = area.position.x + area.size.width as i32;
-    let x = right - wide - margin;
+pub fn corner(area: PhysicalRect<i32, u32>, scale: f64, top: bool) -> LogicalPosition<f64> {
+    let left = f64::from(area.position.x) / scale;
+    let up = f64::from(area.position.y) / scale;
+    let x = left + f64::from(area.size.width) / scale - WIDE - MARGIN;
     let y = if top {
-        area.position.y + margin
+        up + MARGIN
     } else {
-        area.position.y + area.size.height as i32 - tall - margin
+        up + f64::from(area.size.height) / scale - TALL - MARGIN
     };
-    PhysicalPosition::new(x, y)
+    LogicalPosition::new(x, y)
 }
 
 pub fn open<R: Runtime>(app: &AppHandle<R>) {
     if app.get_webview_window(LABEL).is_some() {
         return;
     }
+    let Ok(Some(screen)) = app.primary_monitor() else {
+        return;
+    };
+    let at = corner(
+        *screen.work_area(),
+        screen.scale_factor(),
+        cfg!(target_os = "macos"),
+    );
     let built = crate::looks::dressed(WebviewWindowBuilder::new(
         app,
         LABEL,
@@ -41,6 +47,7 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
     ))
     .title("CoPanda")
     .inner_size(WIDE, TALL)
+    .position(at.x, at.y)
     .resizable(false)
     .maximizable(false)
     .minimizable(false)
@@ -48,24 +55,11 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) {
     .always_on_top(true)
     .skip_taskbar(true)
     .focused(false)
-    .visible(false)
+    .accept_first_mouse(true)
     .build();
-    let window = match built {
-        Ok(window) => window,
-        Err(why) => {
-            crate::note::note(&format!("the ready card would not open: {why}"));
-            return;
-        }
-    };
-    if let Ok(Some(screen)) = app.primary_monitor() {
-        let at = corner(
-            *screen.work_area(),
-            screen.scale_factor(),
-            cfg!(target_os = "macos"),
-        );
-        let _ = window.set_position(at);
+    if let Err(why) = built {
+        crate::note::note(&format!("the ready card would not open: {why}"));
     }
-    let _ = window.show();
 }
 
 pub fn close<R: Runtime>(app: &AppHandle<R>) {

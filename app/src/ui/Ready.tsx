@@ -25,8 +25,8 @@ function counted(value: number) {
 }
 
 export default function Ready() {
-  const { kept } = useKept();
-  const [glance, setGlance] = useState<Glance | null>(null);
+  const { kept, trouble } = useKept();
+  const [glance, setGlance] = useState<Glance | "unread" | null>(null);
   const [held, setHeld] = useState(false);
   const left = useRef(LASTS_MS);
   const mac = onMac();
@@ -34,7 +34,7 @@ export default function Ready() {
   useEffect(() => {
     invoke<Glance>("glance", { since: midnight() })
       .then(setGlance)
-      .catch(() => setGlance({ items: 0, today: 0, pinned: 0, bytes: 0 }));
+      .catch(() => setGlance("unread"));
     const heard = listen("panel-shown", leave);
     return () => {
       void heard.then((drop) => drop());
@@ -54,7 +54,14 @@ export default function Ready() {
   }, []);
 
   useEffect(() => {
-    if (held || glance === null) {
+    if (trouble !== null && kept === null) {
+      leave();
+    }
+  }, [trouble, kept]);
+
+  const shown = kept !== null && glance !== null;
+  useEffect(() => {
+    if (held || !shown) {
       return;
     }
     const started = Date.now();
@@ -63,7 +70,7 @@ export default function Ready() {
       clearTimeout(timer);
       left.current -= Date.now() - started;
     };
-  }, [held, glance]);
+  }, [held, shown]);
 
   if (!kept || !glance) {
     return null;
@@ -107,7 +114,7 @@ export default function Ready() {
           </svg>
         </button>
       </div>
-      {glance.items > 0 ? (
+      {glance === "unread" ? null : glance.items > 0 ? (
         <dl className="ready-stats">
           {(
             [

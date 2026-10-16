@@ -195,6 +195,12 @@ pub fn reopened<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+pub fn unpin<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(window) = app.get_webview_window(LABEL) {
+        let _ = window.set_always_on_top(false);
+    }
+}
+
 #[tauri::command]
 pub fn greeting(state: tauri::State<'_, Now>) -> Greeting {
     state
