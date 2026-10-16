@@ -8,14 +8,6 @@ const WIDE: f64 = 360.0;
 const TALL: f64 = 184.0;
 const MARGIN: f64 = 12.0;
 
-#[derive(Debug, Default, PartialEq, Eq, serde::Serialize)]
-pub struct Glance {
-    items: i64,
-    today: i64,
-    pinned: i64,
-    bytes: i64,
-}
-
 pub fn corner(area: PhysicalRect<i32, u32>, scale: f64, top: bool) -> LogicalPosition<f64> {
     let left = f64::from(area.position.x) / scale;
     let up = f64::from(area.position.y) / scale;
@@ -69,21 +61,11 @@ pub fn close<R: Runtime>(app: &AppHandle<R>) {
 }
 
 #[tauri::command(async)]
-pub fn glance(since: i64) -> Result<Glance, String> {
-    let at = crate::settings::folder()
-        .ok_or_else(crate::settings::nowhere)?
-        .join("history.db");
-    if !at.exists() {
-        return Ok(Glance::default());
-    }
-    let store = cp_store::Store::open(&at).map_err(|why| why.to_string())?;
-    let seen = store.glance(since).map_err(|why| why.to_string())?;
-    Ok(Glance {
-        items: seen.items,
-        today: seen.today,
-        pinned: seen.pinned,
-        bytes: seen.bytes,
-    })
+pub fn glance(since: i64) -> Result<cp_store::Glance, String> {
+    let Some(store) = crate::settings::history_if_any()? else {
+        return Ok(cp_store::Glance::default());
+    };
+    store.glance(since).map_err(|why| why.to_string())
 }
 
 #[tauri::command]

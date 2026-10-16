@@ -1,7 +1,7 @@
 use super::Store;
 use crate::Result;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize)]
 pub struct Glance {
     pub items: i64,
     pub today: i64,
