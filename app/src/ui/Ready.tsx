@@ -6,7 +6,7 @@ import { caps, onMac, useKept } from "../core";
 import { inEnglish, sized, t } from "../locales";
 import panda from "../panda.svg";
 
-export const LASTS_MS = 6000;
+export const LASTS_MS = 10000;
 
 export type Glance = { items: number; today: number; pinned: number; bytes: number };
 
