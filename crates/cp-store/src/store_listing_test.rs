@@ -532,7 +532,7 @@ fn no_order_sorts_the_history_in_memory() {
         };
         let clauses =
             Clauses::of(&filter, true, true).expect("with no term there are still clauses");
-        let sql = page_sql(&clauses, order.key(), false);
+        let sql = page_sql(&clauses, order.key(), None, false);
         let plan: Vec<String> = store
             .db
             .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
@@ -734,16 +734,16 @@ fn a_cursor_from_another_order_is_refused_not_misread() {
         "it goes out and comes back as text"
     );
     assert_eq!(Cursor::decode("recent:1"), None);
-    assert_eq!(Cursor::decode("sideways:1:2"), None);
-    assert_eq!(Cursor::decode("recent:1:2:3"), None);
+    assert_eq!(Cursor::decode("sideways:0:1:2"), None);
+    assert_eq!(Cursor::decode("recent:x:1:2"), None);
     assert_eq!(
-        Cursor::decode("recent:x:2"),
+        Cursor::decode("recent:0:x:2"),
         None,
         "a numeric order wants a number"
     );
-    let grouped = Cursor::decode("by-group:ejemplo.test:7").expect("a group cursor");
+    let grouped = Cursor::decode("by-group:0:ejemplo.test:7").expect("a group cursor");
     assert_eq!(Cursor::decode(&grouped.encode()), Some(grouped));
-    let colons = Cursor::decode("by-group:carpeta:de:red:7").expect("a key may hold colons");
+    let colons = Cursor::decode("by-group:1:carpeta:de:red:7").expect("a key may hold colons");
     assert_eq!(Cursor::decode(&colons.encode()), Some(colons));
 }
 
@@ -1367,4 +1367,99 @@ fn every_order_including_by_group_pages_without_repeating_or_skipping_when_most_
     ids.sort_unstable();
     ids.dedup();
     assert_eq!(ids.len(), 30, "ByGroup repeated rows");
+}
+
+fn jira_history() -> Store {
+    let store = Store::in_memory().expect("schema");
+    let note = "abre el ticket en Jira mañana";
+    store
+        .insert_item("uuid-note", &text_item(note, Kind::Text), note, 10)
+        .expect("note");
+    let link = "https://jira.empresa.test/browse/AB-1";
+    store
+        .insert_item("uuid-link", &text_item(link, Kind::Link), link, 20)
+        .expect("link");
+    let image = Item {
+        kind: Some(Kind::Image),
+        formats: vec![Format {
+            id: "public.png".into(),
+            payload: Payload::Inline(vec![1]),
+        }],
+    };
+    let id = store
+        .insert_item("uuid-shot", &image, "", 30)
+        .expect("image");
+    store.set_ocr_text(id, "Jira board", 31).expect("ocr");
+    store
+}
+
+fn searched(store: &Store, query: &str) -> Vec<Option<Kind>> {
+    let filter = Filter {
+        query: Some(query.into()),
+        ..Default::default()
+    };
+    all(store, &filter).iter().map(|one| one.kind).collect()
+}
+
+#[test]
+fn what_matched_in_the_words_comes_before_what_was_read_in_an_image() {
+    let store = jira_history();
+    assert_eq!(
+        searched(&store, "jira"),
+        vec![Some(Kind::Link), Some(Kind::Text), Some(Kind::Image)],
+        "the newest image still waits behind the texts"
+    );
+}
+
+#[test]
+fn a_word_followed_by_a_space_leaves_the_links_out() {
+    let store = jira_history();
+    assert_eq!(
+        searched(&store, "jira "),
+        vec![Some(Kind::Text), Some(Kind::Image)]
+    );
+    assert_eq!(searched(&store, "jir"), searched(&store, "jira"));
+    assert!(
+        searched(&store, "jir ").is_empty(),
+        "a whole word is not a prefix"
+    );
+    let filter = Filter {
+        query: Some("jira ".into()),
+        ..Default::default()
+    };
+    assert_eq!(store.count_matching(&filter).expect("counted"), 2);
+}
+
+#[test]
+fn paging_walks_from_the_words_into_the_images_without_repeating() {
+    let store = jira_history();
+    let filter = Filter {
+        query: Some("jira".into()),
+        ..Default::default()
+    };
+    let mut seen = Vec::new();
+    let mut after = None;
+    loop {
+        let page = store.list(&filter, 1, after).expect("a page");
+        seen.extend(page.rows.iter().map(|one| one.kind));
+        match page.next {
+            Some(next) => after = Some(next),
+            None => break,
+        }
+    }
+    assert_eq!(
+        seen,
+        vec![Some(Kind::Link), Some(Kind::Text), Some(Kind::Image)]
+    );
+}
+
+#[test]
+fn a_quote_in_the_query_does_not_break_the_ranking() {
+    let store = Store::in_memory().expect("schema");
+    let text = "it's done";
+    store
+        .insert_item("uuid-q", &text_item(text, Kind::Text), text, 1)
+        .expect("insert");
+    assert_eq!(searched(&store, "it's"), vec![Some(Kind::Text)]);
+    assert_eq!(searched(&store, "it's "), vec![Some(Kind::Text)]);
 }

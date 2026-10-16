@@ -1,4 +1,4 @@
-use super::{EXCERPT_CHARS, Segment, excerpt, fold, fold_mapped, terms_of};
+use super::{EXCERPT_CHARS, Segment, Term, excerpt, fold, fold_mapped, holds, terms_of};
 
 fn plain(text: &str) -> Segment {
     Segment {
@@ -14,8 +14,81 @@ fn hit(text: &str) -> Segment {
     }
 }
 
-fn terms(words: &[&str]) -> Vec<String> {
-    words.iter().map(|word| (*word).to_owned()).collect()
+fn terms(words: &[&str]) -> Vec<Term> {
+    words
+        .iter()
+        .map(|word| Term {
+            text: (*word).to_owned(),
+            whole: false,
+        })
+        .collect()
+}
+
+fn texts(query: &str) -> Vec<String> {
+    terms_of(query).into_iter().map(|term| term.text).collect()
+}
+
+fn whole(word: &str) -> Term {
+    Term {
+        text: word.into(),
+        whole: true,
+    }
+}
+
+#[test]
+fn a_word_followed_by_a_space_is_whole_and_the_one_being_typed_is_not() {
+    let wholes = |query| {
+        terms_of(query)
+            .into_iter()
+            .map(|term| term.whole)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(wholes("jira"), vec![false]);
+    assert_eq!(wholes("jira "), vec![true]);
+    assert_eq!(wholes("jira abr"), vec![true, false]);
+    assert_eq!(wholes("jira !!"), vec![true]);
+}
+
+#[test]
+fn a_whole_word_skips_links_paths_mail_and_longer_words() {
+    let jira = [whole("jira")];
+    assert!(!holds("https://jira.empresa.com/browse/AB-1", &jira));
+    assert!(!holds("C:\\tools\\jira\\notes.txt", &jira));
+    assert!(!holds("jira@empresa.com", &jira));
+    assert!(!holds("las jiras del equipo", &jira));
+    assert!(holds("abre el ticket en Jira mañana", &jira));
+    assert!(holds("lo vimos en jira.", &jira));
+    assert!(holds("(Jira) y ¿jira?", &jira));
+    assert!(holds("jira", &jira));
+}
+
+#[test]
+fn a_word_being_typed_still_finds_links_and_prefixes() {
+    assert!(holds("https://jira.empresa.com", &terms(&["jir"])));
+    assert!(holds("las jiras", &terms(&["jira"])));
+}
+
+#[test]
+fn every_term_must_hold() {
+    let both = [
+        whole("jira"),
+        Term {
+            text: "abr".into(),
+            whole: false,
+        },
+    ];
+    assert!(holds("abrir jira hoy", &both));
+    assert!(!holds("abrir jira.com", &both));
+    assert!(!holds("jira hoy", &both));
+}
+
+#[test]
+fn a_whole_word_marks_only_the_standalone_one() {
+    let found = excerpt("ve jira.com o jira, da igual", &[whole("jira")], 100).expect("a hit");
+    assert_eq!(
+        found.segments,
+        vec![plain("ve jira.com o "), hit("jira"), plain(", da igual")]
+    );
 }
 
 #[test]
@@ -192,7 +265,7 @@ fn nothing_to_look_for_is_nothing_found() {
 
 #[test]
 fn the_terms_are_the_words_the_index_would_look_for() {
-    assert_eq!(terms_of("Café  AB-4417 ... !!"), vec!["cafe", "ab-4417"]);
+    assert_eq!(texts("Café  AB-4417 ... !!"), vec!["cafe", "ab-4417"]);
     assert!(terms_of("   ").is_empty());
     assert!(terms_of("!!! ...").is_empty());
 }
@@ -291,28 +364,28 @@ fn nfc_and_nfd_spellings_of_the_same_letter_fold_the_same() {
 
 #[test]
 fn terms_of_an_empty_or_symbol_only_query_is_empty() {
-    assert_eq!(terms_of(""), Vec::<String>::new());
-    assert_eq!(terms_of("   "), Vec::<String>::new());
-    assert_eq!(terms_of("!?#"), Vec::<String>::new());
+    assert!(terms_of("").is_empty());
+    assert!(terms_of("   ").is_empty());
+    assert!(terms_of("!?#").is_empty());
 }
 
 #[test]
 fn a_leading_dash_stays_glued_to_its_word() {
-    assert_eq!(terms_of("gato -perro"), vec!["gato", "-perro"]);
+    assert_eq!(texts("gato -perro"), vec!["gato", "-perro"]);
 }
 
 #[test]
 fn quotes_are_not_a_token_boundary() {
-    assert_eq!(terms_of("\"hola mundo\""), vec!["\"hola", "mundo\""]);
+    assert_eq!(texts("\"hola mundo\""), vec!["\"hola", "mundo\""]);
 }
 
 #[test]
 fn a_term_longer_than_the_text_finds_nothing_and_does_not_panic() {
-    assert_eq!(excerpt("ab", &["abcdef".to_owned()], 100), None);
+    assert_eq!(excerpt("ab", &terms(&["abcdef"]), 100), None);
 }
 
 #[test]
 fn a_width_of_zero_still_shows_something() {
-    let found = excerpt("a match in here", &["match".to_owned()], 0).expect("a hit");
+    let found = excerpt("a match in here", &terms(&["match"]), 0).expect("a hit");
     assert!(found.segments.iter().any(|one| one.matched));
 }

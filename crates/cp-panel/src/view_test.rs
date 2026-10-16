@@ -1050,3 +1050,11 @@ fn a_long_text_card_shows_the_lines_the_chosen_height_allows() {
     let shut = |most| face_for(&long, false, most).shut_px();
     assert!(shut(3) > shut(2) && shut(2) > shut(1));
 }
+
+#[test]
+fn the_space_after_the_last_word_reaches_the_search() {
+    assert_eq!(sweeten("jira "), "jira ");
+    assert_eq!(sweeten("jira"), "jira");
+    assert_eq!(sweeten("#imagen jira  "), "k:image jira ");
+    assert_eq!(sweeten("   "), "");
+}

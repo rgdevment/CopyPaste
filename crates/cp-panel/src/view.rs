@@ -606,7 +606,8 @@ pub fn harvest(query: &str) -> (Vec<String>, String) {
 }
 
 pub fn sweeten(query: &str) -> String {
-    query
+    let spaced = query.ends_with(char::is_whitespace);
+    let sweet = query
         .split_whitespace()
         .map(|token| {
             let (sign, rest) = match token.strip_prefix('-') {
@@ -619,7 +620,12 @@ pub fn sweeten(query: &str) -> String {
             }
         })
         .collect::<Vec<_>>()
-        .join(" ")
+        .join(" ");
+    if spaced && !sweet.is_empty() {
+        sweet + " "
+    } else {
+        sweet
+    }
 }
 
 pub fn label_of_form(form: Form) -> &'static str {

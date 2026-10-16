@@ -121,6 +121,24 @@ fn main() -> std::process::ExitCode {
     );
     over += measure(
         Budget {
+            what: "a whole word leaving links out",
+            ceiling: Duration::from_millis(20),
+        },
+        || {
+            store
+                .list(
+                    &Filter {
+                        query: Some("example ".into()),
+                        ..Default::default()
+                    },
+                    100,
+                    None,
+                )
+                .expect("queried");
+        },
+    );
+    over += measure(
+        Budget {
             what: "worst case: matches the whole history",
             ceiling: Duration::from_millis(60),
         },

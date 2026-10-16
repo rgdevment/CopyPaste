@@ -39,12 +39,34 @@ fn fold_each(input: &str, mut push: impl FnMut(char, usize)) {
     }
 }
 
-pub fn terms_of(query: &str) -> Vec<String> {
-    fold(query)
-        .split_whitespace()
-        .filter(|word| word.chars().any(char::is_alphanumeric))
-        .map(str::to_owned)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Term {
+    pub text: String,
+    pub whole: bool,
+}
+
+pub fn terms_of(query: &str) -> Vec<Term> {
+    let folded = fold(query);
+    let typing = !folded.ends_with(char::is_whitespace);
+    let words: Vec<&str> = folded.split_whitespace().collect();
+    let last = words.len().saturating_sub(1);
+    words
+        .into_iter()
+        .enumerate()
+        .filter(|(_, word)| word.chars().any(char::is_alphanumeric))
+        .map(|(at, word)| Term {
+            text: word.to_owned(),
+            whole: at < last || !typing,
+        })
         .collect()
+}
+
+pub fn holds(text: &str, terms: &[Term]) -> bool {
+    let chars: Vec<char> = fold(text).chars().collect();
+    let tokens = tokens_of(&chars);
+    terms
+        .iter()
+        .all(|term| !spots_of(&chars, &tokens, term).is_empty())
 }
 
 pub const EXCERPT_CHARS: usize = 160;
@@ -66,12 +88,12 @@ impl Excerpt {
     }
 }
 
-pub fn excerpt(text: &str, terms: &[String], width: usize) -> Option<Excerpt> {
+pub fn excerpt(text: &str, terms: &[Term], width: usize) -> Option<Excerpt> {
     let folded = fold_mapped(text);
     let tokens = tokens_of(&folded.chars);
     let mut hits: Vec<(usize, usize)> = terms
         .iter()
-        .flat_map(|term| matches_of(&folded.chars, &tokens, term))
+        .flat_map(|term| spots_of(&folded.chars, &tokens, term))
         .map(|(from, to)| {
             let last = folded.origin[to - 1];
             (
@@ -168,6 +190,42 @@ fn tokens_of(chars: &[char]) -> Vec<(usize, usize)> {
         tokens.push((from, chars.len()));
     }
     tokens
+}
+
+fn spots_of(chars: &[char], tokens: &[(usize, usize)], term: &Term) -> Vec<(usize, usize)> {
+    if term.whole {
+        alone_of(chars, &term.text)
+    } else {
+        matches_of(chars, tokens, &term.text)
+    }
+}
+
+fn alone_of(chars: &[char], word: &str) -> Vec<(usize, usize)> {
+    let wanted: Vec<char> = word
+        .trim_matches(|c: char| !c.is_alphanumeric())
+        .chars()
+        .collect();
+    if wanted.is_empty() {
+        return Vec::new();
+    }
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at < chars.len() {
+        let start = at;
+        while at < chars.len() && !chars[at].is_whitespace() {
+            at += 1;
+        }
+        let chunk = &chars[start..at];
+        if let (Some(from), Some(to)) = (
+            chunk.iter().position(|c| c.is_alphanumeric()),
+            chunk.iter().rposition(|c| c.is_alphanumeric()),
+        ) && chunk[from..=to] == wanted[..]
+        {
+            found.push((start + from, start + to + 1));
+        }
+        at += 1;
+    }
+    found
 }
 
 fn matches_of(chars: &[char], tokens: &[(usize, usize)], term: &str) -> Vec<(usize, usize)> {
