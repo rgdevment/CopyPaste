@@ -2,14 +2,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
+import { forPanel } from "./setup";
 
 type Invoke = (what: string, args?: never) => Promise<unknown>;
 
-async function insteadOf(handle: (what: string, real?: Invoke) => Promise<unknown> | null) {
+async function insteadOf(
+  handle: (what: string, real?: Invoke, args?: unknown) => Promise<unknown> | null,
+) {
   const { invoke } = await import("@tauri-apps/api/core");
   const real = vi.mocked(invoke).getMockImplementation() as Invoke;
   vi.mocked(invoke).mockImplementation(((what: string, args?: never) => {
-    const mine = handle(what, real);
+    const mine = handle(what, real, args);
     return mine ?? real(what, args);
   }) as never);
   return () => vi.mocked(invoke).mockImplementation(real as never);
@@ -60,8 +63,8 @@ describe("when the backend says no", () => {
 
   it("warns the shortcut is taken even when it cannot offer others", async () => {
     undo.push(
-      await insteadOf((what) => {
-        if (what === "keys") {
+      await insteadOf((what, _real, args) => {
+        if (what === "keys" && forPanel(args)) {
           return Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false });
         }
         return what === "spare" ? Promise.reject(new Error("no answer")) : null;

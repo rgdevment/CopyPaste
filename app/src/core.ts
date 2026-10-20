@@ -17,6 +17,8 @@ export type Kept = {
   locale: string | null;
   theme: Look;
   shortcut: string;
+  "plain-shortcut"?: string;
+  "forms-shortcut"?: string;
   "hides-when-left": boolean;
   "keeps-days": number;
   "images-quota-mb": number;
@@ -270,28 +272,33 @@ export function empty(): Promise<void> {
 
 export type Keys = { wanted: string; bound: boolean };
 
-export function useKeys(shortcut: string) {
+export type Role = "panel" | "plain" | "forms";
+
+export function useKeys(shortcut: string, role: Role = "panel") {
   const [keys, setKeys] = useState<Keys | null>(null);
   const [spare, setSpare] = useState<string[]>([]);
   const live = useRef(true);
 
-  const ask = useCallback((taken: string) => {
-    invoke<Keys>("keys")
-      .then((said) => {
-        if (!live.current) {
-          return;
-        }
-        setKeys(said);
-        if (said.bound) {
-          setSpare([]);
-          return;
-        }
-        invoke<string[]>("spare", { taken })
-          .then((free) => live.current && setSpare(free))
-          .catch(() => live.current && setSpare([]));
-      })
-      .catch(() => live.current && setKeys(null));
-  }, []);
+  const ask = useCallback(
+    (taken: string) => {
+      invoke<Keys>("keys", { role })
+        .then((said) => {
+          if (!live.current) {
+            return;
+          }
+          setKeys(said);
+          if (said.bound) {
+            setSpare([]);
+            return;
+          }
+          invoke<string[]>("spare", { taken, role })
+            .then((free) => live.current && setSpare(free))
+            .catch(() => live.current && setSpare([]));
+        })
+        .catch(() => live.current && setKeys(null));
+    },
+    [role],
+  );
 
   useEffect(() => {
     live.current = true;

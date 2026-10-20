@@ -156,6 +156,30 @@ pub fn paste_as(
     written
 }
 
+pub fn newest(store: &Store, back: usize) -> Option<cp_store::Listed> {
+    match store.list(&cp_store::Filter::default(), back + 1, None) {
+        Ok(page) => page.rows.into_iter().nth(back),
+        Err(why) => {
+            note(&format!(
+                "the newest in the history could not be read: {why}"
+            ));
+            None
+        }
+    }
+}
+
+pub fn paste_plain(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> bool {
+    let Ok(Some(item)) = store.item(id) else {
+        return false;
+    };
+    let ocr = store.ocr_text(id).ok().flatten();
+    let Some(form) = cp_core::paste_as::plainest(&here::content_of(&item, ocr.as_deref())) else {
+        note(&format!("pasting {id} plain: it holds no text to paste"));
+        return false;
+    };
+    paste_as(store, engine, id, form.as_str(), Towards::Elsewhere)
+}
+
 fn short_of(id: i64, landed: here::Landed) -> bool {
     if let here::Landed::Short { placed, wanted } = landed {
         note(&format!(

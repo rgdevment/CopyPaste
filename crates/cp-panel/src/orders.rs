@@ -58,6 +58,23 @@ pub fn listen(
                         }
                     });
                 }
+                "plain" | "forms" => {
+                    let in_front = here::ahead_now(host);
+                    let kept = shelf.renew();
+                    crate::say::adopt_english(kept.english);
+                    let (aim, plain) = (ahead.clone(), said.trim() == "plain");
+                    let _ = ui.upgrade_in_event_loop(move |panel| {
+                        if panel.window().is_visible() {
+                            vanish(&panel);
+                        }
+                        aim.store(in_front, Ordering::Relaxed);
+                        if plain {
+                            panel.invoke_plain_asked();
+                        } else {
+                            panel.invoke_forms_asked();
+                        }
+                    });
+                }
                 "empty" => {
                     let _ = ui.upgrade_in_event_loop(|panel| panel.invoke_emptied());
                 }
@@ -70,7 +87,7 @@ pub fn listen(
             }
         }
         let _ = ui.upgrade_in_event_loop(|panel| {
-            if let Some(handle) = handle_of(&panel) {
+            if let Some(handle) = handle_of(panel.window()) {
                 here::ground(handle);
             }
             let _ = slint::quit_event_loop();

@@ -1,8 +1,43 @@
 use super::*;
 
+const EVERY_SPARE: [&[&str]; 3] = [SPARE, PLAIN_SPARE, FORMS_SPARE];
+
+fn every_spare() -> impl Iterator<Item = &'static &'static str> {
+    EVERY_SPARE.into_iter().flatten()
+}
+
 #[test]
 fn what_the_settings_file_ships_with_is_a_combination_the_system_knows() {
-    assert!(cp_config::SHORTCUT.parse::<Shortcut>().is_ok());
+    for role in Role::ALL {
+        assert!(role.fallback().parse::<Shortcut>().is_ok(), "{role:?}");
+    }
+}
+
+#[test]
+fn each_shortcut_reads_and_writes_its_own_line_of_the_settings() {
+    let mut config = Config::default();
+    for role in Role::ALL {
+        assert_eq!(role.of(&config), role.fallback());
+        role.set(&mut config, format!("Ctrl+Alt+F{}", role as u8 + 1));
+    }
+    assert_eq!(config.shortcut, "Ctrl+Alt+F1");
+    assert_eq!(config.plain_shortcut, "Ctrl+Alt+F2");
+    assert_eq!(config.forms_shortcut, "Ctrl+Alt+F3");
+}
+
+#[test]
+fn the_window_names_each_shortcut_the_way_the_settings_spell_it() {
+    let roles: Vec<Role> =
+        serde_json::from_str(r#"["panel","plain","forms"]"#).expect("names it knows");
+    assert_eq!(roles, Role::ALL);
+    assert_eq!(Role::default(), Role::Panel);
+}
+
+#[test]
+fn every_spare_list_starts_with_the_shortcut_it_ships_with() {
+    for role in Role::ALL {
+        assert_eq!(role.spare().first(), Some(&role.fallback()), "{role:?}");
+    }
 }
 
 #[test]
@@ -14,13 +49,13 @@ fn a_combination_nobody_could_press_is_refused_before_the_system_sees_it() {
 #[test]
 fn nothing_is_bound_until_the_system_says_yes() {
     let bound = Bound::default();
-    assert!(bound.0.lock().expect("unpoisoned").is_none());
+    assert!(bound.0.lock().expect("unpoisoned").is_empty());
 }
 
 #[test]
 fn every_spare_combination_is_one_the_system_can_be_asked_for() {
-    assert!(!SPARE.is_empty());
-    for said in SPARE {
+    assert!(EVERY_SPARE.iter().all(|one| !one.is_empty()));
+    for said in every_spare() {
         assert!(
             said.parse::<Shortcut>().is_ok(),
             "«{said}» would be dropped in silence"
@@ -30,7 +65,7 @@ fn every_spare_combination_is_one_the_system_can_be_asked_for() {
 
 #[test]
 fn the_spare_list_spells_its_modifiers_the_way_the_picker_does() {
-    for said in SPARE {
+    for said in every_spare() {
         let parts: Vec<&str> = said.split('+').collect();
         let order = ["Ctrl", "Alt", "Shift", "Cmd"];
         let mut seen = 0;
@@ -47,13 +82,15 @@ fn the_spare_list_spells_its_modifiers_the_way_the_picker_does() {
 
 #[test]
 fn no_two_spare_entries_are_the_same_combination_spelled_differently() {
-    let parsed: Vec<Shortcut> = SPARE
-        .iter()
-        .filter_map(|said| said.parse::<Shortcut>().ok())
-        .collect();
-    for (at, one) in parsed.iter().enumerate() {
-        for other in &parsed[at + 1..] {
-            assert_ne!(one, other, "one combination is offered twice");
+    for list in EVERY_SPARE {
+        let parsed: Vec<Shortcut> = list
+            .iter()
+            .filter_map(|said| said.parse::<Shortcut>().ok())
+            .collect();
+        for (at, one) in parsed.iter().enumerate() {
+            for other in &parsed[at + 1..] {
+                assert_ne!(one, other, "one combination is offered twice");
+            }
         }
     }
 }
@@ -85,7 +122,7 @@ fn no_spare_takes_a_combination_the_system_or_everyday_apps_already_use() {
         .iter()
         .map(|said| said.parse::<Shortcut>().expect("a real combination"))
         .collect();
-    for said in SPARE {
+    for said in every_spare() {
         let one: Shortcut = said.parse().expect("a real combination");
         assert!(!spoken.contains(&one), "«{said}» is already spoken for");
     }

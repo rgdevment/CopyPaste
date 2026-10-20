@@ -5,8 +5,9 @@ import { Theme } from "theme.slint";
 import { Words } from "words.slint";
 import { Icon, Action, Pill, Tag, CardView, Hue } from "cards.slint";
 import { NewerStrip } from "newer.slint";
+import { Chooser } from "chooser.slint";
 
-export { Card, Chip, FormRow, Theme, Words }
+export { Card, Chip, FormRow, Theme, Words, Chooser }
 
 export component Panel inherits Window {
     width: Theme.width;
@@ -98,6 +99,8 @@ export component Panel inherits Window {
     }
     callback fresh-start();
     callback emptied();
+    callback plain-asked();
+    callback forms-asked();
     callback arrived();
     callback sheet-chosen(string);
     callback paste-as(int, string);

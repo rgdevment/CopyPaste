@@ -43,21 +43,27 @@ pub fn place(panel: &Panel) {
     }
 }
 
-pub fn zoom(panel: &Panel) {
+pub fn rescaled(window: &slint::Window, zoom: f32) -> Option<f32> {
     use i_slint_backend_winit::WinitWindowAccessor;
-    let window = panel.window();
-    let Some(device) = window.with_winit_window(|winit| winit.scale_factor()) else {
-        return;
-    };
-    let theme = panel.global::<crate::Theme>();
+    let device = window.with_winit_window(|winit| winit.scale_factor())?;
     #[allow(clippy::cast_possible_truncation)]
-    let wanted = (device * f64::from(theme.get_zoom())) as f32;
+    let wanted = (device * f64::from(zoom)) as f32;
     if (window.scale_factor() - wanted).abs() < 0.001 {
-        return;
+        return None;
     }
     window.dispatch_event(slint::platform::WindowEvent::ScaleFactorChanged {
         scale_factor: wanted,
     });
+    Some(wanted)
+}
+
+pub fn zoom(panel: &Panel) {
+    use i_slint_backend_winit::WinitWindowAccessor;
+    let window = panel.window();
+    let theme = panel.global::<crate::Theme>();
+    let Some(wanted) = rescaled(window, theme.get_zoom()) else {
+        return;
+    };
     let side = |logical: f32| (logical * wanted).round().max(1.0) as u32;
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let size = slint::PhysicalSize::new(side(theme.get_width()), side(theme.get_height()));

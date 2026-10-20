@@ -120,7 +120,8 @@ impl App {
             state,
         };
         app.wire(&panel);
-        dress_theme(&panel, kept.light(here::system_is_light()), kept.look);
+        app.wire_quick(&panel)?;
+        dress_theme(panel.global::<crate::Theme>(), kept);
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
@@ -286,6 +287,23 @@ impl App {
                 crate::showing::nudge(&ui, dx, dy);
             }
         });
+    }
+
+    fn wire_quick(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
+        let state = self.state.clone();
+        let quick = crate::quick::Quick::start(Rc::new(move || {
+            let state = state.borrow();
+            crate::quick::Aim {
+                store: state.store.clone(),
+                engine: state.engine.clone(),
+                kept: state.kept.get(),
+            }
+        }))?;
+        let (plain, ahead) = (quick.clone(), self.state.borrow().ahead.clone());
+        panel.on_plain_asked(move || plain.plain(ahead.swap(0, Ordering::Relaxed)));
+        let ahead = self.state.borrow().ahead.clone();
+        panel.on_forms_asked(move || quick.choose(ahead.swap(0, Ordering::Relaxed)));
+        Ok(())
     }
 
     fn wire(&self, panel: &Panel) {
@@ -582,7 +600,7 @@ impl App {
                 ui.set_chips_scroll(0.0);
                 let kept = state.borrow().kept.get();
                 state.borrow_mut().metrics.shut_lines = kept.look.density.shut_lines();
-                dress_theme(&ui, kept.light(here::system_is_light()), kept.look);
+                dress_theme(ui.global::<crate::Theme>(), kept);
                 ui.set_update_line(newer_line().into());
                 refresh(&ui, &state);
                 back_to_the_newest(&ui, &state);
@@ -702,7 +720,7 @@ impl App {
                 note(&format!("{id} has no file another application could take"));
                 return;
             }
-            let Some(handle) = handle_of(&ui) else {
+            let Some(handle) = handle_of(ui.window()) else {
                 note(&format!(
                     "{id} cannot be dragged: the panel has no native window"
                 ));
@@ -761,16 +779,16 @@ impl App {
     }
 }
 
-pub fn handle_of(panel: &Panel) -> Option<raw_window_handle::RawWindowHandle> {
+pub fn handle_of(window: &slint::Window) -> Option<raw_window_handle::RawWindowHandle> {
     use raw_window_handle::HasWindowHandle;
-    let handle = panel.window().window_handle();
+    let handle = window.window_handle();
     HasWindowHandle::window_handle(&handle)
         .ok()
         .map(|raw| raw.as_raw())
 }
 
 pub fn dress(panel: &Panel, wanted: &str, light: bool) {
-    if let Some(handle) = handle_of(panel) {
+    if let Some(handle) = handle_of(panel.window()) {
         here::dress(handle, wanted, light);
     }
 }
@@ -1191,13 +1209,13 @@ fn step_aside(ui: &Panel, state: &Rc<RefCell<State>>, leaving: Leaving) {
 }
 
 pub fn forward(panel: &Panel) {
-    if let Some(handle) = handle_of(panel) {
+    if let Some(handle) = handle_of(panel.window()) {
         here::forward(handle);
     }
 }
 
-fn dress_theme(ui: &Panel, light: bool, look: crate::kept::Look) {
-    let theme = ui.global::<crate::Theme>();
+pub fn dress_theme(theme: crate::Theme<'_>, kept: crate::kept::Kept) {
+    let (light, look) = (kept.light(here::system_is_light()), kept.look);
     theme.set_light(light);
     let swatch = look.accent.swatch(light);
     theme.set_accent(opaque(swatch.accent));

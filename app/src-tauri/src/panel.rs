@@ -281,6 +281,21 @@ fn allow<R: Runtime>(app: &AppHandle<R>) {
     let _ = app;
 }
 
+pub fn paste_plain<R: Runtime>(app: &AppHandle<R>) {
+    ask(app, "plain");
+}
+
+pub fn choose<R: Runtime>(app: &AppHandle<R>) {
+    ask(app, "forms");
+}
+
+fn ask<R: Runtime>(app: &AppHandle<R>, what: &str) {
+    allow(app);
+    if let Err(Said::Broken) = say(app, what) {
+        bring_back(app);
+    }
+}
+
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {
     if let Err(Said::Broken) = say(app, "hide") {
         bring_back(app);

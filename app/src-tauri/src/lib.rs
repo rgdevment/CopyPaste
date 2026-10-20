@@ -87,10 +87,7 @@ pub fn run() {
                 waking::on_first_run();
             }
             panel::raise(app.handle());
-            let wanted = kept
-                .as_ref()
-                .map_or(cp_config::SHORTCUT, |one| one.shortcut.as_str());
-            keys::raise(app.handle(), wanted);
+            keys::raise(app.handle(), &kept.clone().unwrap_or_default());
             welcome::raise(app.handle(), fresh);
             update::keep_looking();
             Ok(())

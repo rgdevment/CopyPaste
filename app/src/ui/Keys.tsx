@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { asKeys, combination, type Kept, onMac, useKeys } from "../core";
+import { asKeys, combination, type Kept, onMac, type Role, useKeys } from "../core";
 import { panelKeys, t } from "../locales";
 import { Band, Line } from "./Bits";
+
+const FIELD: Record<Role, "shortcut" | "plain-shortcut" | "forms-shortcut"> = {
+  panel: "shortcut",
+  plain: "plain-shortcut",
+  forms: "forms-shortcut",
+};
 
 export default function Keys({
   kept,
@@ -10,63 +16,35 @@ export default function Keys({
   kept: Kept;
   change: (what: Partial<Kept>) => Promise<void>;
 }) {
-  const { keys, spare, recheck } = useKeys(kept.shortcut);
-  const [asking, setAsking] = useState(false);
   const mac = onMac();
 
   return (
     <>
       <h1>{t("railKeys")}</h1>
 
-      <Band says={t("bandOpens")} />
+      <Band says={t("bandAnywhere")} />
 
-      <Line
-        says={t("keys")}
-        why={asking ? t("keysAsk") : keys && !keys.bound ? t("keysTaken") : t("keysWhy")}
-        more={
-          !asking && keys && !keys.bound && spare.length > 0 ? (
-            <div className="spare">
-              <span>{t("keysFree")}</span>
-              {spare.map((one) => (
-                <button
-                  key={one}
-                  type="button"
-                  className="keys spare-one"
-                  onClick={() => void change({ shortcut: one }).finally(() => recheck(one))}
-                >
-                  {asKeys(one, mac)}
-                </button>
-              ))}
-            </div>
-          ) : null
-        }
-      >
-        <span className={keys && !keys.bound && !asking ? "keys taken" : "keys"}>
-          {asKeys(kept.shortcut, mac)}
-        </span>
-        <button
-          type="button"
-          className="mild"
-          onClick={() => setAsking(!asking)}
-          onKeyDown={(press) => {
-            if (!asking) {
-              return;
-            }
-            press.preventDefault();
-            if (press.code === "Escape") {
-              setAsking(false);
-              return;
-            }
-            const said = combination(press);
-            if (said !== null) {
-              setAsking(false);
-              void change({ shortcut: said }).finally(() => recheck(said));
-            }
-          }}
-        >
-          {asking ? t("keysStop") : t("keysChange")}
-        </button>
+      <Shortcut which="panel" says={t("keys")} why={t("keysWhy")} kept={kept} change={change} />
+
+      <Line says={t("keysAsCopied")} why={t("keysAsCopiedWhy")}>
+        <span className="keys">{asKeys(mac ? "Cmd+V" : "Ctrl+V", mac)}</span>
       </Line>
+
+      <Shortcut
+        which="plain"
+        says={t("keysPlain")}
+        why={t("keysPlainWhy")}
+        kept={kept}
+        change={change}
+      />
+
+      <Shortcut
+        which="forms"
+        says={t("keysForms")}
+        why={t("keysFormsWhy")}
+        kept={kept}
+        change={change}
+      />
 
       <Band says={t("keysTable")} />
 
@@ -85,5 +63,93 @@ export default function Keys({
         </tbody>
       </table>
     </>
+  );
+}
+
+function Shortcut({
+  which: role,
+  says,
+  why,
+  kept,
+  change,
+}: {
+  which: Role;
+  says: string;
+  why: string;
+  kept: Kept;
+  change: (what: Partial<Kept>) => Promise<void>;
+}) {
+  const field = FIELD[role];
+  const said = kept[field] ?? "";
+  const { keys, spare, recheck } = useKeys(said, role);
+  const [asking, setAsking] = useState(false);
+  const [twice, setTwice] = useState(false);
+  const mac = onMac();
+  const off = said === "";
+  const taken = !asking && !off && keys !== null && !keys.bound;
+  const take = (one: string) => {
+    const others = (Object.keys(FIELD) as Role[]).filter((other) => other !== role);
+    const repeated = one !== "" && others.some((other) => kept[FIELD[other]] === one);
+    setTwice(repeated);
+    if (!repeated) {
+      void change({ [field]: one }).finally(() => recheck(one));
+    }
+  };
+  const told = asking
+    ? t("keysAsk")
+    : twice
+      ? t("keysTwice")
+      : taken
+        ? t(role === "panel" ? "keysTaken" : "keysTakenPaste")
+        : why;
+
+  return (
+    <Line
+      says={says}
+      why={told}
+      more={
+        taken && spare.length > 0 ? (
+          <div className="spare">
+            <span>{t("keysFree")}</span>
+            {spare.map((one) => (
+              <button key={one} type="button" className="keys spare-one" onClick={() => take(one)}>
+                {asKeys(one, mac)}
+              </button>
+            ))}
+          </div>
+        ) : null
+      }
+    >
+      <span className={taken ? "keys taken" : off ? "keys off" : "keys"}>
+        {off ? t("keysOff") : asKeys(said, mac)}
+      </span>
+      <button
+        type="button"
+        className="mild"
+        onClick={() => setAsking(!asking)}
+        onKeyDown={(press) => {
+          if (!asking) {
+            return;
+          }
+          press.preventDefault();
+          if (press.code === "Escape") {
+            setAsking(false);
+            return;
+          }
+          const pressed = combination(press);
+          if (pressed !== null) {
+            setAsking(false);
+            take(pressed);
+          }
+        }}
+      >
+        {asking ? t("keysStop") : off ? t("keysSet") : t("keysChange")}
+      </button>
+      {role !== "panel" && !off && !asking ? (
+        <button type="button" className="mild" onClick={() => take("")}>
+          {t("keysClear")}
+        </button>
+      ) : null}
+    </Line>
   );
 }
