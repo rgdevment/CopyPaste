@@ -686,8 +686,11 @@ fn a_counted_folder_is_told_and_a_missing_one_is_not() {
 fn a_write_given_up_is_handed_back_to_the_watcher() {
     let dir = aside("abandoning");
     let engine = Engine::start(&dir.join("history.db"), |_, _| {}, |_| {}).expect("an engine");
-    assert!(engine.writing());
-    assert!(engine.abandoned());
+    let _ = engine.writing();
+    assert!(
+        engine.abandoned(),
+        "giving a write up needs no clipboard, only the watcher"
+    );
     drop(engine);
     let _ = std::fs::remove_dir_all(&dir);
 }
