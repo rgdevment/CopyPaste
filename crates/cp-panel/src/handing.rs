@@ -5,6 +5,8 @@ use crate::note::note;
 use crate::view::{AS_IS, as_is_label, form_of, label_of_form, shorthand_of};
 use cp_store::Store;
 
+pub const PLAIN: &str = "plain";
+
 fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towards) -> Landing {
     if towards == Towards::Elsewhere {
         return Landing::anywhere();
@@ -125,15 +127,22 @@ pub fn paste_as(
     if key == AS_IS {
         return hand_over(store, engine, id, towards);
     }
-    let Some(form) = form_of(key) else {
-        note(&format!("a form nobody knows: {key}"));
-        return false;
-    };
     let Ok(Some(item)) = store.item(id) else {
         return false;
     };
     let ocr = store.ocr_text(id).ok().flatten();
     let content = here::content_of(&item, ocr.as_deref());
+    let form = if key == PLAIN {
+        cp_core::paste_as::plainest(&content)
+    } else {
+        form_of(key)
+    };
+    let Some(form) = form else {
+        note(&format!(
+            "pasting {id} as {key}: there is no such form for it"
+        ));
+        return false;
+    };
     let Some(rendered) = cp_core::paste_as::render(form, &content) else {
         note(&format!(
             "pasting {id} as {key}: the form gave nothing back"
@@ -169,18 +178,6 @@ pub fn newest(store: &Store, back: usize) -> Option<(cp_store::Listed, bool)> {
             None
         }
     }
-}
-
-pub fn paste_plain(store: &Store, engine: Option<&crate::engine::Engine>, id: i64) -> bool {
-    let Ok(Some(item)) = store.item(id) else {
-        return false;
-    };
-    let ocr = store.ocr_text(id).ok().flatten();
-    let Some(form) = cp_core::paste_as::plainest(&here::content_of(&item, ocr.as_deref())) else {
-        note(&format!("pasting {id} plain: it holds no text to paste"));
-        return false;
-    };
-    paste_as(store, engine, id, form.as_str(), Towards::Elsewhere)
 }
 
 fn short_of(id: i64, landed: here::Landed) -> bool {

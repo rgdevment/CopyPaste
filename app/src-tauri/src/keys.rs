@@ -116,12 +116,20 @@ pub fn bind<R: Runtime>(app: &AppHandle<R>, role: Role, said: &str) -> Result<()
     app.global_shortcut()
         .on_shortcut(wanted, move |_app, _shortcut, event| {
             if event.state() == ShortcutState::Pressed {
+                unmenued();
                 role.answer(&handle);
             }
         })
         .map_err(|why| format!("the system would not give up «{said}»: {why}"))?;
     remember(app, role, Some(said));
     Ok(())
+}
+
+fn unmenued() {
+    #[cfg(windows)]
+    if !cp_win_sys::keystroke::mask_menu() {
+        note("the held Alt could not be kept from opening the menu of the app in front");
+    }
 }
 
 fn held<R: Runtime>(app: &AppHandle<R>, role: Role) -> Option<String> {

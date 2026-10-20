@@ -7,6 +7,19 @@ pub const OURS: usize = 0x0C0B_9A57;
 
 const VK_V: VIRTUAL_KEY = VIRTUAL_KEY(b'V' as u16);
 
+const VK_UNASSIGNED: VIRTUAL_KEY = VIRTUAL_KEY(0xE8);
+
+pub fn mask_batch() -> Vec<INPUT> {
+    vec![key(VK_UNASSIGNED, false), key(VK_UNASSIGNED, true)]
+}
+
+pub fn mask_menu() -> bool {
+    if ![VK_MENU, VK_LWIN, VK_RWIN].into_iter().any(pressed) {
+        return true;
+    }
+    send(&mask_batch())
+}
+
 pub fn paste_batch() -> Vec<INPUT> {
     let mut batch = Vec::with_capacity(9);
     for held in [VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_CONTROL] {

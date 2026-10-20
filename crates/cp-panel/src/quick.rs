@@ -1,5 +1,5 @@
 use crate::Chooser;
-use crate::handing::{forms_of, newest, paste_as, paste_plain};
+use crate::handing::{PLAIN, forms_of, newest, paste_as};
 use crate::here;
 use crate::note::note;
 use cp_store::{Listed, Store};
@@ -43,12 +43,17 @@ impl Quick {
     pub fn plain(&self, ahead: isize) {
         let ahead = self.aimed(ahead);
         self.hide();
+        if ahead == 0 {
+            note("nothing to paste plain into: no other window is in front");
+            return;
+        }
         let aim = (self.reach)();
         let Some((row, _)) = newest(&aim.store, 0) else {
             note("nothing to paste plain: the history is empty");
             return;
         };
-        if !paste_plain(&aim.store, aim.engine.as_deref(), row.id) {
+        let towards = crate::landing::Towards::Elsewhere;
+        if !paste_as(&aim.store, aim.engine.as_deref(), row.id, PLAIN, towards) {
             return;
         }
         here::paste_into(
@@ -174,13 +179,7 @@ impl Quick {
             key,
             here::towards(ahead),
         ) {
-            complain(
-                chooser,
-                crate::say::pick(
-                    "no se pudo pegar: el portapapeles está ocupado",
-                    "could not paste: the clipboard is busy",
-                ),
-            );
+            complain(chooser, crate::app::busy());
             return;
         }
         let hiding = chooser.as_weak();
@@ -190,28 +189,33 @@ impl Quick {
             }
         };
         let later = Rc::downgrade(self);
-        here::paste_into(ahead, hide, move |sent| {
-            let Some(chooser) = later
-                .upgrade()
-                .and_then(|quick| quick.chooser.get().map(ComponentHandle::clone_strong))
-            else {
-                return;
-            };
-            match sent {
-                here::Sent::Done => {}
-                here::Sent::Nobody => {
-                    note("no window was left to paste into, it stays on the clipboard");
-                }
-                here::Sent::Degraded(why) => {
-                    let said = crate::excuse::why_not(why, crate::say::in_english());
-                    note(&format!(
-                        "it stays on the clipboard, unpasted: {why:?}: {said}"
-                    ));
-                    appear(&chooser);
-                    complain(&chooser, said);
-                }
-            }
+        slint::Timer::single_shot(Duration::ZERO, move || {
+            here::paste_into(ahead, hide, move |sent| delivered(&later, sent));
         });
+    }
+}
+
+fn delivered(later: &Weak<Quick>, sent: here::Sent) {
+    let Some(chooser) = later
+        .upgrade()
+        .and_then(|quick| quick.chooser.get().map(ComponentHandle::clone_strong))
+    else {
+        return;
+    };
+    match sent {
+        here::Sent::Done => {}
+        here::Sent::Nobody => {
+            note("no window was left to paste into, it stays on the clipboard");
+            let _ = chooser.hide();
+        }
+        here::Sent::Degraded(why) => {
+            let said = crate::excuse::why_not(why, crate::say::in_english());
+            note(&format!(
+                "it stays on the clipboard, unpasted: {why:?}: {said}"
+            ));
+            appear(&chooser);
+            complain(&chooser, said);
+        }
     }
 }
 
@@ -303,30 +307,9 @@ fn tall(rows: usize) -> f64 {
 
 fn place(chooser: &Chooser) {
     use slint::Model;
-    let Some(pointer) = here::pointer() else {
-        return;
-    };
     let zoom = f64::from(kept_zoom(chooser));
     let size = (WIDE * zoom, tall(chooser.get_rows().row_count()) * zoom);
-    let window = chooser.window();
-    if pointer.physical {
-        let scale = pointer.scale;
-        let (x, y) = crate::placing::beside(
-            pointer.at,
-            pointer.area,
-            (size.0 * scale, size.1 * scale),
-            scale,
-        );
-        #[allow(clippy::cast_possible_truncation)]
-        window.set_position(slint::PhysicalPosition::new(
-            x.round() as i32,
-            y.round() as i32,
-        ));
-    } else {
-        let (x, y) = crate::placing::beside(pointer.at, pointer.area, size, 1.0);
-        #[allow(clippy::cast_possible_truncation)]
-        window.set_position(slint::LogicalPosition::new(x as f32, y as f32));
-    }
+    crate::showing::beside_pointer(chooser.window(), size);
 }
 
 #[cfg(test)]

@@ -69,6 +69,22 @@ describe("the window", () => {
     expect(said?.config.shortcut).toBe("Ctrl+Alt+V");
   });
 
+  it("refuses the combination every app pastes with", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    const changes = await screen.findAllByRole("button", { name: "Cambiar" });
+    const before = vi.mocked(invoke).mock.calls.filter(([what]) => what === "keep").length;
+    await who.click(changes[1]);
+    const stop = await screen.findByRole("button", { name: "Dejarlo como está" });
+    stop.focus();
+    await who.keyboard("{Control>}[KeyV]{/Control}");
+    expect(await screen.findByText(/la de copiar, cortar o pegar/)).toBeDefined();
+    const after = vi.mocked(invoke).mock.calls.filter(([what]) => what === "keep").length;
+    expect(after).toBe(before);
+  });
+
   it("refuses a combination another CoPanda shortcut already answers to", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const who = userEvent.setup();

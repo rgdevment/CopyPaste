@@ -15,14 +15,19 @@ thread_local! {
 }
 
 pub fn place(panel: &Panel) {
+    let theme = panel.global::<crate::Theme>();
+    let zoom = f64::from(theme.get_zoom());
+    let size = (
+        f64::from(theme.get_width()) * zoom,
+        f64::from(theme.get_height()) * zoom,
+    );
+    beside_pointer(panel.window(), size);
+}
+
+pub fn beside_pointer(window: &slint::Window, (width, height): (f64, f64)) {
     let Some(pointer) = crate::here::pointer() else {
         return;
     };
-    let theme = panel.global::<crate::Theme>();
-    let zoom = f64::from(theme.get_zoom());
-    let width = f64::from(theme.get_width()) * zoom;
-    let height = f64::from(theme.get_height()) * zoom;
-    let window = panel.window();
     let scale = pointer.scale;
     if pointer.physical {
         let (x, y) = crate::placing::beside(

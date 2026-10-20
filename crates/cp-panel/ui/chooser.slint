@@ -54,9 +54,6 @@ export component Chooser inherits Window {
                 root.chosen(root.rows[root.current].key);
                 return accept;
             }
-            if event.modifiers.control || event.modifiers.alt || event.modifiers.meta {
-                return reject;
-            }
             if event.text.character-count == 1 && event.text.is-float() && event.text != "0" {
                 let at = event.text.to-float() - 1;
                 if at < root.rows.length {

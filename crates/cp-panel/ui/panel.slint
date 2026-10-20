@@ -290,7 +290,7 @@ export component Panel inherits Window {
                                         return accept;
                                     }
                                     if event.text == Key.Return && root.current >= 0 && event.modifiers.shift {
-                                        root.paste-as(root.cards[root.current].id, "plain-text");
+                                        root.paste-as(root.cards[root.current].id, "plain");
                                         return accept;
                                     }
                                     if event.text == Key.Backspace
@@ -725,7 +725,7 @@ export component Panel inherits Window {
                             layout: root.layout;
                             copy(id) => { root.copy(id); }
                             paste(id) => { root.paste(id); }
-                            plain(id) => { root.paste-as(id, "plain-text"); }
+                            plain(id) => { root.paste-as(id, "plain"); }
                             forms(id) => {
                                 root.current = index;
                                 root.opened = false;

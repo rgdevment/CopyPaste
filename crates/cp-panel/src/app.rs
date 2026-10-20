@@ -1115,7 +1115,7 @@ fn arm_sheet(state: &Rc<RefCell<State>>, ui: &Panel) {
         });
 }
 
-fn busy() -> &'static str {
+pub fn busy() -> &'static str {
     if crate::here::read_stuck() {
         return crate::say::pick(
             "una app dejó de responder con lo copiado; reinicia CoPanda",

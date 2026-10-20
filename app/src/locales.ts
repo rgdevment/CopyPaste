@@ -108,6 +108,7 @@ const ES = {
   keysSet: "Asignar",
   keysClear: "Quitar",
   keysTwice: "Esa combinación ya la usa otro atajo de CoPanda. Elige otra",
+  keysSystem: "Esa combinación es la de copiar, cortar o pegar de todas las apps. Elige otra",
   keysTakenPaste:
     "Otro programa ya usa esa combinación, así que este atajo no responde. Elige otra cuando puedas cambiarla",
   keysTable: "Lo que responde el panel",
@@ -470,6 +471,7 @@ const EN: Record<keyof Said, string> = {
   keysSet: "Set",
   keysClear: "Remove",
   keysTwice: "Another CoPanda shortcut already uses that combination. Pick another",
+  keysSystem: "That combination copies, cuts or pastes in every app. Pick another",
   keysTakenPaste:
     "Another program already uses that combination, so this shortcut does not answer. Pick another when you can change it",
   keysTable: "What the panel answers to",

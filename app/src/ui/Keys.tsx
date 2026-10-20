@@ -9,6 +9,8 @@ const FIELD: Record<Role, "shortcut" | "plain-shortcut" | "forms-shortcut"> = {
   forms: "forms-shortcut",
 };
 
+const SYSTEM = ["Ctrl+C", "Ctrl+X", "Ctrl+V", "Cmd+C", "Cmd+X", "Cmd+V", "Shift+Insert"];
+
 export default function Keys({
   kept,
   change,
@@ -83,22 +85,23 @@ function Shortcut({
   const said = kept[field] ?? "";
   const { keys, spare, recheck } = useKeys(said, role);
   const [asking, setAsking] = useState(false);
-  const [twice, setTwice] = useState(false);
+  const [refused, setRefused] = useState<"keysTwice" | "keysSystem" | null>(null);
   const mac = onMac();
   const off = said === "";
   const taken = !asking && !off && keys !== null && !keys.bound;
   const take = (one: string) => {
     const others = (Object.keys(FIELD) as Role[]).filter((other) => other !== role);
     const repeated = one !== "" && others.some((other) => kept[FIELD[other]] === one);
-    setTwice(repeated);
-    if (!repeated) {
+    const why = SYSTEM.includes(one) ? "keysSystem" : repeated ? "keysTwice" : null;
+    setRefused(why);
+    if (why === null) {
       void change({ [field]: one }).finally(() => recheck(one));
     }
   };
   const told = asking
     ? t("keysAsk")
-    : twice
-      ? t("keysTwice")
+    : refused
+      ? t(refused)
       : taken
         ? t(role === "panel" ? "keysTaken" : "keysTakenPaste")
         : why;
@@ -127,7 +130,7 @@ function Shortcut({
         type="button"
         className="mild"
         onClick={() => {
-          setTwice(false);
+          setRefused(null);
           setAsking(!asking);
         }}
         onKeyDown={(press) => {
