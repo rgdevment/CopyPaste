@@ -83,6 +83,9 @@ fn worn_over(
 ) -> Option<i64> {
     let item = store.item(id).ok().flatten()?;
     if !here::rebuilds_whole(&item) {
+        note(&format!(
+            "{id} carries more than its picture, so a terminal gets no path for it"
+        ));
         return None;
     }
     let landing = Landing {
@@ -90,6 +93,9 @@ fn worn_over(
         ..landing_for(store, &item, id, towards)
     };
     if towards == Towards::Terminal && !matches!(landing.offer(), crate::landing::Offer::Text(_)) {
+        note(&format!(
+            "{id} has no file a terminal could take, so it gets no path"
+        ));
         return None;
     }
     let landed = written_over(&item, &landing, Some(engine));

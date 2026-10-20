@@ -403,3 +403,22 @@ fn a_picture_that_carried_more_than_its_pixels_cannot_be_rebuilt_whole() {
     };
     assert!(!rebuilt_whole(&too_big));
 }
+
+#[test]
+fn a_snipping_tool_screenshot_with_its_clipboard_plumbing_goes_back_whole() {
+    let png = image_bytes();
+    let snip = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![
+            announced("CF_BITMAP"),
+            announced("CF_DIB"),
+            announced("CF_DIBV5"),
+            inline("CanIncludeInClipboardHistory", &1u32.to_le_bytes()),
+            announced("CanUploadToCloudClipboard"),
+            announced("DataObject"),
+            announced("Ole Private Data"),
+            inline(PNG, &png),
+        ],
+    };
+    assert!(rebuilt_whole(&snip));
+}

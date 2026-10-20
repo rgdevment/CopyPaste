@@ -427,7 +427,13 @@ fn kept(store: &Store, notice: &mut Notice) -> Option<(i64, Option<Copied>)> {
     let item = taken(here::capture_insisting(), here::unreadable, notice)?;
     let from = here::in_front();
     let id = keep(store, &item, crate::app::now_ms(), from.as_deref())?;
-    Some((id, Copied::of(before, here::sequence(), id, &item)))
+    let copied = Copied::of(before, here::sequence(), id, &item);
+    if copied.is_none() && item.kind == Some(Kind::Image) && before.is_some() {
+        note(&format!(
+            "{id} changed while it was read, so a terminal gets no path for it"
+        ));
+    }
+    Some((id, copied))
 }
 
 fn taken(

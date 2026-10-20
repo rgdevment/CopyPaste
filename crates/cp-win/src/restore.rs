@@ -86,13 +86,20 @@ const PICTURE_TWINS: [&str; 6] = [
     "CF_DIB",
     "CF_BITMAP",
 ];
+const PLUMBING: [&str; 5] = [
+    "DataObject",
+    "Ole Private Data",
+    "CanIncludeInClipboardHistory",
+    "CanUploadToCloudClipboard",
+    "CF_LOCALE",
+];
 
 pub fn rebuilt_whole(item: &Item) -> bool {
     let mut picture = false;
     for format in &item.formats {
         let held = payload_of(format).is_some();
         let twin = PICTURE_TWINS.contains(&format.id.as_str());
-        if !held && !twin {
+        if !held && !twin && !PLUMBING.contains(&format.id.as_str()) {
             return false;
         }
         picture |= held && twin;
