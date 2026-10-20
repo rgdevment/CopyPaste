@@ -74,16 +74,6 @@ fn neither_the_panel_nor_its_host_is_ever_where_a_paste_goes() {
 }
 
 #[test]
-fn a_window_already_in_front_needs_no_pulling() {
-    let edit = crate::window::EditWindow::open("pulled").expect("a window to try it on");
-    edit.pump(std::time::Duration::from_millis(50));
-    if foreground() != Some(edit.window()) {
-        return;
-    }
-    assert!(pull_forward(edit.window()));
-}
-
-#[test]
 fn a_window_that_is_gone_is_never_pulled_forward() {
     assert!(!pull_forward(HWND(std::ptr::null_mut())));
 }

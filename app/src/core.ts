@@ -225,18 +225,28 @@ const ALIASES: Record<string, string> = {
   meta: "cmd",
 };
 
-function keysOf(shortcut: string): string[] {
+const EITHER = ["cmdorctrl", "commandorcontrol", "cmdorcontrol", "commandorctrl"];
+
+function canonical(key: string, mac: boolean): string {
+  const bare = /^(key|digit)(.)$/.exec(key)?.[2] ?? key;
+  if (EITHER.includes(bare)) {
+    return mac ? "cmd" : "ctrl";
+  }
+  return ALIASES[bare] ?? bare;
+}
+
+function keysOf(shortcut: string, mac: boolean): string[] {
   return shortcut
     .split("+")
     .map((one) => one.trim().toLowerCase())
     .filter((one) => one.length > 0)
-    .map((one) => ALIASES[one] ?? one)
+    .map((one) => canonical(one, mac))
     .sort();
 }
 
-export function sameKeys(one: string, other: string): boolean {
-  const mine = keysOf(one);
-  const theirs = keysOf(other);
+export function sameKeys(one: string, other: string, mac = onMac()): boolean {
+  const mine = keysOf(one, mac);
+  const theirs = keysOf(other, mac);
   return mine.length > 0 && mine.join("+") === theirs.join("+");
 }
 

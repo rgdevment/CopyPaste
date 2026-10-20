@@ -106,6 +106,9 @@ pub fn pull_forward(window: HWND) -> bool {
     let Some(ahead) = foreground() else {
         return false;
     };
+    if unsafe { windows::Win32::UI::WindowsAndMessaging::IsHungAppWindow(ahead) }.as_bool() {
+        return false;
+    }
     let thread =
         unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(ahead, None) };
     let Some(attached) = Attached::to(thread) else {

@@ -236,7 +236,8 @@ mod platform {
         let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get()) else {
             return;
         };
-        if cp_win_sys::frontmost::bring_forward(target.window)
+        let _ = cp_win_sys::frontmost::bring_forward(target.window);
+        if cp_win_sys::frontmost::foreground() == Some(target.window)
             || cp_win_sys::frontmost::pull_forward(target.window)
         {
             return;

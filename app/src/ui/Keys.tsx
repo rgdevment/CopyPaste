@@ -102,7 +102,7 @@ function Shortcut({
   const take = (one: string) => {
     const others = (Object.keys(FIELD) as Role[]).filter((other) => other !== role);
     const repeated = others.some((other) => sameKeys(one, kept[FIELD[other]] ?? ""));
-    const system = SYSTEM.some((taken) => sameKeys(one, taken));
+    const system = SYSTEM.some((reserved) => sameKeys(one, reserved));
     const why = system ? "keysSystem" : repeated ? "keysTwice" : null;
     setRefused(why);
     if (why === null) {

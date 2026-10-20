@@ -171,7 +171,9 @@ impl Quick {
         self.back.set(back);
         if !self.fill(chooser) {
             self.back.set(was);
+            return;
         }
+        crate::showing::kept_inside(chooser.window(), size_of(chooser));
     }
 
     fn chosen(self: &Rc<Self>, chooser: &Chooser, key: &str) {
@@ -303,23 +305,25 @@ fn leave_when_left(chooser: &Chooser, ahead: Arc<AtomicIsize>) {
         if let WindowEvent::Focused(false) = event
             && let Some(chooser) = weak.upgrade()
         {
-            left(&chooser, &ahead);
+            left(&chooser, ahead.clone(), here::activated);
         }
         EventResult::Propagate
     });
 }
 
-fn left(chooser: &Chooser, ahead: &AtomicIsize) {
+fn left(chooser: &Chooser, ahead: Arc<AtomicIsize>, ours: impl Fn() -> bool + 'static) {
     if !chooser.window().is_visible() {
         return;
     }
-    ahead.store(0, Ordering::Relaxed);
-    note(&format!(
-        "the paste as card was left for {}",
-        here::in_front().unwrap_or_else(|| "another app".to_owned())
-    ));
     let later = chooser.as_weak();
     slint::Timer::single_shot(Duration::ZERO, move || {
+        if !ours() {
+            ahead.store(0, Ordering::Relaxed);
+            note(&format!(
+                "the paste as card was left for {}",
+                here::in_front().unwrap_or_else(|| "another app".to_owned())
+            ));
+        }
         if let Some(chooser) = later.upgrade() {
             let _ = chooser.hide();
         }
@@ -343,13 +347,16 @@ fn subject_of(row: &Listed) -> String {
     }
 }
 
-fn place(chooser: &Chooser) {
+fn size_of(chooser: &Chooser) -> (f64, f64) {
     let zoom = f64::from(kept_zoom(chooser));
-    let size = (
+    (
         f64::from(chooser.get_wide()) * zoom,
         f64::from(chooser.get_tall()) * zoom,
-    );
-    crate::showing::beside_pointer(chooser.window(), size);
+    )
+}
+
+fn place(chooser: &Chooser) {
+    crate::showing::beside_pointer(chooser.window(), size_of(chooser));
 }
 
 #[cfg(test)]

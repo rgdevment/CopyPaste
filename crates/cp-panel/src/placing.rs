@@ -28,6 +28,13 @@ pub fn beside(pointer: (f64, f64), area: Area, size: (f64, f64), unit: f64) -> (
     )
 }
 
+pub fn kept_within(at: (f64, f64), size: (f64, f64), area: Area) -> (f64, f64) {
+    (
+        at.0.min(area.right - size.0).max(area.left),
+        at.1.min(area.bottom - size.1).max(area.top),
+    )
+}
+
 #[cfg(test)]
 #[path = "placing_test.rs"]
 mod tests;

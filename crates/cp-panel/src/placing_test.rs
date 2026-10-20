@@ -64,3 +64,29 @@ fn a_panel_taller_than_the_screen_starts_at_its_top() {
     };
     assert_eq!(beside((500.0, 200.0), short, PANEL, 1.0).1, 0.0);
 }
+
+#[test]
+fn a_window_that_grew_is_pushed_back_inside_without_moving_otherwise() {
+    let area = Area {
+        left: 0.0,
+        top: 0.0,
+        right: 1000.0,
+        bottom: 800.0,
+    };
+    assert_eq!(
+        kept_within((100.0, 200.0), (300.0, 200.0), area),
+        (100.0, 200.0)
+    );
+    assert_eq!(
+        kept_within((100.0, 700.0), (300.0, 200.0), area),
+        (100.0, 600.0)
+    );
+    assert_eq!(
+        kept_within((900.0, 50.0), (300.0, 200.0), area),
+        (700.0, 50.0)
+    );
+    assert_eq!(
+        kept_within((-20.0, -10.0), (300.0, 200.0), area),
+        (0.0, 0.0)
+    );
+}

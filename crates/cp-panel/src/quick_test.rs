@@ -305,20 +305,20 @@ fn losing_the_focus_puts_the_card_away_on_the_next_turn() {
     bench.quick.choose();
     let chooser = card(&bench);
     bench.ahead.store(42, Ordering::Relaxed);
-    left(&chooser, &bench.ahead);
+    left(&chooser, bench.ahead.clone(), || false);
     assert!(
         chooser.window().is_visible(),
         "not in the middle of the event"
     );
+    tick(1);
     assert_eq!(
         bench.ahead.load(Ordering::Relaxed),
         0,
-        "clicking elsewhere forgets where it was going"
+        "clicking elsewhere forgets where it was going, once the switch is over"
     );
-    tick(1);
     assert!(!chooser.window().is_visible());
     bench.ahead.store(42, Ordering::Relaxed);
-    left(&chooser, &bench.ahead);
+    left(&chooser, bench.ahead.clone(), || false);
     tick(1);
     assert!(!chooser.window().is_visible());
     assert_eq!(
@@ -357,4 +357,20 @@ fn the_card_comes_forward_in_the_same_turn_it_shows() {
     let chooser = card(&bench);
     assert!(chooser.window().is_visible());
     assert_eq!(chooser.get_current(), 0, "ready for the keys right away");
+}
+
+#[test]
+fn leaving_the_card_for_a_window_of_our_own_keeps_where_it_was_going() {
+    let bench = bench(&["newest"]);
+    bench.quick.choose();
+    let chooser = card(&bench);
+    bench.ahead.store(42, Ordering::Relaxed);
+    left(&chooser, bench.ahead.clone(), || true);
+    assert_eq!(
+        bench.ahead.load(Ordering::Relaxed),
+        42,
+        "the panel opened over the card still pastes where the user was"
+    );
+    tick(1);
+    assert!(!chooser.window().is_visible());
 }

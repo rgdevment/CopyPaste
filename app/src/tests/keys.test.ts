@@ -53,5 +53,10 @@ describe("two combinations", () => {
     expect(sameKeys("Option+Super+1", "Alt+Cmd+1")).toBe(true);
     expect(sameKeys("Ctrl+Alt+V", "Ctrl+Alt+Shift+V")).toBe(false);
     expect(sameKeys("", "")).toBe(false);
+    expect(sameKeys("Ctrl+Alt+KeyV", "Ctrl+Alt+V")).toBe(true);
+    expect(sameKeys("Ctrl+Digit1", "Ctrl+1")).toBe(true);
+    expect(sameKeys("CommandOrControl+Alt+V", "Ctrl+Alt+V", false)).toBe(true);
+    expect(sameKeys("CmdOrCtrl+Alt+V", "Cmd+Alt+V", true)).toBe(true);
+    expect(sameKeys("CmdOrCtrl+Alt+V", "Cmd+Alt+V", false)).toBe(false);
   });
 });
