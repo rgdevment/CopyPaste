@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::time::Duration;
 
 const COMPLAINS_FOR: Duration = Duration::from_millis(2_200);
+const LOOKS_AGAIN: Duration = Duration::from_millis(150);
 
 pub struct Aim {
     pub store: Rc<Store>,
@@ -258,6 +259,30 @@ fn appear(chooser: &Chooser) {
         None => note("the paste as card had no window yet to bring forward"),
     }
     chooser.invoke_focus_keys();
+    let later = chooser.as_weak();
+    slint::Timer::single_shot(LOOKS_AGAIN, move || {
+        if let Some(chooser) = later.upgrade() {
+            still_ahead(&chooser);
+        }
+    });
+}
+
+fn still_ahead(chooser: &Chooser) {
+    if !chooser.window().is_visible() {
+        return;
+    }
+    let Some(handle) = crate::app::handle_of(chooser.window()) else {
+        return;
+    };
+    if here::holds_front(handle) {
+        return;
+    }
+    note(&format!(
+        "the paste as card showed but {} kept the keys, so it is brought forward again",
+        here::in_front().unwrap_or_else(|| "another app".to_owned())
+    ));
+    here::forward(handle);
+    chooser.invoke_focus_keys();
 }
 
 fn complain(chooser: &Chooser, said: &str) {
@@ -289,6 +314,10 @@ fn left(chooser: &Chooser, ahead: &AtomicIsize) {
         return;
     }
     ahead.store(0, Ordering::Relaxed);
+    note(&format!(
+        "the paste as card was left for {}",
+        here::in_front().unwrap_or_else(|| "another app".to_owned())
+    ));
     let later = chooser.as_weak();
     slint::Timer::single_shot(Duration::ZERO, move || {
         if let Some(chooser) = later.upgrade() {

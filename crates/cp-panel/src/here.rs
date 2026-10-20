@@ -7,11 +7,11 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     Dragged, Listening, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting,
-    content_of, data_dir, drag_out, dress, forward, front, ground, hand_back, host, in_front,
-    keep_awake, media_of, ocr_available, on_foreground, open_link, open_path, ours_up_front,
-    paste_into, pointer, read_stuck, rebuilds_whole, sequence, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable, utc_offset_at, watch_start,
-    worn_sequence,
+    content_of, data_dir, drag_out, dress, forward, front, ground, hand_back, holds_front, host,
+    in_front, keep_awake, media_of, ocr_available, on_foreground, open_link, open_path,
+    ours_up_front, paste_into, pointer, read_stuck, rebuilds_whole, sequence, system_is_light,
+    text_in, thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable, utc_offset_at,
+    watch_start, worn_sequence,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -54,6 +54,14 @@ mod platform {
 
     pub fn front() -> isize {
         cp_win_sys::frontmost::foreground().map_or(0, |window| window.0 as isize)
+    }
+
+    pub fn holds_front(handle: RawWindowHandle) -> bool {
+        let RawWindowHandle::Win32(win32) = handle else {
+            return true;
+        };
+        cp_win_sys::frontmost::target_at(win32.hwnd.get())
+            .is_some_and(|ours| cp_win_sys::frontmost::foreground() == Some(ours.window))
     }
 
     pub fn worn_sequence() -> Option<i64> {
@@ -320,6 +328,10 @@ mod platform {
 
     pub fn front() -> isize {
         0
+    }
+
+    pub fn holds_front(_handle: RawWindowHandle) -> bool {
+        true
     }
 
     pub fn worn_sequence() -> Option<i64> {
