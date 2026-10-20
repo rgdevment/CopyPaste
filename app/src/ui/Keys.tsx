@@ -78,6 +78,13 @@ export default function Keys({
   );
 }
 
+function refusalOf(system: boolean, repeated: boolean): "keysSystem" | "keysTwice" | null {
+  if (system) {
+    return "keysSystem";
+  }
+  return repeated ? "keysTwice" : null;
+}
+
 function Shortcut({
   which: role,
   says,
@@ -103,7 +110,7 @@ function Shortcut({
     const others = (Object.keys(FIELD) as Role[]).filter((other) => other !== role);
     const repeated = others.some((other) => sameKeys(one, kept[FIELD[other]] ?? ""));
     const system = SYSTEM.some((reserved) => sameKeys(one, reserved));
-    const why = system ? "keysSystem" : repeated ? "keysTwice" : null;
+    const why = refusalOf(system, repeated);
     setRefused(why);
     if (why === null) {
       void change({ [field]: one }).finally(() => recheck(one));

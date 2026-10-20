@@ -241,7 +241,7 @@ function keysOf(shortcut: string, mac: boolean): string[] {
     .map((one) => one.trim().toLowerCase())
     .filter((one) => one.length > 0)
     .map((one) => canonical(one, mac))
-    .sort();
+    .sort((one, other) => one.localeCompare(other));
 }
 
 export function sameKeys(one: string, other: string, mac = onMac()): boolean {
