@@ -33,14 +33,6 @@ impl Role {
         }
     }
 
-    pub fn fallback(self) -> &'static str {
-        match self {
-            Role::Panel => cp_config::SHORTCUT,
-            Role::Plain => cp_config::PLAIN_SHORTCUT,
-            Role::Forms => cp_config::FORMS_SHORTCUT,
-        }
-    }
-
     fn spare(self) -> &'static [&'static str] {
         match self {
             Role::Panel => SPARE,
@@ -208,9 +200,8 @@ pub fn spare(app: tauri::AppHandle, taken: String, role: Option<Role>) -> Vec<St
 #[tauri::command]
 pub fn keys(app: tauri::AppHandle, role: Option<Role>) -> Keys {
     let role = role.unwrap_or_default();
-    let wanted = crate::settings::settings()
-        .map(|one| role.of(&one).to_owned())
-        .unwrap_or_else(|_| role.fallback().to_owned());
+    let config = crate::settings::settings().unwrap_or_else(|_| unread());
+    let wanted = role.of(&config).to_owned();
     let bound = held(&app, role).is_some();
     Keys { wanted, bound }
 }

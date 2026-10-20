@@ -9,7 +9,10 @@ fn every_spare() -> impl Iterator<Item = &'static &'static str> {
 #[test]
 fn what_the_settings_file_ships_with_is_a_combination_the_system_knows() {
     for role in Role::ALL {
-        assert!(role.fallback().parse::<Shortcut>().is_ok(), "{role:?}");
+        assert!(
+            role.of(&Config::default()).parse::<Shortcut>().is_ok(),
+            "{role:?}"
+        );
     }
 }
 
@@ -17,7 +20,7 @@ fn what_the_settings_file_ships_with_is_a_combination_the_system_knows() {
 fn each_shortcut_reads_and_writes_its_own_line_of_the_settings() {
     let mut config = Config::default();
     for role in Role::ALL {
-        assert_eq!(role.of(&config), role.fallback());
+        assert_eq!(role.of(&config), role.of(&Config::default()));
         role.set(&mut config, format!("Ctrl+Alt+F{}", role as u8 + 1));
     }
     assert_eq!(config.shortcut, "Ctrl+Alt+F1");
@@ -36,7 +39,11 @@ fn the_window_names_each_shortcut_the_way_the_settings_spell_it() {
 #[test]
 fn every_spare_list_starts_with_the_shortcut_it_ships_with() {
     for role in Role::ALL {
-        assert_eq!(role.spare().first(), Some(&role.fallback()), "{role:?}");
+        assert_eq!(
+            role.spare().first(),
+            Some(&role.of(&Config::default())),
+            "{role:?}"
+        );
     }
 }
 

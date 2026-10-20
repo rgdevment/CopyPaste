@@ -118,20 +118,24 @@ pub fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Handed {
-    Written,
-    Formless,
+pub enum Refused {
+    Textless,
+    Unmade,
     Failed,
 }
 
-impl Handed {
+impl Refused {
     pub fn said(self) -> &'static str {
         match self {
-            Handed::Formless => crate::say::pick(
+            Refused::Textless => crate::say::pick(
                 "no tiene texto para pegarlo así; elige otra forma",
                 "it has no text to paste that way; pick another",
             ),
-            Handed::Written | Handed::Failed => crate::app::busy(),
+            Refused::Unmade => crate::say::pick(
+                "no se pudo preparar esa forma; elige otra",
+                "that form could not be made; pick another",
+            ),
+            Refused::Failed => crate::app::busy(),
         }
     }
 }
@@ -142,12 +146,12 @@ pub fn paste_as(
     id: i64,
     key: &str,
     towards: Towards,
-) -> Handed {
+) -> Result<(), Refused> {
     if key == AS_IS {
         return written_or_not(hand_over(store, engine, id, towards));
     }
     let Ok(Some(item)) = store.item(id) else {
-        return Handed::Failed;
+        return Err(Refused::Failed);
     };
     let ocr = store.ocr_text(id).ok().flatten();
     let content = here::content_of(&item, ocr.as_deref());
@@ -160,13 +164,17 @@ pub fn paste_as(
         note(&format!(
             "pasting {id} as {key}: there is no such form for it"
         ));
-        return Handed::Formless;
+        return Err(if key == PLAIN {
+            Refused::Textless
+        } else {
+            Refused::Unmade
+        });
     };
     let Some(rendered) = cp_core::paste_as::render(form, &content) else {
         note(&format!(
             "pasting {id} as {key}: the form gave nothing back"
         ));
-        return Handed::Formless;
+        return Err(Refused::Unmade);
     };
     let made = rendered.into_item();
     let written = short_of(
@@ -184,11 +192,11 @@ pub fn paste_as(
     written_or_not(written)
 }
 
-fn written_or_not(written: bool) -> Handed {
+fn written_or_not(written: bool) -> Result<(), Refused> {
     if written {
-        Handed::Written
+        Ok(())
     } else {
-        Handed::Failed
+        Err(Refused::Failed)
     }
 }
 

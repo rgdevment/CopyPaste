@@ -717,3 +717,12 @@ fn copying_cutting_and_pasting_stay_with_every_app() {
         assert!(!the_systems(one), "{one}");
     }
 }
+
+#[test]
+fn the_other_names_the_system_knows_a_key_by_are_the_same_key() {
+    assert!(same_keys("Control+Alt+KeyV", "Ctrl+Alt+V"));
+    assert!(same_keys("Option+Super+Digit1", "Alt+Cmd+1"));
+    assert!(the_systems("CommandOrControl+V"));
+    assert!(the_systems("Control+keyc"));
+    assert!(!the_systems("Control+Alt+V"));
+}

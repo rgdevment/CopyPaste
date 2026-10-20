@@ -1331,11 +1331,7 @@ fn plain_from_files_is_where_they_live() {
     assert_eq!(plainest(&Content::default()), None);
     assert_eq!(plainest(&text_of(Kind::Text, "")), None);
     assert_eq!(
-        plainest(&text_of(
-            Kind::Text,
-            " 
-	 "
-        )),
-        None
+        plainest(&text_of(Kind::Text, " \n\t ")),
+        Some(Form::PlainText)
     );
 }

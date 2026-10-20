@@ -9,7 +9,17 @@ const FIELD: Record<Role, "shortcut" | "plain-shortcut" | "forms-shortcut"> = {
   forms: "forms-shortcut",
 };
 
-const SYSTEM = ["Ctrl+C", "Ctrl+X", "Ctrl+V", "Cmd+C", "Cmd+X", "Cmd+V", "Shift+Insert"];
+const SYSTEM = [
+  "Ctrl+C",
+  "Ctrl+X",
+  "Ctrl+V",
+  "Ctrl+Insert",
+  "Shift+Insert",
+  "Shift+Delete",
+  "Cmd+C",
+  "Cmd+X",
+  "Cmd+V",
+];
 
 export default function Keys({
   kept,

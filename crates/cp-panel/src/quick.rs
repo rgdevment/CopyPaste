@@ -1,5 +1,5 @@
 use crate::Chooser;
-use crate::handing::{Handed, PLAIN, forms_of, newest, paste_as};
+use crate::handing::{PLAIN, forms_of, newest, paste_as};
 use crate::here;
 use crate::note::note;
 use cp_store::{Listed, Store};
@@ -41,7 +41,7 @@ impl Quick {
 
     pub fn plain(self: &Rc<Self>) {
         self.hide();
-        let ahead = self.ahead.load(Ordering::Relaxed);
+        let ahead = self.ahead.swap(0, Ordering::Relaxed);
         if ahead == 0 {
             note("nothing to paste plain into: no other window is in front");
             return;
@@ -52,9 +52,9 @@ impl Quick {
             return;
         };
         let towards = crate::landing::Towards::Elsewhere;
-        let handed = paste_as(&aim.store, aim.engine.as_deref(), row.id, PLAIN, towards);
-        if handed != Handed::Written {
-            self.explain(handed.said());
+        if let Err(refused) = paste_as(&aim.store, aim.engine.as_deref(), row.id, PLAIN, towards) {
+            self.ahead.store(ahead, Ordering::Relaxed);
+            self.explain(refused.said());
             return;
         }
         let later = Rc::downgrade(self);
@@ -70,6 +70,7 @@ impl Quick {
                         "pasted plain onto the clipboard, unpasted: {why:?}"
                     ));
                     if let Some(quick) = later.upgrade() {
+                        quick.ahead.store(ahead, Ordering::Relaxed);
                         quick.explain(said);
                     }
                 }
@@ -175,17 +176,12 @@ impl Quick {
         };
         let aim = (self.reach)();
         let ahead = self.ahead.load(Ordering::Relaxed);
-        let handed = paste_as(
-            &aim.store,
-            aim.engine.as_deref(),
-            id,
-            key,
-            here::towards(ahead),
-        );
-        if handed != Handed::Written {
-            complain(chooser, handed.said());
+        let towards = here::towards(ahead);
+        if let Err(refused) = paste_as(&aim.store, aim.engine.as_deref(), id, key, towards) {
+            complain(chooser, refused.said());
             return;
         }
+        self.ahead.store(0, Ordering::Relaxed);
         let hiding = chooser.as_weak();
         let hide = move || {
             if let Some(chooser) = hiding.upgrade() {
@@ -194,16 +190,16 @@ impl Quick {
         };
         let later = Rc::downgrade(self);
         slint::Timer::single_shot(Duration::ZERO, move || {
-            here::paste_into(ahead, hide, move |sent| delivered(&later, sent));
+            here::paste_into(ahead, hide, move |sent| delivered(&later, ahead, sent));
         });
     }
 }
 
-fn delivered(later: &Weak<Quick>, sent: here::Sent) {
-    let Some(chooser) = later
-        .upgrade()
-        .and_then(|quick| quick.chooser.get().map(ComponentHandle::clone_strong))
-    else {
+fn delivered(later: &Weak<Quick>, ahead: isize, sent: here::Sent) {
+    let Some(quick) = later.upgrade() else {
+        return;
+    };
+    let Some(chooser) = quick.chooser.get().map(ComponentHandle::clone_strong) else {
         return;
     };
     match sent {
@@ -217,6 +213,7 @@ fn delivered(later: &Weak<Quick>, sent: here::Sent) {
             note(&format!(
                 "it stays on the clipboard, unpasted: {why:?}: {said}"
             ));
+            quick.ahead.store(ahead, Ordering::Relaxed);
             appear(&chooser);
             complain(&chooser, said);
         }
@@ -240,7 +237,7 @@ fn wire(quick: &Rc<Quick>, chooser: &Chooser) {
     chooser.on_dismiss(move || {
         if let Some(quick) = weak.upgrade() {
             quick.hide();
-            here::hand_back(quick.ahead.load(Ordering::Relaxed));
+            here::hand_back(quick.ahead.swap(0, Ordering::Relaxed));
         }
     });
     leave_when_left(chooser);
@@ -297,12 +294,7 @@ fn subject_of(row: &Listed) -> String {
     if let Some(label) = row.label.as_deref().filter(|one| !one.trim().is_empty()) {
         return label.trim().to_owned();
     }
-    let folder = matches!(
-        row.kind,
-        Some(cp_core::kind::Kind::File | cp_core::kind::Kind::Folder)
-    )
-    .then(|| crate::folder::parts_of(&row.preview))
-    .flatten();
+    let folder = crate::view::folder_of(row);
     let said = crate::view::headline_of(row, &crate::view::body_of(row), folder.as_ref());
     if said.is_empty() {
         crate::view::label_of(row.kind).to_owned()

@@ -166,7 +166,7 @@ pub fn same_keys(one: &str, other: &str) -> bool {
     let keys = |said: &str| {
         let mut keys: Vec<String> = said
             .split('+')
-            .map(|key| key.trim().to_lowercase())
+            .map(|key| canonical(&key.trim().to_lowercase()))
             .filter(|key| !key.is_empty())
             .collect();
         keys.sort_unstable();
@@ -174,6 +174,31 @@ pub fn same_keys(one: &str, other: &str) -> bool {
     };
     let mine = keys(one);
     !mine.is_empty() && mine == keys(other)
+}
+
+fn canonical(key: &str) -> String {
+    let key = key
+        .strip_prefix("key")
+        .filter(|rest| rest.len() == 1)
+        .unwrap_or(key);
+    let key = key
+        .strip_prefix("digit")
+        .filter(|rest| rest.len() == 1)
+        .unwrap_or(key);
+    match key {
+        "control" => "ctrl",
+        "option" => "alt",
+        "command" | "super" | "meta" | "cmd" => "cmd",
+        "cmdorctrl" | "commandorcontrol" | "cmdorcontrol" | "commandorctrl" => {
+            if cfg!(target_os = "macos") {
+                "cmd"
+            } else {
+                "ctrl"
+            }
+        }
+        other => other,
+    }
+    .to_owned()
 }
 
 #[must_use]

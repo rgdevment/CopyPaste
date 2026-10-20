@@ -1,5 +1,5 @@
 use crate::aside::Leaving;
-use crate::handing::{Handed, forms_of, hand_over, paste_as};
+use crate::handing::{forms_of, hand_over, paste_as};
 use crate::here;
 use crate::landing::Towards;
 use crate::model::{Metrics, Rows, reveal};
@@ -221,8 +221,8 @@ impl App {
                 Asking::Forms(id) => {
                     let (store, engine, towards) = aimed(&state);
                     match paste_as(&store, engine.as_deref(), id, key.as_str(), towards) {
-                        Handed::Written => deliver(&ui, &state),
-                        refused => complain(&ui, refused.said()),
+                        Ok(()) => deliver(&ui, &state),
+                        Err(refused) => complain(&ui, refused.said()),
                     }
                 }
                 Asking::Kinds => {
@@ -649,8 +649,8 @@ impl App {
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
                 match done {
-                    Handed::Written => deliver(&ui, &state),
-                    refused => complain(&ui, refused.said()),
+                    Ok(()) => deliver(&ui, &state),
+                    Err(refused) => complain(&ui, refused.said()),
                 }
             }
         });
