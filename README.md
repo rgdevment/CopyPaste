@@ -239,8 +239,9 @@ CoPanda follows your system theme automatically — no configuration needed.
 
 ## Keyboard Shortcuts
 
-CoPanda keeps `Ctrl+V` under the active application's control and uses one
-global shortcut of its own to open the history panel. On a Mac the panel answers
+CoPanda keeps `Ctrl+V` under the active application's control and adds three
+global shortcuts of its own: one opens the history panel, and two paste the
+latest item without it, as plain text or in the form you pick. On a Mac the panel answers
 the keys of the system it runs on: ⌘ where Windows uses Ctrl, and the keys a Mac
 keyboard does not have are replaced by the ones it does.
 
@@ -248,6 +249,8 @@ keyboard does not have are replaced by the ones it does.
 | :---- | :------ | :---- | :----- |
 | App you're in | Ctrl+V | ⌘V | Normal paste. CoPanda does not intercept it. |
 | Anywhere | Ctrl+Alt+V | ⌃⌥V | Open the panel. Change it in Settings → Keyboard shortcuts; if another program already uses it, free alternatives are offered. |
+| Anywhere | Alt+Shift+V | ⌃⇧V | Paste the latest item as plain text, without opening the panel. |
+| Anywhere | Ctrl+Alt+P | ⌃⌥P | Paste the latest item as… — a small card next to the pointer: 1–9 pastes a form, ← → steps to older items. |
 | Panel | Enter | ⏎ | Paste the selected item. |
 | Panel | Shift + Enter | ⇧⏎ | Paste as plain text. |
 | Panel | Alt + Enter  ·  Ctrl + Enter | ⌥⏎  ·  ⌘⏎ | Open or close "Paste as…". |
