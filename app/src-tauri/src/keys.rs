@@ -33,6 +33,10 @@ impl Role {
         }
     }
 
+    pub fn masks_the_menu(self) -> bool {
+        self == Role::Plain
+    }
+
     fn spare(self) -> &'static [&'static str] {
         match self {
             Role::Panel => SPARE,
@@ -116,7 +120,9 @@ pub fn bind<R: Runtime>(app: &AppHandle<R>, role: Role, said: &str) -> Result<()
     app.global_shortcut()
         .on_shortcut(wanted, move |_app, _shortcut, event| {
             if event.state() == ShortcutState::Pressed {
-                unmenued();
+                if role.masks_the_menu() {
+                    unmenued();
+                }
                 role.answer(&handle);
             }
         })

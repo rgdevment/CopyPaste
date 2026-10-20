@@ -142,8 +142,8 @@ fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
     };
     crate::note::note(&format!("the new shortcut could not be taken: {why}"));
     let mut back = landed;
+    let before = was.unwrap_or_else(crate::keys::unread);
     for role in &moved {
-        let before = was.clone().unwrap_or_else(crate::keys::unread);
         role.set(&mut back, role.of(&before).to_owned());
     }
     if let Err(twice) = rebound(app, &moved, &back) {

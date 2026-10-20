@@ -142,3 +142,13 @@ fn settings_that_cannot_be_read_take_no_combination_beyond_the_panel() {
     assert_eq!(unread.plain_shortcut, "");
     assert_eq!(unread.forms_shortcut, "");
 }
+
+#[test]
+fn only_the_shortcut_that_opens_no_window_keeps_the_menu_closed_by_hand() {
+    assert!(Role::Plain.masks_the_menu());
+    assert!(
+        !Role::Panel.masks_the_menu(),
+        "a window of ours takes the keys, and a typed mask would cost it the front"
+    );
+    assert!(!Role::Forms.masks_the_menu());
+}

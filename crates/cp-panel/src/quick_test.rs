@@ -144,8 +144,14 @@ fn the_arrows_walk_back_through_the_history_and_stop_at_both_ends() {
     let bench = bench(&["older", "newest"]);
     bench.quick.choose();
     let chooser = card(&bench);
+    let at = chooser.window().position();
     press(&chooser, Key::LeftArrow);
     assert_eq!(chooser.get_subject(), "older");
+    assert_eq!(
+        chooser.window().position(),
+        at,
+        "the card stays where it opened"
+    );
     assert!(chooser.get_newer());
     assert!(!chooser.get_older());
     press(&chooser, Key::LeftArrow);
@@ -298,16 +304,28 @@ fn losing_the_focus_puts_the_card_away_on_the_next_turn() {
     let bench = bench(&["newest"]);
     bench.quick.choose();
     let chooser = card(&bench);
-    left(&chooser);
+    bench.ahead.store(42, Ordering::Relaxed);
+    left(&chooser, &bench.ahead);
     assert!(
         chooser.window().is_visible(),
         "not in the middle of the event"
     );
+    assert_eq!(
+        bench.ahead.load(Ordering::Relaxed),
+        0,
+        "clicking elsewhere forgets where it was going"
+    );
     tick(1);
     assert!(!chooser.window().is_visible());
-    left(&chooser);
+    bench.ahead.store(42, Ordering::Relaxed);
+    left(&chooser, &bench.ahead);
     tick(1);
     assert!(!chooser.window().is_visible());
+    assert_eq!(
+        bench.ahead.load(Ordering::Relaxed),
+        42,
+        "a card already put away by us keeps the target for the paste in flight"
+    );
 }
 
 #[test]

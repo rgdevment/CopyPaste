@@ -217,6 +217,29 @@ export function nearLimit(usedBytes: number, quotaMb: number) {
   return quotaMb > 0 && usedBytes * 10 >= quotaMb * A_MEGABYTE * 7;
 }
 
+const ALIASES: Record<string, string> = {
+  control: "ctrl",
+  option: "alt",
+  command: "cmd",
+  super: "cmd",
+  meta: "cmd",
+};
+
+function keysOf(shortcut: string): string[] {
+  return shortcut
+    .split("+")
+    .map((one) => one.trim().toLowerCase())
+    .filter((one) => one.length > 0)
+    .map((one) => ALIASES[one] ?? one)
+    .sort();
+}
+
+export function sameKeys(one: string, other: string): boolean {
+  const mine = keysOf(one);
+  const theirs = keysOf(other);
+  return mine.length > 0 && mine.join("+") === theirs.join("+");
+}
+
 export function combination(press: {
   ctrlKey: boolean;
   altKey: boolean;

@@ -167,7 +167,6 @@ impl Quick {
         if !self.fill(chooser) {
             self.back.set(was);
         }
-        place(chooser);
     }
 
     fn chosen(self: &Rc<Self>, chooser: &Chooser, key: &str) {
@@ -240,7 +239,7 @@ fn wire(quick: &Rc<Quick>, chooser: &Chooser) {
             here::hand_back(quick.ahead.swap(0, Ordering::Relaxed));
         }
     });
-    leave_when_left(chooser);
+    leave_when_left(chooser, quick.ahead.clone());
 }
 
 fn appear(chooser: &Chooser) {
@@ -266,7 +265,7 @@ fn complain(chooser: &Chooser, said: &str) {
     });
 }
 
-fn leave_when_left(chooser: &Chooser) {
+fn leave_when_left(chooser: &Chooser, ahead: Arc<AtomicIsize>) {
     use i_slint_backend_winit::winit::event::WindowEvent;
     use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
     let weak = chooser.as_weak();
@@ -274,16 +273,17 @@ fn leave_when_left(chooser: &Chooser) {
         if let WindowEvent::Focused(false) = event
             && let Some(chooser) = weak.upgrade()
         {
-            left(&chooser);
+            left(&chooser, &ahead);
         }
         EventResult::Propagate
     });
 }
 
-fn left(chooser: &Chooser) {
+fn left(chooser: &Chooser, ahead: &AtomicIsize) {
     if !chooser.window().is_visible() {
         return;
     }
+    ahead.store(0, Ordering::Relaxed);
     let later = chooser.as_weak();
     slint::Timer::single_shot(Duration::ZERO, move || {
         if let Some(chooser) = later.upgrade() {

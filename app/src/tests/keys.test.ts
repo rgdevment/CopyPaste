@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combination } from "../core";
+import { combination, sameKeys } from "../core";
 
 function press(code: string, held: Partial<Record<"ctrl" | "alt" | "shift" | "meta", boolean>>) {
   return {
@@ -43,5 +43,15 @@ describe("the combination the user presses", () => {
   it("refuses modifiers without a real key", () => {
     expect(combination(press("ControlLeft", { ctrl: true }))).toBeNull();
     expect(combination(press("AltLeft", { ctrl: true, alt: true }))).toBeNull();
+  });
+});
+
+describe("two combinations", () => {
+  it("are the same however they are spelled or ordered", () => {
+    expect(sameKeys("Shift+Alt+V", "Alt+Shift+V")).toBe(true);
+    expect(sameKeys("Control+Alt+P", "ctrl + alt + p")).toBe(true);
+    expect(sameKeys("Option+Super+1", "Alt+Cmd+1")).toBe(true);
+    expect(sameKeys("Ctrl+Alt+V", "Ctrl+Alt+Shift+V")).toBe(false);
+    expect(sameKeys("", "")).toBe(false);
   });
 });

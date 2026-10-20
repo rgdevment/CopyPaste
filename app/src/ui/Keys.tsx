@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { asKeys, combination, type Kept, onMac, type Role, useKeys } from "../core";
+import { asKeys, combination, type Kept, onMac, type Role, sameKeys, useKeys } from "../core";
 import { panelKeys, t } from "../locales";
 import { Band, Line } from "./Bits";
 
@@ -101,8 +101,9 @@ function Shortcut({
   const taken = !asking && !off && keys !== null && !keys.bound;
   const take = (one: string) => {
     const others = (Object.keys(FIELD) as Role[]).filter((other) => other !== role);
-    const repeated = one !== "" && others.some((other) => kept[FIELD[other]] === one);
-    const why = SYSTEM.includes(one) ? "keysSystem" : repeated ? "keysTwice" : null;
+    const repeated = others.some((other) => sameKeys(one, kept[FIELD[other]] ?? ""));
+    const system = SYSTEM.some((taken) => sameKeys(one, taken));
+    const why = system ? "keysSystem" : repeated ? "keysTwice" : null;
     setRefused(why);
     if (why === null) {
       void change({ [field]: one }).finally(() => recheck(one));
