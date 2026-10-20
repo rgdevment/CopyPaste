@@ -135,7 +135,7 @@ mod platform {
         landing: &crate::landing::Landing,
         starting: impl FnOnce(),
         ours: impl FnOnce(),
-        abandon: impl FnOnce(i64),
+        abandon: impl FnOnce(),
     ) -> Landed {
         let mut ready = cp_win::restore::ready_for(item);
         match landing.offer() {
@@ -143,12 +143,8 @@ mod platform {
             crate::landing::Offer::Text(text) => ready.offer_text(&text),
             crate::landing::Offer::Nothing => {}
         }
-        let moved = |over: i64| cp_win_sys::clipboard::sequence() != Some(over);
-        if let Some(over) = landing.only_over {
+        if landing.only_over.is_some() {
             ready.unrecorded();
-            if moved(over) {
-                return Landed::Nothing;
-            }
         }
         starting();
         let Some(clipboard) = Clipboard::to_write() else {
@@ -156,10 +152,10 @@ mod platform {
             return Landed::Nothing;
         };
         if let Some(over) = landing.only_over
-            && moved(over)
+            && cp_win_sys::clipboard::sequence() != Some(over)
         {
             drop(clipboard);
-            abandon(over);
+            abandon();
             return Landed::Nothing;
         }
         let landed = match cp_win::restore::place(&clipboard, &ready) {
@@ -392,7 +388,7 @@ mod platform {
         landing: &crate::landing::Landing,
         starting: impl FnOnce(),
         ours: impl FnOnce(),
-        _abandon: impl FnOnce(i64),
+        _abandon: impl FnOnce(),
     ) -> Landed {
         let offered = match landing.offer() {
             crate::landing::Offer::Text(text) => Some(text),

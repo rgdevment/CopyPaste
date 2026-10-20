@@ -115,10 +115,30 @@ fn a_write_given_up_lets_the_copy_that_beat_it_be_seen() {
         Seen::Ours,
         "while writing, the next count looks ours"
     );
-    watcher.abandoned(10);
+    watcher.abandoned();
     assert!(
         matches!(watcher.tick(11), Seen::Fresh { .. }),
         "once given up, that same count is someone else's copy"
     );
     assert_eq!(watcher.tick(11), Seen::Nothing);
+}
+
+#[test]
+fn a_copy_seen_before_the_write_began_is_not_seen_twice_when_it_is_given_up() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    watcher.tick(10);
+    assert!(matches!(watcher.tick(11), Seen::Fresh { .. }));
+    watcher.writing(11);
+    watcher.abandoned();
+    assert_eq!(
+        watcher.tick(11),
+        Seen::Nothing,
+        "already kept before the write"
+    );
+    watcher.abandoned();
+    assert_eq!(
+        watcher.tick(11),
+        Seen::Nothing,
+        "giving up twice changes nothing"
+    );
 }

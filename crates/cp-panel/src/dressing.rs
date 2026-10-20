@@ -66,6 +66,7 @@ pub struct Dressing<C: Closet> {
     closet: C,
     latest: Latest,
     worn: Cell<Option<Worn>>,
+    refused: Cell<Option<Copied>>,
     listening: Option<here::Listening>,
 }
 
@@ -85,6 +86,7 @@ impl<C: Closet + 'static> Dressing<C> {
                 closet,
                 latest,
                 worn: Cell::new(None),
+                refused: Cell::new(None),
                 listening,
             }
         })
@@ -113,7 +115,8 @@ impl<C: Closet + 'static> Dressing<C> {
         let now = self.closet.sequence();
         let worn = still_worn(self.worn.get(), now);
         self.worn.set(worn);
-        let copied = still_copied(self.copied(), now);
+        let copied =
+            still_copied(self.copied(), now).filter(|copy| self.refused.get() != Some(*copy));
         if worn.is_none() && copied.is_none() {
             return;
         }
@@ -123,6 +126,9 @@ impl<C: Closet + 'static> Dressing<C> {
                 if let Some(over) = now {
                     let placed = self.closet.place(id, Towards::Terminal, over);
                     self.worn.set(placed.map(|sequence| Worn { sequence, id }));
+                    if placed.is_none() {
+                        self.refused.set(copied);
+                    }
                 }
             }
             Step::Undress(_) => {

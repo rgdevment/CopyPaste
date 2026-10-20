@@ -80,11 +80,11 @@ impl Watching {
         true
     }
 
-    pub fn abandoned(&self, before: i64) -> bool {
+    pub fn abandoned(&self) -> bool {
         let Ok(mut watcher) = self.watcher.lock() else {
             return false;
         };
-        watcher.abandoned(before);
+        watcher.abandoned();
         true
     }
 

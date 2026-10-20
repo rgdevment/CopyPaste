@@ -88,6 +88,7 @@ fn wardrobe(copied: Option<Copied>) -> (Rc<Shelf>, Dressing<Rc<Shelf>>, Latest) 
         closet: shelf.clone(),
         latest: latest.clone(),
         worn: Cell::new(None),
+        refused: Cell::new(None),
         listening: None,
     };
     (shelf, dressing, latest)
@@ -157,12 +158,24 @@ fn a_copy_made_inside_the_terminal_is_left_alone_on_the_way_out() {
 }
 
 #[test]
-fn a_dress_the_clipboard_refuses_leaves_nothing_worn() {
-    let (shelf, dressing, _) = wardrobe(picture());
+fn a_picture_that_could_not_be_dressed_is_not_tried_again_until_a_new_copy() {
+    let (shelf, dressing, latest) = wardrobe(picture());
     shelf.refuses.set(true);
     dressing.look(TERMINAL);
     assert_eq!(dressing.worn.get(), None);
     assert!(shelf.placed.borrow().is_empty());
+    shelf.refuses.set(false);
+    shelf.looked.set(0);
+    dressing.look(TERMINAL);
+    assert!(shelf.placed.borrow().is_empty());
+    assert_eq!(shelf.looked.get(), 0, "not even the window is asked about");
+    shelf.sequence.set(12);
+    *latest.lock().expect("unpoisoned") = Some(Copied {
+        sequence: 12,
+        id: 4,
+    });
+    dressing.look(TERMINAL);
+    assert_eq!(*shelf.placed.borrow(), [(4, Towards::Terminal, 12)]);
 }
 
 #[test]

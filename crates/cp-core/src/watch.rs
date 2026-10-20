@@ -78,9 +78,10 @@ impl Watcher {
         self.ours = Some((from, None));
     }
 
-    pub fn abandoned(&mut self, before: i64) {
-        self.ours = None;
-        self.last = Some(before);
+    pub fn abandoned(&mut self) {
+        if let Some((from, _)) = self.ours.take() {
+            self.last = Some(from);
+        }
     }
 
     pub fn wrote(&mut self, count: i64) {

@@ -65,8 +65,8 @@ impl Engine {
         self.watching.ours()
     }
 
-    pub fn abandoned(&self, before: i64) -> bool {
-        self.watching.abandoned(before)
+    pub fn abandoned(&self) -> bool {
+        self.watching.abandoned()
     }
 }
 

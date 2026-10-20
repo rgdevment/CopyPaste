@@ -241,7 +241,7 @@ fn a_copy_that_lands_while_a_write_is_given_up_still_wakes_the_watcher() {
     assert!(watching.writing());
     count.store(31, Ordering::Relaxed);
     std::thread::sleep(QUICK * 4);
-    assert!(watching.abandoned(30));
+    assert!(watching.abandoned());
     assert!(
         waited_for(&seen, 1) >= 1,
         "the copy that beat the write is kept"

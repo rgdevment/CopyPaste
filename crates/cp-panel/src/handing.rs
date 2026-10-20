@@ -70,7 +70,7 @@ fn written_over(
         landing,
         || starting(engine),
         || mark(engine),
-        |before| abandoned(engine, before),
+        || abandoned(engine),
     )
 }
 
@@ -290,9 +290,9 @@ fn starting(engine: Option<&crate::engine::Engine>) {
     }
 }
 
-fn abandoned(engine: Option<&crate::engine::Engine>, before: i64) {
+fn abandoned(engine: Option<&crate::engine::Engine>) {
     if let Some(engine) = engine
-        && !engine.abandoned(before)
+        && !engine.abandoned()
     {
         note("a write given up could not be handed back to the watcher");
     }

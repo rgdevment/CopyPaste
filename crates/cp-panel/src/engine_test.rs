@@ -687,7 +687,7 @@ fn a_write_given_up_is_handed_back_to_the_watcher() {
     let dir = aside("abandoning");
     let engine = Engine::start(&dir.join("history.db"), |_, _| {}, |_| {}).expect("an engine");
     assert!(engine.writing());
-    assert!(engine.abandoned(5));
+    assert!(engine.abandoned());
     drop(engine);
     let _ = std::fs::remove_dir_all(&dir);
 }
