@@ -7,6 +7,8 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+const SETTLES: Duration = Duration::from_millis(60);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Copied {
     pub sequence: i64,
@@ -67,6 +69,7 @@ pub struct Dressing<C: Closet> {
     latest: Latest,
     worn: Cell<Option<Worn>>,
     refused: Cell<Option<Copied>>,
+    settling: slint::Timer,
     listening: Option<here::Listening>,
 }
 
@@ -74,19 +77,17 @@ impl<C: Closet + 'static> Dressing<C> {
     pub fn start(closet: C, latest: Latest) -> Rc<Self> {
         Rc::new_cyclic(|weak: &Weak<Self>| {
             let weak = weak.clone();
-            let listening = here::on_foreground(move |window| {
-                let later = weak.clone();
-                slint::Timer::single_shot(Duration::ZERO, move || {
-                    if let Some(dressing) = later.upgrade() {
-                        dressing.look(window);
-                    }
-                });
+            let listening = here::on_foreground(move |_window| {
+                if let Some(dressing) = weak.upgrade() {
+                    dressing.settle();
+                }
             });
             Self {
                 closet,
                 latest,
                 worn: Cell::new(None),
                 refused: Cell::new(None),
+                settling: slint::Timer::default(),
                 listening,
             }
         })
@@ -98,6 +99,16 @@ impl<C: Closet + 'static> Dressing<C> {
 
     pub fn arrived(&self) {
         self.look(self.closet.front());
+    }
+
+    fn settle(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.settling
+            .start(slint::TimerMode::SingleShot, SETTLES, move || {
+                if let Some(dressing) = weak.upgrade() {
+                    dressing.arrived();
+                }
+            });
     }
 
     pub fn put_back(&self) {

@@ -337,7 +337,9 @@ fn a_write_kept_out_of_the_history_says_so_once_per_door() {
     let before = ready.wanted();
     ready.unrecorded();
     ready.unrecorded();
-    assert_eq!(ready.wanted(), before + UNRECORDED.len() + 1);
+    assert_eq!(ready.wanted(), before + UNRECORDED.len() + 2);
+    let worn = id_of(WORN).expect("a format the system registers");
+    assert!(ready.offers(worn), "the write can be told apart as ours");
     let unwatched = id_of(UNWATCHED).expect("a format the system registers");
     assert!(
         ready.offers(unwatched),

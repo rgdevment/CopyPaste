@@ -84,3 +84,8 @@ fn a_second_read_waits_for_the_first_to_close_instead_of_sharing_it() {
         closed - second
     );
 }
+
+#[test]
+fn a_format_nobody_ever_wrote_is_not_held() {
+    assert!(!holds("CoPanda Never Written By Anyone"));
+}

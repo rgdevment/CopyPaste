@@ -13,6 +13,7 @@ const JFIF: &str = "JFIF";
 const DROP_EFFECT: &str = "Preferred DropEffect";
 pub const UNRECORDED: [&str; 2] = ["CanIncludeInClipboardHistory", "CanUploadToCloudClipboard"];
 pub const UNWATCHED: &str = "ExcludeClipboardContentFromMonitorProcessing";
+pub const WORN: &str = "CoPanda Worn";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
@@ -66,7 +67,7 @@ impl Ready {
             self.owned.retain(|(kept, _)| *kept != id);
             self.owned.push((id, 0u32.to_le_bytes().to_vec()));
         }
-        if let Some(id) = id_of(UNWATCHED) {
+        for id in [UNWATCHED, WORN].iter().filter_map(|name| id_of(name)) {
             self.owned.retain(|(kept, _)| *kept != id);
             self.owned.push((id, Vec::new()));
         }

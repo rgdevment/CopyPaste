@@ -89,6 +89,7 @@ fn wardrobe(copied: Option<Copied>) -> (Rc<Shelf>, Dressing<Rc<Shelf>>, Latest) 
         latest: latest.clone(),
         worn: Cell::new(None),
         refused: Cell::new(None),
+        settling: slint::Timer::default(),
         listening: None,
     };
     (shelf, dressing, latest)
@@ -228,4 +229,22 @@ fn quitting_takes_the_path_off_only_while_it_is_still_on() {
 fn starting_listens_for_windows_where_the_system_can_tell() {
     let dressing = Dressing::start(Rc::new(Shelf::default()), Arc::new(Mutex::new(None)));
     assert_eq!(dressing.listening(), cfg!(target_os = "windows"));
+}
+
+#[test]
+fn windows_flicking_past_are_waited_out_and_only_the_one_left_in_front_counts() {
+    i_slint_backend_testing::init_no_event_loop();
+    let shelf = Rc::new(Shelf::default());
+    shelf.sequence.set(7);
+    let dressing = Dressing::start(shelf.clone(), Arc::new(Mutex::new(picture())));
+    shelf.front.set(CHAT);
+    dressing.settle();
+    shelf.front.set(TERMINAL);
+    dressing.settle();
+    assert!(
+        shelf.placed.borrow().is_empty(),
+        "nothing happens while windows still move"
+    );
+    i_slint_backend_testing::mock_elapsed_time(SETTLES + Duration::from_millis(5));
+    assert_eq!(*shelf.placed.borrow(), [(3, Towards::Terminal, 7)]);
 }

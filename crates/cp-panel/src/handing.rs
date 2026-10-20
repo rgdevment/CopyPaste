@@ -96,7 +96,7 @@ fn worn_over(
     if landed == here::Landed::Nothing {
         return None;
     }
-    here::sequence()
+    here::worn_sequence()
 }
 
 pub struct Shelves {

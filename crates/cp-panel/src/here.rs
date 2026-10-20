@@ -11,6 +11,7 @@ pub use platform::{
     keep_awake, media_of, ocr_available, on_foreground, open_link, open_path, ours_up_front,
     paste_into, pointer, read_stuck, rebuilds_whole, sequence, system_is_light, text_in,
     thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable, utc_offset_at, watch_start,
+    worn_sequence,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -53,6 +54,12 @@ mod platform {
 
     pub fn front() -> isize {
         cp_win_sys::frontmost::foreground().map_or(0, |window| window.0 as isize)
+    }
+
+    pub fn worn_sequence() -> Option<i64> {
+        let sequence = cp_win_sys::clipboard::sequence()?;
+        let ours = cp_win_sys::clipboard::holds(cp_win::restore::WORN);
+        (ours && cp_win_sys::clipboard::sequence() == Some(sequence)).then_some(sequence)
     }
 
     pub fn rebuilds_whole(item: &Item) -> bool {
@@ -307,6 +314,10 @@ mod platform {
 
     pub fn front() -> isize {
         0
+    }
+
+    pub fn worn_sequence() -> Option<i64> {
+        None
     }
 
     pub fn rebuilds_whole(_item: &Item) -> bool {

@@ -142,3 +142,15 @@ fn a_copy_seen_before_the_write_began_is_not_seen_twice_when_it_is_given_up() {
         "giving up twice changes nothing"
     );
 }
+
+#[test]
+fn a_copy_made_before_a_write_began_and_never_ticked_is_seen_once_it_is_given_up() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    watcher.tick(10);
+    watcher.writing(11);
+    watcher.abandoned();
+    assert!(
+        matches!(watcher.tick(11), Seen::Fresh { .. }),
+        "the copy that slipped in before the write is still someone's copy"
+    );
+}
