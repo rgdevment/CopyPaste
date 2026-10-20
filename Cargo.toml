@@ -40,7 +40,7 @@ tauri-plugin-opener = "2.6"
 tauri-plugin-single-instance = "2.5"
 tauri-plugin-shell = "2.4"
 tauri-plugin-dialog = "2.8"
-tauri-plugin-updater = "2.13"
+tauri-plugin-updater = { version = "2.14", default-features = false, features = ["rustls-tls", "system-proxy"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "system-proxy"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 tauri-plugin-global-shortcut = "2.4"
