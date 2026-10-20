@@ -104,3 +104,21 @@ fn a_counter_that_goes_backwards_is_a_new_session_not_a_burst() {
     assert_eq!(watcher.tick(3), Seen::Fresh { skipped: Some(0) });
     assert_eq!(watcher.missed(), Some(0));
 }
+
+#[test]
+fn a_write_given_up_lets_the_copy_that_beat_it_be_seen() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    watcher.tick(10);
+    watcher.writing(10);
+    assert_eq!(
+        watcher.tick(11),
+        Seen::Ours,
+        "while writing, the next count looks ours"
+    );
+    watcher.abandoned(10);
+    assert!(
+        matches!(watcher.tick(11), Seen::Fresh { .. }),
+        "once given up, that same count is someone else's copy"
+    );
+    assert_eq!(watcher.tick(11), Seen::Nothing);
+}

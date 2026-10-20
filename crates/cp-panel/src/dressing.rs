@@ -2,27 +2,28 @@ use crate::here;
 use crate::landing::Towards;
 use cp_core::item::Item;
 use cp_core::kind::Kind;
-use std::cell::{Cell, RefCell};
-use std::rc::Rc;
+use std::cell::Cell;
+use std::rc::{Rc, Weak};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Copied {
     pub sequence: i64,
     pub id: i64,
-    pub picture: bool,
 }
 
 impl Copied {
     pub fn of(before: Option<i64>, after: Option<i64>, id: i64, item: &Item) -> Option<Self> {
+        if item.kind != Some(Kind::Image) {
+            return None;
+        }
         let sequence = before.filter(|was| Some(*was) == after)?;
-        Some(Self {
-            sequence,
-            id,
-            picture: item.kind == Some(Kind::Image),
-        })
+        Some(Self { sequence, id })
     }
 }
+
+pub type Latest = Arc<Mutex<Option<Copied>>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Worn {
@@ -41,82 +42,107 @@ pub fn still_worn(worn: Option<Worn>, now: Option<i64>) -> Option<Worn> {
     worn.filter(|was| Some(was.sequence) == now)
 }
 
-pub fn step(worn: Option<Worn>, terminal: bool, now: Option<i64>, copied: Option<Copied>) -> Step {
-    match (worn, terminal) {
-        (Some(_), true) => Step::Stay,
-        (Some(was), false) => Step::Undress(was.id),
-        (None, false) => Step::Stay,
-        (None, true) => match copied {
-            Some(copy) if copy.picture && Some(copy.sequence) == now => Step::Dress(copy.id),
-            _ => Step::Stay,
-        },
+pub fn still_copied(copied: Option<Copied>, now: Option<i64>) -> Option<Copied> {
+    copied.filter(|copy| Some(copy.sequence) == now)
+}
+
+pub fn step(worn: Option<Worn>, terminal: bool, copied: Option<Copied>) -> Step {
+    match (worn, terminal, copied) {
+        (Some(_), true, _) => Step::Stay,
+        (Some(was), false, _) => Step::Undress(was.id),
+        (None, true, Some(copy)) => Step::Dress(copy.id),
+        (None, _, _) => Step::Stay,
     }
 }
 
 pub trait Closet {
-    fn copied(&self) -> Option<Copied>;
-    fn copied_again(&self, sequence: i64);
-    fn place(&self, id: i64, towards: Towards) -> bool;
+    fn place(&self, id: i64, towards: Towards, over: i64) -> Option<i64>;
     fn sequence(&self) -> Option<i64>;
+    fn front(&self) -> isize;
+    fn terminal(&self, window: isize) -> bool;
 }
 
 pub struct Dressing<C: Closet> {
     closet: C,
+    latest: Latest,
     worn: Cell<Option<Worn>>,
-    listening: RefCell<Option<here::Listening>>,
+    listening: Option<here::Listening>,
 }
 
 impl<C: Closet + 'static> Dressing<C> {
-    pub fn start(closet: C) -> Rc<Self> {
-        let dressing = Rc::new(Self {
-            closet,
-            worn: Cell::new(None),
-            listening: RefCell::new(None),
-        });
-        let weak = Rc::downgrade(&dressing);
-        let listening = here::on_foreground(move |window| {
-            let later = weak.clone();
-            slint::Timer::single_shot(Duration::ZERO, move || {
-                if let Some(dressing) = later.upgrade() {
-                    dressing.heard(window);
-                }
+    pub fn start(closet: C, latest: Latest) -> Rc<Self> {
+        Rc::new_cyclic(|weak: &Weak<Self>| {
+            let weak = weak.clone();
+            let listening = here::on_foreground(move |window| {
+                let later = weak.clone();
+                slint::Timer::single_shot(Duration::ZERO, move || {
+                    if let Some(dressing) = later.upgrade() {
+                        dressing.look(window);
+                    }
+                });
             });
-        });
-        dressing.listening.replace(listening);
-        dressing
+            Self {
+                closet,
+                latest,
+                worn: Cell::new(None),
+                listening,
+            }
+        })
     }
 
     pub fn listening(&self) -> bool {
-        self.listening.borrow().is_some()
+        self.listening.is_some()
     }
 
-    fn heard(&self, window: isize) {
-        self.turn(
-            here::towards(window) == Towards::Terminal,
-            self.closet.sequence(),
-        );
+    pub fn arrived(&self) {
+        self.look(self.closet.front());
     }
 
-    fn turn(&self, terminal: bool, now: Option<i64>) {
+    pub fn put_back(&self) {
+        let now = self.closet.sequence();
+        if let Some(was) = still_worn(self.worn.get(), now) {
+            self.undress(was);
+        }
+    }
+
+    fn copied(&self) -> Option<Copied> {
+        self.latest.lock().ok().and_then(|held| *held)
+    }
+
+    fn look(&self, window: isize) {
+        let now = self.closet.sequence();
         let worn = still_worn(self.worn.get(), now);
         self.worn.set(worn);
-        match step(worn, terminal, now, self.closet.copied()) {
+        let copied = still_copied(self.copied(), now);
+        if worn.is_none() && copied.is_none() {
+            return;
+        }
+        match step(worn, self.closet.terminal(window), copied) {
             Step::Stay => {}
             Step::Dress(id) => {
-                if self.closet.place(id, Towards::Terminal) {
-                    let sequence = self.closet.sequence();
-                    self.worn
-                        .set(sequence.map(|sequence| Worn { sequence, id }));
+                if let Some(over) = now {
+                    let placed = self.closet.place(id, Towards::Terminal, over);
+                    self.worn.set(placed.map(|sequence| Worn { sequence, id }));
                 }
             }
-            Step::Undress(id) => {
-                self.worn.set(None);
-                if self.closet.place(id, Towards::Elsewhere)
-                    && let Some(sequence) = self.closet.sequence()
-                {
-                    self.closet.copied_again(sequence);
+            Step::Undress(_) => {
+                if let Some(was) = worn {
+                    self.undress(was);
                 }
             }
+        }
+    }
+
+    fn undress(&self, was: Worn) {
+        let Some(sequence) = self.closet.place(was.id, Towards::Elsewhere, was.sequence) else {
+            return;
+        };
+        self.worn.set(None);
+        if let Ok(mut held) = self.latest.lock() {
+            *held = Some(Copied {
+                sequence,
+                id: was.id,
+            });
         }
     }
 }

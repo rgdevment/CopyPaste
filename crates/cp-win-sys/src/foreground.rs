@@ -1,14 +1,15 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent};
 use windows::Win32::UI::WindowsAndMessaging::{
     EVENT_SYSTEM_FOREGROUND, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
 };
 
-type Heard = Box<dyn Fn(isize)>;
+type Heard = std::rc::Rc<dyn Fn(isize)>;
 
 thread_local! {
-    static HEARD: RefCell<Option<Heard>> = const { RefCell::new(None) };
+    static HOOKED: RefCell<HashMap<isize, Heard>> = RefCell::new(HashMap::new());
 }
 
 pub struct Listening(HWINEVENTHOOK);
@@ -16,12 +17,11 @@ pub struct Listening(HWINEVENTHOOK);
 impl Drop for Listening {
     fn drop(&mut self) {
         let _ = unsafe { UnhookWinEvent(self.0) };
-        HEARD.with(|heard| heard.borrow_mut().take());
+        HOOKED.with(|hooked| hooked.borrow_mut().remove(&key_of(self.0)));
     }
 }
 
 pub fn listen(heard: impl Fn(isize) + 'static) -> Option<Listening> {
-    HEARD.with(|held| *held.borrow_mut() = Some(Box::new(heard)));
     let hook = unsafe {
         SetWinEventHook(
             EVENT_SYSTEM_FOREGROUND,
@@ -34,22 +34,29 @@ pub fn listen(heard: impl Fn(isize) + 'static) -> Option<Listening> {
         )
     };
     if hook.is_invalid() {
-        HEARD.with(|held| held.borrow_mut().take());
         return None;
     }
+    HOOKED.with(|hooked| {
+        hooked
+            .borrow_mut()
+            .insert(key_of(hook), std::rc::Rc::new(heard))
+    });
     Some(Listening(hook))
 }
 
-fn told(window: HWND) {
-    HEARD.with(|held| {
-        if let Some(heard) = held.borrow().as_ref() {
-            heard(window.0 as isize);
-        }
-    });
+fn key_of(hook: HWINEVENTHOOK) -> isize {
+    hook.0 as isize
+}
+
+fn told(hook: HWINEVENTHOOK, window: HWND) {
+    let heard = HOOKED.with(|hooked| hooked.borrow().get(&key_of(hook)).cloned());
+    if let Some(heard) = heard {
+        heard(window.0 as isize);
+    }
 }
 
 unsafe extern "system" fn changed(
-    _hook: HWINEVENTHOOK,
+    hook: HWINEVENTHOOK,
     _event: u32,
     window: HWND,
     _object: i32,
@@ -57,7 +64,7 @@ unsafe extern "system" fn changed(
     _thread: u32,
     _time: u32,
 ) {
-    told(window);
+    told(hook, window);
 }
 
 #[cfg(test)]

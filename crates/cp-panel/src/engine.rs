@@ -13,7 +13,6 @@ use std::sync::atomic::Ordering;
 
 pub struct Engine {
     watching: here::Watching,
-    copied: Arc<std::sync::Mutex<Option<Copied>>>,
     rest: Arc<Rest>,
     errands: std::sync::Mutex<Option<std::thread::JoinHandle<()>>>,
 }
@@ -21,25 +20,22 @@ pub struct Engine {
 impl Engine {
     pub fn start(
         db: &Path,
-        fresh: impl Fn(i64) + Send + 'static,
+        fresh: impl Fn(i64, Option<Copied>) + Send + 'static,
         changed: impl Fn(i64) + Send + 'static,
     ) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
         let rest = Arc::new(Rest::new());
         let waking = rest.clone();
         let mut notice = Notice::default();
-        let copied = Arc::new(std::sync::Mutex::new(None));
-        let noted = copied.clone();
         let watching = here::watch_start(move || {
-            if let Some(id) = kept(&store, &mut notice, &noted) {
+            if let Some((id, copied)) = kept(&store, &mut notice) {
                 waking.wake();
-                fresh(id);
+                fresh(id, copied);
             }
         });
         let errands = errands(db, rest.clone(), Box::new(changed));
         Ok(Self {
             watching,
-            copied,
             rest,
             errands: std::sync::Mutex::new(errands),
         })
@@ -69,16 +65,8 @@ impl Engine {
         self.watching.ours()
     }
 
-    pub fn copied(&self) -> Option<Copied> {
-        self.copied.lock().ok().and_then(|held| *held)
-    }
-
-    pub fn copied_again(&self, sequence: i64) {
-        if let Ok(mut held) = self.copied.lock()
-            && let Some(copied) = held.as_mut()
-        {
-            copied.sequence = sequence;
-        }
+    pub fn abandoned(&self, before: i64) -> bool {
+        self.watching.abandoned(before)
     }
 }
 
@@ -434,19 +422,12 @@ fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) -> bool {
     }
 }
 
-fn kept(
-    store: &Store,
-    notice: &mut Notice,
-    copied: &std::sync::Mutex<Option<Copied>>,
-) -> Option<i64> {
+fn kept(store: &Store, notice: &mut Notice) -> Option<(i64, Option<Copied>)> {
     let before = here::sequence();
     let item = taken(here::capture_insisting(), here::unreadable, notice)?;
     let from = here::in_front();
     let id = keep(store, &item, crate::app::now_ms(), from.as_deref())?;
-    if let Ok(mut held) = copied.lock() {
-        *held = Copied::of(before, here::sequence(), id, &item);
-    }
-    Some(id)
+    Some((id, Copied::of(before, here::sequence(), id, &item)))
 }
 
 fn taken(

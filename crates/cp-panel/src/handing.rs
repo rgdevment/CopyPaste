@@ -25,7 +25,7 @@ fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towa
     Landing {
         towards,
         files,
-        unrecorded: false,
+        only_over: None,
     }
 }
 
@@ -35,7 +35,19 @@ pub fn hand_over(
     id: i64,
     towards: Towards,
 ) -> bool {
-    let written = placed(store, engine, id, towards, false);
+    let item = match store.item(id) {
+        Ok(Some(item)) => item,
+        Ok(None) => {
+            note(&format!("pasting {id}: it is no longer in the store"));
+            return false;
+        }
+        Err(why) => {
+            note(&format!("pasting {id}: {why}"));
+            return false;
+        }
+    };
+    let landing = landing_for(store, &item, id, towards);
+    let written = short_of(id, written_over(&item, &landing, engine));
     if written {
         if let Err(why) = store.record_paste(id, crate::app::now_ms()) {
             note(&format!("{id} was pasted and nobody wrote it down: {why}"));
@@ -48,39 +60,43 @@ pub fn hand_over(
     written
 }
 
-pub fn dress(
-    store: &Store,
+fn written_over(
+    item: &cp_core::item::Item,
+    landing: &Landing,
     engine: Option<&crate::engine::Engine>,
-    id: i64,
-    towards: Towards,
-) -> bool {
-    placed(store, engine, id, towards, true)
+) -> here::Landed {
+    here::to_clipboard(
+        item,
+        landing,
+        || starting(engine),
+        || mark(engine),
+        |before| abandoned(engine, before),
+    )
 }
 
-fn placed(
+fn worn_over(
     store: &Store,
-    engine: Option<&crate::engine::Engine>,
+    engine: &crate::engine::Engine,
     id: i64,
     towards: Towards,
-    unrecorded: bool,
-) -> bool {
-    let item = match store.item(id) {
-        Ok(Some(item)) => item,
-        Ok(None) => {
-            note(&format!("placing {id}: it is no longer in the store"));
-            return false;
-        }
-        Err(why) => {
-            note(&format!("placing {id}: {why}"));
-            return false;
-        }
-    };
+    over: i64,
+) -> Option<i64> {
+    let item = store.item(id).ok().flatten()?;
+    if !here::rebuilds_whole(&item) {
+        return None;
+    }
     let landing = Landing {
-        unrecorded,
+        only_over: Some(over),
         ..landing_for(store, &item, id, towards)
     };
-    let landed = here::to_clipboard(&item, &landing, || starting(engine), || mark(engine));
-    short_of(id, landed)
+    if towards == Towards::Terminal && !matches!(landing.offer(), crate::landing::Offer::Text(_)) {
+        return None;
+    }
+    let landed = written_over(&item, &landing, Some(engine));
+    if landed == here::Landed::Nothing {
+        return None;
+    }
+    here::sequence()
 }
 
 pub struct Shelves {
@@ -89,20 +105,20 @@ pub struct Shelves {
 }
 
 impl crate::dressing::Closet for Shelves {
-    fn copied(&self) -> Option<crate::dressing::Copied> {
-        self.engine.copied()
-    }
-
-    fn copied_again(&self, sequence: i64) {
-        self.engine.copied_again(sequence);
-    }
-
-    fn place(&self, id: i64, towards: Towards) -> bool {
-        dress(&self.store, Some(&self.engine), id, towards)
+    fn place(&self, id: i64, towards: Towards, over: i64) -> Option<i64> {
+        worn_over(&self.store, &self.engine, id, towards, over)
     }
 
     fn sequence(&self) -> Option<i64> {
         here::sequence()
+    }
+
+    fn front(&self) -> isize {
+        here::front()
+    }
+
+    fn terminal(&self, window: isize) -> bool {
+        here::towards(window) == Towards::Terminal
     }
 }
 
@@ -226,15 +242,7 @@ pub fn paste_as(
         return Err(Refused::Unmade);
     };
     let made = rendered.into_item();
-    let written = short_of(
-        id,
-        here::to_clipboard(
-            &made,
-            &Landing::anywhere(),
-            || starting(engine),
-            || mark(engine),
-        ),
-    );
+    let written = short_of(id, written_over(&made, &Landing::anywhere(), engine));
     if written && let Err(why) = store.record_paste(id, crate::app::now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
@@ -279,6 +287,14 @@ fn starting(engine: Option<&crate::engine::Engine>) {
     };
     if !engine.writing() {
         note("the start of the clipboard write could not be marked as ours");
+    }
+}
+
+fn abandoned(engine: Option<&crate::engine::Engine>, before: i64) {
+    if let Some(engine) = engine
+        && !engine.abandoned(before)
+    {
+        note("a write given up could not be handed back to the watcher");
     }
 }
 

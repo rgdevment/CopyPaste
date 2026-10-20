@@ -129,6 +129,10 @@ impl App {
     }
 
     pub fn close(&self) {
+        let dressing = self.state.borrow().dressing.clone();
+        if let Some(dressing) = dressing {
+            dressing.put_back();
+        }
         let engine = self.state.borrow().engine.clone();
         if let Some(engine) = engine {
             engine.close();
@@ -171,11 +175,17 @@ impl App {
     fn keep_watch(&self, ui: slint::Weak<Panel>) {
         let db = self.state.borrow().options.db.clone();
         let drawn = ui.clone();
-        let arrived = move |_| {
+        let latest: crate::dressing::Latest = Arc::new(std::sync::Mutex::new(None));
+        let noted = latest.clone();
+        let arrived = move |_, copied| {
+            if let Ok(mut held) = noted.lock() {
+                *held = copied;
+            }
             let _ = ui.upgrade_in_event_loop(|panel| {
                 if panel.window().is_visible() && !panel.get_sheet_open() {
                     panel.invoke_arrived();
                 }
+                panel.invoke_copied();
             });
         };
         let changed = move |id| {
@@ -186,25 +196,34 @@ impl App {
         match crate::engine::Engine::start(&db, arrived, changed) {
             Ok(engine) => {
                 let engine = Rc::new(engine);
-                let store = self.state.borrow().store.clone();
-                let dressing = crate::dressing::Dressing::start(crate::handing::Shelves {
-                    store,
-                    engine: engine.clone(),
-                });
-                if !dressing.listening() {
-                    note(
-                        "nobody hears which window comes forward, so terminals get no image paths",
-                    );
-                }
-                let mut state = self.state.borrow_mut();
-                state.engine = Some(engine);
-                state.dressing = Some(dressing);
+                self.dress_terminals(&engine, latest);
+                self.state.borrow_mut().engine = Some(engine);
             }
             Err(why) => crate::note::trouble(
                 cp_core::trouble::Trouble::Unwatched,
                 &format!("nothing watches the clipboard: {why}"),
             ),
         }
+    }
+
+    fn dress_terminals(&self, engine: &Rc<crate::engine::Engine>, latest: crate::dressing::Latest) {
+        if !cfg!(target_os = "windows") {
+            return;
+        }
+        let store = self.state.borrow().store.clone();
+        let shelves = crate::handing::Shelves {
+            store,
+            engine: engine.clone(),
+        };
+        let dressing = crate::dressing::Dressing::start(shelves, latest);
+        if !dressing.listening() {
+            note("nobody hears which window comes forward, so terminals get no image paths");
+        }
+        if let Some(panel) = self.ui.upgrade() {
+            let heard = dressing.clone();
+            panel.on_copied(move || heard.arrived());
+        }
+        self.state.borrow_mut().dressing = Some(dressing);
     }
 
     pub fn ui(&self) -> slint::Weak<Panel> {

@@ -72,6 +72,28 @@ impl Ready {
     }
 }
 
+const PICTURE_TWINS: [&str; 6] = [
+    SYNTHETIC_IMAGE,
+    PNG,
+    JFIF,
+    "CF_DIBV5",
+    "CF_DIB",
+    "CF_BITMAP",
+];
+
+pub fn rebuilt_whole(item: &Item) -> bool {
+    let mut picture = false;
+    for format in &item.formats {
+        let held = payload_of(format).is_some();
+        let twin = PICTURE_TWINS.contains(&format.id.as_str());
+        if !held && !twin {
+            return false;
+        }
+        picture |= held && twin;
+    }
+    picture
+}
+
 pub fn ready_for(item: &Item) -> Ready {
     let (mut owned, mut returned) = pasted_files(item);
     for format in &item.formats {
