@@ -8,6 +8,7 @@ pub enum Towards {
 pub struct Landing {
     pub towards: Towards,
     pub files: Vec<std::path::PathBuf>,
+    pub unrecorded: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,6 +23,7 @@ impl Landing {
         Self {
             towards: Towards::Elsewhere,
             files: Vec::new(),
+            unrecorded: false,
         }
     }
 

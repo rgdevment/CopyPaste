@@ -34,6 +34,7 @@ pub struct App {
 struct State {
     store: Rc<Store>,
     engine: Option<Rc<crate::engine::Engine>>,
+    dressing: Option<Rc<crate::dressing::Dressing<crate::handing::Shelves>>>,
     ahead: Arc<AtomicIsize>,
     query: String,
     tags: Vec<String>,
@@ -96,6 +97,7 @@ impl App {
         let state = Rc::new(RefCell::new(State {
             store: Rc::new(store),
             engine: None,
+            dressing: None,
             ahead: Arc::new(AtomicIsize::new(0)),
             query: String::new(),
             tags: Vec::new(),
@@ -182,7 +184,22 @@ impl App {
             });
         };
         match crate::engine::Engine::start(&db, arrived, changed) {
-            Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
+            Ok(engine) => {
+                let engine = Rc::new(engine);
+                let store = self.state.borrow().store.clone();
+                let dressing = crate::dressing::Dressing::start(crate::handing::Shelves {
+                    store,
+                    engine: engine.clone(),
+                });
+                if !dressing.listening() {
+                    note(
+                        "nobody hears which window comes forward, so terminals get no image paths",
+                    );
+                }
+                let mut state = self.state.borrow_mut();
+                state.engine = Some(engine);
+                state.dressing = Some(dressing);
+            }
             Err(why) => crate::note::trouble(
                 cp_core::trouble::Trouble::Unwatched,
                 &format!("nothing watches the clipboard: {why}"),

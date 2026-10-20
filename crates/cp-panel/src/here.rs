@@ -6,11 +6,11 @@ use raw_window_handle::RawWindowHandle;
 use std::path::{Path, PathBuf};
 
 pub use platform::{
-    Dragged, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting, content_of,
-    data_dir, drag_out, dress, forward, ground, hand_back, host, in_front, keep_awake, media_of,
-    ocr_available, open_link, open_path, ours_up_front, paste_into, pointer, read_stuck,
-    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable,
-    utc_offset_at, watch_start,
+    Dragged, Listening, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting,
+    content_of, data_dir, drag_out, dress, forward, ground, hand_back, host, in_front, keep_awake,
+    media_of, ocr_available, on_foreground, open_link, open_path, ours_up_front, paste_into,
+    pointer, read_stuck, sequence, system_is_light, text_in, thumb_of_file, thumbs_dir,
+    to_clipboard, towards, unreadable, utc_offset_at, watch_start,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -45,6 +45,16 @@ mod platform {
     pub use cp_core::watching::Watching;
     pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
         cp_win::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
+
+    pub fn sequence() -> Option<i64> {
+        cp_win_sys::clipboard::sequence()
+    }
+
+    pub type Listening = cp_win_sys::foreground::Listening;
+
+    pub fn on_foreground(heard: impl Fn(isize) + 'static) -> Option<Listening> {
+        cp_win_sys::foreground::listen(heard)
     }
 
     pub fn data_dir() -> Option<PathBuf> {
@@ -123,6 +133,9 @@ mod platform {
             crate::landing::Offer::Files(paths) => ready.offer_files(&paths),
             crate::landing::Offer::Text(text) => ready.offer_text(&text),
             crate::landing::Offer::Nothing => {}
+        }
+        if landing.unrecorded {
+            ready.unrecorded();
         }
         starting();
         let Some(clipboard) = Clipboard::to_write() else {
@@ -270,6 +283,16 @@ mod platform {
     pub use cp_core::watching::Watching;
     pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
         cp_mac::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
+
+    pub fn sequence() -> Option<i64> {
+        None
+    }
+
+    pub struct Listening;
+
+    pub fn on_foreground(_heard: impl Fn(isize) + 'static) -> Option<Listening> {
+        None
     }
 
     pub fn data_dir() -> Option<PathBuf> {

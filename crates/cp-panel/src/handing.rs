@@ -22,7 +22,11 @@ fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towa
         label.as_deref(),
         std::time::SystemTime::now(),
     );
-    Landing { towards, files }
+    Landing {
+        towards,
+        files,
+        unrecorded: false,
+    }
 }
 
 pub fn hand_over(
@@ -31,20 +35,7 @@ pub fn hand_over(
     id: i64,
     towards: Towards,
 ) -> bool {
-    let item = match store.item(id) {
-        Ok(Some(item)) => item,
-        Ok(None) => {
-            note(&format!("pasting {id}: it is no longer in the store"));
-            return false;
-        }
-        Err(why) => {
-            note(&format!("pasting {id}: {why}"));
-            return false;
-        }
-    };
-    let landing = landing_for(store, &item, id, towards);
-    let landed = here::to_clipboard(&item, &landing, || starting(engine), || mark(engine));
-    let written = short_of(id, landed);
+    let written = placed(store, engine, id, towards, false);
     if written {
         if let Err(why) = store.record_paste(id, crate::app::now_ms()) {
             note(&format!("{id} was pasted and nobody wrote it down: {why}"));
@@ -55,6 +46,64 @@ pub fn hand_over(
         ));
     }
     written
+}
+
+pub fn dress(
+    store: &Store,
+    engine: Option<&crate::engine::Engine>,
+    id: i64,
+    towards: Towards,
+) -> bool {
+    placed(store, engine, id, towards, true)
+}
+
+fn placed(
+    store: &Store,
+    engine: Option<&crate::engine::Engine>,
+    id: i64,
+    towards: Towards,
+    unrecorded: bool,
+) -> bool {
+    let item = match store.item(id) {
+        Ok(Some(item)) => item,
+        Ok(None) => {
+            note(&format!("placing {id}: it is no longer in the store"));
+            return false;
+        }
+        Err(why) => {
+            note(&format!("placing {id}: {why}"));
+            return false;
+        }
+    };
+    let landing = Landing {
+        unrecorded,
+        ..landing_for(store, &item, id, towards)
+    };
+    let landed = here::to_clipboard(&item, &landing, || starting(engine), || mark(engine));
+    short_of(id, landed)
+}
+
+pub struct Shelves {
+    pub store: std::rc::Rc<Store>,
+    pub engine: std::rc::Rc<crate::engine::Engine>,
+}
+
+impl crate::dressing::Closet for Shelves {
+    fn copied(&self) -> Option<crate::dressing::Copied> {
+        self.engine.copied()
+    }
+
+    fn copied_again(&self, sequence: i64) {
+        self.engine.copied_again(sequence);
+    }
+
+    fn place(&self, id: i64, towards: Towards) -> bool {
+        dress(&self.store, Some(&self.engine), id, towards)
+    }
+
+    fn sequence(&self) -> Option<i64> {
+        here::sequence()
+    }
 }
 
 fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {

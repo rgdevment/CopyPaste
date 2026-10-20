@@ -681,3 +681,32 @@ fn a_counted_folder_is_told_and_a_missing_one_is_not() {
     store.enqueue(id, "folder").expect("queued again");
     assert!(told(&store, &thumbs).is_empty());
 }
+
+#[test]
+fn the_engine_remembers_the_copy_on_the_clipboard_and_hears_when_it_comes_back() {
+    let dir = aside("remembering");
+    let engine = Engine::start(&dir.join("history.db"), |_| {}, |_| {}).expect("an engine");
+    *engine.copied.lock().expect("unpoisoned") = None;
+    engine.copied_again(9);
+    assert_eq!(
+        engine.copied(),
+        None,
+        "nothing to move when nothing was copied"
+    );
+    let copy = crate::dressing::Copied {
+        sequence: 7,
+        id: 3,
+        picture: true,
+    };
+    *engine.copied.lock().expect("unpoisoned") = Some(copy);
+    engine.copied_again(9);
+    assert_eq!(
+        engine.copied(),
+        Some(crate::dressing::Copied {
+            sequence: 9,
+            ..copy
+        })
+    );
+    drop(engine);
+    let _ = std::fs::remove_dir_all(&dir);
+}

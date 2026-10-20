@@ -156,6 +156,7 @@ fn landing(towards: Towards, files: &[&str]) -> Landing {
     Landing {
         towards,
         files: files.iter().map(std::path::PathBuf::from).collect(),
+        unrecorded: false,
     }
 }
 

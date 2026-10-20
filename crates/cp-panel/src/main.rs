@@ -2,6 +2,7 @@ mod age;
 mod app;
 mod aside;
 mod dragging;
+mod dressing;
 mod engine;
 mod excuse;
 mod face;

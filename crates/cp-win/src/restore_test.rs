@@ -330,3 +330,22 @@ fn ids_the_clipboard_refused_are_counted_against_what_it_was_given() {
     assert_eq!(ready.wanted(), 2);
     assert_eq!(ready.fitted(1), (1, 2));
 }
+
+#[test]
+fn a_write_kept_out_of_the_history_says_so_once_per_door() {
+    let mut ready = an_image();
+    let before = ready.wanted();
+    ready.unrecorded();
+    ready.unrecorded();
+    assert_eq!(ready.wanted(), before + UNRECORDED.len());
+    for name in UNRECORDED {
+        let id = id_of(name).expect("a format the system registers");
+        assert!(
+            ready
+                .owned
+                .iter()
+                .any(|(kept, bytes)| *kept == id && *bytes == 0u32.to_le_bytes())
+        );
+    }
+    assert!(ready.offers(CF_DIB), "the picture itself stays");
+}

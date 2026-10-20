@@ -11,6 +11,7 @@ use crate::virtual_files::{self, Materialized};
 const PNG: &str = "PNG";
 const JFIF: &str = "JFIF";
 const DROP_EFFECT: &str = "Preferred DropEffect";
+pub const UNRECORDED: [&str; 2] = ["CanIncludeInClipboardHistory", "CanUploadToCloudClipboard"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
@@ -57,6 +58,13 @@ impl Ready {
         }
         self.owned.retain(|(id, _)| *id != CF_UNICODETEXT);
         self.owned.push((CF_UNICODETEXT, utf16_of(text)));
+    }
+
+    pub fn unrecorded(&mut self) {
+        for id in UNRECORDED.iter().filter_map(|name| id_of(name)) {
+            self.owned.retain(|(kept, _)| *kept != id);
+            self.owned.push((id, 0u32.to_le_bytes().to_vec()));
+        }
     }
 
     pub fn offers(&self, id: u32) -> bool {
