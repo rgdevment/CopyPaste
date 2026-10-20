@@ -100,7 +100,7 @@ impl Quick {
         appear(chooser);
     }
 
-    pub fn warm(self: &Rc<Self>) -> bool {
+    pub fn draw(self: &Rc<Self>) -> bool {
         self.chooser().is_some()
     }
 
@@ -281,7 +281,7 @@ fn still_ahead(chooser: &Chooser) {
     }
     note(&format!(
         "the paste as card showed but {} kept the keys, so it is brought forward again",
-        here::in_front().unwrap_or_else(|| "another app".to_owned())
+        whoever_is_in_front()
     ));
     here::forward(handle);
     chooser.invoke_focus_keys();
@@ -321,13 +321,17 @@ fn left(chooser: &Chooser, ahead: Arc<AtomicIsize>, ours: impl Fn() -> bool + 's
             ahead.store(0, Ordering::Relaxed);
             note(&format!(
                 "the paste as card was left for {}",
-                here::in_front().unwrap_or_else(|| "another app".to_owned())
+                whoever_is_in_front()
             ));
         }
         if let Some(chooser) = later.upgrade() {
             let _ = chooser.hide();
         }
     });
+}
+
+fn whoever_is_in_front() -> String {
+    here::in_front().unwrap_or_else(|| "another app".to_owned())
 }
 
 fn kept_zoom(chooser: &Chooser) -> f32 {

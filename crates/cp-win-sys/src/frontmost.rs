@@ -100,6 +100,7 @@ pub fn bring_forward(window: HWND) -> bool {
 }
 
 pub fn pull_forward(window: HWND) -> bool {
+    let _ = bring_forward(window);
     if foreground() == Some(window) {
         return true;
     }
