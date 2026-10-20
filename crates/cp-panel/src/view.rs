@@ -108,9 +108,7 @@ pub fn card_of(row: &Listed, now: i64, meta: Option<&MetaOfOne>, most: i32) -> C
     let link = (row.kind == Some(Kind::Link))
         .then(|| crate::link::parts_of(&row.preview))
         .flatten();
-    let folder = matches!(row.kind, Some(Kind::Folder | Kind::File))
-        .then(|| crate::folder::parts_of(&row.preview))
-        .flatten();
+    let folder = folder_of(row);
     let papers = (row.kind == Some(Kind::File))
         .then(|| crate::papers::papers_of(&row.preview))
         .flatten();
@@ -309,6 +307,12 @@ pub fn mixed_open_px(row: &Listed, thumb: bool, now: i64, room: f32, most: i32) 
     } else {
         crate::face::open_px(body)
     }
+}
+
+pub fn folder_of(row: &Listed) -> Option<crate::folder::Parts> {
+    matches!(row.kind, Some(Kind::Folder | Kind::File))
+        .then(|| crate::folder::parts_of(&row.preview))
+        .flatten()
 }
 
 pub fn headline_of(row: &Listed, body: &str, folder: Option<&crate::folder::Parts>) -> String {

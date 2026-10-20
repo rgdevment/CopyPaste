@@ -281,6 +281,24 @@ fn allow<R: Runtime>(app: &AppHandle<R>) {
     let _ = app;
 }
 
+pub fn paste_plain<R: Runtime>(app: &AppHandle<R>) {
+    ask(app, "plain");
+}
+
+pub fn choose<R: Runtime>(app: &AppHandle<R>) {
+    ask(app, "forms");
+}
+
+fn ask<R: Runtime>(app: &AppHandle<R>, what: &str) {
+    allow(app);
+    if say(app, what).is_err() {
+        crate::note::note(&format!(
+            "the panel was not listening, so «{what}» went unanswered and it is brought back"
+        ));
+        bring_back(app);
+    }
+}
+
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {
     if let Err(Said::Broken) = say(app, "hide") {
         bring_back(app);

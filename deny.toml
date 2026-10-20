@@ -7,9 +7,6 @@ targets = [
 
 [advisories]
 yanked = "deny"
-ignore = [
-  { crate = "zip@4.6.1", reason = "every 4.x is yanked and tauri-plugin-updater 2.x still needs zip ^4" },
-]
 
 [licenses]
 allow = [

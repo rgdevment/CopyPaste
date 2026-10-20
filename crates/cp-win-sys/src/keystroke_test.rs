@@ -94,3 +94,29 @@ fn nothing_is_flagged_as_a_bare_scan_code() {
         );
     }
 }
+
+#[test]
+fn the_mask_is_one_tap_of_a_key_no_app_answers_to() {
+    let batch = mask_batch();
+    let taps: Vec<(u16, bool)> = batch
+        .iter()
+        .map(|one| {
+            let ki = unsafe { one.Anonymous.ki };
+            (ki.wVk.0, ki.dwFlags.contains(KEYEVENTF_KEYUP))
+        })
+        .collect();
+    assert_eq!(taps, [(0xE8, false), (0xE8, true)]);
+    assert!(
+        batch
+            .iter()
+            .all(|one| unsafe { one.Anonymous.ki.dwExtraInfo } == OURS)
+    );
+}
+
+#[test]
+fn with_no_alt_or_windows_key_held_there_is_no_menu_to_keep_closed() {
+    if [VK_MENU, VK_LWIN, VK_RWIN].into_iter().any(pressed) {
+        return;
+    }
+    assert!(mask_menu());
+}

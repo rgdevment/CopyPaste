@@ -1276,3 +1276,62 @@ fn a_link_with_no_target_is_just_its_text() {
         "[sin comillas](x.html)"
     );
 }
+
+#[test]
+fn plain_is_the_text_whether_or_not_it_came_styled() {
+    let styled = Content {
+        rich: true,
+        html: Some("<b>hola</b>".into()),
+        ..text_of(Kind::Text, "hola")
+    };
+    assert_eq!(plainest(&styled), Some(Form::PlainText));
+    assert_eq!(
+        plainest(&text_of(Kind::Json, "{\"a\":1}")),
+        Some(Form::PlainText)
+    );
+    assert_eq!(
+        plainest(&text_of(Kind::Link, "https://a.test")),
+        Some(Form::PlainText)
+    );
+}
+
+#[test]
+fn plain_from_a_picture_is_the_text_read_in_it() {
+    let png = [0u8; 4];
+    let read = Content {
+        kind: Some(Kind::Image),
+        text: Some("alt".into()),
+        image: Some(&png),
+        ocr: Some(" Factura 10 "),
+        ..Default::default()
+    };
+    assert_eq!(plainest(&read), Some(Form::ImageOcr));
+    let unread = Content {
+        kind: Some(Kind::Image),
+        image: Some(&png),
+        ocr: Some("   "),
+        ..Default::default()
+    };
+    assert_eq!(plainest(&unread), None);
+}
+
+#[test]
+fn plain_from_files_is_where_they_live() {
+    let files = Content {
+        kind: Some(Kind::File),
+        paths: vec!["/tmp/a.txt".into(), "/tmp/b.txt".into()],
+        ..Default::default()
+    };
+    assert_eq!(plainest(&files), Some(Form::Path));
+    let named_by_finder = Content {
+        text: Some("a.txt".into()),
+        ..files
+    };
+    assert_eq!(plainest(&named_by_finder), Some(Form::Path));
+    assert_eq!(plainest(&Content::default()), None);
+    assert_eq!(plainest(&text_of(Kind::Text, "")), None);
+    assert_eq!(
+        plainest(&text_of(Kind::Text, " \n\t ")),
+        Some(Form::PlainText)
+    );
+}

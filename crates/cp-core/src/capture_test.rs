@@ -188,11 +188,32 @@ fn a_read_that_answers_after_the_retries_is_still_kept() {
 
 #[test]
 fn a_late_answer_is_dropped_if_a_newer_copy_arrived_meanwhile() {
-    let start = std::time::Instant::now();
-    let got = after_slow(
-        || i64::from(start.elapsed() > std::time::Duration::from_millis(40)),
-        200,
-        Captured::Kept(Item::plain("stale")),
+    let gate = std::sync::Arc::new(std::sync::Barrier::new(2));
+    let opened = gate.clone();
+    let looks = std::cell::Cell::new(0);
+    let mut once = Some(Captured::Kept(Item::plain("stale")));
+    let got = insisting_afresh(
+        Retry {
+            attempts: 2,
+            pause: std::time::Duration::from_millis(1),
+        },
+        std::time::Duration::from_millis(5),
+        std::time::Duration::from_secs(5),
+        || {
+            looks.set(looks.get() + 1);
+            if looks.get() == 4 {
+                opened.wait();
+            }
+            i64::from(looks.get() > 4)
+        },
+        move || {
+            let answer = once.take().unwrap_or(Captured::Nothing);
+            let gate = gate.clone();
+            crate::reading::begin(move || {
+                gate.wait();
+                answer
+            })
+        },
     );
     assert_eq!(got, Captured::Superseded);
 }

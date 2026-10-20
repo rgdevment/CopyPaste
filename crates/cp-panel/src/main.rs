@@ -24,6 +24,7 @@ mod orders;
 mod paired;
 mod papers;
 mod placing;
+mod quick;
 mod reaching;
 mod say;
 mod shape;

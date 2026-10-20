@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { adopt } from "../locales";
-import { scene as asked } from "./setup";
+import { scene as asked, forPanel } from "./setup";
 
 describe("the window", () => {
   beforeEach(() => {
@@ -37,6 +37,68 @@ describe("the window", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Atajos de teclado");
     expect(await screen.findByText("Ctrl + Alt + V")).toBeDefined();
     expect(screen.getByText("Doble clic")).toBeDefined();
+  });
+
+  it("lists every shortcut that works anywhere, the usual paste only as a reminder", async () => {
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    expect(await screen.findByText("Pegar como se copió")).toBeDefined();
+    expect(screen.getByText("Ctrl + V")).toBeDefined();
+    expect(screen.getByText("Pegar en texto plano")).toBeDefined();
+    expect(await screen.findByText("Alt + Shift + V")).toBeDefined();
+    expect(screen.getByText("Pegar como…")).toBeDefined();
+    expect(screen.getByText("Ctrl + Alt + P")).toBeDefined();
+    expect(screen.getAllByRole("button", { name: "Cambiar" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(2);
+  });
+
+  it("a paste shortcut can be left without a combination", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    const [remove] = await screen.findAllByRole("button", { name: "Quitar" });
+    await who.click(remove);
+    const kept = vi
+      .mocked(invoke)
+      .mock.calls.filter(([what]) => what === "keep")
+      .pop();
+    const said = kept?.[1] as { config: Record<string, string> } | undefined;
+    expect(said?.config["plain-shortcut"]).toBe("");
+    expect(said?.config.shortcut).toBe("Ctrl+Alt+V");
+  });
+
+  it("refuses the combination every app pastes with", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    const changes = await screen.findAllByRole("button", { name: "Cambiar" });
+    const before = vi.mocked(invoke).mock.calls.filter(([what]) => what === "keep").length;
+    await who.click(changes[1]);
+    const stop = await screen.findByRole("button", { name: "Dejarlo como está" });
+    stop.focus();
+    await who.keyboard("{Control>}[KeyV]{/Control}");
+    expect(await screen.findByText(/la de copiar, cortar o pegar/)).toBeDefined();
+    const after = vi.mocked(invoke).mock.calls.filter(([what]) => what === "keep").length;
+    expect(after).toBe(before);
+  });
+
+  it("refuses a combination another CoPanda shortcut already answers to", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const who = userEvent.setup();
+    render(<App />);
+    await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
+    const changes = await screen.findAllByRole("button", { name: "Cambiar" });
+    const before = vi.mocked(invoke).mock.calls.filter(([what]) => what === "keep").length;
+    await who.click(changes[2]);
+    const stop = await screen.findByRole("button", { name: "Dejarlo como está" });
+    stop.focus();
+    await who.keyboard("{Alt>}{Shift>}[KeyV]{/Shift}{/Alt}");
+    expect(await screen.findByText(/ya la usa otro atajo de CoPanda/)).toBeDefined();
+    const after = vi.mocked(invoke).mock.calls.filter(([what]) => what === "keep").length;
+    expect(after).toBe(before);
   });
 
   it("offers five sections and About, and nothing else", () => {
@@ -152,7 +214,7 @@ describe("the window", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
-      what === "keys"
+      what === "keys" && forPanel(args)
         ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
         : real?.(what, args)) as never);
     const who = userEvent.setup();
@@ -167,13 +229,13 @@ describe("the window", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
-      what === "keys"
+      what === "keys" && forPanel(args)
         ? Promise.resolve({ wanted: "Ctrl+Alt+V", bound: false })
         : real?.(what, args)) as never);
     render(<App />);
     await who.click(screen.getByRole("button", { name: "Atajos de teclado" }));
     expect(await screen.findByText(/Estas están libres ahora mismo/)).toBeDefined();
-    const offered = await screen.findByRole("button", { name: "Alt + Shift + V" });
+    const offered = await screen.findByRole("button", { name: "Ctrl + Alt + Shift + V" });
     await who.click(offered);
     const asked = vi
       .mocked(invoke)
@@ -181,7 +243,7 @@ describe("the window", () => {
       .pop();
     expect(asked).toBeDefined();
     const sent = asked?.[1] as { config: { shortcut: string } } | undefined;
-    expect(sent?.config.shortcut).toBe("Alt+Shift+V");
+    expect(sent?.config.shortcut).toBe("Ctrl+Alt+Shift+V");
     vi.mocked(invoke).mockImplementation(real as never);
   });
 
@@ -335,7 +397,8 @@ describe("the window", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     render(<App />);
     await userEvent.click(screen.getByRole("button", { name: "Atajos de teclado" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Cambiar" }));
+    const [change] = await screen.findAllByRole("button", { name: "Cambiar" });
+    await userEvent.click(change);
     const stop = await screen.findByRole("button", { name: "Dejarlo como está" });
     stop.focus();
     await userEvent.keyboard("{Control>}{Alt>}[F9]{/Alt}{/Control}");

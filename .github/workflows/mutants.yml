@@ -53,7 +53,7 @@ jobs:
       - name: Rust, from rust-toolchain.toml
         if: steps.touched.outputs.any == 'yes'
         run: rustup toolchain install --no-self-update
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: mutants
           save-if: false

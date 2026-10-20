@@ -985,6 +985,12 @@ button:disabled {
   text-decoration: line-through;
 }
 
+.keys.off {
+  font-family: inherit;
+  color: var(--muted);
+  border-style: dashed;
+}
+
 .welcome {
   height: calc(100% - 35px);
   display: flex;

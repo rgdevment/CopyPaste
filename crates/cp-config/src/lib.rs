@@ -12,7 +12,26 @@ pub const FILE: &str = "config.toml";
 pub const SHORTCUT: &str = "Ctrl+Alt+V";
 
 #[cfg(target_os = "macos")]
+pub const PLAIN_SHORTCUT: &str = "Ctrl+Shift+V";
+#[cfg(not(target_os = "macos"))]
+pub const PLAIN_SHORTCUT: &str = "Alt+Shift+V";
+
+pub const FORMS_SHORTCUT: &str = "Ctrl+Alt+P";
+
+#[cfg(target_os = "macos")]
 const FORMER_SHORTCUT: &str = "Cmd+Alt+V";
+
+pub const THE_SYSTEMS: &[&str] = &[
+    "Ctrl+C",
+    "Ctrl+X",
+    "Ctrl+V",
+    "Ctrl+Insert",
+    "Shift+Insert",
+    "Shift+Delete",
+    "Cmd+C",
+    "Cmd+X",
+    "Cmd+V",
+];
 
 pub const KEEPS_DAYS: u16 = 30;
 
@@ -43,6 +62,8 @@ pub struct Config {
     pub locale: Option<String>,
     pub theme: Theme,
     pub shortcut: String,
+    pub plain_shortcut: String,
+    pub forms_shortcut: String,
     pub hides_when_left: bool,
     #[serde(with = "count")]
     pub keeps_days: Option<u16>,
@@ -89,6 +110,8 @@ impl Default for Config {
             locale: None,
             theme: Theme::default(),
             shortcut: SHORTCUT.to_owned(),
+            plain_shortcut: PLAIN_SHORTCUT.to_owned(),
+            forms_shortcut: FORMS_SHORTCUT.to_owned(),
             hides_when_left: true,
             keeps_days: Some(KEEPS_DAYS),
             images_quota_mb: Some(IMAGES_QUOTA_MB),
@@ -105,13 +128,24 @@ impl Default for Config {
 impl Config {
     #[must_use]
     pub fn sane(mut self) -> Self {
-        if self.shortcut.trim().is_empty() {
+        if self.shortcut.trim().is_empty() || the_systems(&self.shortcut) {
             self.shortcut = SHORTCUT.to_owned();
         }
         self.shortcut = self.shortcut.trim().to_owned();
         #[cfg(target_os = "macos")]
         if self.shortcut == FORMER_SHORTCUT {
             self.shortcut = SHORTCUT.to_owned();
+        }
+        self.plain_shortcut = self.plain_shortcut.trim().to_owned();
+        self.forms_shortcut = self.forms_shortcut.trim().to_owned();
+        if the_systems(&self.plain_shortcut) || same_keys(&self.plain_shortcut, &self.shortcut) {
+            self.plain_shortcut.clear();
+        }
+        if the_systems(&self.forms_shortcut)
+            || same_keys(&self.forms_shortcut, &self.shortcut)
+            || same_keys(&self.forms_shortcut, &self.plain_shortcut)
+        {
+            self.forms_shortcut.clear();
         }
         if self.keeps_days == Some(0) {
             self.keeps_days = None;
@@ -125,6 +159,51 @@ impl Config {
         self.code_font = trimmed(self.code_font.take());
         self
     }
+}
+
+#[must_use]
+pub fn same_keys(one: &str, other: &str) -> bool {
+    let keys = |said: &str| {
+        let mut keys: Vec<String> = said
+            .split('+')
+            .map(|key| canonical(&key.trim().to_lowercase()))
+            .filter(|key| !key.is_empty())
+            .collect();
+        keys.sort_unstable();
+        keys
+    };
+    let mine = keys(one);
+    !mine.is_empty() && mine == keys(other)
+}
+
+fn canonical(key: &str) -> String {
+    let key = key
+        .strip_prefix("key")
+        .filter(|rest| rest.len() == 1)
+        .unwrap_or(key);
+    let key = key
+        .strip_prefix("digit")
+        .filter(|rest| rest.len() == 1)
+        .unwrap_or(key);
+    match key {
+        "control" => "ctrl",
+        "option" => "alt",
+        "command" | "super" | "meta" | "cmd" => "cmd",
+        "cmdorctrl" | "commandorcontrol" | "cmdorcontrol" | "commandorctrl" => {
+            if cfg!(target_os = "macos") {
+                "cmd"
+            } else {
+                "ctrl"
+            }
+        }
+        other => other,
+    }
+    .to_owned()
+}
+
+#[must_use]
+pub fn the_systems(said: &str) -> bool {
+    THE_SYSTEMS.iter().any(|one| same_keys(one, said))
 }
 
 fn trimmed(said: Option<String>) -> Option<String> {

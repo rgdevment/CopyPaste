@@ -1,3 +1,4 @@
+use crate::keys::Role;
 use cp_config::Config;
 use std::path::PathBuf;
 
@@ -126,32 +127,45 @@ fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
     let dir = folder().ok_or_else(nowhere)?;
     let path = cp_config::at(&dir);
     let was = read_or_reset(&path).ok();
-    let before = was.as_ref().map(|one| one.shortcut.clone());
     let config = Config {
-        welcomed: was.and_then(|one| one.welcomed),
+        welcomed: was.as_ref().and_then(|one| one.welcomed.clone()),
         ..config
     };
     cp_config::write(&path, &config).map_err(|why| why.to_string())?;
     let landed = cp_config::read(&path).map_err(|why| why.to_string())?;
-    if before.as_deref() == Some(landed.shortcut.as_str()) {
-        return Ok(landed);
-    }
-    let Err(why) = crate::keys::bind(app, &landed.shortcut) else {
+    let moved: Vec<Role> = Role::ALL
+        .into_iter()
+        .filter(|role| was.as_ref().map(|one| role.of(one)) != Some(role.of(&landed)))
+        .collect();
+    let Err(why) = rebound(app, &moved, &landed) else {
         return Ok(landed);
     };
     crate::note::note(&format!("the new shortcut could not be taken: {why}"));
-    let was = before.unwrap_or_else(|| cp_config::SHORTCUT.to_owned());
-    let back = Config {
-        shortcut: was.clone(),
-        ..landed
-    };
-    let _ = cp_config::write(&path, &back);
-    if let Err(twice) = crate::keys::bind(app, &was) {
+    let mut back = landed;
+    for role in &moved {
+        let before = was.clone().unwrap_or_else(crate::keys::unread);
+        role.set(&mut back, role.of(&before).to_owned());
+    }
+    if let Err(twice) = rebound(app, &moved, &back) {
         crate::note::note(&format!(
-            "and the one before it did not come back either: {twice}"
+            "and the ones before it did not all come back either: {twice}"
         ));
     }
+    let _ = cp_config::write(&path, &back);
     Err(why)
+}
+
+fn rebound(app: &tauri::AppHandle, moved: &[Role], config: &Config) -> Result<(), String> {
+    for role in moved {
+        crate::keys::release(app, *role);
+    }
+    let mut refused = Ok(());
+    for role in moved {
+        if let Err(why) = crate::keys::bind(app, *role, role.of(config)) {
+            refused = refused.and(Err(why));
+        }
+    }
+    refused
 }
 
 #[tauri::command(async)]

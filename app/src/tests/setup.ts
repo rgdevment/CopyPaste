@@ -32,6 +32,8 @@ vi.mock("@tauri-apps/api/core", () => ({
         locale: asked.locale,
         theme: "system",
         shortcut: "Ctrl+Alt+V",
+        "plain-shortcut": "Alt+Shift+V",
+        "forms-shortcut": "Ctrl+Alt+P",
         "hides-when-left": true,
         "keeps-days": 30,
         "images-quota-mb": 0,
@@ -74,7 +76,9 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (what === "empty") return Promise.resolve(null);
     if (what === "trouble") return Promise.resolve(null);
     if (what === "keys") {
-      return Promise.resolve({ wanted: "Ctrl+Alt+V", bound: asked.bound });
+      const role = (args as { role?: string } | undefined)?.role ?? "panel";
+      const wanted = { panel: "Ctrl+Alt+V", plain: "Alt+Shift+V", forms: "Ctrl+Alt+P" }[role];
+      return Promise.resolve({ wanted, bound: role === "panel" ? asked.bound : true });
     }
     if (what === "waking") {
       return Promise.resolve({ offered: true, wakes: false, theirs: false, managed: false });
@@ -175,3 +179,8 @@ afterEach(() => {
   asked.usedBytes = 0;
   asked.glance = { items: 0, today: 0, pinned: 0, bytes: 0 };
 });
+
+export function forPanel(args: unknown) {
+  const role = (args as { role?: string } | undefined)?.role;
+  return role === undefined || role === "panel";
+}

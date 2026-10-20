@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
       - name: Rust, from rust-toolchain.toml
         run: rustup toolchain install --no-self-update
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: workspace
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -119,7 +119,7 @@ jobs:
         run: |
           rustup toolchain install --no-self-update
           rustup target add aarch64-apple-darwin
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: cross
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -148,7 +148,7 @@ jobs:
         run: |
           rustup toolchain install --no-self-update
           rustup component add llvm-tools-preview
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: coverage
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -208,7 +208,7 @@ jobs:
         run: |
           rustup toolchain install --no-self-update
           rustup component add llvm-tools-preview
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: coverage
           save-if: ${{ github.ref == 'refs/heads/main' }}

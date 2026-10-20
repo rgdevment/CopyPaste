@@ -1,0 +1,218 @@
+import { FormRow } from "types.slint";
+import { Theme } from "theme.slint";
+import { Hue } from "cards.slint";
+
+export component Chooser inherits Window {
+    width: 340px;
+    height: box.preferred-height;
+    no-frame: true;
+    always-on-top: true;
+    background: Theme.apple ? Theme.panel : transparent;
+    default-font-family: Theme.font;
+    title: "CoPanda";
+
+    in property <[FormRow]> rows;
+    in property <string> kind;
+    in property <string> subject;
+    in property <string> said-when;
+    in property <string> hints;
+    in property <string> complaint;
+    in property <bool> older;
+    in property <bool> newer;
+    in-out property <int> current: 0;
+    out property <length> wide: root.width;
+    out property <length> tall: box.preferred-height;
+    callback chosen(string);
+    callback step(int);
+    callback dismiss();
+    callback focus-keys();
+    focus-keys => { keys.focus(); }
+
+    forward-focus: keys;
+
+    keys := FocusScope {
+        key-pressed(event) => {
+            if event.text == Key.Escape {
+                root.dismiss();
+                return accept;
+            }
+            if event.text == Key.DownArrow {
+                root.current = min(root.current + 1, root.rows.length - 1);
+                return accept;
+            }
+            if event.text == Key.UpArrow {
+                root.current = max(root.current - 1, 0);
+                return accept;
+            }
+            if event.text == Key.LeftArrow && root.older {
+                root.step(1);
+                return accept;
+            }
+            if event.text == Key.RightArrow && root.newer {
+                root.step(-1);
+                return accept;
+            }
+            if event.text == Key.Return && root.rows.length > 0 {
+                root.chosen(root.rows[root.current].key);
+                return accept;
+            }
+            if event.text.character-count == 1 && event.text.is-float() && event.text != "0" {
+                let at = event.text.to-float() - 1;
+                if at < root.rows.length {
+                    root.chosen(root.rows[at].key);
+                }
+                return accept;
+            }
+            reject
+        }
+    }
+
+    Rectangle {
+        border-radius: Theme.radius-card;
+        border-width: 1px;
+        border-color: Theme.selected-edge;
+        background: Theme.panel;
+        clip: true;
+
+        box := VerticalLayout {
+            padding: 8px;
+            spacing: 2px;
+
+            HorizontalLayout {
+                height: 26px;
+                padding-left: 10px;
+                padding-right: 6px;
+                spacing: 7px;
+                alignment: stretch;
+                Rectangle {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 2px;
+                    background: Hue.of(root.kind);
+                    y: (parent.height - 6px) / 2;
+                }
+                Text {
+                    text: root.subject;
+                    color: Theme.title;
+                    font-size: Theme.fs-small;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                }
+                Text {
+                    text: root.said-when;
+                    color: Theme.muted;
+                    font-size: Theme.fs-caption;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "‹";
+                    color: root.older ? Theme.muted : Theme.field-border;
+                    font-size: Theme.fs-body;
+                    vertical-alignment: center;
+                    TouchArea {
+                        enabled: root.older;
+                        clicked => { root.step(1); }
+                    }
+                }
+                Text {
+                    text: "›";
+                    color: root.newer ? Theme.muted : Theme.field-border;
+                    font-size: Theme.fs-body;
+                    vertical-alignment: center;
+                    TouchArea {
+                        enabled: root.newer;
+                        clicked => { root.step(-1); }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Theme.panel-border;
+            }
+
+            for form[at] in root.rows : Rectangle {
+                property <bool> chosen-here: at == root.current;
+                height: 32px;
+                border-radius: 8px;
+                background: chosen-here ? Theme.selected : row-touch.has-hover ? Theme.row-hover : transparent;
+                animate background { duration: chosen-here || row-touch.has-hover ? 0ms : Theme.let-go; }
+                if chosen-here : Rectangle {
+                    x: 0px;
+                    y: 7px;
+                    width: 3px;
+                    height: parent.height - 14px;
+                    border-radius: 1.5px;
+                    background: Theme.accent;
+                }
+                HorizontalLayout {
+                    padding-left: 9px;
+                    padding-right: 10px;
+                    spacing: 10px;
+                    alignment: stretch;
+                    if at < 9 : Rectangle {
+                        width: 18px;
+                        height: 18px;
+                        y: (parent.height - 18px) / 2;
+                        border-radius: 5px;
+                        background: Theme.tile;
+                        Text {
+                            text: at + 1;
+                            color: chosen-here ? Theme.accent : Theme.muted;
+                            font-size: Theme.fs-caption;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    if at >= 9 : Rectangle { width: 18px; }
+                    Text {
+                        text: form.label;
+                        color: chosen-here ? Theme.accent : Theme.body;
+                        font-size: Theme.fs-body;
+                        vertical-alignment: center;
+                        min-width: 120px;
+                        overflow: elide;
+                    }
+                    if form.preview != "" : Text {
+                        text: form.preview;
+                        color: Theme.muted;
+                        font-size: Theme.fs-meta;
+                        font-family: Theme.mono-font;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                        overflow: elide;
+                        wrap: no-wrap;
+                        horizontal-stretch: 1;
+                    }
+                    if form.preview == "" : Rectangle { horizontal-stretch: 1; }
+                }
+                row-touch := TouchArea {
+                    clicked => { root.chosen(form.key); }
+                    pointer-event(event) => {
+                        if (event.kind == PointerEventKind.move) {
+                            root.current = at;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Theme.panel-border;
+            }
+
+            Text {
+                height: 22px;
+                text: root.complaint != "" ? root.complaint : root.hints;
+                color: root.complaint != "" ? Theme.title : Theme.muted;
+                font-size: Theme.fs-caption;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+}

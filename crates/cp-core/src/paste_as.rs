@@ -204,6 +204,20 @@ pub fn forms_for(content: &Content) -> Vec<Form> {
     forms
 }
 
+pub fn plainest(content: &Content) -> Option<Form> {
+    let read = content.ocr.is_some_and(|ocr| !ocr.trim().is_empty());
+    if content.image.is_some() && read {
+        return Some(Form::ImageOcr);
+    }
+    if !content.paths.is_empty() {
+        return Some(Form::Path);
+    }
+    if content.text.as_deref().is_some_and(|text| !text.is_empty()) {
+        return Some(Form::PlainText);
+    }
+    read.then_some(Form::ImageOcr)
+}
+
 pub fn render(form: Form, content: &Content) -> Option<Rendered> {
     let text = content.text.as_deref().map(str::trim).unwrap_or_default();
     let rendered = match form {

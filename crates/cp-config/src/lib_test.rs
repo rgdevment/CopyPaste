@@ -29,6 +29,8 @@ fn what_goes_in_comes_back() {
         locale: Some("es".into()),
         theme: Theme::Dark,
         shortcut: "Ctrl+Shift+V".into(),
+        plain_shortcut: "Ctrl+Alt+B".into(),
+        forms_shortcut: String::new(),
         hides_when_left: false,
         keeps_days: None,
         images_quota_mb: Some(512),
@@ -223,6 +225,65 @@ fn the_shortcut_loses_the_spaces_around_it() {
     }
     .sane();
     assert_eq!(asked.shortcut, "Ctrl+Shift+V");
+}
+
+#[test]
+fn a_fresh_install_pastes_plain_and_asks_how_with_shortcuts_of_their_own() {
+    let config = Config::default().sane();
+    assert_eq!(config.plain_shortcut, PLAIN_SHORTCUT);
+    assert_eq!(config.forms_shortcut, FORMS_SHORTCUT);
+    assert_ne!(config.plain_shortcut, config.shortcut);
+    assert_ne!(config.forms_shortcut, config.shortcut);
+    assert_ne!(config.forms_shortcut, config.plain_shortcut);
+}
+
+#[test]
+fn settings_from_before_the_paste_shortcuts_get_them() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "shortcut = \"Ctrl+Alt+V\"\n").expect("writes");
+    let config = read(&path).expect("reads");
+    assert_eq!(config.plain_shortcut, PLAIN_SHORTCUT);
+    assert_eq!(config.forms_shortcut, FORMS_SHORTCUT);
+}
+
+#[test]
+fn a_paste_shortcut_left_blank_stays_off() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    let mine = Config {
+        plain_shortcut: "  ".into(),
+        forms_shortcut: String::new(),
+        ..Config::default()
+    };
+    write(&path, &mine).expect("writes");
+    let config = read(&path).expect("reads");
+    assert_eq!(config.plain_shortcut, "");
+    assert_eq!(config.forms_shortcut, "");
+}
+
+#[test]
+fn a_combination_already_opening_the_panel_is_not_also_a_paste_shortcut() {
+    let asked = Config {
+        shortcut: PLAIN_SHORTCUT.into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.shortcut, PLAIN_SHORTCUT);
+    assert_eq!(asked.plain_shortcut, "");
+    assert_eq!(asked.forms_shortcut, FORMS_SHORTCUT);
+}
+
+#[test]
+fn asking_how_never_takes_the_combination_that_pastes_plain() {
+    let asked = Config {
+        plain_shortcut: " Ctrl+Alt+B ".into(),
+        forms_shortcut: "Ctrl+Alt+B".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.plain_shortcut, "Ctrl+Alt+B");
+    assert_eq!(asked.forms_shortcut, "");
 }
 
 #[test]
@@ -623,4 +684,45 @@ fn a_blank_font_means_the_system_one() {
     .sane();
     assert_eq!(blank.font, None);
     assert_eq!(blank.code_font.as_deref(), Some("sf-mono"));
+}
+
+#[test]
+fn one_combination_is_one_combination_however_it_is_spelled() {
+    assert!(same_keys("Ctrl+Alt+V", "alt + ctrl + v"));
+    assert!(!same_keys("Ctrl+Alt+V", "Ctrl+Alt+Shift+V"));
+    assert!(!same_keys("", ""));
+    let asked = Config {
+        plain_shortcut: "alt+ctrl+v".into(),
+        forms_shortcut: "v+alt+ctrl".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.plain_shortcut, "");
+    assert_eq!(asked.forms_shortcut, "");
+}
+
+#[test]
+fn copying_cutting_and_pasting_stay_with_every_app() {
+    let asked = Config {
+        shortcut: "Ctrl+V".into(),
+        plain_shortcut: "shift+insert".into(),
+        forms_shortcut: "Cmd+C".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.shortcut, SHORTCUT);
+    assert_eq!(asked.plain_shortcut, "");
+    assert_eq!(asked.forms_shortcut, "");
+    for one in [SHORTCUT, PLAIN_SHORTCUT, FORMS_SHORTCUT] {
+        assert!(!the_systems(one), "{one}");
+    }
+}
+
+#[test]
+fn the_other_names_the_system_knows_a_key_by_are_the_same_key() {
+    assert!(same_keys("Control+Alt+KeyV", "Ctrl+Alt+V"));
+    assert!(same_keys("Option+Super+Digit1", "Alt+Cmd+1"));
+    assert!(the_systems("CommandOrControl+V"));
+    assert!(the_systems("Control+keyc"));
+    assert!(!the_systems("Control+Alt+V"));
 }
