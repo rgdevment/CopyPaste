@@ -685,3 +685,35 @@ fn a_blank_font_means_the_system_one() {
     assert_eq!(blank.font, None);
     assert_eq!(blank.code_font.as_deref(), Some("sf-mono"));
 }
+
+#[test]
+fn one_combination_is_one_combination_however_it_is_spelled() {
+    assert!(same_keys("Ctrl+Alt+V", "alt + ctrl + v"));
+    assert!(!same_keys("Ctrl+Alt+V", "Ctrl+Alt+Shift+V"));
+    assert!(!same_keys("", ""));
+    let asked = Config {
+        plain_shortcut: "alt+ctrl+v".into(),
+        forms_shortcut: "v+alt+ctrl".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.plain_shortcut, "");
+    assert_eq!(asked.forms_shortcut, "");
+}
+
+#[test]
+fn copying_cutting_and_pasting_stay_with_every_app() {
+    let asked = Config {
+        shortcut: "Ctrl+V".into(),
+        plain_shortcut: "shift+insert".into(),
+        forms_shortcut: "Cmd+C".into(),
+        ..Config::default()
+    }
+    .sane();
+    assert_eq!(asked.shortcut, SHORTCUT);
+    assert_eq!(asked.plain_shortcut, "");
+    assert_eq!(asked.forms_shortcut, "");
+    for one in [SHORTCUT, PLAIN_SHORTCUT, FORMS_SHORTCUT] {
+        assert!(!the_systems(one), "{one}");
+    }
+}

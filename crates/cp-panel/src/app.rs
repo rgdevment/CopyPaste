@@ -1,5 +1,5 @@
 use crate::aside::Leaving;
-use crate::handing::{forms_of, hand_over, paste_as};
+use crate::handing::{Handed, forms_of, hand_over, paste_as};
 use crate::here;
 use crate::landing::Towards;
 use crate::model::{Metrics, Rows, reveal};
@@ -220,10 +220,9 @@ impl App {
             match asking {
                 Asking::Forms(id) => {
                     let (store, engine, towards) = aimed(&state);
-                    if paste_as(&store, engine.as_deref(), id, key.as_str(), towards) {
-                        deliver(&ui, &state);
-                    } else {
-                        complain(&ui, busy());
+                    match paste_as(&store, engine.as_deref(), id, key.as_str(), towards) {
+                        Handed::Written => deliver(&ui, &state),
+                        refused => complain(&ui, refused.said()),
                     }
                 }
                 Asking::Kinds => {
@@ -291,18 +290,21 @@ impl App {
 
     fn wire_quick(&self, panel: &Panel) {
         let state = self.state.clone();
-        let quick = crate::quick::Quick::new(Rc::new(move || {
-            let state = state.borrow();
-            crate::quick::Aim {
-                store: state.store.clone(),
-                engine: state.engine.clone(),
-                kept: state.kept.get(),
-            }
-        }));
-        let (plain, ahead) = (quick.clone(), self.state.borrow().ahead.clone());
-        panel.on_plain_asked(move || plain.plain(ahead.swap(0, Ordering::Relaxed)));
-        let (forms, ahead) = (quick.clone(), self.state.borrow().ahead.clone());
-        panel.on_forms_asked(move || forms.choose(ahead.swap(0, Ordering::Relaxed)));
+        let quick = crate::quick::Quick::new(
+            Rc::new(move || {
+                let state = state.borrow();
+                crate::quick::Aim {
+                    store: state.store.clone(),
+                    engine: state.engine.clone(),
+                    kept: state.kept.get(),
+                }
+            }),
+            self.state.borrow().ahead.clone(),
+        );
+        let plain = quick.clone();
+        panel.on_plain_asked(move || plain.plain());
+        let forms = quick.clone();
+        panel.on_forms_asked(move || forms.choose());
         panel.on_quitting(move || quick.ground());
     }
 
@@ -646,10 +648,9 @@ impl App {
             );
             if let Some(ui) = ui.upgrade() {
                 ui.set_sheet_open(false);
-                if done {
-                    deliver(&ui, &state);
-                } else {
-                    complain(&ui, busy());
+                match done {
+                    Handed::Written => deliver(&ui, &state),
+                    refused => complain(&ui, refused.said()),
                 }
             }
         });

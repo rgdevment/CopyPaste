@@ -21,6 +21,18 @@ pub const FORMS_SHORTCUT: &str = "Ctrl+Alt+P";
 #[cfg(target_os = "macos")]
 const FORMER_SHORTCUT: &str = "Cmd+Alt+V";
 
+pub const THE_SYSTEMS: &[&str] = &[
+    "Ctrl+C",
+    "Ctrl+X",
+    "Ctrl+V",
+    "Ctrl+Insert",
+    "Shift+Insert",
+    "Shift+Delete",
+    "Cmd+C",
+    "Cmd+X",
+    "Cmd+V",
+];
+
 pub const KEEPS_DAYS: u16 = 30;
 
 pub const IMAGES_QUOTA_MB: u32 = 5120;
@@ -116,7 +128,7 @@ impl Default for Config {
 impl Config {
     #[must_use]
     pub fn sane(mut self) -> Self {
-        if self.shortcut.trim().is_empty() {
+        if self.shortcut.trim().is_empty() || the_systems(&self.shortcut) {
             self.shortcut = SHORTCUT.to_owned();
         }
         self.shortcut = self.shortcut.trim().to_owned();
@@ -126,10 +138,13 @@ impl Config {
         }
         self.plain_shortcut = self.plain_shortcut.trim().to_owned();
         self.forms_shortcut = self.forms_shortcut.trim().to_owned();
-        if self.plain_shortcut == self.shortcut {
+        if the_systems(&self.plain_shortcut) || same_keys(&self.plain_shortcut, &self.shortcut) {
             self.plain_shortcut.clear();
         }
-        if self.forms_shortcut == self.shortcut || self.forms_shortcut == self.plain_shortcut {
+        if the_systems(&self.forms_shortcut)
+            || same_keys(&self.forms_shortcut, &self.shortcut)
+            || same_keys(&self.forms_shortcut, &self.plain_shortcut)
+        {
             self.forms_shortcut.clear();
         }
         if self.keeps_days == Some(0) {
@@ -144,6 +159,26 @@ impl Config {
         self.code_font = trimmed(self.code_font.take());
         self
     }
+}
+
+#[must_use]
+pub fn same_keys(one: &str, other: &str) -> bool {
+    let keys = |said: &str| {
+        let mut keys: Vec<String> = said
+            .split('+')
+            .map(|key| key.trim().to_lowercase())
+            .filter(|key| !key.is_empty())
+            .collect();
+        keys.sort_unstable();
+        keys
+    };
+    let mine = keys(one);
+    !mine.is_empty() && mine == keys(other)
+}
+
+#[must_use]
+pub fn the_systems(said: &str) -> bool {
+    THE_SYSTEMS.iter().any(|one| same_keys(one, said))
 }
 
 fn trimmed(said: Option<String>) -> Option<String> {

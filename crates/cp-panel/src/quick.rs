@@ -1,16 +1,15 @@
 use crate::Chooser;
-use crate::handing::{PLAIN, forms_of, newest, paste_as};
+use crate::handing::{Handed, PLAIN, forms_of, newest, paste_as};
 use crate::here;
 use crate::note::note;
 use cp_store::{Listed, Store};
 use slint::{ComponentHandle, ModelRc};
 use std::cell::{Cell, OnceCell};
 use std::rc::{Rc, Weak};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicIsize, Ordering};
 use std::time::Duration;
 
-const WIDE: f64 = 340.0;
-const ROW: f64 = 34.0;
-const FRAME: f64 = 80.0;
 const COMPLAINS_FOR: Duration = Duration::from_millis(2_200);
 
 pub struct Aim {
@@ -25,24 +24,24 @@ pub struct Quick {
     chooser: OnceCell<Chooser>,
     reach: Reach,
     back: Cell<usize>,
-    ahead: Cell<isize>,
+    ahead: Arc<AtomicIsize>,
     showing: Cell<Option<i64>>,
 }
 
 impl Quick {
-    pub fn new(reach: Reach) -> Rc<Self> {
+    pub fn new(reach: Reach, ahead: Arc<AtomicIsize>) -> Rc<Self> {
         Rc::new(Self {
             chooser: OnceCell::new(),
             reach,
             back: Cell::new(0),
-            ahead: Cell::new(0),
+            ahead,
             showing: Cell::new(None),
         })
     }
 
-    pub fn plain(&self, ahead: isize) {
-        let ahead = self.aimed(ahead);
+    pub fn plain(self: &Rc<Self>) {
         self.hide();
+        let ahead = self.ahead.load(Ordering::Relaxed);
         if ahead == 0 {
             note("nothing to paste plain into: no other window is in front");
             return;
@@ -53,30 +52,35 @@ impl Quick {
             return;
         };
         let towards = crate::landing::Towards::Elsewhere;
-        if !paste_as(&aim.store, aim.engine.as_deref(), row.id, PLAIN, towards) {
+        let handed = paste_as(&aim.store, aim.engine.as_deref(), row.id, PLAIN, towards);
+        if handed != Handed::Written {
+            self.explain(handed.said());
             return;
         }
+        let later = Rc::downgrade(self);
         here::paste_into(
             ahead,
             || {},
-            |sent| match sent {
+            move |sent| match sent {
                 here::Sent::Done => {}
                 here::Sent::Nobody => note("no window was left to paste plain into"),
                 here::Sent::Degraded(why) => {
+                    let said = crate::excuse::why_not(why, crate::say::in_english());
                     note(&format!(
                         "pasted plain onto the clipboard, unpasted: {why:?}"
                     ));
+                    if let Some(quick) = later.upgrade() {
+                        quick.explain(said);
+                    }
                 }
             },
         );
     }
 
-    pub fn choose(self: &Rc<Self>, ahead: isize) {
-        let ahead = self.aimed(ahead);
+    pub fn choose(self: &Rc<Self>) {
         let Some(chooser) = self.chooser() else {
             return;
         };
-        self.ahead.set(ahead);
         self.back.set(0);
         if !self.fill(chooser) {
             note("nothing to paste as: the history is empty");
@@ -104,12 +108,11 @@ impl Quick {
         }
     }
 
-    fn aimed(&self, ahead: isize) -> isize {
-        let open = self
-            .chooser
-            .get()
-            .is_some_and(|chooser| chooser.window().is_visible());
-        crate::aside::aimed_at(ahead, self.ahead.get(), open)
+    fn explain(self: &Rc<Self>, said: &str) {
+        self.choose();
+        if let Some(chooser) = self.chooser.get().filter(|one| one.window().is_visible()) {
+            complain(chooser, said);
+        }
     }
 
     fn hide(&self) {
@@ -171,15 +174,16 @@ impl Quick {
             return;
         };
         let aim = (self.reach)();
-        let ahead = self.ahead.get();
-        if !paste_as(
+        let ahead = self.ahead.load(Ordering::Relaxed);
+        let handed = paste_as(
             &aim.store,
             aim.engine.as_deref(),
             id,
             key,
             here::towards(ahead),
-        ) {
-            complain(chooser, crate::app::busy());
+        );
+        if handed != Handed::Written {
+            complain(chooser, handed.said());
             return;
         }
         let hiding = chooser.as_weak();
@@ -236,7 +240,7 @@ fn wire(quick: &Rc<Quick>, chooser: &Chooser) {
     chooser.on_dismiss(move || {
         if let Some(quick) = weak.upgrade() {
             quick.hide();
-            here::hand_back(quick.ahead.get());
+            here::hand_back(quick.ahead.load(Ordering::Relaxed));
         }
     });
     leave_when_left(chooser);
@@ -293,7 +297,13 @@ fn subject_of(row: &Listed) -> String {
     if let Some(label) = row.label.as_deref().filter(|one| !one.trim().is_empty()) {
         return label.trim().to_owned();
     }
-    let said = crate::view::squeezed_of(&crate::view::body_of(row));
+    let folder = matches!(
+        row.kind,
+        Some(cp_core::kind::Kind::File | cp_core::kind::Kind::Folder)
+    )
+    .then(|| crate::folder::parts_of(&row.preview))
+    .flatten();
+    let said = crate::view::headline_of(row, &crate::view::body_of(row), folder.as_ref());
     if said.is_empty() {
         crate::view::label_of(row.kind).to_owned()
     } else {
@@ -301,14 +311,12 @@ fn subject_of(row: &Listed) -> String {
     }
 }
 
-fn tall(rows: usize) -> f64 {
-    FRAME + ROW * rows as f64
-}
-
 fn place(chooser: &Chooser) {
-    use slint::Model;
     let zoom = f64::from(kept_zoom(chooser));
-    let size = (WIDE * zoom, tall(chooser.get_rows().row_count()) * zoom);
+    let size = (
+        f64::from(chooser.get_wide()) * zoom,
+        f64::from(chooser.get_tall()) * zoom,
+    );
     crate::showing::beside_pointer(chooser.window(), size);
 }
 

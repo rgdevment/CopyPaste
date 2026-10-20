@@ -75,6 +75,14 @@ pub struct Keys {
     bound: bool,
 }
 
+pub fn unread() -> Config {
+    Config {
+        plain_shortcut: String::new(),
+        forms_shortcut: String::new(),
+        ..Config::default()
+    }
+}
+
 pub fn raise<R: Runtime>(app: &AppHandle<R>, config: &Config) {
     app.manage(Bound::default());
     for role in Role::ALL {

@@ -20,6 +20,8 @@ export component Chooser inherits Window {
     in property <bool> older;
     in property <bool> newer;
     in-out property <int> current: 0;
+    out property <length> wide: root.width;
+    out property <length> tall: box.preferred-height;
     callback chosen(string);
     callback step(int);
     callback dismiss();

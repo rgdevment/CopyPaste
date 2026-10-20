@@ -137,33 +137,35 @@ fn written(app: &tauri::AppHandle, config: Config) -> Result<Config, String> {
         .into_iter()
         .filter(|role| was.as_ref().map(|one| role.of(one)) != Some(role.of(&landed)))
         .collect();
-    for role in &moved {
-        crate::keys::release(app, *role);
-    }
-    let mut back = landed.clone();
-    let mut refused = None;
-    for role in moved {
-        let Err(why) = crate::keys::bind(app, role, role.of(&landed)) else {
-            continue;
-        };
-        crate::note::note(&format!("the new shortcut could not be taken: {why}"));
-        let before = was
-            .as_ref()
-            .map_or(role.fallback(), |one| role.of(one))
-            .to_owned();
-        if let Err(twice) = crate::keys::bind(app, role, &before) {
-            crate::note::note(&format!(
-                "and the one before it did not come back either: {twice}"
-            ));
-        }
-        role.set(&mut back, before);
-        refused.get_or_insert(why);
-    }
-    let Some(why) = refused else {
+    let Err(why) = rebound(app, &moved, &landed) else {
         return Ok(landed);
     };
+    crate::note::note(&format!("the new shortcut could not be taken: {why}"));
+    let mut back = landed;
+    for role in &moved {
+        let before = was.as_ref().map_or(role.fallback(), |one| role.of(one));
+        role.set(&mut back, before.to_owned());
+    }
+    if let Err(twice) = rebound(app, &moved, &back) {
+        crate::note::note(&format!(
+            "and the ones before it did not all come back either: {twice}"
+        ));
+    }
     let _ = cp_config::write(&path, &back);
     Err(why)
+}
+
+fn rebound(app: &tauri::AppHandle, moved: &[Role], config: &Config) -> Result<(), String> {
+    for role in moved {
+        crate::keys::release(app, *role);
+    }
+    let mut refused = Ok(());
+    for role in moved {
+        if let Err(why) = crate::keys::bind(app, *role, role.of(config)) {
+            refused = refused.and(Err(why));
+        }
+    }
+    refused
 }
 
 #[tauri::command(async)]

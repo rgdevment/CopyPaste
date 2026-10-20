@@ -117,18 +117,37 @@ pub fn forms_of(store: &Store, id: i64) -> Vec<FormRow> {
     rows
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Handed {
+    Written,
+    Formless,
+    Failed,
+}
+
+impl Handed {
+    pub fn said(self) -> &'static str {
+        match self {
+            Handed::Formless => crate::say::pick(
+                "no tiene texto para pegarlo así; elige otra forma",
+                "it has no text to paste that way; pick another",
+            ),
+            Handed::Written | Handed::Failed => crate::app::busy(),
+        }
+    }
+}
+
 pub fn paste_as(
     store: &Store,
     engine: Option<&crate::engine::Engine>,
     id: i64,
     key: &str,
     towards: Towards,
-) -> bool {
+) -> Handed {
     if key == AS_IS {
-        return hand_over(store, engine, id, towards);
+        return written_or_not(hand_over(store, engine, id, towards));
     }
     let Ok(Some(item)) = store.item(id) else {
-        return false;
+        return Handed::Failed;
     };
     let ocr = store.ocr_text(id).ok().flatten();
     let content = here::content_of(&item, ocr.as_deref());
@@ -141,13 +160,13 @@ pub fn paste_as(
         note(&format!(
             "pasting {id} as {key}: there is no such form for it"
         ));
-        return false;
+        return Handed::Formless;
     };
     let Some(rendered) = cp_core::paste_as::render(form, &content) else {
         note(&format!(
             "pasting {id} as {key}: the form gave nothing back"
         ));
-        return false;
+        return Handed::Formless;
     };
     let made = rendered.into_item();
     let written = short_of(
@@ -162,7 +181,15 @@ pub fn paste_as(
     if written && let Err(why) = store.record_paste(id, crate::app::now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
-    written
+    written_or_not(written)
+}
+
+fn written_or_not(written: bool) -> Handed {
+    if written {
+        Handed::Written
+    } else {
+        Handed::Failed
+    }
 }
 
 pub fn newest(store: &Store, back: usize) -> Option<(cp_store::Listed, bool)> {

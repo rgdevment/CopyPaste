@@ -34,7 +34,21 @@ fn without_a_name_the_card_is_headed_by_what_was_copied_on_one_line() {
 }
 
 #[test]
-fn a_room_for_every_way_to_paste_it() {
-    assert!(tall(6) > tall(3));
-    assert_eq!(tall(2) - tall(1), ROW);
+fn a_file_is_headed_by_its_name_as_the_panel_heads_it() {
+    let row = listed(
+        Kind::File,
+        "C:\\Users\\ana\\Documents\\informe-final.docx",
+        None,
+    );
+    let body = crate::view::body_of(&row);
+    let folder = crate::folder::parts_of(&row.preview);
+    assert_eq!(
+        subject_of(&row),
+        crate::view::headline_of(&row, &body, folder.as_ref())
+    );
+    assert!(
+        !subject_of(&row).contains("Documents"),
+        "{}",
+        subject_of(&row)
+    );
 }

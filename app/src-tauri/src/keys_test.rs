@@ -127,3 +127,11 @@ fn no_spare_takes_a_combination_the_system_or_everyday_apps_already_use() {
         assert!(!spoken.contains(&one), "«{said}» is already spoken for");
     }
 }
+
+#[test]
+fn settings_that_cannot_be_read_take_no_combination_beyond_the_panel() {
+    let unread = unread();
+    assert_eq!(unread.shortcut, cp_config::SHORTCUT);
+    assert_eq!(unread.plain_shortcut, "");
+    assert_eq!(unread.forms_shortcut, "");
+}

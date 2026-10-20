@@ -87,7 +87,7 @@ pub fn run() {
                 waking::on_first_run();
             }
             panel::raise(app.handle());
-            keys::raise(app.handle(), &kept.unwrap_or_default());
+            keys::raise(app.handle(), &kept.unwrap_or_else(keys::unread));
             welcome::raise(app.handle(), fresh);
             update::keep_looking();
             Ok(())
