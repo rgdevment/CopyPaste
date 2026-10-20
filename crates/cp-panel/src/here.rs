@@ -225,9 +225,15 @@ mod platform {
         let RawWindowHandle::Win32(win32) = handle else {
             return;
         };
-        if let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get()) {
-            cp_win_sys::frontmost::bring_forward(target.window);
+        let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get()) else {
+            return;
+        };
+        if cp_win_sys::frontmost::bring_forward(target.window)
+            || cp_win_sys::frontmost::pull_forward(target.window)
+        {
+            return;
         }
+        crate::note::note("Windows would not bring our window forward, so its keys stay behind");
     }
 
     pub use cp_win_sys::dragging::Dragged;

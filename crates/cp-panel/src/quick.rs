@@ -99,6 +99,10 @@ impl Quick {
         appear(chooser);
     }
 
+    pub fn warm(self: &Rc<Self>) -> bool {
+        self.chooser().is_some()
+    }
+
     pub fn ground(&self) {
         if let Some(handle) = self
             .chooser
@@ -249,8 +253,9 @@ fn appear(chooser: &Chooser) {
     }
     crate::showing::rescaled(chooser.window(), kept_zoom(chooser));
     place(chooser);
-    if let Some(handle) = crate::app::handle_of(chooser.window()) {
-        here::forward(handle);
+    match crate::app::handle_of(chooser.window()) {
+        Some(handle) => here::forward(handle),
+        None => note("the paste as card had no window yet to bring forward"),
     }
     chooser.invoke_focus_keys();
 }

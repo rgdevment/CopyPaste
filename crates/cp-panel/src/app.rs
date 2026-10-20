@@ -337,6 +337,9 @@ impl App {
             }),
             self.state.borrow().ahead.clone(),
         );
+        if !quick.warm() {
+            note("the paste as card is drawn on its first use instead");
+        }
         let plain = quick.clone();
         panel.on_plain_asked(move || plain.plain());
         let forms = quick.clone();

@@ -336,3 +336,25 @@ fn putting_the_card_down_on_quitting_is_safe_drawn_or_not() {
     drawn.quick.choose();
     drawn.quick.ground();
 }
+
+#[test]
+fn the_card_is_drawn_before_it_is_ever_asked_for_and_stays_hidden() {
+    let bench = bench(&["newest"]);
+    assert!(bench.quick.chooser.get().is_none());
+    assert!(bench.quick.warm());
+    let chooser = card(&bench);
+    assert!(!chooser.window().is_visible(), "drawn, not shown");
+    assert!(bench.quick.warm(), "warming twice keeps the same card");
+    bench.quick.choose();
+    assert!(card(&bench).window().is_visible());
+}
+
+#[test]
+fn the_card_comes_forward_in_the_same_turn_it_shows() {
+    let bench = bench(&["newest"]);
+    bench.quick.warm();
+    bench.quick.choose();
+    let chooser = card(&bench);
+    assert!(chooser.window().is_visible());
+    assert_eq!(chooser.get_current(), 0, "ready for the keys right away");
+}
