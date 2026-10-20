@@ -257,6 +257,10 @@
       {
         "title": "Tus atajos, a tu gusto",
         "said": "en Ajustes › Atajos de teclado puedes cambiar o quitar cada uno, y si otro programa ya usa una combinación, CoPanda te sugiere otras libres."
+      },
+      {
+        "title": "Imágenes que llegan a la terminal",
+        "said": "en Windows, si copias una imagen y pasas a una terminal, Ctrl+V pega la ruta del archivo lista para usar; al volver a cualquier otra app, se pega la imagen como siempre."
       }
     ],
     "en": [
@@ -271,6 +275,10 @@
       {
         "title": "Your shortcuts, your way",
         "said": "in Settings › Keyboard shortcuts you can change or remove each one, and if another program already uses a combination, CoPanda suggests free ones."
+      },
+      {
+        "title": "Pictures that reach the terminal",
+        "said": "on Windows, if you copy a picture and switch to a terminal, Ctrl+V pastes the path to its file, ready to use; back in any other app, the picture pastes as always."
       }
     ]
   }

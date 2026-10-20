@@ -328,7 +328,7 @@ fn aside(name: &str) -> std::path::PathBuf {
 #[test]
 fn an_engine_that_started_closes_and_closing_it_twice_is_no_error() {
     let dir = aside("closing");
-    let engine = Engine::start(&dir.join("history.db"), |_| {}, |_| {}).expect("an engine");
+    let engine = Engine::start(&dir.join("history.db"), |_, _| {}, |_| {}).expect("an engine");
     let started = std::time::Instant::now();
     engine.close();
     engine.close();
@@ -343,7 +343,7 @@ fn an_engine_that_started_closes_and_closing_it_twice_is_no_error() {
 #[test]
 fn an_engine_nobody_closed_is_still_closed_by_dropping_it() {
     let dir = aside("dropping");
-    let engine = Engine::start(&dir.join("history.db"), |_| {}, |_| {}).expect("an engine");
+    let engine = Engine::start(&dir.join("history.db"), |_, _| {}, |_| {}).expect("an engine");
     let started = std::time::Instant::now();
     drop(engine);
     assert!(
@@ -680,4 +680,17 @@ fn a_counted_folder_is_told_and_a_missing_one_is_not() {
     std::fs::remove_dir_all(&folder).expect("gone");
     store.enqueue(id, "folder").expect("queued again");
     assert!(told(&store, &thumbs).is_empty());
+}
+
+#[test]
+fn a_write_given_up_is_handed_back_to_the_watcher() {
+    let dir = aside("abandoning");
+    let engine = Engine::start(&dir.join("history.db"), |_, _| {}, |_| {}).expect("an engine");
+    let _ = engine.writing();
+    assert!(
+        engine.abandoned(),
+        "giving a write up needs no clipboard, only the watcher"
+    );
+    drop(engine);
+    let _ = std::fs::remove_dir_all(&dir);
 }

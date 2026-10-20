@@ -6,11 +6,12 @@ use raw_window_handle::RawWindowHandle;
 use std::path::{Path, PathBuf};
 
 pub use platform::{
-    Dragged, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting, content_of,
-    data_dir, drag_out, dress, forward, ground, hand_back, host, in_front, keep_awake, media_of,
-    ocr_available, open_link, open_path, ours_up_front, paste_into, pointer, read_stuck,
-    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable,
-    utc_offset_at, watch_start,
+    Dragged, Listening, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting,
+    content_of, data_dir, drag_out, dress, forward, front, ground, hand_back, host, in_front,
+    keep_awake, media_of, ocr_available, on_foreground, open_link, open_path, ours_up_front,
+    paste_into, pointer, read_stuck, rebuilds_whole, sequence, system_is_light, text_in,
+    thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable, utc_offset_at, watch_start,
+    worn_sequence,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -45,6 +46,30 @@ mod platform {
     pub use cp_core::watching::Watching;
     pub fn watch_start(on_fresh: impl FnMut() + Send + 'static) -> Watching {
         cp_win::watching::every(cp_core::watching::EVERY, on_fresh)
+    }
+
+    pub fn sequence() -> Option<i64> {
+        cp_win_sys::clipboard::sequence()
+    }
+
+    pub fn front() -> isize {
+        cp_win_sys::frontmost::foreground().map_or(0, |window| window.0 as isize)
+    }
+
+    pub fn worn_sequence() -> Option<i64> {
+        let sequence = cp_win_sys::clipboard::sequence()?;
+        let ours = cp_win_sys::clipboard::holds(cp_win::restore::WORN);
+        (ours && cp_win_sys::clipboard::sequence() == Some(sequence)).then_some(sequence)
+    }
+
+    pub fn rebuilds_whole(item: &Item) -> bool {
+        cp_win::restore::rebuilt_whole(item)
+    }
+
+    pub type Listening = cp_win_sys::foreground::Listening;
+
+    pub fn on_foreground(heard: impl Fn(isize) + 'static) -> Option<Listening> {
+        cp_win_sys::foreground::listen(heard)
     }
 
     pub fn data_dir() -> Option<PathBuf> {
@@ -117,6 +142,7 @@ mod platform {
         landing: &crate::landing::Landing,
         starting: impl FnOnce(),
         ours: impl FnOnce(),
+        abandon: impl FnOnce(),
     ) -> Landed {
         let mut ready = cp_win::restore::ready_for(item);
         match landing.offer() {
@@ -124,11 +150,21 @@ mod platform {
             crate::landing::Offer::Text(text) => ready.offer_text(&text),
             crate::landing::Offer::Nothing => {}
         }
+        if landing.only_over.is_some() {
+            ready.unrecorded();
+        }
         starting();
         let Some(clipboard) = Clipboard::to_write() else {
             ours();
             return Landed::Nothing;
         };
+        if let Some(over) = landing.only_over
+            && cp_win_sys::clipboard::sequence() != Some(over)
+        {
+            drop(clipboard);
+            abandon();
+            return Landed::Nothing;
+        }
         let landed = match cp_win::restore::place(&clipboard, &ready) {
             cp_win::restore::Restored::Written {
                 formats,
@@ -272,6 +308,28 @@ mod platform {
         cp_mac::watching::every(cp_core::watching::EVERY, on_fresh)
     }
 
+    pub fn sequence() -> Option<i64> {
+        None
+    }
+
+    pub fn front() -> isize {
+        0
+    }
+
+    pub fn worn_sequence() -> Option<i64> {
+        None
+    }
+
+    pub fn rebuilds_whole(_item: &Item) -> bool {
+        false
+    }
+
+    pub struct Listening;
+
+    pub fn on_foreground(_heard: impl Fn(isize) + 'static) -> Option<Listening> {
+        None
+    }
+
     pub fn data_dir() -> Option<PathBuf> {
         cp_mac_sys::paths::data_dir()
     }
@@ -341,6 +399,7 @@ mod platform {
         landing: &crate::landing::Landing,
         starting: impl FnOnce(),
         ours: impl FnOnce(),
+        _abandon: impl FnOnce(),
     ) -> Landed {
         let offered = match landing.offer() {
             crate::landing::Offer::Text(text) => Some(text),

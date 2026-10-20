@@ -60,6 +60,7 @@ pub fn insist<T>(
 pub struct Watcher {
     last: Option<i64>,
     ours: Option<(i64, Option<i64>)>,
+    before_writing: Option<i64>,
     missed: u64,
     cadence: Cadence,
 }
@@ -69,13 +70,21 @@ impl Watcher {
         Self {
             last: None,
             ours: None,
+            before_writing: None,
             missed: 0,
             cadence,
         }
     }
 
     pub fn writing(&mut self, from: i64) {
+        self.before_writing = self.last;
         self.ours = Some((from, None));
+    }
+
+    pub fn abandoned(&mut self) {
+        if self.ours.take().is_some() {
+            self.last = self.before_writing.take();
+        }
     }
 
     pub fn wrote(&mut self, count: i64) {

@@ -104,3 +104,53 @@ fn a_counter_that_goes_backwards_is_a_new_session_not_a_burst() {
     assert_eq!(watcher.tick(3), Seen::Fresh { skipped: Some(0) });
     assert_eq!(watcher.missed(), Some(0));
 }
+
+#[test]
+fn a_write_given_up_lets_the_copy_that_beat_it_be_seen() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    watcher.tick(10);
+    watcher.writing(10);
+    assert_eq!(
+        watcher.tick(11),
+        Seen::Ours,
+        "while writing, the next count looks ours"
+    );
+    watcher.abandoned();
+    assert!(
+        matches!(watcher.tick(11), Seen::Fresh { .. }),
+        "once given up, that same count is someone else's copy"
+    );
+    assert_eq!(watcher.tick(11), Seen::Nothing);
+}
+
+#[test]
+fn a_copy_seen_before_the_write_began_is_not_seen_twice_when_it_is_given_up() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    watcher.tick(10);
+    assert!(matches!(watcher.tick(11), Seen::Fresh { .. }));
+    watcher.writing(11);
+    watcher.abandoned();
+    assert_eq!(
+        watcher.tick(11),
+        Seen::Nothing,
+        "already kept before the write"
+    );
+    watcher.abandoned();
+    assert_eq!(
+        watcher.tick(11),
+        Seen::Nothing,
+        "giving up twice changes nothing"
+    );
+}
+
+#[test]
+fn a_copy_made_before_a_write_began_and_never_ticked_is_seen_once_it_is_given_up() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    watcher.tick(10);
+    watcher.writing(11);
+    watcher.abandoned();
+    assert!(
+        matches!(watcher.tick(11), Seen::Fresh { .. }),
+        "the copy that slipped in before the write is still someone's copy"
+    );
+}

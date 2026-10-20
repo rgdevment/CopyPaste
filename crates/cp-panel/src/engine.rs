@@ -1,3 +1,4 @@
+use crate::dressing::Copied;
 use crate::here;
 use crate::note::note;
 use cp_core::capture::{Captured, Unreadable};
@@ -19,7 +20,7 @@ pub struct Engine {
 impl Engine {
     pub fn start(
         db: &Path,
-        fresh: impl Fn(i64) + Send + 'static,
+        fresh: impl Fn(i64, Option<Copied>) + Send + 'static,
         changed: impl Fn(i64) + Send + 'static,
     ) -> Result<Self, cp_store::Error> {
         let store = Store::open(db)?;
@@ -27,9 +28,9 @@ impl Engine {
         let waking = rest.clone();
         let mut notice = Notice::default();
         let watching = here::watch_start(move || {
-            if let Some(id) = kept(&store, &mut notice) {
+            if let Some((id, copied)) = kept(&store, &mut notice) {
                 waking.wake();
-                fresh(id);
+                fresh(id, copied);
             }
         });
         let errands = errands(db, rest.clone(), Box::new(changed));
@@ -62,6 +63,10 @@ impl Engine {
 
     pub fn ours(&self) -> bool {
         self.watching.ours()
+    }
+
+    pub fn abandoned(&self) -> bool {
+        self.watching.abandoned()
     }
 }
 
@@ -417,10 +422,18 @@ fn give_up(store: &Store, id: i64, job: &str, why: &str, at: i64) -> bool {
     }
 }
 
-fn kept(store: &Store, notice: &mut Notice) -> Option<i64> {
+fn kept(store: &Store, notice: &mut Notice) -> Option<(i64, Option<Copied>)> {
+    let before = here::sequence();
     let item = taken(here::capture_insisting(), here::unreadable, notice)?;
     let from = here::in_front();
-    keep(store, &item, crate::app::now_ms(), from.as_deref())
+    let id = keep(store, &item, crate::app::now_ms(), from.as_deref())?;
+    let copied = Copied::of(before, here::sequence(), id, &item);
+    if copied.is_none() && item.kind == Some(Kind::Image) && before.is_some() {
+        note(&format!(
+            "{id} changed while it was read, so a terminal gets no path for it"
+        ));
+    }
+    Some((id, copied))
 }
 
 fn taken(

@@ -330,3 +330,95 @@ fn ids_the_clipboard_refused_are_counted_against_what_it_was_given() {
     assert_eq!(ready.wanted(), 2);
     assert_eq!(ready.fitted(1), (1, 2));
 }
+
+#[test]
+fn a_write_kept_out_of_the_history_says_so_once_per_door() {
+    let mut ready = an_image();
+    let before = ready.wanted();
+    ready.unrecorded();
+    ready.unrecorded();
+    assert_eq!(ready.wanted(), before + UNRECORDED.len() + 2);
+    let worn = id_of(WORN).expect("a format the system registers");
+    assert!(ready.offers(worn), "the write can be told apart as ours");
+    let unwatched = id_of(UNWATCHED).expect("a format the system registers");
+    assert!(
+        ready.offers(unwatched),
+        "other clipboard managers look away too"
+    );
+    for name in UNRECORDED {
+        let id = id_of(name).expect("a format the system registers");
+        assert!(
+            ready
+                .owned
+                .iter()
+                .any(|(kept, bytes)| *kept == id && *bytes == 0u32.to_le_bytes())
+        );
+    }
+    assert!(ready.offers(CF_DIB), "the picture itself stays");
+}
+
+fn announced(id: &str) -> Format {
+    Format {
+        id: id.into(),
+        payload: Payload::Announced { size: Some(10) },
+    }
+}
+
+#[test]
+fn a_plain_screenshot_goes_back_exactly_as_it_came() {
+    let png = image_bytes();
+    let screenshot = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![
+            inline(PNG, &png),
+            announced("CF_DIBV5"),
+            announced("CF_BITMAP"),
+        ],
+    };
+    assert!(rebuilt_whole(&screenshot));
+}
+
+#[test]
+fn a_picture_that_carried_more_than_its_pixels_cannot_be_rebuilt_whole() {
+    let png = image_bytes();
+    let slide = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![inline(PNG, &png), announced("Art::GVML ClipFormat")],
+    };
+    assert!(!rebuilt_whole(&slide));
+    let unread = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![announced(PNG), announced("CF_DIB")],
+    };
+    assert!(
+        !rebuilt_whole(&unread),
+        "with no pixels kept there is nothing to rebuild"
+    );
+    let too_big = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![Format {
+            id: PNG.into(),
+            payload: Payload::TooBig { size: 1 << 30 },
+        }],
+    };
+    assert!(!rebuilt_whole(&too_big));
+}
+
+#[test]
+fn a_snipping_tool_screenshot_with_its_clipboard_plumbing_goes_back_whole() {
+    let png = image_bytes();
+    let snip = Item {
+        kind: Some(cp_core::kind::Kind::Image),
+        formats: vec![
+            announced("CF_BITMAP"),
+            announced("CF_DIB"),
+            announced("CF_DIBV5"),
+            inline("CanIncludeInClipboardHistory", &1u32.to_le_bytes()),
+            announced("CanUploadToCloudClipboard"),
+            announced("DataObject"),
+            announced("Ole Private Data"),
+            inline(PNG, &png),
+        ],
+    };
+    assert!(rebuilt_whole(&snip));
+}

@@ -224,3 +224,27 @@ fn closing_in_the_middle_of_a_long_period_is_prompt() {
     assert!(watching.close());
     assert!(started.elapsed() < Duration::from_millis(400));
 }
+
+#[test]
+fn a_copy_that_lands_while_a_write_is_given_up_still_wakes_the_watcher() {
+    let count = Arc::new(AtomicI64::new(30));
+    let seen = Arc::new(AtomicUsize::new(0));
+    let watching = Watching::every(
+        Cadence::Opaque,
+        QUICK,
+        NAP,
+        at(&count),
+        never_busy(),
+        counted(&seen),
+    );
+    std::thread::sleep(QUICK * 4);
+    assert!(watching.writing());
+    count.store(31, Ordering::Relaxed);
+    std::thread::sleep(QUICK * 4);
+    assert!(watching.abandoned());
+    assert!(
+        waited_for(&seen, 1) >= 1,
+        "the copy that beat the write is kept"
+    );
+    assert!(watching.close());
+}

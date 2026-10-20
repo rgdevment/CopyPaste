@@ -6,6 +6,7 @@ pub mod clock;
 pub mod com;
 pub mod dragging;
 pub mod files;
+pub mod foreground;
 pub mod formats;
 pub mod frontmost;
 pub mod keystroke;

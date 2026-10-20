@@ -80,6 +80,14 @@ impl Watching {
         true
     }
 
+    pub fn abandoned(&self) -> bool {
+        let Ok(mut watcher) = self.watcher.lock() else {
+            return false;
+        };
+        watcher.abandoned();
+        true
+    }
+
     pub fn ours(&self) -> bool {
         let Some(count) = (self.count)() else {
             return false;

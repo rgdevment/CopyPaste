@@ -11,6 +11,9 @@ use crate::virtual_files::{self, Materialized};
 const PNG: &str = "PNG";
 const JFIF: &str = "JFIF";
 const DROP_EFFECT: &str = "Preferred DropEffect";
+pub const UNRECORDED: [&str; 2] = ["CanIncludeInClipboardHistory", "CanUploadToCloudClipboard"];
+pub const UNWATCHED: &str = "ExcludeClipboardContentFromMonitorProcessing";
+pub const WORN: &str = "CoPanda Worn";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restored {
@@ -59,9 +62,49 @@ impl Ready {
         self.owned.push((CF_UNICODETEXT, utf16_of(text)));
     }
 
+    pub fn unrecorded(&mut self) {
+        for id in UNRECORDED.iter().filter_map(|name| id_of(name)) {
+            self.owned.retain(|(kept, _)| *kept != id);
+            self.owned.push((id, 0u32.to_le_bytes().to_vec()));
+        }
+        for id in [UNWATCHED, WORN].iter().filter_map(|name| id_of(name)) {
+            self.owned.retain(|(kept, _)| *kept != id);
+            self.owned.push((id, Vec::new()));
+        }
+    }
+
     pub fn offers(&self, id: u32) -> bool {
         self.owned.iter().any(|(kept, _)| *kept == id)
     }
+}
+
+const PICTURE_TWINS: [&str; 6] = [
+    SYNTHETIC_IMAGE,
+    PNG,
+    JFIF,
+    "CF_DIBV5",
+    "CF_DIB",
+    "CF_BITMAP",
+];
+const PLUMBING: [&str; 5] = [
+    "DataObject",
+    "Ole Private Data",
+    "CanIncludeInClipboardHistory",
+    "CanUploadToCloudClipboard",
+    "CF_LOCALE",
+];
+
+pub fn rebuilt_whole(item: &Item) -> bool {
+    let mut picture = false;
+    for format in &item.formats {
+        let held = payload_of(format).is_some();
+        let twin = PICTURE_TWINS.contains(&format.id.as_str());
+        if !held && !twin && !PLUMBING.contains(&format.id.as_str()) {
+            return false;
+        }
+        picture |= held && twin;
+    }
+    picture
 }
 
 pub fn ready_for(item: &Item) -> Ready {

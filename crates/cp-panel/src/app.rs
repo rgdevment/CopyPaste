@@ -34,6 +34,7 @@ pub struct App {
 struct State {
     store: Rc<Store>,
     engine: Option<Rc<crate::engine::Engine>>,
+    dressing: Option<Rc<crate::dressing::Dressing<crate::handing::Shelves>>>,
     ahead: Arc<AtomicIsize>,
     query: String,
     tags: Vec<String>,
@@ -96,6 +97,7 @@ impl App {
         let state = Rc::new(RefCell::new(State {
             store: Rc::new(store),
             engine: None,
+            dressing: None,
             ahead: Arc::new(AtomicIsize::new(0)),
             query: String::new(),
             tags: Vec::new(),
@@ -127,6 +129,10 @@ impl App {
     }
 
     pub fn close(&self) {
+        let dressing = self.state.borrow().dressing.clone();
+        if let Some(dressing) = dressing {
+            dressing.put_back();
+        }
         let engine = self.state.borrow().engine.clone();
         if let Some(engine) = engine {
             engine.close();
@@ -169,11 +175,17 @@ impl App {
     fn keep_watch(&self, ui: slint::Weak<Panel>) {
         let db = self.state.borrow().options.db.clone();
         let drawn = ui.clone();
-        let arrived = move |_| {
+        let latest: crate::dressing::Latest = Arc::new(std::sync::Mutex::new(None));
+        let noted = latest.clone();
+        let arrived = move |_, copied| {
+            if let Ok(mut held) = noted.lock() {
+                *held = copied;
+            }
             let _ = ui.upgrade_in_event_loop(|panel| {
                 if panel.window().is_visible() && !panel.get_sheet_open() {
                     panel.invoke_arrived();
                 }
+                panel.invoke_copied();
             });
         };
         let changed = move |id| {
@@ -182,12 +194,36 @@ impl App {
             });
         };
         match crate::engine::Engine::start(&db, arrived, changed) {
-            Ok(engine) => self.state.borrow_mut().engine = Some(Rc::new(engine)),
+            Ok(engine) => {
+                let engine = Rc::new(engine);
+                self.dress_terminals(&engine, latest);
+                self.state.borrow_mut().engine = Some(engine);
+            }
             Err(why) => crate::note::trouble(
                 cp_core::trouble::Trouble::Unwatched,
                 &format!("nothing watches the clipboard: {why}"),
             ),
         }
+    }
+
+    fn dress_terminals(&self, engine: &Rc<crate::engine::Engine>, latest: crate::dressing::Latest) {
+        if !cfg!(target_os = "windows") {
+            return;
+        }
+        let store = self.state.borrow().store.clone();
+        let shelves = crate::handing::Shelves {
+            store,
+            engine: engine.clone(),
+        };
+        let dressing = crate::dressing::Dressing::start(shelves, latest);
+        if !dressing.listening() {
+            note("nobody hears which window comes forward, so terminals get no image paths");
+        }
+        if let Some(panel) = self.ui.upgrade() {
+            let heard = dressing.clone();
+            panel.on_copied(move || heard.arrived());
+        }
+        self.state.borrow_mut().dressing = Some(dressing);
     }
 
     pub fn ui(&self) -> slint::Weak<Panel> {

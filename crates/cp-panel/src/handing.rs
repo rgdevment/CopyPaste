@@ -22,7 +22,11 @@ fn landing_for(store: &Store, item: &cp_core::item::Item, id: i64, towards: Towa
         label.as_deref(),
         std::time::SystemTime::now(),
     );
-    Landing { towards, files }
+    Landing {
+        towards,
+        files,
+        only_over: None,
+    }
 }
 
 pub fn hand_over(
@@ -43,8 +47,7 @@ pub fn hand_over(
         }
     };
     let landing = landing_for(store, &item, id, towards);
-    let landed = here::to_clipboard(&item, &landing, || starting(engine), || mark(engine));
-    let written = short_of(id, landed);
+    let written = short_of(id, written_over(&item, &landing, engine));
     if written {
         if let Err(why) = store.record_paste(id, crate::app::now_ms()) {
             note(&format!("{id} was pasted and nobody wrote it down: {why}"));
@@ -55,6 +58,74 @@ pub fn hand_over(
         ));
     }
     written
+}
+
+fn written_over(
+    item: &cp_core::item::Item,
+    landing: &Landing,
+    engine: Option<&crate::engine::Engine>,
+) -> here::Landed {
+    here::to_clipboard(
+        item,
+        landing,
+        || starting(engine),
+        || mark(engine),
+        || abandoned(engine),
+    )
+}
+
+fn worn_over(
+    store: &Store,
+    engine: &crate::engine::Engine,
+    id: i64,
+    towards: Towards,
+    over: i64,
+) -> Option<i64> {
+    let item = store.item(id).ok().flatten()?;
+    if !here::rebuilds_whole(&item) {
+        note(&format!(
+            "{id} carries more than its picture, so a terminal gets no path for it"
+        ));
+        return None;
+    }
+    let landing = Landing {
+        only_over: Some(over),
+        ..landing_for(store, &item, id, towards)
+    };
+    if towards == Towards::Terminal && !matches!(landing.offer(), crate::landing::Offer::Text(_)) {
+        note(&format!(
+            "{id} has no file a terminal could take, so it gets no path"
+        ));
+        return None;
+    }
+    let landed = written_over(&item, &landing, Some(engine));
+    if landed == here::Landed::Nothing {
+        return None;
+    }
+    here::worn_sequence()
+}
+
+pub struct Shelves {
+    pub store: std::rc::Rc<Store>,
+    pub engine: std::rc::Rc<crate::engine::Engine>,
+}
+
+impl crate::dressing::Closet for Shelves {
+    fn place(&self, id: i64, towards: Towards, over: i64) -> Option<i64> {
+        worn_over(&self.store, &self.engine, id, towards, over)
+    }
+
+    fn sequence(&self) -> Option<i64> {
+        here::sequence()
+    }
+
+    fn front(&self) -> isize {
+        here::front()
+    }
+
+    fn terminal(&self, window: isize) -> bool {
+        here::towards(window) == Towards::Terminal
+    }
 }
 
 fn glimpse(rendered: Option<cp_core::paste_as::Rendered>) -> String {
@@ -177,15 +248,7 @@ pub fn paste_as(
         return Err(Refused::Unmade);
     };
     let made = rendered.into_item();
-    let written = short_of(
-        id,
-        here::to_clipboard(
-            &made,
-            &Landing::anywhere(),
-            || starting(engine),
-            || mark(engine),
-        ),
-    );
+    let written = short_of(id, written_over(&made, &Landing::anywhere(), engine));
     if written && let Err(why) = store.record_paste(id, crate::app::now_ms()) {
         note(&format!("{id} was pasted and nobody wrote it down: {why}"));
     }
@@ -230,6 +293,14 @@ fn starting(engine: Option<&crate::engine::Engine>) {
     };
     if !engine.writing() {
         note("the start of the clipboard write could not be marked as ours");
+    }
+}
+
+fn abandoned(engine: Option<&crate::engine::Engine>) {
+    if let Some(engine) = engine
+        && !engine.abandoned()
+    {
+        note("a write given up could not be handed back to the watcher");
     }
 }
 

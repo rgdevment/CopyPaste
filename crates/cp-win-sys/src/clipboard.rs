@@ -1,7 +1,7 @@
 use windows::Win32::Foundation::{HGLOBAL, HWND};
 use windows::Win32::System::DataExchange::{
     CloseClipboard, EnumClipboardFormats, GetClipboardData, GetClipboardOwner,
-    GetClipboardSequenceNumber, OpenClipboard,
+    GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
 };
 use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
@@ -251,6 +251,13 @@ pub(crate) fn global_bytes(global: HGLOBAL, up_to: usize) -> Option<Vec<u8>> {
 
     let _ = unsafe { GlobalUnlock(global) };
     Some(bytes)
+}
+
+pub fn holds(name: &str) -> bool {
+    let Some(id) = crate::formats::id_of(name) else {
+        return false;
+    };
+    unsafe { IsClipboardFormatAvailable(id) }.is_ok()
 }
 
 pub fn sequence() -> Option<i64> {
