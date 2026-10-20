@@ -273,16 +273,22 @@ fn leave_when_left(chooser: &Chooser) {
     chooser.window().on_winit_window_event(move |_, event| {
         if let WindowEvent::Focused(false) = event
             && let Some(chooser) = weak.upgrade()
-            && chooser.window().is_visible()
         {
-            let later = chooser.as_weak();
-            slint::Timer::single_shot(Duration::ZERO, move || {
-                if let Some(chooser) = later.upgrade() {
-                    let _ = chooser.hide();
-                }
-            });
+            left(&chooser);
         }
         EventResult::Propagate
+    });
+}
+
+fn left(chooser: &Chooser) {
+    if !chooser.window().is_visible() {
+        return;
+    }
+    let later = chooser.as_weak();
+    slint::Timer::single_shot(Duration::ZERO, move || {
+        if let Some(chooser) = later.upgrade() {
+            let _ = chooser.hide();
+        }
     });
 }
 
