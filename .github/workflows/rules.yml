@@ -101,7 +101,7 @@ jobs:
           persist-credentials: false
       - name: Rust, from rust-toolchain.toml
         run: rustup toolchain install --no-self-update
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: workspace
           save-if: false
@@ -130,7 +130,7 @@ jobs:
           persist-credentials: false
       - name: Rust, from rust-toolchain.toml
         run: rustup toolchain install --no-self-update
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: budget
           save-if: ${{ github.ref == 'refs/heads/main' }}
