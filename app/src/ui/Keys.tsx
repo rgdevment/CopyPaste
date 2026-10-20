@@ -126,7 +126,10 @@ function Shortcut({
       <button
         type="button"
         className="mild"
-        onClick={() => setAsking(!asking)}
+        onClick={() => {
+          setTwice(false);
+          setAsking(!asking);
+        }}
         onKeyDown={(press) => {
           if (!asking) {
             return;

@@ -120,7 +120,7 @@ impl App {
             state,
         };
         app.wire(&panel);
-        app.wire_quick(&panel)?;
+        app.wire_quick(&panel);
         dress_theme(panel.global::<crate::Theme>(), kept);
         refresh(&panel, &app.state);
         Ok((panel, app))
@@ -289,21 +289,21 @@ impl App {
         });
     }
 
-    fn wire_quick(&self, panel: &Panel) -> Result<(), slint::PlatformError> {
+    fn wire_quick(&self, panel: &Panel) {
         let state = self.state.clone();
-        let quick = crate::quick::Quick::start(Rc::new(move || {
+        let quick = crate::quick::Quick::new(Rc::new(move || {
             let state = state.borrow();
             crate::quick::Aim {
                 store: state.store.clone(),
                 engine: state.engine.clone(),
                 kept: state.kept.get(),
             }
-        }))?;
+        }));
         let (plain, ahead) = (quick.clone(), self.state.borrow().ahead.clone());
         panel.on_plain_asked(move || plain.plain(ahead.swap(0, Ordering::Relaxed)));
-        let ahead = self.state.borrow().ahead.clone();
-        panel.on_forms_asked(move || quick.choose(ahead.swap(0, Ordering::Relaxed)));
-        Ok(())
+        let (forms, ahead) = (quick.clone(), self.state.borrow().ahead.clone());
+        panel.on_forms_asked(move || forms.choose(ahead.swap(0, Ordering::Relaxed)));
+        panel.on_quitting(move || quick.ground());
     }
 
     fn wire(&self, panel: &Panel) {

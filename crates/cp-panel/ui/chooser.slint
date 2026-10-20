@@ -20,7 +20,6 @@ export component Chooser inherits Window {
     in property <bool> older;
     in property <bool> newer;
     in-out property <int> current: 0;
-    in-out property <float> shown: 1.0;
     callback chosen(string);
     callback step(int);
     callback dismiss();
@@ -74,9 +73,7 @@ export component Chooser inherits Window {
         border-width: 1px;
         border-color: Theme.selected-edge;
         background: Theme.panel;
-        opacity: Theme.apple ? 1.0 : root.shown;
         clip: true;
-        animate opacity { duration: Theme.appear; easing: ease-out; }
 
         box := VerticalLayout {
             padding: 8px;

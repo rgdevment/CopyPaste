@@ -1323,6 +1323,11 @@ fn plain_from_files_is_where_they_live() {
         ..Default::default()
     };
     assert_eq!(plainest(&files), Some(Form::Path));
+    let named_by_finder = Content {
+        text: Some("a.txt".into()),
+        ..files
+    };
+    assert_eq!(plainest(&named_by_finder), Some(Form::Path));
     assert_eq!(plainest(&Content::default()), None);
     assert_eq!(plainest(&text_of(Kind::Text, "")), None);
 }

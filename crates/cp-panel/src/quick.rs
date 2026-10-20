@@ -4,8 +4,8 @@ use crate::here;
 use crate::note::note;
 use cp_store::{Listed, Store};
 use slint::{ComponentHandle, ModelRc};
-use std::cell::Cell;
-use std::rc::Rc;
+use std::cell::{Cell, OnceCell};
+use std::rc::{Rc, Weak};
 use std::time::Duration;
 
 const WIDE: f64 = 340.0;
@@ -22,7 +22,7 @@ pub struct Aim {
 pub type Reach = Rc<dyn Fn() -> Aim>;
 
 pub struct Quick {
-    chooser: Chooser,
+    chooser: OnceCell<Chooser>,
     reach: Reach,
     back: Cell<usize>,
     ahead: Cell<isize>,
@@ -30,21 +30,21 @@ pub struct Quick {
 }
 
 impl Quick {
-    pub fn start(reach: Reach) -> Result<Rc<Self>, slint::PlatformError> {
-        let quick = Rc::new(Self {
-            chooser: Chooser::new()?,
+    pub fn new(reach: Reach) -> Rc<Self> {
+        Rc::new(Self {
+            chooser: OnceCell::new(),
             reach,
             back: Cell::new(0),
             ahead: Cell::new(0),
             showing: Cell::new(None),
-        });
-        wire(&quick);
-        Ok(quick)
+        })
     }
 
     pub fn plain(&self, ahead: isize) {
+        let ahead = self.aimed(ahead);
+        self.hide();
         let aim = (self.reach)();
-        let Some(row) = newest(&aim.store, 0) else {
+        let Some((row, _)) = newest(&aim.store, 0) else {
             note("nothing to paste plain: the history is empty");
             return;
         };
@@ -54,8 +54,10 @@ impl Quick {
         here::paste_into(
             ahead,
             || {},
-            |sent| {
-                if let here::Sent::Degraded(why) = sent {
+            |sent| match sent {
+                here::Sent::Done => {}
+                here::Sent::Nobody => note("no window was left to paste plain into"),
+                here::Sent::Degraded(why) => {
                     note(&format!(
                         "pasted plain onto the clipboard, unpasted: {why:?}"
                     ));
@@ -64,76 +66,102 @@ impl Quick {
         );
     }
 
-    pub fn choose(&self, ahead: isize) {
+    pub fn choose(self: &Rc<Self>, ahead: isize) {
+        let ahead = self.aimed(ahead);
+        let Some(chooser) = self.chooser() else {
+            return;
+        };
         self.ahead.set(ahead);
         self.back.set(0);
-        if !self.fill() {
+        if !self.fill(chooser) {
             note("nothing to paste as: the history is empty");
             return;
         }
-        let kept = (self.reach)().kept;
-        crate::app::dress_theme(self.chooser.global::<crate::Theme>(), kept);
-        self.chooser.set_complaint(Default::default());
-        self.chooser.set_hints(
+        crate::app::dress_theme(chooser.global::<crate::Theme>(), (self.reach)().kept);
+        chooser.set_complaint(Default::default());
+        chooser.set_hints(
             crate::say::pick(
                 "1-9 · ⏎ pegar · ←→ otro · esc",
                 "1-9 · ⏎ paste · ←→ another · esc",
             )
             .into(),
         );
-        self.appear();
+        appear(chooser);
     }
 
-    fn appear(&self) {
-        place(&self.chooser);
-        if self.chooser.show().is_err() {
-            return;
+    pub fn ground(&self) {
+        if let Some(handle) = self
+            .chooser
+            .get()
+            .and_then(|chooser| crate::app::handle_of(chooser.window()))
+        {
+            here::ground(handle);
         }
-        crate::showing::rescaled(self.chooser.window(), kept_zoom(&self.chooser));
-        place(&self.chooser);
-        if let Some(handle) = crate::app::handle_of(self.chooser.window()) {
-            here::forward(handle);
-        }
-        self.chooser.invoke_focus_keys();
     }
 
-    fn fill(&self) -> bool {
+    fn aimed(&self, ahead: isize) -> isize {
+        let open = self
+            .chooser
+            .get()
+            .is_some_and(|chooser| chooser.window().is_visible());
+        crate::aside::aimed_at(ahead, self.ahead.get(), open)
+    }
+
+    fn hide(&self) {
+        if let Some(chooser) = self.chooser.get() {
+            let _ = chooser.hide();
+        }
+    }
+
+    fn chooser(self: &Rc<Self>) -> Option<&Chooser> {
+        if let Some(chooser) = self.chooser.get() {
+            return Some(chooser);
+        }
+        let chooser = match Chooser::new() {
+            Ok(chooser) => chooser,
+            Err(why) => {
+                note(&format!("the paste as card could not be drawn: {why}"));
+                return None;
+            }
+        };
+        wire(self, &chooser);
+        Some(self.chooser.get_or_init(|| chooser))
+    }
+
+    fn fill(&self, chooser: &Chooser) -> bool {
         let aim = (self.reach)();
         let back = self.back.get();
-        let Some(row) = newest(&aim.store, back) else {
+        let Some((row, older)) = newest(&aim.store, back) else {
             return false;
         };
-        let rows = forms_of(&aim.store, row.id);
-        self.chooser
-            .set_rows(ModelRc::from(Rc::new(slint::VecModel::from(rows))));
-        self.chooser.set_current(0);
-        self.chooser
-            .set_kind(row.kind.map_or("text", cp_core::kind::Kind::as_str).into());
-        self.chooser.set_subject(subject_of(&row).into());
-        self.chooser.set_said_when(
+        chooser.set_rows(ModelRc::from(Rc::new(slint::VecModel::from(forms_of(
+            &aim.store, row.id,
+        )))));
+        chooser.set_current(0);
+        chooser.set_kind(row.kind.map_or("text", cp_core::kind::Kind::as_str).into());
+        chooser.set_subject(subject_of(&row).into());
+        chooser.set_said_when(
             crate::age::age_text(crate::app::now_ms(), crate::view::touched_of(&row)).into(),
         );
-        self.chooser.set_newer(back > 0);
-        self.chooser
-            .set_older(newest(&aim.store, back + 1).is_some());
+        chooser.set_newer(back > 0);
+        chooser.set_older(older);
         self.showing.set(Some(row.id));
         true
     }
 
-    fn step(&self, by: i32) {
+    fn step(&self, chooser: &Chooser, by: i32) {
         let was = self.back.get();
         let Some(back) = was.checked_add_signed(by as isize) else {
             return;
         };
         self.back.set(back);
-        if !self.fill() {
+        if !self.fill(chooser) {
             self.back.set(was);
-            self.fill();
         }
-        place(&self.chooser);
+        place(chooser);
     }
 
-    fn chosen(&self, key: &str) {
+    fn chosen(self: &Rc<Self>, chooser: &Chooser, key: &str) {
         let Some(id) = self.showing.get() else {
             return;
         };
@@ -146,73 +174,91 @@ impl Quick {
             key,
             here::towards(ahead),
         ) {
-            self.complain(crate::say::pick(
-                "no se pudo pegar: el portapapeles está ocupado",
-                "could not paste: the clipboard is busy",
-            ));
+            complain(
+                chooser,
+                crate::say::pick(
+                    "no se pudo pegar: el portapapeles está ocupado",
+                    "could not paste: the clipboard is busy",
+                ),
+            );
             return;
         }
-        let (hiding, later) = (self.chooser.as_weak(), self.chooser.as_weak());
+        let hiding = chooser.as_weak();
         let hide = move || {
             if let Some(chooser) = hiding.upgrade() {
                 let _ = chooser.hide();
             }
         };
+        let later = Rc::downgrade(self);
         here::paste_into(ahead, hide, move |sent| {
-            let Some(chooser) = later.upgrade() else {
+            let Some(chooser) = later
+                .upgrade()
+                .and_then(|quick| quick.chooser.get().map(ComponentHandle::clone_strong))
+            else {
                 return;
             };
             match sent {
                 here::Sent::Done => {}
                 here::Sent::Nobody => {
                     note("no window was left to paste into, it stays on the clipboard");
-                    let _ = chooser.hide();
                 }
                 here::Sent::Degraded(why) => {
                     let said = crate::excuse::why_not(why, crate::say::in_english());
                     note(&format!(
                         "it stays on the clipboard, unpasted: {why:?}: {said}"
                     ));
-                    chooser.set_complaint(said.into());
-                    let _ = chooser.show();
+                    appear(&chooser);
+                    complain(&chooser, said);
                 }
-            }
-        });
-    }
-
-    fn complain(&self, said: &str) {
-        self.chooser.set_complaint(said.into());
-        let weak = self.chooser.as_weak();
-        slint::Timer::single_shot(COMPLAINS_FOR, move || {
-            if let Some(chooser) = weak.upgrade() {
-                chooser.set_complaint(Default::default());
             }
         });
     }
 }
 
-fn wire(quick: &Rc<Quick>) {
-    let chooser = &quick.chooser;
-    let weak = Rc::downgrade(quick);
+fn wire(quick: &Rc<Quick>, chooser: &Chooser) {
+    let (weak, own) = (Rc::downgrade(quick), chooser.as_weak());
     chooser.on_chosen(move |key| {
-        if let Some(quick) = weak.upgrade() {
-            quick.chosen(key.as_str());
+        if let (Some(quick), Some(chooser)) = (weak.upgrade(), own.upgrade()) {
+            quick.chosen(&chooser, key.as_str());
         }
     });
-    let weak = Rc::downgrade(quick);
+    let (weak, own) = (Rc::downgrade(quick), chooser.as_weak());
     chooser.on_step(move |by| {
-        if let Some(quick) = weak.upgrade() {
-            quick.step(by);
+        if let (Some(quick), Some(chooser)) = (weak.upgrade(), own.upgrade()) {
+            quick.step(&chooser, by);
         }
     });
-    let weak = Rc::downgrade(quick);
+    let weak: Weak<Quick> = Rc::downgrade(quick);
     chooser.on_dismiss(move || {
         if let Some(quick) = weak.upgrade() {
-            let _ = quick.chooser.hide();
+            quick.hide();
             here::hand_back(quick.ahead.get());
         }
     });
     leave_when_left(chooser);
+}
+
+fn appear(chooser: &Chooser) {
+    place(chooser);
+    if chooser.show().is_err() {
+        return;
+    }
+    crate::showing::rescaled(chooser.window(), kept_zoom(chooser));
+    place(chooser);
+    if let Some(handle) = crate::app::handle_of(chooser.window()) {
+        here::forward(handle);
+    }
+    chooser.invoke_focus_keys();
+}
+
+fn complain(chooser: &Chooser, said: &str) {
+    chooser.set_complaint(said.into());
+    let weak = chooser.as_weak();
+    slint::Timer::single_shot(COMPLAINS_FOR, move || {
+        if let Some(chooser) = weak.upgrade() {
+            chooser.set_complaint(Default::default());
+        }
+    });
 }
 
 fn leave_when_left(chooser: &Chooser) {

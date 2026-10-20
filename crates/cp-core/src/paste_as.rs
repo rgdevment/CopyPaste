@@ -209,13 +209,13 @@ pub fn plainest(content: &Content) -> Option<Form> {
     if content.image.is_some() && read {
         return Some(Form::ImageOcr);
     }
+    if !content.paths.is_empty() {
+        return Some(Form::Path);
+    }
     if content.text.as_deref().is_some_and(|text| !text.is_empty()) {
         return Some(Form::PlainText);
     }
-    if read {
-        return Some(Form::ImageOcr);
-    }
-    (!content.paths.is_empty()).then_some(Form::Path)
+    read.then_some(Form::ImageOcr)
 }
 
 pub fn render(form: Form, content: &Content) -> Option<Rendered> {

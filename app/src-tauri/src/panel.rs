@@ -291,7 +291,10 @@ pub fn choose<R: Runtime>(app: &AppHandle<R>) {
 
 fn ask<R: Runtime>(app: &AppHandle<R>, what: &str) {
     allow(app);
-    if let Err(Said::Broken) = say(app, what) {
+    if say(app, what).is_err() {
+        crate::note::note(&format!(
+            "the panel was not listening, so «{what}» went unanswered and it is brought back"
+        ));
         bring_back(app);
     }
 }

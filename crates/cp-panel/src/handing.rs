@@ -156,9 +156,12 @@ pub fn paste_as(
     written
 }
 
-pub fn newest(store: &Store, back: usize) -> Option<cp_store::Listed> {
-    match store.list(&cp_store::Filter::default(), back + 1, None) {
-        Ok(page) => page.rows.into_iter().nth(back),
+pub fn newest(store: &Store, back: usize) -> Option<(cp_store::Listed, bool)> {
+    match store.list(&cp_store::Filter::default(), back + 2, None) {
+        Ok(page) => {
+            let older = page.rows.len() > back + 1;
+            page.rows.into_iter().nth(back).map(|row| (row, older))
+        }
         Err(why) => {
             note(&format!(
                 "the newest in the history could not be read: {why}"

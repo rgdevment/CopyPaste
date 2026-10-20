@@ -64,10 +64,12 @@ pub fn listen(
                     crate::say::adopt_english(kept.english);
                     let (aim, plain) = (ahead.clone(), said.trim() == "plain");
                     let _ = ui.upgrade_in_event_loop(move |panel| {
-                        if panel.window().is_visible() {
+                        let showing = panel.window().is_visible();
+                        let before = aim.load(Ordering::Relaxed);
+                        aim.store(aimed_at(in_front, before, showing), Ordering::Relaxed);
+                        if showing {
                             vanish(&panel);
                         }
-                        aim.store(in_front, Ordering::Relaxed);
                         if plain {
                             panel.invoke_plain_asked();
                         } else {
@@ -87,6 +89,7 @@ pub fn listen(
             }
         }
         let _ = ui.upgrade_in_event_loop(|panel| {
+            panel.invoke_quitting();
             if let Some(handle) = handle_of(panel.window()) {
                 here::ground(handle);
             }
