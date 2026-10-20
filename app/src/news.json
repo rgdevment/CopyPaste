@@ -242,5 +242,36 @@
         "said": "if you open CoPanda while it is already running, its help stays in front of your other windows."
       }
     ]
+  },
+  {
+    "version": "3.4.0",
+    "es": [
+      {
+        "title": "Texto plano sin abrir nada",
+        "said": "con Alt+Shift+V (⌃⇧V en Mac) pegas lo último que copiaste solo como texto, sin formato, donde estés escribiendo."
+      },
+      {
+        "title": "Pegar como, a mano",
+        "said": "con Ctrl+Alt+P (⌃⌥P en Mac) aparece junto al puntero una tarjeta con todas las formas de pegar lo último; eliges con un número y con las flechas llegas a lo anterior."
+      },
+      {
+        "title": "Tus atajos, a tu gusto",
+        "said": "en Ajustes › Atajos de teclado puedes cambiar o quitar cada uno, y si otro programa ya usa una combinación, CoPanda te sugiere otras libres."
+      }
+    ],
+    "en": [
+      {
+        "title": "Plain text without opening anything",
+        "said": "Alt+Shift+V (⌃⇧V on a Mac) pastes the last thing you copied as text alone, no formatting, wherever you are typing."
+      },
+      {
+        "title": "Paste as, right at hand",
+        "said": "Ctrl+Alt+P (⌃⌥P on a Mac) shows a card next to the pointer with every way to paste the last thing; pick one with a number, and the arrows reach what came before."
+      },
+      {
+        "title": "Your shortcuts, your way",
+        "said": "in Settings › Keyboard shortcuts you can change or remove each one, and if another program already uses a combination, CoPanda suggests free ones."
+      }
+    ]
   }
 ]
