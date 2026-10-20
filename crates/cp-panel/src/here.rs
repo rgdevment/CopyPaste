@@ -7,11 +7,11 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     Dragged, Listening, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting,
-    content_of, data_dir, drag_out, dress, forward, front, ground, hand_back, host, in_front,
-    keep_awake, media_of, ocr_available, on_foreground, open_link, open_path, ours_up_front,
-    paste_into, pointer, read_stuck, rebuilds_whole, sequence, system_is_light, text_in,
-    thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable, utc_offset_at, watch_start,
-    worn_sequence,
+    content_of, data_dir, drag_out, dress, forward, front, ground, hand_back, holds_front, host,
+    in_front, keep_awake, media_of, ocr_available, on_foreground, open_link, open_path,
+    ours_up_front, paste_into, pointer, read_stuck, rebuilds_whole, screen_of, sequence,
+    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable,
+    utc_offset_at, watch_start, worn_sequence,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -54,6 +54,32 @@ mod platform {
 
     pub fn front() -> isize {
         cp_win_sys::frontmost::foreground().map_or(0, |window| window.0 as isize)
+    }
+
+    pub fn screen_of(handle: RawWindowHandle) -> Option<super::Pointer> {
+        let RawWindowHandle::Win32(win32) = handle else {
+            return None;
+        };
+        let spot = cp_win_sys::pointer::spot_of(win32.hwnd.get())?;
+        Some(super::Pointer {
+            at: (f64::from(spot.x), f64::from(spot.y)),
+            area: crate::placing::Area {
+                left: f64::from(spot.left),
+                top: f64::from(spot.top),
+                right: f64::from(spot.right),
+                bottom: f64::from(spot.bottom),
+            },
+            physical: true,
+            scale: spot.scale,
+        })
+    }
+
+    pub fn holds_front(handle: RawWindowHandle) -> bool {
+        let RawWindowHandle::Win32(win32) = handle else {
+            return true;
+        };
+        cp_win_sys::frontmost::target_at(win32.hwnd.get())
+            .is_some_and(|ours| cp_win_sys::frontmost::foreground() == Some(ours.window))
     }
 
     pub fn worn_sequence() -> Option<i64> {
@@ -225,8 +251,13 @@ mod platform {
         let RawWindowHandle::Win32(win32) = handle else {
             return;
         };
-        if let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get()) {
-            cp_win_sys::frontmost::bring_forward(target.window);
+        let Some(target) = cp_win_sys::frontmost::target_at(win32.hwnd.get()) else {
+            return;
+        };
+        if !cp_win_sys::frontmost::pull_forward(target.window) {
+            crate::note::note(
+                "Windows would not bring our window forward, so its keys stay behind",
+            );
         }
     }
 
@@ -314,6 +345,14 @@ mod platform {
 
     pub fn front() -> isize {
         0
+    }
+
+    pub fn holds_front(_handle: RawWindowHandle) -> bool {
+        true
+    }
+
+    pub fn screen_of(_handle: RawWindowHandle) -> Option<super::Pointer> {
+        None
     }
 
     pub fn worn_sequence() -> Option<i64> {

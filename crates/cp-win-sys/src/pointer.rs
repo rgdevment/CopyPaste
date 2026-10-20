@@ -1,6 +1,7 @@
-use windows::Win32::Foundation::POINT;
+use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromPoint,
+    GetMonitorInfoW, HMONITOR, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromPoint,
+    MonitorFromWindow,
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
@@ -22,6 +23,15 @@ pub fn spot() -> Option<Spot> {
     let mut at = POINT::default();
     unsafe { GetCursorPos(&raw mut at) }.ok()?;
     let monitor = unsafe { MonitorFromPoint(at, MONITOR_DEFAULTTONEAREST) };
+    spot_on(monitor, at)
+}
+
+pub fn spot_of(window: isize) -> Option<Spot> {
+    let monitor = unsafe { MonitorFromWindow(HWND(window as *mut _), MONITOR_DEFAULTTONEAREST) };
+    spot_on(monitor, POINT::default())
+}
+
+fn spot_on(monitor: HMONITOR, at: POINT) -> Option<Spot> {
     let mut info = MONITORINFO {
         cbSize: u32::try_from(size_of::<MONITORINFO>()).ok()?,
         ..Default::default()

@@ -144,8 +144,14 @@ fn the_arrows_walk_back_through_the_history_and_stop_at_both_ends() {
     let bench = bench(&["older", "newest"]);
     bench.quick.choose();
     let chooser = card(&bench);
+    let at = chooser.window().position();
     press(&chooser, Key::LeftArrow);
     assert_eq!(chooser.get_subject(), "older");
+    assert_eq!(
+        chooser.window().position(),
+        at,
+        "the card stays where it opened"
+    );
     assert!(chooser.get_newer());
     assert!(!chooser.get_older());
     press(&chooser, Key::LeftArrow);
@@ -298,16 +304,28 @@ fn losing_the_focus_puts_the_card_away_on_the_next_turn() {
     let bench = bench(&["newest"]);
     bench.quick.choose();
     let chooser = card(&bench);
-    left(&chooser);
+    bench.ahead.store(42, Ordering::Relaxed);
+    left(&chooser, bench.ahead.clone(), || false);
     assert!(
         chooser.window().is_visible(),
         "not in the middle of the event"
     );
     tick(1);
+    assert_eq!(
+        bench.ahead.load(Ordering::Relaxed),
+        0,
+        "clicking elsewhere forgets where it was going, once the switch is over"
+    );
     assert!(!chooser.window().is_visible());
-    left(&chooser);
+    bench.ahead.store(42, Ordering::Relaxed);
+    left(&chooser, bench.ahead.clone(), || false);
     tick(1);
     assert!(!chooser.window().is_visible());
+    assert_eq!(
+        bench.ahead.load(Ordering::Relaxed),
+        42,
+        "a card already put away by us keeps the target for the paste in flight"
+    );
 }
 
 #[test]
@@ -317,4 +335,42 @@ fn putting_the_card_down_on_quitting_is_safe_drawn_or_not() {
     let drawn = bench(&["newest"]);
     drawn.quick.choose();
     drawn.quick.ground();
+}
+
+#[test]
+fn the_card_is_drawn_before_it_is_ever_asked_for_and_stays_hidden() {
+    let bench = bench(&["newest"]);
+    assert!(bench.quick.chooser.get().is_none());
+    assert!(bench.quick.draw());
+    let chooser = card(&bench);
+    assert!(!chooser.window().is_visible(), "drawn, not shown");
+    assert!(bench.quick.draw(), "drawing twice keeps the same card");
+    bench.quick.choose();
+    assert!(card(&bench).window().is_visible());
+}
+
+#[test]
+fn the_card_comes_forward_in_the_same_turn_it_shows() {
+    let bench = bench(&["newest"]);
+    bench.quick.draw();
+    bench.quick.choose();
+    let chooser = card(&bench);
+    assert!(chooser.window().is_visible());
+    assert_eq!(chooser.get_current(), 0, "ready for the keys right away");
+}
+
+#[test]
+fn leaving_the_card_for_a_window_of_our_own_keeps_where_it_was_going() {
+    let bench = bench(&["newest"]);
+    bench.quick.choose();
+    let chooser = card(&bench);
+    bench.ahead.store(42, Ordering::Relaxed);
+    left(&chooser, bench.ahead.clone(), || true);
+    assert_eq!(
+        bench.ahead.load(Ordering::Relaxed),
+        42,
+        "the panel opened over the card still pastes where the user was"
+    );
+    tick(1);
+    assert!(!chooser.window().is_visible());
 }

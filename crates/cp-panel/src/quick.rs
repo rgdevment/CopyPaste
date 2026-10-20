@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::time::Duration;
 
 const COMPLAINS_FOR: Duration = Duration::from_millis(2_200);
+const LOOKS_AGAIN: Duration = Duration::from_millis(150);
 
 pub struct Aim {
     pub store: Rc<Store>,
@@ -99,6 +100,10 @@ impl Quick {
         appear(chooser);
     }
 
+    pub fn draw(self: &Rc<Self>) -> bool {
+        self.chooser().is_some()
+    }
+
     pub fn ground(&self) {
         if let Some(handle) = self
             .chooser
@@ -166,8 +171,9 @@ impl Quick {
         self.back.set(back);
         if !self.fill(chooser) {
             self.back.set(was);
+            return;
         }
-        place(chooser);
+        crate::showing::kept_inside(chooser.window(), size_of(chooser));
     }
 
     fn chosen(self: &Rc<Self>, chooser: &Chooser, key: &str) {
@@ -240,7 +246,7 @@ fn wire(quick: &Rc<Quick>, chooser: &Chooser) {
             here::hand_back(quick.ahead.swap(0, Ordering::Relaxed));
         }
     });
-    leave_when_left(chooser);
+    leave_when_left(chooser, quick.ahead.clone());
 }
 
 fn appear(chooser: &Chooser) {
@@ -250,9 +256,34 @@ fn appear(chooser: &Chooser) {
     }
     crate::showing::rescaled(chooser.window(), kept_zoom(chooser));
     place(chooser);
-    if let Some(handle) = crate::app::handle_of(chooser.window()) {
-        here::forward(handle);
+    match crate::app::handle_of(chooser.window()) {
+        Some(handle) => here::forward(handle),
+        None => note("the paste as card had no window yet to bring forward"),
     }
+    chooser.invoke_focus_keys();
+    let later = chooser.as_weak();
+    slint::Timer::single_shot(LOOKS_AGAIN, move || {
+        if let Some(chooser) = later.upgrade() {
+            still_ahead(&chooser);
+        }
+    });
+}
+
+fn still_ahead(chooser: &Chooser) {
+    if !chooser.window().is_visible() {
+        return;
+    }
+    let Some(handle) = crate::app::handle_of(chooser.window()) else {
+        return;
+    };
+    if here::holds_front(handle) {
+        return;
+    }
+    note(&format!(
+        "the paste as card showed but {} kept the keys, so it is brought forward again",
+        whoever_is_in_front()
+    ));
+    here::forward(handle);
     chooser.invoke_focus_keys();
 }
 
@@ -266,7 +297,7 @@ fn complain(chooser: &Chooser, said: &str) {
     });
 }
 
-fn leave_when_left(chooser: &Chooser) {
+fn leave_when_left(chooser: &Chooser, ahead: Arc<AtomicIsize>) {
     use i_slint_backend_winit::winit::event::WindowEvent;
     use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
     let weak = chooser.as_weak();
@@ -274,22 +305,33 @@ fn leave_when_left(chooser: &Chooser) {
         if let WindowEvent::Focused(false) = event
             && let Some(chooser) = weak.upgrade()
         {
-            left(&chooser);
+            left(&chooser, ahead.clone(), here::activated);
         }
         EventResult::Propagate
     });
 }
 
-fn left(chooser: &Chooser) {
+fn left(chooser: &Chooser, ahead: Arc<AtomicIsize>, ours: impl Fn() -> bool + 'static) {
     if !chooser.window().is_visible() {
         return;
     }
     let later = chooser.as_weak();
     slint::Timer::single_shot(Duration::ZERO, move || {
+        if !ours() {
+            ahead.store(0, Ordering::Relaxed);
+            note(&format!(
+                "the paste as card was left for {}",
+                whoever_is_in_front()
+            ));
+        }
         if let Some(chooser) = later.upgrade() {
             let _ = chooser.hide();
         }
     });
+}
+
+fn whoever_is_in_front() -> String {
+    here::in_front().unwrap_or_else(|| "another app".to_owned())
 }
 
 fn kept_zoom(chooser: &Chooser) -> f32 {
@@ -309,13 +351,16 @@ fn subject_of(row: &Listed) -> String {
     }
 }
 
-fn place(chooser: &Chooser) {
+fn size_of(chooser: &Chooser) -> (f64, f64) {
     let zoom = f64::from(kept_zoom(chooser));
-    let size = (
+    (
         f64::from(chooser.get_wide()) * zoom,
         f64::from(chooser.get_tall()) * zoom,
-    );
-    crate::showing::beside_pointer(chooser.window(), size);
+    )
+}
+
+fn place(chooser: &Chooser) {
+    crate::showing::beside_pointer(chooser.window(), size_of(chooser));
 }
 
 #[cfg(test)]

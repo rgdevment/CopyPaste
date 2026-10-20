@@ -24,6 +24,23 @@ pub fn place(panel: &Panel) {
     beside_pointer(panel.window(), size);
 }
 
+pub fn kept_inside(window: &slint::Window, (width, height): (f64, f64)) {
+    let Some(screen) = crate::app::handle_of(window).and_then(crate::here::screen_of) else {
+        return;
+    };
+    let now = window.position();
+    let (x, y) = crate::placing::kept_within(
+        (f64::from(now.x), f64::from(now.y)),
+        (width * screen.scale, height * screen.scale),
+        screen.area,
+    );
+    #[allow(clippy::cast_possible_truncation)]
+    window.set_position(slint::PhysicalPosition::new(
+        x.round() as i32,
+        y.round() as i32,
+    ));
+}
+
 pub fn beside_pointer(window: &slint::Window, (width, height): (f64, f64)) {
     let Some(pointer) = crate::here::pointer() else {
         return;

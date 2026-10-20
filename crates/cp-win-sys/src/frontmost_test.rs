@@ -72,3 +72,8 @@ fn neither_the_panel_nor_its_host_is_ever_where_a_paste_goes() {
     assert!(!is_one_of(Some(30), &[10, 20]));
     assert!(!is_one_of(None, &[10, 20]));
 }
+
+#[test]
+fn a_window_that_is_gone_is_never_pulled_forward() {
+    assert!(!pull_forward(HWND(std::ptr::null_mut())));
+}

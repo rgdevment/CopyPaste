@@ -99,6 +99,28 @@ pub fn bring_forward(window: HWND) -> bool {
     unsafe { SetForegroundWindow(window) }.as_bool()
 }
 
+pub fn pull_forward(window: HWND) -> bool {
+    let _ = bring_forward(window);
+    if foreground() == Some(window) {
+        return true;
+    }
+    let Some(ahead) = foreground() else {
+        return false;
+    };
+    if unsafe { windows::Win32::UI::WindowsAndMessaging::IsHungAppWindow(ahead) }.as_bool() {
+        return false;
+    }
+    let thread =
+        unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(ahead, None) };
+    let Some(attached) = Attached::to(thread) else {
+        return false;
+    };
+    let _ = bring_forward(window);
+    let _ = attached.focus_on(window);
+    drop(attached);
+    foreground() == Some(window)
+}
+
 pub fn answers(window: HWND, patience_ms: u32) -> bool {
     let mut ignored = 0usize;
 
