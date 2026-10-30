@@ -2,7 +2,7 @@
 
 <!-- Written by `npm run notices`. Do not edit by hand. -->
 
-The licence texts of the 425 crates named in
+The licence texts of the 431 crates named in
 [THIRD-PARTY-BUNDLED.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY-BUNDLED.md), each written once with
 the crates that carry it: 254 texts. A text is read in full from the
 crate as it is published, from its licence, copying and notice files and its
@@ -2647,7 +2647,7 @@ limitations under the License.
 
 ## Text 37
 
-Written out for `clipboard-win` 5.4.1, from the licence the manifest declares: the crate ships no licence file.
+Written out for `clipboard-win` 5.4.3, from the licence the manifest declares: the crate ships no licence file.
 
 ```text
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -11288,7 +11288,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 166
 
-Carried by `pulldown-cmark` 0.13.4.
+Carried by `pulldown-cmark` 0.13.6.
 
 ```text
 The MIT License
@@ -14167,7 +14167,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Text 221
 
-Carried by `tokio` 1.54.0, `tokio-util` 0.7.20.
+Carried by `tokio` 1.54.1, `tokio-util` 0.7.20.
 
 ```text
 MIT License
@@ -15532,7 +15532,7 @@ SOFTWARE.
 
 ## Text 243
 
-Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
+Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.45.0, `windows-sys` 0.48.0, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.42.2, `windows-targets` 0.48.5, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.42.2, `windows_x86_64_msvc` 0.48.5, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
 
 ```text
 Apache License
@@ -15740,7 +15740,7 @@ Apache License
 
 ## Text 244
 
-Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
+Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.45.0, `windows-sys` 0.48.0, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.42.2, `windows-targets` 0.48.5, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.42.2, `windows_x86_64_msvc` 0.48.5, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
 
 ```text
 MIT License
