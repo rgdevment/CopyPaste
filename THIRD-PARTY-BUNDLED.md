@@ -39,7 +39,7 @@ with the crates that carry it.
 | `scheduler` | 0.28.0 | MIT |
 | `uc.micro` | 3.0.0 | MIT |
 
-## In the core (425 crates)
+## In the core (431 crates)
 
 | Crate | Version | Licence |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ with the crates that carry it.
 | `cfg-if` | 1.0.5 | MIT OR Apache-2.0 |
 | `cgl` | 0.3.2 | MIT / Apache-2.0 |
 | `chrono` | 0.4.45 | MIT OR Apache-2.0 |
-| `clipboard-win` | 5.4.1 | BSL-1.0 |
+| `clipboard-win` | 5.4.3 | BSL-1.0 |
 | `clru` | 0.6.3 | MIT |
 | `codespan-reporting` | 0.13.1 | Apache-2.0 |
 | `color_quant` | 1.1.0 | MIT |
@@ -283,7 +283,7 @@ with the crates that carry it.
 | `powerfmt` | 0.2.1 | MIT OR Apache-2.0 |
 | `presser` | 0.3.1 | MIT OR Apache-2.0 |
 | `profiling` | 1.0.18 | MIT OR Apache-2.0 |
-| `pulldown-cmark` | 0.13.4 | MIT |
+| `pulldown-cmark` | 0.13.6 | MIT |
 | `pxfm` | 0.1.30 | BSD-3-Clause OR Apache-2.0 |
 | `quick-error` | 2.0.1 | MIT/Apache-2.0 |
 | `quick-xml` | 0.42.0 | MIT |
@@ -383,7 +383,7 @@ with the crates that carry it.
 | `tiny-skia-path` | 0.12.0 | BSD-3-Clause |
 | `tinystr` | 0.8.4 | Unicode-3.0 |
 | `tinyvec` | 1.13.3 | Zlib OR Apache-2.0 OR MIT |
-| `tokio` | 1.54.0 | MIT |
+| `tokio` | 1.54.1 | MIT |
 | `tokio-rustls` | 0.26.6 | MIT OR Apache-2.0 |
 | `tokio-util` | 0.7.20 | MIT |
 | `toml` | 1.1.8+spec-1.1.0 | MIT OR Apache-2.0 |
@@ -440,14 +440,20 @@ with the crates that carry it.
 | `windows-registry` | 0.6.1 | MIT OR Apache-2.0 |
 | `windows-result` | 0.4.1 | MIT OR Apache-2.0 |
 | `windows-strings` | 0.5.1 | MIT OR Apache-2.0 |
+| `windows-sys` | 0.45.0 | MIT OR Apache-2.0 |
+| `windows-sys` | 0.48.0 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.52.0 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.59.0 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.60.2 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.61.2 | MIT OR Apache-2.0 |
+| `windows-targets` | 0.42.2 | MIT OR Apache-2.0 |
+| `windows-targets` | 0.48.5 | MIT OR Apache-2.0 |
 | `windows-targets` | 0.52.6 | MIT OR Apache-2.0 |
 | `windows-targets` | 0.53.5 | MIT OR Apache-2.0 |
 | `windows-threading` | 0.2.1 | MIT OR Apache-2.0 |
 | `windows-version` | 0.1.7 | MIT OR Apache-2.0 |
+| `windows_x86_64_msvc` | 0.42.2 | MIT OR Apache-2.0 |
+| `windows_x86_64_msvc` | 0.48.5 | MIT OR Apache-2.0 |
 | `windows_x86_64_msvc` | 0.52.6 | MIT OR Apache-2.0 |
 | `windows_x86_64_msvc` | 0.53.1 | MIT OR Apache-2.0 |
 | `winit` | 0.30.13 | Apache-2.0 |
