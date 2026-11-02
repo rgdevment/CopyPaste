@@ -200,7 +200,7 @@ with the crates that carry it.
 | `libc` | 0.2.191 | MIT OR Apache-2.0 |
 | `libloading` | 0.8.9 | ISC |
 | `libm` | 0.2.16 | MIT |
-| `libsqlite3-sys` | 0.38.2 | MIT |
+| `libsqlite3-sys` | 0.39.1 | MIT |
 | `linebender_resource_handle` | 0.1.1 | Apache-2.0 OR MIT |
 | `litemap` | 0.8.3 | Unicode-3.0 |
 | `lock_api` | 0.4.14 | MIT OR Apache-2.0 |
@@ -302,7 +302,7 @@ with the crates that carry it.
 | `rgb` | 0.8.53 | MIT |
 | `ring` | 0.17.14 | Apache-2.0 AND ISC |
 | `roxmltree` | 0.21.1 | MIT OR Apache-2.0 |
-| `rusqlite` | 0.40.2 | MIT |
+| `rusqlite` | 0.41.1 | MIT |
 | `rustc-hash` | 1.1.0 | Apache-2.0/MIT |
 | `rustix` | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | `rustls` | 0.23.46 | Apache-2.0 OR ISC OR MIT |
@@ -363,7 +363,7 @@ with the crates that carry it.
 | `taffy` | 0.10.1 | MIT |
 | `tao` | 0.37.1 | Apache-2.0 |
 | `tar` | 0.4.46 | MIT OR Apache-2.0 |
-| `tauri` | 2.12.4 | Apache-2.0 OR MIT |
+| `tauri` | 2.12.5 | Apache-2.0 OR MIT |
 | `tauri-plugin-dialog` | 2.8.3 | Apache-2.0 OR MIT |
 | `tauri-plugin-fs` | 2.7.1 | Apache-2.0 OR MIT |
 | `tauri-plugin-global-shortcut` | 2.4.1 | Apache-2.0 OR MIT |
@@ -372,7 +372,7 @@ with the crates that carry it.
 | `tauri-plugin-single-instance` | 2.5.4 | Apache-2.0 OR MIT |
 | `tauri-plugin-updater` | 2.14.0 | Apache-2.0 OR MIT |
 | `tauri-runtime` | 2.12.2 | Apache-2.0 OR MIT |
-| `tauri-runtime-wry` | 2.12.2 | Apache-2.0 OR MIT |
+| `tauri-runtime-wry` | 2.12.3 | Apache-2.0 OR MIT |
 | `tauri-utils` | 2.10.2 | Apache-2.0 OR MIT |
 | `tempfile` | 3.27.0 | MIT OR Apache-2.0 |
 | `thiserror` | 2.0.21 | MIT OR Apache-2.0 |

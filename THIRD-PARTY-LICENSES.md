@@ -624,7 +624,7 @@ END OF TERMS AND CONDITIONS
 
 ## Text 10
 
-Carried by `arboard` 3.7.0, `fdeflate` 0.3.7, `field-offset` 0.3.6, `half` 2.7.1, `image` 0.25.10, `image-webp` 0.2.4, `linebender_resource_handle` 0.1.1, `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1, `naga` 30.0.1, `naga-types` 30.0.1, `num-conv` 0.2.2, `pin-project` 1.1.13, `pin-project-lite` 0.2.17, `portable-atomic` 1.15.0, `range-alloc` 0.1.5, `raw-window-handle` 0.6.2, `resvg` 0.48.1, `simdutf8` 0.1.5, `sync_wrapper` 1.0.2, `tauri` 2.12.4, `tauri-plugin-dialog` 2.8.3, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.2, `tauri-plugin-shell` 2.5.0, `tauri-plugin-single-instance` 2.5.4, `tauri-plugin-updater` 2.14.0, `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.2, `tauri-utils` 2.10.2, `time` 0.3.55, `time-core` 0.1.9, `usvg` 0.48.1, `wgpu` 30.0.1, `wgpu-core` 30.0.1, `wgpu-core-deps-apple` 30.0.1, `wgpu-core-deps-windows-linux-android` 30.0.1, `wgpu-hal` 30.0.1, `wgpu-naga-bridge` 30.0.1, `wgpu-types` 30.0.1.
+Carried by `arboard` 3.7.0, `fdeflate` 0.3.7, `field-offset` 0.3.6, `half` 2.7.1, `image` 0.25.10, `image-webp` 0.2.4, `linebender_resource_handle` 0.1.1, `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1, `naga` 30.0.1, `naga-types` 30.0.1, `num-conv` 0.2.2, `pin-project` 1.1.13, `pin-project-lite` 0.2.17, `portable-atomic` 1.15.0, `range-alloc` 0.1.5, `raw-window-handle` 0.6.2, `resvg` 0.48.1, `simdutf8` 0.1.5, `sync_wrapper` 1.0.2, `tauri` 2.12.5, `tauri-plugin-dialog` 2.8.3, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.2, `tauri-plugin-shell` 2.5.0, `tauri-plugin-single-instance` 2.5.4, `tauri-plugin-updater` 2.14.0, `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.3, `tauri-utils` 2.10.2, `time` 0.3.55, `time-core` 0.1.9, `usvg` 0.48.1, `wgpu` 30.0.1, `wgpu-core` 30.0.1, `wgpu-core-deps-apple` 30.0.1, `wgpu-core-deps-windows-linux-android` 30.0.1, `wgpu-hal` 30.0.1, `wgpu-naga-bridge` 30.0.1, `wgpu-types` 30.0.1.
 
 ```text
 Apache License
@@ -9233,7 +9233,7 @@ Copyright notices are retained in src/* files where relevant.
 
 ## Text 133
 
-Carried by `libsqlite3-sys` 0.38.2, `rusqlite` 0.40.2.
+Carried by `libsqlite3-sys` 0.39.1, `rusqlite` 0.41.1.
 
 ```text
 Copyright (c) 2014 The rusqlite developers
@@ -13988,7 +13988,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 215
 
-Carried by `tauri` 2.12.4, `tauri-plugin-dialog` 2.8.3, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.2, `tauri-plugin-shell` 2.5.0, `tauri-plugin-updater` 2.14.0, `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.2, `tauri-utils` 2.10.2.
+Carried by `tauri` 2.12.5, `tauri-plugin-dialog` 2.8.3, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.2, `tauri-plugin-shell` 2.5.0, `tauri-plugin-updater` 2.14.0, `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.3, `tauri-utils` 2.10.2.
 
 ```text
 MIT License
