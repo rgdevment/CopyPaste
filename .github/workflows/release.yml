@@ -117,8 +117,6 @@ jobs:
   version:
     name: Resolve the version
     needs: [gate]
-    # On a tag it sees the release environment, so a missing updater key stops the run before any build.
-    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -135,6 +133,8 @@ jobs:
       HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
       HAS_PFX_PASSWORD: ${{ secrets.PFX_PASSWORD != '' }}
+      HAS_BRIDGE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY != '' }}
+      WANTS_BRIDGE: ${{ vars.BRIDGE_MANIFEST == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -157,6 +157,7 @@ jobs:
           if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$HAS_UPDATER_PASSWORD" != "true" ]; then
             echo "::notice::the updater key carries no password; that is fine if it was made without one"
           fi
+
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             missing=""
             want() { [ "$2" = "true" ] || missing="$missing $1"; }
@@ -170,7 +171,9 @@ jobs:
               want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
               want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
             fi
-            # RELEASE_PRIVATE_KEY lives in the feed environment; publish asks for it before uploading.
+            if [ "$WANTS_BRIDGE" = "true" ]; then
+              want RELEASE_PRIVATE_KEY "$HAS_BRIDGE_KEY"
+            fi
             [ -z "$missing" ] || fail "this tag would be released without:$missing"
           fi
 
@@ -218,7 +221,6 @@ jobs:
   bundle-windows:
     name: copypaste-windows-installer
     needs: [version, tested]
-    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     runs-on: windows-latest
     timeout-minutes: 60
     outputs:
@@ -442,7 +444,6 @@ jobs:
     name: copypaste-macos-installer (${{ matrix.arch }})
     needs: [version, tested]
     if: needs.version.outputs.macos == 'true'
-    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     runs-on: macos-latest
     timeout-minutes: 60
     strategy:
@@ -783,7 +784,6 @@ jobs:
       && needs.tested.result == 'success'
       && needs.bundle-windows.result == 'success'
       && (needs.bundle-macos.result == 'success' || needs.bundle-macos.result == 'skipped')
-    environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -836,7 +836,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
-            echo "::error::the release environment holds no updater key"
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is empty, so nothing could be signed for the updater"
             exit 1
           fi
           v="${{ needs.version.outputs.version }}"
@@ -881,8 +881,6 @@ jobs:
       && (needs.bundle-macos.result == 'success' || needs.bundle-macos.result == 'skipped')
       && (needs.bundle-msix.result == 'success' || needs.bundle-msix.result == 'skipped')
       && needs.sign-updater.result == 'success'
-    # Only the bridge manifest's key is here: the updater's stays in sign-updater, where it signs.
-    environment: feed
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     concurrency:
@@ -1395,7 +1393,6 @@ jobs:
       && needs.verify.result == 'success'
       && needs.bundle-msix.result == 'success'
       && needs.version.outputs.prerelease == 'false'
-    environment: release
     runs-on: windows-latest
     timeout-minutes: 20
     concurrency:
@@ -1486,7 +1483,6 @@ jobs:
       && needs.version.result == 'success' && needs.publish.result == 'success'
       && needs.verify.result == 'success'
       && needs.version.outputs.macos == 'true'
-    environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -1666,7 +1662,6 @@ jobs:
       && needs.verify.result == 'success'
       && needs.version.outputs.prerelease == 'false'
       && vars.WINGET_PUBLISH == 'true'
-    environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
