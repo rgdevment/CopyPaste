@@ -290,6 +290,11 @@ The 3.0 pipeline will need these, all named as Tisty names them:
 | `BRIDGE_MANIFEST`                            | variable | The manifest a 2.x reads. Off once nobody is left on the 2. |
 | `MSIX_IDENTITY`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_DISPLAY` | variable | Package identity, frozen from the 2.x. |
 
+The secrets live in two environments that only `v*` tags can deploy to:
+`RELEASE_PRIVATE_KEY` in `feed`, which only the publishing job sees, and every
+other one in `release`. The updater key reaches a single job, the one that
+signs what ships; the builds never hold it.
+
 Rotating any of these needs no code change.
 
 ## Rolling back
