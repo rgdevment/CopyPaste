@@ -15,10 +15,29 @@ on: # zizmor: ignore[dangerous-triggers] neither job checks out the pull request
         type: boolean
         default: true
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
+  # main runs CI again on the merge, and Mutants only ever measures a pull request, so nothing left running here is owed
+  stop:
+    name: a closed pull request stops what still runs for it
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Every run still going for its last commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh run list --commit "$HEAD_SHA" --event pull_request --limit 100             --json databaseId,status             --jq '.[] | select(.status != "completed") | .databaseId' |
+            while read -r run; do
+              gh run cancel "$run" || echo "::notice::run $run had already ended"
+            done
+
   sweep:
     name: a closed pull request takes its caches with it
     permissions:
@@ -36,6 +55,8 @@ jobs:
 
   generations:
     name: one generation of each cache, and nothing a tag left behind
+    # the branch filter on workflow_run reads the branch of the run that triggered it, and a
+    # fork's pull request can name its branch main: only a push to this repository counts
     if: >-
       github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
       || (github.event_name == 'workflow_run'
