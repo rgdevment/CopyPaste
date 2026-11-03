@@ -117,6 +117,8 @@ jobs:
   version:
     name: Resolve the version
     needs: [gate]
+    # On a tag it sees the release environment, so a missing updater key stops the run before any build.
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -133,8 +135,6 @@ jobs:
       HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
       HAS_PFX_PASSWORD: ${{ secrets.PFX_PASSWORD != '' }}
-      HAS_BRIDGE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY != '' }}
-      WANTS_BRIDGE: ${{ vars.BRIDGE_MANIFEST == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -157,10 +157,6 @@ jobs:
           if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$HAS_UPDATER_PASSWORD" != "true" ]; then
             echo "::notice::the updater key carries no password; that is fine if it was made without one"
           fi
-          if [ "$HAS_UPDATER_KEY" != "true" ]; then
-            echo "::warning::no updater key; this release cannot be installed by an existing copy"
-          fi
-
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             missing=""
             want() { [ "$2" = "true" ] || missing="$missing $1"; }
@@ -174,9 +170,7 @@ jobs:
               want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
               want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
             fi
-            if [ "$WANTS_BRIDGE" = "true" ]; then
-              want RELEASE_PRIVATE_KEY "$HAS_BRIDGE_KEY"
-            fi
+            # RELEASE_PRIVATE_KEY lives in the feed environment; publish asks for it before uploading.
             [ -z "$missing" ] || fail "this tag would be released without:$missing"
           fi
 
@@ -224,6 +218,7 @@ jobs:
   bundle-windows:
     name: copypaste-windows-installer
     needs: [version, tested]
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     runs-on: windows-latest
     timeout-minutes: 60
     outputs:
@@ -231,7 +226,6 @@ jobs:
     env:
       TARGET: x86_64-pc-windows-msvc
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
-      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -286,18 +280,14 @@ jobs:
           "CERT_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "the bundler signs with $($cert.Thumbprint)"
 
+      # No updater key here: the build runs npm scripts and every crate's build.rs.
       - name: Bundle
         working-directory: app
         shell: bash
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          sign=""
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then sign="--no-sign"; fi
           packs=""
           if [ -f sign.json ]; then packs="--config sign.json"; fi
-          npm run tauri build -- --bundles nsis $sign $packs
+          npm run tauri build -- --bundles nsis $packs
 
       - name: The installer carries both binaries
         shell: bash
@@ -434,25 +424,6 @@ jobs:
           cp "$setup" "dist/copanda-installer-$v-windows-x86_64.exe"
           ls -l dist
 
-      - name: Sign it for the updater
-        if: env.HAS_UPDATER_KEY == 'true'
-        working-directory: app
-        shell: bash
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          v="${{ needs.version.outputs.version }}"
-          exe="../dist/copanda-installer-$v-windows-x86_64.exe"
-          rm -f "$exe.sig"
-          npm run tauri -- signer sign --app-version "$v" "$exe"
-          test -s "$exe.sig" || { echo "::error::no updater signature was written"; exit 1; }
-          base64 -d < "$exe.sig" > "$RUNNER_TEMP/one.minisig"
-          if ! bash ../scripts/signed_for.sh "$RUNNER_TEMP/one.minisig" "$v"; then
-            echo "::error::the updater signature is not bound to $v"
-            exit 1
-          fi
-
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundle-windows
@@ -460,10 +431,18 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: updater-windows
+          path: dist/copanda-installer-*-windows-x86_64.exe
+          retention-days: 7
+          if-no-files-found: error
+
   bundle-macos:
     name: copypaste-macos-installer (${{ matrix.arch }})
     needs: [version, tested]
     if: needs.version.outputs.macos == 'true'
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     runs-on: macos-latest
     timeout-minutes: 60
     strategy:
@@ -479,7 +458,6 @@ jobs:
       ARCH: ${{ matrix.arch }}
       HAS_P12: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
       HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
-      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -550,13 +528,7 @@ jobs:
 
       - name: Bundle
         working-directory: app
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          sign=""
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then sign="--no-sign"; fi
-          npm run tauri bundle -- --target "$TARGET" --bundles app,dmg $sign
+        run: npm run tauri bundle -- --target "$TARGET" --bundles app,dmg
 
       - name: It carries the panel, on one chip
         run: |
@@ -611,7 +583,7 @@ jobs:
           xcrun stapler staple "$dmg"
           xcrun stapler validate "$dmg"
 
-      - name: Staple the app itself, and tar it again
+      - name: Staple the app itself, and tar it
         if: env.HAS_APPLE_ID == 'true' && env.HAS_P12 == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -628,7 +600,6 @@ jobs:
           xcrun stapler staple "$app"
           xcrun stapler validate "$app"
 
-          rm -f "$out"/*.app.tar.gz "$out"/*.app.tar.gz.sig
           COPYFILE_DISABLE=1 tar --no-xattrs -czf "$out/CoPanda.app.tar.gz" -C "$out" CoPanda.app
 
           rm -rf "$RUNNER_TEMP/rt" && mkdir -p "$RUNNER_TEMP/rt"
@@ -636,36 +607,17 @@ jobs:
           codesign --verify --deep --strict "$RUNNER_TEMP/rt/CoPanda.app"
           xcrun stapler validate "$RUNNER_TEMP/rt/CoPanda.app"
 
-      - name: Sign it for the updater
-        if: env.HAS_UPDATER_KEY == 'true' && env.HAS_APPLE_ID == 'true'
-        working-directory: app
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          v="${{ needs.version.outputs.version }}"
-          out="../target/$TARGET/release/bundle/macos"
-          npm run tauri -- signer sign --app-version "$v" "$out/CoPanda.app.tar.gz"
-          test -s "$out/CoPanda.app.tar.gz.sig"
-          base64 -d < "$out/CoPanda.app.tar.gz.sig" > "$RUNNER_TEMP/one.minisig"
-          if ! bash ../scripts/signed_for.sh "$RUNNER_TEMP/one.minisig" "$v"; then
-            echo "::error::the updater signature is not bound to $v"
-            exit 1
-          fi
-
       - name: Name it after the release
         run: |
           v="${{ needs.version.outputs.version }}"
           mkdir -p dist
           out="target/$TARGET/release/bundle/macos"
           app="$out/CoPanda.app"
-          if xcrun stapler validate "$app" >/dev/null 2>&1 \
-            && [ -s "$out/CoPanda.app.tar.gz.sig" ]; then
+          if [ -s "$out/CoPanda.app.tar.gz" ] \
+            && xcrun stapler validate "$app" >/dev/null 2>&1; then
             cp "$out/CoPanda.app.tar.gz" "dist/copanda-$v-macos-$ARCH.app.tar.gz"
-            cp "$out/CoPanda.app.tar.gz.sig" "dist/copanda-$v-macos-$ARCH.app.tar.gz.sig"
           else
-            echo "::warning::no stapled, signed tarball; macOS $ARCH gets no self-update this release"
-            rm -f "$out/CoPanda.app.tar.gz" "$out/CoPanda.app.tar.gz.sig"
+            echo "::warning::no stapled tarball; macOS $ARCH gets no self-update this release"
           fi
           dmg=$(ls target/$TARGET/release/bundle/dmg/*.dmg 2>/dev/null | head -1) || true
           if [ -z "$dmg" ]; then
@@ -681,6 +633,13 @@ jobs:
           path: dist/*
           retention-days: 7
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: updater-macos-${{ matrix.arch }}
+          path: dist/*.app.tar.gz
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Cleanup keychain
         if: always() && env.KEYCHAIN_PATH != ''
@@ -815,9 +774,105 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # The only job that holds the updater key: it builds nothing and runs nobody else's scripts.
+  sign-updater:
+    name: Signed for the updater
+    needs: [version, tested, bundle-windows, bundle-macos]
+    if: >-
+      !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      && needs.tested.result == 'success'
+      && needs.bundle-windows.result == 'success'
+      && (needs.bundle-macos.result == 'success' || needs.bundle-macos.result == 'skipped')
+    environment: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            app/package-lock.json
+            scripts/signed_for.sh
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: updater-*
+          path: dist
+          merge-multiple: true
+
+      - name: The signer the app was built with, and nothing else
+        run: |
+          lock=app/package-lock.json
+          v=$(jq -r '.packages["node_modules/@tauri-apps/cli"].version // ""' "$lock")
+          if [ -z "$v" ]; then
+            echo "::error::the lockfile names no @tauri-apps/cli"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/signer"
+          npm install --prefix "$RUNNER_TEMP/signer" --ignore-scripts --no-audit --no-fund \
+            "@tauri-apps/cli@$v"
+          for pkg in @tauri-apps/cli @tauri-apps/cli-linux-x64-gnu; do
+            want=$(jq -r --arg k "node_modules/$pkg" '.packages[$k].integrity // ""' "$lock")
+            got=$(jq -r --arg k "node_modules/$pkg" '.packages[$k].integrity // ""' \
+              "$RUNNER_TEMP/signer/package-lock.json")
+            if [ -z "$want" ] || [ "$want" != "$got" ]; then
+              echo "::error::$pkg is not the one the lockfile names"
+              exit 1
+            fi
+          done
+
+      # Signed last, over the bytes signtool and the stapler left: those are what ship.
+      - name: Sign what ships
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::the release environment holds no updater key"
+            exit 1
+          fi
+          v="${{ needs.version.outputs.version }}"
+          ships="dist/copanda-installer-$v-windows-x86_64.exe"
+          if [ "${{ needs.version.outputs.macos }}" = "true" ]; then
+            ships="$ships dist/copanda-$v-macos-aarch64.app.tar.gz dist/copanda-$v-macos-x86_64.app.tar.gz"
+          fi
+          mkdir -p signatures
+          for f in $ships; do
+            if [ ! -s "$f" ]; then
+              echo "::error::$f was not built, so nothing out there could update to it"
+              exit 1
+            fi
+            rm -f "$f.sig"
+            "$RUNNER_TEMP/signer/node_modules/.bin/tauri" signer sign --app-version "$v" "$f"
+            test -s "$f.sig" || { echo "::error::no signature for $f"; exit 1; }
+            base64 -d < "$f.sig" > "$RUNNER_TEMP/one.minisig"
+            if ! bash scripts/signed_for.sh "$RUNNER_TEMP/one.minisig" "$v"; then
+              echo "::error::the updater signature for $f is not bound to $v"
+              exit 1
+            fi
+            mv "$f.sig" signatures/
+          done
+          rm -f "$RUNNER_TEMP/one.minisig"
+          ls -l signatures
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundle-signatures
+          path: signatures/*
+          retention-days: 7
+          if-no-files-found: error
+
   publish:
     name: GitHub Release
-    needs: [rust, tested, version, bundle-windows, bundle-macos, bundle-msix]
+    needs: [rust, tested, version, bundle-windows, bundle-macos, bundle-msix, sign-updater]
     if: >-
       !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
       && needs.rust.result == 'success' && needs.tested.result == 'success'
@@ -825,6 +880,9 @@ jobs:
       && needs.bundle-windows.result == 'success'
       && (needs.bundle-macos.result == 'success' || needs.bundle-macos.result == 'skipped')
       && (needs.bundle-msix.result == 'success' || needs.bundle-msix.result == 'skipped')
+      && needs.sign-updater.result == 'success'
+    # Only the bridge manifest's key is here: the updater's stays in sign-updater, where it signs.
+    environment: feed
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     concurrency:
@@ -1337,6 +1395,7 @@ jobs:
       && needs.verify.result == 'success'
       && needs.bundle-msix.result == 'success'
       && needs.version.outputs.prerelease == 'false'
+    environment: release
     runs-on: windows-latest
     timeout-minutes: 20
     concurrency:
@@ -1427,6 +1486,7 @@ jobs:
       && needs.version.result == 'success' && needs.publish.result == 'success'
       && needs.verify.result == 'success'
       && needs.version.outputs.macos == 'true'
+    environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -1606,6 +1666,7 @@ jobs:
       && needs.verify.result == 'success'
       && needs.version.outputs.prerelease == 'false'
       && vars.WINGET_PUBLISH == 'true'
+    environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
