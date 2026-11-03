@@ -41,17 +41,38 @@ jobs:
         with:
           go-version: "1.25"
           cache: false
+      # offline, so a pull request is judged on its own lines and never on whether GitHub's API answered
       - name: The workflows mean what they say
         env:
-          GH_TOKEN: ${{ github.token }}
           SHELLCHECK_OPTS: --severity=warning
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           "$(go env GOPATH)/bin/actionlint"
-          zizmor --min-severity medium .github
+          zizmor --offline --min-severity medium .github
+
+      - name: No action pinned here is an impostor or has a known vulnerability
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          # zizmor exits 1 only when it could not finish; findings exit 10 or more and are not retried
+          for try in 1 2 3; do
+            code=0
+            zizmor --min-severity medium .github || code=$?
+            [ "$code" -ne 1 ] && exit "$code"
+            echo "::warning::try $try did not finish; asking GitHub again in a minute"
+            sleep 60
+          done
+          exit 1
 
       - name: Project conventions
         run: bash scripts/rules.sh
+
+      # nothing else looks at a subject that reached main without a pull request
+      - name: The subject that landed
+        if: github.event_name == 'push'
+        run: bash scripts/commits.sh --title "$(git log -1 --format=%s)"
 
   notices:
     name: The notices match the lockfiles
@@ -84,8 +105,11 @@ jobs:
             exit 1
           fi
 
+  # one turn of the suite is what CI already runs on every pull request, so this job only earns its
+  # runners when it runs the twenty that say whether a test is deterministic
   deterministic:
     name: Tests are deterministic (${{ matrix.os }})
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -110,11 +134,7 @@ jobs:
           tool: nextest
       - name: The core, over and over
         run: |
-          turns=4
-          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            turns=20
-          fi
-          for _ in $(seq 1 "$turns"); do
+          for _ in $(seq 1 20); do
             cargo nextest run -p cp-core --no-tests=pass || exit 1
           done
 

@@ -4,15 +4,16 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 0
 status=0
 
-# every tool below reads the working tree, not the index, so with anything unstaged what passes
-# here is not what is about to be committed. Checking the index would mean a throwaway worktree
-# per commit; saying so costs nothing.
-if ! git diff --quiet; then
-  printf '!  tracked files differ from what is staged: these checks describe your working tree,\n'
-  printf '!  not the commit you are making\n'
-fi
+# what is about to be committed, not what the working tree happens to hold beside it
+staged=$(mktemp -d)
+trap 'rm -rf "$staged"' EXIT
+git checkout-index --all --prefix="$staged/" || {
+  echo "x  the staged tree could not be written out, so nothing was looked at"
+  exit 1
+}
 
-bash scripts/rules.sh || status=1
+bash "$staged/scripts/rules.sh" < /dev/null || status=1
+bash "$staged/scripts/branches.sh" "$(git rev-parse --abbrev-ref HEAD)" || status=1
 
 quietly() {
   local said
@@ -24,16 +25,29 @@ quietly() {
 }
 
 if command -v cargo > /dev/null; then
-  quietly "cargo fmt --all --check" "cargo fmt --all would change files"
+  quietly "cd \"$staged\" && cargo fmt --all --check" "cargo fmt --all would change files"
+  # the probe bodies are included, not modules, so cargo fmt --all never reaches them
+  quietly "cd \"$staged\" && rustfmt --check --edition 2024 crates/cp-mac/examples/probe/battery.rs crates/cp-win/examples/probe/battery.rs crates/cp-win/examples/probe/restoring.rs" \
+    "rustfmt would change the probe bodies"
 else
-  echo "x  cargo is not here, so the formatting was not looked at"
+  echo "!  cargo is not here, so the formatting was not looked at"
 fi
 
 if [ -d app/node_modules ]; then
-  quietly "cd app && npx --no-install biome check src" \
+  quietly "cd \"$staged/app\" && \"$PWD/app/node_modules/.bin/biome\" check src" \
     "biome would change files, or is not installed; it is the first thing CI runs"
 else
-  echo "x  app/node_modules is not here, so biome did not look at the window"
+  echo "!  app/node_modules is not here, so biome did not look at the window"
+fi
+
+# the rules job refuses a lockfile the notices do not follow; written here, the fix is one git add away
+if git diff --cached --name-only | grep -qE '(^|/)(Cargo\.lock|package-lock\.json)$'; then
+  if [ -d app/node_modules ]; then
+    quietly "node scripts/third-party.mjs > /dev/null && git diff --quiet -- THIRD-PARTY-BUNDLED.md THIRD-PARTY-LICENSES.md" \
+      "the notices were behind the lockfiles; npm run notices just wrote them, so stage them"
+  else
+    echo "!  app/node_modules is not here, so the notices were not checked against the lockfiles"
+  fi
 fi
 
 exit $status

@@ -1,0 +1,98 @@
+name: Advisories
+
+# An advisory or a yank lands on crates.io any day, and the first anyone heard of it was a red
+# main. Every morning this reads the lock the way CI does and, when something fails, moves only
+# the crates named to their newest compatible release and leaves the branch ready to open.
+on:
+  schedule:
+    - cron: "37 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  BRANCH: build/advisories
+
+jobs:
+  moved:
+    name: the crates an advisory names move past it
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Rust, from rust-toolchain.toml
+        run: rustup toolchain install --no-self-update
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        with:
+          tool: cargo-deny
+
+      - name: Read the lock and move what it names
+        id: move
+        run: |
+          set -uo pipefail
+          if cargo deny --format json check advisories 2> "$RUNNER_TEMP/deny.json"; then
+            echo "Nothing in the lock has an advisory or a yank against it."
+            exit 0
+          fi
+          mapfile -t named < <(jq -r 'select(.type == "diagnostic" and .fields.severity == "error")
+            | .fields.graphs[]?.Krate | "\(.name)@\(.version)"' "$RUNNER_TEMP/deny.json" | sort -u)
+          if [ "${#named[@]}" -eq 0 ]; then
+            cat "$RUNNER_TEMP/deny.json"
+            echo "::error::cargo-deny failed without naming a crate; read the log above."
+            exit 1
+          fi
+          for one in "${named[@]}"; do
+            cargo update -p "$one" || echo "::warning::$one has no compatible release to move to"
+          done
+          if git diff --quiet Cargo.lock; then
+            echo "::error::no compatible release moves past ${named[*]}: it needs a hand, or an entry in deny.toml."
+            exit 1
+          fi
+          if ! cargo deny check advisories; then
+            echo "::error::the lock moved but still fails; the branch was not pushed."
+            exit 1
+          fi
+          crates=$(printf '%s\n' "${named[@]}" | sed 's/@.*//' | sort -u | paste -sd, - | sed 's/,/, /g')
+          echo "crates=$crates" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.move.outputs.crates != ''
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # the rules job refuses a lock the notices do not match, so they move with it.
+      - name: The notices the new lock carries
+        if: steps.move.outputs.crates != ''
+        run: |
+          npm ci --prefix app
+          npm run notices
+
+      - name: Leave the branch ready
+        if: steps.move.outputs.crates != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRATES: ${{ steps.move.outputs.crates }}
+        run: |
+          set -euo pipefail
+          subject="build(deps): $CRATES past today's advisories"
+          [ "$(printf '%s' "$subject" | wc -m)" -le 110 ] || subject="build(deps): the crates past today's advisories"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -qm "$subject" Cargo.lock THIRD-PARTY-BUNDLED.md THIRD-PARTY-LICENSES.md
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
+          # red on purpose: main fails the same check until this is merged, and a red run is what reaches the inbox.
+          echo "::error::$subject — open it: https://github.com/${GITHUB_REPOSITORY}/compare/main...${BRANCH}?expand=1"
+          exit 1

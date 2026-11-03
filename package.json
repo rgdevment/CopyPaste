@@ -12,7 +12,7 @@
     "smol-toml": "^1.9.0"
   },
   "scripts": {
-    "prepare": "git config core.hooksPath hooks || echo the hooks are not set: this is not a git clone",
+    "prepare": "git config --get core.hooksPath || git config core.hooksPath hooks || echo the hooks are not set: this is not a git clone",
     "lint:md": "markdownlint-cli2",
     "format:md": "markdownlint-cli2 --fix",
     "notices": "node scripts/third-party.mjs"

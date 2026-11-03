@@ -49,7 +49,7 @@ In many ways! Code is just one of them:
 ### Contribute Code
 
 1. **Fork** the repository
-2. **Create a branch** from `main` (`git checkout -b feature/my-improvement`)
+2. **Create a branch** from `main` (`git checkout -b feat/my-improvement`)
 3. **Make your changes** following our style:
    - Clean and minimalist code
    - Code and identifiers in English
@@ -132,11 +132,12 @@ them run for you:
 git config core.hooksPath hooks
 ```
 
-That gives you three. `pre-commit` runs the conventions, `cargo fmt --all
---check` and biome — a couple of seconds, and between them they are most of what
+That gives you three. `pre-commit` runs the conventions, the branch's name,
+`cargo fmt --all --check` and biome — a couple of seconds, and between them they are most of what
 turns CI red. `commit-msg` weighs the message while the fix is still an
-`--amend` rather than a rebase. `pre-push` runs the conventions again and the
-messages of everything you are about to send, and when what you are sending is a
+`--amend` rather than a rebase. `pre-push` runs the conventions again, the name
+each branch takes on the remote and the messages of everything you are about to
+send, and when what you are sending is a
 tag it asks `scripts/news.sh` whether `app/src/news.json` says what changed in
 that version — the screen that tells a person what is new is the only place the
 app says it, and a tag is the last moment to notice it is empty. A candidate is
@@ -156,14 +157,20 @@ type(scope): the concrete change
 
 - **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
   `build`, `ci`, `chore`, `revert`. The scope is optional.
-- **At most 120 characters.**
+- **At most 112 characters**, and 120 for the title with its `(#123)`.
 - **No body and no trailers** — no `Co-authored-by`, no `Signed-off-by`. The
   CLA below is signed once on the pull request, not on each commit.
 - **No links**, except `#123` for an issue or pull request of this repository.
 - Say what changed, not how it was found.
 
 A pull request's title follows the same rule, because the squash keeps it as
-the subject on `main`.
+the subject on `main`, and GitHub adds ` (#123)` after it: a commit's subject
+stops eight characters short so the title still fits.
+
+A branch says the same thing before its first commit: `kind/what`, in lowercase,
+where the kind is one of the types above or `hotfix` or `release`, as in
+`feat/search-ranking` or `fix/tokio-yanked`. `scripts/branches.sh` holds that
+shape.
 
 **UI/UX:**
 

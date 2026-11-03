@@ -106,6 +106,13 @@ every_example_has_its_own_name() {
   fi
 }
 
+# a signing key, a token or a minisign secret in the tree is public the moment it is pushed
+no_secret_kept_in_the_tree() {
+  local secret='gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{60,}|-----BEGIN ((RSA|EC|DSA|OPENSSH|ENCRYPTED) )?PRIVATE KEY-----|rsign encrypted secret[ ]key|sqp_[0-9a-f]{40}'
+  grep -rnIE "$secret" crates app/src app/src-tauri scripts .github packaging hooks     --exclude-dir=target --exclude-dir=node_modules
+  found_nothing     "a token or a private key is in the tree; it belongs in the repository's secrets" $?     "the tree could not be looked through for secrets"     && went_well "no token or private key is kept in the tree"
+}
+
 what_python_measures() {
   local why=$1 said
   shift
@@ -129,6 +136,7 @@ written_in_english
 tests_named_in_english
 no_comments_in_the_code
 every_example_has_its_own_name
+no_secret_kept_in_the_tree
 what_python_measures "the tests live beside the file, not inside it" oversized.py --inline
 what_python_measures "no file or function grows past what a person can hold" oversized.py
 what_python_measures "no crate slips out of mutation" mutants_cover.py

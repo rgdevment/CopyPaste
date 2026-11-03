@@ -54,12 +54,15 @@ weighed() {
     broke=1
     amiss "$who links outside this repository; only #123 of this one"
   fi
+  # a subject becomes the squash title, and GitHub ends that with " (#1234)", so it leaves the room
+  local room=$most
+  [ -n "$strict" ] || room=$((most - 8))
   # bytes minus UTF-8 continuation bytes: ${#said} counts bytes when a client spawns git with no locale
   local long
   long=$(printf '%s' "$said" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' ')
-  if [ "$long" -gt "$most" ]; then
+  if [ "$long" -gt "$room" ]; then
     broke=1
-    amiss "$who is $long characters, and the subject goes under $most"
+    amiss "$who is $long characters, and the subject goes under $room"
   fi
   [ -z "$broke" ] || printf '  %s\n' "$said"
 }
