@@ -164,8 +164,8 @@ type(scope): the concrete change
 - Say what changed, not how it was found.
 
 A pull request's title follows the same rule, because the squash keeps it as
-the subject on `main`, and GitHub adds ` (#123)` after it: a commit's subject
-stops eight characters short so the title still fits.
+the subject on `main`, and GitHub adds a space and `(#123)` after it: a commit's
+subject stops eight characters short so the title still fits.
 
 A branch says the same thing before its first commit: `kind/what`, in lowercase,
 where the kind is one of the types above or `hotfix` or `release`, as in
