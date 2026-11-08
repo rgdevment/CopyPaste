@@ -7,6 +7,9 @@ targets = [
 
 [advisories]
 yanked = "deny"
+ignore = [
+  { id = "RUSTSEC-2026-0441", reason = "pin-utils is unmaintained with no fix; it only reaches us through spin_on in slint 1.18.1" },
+]
 
 [licenses]
 allow = [
