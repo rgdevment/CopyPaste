@@ -15,6 +15,9 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         {
+          "url": "https://rgdevment.dev/*"
+        },
+        {
           "url": "https://rgdevment.com/*"
         },
         {
