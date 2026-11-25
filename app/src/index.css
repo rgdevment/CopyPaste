@@ -27,11 +27,12 @@
   --close: #c42b1c;
   color-scheme: light;
   --ui:
-    -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    var(--worn-text, -apple-system), -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
   --display:
-    -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", system-ui,
-    sans-serif;
-  --mono: Menlo, Consolas, ui-monospace, monospace;
+    var(--worn-text, -apple-system), -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display",
+    "Segoe UI", system-ui, sans-serif;
+  --mono: var(--worn-code, Menlo), Menlo, Consolas, ui-monospace, monospace;
   --fs-caption: 11px;
   --fs-small: 12px;
   --fs-body: 13px;
@@ -363,6 +364,93 @@ select {
   border-radius: var(--r-control);
   padding: 6px 10px;
   min-width: 132px;
+}
+
+.font-picker {
+  position: relative;
+}
+
+.font-picked {
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  background: var(--field);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-control);
+  padding: 6px 28px 6px 10px;
+  min-width: 132px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    right 13px center,
+    right 9px center;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.font-drop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  width: 280px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-control);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+
+.font-drop input {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  background: var(--field);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-control);
+  padding: 6px 10px;
+}
+
+.font-options {
+  margin-top: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-color: var(--edge) transparent;
+}
+
+.font-options [role="option"] {
+  padding: 6px 10px;
+  border-radius: var(--r-control);
+  font-size: var(--fs-body);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.font-options [role="option"].lit {
+  background: var(--hover);
+}
+
+.font-options [role="option"][aria-selected="true"] {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.font-none {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: var(--fs-small);
+  color: var(--muted);
 }
 
 .keys {

@@ -237,40 +237,75 @@ pub fn fonts_dir_here() -> std::path::PathBuf {
     Path::new(&windows).join("Fonts")
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Family {
+    pub name: String,
+    pub local: String,
+    pub mono: bool,
+    pub symbol: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Installed {
+    pub families: Vec<Family>,
+    pub system: Option<String>,
+}
+
+const SYMBOLS: [&str; 6] = [
+    "Marlett",
+    "Segoe MDL2 Assets",
+    "Segoe Fluent Icons",
+    "Webdings",
+    "Wingdings",
+    "Symbol",
+];
+
 #[must_use]
-pub fn present(
-    among: &'static [Font],
-    dir: &Path,
-    exists: &dyn Fn(&Path) -> bool,
-) -> Vec<&'static Font> {
-    among
-        .iter()
-        .filter(|one| exists(&dir.join(one.file)))
-        .collect()
+pub fn offerable(family: &Family) -> bool {
+    let name = family.name.to_lowercase();
+    !family.symbol
+        && !name.starts_with('.')
+        && !SYMBOLS.iter().any(|one| {
+            let one = one.to_lowercase();
+            name == one || name.starts_with(&format!("{one} "))
+        })
+}
+
+fn same(one: &str, other: &str) -> bool {
+    one.eq_ignore_ascii_case(other)
 }
 
 #[must_use]
-pub fn family_of(
-    asked: Option<&str>,
-    fallback: Font,
-    among: &'static [Font],
-    dir: &Path,
-    exists: &dyn Fn(&Path) -> bool,
-) -> &'static str {
-    let Some(asked) = asked else {
-        return fallback.family;
-    };
-    present(among, dir, exists)
-        .into_iter()
-        .find(|one| one.id == asked)
-        .map_or(fallback.family, |one| one.family)
+pub fn installed<'a>(name: &str, families: &'a [Family]) -> Option<&'a Family> {
+    families
+        .iter()
+        .find(|one| same(&one.name, name) || same(&one.local, name))
+}
+
+#[must_use]
+pub fn substituted(face: &str, entries: &[(String, String)]) -> String {
+    let bare = |said: &str| said.split(',').next().unwrap_or(said).trim().to_owned();
+    entries
+        .iter()
+        .find(|(key, _)| same(key.trim(), face))
+        .or_else(|| entries.iter().find(|(key, _)| same(&bare(key), face)))
+        .map(|(_, value)| bare(value))
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| face.to_owned())
+}
+
+#[must_use]
+pub fn css_of(family: &str) -> String {
+    format!("\"{}\"", family.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Offered {
-    pub id: &'static str,
-    pub label: &'static str,
-    pub css: &'static str,
+    pub id: String,
+    pub label: String,
+    pub css: String,
+    #[serde(skip)]
+    pub family: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -284,19 +319,50 @@ pub struct Paint {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Choices {
     pub text: Offered,
     pub texts: Vec<Offered>,
     pub code: Offered,
     pub codes: Vec<Offered>,
+    pub plain_system: bool,
     pub accents: Vec<Paint>,
 }
 
-fn offered(one: &Font) -> Offered {
+impl Choices {
+    #[must_use]
+    pub fn text_family(&self, asked: Option<&str>) -> &str {
+        &worn(asked, &self.text, &self.texts).family
+    }
+
+    #[must_use]
+    pub fn code_family(&self, asked: Option<&str>) -> &str {
+        &worn(asked, &self.code, &self.codes).family
+    }
+}
+
+#[must_use]
+pub fn worn<'a>(asked: Option<&str>, fallback: &'a Offered, among: &'a [Offered]) -> &'a Offered {
+    asked
+        .and_then(|asked| among.iter().find(|one| one.id == asked))
+        .unwrap_or(fallback)
+}
+
+fn kept(one: &Font) -> Offered {
     Offered {
-        id: one.id,
-        label: one.label,
-        css: one.css,
+        id: one.id.to_owned(),
+        label: one.label.to_owned(),
+        css: one.css.to_owned(),
+        family: one.family.to_owned(),
+    }
+}
+
+fn found(one: &Family) -> Offered {
+    Offered {
+        id: one.name.clone(),
+        label: one.local.clone(),
+        css: css_of(&one.name),
+        family: one.name.clone(),
     }
 }
 
@@ -305,19 +371,73 @@ pub fn hex(rgb: u32) -> String {
     format!("#{:06X}", rgb & 0x00FF_FFFF)
 }
 
+fn offered(
+    fixed: &[Font],
+    skipped: Option<&str>,
+    families: &[Family],
+    dir: &Path,
+    exists: &dyn Fn(&Path) -> bool,
+) -> Vec<Offered> {
+    let fixed: Vec<&Font> = fixed
+        .iter()
+        .filter(|one| exists(&dir.join(one.file)) || installed(one.family, families).is_some())
+        .collect();
+    let taken = |name: &str| {
+        skipped.is_some_and(|skipped| same(name, skipped))
+            || fixed.iter().any(|one| same(name, one.family))
+    };
+    let mut all: Vec<Offered> = fixed
+        .iter()
+        .map(|one| kept(one))
+        .chain(
+            families
+                .iter()
+                .filter(|one| offerable(one) && !taken(&one.name))
+                .map(found),
+        )
+        .collect();
+    all.sort_by_key(|one| one.label.to_lowercase());
+    all
+}
+
+fn system_text(fonts: &Fonts, installed_here: &Installed) -> (Offered, bool) {
+    let system = installed_here
+        .system
+        .as_deref()
+        .and_then(|name| installed(name, &installed_here.families))
+        .filter(|one| offerable(one));
+    match system {
+        Some(one) if !same(&one.name, fonts.text.family) => (
+            Offered {
+                id: String::new(),
+                ..found(one)
+            },
+            false,
+        ),
+        _ => (kept(&fonts.text), true),
+    }
+}
+
 #[must_use]
-pub fn choices(fonts: &Fonts, dir: &Path, exists: &dyn Fn(&Path) -> bool) -> Choices {
+pub fn choices(
+    fonts: &Fonts,
+    installed_here: &Installed,
+    dir: &Path,
+    exists: &dyn Fn(&Path) -> bool,
+) -> Choices {
+    let (text, plain_system) = system_text(fonts, installed_here);
+    let monos: Vec<Family> = installed_here
+        .families
+        .iter()
+        .filter(|one| one.mono)
+        .cloned()
+        .collect();
     Choices {
-        text: offered(&fonts.text),
-        texts: present(fonts.texts, dir, exists)
-            .into_iter()
-            .map(offered)
-            .collect(),
-        code: offered(&fonts.code),
-        codes: present(fonts.codes, dir, exists)
-            .into_iter()
-            .map(offered)
-            .collect(),
+        text,
+        texts: offered(fonts.texts, None, &installed_here.families, dir, exists),
+        code: kept(&fonts.code),
+        codes: offered(fonts.codes, Some(fonts.code.family), &monos, dir, exists),
+        plain_system,
         accents: Accent::ALL
             .iter()
             .map(|one| Paint {
@@ -331,11 +451,59 @@ pub fn choices(fonts: &Fonts, dir: &Path, exists: &dyn Fn(&Path) -> bool) -> Cho
     }
 }
 
+#[cfg(target_os = "windows")]
+use cp_win_sys::fonts as system_fonts;
+
+#[cfg(target_os = "macos")]
+use cp_mac_sys::fonts as system_fonts;
+
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+fn families_here() -> Vec<Family> {
+    system_fonts::families()
+        .into_iter()
+        .map(|one| Family {
+            name: one.name,
+            local: one.local,
+            mono: one.mono,
+            symbol: one.symbol,
+        })
+        .collect()
+}
+
+#[must_use]
+pub fn installed_here() -> Installed {
+    #[cfg(target_os = "windows")]
+    {
+        let system = system_fonts::message_face().map(|face| {
+            let swapped = substituted(&face, &system_fonts::substitutes());
+            system_fonts::family_of_gdi(&swapped).unwrap_or(swapped)
+        });
+        Installed {
+            families: families_here(),
+            system,
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        Installed {
+            families: families_here(),
+            system: None,
+        }
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        Installed::default()
+    }
+}
+
 #[must_use]
 pub fn choices_here() -> Choices {
-    choices(&fonts_here(), &fonts_dir_here(), &|path: &Path| {
-        path.exists()
-    })
+    choices(
+        &fonts_here(),
+        &installed_here(),
+        &fonts_dir_here(),
+        &|path: &Path| path.exists(),
+    )
 }
 
 pub mod lenient {

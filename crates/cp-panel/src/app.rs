@@ -73,7 +73,8 @@ struct Request {
 impl App {
     pub fn start(store: Store, options: Options) -> Result<(Panel, Self), slint::PlatformError> {
         let panel = Panel::new()?;
-        let kept = crate::kept::read();
+        let fonts = cp_config::look::choices_here();
+        let kept = crate::kept::read(&fonts);
         crate::say::adopt_english(kept.english);
         crate::view::dress_words(&panel);
         let theme = panel.global::<crate::Theme>();
@@ -115,7 +116,7 @@ impl App {
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
             last_refresh: Duration::ZERO,
-            kept: crate::kept::Shelf::new(kept),
+            kept: crate::kept::Shelf::new(kept.clone(), fonts),
             generation,
             counter,
         }));
@@ -125,8 +126,8 @@ impl App {
         };
         app.wire(&panel);
         app.wire_quick(&panel);
-        dress_theme(panel.global::<crate::Theme>(), kept);
         panel.set_one_click(kept.one_click);
+        dress_theme(panel.global::<crate::Theme>(), kept);
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
@@ -650,8 +651,8 @@ impl App {
                 stop_lingering(&ui, &state.borrow().lingering);
                 let kept = state.borrow().kept.get();
                 state.borrow_mut().metrics.shut_lines = kept.look.density.shut_lines();
-                dress_theme(ui.global::<crate::Theme>(), kept);
                 ui.set_one_click(kept.one_click);
+                dress_theme(ui.global::<crate::Theme>(), kept);
                 ui.set_update_line(newer_line().into());
                 refresh(&ui, &state);
                 back_to_the_newest(&ui, &state);
@@ -1294,8 +1295,8 @@ pub fn dress_theme(theme: crate::Theme<'_>, kept: crate::kept::Kept) {
     theme.set_selected(opaque(swatch.selected));
     theme.set_selected_edge(opaque(swatch.edge));
     theme.set_grip(opaque(swatch.edge));
-    theme.set_font(look.font.into());
-    theme.set_mono_font(look.mono.into());
+    theme.set_font(look.font.as_str().into());
+    theme.set_mono_font(look.mono.as_str().into());
     theme.set_zoom(look.size.zoom());
 }
 

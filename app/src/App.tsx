@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
-import { useKept, useTrouble, useWaiting } from "./core";
+import { useChoices, useKept, useTrouble, useWaiting, wearFonts, wornFonts } from "./core";
 import { fill, panelTroubleSaid, t } from "./locales";
 import About from "./ui/About";
 import Appearance from "./ui/Appearance";
@@ -29,6 +29,10 @@ export function landing(hash: string): Where {
 export default function App() {
   const [where, setWhere] = useState<Where>(() => landing(window.location.hash));
   const { kept, trouble, change, look } = useKept();
+  const choices = useChoices();
+  const { text, code } = kept && choices ? wornFonts(kept, choices) : { text: null, code: null };
+
+  useEffect(() => wearFonts({ text, code }), [text, code]);
   const panelTrouble = useTrouble();
   const waiting = useWaiting();
 
@@ -91,7 +95,7 @@ export default function App() {
             </p>
           )}
           {kept && where === "general" && <General kept={kept} change={change} />}
-          {kept && where === "look" && <Appearance kept={kept} change={change} />}
+          {kept && where === "look" && <Appearance kept={kept} change={change} choices={choices} />}
           {kept && where === "keys" && <Keys kept={kept} change={change} />}
           {kept && where === "history" && <History kept={kept} change={change} />}
           {where === "backup" && <Backup />}
