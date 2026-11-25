@@ -169,6 +169,7 @@ pub fn a_panel_would_float() -> Option<Floated> {
     let view = window.contentView()?;
     let at = NonNull::from(&*view).cast();
     let took_the_keys = keys_without_activating(at);
+    let counts_as_ours = crate::activation::is_ours_up_front() == Some(true);
     let lingers_without_the_keys = keyless(at, true) && !window.canBecomeKeyWindow();
     keyless(at, false);
     let keys_come_back = window.canBecomeKeyWindow();
@@ -185,7 +186,7 @@ pub fn a_panel_would_float() -> Option<Floated> {
         took_the_keys,
         lingers_without_the_keys,
         keys_come_back,
-        counts_as_ours: crate::activation::is_ours_up_front() == Some(true),
+        counts_as_ours,
         back_as_it_was: grounded(at) && !window.isKindOfClass(Floating::class()),
     };
     window.orderOut(None);
