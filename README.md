@@ -259,6 +259,7 @@ keyboard does not have are replaced by the ones it does.
 | Panel | ↑ ↓ | ↑ ↓ | Move through the list. |
 | Panel | Right arrow | → | Open or close the card. |
 | Panel | Click  ·  Double click | Click  ·  Double click | Open or close the card  ·  paste it. |
+| Panel (Paste with: single click) | Click  ·  Shift + click | Click  ·  ⇧ + click | Paste the card  ·  paste it as plain text. Choose it in Settings → General → Paste with; the right arrow still opens the card. |
 | Open card | Click the ⏎ / ⇧⏎ / Alt ⏎ chips | Click the ⏎ / ⇧⏎ / ⌥⏎ chips | Paste  ·  plain text  ·  paste as. |
 | Panel | Tab  ·  Shift + Tab | ⇥  ·  ⇧⇥ | Cycle through the filters. |
 | Panel | Ctrl + click a kind | ⌘ + click a kind | Add kinds instead of switching. |
