@@ -9,6 +9,7 @@ const OUT: Duration = if cfg!(target_os = "macos") {
     Duration::from_millis(130)
 };
 pub const SLOW: Duration = Duration::from_millis(100);
+const LINGERS_AT_MOST: Duration = Duration::from_millis(500);
 
 thread_local! {
     static CURTAIN: slint::Timer = slint::Timer::default();
@@ -140,6 +141,42 @@ pub fn vanish(ui: &Panel) {
     });
 }
 
+pub fn lingering_for(double_click: Duration) -> Duration {
+    double_click.min(LINGERS_AT_MOST)
+}
+
+pub fn linger(ui: &Panel, timer: &slint::Timer) {
+    let lasts = lingering_for(crate::here::double_click());
+    ui.set_linger(i64::try_from(lasts.as_millis()).unwrap_or(0));
+    ui.set_lingering(true);
+    clicks_activate(ui, false);
+    let weak = ui.as_weak();
+    timer.start(slint::TimerMode::SingleShot, lasts, move || {
+        if let Some(ui) = weak.upgrade() {
+            let _ = ui.hide();
+            settle(&ui);
+        }
+    });
+}
+
+pub fn stop_lingering(ui: &Panel, timer: &slint::Timer) {
+    timer.stop();
+    settle(ui);
+}
+
+fn settle(ui: &Panel) {
+    if ui.get_lingering() {
+        ui.set_lingering(false);
+        clicks_activate(ui, true);
+    }
+}
+
+fn clicks_activate(ui: &Panel, activate: bool) {
+    if let Some(handle) = crate::app::handle_of(ui.window()) {
+        crate::here::clicks_activate(handle, activate);
+    }
+}
+
 pub fn leave_when_left(panel: &Panel, hides: impl Fn() -> bool + 'static) {
     use i_slint_backend_winit::winit::event::WindowEvent;
     use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
@@ -156,6 +193,7 @@ pub fn leave_when_left(panel: &Panel, hides: impl Fn() -> bool + 'static) {
         if let WindowEvent::Focused(false) = event
             && let Some(ui) = weak.upgrade()
             && ui.window().is_visible()
+            && !ui.get_lingering()
             && hides()
         {
             let later = ui.as_weak();
@@ -168,3 +206,7 @@ pub fn leave_when_left(panel: &Panel, hides: impl Fn() -> bool + 'static) {
         EventResult::Propagate
     });
 }
+
+#[cfg(test)]
+#[path = "showing_test.rs"]
+mod tests;

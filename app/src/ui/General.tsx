@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { type Kept, onMac, PRIVACY_PANE, useTrust, useWaking } from "../core";
+import { type Kept, onMac, type PasteWith, PRIVACY_PANE, useTrust, useWaking } from "../core";
 import { t } from "../locales";
 import { Band, Knob, Line } from "./Bits";
 
@@ -90,6 +90,17 @@ export default function General({
           )}
         </Line>
       )}
+
+      <Line says={t("pasteWith")} why={t("pasteWithWhy")}>
+        <select
+          aria-label={t("pasteWith")}
+          value={kept["paste-with"] ?? "double-click"}
+          onChange={(event) => change({ "paste-with": event.target.value as PasteWith })}
+        >
+          <option value="double-click">{t("pasteWithDouble")}</option>
+          <option value="single-click">{t("pasteWithSingle")}</option>
+        </select>
+      </Line>
 
       <Line says={t("hides")} why={t("hidesWhy")}>
         <Knob

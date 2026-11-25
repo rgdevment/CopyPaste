@@ -55,6 +55,9 @@ export component Panel inherits Window {
         }
     }
     in-out property <bool> opened: false;
+    in property <bool> one-click;
+    in property <bool> lingering;
+    in property <duration> linger;
     in-out property <int> hovered: -1;
     property <int> last-chosen: -1;
     property <duration> last-at;
@@ -108,6 +111,7 @@ export component Panel inherits Window {
     callback paste-as(int, string);
     callback cycle(int);
     callback paste(int);
+    callback paste-clicked(int, bool);
     callback copy(int);
     callback named(int, string);
     callback pin(int, bool);
@@ -123,6 +127,14 @@ export component Panel inherits Window {
 
     focus-search => { input.focus(); }
 
+    function tapped(id: int, plain: bool) {
+        if (root.sheet-open) {
+            root.sheet-open = false;
+        } else {
+            root.paste-clicked(id, plain);
+        }
+    }
+
     changed scroll-y => {
         if (root.sheet-open && root.sheet-armed && abs(root.scroll-y - root.sheet-at) > 12px) {
             root.sheet-open = false;
@@ -137,9 +149,9 @@ export component Panel inherits Window {
         border-width: 1px;
         border-color: Theme.panel-border;
         background: Theme.panel;
-        opacity: Theme.apple ? 1.0 : root.shown;
+        opacity: Theme.apple ? 1.0 : root.lingering ? 0.0 : root.shown;
         clip: true;
-        animate opacity { duration: Theme.appear; easing: ease-out; }
+        animate opacity { duration: root.lingering ? root.linger : Theme.appear; easing: ease-out; }
 
         VerticalLayout {
             padding: 0px;
@@ -591,6 +603,8 @@ export component Panel inherits Window {
                         GridCell {
                             card: root.cards[line * 2];
                             current: root.current == line * 2;
+                            one-click: root.one-click;
+                            paste-clicked(plain) => { root.tapped(root.cards[line * 2].id, plain); }
                             chosen => {
                                 root.current = line * 2;
                                 root.moved(line * 2);
@@ -603,6 +617,8 @@ export component Panel inherits Window {
                         if line * 2 + 1 < root.cards.length : GridCell {
                             card: root.cards[line * 2 + 1];
                             current: root.current == line * 2 + 1;
+                            one-click: root.one-click;
+                            paste-clicked(plain) => { root.tapped(root.cards[line * 2 + 1].id, plain); }
                             chosen => {
                                 root.current = line * 2 + 1;
                                 root.moved(line * 2 + 1);
@@ -684,6 +700,8 @@ export component Panel inherits Window {
                             plain-way: root.plain-way;
                             one-kind: root.one-kind;
                             quiet: root.quiet;
+                            one-click: root.one-click;
+                            paste-clicked(id, plain) => { root.tapped(id, plain); }
                             stirred(ax, ay) => {
                                 if (root.quiet && root.rest-x < 0px) {
                                     root.rest-x = ax;
@@ -980,6 +998,14 @@ export component Panel inherits Window {
                         }
                     }
             }
+        }
+
+        if root.lingering : TouchArea {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+            height: parent.height;
+            scroll-event(event) => { return accept; }
         }
     }
 }

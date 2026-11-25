@@ -7,11 +7,11 @@ use std::path::{Path, PathBuf};
 
 pub use platform::{
     Dragged, Listening, THUMBNAILS_FILES, Watching, activated, ahead_now, capture_insisting,
-    content_of, data_dir, drag_out, dress, forward, front, ground, hand_back, holds_front, host,
-    in_front, keep_awake, media_of, ocr_available, on_foreground, open_link, open_path,
-    ours_up_front, paste_into, pointer, read_stuck, rebuilds_whole, screen_of, sequence,
-    system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard, towards, unreadable,
-    utc_offset_at, watch_start, worn_sequence,
+    clicks_activate, content_of, data_dir, double_click, drag_out, dress, forward, front, ground,
+    hand_back, holds_front, host, in_front, keep_awake, media_of, ocr_available, on_foreground,
+    open_link, open_path, ours_up_front, paste_into, pointer, read_stuck, rebuilds_whole,
+    screen_of, sequence, system_is_light, text_in, thumb_of_file, thumbs_dir, to_clipboard,
+    towards, unreadable, utc_offset_at, watch_start, worn_sequence,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -310,6 +310,16 @@ mod platform {
 
     pub fn ground(_handle: RawWindowHandle) {}
 
+    pub fn double_click() -> Duration {
+        Duration::from_millis(u64::from(cp_win_sys::pointer::double_click_ms()))
+    }
+
+    pub fn clicks_activate(handle: RawWindowHandle, activate: bool) {
+        if let RawWindowHandle::Win32(win32) = handle {
+            cp_win_sys::frontmost::clicks_activate(win32.hwnd.get(), activate);
+        }
+    }
+
     pub fn pointer() -> Option<super::Pointer> {
         let spot = cp_win_sys::pointer::spot()?;
         Some(super::Pointer {
@@ -583,6 +593,17 @@ mod platform {
     pub fn ground(handle: RawWindowHandle) {
         if let RawWindowHandle::AppKit(appkit) = handle {
             cp_mac_sys::floating::grounded(appkit.ns_view);
+        }
+    }
+
+    pub fn double_click() -> Duration {
+        Duration::try_from_secs_f64(cp_mac_sys::pointer::double_click_interval())
+            .unwrap_or(Duration::ZERO)
+    }
+
+    pub fn clicks_activate(handle: RawWindowHandle, activate: bool) {
+        if let RawWindowHandle::AppKit(appkit) = handle {
+            cp_mac_sys::floating::keyless(appkit.ns_view, !activate);
         }
     }
 }

@@ -11,6 +11,10 @@ pub struct Spot {
     pub bottom: f64,
 }
 
+pub fn double_click_interval() -> f64 {
+    NSEvent::doubleClickInterval()
+}
+
 pub fn spot() -> Option<Spot> {
     let mtm = MainThreadMarker::new()?;
     let at = NSEvent::mouseLocation();

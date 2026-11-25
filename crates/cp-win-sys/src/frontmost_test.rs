@@ -77,3 +77,14 @@ fn neither_the_panel_nor_its_host_is_ever_where_a_paste_goes() {
 fn a_window_that_is_gone_is_never_pulled_forward() {
     assert!(!pull_forward(HWND(std::ptr::null_mut())));
 }
+
+#[test]
+fn without_activating_sets_and_clears_only_its_own_flag() {
+    let flag = WS_EX_NOACTIVATE.0 as isize;
+    let other = 0x0000_0008_isize;
+    assert_eq!(without_activating(other, true), other | flag);
+    assert_eq!(without_activating(other | flag, false), other);
+    assert_eq!(without_activating(other | flag, true), other | flag);
+    assert_eq!(without_activating(other, false), other);
+    assert_eq!(without_activating(0, true), flag);
+}

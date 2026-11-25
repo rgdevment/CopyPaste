@@ -56,6 +56,14 @@ pub enum Theme {
     Dark,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PasteWith {
+    #[default]
+    DoubleClick,
+    SingleClick,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct Config {
@@ -65,6 +73,8 @@ pub struct Config {
     pub plain_shortcut: String,
     pub forms_shortcut: String,
     pub hides_when_left: bool,
+    #[serde(with = "look::lenient")]
+    pub paste_with: PasteWith,
     #[serde(with = "count")]
     pub keeps_days: Option<u16>,
     #[serde(with = "count", default)]
@@ -113,6 +123,7 @@ impl Default for Config {
             plain_shortcut: PLAIN_SHORTCUT.to_owned(),
             forms_shortcut: FORMS_SHORTCUT.to_owned(),
             hides_when_left: true,
+            paste_with: PasteWith::default(),
             keeps_days: Some(KEEPS_DAYS),
             images_quota_mb: Some(IMAGES_QUOTA_MB),
             welcomed: None,

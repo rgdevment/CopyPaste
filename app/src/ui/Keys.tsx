@@ -64,7 +64,7 @@ export default function Keys({
 
       <table className="bindings">
         <tbody>
-          {panelKeys(mac).map((one) => (
+          {panelKeys(mac, kept["paste-with"] === "single-click").map((one) => (
             <tr key={one.id}>
               <th scope="row" aria-label={one.said}>
                 {one.keys}

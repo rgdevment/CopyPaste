@@ -22,7 +22,7 @@ define_class!(
     impl Floating {
         #[unsafe(method(canBecomeKeyWindow))]
         fn can_become_key(&self) -> bool {
-            true
+            KEYLESS.with(Cell::get) != std::ptr::from_ref(self).addr()
         }
     }
 );
@@ -61,6 +61,28 @@ pub struct Floated {
 
 thread_local! {
     static WAS: Cell<Option<&'static AnyClass>> = const { Cell::new(None) };
+    static KEYLESS: Cell<usize> = const { Cell::new(0) };
+}
+
+pub fn keyless(ns_view: NonNull<c_void>, keyless: bool) -> bool {
+    if MainThreadMarker::new().is_none() {
+        return false;
+    }
+    let view: &NSView = unsafe { ns_view.cast::<NSView>().as_ref() };
+    let Some(window) = view.window() else {
+        return false;
+    };
+    let mine = if keyless {
+        std::ptr::from_ref::<NSWindow>(&window).addr()
+    } else {
+        0
+    };
+    KEYLESS.with(|was| was.set(mine));
+    if keyless && window.isKeyWindow() {
+        window.orderOut(None);
+        window.orderFrontRegardless();
+    }
+    !window.isKeyWindow()
 }
 
 pub fn keys_without_activating(ns_view: NonNull<c_void>) -> bool {

@@ -34,6 +34,7 @@ fn a_config_decides_language_theme_and_hiding_in_one_go() {
             english: true,
             theme: cp_config::Theme::Dark,
             hides: false,
+            one_click: false,
             look: Look::default(),
         }
     );
@@ -58,6 +59,7 @@ fn the_shelf_hands_out_what_was_last_set_across_clones() {
         english: true,
         theme: cp_config::Theme::Light,
         hides: false,
+        one_click: true,
         look: Look {
             accent: cp_config::Accent::Rose,
             ..Look::default()
@@ -129,4 +131,19 @@ fn a_config_with_a_look_is_read_from_the_file() {
     let look = read_from(Some(dir.path())).look;
     assert_eq!(look.accent, cp_config::Accent::Amber);
     assert_eq!(look.density, cp_config::Density::Compact);
+}
+
+#[test]
+fn without_a_config_a_double_click_pastes() {
+    assert!(!resolve(None).one_click);
+}
+
+#[test]
+fn a_single_click_in_the_config_makes_one_click_paste() {
+    let with = |paste_with| cp_config::Config {
+        paste_with,
+        ..cp_config::Config::default()
+    };
+    assert!(resolve(Some(&with(cp_config::PasteWith::SingleClick))).one_click);
+    assert!(!resolve(Some(&with(cp_config::PasteWith::DoubleClick))).one_click);
 }
