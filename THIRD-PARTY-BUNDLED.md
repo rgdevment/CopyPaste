@@ -82,7 +82,7 @@ with the crates that carry it.
 | `color_quant` | 1.1.0 | MIT |
 | `const-field-offset` | 0.2.1 | MIT OR Apache-2.0 |
 | `constant_time_eq` | 0.4.2 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
-| `cookie` | 0.18.2 | MIT OR Apache-2.0 |
+| `cookie` | 0.18.3 | MIT OR Apache-2.0 |
 | `core-foundation` | 0.10.1 | MIT OR Apache-2.0 |
 | `core-foundation` | 0.9.4 | MIT OR Apache-2.0 |
 | `core-foundation-sys` | 0.8.7 | MIT OR Apache-2.0 |
@@ -132,7 +132,7 @@ with the crates that carry it.
 | `fontique` | 0.11.1 | Apache-2.0 OR MIT |
 | `foreign-types` | 0.5.0 | MIT/Apache-2.0 |
 | `foreign-types-shared` | 0.3.1 | MIT/Apache-2.0 |
-| `form_urlencoded` | 1.2.2 | MIT OR Apache-2.0 |
+| `form_urlencoded` | 1.2.3 | MIT OR Apache-2.0 |
 | `futures-channel` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-core` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-sink` | 0.3.34 | MIT OR Apache-2.0 |
@@ -409,7 +409,7 @@ with the crates that carry it.
 | `unicode-vo` | 0.1.0 | MIT/Apache-2.0 |
 | `unicode-width` | 0.2.2 | MIT OR Apache-2.0 |
 | `untrusted` | 0.9.0 | ISC |
-| `url` | 2.5.8 | MIT OR Apache-2.0 |
+| `url` | 2.5.9 | MIT OR Apache-2.0 |
 | `urlpattern` | 0.6.0 | MIT |
 | `usvg` | 0.48.1 | Apache-2.0 OR MIT |
 | `utf8_iter` | 1.0.4 | Apache-2.0 OR MIT |

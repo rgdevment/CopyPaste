@@ -868,7 +868,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Text 13
 
-Carried by `arrayvec` 0.7.8, `atomic-waker` 1.1.2, `base64` 0.22.1, `base64` 0.23.1, `bitflags` 1.3.2, `bitflags` 2.13.2, `cfg-if` 1.0.5, `cgl` 0.3.2, `core-foundation` 0.10.1, `core-foundation` 0.9.4, `core-foundation-sys` 0.8.7, `core-graphics` 0.23.2, `core-graphics` 0.25.0, `core-graphics-types` 0.1.3, `core-graphics-types` 0.2.0, `core_detect` 1.0.0, `critical-section` 1.2.0, `crossbeam-channel` 0.5.17, `crossbeam-utils` 0.8.23, `data-url` 0.3.2, `equivalent` 1.0.3, `errno` 0.3.14, `euclid` 0.22.14, `fastrand` 2.5.0, `filetime` 0.2.29, `flate2` 1.1.10, `fnv` 1.0.7, `fontique` 0.11.1, `form_urlencoded` 1.2.2, `gif` 0.14.2, `glob` 0.3.4, `global-hotkey` 0.8.0, `glow` 0.18.0, `hashbrown` 0.16.1, `hashbrown` 0.17.1, `heck` 0.5.0, `htmlparser` 0.2.1, `httparse` 1.10.1, `hyper-rustls` 0.27.10, `idna` 1.1.0, `idna_adapter` 1.2.2, `indexmap` 2.14.2, `keyboard-types` 0.7.0, `keyboard-types` 0.8.3, `lazy_static` 1.5.1, `lock_api` 0.4.14, `log` 0.4.34, `mime` 0.3.17, `muda` 0.19.3, `muda` 0.20.0, `num-complex` 0.4.6, `num-traits` 0.2.19, `once_cell` 1.21.4, `parking_lot` 0.12.5, `parking_lot_core` 0.9.12, `parlance` 0.1.1, `parley` 0.11.1, `parley_data` 0.11.1, `percent-encoding` 2.3.2, `png` 0.18.1, `regex` 1.13.1, `regex-automata` 0.4.18, `regex-lite` 0.1.9, `regex-syntax` 0.8.11, `renderdoc-sys` 1.1.0, `roxmltree` 0.21.1, `rustc-hash` 1.1.0, `rustix` 1.1.5, `rustls` 0.23.46, `scoped-tls-hkt` 0.1.5, `scopeguard` 1.2.0, `security-framework` 3.7.0, `security-framework-sys` 2.17.0, `serde_with` 3.24.0, `simplecss` 0.2.2, `smallvec` 1.16.3, `smol_str` 0.2.2, `socket2` 0.6.5, `spin_on` 0.1.1, `stable_deref_trait` 1.2.1, `svgtypes` 0.16.1, `system-configuration` 0.7.0, `system-configuration-sys` 0.6.0, `tar` 0.4.46, `tempfile` 3.27.0, `tray-icon` 0.25.1, `unicase` 2.10.0, `unicode-bidi` 0.3.18, `unicode-normalization` 0.1.26, `unicode-segmentation` 1.13.3, `unicode-vo` 0.1.0, `unicode-width` 0.2.2, `url` 2.5.8, `uuid` 1.28.0, `weezl` 0.1.12, `window-vibrancy` 0.8.1, `wry` 0.57.0, `xattr` 1.6.1.
+Carried by `arrayvec` 0.7.8, `atomic-waker` 1.1.2, `base64` 0.22.1, `base64` 0.23.1, `bitflags` 1.3.2, `bitflags` 2.13.2, `cfg-if` 1.0.5, `cgl` 0.3.2, `core-foundation` 0.10.1, `core-foundation` 0.9.4, `core-foundation-sys` 0.8.7, `core-graphics` 0.23.2, `core-graphics` 0.25.0, `core-graphics-types` 0.1.3, `core-graphics-types` 0.2.0, `core_detect` 1.0.0, `critical-section` 1.2.0, `crossbeam-channel` 0.5.17, `crossbeam-utils` 0.8.23, `data-url` 0.3.2, `equivalent` 1.0.3, `errno` 0.3.14, `euclid` 0.22.14, `fastrand` 2.5.0, `filetime` 0.2.29, `flate2` 1.1.10, `fnv` 1.0.7, `fontique` 0.11.1, `form_urlencoded` 1.2.3, `gif` 0.14.2, `glob` 0.3.4, `global-hotkey` 0.8.0, `glow` 0.18.0, `hashbrown` 0.16.1, `hashbrown` 0.17.1, `heck` 0.5.0, `htmlparser` 0.2.1, `httparse` 1.10.1, `hyper-rustls` 0.27.10, `idna` 1.1.0, `idna_adapter` 1.2.2, `indexmap` 2.14.2, `keyboard-types` 0.7.0, `keyboard-types` 0.8.3, `lazy_static` 1.5.1, `lock_api` 0.4.14, `log` 0.4.34, `mime` 0.3.17, `muda` 0.19.3, `muda` 0.20.0, `num-complex` 0.4.6, `num-traits` 0.2.19, `once_cell` 1.21.4, `parking_lot` 0.12.5, `parking_lot_core` 0.9.12, `parlance` 0.1.1, `parley` 0.11.1, `parley_data` 0.11.1, `percent-encoding` 2.3.2, `png` 0.18.1, `regex` 1.13.1, `regex-automata` 0.4.18, `regex-lite` 0.1.9, `regex-syntax` 0.8.11, `renderdoc-sys` 1.1.0, `roxmltree` 0.21.1, `rustc-hash` 1.1.0, `rustix` 1.1.5, `rustls` 0.23.46, `scoped-tls-hkt` 0.1.5, `scopeguard` 1.2.0, `security-framework` 3.7.0, `security-framework-sys` 2.17.0, `serde_with` 3.24.0, `simplecss` 0.2.2, `smallvec` 1.16.3, `smol_str` 0.2.2, `socket2` 0.6.5, `spin_on` 0.1.1, `stable_deref_trait` 1.2.1, `svgtypes` 0.16.1, `system-configuration` 0.7.0, `system-configuration-sys` 0.6.0, `tar` 0.4.46, `tempfile` 3.27.0, `tray-icon` 0.25.1, `unicase` 2.10.0, `unicode-bidi` 0.3.18, `unicode-normalization` 0.1.26, `unicode-segmentation` 1.13.3, `unicode-vo` 0.1.0, `unicode-width` 0.2.2, `url` 2.5.9, `uuid` 1.28.0, `weezl` 0.1.12, `window-vibrancy` 0.8.1, `wry` 0.57.0, `xattr` 1.6.1.
 
 ```text
 Apache License
@@ -2960,7 +2960,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Text 43
 
-Carried by `cookie` 0.18.2.
+Carried by `cookie` 0.18.3.
 
 ```text
 Apache License
@@ -3169,7 +3169,7 @@ limitations under the License.
 
 ## Text 44
 
-Carried by `cookie` 0.18.2.
+Carried by `cookie` 0.18.3.
 
 ```text
 Copyright (c) 2017 Sergio Benitez
@@ -4640,7 +4640,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 
 ## Text 57
 
-Carried by `data-url` 0.3.2, `idna` 1.1.0, `percent-encoding` 2.3.2, `url` 2.5.8.
+Carried by `data-url` 0.3.2, `idna` 1.1.0, `percent-encoding` 2.3.2, `url` 2.5.9.
 
 ```text
 Copyright (c) 2013-2025 The rust-url developers
@@ -5927,7 +5927,7 @@ SOFTWARE.
 
 ## Text 87
 
-Carried by `form_urlencoded` 1.2.2.
+Carried by `form_urlencoded` 1.2.3.
 
 ```text
 Copyright (c) 2013-2016 The rust-url developers
