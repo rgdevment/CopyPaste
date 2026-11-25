@@ -179,3 +179,92 @@ fn a_picture_on_the_clipboard_crosses_as_a_png_and_not_as_its_raw_bitmap() {
         "a bitmap off the clipboard is transcoded, because nothing else reads a raw DIB"
     );
 }
+
+const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+
+fn a_stored_dib() -> Vec<Format> {
+    vec![Format {
+        id: "CF_DIB".into(),
+        payload: Payload::stored(a_dib_of_one_colour()),
+    }]
+}
+
+fn png_bytes_of(format: &Format) -> &[u8] {
+    match &format.payload {
+        Payload::Inline(bytes) | Payload::Blob(bytes) => bytes,
+        other => panic!("the picture arrived as {other:?}"),
+    }
+}
+
+#[test]
+fn a_bitmap_offered_beside_a_png_is_only_announced_without_a_size() {
+    let clipboard = Clipboard::open().expect("the clipboard opens");
+    let payload = payload_for(
+        &clipboard,
+        Some(Family::Image),
+        cp_win_sys::formats::CF_DIB,
+        "CF_DIB",
+        &["PNG", "CF_DIB"],
+    );
+    assert!(
+        matches!(payload, Payload::Announced { size: None }),
+        "got {payload:?}"
+    );
+}
+
+#[test]
+fn a_bitmap_already_stored_is_transcoded_from_the_stored_bytes() {
+    let formats = a_stored_dib();
+    let png = transcoded(&formats, &Bitmap::Kept("CF_DIB")).expect("a PNG comes out");
+    assert_eq!(png.id, SYNTHETIC_IMAGE);
+    assert_eq!(&png_bytes_of(&png)[..8], PNG_SIGNATURE);
+}
+
+#[test]
+fn a_bitmap_read_apart_is_transcoded_from_its_raw_bytes() {
+    let png = transcoded(&[], &Bitmap::Raw(a_dib_of_one_colour())).expect("a PNG comes out");
+    assert_eq!(png.id, SYNTHETIC_IMAGE);
+    assert_eq!(&png_bytes_of(&png)[..8], PNG_SIGNATURE);
+}
+
+#[test]
+fn a_kept_bitmap_that_is_no_longer_stored_gives_no_png() {
+    assert!(transcoded(&[], &Bitmap::Kept("CF_DIB")).is_none());
+}
+
+#[test]
+fn raw_bytes_that_are_not_a_bitmap_give_no_png() {
+    assert!(transcoded(&[], &Bitmap::Raw(vec![1, 2, 3])).is_none());
+}
+
+#[test]
+fn finishing_a_gathered_picture_appends_the_png_after_the_formats_it_had() {
+    let item = Item {
+        kind: Some(Kind::Image),
+        formats: a_stored_dib(),
+    };
+    let gathered = Gathered::Kept {
+        item,
+        bitmap: Some(Bitmap::Kept("CF_DIB")),
+    };
+    let item = gathered.finished().kept().expect("the item is kept");
+    let ids: Vec<&str> = item.formats.iter().map(|one| one.id.as_str()).collect();
+    assert_eq!(ids, ["CF_DIB", SYNTHETIC_IMAGE]);
+}
+
+#[test]
+fn finishing_a_gathered_item_without_a_bitmap_adds_nothing() {
+    let item = Item {
+        kind: Some(Kind::Image),
+        formats: a_stored_dib(),
+    };
+    let gathered = Gathered::Kept { item, bitmap: None };
+    let item = gathered.finished().kept().expect("the item is kept");
+    assert_eq!(item.formats.len(), 1);
+}
+
+#[test]
+fn finishing_something_already_decided_returns_it_untouched() {
+    let gathered = Gathered::Done(Captured::Nothing);
+    assert!(matches!(gathered.finished(), Captured::Nothing));
+}

@@ -21,6 +21,12 @@ pub struct Aim {
 
 pub type Reach = Rc<dyn Fn() -> Aim>;
 
+fn caught_up(aim: &Aim) {
+    if let Some(engine) = aim.engine.as_deref() {
+        engine.caught_up();
+    }
+}
+
 pub struct Quick {
     chooser: OnceCell<Chooser>,
     reach: Reach,
@@ -48,6 +54,7 @@ impl Quick {
             return;
         }
         let aim = (self.reach)();
+        caught_up(&aim);
         let Some((row, _)) = newest(&aim.store, 0) else {
             note("nothing to paste plain: the history is empty");
             return;
@@ -144,6 +151,7 @@ impl Quick {
 
     fn fill(&self, chooser: &Chooser) -> bool {
         let aim = (self.reach)();
+        caught_up(&aim);
         let back = self.back.get();
         let Some((row, older)) = newest(&aim.store, back) else {
             return false;

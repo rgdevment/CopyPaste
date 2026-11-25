@@ -92,6 +92,16 @@ impl Watcher {
         self.ours = Some((from, Some(count)));
     }
 
+    pub fn writing_ours(&self) -> bool {
+        self.ours.is_some()
+    }
+
+    pub fn settled(&mut self, count: Option<i64>) {
+        if count.is_some() {
+            self.last = count;
+        }
+    }
+
     pub fn tick(&mut self, count: i64) -> Seen {
         let Some(last) = self.last else {
             self.last = Some(count);
