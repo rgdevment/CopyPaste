@@ -1,18 +1,29 @@
+use cp_core::settling::SETTLING;
 use cp_core::watch::Cadence;
-use cp_core::watching::{NAP, Watching};
+use cp_core::watching::{NAP, Settle, Watching};
 use cp_win_sys::clipboard;
 use std::sync::Arc;
 use std::time::Duration;
 
+const SERVED_BY_ITS_OWNER: &str = "DataObject";
+
 pub fn every(period: Duration, on_fresh: impl FnMut() + Send + 'static) -> Watching {
-    Watching::every(
+    Watching::settling(
         Cadence::Opaque,
         period,
         NAP,
         Arc::new(clipboard::sequence),
         Arc::new(clipboard::writing_now),
+        Settle {
+            late: Arc::new(served_late),
+            settling: SETTLING,
+        },
         on_fresh,
     )
+}
+
+fn served_late() -> bool {
+    clipboard::has_owner() && clipboard::holds(SERVED_BY_ITS_OWNER)
 }
 
 #[cfg(test)]

@@ -45,10 +45,11 @@ pub fn capture_now() -> Captured {
 }
 
 fn capture_counted(counted: &clipboard::Reading) -> Captured {
-    let captured = match Clipboard::within(counted) {
-        Some(clipboard) => capture(&clipboard),
-        None => Captured::Busy,
+    let gathered = match Clipboard::within(counted) {
+        Some(clipboard) => gather(&clipboard),
+        None => return Captured::Busy,
     };
+    let captured = gathered.finished();
     let Captured::Kept(item) = captured else {
         return captured;
     };
@@ -68,18 +69,46 @@ fn sequence_now() -> i64 {
 }
 
 pub fn capture(clipboard: &Clipboard) -> Captured {
+    gather(clipboard).finished()
+}
+
+enum Bitmap {
+    Kept(&'static str),
+    Raw(Vec<u8>),
+}
+
+enum Gathered {
+    Done(Captured),
+    Kept { item: Item, bitmap: Option<Bitmap> },
+}
+
+impl Gathered {
+    fn finished(self) -> Captured {
+        match self {
+            Gathered::Done(captured) => captured,
+            Gathered::Kept { mut item, bitmap } => {
+                if let Some(png) = bitmap.and_then(|bitmap| transcoded(&item.formats, &bitmap)) {
+                    item.formats.push(png);
+                }
+                Captured::Kept(item)
+            }
+        }
+    }
+}
+
+fn gather(clipboard: &Clipboard) -> Gathered {
     let ids = clipboard.offered();
     if ids.is_empty() {
-        return Captured::Nothing;
+        return Gathered::Done(Captured::Nothing);
     }
     let names: Vec<String> = ids.iter().map(|id| name_of(*id)).collect();
     let offered: Vec<&str> = names.iter().map(String::as_str).collect();
 
     if let Some(refusal) = CATALOG.refusal(&offered) {
-        return Captured::Refused(refusal);
+        return Gathered::Done(Captured::Refused(refusal));
     }
     if let Some(refusal) = asked_not_to_be_kept(clipboard, &ids, &names) {
-        return Captured::Refused(refusal);
+        return Gathered::Done(Captured::Refused(refusal));
     }
 
     let virtual_only = virtual_files::offered_without_a_drop(&offered);
@@ -97,17 +126,18 @@ pub fn capture(clipboard: &Clipboard) -> Captured {
             payload,
         });
     }
-    if let Some(png) = transcoded_image(clipboard, &ids, &names, &offered) {
-        formats.push(png);
-    }
+    let bitmap = bitmap_to_transcode(clipboard, &ids, &names, &offered, &formats);
     if virtual_only {
         announce_virtual_files(clipboard, &ids, &names, &mut formats);
     }
 
-    Captured::Kept(Item {
-        kind: refine(family, &formats),
-        formats,
-    })
+    Gathered::Kept {
+        item: Item {
+            kind: refine(family, &formats),
+            formats,
+        },
+        bitmap,
+    }
 }
 
 fn asked_not_to_be_kept(clipboard: &Clipboard, ids: &[u32], names: &[String]) -> Option<Refusal> {
@@ -131,9 +161,7 @@ fn payload_for(
         return Payload::Announced { size: None };
     }
     if CATALOG.costlier_twin(name, offered) {
-        return Payload::Announced {
-            size: clipboard.size_of(id),
-        };
+        return Payload::Announced { size: None };
     }
     match read(clipboard, id) {
         Some(bytes) => Payload::stored(bytes),
@@ -145,23 +173,34 @@ fn read(clipboard: &Clipboard, id: u32) -> Option<Vec<u8>> {
     clipboard.bytes(id)
 }
 
-fn transcoded_image(
+fn bitmap_to_transcode(
     clipboard: &Clipboard,
     ids: &[u32],
     names: &[String],
     offered: &[&str],
-) -> Option<Format> {
+    formats: &[Format],
+) -> Option<Bitmap> {
     let chosen = CATALOG.preferred_image(offered)?;
     if !chosen.starts_with("CF_DIB") {
         return None;
+    }
+    if bytes_of(formats, chosen).is_some() {
+        return Some(Bitmap::Kept(chosen));
     }
     let id = ids
         .iter()
         .zip(names)
         .find(|(_, name)| name.as_str() == chosen)
         .map(|(id, _)| *id)?;
-    let raw = read(clipboard, id)?;
-    let png = dib::to_png(&raw)?;
+    read(clipboard, id).map(Bitmap::Raw)
+}
+
+fn transcoded(formats: &[Format], bitmap: &Bitmap) -> Option<Format> {
+    let raw = match bitmap {
+        Bitmap::Kept(id) => bytes_of(formats, id)?,
+        Bitmap::Raw(bytes) => bytes.as_slice(),
+    };
+    let png = dib::to_png(raw)?;
     Some(Format {
         id: SYNTHETIC_IMAGE.into(),
         payload: Payload::stored(png),

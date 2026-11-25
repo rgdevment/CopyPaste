@@ -154,3 +154,33 @@ fn a_copy_made_before_a_write_began_and_never_ticked_is_seen_once_it_is_given_up
         "the copy that slipped in before the write is still someone's copy"
     );
 }
+
+#[test]
+fn a_settled_count_makes_the_next_tick_at_it_nothing() {
+    let mut watcher = mac();
+    watcher.tick(10);
+    watcher.settled(Some(14));
+    assert_eq!(watcher.tick(14), Seen::Nothing);
+    assert!(matches!(watcher.tick(15), Seen::Fresh { .. }));
+}
+
+#[test]
+fn an_unknown_settled_count_changes_nothing() {
+    let mut watcher = mac();
+    watcher.tick(10);
+    watcher.settled(None);
+    assert!(matches!(watcher.tick(11), Seen::Fresh { .. }));
+}
+
+#[test]
+fn a_write_of_ours_is_told_until_a_tick_passes_its_end() {
+    let mut watcher = Watcher::new(Cadence::Opaque);
+    assert_eq!(watcher.tick(10), Seen::Nothing);
+    assert!(!watcher.writing_ours());
+    watcher.writing(10);
+    assert!(watcher.writing_ours());
+    watcher.wrote(12);
+    assert!(watcher.writing_ours());
+    assert_eq!(watcher.tick(12), Seen::Ours);
+    assert!(!watcher.writing_ours());
+}

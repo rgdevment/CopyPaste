@@ -260,6 +260,10 @@ pub fn holds(name: &str) -> bool {
     unsafe { IsClipboardFormatAvailable(id) }.is_ok()
 }
 
+pub fn has_owner() -> bool {
+    unsafe { GetClipboardOwner() }.is_ok_and(|owner| !owner.is_invalid())
+}
+
 pub fn sequence() -> Option<i64> {
     let raw = unsafe { GetClipboardSequenceNumber() };
     (raw != 0).then_some(i64::from(raw))

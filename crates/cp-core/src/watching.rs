@@ -1,6 +1,7 @@
 use crate::resting::Rest;
+use crate::settling::{Settled, Settling, settle};
 use crate::watch::{Cadence, Seen, Watcher};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::Duration;
 
 pub const EVERY: Duration = Duration::from_millis(60);
@@ -10,11 +11,53 @@ const _: () = assert!(EVERY.as_millis() >= 16);
 const _: () = assert!(EVERY.as_millis() <= 250);
 const _: () = assert!(NAP.as_millis() <= EVERY.as_millis());
 
+pub const CAUGHT_UP_WITHIN: Duration = Duration::from_millis(1_500);
+
+const _: () = assert!(CAUGHT_UP_WITHIN.as_millis() > crate::settling::SETTLING.ceiling.as_millis());
+
 pub type Counting = Arc<dyn Fn() -> Option<i64> + Send + Sync>;
 pub type Busy = Arc<dyn Fn() -> bool + Send + Sync>;
+pub type Late = Arc<dyn Fn() -> bool + Send + Sync>;
+
+pub struct Settle {
+    pub late: Late,
+    pub settling: Settling,
+}
+
+impl Settle {
+    pub fn never() -> Self {
+        Self {
+            late: Arc::new(|| false),
+            settling: crate::settling::SETTLING,
+        }
+    }
+}
+
+#[derive(Default)]
+struct Behind {
+    keeping: Mutex<bool>,
+    done: Condvar,
+}
+
+impl Behind {
+    fn keeping(&self, now: bool) {
+        *self.keeping.lock().unwrap_or_else(PoisonError::into_inner) = now;
+        self.done.notify_all();
+    }
+
+    fn caught_up_within(&self, most: Duration) -> bool {
+        let held = self.keeping.lock().unwrap_or_else(PoisonError::into_inner);
+        let (held, _) = self
+            .done
+            .wait_timeout_while(held, most, |keeping| *keeping)
+            .unwrap_or_else(PoisonError::into_inner);
+        !*held
+    }
+}
 
 pub struct Watching {
     stop: Arc<Rest>,
+    behind: Arc<Behind>,
     watcher: Arc<Mutex<Watcher>>,
     thread: Mutex<Option<std::thread::JoinHandle<()>>>,
     count: Counting,
@@ -27,9 +70,23 @@ impl Watching {
         nap: Duration,
         count: Counting,
         busy: Busy,
+        on_fresh: impl FnMut() + Send + 'static,
+    ) -> Self {
+        Self::settling(cadence, period, nap, count, busy, Settle::never(), on_fresh)
+    }
+
+    pub fn settling(
+        cadence: Cadence,
+        period: Duration,
+        nap: Duration,
+        count: Counting,
+        busy: Busy,
+        settle_first: Settle,
         mut on_fresh: impl FnMut() + Send + 'static,
     ) -> Self {
         let stop = Arc::new(Rest::new());
+        let behind = Arc::new(Behind::default());
+        let keeping = behind.clone();
         let watcher = Arc::new(Mutex::new(Watcher::new(cadence)));
         let mine = stop.clone();
         let theirs = watcher.clone();
@@ -45,13 +102,26 @@ impl Watching {
                     && let Seen::Fresh { .. } = watcher.tick(now)
                 {
                     drop(watcher);
-                    on_fresh();
+                    keeping.keeping(true);
+                    let cut = || {
+                        busy()
+                            || mine.closed()
+                            || theirs.lock().map_or(true, |watcher| watcher.writing_ours())
+                    };
+                    if let Settled::At(at) = settled(&settle_first, &reading, &cut, &mine) {
+                        if let Ok(mut watcher) = theirs.lock() {
+                            watcher.settled(at);
+                        }
+                        on_fresh();
+                    }
+                    keeping.keeping(false);
                 }
                 mine.rest(period);
             }
         });
         Self {
             stop,
+            behind,
             watcher,
             thread: Mutex::new(Some(thread)),
             count,
@@ -67,6 +137,10 @@ impl Watching {
             Some(thread) => crate::closing::join_within(thread, crate::closing::A_MOMENT),
             None => true,
         }
+    }
+
+    pub fn caught_up_within(&self, most: Duration) -> bool {
+        self.behind.caught_up_within(most)
     }
 
     pub fn writing(&self) -> bool {
@@ -105,6 +179,27 @@ impl Watching {
             .ok()
             .and_then(|watcher| watcher.missed())
     }
+}
+
+fn settled(
+    settle_first: &Settle,
+    count: &Counting,
+    cut: &impl Fn() -> bool,
+    stop: &Rest,
+) -> Settled {
+    if !(settle_first.late)() {
+        return Settled::At(None);
+    }
+    let started = std::time::Instant::now();
+    settle(
+        settle_first.settling,
+        || count(),
+        cut,
+        || started.elapsed(),
+        |pause| {
+            stop.rest(pause);
+        },
+    )
 }
 
 impl Drop for Watching {

@@ -89,3 +89,13 @@ fn a_second_read_waits_for_the_first_to_close_instead_of_sharing_it() {
 fn a_format_nobody_ever_wrote_is_not_held() {
     assert!(!holds("CoPanda Never Written By Anyone"));
 }
+
+#[test]
+fn asking_who_owns_the_clipboard_does_not_need_it_open() {
+    let Some(reading) = Clipboard::open() else {
+        return;
+    };
+    let _ = has_owner();
+    drop(reading);
+    let _ = has_owner();
+}
