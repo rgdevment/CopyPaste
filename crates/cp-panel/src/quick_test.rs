@@ -49,7 +49,15 @@ fn bench(copied: &[&str]) -> Bench {
         Rc::new(move || Aim {
             store: held.clone(),
             engine: None,
-            kept: crate::kept::resolve(None),
+            kept: crate::kept::resolve(
+                None,
+                &cp_config::look::choices(
+                    &cp_config::look::fonts_here(),
+                    &cp_config::look::Installed::default(),
+                    std::path::Path::new("/fonts"),
+                    &|_: &std::path::Path| false,
+                ),
+            ),
         }),
         ahead.clone(),
     );

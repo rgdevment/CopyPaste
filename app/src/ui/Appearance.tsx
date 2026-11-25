@@ -9,11 +9,11 @@ import {
   SHUT_LINES,
   SIZES,
   type TextSize,
-  useChoices,
   ZOOM,
 } from "../core";
 import { t } from "../locales";
 import { Band, Line } from "./Bits";
+import FontPicker from "./FontPicker";
 
 const SIZE_SAYS = {
   small: "sizeSmall",
@@ -42,14 +42,19 @@ const DENSITY_SAYS = {
   comfortable: "densityComfortable",
 } as const;
 
+export function systemSaid(choices: Choices): string {
+  return `${t("fontSystem")} (${choices.text.label}) · ${t("byDefault")}`;
+}
+
 export default function Appearance({
   kept,
   change,
+  choices,
 }: {
   kept: Kept;
   change: (what: Partial<Kept>) => Promise<void>;
+  choices: Choices | null;
 }) {
-  const choices = useChoices();
   const size = kept["text-size"] ?? "normal";
   const density = kept.density ?? "normal";
   const accent = kept.accent ?? "indigo";
@@ -111,9 +116,9 @@ export default function Appearance({
 
       {choices && (
         <Line says={t("font")} why={t("fontWhy")}>
-          <FontList
+          <FontPicker
             says={t("font")}
-            system={choices.text}
+            first={systemSaid(choices)}
             others={choices.texts}
             chosen={kept.font ?? null}
             pick={(id) => change({ font: id })}
@@ -123,9 +128,9 @@ export default function Appearance({
 
       {choices && (
         <Line says={t("codeFont")} why={t("codeFontWhy")}>
-          <FontList
+          <FontPicker
             says={t("codeFont")}
-            system={choices.code}
+            first={`${choices.code.label} · ${t("byDefault")}`}
             others={choices.codes}
             chosen={kept["code-font"] ?? null}
             pick={(id) => change({ "code-font": id })}
@@ -186,36 +191,6 @@ function Segments<T extends string>({
         </label>
       ))}
     </div>
-  );
-}
-
-function FontList({
-  says,
-  system,
-  others,
-  chosen,
-  pick,
-}: {
-  says: string;
-  system: { label: string };
-  others: { id: string; label: string }[];
-  chosen: string | null;
-  pick: (id: string | null) => void;
-}) {
-  const known = others.some((one) => one.id === chosen) ? chosen : "";
-  return (
-    <select
-      aria-label={says}
-      value={known ?? ""}
-      onChange={(event) => pick(event.target.value || null)}
-    >
-      <option value="">{`${system.label} · ${t("byDefault")}`}</option>
-      {others.map((one) => (
-        <option key={one.id} value={one.id}>
-          {one.label}
-        </option>
-      ))}
-    </select>
   );
 }
 

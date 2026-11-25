@@ -72,7 +72,8 @@ struct Request {
 impl App {
     pub fn start(store: Store, options: Options) -> Result<(Panel, Self), slint::PlatformError> {
         let panel = Panel::new()?;
-        let kept = crate::kept::read();
+        let fonts = cp_config::look::choices_here();
+        let kept = crate::kept::read(&fonts);
         crate::say::adopt_english(kept.english);
         crate::view::dress_words(&panel);
         let theme = panel.global::<crate::Theme>();
@@ -113,7 +114,7 @@ impl App {
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
             last_refresh: Duration::ZERO,
-            kept: crate::kept::Shelf::new(kept),
+            kept: crate::kept::Shelf::new(kept.clone(), fonts),
             generation,
             counter,
         }));
@@ -1264,8 +1265,8 @@ pub fn dress_theme(theme: crate::Theme<'_>, kept: crate::kept::Kept) {
     theme.set_selected(opaque(swatch.selected));
     theme.set_selected_edge(opaque(swatch.edge));
     theme.set_grip(opaque(swatch.edge));
-    theme.set_font(look.font.into());
-    theme.set_mono_font(look.mono.into());
+    theme.set_font(look.font.as_str().into());
+    theme.set_mono_font(look.mono.as_str().into());
     theme.set_zoom(look.size.zoom());
 }
 

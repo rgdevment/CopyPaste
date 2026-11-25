@@ -9,6 +9,24 @@ fn config(locale: Option<&str>, theme: cp_config::Theme, hides: bool) -> cp_conf
     }
 }
 
+fn family(name: &str, mono: bool) -> cp_config::look::Family {
+    cp_config::look::Family {
+        name: name.to_owned(),
+        local: name.to_owned(),
+        mono,
+        symbol: false,
+    }
+}
+
+fn fonts() -> cp_config::look::Choices {
+    cp_config::look::choices(
+        &cp_config::look::fonts_here(),
+        &cp_config::look::Installed::default(),
+        std::path::Path::new("/fonts"),
+        &|_: &std::path::Path| false,
+    )
+}
+
 #[test]
 fn an_explicit_theme_beats_the_system_and_system_follows_it() {
     assert!(light_for(cp_config::Theme::Light, false));
@@ -19,7 +37,7 @@ fn an_explicit_theme_beats_the_system_and_system_follows_it() {
 
 #[test]
 fn without_a_config_the_panel_follows_the_system_and_hides_when_left() {
-    let kept = resolve(None);
+    let kept = resolve(None, &fonts());
     assert!(kept.light(true));
     assert!(!kept.light(false));
     assert!(kept.hides);
@@ -27,7 +45,10 @@ fn without_a_config_the_panel_follows_the_system_and_hides_when_left() {
 
 #[test]
 fn a_config_decides_language_theme_and_hiding_in_one_go() {
-    let kept = resolve(Some(&config(Some("en-US"), cp_config::Theme::Dark, false)));
+    let kept = resolve(
+        Some(&config(Some("en-US"), cp_config::Theme::Dark, false)),
+        &fonts(),
+    );
     assert_eq!(
         kept,
         Kept {
@@ -41,7 +62,10 @@ fn a_config_decides_language_theme_and_hiding_in_one_go() {
         !kept.light(true),
         "a chosen dark stays dark on a light system"
     );
-    let kept = resolve(Some(&config(Some("es-CL"), cp_config::Theme::Light, true)));
+    let kept = resolve(
+        Some(&config(Some("es-CL"), cp_config::Theme::Light, true)),
+        &fonts(),
+    );
     assert!(!kept.english);
     assert!(
         kept.light(false),
@@ -52,7 +76,7 @@ fn a_config_decides_language_theme_and_hiding_in_one_go() {
 
 #[test]
 fn the_shelf_hands_out_what_was_last_set_across_clones() {
-    let one = Shelf::new(resolve(None));
+    let one = Shelf::new(resolve(None, &fonts()), fonts());
     let other = one.clone();
     let wanted = Kept {
         english: true,
@@ -63,29 +87,29 @@ fn the_shelf_hands_out_what_was_last_set_across_clones() {
             ..Look::default()
         },
     };
-    other.set(wanted);
+    other.set(wanted.clone());
     assert_eq!(one.get(), wanted);
 }
 
 #[test]
 fn renewing_reads_what_the_settings_say_now() {
     let dir = tempfile::tempdir().expect("dir");
-    let shelf = Shelf::new(resolve(None));
+    let shelf = Shelf::new(resolve(None, &fonts()), fonts());
     let written = config(Some("en-GB"), cp_config::Theme::Dark, false);
     cp_config::write(&cp_config::at(dir.path()), &written).expect("written");
     let kept = shelf.renew_from(Some(dir.path()));
-    assert_eq!(kept, resolve(Some(&written)));
+    assert_eq!(kept, resolve(Some(&written), &fonts()));
     assert_eq!(shelf.get(), kept, "the shelf holds what was just read");
 }
 
 #[test]
 fn with_nowhere_to_read_from_the_defaults_rule() {
-    assert_eq!(read_from(None), resolve(None));
+    assert_eq!(read_from(None, &fonts()), resolve(None, &fonts()));
 }
 
 #[test]
 fn without_a_config_the_panel_looks_as_it_always_did() {
-    let look = resolve(None).look;
+    let look = resolve(None, &fonts()).look;
     assert_eq!(look.size, cp_config::TextSize::Normal);
     assert_eq!(look.density, cp_config::Density::Normal);
     assert_eq!(look.accent, cp_config::Accent::Indigo);
@@ -103,18 +127,78 @@ fn the_look_chosen_reaches_the_panel_and_a_missing_font_does_not() {
         code_font: Some("sf-mono".into()),
         ..cp_config::Config::default()
     };
-    let dir = std::path::Path::new("/fonts");
-    let look = look_of(
-        &chosen,
+    let installed = cp_config::look::Installed {
+        families: vec![family("Avenir Next", false)],
+        system: None,
+    };
+    let offered = cp_config::look::choices(
         &cp_config::look::MAC,
-        dir,
-        &|path: &std::path::Path| path.ends_with("Avenir Next.ttc"),
+        &installed,
+        std::path::Path::new("/fonts"),
+        &|_: &std::path::Path| false,
     );
+    let look = look_of(&chosen, &offered);
     assert_eq!(look.size, cp_config::TextSize::Larger);
     assert_eq!(look.density, cp_config::Density::Comfortable);
     assert_eq!(look.accent, cp_config::Accent::Teal);
     assert_eq!(look.font, "Avenir Next");
     assert_eq!(look.mono, "Menlo");
+}
+
+#[test]
+fn an_old_font_id_and_an_installed_family_both_reach_the_panel() {
+    let installed = cp_config::look::Installed {
+        families: vec![
+            family("Calibri", false),
+            family("Fira Code", true),
+            family("Comic Sans MS", false),
+        ],
+        system: None,
+    };
+    let offered = cp_config::look::choices(
+        &cp_config::look::WINDOWS,
+        &installed,
+        std::path::Path::new("/fonts"),
+        &|_: &std::path::Path| false,
+    );
+    let old = cp_config::Config {
+        font: Some("calibri".into()),
+        ..cp_config::Config::default()
+    };
+    assert_eq!(look_of(&old, &offered).font, "Calibri");
+    let any = cp_config::Config {
+        font: Some("Comic Sans MS".into()),
+        code_font: Some("Fira Code".into()),
+        ..cp_config::Config::default()
+    };
+    let look = look_of(&any, &offered);
+    assert_eq!(look.font, "Comic Sans MS");
+    assert_eq!(look.mono, "Fira Code");
+    let gone = cp_config::Config {
+        font: Some("Papyrus".into()),
+        code_font: Some("Papyrus".into()),
+        ..cp_config::Config::default()
+    };
+    let look = look_of(&gone, &offered);
+    assert_eq!(look.font, "Segoe UI");
+    assert_eq!(look.mono, "Consolas");
+}
+
+#[test]
+fn a_system_font_other_than_the_platform_one_is_what_no_choice_reads_as() {
+    let installed = cp_config::look::Installed {
+        families: vec![family("Comic Sans MS", false)],
+        system: Some("Comic Sans MS".into()),
+    };
+    let offered = cp_config::look::choices(
+        &cp_config::look::WINDOWS,
+        &installed,
+        std::path::Path::new("/fonts"),
+        &|_: &std::path::Path| false,
+    );
+    let look = look_of(&cp_config::Config::default(), &offered);
+    assert_eq!(look.font, "Comic Sans MS");
+    assert_eq!(look.mono, "Consolas");
 }
 
 #[test]
@@ -126,7 +210,7 @@ fn a_config_with_a_look_is_read_from_the_file() {
         ..cp_config::Config::default()
     };
     cp_config::write(&cp_config::at(dir.path()), &chosen).expect("writes");
-    let look = read_from(Some(dir.path())).look;
+    let look = read_from(Some(dir.path()), &fonts()).look;
     assert_eq!(look.accent, cp_config::Accent::Amber);
     assert_eq!(look.density, cp_config::Density::Compact);
 }

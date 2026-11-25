@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+Element.prototype.scrollIntoView = vi.fn();
 const asked = vi.hoisted(() => ({
   greeting: { kind: "tour", former: true } as unknown,
   bound: true,
@@ -54,6 +55,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         texts: [{ id: "avenir-next", label: "Avenir Next", css: '"Avenir Next"' }],
         code: { id: "", label: "Menlo", css: "Menlo" },
         codes: [{ id: "sf-mono", label: "SF Mono", css: "ui-monospace" }],
+        plainSystem: true,
         accents: [
           {
             id: "indigo",
