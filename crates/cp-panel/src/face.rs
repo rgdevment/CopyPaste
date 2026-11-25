@@ -245,9 +245,16 @@ fn lines_for(text: &str, per_line: usize, most: i32) -> i32 {
         .clamp(1, shut_lines_within(most))
 }
 
+const BREAKS: [char; 6] = ['\n', '\u{0B}', '\u{0C}', '\u{85}', '\u{2028}', '\u{2029}'];
+
+pub fn one_line(text: &str) -> String {
+    text.replace(BREAKS, " ").replace('\r', " ")
+}
+
 pub fn opening_of(body: &str) -> (String, String) {
     let shown: Vec<&str> = body
-        .lines()
+        .split(BREAKS)
+        .map(|line| line.strip_suffix('\r').unwrap_or(line))
         .filter(|line| !line.trim().is_empty())
         .take(2)
         .collect();

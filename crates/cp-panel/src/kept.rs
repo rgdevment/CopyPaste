@@ -16,6 +16,8 @@ pub struct Look {
     pub accent: cp_config::Accent,
     pub font: String,
     pub mono: String,
+    pub panel_size: cp_config::PanelSize,
+    pub contrast: bool,
 }
 
 impl Default for Look {
@@ -27,6 +29,8 @@ impl Default for Look {
             accent: cp_config::Accent::default(),
             font: fonts.text.family.to_owned(),
             mono: fonts.code.family.to_owned(),
+            panel_size: cp_config::PanelSize::default(),
+            contrast: false,
         }
     }
 }
@@ -38,6 +42,8 @@ pub fn look_of(config: &cp_config::Config, fonts: &cp_config::look::Choices) -> 
         accent: config.accent,
         font: fonts.text_family(config.font.as_deref()).to_owned(),
         mono: fonts.code_family(config.code_font.as_deref()).to_owned(),
+        panel_size: config.panel_size,
+        contrast: config.high_contrast,
     }
 }
 

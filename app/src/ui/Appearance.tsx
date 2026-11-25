@@ -5,6 +5,7 @@ import {
   type Density,
   type Kept,
   type Look,
+  PANEL_SIZES,
   PLAIN_LOOK,
   SHUT_LINES,
   SIZES,
@@ -12,7 +13,7 @@ import {
   ZOOM,
 } from "../core";
 import { t } from "../locales";
-import { Band, Line } from "./Bits";
+import { Band, Knob, Line } from "./Bits";
 import FontPicker from "./FontPicker";
 
 const SIZE_SAYS = {
@@ -40,6 +41,13 @@ const DENSITY_SAYS = {
   compact: "densityCompact",
   normal: "densityNormal",
   comfortable: "densityComfortable",
+  list: "densityList",
+} as const;
+
+const PANEL_SAYS = {
+  normal: "panelNormal",
+  large: "panelLarge",
+  tall: "panelTall",
 } as const;
 
 export function systemSaid(choices: Choices): string {
@@ -58,6 +66,8 @@ export default function Appearance({
   const size = kept["text-size"] ?? "normal";
   const density = kept.density ?? "normal";
   const accent = kept.accent ?? "indigo";
+  const panelSize = kept["panel-size"] ?? "normal";
+  const contrast = kept["high-contrast"] ?? false;
 
   return (
     <>
@@ -101,6 +111,14 @@ export default function Appearance({
         </div>
       </Line>
 
+      <Line says={t("contrast")} why={t("contrastWhy")}>
+        <Knob
+          on={contrast}
+          says={t("contrast")}
+          onPress={() => void change({ "high-contrast": !contrast })}
+        />
+      </Line>
+
       <Band says={t("bandText")} />
 
       <Line says={t("size")} why={t("sizeWhy")}>
@@ -138,7 +156,18 @@ export default function Appearance({
         </Line>
       )}
 
-      <Band says={t("bandCards")} />
+      <Band says={t("bandPanel")} />
+
+      <Line says={t("panelSize")} why={t("panelSizeWhy")}>
+        <Segments
+          name="panel-size"
+          says={t("panelSize")}
+          all={PANEL_SIZES}
+          chosen={panelSize}
+          label={(one) => t(PANEL_SAYS[one])}
+          pick={(one) => change({ "panel-size": one })}
+        />
+      </Line>
 
       <Line says={t("density")} why={t("densityWhy")}>
         <Segments
@@ -213,10 +242,12 @@ export function previewStyle(kept: Kept, choices: Choices | null): CSSProperties
 }
 
 function Preview({ kept, choices }: { kept: Kept; choices: Choices | null }) {
-  const lines = SHUT_LINES[kept.density ?? "normal"];
+  const density = kept.density ?? "normal";
+  const lines = SHUT_LINES[density];
+  const strong = kept["high-contrast"] ?? false;
   return (
     <figure className="preview" aria-label={t("preview")} style={previewStyle(kept, choices)}>
-      <div className="mock">
+      <div className={strong ? "mock strong" : "mock"}>
         <div className="mock-search">{t("previewSearch")}</div>
         <div className="mock-chips">
           <span className="mock-chip">
@@ -229,14 +260,15 @@ function Preview({ kept, choices }: { kept: Kept; choices: Choices | null }) {
           </span>
         </div>
         <div className="mock-day">{t("previewToday")}</div>
-        <div className="mock-card lit">
+        {density === "list" ? <PreviewRows /> : null}
+        <div className="mock-card lit" hidden={density === "list"}>
           <div className="mock-head">
             <b className="text">{t("previewKind")}</b>
             <span>· Notas</span>
           </div>
           <p>{t("previewText")}</p>
         </div>
-        <div className="mock-card">
+        <div className="mock-card" hidden={density === "list"}>
           <div className="mock-head">
             <b className="code">{t("previewCode")}</b>
             <span>· Terminal</span>
@@ -246,5 +278,25 @@ function Preview({ kept, choices }: { kept: Kept; choices: Choices | null }) {
         </div>
       </div>
     </figure>
+  );
+}
+
+function PreviewRows() {
+  const rows = [
+    { kind: "text", said: t("previewText"), age: t("previewAge") },
+    { kind: "code", said: 'git commit -m "listo"', age: "4 min" },
+    { kind: "text", said: t("previewText"), age: "9 min" },
+    { kind: "code", said: "git push", age: "15 min" },
+  ];
+  return (
+    <>
+      {rows.map((row, at) => (
+        <div key={row.age} className={at === 0 ? "mock-row lit" : "mock-row"}>
+          <i className={`dot ${row.kind}`} />
+          <span className={row.kind === "code" ? "mono" : undefined}>{row.said}</span>
+          <em>{row.age}</em>
+        </div>
+      ))}
+    </>
   );
 }

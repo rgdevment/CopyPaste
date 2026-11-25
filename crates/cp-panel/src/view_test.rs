@@ -1058,3 +1058,153 @@ fn the_space_after_the_last_word_reaches_the_search() {
     assert_eq!(sweeten("#imagen jira  "), "k:image jira ");
     assert_eq!(sweeten("   "), "");
 }
+
+use crate::odd;
+
+const DENSITIES: [cp_config::Density; 4] = [
+    cp_config::Density::Compact,
+    cp_config::Density::Normal,
+    cp_config::Density::Comfortable,
+    cp_config::Density::List,
+];
+
+const EVERY_KIND: [Option<Kind>; 10] = [
+    None,
+    Some(Kind::Text),
+    Some(Kind::Code),
+    Some(Kind::Json),
+    Some(Kind::Link),
+    Some(Kind::Email),
+    Some(Kind::Color),
+    Some(Kind::File),
+    Some(Kind::Folder),
+    Some(Kind::Token),
+];
+
+fn hard_break(one: char) -> bool {
+    matches!(one, '\n' | '\r')
+}
+
+fn unicode_break(one: char) -> bool {
+    matches!(one, '\u{b}' | '\u{c}' | '\u{85}' | '\u{2028}' | '\u{2029}')
+}
+
+fn odd_row(kind: Option<Kind>, text: &str, found: bool) -> Listed {
+    let mut odd = Listed {
+        preview: text.into(),
+        ..row(kind)
+    };
+    if found {
+        odd.snippet = Some(Snippet {
+            found_in: FoundIn::Text,
+            excerpt: Excerpt {
+                segments: vec![
+                    Segment {
+                        text: text.chars().take(30).collect(),
+                        matched: false,
+                    },
+                    Segment {
+                        text: text.chars().skip(30).take(5).collect(),
+                        matched: true,
+                    },
+                ],
+            },
+        });
+    }
+    odd
+}
+
+fn cards_with_a_break(breaks: fn(char) -> bool) -> Vec<String> {
+    let mut failed = Vec::new();
+    for density in DENSITIES {
+        for kind in EVERY_KIND {
+            for (name, text) in odd::texts() {
+                for found in [false, true] {
+                    let card = card_of(
+                        &odd_row(kind, &text, found),
+                        2_000_000,
+                        None,
+                        density.shut_lines(),
+                    );
+                    for (field, said) in [
+                        ("squeezed", card.squeezed.as_str()),
+                        ("headline", card.headline.as_str()),
+                        ("link_domain", card.link_domain.as_str()),
+                        ("line_one", card.line_one.as_str()),
+                    ] {
+                        if said.chars().any(breaks) {
+                            failed.push(format!(
+                                "{density:?} {kind:?} {name} found={found}: {field} {said:?}"
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    failed
+}
+
+#[test]
+fn odd_text_stays_on_one_line_for_every_density() {
+    let failed = cards_with_a_break(hard_break);
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn odd_text_has_no_unicode_line_separator_in_any_one_line_label() {
+    let failed = cards_with_a_break(unicode_break);
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn a_squeezed_body_has_no_edge_or_double_spaces_or_any_separator() {
+    for (name, text) in odd::texts() {
+        let card = card_of(&odd_row(Some(Kind::Text), &text, false), 2_000_000, None, 2);
+        let said = card.squeezed.as_str();
+        assert!(
+            !said.starts_with(' ') && !said.ends_with(' ') && !said.contains("  "),
+            "{name}: {said:?}"
+        );
+        assert!(
+            !said
+                .chars()
+                .any(|one| hard_break(one) || unicode_break(one)),
+            "{name}: {said:?}"
+        );
+    }
+}
+
+#[test]
+fn odd_text_gets_a_face_with_a_finite_positive_height_in_every_density() {
+    let mut failed = Vec::new();
+    for density in DENSITIES {
+        for kind in EVERY_KIND {
+            for (name, text) in odd::texts() {
+                for (found, thumb) in [(false, false), (true, false), (false, true)] {
+                    let face = face_for(&odd_row(kind, &text, found), thumb, density.shut_lines());
+                    let shut = face.shut_px();
+                    if !(shut.is_finite() && shut > 0.0 && face.lines() >= 1) {
+                        failed.push(format!(
+                            "{density:?} {kind:?} {name} found={found} thumb={thumb}: {shut}"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn a_link_with_an_odd_host_names_a_one_line_domain() {
+    for (name, text) in odd::texts() {
+        let card = card_of(&odd_row(Some(Kind::Link), &text, false), 2_000_000, None, 2);
+        assert!(
+            !card.link_domain.chars().any(hard_break),
+            "{name}: {:?}",
+            card.link_domain
+        );
+        assert!(!card.headline.is_empty(), "{name} has a headline");
+    }
+}

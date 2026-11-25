@@ -30,6 +30,7 @@ mod reaching;
 mod say;
 mod shape;
 mod showing;
+mod sizing;
 mod tags;
 mod token;
 mod view;
@@ -174,6 +175,10 @@ fn seeded() -> PathBuf {
 fn where_it_lives() -> Option<PathBuf> {
     here::data_dir().map(|dir| dir.join("history.db"))
 }
+
+#[cfg(test)]
+#[path = "odd_test.rs"]
+mod odd;
 
 #[cfg(test)]
 #[path = "main_test.rs"]

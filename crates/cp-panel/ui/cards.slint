@@ -92,7 +92,7 @@ export component Pill inherits Rectangle {
             background: Hue.of(chip.key);
             y: (parent.height - 7px) / 2;
         }
-        Text { text: chip.label; color: chip.selected ? Theme.accent : Theme.title; font-size: Theme.fs-meta; font-weight: chip.selected ? 600 : 500; vertical-alignment: center; }
+        Text { text: chip.label; color: chip.selected ? Theme.accent : Theme.title; font-size: Theme.fs-meta; font-weight: chip.selected ? Theme.fw-title : Theme.fw-mid; vertical-alignment: center; }
         if chip.count != "" : Text { text: chip.count; color: chip.selected ? Theme.accent-dim : Theme.muted; font-size: Theme.fs-caption; vertical-alignment: center; }
     }
     touch := TouchArea {
@@ -144,7 +144,7 @@ export component Tag inherits Rectangle {
             background: Hue.of(tag.key);
             y: (parent.height - 6px) / 2;
         }
-        Text { text: tag.label; color: Theme.accent; font-size: Theme.fs-meta; font-weight: 600; vertical-alignment: center; }
+        Text { text: tag.label; color: Theme.accent; font-size: Theme.fs-meta; font-weight: Theme.fw-title; vertical-alignment: center; }
         Rectangle {
             width: 14px;
             height: 14px;
@@ -242,8 +242,162 @@ component KeyChip inherits Rectangle {
         padding-left: 8px;
         padding-right: 8px;
         spacing: 5px;
-        Text { text: root.keys; color: root.on ? Theme.accent : Theme.muted; font-size: Theme.fs-meta; font-weight: 600; vertical-alignment: center; }
+        Text { text: root.keys; color: root.on ? Theme.accent : Theme.muted; font-size: Theme.fs-meta; font-weight: Theme.fw-title; vertical-alignment: center; }
         Text { text: root.says; color: root.on ? Theme.accent : Theme.title; font-size: Theme.fs-meta; vertical-alignment: center; }
+    }
+}
+
+component CardActions inherits HorizontalLayout {
+    in property <Card> card;
+    in property <bool> awake: true;
+    callback open-asked();
+    callback edit();
+    callback copy();
+    callback forms();
+    callback pin();
+    callback remove();
+    spacing: 2px;
+    alignment: center;
+    if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: root.awake; pressed => { root.open-asked(); } }
+    Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: root.awake; pressed => { root.edit(); } }
+    if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: root.awake; pressed => { root.copy(); } }
+    if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: root.awake; marked: true; pressed => { root.forms(); } }
+    Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: root.awake; pressed => { root.pin(); } }
+    Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: root.awake; pressed => { root.remove(); } }
+}
+
+component LineText inherits Text {
+    font-size: Theme.fs-body;
+    overflow: elide;
+    wrap: no-wrap;
+    vertical-alignment: center;
+}
+
+component CardLine inherits HorizontalLayout {
+    in property <Card> card;
+    in property <bool> lit;
+    in property <bool> being-named;
+    property <bool> found: card.face == "found" || card.face == "found-thumb";
+    property <bool> mono: card.face == "block" || card.face == "keys" || card.face == "paint";
+    property <bool> named-thing: card.face == "thumb" || card.face == "file" || card.face == "media";
+    property <string> thing: card.folder-name != "" ? card.folder-name : card.headline;
+    property <string> thing-aside: card.folder-parent != "" ? card.folder-parent : card.media-measures != card.headline ? card.media-measures : "";
+    property <string> mono-said: card.face == "keys" ? card.shape-keys : card.face == "block" ? card.line-one : card.squeezed;
+    callback named(string);
+    callback naming-dropped();
+    callback open-asked();
+    callback edit();
+    callback copy();
+    callback forms();
+    callback pin();
+    callback remove();
+    padding-left: 6px;
+    padding-right: 8px;
+    spacing: 9px;
+
+    Rectangle {
+        width: 20px;
+        height: 20px;
+        y: (parent.height - 20px) / 2;
+        border-radius: 5px;
+        clip: true;
+        background: card.paints ? card.paint : Theme.tile;
+        border-width: card.paints ? 1px : 0px;
+        border-color: Theme.selected-edge;
+        if card.has-thumb : Image { source: card.thumb; width: parent.width; height: parent.height; image-fit: cover; }
+        if !card.has-thumb && !card.paints : KindIcon { kind: card.kind; width: 12px; height: 12px; tint: Hue.of(card.kind); }
+    }
+    if being-named : NameField {
+        seed: card.name;
+        room: Words.name-room;
+        words-size: Theme.fs-small;
+        width: 200px;
+        height: 22px;
+        y: (parent.height - 22px) / 2;
+        done(said) => { root.named(said); }
+        gave-up => { root.naming-dropped(); }
+    }
+    if !being-named && card.name != "" : LineText {
+        text: card.name;
+        color: Theme.body;
+        font-weight: Theme.fw-title;
+        max-width: 160px;
+    }
+    if found : HorizontalLayout {
+        horizontal-stretch: 1;
+        LineText { text: card.lead; color: Theme.muted; overflow: clip; }
+        LineText { text: card.hit; color: Theme.accent; font-weight: Theme.fw-title; overflow: clip; }
+        LineText { text: card.tail; color: Theme.body; horizontal-stretch: 1; }
+    }
+    if !found && card.face == "link" : HorizontalLayout {
+        horizontal-stretch: 1;
+        LineText { text: card.link-domain; color: Theme.body; font-weight: Theme.fw-title; overflow: clip; }
+        LineText { text: card.link-path; color: Theme.muted; horizontal-stretch: 1; }
+    }
+    if !found && mono : LineText {
+        text: mono-said;
+        color: Theme.mono;
+        font-size: Theme.fs-small;
+        font-family: Theme.mono-font;
+        horizontal-stretch: 1;
+    }
+    if !found && named-thing : HorizontalLayout {
+        horizontal-stretch: 1;
+        spacing: 5px;
+        LineText { text: thing; color: card.broken ? Theme.danger : Theme.body; }
+        if thing-aside != "" : LineText { text: "· " + thing-aside; color: Theme.muted; font-size: Theme.fs-meta; horizontal-stretch: 1; }
+        if thing-aside == "" : Rectangle { horizontal-stretch: 1; }
+    }
+    if !found && !mono && !named-thing && card.face != "link" : LineText {
+        text: card.squeezed;
+        color: card.broken ? Theme.danger : card.blank ? Theme.muted : Theme.body;
+        horizontal-stretch: 1;
+    }
+    if card.badge != "" : Rectangle {
+        width: badge-pill.preferred-width;
+        height: 15px;
+        y: (parent.height - 15px) / 2;
+        border-radius: Theme.radius-badge;
+        background: Theme.tile;
+        badge-pill := HorizontalLayout {
+            padding-left: 5px;
+            padding-right: 5px;
+            Text { text: card.badge; color: Hue.of(card.kind); font-size: Theme.fs-caption; font-weight: Theme.fw-title; vertical-alignment: center; }
+        }
+    }
+    if card.alert != "" : Rectangle {
+        width: alert-pill.preferred-width;
+        height: 15px;
+        y: (parent.height - 15px) / 2;
+        border-radius: Theme.radius-badge;
+        background: Theme.alert-back;
+        alert-pill := HorizontalLayout {
+            padding-left: 5px;
+            padding-right: 5px;
+            Text { text: card.alert; color: Theme.alert-ink; font-size: Theme.fs-caption; font-weight: Theme.fw-title; vertical-alignment: center; }
+        }
+    }
+    if lit : CardActions {
+        card: card;
+        open-asked => { root.open-asked(); }
+        edit => { root.edit(); }
+        copy => { root.copy(); }
+        forms => { root.forms(); }
+        pin => { root.pin(); }
+        remove => { root.remove(); }
+    }
+    if !lit && card.pinned : Icon {
+        source: @image-url("../assets/icons/pin.svg");
+        width: 10px;
+        height: 10px;
+        tint: Theme.accent-dim;
+        y: (parent.height - 10px) / 2;
+    }
+    if !lit : Text {
+        text: card.age;
+        color: Theme.muted;
+        font-size: Theme.fs-meta;
+        vertical-alignment: center;
     }
 }
 
@@ -282,12 +436,13 @@ export component CardView inherits Rectangle {
     property <bool> dragging;
     property <bool> shifted;
     property <bool> lit: shown-here;
+    property <bool> listed: Theme.listing && !open;
     property <bool> hovering: touch.has-hover && !quiet;
     accessible-role: AccessibleRole.list-item;
     accessible-label: (card.name != "" ? card.name + ", " : "") + card.title + ", " + card.body;
-    border-radius: Theme.radius-card;
+    border-radius: listed ? Theme.radius-inset : Theme.radius-card;
     border-width: 1px;
-    border-color: Theme.card-edge;
+    border-color: lit ? Theme.lit-edge : Theme.card-edge;
     background: lit ? Theme.selected : hovering ? Theme.row-hover : Theme.card;
     animate background, border-color { duration: lit || hovering ? 0ms : Theme.let-go; easing: ease-out; }
     touch := TouchArea {
@@ -320,14 +475,28 @@ export component CardView inherits Rectangle {
 
     if lit : Rectangle {
         x: 0px;
-        y: 8px;
-        width: 3px;
-        height: parent.height - 16px;
-        border-radius: 1.5px;
+        y: listed ? 6px : 8px;
+        width: Theme.lit-bar;
+        height: parent.height - 2 * self.y;
+        border-radius: self.width / 2;
         background: Theme.accent;
     }
 
-    VerticalLayout {
+    if listed : CardLine {
+        card: card;
+        lit: lit;
+        being-named: being-named;
+        named(said) => { root.named(card.id, said); }
+        naming-dropped => { root.naming-dropped(); }
+        open-asked => { root.open-asked(card.id); }
+        edit => { root.edit(card.id); }
+        copy => { root.copy(card.id); }
+        forms => { root.forms(card.id); }
+        pin => { root.pin(card.id, !card.pinned); }
+        remove => { root.remove(card.id); }
+    }
+
+    if !listed : VerticalLayout {
         padding: 10px;
         padding-top: mixed ? 9px : 10px;
         padding-left: mixed ? 12px : 10px;
@@ -402,7 +571,7 @@ export component CardView inherits Rectangle {
                     badge-pill := HorizontalLayout {
                         padding-left: 5px;
                         padding-right: 5px;
-                        Text { text: card.badge; color: Hue.of(card.kind); font-size: Theme.fs-caption; font-weight: 600; vertical-alignment: center; }
+                        Text { text: card.badge; color: Hue.of(card.kind); font-size: Theme.fs-caption; font-weight: Theme.fw-title; vertical-alignment: center; }
                     }
                 }
                 if card.alert != "" : Rectangle {
@@ -414,7 +583,7 @@ export component CardView inherits Rectangle {
                     alert-pill := HorizontalLayout {
                         padding-left: 5px;
                         padding-right: 5px;
-                        Text { text: card.alert; color: Theme.alert-ink; font-size: Theme.fs-caption; font-weight: 600; vertical-alignment: center; }
+                        Text { text: card.alert; color: Theme.alert-ink; font-size: Theme.fs-caption; font-weight: Theme.fw-title; vertical-alignment: center; }
                     }
                 }
                 if card.pinned && !lit && !open : Icon {
@@ -430,22 +599,21 @@ export component CardView inherits Rectangle {
                     font-size: Theme.fs-meta;
                     vertical-alignment: center;
                 }
-                if lit || open : HorizontalLayout {
-                    spacing: 2px;
-                    alignment: center;
-                    if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; pressed => { root.open-asked(card.id); } }
-                    Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; pressed => { root.edit(card.id); } }
-                    if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; pressed => { root.copy(card.id); } }
-                    if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; marked: true; pressed => { root.forms(card.id); } }
-                    Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; pressed => { root.pin(card.id, !card.pinned); } }
-                    Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; pressed => { root.remove(card.id); } }
+                if lit || open : CardActions {
+                    card: card;
+                    open-asked => { root.open-asked(card.id); }
+                    edit => { root.edit(card.id); }
+                    copy => { root.copy(card.id); }
+                    forms => { root.forms(card.id); }
+                    pin => { root.pin(card.id, !card.pinned); }
+                    remove => { root.remove(card.id); }
                 }
             }
 
             if !open && card.face == "found" : HorizontalLayout {
                 height: 19px;
                 Text { text: card.lead; color: Theme.muted; font-size: Theme.fs-body; vertical-alignment: center; }
-                Text { text: card.hit; color: Theme.accent; font-size: Theme.fs-body; font-weight: 600; vertical-alignment: center; }
+                Text { text: card.hit; color: Theme.accent; font-size: Theme.fs-body; font-weight: Theme.fw-title; vertical-alignment: center; }
                 Text { text: card.tail; color: Theme.body; font-size: Theme.fs-body; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
             }
 
@@ -505,7 +673,7 @@ export component CardView inherits Rectangle {
                     HorizontalLayout {
                         height: 19px;
                         Text { text: card.lead; color: Theme.muted; font-size: Theme.fs-body; vertical-alignment: center; }
-                        Text { text: card.hit; color: Theme.accent; font-size: Theme.fs-body; font-weight: 600; vertical-alignment: center; }
+                        Text { text: card.hit; color: Theme.accent; font-size: Theme.fs-body; font-weight: Theme.fw-title; vertical-alignment: center; }
                         Text { text: card.tail; color: Theme.body; font-size: Theme.fs-body; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
                     }
                 }
@@ -537,7 +705,7 @@ export component CardView inherits Rectangle {
 
             if !open && card.face == "link" : HorizontalLayout {
                 height: 19px;
-                if layout != "link" : Text { text: card.link-domain; color: Theme.body; font-size: Theme.fs-body; font-weight: 600; wrap: no-wrap; vertical-alignment: center; }
+                if layout != "link" : Text { text: card.link-domain; color: Theme.body; font-size: Theme.fs-body; font-weight: Theme.fw-title; wrap: no-wrap; vertical-alignment: center; }
                 Text { text: card.link-path; color: layout == "link" ? Theme.body : Theme.muted; font-size: Theme.fs-body; overflow: elide; wrap: no-wrap; horizontal-stretch: 1; vertical-alignment: center; }
             }
 
@@ -553,7 +721,7 @@ export component CardView inherits Rectangle {
                         text: card.papers-format;
                         color: Hue.of(card.kind);
                         font-size: Theme.fs-caption;
-                        font-weight: 600;
+                        font-weight: Theme.fw-title;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
@@ -725,7 +893,7 @@ export component CardView inherits Rectangle {
             spacing: 0px;
             alignment: start;
             Text { text: card.lead; color: Theme.muted; font-size: Theme.fs-body; vertical-alignment: center; }
-            Text { text: card.hit; color: Theme.accent; font-size: Theme.fs-body; font-weight: 600; vertical-alignment: center; }
+            Text { text: card.hit; color: Theme.accent; font-size: Theme.fs-body; font-weight: Theme.fw-title; vertical-alignment: center; }
             Text { text: card.tail; color: Theme.body; font-size: Theme.fs-body; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
         }
 
@@ -797,7 +965,7 @@ export component CardView inherits Rectangle {
                 badge-row := HorizontalLayout {
                     padding-left: 5px;
                     padding-right: 5px;
-                    Text { text: card.badge; color: Theme.muted; font-size: Theme.fs-caption; font-weight: 600; vertical-alignment: center; }
+                    Text { text: card.badge; color: Theme.muted; font-size: Theme.fs-caption; font-weight: Theme.fw-title; vertical-alignment: center; }
                 }
             }
             if card.alert != "" : Rectangle {
@@ -809,7 +977,7 @@ export component CardView inherits Rectangle {
                 alert-row := HorizontalLayout {
                     padding-left: 5px;
                     padding-right: 5px;
-                    Text { text: card.alert; color: Theme.alert-ink; font-size: Theme.fs-caption; font-weight: 600; vertical-alignment: center; }
+                    Text { text: card.alert; color: Theme.alert-ink; font-size: Theme.fs-caption; font-weight: Theme.fw-title; vertical-alignment: center; }
                 }
             }
             Rectangle {
@@ -840,17 +1008,17 @@ export component CardView inherits Rectangle {
             if card.times != "" : Text { text: "×" + card.times; color: Theme.muted; font-size: Theme.fs-meta; vertical-alignment: center; }
             if card.pinned : Icon { source: @image-url("../assets/icons/pin.svg"); width: 10px; height: 10px; tint: Theme.accent-dim; y: (parent.height - 10px) / 2; }
             Rectangle { horizontal-stretch: 1; }
-            HorizontalLayout {
-                spacing: 2px;
-                alignment: center;
+            CardActions {
+                card: card;
+                awake: lit;
                 opacity: lit ? 1.0 : 0.0;
                 animate opacity { duration: 120ms; easing: ease-out; }
-                if card.can-open && !card.broken : Action { icon: @image-url("../assets/icons/external-link.svg"); says: Words.open-it; awake: lit; pressed => { root.open-asked(card.id); } }
-                Action { icon: @image-url("../assets/icons/pencil.svg"); says: Words.name-it; awake: lit; pressed => { root.edit(card.id); } }
-                if !card.broken : Action { icon: @image-url("../assets/icons/copy.svg"); says: Words.copy-it; awake: lit; pressed => { root.copy(card.id); } }
-                if !card.broken : Action { icon: @image-url("../assets/icons/arrow-right-to-line.svg"); says: Words.paste-as; awake: lit; marked: true; pressed => { root.forms(card.id); } }
-                Action { icon: card.pinned ? @image-url("../assets/icons/pin-off.svg") : @image-url("../assets/icons/pin.svg"); says: card.pinned ? Words.unpin : Words.pin; awake: lit; pressed => { root.pin(card.id, !card.pinned); } }
-                Action { icon: @image-url("../assets/icons/trash-2.svg"); says: Words.remove; hot: Theme.danger; awake: lit; pressed => { root.remove(card.id); } }
+                open-asked => { root.open-asked(card.id); }
+                edit => { root.edit(card.id); }
+                copy => { root.copy(card.id); }
+                forms => { root.forms(card.id); }
+                pin => { root.pin(card.id, !card.pinned); }
+                remove => { root.remove(card.id); }
             }
             Text { text: card.age; color: Theme.muted; font-size: Theme.fs-meta; vertical-alignment: center; }
         }

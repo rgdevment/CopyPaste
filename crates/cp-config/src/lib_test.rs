@@ -41,6 +41,8 @@ fn what_goes_in_comes_back() {
         font: Some("avenir-next".into()),
         code_font: Some("sf-mono".into()),
         accent: Accent::Teal,
+        panel_size: PanelSize::Tall,
+        high_contrast: true,
     };
     write(&path, &mine).expect("writes");
     assert_eq!(read(&path).expect("reads"), mine);
@@ -781,4 +783,59 @@ hides-when-left = false
     let read = read(&path).expect("reads");
     assert_eq!(read.paste_with, PasteWith::DoubleClick);
     assert!(!read.hides_when_left);
+}
+
+#[test]
+fn a_file_from_before_the_panel_size_reads_as_normal_without_contrast() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "theme = \"dark\"
+density = \"compact\"
+",
+    )
+    .expect("writes");
+    let kept = read(&path).expect("reads");
+    assert_eq!(kept.panel_size, PanelSize::Normal);
+    assert!(!kept.high_contrast);
+    assert_eq!(kept.density, Density::Compact);
+}
+
+#[test]
+fn a_panel_size_this_version_does_not_know_falls_back_alone() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "theme = \"dark\"
+panel-size = \"huge\"
+high-contrast = true
+density = \"list\"
+",
+    )
+    .expect("writes");
+    let kept = read(&path).expect("reads");
+    assert_eq!(kept.panel_size, PanelSize::Normal);
+    assert!(kept.high_contrast);
+    assert_eq!(kept.theme, Theme::Dark);
+    assert_eq!(kept.density, Density::List);
+}
+
+#[test]
+fn the_list_density_and_the_panel_size_are_written_as_the_settings_say_them() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    let mine = Config {
+        density: Density::List,
+        panel_size: PanelSize::Large,
+        high_contrast: true,
+        ..Config::default()
+    };
+    write(&path, &mine).expect("writes");
+    let text = std::fs::read_to_string(&path).expect("reads");
+    assert!(text.contains("density = \"list\""), "{text}");
+    assert!(text.contains("panel-size = \"large\""), "{text}");
+    assert!(text.contains("high-contrast = true"), "{text}");
+    assert_eq!(read(&path).expect("reads"), mine);
 }

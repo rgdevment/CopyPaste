@@ -231,3 +231,18 @@ fn a_single_click_in_the_config_makes_one_click_paste() {
     assert!(resolve(Some(&with(cp_config::PasteWith::SingleClick)), &fonts()).one_click);
     assert!(!resolve(Some(&with(cp_config::PasteWith::DoubleClick)), &fonts()).one_click);
 }
+
+#[test]
+fn the_panel_size_and_the_contrast_chosen_reach_the_panel() {
+    let chosen = cp_config::Config {
+        panel_size: cp_config::PanelSize::Tall,
+        high_contrast: true,
+        ..cp_config::Config::default()
+    };
+    let look = look_of(&chosen, &fonts());
+    assert_eq!(look.panel_size, cp_config::PanelSize::Tall);
+    assert!(look.contrast);
+    let plain = look_of(&cp_config::Config::default(), &fonts());
+    assert_eq!(plain.panel_size, cp_config::PanelSize::Normal);
+    assert!(!plain.contrast);
+}

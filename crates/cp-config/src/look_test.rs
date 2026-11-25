@@ -400,3 +400,20 @@ fn colours_are_written_as_the_web_writes_them() {
     assert_eq!(hex(0x4F46E5), "#4F46E5");
     assert_eq!(hex(0xFF00_0A0B), "#000A0B");
 }
+
+#[test]
+fn the_list_density_shows_one_line_and_is_the_only_one_that_lists() {
+    assert_eq!(Density::List.shut_lines(), 1);
+    assert!(Density::List.lists());
+    for one in [Density::Compact, Density::Normal, Density::Comfortable] {
+        assert!(!one.lists(), "{one:?}");
+    }
+}
+
+#[test]
+fn each_panel_size_wants_its_width_and_its_height() {
+    assert_eq!(PanelSize::default(), PanelSize::Normal);
+    assert_eq!(PanelSize::Normal.wanted(), (480.0, Some(620.0)));
+    assert_eq!(PanelSize::Large.wanted(), (560.0, Some(800.0)));
+    assert_eq!(PanelSize::Tall.wanted(), (480.0, None));
+}

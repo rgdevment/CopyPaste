@@ -15,7 +15,22 @@ thread_local! {
     static CURTAIN: slint::Timer = slint::Timer::default();
 }
 
+fn fit(panel: &Panel, screen: Option<crate::here::Pointer>) {
+    let theme = panel.global::<crate::Theme>();
+    let Some(screen) = screen else {
+        return;
+    };
+    let (width, height) = crate::sizing::fitted(
+        (theme.get_wanted_width(), theme.get_wanted_height()),
+        theme.get_zoom(),
+        crate::sizing::room_of(screen.area, screen.scale),
+    );
+    theme.set_width(width);
+    theme.set_height(height);
+}
+
 pub fn place(panel: &Panel) {
+    fit(panel, crate::here::pointer());
     let theme = panel.global::<crate::Theme>();
     let zoom = f64::from(theme.get_zoom());
     let size = (
@@ -82,11 +97,11 @@ pub fn rescaled(window: &slint::Window, zoom: f32) -> Option<f32> {
 
 pub fn zoom(panel: &Panel) {
     use i_slint_backend_winit::WinitWindowAccessor;
+    let own = crate::app::handle_of(panel.window()).and_then(crate::here::screen_of);
+    fit(panel, own.or_else(crate::here::pointer));
     let window = panel.window();
     let theme = panel.global::<crate::Theme>();
-    let Some(wanted) = rescaled(window, theme.get_zoom()) else {
-        return;
-    };
+    let wanted = rescaled(window, theme.get_zoom()).unwrap_or_else(|| window.scale_factor());
     let side = |logical: f32| (logical * wanted).round().max(1.0) as u32;
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let size = slint::PhysicalSize::new(side(theme.get_width()), side(theme.get_height()));
@@ -96,6 +111,14 @@ pub fn zoom(panel: &Panel) {
         winit.set_max_inner_size(Some(bound));
     });
     window.set_size(size);
+    let zoom = f64::from(theme.get_zoom());
+    kept_inside(
+        window,
+        (
+            f64::from(theme.get_width()) * zoom,
+            f64::from(theme.get_height()) * zoom,
+        ),
+    );
 }
 
 pub fn nudge(panel: &Panel, dx: f32, dy: f32) {

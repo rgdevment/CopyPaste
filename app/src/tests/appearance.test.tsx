@@ -60,7 +60,7 @@ describe("the appearance", () => {
 
   it("starts on what the panel always looked like, each one marked as the default", async () => {
     await opened();
-    const size = screen.getByRole("radiogroup", { name: "Tamaño" });
+    const size = screen.getByRole("radiogroup", { name: "Tamaño del texto" });
     expect(within(size).getByRole("radio", { name: "Normal" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Índigo · predeterminado" })).toBeChecked();
     expect(screen.getByRole("button", { name: /^Fuente:/ })).toHaveTextContent(
@@ -69,7 +69,7 @@ describe("the appearance", () => {
     expect(screen.getByRole("button", { name: /^Fuente del código:/ })).toHaveTextContent(
       "Menlo · predeterminado",
     );
-    const height = screen.getByRole("radiogroup", { name: "Altura de las tarjetas" });
+    const height = screen.getByRole("radiogroup", { name: "Densidad" });
     expect(within(height).getByRole("radio", { name: "Normal" })).toBeChecked();
   });
 
@@ -109,7 +109,11 @@ describe("the appearance", () => {
     const who = await opened();
     const invoke = await saved();
     await who.selectOptions(screen.getByLabelText("Tema"), "dark");
-    await who.click(screen.getByRole("radio", { name: "Grande" }));
+    await who.click(
+      within(screen.getByRole("radiogroup", { name: "Tamaño del texto" })).getByRole("radio", {
+        name: "Grande",
+      }),
+    );
     await who.click(screen.getByRole("button", { name: "Restablecer la apariencia" }));
     expect(invoke).toHaveBeenCalledWith("keep", {
       config: expect.objectContaining({
@@ -119,16 +123,67 @@ describe("the appearance", () => {
         font: null,
         "code-font": null,
         accent: "indigo",
+        "panel-size": "normal",
+        "high-contrast": false,
       }),
     });
   });
 
+  it("the density offers the list and picking it is saved as such", async () => {
+    const who = await opened();
+    const invoke = await saved();
+    const density = screen.getByRole("radiogroup", { name: "Densidad" });
+    await who.click(within(density).getByRole("radio", { name: "Lista" }));
+    expect(invoke).toHaveBeenCalledWith("keep", {
+      config: expect.objectContaining({ density: "list" }),
+    });
+  });
+
+  it("the panel size is offered as normal, large and tall and is saved", async () => {
+    const who = await opened();
+    const invoke = await saved();
+    const panel = screen.getByRole("radiogroup", { name: "Tamaño del panel" });
+    expect(within(panel).getAllByRole("radio")).toHaveLength(3);
+    expect(within(panel).getByRole("radio", { name: "Normal" })).toBeChecked();
+    await who.click(within(panel).getByRole("radio", { name: "Grande" }));
+    expect(invoke).toHaveBeenCalledWith("keep", {
+      config: expect.objectContaining({ "panel-size": "large" }),
+    });
+    await who.click(within(panel).getByRole("radio", { name: "Alto" }));
+    expect(invoke).toHaveBeenCalledWith("keep", {
+      config: expect.objectContaining({ "panel-size": "tall" }),
+    });
+  });
+
+  it("the high contrast switch is saved on and off", async () => {
+    const who = await opened();
+    const invoke = await saved();
+    const contrast = screen.getByRole("switch", { name: "Contraste alto" });
+    expect(contrast).not.toBeChecked();
+    await who.click(contrast);
+    expect(invoke).toHaveBeenCalledWith("keep", {
+      config: expect.objectContaining({ "high-contrast": true }),
+    });
+  });
+
+  it("the preview shows rows for the list and marks the high contrast", async () => {
+    const who = await opened();
+    const preview = screen.getByRole("figure");
+    expect(preview.querySelectorAll(".mock-row")).toHaveLength(0);
+    expect(preview.querySelector(".mock")).not.toHaveClass("strong");
+    const density = screen.getByRole("radiogroup", { name: "Densidad" });
+    await who.click(within(density).getByRole("radio", { name: "Lista" }));
+    await who.click(screen.getByRole("switch", { name: "Contraste alto" }));
+    expect(preview.querySelectorAll(".mock-row")).toHaveLength(4);
+    expect(preview.querySelector(".mock")).toHaveClass("strong");
+  });
+
   it("the size and the height move with the arrow keys, as one stop each", async () => {
     const who = await opened();
-    const size = screen.getByRole("radiogroup", { name: "Tamaño" });
+    const size = screen.getByRole("radiogroup", { name: "Tamaño del texto" });
     within(size).getByRole("radio", { name: "Normal" }).focus();
     await who.keyboard("{ArrowRight}");
-    expect(screen.getByRole("radio", { name: "Grande" })).toBeChecked();
+    expect(within(size).getByRole("radio", { name: "Grande" })).toBeChecked();
   });
 
   it("the preview wears the chosen size, lines, colour and fonts", () => {
@@ -193,7 +248,7 @@ describe("each choice group", () => {
     render(<App />);
     await who.click(await screen.findByRole("button", { name: "Apariencia" }));
     await screen.findByRole("button", { name: /^Fuente:/ });
-    const size = screen.getByRole("radiogroup", { name: "Tamaño" });
+    const size = screen.getByRole("radiogroup", { name: "Tamaño del texto" });
     const stops = within(size)
       .getAllByRole("radio")
       .map((one) => one.getAttribute("tabindex"));

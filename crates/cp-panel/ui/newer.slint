@@ -17,7 +17,7 @@ component StripButton inherits Rectangle {
         text: root.says;
         color: root.strong ? Theme.panel : Theme.title;
         font-size: Theme.fs-meta;
-        font-weight: 600;
+        font-weight: Theme.fw-title;
         vertical-alignment: center;
         horizontal-alignment: center;
     }
@@ -51,7 +51,7 @@ export component NewerStrip inherits Rectangle {
             text: root.line;
             color: Theme.body;
             font-size: Theme.fs-small;
-            font-weight: 600;
+            font-weight: Theme.fw-title;
             overflow: elide;
             vertical-alignment: center;
             horizontal-stretch: 1;

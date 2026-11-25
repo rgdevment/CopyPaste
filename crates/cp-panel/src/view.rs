@@ -318,7 +318,7 @@ pub fn folder_of(row: &Listed) -> Option<crate::folder::Parts> {
 pub fn headline_of(row: &Listed, body: &str, folder: Option<&crate::folder::Parts>) -> String {
     match row.kind {
         Some(Kind::File | Kind::Folder) => match folder {
-            Some(parts) => parts.name.clone(),
+            Some(parts) => crate::face::one_line(&parts.name),
             None => squeezed_of(body),
         },
         _ => squeezed_of(body),
