@@ -304,7 +304,18 @@ jobs:
             echo "::error::the generated installer script does not lay down the panel; the sidecar was not bundled"
             exit 1
           fi
-          echo "the installer lays down the panel"
+          runtime=$(cd app/src-tauri/binaries && ls *.dll 2>/dev/null) || true
+          if [ -z "$runtime" ]; then
+            echo "::error::the sidecar laid no Visual C++ runtime beside the panel, and the panel does not start without it"
+            exit 1
+          fi
+          for one in $runtime; do
+            if ! grep -qF "oname=$one" "$script"; then
+              echo "::error::the generated installer script does not lay $one beside the panel"
+              exit 1
+            fi
+          done
+          echo "the installer lays down the panel and its runtime:" $runtime
 
       - name: Set the binaries aside for the MSIX
         shell: bash
@@ -312,6 +323,7 @@ jobs:
           mkdir -p stage
           cp target/release/cp-gui.exe stage/CopyPaste.exe
           cp target/release/cp-panel.exe stage/
+          cp app/src-tauri/binaries/*.dll stage/
 
       - name: Sign what the MSIX will carry
         if: env.HAS_PFX == 'true'
@@ -353,12 +365,20 @@ jobs:
           $mine = Get-ChildItem -Path $peek -Recurse -File |
             Where-Object { $_.Extension -in ".exe", ".dll" -and $_.FullName -notmatch [regex]::Escape('$PLUGINSDIR') }
           if (-not $mine) { Write-Error "the installer holds nothing to run"; exit 1 }
+          $runtime = @(Get-ChildItem -Path "app/src-tauri/binaries" -Filter "*.dll" | ForEach-Object { $_.Name.ToLower() })
 
           $status = 0
           foreach ($one in $mine) {
             $where = $one.FullName.Substring($peek.Length).TrimStart("\\")
             $sig = Get-AuthenticodeSignature $one.FullName
-            if (-not $sig.SignerCertificate) {
+            if ($runtime -contains $one.Name.ToLower()) {
+              if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
+                Write-Error "$where is the Visual C++ runtime, yet it does not carry a valid Microsoft signature ($($sig.Status))"
+                $status = 1
+              } else {
+                Write-Host "$where <- $($sig.SignerCertificate.Subject)"
+              }
+            } elseif (-not $sig.SignerCertificate) {
               Write-Error "$where goes out unsigned"
               $status = 1
             } elseif ($sig.SignerCertificate.Thumbprint -ne $env:CERT_THUMBPRINT) {
@@ -377,7 +397,7 @@ jobs:
         id: stage
         shell: bash
         run: |
-          echo "sha=$(cat stage/CopyPaste.exe stage/cp-panel.exe | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cd stage && cat CopyPaste.exe cp-panel.exe $(ls *.dll | sort) | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -690,7 +710,8 @@ jobs:
 
           test -s msix/CopyPaste.exe
           test -s msix/cp-panel.exe
-          test "$(cat msix/CopyPaste.exe msix/cp-panel.exe | sha256sum | cut -d' ' -f1)" \
+          test -s msix/msvcp140.dll
+          test "$(cd msix && cat CopyPaste.exe cp-panel.exe $(ls *.dll | sort) | sha256sum | cut -d' ' -f1)" \
             = "${{ needs.bundle-windows.outputs.stage }}"
 
           mkdir -p msix/Assets
