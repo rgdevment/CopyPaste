@@ -18,10 +18,17 @@ const _: () = assert!(CAUGHT_UP_WITHIN.as_millis() > crate::settling::SETTLING.c
 pub type Counting = Arc<dyn Fn() -> Option<i64> + Send + Sync>;
 pub type Busy = Arc<dyn Fn() -> bool + Send + Sync>;
 pub type Late = Arc<dyn Fn() -> bool + Send + Sync>;
+pub type Clock = Arc<dyn Fn() -> Duration + Send + Sync>;
+
+pub fn steady() -> Clock {
+    let origin = std::time::Instant::now();
+    Arc::new(move || origin.elapsed())
+}
 
 pub struct Settle {
     pub late: Late,
     pub settling: Settling,
+    pub clock: Clock,
 }
 
 impl Settle {
@@ -29,6 +36,7 @@ impl Settle {
         Self {
             late: Arc::new(|| false),
             settling: crate::settling::SETTLING,
+            clock: steady(),
         }
     }
 }
@@ -190,12 +198,13 @@ fn settled(
     if !(settle_first.late)() {
         return Settled::At(None);
     }
-    let started = std::time::Instant::now();
+    let clock = &settle_first.clock;
+    let started = clock();
     settle(
         settle_first.settling,
         || count(),
         cut,
-        || started.elapsed(),
+        || clock().saturating_sub(started),
         |pause| {
             stop.rest(pause);
         },
