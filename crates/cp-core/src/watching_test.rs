@@ -38,8 +38,8 @@ impl Looked {
 
     fn once_seen(&self) {
         assert!(
-            waited_for(&self.reads, 1) >= 1,
-            "the watcher never took its first look"
+            waited_for(&self.reads, 2) >= 2,
+            "the watcher never finished its first look"
         );
     }
 
