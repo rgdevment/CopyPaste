@@ -66,12 +66,27 @@ sys.exit(1)
 said=$(python3 -c "$reads" "$version" "$news" 2>&1)
 looked=$?
 
-# a patch fixes what its minor release shipped, and the window tells that release's news again
-minor="${version%.*}.0"
-if [ "$looked" = 1 ] && [ "$minor" != "$version" ] \
-  && python3 -c "$reads" "$minor" "$news" > /dev/null 2>&1; then
+# a patch fixes what its line shipped, and the window tells that line's newest news again
+earlier='
+import json
+import sys
+
+version, news = sys.argv[1], sys.argv[2]
+line, patch = version.rsplit(".", 1)
+best = None
+for one in json.load(open(news, encoding="utf-8")):
+    said = one.get("version", "") if isinstance(one, dict) else ""
+    head, _, last = said.rpartition(".")
+    if head == line and last.isdigit() and int(last) < int(patch):
+        if best is None or int(last) > best[0]:
+            best = (int(last), said)
+print(best[1] if best else "")
+'
+before=""
+[ "$looked" = 1 ] && before=$(python3 -c "$earlier" "$version" "$news" 2>/dev/null)
+if [ -n "$before" ] && python3 -c "$reads" "$before" "$news" > /dev/null 2>&1; then
   printf 'ok %s is a patch of %s, whose entry in %s still says what it brings\n' \
-    "$version" "$minor" "$news"
+    "$version" "$before" "$news"
   exit 0
 fi
 

@@ -12,3 +12,5 @@
 *.icns binary
 *.jpg binary
 *.db binary
+
+.github/bridge/* -text
