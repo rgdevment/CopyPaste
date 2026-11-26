@@ -1,5 +1,5 @@
 use super::*;
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::time::Instant;
 
 const QUICK: Duration = Duration::from_millis(5);
@@ -48,8 +48,12 @@ impl Looked {
     }
 
     fn set_and_seen(&self, value: i64) {
-        let before = self.reads.load(Ordering::Relaxed);
         self.set(value);
+        self.looked_again();
+    }
+
+    fn looked_again(&self) {
+        let before = self.reads.load(Ordering::Relaxed);
         assert!(
             waited_for(&self.reads, before + 2) >= before + 2,
             "the watcher never looked again"
@@ -65,10 +69,7 @@ fn counted(seen: &Arc<AtomicUsize>) -> impl FnMut() + Send + 'static {
 }
 
 fn waited_for(seen: &Arc<AtomicUsize>, want: usize) -> usize {
-    let until = Instant::now() + Duration::from_secs(5);
-    while Instant::now() < until && seen.load(Ordering::Relaxed) < want {
-        std::thread::sleep(QUICK);
-    }
+    eventually(|| seen.load(Ordering::Relaxed) >= want);
     seen.load(Ordering::Relaxed)
 }
 
@@ -298,11 +299,49 @@ const SHORT_SETTLING: Settling = Settling {
     step: Duration::from_millis(5),
 };
 
-fn late_with(settling: Settling) -> Settle {
+struct Stopped {
+    at: Arc<AtomicU64>,
+}
+
+impl Stopped {
+    fn new() -> Self {
+        Self {
+            at: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    fn clock(&self) -> Clock {
+        let at = self.at.clone();
+        Arc::new(move || Duration::from_millis(at.load(Ordering::Relaxed)))
+    }
+
+    fn pass(&self, by: Duration) {
+        let millis = u64::try_from(by.as_millis()).expect("a short pass");
+        self.at.fetch_add(millis, Ordering::Relaxed);
+    }
+}
+
+fn late_on(clock: Clock) -> Settle {
     Settle {
         late: Arc::new(|| true),
-        settling,
+        settling: SHORT_SETTLING,
+        clock,
     }
+}
+
+fn eventually(what: impl Fn() -> bool) -> bool {
+    let until = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < until && !what() {
+        std::thread::sleep(QUICK);
+    }
+    what()
+}
+
+fn settling_now(watching: &Watching) {
+    assert!(
+        eventually(|| !watching.caught_up_within(Duration::ZERO)),
+        "the watcher never began to settle"
+    );
 }
 
 fn settling_watch(
@@ -325,42 +364,45 @@ fn settling_watch(
 #[test]
 fn a_late_change_is_read_once_even_if_the_count_moves_again_while_it_settles() {
     let count = Looked::from(10);
+    let time = Stopped::new();
     let seen = Arc::new(AtomicUsize::new(0));
-    let watching = settling_watch(
-        count.counting(),
-        never_busy(),
-        late_with(SHORT_SETTLING),
-        &seen,
-    );
+    let watching = settling_watch(count.counting(), never_busy(), late_on(time.clock()), &seen);
     count.once_seen();
     count.set(11);
-    std::thread::sleep(Duration::from_millis(2));
-    count.set(12);
-    assert_eq!(waited_for(&seen, 1), 1);
-    std::thread::sleep(SHORT_SETTLING.quiet * 4);
+    settling_now(&watching);
+    count.set_and_seen(12);
     assert_eq!(
         seen.load(Ordering::Relaxed),
-        1,
+        0,
+        "nothing is read before it settles"
+    );
+    time.pass(SHORT_SETTLING.quiet);
+    assert!(
+        watching.caught_up_within(Duration::from_secs(5)),
+        "a quiet count ends the settle"
+    );
+    assert_eq!(seen.load(Ordering::Relaxed), 1);
+    count.looked_again();
+    assert!(
+        watching.caught_up_within(Duration::ZERO),
         "the second move is not a second read"
     );
+    assert_eq!(seen.load(Ordering::Relaxed), 1);
     assert!(watching.close());
 }
 
 #[test]
 fn a_change_that_is_not_late_is_read_at_once() {
     let count = Looked::from(10);
+    let time = Stopped::new();
     let seen = Arc::new(AtomicUsize::new(0));
-    let slow = Settling {
-        quiet: Duration::from_secs(5),
-        ceiling: Duration::from_secs(10),
-        step: Duration::from_millis(5),
-    };
     let watching = settling_watch(
         count.counting(),
         never_busy(),
         Settle {
             late: Arc::new(|| false),
-            settling: slow,
+            settling: SHORT_SETTLING,
+            clock: time.clock(),
         },
         &seen,
     );
@@ -373,8 +415,9 @@ fn a_change_that_is_not_late_is_read_at_once() {
 #[test]
 fn a_write_of_ours_during_the_settle_skips_the_read() {
     let count = Looked::from(10);
+    let time = Stopped::new();
     let seen = Arc::new(AtomicUsize::new(0));
-    let writing = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let writing = Arc::new(AtomicBool::new(false));
     let begins = writing.clone();
     let watching = settling_watch(
         count.counting(),
@@ -388,12 +431,20 @@ fn a_write_of_ours_during_the_settle_skips_the_read() {
                 true
             }),
             settling: SHORT_SETTLING,
+            clock: time.clock(),
         },
         &seen,
     );
     count.once_seen();
     count.set(11);
-    std::thread::sleep(SHORT_SETTLING.ceiling + QUICK * 12);
+    assert!(
+        eventually(|| writing.load(Ordering::Relaxed)),
+        "the watcher never began to settle"
+    );
+    assert!(
+        watching.caught_up_within(Duration::from_secs(5)),
+        "our write cuts the settle short"
+    );
     assert_eq!(seen.load(Ordering::Relaxed), 0);
     assert!(watching.close());
 }
@@ -401,19 +452,16 @@ fn a_write_of_ours_during_the_settle_skips_the_read() {
 #[test]
 fn closing_in_the_middle_of_a_settle_is_prompt() {
     let moving = Arc::new(AtomicI64::new(0));
+    let time = Stopped::new();
     let seen = Arc::new(AtomicUsize::new(0));
     let ticking = moving.clone();
     let watching = settling_watch(
         Arc::new(move || Some(ticking.fetch_add(1, Ordering::Relaxed))),
         never_busy(),
-        late_with(Settling {
-            quiet: Duration::from_secs(30),
-            ceiling: Duration::from_secs(60),
-            step: Duration::from_millis(5),
-        }),
+        late_on(time.clock()),
         &seen,
     );
-    std::thread::sleep(QUICK * 10);
+    settling_now(&watching);
     let started = Instant::now();
     assert!(watching.close());
     assert!(started.elapsed() < Duration::from_secs(2));
@@ -423,19 +471,19 @@ fn closing_in_the_middle_of_a_settle_is_prompt() {
 #[test]
 fn a_write_of_ours_that_lands_while_it_settles_is_not_read_as_theirs() {
     let count = Looked::from(10);
+    let time = Stopped::new();
     let seen = Arc::new(AtomicUsize::new(0));
-    let watching = settling_watch(
-        count.counting(),
-        never_busy(),
-        late_with(SHORT_SETTLING),
-        &seen,
-    );
+    let watching = settling_watch(count.counting(), never_busy(), late_on(time.clock()), &seen);
     count.once_seen();
-    count.set_and_seen(11);
+    count.set(11);
+    settling_now(&watching);
     assert!(watching.writing());
     count.set(12);
     assert!(watching.ours());
-    std::thread::sleep(SHORT_SETTLING.ceiling + QUICK * 12);
+    assert!(
+        watching.caught_up_within(Duration::from_secs(5)),
+        "our write cuts the settle short"
+    );
     assert_eq!(
         seen.load(Ordering::Relaxed),
         0,
@@ -456,7 +504,7 @@ fn whoever_asks_is_held_until_the_copy_being_read_is_kept() {
         NAP,
         count.counting(),
         never_busy(),
-        late_with(SHORT_SETTLING),
+        late_on(steady()),
         move || {
             enters.fetch_add(1, Ordering::Relaxed);
             std::thread::sleep(Duration::from_millis(100));
