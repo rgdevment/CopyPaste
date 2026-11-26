@@ -284,7 +284,7 @@ The 3.0 pipeline will need these, all named as Tisty names them:
 | `RELEASE_PRIVATE_KEY`                        | secret   | Signs the bridge manifest the 2.x reads. |
 | `STORE_CLIENT_ID` / `STORE_CLIENT_SECRET` / `STORE_SELLER_ID` / `STORE_TENANT_ID` | secret | Partner Center. |
 | `WINGET_TOKEN`                               | secret   | Opens the pull request in `winget-pkgs`. |
-| `GIST_TOKEN`                                 | secret   | Pushes to the Homebrew tap.              |
+| `HOMEBREW_TAP_TOKEN`                         | secret   | Pushes to the Homebrew tap.              |
 | `STORE_APP_ID`, `STORE_PUBLISH`              | variable | Store product and its on/off switch.     |
 | `WINGET_PUBLISH`                             | variable | Off until the package exists.            |
 | `BRIDGE_MANIFEST`                            | variable | The manifest a 2.x reads. Off once nobody is left on the 2. |

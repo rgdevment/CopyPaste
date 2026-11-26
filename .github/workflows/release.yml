@@ -1511,7 +1511,7 @@ jobs:
       cancel-in-progress: false
     env:
       HOMEBREW_PUBLISH: ${{ vars.HOMEBREW_PUBLISH }}
-      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
       - name: The tap cannot be written without its token
         id: gate
@@ -1520,9 +1520,9 @@ jobs:
           if [ "$HOMEBREW_PUBLISH" = "false" ]; then
             echo "::notice::HOMEBREW_PUBLISH is false; the tap keeps the formula it has"
             echo "go=no" >> "$GITHUB_OUTPUT"
-          elif [ -z "${GIST_TOKEN}" ]; then
+          elif [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
             echo "::error::this release reached the point of writing the Homebrew tap and \
-          GIST_TOKEN is not set, so nobody on a Mac would ever be offered it. Set the secret, or \
+          HOMEBREW_TAP_TOKEN is not set, so nobody on a Mac would ever be offered it. Set the secret, or \
           set the HOMEBREW_PUBLISH variable to false."
             exit 1
           else
@@ -1566,7 +1566,7 @@ jobs:
 
           git clone https://github.com/rgdevment/homebrew-tap.git /tmp/tap
           git -C /tmp/tap config --local http.extraheader \
-            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GIST_TOKEN" | base64 -w0)"
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$HOMEBREW_TAP_TOKEN" | base64 -w0)"
           cd /tmp/tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
