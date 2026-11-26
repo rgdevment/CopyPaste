@@ -131,22 +131,14 @@ Three channels need a decision or a human before they can be switched on.
 
 ### 1. winget
 
-`winget-releaser` **adds a version to a package that already exists**; it
-refuses a package the community repository has never seen. Today
-`rgdevment.CopyPaste` is not in `microsoft/winget-pkgs` at all.
+The `winget` job adds a version to a package that already exists in
+`microsoft/winget-pkgs`, with Komac pinned by version and checksum. The package
+`rgdevment.CoPanda` was submitted by hand in microsoft/winget-pkgs#452685,
+which passed validation and has waited for a moderator since October.
 
-1. Cut the first release and let it publish the installer.
-2. Submit the manifest by hand against that public URL:
-   `wingetcreate new <url-of-the-installer>`.
-3. Wait for a `winget-pkgs` moderator to merge it (days, not hours).
-4. Replace `winget-releaser`: it pulls `cargo-bins/cargo-binstall@main`
-   unpinned, which this repository's pinning policy refuses when the job is set
-   up, so the job fails before any step runs. `wingetcreate update` on a
-   Windows runner does the same without third-party actions.
-5. Only then set `vars.WINGET_PUBLISH=true` and `secrets.WINGET_TOKEN`.
-
-The `winget` job is skipped whole while that variable is off, so it is
-harmless to ship the workflow before the package exists.
+Once it is merged, `WINGET_TOKEN` goes into the `channels` environment and
+`vars.WINGET_PUBLISH` is set to `true`. Until then the job is skipped whole, so
+a release never fails over it.
 
 ### 2. Microsoft Store
 
