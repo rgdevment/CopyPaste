@@ -86,7 +86,7 @@ fn the_keys_wait_until_the_target_has_put_its_focus_back() {
     assert_eq!(
         focus_still_landing(Duration::ZERO),
         Some(FOCUS_LANDS),
-        "Electron apps drop a Ctrl+V sent the moment they come forward"
+        "Electron apps such as Claude drop a Ctrl+V sent the moment they come forward"
     );
     assert_eq!(
         focus_still_landing(Duration::from_millis(100)),
