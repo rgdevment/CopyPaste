@@ -35,6 +35,9 @@ reqwest.workspace = true
 rustls.workspace = true
 tauri-plugin-global-shortcut.workspace = true
 
+[dev-dependencies]
+minisign-verify = "0.3"
+
 [target."cfg(windows)".dependencies]
 cp-win-sys.workspace = true
 winreg = "0.56"

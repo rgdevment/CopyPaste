@@ -58,6 +58,62 @@ fn a_download_that_does_not_come_from_our_releases_is_refused() {
 }
 
 #[test]
+fn a_download_from_either_repo_name_is_ours_and_nothing_near_them_is() {
+    for repo in ["CopyPaste", "CoPanda"] {
+        assert!(ours(&format!(
+            "https://github.com/rgdevment/{repo}/releases/download/v3.0.1/copypaste.exe"
+        )));
+    }
+    assert!(!ours(
+        "http://github.com/rgdevment/CoPanda/releases/download/v3.0.1/x.exe"
+    ));
+    assert!(!ours(
+        "https://example.com/rgdevment/CoPanda/releases/download/v3.0.1/x.exe"
+    ));
+    assert!(!ours(
+        "https://github.com/rgdevment/CoPandaX/releases/download/v3.0.1/x.exe"
+    ));
+    assert!(!ours(
+        "https://github.com/rgdevment/CoPanda/releases/latest"
+    ));
+    assert!(!ours(
+        "https://github.com/rgdevment/CopyPaste/releases/latest"
+    ));
+}
+
+#[test]
+fn only_a_signature_that_does_not_verify_is_worth_the_spare_key() {
+    use tauri_plugin_updater::Error;
+    assert!(worth_the_spare(&Error::Minisign(
+        minisign_verify::Error::InvalidSignature
+    )));
+    assert!(worth_the_spare(&Error::Minisign(
+        minisign_verify::Error::UnexpectedKeyId
+    )));
+    assert!(!worth_the_spare(&Error::Network("down".to_owned())));
+    assert!(!worth_the_spare(&Error::TargetNotFound("x".to_owned())));
+    assert!(!worth_the_spare(&Error::SignedVersionMismatch {
+        signed: "1.0.0".to_owned(),
+        announced: "2.0.0".to_owned(),
+    }));
+}
+
+#[test]
+fn the_primary_the_spare_and_the_retired_updater_keys_are_three_different_ones() {
+    let conf: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    let primary = conf["plugins"]["updater"]["pubkey"]
+        .as_str()
+        .unwrap()
+        .trim();
+    let retired = include_str!("../../../.github/updater-retired.pub").trim();
+    assert!(!primary.is_empty());
+    assert!(!SPARE.is_empty());
+    assert_ne!(primary, SPARE);
+    assert_ne!(primary, retired);
+    assert_ne!(SPARE, retired);
+}
+
+#[test]
 fn only_an_intel_build_running_translated_asks_for_the_native_one() {
     assert_eq!(target_for("x86_64", true), Some("darwin-aarch64"));
     assert_eq!(target_for("x86_64", false), None);

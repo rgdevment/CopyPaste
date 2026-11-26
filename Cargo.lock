@@ -1201,6 +1201,7 @@ dependencies = [
  "cp-mac-sys",
  "cp-store",
  "cp-win-sys",
+ "minisign-verify",
  "reqwest",
  "rustls",
  "semver",
